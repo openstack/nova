@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    Nova has been enabled for mutable config. Certain options may be reloaded
+    by sending SIGHUP to the correct process. Live migration options will apply
+    to live migrations currently in progress. Please refer to the configuration
+    manual.
+
+    * DEFAULT.debug
+    * libvirt.live_migration_completion_timeout
+    * libvirt.live_migration_progress_timeout

@@ -17,11 +17,24 @@
 from oslo_config import cfg
 
 
-ipv6_backend = cfg.StrOpt('ipv6_backend',
-    default='rfc2462',
-    help='Backend to use for IPv6 generation')
+IPV6_OPTS = [
+    cfg.StrOpt('ipv6_backend',
+        default='rfc2462',
+        choices=('rfc2462', 'account_identifier'),
+        help="""
+Abstracts out IPv6 address generation to pluggable backends.
 
-IPV6_OPTS = [ipv6_backend]
+nova-network can be put into dual-stack mode, so that it uses
+both IPv4 and IPv6 addresses. In dual-stack mode, by default, instances
+acquire IPv6 global unicast addresses with the help of stateless address
+auto-configuration mechanism.
+
+Related options:
+
+* use_neutron: this option only works with nova-network.
+* use_ipv6: this option only works if ipv6 is enabled for nova-network.
+"""),
+]
 
 
 def register_opts(conf):

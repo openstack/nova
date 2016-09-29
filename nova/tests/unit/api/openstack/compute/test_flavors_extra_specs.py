@@ -18,8 +18,6 @@ import webob
 
 from nova.api.openstack.compute import flavors_extraspecs \
         as flavorextraspecs_v21
-from nova.api.openstack.compute.legacy_v2.contrib import flavorextraspecs \
-        as flavorextraspecs_v2
 from nova import exception
 from nova import objects
 from nova import test
@@ -69,7 +67,7 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
 
     def setUp(self):
         super(FlavorsExtraSpecsTestV21, self).setUp()
-        fakes.stub_out_key_pair_funcs(self.stubs)
+        fakes.stub_out_key_pair_funcs(self)
         self.controller = self.flavorextraspecs.FlavorExtraSpecsController()
 
     def test_index(self):
@@ -341,8 +339,3 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
                                 use_admin_context=True)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, 1, 'key1', body={"key1": value})
-
-
-class FlavorsExtraSpecsTestV2(FlavorsExtraSpecsTestV21):
-    bad_request = webob.exc.HTTPBadRequest
-    flavorextraspecs = flavorextraspecs_v2

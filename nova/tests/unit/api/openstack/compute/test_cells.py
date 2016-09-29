@@ -15,13 +15,11 @@
 
 import copy
 
+import mock
 from oslo_utils import timeutils
 from webob import exc
 
 from nova.api.openstack.compute import cells as cells_ext_v21
-from nova.api.openstack.compute.legacy_v2.contrib import cells as cells_ext_v2
-from nova.api.openstack import extensions
-from nova.cells import rpcapi as cells_rpcapi
 from nova import context
 from nova import exception
 from nova import rpc
@@ -65,11 +63,14 @@ class BaseCellsTest(test.NoDBTestCase):
         def fake_cells_api_get_all_cell_info(*args):
             return self._get_all_cell_info(*args)
 
-        self.stubs.Set(cells_rpcapi.CellsAPI, 'cell_get', fake_cell_get)
-        self.stubs.Set(cells_rpcapi.CellsAPI, 'cell_update', fake_cell_update)
-        self.stubs.Set(cells_rpcapi.CellsAPI, 'cell_create', fake_cell_create)
-        self.stubs.Set(cells_rpcapi.CellsAPI, 'get_cell_info_for_neighbors',
-                fake_cells_api_get_all_cell_info)
+        self.stub_out('nova.cells.rpcapi.CellsAPI.cell_get',
+                      fake_cell_get)
+        self.stub_out('nova.cells.rpcapi.CellsAPI.cell_update',
+                      fake_cell_update)
+        self.stub_out('nova.cells.rpcapi.CellsAPI.cell_create',
+                      fake_cell_create)
+        self.stub_out('nova.cells.rpcapi.CellsAPI.get_cell_info_for_neighbors',
+                      fake_cells_api_get_all_cell_info)
 
     def _get_all_cell_info(self, *args):
         def insecure_transport_url(url):
@@ -91,7 +92,7 @@ class CellsTestV21(BaseCellsTest):
     cell_extension = 'os_compute_api:os-cells'
     bad_request = exception.ValidationError
 
-    def _get_cell_controller(self, ext_mgr):
+    def _get_cell_controller(self):
         return cells_ext_v21.CellsController()
 
     def _get_request(self, resource):
@@ -99,8 +100,7 @@ class CellsTestV21(BaseCellsTest):
 
     def setUp(self):
         super(CellsTestV21, self).setUp()
-        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
-        self.controller = self._get_cell_controller(self.ext_mgr)
+        self.controller = self._get_cell_controller()
         self.context = context.get_admin_context()
         self.flags(enable=True, group='cells')
 
@@ -111,7 +111,7 @@ class CellsTestV21(BaseCellsTest):
         self.assertEqual(len(res_dict['cells']), 2)
         for i, cell in enumerate(res_dict['cells']):
             self.assertEqual(cell['name'], self.fake_cells[i]['name'])
-            self.assertNotIn('capabilitiles', cell)
+            self.assertNotIn('capabilities', cell)
             self.assertNotIn('password', cell)
 
     def test_detail(self):
@@ -144,7 +144,8 @@ class CellsTestV21(BaseCellsTest):
             self.assertEqual(cell_name, 'cell999')
             call_info['delete_called'] += 1
 
-        self.stubs.Set(cells_rpcapi.CellsAPI, 'cell_delete', fake_cell_delete)
+        self.stub_out('nova.cells.rpcapi.CellsAPI.cell_delete',
+                      fake_cell_delete)
 
         req = self._get_request("cells/cell999")
         req.environ['nova.context'] = self.context
@@ -165,7 +166,8 @@ class CellsTestV21(BaseCellsTest):
         def fake_cell_delete(inst, context, cell_name):
             return 0
 
-        self.stubs.Set(cells_rpcapi.CellsAPI, 'cell_delete', fake_cell_delete)
+        self.stub_out('nova.cells.rpcapi.CellsAPI.cell_delete',
+                      fake_cell_delete)
 
         req = self._get_request("cells/cell999")
         req.environ['nova.context'] = self.context
@@ -176,7 +178,8 @@ class CellsTestV21(BaseCellsTest):
         def fake_cell_delete(inst, context, cell_name):
             pass
 
-        self.stubs.Set(cells_rpcapi.CellsAPI, 'cell_delete', fake_cell_delete)
+        self.stub_out('nova.cells.rpcapi.CellsAPI.cell_delete',
+                      fake_cell_delete)
 
         req = self._get_request("cells/cell999")
         req.environ['nova.context'] = self.context
@@ -548,10 +551,6 @@ class CellsTestV21(BaseCellsTest):
         self.assertEqual(cell_caps['cap2'], 'c;d')
 
     def test_show_capacities(self):
-        if (self.cell_extension == 'compute_extension:cells'):
-            self.ext_mgr.is_loaded('os-cell-capacities').AndReturn(True)
-        self.mox.StubOutWithMock(self.controller.cells_rpcapi,
-                                 'get_capacities')
         response = {"ram_free":
                         {"units_by_mb": {"8192": 0, "512": 13,
                                 "4096": 1, "2048": 3, "16384": 0},
@@ -561,21 +560,20 @@ class CellsTestV21(BaseCellsTest):
                                 "40960": 23, "163840": 5, "0": 0},
                         "total_mb": 1052672}
                     }
-        self.controller.cells_rpcapi.\
-            get_capacities(self.context, cell_name=None).AndReturn(response)
-        self.mox.ReplayAll()
-        req = self._get_request("cells/capacities")
-        req.environ["nova.context"] = self.context
-        res_dict = self.controller.capacities(req)
-        self.assertEqual(response, res_dict['cell']['capacities'])
+
+        with mock.patch.object(self.controller.cells_rpcapi, 'get_capacities',
+                               return_value=response) as mock_get_capacities:
+            req = self._get_request("cells/capacities")
+            req.environ["nova.context"] = self.context
+            res_dict = self.controller.capacities(req)
+            self.assertEqual(response, res_dict['cell']['capacities'])
+            mock_get_capacities.assert_called_once_with(
+                self.context, cell_name=None)
 
     def test_show_capacity_fails_with_non_admin_context(self):
-        if (self.cell_extension == 'compute_extension:cells'):
-            self.ext_mgr.is_loaded('os-cell-capacities').AndReturn(True)
         rules = {self.cell_extension: "is_admin:true"}
         self.policy.set_rules(rules)
 
-        self.mox.ReplayAll()
         req = self._get_request("cells/capacities")
         req.environ["nova.context"] = self.context
         req.environ["nova.context"].is_admin = False
@@ -583,24 +581,18 @@ class CellsTestV21(BaseCellsTest):
                           self.controller.capacities, req)
 
     def test_show_capacities_for_invalid_cell(self):
-        if (self.cell_extension == 'compute_extension:cells'):
-            self.ext_mgr.is_loaded('os-cell-capacities').AndReturn(True)
-        self.mox.StubOutWithMock(self.controller.cells_rpcapi,
-                                 'get_capacities')
-        self.controller.cells_rpcapi. \
-            get_capacities(self.context, cell_name="invalid_cell").AndRaise(
-            exception.CellNotFound(cell_name="invalid_cell"))
-        self.mox.ReplayAll()
-        req = self._get_request("cells/invalid_cell/capacities")
-        req.environ["nova.context"] = self.context
-        self.assertRaises(exc.HTTPNotFound,
-                          self.controller.capacities, req, "invalid_cell")
+        with mock.patch.object(self.controller.cells_rpcapi, 'get_capacities',
+                side_effect=exception.CellNotFound(cell_name="invalid_cell")
+                ) as mock_get_capacities:
+            req = self._get_request("cells/invalid_cell/capacities")
+            req.environ["nova.context"] = self.context
+            self.assertRaises(exc.HTTPNotFound,
+                              self.controller.capacities, req, "invalid_cell")
+
+            mock_get_capacities.assert_called_once_with(
+                self.context, cell_name="invalid_cell")
 
     def test_show_capacities_for_cell(self):
-        if (self.cell_extension == 'compute_extension:cells'):
-            self.ext_mgr.is_loaded('os-cell-capacities').AndReturn(True)
-        self.mox.StubOutWithMock(self.controller.cells_rpcapi,
-                                 'get_capacities')
         response = {"ram_free":
                         {"units_by_mb": {"8192": 0, "512": 13,
                                 "4096": 1, "2048": 3, "16384": 0},
@@ -610,14 +602,16 @@ class CellsTestV21(BaseCellsTest):
                                 "40960": 23, "163840": 5, "0": 0},
                         "total_mb": 1052672}
                     }
-        self.controller.cells_rpcapi.\
-                        get_capacities(self.context, cell_name='cell_name').\
-                            AndReturn(response)
-        self.mox.ReplayAll()
-        req = self._get_request("cells/capacities")
-        req.environ["nova.context"] = self.context
-        res_dict = self.controller.capacities(req, 'cell_name')
-        self.assertEqual(response, res_dict['cell']['capacities'])
+
+        with mock.patch.object(self.controller.cells_rpcapi, 'get_capacities',
+                               return_value=response) as mock_get_capacities:
+            req = self._get_request("cells/capacities")
+            req.environ["nova.context"] = self.context
+            res_dict = self.controller.capacities(req, 'cell_name')
+            self.assertEqual(response, res_dict['cell']['capacities'])
+
+            mock_get_capacities.assert_called_once_with(
+                self.context, cell_name='cell_name')
 
     def test_sync_instances(self):
         call_info = {}
@@ -627,7 +621,8 @@ class CellsTestV21(BaseCellsTest):
             call_info['updated_since'] = kwargs.get('updated_since')
             call_info['deleted'] = kwargs.get('deleted')
 
-        self.stubs.Set(cells_rpcapi.CellsAPI, 'sync_instances', sync_instances)
+        self.stub_out('nova.cells.rpcapi.CellsAPI.sync_instances',
+                      sync_instances)
 
         req = self._get_request("cells/sync_instances")
         req.environ['nova.context'] = self.context
@@ -684,7 +679,8 @@ class CellsTestV21(BaseCellsTest):
         def sync_instances(self, context, **kwargs):
             pass
 
-        self.stubs.Set(cells_rpcapi.CellsAPI, 'sync_instances', sync_instances)
+        self.stub_out('nova.cells.rpcapi.CellsAPI.sync_instances',
+                      sync_instances)
 
         req = self._get_request("cells/sync_instances")
         req.environ['nova.context'] = self.context
@@ -723,54 +719,3 @@ class CellsTestV21(BaseCellsTest):
         req = self._get_request("cells/sync_instances")
         self.assertRaises(exc.HTTPNotImplemented,
                 self.controller.sync_instances, req, {})
-
-
-class CellsTestV2(CellsTestV21):
-    cell_extension = 'compute_extension:cells'
-    bad_request = exc.HTTPBadRequest
-
-    def _get_cell_controller(self, ext_mgr):
-        return cells_ext_v2.Controller(ext_mgr)
-
-    def test_cell_create_name_with_invalid_character_raises(self):
-        pass
-
-    def test_cell_create_rpc_port_with_null(self):
-        body = {'cell': {'name': 'fake',
-                         'username': 'fred',
-                         'password': 'secret',
-                         'rpc_host': 'r3.example.org',
-                         'rpc_port': None,
-                         'type': 'parent'}}
-
-        req = self._get_request("cells")
-        req.environ['nova.context'] = self.context
-        self.controller.create(req, body=body)
-
-    def test_cell_update_rpc_port_with_null(self):
-        body = {'cell': {'name': 'fake',
-                         'username': 'fred',
-                         'password': 'secret',
-                         'rpc_host': 'r3.example.org',
-                         'rpc_port': None,
-                         'type': 'parent'}}
-
-        req = self._get_request("cells")
-        req.environ['nova.context'] = self.context
-        self.controller.update(req, 'cell1', body=body)
-
-    def test_cell_create_name_with_leading_trailing_spaces_compat_mode(self):
-        pass
-
-    def test_cell_create_name_with_leading_trailing_spaces(self):
-        body = {'cell': {'name': '  moocow  ',
-                         'username': 'fred',
-                         'password': 'secret',
-                         'rpc_host': 'r3.example.org',
-                         'type': 'parent'}}
-
-        req = self._get_request("cells")
-        req.environ['nova.context'] = self.context
-        resp = self.controller.create(req, body=body)
-        # NOTE(alex_xu): legacy v2 didn't strip the spaces.
-        self.assertEqual('  moocow  ', resp['cell']['name'])

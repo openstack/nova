@@ -105,6 +105,24 @@ Nova Shell
 
     Runs the named script from the specified path with flags set.
 
+Nova Project
+~~~~~~~~~~~~
+
+``nova-manage project quota <project_id> [--user <user_id>] [--key <key>] [--value <value>]``
+
+    Create, update or display quotas for project/user.  If a key is
+    not specified then the current usages are displayed.
+
+``nova-manage project quota_usage_refresh <project_id> [--user <user_id>] [--key <key>]``
+
+    Refresh the quota usages for the project/user so that the
+    usage record matches the actual used.  If a key is not specified
+    then all quota usages relevant to the project/user are refreshed.
+
+``nova-manage project scrub <project-id>``
+
+    Deletes data associated with project.
+
 Nova VPN
 ~~~~~~~~
 
@@ -162,11 +180,11 @@ Nova Images
 Nova VM
 ~~~~~~~~~~~
 
+**DEPRECATED** Use the nova list command from python-novaclient instead.
+The vm subcommand will be removed in the 15.0.0 Ocata release.
+
 ``nova-manage vm list [host]``
     Show a list of all instances. Accepts optional hostname (to show only instances on specific host).
-
-``nova-manage live-migration <ec2_id> <destination host name>``
-    Live migrate instance from current host to destination host. Requires instance id (which comes from euca-describe-instance) and destination host name (which can be found from nova-manage service list).
 
 
 SEE ALSO

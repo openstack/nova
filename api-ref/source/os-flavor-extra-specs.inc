@@ -1,8 +1,4 @@
 .. -*- rst -*-
-.. needs:method_verification
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
 ======================================================
  Flavors extra-specs (flavors, os-flavor-extra-specs)
@@ -11,25 +7,62 @@
 Lists, creates, deletes, and updates the extra-specs or keys for a
 flavor.
 
-Create Extra Specs For A Flavor
-===============================
+List Extra Specs For A Flavor
+=============================
 
-.. rest_method:: POST /v2.1/{tenant_id}/flavors/{flavor_id}/os-extra_specs
+.. rest_method:: GET /flavors/{flavor_id}/os-extra_specs
 
-Creates extra specs for a flavor, by ID.
+Lists all extra specs for a flavor, by ID.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - flavor_id: flavor_id
+
+Response
+--------
+
+
+.. rest_parameters:: parameters.yaml
+
+  - extra_specs: extra_specs
+  - key: flavor_extra_spec_key2
+  - value: flavor_extra_spec_value
+
+**Example List Extra Specs For A Flavor: JSON response**
+
+.. literalinclude:: ../../doc/api_samples/flavor-extra-specs/flavor-extra-specs-list-resp.json
+   :language: javascript
+
+Create Extra Specs For A Flavor
+===============================
+
+.. rest_method:: POST /flavors/{flavor_id}/os-extra_specs
+
+Creates extra specs for a flavor, by ID.
+
+Normal response codes: 200
+
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
+conflict(409)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+
+  - flavor_id: flavor_id
+  - extra_specs: extra_specs
+  - key: flavor_extra_spec_key2
+  - value: flavor_extra_spec_value
 
 **Example Create Extra Specs For A Flavor: JSON request**
 
@@ -39,62 +72,44 @@ Request
 Response
 --------
 
+.. rest_parameters:: parameters.yaml
+
+  - extra_specs: extra_specs
+  - key: flavor_extra_spec_key2
+  - value: flavor_extra_spec_value
+
 **Example Create Extra Specs For A Flavor: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/flavor-extra-specs/flavor-extra-specs-create-resp.json
    :language: javascript
 
-List Extra Specs For A Flavor
-=============================
-
-.. rest_method:: GET /v2.1/{tenant_id}/flavors/{flavor_id}/os-extra_specs
-
-Lists all extra specs for a flavor, by ID.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-  - flavor_id: flavor_id
-
-Response
---------
-
-**Example List Extra Specs For A Flavor: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/flavor-extra-specs/flavor-extra-specs-list-resp.json
-   :language: javascript
-
 Show An Extra Spec For A Flavor
 ===============================
 
-.. rest_method:: GET /v2.1/{tenant_id}/flavors/{flavor_id}/os-extra_specs/{flavor_extra_spec_key}
+.. rest_method:: GET /flavors/{flavor_id}/os-extra_specs/{flavor_extra_spec_key}
 
 Shows an extra spec, by key, for a flavor, by ID.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - flavor_id: flavor_id
   - flavor_extra_spec_key: flavor_extra_spec_key
 
+
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - key: flavor_extra_spec_key2
+  - value: flavor_extra_spec_value
 
 **Example Show An Extra Spec For A Flavor: JSON response**
 
@@ -104,23 +119,26 @@ Response
 Update An Extra Spec For A Flavor
 =================================
 
-.. rest_method:: PUT /v2.1/{tenant_id}/flavors/{flavor_id}/os-extra_specs/{flavor_extra_spec_key}
+.. rest_method:: PUT /flavors/{flavor_id}/os-extra_specs/{flavor_extra_spec_key}
 
 Updates an extra spec, by key, for a flavor, by ID.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403)
+itemNotFound(404), conflict(409)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - flavor_id: flavor_id
   - flavor_extra_spec_key: flavor_extra_spec_key
+  - key: flavor_extra_spec_key2
+  - value: flavor_extra_spec_value
+
 
 **Example Update An Extra Spec For A Flavor: JSON request**
 
@@ -130,6 +148,12 @@ Request
 Response
 --------
 
+.. rest_parameters:: parameters.yaml
+
+
+  - key: flavor_extra_spec_key2
+  - value: flavor_extra_spec_value
+
 **Example Update An Extra Spec For A Flavor: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/flavor-extra-specs/flavor-extra-specs-update-resp.json
@@ -138,24 +162,24 @@ Response
 Delete An Extra Spec For A Flavor
 =================================
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/flavors/{flavor_id}/os-extra_specs/{flavor_extra_spec_key}
+.. rest_method:: DELETE /flavors/{flavor_id}/os-extra_specs/{flavor_extra_spec_key}
 
 Deletes an extra spec, by key, for a flavor, by ID.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - flavor_id: flavor_id
   - flavor_extra_spec_key: flavor_extra_spec_key
 
 Response
 --------
 
+There is no body content for the response of a successful DELETE action.

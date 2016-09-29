@@ -30,13 +30,13 @@ from nova.cells import rpcapi as cells_rpcapi
 import nova.conf
 from nova import exception
 from nova.i18n import _
+from nova.policies import cells as cells_policies
 from nova import rpc
 
 
 CONF = nova.conf.CONF
 
 ALIAS = "os-cells"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def _filter_keys(item, keys):
@@ -108,7 +108,7 @@ class CellsController(wsgi.Controller):
     def index(self, req):
         """Return all cells in brief."""
         ctxt = req.environ['nova.context']
-        authorize(ctxt)
+        ctxt.can(cells_policies.BASE_POLICY_NAME)
         return self._get_cells(ctxt, req)
 
     @extensions.expected_errors(501)
@@ -116,7 +116,7 @@ class CellsController(wsgi.Controller):
     def detail(self, req):
         """Return all cells in detail."""
         ctxt = req.environ['nova.context']
-        authorize(ctxt)
+        ctxt.can(cells_policies.BASE_POLICY_NAME)
         return self._get_cells(ctxt, req, detail=True)
 
     @extensions.expected_errors(501)
@@ -124,7 +124,7 @@ class CellsController(wsgi.Controller):
     def info(self, req):
         """Return name and capabilities for this cell."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(cells_policies.BASE_POLICY_NAME)
         cell_capabs = {}
         my_caps = CONF.cells.capabilities
         for cap in my_caps:
@@ -145,7 +145,7 @@ class CellsController(wsgi.Controller):
         # TODO(kaushikc): return capacities as a part of cell info and
         # cells detail calls in v2.1, along with capabilities
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(cells_policies.BASE_POLICY_NAME)
         try:
             capacities = self.cells_rpcapi.get_capacities(context,
                                                           cell_name=id)
@@ -159,7 +159,7 @@ class CellsController(wsgi.Controller):
     def show(self, req, id):
         """Return data about the given cell name.  'id' is a cell name."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(cells_policies.BASE_POLICY_NAME)
         try:
             cell = self.cells_rpcapi.cell_get(context, id)
         except exception.CellNotFound as e:
@@ -175,7 +175,7 @@ class CellsController(wsgi.Controller):
         """Delete a child or parent cell entry.  'id' is a cell name."""
         context = req.environ['nova.context']
 
-        authorize(context, action="delete")
+        context.can(cells_policies.POLICY_ROOT % "delete")
 
         try:
             num_deleted = self.cells_rpcapi.cell_delete(context, id)
@@ -197,8 +197,7 @@ class CellsController(wsgi.Controller):
 
         # Start with the cell type conversion
         if 'type' in cell:
-            cell['is_parent'] = cell['type'] == 'parent'
-            del cell['type']
+            cell['is_parent'] = cell.pop('type') == 'parent'
         # Avoid cell type being overwritten to 'child'
         elif existing:
             cell['is_parent'] = existing['is_parent']
@@ -243,7 +242,7 @@ class CellsController(wsgi.Controller):
         """Create a child cell entry."""
         context = req.environ['nova.context']
 
-        authorize(context, action="create")
+        context.can(cells_policies.POLICY_ROOT % "create")
 
         cell = body['cell']
         self._normalize_cell(cell)
@@ -261,7 +260,7 @@ class CellsController(wsgi.Controller):
         """Update a child cell entry.  'id' is the cell name to update."""
         context = req.environ['nova.context']
 
-        authorize(context, action="update")
+        context.can(cells_policies.POLICY_ROOT % "update")
 
         cell = body['cell']
         cell.pop('id', None)
@@ -295,7 +294,7 @@ class CellsController(wsgi.Controller):
         """Tell all cells to sync instance info."""
         context = req.environ['nova.context']
 
-        authorize(context, action="sync_instances")
+        context.can(cells_policies.POLICY_ROOT % "sync_instances")
 
         project_id = body.pop('project_id', None)
         deleted = body.pop('deleted', False)

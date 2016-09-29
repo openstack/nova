@@ -37,6 +37,7 @@ class GlanceStore(object):
         def pick_glance(kwargs):
             server = next(glance_api_servers)
             kwargs['endpoint'] = server
+            kwargs['api_version'] = 1 if CONF.glance.use_glance_v1 else 2
             # NOTE(sdague): is the return significant here at all?
             return server
 
@@ -50,7 +51,8 @@ class GlanceStore(object):
         cb = functools.partial(retry_cb, context, instance)
 
         return session.call_plugin_serialized_with_retry(
-            'glance', fn, CONF.glance.num_retries, pick_glance, cb, **params)
+            'glance.py', fn, CONF.glance.num_retries, pick_glance, cb,
+            **params)
 
     def _make_params(self, context, session, image_id):
         return {'image_id': image_id,

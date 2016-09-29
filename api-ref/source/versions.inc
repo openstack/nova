@@ -1,25 +1,23 @@
 .. -*- rst -*-
-.. needs:method_verification
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
 ==============
  API Versions
 ==============
-
-Concepts
-========
 
 In order to bring new features to users over time, the Nova API
 supports versioning. There are two kinds of versions in Nova.
 
 - ''major versions'', which have dedicated urls
 - ''microversions'', which can be requested through the use of the
-  ``X-OpenStack-Nova-API-Version`` header
+  ``X-OpenStack-Nova-API-Version`` header or since microversion 2.27
+  the ``OpenStack-API-Version`` header may also be used.
 
-.. TODO(sdague): build a more detailed link to using Microversions on
-   requests.
+For more detail about Microversion, please reference:
+`Microversions
+<http://developer.openstack.org/api-guide/compute/microversions.html>`_
+
+The Version APIs work differently from other APIs as they *do not*
+require authentication.
 
 List All Major Versions
 =======================
@@ -31,14 +29,13 @@ the deployment. Links to more specific information will be provided
 for each API version, as well as information about supported min and
 max microversions.
 
-Normal Response Codes: 200, 300
+Normal Response Codes: 200
 
 Response
 --------
 
 .. rest_parameters:: parameters.yaml
 
-  - x-openstack-request-id: x-openstack-request-id
   - versions: versions
   - id: version_id
   - status: version_status
@@ -89,7 +86,6 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-  - x-openstack-request-id: x-openstack-request-id
   - version: version
   - id: version_id
   - status: version_status

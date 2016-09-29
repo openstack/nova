@@ -14,8 +14,12 @@
 
 import six
 
+from nova.api.openstack import api_version_request
+from nova.api.openstack.api_version_request \
+    import MIN_WITHOUT_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.policies import used_limits as ul_policies
 from nova import quota
 
 
@@ -23,7 +27,6 @@ QUOTAS = quota.QUOTAS
 
 
 ALIAS = "os-used-limits"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class UsedLimitsController(wsgi.Controller):
@@ -41,14 +44,24 @@ class UsedLimitsController(wsgi.Controller):
         context = req.environ['nova.context']
         project_id = self._project_id(context, req)
         quotas = QUOTAS.get_project_quotas(context, project_id, usages=True)
-        quota_map = {
-            'totalRAMUsed': 'ram',
-            'totalCoresUsed': 'cores',
-            'totalInstancesUsed': 'instances',
-            'totalFloatingIpsUsed': 'floating_ips',
-            'totalSecurityGroupsUsed': 'security_groups',
-            'totalServerGroupsUsed': 'server_groups',
-        }
+        if api_version_request.is_supported(
+                req, min_version=MIN_WITHOUT_PROXY_API_SUPPORT_VERSION):
+            quota_map = {
+                'totalRAMUsed': 'ram',
+                'totalCoresUsed': 'cores',
+                'totalInstancesUsed': 'instances',
+                'totalServerGroupsUsed': 'server_groups',
+            }
+        else:
+            quota_map = {
+                'totalRAMUsed': 'ram',
+                'totalCoresUsed': 'cores',
+                'totalInstancesUsed': 'instances',
+                'totalFloatingIpsUsed': 'floating_ips',
+                'totalSecurityGroupsUsed': 'security_groups',
+                'totalServerGroupsUsed': 'server_groups',
+            }
+
         used_limits = {}
         for display_name, key in six.iteritems(quota_map):
             if key in quotas:
@@ -65,7 +78,7 @@ class UsedLimitsController(wsgi.Controller):
                 'project_id': tenant_id,
                 'user_id': context.user_id
                 }
-            authorize(context, target=target)
+            context.can(ul_policies.BASE_POLICY_NAME, target)
             return tenant_id
         return context.project_id
 

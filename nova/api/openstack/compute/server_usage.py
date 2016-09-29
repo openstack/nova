@@ -14,10 +14,10 @@
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.policies import server_usage as su_policies
 
 
 ALIAS = "os-server-usage"
-authorize = extensions.os_compute_soft_authorizer(ALIAS)
 
 resp_topic = "OS-SRV-USG"
 
@@ -37,7 +37,7 @@ class ServerUsageController(wsgi.Controller):
     @wsgi.extends
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
-        if authorize(context):
+        if context.can(su_policies.BASE_POLICY_NAME, fatal=False):
             server = resp_obj.obj['server']
             db_instance = req.get_db_instance(server['id'])
             # server['id'] is guaranteed to be in the cache due to
@@ -47,7 +47,7 @@ class ServerUsageController(wsgi.Controller):
     @wsgi.extends
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
-        if authorize(context):
+        if context.can(su_policies.BASE_POLICY_NAME, fatal=False):
             servers = list(resp_obj.obj['servers'])
             for server in servers:
                 db_instance = req.get_db_instance(server['id'])

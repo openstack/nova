@@ -40,6 +40,6 @@ def main():
 
     server = service.Service.create(binary='nova-cells',
                                     topic=CONF.cells.topic,
-                                    manager=CONF.cells.manager)
+                                    manager='nova.cells.manager.CellsManager')
     service.serve(server)
     service.wait()

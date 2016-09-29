@@ -1,35 +1,59 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
 
-=======================================
- Project networks (os-tenant-networks)
-=======================================
+===================================================
+ Project networks (os-tenant-networks) (DEPRECATED)
+===================================================
+
+.. warning::
+
+   These APIs are proxy calls to the Network service. Nova has
+   deprecated all the proxy APIs and users should use the native APIs
+   instead. These will fail with a 404 after microversion 2.35.
+   See: `Relevant Network APIs
+   <http://developer.openstack.org/api-ref-networking-v2-ext.html>`__.
 
 Creates, lists, shows information for, and deletes project networks.
+
+List Project Networks
+=====================
+
+.. rest_method:: GET /os-tenant-networks
+
+Lists all project networks.
+
+Policy defaults enable only users with the administrative role or
+the owner of the network to perform this operation. Cloud providers
+can change these permissions through the ``policy.json`` file.
+
+Normal response codes: 200
+
+Error response codes: unauthorized(401), forbidden(403)
+
+Response
+--------
+
+**Example List Project Networks: JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-tenant-networks/networks-list-res.json
+   :language: javascript
 
 Create Project Network
 ======================
 
-.. rest_method:: POST /v2.1/{tenant_id}/os-tenant-networks
+.. rest_method:: POST /os-tenant-networks
 
 Creates a project network.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role to
+perform this operation. Cloud providers can change these permissions
+through the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), conflict(409), serviceUnavailable(503)
 
 **Example Create Project Network: JSON request**
 
@@ -44,55 +68,27 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-tenant-networks/networks-post-res.json
    :language: javascript
 
-List Project Networks
-=====================
-
-.. rest_method:: GET /v2.1/{tenant_id}/os-tenant-networks
-
-Lists all project networks.
-
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-
-Response
---------
-
-**Example List Project Networks: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/os-tenant-networks/networks-list-res.json
-   :language: javascript
-
 Show Project Network Details
 ============================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-tenant-networks/{network_id}
+.. rest_method:: GET /os-tenant-networks/{network_id}
 
 Shows details for a project network.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or
+the owner of the network to perform this operation. Cloud providers
+can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - network_id: network_id
 
 Response
@@ -106,24 +102,26 @@ Response
 Delete Project Network
 ======================
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/os-tenant-networks/{network_id}
+.. rest_method:: DELETE /os-tenant-networks/{network_id}
 
 Deletes a project network.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or
+the owner of the network to perform this operation. Cloud providers
+can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), conflict(409)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - network_id: network_id
 
 Response
 --------
+
+There is no body content for the response of a successful DELETE query.

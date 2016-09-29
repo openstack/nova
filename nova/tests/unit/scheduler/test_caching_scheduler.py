@@ -138,6 +138,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
         host_state.free_ram_mb = 50000
         host_state.total_usable_ram_mb = 50000
         host_state.free_disk_mb = 4096
+        host_state.total_usable_disk_gb = 4
         host_state.service = {
             "disabled": False,
             "updated_at": timeutils.utcnow(),
@@ -201,7 +202,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         # This has proved to be around 1 ms on a random dev box
         # But this is here so you can do simply performance testing easily.
-        self.assertTrue(per_request_ms < 1000)
+        self.assertLess(per_request_ms, 1000)
 
 
 if __name__ == '__main__':

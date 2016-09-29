@@ -12,24 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 from nova.tests.functional.api_sample_tests import test_servers
-
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class SuspendServerSamplesJsonTest(test_servers.ServersSampleBase):
-    extension_name = "os-suspend-server"
-
-    def _get_flags(self):
-        f = super(SuspendServerSamplesJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.admin_actions.Admin_actions')
-        return f
+    sample_dir = "os-suspend-server"
 
     def setUp(self):
         """setUp Method for SuspendServer api samples extension

@@ -1,34 +1,44 @@
 .. -*- rst -*-
-.. needs:method_verification
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
-Trigger Crash Dump In Server (Trigger_Crash_Dump Action)
-========================================================
+Trigger Crash Dump In Server
+============================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
+
+.. versionadded:: 2.17
 
 Trigger a crash dump in a server.
 
-Specify the ``trigger_crash_dump`` action in the request body.
+When a server starts behaving oddly at a fundamental level, it maybe
+be useful to get a kernel level crash dump to debug further. The crash
+dump action forces a crash dump followed by a system reboot of the
+server. Once the server comes back online, you can find a Kernel Crash
+Dump file in a certain location of the filesystem. For example, for
+Ubuntu you can find it in the ``/var/crash`` directory.
 
-When a crash dump is triggered for a virtual server, it causes a system reboot. This action can cause data loss. Also, network connectivity can be lost. Once the server comes back online, you can find a Kernel Crash Dump file in a certain location of the filesystem. For example, for Ubuntu you can find it in the ``/var/crash`` directory.
+.. warning::
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+   This action can cause data loss. Also, network connectivity can be
+   lost both during and after this operation.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401),
+forbidden(403), itemNotFound(404), conflict(409)
+
+* 400 is returned if the server does not support a crash dump (either
+  by configuration or because the backend does not support it)
+* 409 is returned if the server is not in a state where a crash dump
+  action is allowed.
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
+  - trigger_crash_dump: trigger_crash_dump
 
 **Example Trigger crash dump: JSON request**
 
@@ -37,3 +47,5 @@ Request
 
 Response
 --------
+
+No body is returned on a successful submission.

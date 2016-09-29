@@ -16,6 +16,8 @@ import netaddr
 import six
 import webob.exc
 
+from nova.api.openstack.api_version_request \
+    import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack.compute.schemas import floating_ips_bulk
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -24,30 +26,31 @@ import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.policies import floating_ips_bulk as fib_policies
 
 CONF = nova.conf.CONF
-CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
 
 
 ALIAS = 'os-floating-ips-bulk'
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class FloatingIPBulkController(wsgi.Controller):
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(404)
     def index(self, req):
         """Return a list of all floating IPs."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fib_policies.BASE_POLICY_NAME)
 
         return self._get_floating_ip_info(context)
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(404)
     def show(self, req, id):
         """Return a list of all floating IPs for a given host."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fib_policies.BASE_POLICY_NAME)
 
         return self._get_floating_ip_info(context, id)
 
@@ -83,12 +86,13 @@ class FloatingIPBulkController(wsgi.Controller):
 
         return floating_ip_info
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((400, 409))
     @validation.schema(floating_ips_bulk.create)
     def create(self, req, body):
         """Bulk create floating IPs."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fib_policies.BASE_POLICY_NAME)
 
         params = body['floating_ips_bulk_create']
         ip_range = params['ip_range']
@@ -111,12 +115,13 @@ class FloatingIPBulkController(wsgi.Controller):
                                                "pool": pool,
                                                "interface": interface}}
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((400, 404))
     @validation.schema(floating_ips_bulk.delete)
     def update(self, req, id, body):
         """Bulk delete floating IPs."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fib_policies.BASE_POLICY_NAME)
 
         if id != "delete":
             msg = _("Unknown action")

@@ -17,14 +17,23 @@ import datetime
 import time
 import zlib
 
+import mock
 from oslo_log import log as logging
 from oslo_utils import timeutils
 
+from nova.compute import api as compute_api
+from nova.compute import rpcapi
 from nova import context
 from nova import exception
+from nova import objects
+from nova.objects import block_device as block_device_obj
+from nova import test
 from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
+from nova.tests.unit.api.openstack import fakes
+from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_network
+from nova import volume
 
 
 LOG = logging.getLogger(__name__)
@@ -42,6 +51,10 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
 
     def setUp(self):
         super(ServersTestBase, self).setUp()
+        # The network service is called as part of server creates but no
+        # networks have been populated in the db, so stub the methods.
+        # The networks aren't relevant to what is being tested.
+        fake_network.set_stub_network_methods(self)
         self.conductor = self.start_service(
             'conductor', manager='nova.conductor.manager.ConductorManager')
 
@@ -99,7 +112,6 @@ class ServersTest(ServersTestBase):
 
     def test_create_server_with_error(self):
         # Create a server which will enter error state.
-        fake_network.set_stub_network_methods(self)
 
         def throw_error(*args, **kwargs):
             raise exception.BuildAbortException(reason='',
@@ -121,7 +133,6 @@ class ServersTest(ServersTestBase):
 
     def test_create_and_delete_server(self):
         # Creates and deletes a server.
-        fake_network.set_stub_network_methods(self)
 
         # Create server
         # Build the server data gradually, checking errors along the way
@@ -198,7 +209,6 @@ class ServersTest(ServersTestBase):
     def test_deferred_delete(self):
         # Creates, deletes and waits for server to be reclaimed.
         self.flags(reclaim_instance_interval=1)
-        fake_network.set_stub_network_methods(self)
 
         # Create server
         server = self._build_minimal_create_server_request()
@@ -234,7 +244,6 @@ class ServersTest(ServersTestBase):
     def test_deferred_delete_restore(self):
         # Creates, deletes and restores a server.
         self.flags(reclaim_instance_interval=3600)
-        fake_network.set_stub_network_methods(self)
 
         # Create server
         server = self._build_minimal_create_server_request()
@@ -267,7 +276,6 @@ class ServersTest(ServersTestBase):
     def test_deferred_delete_force(self):
         # Creates, deletes and force deletes a server.
         self.flags(reclaim_instance_interval=3600)
-        fake_network.set_stub_network_methods(self)
 
         # Create server
         server = self._build_minimal_create_server_request()
@@ -299,7 +307,6 @@ class ServersTest(ServersTestBase):
 
     def test_create_server_with_metadata(self):
         # Creates a server with metadata.
-        fake_network.set_stub_network_methods(self)
 
         # Build the server data gradually, checking errors along the way
         server = self._build_minimal_create_server_request()
@@ -341,7 +348,6 @@ class ServersTest(ServersTestBase):
 
     def test_create_and_rebuild_server(self):
         # Rebuild a server with metadata.
-        fake_network.set_stub_network_methods(self)
 
         # create a server with initially has no metadata
         server = self._build_minimal_create_server_request()
@@ -407,7 +413,6 @@ class ServersTest(ServersTestBase):
 
     def test_rename_server(self):
         # Test building and renaming a server.
-        fake_network.set_stub_network_methods(self)
 
         # Create a server
         server = self._build_minimal_create_server_request()
@@ -464,7 +469,6 @@ class ServersTest(ServersTestBase):
 
     def test_create_server_with_injected_files(self):
         # Creates a server with injected_files.
-        fake_network.set_stub_network_methods(self)
         personality = []
 
         # Inject a text file
@@ -609,8 +613,6 @@ class ServersTestV219(ServersTestBase):
         self.assertEqual(400, cm.exception.response.status_code)
 
     def test_create_server_with_description(self):
-        fake_network.set_stub_network_methods(self)
-
         self.api.microversion = '2.19'
         # Create and get a server with a description
         self._create_server_and_verify(True, 'test description')
@@ -622,8 +624,6 @@ class ServersTestV219(ServersTestBase):
         self._create_server_and_verify(False)
 
     def test_update_server_with_description(self):
-        fake_network.set_stub_network_methods(self)
-
         self.api.microversion = '2.19'
         # Create a server with an initial description
         server_id = self._create_server(True, 'test desc 1')[1]['id']
@@ -643,8 +643,6 @@ class ServersTestV219(ServersTestBase):
         self._delete_server(server_id)
 
     def test_rebuild_server_with_description(self):
-        fake_network.set_stub_network_methods(self)
-
         self.api.microversion = '2.19'
 
         # Create a server with an initial description
@@ -667,8 +665,6 @@ class ServersTestV219(ServersTestBase):
         self._delete_server(server_id)
 
     def test_version_compatibility(self):
-        fake_network.set_stub_network_methods(self)
-
         # Create a server with microversion v2.19 and a description.
         self.api.microversion = '2.19'
         server_id = self._create_server(True, 'test desc 1')[1]['id']
@@ -701,8 +697,6 @@ class ServersTestV219(ServersTestBase):
         self._create_assertRaisesRegex('test create 2.18')
 
     def test_description_errors(self):
-        fake_network.set_stub_network_methods(self)
-
         self.api.microversion = '2.19'
         # Create servers with invalid descriptions.  These throw 400.
         # Invalid unicode with non-printable control char
@@ -719,3 +713,113 @@ class ServersTestV219(ServersTestBase):
         # Description is longer than 255 chars
         self._update_assertRaisesRegex(server_id, 'x' * 256)
         self._rebuild_assertRaisesRegex(server_id, 'x' * 256)
+
+
+class ServerTestV220(ServersTestBase):
+    api_major_version = 'v2.1'
+
+    def setUp(self):
+        super(ServerTestV220, self).setUp()
+        self.api.microversion = '2.20'
+        fake_network.set_stub_network_methods(self)
+        self.ctxt = context.get_admin_context()
+
+    def _create_server(self):
+        server = self._build_minimal_create_server_request()
+        post = {'server': server}
+        response = self.api.api_post('/servers', post).body
+        return (server, response['server'])
+
+    def _shelve_server(self):
+        server = self._create_server()[1]
+        server_id = server['id']
+        self._wait_for_state_change(server, 'BUILD')
+        self.api.post_server_action(server_id, {'shelve': None})
+        return self._wait_for_state_change(server, 'ACTIVE')
+
+    def _get_fake_bdms(self, ctxt):
+        return block_device_obj.block_device_make_list(self.ctxt,
+                    [fake_block_device.FakeDbBlockDeviceDict(
+                    {'device_name': '/dev/vda',
+                     'source_type': 'volume',
+                     'destination_type': 'volume',
+                     'volume_id': '5d721593-f033-4f6d-ab6f-b5b067e61bc4'})])
+
+    def test_attach_detach_vol_to_shelved_server(self):
+        self.flags(shelved_offload_time=-1)
+        found_server = self._shelve_server()
+        self.assertEqual('SHELVED', found_server['status'])
+        server_id = found_server['id']
+
+        # Test attach volume
+        with test.nested(mock.patch.object(compute_api.API,
+                                       '_check_attach_and_reserve_volume'),
+                         mock.patch.object(rpcapi.ComputeAPI,
+                                       'attach_volume')) as (mock_reserve,
+                                                             mock_attach):
+            volume_attachment = {"volumeAttachment": {"volumeId":
+                                       "5d721593-f033-4f6d-ab6f-b5b067e61bc4"}}
+            self.api.api_post(
+                            '/servers/%s/os-volume_attachments' % (server_id),
+                            volume_attachment)
+            self.assertTrue(mock_reserve.called)
+            self.assertTrue(mock_attach.called)
+
+        # Test detach volume
+        self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
+        with test.nested(mock.patch.object(compute_api.API,
+                                           '_check_and_begin_detach'),
+                         mock.patch.object(objects.BlockDeviceMappingList,
+                                           'get_by_instance_uuid'),
+                         mock.patch.object(rpcapi.ComputeAPI,
+                                           'detach_volume')
+                         ) as (mock_check, mock_get_bdms, mock_rpc):
+
+            mock_get_bdms.return_value = self._get_fake_bdms(self.ctxt)
+            attachment_id = mock_get_bdms.return_value[0]['volume_id']
+
+            self.api.api_delete('/servers/%s/os-volume_attachments/%s' %
+                            (server_id, attachment_id))
+            self.assertTrue(mock_check.called)
+            self.assertTrue(mock_rpc.called)
+
+        self._delete_server(server_id)
+
+    def test_attach_detach_vol_to_shelved_offloaded_server(self):
+        self.flags(shelved_offload_time=0)
+        found_server = self._shelve_server()
+        self.assertEqual('SHELVED_OFFLOADED', found_server['status'])
+        server_id = found_server['id']
+
+        # Test attach volume
+        with test.nested(mock.patch.object(compute_api.API,
+                                       '_check_attach_and_reserve_volume'),
+                         mock.patch.object(volume.cinder.API,
+                                       'attach')) as (mock_reserve, mock_vol):
+            volume_attachment = {"volumeAttachment": {"volumeId":
+                                       "5d721593-f033-4f6d-ab6f-b5b067e61bc4"}}
+            attach_response = self.api.api_post(
+                             '/servers/%s/os-volume_attachments' % (server_id),
+                             volume_attachment).body['volumeAttachment']
+            self.assertTrue(mock_reserve.called)
+            self.assertTrue(mock_vol.called)
+            self.assertIsNone(attach_response['device'])
+
+        # Test detach volume
+        self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
+        with test.nested(mock.patch.object(compute_api.API,
+                                           '_check_and_begin_detach'),
+                         mock.patch.object(objects.BlockDeviceMappingList,
+                                           'get_by_instance_uuid'),
+                         mock.patch.object(compute_api.API,
+                                           '_local_cleanup_bdm_volumes')
+                         ) as (mock_check, mock_get_bdms, mock_clean_vols):
+
+            mock_get_bdms.return_value = self._get_fake_bdms(self.ctxt)
+            attachment_id = mock_get_bdms.return_value[0]['volume_id']
+            self.api.api_delete('/servers/%s/os-volume_attachments/%s' %
+                            (server_id, attachment_id))
+            self.assertTrue(mock_check.called)
+            self.assertTrue(mock_clean_vols.called)
+
+        self._delete_server(server_id)

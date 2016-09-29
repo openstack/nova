@@ -28,65 +28,21 @@ from cinderclient import exceptions as cinder_exception
 from cinderclient.v1 import client as v1_client
 from keystoneauth1 import exceptions as keystone_exception
 from keystoneauth1 import loading as ks_loading
-from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import strutils
 import six
 
 from nova import availability_zones as az
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LW
 
-cinder_opts = [
-    cfg.StrOpt('catalog_info',
-            default='volumev2:cinderv2:publicURL',
-            help='Info to match when looking for cinder in the service '
-                 'catalog. Format is: separated values of the form: '
-                 '<service_type>:<service_name>:<endpoint_type>'),
-    cfg.StrOpt('endpoint_template',
-               help='Override service catalog lookup with template for cinder '
-                    'endpoint e.g. http://localhost:8776/v1/%(project_id)s'),
-    cfg.StrOpt('os_region_name',
-               help='Region name of this node'),
-    cfg.IntOpt('http_retries',
-               default=3,
-               help='Number of cinderclient retries on failed http calls'),
-    cfg.BoolOpt('cross_az_attach',
-                default=True,
-                help='Allow attach between instance and volume in different '
-                     'availability zones. If False, volumes attached to an '
-                     'instance must be in the same availability zone in '
-                     'Cinder as the instance availability zone in Nova. '
-                     'This also means care should be taken when booting an '
-                     'instance from a volume where source is not "volume" '
-                     'because Nova will attempt to create a volume using '
-                     'the same availability zone as what is assigned to the '
-                     'instance. If that AZ is not in Cinder (or '
-                     'allow_availability_zone_fallback=False in cinder.conf), '
-                     'the volume create request will fail and the instance '
-                     'will fail the build request.'),
-]
 
-CONF = cfg.CONF
-CINDER_OPT_GROUP = 'cinder'
-
-# cinder_opts options in the DEFAULT group were deprecated in Juno
-CONF.register_opts(cinder_opts, group=CINDER_OPT_GROUP)
-
-
-deprecated = {'timeout': [cfg.DeprecatedOpt('http_timeout',
-                                            group=CINDER_OPT_GROUP)],
-              'cafile': [cfg.DeprecatedOpt('ca_certificates_file',
-                                           group=CINDER_OPT_GROUP)],
-              'insecure': [cfg.DeprecatedOpt('api_insecure',
-                                             group=CINDER_OPT_GROUP)]}
-
-ks_loading.register_session_conf_options(CONF,
-                                         CINDER_OPT_GROUP,
-                                         deprecated_opts=deprecated)
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
@@ -106,8 +62,8 @@ def cinderclient(context):
     global _V1_ERROR_RAISED
 
     if not _SESSION:
-        _SESSION = ks_loading.load_session_from_conf_options(CONF,
-                                                             CINDER_OPT_GROUP)
+        _SESSION = ks_loading.load_session_from_conf_options(
+            CONF, nova.conf.cinder.cinder_group.name)
 
     url = None
     endpoint_override = None
@@ -231,18 +187,17 @@ def translate_cinder_exception(method):
         try:
             res = method(self, ctx, *args, **kwargs)
         except (cinder_exception.ConnectionError,
-                keystone_exception.ConnectionError):
-            exc_type, exc_value, exc_trace = sys.exc_info()
-            _reraise(exception.CinderConnectionFailed(
-                reason=six.text_type(exc_value)))
+                keystone_exception.ConnectionError) as exc:
+            err_msg = encodeutils.exception_to_unicode(exc)
+            _reraise(exception.CinderConnectionFailed(reason=err_msg))
         except (keystone_exception.BadRequest,
-                cinder_exception.BadRequest):
-            exc_type, exc_value, exc_trace = sys.exc_info()
-            _reraise(exception.InvalidInput(reason=six.text_type(exc_value)))
+                cinder_exception.BadRequest) as exc:
+            err_msg = encodeutils.exception_to_unicode(exc)
+            _reraise(exception.InvalidInput(reason=err_msg))
         except (keystone_exception.Forbidden,
-                cinder_exception.Forbidden):
-            exc_type, exc_value, exc_trace = sys.exc_info()
-            _reraise(exception.Forbidden(six.text_type(exc_value)))
+                cinder_exception.Forbidden) as exc:
+            err_msg = encodeutils.exception_to_unicode(exc)
+            _reraise(exception.Forbidden(err_msg))
         return res
     return wrapper
 
@@ -288,9 +243,7 @@ def translate_mixed_exceptions(method):
 
 
 def _reraise(desired_exc):
-    exc_type, exc_value, exc_trace = sys.exc_info()
-    exc_value = desired_exc
-    six.reraise(exc_value, None, exc_trace)
+    six.reraise(type(desired_exc), desired_exc, sys.exc_info()[2])
 
 
 class API(object):
@@ -331,6 +284,14 @@ class API(object):
         if volume['attach_status'] == "attached":
             msg = _("volume %s already attached") % volume['id']
             raise exception.InvalidVolume(reason=msg)
+
+        self.check_availability_zone(context, volume, instance)
+
+    def check_availability_zone(self, context, volume, instance=None):
+        """Ensure that the availability zone is the same."""
+
+        # TODO(walter-boring): move this check to Cinder as part of
+        # the reserve call.
         if instance and not CONF.cinder.cross_az_attach:
             instance_az = az.get_instance_availability_zone(context, instance)
             if instance_az != volume['availability_zone']:
@@ -385,6 +346,11 @@ class API(object):
     @translate_volume_exception
     def detach(self, context, volume_id, instance_uuid=None,
                attachment_id=None):
+        client = cinderclient(context)
+        if client.version == '1':
+            client.volumes.detach(volume_id)
+            return
+
         if attachment_id is None:
             volume = self.get(context, volume_id)
             if volume['multiattach']:
@@ -410,7 +376,7 @@ class API(object):
                                     "cannot perform the detach."),
                                 {'volume_id': volume_id})
 
-        cinderclient(context).volumes.detach(volume_id, attachment_id)
+        client.volumes.detach(volume_id, attachment_id)
 
     @translate_volume_exception
     def initialize_connection(self, context, volume_id, connector):

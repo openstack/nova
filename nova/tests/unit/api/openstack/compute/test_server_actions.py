@@ -13,17 +13,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import base64
 import uuid
 
 import mock
 from mox3 import mox
-from oslo_policy import policy as oslo_policy
 from oslo_utils import uuidutils
 import webob
 
 from nova.api.openstack.compute import extension_info
-from nova.api.openstack.compute.legacy_v2 import servers as servers_v2
 from nova.api.openstack.compute import servers as servers_v21
 from nova.compute import api as compute_api
 from nova.compute import task_states
@@ -32,7 +29,6 @@ import nova.conf
 from nova import exception
 from nova.image import glance
 from nova import objects
-from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
@@ -116,19 +112,21 @@ class ServerActionsControllerTestV21(test.TestCase):
             compute_api.API.rebuild(context, mox.IgnoreArg(), image_ref,
                                     mox.IgnoreArg())
 
-    def _stub_instance_get(self, uuid=None):
+    def _stub_instance_get(self, context, uuid=None):
         self.mox.StubOutWithMock(compute_api.API, 'get')
         if uuid is None:
             uuid = uuidutils.generate_uuid()
         instance = fake_instance.fake_db_instance(
-            id=1, uuid=uuid, vm_state=vm_states.ACTIVE, task_state=None)
+            id=1, uuid=uuid, vm_state=vm_states.ACTIVE, task_state=None,
+            project_id=context.project_id,
+            user_id=context.user_id)
         instance = objects.Instance._from_db_object(
             self.context, objects.Instance(), instance)
 
         self.compute_api.get(self.context, uuid,
                              expected_attrs=['flavor', 'pci_devices',
-                                             'numa_topology'],
-                             want_objects=True).AndReturn(instance)
+                                             'numa_topology']
+                             ).AndReturn(instance)
         return instance
 
     def _test_locked_instance(self, action, method=None, body_map=None,
@@ -138,7 +136,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         if compute_api_args_map is None:
             compute_api_args_map = {}
 
-        instance = self._stub_instance_get()
+        instance = self._stub_instance_get(self.req.environ['nova.context'])
         args, kwargs = compute_api_args_map.get(action, ((), {}))
 
         getattr(compute_api.API, method)(self.context, instance,
@@ -179,10 +177,6 @@ class ServerActionsControllerTestV21(test.TestCase):
                     '_action_reboot': (('HARD',), {}),
                     '_action_rebuild': ((self.image_uuid,
                                          'TNc53Dr8s7vw'), {})}
-
-        if self.servers == servers_v2:
-            args_map['_action_rebuild'] = ((self.image_uuid, 'TNc53Dr8s7vw'),
-                                           {'files_to_inject': None})
 
         for action in actions:
             method = method_translations.get(action)
@@ -323,7 +317,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.assertEqual(len(body['server']['adminPass']),
                          CONF.password_length)
 
-        self.assertEqual(robj['location'], self_href)
+        self.assertEqual(robj['location'], self_href.encode('utf-8'))
 
     def test_rebuild_instance_with_image_uuid(self):
         info = dict(image_href_in_call=None)
@@ -346,15 +340,6 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.assertEqual(info['image_href_in_call'], self.image_uuid)
 
     def test_rebuild_instance_with_image_href_uses_uuid(self):
-        info = dict(image_href_in_call=None)
-
-        def rebuild(self2, context, instance, image_href, *args, **kwargs):
-            info['image_href_in_call'] = image_href
-
-        self.stub_out('nova.db.instance_get',
-                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
-        self.stubs.Set(compute_api.API, 'rebuild', rebuild)
-
         # proper local hrefs must start with 'http://localhost/v2/'
         body = {
             'rebuild': {
@@ -362,8 +347,9 @@ class ServerActionsControllerTestV21(test.TestCase):
             },
         }
 
-        self.controller._action_rebuild(self.req, FAKE_UUID, body=body)
-        self.assertEqual(info['image_href_in_call'], self.image_uuid)
+        self.assertRaises(exception.ValidationError,
+                          self.controller._action_rebuild,
+                          self.req, FAKE_UUID, body=body)
 
     def test_rebuild_accepted_minimum_pass_disabled(self):
         # run with enable_instance_password disabled to verify adminPass
@@ -387,7 +373,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.assertEqual(body['server']['image']['id'], '2')
         self.assertNotIn("adminPass", body['server'])
 
-        self.assertEqual(robj['location'], self_href)
+        self.assertEqual(robj['location'], self_href.encode('utf-8'))
 
     def test_rebuild_raises_conflict_on_invalid_state(self):
         body = {
@@ -525,7 +511,7 @@ class ServerActionsControllerTestV21(test.TestCase):
                 "imageRef": "foo",
             },
         }
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.controller._action_rebuild,
                           self.req, FAKE_UUID, body=body)
 
@@ -804,6 +790,16 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         body = dict(resize=dict(flavorRef="http://localhost/3"))
 
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._action_resize,
+                          self.req, FAKE_UUID, body=body)
+
+    @mock.patch('nova.compute.api.API.resize',
+                side_effect=exception.PciRequestAliasNotDefined(
+                    alias='fake_name'))
+    def test_resize_pci_alias_not_defined(self, mock_resize):
+        # Tests that PciRequestAliasNotDefined is translated to a 400 error.
+        body = dict(resize=dict(flavorRef="http://localhost/3"))
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_resize,
                           self.req, FAKE_UUID, body=body)
@@ -1194,168 +1190,3 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller._action_create_image,
                           self.req, FAKE_UUID, body=body)
-
-
-class ServerActionsControllerTestV2(ServerActionsControllerTestV21):
-    image_base_url = 'http://localhost/v2/fake/images/'
-    servers = servers_v2
-    validation_error = webob.exc.HTTPBadRequest
-    request_too_large_error = webob.exc.HTTPRequestEntityTooLarge
-    image_url = 'http://localhost/v2/fake/images/'
-
-    def _get_controller(self):
-        class FakeExtManager(object):
-            def is_loaded(self, ext):
-                return False
-
-        return self.servers.Controller(ext_mgr=FakeExtManager())
-
-    def _set_fake_extension(self):
-        def fake_is_loaded(ext):
-            return ext == 'os-preserve-ephemeral-rebuild'
-        self.stubs.Set(self.controller.ext_mgr, 'is_loaded', fake_is_loaded)
-
-    def _rebuild(self, context, image_ref, value=None):
-        if value is not None:
-            compute_api.API.rebuild(context, mox.IgnoreArg(), image_ref,
-                                    mox.IgnoreArg(), preserve_ephemeral=value,
-                                    files_to_inject=None)
-        else:
-            compute_api.API.rebuild(context, mox.IgnoreArg(), image_ref,
-                                    mox.IgnoreArg(), files_to_inject=None)
-
-    def _stub_instance_get(self, uuid=None):
-        self.mox.StubOutWithMock(compute_api.API, 'get')
-        if uuid is None:
-            uuid = uuidutils.generate_uuid()
-        instance = fake_instance.fake_db_instance(
-            id=1, uuid=uuid, vm_state=vm_states.ACTIVE, task_state=None)
-        instance = objects.Instance._from_db_object(
-            self.context, objects.Instance(), instance)
-
-        self.compute_api.get(self.context, uuid,
-                             expected_attrs=['flavor'],
-                             want_objects=True).AndReturn(instance)
-        return instance
-
-    def test_rebuild_bad_personality(self):
-        body = {
-            "rebuild": {
-                "imageRef": self._image_href,
-                "personality": [{
-                    "path": "/path/to/file",
-                    "contents": "INVALID b64",
-                }]
-            },
-        }
-
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller._action_rebuild,
-                          self.req, FAKE_UUID, body=body)
-
-    def test_rebuild_personality(self):
-        body = {
-            "rebuild": {
-                "imageRef": self._image_href,
-                "personality": [{
-                    "path": "/path/to/file",
-                    "contents": base64.b64encode("Test String"),
-                }]
-            },
-        }
-
-        body = self.controller._action_rebuild(self.req, FAKE_UUID,
-                                               body=body).obj
-
-        self.assertNotIn('personality', body['server'])
-
-    def test_resize_server_with_extra_arg(self):
-        # NOTE: v2.0 API cannot cover this case, skip this.
-        pass
-
-    def test_resize_server_invalid_flavor_ref(self):
-        # NOTE: v2.0 API cannot cover this case, skip this.
-        pass
-
-    def test_create_image_glance_link_prefix(self):
-        self.flags(osapi_glance_link_prefix='https://glancehost')
-        body = {
-            'createImage': {
-                'name': 'Snapshot 1',
-            },
-        }
-
-        response = self.controller._action_create_image(self.req, FAKE_UUID,
-                                                        body=body)
-
-        location = response.headers['Location']
-        self.assertEqual('https://glancehost/v2/fake/images/123', location)
-
-    def test_rebuild_preserve_ephemeral_is_ignored_when_ext_not_loaded(self):
-        return_server = fakes.fake_instance_get(image_ref='2',
-                                                vm_state=vm_states.ACTIVE,
-                                                host='fake_host')
-        self.stub_out('nova.db.instance_get_by_uuid', return_server)
-
-        body = {
-            "rebuild": {
-                "imageRef": self._image_href,
-                "preserve_ephemeral": False,
-            },
-        }
-
-        self.mox.StubOutWithMock(compute_api.API, 'rebuild')
-        compute_api.API.rebuild(self.context, mox.IgnoreArg(),
-                                self._image_href,
-                                mox.IgnoreArg(), files_to_inject=None)
-        self.mox.ReplayAll()
-
-        self.controller._action_rebuild(self.req, FAKE_UUID, body)
-
-    def test_create_vol_backed_img_snapshotting_policy_blocks_project(self):
-        """Don't permit a snapshot of a volume backed instance if configured
-        not to based on project
-        """
-        body = {
-            'createImage': {
-                'name': 'Snapshot 1',
-            },
-        }
-        rule_name = "compute:snapshot_volume_backed"
-        rules = {
-                rule_name: "project_id:no_id",
-                "compute:get": ""
-        }
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-        with mock.patch.object(compute_api.API, 'is_volume_backed_instance',
-                               return_value=True):
-            exc = self.assertRaises(exception.PolicyNotAuthorized,
-                              self.controller._action_create_image,
-                              self.req, FAKE_UUID, body=body)
-            self.assertEqual(
-                "Policy doesn't allow %s to be performed." % rule_name,
-                exc.format_message())
-
-    def test_create_vol_backed_img_snapshotting_policy_blocks_role(self):
-        """Don't permit a snapshot of a volume backed instance if configured
-        not to based on role
-        """
-        body = {
-            'createImage': {
-                'name': 'Snapshot 1',
-            },
-        }
-        rule_name = "compute:snapshot_volume_backed"
-        rules = {
-                rule_name: "role:no_role",
-                "compute:get": ""
-        }
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-        with mock.patch.object(compute_api.API, 'is_volume_backed_instance',
-                               return_value=True):
-            exc = self.assertRaises(exception.PolicyNotAuthorized,
-                              self.controller._action_create_image,
-                              self.req, FAKE_UUID, body=body)
-            self.assertEqual(
-                "Policy doesn't allow %s to be performed." % rule_name,
-                exc.format_message())

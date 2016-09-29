@@ -13,16 +13,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 import six
 
-from nova.api.openstack.compute.legacy_v2.contrib import used_limits \
-        as used_limits_v2
+from nova.api.openstack import api_version_request
 from nova.api.openstack.compute import used_limits \
         as used_limits_v21
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 import nova.context
 from nova import exception
+from nova.policies import used_limits as ul_policies
 from nova import quota
 from nova import test
 
@@ -31,6 +31,8 @@ class FakeRequest(object):
     def __init__(self, context, reserved=False):
         self.environ = {'nova.context': context}
         self.reserved = reserved
+
+        self.api_version_request = api_version_request.min_api_version()
         self.GET = {'reserved': 1} if reserved else {}
 
 
@@ -47,8 +49,9 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
     def _set_up_controller(self):
         self.ext_mgr = None
         self.controller = used_limits_v21.UsedLimitsController()
-        self.mox.StubOutWithMock(used_limits_v21, 'authorize')
-        self.authorize = used_limits_v21.authorize
+        patcher = self.mock_can = mock.patch('nova.context.RequestContext.can')
+        self.mock_can = patcher.start()
+        self.addCleanup(patcher.stop)
 
     def _do_test_used_limits(self, reserved):
         fake_req = FakeRequest(self.fake_context, reserved=reserved)
@@ -123,13 +126,14 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
             self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(True)
             self.ext_mgr.is_loaded('os-server-group-quotas').AndReturn(
                 self.include_server_group_quotas)
-        self.authorize(self.fake_context, target=target)
         self.mox.StubOutWithMock(quota.QUOTAS, 'get_project_quotas')
-        quota.QUOTAS.get_project_quotas(self.fake_context, '%s' % tenant_id,
+        quota.QUOTAS.get_project_quotas(self.fake_context, tenant_id,
                                         usages=True).AndReturn({})
         self.mox.ReplayAll()
         res = wsgi.ResponseObject(obj)
         self.controller.index(fake_req, res)
+        self.mock_can.assert_called_once_with(ul_policies.BASE_POLICY_NAME,
+                                              target)
 
     def test_admin_can_fetch_used_limits_for_own_project(self):
         project_id = "123456"
@@ -148,9 +152,8 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
             self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(True)
             self.ext_mgr.is_loaded('os-server-group-quotas').AndReturn(
                 self.include_server_group_quotas)
-        self.mox.StubOutWithMock(extensions, 'extension_authorizer')
         self.mox.StubOutWithMock(quota.QUOTAS, 'get_project_quotas')
-        quota.QUOTAS.get_project_quotas(self.fake_context, '%s' % project_id,
+        quota.QUOTAS.get_project_quotas(self.fake_context, project_id,
                                         usages=True).AndReturn({})
         self.mox.ReplayAll()
         res = wsgi.ResponseObject(obj)
@@ -176,13 +179,14 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
         fake_req.GET = {'tenant_id': tenant_id}
         if self.ext_mgr is not None:
             self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(True)
-        self.authorize(self.fake_context, target=target). \
-            AndRaise(exception.PolicyNotAuthorized(
-            action=self.used_limit_extension))
+        self.mock_can.side_effect = exception.PolicyNotAuthorized(
+            action=self.used_limit_extension)
         self.mox.ReplayAll()
         res = wsgi.ResponseObject(obj)
         self.assertRaises(exception.PolicyNotAuthorized, self.controller.index,
                           fake_req, res)
+        self.mock_can.assert_called_once_with(ul_policies.BASE_POLICY_NAME,
+                                              target)
 
     def test_used_limits_fetched_for_context_project_id(self):
         project_id = "123456"
@@ -257,18 +261,3 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
         self.controller.index(fake_req, res)
         abs_limits = res.obj['limits']['absolute']
         self.assertNotIn('totalRAMUsed', abs_limits)
-
-
-class UsedLimitsTestCaseV2(UsedLimitsTestCaseV21):
-    used_limit_extension = "compute_extension:used_limits_for_admin"
-
-    def _set_up_controller(self):
-        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
-        self.controller = used_limits_v2.UsedLimitsController(self.ext_mgr)
-        self.mox.StubOutWithMock(used_limits_v2, 'authorize_for_admin')
-        self.authorize = used_limits_v2.authorize_for_admin
-
-
-class UsedLimitsTestCaseV2WithoutServerGroupQuotas(UsedLimitsTestCaseV2):
-    used_limit_extension = "compute_extension:used_limits_for_admin"
-    include_server_group_quotas = False

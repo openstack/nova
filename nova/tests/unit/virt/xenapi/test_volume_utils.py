@@ -342,3 +342,78 @@ class MultipleVolumesTestCase(stubs.XenAPITestBaseNoDB):
         volume_utils.purge_sr(self.session, 'SR')
 
         self.assertEqual([], mock_forget.mock_calls)
+
+
+class TestStreamToVDI(stubs.XenAPITestBaseNoDB):
+
+    @mock.patch.object(volume_utils, '_stream_to_vdi')
+    @mock.patch.object(volume_utils, '_get_vdi_import_path',
+                       return_value='vdi_import_path')
+    def test_creates_task_conn(self, mock_import_path, mock_stream):
+        session = stubs.get_fake_session()
+        session.custom_task = mock.MagicMock()
+        session.custom_task.return_value.__enter__.return_value = 'task'
+        session.http_connection = mock.MagicMock()
+        session.http_connection.return_value.__enter__.return_value = 'conn'
+
+        instance = {'name': 'instance-name'}
+
+        volume_utils.stream_to_vdi(session, instance, 'vhd', 'file_obj', 100,
+                                   'vdi_ref')
+
+        session.custom_task.assert_called_with('VDI_IMPORT_for_instance-name')
+        mock_stream.assert_called_with('conn', 'vdi_import_path', 100,
+                                       'file_obj')
+
+        self.assertTrue(session.http_connection.return_value.__exit__.called)
+        self.assertTrue(session.custom_task.return_value.__exit__.called)
+
+    def test_stream_to_vdi_tiny(self):
+        mock_file = mock.Mock()
+        mock_file.read.side_effect = ['a']
+        mock_conn = mock.Mock()
+        resp = mock.Mock()
+        resp.status = '200'
+        resp.reason = 'OK'
+        mock_conn.getresponse.return_value = resp
+
+        volume_utils._stream_to_vdi(mock_conn, '/path', 1, mock_file)
+        args, kwargs = mock_conn.request.call_args
+        self.assertEqual(kwargs['headers']['Content-Length'], '1')
+        mock_file.read.assert_called_once_with(1)
+        mock_conn.send.assert_called_once_with('a')
+
+    def test_stream_to_vdi_chunk_multiple(self):
+        mock_file = mock.Mock()
+        mock_file.read.side_effect = ['aaaaa', 'bbbbb']
+        mock_conn = mock.Mock()
+        resp = mock.Mock()
+        resp.status = '200'
+        resp.reason = 'OK'
+        mock_conn.getresponse.return_value = resp
+
+        tot_size = 2 * 16 * 1024
+        volume_utils._stream_to_vdi(mock_conn, '/path', tot_size, mock_file)
+        args, kwargs = mock_conn.request.call_args
+        self.assertEqual(kwargs['headers']['Content-Length'], str(tot_size))
+        mock_file.read.assert_has_calls([mock.call(16 * 1024),
+                                         mock.call(16 * 1024)])
+        mock_conn.send.assert_has_calls([mock.call('aaaaa'),
+                                         mock.call('bbbbb')])
+
+    def test_stream_to_vdi_chunk_remaining(self):
+        mock_file = mock.Mock()
+        mock_file.read.side_effect = ['aaaaa', 'bb']
+        mock_conn = mock.Mock()
+        resp = mock.Mock()
+        resp.status = '200'
+        resp.reason = 'OK'
+        mock_conn.getresponse.return_value = resp
+
+        tot_size = 16 * 1024 + 1024
+        volume_utils._stream_to_vdi(mock_conn, '/path', tot_size, mock_file)
+        args, kwargs = mock_conn.request.call_args
+        self.assertEqual(kwargs['headers']['Content-Length'], str(tot_size))
+        mock_file.read.assert_has_calls([mock.call(16 * 1024),
+                                         mock.call(1024)])
+        mock_conn.send.assert_has_calls([mock.call('aaaaa'), mock.call('bb')])

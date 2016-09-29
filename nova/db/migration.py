@@ -21,14 +21,14 @@ from nova.db.sqlalchemy import migration
 IMPL = migration
 
 
-def db_sync(version=None, database='main'):
+def db_sync(version=None, database='main', context=None):
     """Migrate the database to `version` or the most recent version."""
-    return IMPL.db_sync(version=version, database=database)
+    return IMPL.db_sync(version=version, database=database, context=context)
 
 
-def db_version(database='main'):
+def db_version(database='main', context=None):
     """Display the current database version."""
-    return IMPL.db_version(database=database)
+    return IMPL.db_version(database=database, context=context)
 
 
 def db_initial_version(database='main'):

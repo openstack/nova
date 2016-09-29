@@ -13,32 +13,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 from nova.tests.functional.api_sample_tests import api_sample_base
-
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class NetworksAssociateJsonTests(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-networks-associate"
-    extra_extensions_to_load = ["os-networks"]
+    sample_dir = "os-networks-associate"
 
     _sentinel = object()
-
-    def _get_flags(self):
-        f = super(NetworksAssociateJsonTests, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        # Networks_associate requires Networks to be update
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.os_networks.Os_networks')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.networks_associate.'
-            'Networks_associate')
-        return f
 
     def setUp(self):
         super(NetworksAssociateJsonTests, self).setUp()

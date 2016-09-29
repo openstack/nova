@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 from oslo_log import log as logging
 
 import nova.conf
@@ -63,19 +62,6 @@ class FileTransfer(xfer_base.TransferBase):
 
     desc_required_keys = ['id', 'mountpoint']
 
-    # NOTE(jbresnah) because the group under which these options are added is
-    # dyncamically determined these options need to stay out of global space
-    # or they will confuse generate_sample.sh
-    filesystem_opts = [
-         cfg.StrOpt('id',
-                    help=_('A unique ID given to each file system.  This is '
-                           'value is set in Glance and agreed upon here so '
-                           'that the operator knowns they are dealing with '
-                           'the same file system.')),
-         cfg.StrOpt('mountpoint',
-                    help=_('The path at which the file system is mounted.')),
-    ]
-
     def _get_options(self):
         fs_dict = {}
         for fs in CONF.image_file_url.filesystems:
@@ -88,12 +74,6 @@ class FileTransfer(xfer_base.TransferBase):
                     module=str(self), reason=msg)
             fs_dict[CONF[group_name].id] = CONF[group_name]
         return fs_dict
-
-    def __init__(self):
-        # create the needed options
-        for fs in CONF.image_file_url.filesystems:
-            group_name = 'image_file_url:' + fs
-            CONF.register_opts(self.filesystem_opts, group=group_name)
 
     def _verify_config(self):
         for fs_key in self.filesystems:
@@ -117,8 +97,7 @@ class FileTransfer(xfer_base.TransferBase):
                     module=str(self), reason=msg)
         id = metadata['id']
         if id not in self.filesystems:
-            msg = _('The ID %(id)s is unknown.') % {'id': id}
-            LOG.info(msg)
+            LOG.info(_LI('The ID %(id)s is unknown.'), {'id': id})
             return
         fs_descriptor = self.filesystems[id]
         return fs_descriptor

@@ -15,14 +15,13 @@
 #
 import mock
 from neutronclient.common import exceptions as n_exc
+from neutronclient.neutron import v2_0 as neutronv20
 from neutronclient.v2_0 import client
-
 from six.moves import range
 
 from nova import context
 from nova import exception
 from nova.network.security_group import neutron_driver
-from nova.network.security_group import openstack_driver
 from nova import objects
 from nova import test
 from nova.tests import uuidsentinel as uuids
@@ -143,52 +142,32 @@ class TestNeutronDriver(test.NoDBTestCase):
     def test_get_with_name_duplicated(self):
         sg_name = 'web_server'
         expected_sg_id = '85cc3048-abc3-43cc-89b3-377341426ac5'
-        list_security_groups = {'security_groups':
-                                [{'name': sg_name,
-                                  'id': expected_sg_id,
-                                  'tenant_id': self.context.tenant,
-                                  'description': 'server',
-                                  'rules': []}
-                                ]}
-        self.mocked_client.list_security_groups.return_value = (
-            list_security_groups)
         expected_sg = {'security_group': {'name': sg_name,
                                  'id': expected_sg_id,
                                  'tenant_id': self.context.tenant,
                                  'description': 'server', 'rules': []}}
         self.mocked_client.show_security_group.return_value = expected_sg
-        self.mocked_client.EXTED_PLURALS = client.Client.EXTED_PLURALS
 
         sg_api = neutron_driver.SecurityGroupAPI()
-        observed_sg = sg_api.get(self.context, name=sg_name)
+        with mock.patch.object(neutronv20, 'find_resourceid_by_name_or_id',
+                               return_value=expected_sg_id):
+            observed_sg = sg_api.get(self.context, name=sg_name)
         expected_sg['security_group']['project_id'] = self.context.tenant
         del expected_sg['security_group']['tenant_id']
         self.assertEqual(expected_sg['security_group'], observed_sg)
-        self.mocked_client.list_security_groups.assert_called_once_with(
-            name=sg_name, fields='id', tenant_id=self.context.tenant)
         self.mocked_client.show_security_group.assert_called_once_with(
             expected_sg_id)
 
     def test_get_with_invalid_name(self):
         sg_name = 'invalid_name'
         expected_sg_id = '85cc3048-abc3-43cc-89b3-377341426ac5'
-        list_security_groups = {'security_groups':
-                                [{'name': sg_name,
-                                  'id': expected_sg_id,
-                                  'tenant_id': self.context.tenant,
-                                  'description': 'server',
-                                  'rules': []}
-                                ]}
-        self.mocked_client.list_security_groups.return_value = (
-            list_security_groups)
         self.mocked_client.show_security_group.side_effect = TypeError
-        self.mocked_client.EXTED_PLURALS = client.Client.EXTED_PLURALS
 
-        sg_api = neutron_driver.SecurityGroupAPI()
-        self.assertRaises(exception.SecurityGroupNotFound,
-                          sg_api.get, self.context, name=sg_name)
-        self.mocked_client.list_security_groups.assert_called_once_with(
-            name=sg_name, fields='id', tenant_id=self.context.tenant)
+        with mock.patch.object(neutronv20, 'find_resourceid_by_name_or_id',
+                               return_value=expected_sg_id):
+            sg_api = neutron_driver.SecurityGroupAPI()
+            self.assertRaises(exception.SecurityGroupNotFound,
+                              sg_api.get, self.context, name=sg_name)
         self.mocked_client.show_security_group.assert_called_once_with(
             expected_sg_id)
 
@@ -434,19 +413,3 @@ class TestNeutronDriverWithoutMock(test.NoDBTestCase):
         r = sg_api.populate_security_groups('ignore')
         self.assertIsInstance(r, objects.SecurityGroupList)
         self.assertEqual(0, len(r))
-
-
-class TestGetter(test.NoDBTestCase):
-    @mock.patch('nova.network.security_group.openstack_driver.'
-                '_get_openstack_security_group_driver')
-    def test_caches(self, mock_get):
-        getter = openstack_driver.get_openstack_security_group_driver
-        openstack_driver.DRIVER_CACHE = {}
-        getter(False)
-        getter(False)
-        getter(True)
-        getter(False)
-        self.assertEqual(2, len(mock_get.call_args_list))
-        self.assertEqual({True: mock_get.return_value,
-                          False: mock_get.return_value},
-                         openstack_driver.DRIVER_CACHE)

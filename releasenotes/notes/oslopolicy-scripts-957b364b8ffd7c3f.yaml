@@ -1,0 +1,14 @@
+---
+features:
+  - Nova is now configured to work with two oslo.policy CLI scripts that have
+    been added.
+
+    The first of these can be called like
+    "oslopolicy-list-redundant --namespace nova" and will output a list of
+    policy rules in policy.[json|yaml] that match the project defaults. These
+    rules can be removed from the policy file as they have no effect there.
+
+    The second script can be called like
+    "oslopolicy-policy-generator --namespace nova --output-file policy-merged.yaml"
+    and will populate the policy-merged.yaml file with the effective policy.
+    This is the merged results of project defaults and config file overrides.

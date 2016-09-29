@@ -26,7 +26,9 @@ from nova.scheduler import filters
 from nova.scheduler import host_manager
 from nova.scheduler import ironic_host_manager
 from nova import test
+from nova.tests.unit.scheduler import fakes
 from nova.tests.unit.scheduler import ironic_fakes
+from nova.tests import uuidsentinel as uuids
 
 
 class FakeFilterClass1(filters.BaseHostFilter):
@@ -42,7 +44,8 @@ class FakeFilterClass2(filters.BaseHostFilter):
 class IronicHostManagerTestCase(test.NoDBTestCase):
     """Test case for IronicHostManager class."""
 
-    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(ironic_host_manager.IronicHostManager,
+                       '_init_instance_info')
     @mock.patch.object(host_manager.HostManager, '_init_aggregates')
     def setUp(self, mock_init_agg, mock_init_inst):
         super(IronicHostManagerTestCase, self).setUp()
@@ -92,11 +95,73 @@ class IronicHostManagerTestCase(test.NoDBTestCase):
             self.assertEqual(compute_node.free_disk_gb * 1024,
                              host_states_map[state_key].free_disk_mb)
 
+    def test_is_ironic_compute(self):
+        ironic = ironic_fakes.COMPUTE_NODES[0]
+        self.assertTrue(self.host_manager._is_ironic_compute(ironic))
+
+        non_ironic = fakes.COMPUTE_NODES[0]
+        self.assertFalse(self.host_manager._is_ironic_compute(non_ironic))
+
+    @mock.patch.object(host_manager.HostManager, '_get_instance_info')
+    def test_get_instance_info_ironic_compute_return_empty_instance_dict(self,
+            mock_get_instance_info):
+        compute_node = ironic_fakes.COMPUTE_NODES[0]
+
+        rv = self.host_manager._get_instance_info('fake_context', compute_node)
+
+        # for ironic compute nodes we always return an empty dict
+        self.assertEqual({}, rv)
+        # base class implementation is overriden and not called
+        self.assertFalse(mock_get_instance_info.called)
+
+    @mock.patch.object(host_manager.HostManager, '_get_instance_info')
+    def test_get_instance_info_non_ironic_compute_call_super_class(self,
+            mock_get_instance_info):
+        expected_rv = {uuids.fake_instance_uuid: objects.Instance()}
+        mock_get_instance_info.return_value = expected_rv
+        compute_node = fakes.COMPUTE_NODES[0]
+
+        rv = self.host_manager._get_instance_info('fake_context', compute_node)
+
+        # for a non-ironic compute we call the base class implementation
+        mock_get_instance_info.assert_called_once_with('fake_context',
+                                                       compute_node)
+        # we return exactly what the base class implementation returned
+        self.assertIs(expected_rv, rv)
+
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(objects.ComputeNodeList, 'get_all')
+    def test_init_instance_info(self, mock_get_all,
+                                mock_base_init_instance_info):
+        cn1 = objects.ComputeNode(**{'hypervisor_type': 'ironic'})
+        cn2 = objects.ComputeNode(**{'hypervisor_type': 'qemu'})
+        cn3 = objects.ComputeNode(**{'hypervisor_type': 'qemu'})
+        mock_get_all.return_value.objects = [cn1, cn2, cn3]
+
+        self.host_manager._init_instance_info()
+        # ensure we filter out ironic nodes before calling the base class impl
+        mock_base_init_instance_info.assert_called_once_with([cn2, cn3])
+
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(objects.ComputeNodeList, 'get_all')
+    def test_init_instance_info_compute_nodes(self, mock_get_all,
+                                              mock_base_init_instance_info):
+        cn1 = objects.ComputeNode(**{'hypervisor_type': 'ironic'})
+        cn2 = objects.ComputeNode(**{'hypervisor_type': 'qemu'})
+
+        self.host_manager._init_instance_info(compute_nodes=[cn1, cn2])
+
+        # check we don't try to get nodes list if it was passed explicitly
+        self.assertFalse(mock_get_all.called)
+        # ensure we filter out ironic nodes before calling the base class impl
+        mock_base_init_instance_info.assert_called_once_with([cn2])
+
 
 class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
     """Test case for IronicHostManager class."""
 
-    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(ironic_host_manager.IronicHostManager,
+                       '_init_instance_info')
     @mock.patch.object(host_manager.HostManager, '_init_aggregates')
     def setUp(self, mock_init_agg, mock_init_inst):
         super(IronicHostManagerChangedNodesTestCase, self).setUp()
@@ -208,7 +273,7 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
         spec_obj = objects.RequestSpec(
             flavor=objects.Flavor(root_gb=10, ephemeral_gb=0, memory_mb=1024,
                                   vcpus=1),
-            uuid='fake-uuid')
+            uuid=uuids.instance)
         host.consume_from_request(spec_obj)
 
         self.assertEqual(1, host.vcpus_used)
@@ -250,7 +315,8 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
 class IronicHostManagerTestFilters(test.NoDBTestCase):
     """Test filters work for IronicHostManager."""
 
-    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(ironic_host_manager.IronicHostManager,
+                       '_init_instance_info')
     @mock.patch.object(host_manager.HostManager, '_init_aggregates')
     def setUp(self, mock_init_agg, mock_init_inst):
         super(IronicHostManagerTestFilters, self).setUp()
@@ -287,7 +353,8 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
         self.assertEqual(1, len(default_filters))
         self.assertIsInstance(default_filters[0], FakeFilterClass1)
 
-    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(ironic_host_manager.IronicHostManager,
+                       '_init_instance_info')
     @mock.patch.object(host_manager.HostManager, '_init_aggregates')
     def test_host_manager_default_filters_uses_baremetal(self, mock_init_agg,
                                                          mock_init_inst):
@@ -332,7 +399,7 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
 
     def test_get_filtered_hosts(self):
         fake_properties = objects.RequestSpec(
-            instance_uuid='fake-uuid',
+            instance_uuid=uuids.instance,
             ignore_hosts=[],
             force_hosts=[],
             force_nodes=[])
@@ -348,7 +415,7 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
 
     def test_get_filtered_hosts_with_ignore(self):
         fake_properties = objects.RequestSpec(
-            instance_uuid='fake-uuid',
+            instance_uuid=uuids.instance,
             ignore_hosts=['fake_host1', 'fake_host3',
                           'fake_host5', 'fake_multihost'],
             force_hosts=[],
@@ -365,7 +432,7 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
 
     def test_get_filtered_hosts_with_force_hosts(self):
         fake_properties = objects.RequestSpec(
-            instance_uuid='fake-uuid',
+            instance_uuid=uuids.instance,
             ignore_hosts=[],
             force_hosts=['fake_host1', 'fake_host3', 'fake_host5'],
             force_nodes=[])
@@ -381,7 +448,7 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
 
     def test_get_filtered_hosts_with_no_matching_force_hosts(self):
         fake_properties = objects.RequestSpec(
-            instance_uuid='fake-uuid',
+            instance_uuid=uuids.instance,
             ignore_hosts=[],
             force_hosts=['fake_host5', 'fake_host6'],
             force_nodes=[])
@@ -397,7 +464,7 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
     def test_get_filtered_hosts_with_ignore_and_force_hosts(self):
         # Ensure ignore_hosts processed before force_hosts in host filters.
         fake_properties = objects.RequestSpec(
-            instance_uuid='fake-uuid',
+            instance_uuid=uuids.instance,
             ignore_hosts=['fake_host1'],
             force_hosts=['fake_host3', 'fake_host1'],
             force_nodes=[])
@@ -414,7 +481,7 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
     def test_get_filtered_hosts_with_force_host_and_many_nodes(self):
         # Ensure all nodes returned for a host with many nodes
         fake_properties = objects.RequestSpec(
-            instance_uuid='fake-uuid',
+            instance_uuid=uuids.instance,
             ignore_hosts=[],
             force_hosts=['fake_multihost'],
             force_nodes=[])
@@ -430,7 +497,7 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
 
     def test_get_filtered_hosts_with_force_nodes(self):
         fake_properties = objects.RequestSpec(
-            instance_uuid='fake-uuid',
+            instance_uuid=uuids.instance,
             ignore_hosts=[],
             force_hosts=[],
             force_nodes=['fake-node2', 'fake-node4', 'fake-node9'])
@@ -447,7 +514,7 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
     def test_get_filtered_hosts_with_force_hosts_and_nodes(self):
         # Ensure only overlapping results if both force host and node
         fake_properties = objects.RequestSpec(
-            instance_uuid='fake-uuid',
+            instance_uuid=uuids.instance,
             ignore_hosts=[],
             force_hosts=['fake_host1', 'fake_multihost'],
             force_nodes=['fake-node2', 'fake-node9'])
@@ -464,7 +531,7 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
     def test_get_filtered_hosts_with_force_hosts_and_wrong_nodes(self):
         # Ensure non-overlapping force_node and force_host yield no result
         fake_properties = objects.RequestSpec(
-            instance_uuid='fake-uuid',
+            instance_uuid=uuids.instance,
             ignore_hosts=[],
             force_hosts=['fake_multihost'],
             force_nodes=['fake-node'])
@@ -480,7 +547,7 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
     def test_get_filtered_hosts_with_ignore_hosts_and_force_nodes(self):
         # Ensure ignore_hosts can coexist with force_nodes
         fake_properties = objects.RequestSpec(
-            instance_uuid='fake-uuid',
+            instance_uuid=uuids.instance,
             ignore_hosts=['fake_host1', 'fake_host2'],
             force_hosts=[],
             force_nodes=['fake-node4', 'fake-node2'])
@@ -496,7 +563,7 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
     def test_get_filtered_hosts_with_ignore_hosts_and_force_same_nodes(self):
         # Ensure ignore_hosts is processed before force_nodes
         fake_properties = objects.RequestSpec(
-            instance_uuid='fake-uuid',
+            instance_uuid=uuids.instance,
             ignore_hosts=['fake_multihost'],
             force_hosts=[],
             force_nodes=['fake_node4', 'fake_node2'])

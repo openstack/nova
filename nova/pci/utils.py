@@ -76,14 +76,14 @@ def get_pci_address(domain, bus, slot, func):
 
 def get_function_by_ifname(ifname):
     """Given the device name, returns the PCI address of a device
-    and returns True if the address in a physical function.
+    and returns True if the address is in a physical function.
     """
     dev_path = "/sys/class/net/%s/device" % ifname
     sriov_totalvfs = 0
     if os.path.isdir(dev_path):
         try:
             # sriov_totalvfs contains the maximum possible VFs for this PF
-            with open(dev_path + _SRIOV_TOTALVFS) as fd:
+            with open(os.path.join(dev_path, _SRIOV_TOTALVFS)) as fd:
                 sriov_totalvfs = int(fd.read())
                 return (os.readlink(dev_path).strip("./"),
                         sriov_totalvfs > 0)

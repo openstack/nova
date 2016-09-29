@@ -15,6 +15,7 @@
 
 """Test of Policy Engine For Nova."""
 
+import mock
 import os.path
 
 from oslo_policy import policy as oslo_policy
@@ -45,97 +46,105 @@ class PolicyFileTestCase(test.NoDBTestCase):
 
             self.flags(policy_file=tmpfilename, group='oslo_policy')
 
-            # NOTE(uni): context construction invokes policy check to determin
+            # NOTE(uni): context construction invokes policy check to determine
             # is_admin or not. As a side-effect, policy reset is needed here
             # to flush existing policy cache.
             policy.reset()
+            policy.init()
+            rule = oslo_policy.RuleDefault('example:test', "")
+            policy._ENFORCER.register_defaults([rule])
 
             action = "example:test"
             with open(tmpfilename, "w") as policyfile:
                 policyfile.write('{"example:test": ""}')
-            policy.enforce(self.context, action, self.target)
+            policy.authorize(self.context, action, self.target)
             with open(tmpfilename, "w") as policyfile:
                 policyfile.write('{"example:test": "!"}')
             policy._ENFORCER.load_rules(True)
-            self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
+            self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
                               self.context, action, self.target)
 
 
 class PolicyTestCase(test.NoDBTestCase):
     def setUp(self):
         super(PolicyTestCase, self).setUp()
-        rules = {
-            "true": '@',
-            "example:allowed": '@',
-            "example:denied": "!",
-            "example:get_http": "http://www.example.com",
-            "example:my_file": "role:compute_admin or "
-                               "project_id:%(project_id)s",
-            "example:early_and_fail": "! and @",
-            "example:early_or_success": "@ or !",
-            "example:lowercase_admin": "role:admin or role:sysadmin",
-            "example:uppercase_admin": "role:ADMIN or role:sysadmin",
-        }
+        rules = [
+            oslo_policy.RuleDefault("true", '@'),
+            oslo_policy.RuleDefault("example:allowed", '@'),
+            oslo_policy.RuleDefault("example:denied", "!"),
+            oslo_policy.RuleDefault("example:get_http",
+                                    "http://www.example.com"),
+            oslo_policy.RuleDefault("example:my_file",
+                                    "role:compute_admin or "
+                                    "project_id:%(project_id)s"),
+            oslo_policy.RuleDefault("example:early_and_fail", "! and @"),
+            oslo_policy.RuleDefault("example:early_or_success", "@ or !"),
+            oslo_policy.RuleDefault("example:lowercase_admin",
+                                    "role:admin or role:sysadmin"),
+            oslo_policy.RuleDefault("example:uppercase_admin",
+                                    "role:ADMIN or role:sysadmin"),
+        ]
         policy.reset()
         policy.init()
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
+        # before a policy rule can be used, its default has to be registered.
+        policy._ENFORCER.register_defaults(rules)
         self.context = context.RequestContext('fake', 'fake', roles=['member'])
         self.target = {}
 
-    def test_enforce_nonexistent_action_throws(self):
+    def test_authorize_nonexistent_action_throws(self):
         action = "example:noexist"
-        self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
+        self.assertRaises(oslo_policy.PolicyNotRegistered, policy.authorize,
                           self.context, action, self.target)
 
-    def test_enforce_bad_action_throws(self):
+    def test_authorize_bad_action_throws(self):
         action = "example:denied"
-        self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
+        self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
                           self.context, action, self.target)
 
-    def test_enforce_bad_action_noraise(self):
+    def test_authorize_bad_action_noraise(self):
         action = "example:denied"
-        result = policy.enforce(self.context, action, self.target, False)
+        result = policy.authorize(self.context, action, self.target, False)
         self.assertFalse(result)
 
-    def test_enforce_good_action(self):
+    def test_authorize_good_action(self):
         action = "example:allowed"
-        result = policy.enforce(self.context, action, self.target)
+        result = policy.authorize(self.context, action, self.target)
         self.assertTrue(result)
 
     @requests_mock.mock()
-    def test_enforce_http_true(self, req_mock):
+    def test_authorize_http_true(self, req_mock):
         req_mock.post('http://www.example.com/',
                       text='True')
         action = "example:get_http"
         target = {}
-        result = policy.enforce(self.context, action, target)
+        result = policy.authorize(self.context, action, target)
         self.assertTrue(result)
 
     @requests_mock.mock()
-    def test_enforce_http_false(self, req_mock):
+    def test_authorize_http_false(self, req_mock):
         req_mock.post('http://www.example.com/',
                       text='False')
         action = "example:get_http"
         target = {}
-        self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
+        self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
                           self.context, action, target)
 
-    def test_templatized_enforcement(self):
+    def test_templatized_authorization(self):
         target_mine = {'project_id': 'fake'}
         target_not_mine = {'project_id': 'another'}
         action = "example:my_file"
-        policy.enforce(self.context, action, target_mine)
-        self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
+        policy.authorize(self.context, action, target_mine)
+        self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
                           self.context, action, target_not_mine)
 
-    def test_early_AND_enforcement(self):
+    def test_early_AND_authorization(self):
         action = "example:early_and_fail"
-        self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
+        self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
                           self.context, action, self.target)
 
-    def test_early_OR_enforcement(self):
+    def test_early_OR_authorization(self):
         action = "example:early_or_success"
-        policy.enforce(self.context, action, self.target)
+        policy.authorize(self.context, action, self.target)
 
     def test_ignore_case_role_check(self):
         lowercase_action = "example:lowercase_admin"
@@ -145,40 +154,32 @@ class PolicyTestCase(test.NoDBTestCase):
         admin_context = context.RequestContext('admin',
                                                'fake',
                                                roles=['AdMiN'])
-        policy.enforce(admin_context, lowercase_action, self.target)
-        policy.enforce(admin_context, uppercase_action, self.target)
+        policy.authorize(admin_context, lowercase_action, self.target)
+        policy.authorize(admin_context, uppercase_action, self.target)
 
+    @mock.patch.object(policy.LOG, 'warning')
+    def test_warning_when_deprecated_user_based_rule_used(self, mock_warning):
+        policy._warning_for_deprecated_user_based_rules(
+            [("os_compute_api:servers:index",
+                "project_id:%(project_id)s or user_id:%(user_id)s")])
+        mock_warning.assert_called_once_with(
+            u"The user_id attribute isn't supported in the rule "
+             "'%s'. All the user_id based policy enforcement will be removed "
+             "in the future.", "os_compute_api:servers:index")
 
-class DefaultPolicyTestCase(test.NoDBTestCase):
+    @mock.patch.object(policy.LOG, 'warning')
+    def test_no_warning_for_user_based_resource(self, mock_warning):
+        policy._warning_for_deprecated_user_based_rules(
+            [("os_compute_api:os-keypairs:index",
+                "user_id:%(user_id)s")])
+        mock_warning.assert_not_called()
 
-    def setUp(self):
-        super(DefaultPolicyTestCase, self).setUp()
-
-        self.rules = {
-            "default": '',
-            "example:exist": "!",
-        }
-
-        self._set_rules('default')
-
-        self.context = context.RequestContext('fake', 'fake')
-
-    def _set_rules(self, default_rule):
-        policy.reset()
-        rules = oslo_policy.Rules.from_dict(self.rules)
-        policy.init(rules=rules, default_rule=default_rule, use_conf=False)
-
-    def test_policy_called(self):
-        self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
-                self.context, "example:exist", {})
-
-    def test_not_found_policy_calls_default(self):
-        policy.enforce(self.context, "example:noexist", {})
-
-    def test_default_not_found(self):
-        self._set_rules("default_noexist")
-        self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
-                self.context, "example:noexist", {})
+    @mock.patch.object(policy.LOG, 'warning')
+    def test_no_warning_for_no_user_based_rule(self, mock_warning):
+        policy._warning_for_deprecated_user_based_rules(
+            [("os_compute_api:servers:index",
+                "project_id:%(project_id)s")])
+        mock_warning.assert_not_called()
 
 
 class IsAdminCheckTestCase(test.NoDBTestCase):
@@ -225,12 +226,12 @@ class AdminRolePolicyTestCase(test.NoDBTestCase):
         self.actions = policy.get_rules().keys()
         self.target = {}
 
-    def test_enforce_admin_actions_with_nonadmin_context_throws(self):
+    def test_authorize_admin_actions_with_nonadmin_context_throws(self):
         """Check if non-admin context passed to admin actions throws
            Policy not authorized exception
         """
         for action in self.actions:
-            self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
+            self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
                           self.context, action, self.target)
 
 
@@ -246,68 +247,15 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
         self.fake_policy = jsonutils.loads(fake_policy.policy_data)
 
         self.admin_only_rules = (
+"cells_scheduler_filter:DifferentCellFilter",
 "cells_scheduler_filter:TargetCellFilter",
-"compute:unlock_override",
-"compute:get_all_tenants",
-"compute:create:forced_host",
-"compute:swap_volume",
-"compute_extension:accounts",
-"compute_extension:admin_actions",
-"compute_extension:admin_actions:resetNetwork",
-"compute_extension:admin_actions:injectNetworkInfo",
-"compute_extension:admin_actions:migrateLive",
-"compute_extension:admin_actions:resetState",
-"compute_extension:admin_actions:migrate",
-"compute_extension:aggregates",
-"compute_extension:agents",
-"compute_extension:baremetal_nodes",
-"compute_extension:cells",
-"compute_extension:cells:create",
-"compute_extension:cells:delete",
-"compute_extension:cells:update",
-"compute_extension:cells:sync_instances",
-"compute_extension:cloudpipe",
-"compute_extension:cloudpipe_update",
-"compute_extension:evacuate",
-"compute_extension:extended_server_attributes",
-"compute_extension:fixed_ips",
-"compute_extension:flavor_access:addTenantAccess",
-"compute_extension:flavor_access:removeTenantAccess",
-"compute_extension:flavorextraspecs:create",
-"compute_extension:flavorextraspecs:update",
-"compute_extension:flavorextraspecs:delete",
-"compute_extension:flavormanage",
-"compute_extension:floating_ips_bulk",
-"compute_extension:fping:all_tenants",
-"compute_extension:hosts",
-"compute_extension:hypervisors",
-"compute_extension:instance_actions:events",
-"compute_extension:instance_usage_audit_log",
-"compute_extension:networks",
-"compute_extension:networks_associate",
-"compute_extension:quotas:update",
-"compute_extension:quotas:delete",
-"compute_extension:security_group_default_rules",
-"compute_extension:server_diagnostics",
-"compute_extension:services",
-"compute_extension:shelveOffload",
-"compute_extension:simple_tenant_usage:list",
-"compute_extension:users",
-"compute_extension:availability_zone:detail",
-"compute_extension:used_limits_for_admin",
-"compute_extension:migrations:index",
-"compute_extension:os-assisted-volume-snapshots:create",
-"compute_extension:os-assisted-volume-snapshots:delete",
-"compute_extension:console_auth_tokens",
-"compute_extension:os-server-external-events:create",
-"compute_extension:volume_attachments:update",
+"network:attach_external_network",
 "os_compute_api:servers:create:forced_host",
 "os_compute_api:servers:detail:get_all_tenants",
 "os_compute_api:servers:index:get_all_tenants",
 "os_compute_api:servers:show:host_status",
 "os_compute_api:servers:migrations:force_complete",
 "os_compute_api:servers:migrations:delete",
-"network:attach_external_network",
 "os_compute_api:os-admin-actions",
 "os_compute_api:os-admin-actions:reset_network",
 "os_compute_api:os-admin-actions:inject_network_info",
@@ -375,22 +323,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 )
 
         self.admin_or_owner_rules = (
-"default",
-"compute:start",
-"compute:stop",
-"compute:delete",
-"compute:soft_delete",
-"compute:force_delete",
-"compute:lock",
-"compute:unlock",
-"compute_extension:admin_actions:pause",
-"compute_extension:admin_actions:unpause",
-"compute_extension:admin_actions:suspend",
-"compute_extension:admin_actions:resume",
-"compute_extension:admin_actions:lock",
-"compute_extension:admin_actions:unlock",
-"compute_extension:admin_actions:createBackup",
-"compute_extension:simple_tenant_usage:show",
 "os_compute_api:servers:start",
 "os_compute_api:servers:stop",
 "os_compute_api:servers:trigger_crash_dump",
@@ -416,59 +348,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-suspend-server:suspend",
 "os_compute_api:os-suspend-server:resume",
 "os_compute_api:os-tenant-networks",
-"compute:create",
-"compute:create:attach_network",
-"compute:create:attach_volume",
-"compute:get_all_instance_metadata",
-"compute:get_all_instance_system_metadata",
-"compute:get_console_output",
-"compute:get_diagnostics",
-"compute:delete_instance_metadata",
-"compute:get",
-"compute:get_all",
-"compute:shelve",
-"compute:shelve_offload",
-"compute:snapshot_volume_backed",
-"compute:unshelve",
-"compute:resize",
-"compute:confirm_resize",
-"compute:revert_resize",
-"compute:rebuild",
-"compute:reboot",
-"compute:volume_snapshot_create",
-"compute:volume_snapshot_delete",
-"compute:add_fixed_ip",
-"compute:attach_interface",
-"compute:detach_interface",
-"compute:attach_volume",
-"compute:detach_volume",
-"compute:backup",
-"compute:get_instance_diagnostics",
-"compute:get_instance_metadata",
-"compute:get_mks_console",
-"compute:get_rdp_console",
-"compute:get_serial_console",
-"compute:get_spice_console",
-"compute:get_vnc_console",
-"compute:inject_network_info",
-"compute:pause",
-"compute:remove_fixed_ip",
-"compute:rescue",
-"compute:reset_network",
-"compute:restore",
-"compute:resume",
-"compute:security_groups:add_to_instance",
-"compute:security_groups:remove_from_instance",
-"compute:set_admin_password",
-"compute:snapshot",
-"compute:suspend",
-"compute:unpause",
-"compute:unrescue",
-"compute:update",
-"compute:update_instance_metadata",
-"compute_extension:config_drive",
-"compute_extension:os-tenant-networks",
-"network:get_vif_by_mac_address",
 "os_compute_api:extensions",
 "os_compute_api:os-config-drive",
 "os_compute_api:servers:confirm_resize",
@@ -485,101 +364,11 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:servers:revert_resize",
 "os_compute_api:servers:show",
 "os_compute_api:servers:update",
-"compute_extension:attach_interfaces",
-"compute_extension:certificates",
-"compute_extension:console_output",
-"compute_extension:consoles",
-"compute_extension:createserverext",
-"compute_extension:deferred_delete",
-"compute_extension:disk_config",
-"compute_extension:extended_status",
-"compute_extension:extended_availability_zone",
-"compute_extension:extended_ips",
-"compute_extension:extended_ips_mac",
-"compute_extension:extended_vif_net",
-"compute_extension:extended_volumes",
-"compute_extension:flavor_access",
-"compute_extension:flavor_disabled",
-"compute_extension:flavor_rxtx",
-"compute_extension:flavor_swap",
-"compute_extension:flavorextradata",
-"compute_extension:flavorextraspecs:index",
-"compute_extension:flavorextraspecs:show",
-"compute_extension:floating_ip_dns",
-"compute_extension:floating_ip_pools",
-"compute_extension:floating_ips",
-"compute_extension:fping",
-"compute_extension:image_size",
-"compute_extension:instance_actions",
-"compute_extension:keypairs",
-"compute_extension:keypairs:index",
-"compute_extension:keypairs:show",
-"compute_extension:keypairs:create",
-"compute_extension:keypairs:delete",
-"compute_extension:multinic",
-"compute_extension:networks:view",
-"compute_extension:quotas:show",
-"compute_extension:quota_classes",
-"compute_extension:rescue",
-"compute_extension:security_groups",
-"compute_extension:server_groups",
-"compute_extension:server_password",
-"compute_extension:server_usage",
-"compute_extension:shelve",
-"compute_extension:unshelve",
-"compute_extension:virtual_interfaces",
-"compute_extension:virtual_storage_arrays",
-"compute_extension:volumes",
-"compute_extension:volume_attachments:index",
-"compute_extension:volume_attachments:show",
-"compute_extension:volume_attachments:create",
-"compute_extension:volume_attachments:delete",
-"compute_extension:volumetypes",
-"compute_extension:availability_zone:list",
-"network:get_all",
-"network:get",
-"network:create",
-"network:delete",
-"network:associate",
-"network:disassociate",
-"network:get_vifs_by_instance",
-"network:allocate_for_instance",
-"network:deallocate_for_instance",
-"network:validate_networks",
-"network:get_instance_uuids_by_ip_filter",
-"network:get_instance_id_by_floating_address",
-"network:setup_networks_on_host",
-"network:get_backdoor_port",
-"network:get_floating_ip",
-"network:get_floating_ip_pools",
-"network:get_floating_ip_by_address",
-"network:get_floating_ips_by_project",
-"network:get_floating_ips_by_fixed_address",
-"network:allocate_floating_ip",
-"network:associate_floating_ip",
-"network:disassociate_floating_ip",
-"network:release_floating_ip",
-"network:migrate_instance_start",
-"network:migrate_instance_finish",
-"network:get_fixed_ip",
-"network:get_fixed_ip_by_address",
-"network:add_fixed_ip_to_instance",
-"network:remove_fixed_ip_from_instance",
-"network:add_network_to_project",
-"network:get_instance_nw_info",
-"network:get_dns_domains",
-"network:add_dns_entry",
-"network:modify_dns_entry",
-"network:delete_dns_entry",
-"network:get_dns_entries_by_address",
-"network:get_dns_entries_by_name",
-"network:create_private_dns_domain",
-"network:create_public_dns_domain",
-"network:delete_dns_domain",
 "os_compute_api:servers:create_image:allow_volume_backed",
-"os_compute_api:os-access-ips",
 "os_compute_api:os-admin-password",
 "os_compute_api:os-attach-interfaces",
+"os_compute_api:os-attach-interfaces:create",
+"os_compute_api:os-attach-interfaces:delete",
 "os_compute_api:os-certificates:create",
 "os_compute_api:os-certificates:show",
 "os_compute_api:os-consoles:create",
@@ -589,7 +378,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-console-output",
 "os_compute_api:os-remote-consoles",
 "os_compute_api:os-deferred-delete",
-"os_compute_api:os-disk-config",
 "os_compute_api:os-extended-status",
 "os_compute_api:os-extended-availability-zone",
 "os_compute_api:os-extended-volumes",
@@ -626,19 +414,18 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 )
 
         self.non_admin_only_rules = (
-"compute_extension:hide_server_addresses",
-"os_compute_api:os-hide-server-addresses")
+"os_compute_api:os-hide-server-addresses",)
 
         self.allow_all_rules = (
 "os_compute_api:os-quota-sets:defaults",
 "os_compute_api:extensions:discoverable",
-"os_compute_api:os-access-ips:discoverable",
 "os_compute_api:os-admin-actions:discoverable",
 "os_compute_api:os-admin-password:discoverable",
 "os_compute_api:os-aggregates:discoverable",
 "os_compute_api:os-agents:discoverable",
 "os_compute_api:os-attach-interfaces:discoverable",
 "os_compute_api:os-baremetal-nodes:discoverable",
+"os_compute_api:os-block-device-mapping:discoverable",
 "os_compute_api:os-block-device-mapping-v1:discoverable",
 "os_compute_api:os-cells:discoverable",
 "os_compute_api:os-certificates:discoverable",
@@ -649,7 +436,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-remote-consoles:discoverable",
 "os_compute_api:os-create-backup:discoverable",
 "os_compute_api:os-deferred-delete:discoverable",
-"os_compute_api:os-disk-config:discoverable",
 "os_compute_api:os-evacuate:discoverable",
 "os_compute_api:os-extended-server-attributes:discoverable",
 "os_compute_api:os-extended-status:discoverable",
@@ -671,6 +457,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-hosts:discoverable",
 "os_compute_api:os-hypervisors:discoverable",
 "os_compute_api:images:discoverable",
+"os_compute_api:image-metadata:discoverable",
 "os_compute_api:image-size:discoverable",
 "os_compute_api:os-instance-actions:discoverable",
 "os_compute_api:os-instance-usage-audit-log:discoverable",
@@ -680,12 +467,11 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-lock-server:discoverable",
 "os_compute_api:os-migrate-server:discoverable",
 "os_compute_api:os-multinic:discoverable",
+"os_compute_api:os-multiple-create:discoverable",
 "os_compute_api:os-networks:discoverable",
 "os_compute_api:os-networks-associate:discoverable",
 "os_compute_api:os-pause-server:discoverable",
 "os_compute_api:os-pci:discoverable",
-"os_compute_api:os-personality:discoverable",
-"os_compute_api:os-preserve-ephemeral-rebuild:discoverable",
 "os_compute_api:os-quota-sets:discoverable",
 "os_compute_api:os-quota-class-sets:discoverable",
 "os_compute_api:os-rescue:discoverable",
@@ -698,14 +484,16 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-server-groups:discoverable",
 "os_compute_api:os-server-tags:delete",
 "os_compute_api:os-server-tags:delete_all",
+"os_compute_api:os-server-tags:discoverable",
 "os_compute_api:os-server-tags:index",
 "os_compute_api:os-server-tags:show",
 "os_compute_api:os-server-tags:update",
 "os_compute_api:os-server-tags:update_all",
 "os_compute_api:os-services:discoverable",
 "os_compute_api:server-metadata:discoverable",
+"os_compute_api:server-migrations:discoverable",
 "os_compute_api:servers:discoverable",
-"os_compute_api:os-shelve:shelve:discoverable",
+"os_compute_api:os-shelve:discoverable",
 "os_compute_api:os-simple-tenant-usage:discoverable",
 "os_compute_api:os-suspend-server:discoverable",
 "os_compute_api:os-tenant-networks:discoverable",
@@ -719,6 +507,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-assisted-volume-snapshots:discoverable",
 "os_compute_api:os-console-auth-tokens:discoverable",
 "os_compute_api:os-server-external-events:discoverable",
+"os_compute_api:versions:discoverable",
 )
 
     def test_all_rules_in_sample_file(self):
@@ -730,21 +519,22 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 
     def test_admin_only_rules(self):
         for rule in self.admin_only_rules:
-            self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
-                              self.non_admin_context, rule, self.target)
-            policy.enforce(self.admin_context, rule, self.target)
+            self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
+                              self.non_admin_context, rule,
+                              {'project_id': 'fake', 'user_id': 'fake'})
+            policy.authorize(self.admin_context, rule, self.target)
 
     def test_non_admin_only_rules(self):
         for rule in self.non_admin_only_rules:
-            self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
+            self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
                               self.admin_context, rule, self.target)
-            policy.enforce(self.non_admin_context, rule, self.target)
+            policy.authorize(self.non_admin_context, rule, self.target)
 
     def test_admin_or_owner_rules(self):
         for rule in self.admin_or_owner_rules:
-            self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
+            self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
                               self.non_admin_context, rule, self.target)
-            policy.enforce(self.non_admin_context, rule,
+            policy.authorize(self.non_admin_context, rule,
                            {'project_id': 'fake', 'user_id': 'fake'})
 
     def test_no_empty_rules(self):
@@ -762,7 +552,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 
     def test_allow_all_rules(self):
         for rule in self.allow_all_rules:
-            policy.enforce(self.non_admin_context, rule, self.target)
+            policy.authorize(self.non_admin_context, rule, self.target)
 
     def test_rule_missing(self):
         rules = policy.get_rules()

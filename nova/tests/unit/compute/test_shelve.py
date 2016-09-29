@@ -43,7 +43,9 @@ def _fake_resources():
 
 
 class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
-    def _shelve_instance(self, shelved_offload_time, clean_shutdown=True):
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    def _shelve_instance(self, shelved_offload_time,
+                         mock_notify, clean_shutdown=True):
         CONF.set_override('shelved_offload_time', shelved_offload_time)
         host = 'fake-mini'
         instance = self._create_fake_instance_obj(params={'host': host})
@@ -98,8 +100,6 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 tracking['last_state'] = instance.vm_state
             elif (tracking['last_state'] == vm_states.SHELVED and
                   CONF.shelved_offload_time == 0):
-                self.assertIsNone(instance.host)
-                self.assertIsNone(instance.node)
                 self.assertIsNone(instance.task_state)
                 self.assertEqual(vm_states.SHELVED_OFFLOADED,
                                  instance.vm_state)
@@ -107,6 +107,11 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                                   task_states.SHELVING_OFFLOADING],
                                  expected_task_state)
                 tracking['last_state'] = instance.vm_state
+            elif (tracking['last_state'] == vm_states.SHELVED_OFFLOADED and
+                  CONF.shelved_offload_time == 0):
+                self.assertIsNone(instance.host)
+                self.assertIsNone(instance.node)
+                self.assertIsNone(expected_task_state)
             else:
                 self.fail('Unexpected save!')
 
@@ -126,6 +131,11 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             mock_save.side_effect = check_save
             self.compute.shelve_instance(self.context, instance,
                     image_id=image_id, clean_shutdown=clean_shutdown)
+            mock_notify.assert_has_calls([
+                mock.call(self.context, instance, 'fake-mini',
+                          action='shelve', phase='start'),
+                mock.call(self.context, instance, 'fake-mini',
+                          action='shelve', phase='end')])
 
     def test_shelve(self):
         self._shelve_instance(-1)
@@ -212,8 +222,10 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
         def fake_claim(context, instance, limits):
             instance.host = self.compute.host
+            requests = objects.InstancePCIRequests(requests=[])
             return claims.Claim(context, instance,
-                                self.rt, _fake_resources())
+                                self.rt, _fake_resources(),
+                                requests)
 
         tracking = {
             'last_state': instance.task_state,
@@ -319,7 +331,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 self.context, instance, self.compute.host)
         self.rt.instance_claim(self.context, instance, limits).AndReturn(
                 claims.Claim(self.context, instance, self.rt,
-                             _fake_resources()))
+                             _fake_resources(),
+                             objects.InstancePCIRequests(requests=[])))
         self.compute.driver.spawn(self.context, instance,
                 mox.IsA(objects.ImageMeta),
                 injected_files=[], admin_password=None,

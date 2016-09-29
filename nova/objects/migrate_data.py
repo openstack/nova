@@ -107,7 +107,10 @@ class LibvirtLiveMigrateBDMInfo(obj_base.NovaObject):
 class LibvirtLiveMigrateData(LiveMigrateData):
     # Version 1.0: Initial version
     # Version 1.1: Added target_connect_addr
-    VERSION = '1.1'
+    # Version 1.2: Added 'serial_listen_ports' to allow live migration with
+    #              serial console.
+    # Version 1.3: Added 'supported_perf_events'
+    VERSION = '1.3'
 
     fields = {
         'filename': fields.StringField(),
@@ -122,14 +125,22 @@ class LibvirtLiveMigrateData(LiveMigrateData):
         'graphics_listen_addr_vnc': fields.IPAddressField(nullable=True),
         'graphics_listen_addr_spice': fields.IPAddressField(nullable=True),
         'serial_listen_addr': fields.StringField(nullable=True),
+        'serial_listen_ports': fields.ListOfIntegersField(),
         'bdms': fields.ListOfObjectsField('LibvirtLiveMigrateBDMInfo'),
         'target_connect_addr': fields.StringField(nullable=True),
+        'supported_perf_events': fields.ListOfStringsField(),
     }
 
     def obj_make_compatible(self, primitive, target_version):
         super(LibvirtLiveMigrateData, self).obj_make_compatible(
             primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 3):
+            if 'supported_perf_events' in primitive:
+                del primitive['supported_perf_events']
+        if target_version < (1, 2):
+            if 'serial_listen_ports' in primitive:
+                del primitive['serial_listen_ports']
         if target_version < (1, 1) and 'target_connect_addr' in primitive:
             del primitive['target_connect_addr']
 
@@ -256,4 +267,28 @@ class XenapiLiveMigrateData(LiveMigrateData):
 
 @obj_base.NovaObjectRegistry.register
 class HyperVLiveMigrateData(LiveMigrateData):
-    VERSION = '1.0'
+    # Version 1.0: Initial version
+    # Version 1.1: Added is_shared_instance_path
+    VERSION = '1.1'
+
+    fields = {'is_shared_instance_path': fields.BooleanField()}
+
+    def obj_make_compatible(self, primitive, target_version):
+        super(HyperVLiveMigrateData, self).obj_make_compatible(
+            primitive, target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1):
+            if 'is_shared_instance_path' in primitive:
+                del primitive['is_shared_instance_path']
+
+    def to_legacy_dict(self, pre_migration_result=False):
+        legacy = super(HyperVLiveMigrateData, self).to_legacy_dict()
+        if self.obj_attr_is_set('is_shared_instance_path'):
+            legacy['is_shared_instance_path'] = self.is_shared_instance_path
+
+        return legacy
+
+    def from_legacy_dict(self, legacy):
+        super(HyperVLiveMigrateData, self).from_legacy_dict(legacy)
+        if 'is_shared_instance_path' in legacy:
+            self.is_shared_instance_path = legacy['is_shared_instance_path']

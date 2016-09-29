@@ -1,3 +1,5 @@
+# needs:fix_opt_description
+
 # Copyright 2016 Huawei Technology corp.
 # All Rights Reserved.
 #
@@ -15,41 +17,81 @@
 
 from oslo_config import cfg
 
-default_floating_pool_opt = cfg.StrOpt('default_floating_pool',
+
+# TODO(johngarbutt) all of these opitions only work with nova-network.
+# We need to find a good way to document that.
+floating_ip_opts = [
+    cfg.StrOpt('default_floating_pool',
         default='nova',
-        help='Default pool for floating IPs')
+        help="""
+Default pool for floating IPs.
 
-auto_assign_opt = cfg.BoolOpt('auto_assign_floating_ip',
+This option specifies the default floating IP pool for allocating floating IPs.
+
+While allocating a floating ip, users can optionally pass in the name of the
+pool they want to allocate from, otherwise it will be pulled from the
+default pool.
+
+If this option is not set, then 'nova' is used as default floating pool.
+
+Possible values:
+
+    * Any string representing a floating IP pool name
+"""),
+    cfg.BoolOpt('auto_assign_floating_ip',
         default=False,
-        help='Autoassigning floating IP to VM')
+        help="""
+Autoassigning floating IP to VM
 
-dns_mgr_opt = cfg.StrOpt('floating_ip_dns_manager',
+When set to True, floating IP is auto allocated and associated
+to the VM upon creation.
+"""),
+   cfg.StrOpt('floating_ip_dns_manager',
         default='nova.network.noop_dns_driver.NoopDNSDriver',
-        help='Full class name for the DNS Manager for '
-        'floating IPs')
+        help="""
+Full class name for the DNS Manager for floating IPs.
 
-instance_dns_opt = cfg.StrOpt('instance_dns_manager',
+This option specifies the class of the driver that provides functionality
+to manage DNS entries associated with floating IPs.
+
+When a user adds a DNS entry for a specified domain to a floating IP,
+nova will add a DNS entry using the specified floating DNS driver.
+When a floating IP is deallocated, its DNS entry will automatically be deleted.
+
+Possible values:
+
+    * Full Python path to the class to be used
+"""),
+    cfg.StrOpt('instance_dns_manager',
         default='nova.network.noop_dns_driver.NoopDNSDriver',
-        help='Full class name for the DNS Manager for '
-        'instance IPs')
+        help="""
+Full class name for the DNS Manager for instance IPs.
 
-dns_domain_opt = cfg.StrOpt('instance_dns_domain',
+This option specifies the class of the driver that provides functionality
+to manage DNS entries for instances.
+
+On instance creation, nova will add DNS entries for the instance name and
+id, using the specified instance DNS driver and domain. On instance deletion,
+nova will remove the DNS entries.
+
+Possible values:
+
+    * Full Python path to the class to be used
+"""),
+    # TODO(aunnam): remove default
+    cfg.StrOpt('instance_dns_domain',
         default='',
-        help='Full class name for the DNS Zone '
-        'for instance IPs')
-
-ALL_OPTS = [
-    default_floating_pool_opt,
-    auto_assign_opt,
-    dns_domain_opt,
-    dns_mgr_opt,
-    instance_dns_opt
+        help="""
+If specified, Nova checks if the availability_zone of every instance matches
+what the database says the availability_zone should be for the specified
+dns_domain.
+""")
 ]
 
 
 def register_opts(conf):
-    conf.register_opts(ALL_OPTS)
+    conf.register_opts(floating_ip_opts)
 
 
 def list_opts():
-    return {'DEFAULT': ALL_OPTS}
+    return {'DEFAULT': floating_ip_opts}

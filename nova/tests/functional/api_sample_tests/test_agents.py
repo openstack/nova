@@ -13,32 +13,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 from nova.db.sqlalchemy import models
 from nova.tests.functional.api_sample_tests import api_sample_base
-
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class AgentsJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-agents"
-
-    def _get_flags(self):
-        f = super(AgentsJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.agents.Agents')
-        return f
+    sample_dir = "os-agents"
 
     def setUp(self):
         super(AgentsJsonTest, self).setUp()
 
         fake_agents_list = [{'url': 'http://example.com/path/to/resource',
-                             'hypervisor': 'hypervisor',
+                             'hypervisor': 'xen',
                              'architecture': 'x86',
                              'os': 'os',
                              'version': '8.0',
@@ -75,7 +62,7 @@ class AgentsJsonTest(api_sample_base.ApiSampleTestBaseV21):
     def test_agent_create(self):
         # Creates a new agent build.
         project = {'url': 'http://example.com/path/to/resource',
-                'hypervisor': 'hypervisor',
+                'hypervisor': 'xen',
                 'architecture': 'x86',
                 'os': 'os',
                 'version': '8.0',

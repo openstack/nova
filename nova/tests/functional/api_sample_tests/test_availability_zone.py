@@ -12,25 +12,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
-
-CONF = nova.conf.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class AvailabilityZoneJsonTest(test_servers.ServersSampleBase):
     ADMIN_API = True
-    extension_name = "os-availability-zone"
-
-    def _get_flags(self):
-        f = super(AvailabilityZoneJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.availability_zone.'
-            'Availability_zone')
-        return f
+    sample_dir = "os-availability-zone"
 
     def test_availability_zone_list(self):
         response = self._do_get('os-availability-zone')
@@ -40,6 +27,3 @@ class AvailabilityZoneJsonTest(test_servers.ServersSampleBase):
         response = self._do_get('os-availability-zone/detail')
         self._verify_response('availability-zone-detail-resp', {}, response,
                               200)
-
-    def test_availability_zone_post(self):
-        self._post_server()

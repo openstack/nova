@@ -16,8 +16,6 @@ import webob
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack.compute import fixed_ips as fixed_ips_v21
-from nova.api.openstack.compute.legacy_v2.contrib import fixed_ips \
-        as fixed_ips_v2
 from nova.api.openstack import wsgi as os_wsgi
 from nova import context
 from nova import exception
@@ -240,20 +238,6 @@ class FixedIpTestV21(test.NoDBTestCase):
                           '10.0.0.2', body=body)
 
 
-class FixedIpTestV2(FixedIpTestV21):
-
-    fixed_ips = fixed_ips_v2
-
-    def _assert_equal(self, ret, exp):
-        self.assertEqual(ret.status, '202 Accepted')
-
-    def _get_reserve_action(self):
-        return self.controller.action
-
-    def _get_unreserve_action(self):
-        return self.controller.action
-
-
 class FixedIpTestV24(FixedIpTestV21):
 
     wsgi_api_version = '2.4'
@@ -263,3 +247,19 @@ class FixedIpTestV24(FixedIpTestV21):
             if address == fixed_ip['address']:
                 return {'reserved': fixed_ip['reserved']}
         self.fail('Invalid address: %s' % address)
+
+
+class FixedIpDeprecationTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FixedIpDeprecationTest, self).setUp()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+        self.controller = fixed_ips_v21.FixedIPController()
+
+    def test_all_apis_return_not_found(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.show, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.reserve, self.req, fakes.FAKE_UUID, {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.unreserve, self.req, fakes.FAKE_UUID, {})

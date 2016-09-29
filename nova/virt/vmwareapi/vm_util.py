@@ -164,7 +164,7 @@ def _get_allocation_info(client_factory, limits, allocation_type):
     if limits.limit:
         allocation.limit = limits.limit
     else:
-        # Set as 'umlimited'
+        # Set as 'unlimited'
         allocation.limit = -1
     if limits.reservation:
         allocation.reservation = limits.reservation
@@ -259,6 +259,12 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
     opt = client_factory.create('ns0:OptionValue')
     opt.key = "nvp.vm-uuid"
     opt.value = instance.uuid
+    extra_config.append(opt)
+
+    # enable to provide info needed by udev to generate /dev/disk/by-id
+    opt = client_factory.create('ns0:OptionValue')
+    opt.key = "disk.EnableUUID"
+    opt.value = True
     extra_config.append(opt)
 
     port_index = 0
@@ -475,10 +481,11 @@ def _create_vif_spec(client_factory, vif_info, vif_limits=None):
     return network_spec
 
 
-def get_network_attach_config_spec(client_factory, vif_info, index):
+def get_network_attach_config_spec(client_factory, vif_info, index,
+                                   vif_limits=None):
     """Builds the vif attach config spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
-    vif_spec = _create_vif_spec(client_factory, vif_info)
+    vif_spec = _create_vif_spec(client_factory, vif_info, vif_limits)
     config_spec.deviceChange = [vif_spec]
     if vif_info['iface_id'] is not None:
         config_spec.extraConfig = [_iface_id_option_value(client_factory,
@@ -1266,7 +1273,10 @@ def get_all_cluster_mors(session):
                                         "ClusterComputeResource", ["name"])
         session._call_method(vutil, 'cancel_retrieval',
                              results)
-        return results.objects
+        if results.objects is None:
+            return []
+        else:
+            return results.objects
 
     except Exception as excep:
         LOG.warning(_LW("Failed to get cluster references %s"), excep)

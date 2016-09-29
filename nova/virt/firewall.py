@@ -30,7 +30,6 @@ from nova.virt import netutils
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
-CONF.import_opt('use_ipv6', 'nova.netconf')
 
 
 def load_driver(default, *args, **kwargs):
@@ -86,7 +85,7 @@ class FirewallDriver(object):
 
         Gets called when an instance gets added to or removed from
         the security group the instance is a member of or if the
-        group gains or looses a rule.
+        group gains or loses a rule.
         """
         raise NotImplementedError()
 

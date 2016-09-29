@@ -1,0 +1,12 @@
+---
+fixes:
+  - |
+    When instantiating an instance based on an image with the metadata
+    hw_vif_multiqueue_enabled=true, if flavor.vcpus is less than the limit
+    of the number of queues on a tap interface in the kernel, nova uses
+    flavor.vcpus as the number of queues. if not, nova uses the limit.
+    The limits are as follows:
+
+      * kernels prior to 3.0: 1
+      * kernels 3.x: 8
+      * kernels 4.x: 256

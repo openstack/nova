@@ -1,0 +1,8 @@
+---
+deprecations:
+  - The feature to download *Glance* images via file transfer instead
+    of HTTP is now deprecated and may be removed as early as the 15.0.0
+    release. The config options ``filesystems`` in the section
+    ``image_file_url`` are affected as well as the derived sections
+    ``image_file_url:<list entry name>`` and their config options
+    ``id`` and ``mountpoint``.

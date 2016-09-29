@@ -19,10 +19,10 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.console import api as console_api
 from nova import exception
+from nova.policies import consoles as consoles_policies
 
 
 ALIAS = 'os-consoles'
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def _translate_keys(cons):
@@ -55,7 +55,7 @@ class ConsolesController(wsgi.Controller):
     def index(self, req, server_id):
         """Returns a list of consoles for this instance."""
         context = req.environ['nova.context']
-        authorize(context, action='index')
+        context.can(consoles_policies.POLICY_ROOT % 'index')
 
         consoles = self.console_api.get_consoles(
                 req.environ['nova.context'], server_id)
@@ -69,7 +69,7 @@ class ConsolesController(wsgi.Controller):
     def create(self, req, server_id, body):
         """Creates a new console."""
         context = req.environ['nova.context']
-        authorize(context, action='create')
+        context.can(consoles_policies.POLICY_ROOT % 'create')
 
         try:
             self.console_api.create_console(
@@ -81,7 +81,7 @@ class ConsolesController(wsgi.Controller):
     def show(self, req, server_id, id):
         """Shows in-depth information on a specific console."""
         context = req.environ['nova.context']
-        authorize(context, action='show')
+        context.can(consoles_policies.POLICY_ROOT % 'show')
 
         try:
             console = self.console_api.get_console(
@@ -97,7 +97,7 @@ class ConsolesController(wsgi.Controller):
     def delete(self, req, server_id, id):
         """Deletes a console."""
         context = req.environ['nova.context']
-        authorize(context, action='delete')
+        context.can(consoles_policies.POLICY_ROOT % 'delete')
 
         try:
             self.console_api.delete_console(req.environ['nova.context'],

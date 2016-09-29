@@ -37,8 +37,9 @@ class ConfigDriveTestCase(test.NoDBTestCase):
 
     REQUIRES_LOCKING = True
 
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(driver.VMwareVCDriver, '_register_openstack_extension')
-    def setUp(self, mock_register):
+    def setUp(self, mock_register, mock_service):
         super(ConfigDriveTestCase, self).setUp()
         vm_util.vm_refs_cache_reset()
         self.context = context.RequestContext('fake', 'fake', is_admin=False)
@@ -81,6 +82,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         self.test_instance = fake_instance.fake_instance_obj(self.context,
                                                              **instance_values)
         self.test_instance.flavor = objects.Flavor(vcpus=4, memory_mb=8192,
+                                                   root_gb=80,
                                                    ephemeral_gb=0, swap=0,
                                                    extra_specs={})
 
@@ -95,7 +97,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
 
         class FakeInstanceMetadata(object):
             def __init__(self, instance, content=None, extra_md=None,
-                         network_info=None):
+                         network_info=None, request_context=None):
                 pass
 
             def metadata_for_config_drive(self):
@@ -139,15 +141,16 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         self.test_instance.config_drive = 'True'
         self.mox.StubOutWithMock(vmops.VMwareVMOps, '_create_config_drive')
         self.mox.StubOutWithMock(vmops.VMwareVMOps, '_attach_cdrom_to_vm')
-        self.conn._vmops._create_config_drive(self.test_instance,
-                                               mox.IgnoreArg(),
-                                               mox.IgnoreArg(),
-                                               mox.IgnoreArg(),
-                                               mox.IgnoreArg(),
-                                               mox.IgnoreArg(),
-                                               mox.IgnoreArg(),
-                                               mox.IgnoreArg()
-                                               ).AndReturn('[ds1] fake.iso')
+        self.conn._vmops._create_config_drive(mox.IgnoreArg(),
+                                              self.test_instance,
+                                              mox.IgnoreArg(),
+                                              mox.IgnoreArg(),
+                                              mox.IgnoreArg(),
+                                              mox.IgnoreArg(),
+                                              mox.IgnoreArg(),
+                                              mox.IgnoreArg(),
+                                              mox.IgnoreArg()
+                                              ).AndReturn('[ds1] fake.iso')
         self.conn._vmops._attach_cdrom_to_vm(mox.IgnoreArg(),
                                                mox.IgnoreArg(),
                                                mox.IgnoreArg(),

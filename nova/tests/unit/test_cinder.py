@@ -19,11 +19,14 @@ from cinderclient.v2 import client as cinder_client_v2
 from requests_mock.contrib import fixture
 from testtools import matchers
 
+import nova.conf
 from nova import context
 from nova import exception
 from nova import test
 from nova.volume import cinder
 
+
+CONF = nova.conf.CONF
 
 _image_metadata = {
     'kernel_id': 'fake',
@@ -184,9 +187,9 @@ class CinderV2TestCase(BaseCinderTestCase, test.NoDBTestCase):
 
     def setUp(self):
         super(CinderV2TestCase, self).setUp()
-        cinder.CONF.set_override('catalog_info',
-                                 'volumev2:cinder:publicURL', group='cinder')
-        self.addCleanup(cinder.CONF.reset)
+        CONF.set_override('catalog_info',
+                          'volumev2:cinder:publicURL', group='cinder')
+        self.addCleanup(CONF.reset)
 
     def create_client(self):
         c = super(CinderV2TestCase, self).create_client()

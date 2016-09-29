@@ -11,21 +11,23 @@
 #    under the License.
 
 import jsonschema
+import webob
 
-from webob import exc
-
+from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import server_tags as schema
 from nova.api.openstack.compute.views import server_tags
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
+from nova import compute
+from nova.compute import vm_states
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.policies import server_tags as st_policies
 
 
 ALIAS = "os-server-tags"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def _get_tags_names(tags):
@@ -35,42 +37,58 @@ def _get_tags_names(tags):
 class ServerTagsController(wsgi.Controller):
     _view_builder_class = server_tags.ViewBuilder
 
+    def __init__(self):
+        self.compute_api = compute.API()
+        super(ServerTagsController, self).__init__()
+
+    def _check_instance_in_valid_state(self, context, server_id, action):
+        instance = common.get_instance(self.compute_api, context, server_id)
+        if instance.vm_state not in (vm_states.ACTIVE, vm_states.PAUSED,
+                                     vm_states.SUSPENDED, vm_states.STOPPED):
+            exc = exception.InstanceInvalidState(attr='vm_state',
+                                                 instance_uuid=instance.uuid,
+                                                 state=instance.vm_state,
+                                                 method=action)
+            common.raise_http_conflict_for_instance_invalid_state(exc, action,
+                                                                  server_id)
+
     @wsgi.Controller.api_version("2.26")
     @wsgi.response(204)
     @extensions.expected_errors(404)
     def show(self, req, server_id, id):
         context = req.environ["nova.context"]
-        authorize(context, action='show')
+        context.can(st_policies.POLICY_ROOT % 'show')
 
         try:
             exists = objects.Tag.exists(context, server_id, id)
         except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         if not exists:
             msg = (_("Server %(server_id)s has no tag '%(tag)s'")
                    % {'server_id': server_id, 'tag': id})
-            raise exc.HTTPNotFound(explanation=msg)
+            raise webob.exc.HTTPNotFound(explanation=msg)
 
     @wsgi.Controller.api_version("2.26")
     @extensions.expected_errors(404)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
-        authorize(context, action='index')
+        context.can(st_policies.POLICY_ROOT % 'index')
 
         try:
             tags = objects.TagList.get_by_resource_id(context, server_id)
         except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         return {'tags': _get_tags_names(tags)}
 
     @wsgi.Controller.api_version("2.26")
-    @extensions.expected_errors((400, 404))
+    @extensions.expected_errors((400, 404, 409))
     @validation.schema(schema.update)
     def update(self, req, server_id, id, body):
         context = req.environ["nova.context"]
-        authorize(context, action='update')
+        context.can(st_policies.POLICY_ROOT % 'update')
+        self._check_instance_in_valid_state(context, server_id, 'update tag')
 
         try:
             jsonschema.validate(id, schema.tag)
@@ -78,46 +96,47 @@ class ServerTagsController(wsgi.Controller):
             msg = (_("Tag '%(tag)s' is invalid. It must be a string without "
                      "characters '/' and ','. Validation error message: "
                      "%(err)s") % {'tag': id, 'err': e.message})
-            raise exc.HTTPBadRequest(explanation=msg)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         try:
             tags = objects.TagList.get_by_resource_id(context, server_id)
         except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         if len(tags) >= objects.instance.MAX_TAG_COUNT:
             msg = (_("The number of tags exceeded the per-server limit %d")
                    % objects.instance.MAX_TAG_COUNT)
-            raise exc.HTTPBadRequest(explanation=msg)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         if len(id) > objects.tag.MAX_TAG_LENGTH:
             msg = (_("Tag '%(tag)s' is too long. Maximum length of a tag "
                      "is %(length)d") % {'tag': id,
                                          'length': objects.tag.MAX_TAG_LENGTH})
-            raise exc.HTTPBadRequest(explanation=msg)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         if id in _get_tags_names(tags):
             # NOTE(snikitin): server already has specified tag
-            return exc.HTTPNoContent()
+            return webob.Response(status_int=204)
 
         tag = objects.Tag(context=context, resource_id=server_id, tag=id)
 
         try:
             tag.create()
         except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
-        response = exc.HTTPCreated()
+        response = webob.Response(status_int=201)
         response.headers['Location'] = self._view_builder.get_location(
             req, server_id, id)
         return response
 
     @wsgi.Controller.api_version("2.26")
-    @extensions.expected_errors((400, 404))
+    @extensions.expected_errors((400, 404, 409))
     @validation.schema(schema.update_all)
     def update_all(self, req, server_id, body):
         context = req.environ["nova.context"]
-        authorize(context, action='update_all')
+        context.can(st_policies.POLICY_ROOT % 'update_all')
+        self._check_instance_in_valid_state(context, server_id, 'update tags')
 
         invalid_tags = []
         for tag in body['tags']:
@@ -128,7 +147,7 @@ class ServerTagsController(wsgi.Controller):
         if invalid_tags:
             msg = (_("Tags '%s' are invalid. Each tag must be a string "
                      "without characters '/' and ','.") % invalid_tags)
-            raise exc.HTTPBadRequest(explanation=msg)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         tag_count = len(body['tags'])
         if tag_count > objects.instance.MAX_TAG_COUNT:
@@ -136,7 +155,7 @@ class ServerTagsController(wsgi.Controller):
                      "%(max)d. The number of tags in request is %(count)d.")
                    % {'max': objects.instance.MAX_TAG_COUNT,
                       'count': tag_count})
-            raise exc.HTTPBadRequest(explanation=msg)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         long_tags = [
             t for t in body['tags'] if len(t) > objects.tag.MAX_TAG_LENGTH]
@@ -144,40 +163,42 @@ class ServerTagsController(wsgi.Controller):
             msg = (_("Tags %(tags)s are too long. Maximum length of a tag "
                      "is %(length)d") % {'tags': long_tags,
                                          'length': objects.tag.MAX_TAG_LENGTH})
-            raise exc.HTTPBadRequest(explanation=msg)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         try:
             tags = objects.TagList.create(context, server_id, body['tags'])
         except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         return {'tags': _get_tags_names(tags)}
 
     @wsgi.Controller.api_version("2.26")
     @wsgi.response(204)
-    @extensions.expected_errors(404)
+    @extensions.expected_errors((404, 409))
     def delete(self, req, server_id, id):
         context = req.environ["nova.context"]
-        authorize(context, action='delete')
+        context.can(st_policies.POLICY_ROOT % 'delete')
+        self._check_instance_in_valid_state(context, server_id, 'delete tag')
 
         try:
             objects.Tag.destroy(context, server_id, id)
         except exception.InstanceTagNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
     @wsgi.Controller.api_version("2.26")
     @wsgi.response(204)
-    @extensions.expected_errors(404)
+    @extensions.expected_errors((404, 409))
     def delete_all(self, req, server_id):
         context = req.environ["nova.context"]
-        authorize(context, action='delete_all')
+        context.can(st_policies.POLICY_ROOT % 'delete_all')
+        self._check_instance_in_valid_state(context, server_id, 'delete tags')
 
         try:
             objects.TagList.destroy(context, server_id)
         except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
 
 class ServerTags(extensions.V21APIExtensionBase):

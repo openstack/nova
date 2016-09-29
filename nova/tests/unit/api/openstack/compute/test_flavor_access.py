@@ -22,9 +22,7 @@ from webob import exc
 from nova.api.openstack import api_version_request as api_version
 from nova.api.openstack.compute import flavor_access \
         as flavor_access_v21
-from nova.api.openstack.compute.legacy_v2.contrib import flavor_access \
-        as flavor_access_v2
-from nova.api.openstack.compute.legacy_v2 import flavors as flavors_api
+from nova.api.openstack.compute import flavors as flavors_api
 from nova import context
 from nova import exception
 from nova import test
@@ -138,7 +136,7 @@ class FlavorAccessTestV21(test.NoDBTestCase):
 
     def setUp(self):
         super(FlavorAccessTestV21, self).setUp()
-        self.flavor_controller = flavors_api.Controller()
+        self.flavor_controller = flavors_api.FlavorsController()
         self.req = FakeRequest()
         self.req.environ = {"nova.context": context.RequestContext('fake_user',
                                                                    'fake')}
@@ -385,63 +383,6 @@ class FlavorAccessTestV21(test.NoDBTestCase):
         body = {'removeTenantAccess': {'tenant': ''}}
         self.assertRaises(self.validation_ex,
                           remove_access, req, '2', body=body)
-
-
-class FlavorAccessTestV20(FlavorAccessTestV21):
-    api_version = "2.0"
-    FlavorAccessController = flavor_access_v2.FlavorAccessController
-    FlavorActionController = flavor_access_v2.FlavorActionController
-    validation_ex = exc.HTTPBadRequest
-
-    def setUp(self):
-        super(FlavorAccessTestV20, self).setUp()
-        self.req = FakeRequest()
-        self.req.environ = {"nova.context": context.get_admin_context()}
-
-    def test_remove_tenant_access_with_no_admin_user(self):
-        req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
-                                      use_admin_context=False)
-        body = {'removeTenantAccess': {'tenant': 'proj2'}}
-        remove_access = self._get_remove_access()
-        self.assertRaises(exception.AdminRequired,
-                          remove_access, req, '2', body=body)
-
-    def test_add_tenant_access_with_no_admin_user(self):
-        req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
-                                      use_admin_context=False)
-        body = {'addTenantAccess': {'tenant': 'proj2'}}
-        add_access = self._get_add_access()
-        self.assertRaises(exception.AdminRequired,
-                          add_access, req, '2', body=body)
-
-    def test_list_with_no_admin(self):
-        req = fakes.HTTPRequest.blank(self._prefix + '/flavors/fake/flavors')
-        self.assertRaises(exception.AdminRequired,
-                          self.flavor_access_controller.index,
-                          req, 'fake')
-
-    @mock.patch('nova.objects.Flavor.add_access')
-    def test_add_tenant_access_is_public(self, mock_add):
-        # V2 don't test public before add access
-        expected = {'flavor_access':
-                    [{'flavor_id': '3', 'tenant_id': 'proj3'}]}
-        body = {'addTenantAccess': {'tenant': 'proj2'}}
-        req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
-                                      use_admin_context=True)
-
-        add_access = self._get_add_access()
-        result = add_access(req, '3', body=body)
-        mock_add.assert_called_once_with('proj2')
-        self.assertEqual(result, expected)
-
-    @mock.patch('nova.objects.Flavor.add_access')
-    def test_add_tenant_access_with_flavor_not_found(self, mock_add):
-        body = {'addTenantAccess': {'tenant': 'proj2'}}
-        req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
-                                      use_admin_context=True)
-        add_access = self._get_add_access()
-        add_access(req, '1000', body=body)
-        mock_add.assert_called_once_with('proj2')
 
 
 class FlavorAccessPolicyEnforcementV21(test.NoDBTestCase):

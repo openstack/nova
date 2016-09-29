@@ -23,7 +23,6 @@ from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import aggregate
-from nova.objects import fields
 from nova.objects import service
 from nova import test
 from nova.tests.unit.objects import test_compute_node
@@ -275,6 +274,16 @@ class _TestServiceObject(object):
         # Make sure it doesn't re-fetch this
         service_obj.compute_node
 
+    @mock.patch.object(db, 'service_get_all_computes_by_hv_type')
+    def test_get_all_computes_by_hv_type(self, mock_get_all):
+        mock_get_all.return_value = [fake_service]
+        services = service.ServiceList.get_all_computes_by_hv_type(
+            self.context, 'hv-type')
+        self.assertEqual(1, len(services))
+        self.compare_obj(services[0], fake_service, allow_missing=OPTIONAL)
+        mock_get_all.assert_called_once_with(self.context, 'hv-type',
+                                             include_disabled=False)
+
     def test_load_when_orphaned(self):
         service_obj = service.Service()
         service_obj.id = 123
@@ -446,72 +455,3 @@ class TestServiceVersion(test.TestCase):
         obj = objects.Service()
         obj._from_db_object(self.ctxt, obj, fake_different_service)
         self.assertEqual(fake_version, obj.version)
-
-    def test_save_noop_with_only_version(self):
-        o = objects.Service(context=self.ctxt, id=fake_service['id'])
-        o.obj_reset_changes(['id'])
-        self.assertEqual(set(['version']), o.obj_what_changed())
-        with mock.patch('nova.db.service_update') as mock_update:
-            o.save()
-            self.assertFalse(mock_update.called)
-        o.host = 'foo'
-        with mock.patch('nova.db.service_update') as mock_update:
-            mock_update.return_value = fake_service
-            o.save()
-            mock_update.assert_called_once_with(
-                self.ctxt, fake_service['id'],
-                {'version': service.SERVICE_VERSION,
-                 'host': 'foo'})
-
-
-class TestServiceStatusNotification(test.TestCase):
-    def setUp(self):
-        self.ctxt = context.get_admin_context()
-        super(TestServiceStatusNotification, self).setUp()
-
-    @mock.patch('nova.objects.service.ServiceStatusNotification')
-    def _verify_notification(self, service_obj, mock_notification):
-        service_obj.save()
-
-        self.assertTrue(mock_notification.called)
-
-        event_type = mock_notification.call_args[1]['event_type']
-        priority = mock_notification.call_args[1]['priority']
-        publisher = mock_notification.call_args[1]['publisher']
-        payload = mock_notification.call_args[1]['payload']
-
-        self.assertEqual(service_obj.host, publisher.host)
-        self.assertEqual(service_obj.binary, publisher.binary)
-        self.assertEqual(fields.NotificationPriority.INFO, priority)
-        self.assertEqual('service', event_type.object)
-        self.assertEqual(fields.NotificationAction.UPDATE,
-                         event_type.action)
-        for field in service.ServiceStatusPayload.SCHEMA:
-            if field in fake_service:
-                self.assertEqual(fake_service[field], getattr(payload, field))
-
-        mock_notification.return_value.emit.assert_called_once_with(self.ctxt)
-
-    @mock.patch('nova.db.service_update')
-    def test_service_update_with_notification(self, mock_db_service_update):
-        service_obj = objects.Service(context=self.ctxt, id=fake_service['id'])
-        mock_db_service_update.return_value = fake_service
-        for key, value in {'disabled': True,
-                           'disabled_reason': 'my reason',
-                           'forced_down': True}.items():
-            setattr(service_obj, key, value)
-            self._verify_notification(service_obj)
-
-    @mock.patch('nova.objects.service.ServiceStatusNotification')
-    @mock.patch('nova.db.service_update')
-    def test_service_update_without_notification(self,
-                                                 mock_db_service_update,
-                                                 mock_notification):
-        service_obj = objects.Service(context=self.ctxt, id=fake_service['id'])
-        mock_db_service_update.return_value = fake_service
-
-        for key, value in {'report_count': 13,
-                           'last_seen_up': timeutils.utcnow()}.items():
-            setattr(service_obj, key, value)
-            service_obj.save()
-            self.assertFalse(mock_notification.called)

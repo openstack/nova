@@ -29,6 +29,7 @@ from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_flavor
+from nova.tests import uuidsentinel as uuids
 
 
 class SchedulerUtilsTestCase(test.NoDBTestCase):
@@ -38,7 +39,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         self.context = 'fake-context'
 
     def test_build_request_spec_without_image(self):
-        instance = {'uuid': 'fake-uuid'}
+        instance = {'uuid': uuids.instance}
         instance_type = objects.Flavor(**test_flavor.fake_flavor)
 
         with mock.patch.object(flavors, 'extract_flavor') as mock_extract:
@@ -46,7 +47,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
             request_spec = scheduler_utils.build_request_spec(self.context,
                                                               None,
                                                               [instance])
-            mock_extract.assert_called_once_with({'uuid': 'fake-uuid'})
+            mock_extract.assert_called_once_with({'uuid': uuids.instance})
         self.assertEqual({}, request_spec['image'])
 
     def test_build_request_spec_with_object(self):
@@ -65,7 +66,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
     @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
     @mock.patch.object(objects.Instance, 'save')
     def test_set_vm_state_and_notify(self, mock_save, mock_add, mock_get):
-        expected_uuid = 'fake-uuid'
+        expected_uuid = uuids.instance
         request_spec = dict(instance_properties=dict(uuid='other-uuid'))
         updates = dict(vm_state='fake-vm-state')
         service = 'fake-service'
@@ -208,7 +209,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
                                             exc_reason=[msg]))
         nvh = self.assertRaises(exception.MaxRetriesExceeded,
                                 scheduler_utils.populate_retry,
-                                filter_properties, 'fake-uuid')
+                                filter_properties, uuids.instance)
         # make sure 'msg' is a substring of the complete exception text
         self.assertIn(msg, six.text_type(nvh))
 
@@ -324,7 +325,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
             scheduler_utils._SUPPORTS_SOFT_ANTI_AFFINITY = None
             self.assertRaises(exception.UnsupportedPolicyException,
                               scheduler_utils._get_group_details,
-                              self.context, 'fake-uuid')
+                              self.context, uuids.instance)
 
     def test_get_group_details_with_filter_not_configured(self):
         policies = ['anti-affinity', 'affinity',
@@ -337,12 +338,12 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         mock_ggd.return_value = scheduler_utils.GroupDetails(
             hosts=set(['hostA', 'hostB']), policies=['policy'],
             members=['instance1'])
-        spec = {'instance_properties': {'uuid': 'fake-uuid'}}
+        spec = {'instance_properties': {'uuid': uuids.instance}}
         filter_props = {'group_hosts': ['hostC']}
 
         scheduler_utils.setup_instance_group(self.context, spec, filter_props)
 
-        mock_ggd.assert_called_once_with(self.context, 'fake-uuid',
+        mock_ggd.assert_called_once_with(self.context, uuids.instance,
                                          ['hostC'])
         expected_filter_props = {'group_updated': True,
                                  'group_hosts': set(['hostA', 'hostB']),
@@ -353,12 +354,12 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
     @mock.patch.object(scheduler_utils, '_get_group_details')
     def test_setup_instance_group_with_no_group(self, mock_ggd):
         mock_ggd.return_value = None
-        spec = {'instance_properties': {'uuid': 'fake-uuid'}}
+        spec = {'instance_properties': {'uuid': uuids.instance}}
         filter_props = {'group_hosts': ['hostC']}
 
         scheduler_utils.setup_instance_group(self.context, spec, filter_props)
 
-        mock_ggd.assert_called_once_with(self.context, 'fake-uuid',
+        mock_ggd.assert_called_once_with(self.context, uuids.instance,
                                          ['hostC'])
         self.assertNotIn('group_updated', filter_props)
         self.assertNotIn('group_policies', filter_props)
@@ -367,7 +368,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
     @mock.patch.object(scheduler_utils, '_get_group_details')
     def test_setup_instance_group_with_filter_not_configured(self, mock_ggd):
         mock_ggd.side_effect = exception.NoValidHost(reason='whatever')
-        spec = {'instance_properties': {'uuid': 'fake-uuid'}}
+        spec = {'instance_properties': {'uuid': uuids.instance}}
         filter_props = {'group_hosts': ['hostC']}
 
         self.assertRaises(exception.NoValidHost,

@@ -74,4 +74,7 @@ class BlockDeviceMapping(extensions.V21APIExtensionBase):
             create_kwargs['legacy_bdm'] = False
 
     def get_server_create_schema(self, version):
-        return schema_block_device_mapping.server_create
+        if version == '2.32':
+            return schema_block_device_mapping.server_create_v232
+        else:
+            return schema_block_device_mapping.server_create

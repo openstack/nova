@@ -25,8 +25,7 @@ LOG = logging.getLogger(__name__)
 
 
 class DifferentHostFilter(filters.BaseHostFilter):
-    '''Schedule the instance on a different host from a set of instances.'''
-
+    """Schedule the instance on a different host from a set of instances."""
     # The hosts the instances are running on doesn't change within a request
     run_filter_once_per_request = True
 
@@ -40,10 +39,9 @@ class DifferentHostFilter(filters.BaseHostFilter):
 
 
 class SameHostFilter(filters.BaseHostFilter):
-    '''Schedule the instance on the same host as another instance in a set of
+    """Schedule the instance on the same host as another instance in a set of
     instances.
-    '''
-
+    """
     # The hosts the instances are running on doesn't change within a request
     run_filter_once_per_request = True
 
@@ -57,9 +55,7 @@ class SameHostFilter(filters.BaseHostFilter):
 
 
 class SimpleCIDRAffinityFilter(filters.BaseHostFilter):
-    '''Schedule the instance on a host with a particular cidr
-    '''
-
+    """Schedule the instance on a host with a particular cidr"""
     # The address of a host doesn't change within a request
     run_filter_once_per_request = True
 
@@ -87,12 +83,17 @@ class _GroupAntiAffinityFilter(filters.BaseHostFilter):
                     if spec_obj.instance_group else [])
         if self.policy_name not in policies:
             return True
+        # NOTE(hanrong): Move operations like resize can check the same source
+        # compute node where the instance is. That case, AntiAffinityFilter
+        # must not return the source as a non-possible destination.
+        if spec_obj.instance_uuid in host_state.instances.keys():
+            return True
 
         group_hosts = (spec_obj.instance_group.hosts
                        if spec_obj.instance_group else [])
         LOG.debug("Group anti affinity: check if %(host)s not "
-                    "in %(configured)s", {'host': host_state.host,
-                                           'configured': group_hosts})
+                  "in %(configured)s", {'host': host_state.host,
+                                        'configured': group_hosts})
         if group_hosts:
             return host_state.host not in group_hosts
 
@@ -119,8 +120,8 @@ class _GroupAffinityFilter(filters.BaseHostFilter):
         group_hosts = (spec_obj.instance_group.hosts
                        if spec_obj.instance_group else [])
         LOG.debug("Group affinity: check if %(host)s in "
-                    "%(configured)s", {'host': host_state.host,
-                                        'configured': group_hosts})
+                  "%(configured)s", {'host': host_state.host,
+                                     'configured': group_hosts})
         if group_hosts:
             return host_state.host in group_hosts
 

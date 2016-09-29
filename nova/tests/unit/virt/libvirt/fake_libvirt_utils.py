@@ -39,8 +39,12 @@ def get_disk_size(path, format=None):
     return 0
 
 
-def get_disk_backing_file(path, format=None):
-    return disk_backing_files.get(path, None)
+def get_disk_backing_file(path, basename=True, format=None):
+    backing_file = disk_backing_files.get(path, None)
+    if backing_file and basename:
+        backing_file = os.path.basename(backing_file)
+
+    return backing_file
 
 
 def get_disk_type_from_path(path):
@@ -139,18 +143,16 @@ def get_fs_info(path):
             'free': 84 * (1024 ** 3)}
 
 
-def fetch_image(context, target, image_id, user_id, project_id, max_size=0):
+def fetch_image(context, target, image_id, max_size=0):
     pass
 
 
-def fetch_raw_image(context, target, image_id, user_id, project_id,
-                    max_size=0):
+def fetch_raw_image(context, target, image_id, max_size=0):
     pass
 
 
-def get_instance_path(instance, forceold=False, relative=False):
-    return libvirt_utils.get_instance_path(instance, forceold=forceold,
-                                           relative=relative)
+def get_instance_path(instance, relative=False):
+    return libvirt_utils.get_instance_path(instance, relative=relative)
 
 
 def get_instance_path_at_destination(instance, migrate_data=None):

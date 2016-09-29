@@ -33,11 +33,13 @@ from oslo_service import loopingcall
 from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import importutils
+import time
 
 from nova.compute import power_state
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
+from nova.i18n import _LW
 from nova import utils
 from nova.virt import hardware
 from nova.virt.libvirt import compat
@@ -118,14 +120,12 @@ class Guest(object):
         :returns guest.Guest: Guest ready to be launched
         """
         try:
-            # TODO(sahid): Host.write_instance_config should return
-            # an instance of Guest
-            domain = host.write_instance_config(xml)
+            guest = host.write_instance_config(xml)
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE('Error defining a domain with XML: %s'),
+                LOG.error(_LE('Error defining a guest with XML: %s'),
                           encodeutils.safe_decode(xml))
-        return cls(domain)
+        return guest
 
     def launch(self, pause=False):
         """Starts a created guest.
@@ -145,6 +145,46 @@ class Guest(object):
         """Stops a running guest."""
         self._domain.destroy()
 
+    def _sync_guest_time(self):
+        """Try to set VM time to the current value.  This is typically useful
+        when clock wasn't running on the VM for some time (e.g. during
+        suspension or migration), especially if the time delay exceeds NTP
+        tolerance.
+
+        It is not guaranteed that the time is actually set (it depends on guest
+        environment, especially QEMU agent presence) or that the set time is
+        very precise (NTP in the guest should take care of it if needed).
+        """
+        t = time.time()
+        seconds = int(t)
+        nseconds = int((t - seconds) * 10 ** 9)
+        try:
+            self._domain.setTime(time={'seconds': seconds,
+                                       'nseconds': nseconds})
+        except libvirt.libvirtError as e:
+            code = e.get_error_code()
+            if code == libvirt.VIR_ERR_AGENT_UNRESPONSIVE:
+                LOG.debug('Failed to set time: QEMU agent unresponsive',
+                          instance_uuid=self.uuid)
+            elif code == libvirt.VIR_ERR_NO_SUPPORT:
+                LOG.debug('Failed to set time: not supported',
+                          instance_uuid=self.uuid)
+            elif code == libvirt.VIR_ERR_ARGUMENT_UNSUPPORTED:
+                LOG.debug('Failed to set time: agent not configured',
+                          instance_uuid=self.uuid)
+            else:
+                LOG.warning(_LW('Failed to set time: %(reason)s'),
+                            {'reason': e}, instance_uuid=self.uuid)
+        except Exception as ex:
+            # The highest priority is not to let this method crash and thus
+            # disrupt its caller in any way.  So we swallow this error here,
+            # to be absolutely safe.
+            LOG.debug('Failed to set time: %(reason)s',
+                      {'reason': ex}, instance_uuid=self.uuid)
+        else:
+            LOG.debug('Time updated to: %d.%09d', seconds, nseconds,
+                      instance_uuid=self.uuid)
+
     def inject_nmi(self):
         """Injects an NMI to a guest."""
         self._domain.injectNMI()
@@ -152,6 +192,7 @@ class Guest(object):
     def resume(self):
         """Resumes a suspended guest."""
         self._domain.resume()
+        self._sync_guest_time()
 
     def enable_hairpin(self):
         """Enables hairpin mode for this guest."""
@@ -247,7 +288,9 @@ class Guest(object):
         """
         flags = persistent and libvirt.VIR_DOMAIN_AFFECT_CONFIG or 0
         flags |= live and libvirt.VIR_DOMAIN_AFFECT_LIVE or 0
-        self._domain.attachDeviceFlags(conf.to_xml(), flags=flags)
+        device_xml = conf.to_xml()
+        LOG.debug("attach device xml: %s", device_xml)
+        self._domain.attachDeviceFlags(device_xml, flags=flags)
 
     def get_disk(self, device):
         """Returns the disk mounted at device
@@ -354,7 +397,9 @@ class Guest(object):
         """
         flags = persistent and libvirt.VIR_DOMAIN_AFFECT_CONFIG or 0
         flags |= live and libvirt.VIR_DOMAIN_AFFECT_LIVE or 0
-        self._domain.detachDeviceFlags(conf.to_xml(), flags=flags)
+        device_xml = conf.to_xml()
+        LOG.debug("detach device xml: %s", device_xml)
+        self._domain.detachDeviceFlags(device_xml, flags=flags)
 
     def get_xml_desc(self, dump_inactive=False, dump_sensitive=False,
                      dump_migratable=False):
@@ -477,6 +522,104 @@ class Guest(object):
         """
         self._domain.suspend()
 
+    def migrate(self, destination, params=None, flags=0, domain_xml=None,
+                bandwidth=0):
+        """Migrate guest object from its current host to the destination
+
+        :param destination: URI of host destination where guest will be migrate
+        :param flags: May be one of more of the following:
+           VIR_MIGRATE_LIVE Do not pause the VM during migration
+           VIR_MIGRATE_PEER2PEER Direct connection between source &
+                                 destination hosts
+           VIR_MIGRATE_TUNNELLED Tunnel migration data over the
+                                 libvirt RPC channel
+           VIR_MIGRATE_PERSIST_DEST If the migration is successful,
+                                    persist the domain on the
+                                    destination host.
+           VIR_MIGRATE_UNDEFINE_SOURCE If the migration is successful,
+                                       undefine the domain on the
+                                       source host.
+           VIR_MIGRATE_PAUSED Leave the domain suspended on the remote
+                              side.
+           VIR_MIGRATE_NON_SHARED_DISK Migration with non-shared
+                                       storage with full disk copy
+           VIR_MIGRATE_NON_SHARED_INC Migration with non-shared
+                                      storage with incremental disk
+                                      copy
+           VIR_MIGRATE_CHANGE_PROTECTION Protect against domain
+                                         configuration changes during
+                                         the migration process (set
+                                         automatically when
+                                         supported).
+           VIR_MIGRATE_UNSAFE Force migration even if it is considered
+                              unsafe.
+           VIR_MIGRATE_OFFLINE Migrate offline
+        :param domain_xml: Changing guest configuration during migration
+        :param bandwidth: The maximun bandwidth in MiB/s
+        """
+        if domain_xml is None:
+            self._domain.migrateToURI(
+                destination, flags=flags, bandwidth=bandwidth)
+        else:
+            if params:
+                self._domain.migrateToURI3(
+                    destination, params=params, flags=flags)
+            else:
+                self._domain.migrateToURI2(
+                    destination, dxml=domain_xml,
+                    flags=flags, bandwidth=bandwidth)
+
+    def abort_job(self):
+        """Requests to abort current background job"""
+        self._domain.abortJob()
+
+    def migrate_configure_max_downtime(self, mstime):
+        """Sets maximum time for which domain is allowed to be paused
+
+        :param mstime: Downtime in milliseconds.
+        """
+        self._domain.migrateSetMaxDowntime(mstime)
+
+    def migrate_start_postcopy(self):
+        """Switch running live migration to post-copy mode"""
+        self._domain.migrateStartPostCopy()
+
+    def get_job_info(self):
+        """Get job info for the domain
+
+        Query the libvirt job info for the domain (ie progress
+        of migration, or snapshot operation)
+
+        :returns: a JobInfo of guest
+        """
+        if JobInfo._have_job_stats:
+            try:
+                stats = self._domain.jobStats()
+                return JobInfo(**stats)
+            except libvirt.libvirtError as ex:
+                if ex.get_error_code() == libvirt.VIR_ERR_NO_SUPPORT:
+                    # Remote libvirt doesn't support new API
+                    LOG.debug("Missing remote virDomainGetJobStats: %s", ex)
+                    JobInfo._have_job_stats = False
+                    return JobInfo._get_job_stats_compat(self._domain)
+                elif ex.get_error_code() in (
+                        libvirt.VIR_ERR_NO_DOMAIN,
+                        libvirt.VIR_ERR_OPERATION_INVALID):
+                    # Transient guest finished migration, so it has gone
+                    # away completclsely
+                    LOG.debug("Domain has shutdown/gone away: %s", ex)
+                    return JobInfo(type=libvirt.VIR_DOMAIN_JOB_COMPLETED)
+                else:
+                    LOG.debug("Failed to get job stats: %s", ex)
+                    raise
+            except AttributeError as ex:
+                # Local python binding doesn't support new API
+                LOG.debug("Missing local virDomainGetJobStats: %s", ex)
+                JobInfo._have_job_stats = False
+                return JobInfo._get_job_stats_compat(self._domain)
+        else:
+            return JobInfo._get_job_stats_compat(self._domain)
+
 
 class BlockDevice(object):
     """Wrapper around block device API"""
@@ -550,24 +693,31 @@ class BlockDevice(object):
         Libvirt may return either cur==end or an empty dict when
         the job is complete, depending on whether the job has been
         cleaned up by libvirt yet, or not.
+        It can also return end=0 if qemu has not yet started the block
+        operation.
 
         :param abort_on_error: Whether to stop process and raise NovaException
                                on error (default: False)
         :param wait_for_job_clean: Whether to force wait to ensure job is
-                                   finished (see bug: LP#1119173)
+                                   finished (see bug: RH Bugzilla#1119173)
 
         :returns: True if still in progress
                   False if completed
         """
         status = self.get_job_info()
-        if not status and abort_on_error:
-            msg = _('libvirt error while requesting blockjob info.')
-            raise exception.NovaException(msg)
+        if not status:
+            if abort_on_error:
+                msg = _('libvirt error while requesting blockjob info.')
+                raise exception.NovaException(msg)
+            return False
 
         if wait_for_job_clean:
             job_ended = status.job == 0
         else:
-            job_ended = status.cur == status.end
+            # NOTE(slaweq): because of bug in libvirt, which is described in
+            # http://www.redhat.com/archives/libvir-list/2016-September/msg00017.html
+            # if status.end == 0 job is not started yet so it is not finished
+            job_ended = status.end != 0 and status.cur == status.end
 
         return not job_ended
 
@@ -602,3 +752,81 @@ class BlockDeviceJobInfo(object):
         self.bandwidth = bandwidth
         self.cur = cur
         self.end = end
+
+
+class JobInfo(object):
+    """Information about libvirt background jobs
+
+    This class encapsulates information about libvirt
+    background jobs. It provides a mapping from either
+    the old virDomainGetJobInfo API which returned a
+    fixed list of fields, or the modern virDomainGetJobStats
+    which returns an extendable dict of fields.
+    """
+
+    _have_job_stats = True
+
+    def __init__(self, **kwargs):
+
+        self.type = kwargs.get("type", libvirt.VIR_DOMAIN_JOB_NONE)
+        self.time_elapsed = kwargs.get("time_elapsed", 0)
+        self.time_remaining = kwargs.get("time_remaining", 0)
+        self.downtime = kwargs.get("downtime", 0)
+        self.setup_time = kwargs.get("setup_time", 0)
+        self.data_total = kwargs.get("data_total", 0)
+        self.data_processed = kwargs.get("data_processed", 0)
+        self.data_remaining = kwargs.get("data_remaining", 0)
+        self.memory_total = kwargs.get("memory_total", 0)
+        self.memory_processed = kwargs.get("memory_processed", 0)
+        self.memory_remaining = kwargs.get("memory_remaining", 0)
+        self.memory_iteration = kwargs.get("memory_iteration", 0)
+        self.memory_constant = kwargs.get("memory_constant", 0)
+        self.memory_normal = kwargs.get("memory_normal", 0)
+        self.memory_normal_bytes = kwargs.get("memory_normal_bytes", 0)
+        self.memory_bps = kwargs.get("memory_bps", 0)
+        self.disk_total = kwargs.get("disk_total", 0)
+        self.disk_processed = kwargs.get("disk_processed", 0)
+        self.disk_remaining = kwargs.get("disk_remaining", 0)
+        self.disk_bps = kwargs.get("disk_bps", 0)
+        self.comp_cache = kwargs.get("compression_cache", 0)
+        self.comp_bytes = kwargs.get("compression_bytes", 0)
+        self.comp_pages = kwargs.get("compression_pages", 0)
+        self.comp_cache_misses = kwargs.get("compression_cache_misses", 0)
+        self.comp_overflow = kwargs.get("compression_overflow", 0)
+
+    @classmethod
+    def _get_job_stats_compat(cls, dom):
+        # Make the old virDomainGetJobInfo method look similar to the
+        # modern virDomainGetJobStats method
+        try:
+            info = dom.jobInfo()
+        except libvirt.libvirtError as ex:
+            # When migration of a transient guest completes, the guest
+            # goes away so we'll see NO_DOMAIN error code
+            #
+            # When migration of a persistent guest completes, the guest
+            # merely shuts off, but libvirt unhelpfully raises an
+            # OPERATION_INVALID error code
+            #
+            # Lets pretend both of these mean success
+            if ex.get_error_code() in (libvirt.VIR_ERR_NO_DOMAIN,
+                                       libvirt.VIR_ERR_OPERATION_INVALID):
+                LOG.debug("Domain has shutdown/gone away: %s", ex)
+                return cls(type=libvirt.VIR_DOMAIN_JOB_COMPLETED)
+            else:
+                LOG.debug("Failed to get job info: %s", ex)
+                raise
+
+        return cls(
+            type=info[0],
+            time_elapsed=info[1],
+            time_remaining=info[2],
+            data_total=info[3],
+            data_processed=info[4],
+            data_remaining=info[5],
+            memory_total=info[6],
+            memory_processed=info[7],
+            memory_remaining=info[8],
+            disk_total=info[9],
+            disk_processed=info[10],
+            disk_remaining=info[11])

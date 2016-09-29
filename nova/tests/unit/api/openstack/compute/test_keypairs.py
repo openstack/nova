@@ -14,14 +14,11 @@
 #    under the License.
 
 import mock
+from oslo_policy import policy as oslo_policy
 from oslo_serialization import jsonutils
 import webob
 
-from oslo_policy import policy as oslo_policy
-
 from nova.api.openstack.compute import keypairs as keypairs_v21
-from nova.api.openstack.compute.legacy_v2.contrib import keypairs \
-        as keypairs_v2
 from nova.api.openstack import wsgi as os_wsgi
 from nova.compute import api as compute_api
 from nova import exception
@@ -50,7 +47,7 @@ def fake_keypair(name):
                 name=name, **keypair_data)
 
 
-def db_key_pair_get_all_by_user(self, user_id):
+def db_key_pair_get_all_by_user(self, user_id, limit, marker):
     return [fake_keypair('FAKE')]
 
 
@@ -63,8 +60,8 @@ def db_key_pair_destroy(context, user_id, name):
         raise Exception()
 
 
-def db_key_pair_create_duplicate(context, keypair):
-    raise exception.KeyPairExists(key_name=keypair.get('name', ''))
+def db_key_pair_create_duplicate(context):
+    raise exception.KeyPairExists(key_name='create_duplicate')
 
 
 class KeypairsTestV21(test.TestCase):
@@ -80,7 +77,6 @@ class KeypairsTestV21(test.TestCase):
     def setUp(self):
         super(KeypairsTestV21, self).setUp()
         fakes.stub_out_networking(self)
-        fakes.stub_out_rate_limiting(self.stubs)
 
         self.stub_out("nova.db.key_pair_get_all_by_user",
                       db_key_pair_get_all_by_user)
@@ -88,10 +84,6 @@ class KeypairsTestV21(test.TestCase):
                       db_key_pair_create)
         self.stub_out("nova.db.key_pair_destroy",
                       db_key_pair_destroy)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Keypairs'])
         self._setup_app_and_controller()
 
         self.req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
@@ -104,8 +96,8 @@ class KeypairsTestV21(test.TestCase):
     def test_keypair_create(self):
         body = {'keypair': {'name': 'create_test'}}
         res_dict = self.controller.create(self.req, body=body)
-        self.assertTrue(len(res_dict['keypair']['fingerprint']) > 0)
-        self.assertTrue(len(res_dict['keypair']['private_key']) > 0)
+        self.assertGreater(len(res_dict['keypair']['fingerprint']), 0)
+        self.assertGreater(len(res_dict['keypair']['private_key']), 0)
         self._assert_keypair_type(res_dict)
 
     def _test_keypair_create_bad_request_case(self,
@@ -184,8 +176,8 @@ class KeypairsTestV21(test.TestCase):
             },
         }
         res_dict = self.controller.create(self.req, body=body)
-        # FIXME(ja): sholud we check that public_key was sent to create?
-        self.assertTrue(len(res_dict['keypair']['fingerprint']) > 0)
+        # FIXME(ja): Should we check that public_key was sent to create?
+        self.assertGreater(len(res_dict['keypair']['fingerprint']), 0)
         self.assertNotIn('private_key', res_dict['keypair'])
         self._assert_keypair_type(res_dict)
 
@@ -233,7 +225,8 @@ class KeypairsTestV21(test.TestCase):
         self.assertIn('Quota exceeded, too many key pairs.', ex.explanation)
 
     def test_keypair_create_duplicate(self):
-        self.stub_out("nova.db.key_pair_create", db_key_pair_create_duplicate)
+        self.stub_out("nova.objects.KeyPair.create",
+                      db_key_pair_create_duplicate)
         body = {'keypair': {'name': 'create_duplicate'}}
         ex = self.assertRaises(webob.exc.HTTPConflict,
                                self.controller.create, self.req, body=body)
@@ -287,7 +280,15 @@ class KeypairsTestV21(test.TestCase):
                       fakes.fake_instance_get())
         self.stub_out('nova.db.instance_get_by_uuid',
                       fakes.fake_instance_get())
-        req = webob.Request.blank(self.base_url + '/servers/' + uuids.server)
+        # NOTE(sdague): because of the way extensions work, we have to
+        # also stub out the Request compute cache with a real compute
+        # object. Delete this once we remove all the gorp of
+        # extensions modifying the server objects.
+        self.stub_out('nova.api.openstack.wsgi.Request.get_db_instance',
+                      fakes.fake_compute_get())
+
+        req = fakes.HTTPRequest.blank(
+            self.base_url + '/servers/' + uuids.server)
         req.headers['Content-Type'] = 'application/json'
         response = req.get_response(self.app_server)
         self.assertEqual(response.status_int, 200)
@@ -353,15 +354,17 @@ class KeypairPolicyTestV21(test.NoDBTestCase):
     def setUp(self):
         super(KeypairPolicyTestV21, self).setUp()
 
-        def _db_key_pair_get(context, user_id, name):
-            return dict(test_keypair.fake_keypair,
-                        name='foo', public_key='XXX', fingerprint='YYY',
-                        type='ssh')
+        @staticmethod
+        def _db_key_pair_get(context, user_id, name=None):
+            if name is not None:
+                return dict(test_keypair.fake_keypair,
+                            name='foo', public_key='XXX', fingerprint='YYY',
+                            type='ssh')
+            else:
+                return db_key_pair_get_all_by_user(context, user_id)
 
-        self.stub_out("nova.db.key_pair_get", _db_key_pair_get)
-        self.stub_out("nova.db.key_pair_get_all_by_user",
-                      db_key_pair_get_all_by_user)
-        self.stub_out("nova.db.key_pair_destroy", db_key_pair_destroy)
+        self.stub_out("nova.objects.keypair.KeyPair._get_from_db",
+                      _db_key_pair_get)
 
         self.req = fakes.HTTPRequest.blank('')
 
@@ -372,7 +375,8 @@ class KeypairPolicyTestV21(test.NoDBTestCase):
                           self.KeyPairController.index,
                           self.req)
 
-    def test_keypair_list_pass_policy(self):
+    @mock.patch('nova.objects.KeyPairList.get_by_user')
+    def test_keypair_list_pass_policy(self, mock_get):
         rules = {self.policy_path + ':index': ''}
         policy.set_rules(oslo_policy.Rules.from_dict(rules))
         res = self.KeyPairController.index(self.req)
@@ -423,49 +427,11 @@ class KeypairPolicyTestV21(test.NoDBTestCase):
                           self.KeyPairController.delete,
                           self.req, 'FAKE')
 
-    def test_keypair_delete_pass_policy(self):
+    @mock.patch('nova.objects.KeyPair.destroy_by_name')
+    def test_keypair_delete_pass_policy(self, mock_destroy):
         rules = {self.policy_path + ':delete': ''}
         policy.set_rules(oslo_policy.Rules.from_dict(rules))
         self.KeyPairController.delete(self.req, 'FAKE')
-
-
-class KeypairsTestV2(KeypairsTestV21):
-    validation_error = webob.exc.HTTPBadRequest
-
-    def _setup_app_and_controller(self):
-        self.app_server = fakes.wsgi_app(init_only=('servers',))
-        self.controller = keypairs_v2.KeypairController()
-
-    def test_keypair_create_with_name_leading_trailing_spaces(
-            self):
-        body = {'keypair': {'name': '  test  '}}
-        self.req.set_legacy_v2()
-        res_dict = self.controller.create(self.req, body=body)
-        self.assertEqual('  test  ', res_dict['keypair']['name'])
-
-    def test_keypair_create_with_name_leading_trailing_spaces_compat_mode(
-            self):
-        pass
-
-    def test_create_server_keypair_name_with_leading_trailing(self):
-        pass
-
-    @mock.patch.object(compute_api.API, 'create')
-    def test_create_server_keypair_name_with_leading_trailing_compat_mode(
-            self, mock_create):
-        mock_create.return_value = (
-            objects.InstanceList(objects=[
-                fakes.stub_instance_obj(ctxt=None, id=1)]),
-            None)
-        req = fakes.HTTPRequest.blank(self.base_url + '/servers')
-        req.method = 'POST'
-        req.headers["content-type"] = "application/json"
-        req.body = jsonutils.dump_as_bytes({'server': {'name': 'test',
-                                               'flavorRef': 1,
-                                               'keypair_name': '  abc  ',
-                                               'imageRef': FAKE_UUID}})
-        res = req.get_response(self.app_server)
-        self.assertEqual(202, res.status_code)
 
 
 class KeypairsTestV22(KeypairsTestV21):
@@ -596,9 +562,41 @@ class KeypairsTestV210(KeypairsTestV22):
                           req, body=body)
 
 
-class KeypairPolicyTestV2(KeypairPolicyTestV21):
-    KeyPairController = keypairs_v2.KeypairController()
-    policy_path = 'compute_extension:keypairs'
+class KeypairsTestV235(test.TestCase):
+    base_url = '/v2/fake'
+    wsgi_api_version = '2.35'
 
-    def _assert_keypair_create(self, mock_create, req):
-        mock_create.assert_called_with(req, 'fake_user', 'create_test')
+    def _setup_app_and_controller(self):
+        self.app_server = fakes.wsgi_app_v21(init_only=('os-keypairs'))
+        self.controller = keypairs_v21.KeypairController()
+
+    def setUp(self):
+        super(KeypairsTestV235, self).setUp()
+        self._setup_app_and_controller()
+
+    @mock.patch("nova.db.key_pair_get_all_by_user")
+    def test_keypair_list_limit_and_marker(self, mock_kp_get):
+        mock_kp_get.side_effect = db_key_pair_get_all_by_user
+
+        req = fakes.HTTPRequest.blank(
+            self.base_url + '/os-keypairs?limit=3&marker=fake_marker',
+            version=self.wsgi_api_version, use_admin_context=True)
+
+        res_dict = self.controller.index(req)
+
+        mock_kp_get.assert_called_once_with(
+            req.environ['nova.context'], 'fake_user',
+            limit=3, marker='fake_marker')
+        response = {'keypairs': [{'keypair': dict(keypair_data, name='FAKE',
+                                                  type='ssh')}]}
+        self.assertEqual(res_dict, response)
+
+    @mock.patch('nova.compute.api.KeypairAPI.get_key_pairs')
+    def test_keypair_list_limit_and_marker_invalid_marker(self, mock_kp_get):
+        mock_kp_get.side_effect = exception.MarkerNotFound(marker='unknown_kp')
+
+        req = fakes.HTTPRequest.blank(
+            self.base_url + '/os-keypairs?limit=3&marker=unknown_kp',
+            version=self.wsgi_api_version, use_admin_context=True)
+
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.index, req)

@@ -20,11 +20,10 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova.i18n import _
+from nova.policies import instance_actions as ia_policies
 from nova import utils
 
 ALIAS = "os-instance-actions"
-authorize = extensions.os_compute_authorizer(ALIAS)
-soft_authorize = extensions.os_compute_soft_authorizer(ALIAS)
 
 ACTION_KEYS = ['action', 'instance_uuid', 'request_id', 'user_id',
                'project_id', 'start_time', 'message']
@@ -64,7 +63,7 @@ class InstanceActionsController(wsgi.Controller):
         """Returns the list of actions recorded for a given instance."""
         context = req.environ["nova.context"]
         instance = self._get_instance(req, context, server_id)
-        authorize(context, target=instance)
+        context.can(ia_policies.BASE_POLICY_NAME, instance)
         actions_raw = self.action_api.actions_get(context, instance)
         actions = [self._format_action(action) for action in actions_raw]
         return {'instanceActions': actions}
@@ -74,7 +73,7 @@ class InstanceActionsController(wsgi.Controller):
         """Return data about the given instance action."""
         context = req.environ['nova.context']
         instance = self._get_instance(req, context, server_id)
-        authorize(context, target=instance)
+        context.can(ia_policies.BASE_POLICY_NAME, instance)
         action = self.action_api.action_get_by_request_id(context, instance,
                                                           id)
         if action is None:
@@ -83,7 +82,7 @@ class InstanceActionsController(wsgi.Controller):
 
         action_id = action['id']
         action = self._format_action(action)
-        if soft_authorize(context, action='events'):
+        if context.can(ia_policies.POLICY_ROOT % 'events', fatal=False):
             events_raw = self.action_api.action_events_get(context, instance,
                                                            action_id)
             action['events'] = [self._format_event(evt) for evt in events_raw]

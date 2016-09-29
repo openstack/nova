@@ -19,7 +19,6 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
 
-from nova import context
 from nova import db
 from nova import exception
 from nova import objects
@@ -30,6 +29,8 @@ LOG = logging.getLogger(__name__)
 
 
 def compare_pci_device_attributes(obj_a, obj_b):
+    if not isinstance(obj_b, PciDevice):
+        return False
     pci_ignore_fields = base.NovaPersistentObject.fields.keys()
     for name in obj_a.obj_fields:
         if name in pci_ignore_fields:
@@ -112,18 +113,6 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         'parent_addr': fields.StringField(nullable=True),
     }
 
-    @staticmethod
-    def should_migrate_data():
-        # NOTE(ndipanov): Only migrate parent_addr if all services are up to at
-        # least version 4 - this should only ever be called from save()
-        services = ('conductor', 'api')
-        min_parent_addr_version = 4
-
-        min_deployed = min(objects.Service.get_minimum_version(
-            context.get_admin_context(), 'nova-' + service)
-            for service in services)
-        return min_deployed >= min_parent_addr_version
-
     def obj_make_compatible(self, primitive, target_version):
         target_version = versionutils.convert_version_to_tuple(target_version)
         if target_version < (1, 2) and 'request_id' in primitive:
@@ -155,8 +144,8 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         # functions like claim/allocate etc. The id is allocated by
         # database. The extra_info is created by the object.
         no_changes = ('status', 'instance_uuid', 'id', 'extra_info')
-        map(lambda x: dev_dict.pop(x, None),
-            [key for key in no_changes])
+        for key in no_changes:
+            dev_dict.pop(key, None)
 
         # NOTE(ndipanov): This needs to be set as it's accessed when matching
         dev_dict.setdefault('parent_addr')
@@ -175,6 +164,11 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         super(PciDevice, self).__init__(*args, **kwargs)
         self.obj_reset_changes()
         self.extra_info = {}
+        # NOTE(ndipanov): These are required to build an in-memory device tree
+        # but don't need to be proper fields (and can't easily be as they would
+        # hold circular references)
+        self.parent_device = None
+        self.child_devices = []
 
     def __eq__(self, other):
         return compare_pci_device_attributes(self, other)
@@ -192,10 +186,6 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                 pci_device.extra_info = jsonutils.loads(extra_info)
         pci_device._context = context
         pci_device.obj_reset_changes()
-        # NOTE(ndipanov): As long as there is PF data in the old location, we
-        # want to load it as it may have be the only place we have it
-        if 'phys_function' in pci_device.extra_info:
-            pci_device.parent_addr = pci_device.extra_info['phys_function']
 
         return pci_device
 
@@ -231,23 +221,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                                   self.address)
         elif self.status != fields.PciDeviceStatus.DELETED:
             updates = self.obj_get_changes()
-            if not self.should_migrate_data():
-                # NOTE(ndipanov): If we are not migrating data yet, make sure
-                # that any changes to parent_addr are also in the old location
-                # in extra_info
-                if 'parent_addr' in updates and updates['parent_addr']:
-                    extra_update = updates.get('extra_info', {})
-                    if not extra_update and self.obj_attr_is_set('extra_info'):
-                        extra_update = self.extra_info
-                    extra_update['phys_function'] = updates['parent_addr']
-                    updates['extra_info'] = extra_update
-            else:
-                # NOTE(ndipanov): Once we start migrating, meaning all control
-                # plane has been upgraded - aggressively migrate on every save
-                pf_extra = self.extra_info.pop('phys_function', None)
-                if pf_extra and 'parent_addr' not in updates:
-                    updates['parent_addr'] = pf_extra
-                updates['extra_info'] = self.extra_info
+            updates['extra_info'] = self.extra_info
 
             if 'extra_info' in updates:
                 updates['extra_info'] = jsonutils.dumps(updates['extra_info'])
@@ -262,7 +236,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         for dev in dev_list:
             dev.status = status
 
-    def claim(self, instance):
+    def claim(self, instance_uuid):
         if self.status != fields.PciDeviceStatus.AVAILABLE:
             raise exception.PciDeviceInvalidStatus(
                 compute_node_id=self.compute_node_id,
@@ -272,10 +246,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         if self.dev_type == fields.PciDeviceType.SRIOV_PF:
             # Update PF status to CLAIMED if all of it dependants are free
             # and set their status to UNCLAIMABLE
-            vfs_list = objects.PciDeviceList.get_by_parent_address(
-                                             self._context,
-                                             self.compute_node_id,
-                                             self.address)
+            vfs_list = self.child_devices
             if not all([vf.is_available() for vf in vfs_list]):
                 raise exception.PciDeviceVFInvalidStatus(
                     compute_node_id=self.compute_node_id,
@@ -294,10 +265,8 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
             parent_ok_statuses = (fields.PciDeviceStatus.AVAILABLE,
                                   fields.PciDeviceStatus.UNCLAIMABLE,
                                   fields.PciDeviceStatus.UNAVAILABLE)
-            try:
-                parent = self.get_by_dev_addr(self._context,
-                                              self.compute_node_id,
-                                              self.parent_addr)
+            parent = self.parent_device
+            if parent:
                 if parent.status not in parent_ok_statuses:
                     raise exception.PciDevicePFInvalidStatus(
                         compute_node_id=self.compute_node_id,
@@ -307,14 +276,14 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                 # Set PF status
                 if parent.status == fields.PciDeviceStatus.AVAILABLE:
                     parent.status = fields.PciDeviceStatus.UNCLAIMABLE
-            except exception.PciDeviceNotFound:
+            else:
                 LOG.debug('Physical function addr: %(pf_addr)s parent of '
-                          'VF addr: %(vf_addr)s was not found',
-                           {'pf_addr': self.parent_addr,
-                            'vf_addr': self.address})
+                            'VF addr: %(vf_addr)s was not found',
+                            {'pf_addr': self.parent_addr,
+                                'vf_addr': self.address})
 
         self.status = fields.PciDeviceStatus.CLAIMED
-        self.instance_uuid = instance['uuid']
+        self.instance_uuid = instance_uuid
 
     def allocate(self, instance):
         ok_statuses = (fields.PciDeviceStatus.AVAILABLE,
@@ -322,7 +291,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         parent_ok_statuses = (fields.PciDeviceStatus.AVAILABLE,
                               fields.PciDeviceStatus.UNCLAIMABLE,
                               fields.PciDeviceStatus.UNAVAILABLE)
-        dependatns_ok_statuses = (fields.PciDeviceStatus.AVAILABLE,
+        dependants_ok_statuses = (fields.PciDeviceStatus.AVAILABLE,
                                   fields.PciDeviceStatus.UNCLAIMABLE)
         if self.status not in ok_statuses:
             raise exception.PciDeviceInvalidStatus(
@@ -336,11 +305,8 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                 address=self.address, owner=self.instance_uuid,
                 hopeowner=instance['uuid'])
         if self.dev_type == fields.PciDeviceType.SRIOV_PF:
-            vfs_list = objects.PciDeviceList.get_by_parent_address(
-                                             self._context,
-                                             self.compute_node_id,
-                                             self.address)
-            if not all([vf.status in dependatns_ok_statuses for
+            vfs_list = self.child_devices
+            if not all([vf.status in dependants_ok_statuses for
                         vf in vfs_list]):
                 raise exception.PciDeviceVFInvalidStatus(
                     compute_node_id=self.compute_node_id,
@@ -349,10 +315,8 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                                      fields.PciDeviceStatus.UNAVAILABLE)
 
         elif (self.dev_type == fields.PciDeviceType.SRIOV_VF):
-            try:
-                parent = self.get_by_dev_addr(self._context,
-                                              self.compute_node_id,
-                                              self.parent_addr)
+            parent = self.parent_device
+            if parent:
                 if parent.status not in parent_ok_statuses:
                     raise exception.PciDevicePFInvalidStatus(
                         compute_node_id=self.compute_node_id,
@@ -361,7 +325,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                         hopestatus=parent_ok_statuses)
                 # Set PF status
                 parent.status = fields.PciDeviceStatus.UNAVAILABLE
-            except exception.PciDeviceNotFound:
+            else:
                 LOG.debug('Physical function addr: %(pf_addr)s parent of '
                           'VF addr: %(vf_addr)s was not found',
                            {'pf_addr': self.parent_addr,
@@ -405,31 +369,24 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                 hopeowner=instance['uuid'])
         if self.dev_type == fields.PciDeviceType.SRIOV_PF:
             # Set all PF dependants status to AVAILABLE
-            vfs_list = objects.PciDeviceList.get_by_parent_address(
-                                             self._context,
-                                             self.compute_node_id,
-                                             self.address)
+            vfs_list = self.child_devices
             self._bulk_update_status(vfs_list,
                                      fields.PciDeviceStatus.AVAILABLE)
             free_devs.extend(vfs_list)
         if self.dev_type == fields.PciDeviceType.SRIOV_VF:
             # Set PF status to AVAILABLE if all of it's VFs are free
-            vfs_list = objects.PciDeviceList.get_by_parent_address(
-                                             self._context,
-                                             self.compute_node_id,
-                                             self.parent_addr)
-            if all([vf.is_available() for vf in vfs_list if vf.id != self.id]):
-                try:
-                    parent = self.get_by_dev_addr(self._context,
-                                                  self.compute_node_id,
-                                                  self.parent_addr)
+            parent = self.parent_device
+            if not parent:
+                LOG.debug('Physical function addr: %(pf_addr)s parent of '
+                          'VF addr: %(vf_addr)s was not found',
+                           {'pf_addr': self.parent_addr,
+                            'vf_addr': self.address})
+            else:
+                vfs_list = parent.child_devices
+                if all([vf.is_available() for vf in vfs_list
+                        if vf.id != self.id]):
                     parent.status = fields.PciDeviceStatus.AVAILABLE
                     free_devs.append(parent)
-                except exception.PciDeviceNotFound:
-                    LOG.debug('Physical function addr: %(pf_addr)s parent of '
-                              'VF addr: %(vf_addr)s was not found',
-                               {'pf_addr': self.parent_addr,
-                                'vf_addr': self.address})
         old_status = self.status
         self.status = fields.PciDeviceStatus.AVAILABLE
         free_devs.append(self)
@@ -465,8 +422,9 @@ class PciDeviceList(base.ObjectListBase, base.NovaObject):
 
     def __init__(self, *args, **kwargs):
         super(PciDeviceList, self).__init__(*args, **kwargs)
-        self.objects = []
-        self.obj_reset_changes()
+        if 'objects' not in kwargs:
+            self.objects = []
+            self.obj_reset_changes()
 
     @base.remotable_classmethod
     def get_by_compute_node(cls, context, node_id):

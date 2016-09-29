@@ -33,11 +33,8 @@ def upgrade(migrate_engine):
         mysql_engine='InnoDB',
         mysql_charset='latin1'
     )
-    # NOTE(mriedem): DB2 creates an index when a unique constraint is created
-    # so trying to add a second index on the name column will fail with error
-    # SQL0605W, so omit the index in the case of DB2.
-    if migrate_engine.name != 'ibm_db_sa':
-        Index('resource_providers_uuid_idx', resource_providers.c.uuid)
+
+    Index('resource_providers_uuid_idx', resource_providers.c.uuid)
 
     inventories = Table(
         'inventories', meta,

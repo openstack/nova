@@ -15,14 +15,12 @@
 
 import uuid as uuid_lib
 
-from oslo_config import cfg
 from oslo_utils import timeutils
 from webob import exc
 
 from nova.api.openstack.compute import cloudpipe as cloudpipe_v21
-from nova.api.openstack.compute.legacy_v2.contrib import cloudpipe \
-        as cloudpipe_v2
 from nova.compute import utils as compute_utils
+import nova.conf
 from nova import exception
 from nova import objects
 from nova import test
@@ -31,8 +29,7 @@ from nova.tests.unit import fake_network
 from nova.tests.unit import matchers
 from nova import utils
 
-CONF = cfg.CONF
-CONF.import_opt('vpn_image_id', 'nova.cloudpipe.pipelib')
+CONF = nova.conf.CONF
 
 
 project_id = str(uuid_lib.uuid4().hex)
@@ -41,20 +38,20 @@ uuid = str(uuid_lib.uuid4())
 
 def fake_vpn_instance():
     return objects.Instance(
-        id=7, image_ref=CONF.vpn_image_id, vm_state='active',
+        id=7, image_ref=CONF.cloudpipe.vpn_image_id, vm_state='active',
         created_at=timeutils.parse_strtime('1981-10-20T00:00:00.000000'),
         uuid=uuid, project_id=project_id)
 
 
-def compute_api_get_all_empty(context, search_opts=None, want_objects=True):
+def compute_api_get_all_empty(context, search_opts=None):
     return []
 
 
-def compute_api_get_all(context, search_opts=None, want_objects=True):
+def compute_api_get_all(context, search_opts=None):
         return [fake_vpn_instance()]
 
 
-def utils_vpn_ping(addr, port, timoeout=0.05, session_id=None):
+def utils_vpn_ping(addr, port, timeout=0.05, session_id=None):
     return True
 
 
@@ -153,13 +150,6 @@ class CloudpipeTestV21(test.NoDBTestCase):
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(exception.ValidationError,
                           self.controller.create, req, body=body)
-
-
-class CloudpipeTestV2(CloudpipeTestV21):
-    cloudpipe = cloudpipe_v2
-
-    def test_cloudpipe_create_with_bad_project_id_failed(self):
-        pass
 
 
 class CloudpipePolicyEnforcementV21(test.NoDBTestCase):

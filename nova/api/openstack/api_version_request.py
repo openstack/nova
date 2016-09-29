@@ -72,6 +72,29 @@ REST_API_VERSION_HISTORY = """REST API Version History:
     * 2.25 - Make block_migration support 'auto' and remove
              disk_over_commit for os-migrateLive.
     * 2.26 - Adds support of server tags
+    * 2.27 - Adds support for new-style microversion headers while
+             keeping support for the original style.
+    * 2.28 - Changes compute_node.cpu_info from string to object
+    * 2.29 - Add a force flag in evacuate request body and change the
+             behaviour for the host flag by calling the scheduler.
+    * 2.30 - Add a force flag in live-migrate request body and change the
+             behaviour for the host flag by calling the scheduler.
+    * 2.31 - Fix os-console-auth-tokens to work for all console types.
+    * 2.32 - Add tag to networks and block_device_mapping_v2 in server boot
+             request body.
+    * 2.33 - Add pagination support for hypervisors.
+    * 2.34 - Checks before live-migration are made in asynchronous way.
+             os-Migratelive Action does not throw badRequest in case of
+             pre-checks failure. Verification result is available over
+             instance-actions.
+    * 2.35 - Adds keypairs pagination support.
+    * 2.36 - Deprecates all the API which proxy to another service and fping
+             API.
+    * 2.37 - Adds support for auto-allocating networking, otherwise known as
+             "Get me a Network". Also enforces server.networks.uuid to be in
+             UUID format.
+    * 2.38 - Add a condition to return HTTPBadRequest if invalid status is
+             provided for listing servers.
 """
 
 # The minimum and maximum versions of the API supported
@@ -80,8 +103,13 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.26"
+_MAX_API_VERSION = "2.38"
 DEFAULT_API_VERSION = _MIN_API_VERSION
+
+# All the proxy APIs which related network, images and baremetal
+# were deprecated from 2.36.
+MAX_PROXY_API_SUPPORT_VERSION = '2.35'
+MIN_WITHOUT_PROXY_API_SUPPORT_VERSION = '2.36'
 
 
 # NOTE(cyeoh): min and max versions declared as functions so we can

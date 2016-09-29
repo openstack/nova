@@ -18,6 +18,8 @@ import tarfile
 
 from nova import image
 
+_VDI_FORMAT_RAW = 1
+
 IMAGE_API = image.API()
 
 

@@ -22,8 +22,6 @@ import six
 from webob import exc
 
 from nova.api.openstack.compute import instance_actions as instance_actions_v21
-from nova.api.openstack.compute.legacy_v2.contrib import instance_actions \
-        as instance_actions_v2
 from nova.api.openstack import wsgi as os_wsgi
 from nova.compute import api as compute_api
 from nova.db.sqlalchemy import models
@@ -91,7 +89,7 @@ class InstanceActionsPolicyTestV21(test.NoDBTestCase):
                      'project_id:%(project_id)s'}
         policy.set_rules(oslo_policy.Rules.from_dict(rules))
 
-    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
+    @mock.patch('nova.api.openstack.common.get_instance')
     def test_list_actions_restricted_by_project(self, mock_instance_get):
         self._set_policy_rules()
         req = self._get_http_req('os-instance-actions')
@@ -99,7 +97,7 @@ class InstanceActionsPolicyTestV21(test.NoDBTestCase):
         self.assertRaises(exception.Forbidden, self.controller.index, req,
                           str(uuid.uuid4()))
 
-    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
+    @mock.patch('nova.api.openstack.common.get_instance')
     def test_get_action_restricted_by_project(self, mock_instance_get):
         self._set_policy_rules()
         req = self._get_http_req('os-instance-actions/1')
@@ -108,22 +106,11 @@ class InstanceActionsPolicyTestV21(test.NoDBTestCase):
                           str(uuid.uuid4()), '1')
 
 
-class InstanceActionsPolicyTestV2(InstanceActionsPolicyTestV21):
-    instance_actions = instance_actions_v2
-
-    def _set_policy_rules(self):
-        rules = {'compute:get': '',
-                 'compute_extension:instance_actions':
-                     'project_id:%(project_id)s'}
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-
-
 class InstanceActionsTestV21(test.NoDBTestCase):
     instance_actions = instance_actions_v21
     wsgi_api_version = os_wsgi.DEFAULT_API_VERSION
 
-    def fake_get(self, context, instance_uuid, expected_attrs=None,
-                     want_objects=False):
+    def fake_get(self, context, instance_uuid, expected_attrs=None):
         return objects.Instance(uuid=instance_uuid)
 
     def setUp(self):
@@ -213,8 +200,7 @@ class InstanceActionsTestV21(test.NoDBTestCase):
                           FAKE_UUID, FAKE_REQUEST_ID)
 
     def test_index_instance_not_found(self):
-        def fake_get(self, context, instance_uuid, expected_attrs=None,
-                     want_objects=False):
+        def fake_get(self, context, instance_uuid, expected_attrs=None):
             raise exception.InstanceNotFound(instance_id=instance_uuid)
         self.stubs.Set(compute_api.API, 'get', fake_get)
         req = self._get_http_req('os-instance-actions')
@@ -222,8 +208,7 @@ class InstanceActionsTestV21(test.NoDBTestCase):
                           FAKE_UUID)
 
     def test_show_instance_not_found(self):
-        def fake_get(self, context, instance_uuid, expected_attrs=None,
-                     want_objects=False):
+        def fake_get(self, context, instance_uuid, expected_attrs=None):
             raise exception.InstanceNotFound(instance_id=instance_uuid)
         self.stubs.Set(compute_api.API, 'get', fake_get)
         req = self._get_http_req('os-instance-actions/fake')
@@ -234,17 +219,6 @@ class InstanceActionsTestV21(test.NoDBTestCase):
 class InstanceActionsTestV221(InstanceActionsTestV21):
     wsgi_api_version = "2.21"
 
-    def fake_get(self, context, instance_uuid, expected_attrs=None,
-                 want_objects=False):
+    def fake_get(self, context, instance_uuid, expected_attrs=None):
         self.assertEqual('yes', context.read_deleted)
         return objects.Instance(uuid=instance_uuid)
-
-
-class InstanceActionsTestV2(InstanceActionsTestV21):
-    instance_actions = instance_actions_v2
-
-    def _set_policy_rules(self):
-        rules = {'compute:get': '',
-                 'compute_extension:instance_actions': '',
-                 'compute_extension:instance_actions:events': 'is_admin:True'}
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))

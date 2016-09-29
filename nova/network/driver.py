@@ -14,20 +14,14 @@
 
 import sys
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import importutils
 
+import nova.conf
 from nova.i18n import _LE, _LI
 
-driver_opts = [
-    cfg.StrOpt('network_driver',
-               default='nova.network.linux_net',
-               help='Driver to use for network creation'),
-]
-CONF = cfg.CONF
-CONF.register_opts(driver_opts)
 
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 

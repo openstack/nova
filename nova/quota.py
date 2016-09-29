@@ -291,6 +291,33 @@ class DbQuotaDriver(object):
                 settable_quotas[key] = {'minimum': minimum, 'maximum': -1}
         return settable_quotas
 
+    def _get_syncable_resources(self, resources, user_id=None):
+        """Given a list of resources, retrieve the syncable resources
+        scoped to a project or a user.
+
+        A resource is syncable if it has a function to sync the quota
+        usage record with the actual usage of the project or user.
+
+        :param resources: A dictionary of the registered resources.
+        :param user_id: Optional. If user_id is specified, user-scoped
+                        resources will be returned. Otherwise,
+                        project-scoped resources will be returned.
+        :returns: A list of resource names scoped to a project or
+                  user that can be sync'd.
+        """
+        syncable_resources = []
+        per_project_resources = db.quota_get_per_project_resources()
+        for key, value in resources.items():
+            if isinstance(value, ReservableResource):
+                # Resources are either project-scoped or user-scoped
+                project_scoped = (user_id is None and
+                                  key in per_project_resources)
+                user_scoped = (user_id is not None and
+                               key not in per_project_resources)
+                if project_scoped or user_scoped:
+                    syncable_resources.append(key)
+        return syncable_resources
+
     def _get_quotas(self, context, resources, keys, has_sync, project_id=None,
                     user_id=None, project_quotas=None):
         """A helper method which retrieves the quotas for the specific
@@ -503,7 +530,7 @@ class DbQuotaDriver(object):
         LOG.debug('Quotas for project %(project_id)s and user %(user_id)s '
                   'after resource sync: %(quotas)s',
                   {'project_id': project_id, 'user_id': user_id,
-                   'quotas': quotas})
+                   'quotas': user_quotas})
 
         # NOTE(Vek): Most of the work here has to be done in the DB
         #            API, because we have to do it in a transaction,
@@ -589,6 +616,52 @@ class DbQuotaDriver(object):
             except exception.QuotaUsageNotFound:
                 # That means it'll be refreshed anyway
                 pass
+
+    def usage_refresh(self, context, resources, project_id=None,
+                      user_id=None, resource_names=None):
+        """Refresh the usage records for a particular project and user
+        on a list of resources.  This will force usage records to be
+        sync'd immediately to the actual usage.
+
+        This method will raise a QuotaUsageRefreshNotAllowed exception if a
+        usage refresh is not allowed on a resource for the given project
+        or user.
+
+        :param context: The request context, for access checks.
+        :param resources: A dictionary of the registered resources.
+        :param project_id: Optional: Project whose resources to
+                           refresh.  If not set, then the project_id
+                           is taken from the context.
+        :param user_id: Optional: User whose resources to refresh.
+                        If not set, then the user_id is taken from the
+                        context.
+        :param resources_names: Optional: A list of the resource names
+                                for which the usage must be refreshed.
+                                If not specified, then all the usages
+                                for the project and user will be refreshed.
+        """
+
+        if project_id is None:
+            project_id = context.project_id
+        if user_id is None:
+            user_id = context.user_id
+
+        syncable_resources = self._get_syncable_resources(resources, user_id)
+
+        if resource_names:
+            for res_name in resource_names:
+                if res_name not in syncable_resources:
+                    raise exception.QuotaUsageRefreshNotAllowed(
+                                                  resource=res_name,
+                                                  project_id=project_id,
+                                                  user_id=user_id,
+                                                  syncable=syncable_resources)
+        else:
+            resource_names = syncable_resources
+
+        return db.quota_usage_refresh(context, resources, resource_names,
+                                      CONF.until_refresh, CONF.max_age,
+                                      project_id=project_id, user_id=user_id)
 
     def destroy_all_by_project_and_user(self, context, project_id, user_id):
         """Destroy all quotas, usages, and reservations associated with a
@@ -864,6 +937,32 @@ class NoopQuotaDriver(object):
         :param resources: A list of the resource names for which the
                           usage must be reset.
         """
+        pass
+
+    def usage_refresh(self, context, resources, project_id=None, user_id=None,
+                      resource_names=None):
+        """Refresh the usage records for a particular project and user
+        on a list of resources.  This will force usage records to be
+        sync'd immediately to the actual usage.
+
+        This method will raise a QuotaUsageRefreshNotAllowed exception if a
+        usage refresh is not allowed on a resource for the given project
+        or user.
+
+        :param context: The request context, for access checks.
+        :param resources: A dictionary of the registered resources.
+        :param project_id: Optional: Project whose resources to
+                           refresh.  If not set, then the project_id
+                           is taken from the context.
+        :param user_id: Optional: User whose resources to refresh.
+                        If not set, then the user_id is taken from the
+                        context.
+        :param resources_names: Optional: A list of the resource names
+                                for which the usage must be refreshed.
+                                If not specified, then all the usages
+                                for the project and user will be refreshed.
+        """
+
         pass
 
     def destroy_all_by_project_and_user(self, context, project_id, user_id):
@@ -1342,6 +1441,32 @@ class QuotaEngine(object):
         """
 
         self._driver.usage_reset(context, resources)
+
+    def usage_refresh(self, context, project_id=None, user_id=None,
+                      resource_names=None):
+        """Refresh the usage records for a particular project and user
+        on a list of resources.  This will force usage records to be
+        sync'd immediately to the actual usage.
+
+        This method will raise a QuotaUsageRefreshNotAllowed exception if a
+        usage refresh is not allowed on a resource for the given project
+        or user.
+
+        :param context: The request context, for access checks.
+        :param project_id: Optional:  Project whose resources to
+                           refresh.  If not set, then the project_id
+                           is taken from the context.
+        :param user_id: Optional: User whose resources to refresh.
+                        If not set, then the user_id is taken from the
+                        context.
+        :param resources_names: Optional: A list of the resource names
+                                for which the usage must be refreshed.
+                                If not specified, then all the usages
+                                for the project and user will be refreshed.
+        """
+
+        self._driver.usage_refresh(context, self._resources, project_id,
+                                   user_id, resource_names)
 
     def destroy_all_by_project_and_user(self, context, project_id, user_id):
         """Destroy all quotas, usages, and reservations associated with a

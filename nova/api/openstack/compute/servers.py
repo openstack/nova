@@ -14,7 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import base64
 import re
 
 from oslo_log import log as logging
@@ -29,6 +28,7 @@ from webob import exc
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
+from nova.api.openstack.compute import helpers
 from nova.api.openstack.compute.schemas import servers as schema_servers
 from nova.api.openstack.compute.views import servers as views_servers
 from nova.api.openstack import extensions
@@ -36,27 +36,24 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
 from nova.compute import flavors
+from nova.compute import utils as compute_utils
 import nova.conf
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LW
 from nova.image import glance
 from nova import objects
+from nova.policies import servers as server_policies
 from nova import utils
 
 ALIAS = 'servers'
 TAG_SEARCH_FILTERS = ('tags', 'tags-any', 'not-tags', 'not-tags-any')
+DEVICE_TAGGING_MIN_COMPUTE_VERSION = 14
 
 CONF = nova.conf.CONF
-CONF.import_opt('enable_instance_password',
-                'nova.api.openstack.compute.legacy_v2.servers')
-CONF.import_opt('extensions_blacklist', 'nova.api.openstack',
-                group='osapi_v21')
-CONF.import_opt('extensions_whitelist', 'nova.api.openstack',
-                group='osapi_v21')
 
 LOG = logging.getLogger(__name__)
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class ServersController(wsgi.Controller):
@@ -64,13 +61,7 @@ class ServersController(wsgi.Controller):
 
     EXTENSION_CREATE_NAMESPACE = 'nova.api.v21.extensions.server.create'
 
-    EXTENSION_REBUILD_NAMESPACE = 'nova.api.v21.extensions.server.rebuild'
-
-    EXTENSION_UPDATE_NAMESPACE = 'nova.api.v21.extensions.server.update'
-
-    EXTENSION_RESIZE_NAMESPACE = 'nova.api.v21.extensions.server.resize'
-
-    _view_builder_class = views_servers.ViewBuilderV21
+    _view_builder_class = views_servers.ViewBuilder
 
     schema_server_create = schema_servers.base_create
     schema_server_update = schema_servers.base_update
@@ -84,6 +75,9 @@ class ServersController(wsgi.Controller):
     schema_server_create_v219 = schema_servers.base_create_v219
     schema_server_update_v219 = schema_servers.base_update_v219
     schema_server_rebuild_v219 = schema_servers.base_rebuild_v219
+
+    schema_server_create_v232 = schema_servers.base_create_v232
+    schema_server_create_v237 = schema_servers.base_create_v237
 
     @staticmethod
     def _add_location(robj):
@@ -154,7 +148,7 @@ class ServersController(wsgi.Controller):
 
         self.extension_info = kwargs.pop('extension_info')
         super(ServersController, self).__init__(**kwargs)
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
 
         # Look for implementation of extension point of server creation
         self.create_extension_manager = \
@@ -167,39 +161,6 @@ class ServersController(wsgi.Controller):
         if not list(self.create_extension_manager):
             LOG.debug("Did not find any server create extensions")
 
-        # Look for implementation of extension point of server rebuild
-        self.rebuild_extension_manager = \
-            stevedore.enabled.EnabledExtensionManager(
-                namespace=self.EXTENSION_REBUILD_NAMESPACE,
-                check_func=_check_load_extension('server_rebuild'),
-                invoke_on_load=True,
-                invoke_kwds={"extension_info": self.extension_info},
-                propagate_map_exceptions=True)
-        if not list(self.rebuild_extension_manager):
-            LOG.debug("Did not find any server rebuild extensions")
-
-        # Look for implementation of extension point of server update
-        self.update_extension_manager = \
-            stevedore.enabled.EnabledExtensionManager(
-                namespace=self.EXTENSION_UPDATE_NAMESPACE,
-                check_func=_check_load_extension('server_update'),
-                invoke_on_load=True,
-                invoke_kwds={"extension_info": self.extension_info},
-                propagate_map_exceptions=True)
-        if not list(self.update_extension_manager):
-            LOG.debug("Did not find any server update extensions")
-
-        # Look for implementation of extension point of server resize
-        self.resize_extension_manager = \
-            stevedore.enabled.EnabledExtensionManager(
-                namespace=self.EXTENSION_RESIZE_NAMESPACE,
-                check_func=_check_load_extension('server_resize'),
-                invoke_on_load=True,
-                invoke_kwds={"extension_info": self.extension_info},
-                propagate_map_exceptions=True)
-        if not list(self.resize_extension_manager):
-            LOG.debug("Did not find any server resize extensions")
-
         # Look for API schema of server create extension
         self.create_schema_manager = \
             stevedore.enabled.EnabledExtensionManager(
@@ -209,6 +170,12 @@ class ServersController(wsgi.Controller):
                 invoke_kwds={"extension_info": self.extension_info},
                 propagate_map_exceptions=True)
         if list(self.create_schema_manager):
+            self.create_schema_manager.map(self._create_extension_schema,
+                                           self.schema_server_create_v237,
+                                           '2.37')
+            self.create_schema_manager.map(self._create_extension_schema,
+                                           self.schema_server_create_v232,
+                                          '2.32')
             self.create_schema_manager.map(self._create_extension_schema,
                                            self.schema_server_create_v219,
                                           '2.19')
@@ -220,65 +187,11 @@ class ServersController(wsgi.Controller):
         else:
             LOG.debug("Did not find any server create schemas")
 
-        # Look for API schema of server update extension
-        self.update_schema_manager = \
-            stevedore.enabled.EnabledExtensionManager(
-                namespace=self.EXTENSION_UPDATE_NAMESPACE,
-                check_func=_check_load_extension('get_server_update_schema'),
-                invoke_on_load=True,
-                invoke_kwds={"extension_info": self.extension_info},
-                propagate_map_exceptions=True)
-        if list(self.update_schema_manager):
-            self.update_schema_manager.map(self._update_extension_schema,
-                                           self.schema_server_update_v219,
-                                           '2.19')
-            self.update_schema_manager.map(self._update_extension_schema,
-                                           self.schema_server_update, '2.1')
-            self.update_schema_manager.map(self._update_extension_schema,
-                                           self.schema_server_update_v20,
-                                           '2.0')
-        else:
-            LOG.debug("Did not find any server update schemas")
-
-        # Look for API schema of server rebuild extension
-        self.rebuild_schema_manager = \
-            stevedore.enabled.EnabledExtensionManager(
-                namespace=self.EXTENSION_REBUILD_NAMESPACE,
-                check_func=_check_load_extension('get_server_rebuild_schema'),
-                invoke_on_load=True,
-                invoke_kwds={"extension_info": self.extension_info},
-                propagate_map_exceptions=True)
-        if list(self.rebuild_schema_manager):
-            self.rebuild_schema_manager.map(self._rebuild_extension_schema,
-                                            self.schema_server_rebuild_v219,
-                                            '2.19')
-            self.rebuild_schema_manager.map(self._rebuild_extension_schema,
-                                            self.schema_server_rebuild, '2.1')
-            self.rebuild_schema_manager.map(self._rebuild_extension_schema,
-                                            self.schema_server_rebuild_v20,
-                                            '2.0')
-        else:
-            LOG.debug("Did not find any server rebuild schemas")
-
-        # Look for API schema of server resize extension
-        self.resize_schema_manager = \
-            stevedore.enabled.EnabledExtensionManager(
-                namespace=self.EXTENSION_RESIZE_NAMESPACE,
-                check_func=_check_load_extension('get_server_resize_schema'),
-                invoke_on_load=True,
-                invoke_kwds={"extension_info": self.extension_info},
-                propagate_map_exceptions=True)
-        if list(self.resize_schema_manager):
-            self.resize_schema_manager.map(self._resize_extension_schema,
-                                           self.schema_server_resize, '2.1')
-        else:
-            LOG.debug("Did not find any server resize schemas")
-
     @extensions.expected_errors((400, 403))
     def index(self, req):
         """Returns a list of server names and ids for a given user."""
         context = req.environ['nova.context']
-        authorize(context, action="index")
+        context.can(server_policies.SERVERS % 'index')
         try:
             servers = self._get_servers(req, is_detail=False)
         except exception.Invalid as err:
@@ -289,7 +202,7 @@ class ServersController(wsgi.Controller):
     def detail(self, req):
         """Returns a list of server details for a given user."""
         context = req.environ['nova.context']
-        authorize(context, action="detail")
+        context.can(server_policies.SERVERS % 'detail')
         try:
             servers = self._get_servers(req, is_detail=True)
         except exception.Invalid as err:
@@ -308,12 +221,19 @@ class ServersController(wsgi.Controller):
 
         # Verify search by 'status' contains a valid status.
         # Convert it to filter by vm_state or task_state for compute_api.
+        # For non-admin user, vm_state and task_state are filtered through
+        # remove_invalid_options function, based on value of status field.
+        # Set value to vm_state and task_state to make search simple.
         search_opts.pop('status', None)
         if 'status' in req.GET.keys():
             statuses = req.GET.getall('status')
             states = common.task_and_vm_state_from_status(statuses)
             vm_state, task_state = states
             if not vm_state and not task_state:
+                if api_version_request.is_supported(req, min_version='2.38'):
+                    msg = _('Invalid status value')
+                    raise exc.HTTPBadRequest(explanation=msg)
+
                 return {'servers': []}
             search_opts['vm_state'] = vm_state
             # When we search by vm state, task state will return 'default'.
@@ -353,6 +273,14 @@ class ServersController(wsgi.Controller):
                 msg = _("Only administrators may list deleted instances")
                 raise exc.HTTPForbidden(explanation=msg)
 
+        # Verify the value of the 'name' option is a correct regex.
+        if 'name' in search_opts:
+            try:
+                re.compile(search_opts['name'])
+            except re.error:
+                msg = _("The regex for server name is incorrect")
+                raise exc.HTTPBadRequest(explanation=msg)
+
         if api_version_request.is_supported(req, min_version='2.26'):
             for tag_filter in TAG_SEARCH_FILTERS:
                 if tag_filter in search_opts:
@@ -388,9 +316,9 @@ class ServersController(wsgi.Controller):
         elevated = None
         if all_tenants:
             if is_detail:
-                authorize(context, action="detail:get_all_tenants")
+                context.can(server_policies.SERVERS % 'detail:get_all_tenants')
             else:
-                authorize(context, action="index:get_all_tenants")
+                context.can(server_policies.SERVERS % 'index:get_all_tenants')
             elevated = context.elevated()
         else:
             if context.project_id:
@@ -403,6 +331,7 @@ class ServersController(wsgi.Controller):
 
         expected_attrs = ['pci_devices']
         if is_detail:
+            expected_attrs.append('services')
             if api_version_request.is_supported(req, '2.26'):
                 expected_attrs.append("tags")
 
@@ -414,7 +343,7 @@ class ServersController(wsgi.Controller):
         try:
             instance_list = self.compute_api.get_all(elevated or context,
                     search_opts=search_opts, limit=limit, marker=marker,
-                    want_objects=True, expected_attrs=expected_attrs,
+                    expected_attrs=expected_attrs,
                     sort_keys=sort_keys, sort_dirs=sort_dirs)
         except exception.MarkerNotFound:
             msg = _('marker [%s] not found') % marker
@@ -444,6 +373,8 @@ class ServersController(wsgi.Controller):
         """
         expected_attrs = ['flavor', 'pci_devices', 'numa_topology']
         if is_detail:
+            if api_version_request.is_supported(req, '2.26'):
+                expected_attrs.append("tags")
             expected_attrs = self._view_builder.get_show_expected_attrs(
                                                             expected_attrs)
         instance = common.get_instance(self.compute_api, context,
@@ -452,8 +383,80 @@ class ServersController(wsgi.Controller):
         req.cache_db_instance(instance)
         return instance
 
-    def _get_requested_networks(self, requested_networks):
+    @staticmethod
+    def _validate_network_id(net_id, network_uuids):
+        """Validates that a requested network id.
+
+        This method performs two checks:
+
+        1. That the network id is in the proper uuid format.
+        2. That the network is not a duplicate when using nova-network.
+
+        :param net_id: The network id to validate.
+        :param network_uuids: A running list of requested network IDs that have
+            passed validation already.
+        :raises: webob.exc.HTTPBadRequest if validation fails
+        """
+        if not uuidutils.is_uuid_like(net_id):
+            # NOTE(mriedem): Neutron would allow a network id with a br- prefix
+            # back in Folsom so continue to honor that.
+            # TODO(mriedem): Need to figure out if this is still a valid case.
+            br_uuid = net_id.split('-', 1)[-1]
+            if not uuidutils.is_uuid_like(br_uuid):
+                msg = _("Bad networks format: network uuid is "
+                        "not in proper format (%s)") % net_id
+                raise exc.HTTPBadRequest(explanation=msg)
+
+        # duplicate networks are allowed only for neutron v2.0
+        if net_id in network_uuids and not utils.is_neutron():
+            expl = _("Duplicate networks (%s) are not allowed") % net_id
+            raise exc.HTTPBadRequest(explanation=expl)
+
+    @staticmethod
+    def _validate_auto_or_none_network_request(requested_networks):
+        """Validates a set of network requests with 'auto' or 'none' in it.
+
+        :param requested_networks: nova.objects.NetworkRequestList
+        :returns: nova.objects.NetworkRequestList - the same list as the input
+            if validation is OK, None if the request can't be honored due to
+            the minimum nova-compute service version in the deployment is not
+            new enough to support auto-allocated networking.
+        """
+
+        # Check the minimum nova-compute service version since Mitaka
+        # computes can't handle network IDs that aren't UUIDs.
+        # TODO(mriedem): Remove this check in Ocata.
+        min_compute_version = objects.Service.get_minimum_version(
+            nova_context.get_admin_context(), 'nova-compute')
+
+        # NOTE(mriedem): If the minimum compute version is not new enough
+        # for supporting auto-allocation, change the network request to
+        # None so it works the same as it did in Mitaka when you don't
+        # request anything.
+        if min_compute_version < 12:
+            LOG.debug("User requested network '%s' but the minimum "
+                      "nova-compute version in the deployment is not new "
+                      "enough to support that request, so treating it as "
+                      "though a specific network was not requested.",
+                      requested_networks[0].network_id)
+            return None
+        return requested_networks
+
+    def _get_requested_networks(self, requested_networks,
+                                supports_device_tagging=False):
         """Create a list of requested networks from the networks attribute."""
+
+        # Starting in the 2.37 microversion, requested_networks is either a
+        # list or a string enum with value 'auto' or 'none'. The auto/none
+        # values are verified via jsonschema so we don't check them again here.
+        if isinstance(requested_networks, six.string_types):
+            req_nets = objects.NetworkRequestList(
+                objects=[objects.NetworkRequest(
+                    network_id=requested_networks)])
+            # Check the minimum nova-compute service version for supporting
+            # these special values.
+            return self._validate_auto_or_none_network_request(req_nets)
+
         networks = []
         network_uuids = []
         for network in requested_networks:
@@ -465,6 +468,11 @@ class ServersController(wsgi.Controller):
                 request.address = network.get('fixed_ip', None)
                 request.port_id = network.get('port', None)
 
+                request.tag = network.get('tag', None)
+                if request.tag and not supports_device_tagging:
+                    msg = _('Network interface tags are not yet supported.')
+                    raise exc.HTTPBadRequest(explanation=msg)
+
                 if request.port_id:
                     request.network_id = None
                     if not utils.is_neutron():
@@ -473,31 +481,17 @@ class ServersController(wsgi.Controller):
                         raise exc.HTTPBadRequest(explanation=msg)
                     if request.address is not None:
                         msg = _("Specified Fixed IP '%(addr)s' cannot be used "
-                                "with port '%(port)s': port already has "
-                                "a Fixed IP allocated.") % {
+                                "with port '%(port)s': the two cannot be "
+                                "specified together.") % {
                                     "addr": request.address,
                                     "port": request.port_id}
                         raise exc.HTTPBadRequest(explanation=msg)
                 else:
                     request.network_id = network['uuid']
+                    self._validate_network_id(
+                        request.network_id, network_uuids)
+                    network_uuids.append(request.network_id)
 
-                if (not request.port_id and
-                        not uuidutils.is_uuid_like(request.network_id)):
-                    br_uuid = request.network_id.split('-', 1)[-1]
-                    if not uuidutils.is_uuid_like(br_uuid):
-                        msg = _("Bad networks format: network uuid is "
-                                "not in proper format "
-                                "(%s)") % request.network_id
-                        raise exc.HTTPBadRequest(explanation=msg)
-
-                # duplicate networks are allowed only for neutron v2.0
-                if (not utils.is_neutron() and request.network_id and
-                        request.network_id in network_uuids):
-                    expl = (_("Duplicate networks"
-                              " (%s) are not allowed") %
-                            request.network_id)
-                    raise exc.HTTPBadRequest(explanation=expl)
-                network_uuids.append(request.network_id)
                 networks.append(request)
             except KeyError as key:
                 expl = _('Bad network format: missing %s') % key
@@ -508,35 +502,21 @@ class ServersController(wsgi.Controller):
 
         return objects.NetworkRequestList(objects=networks)
 
-    # NOTE(vish): Without this regex, b64decode will happily
-    #             ignore illegal bytes in the base64 encoded
-    #             data.
-    B64_REGEX = re.compile('^(?:[A-Za-z0-9+\/]{4})*'
-                           '(?:[A-Za-z0-9+\/]{2}=='
-                           '|[A-Za-z0-9+\/]{3}=)?$')
-
-    def _decode_base64(self, data):
-        data = re.sub(r'\s', '', data)
-        if not self.B64_REGEX.match(data):
-            return None
-        try:
-            return base64.b64decode(data)
-        except TypeError:
-            return None
-
     @extensions.expected_errors(404)
     def show(self, req, id):
         """Returns server details by server id."""
         context = req.environ['nova.context']
-        authorize(context, action="show")
+        context.can(server_policies.SERVERS % 'show')
         instance = self._get_server(context, req, id, is_detail=True)
         return self._view_builder.show(req, instance)
 
     @wsgi.response(202)
-    @extensions.expected_errors((400, 403, 409, 413))
+    @extensions.expected_errors((400, 403, 409))
     @validation.schema(schema_server_create_v20, '2.0', '2.0')
     @validation.schema(schema_server_create, '2.1', '2.18')
-    @validation.schema(schema_server_create_v219, '2.19')
+    @validation.schema(schema_server_create_v219, '2.19', '2.31')
+    @validation.schema(schema_server_create_v232, '2.32', '2.36')
+    @validation.schema(schema_server_create_v237, '2.37')
     def create(self, req, body):
         """Creates a new server for a given user."""
 
@@ -571,24 +551,41 @@ class ServersController(wsgi.Controller):
 
         availability_zone = create_kwargs.pop("availability_zone", None)
 
+        helpers.translate_attributes(helpers.CREATE,
+                                     server_dict, create_kwargs)
+
         target = {
             'project_id': context.project_id,
             'user_id': context.user_id,
             'availability_zone': availability_zone}
-        authorize(context, target, 'create')
+        context.can(server_policies.SERVERS % 'create', target)
 
-        # TODO(Shao He, Feng) move this policy check to os-availabilty-zone
+        # TODO(Shao He, Feng) move this policy check to os-availability-zone
         # extension after refactor it.
         parse_az = self.compute_api.parse_availability_zone
-        availability_zone, host, node = parse_az(context, availability_zone)
+        try:
+            availability_zone, host, node = parse_az(context,
+                                                     availability_zone)
+        except exception.InvalidInput as err:
+            raise exc.HTTPBadRequest(explanation=six.text_type(err))
         if host or node:
-            authorize(context, {}, 'create:forced_host')
+            context.can(server_policies.SERVERS % 'create:forced_host', {})
+
+        min_compute_version = objects.Service.get_minimum_version(
+            nova_context.get_admin_context(), 'nova-compute')
+        supports_device_tagging = (min_compute_version >=
+                                   DEVICE_TAGGING_MIN_COMPUTE_VERSION)
 
         block_device_mapping = create_kwargs.get("block_device_mapping")
         # TODO(Shao He, Feng) move this policy check to os-block-device-mapping
         # extension after refactor it.
         if block_device_mapping:
-            authorize(context, target, 'create:attach_volume')
+            context.can(server_policies.SERVERS % 'create:attach_volume',
+                        target)
+            for bdm in block_device_mapping:
+                if bdm.get('tag', None) and not supports_device_tagging:
+                    msg = _('Block device tags are not yet supported.')
+                    raise exc.HTTPBadRequest(explanation=msg)
 
         image_uuid = self._image_from_req_data(server_dict, create_kwargs)
 
@@ -609,17 +606,13 @@ class ServersController(wsgi.Controller):
 
         if requested_networks is not None:
             requested_networks = self._get_requested_networks(
-                requested_networks)
+                requested_networks, supports_device_tagging)
 
         if requested_networks and len(requested_networks):
-            authorize(context, target, 'create:attach_network')
+            context.can(server_policies.SERVERS % 'create:attach_network',
+                        target)
 
-        try:
-            flavor_id = self._flavor_id_from_req_data(body)
-        except ValueError:
-            msg = _("Invalid flavorRef provided.")
-            raise exc.HTTPBadRequest(explanation=msg)
-
+        flavor_id = self._flavor_id_from_req_data(body)
         try:
             inst_type = flavors.get_flavor_by_flavor_id(
                     flavor_id, ctxt=context, read_deleted="no")
@@ -643,9 +636,6 @@ class ServersController(wsgi.Controller):
         except exception.ImageNotFound:
             msg = _("Can not find requested image")
             raise exc.HTTPBadRequest(explanation=msg)
-        except exception.FlavorNotFound:
-            msg = _("Invalid flavorRef provided.")
-            raise exc.HTTPBadRequest(explanation=msg)
         except exception.KeypairNotFound:
             msg = _("Invalid key_name provided.")
             raise exc.HTTPBadRequest(explanation=msg)
@@ -664,6 +654,7 @@ class ServersController(wsgi.Controller):
         except (exception.ImageNotActive,
                 exception.ImageBadRequest,
                 exception.FixedIpNotFoundForAddress,
+                exception.FlavorNotFound,
                 exception.FlavorDiskTooSmall,
                 exception.FlavorMemoryTooSmall,
                 exception.InvalidMetadata,
@@ -698,7 +689,11 @@ class ServersController(wsgi.Controller):
                 exception.ImageNUMATopologyCPUDuplicates,
                 exception.ImageNUMATopologyCPUsUnassigned,
                 exception.ImageNUMATopologyMemoryOutOfRange,
-                exception.InstanceGroupNotFound) as error:
+                exception.InvalidNUMANodesNumber,
+                exception.InstanceGroupNotFound,
+                exception.PciRequestAliasNotDefined,
+                exception.SnapshotNotFound,
+                exception.UnableToAutoAllocateNetwork) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except (exception.PortInUse,
                 exception.InstanceExists,
@@ -708,10 +703,6 @@ class ServersController(wsgi.Controller):
 
         # If the caller wanted a reservation_id, return it
         if return_reservation_id:
-            # NOTE(cyeoh): In v3 reservation_id was wrapped in
-            # servers_reservation but this is reverted for V2 API
-            # compatibility. In the long term with the tasks API we
-            # will probably just drop the concept of reservation_id
             return wsgi.ResponseObject({'reservation_id': resv_id})
 
         req.cache_db_instances(instances)
@@ -740,17 +731,6 @@ class ServersController(wsgi.Controller):
 
         handler.server_rebuild(rebuild_dict, rebuild_kwargs)
 
-    def _resize_extension_point(self, ext, resize_dict, resize_kwargs):
-        handler = ext.obj
-        LOG.debug("Running _resize_extension_point for %s", ext.obj)
-
-        handler.server_resize(resize_dict, resize_kwargs)
-
-    def _update_extension_point(self, ext, update_dict, update_kwargs):
-        handler = ext.obj
-        LOG.debug("Running _update_extension_point for %s", ext.obj)
-        handler.server_update(update_dict, update_kwargs)
-
     def _create_extension_schema(self, ext, create_schema, version):
         handler = ext.obj
         LOG.debug("Running _create_extension_schema for %s", ext.obj)
@@ -764,13 +744,6 @@ class ServersController(wsgi.Controller):
         else:
             create_schema['properties']['server']['properties'].update(schema)
 
-    def _update_extension_schema(self, ext, update_schema, version):
-        handler = ext.obj
-        LOG.debug("Running _update_extension_schema for %s", ext.obj)
-
-        schema = handler.get_server_update_schema(version)
-        update_schema['properties']['server']['properties'].update(schema)
-
     def _rebuild_extension_schema(self, ext, rebuild_schema, version):
         handler = ext.obj
         LOG.debug("Running _rebuild_extension_schema for %s", ext.obj)
@@ -778,16 +751,11 @@ class ServersController(wsgi.Controller):
         schema = handler.get_server_rebuild_schema(version)
         rebuild_schema['properties']['rebuild']['properties'].update(schema)
 
-    def _resize_extension_schema(self, ext, resize_schema, version):
-        handler = ext.obj
-        LOG.debug("Running _resize_extension_schema for %s", ext.obj)
-
-        schema = handler.get_server_resize_schema(version)
-        resize_schema['properties']['resize']['properties'].update(schema)
-
     def _delete(self, context, req, instance_uuid):
-        authorize(context, action='delete')
         instance = self._get_server(context, req, instance_uuid)
+        context.can(server_policies.SERVERS % 'delete',
+                    target={'user_id': instance.user_id,
+                            'project_id': instance.project_id})
         if CONF.reclaim_instance_interval:
             try:
                 self.compute_api.soft_delete(context, instance)
@@ -808,26 +776,26 @@ class ServersController(wsgi.Controller):
 
         ctxt = req.environ['nova.context']
         update_dict = {}
-        authorize(ctxt, action='update')
-
-        if 'name' in body['server']:
-            update_dict['display_name'] = common.normalize_name(
-                body['server']['name'])
-
-        if 'description' in body['server']:
-            # This is allowed to be None (remove description)
-            update_dict['display_description'] = body['server']['description']
-
-        if list(self.update_extension_manager):
-            self.update_extension_manager.map(self._update_extension_point,
-                                              body['server'], update_dict)
-
         instance = self._get_server(ctxt, req, id, is_detail=True)
+        ctxt.can(server_policies.SERVERS % 'update',
+                 target={'user_id': instance.user_id,
+                         'project_id': instance.project_id})
+
+        server = body['server']
+
+        if 'name' in server:
+            update_dict['display_name'] = common.normalize_name(
+                server['name'])
+
+        if 'description' in server:
+            # This is allowed to be None (remove description)
+            update_dict['display_description'] = server['description']
+
+        helpers.translate_attributes(helpers.UPDATE, server, update_dict)
+
         try:
-            # NOTE(mikal): this try block needs to stay because save() still
-            # might throw an exception.
-            instance.update(update_dict)
-            instance.save()
+            instance = self.compute_api.update_instance(ctxt, instance,
+                                                        update_dict)
             return self._view_builder.show(req, instance,
                                            extend_address=False)
         except exception.InstanceNotFound:
@@ -842,7 +810,7 @@ class ServersController(wsgi.Controller):
     @wsgi.action('confirmResize')
     def _action_confirm_resize(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context, action='confirm_resize')
+        context.can(server_policies.SERVERS % 'confirm_resize')
         instance = self._get_server(context, req, id)
         try:
             self.compute_api.confirm_resize(context, instance)
@@ -862,7 +830,7 @@ class ServersController(wsgi.Controller):
     @wsgi.action('revertResize')
     def _action_revert_resize(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context, action='revert_resize')
+        context.can(server_policies.SERVERS % 'revert_resize')
         instance = self._get_server(context, req, id)
         try:
             self.compute_api.revert_resize(context, instance)
@@ -888,7 +856,7 @@ class ServersController(wsgi.Controller):
 
         reboot_type = body['reboot']['type'].upper()
         context = req.environ['nova.context']
-        authorize(context, action='reboot')
+        context.can(server_policies.SERVERS % 'reboot')
         instance = self._get_server(context, req, id)
 
         try:
@@ -902,8 +870,10 @@ class ServersController(wsgi.Controller):
     def _resize(self, req, instance_id, flavor_id, **kwargs):
         """Begin the resize process with given instance/flavor."""
         context = req.environ["nova.context"]
-        authorize(context, action='resize')
         instance = self._get_server(context, req, instance_id)
+        context.can(server_policies.SERVERS % 'resize',
+                    target={'user_id': instance.user_id,
+                            'project_id': instance.project_id})
 
         try:
             self.compute_api.resize(context, instance, flavor_id, **kwargs)
@@ -929,7 +899,8 @@ class ServersController(wsgi.Controller):
                 exception.CannotResizeDisk,
                 exception.CannotResizeToSameFlavor,
                 exception.FlavorNotFound,
-                exception.NoValidHost) as e:
+                exception.NoValidHost,
+                exception.PciRequestAliasNotDefined) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except exception.Invalid:
             msg = _("Invalid instance image.")
@@ -952,17 +923,6 @@ class ServersController(wsgi.Controller):
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'delete', id)
 
-    def _image_uuid_from_href(self, image_href):
-        # If the image href was generated by nova api, strip image_href
-        # down to an id and use the default glance connection params
-        image_uuid = image_href.split('/').pop()
-
-        if not uuidutils.is_uuid_like(image_uuid):
-            msg = _("Invalid imageRef provided.")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        return image_uuid
-
     def _image_from_req_data(self, server_dict, create_kwargs):
         """Get image data from the request or raise appropriate
         exceptions.
@@ -975,7 +935,7 @@ class ServersController(wsgi.Controller):
         if not image_href and create_kwargs.get('block_device_mapping'):
             return ''
         elif image_href:
-            return self._image_uuid_from_href(six.text_type(image_href))
+            return image_href
         else:
             msg = _("Missing imageRef attribute")
             raise exc.HTTPBadRequest(explanation=msg)
@@ -993,16 +953,13 @@ class ServersController(wsgi.Controller):
         resize_dict = body['resize']
         flavor_ref = str(resize_dict["flavorRef"])
 
-        resize_kwargs = {}
+        kwargs = {}
+        helpers.translate_attributes(helpers.RESIZE, resize_dict, kwargs)
 
-        if list(self.resize_extension_manager):
-            self.resize_extension_manager.map(self._resize_extension_point,
-                                              resize_dict, resize_kwargs)
-
-        self._resize(req, id, flavor_ref, **resize_kwargs)
+        self._resize(req, id, flavor_ref, **kwargs)
 
     @wsgi.response(202)
-    @extensions.expected_errors((400, 403, 404, 409, 413))
+    @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.action('rebuild')
     @validation.schema(schema_server_rebuild_v20, '2.0', '2.0')
     @validation.schema(schema_server_rebuild, '2.1', '2.18')
@@ -1012,33 +969,31 @@ class ServersController(wsgi.Controller):
         rebuild_dict = body['rebuild']
 
         image_href = rebuild_dict["imageRef"]
-        image_href = self._image_uuid_from_href(image_href)
 
         password = self._get_server_admin_password(rebuild_dict)
 
         context = req.environ['nova.context']
-        authorize(context, action='rebuild')
         instance = self._get_server(context, req, id)
-
+        context.can(server_policies.SERVERS % 'rebuild',
+                    target={'user_id': instance.user_id,
+                            'project_id': instance.project_id})
         attr_map = {
             'name': 'display_name',
             'description': 'display_description',
             'metadata': 'metadata',
         }
 
-        rebuild_kwargs = {}
+        kwargs = {}
 
-        if list(self.rebuild_extension_manager):
-            self.rebuild_extension_manager.map(self._rebuild_extension_point,
-                                               rebuild_dict, rebuild_kwargs)
+        helpers.translate_attributes(helpers.REBUILD, rebuild_dict, kwargs)
 
         for request_attribute, instance_attribute in attr_map.items():
             try:
                 if request_attribute == 'name':
-                    rebuild_kwargs[instance_attribute] = common.normalize_name(
+                    kwargs[instance_attribute] = common.normalize_name(
                         rebuild_dict[request_attribute])
                 else:
-                    rebuild_kwargs[instance_attribute] = rebuild_dict[
+                    kwargs[instance_attribute] = rebuild_dict[
                         request_attribute]
             except (KeyError, TypeError):
                 pass
@@ -1048,7 +1003,7 @@ class ServersController(wsgi.Controller):
                                      instance,
                                      image_href,
                                      password,
-                                     **rebuild_kwargs)
+                                     **kwargs)
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
@@ -1092,7 +1047,7 @@ class ServersController(wsgi.Controller):
     def _action_create_image(self, req, id, body):
         """Snapshot a server instance."""
         context = req.environ['nova.context']
-        authorize(context, action='create_image')
+        context.can(server_policies.SERVERS % 'create_image')
 
         entity = body["createImage"]
         image_name = common.normalize_name(entity["name"])
@@ -1106,9 +1061,10 @@ class ServersController(wsgi.Controller):
                     context, instance.uuid)
 
         try:
-            if self.compute_api.is_volume_backed_instance(context, instance,
+            if compute_utils.is_volume_backed_instance(context, instance,
                                                           bdms):
-                authorize(context, action="create_image:allow_volume_backed")
+                context.can(server_policies.SERVERS %
+                    'create_image:allow_volume_backed')
                 image = self.compute_api.snapshot_volume_backed(
                                                        context,
                                                        instance,
@@ -1138,9 +1094,9 @@ class ServersController(wsgi.Controller):
 
     def _get_server_admin_password(self, server):
         """Determine the admin password for a server on creation."""
-        try:
+        if 'adminPass' in server:
             password = server['adminPass']
-        except KeyError:
+        else:
             password = utils.generate_password()
         return password
 
@@ -1169,7 +1125,7 @@ class ServersController(wsgi.Controller):
         """Start an instance."""
         context = req.environ['nova.context']
         instance = self._get_instance(context, id)
-        authorize(context, instance, 'start')
+        context.can(server_policies.SERVERS % 'start', instance)
         LOG.debug('start instance', instance=instance)
         try:
             self.compute_api.start(context, instance)
@@ -1188,7 +1144,9 @@ class ServersController(wsgi.Controller):
         """Stop an instance."""
         context = req.environ['nova.context']
         instance = self._get_instance(context, id)
-        authorize(context, instance, 'stop')
+        context.can(server_policies.SERVERS % 'stop',
+                    target={'user_id': instance.user_id,
+                            'project_id': instance.project_id})
         LOG.debug('stop instance', instance=instance)
         try:
             self.compute_api.stop(context, instance)
@@ -1209,14 +1167,16 @@ class ServersController(wsgi.Controller):
         """Trigger crash dump in an instance"""
         context = req.environ['nova.context']
         instance = self._get_instance(context, id)
-        authorize(context, instance, 'trigger_crash_dump')
+        context.can(server_policies.SERVERS % 'trigger_crash_dump',
+                    target={'user_id': instance.user_id,
+                            'project_id': instance.project_id})
         try:
             self.compute_api.trigger_crash_dump(context, instance)
+        except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
+            raise webob.exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                 'trigger_crash_dump', id)
-        except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
-            raise webob.exc.HTTPConflict(explanation=e.format_message())
         except exception.TriggerCrashDumpNotSupported as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
 

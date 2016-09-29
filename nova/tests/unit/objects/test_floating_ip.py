@@ -14,7 +14,6 @@
 
 import mock
 import netaddr
-
 from oslo_versionedobjects import base as ovo_base
 
 from nova import exception
@@ -234,7 +233,7 @@ class _TestFloatingIPObject(object):
         ips = [objects.FloatingIPList.make_ip_info('1.1.1.1', 'pool', 'eth0'),
                objects.FloatingIPList.make_ip_info('1.1.1.2', 'loop', 'eth1')]
         result = objects.FloatingIPList.create(None, ips)
-        self.assertIs(result, None)
+        self.assertIsNone(result)
         result = objects.FloatingIPList.create(None, ips, want_result=True)
         self.assertEqual('1.1.1.1', str(result[0].address))
         self.assertEqual('1.1.1.2', str(result[1].address))

@@ -23,24 +23,30 @@ It is used via a single directive in the .rst file
 from sphinx.util.compat import Directive
 from docutils import nodes
 
+from nova.notifications.objects import base as notification
 from nova.objects import base
-from nova.objects import notification
-
-
-def full_name(cls):
-    return cls.__module__ + '.' + cls.__name__
 
 
 class VersionedNotificationDirective(Directive):
 
-    LINK_PREFIX = 'https://git.openstack.org/cgit/openstack/nova/plain/'
     SAMPLE_ROOT = 'doc/notification_samples/'
+    TOGGLE_SCRIPT = """
+<script>
+jQuery(document).ready(function(){
+    jQuery('#%s-div').toggle('show');
+    jQuery('#%s-hideshow').on('click', function(event) {
+        jQuery('#%s-div').toggle('show');
+    });
+});
+</script>
+"""
 
     def run(self):
         notifications = self._collect_notifications()
         return self._build_markup(notifications)
 
     def _collect_notifications(self):
+        base.NovaObjectRegistry.register_notification_objects()
         notifications = []
         ovos = base.NovaObjectRegistry.obj_classes()
         for name, cls in ovos.items():
@@ -50,14 +56,15 @@ class VersionedNotificationDirective(Directive):
 
                 payload_name = cls.fields['payload'].objname
                 payload_cls = ovos[payload_name][0]
-
-                notifications.append((full_name(cls), full_name(payload_cls),
-                                      cls.sample))
-        return notifications
+                for sample in cls.samples:
+                    notifications.append((cls.__name__,
+                                          payload_cls.__name__,
+                                          sample))
+        return sorted(notifications)
 
     def _build_markup(self, notifications):
         content = []
-        cols = ['Notification class', 'Payload class', 'Sample file link']
+        cols = ['Event type', 'Notification class', 'Payload class', 'Sample']
         table = nodes.table()
         content.append(table)
         group = nodes.tgroup(cols=len(cols))
@@ -66,7 +73,7 @@ class VersionedNotificationDirective(Directive):
         head = nodes.thead()
         group.append(head)
 
-        for i in range(len(cols)):
+        for _ in cols:
             group.append(nodes.colspec(colwidth=1))
 
         body = nodes.tbody()
@@ -82,9 +89,16 @@ class VersionedNotificationDirective(Directive):
             col.append(text)
 
         # fill the table content, one notification per row
-        for name, payload, sample in notifications:
+        for name, payload, sample_file in notifications:
+            event_type = sample_file[0: -5].replace('-', '.')
+
             row = nodes.row()
             body.append(row)
+            col = nodes.entry()
+            row.append(col)
+            text = nodes.literal(text=event_type)
+            col.append(text)
+
             col = nodes.entry()
             row.append(col)
             text = nodes.literal(text=name)
@@ -97,12 +111,19 @@ class VersionedNotificationDirective(Directive):
 
             col = nodes.entry()
             row.append(col)
-            ref = nodes.reference(refuri=self.LINK_PREFIX +
-                                  self.SAMPLE_ROOT + sample)
-            txt = nodes.inline()
-            col.append(txt)
-            txt.append(ref)
-            ref.append(nodes.literal(text=sample))
+
+            with open(self.SAMPLE_ROOT + sample_file, 'r') as f:
+                sample_content = f.read()
+
+            event_type = sample_file[0: -5]
+            html_str = self.TOGGLE_SCRIPT % ((event_type, ) * 3)
+            html_str += ("<input type='button' id='%s-hideshow' "
+                         "value='hide/show sample'>" % event_type)
+            html_str += ("<div id='%s-div'><pre>%s</pre></div>"
+                         % (event_type, sample_content))
+
+            raw = nodes.raw('', html_str, format="html")
+            col.append(raw)
 
         return content
 

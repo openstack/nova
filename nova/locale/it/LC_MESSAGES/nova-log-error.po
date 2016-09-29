@@ -7,9 +7,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:29+0000\n"
+"POT-Creation-Date: 2016-08-25 06:15+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -28,14 +28,6 @@ msgid ""
 msgstr ""
 "La dimensione virtuale di %(base)s %(base_size)s è maggiore della dimensione "
 "del disco di root dell'istanza %(size)s"
-
-#, python-format
-msgid ""
-"%(base)s virtual size %(disk_size)s larger than flavor root disk size "
-"%(size)s"
-msgstr ""
-"La dimensione virtuale %(base)s su disco con capacità %(disk_size)s è "
-"maggiore di quella del disco di root dell'istanza %(size)s"
 
 #, python-format
 msgid ""
@@ -72,34 +64,6 @@ msgstr "Intercettato errore: %s"
 
 msgid "Compute driver option required, but not specified"
 msgstr "L'opzione compute driver è obbligatoria, ma non è stata specificata"
-
-#, python-format
-msgid "Compute.api::inject_network_info %s"
-msgstr "Compute.api::inject_network_info %s"
-
-#, python-format
-msgid "Compute.api::lock %s"
-msgstr "Compute.api::lock %s"
-
-#, python-format
-msgid "Compute.api::pause %s"
-msgstr "Compute.api::pause %s"
-
-#, python-format
-msgid "Compute.api::resetState %s"
-msgstr "Compute.api::resetState %s"
-
-#, python-format
-msgid "Compute.api::reset_network %s"
-msgstr "Compute.api::reset_network %s"
-
-#, python-format
-msgid "Compute.api::unlock %s"
-msgstr "Compute.api::unlock %s"
-
-#, python-format
-msgid "Compute.api::unpause %s"
-msgstr "Compute.api::unpause %s"
 
 #, python-format
 msgid "Connection to libvirt failed: %s"
@@ -226,12 +190,6 @@ msgstr ""
 "%(node)s."
 
 #, python-format
-msgid "Error reading image info file %(filename)s: %(error)s"
-msgstr ""
-"Errore durante la lettura del file di informazioni dell'immagine "
-"%(filename)s: %(error)s"
-
-#, python-format
 msgid "Error releasing DHCP for IP %(address)s with MAC %(mac_address)s"
 msgstr ""
 "Errore durante il rilascio del DHCP per gli IP %(address)s con MAC "
@@ -345,9 +303,6 @@ msgid ""
 msgstr ""
 "Impossibile copiare l'immagine presente in cache %(source)s verso %(dest)s "
 "per il ridimensionamento: %(error)s"
-
-msgid "Failed to deallocate network for instance."
-msgstr "Impossibile deallocare la rete per l'istanza."
 
 msgid "Failed to deallocate networks"
 msgstr "Impossibile deallocare le reti"
@@ -583,10 +538,6 @@ msgid "Instance failed to spawn"
 msgstr "L'istanza non è riuscita a generare"
 
 #, python-format
-msgid "Instance type %s not found for deletion"
-msgstr "Tipo di istanza %s nono trovato per l'eliminazione"
-
-#, python-format
 msgid "Interface %s not found"
 msgstr "Interfaccia %s non trovata"
 
@@ -671,18 +622,6 @@ msgstr ""
 #, python-format
 msgid "Neutron error creating port on network %s"
 msgstr "Errore di Neutron durante la creazione della porta su rete %s"
-
-#, python-format
-msgid "No db access allowed in nova-compute: %s"
-msgstr "Nessun accesso db consentito in nova-compute: %s"
-
-#, python-format
-msgid "No db access allowed in nova-dhcpbridge: %s"
-msgstr "Nessun accesso db consentito in nova-dhcpbridge: %s"
-
-#, python-format
-msgid "No db access allowed in nova-network: %s"
-msgstr "Nessun accesso db consentito in nova-network: %s"
 
 #, python-format
 msgid "No save handler for %s"
@@ -778,10 +717,6 @@ msgstr ""
 msgid "Unable to execute %(cmd)s. Exception: %(exception)s"
 msgstr "Impossibile eseguire %(cmd)s. Eccezione: %(exception)s"
 
-#, python-format
-msgid "Unable to find address %r"
-msgstr "Impossibile trovare l'indirizzo %r"
-
 msgid "Unable to get updated status"
 msgstr "Impossibile ottenere lo stato aggiornato"
 
@@ -810,10 +745,6 @@ msgstr "Impossibile recuperare le policy di storage con nome: %s"
 #, python-format
 msgid "Unable to set up pool: %s."
 msgstr "Impossibile configurare il pool: %s."
-
-#, python-format
-msgid "Unable to update host of port %s"
-msgstr "Impossibile aggiornare l'host con porta %s"
 
 msgid "Unexpected build failure, not rescheduling build."
 msgstr ""
@@ -877,14 +808,6 @@ msgstr "allocate_port_for_instance ha restituito le porte %(ports)s"
 msgid "attaching network adapter failed."
 msgstr "Impossibile collegare l'adattatore di rete."
 
-#, python-format
-msgid "compute.api::resume %s"
-msgstr "compute.api::resume %s"
-
-#, python-format
-msgid "compute.api::suspend %s"
-msgstr "compute.api::suspend %s"
-
 msgid "detaching network adapter failed."
 msgstr "collegamento dell'adattatore di rete non riuscito."
 
@@ -894,11 +817,6 @@ msgstr "errore durante l'arresto() in sync_power_state."
 #, python-format
 msgid "error opening rbd image %s"
 msgstr "Errore nell'apertura dell'immagine rbd %s"
-
-#, python-format
-msgid "image %(id)s at (%(base_file)s): image verification failed"
-msgstr ""
-"immagine %(id)s in (%(base_file)s): verifica dell'immagine non riuscita"
 
 #, python-format
 msgid "killing radvd threw %s"

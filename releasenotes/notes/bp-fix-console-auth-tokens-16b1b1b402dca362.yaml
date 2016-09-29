@@ -1,0 +1,4 @@
+---
+features:
+    - Fix os-console-auth-tokens API to return connection info for all types
+      of tokens, not just RDP.

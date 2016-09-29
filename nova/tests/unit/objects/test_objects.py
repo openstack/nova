@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import collections
 import contextlib
 import copy
 import datetime
@@ -24,7 +23,6 @@ import fixtures
 import mock
 from oslo_log import log
 from oslo_utils import timeutils
-from oslo_utils import versionutils
 from oslo_versionedobjects import base as ovo_base
 from oslo_versionedobjects import exception as ovo_exc
 from oslo_versionedobjects import fixture
@@ -35,7 +33,6 @@ from nova import exception
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
-from nova.objects import notification
 from nova.objects import virt_device_metadata
 from nova import test
 from nova.tests import fixtures as nova_fixtures
@@ -239,7 +236,7 @@ class _BaseTestCase(test.TestCase):
         self.user_id = 'fake-user'
         self.project_id = 'fake-project'
         self.context = context.RequestContext(self.user_id, self.project_id)
-        fake_notifier.stub_notifier(self.stubs)
+        fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
 
         # NOTE(danms): register these here instead of at import time
@@ -1100,26 +1097,30 @@ class TestRegistry(test.NoDBTestCase):
 object_data = {
     'Agent': '1.0-c0c092abaceb6f51efe5d82175f15eba',
     'AgentList': '1.0-5a7380d02c3aaf2a32fc8115ae7ca98c',
-    'Aggregate': '1.2-fe9d8c93feb37919753e9e44fe6818a7',
+    'Aggregate': '1.3-f315cb68906307ca2d1cca84d4753585',
     'AggregateList': '1.2-fb6e19f3c3a3186b04eceb98b5dadbfa',
+    'Allocation': '1.0-864506325f1822f4e4805b56faf51bbe',
+    'AllocationList': '1.1-e43fe4a9c9cbbda7438b0e48332f099e',
     'BandwidthUsage': '1.2-c6e4c779c7f40f2407e3d70022e3cd1c',
     'BandwidthUsageList': '1.2-5fe7475ada6fe62413cbfcc06ec70746',
     'BlockDeviceMapping': '1.17-5e094927f1251770dcada6ab05adfcdb',
     'BlockDeviceMappingList': '1.17-1e568eecb91d06d4112db9fd656de235',
-    'BuildRequest': '1.0-fea0b079bddc45f3150f16be5515a2a8',
+    'BuildRequest': '1.2-532d95a88c5fd33e85878e408e5d6e8d',
+    'BuildRequestList': '1.0-cd95608eccb89fbc702c8b52f38ec738',
     'CellMapping': '1.0-7f1a7e85a22bbb7559fc730ab658b9bd',
+    'CellMappingList': '1.0-4ee0d9efdfd681fed822da88376e04d2',
     'ComputeNode': '1.16-2436e5b836fa0306a3c4e6d9e5ddacec',
-    'ComputeNodeList': '1.14-3b6f4f5ade621c40e70cb116db237844',
+    'ComputeNodeList': '1.15-4ec4ea3ed297edbd25c33e2aaf797cca',
     'DNSDomain': '1.0-7b0b2dab778454b6a7b6c66afe163a1a',
     'DNSDomainList': '1.0-4ee0d9efdfd681fed822da88376e04d2',
+    'Destination': '1.0-4c59dd1288b2e7adbda6051a2de59183',
+    'DeviceBus': '1.0-77509ea1ea0dd750d5864b9bd87d3f9d',
     'DeviceMetadata': '1.0-04eb8fd218a49cbc3b1e54b774d179f7',
-    'DeviceMetadataList': '1.0-15ecf022a68ddbb8c2a6739cfc9f8f5e',
     'DiskMetadata': '1.0-e7a0f1ccccf10d26a76b28e7492f3788',
     'EC2Ids': '1.0-474ee1094c7ec16f8ce657595d8c49d9',
     'EC2InstanceMapping': '1.0-a4556eb5c5e94c045fe84f49cf71644f',
     'EC2SnapshotMapping': '1.0-47e7ddabe1af966dce0cfd0ed6cd7cd1',
     'EC2VolumeMapping': '1.0-5b713751d6f97bad620f3378a521020d',
-    'EventType': '1.0-21dc35de314fc5fc0a7965211c0c00f7',
     'FixedIP': '1.14-53e1c10b539f1a82fe83b1af4720efae',
     'FixedIPList': '1.14-87a39361c8f08f059004d6b15103cdfd',
     'Flavor': '1.1-b6bb7a730a79d720344accefafacf7ee',
@@ -1127,49 +1128,49 @@ object_data = {
     'FloatingIP': '1.10-52a67d52d85eb8b3f324a5b7935a335b',
     'FloatingIPList': '1.11-7f2ba670714e1b7bab462ab3290f7159',
     'HostMapping': '1.0-1a3390a696792a552ab7bd31a77ba9ac',
-    'HyperVLiveMigrateData': '1.0-0b868dd6228a09c3f3e47016dddf6a1c',
+    'HyperVLiveMigrateData': '1.1-9987a3cec31a81abac6fba7cc722e43f',
     'HVSpec': '1.2-db672e73304da86139086d003f3977e7',
     'IDEDeviceBus': '1.0-29d4c9f27ac44197f01b6ac1b7e16502',
     'ImageMeta': '1.8-642d1b2eb3e880a367f37d72dd76162d',
-    'ImageMetaProps': '1.12-6a132dee47931447bf86c03c7006d96c',
-    'Instance': '2.1-416fdd0dfc33dfa12ff2cfdd8cc32e17',
+    'ImageMetaProps': '1.15-d45133ec8d2d4a6456338fb0ffd0e5c2',
+    'Instance': '2.3-4f98ab23f4b0a25fabb1040c8f5edecc',
     'InstanceAction': '1.1-f9f293e526b66fca0d05c3b3a2d13914',
     'InstanceActionEvent': '1.1-e56a64fa4710e43ef7af2ad9d6028b33',
     'InstanceActionEventList': '1.1-13d92fb953030cdbfee56481756e02be',
     'InstanceActionList': '1.0-4a53826625cc280e15fae64a575e0879',
+    'InstanceDeviceMetadata': '1.0-74d78dd36aa32d26d2769a1b57caf186',
     'InstanceExternalEvent': '1.1-6e446ceaae5f475ead255946dd443417',
     'InstanceFault': '1.2-7ef01f16f1084ad1304a513d6d410a38',
     'InstanceFaultList': '1.1-f8ec07cbe3b60f5f07a8b7a06311ac0d',
     'InstanceGroup': '1.10-1a0c8c7447dc7ecb9da53849430c4a5f',
     'InstanceGroupList': '1.7-be18078220513316abd0ae1b2d916873',
     'InstanceInfoCache': '1.5-cd8b96fefe0fc8d4d337243ba0bf0e1e',
-    'InstanceList': '2.0-6c8ba6147cca3082b1e4643f795068bf',
+    'InstanceList': '2.1-e64b9f623db6370b22ec910461f06a52',
     'InstanceMapping': '1.0-65de80c491f54d19374703c0753c4d47',
     'InstanceMappingList': '1.0-9e982e3de1613b9ada85e35f69b23d47',
     'InstanceNUMACell': '1.3-6991a20992c5faa57fae71a45b40241b',
     'InstanceNUMATopology': '1.2-d944a7d6c21e1c773ffdf09c6d025954',
     'InstancePCIRequest': '1.1-b1d75ebc716cb12906d9d513890092bf',
     'InstancePCIRequests': '1.1-65e38083177726d806684cb1cc0136d2',
-    'Inventory': '1.0-f4160797d47a533a58700e9ddcc9c5e2',
+    'Inventory': '1.0-84131c00c84a27ee6930d01b329c9a9d',
     'InventoryList': '1.0-de53f0fd078c27cc1d43400f4e8bcef8',
     'LibvirtLiveMigrateBDMInfo': '1.0-252aabb723ca79d5469fa56f64b57811',
-    'LibvirtLiveMigrateData': '1.1-4ecf40aae7fee7bb37fc3b2123e760de',
-    'KeyPair': '1.3-bfaa2a8b148cdf11e0c72435d9dd097a',
-    'KeyPairList': '1.2-58b94f96e776bedaf1e192ddb2a24c4e',
+    'LibvirtLiveMigrateData': '1.3-2795e5646ee21e8c7f1c3e64fb6c80a3',
+    'KeyPair': '1.4-1244e8d1b103cc69d038ed78ab3a8cc6',
+    'KeyPairList': '1.3-94aad3ac5c938eef4b5e83da0212f506',
     'Migration': '1.4-17979b9f2ae7f28d97043a220b2a8350',
-    'MigrationContext': '1.0-d8c2f10069e410f639c49082b5932c92',
+    'MigrationContext': '1.1-9fb17b0b521370957a884636499df52d',
     'MigrationList': '1.3-55595bfc1a299a5962614d0821a3567e',
     'MonitorMetric': '1.1-53b1db7c4ae2c531db79761e7acc52ba',
     'MonitorMetricList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
-    'NotificationPublisher': '1.0-bbbc1402fb0e443a3eb227cc52b61545',
     'NUMACell': '1.2-74fc993ac5c83005e76e34e8487f1c05',
-    'NUMAPagesTopology': '1.0-c71d86317283266dc8364c149155e48e',
+    'NUMAPagesTopology': '1.1-edab9fa2dc43c117a38d600be54b4542',
     'NUMATopology': '1.2-c63fad38be73b6afd04715c9c1b29220',
     'NUMATopologyLimits': '1.0-9463e0edd40f64765ae518a539b9dfd2',
     'Network': '1.2-a977ab383aa462a479b2fae8211a5dde',
     'NetworkInterfaceMetadata': '1.0-99a9574d086feb5ad45cd04a34855647',
     'NetworkList': '1.2-69eca910d8fa035dfecd8ba10877ee59',
-    'NetworkRequest': '1.1-7a3e4ca2ce1e7b62d8400488f2f2b756',
+    'NetworkRequest': '1.2-af1ff2d986999fbb79377712794d82aa',
     'NetworkRequestList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
     'PciDevice': '1.5-0d5abe5c91645b8469eb2a93fc53f932',
     'PCIDeviceBus': '1.0-2b891cb77e42961044689f3dc2718995',
@@ -1178,8 +1179,9 @@ object_data = {
     'PciDevicePoolList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
     'Quotas': '1.2-1fe4cd50593aaf5d36a6dc5ab3f98fb3',
     'QuotasNoOp': '1.2-e041ddeb7dc8188ca71706f78aad41c1',
-    'RequestSpec': '1.5-576a249869c161e17b7cd6d55f9d85f3',
-    'ResourceProvider': '1.0-57a9a344b0faed9cf6d6811835b6deb6',
+    'RequestSpec': '1.6-c1cb516acdf120d367a42d343ed695b5',
+    'ResourceProvider': '1.1-7bbcd5ea1c51782692f55489ab08dea6',
+    'ResourceProviderList': '1.0-82bd48d8d0f7913bbe7266f3835c81bf',
     'S3ImageMapping': '1.0-7dd7366a890d82660ed121de9092276e',
     'SchedulerLimits': '1.0-249c4bd8e62a9b327b7026b7f19cc641',
     'SchedulerRetries': '1.1-3c9c8b16143ebbb6ad7030e999d14cc0',
@@ -1189,29 +1191,50 @@ object_data = {
     'SecurityGroupRule': '1.1-ae1da17b79970012e8536f88cb3c6b29',
     'SecurityGroupRuleList': '1.2-0005c47fcd0fb78dd6d7fd32a1409f5b',
     'Service': '1.20-0f9c0bf701e68640b78638fd09e2cddc',
-    'ServiceList': '1.18-6c52cb616621c1af2415dcc11faf5c1a',
-    'ServiceStatusNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'ServiceStatusPayload': '1.0-a5e7b4fd6cc5581be45b31ff1f3a3f7f',
+    'ServiceList': '1.19-5325bce13eebcbf22edc9678285270cc',
     'TaskLog': '1.0-78b0534366f29aa3eebb01860fbe18fe',
     'TaskLogList': '1.0-cc8cce1af8a283b9d28b55fcd682e777',
     'Tag': '1.1-8b8d7d5b48887651a0e01241672e2963',
     'TagList': '1.1-55231bdb671ecf7641d6a2e9109b5d8e',
+    'Usage': '1.0-b78f18c3577a38e7a033e46a9725b09b',
+    'UsageList': '1.0-de53f0fd078c27cc1d43400f4e8bcef8',
     'USBDeviceBus': '1.0-e4c7dd6032e46cd74b027df5eb2d4750',
     'VirtCPUFeature': '1.0-3310718d8c72309259a6e39bdefe83ee',
     'VirtCPUModel': '1.0-6a5cc9f322729fc70ddc6733bacd57d3',
     'VirtCPUTopology': '1.0-fc694de72e20298f7c6bab1083fd4563',
-    'VirtualInterface': '1.1-422f46c1eaa24a1f63d3360c199cc7c0',
+    'VirtualInterface': '1.3-efd3ca8ebcc5ce65fff5a25f31754c54',
     'VirtualInterfaceList': '1.0-9750e2074437b3077e46359102779fc6',
     'VolumeUsage': '1.0-6c8190c46ce1469bb3286a1f21c2e475',
     'XenapiLiveMigrateData': '1.0-5f982bec68f066e194cd9ce53a24ac4c',
 }
 
 
+def get_nova_objects():
+    """Get Nova versioned objects
+
+    This returns a dict of versioned objects which are
+    in the Nova project namespace only. ie excludes
+    objects from os-vif and other 3rd party modules
+
+    :return: a dict mapping class names to lists of versioned objects
+    """
+
+    all_classes = base.NovaObjectRegistry.obj_classes()
+    nova_classes = {}
+    for name in all_classes:
+        objclasses = all_classes[name]
+        if (objclasses[0].OBJ_PROJECT_NAMESPACE !=
+            base.NovaObject.OBJ_PROJECT_NAMESPACE):
+            continue
+        nova_classes[name] = objclasses
+    return nova_classes
+
+
 class TestObjectVersions(test.NoDBTestCase):
     def test_versions(self):
         checker = fixture.ObjectVersionChecker(
-            base.NovaObjectRegistry.obj_classes())
-        fingerprints = checker.get_hashes(extra_data_func=get_extra_data)
+            get_nova_objects())
+        fingerprints = checker.get_hashes()
 
         if os.getenv('GENERATE_HASHES'):
             open('object_hashes.txt', 'w').write(
@@ -1224,32 +1247,6 @@ class TestObjectVersions(test.NoDBTestCase):
                          'Some objects have changed; please make sure the '
                          'versions have been bumped, and then update their '
                          'hashes here.')
-
-    def test_notification_payload_version_depends_on_the_schema(self):
-        @base.NovaObjectRegistry.register_if(False)
-        class TestNotificationPayload(notification.NotificationPayloadBase):
-            VERSION = '1.0'
-
-            SCHEMA = {
-                'field_1': ('source_field', 'field_1'),
-                'field_2': ('source_field', 'field_2'),
-            }
-
-            fields = {
-                'extra_field': fields.StringField(),  # filled by ctor
-                'field_1': fields.StringField(),  # filled by the schema
-                'field_2': fields.IntegerField(),   # filled by the schema
-            }
-
-        checker = fixture.ObjectVersionChecker(
-            {'TestNotificationPayload': (TestNotificationPayload,)})
-
-        old_hash = checker.get_hashes(extra_data_func=get_extra_data)
-        TestNotificationPayload.SCHEMA['field_3'] = ('source_field',
-                                                     'field_3')
-        new_hash = checker.get_hashes(extra_data_func=get_extra_data)
-
-        self.assertNotEqual(old_hash, new_hash)
 
     def test_obj_make_compatible(self):
         # NOTE(danms): This is normally not registered because it is just a
@@ -1264,17 +1261,18 @@ class TestObjectVersions(test.NoDBTestCase):
         # This doesn't actually test the data conversions, but it at least
         # makes sure the method doesn't blow up on something basic like
         # expecting the wrong version format.
-        obj_classes = base.NovaObjectRegistry.obj_classes()
-        for obj_name in obj_classes:
-            versions = ovo_base.obj_tree_get_versions(obj_name)
-            obj_class = obj_classes[obj_name][0]
-            version = versionutils.convert_version_to_tuple(obj_class.VERSION)
-            for n in range(version[1]):
-                test_version = '%d.%d' % (version[0], n)
-                LOG.info('testing obj: %s version: %s' %
-                         (obj_name, test_version))
-                obj_class().obj_to_primitive(target_version=test_version,
-                                             version_manifest=versions)
+
+        # Hold a dictionary of args/kwargs that need to get passed into
+        # __init__() for specific classes. The key in the dictionary is
+        # the obj_class that needs the init args/kwargs.
+        init_args = {}
+        init_kwargs = {}
+
+        checker = fixture.ObjectVersionChecker(
+            base.NovaObjectRegistry.obj_classes())
+        checker.test_compatibility_routines(use_manifest=True,
+                                            init_args=init_args,
+                                            init_kwargs=init_kwargs)
 
     def test_list_obj_make_compatible(self):
         @base.NovaObjectRegistry.register_if(False)
@@ -1373,17 +1371,3 @@ class TestObjMethodOverrides(test.NoDBTestCase):
             obj_class = obj_classes[obj_name][0]
             self.assertEqual(args,
                     inspect.getargspec(obj_class.obj_reset_changes))
-
-
-def get_extra_data(obj_class):
-    extra_data = tuple()
-
-    # Get the SCHEMA items to add to the fingerprint
-    # if we are looking at a notification
-    if issubclass(obj_class, notification.NotificationPayloadBase):
-        schema_data = collections.OrderedDict(
-            sorted(obj_class.SCHEMA.items()))
-
-        extra_data += (schema_data,)
-
-    return extra_data

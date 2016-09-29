@@ -19,30 +19,39 @@ import copy
 import mock
 from oslo_serialization import jsonutils
 
+from nova.api.openstack.compute import services
 from nova.cells import utils as cells_utils
 from nova import compute
+from nova.compute import api as compute_api
 from nova import context
 from nova import exception
 from nova import objects
 from nova import test
+from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_objects
 from nova.tests.unit.objects import test_service
+import testtools
 
 
 class ComputeHostAPITestCase(test.TestCase):
     def setUp(self):
         super(ComputeHostAPITestCase, self).setUp()
         self.host_api = compute.HostAPI()
+        self.aggregate_api = compute_api.AggregateAPI()
         self.ctxt = context.get_admin_context()
-        fake_notifier.stub_notifier(self.stubs)
+        fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
+        self.req = fakes.HTTPRequest.blank('')
+        self.controller = services.ServiceController()
 
     def _compare_obj(self, obj, db_obj):
         test_objects.compare_obj(self, obj, db_obj,
                                  allow_missing=test_service.OPTIONAL)
 
     def _compare_objs(self, obj_list, db_obj_list):
+        self.assertEqual(len(obj_list), len(db_obj_list),
+                         "The length of two object lists are different.")
         for index, obj in enumerate(obj_list):
             self._compare_obj(obj, db_obj_list[index])
 
@@ -303,6 +312,23 @@ class ComputeHostAPITestCase(test.TestCase):
             get_by_id.assert_called_once_with(self.ctxt, 1)
             destroy.assert_called_once_with()
 
+    def test_service_delete_compute_in_aggregate(self):
+        compute = self.host_api.db.service_create(self.ctxt,
+            {'host': 'fake-compute-host',
+             'binary': 'nova-compute',
+             'topic': 'compute',
+             'report_count': 0})
+        aggregate = self.aggregate_api.create_aggregate(self.ctxt,
+                                                   'aggregate',
+                                                   None)
+        self.aggregate_api.add_host_to_aggregate(self.ctxt,
+                                                 aggregate.id,
+                                                 'fake-compute-host')
+        self.controller.delete(self.req, compute.id)
+        result = self.aggregate_api.get_aggregate(self.ctxt,
+                                                  aggregate.id).hosts
+        self.assertEqual([], result)
+
 
 class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
     def setUp(self):
@@ -408,6 +434,11 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
             self.host_api.service_delete(self.ctxt, cell_service_id)
             service_delete.assert_called_once_with(
                 self.ctxt, cell_service_id)
+
+    @testtools.skip('cells do not support host aggregates')
+    def test_service_delete_compute_in_aggregate(self):
+        # this test is not valid for cell
+        pass
 
     @mock.patch.object(objects.InstanceList, 'get_by_host')
     def test_instance_get_all_by_host(self, mock_get):

@@ -16,16 +16,20 @@
 Image caching and management.
 """
 import os
+import re
 
 from os_win import utilsfactory
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import units
+from oslo_utils import uuidutils
 
 import nova.conf
 from nova import exception
+from nova.i18n import _, _LI
 from nova import utils
 from nova.virt.hyperv import pathutils
+from nova.virt import imagecache
 from nova.virt import images
 
 LOG = logging.getLogger(__name__)
@@ -33,8 +37,20 @@ LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
 
 
-class ImageCache(object):
+def synchronize_with_path(f):
+    def wrapper(self, image_path):
+
+        @utils.synchronized(image_path)
+        def inner():
+            return f(self, image_path)
+        return inner()
+
+    return wrapper
+
+
+class ImageCache(imagecache.ImageCacheManager):
     def __init__(self):
+        super(ImageCache, self).__init__()
         self._pathutils = pathutils.PathUtils()
         self._vhdutils = utilsfactory.get_vhdutils()
 
@@ -42,7 +58,7 @@ class ImageCache(object):
         if instance.old_flavor:
             return instance.old_flavor.root_gb
         else:
-            return instance.root_gb
+            return instance.flavor.root_gb
 
     def _resize_and_cache_vhd(self, instance, vhd_path):
         vhd_size = self._vhdutils.get_vhd_size(vhd_path)['VirtualSize']
@@ -87,8 +103,8 @@ class ImageCache(object):
             copy_and_resize_vhd()
             return resized_vhd_path
 
-    def get_cached_image(self, context, instance):
-        image_id = instance.image_ref
+    def get_cached_image(self, context, instance, rescue_image_id=None):
+        image_id = rescue_image_id or instance.image_ref
 
         base_vhd_dir = self._pathutils.get_base_vhd_dir()
         base_vhd_path = os.path.join(base_vhd_dir, image_id)
@@ -104,9 +120,7 @@ class ImageCache(object):
 
             if not vhd_path:
                 try:
-                    images.fetch(context, image_id, base_vhd_path,
-                                 instance.user_id,
-                                 instance.project_id)
+                    images.fetch(context, image_id, base_vhd_path)
 
                     format_ext = self._vhdutils.get_vhd_format(base_vhd_path)
                     vhd_path = base_vhd_path + '.' + format_ext.lower()
@@ -120,11 +134,112 @@ class ImageCache(object):
 
         vhd_path = fetch_image_if_not_existing()
 
-        if CONF.use_cow_images and vhd_path.split('.')[-1].lower() == 'vhd':
+        # Note: rescue images are not resized.
+        is_vhd = vhd_path.split('.')[-1].lower() == 'vhd'
+        if CONF.use_cow_images and is_vhd and not rescue_image_id:
             # Resize the base VHD image as it's not possible to resize a
             # differencing VHD. This does not apply to VHDX images.
             resized_vhd_path = self._resize_and_cache_vhd(instance, vhd_path)
             if resized_vhd_path:
                 return resized_vhd_path
 
+        if rescue_image_id:
+            self._verify_rescue_image(instance, rescue_image_id,
+                                      vhd_path)
+
         return vhd_path
+
+    def _verify_rescue_image(self, instance, rescue_image_id,
+                             rescue_image_path):
+        rescue_image_info = self._vhdutils.get_vhd_info(rescue_image_path)
+        rescue_image_size = rescue_image_info['VirtualSize']
+        flavor_disk_size = instance.flavor.root_gb * units.Gi
+
+        if rescue_image_size > flavor_disk_size:
+            err_msg = _('Using a rescue image bigger than the instance '
+                        'flavor disk size is not allowed. '
+                        'Rescue image size: %(rescue_image_size)s. '
+                        'Flavor disk size:%(flavor_disk_size)s.') % dict(
+                            rescue_image_size=rescue_image_size,
+                            flavor_disk_size=flavor_disk_size)
+            raise exception.ImageUnacceptable(reason=err_msg,
+                                              image_id=rescue_image_id)
+
+    def get_image_details(self, context, instance):
+        image_id = instance.image_ref
+        return images.get_info(context, image_id)
+
+    def _age_and_verify_cached_images(self, context, all_instances, base_dir):
+        for img in self.originals:
+            if img in self.used_images:
+                # change the timestamp on the image so as to reflect the last
+                # time it was used
+                self._update_image_timestamp(img)
+            else:
+                self._remove_if_old_image(img)
+
+    def _update_image_timestamp(self, image):
+        backing_files = self._get_image_backing_files(image)
+        for img in backing_files:
+            os.utime(img, None)
+
+    def _get_image_backing_files(self, image):
+        base_file = self._pathutils.get_image_path(image)
+        if not base_file:
+            # not vhd or vhdx, ignore.
+            return []
+
+        backing_files = [base_file]
+        resize_re = re.compile('%s_[0-9]+$' % image)
+        for img in self.unexplained_images:
+            match = resize_re.match(img)
+            if match:
+                backing_files.append(self._pathutils.get_image_path(img))
+
+        return backing_files
+
+    def _remove_if_old_image(self, image):
+        backing_files = self._get_image_backing_files(image)
+        max_age_seconds = CONF.remove_unused_original_minimum_age_seconds
+
+        for img in backing_files:
+            age_seconds = self._pathutils.get_age_of_file(img)
+            if age_seconds > max_age_seconds:
+                LOG.info(_LI("Removing old, unused image: %s"), img)
+                self.remove_old_image(img)
+
+    @synchronize_with_path
+    def remove_old_image(self, img):
+        self._pathutils.remove(img)
+
+    def update(self, context, all_instances):
+        base_vhd_dir = self._pathutils.get_base_vhd_dir()
+
+        running = self._list_running_instances(context, all_instances)
+        self.used_images = running['used_images'].keys()
+        all_files = self._list_base_images(base_vhd_dir)
+        self.originals = all_files['originals']
+        self.unexplained_images = all_files['unexplained_images']
+
+        self._age_and_verify_cached_images(context, all_instances,
+                                           base_vhd_dir)
+
+    def _list_base_images(self, base_dir):
+        unexplained_images = []
+        originals = []
+
+        for entry in os.listdir(base_dir):
+            file_name, extension = os.path.splitext(entry)
+            # extension has a leading '.'. E.g.: '.vhdx'
+            if extension.lstrip('.').lower() not in ['vhd', 'vhdx']:
+                # File is not an image. Ignore it.
+                # imagecache will not store images of any other formats.
+                continue
+
+            if uuidutils.is_uuid_like(file_name):
+                originals.append(file_name)
+            else:
+                unexplained_images.append(file_name)
+
+        return {'unexplained_images': unexplained_images,
+                'originals': originals}

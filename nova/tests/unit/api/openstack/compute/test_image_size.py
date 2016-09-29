@@ -14,7 +14,6 @@
 #    under the License.
 
 from oslo_serialization import jsonutils
-import webob
 
 from nova.image import glance
 from nova import test
@@ -78,12 +77,13 @@ class ImageSizeTestV21(test.NoDBTestCase):
         super(ImageSizeTestV21, self).setUp()
         self.stubs.Set(glance.GlanceImageService, 'show', fake_show)
         self.stubs.Set(glance.GlanceImageService, 'detail', fake_detail)
-        self.flags(osapi_compute_extension=['nova.api.openstack.compute'
-                                            '.contrib.image_size.Image_size'])
+        self.stubs.Set(glance.GlanceImageServiceV2, 'show', fake_show)
+        self.stubs.Set(glance.GlanceImageServiceV2, 'detail', fake_detail)
+
         self.flags(api_servers=['http://localhost:9292'], group='glance')
 
     def _make_request(self, url):
-        req = webob.Request.blank(url)
+        req = fakes.HTTPRequest.blank(url)
         req.headers['Accept'] = self.content_type
         res = req.get_response(self._get_app())
         return res
@@ -116,8 +116,3 @@ class ImageSizeTestV21(test.NoDBTestCase):
         images = self._get_images(res.body)
         self.assertImageSize(images[0], 12345678)
         self.assertImageSize(images[1], 87654321)
-
-
-class ImageSizeTestV2(ImageSizeTestV21):
-    def _get_app(self):
-        return fakes.wsgi_app(init_only=('images',))

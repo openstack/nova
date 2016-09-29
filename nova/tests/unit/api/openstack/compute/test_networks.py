@@ -25,13 +25,9 @@ import netaddr
 from oslo_config import cfg
 import webob
 
-from nova.api.openstack.compute.legacy_v2.contrib import networks_associate
-from nova.api.openstack.compute.legacy_v2.contrib import os_networks \
-        as networks
 from nova.api.openstack.compute import networks as networks_v21
 from nova.api.openstack.compute import networks_associate \
         as networks_associate_v21
-from nova.api.openstack import extensions
 import nova.context
 from nova import exception
 from nova.network import manager
@@ -121,9 +117,8 @@ NEW_NETWORK = {
 class FakeNetworkAPI(object):
 
     _sentinel = object()
-    _vlan_is_disabled = False
 
-    def __init__(self, skip_policy_check=False):
+    def __init__(self):
         self.networks = copy.deepcopy(FAKE_NETWORKS)
 
     def delete(self, context, network_id):
@@ -157,8 +152,6 @@ class FakeNetworkAPI(object):
 
     def add_network_to_project(self, context,
                                project_id, network_uuid=None):
-        if self._vlan_is_disabled:
-            raise NotImplementedError()
         if network_uuid:
             for network in self.networks:
                 if network.get('project_id', None) is None:
@@ -251,7 +244,6 @@ class NetworkCreateExceptionsTestV21(test.TestCase):
         super(NetworkCreateExceptionsTestV21, self).setUp()
         self._setup()
         fakes.stub_out_networking(self)
-        fakes.stub_out_rate_limiting(self.stubs)
         self.new_network = copy.deepcopy(NEW_NETWORK)
 
     def _setup(self):
@@ -265,7 +257,19 @@ class NetworkCreateExceptionsTestV21(test.TestCase):
                           body=self.new_network)
 
     def test_network_create_no_cidr(self):
-        self.new_network['network']['cidr'] = ''
+        del self.new_network['network']['cidr']
+        self.assertRaises(self.validation_error,
+                          self.controller.create, self.req,
+                          body=self.new_network)
+
+    def test_network_create_no_label(self):
+        del self.new_network['network']['label']
+        self.assertRaises(self.validation_error,
+                          self.controller.create, self.req,
+                          body=self.new_network)
+
+    def test_network_create_label_too_long(self):
+        self.new_network['network']['label'] = "x" * 256
         self.assertRaises(self.validation_error,
                           self.controller.create, self.req,
                           body=self.new_network)
@@ -310,22 +314,25 @@ class NetworkCreateExceptionsTestV21(test.TestCase):
                           self.controller.create, self.req,
                           body=self.new_network)
 
+    def test_network_create_vlan_conflict(self):
 
-class NetworkCreateExceptionsTestV2(NetworkCreateExceptionsTestV21):
-    validation_error = webob.exc.HTTPBadRequest
+        @staticmethod
+        def get_all(context):
+            ret = objects.NetworkList(context=context, objects=[])
+            net = objects.Network(cidr='10.0.0.0/24', vlan=100)
+            ret.objects.append(net)
+            return ret
 
-    def _setup(self):
-        ext_mgr = extensions.ExtensionManager()
-        ext_mgr.extensions = {'os-extended-networks': 'fake'}
-        self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
+        def fake_create(context):
+            raise exception.DuplicateVlan(vlan=100)
 
-        self.controller = networks.NetworkController(
-                self.PassthroughAPI(), ext_mgr)
+        self.stub_out('nova.objects.NetworkList.get_all', get_all)
+        self.stub_out('nova.objects.Network.create', fake_create)
 
-    def test_network_create_with_both_cidr_and_cidr_v6(self):
-        # NOTE: v2.0 API cannot handle this case, so we need to just
-        # skip it on the API.
-        pass
+        self.new_network['network']['cidr'] = '20.0.0.0/24'
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller.create, self.req,
+                          body=self.new_network)
 
 
 class NetworksTestV21(test.NoDBTestCase):
@@ -336,7 +343,6 @@ class NetworksTestV21(test.NoDBTestCase):
         self.fake_network_api = FakeNetworkAPI()
         self._setup()
         fakes.stub_out_networking(self)
-        fakes.stub_out_rate_limiting(self.stubs)
         self.new_network = copy.deepcopy(NEW_NETWORK)
         self.non_admin_req = fakes.HTTPRequest.blank(
             '', project_id=fakes.FAKE_PROJECT_ID)
@@ -348,7 +354,7 @@ class NetworksTestV21(test.NoDBTestCase):
         self.controller = networks_v21.NetworkController(
             self.fake_network_api)
         self.neutron_ctrl = networks_v21.NetworkController(
-            neutron.API(skip_policy_check=True))
+            neutron.API())
         self.req = fakes.HTTPRequest.blank('',
                                            project_id=fakes.FAKE_PROJECT_ID)
 
@@ -386,10 +392,9 @@ class NetworksTestV21(test.NoDBTestCase):
 
     def test_network_disassociate(self):
         uuid = FAKE_NETWORKS[0]['uuid']
-        res = self.controller._disassociate_host_and_project(
-            self.req, uuid, {'disassociate': None})
-        self._check_status(res, self.controller._disassociate_host_and_project,
-                           202)
+        disassociate = self.controller._disassociate_host_and_project
+        res = disassociate(self.req, uuid, {'disassociate': None})
+        self._check_status(res, disassociate, 202)
         self.assertIsNone(self.fake_network_api.networks[0]['project_id'])
         self.assertIsNone(self.fake_network_api.networks[0]['host'])
 
@@ -417,8 +422,9 @@ class NetworksTestV21(test.NoDBTestCase):
                           self.controller.show, self.req, 100)
 
     def test_network_delete(self):
-        res = self.controller.delete(self.req, 1)
-        self._check_status(res, self.controller.delete, 202)
+        delete_method = self.controller.delete
+        res = delete_method(self.req, 1)
+        self._check_status(res, delete_method, 202)
 
     def test_network_delete_not_found(self):
         self.assertRaises(webob.exc.HTTPNotFound,
@@ -430,8 +436,9 @@ class NetworksTestV21(test.NoDBTestCase):
 
     def test_network_add(self):
         uuid = FAKE_NETWORKS[1]['uuid']
-        res = self.controller.add(self.req, body={'id': uuid})
-        self._check_status(res, self.controller.add, 202)
+        add = self.controller.add
+        res = add(self.req, body={'id': uuid})
+        self._check_status(res, add, 202)
         res_dict = self.controller.show(self.admin_req,
                                         uuid)
         self.assertEqual(res_dict['network']['project_id'],
@@ -472,8 +479,9 @@ class NetworksTestV21(test.NoDBTestCase):
                                 'extra_arg': 123})
 
     def test_network_add_network_with_none_id(self):
-        res = self.controller.add(self.req, body={'id': None})
-        self._check_status(res, self.controller.add, 202)
+        add = self.controller.add
+        res = add(self.req, body={'id': None})
+        self._check_status(res, add, 202)
 
     def test_network_create(self):
         res_dict = self.controller.create(self.req, body=self.new_network)
@@ -496,64 +504,6 @@ class NetworksTestV21(test.NoDBTestCase):
                           self.req, uuid, {'disassociate': None})
 
 
-class NetworksTestV2(NetworksTestV21):
-    validation_error = webob.exc.HTTPUnprocessableEntity
-
-    def _setup(self):
-        ext_mgr = extensions.ExtensionManager()
-        ext_mgr.extensions = {'os-extended-networks': 'fake'}
-        self.controller = networks.NetworkController(self.fake_network_api,
-                                                     ext_mgr)
-        self.neutron_ctrl = networks.NetworkController(
-            neutron.API(skip_policy_check=False))
-        self.req = fakes.HTTPRequest.blank('',
-                              project_id=fakes.FAKE_PROJECT_ID,
-                              use_admin_context=True)
-
-    def _check_status(self, res, method, code):
-        self.assertEqual(res.status_int, code)
-
-    def test_network_create_not_extended(self):
-        self.stubs.Set(self.controller, 'extended', False)
-        # NOTE(vish): Verify that new params are not passed through if
-        #             extension is not enabled.
-
-        def no_mtu(*args, **kwargs):
-            if 'mtu' in kwargs:
-                raise test.TestingException("mtu should not pass through")
-            return [{}]
-
-        self.stubs.Set(self.controller.network_api, 'create', no_mtu)
-        self.new_network['network']['mtu'] = 9000
-        self.controller.create(self.req, body=self.new_network)
-
-    def test_network_add_network_with_invalid_id(self):
-        pass
-
-    def test_network_add_network_with_extra_arg(self):
-        pass
-
-    def test_disassociate_host_and_project_with_non_admin(self):
-        uuid = FAKE_NETWORKS[0]['uuid']
-        self.assertRaises(
-            exception.AdminRequired,
-            self.controller._disassociate_host_and_project,
-            self.non_admin_req, uuid, {'disassociate': None})
-
-    def test_network_add_with_non_admin(self):
-        uuid = FAKE_NETWORKS[1]['uuid']
-        self.assertRaises(
-            exception.AdminRequired,
-            self.controller.add,
-            self.non_admin_req, body={'id': uuid})
-
-    def test_network_create_with_non_admin(self):
-        self.assertRaises(
-            exception.AdminRequired,
-            self.controller.create,
-            self.non_admin_req, body=self.new_network)
-
-
 class NetworksAssociateTestV21(test.NoDBTestCase):
 
     def setUp(self):
@@ -561,16 +511,15 @@ class NetworksAssociateTestV21(test.NoDBTestCase):
         self.fake_network_api = FakeNetworkAPI()
         self._setup()
         fakes.stub_out_networking(self)
-        fakes.stub_out_rate_limiting(self.stubs)
         self.admin_req = fakes.HTTPRequest.blank('', use_admin_context=True)
 
     def _setup(self):
-        self.controller = networks.NetworkController(self.fake_network_api)
+        self.controller = networks_v21.NetworkController(self.fake_network_api)
         self.associate_controller = networks_associate_v21\
             .NetworkAssociateActionController(self.fake_network_api)
         self.neutron_assoc_ctrl = (
             networks_associate_v21.NetworkAssociateActionController(
-                neutron.API(skip_policy_check=True)))
+                neutron.API()))
         self.req = fakes.HTTPRequest.blank('')
 
     def _check_status(self, res, method, code):
@@ -578,32 +527,37 @@ class NetworksAssociateTestV21(test.NoDBTestCase):
 
     def test_network_disassociate_host_only(self):
         uuid = FAKE_NETWORKS[0]['uuid']
-        res = self.associate_controller._disassociate_host_only(
+        disassociate = self.associate_controller._disassociate_host_only
+        res = disassociate(
             self.req, uuid, {'disassociate_host': None})
         self._check_status(res,
-                           self.associate_controller._disassociate_host_only,
+                           disassociate,
                            202)
         self.assertIsNotNone(self.fake_network_api.networks[0]['project_id'])
         self.assertIsNone(self.fake_network_api.networks[0]['host'])
 
     def test_network_disassociate_project_only(self):
         uuid = FAKE_NETWORKS[0]['uuid']
-        res = self.associate_controller._disassociate_project_only(
-            self.req, uuid, {'disassociate_project': None})
-        self._check_status(
-            res, self.associate_controller._disassociate_project_only, 202)
+        disassociate = self.associate_controller._disassociate_project_only
+        res = disassociate(self.req, uuid, {'disassociate_project': None})
+        self._check_status(res, disassociate, 202)
         self.assertIsNone(self.fake_network_api.networks[0]['project_id'])
         self.assertIsNotNone(self.fake_network_api.networks[0]['host'])
 
     def test_network_disassociate_project_network_delete(self):
         uuid = FAKE_NETWORKS[1]['uuid']
-        res = self.associate_controller._disassociate_project_only(
+        disassociate = self.associate_controller._disassociate_project_only
+        res = disassociate(
             self.req, uuid, {'disassociate_project': None})
-        self._check_status(
-            res, self.associate_controller._disassociate_project_only, 202)
+        self._check_status(res, disassociate, 202)
         self.assertIsNone(self.fake_network_api.networks[1]['project_id'])
-        res = self.controller.delete(self.req, 1)
-        self.assertEqual(202, res.status_int)
+        delete = self.controller.delete
+        res = delete(self.req, 1)
+
+        # NOTE: On v2.1 code, delete method doesn't return anything and
+        # the status code is decorated on wsgi_code of the method.
+        self.assertIsNone(res)
+        self.assertEqual(202, delete.wsgi_code)
 
     def test_network_associate_project_delete_fail(self):
         uuid = FAKE_NETWORKS[0]['uuid']
@@ -613,9 +567,9 @@ class NetworksAssociateTestV21(test.NoDBTestCase):
 
     def test_network_associate_with_host(self):
         uuid = FAKE_NETWORKS[1]['uuid']
-        res = self.associate_controller._associate_host(
-            self.req, uuid, body={'associate_host': "TestHost"})
-        self._check_status(res, self.associate_controller._associate_host, 202)
+        associate = self.associate_controller._associate_host
+        res = associate(self.req, uuid, body={'associate_host': "TestHost"})
+        self._check_status(res, associate, 202)
         res_dict = self.controller.show(self.admin_req, uuid)
         self.assertEqual(res_dict['network']['host'], 'TestHost')
 
@@ -659,50 +613,6 @@ class NetworksAssociateTestV21(test.NoDBTestCase):
         self.assertRaises(webob.exc.HTTPNotImplemented,
                           self.neutron_assoc_ctrl._disassociate_host_only,
                           self.req, uuid, {'disassociate_host': None})
-
-
-class NetworksAssociateTestV2(NetworksAssociateTestV21):
-
-    def _setup(self):
-        ext_mgr = extensions.ExtensionManager()
-        ext_mgr.extensions = {'os-extended-networks': 'fake'}
-        self.controller = networks.NetworkController(
-                                                self.fake_network_api,
-                                                ext_mgr)
-        self.associate_controller = networks_associate\
-            .NetworkAssociateActionController(self.fake_network_api)
-        self.neutron_assoc_ctrl = (
-            networks_associate.NetworkAssociateActionController(
-                neutron.API(skip_policy_check=False)))
-        self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
-        self.non_admin_req = fakes.HTTPRequest.blank('')
-
-    def _check_status(self, res, method, code):
-        self.assertEqual(res.status_int, code)
-
-    def _test_network_neutron_associate_host_validation_failed(self, body):
-        pass
-
-    def test_network_associate_host_with_non_admin(self):
-        uuid = FAKE_NETWORKS[1]['uuid']
-        self.assertRaises(
-            exception.AdminRequired,
-            self.associate_controller._associate_host,
-            self.non_admin_req, uuid, body={'associate_host': "TestHost"})
-
-    def test_network_disassociate_host_only_with_non_admin(self):
-        uuid = FAKE_NETWORKS[0]['uuid']
-        self.assertRaises(
-            exception.AdminRequired,
-            self.associate_controller._disassociate_host_only,
-            self.non_admin_req, uuid, {'disassociate_host': None})
-
-    def test_network_disassociate_project_only_with_non_admin(self):
-        uuid = FAKE_NETWORKS[0]['uuid']
-        self.assertRaises(
-            exception.AdminRequired,
-            self.associate_controller._disassociate_project_only,
-            self.non_admin_req, uuid, {'disassociate_project': None})
 
 
 class NetworksEnforcementV21(test.NoDBTestCase):
@@ -815,3 +725,44 @@ class NetworksAssociateEnforcementV21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
+
+
+class NetworksDeprecationTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(NetworksDeprecationTest, self).setUp()
+        self.controller = networks_v21.NetworkController()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+
+    def test_all_api_return_not_found(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.show, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.delete, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.index, self.req)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller._disassociate_host_and_project, self.req, {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.add, self.req, {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.create, self.req, {})
+
+
+class NetworksAssociateDeprecationTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(NetworksAssociateDeprecationTest, self).setUp()
+        self.controller = networks_associate_v21\
+            .NetworkAssociateActionController()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+
+    def test_all_api_return_not_found(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller._associate_host, self.req, fakes.FAKE_UUID, {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller._disassociate_project_only, self.req,
+            fakes.FAKE_UUID, {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller._disassociate_host_only, self.req,
+            fakes.FAKE_UUID, {})

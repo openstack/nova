@@ -24,6 +24,7 @@ from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import utils as cells_utils
 from nova.compute import api as compute_api
 from nova.compute import rpcapi as compute_rpcapi
+from nova.compute import vm_states
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
@@ -31,8 +32,6 @@ from nova import rpc
 
 
 check_instance_state = compute_api.check_instance_state
-wrap_check_policy = compute_api.wrap_check_policy
-check_policy = compute_api.check_policy
 check_instance_lock = compute_api.check_instance_lock
 check_instance_cell = compute_api.check_instance_cell
 
@@ -224,6 +223,36 @@ class ComputeCellsAPI(compute_api.API):
             # NOTE(danms): If we try to delete an instance with no cell,
             # there isn't anything to salvage, so we can hard-delete here.
             try:
+                if self._delete_while_booting(context, instance):
+                    return
+            except exception.ObjectActionError:
+                # NOTE(alaski): We very likely got here because the host
+                # constraint in instance.destroy() failed.  This likely means
+                # that an update came up from a child cell and cell_name is
+                # set now.  We handle this similarly to how the
+                # ObjectActionError is handled below.
+                with excutils.save_and_reraise_exception() as exc:
+                    instance = self._lookup_instance(context, instance.uuid)
+                    if instance is None:
+                        exc.reraise = False
+                    elif instance.cell_name:
+                        exc.reraise = False
+                        self._handle_cell_delete(context, instance,
+                                                 method_name)
+                return
+            # If instance.cell_name was not set it's possible that the Instance
+            # object here was pulled from a BuildRequest object and is not
+            # fully populated. Notably it will be missing an 'id' field which
+            # will prevent instance.destroy from functioning properly. A
+            # lookup is attempted which will either return a full Instance or
+            # None if not found. If not found then it's acceptable to skip the
+            # rest of the delete processing.
+            instance = self._lookup_instance(context, instance.uuid)
+            if instance is None:
+                # Instance has been deleted out from under us
+                return
+
+            try:
                 super(ComputeCellsAPI, self)._local_delete(context, instance,
                                                            bdms, method_name,
                                                            self._do_delete)
@@ -319,16 +348,14 @@ class ComputeCellsAPI(compute_api.API):
         super(ComputeCellsAPI, self).unrescue(context, instance)
         self._cast_to_cells(context, instance, 'unrescue')
 
-    @wrap_check_policy
     @check_instance_cell
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
+                                    vm_states.PAUSED, vm_states.SUSPENDED])
     def shelve(self, context, instance, clean_shutdown=True):
         """Shelve the given instance."""
-        super(ComputeCellsAPI, self).shelve(context, instance,
-                clean_shutdown=clean_shutdown)
         self._cast_to_cells(context, instance, 'shelve',
                 clean_shutdown=clean_shutdown)
 
-    @wrap_check_policy
     @check_instance_cell
     def shelve_offload(self, context, instance, clean_shutdown=True):
         """Offload the shelved instance."""
@@ -337,14 +364,13 @@ class ComputeCellsAPI(compute_api.API):
         self._cast_to_cells(context, instance, 'shelve_offload',
                 clean_shutdown=clean_shutdown)
 
-    @wrap_check_policy
     @check_instance_cell
+    @check_instance_state(vm_state=[vm_states.SHELVED,
+                                    vm_states.SHELVED_OFFLOADED])
     def unshelve(self, context, instance):
         """Unshelve the given instance."""
-        super(ComputeCellsAPI, self).unshelve(context, instance)
         self._cast_to_cells(context, instance, 'unshelve')
 
-    @wrap_check_policy
     @check_instance_cell
     def get_vnc_console(self, context, instance, console_type):
         """Get a url to a VNC Console."""
@@ -360,7 +386,6 @@ class ComputeCellsAPI(compute_api.API):
                 instance.uuid, access_url=connect_info['access_url'])
         return {'url': connect_info['access_url']}
 
-    @wrap_check_policy
     @check_instance_cell
     def get_spice_console(self, context, instance, console_type):
         """Get a url to a SPICE Console."""
@@ -376,7 +401,6 @@ class ComputeCellsAPI(compute_api.API):
                 instance.uuid, access_url=connect_info['access_url'])
         return {'url': connect_info['access_url']}
 
-    @wrap_check_policy
     @check_instance_cell
     def get_rdp_console(self, context, instance, console_type):
         """Get a url to a RDP Console."""
@@ -392,7 +416,6 @@ class ComputeCellsAPI(compute_api.API):
                 instance.uuid, access_url=connect_info['access_url'])
         return {'url': connect_info['access_url']}
 
-    @wrap_check_policy
     @check_instance_cell
     def get_serial_console(self, context, instance, console_type):
         """Get a url to a serial console."""
@@ -422,7 +445,8 @@ class ComputeCellsAPI(compute_api.API):
                        disk_bus, device_type):
         """Attach an existing volume to an existing instance."""
         volume = self.volume_api.get(context, volume_id)
-        self.volume_api.check_attach(context, volume, instance=instance)
+        self.volume_api.check_availability_zone(context, volume,
+                                                instance=instance)
 
         return self._call_to_cells(context, instance, 'attach_volume',
                 volume_id, device, disk_bus, device_type)
@@ -434,7 +458,6 @@ class ComputeCellsAPI(compute_api.API):
         self._cast_to_cells(context, instance, 'detach_volume',
                 volume)
 
-    @wrap_check_policy
     @check_instance_cell
     def associate_floating_ip(self, context, instance, address):
         """Makes calls to network_api to associate_floating_ip.
@@ -452,7 +475,6 @@ class ComputeCellsAPI(compute_api.API):
         self._cast_to_cells(context, instance, 'delete_instance_metadata',
                 key)
 
-    @wrap_check_policy
     @check_instance_cell
     def update_instance_metadata(self, context, instance,
                                  metadata, delete=False):
@@ -612,7 +634,9 @@ class HostAPI(compute_api.HostAPI):
         except exception.CellRoutingInconsistency:
             raise exception.ComputeHostNotFound(host=compute_id)
 
-    def compute_node_get_all(self, context):
+    def compute_node_get_all(self, context, limit=None, marker=None):
+        # NOTE(lyj): No pagination for cells, just make sure the arguments
+        #            for the method are the same with the compute.api for now.
         return self.cells_rpcapi.compute_node_get_all(context)
 
     def compute_node_search_by_hypervisor(self, context, hypervisor_match):

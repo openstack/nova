@@ -106,7 +106,7 @@ EOF
     # then apply this rules to the default pool
     if [[ $CEPH_REPLICAS -ne 1 ]]; then
         sudo ceph -c ${CEPH_CONF_FILE} osd crush rule create-simple devstack default osd
-        RULE_ID=$(sudo ceph -c ${CEPH_CONF_FILE} osd crush rule dump devstack | awk '/rule_id/ {print $3}' | cut -d ',' -f1)
+        RULE_ID=$(sudo ceph -c ${CEPH_CONF_FILE} osd crush rule dump devstack | awk '/rule_id/ {print $2}' | cut -d ',' -f1)
         sudo ceph -c ${CEPH_CONF_FILE} osd pool set rbd crush_ruleset ${RULE_ID}
         sudo ceph -c ${CEPH_CONF_FILE} osd pool set data crush_ruleset ${RULE_ID}
         sudo ceph -c ${CEPH_CONF_FILE} osd pool set metadata crush_ruleset ${RULE_ID}

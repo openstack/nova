@@ -17,13 +17,13 @@
 Management class for Pool-related functions (join, eject, etc).
 """
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 import six
 import six.moves.urllib.parse as urlparse
 
 from nova.compute import rpcapi as compute_rpcapi
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LE
 from nova.virt.xenapi import pool_states
@@ -31,15 +31,7 @@ from nova.virt.xenapi import vm_utils
 
 LOG = logging.getLogger(__name__)
 
-xenapi_pool_opts = [
-    cfg.BoolOpt('use_join_force',
-                default=True,
-                help='To use for hosts with different CPUs'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(xenapi_pool_opts, 'xenserver')
-CONF.import_opt('host', 'nova.netconf')
+CONF = nova.conf.CONF
 
 
 class ResourcePool(object):
@@ -70,6 +62,11 @@ class ResourcePool(object):
         """Add a compute host to an aggregate."""
         if not pool_states.is_hv_pool(aggregate.metadata):
             return
+
+        if CONF.xenserver.independent_compute:
+            raise exception.NotSupportedWithOption(
+                operation='adding to a XenServer pool',
+                option='CONF.xenserver.independent_compute')
 
         invalid = {pool_states.CHANGING: _('setup in progress'),
                    pool_states.DISMISSED: _('aggregate deleted'),
@@ -110,7 +107,7 @@ class ResourcePool(object):
                 slave_info = self._create_slave_info()
 
                 self.compute_rpcapi.add_aggregate_host(
-                    context, aggregate, host, master_compute, slave_info)
+                    context, host, aggregate, master_compute, slave_info)
 
     def remove_from_aggregate(self, context, aggregate, host, slave_info=None):
         """Remove a compute host from an aggregate."""
@@ -152,7 +149,7 @@ class ResourcePool(object):
             slave_info = self._create_slave_info()
 
             self.compute_rpcapi.remove_aggregate_host(
-                context, aggregate.id, host, master_compute, slave_info)
+                context, host, aggregate.id, master_compute, slave_info)
         else:
             # this shouldn't have happened
             raise exception.AggregateError(aggregate_id=aggregate.id,
@@ -172,7 +169,7 @@ class ResourcePool(object):
                     'master_addr': self._host_addr,
                     'master_user': CONF.xenserver.connection_username,
                     'master_pass': CONF.xenserver.connection_password, }
-            self._session.call_plugin('xenhost', 'host_join', args)
+            self._session.call_plugin('xenhost.py', 'host_join', args)
         except self._session.XenAPI.Failure as e:
             LOG.error(_LE("Pool-Join failed: %s"), e)
             raise exception.AggregateError(aggregate_id=aggregate_id,

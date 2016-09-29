@@ -16,25 +16,45 @@
 
 from oslo_config import cfg
 
-mks_group = cfg.OptGroup('mks', title='MKS Options')
+mks_group = cfg.OptGroup('mks',
+                         title='MKS Options',
+                         help="""
+Nova compute node uses WebMKS, a desktop sharing protocol to provide
+instance console access to VM's created by VMware hypervisors.
+
+Related options:
+Following options must be set to provide console access.
+* mksproxy_base_url
+* enabled
+""")
 
 mks_opts = [
     cfg.StrOpt('mksproxy_base_url',
                default='http://127.0.0.1:6090/',
-               help='Location of MKS web console proxy, in the form '
-                    '"http://127.0.0.1:6090/"'),
+               help="""
+Location of MKS web console proxy
+
+The URL in the response points to a WebMKS proxy which
+starts proxying between client and corresponding vCenter
+server where instance runs. In order to use the web based
+console access, WebMKS proxy should be installed and configured
+
+Possible values:
+
+* Must be a valid URL of the form:``http://host:port/``
+"""),
     cfg.BoolOpt('enabled',
                 default=False,
-                help='Enable MKS related features'),
-    ]
-
-ALL_MKS_OPTS = mks_opts
+                help="""
+Enables graphical console access for virtual machines.
+"""),
+]
 
 
 def register_opts(conf):
     conf.register_group(mks_group)
-    conf.register_opts(ALL_MKS_OPTS, group = mks_group)
+    conf.register_opts(mks_opts, group=mks_group)
 
 
 def list_opts():
-    return {mks_group: ALL_MKS_OPTS}
+    return {mks_group: mks_opts}

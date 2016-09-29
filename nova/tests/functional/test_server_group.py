@@ -13,9 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
 import time
 
+import mock
 from oslo_config import cfg
 
 from nova import context
@@ -24,7 +24,7 @@ from nova.db.sqlalchemy import api as db_api
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
-from nova.tests.functional import api_paste_fixture
+from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_network
 from nova.tests.unit import policy_fixture
 
@@ -38,18 +38,17 @@ CONF = cfg.CONF
 PROJECT_ID_ALT = "616c6c796f7572626173656172656f73"
 
 
-class ServerGroupTestBase(test.TestCase):
+class ServerGroupTestBase(test.TestCase,
+                          integrated_helpers.InstanceHelperMixin):
     REQUIRES_LOCKING = True
-    api_major_version = 'v2'
+    api_major_version = 'v2.1'
     microversion = None
-    _image_ref_parameter = 'imageRef'
-    _flavor_ref_parameter = 'flavorRef'
 
     # Note(gibi): RamFilter is needed to ensure that
     # test_boot_servers_with_affinity_no_valid_host behaves as expected
-    _scheduler_default_filters = ('ServerGroupAntiAffinityFilter',
+    _scheduler_default_filters = ['ServerGroupAntiAffinityFilter',
                                   'ServerGroupAffinityFilter',
-                                  'RamFilter')
+                                  'RamFilter']
 
     # Override servicegroup parameters to make the tests run faster
     _service_down_time = 2
@@ -70,13 +69,8 @@ class ServerGroupTestBase(test.TestCase):
 
         self.useFixture(policy_fixture.RealPolicyFixture())
 
-        if self.api_major_version == 'v2.1':
-            api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
-                api_version='v2.1'))
-        else:
-            self.useFixture(api_paste_fixture.ApiPasteLegacyV2Fixture())
-            api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
-                api_version='v2'))
+        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
+            api_version='v2.1'))
 
         self.api = api_fixture.api
         self.api.microversion = self.microversion
@@ -91,26 +85,12 @@ class ServerGroupTestBase(test.TestCase):
 
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
 
-    def _wait_for_state_change(self, server, expected_status, max_retries=10):
-        retry_count = 0
-        while True:
-            server = self.admin_api.get_server(server['id'])
-            if server['status'] == expected_status:
-                break
-            retry_count += 1
-            if retry_count == max_retries:
-                self.fail('Wait for state change failed, '
-                          'expected_status=%s, actual_status=%s'
-                          % (expected_status, server['status']))
-            time.sleep(0.5)
-
-        return server
-
     def _boot_a_server_to_group(self, group,
                                 expected_status='ACTIVE', flavor=None):
-        server = self._build_minimal_create_server_request('some-server')
+        server = self._build_minimal_create_server_request(self.api,
+                                                           'some-server')
         if flavor:
-            server[self._flavor_ref_parameter] = ('http://fake.server/%s'
+            server['flavorRef'] = ('http://fake.server/%s'
                                                   % flavor['id'])
         post = {'server': server,
                 'os:scheduler_hints': {'group': group['id']}}
@@ -118,38 +98,16 @@ class ServerGroupTestBase(test.TestCase):
         self.assertTrue(created_server['id'])
 
         # Wait for it to finish being created
-        found_server = self._wait_for_state_change(created_server,
-                                                   expected_status)
+        found_server = self._wait_for_state_change(
+            self.admin_api, created_server, expected_status)
 
         return found_server
 
-    def _build_minimal_create_server_request(self, name):
-        server = {}
 
-        image = self.api.get_images()[0]
-
-        if self._image_ref_parameter in image:
-            image_href = image[self._image_ref_parameter]
-        else:
-            image_href = image['id']
-            image_href = 'http://fake.server/%s' % image_href
-
-        # We now have a valid imageId
-        server[self._image_ref_parameter] = image_href
-
-        # Set a valid flavorId
-        flavor = self.api.get_flavors()[1]
-        server[self._flavor_ref_parameter] = ('http://fake.server/%s'
-                                              % flavor['id'])
-        server['name'] = name
-        return server
-
-
-class ServerGroupTestV2(ServerGroupTestBase):
-    api_major_version = 'v2'
+class ServerGroupTestV21(ServerGroupTestBase):
 
     def setUp(self):
-        super(ServerGroupTestV2, self).setUp()
+        super(ServerGroupTestV21, self).setUp()
 
         self.start_service('network')
         self.compute = self.start_service('compute')
@@ -335,13 +293,14 @@ class ServerGroupTestV2(ServerGroupTestBase):
         created_group = self.api.post_server_groups(group)
         servers = self._boot_servers_to_group(created_group)
 
-        post = {'rebuild': {self._image_ref_parameter:
+        post = {'rebuild': {'imageRef':
                             '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'}}
         self.api.post_server_action(servers[1]['id'], post)
 
-        rebuilt_server = self._wait_for_state_change(servers[1], 'ACTIVE')
+        rebuilt_server = self._wait_for_state_change(
+            self.admin_api, servers[1], 'ACTIVE')
 
-        self.assertEqual(post['rebuild'][self._image_ref_parameter],
+        self.assertEqual(post['rebuild']['imageRef'],
                          rebuilt_server.get('image')['id'])
         return [servers[0], rebuilt_server]
 
@@ -381,11 +340,26 @@ class ServerGroupTestV2(ServerGroupTestBase):
 
         post = {'migrate': {}}
         self.admin_api.post_server_action(servers[1]['id'], post)
-        migrated_server = self._wait_for_state_change(servers[1],
-                                                      'VERIFY_RESIZE')
+        migrated_server = self._wait_for_state_change(
+            self.admin_api, servers[1], 'VERIFY_RESIZE')
 
         self.assertNotEqual(servers[0]['OS-EXT-SRV-ATTR:host'],
                             migrated_server['OS-EXT-SRV-ATTR:host'])
+
+    def test_resize_to_same_host_with_anti_affinity(self):
+        self.flags(allow_resize_to_same_host=True)
+        created_group = self.api.post_server_groups(self.anti_affinity)
+        servers = self._boot_servers_to_group(created_group,
+                                              flavor=self.api.get_flavors()[0])
+
+        post = {'resize': {'flavorRef': '2'}}
+        server1_old_host = servers[1]['OS-EXT-SRV-ATTR:host']
+        self.admin_api.post_server_action(servers[1]['id'], post)
+        migrated_server = self._wait_for_state_change(
+            self.admin_api, servers[1], 'VERIFY_RESIZE')
+
+        self.assertEqual(server1_old_host,
+                         migrated_server['OS-EXT-SRV-ATTR:host'])
 
     def _get_compute_service_by_host_name(self, host_name):
         host = None
@@ -417,7 +391,8 @@ class ServerGroupTestV2(ServerGroupTestBase):
 
         post = {'evacuate': {'onSharedStorage': False}}
         self.admin_api.post_server_action(servers[1]['id'], post)
-        evacuated_server = self._wait_for_state_change(servers[1], 'ACTIVE')
+        evacuated_server = self._wait_for_state_change(
+            self.admin_api, servers[1], 'ACTIVE')
 
         self.assertNotEqual(evacuated_server['OS-EXT-SRV-ATTR:host'],
                             servers[0]['OS-EXT-SRV-ATTR:host'])
@@ -438,8 +413,8 @@ class ServerGroupTestV2(ServerGroupTestBase):
         post = {'evacuate': {'onSharedStorage': False}}
         self.admin_api.post_server_action(servers[1]['id'], post)
 
-        server_after_failed_evac = self._wait_for_state_change(servers[1],
-                                                               'ACTIVE')
+        server_after_failed_evac = self._wait_for_state_change(
+            self.admin_api, servers[1], 'ACTIVE')
 
         # assert that after a failed evac the server active on the same host
         # as before
@@ -462,8 +437,8 @@ class ServerGroupTestV2(ServerGroupTestBase):
         post = {'evacuate': {'onSharedStorage': False}}
         self.admin_api.post_server_action(servers[1]['id'], post)
 
-        server_after_failed_evac = self._wait_for_state_change(servers[1],
-                                                               'ACTIVE')
+        server_after_failed_evac = self._wait_for_state_change(
+            self.admin_api, servers[1], 'ACTIVE')
 
         # assert that after a failed evac the server active on the same host
         # as before
@@ -471,6 +446,15 @@ class ServerGroupTestV2(ServerGroupTestBase):
                          servers[1]['OS-EXT-SRV-ATTR:host'])
 
         host.start()
+
+    def test_soft_affinity_not_supported(self):
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self.api.post_server_groups,
+                               {'name': 'fake-name-1',
+                                'policies': ['soft-affinity']})
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn('Invalid input', ex.response.text)
+        self.assertIn('soft-affinity', ex.response.text)
 
 
 class ServerGroupAffinityConfTest(ServerGroupTestBase):
@@ -557,20 +541,7 @@ class ServerGroupSoftAntiAffinityConfTest(ServerGroupTestBase):
         self.assertEqual(400, failed_server['fault']['code'])
 
 
-class ServerGroupTestV21(ServerGroupTestV2):
-    api_major_version = 'v2.1'
-
-    def test_soft_affinity_not_supported(self):
-        ex = self.assertRaises(client.OpenStackApiException,
-                               self.api.post_server_groups,
-                               {'name': 'fake-name-1',
-                                'policies': ['soft-affinity']})
-        self.assertEqual(400, ex.response.status_code)
-        self.assertIn('Invalid input', ex.response.text)
-        self.assertIn('soft-affinity', ex.response.text)
-
-
-class ServerGroupTestV215(ServerGroupTestV2):
+class ServerGroupTestV215(ServerGroupTestV21):
     api_major_version = 'v2.1'
     microversion = '2.15'
 
@@ -615,7 +586,8 @@ class ServerGroupTestV215(ServerGroupTestV2):
 
         post = {'evacuate': {}}
         self.admin_api.post_server_action(servers[1]['id'], post)
-        evacuated_server = self._wait_for_state_change(servers[1], 'ACTIVE')
+        evacuated_server = self._wait_for_state_change(
+            self.admin_api, servers[1], 'ACTIVE')
 
         self.assertNotEqual(evacuated_server['OS-EXT-SRV-ATTR:host'],
                             servers[0]['OS-EXT-SRV-ATTR:host'])
@@ -637,8 +609,8 @@ class ServerGroupTestV215(ServerGroupTestV2):
         post = {'evacuate': {}}
         self.admin_api.post_server_action(servers[1]['id'], post)
 
-        server_after_failed_evac = self._wait_for_state_change(servers[1],
-                                                               'ACTIVE')
+        server_after_failed_evac = self._wait_for_state_change(
+            self.admin_api, servers[1], 'ACTIVE')
 
         # assert that after a failed evac the server active on the same host
         # as before
@@ -661,8 +633,8 @@ class ServerGroupTestV215(ServerGroupTestV2):
         post = {'evacuate': {}}
         self.admin_api.post_server_action(servers[1]['id'], post)
 
-        server_after_failed_evac = self._wait_for_state_change(servers[1],
-                                                               'ACTIVE')
+        server_after_failed_evac = self._wait_for_state_change(
+            self.admin_api, servers[1], 'ACTIVE')
 
         # assert that after a failed evac the server active on the same host
         # as before
@@ -773,8 +745,8 @@ class ServerGroupTestV215(ServerGroupTestV2):
 
         post = {'migrate': {}}
         self.admin_api.post_server_action(servers[1]['id'], post)
-        migrated_server = self._wait_for_state_change(servers[1],
-                                                      'VERIFY_RESIZE')
+        migrated_server = self._wait_for_state_change(
+            self.admin_api, servers[1], 'VERIFY_RESIZE')
 
         return [migrated_server['OS-EXT-SRV-ATTR:host'],
                 servers[0]['OS-EXT-SRV-ATTR:host']]
@@ -802,7 +774,8 @@ class ServerGroupTestV215(ServerGroupTestV2):
 
         post = {'evacuate': {}}
         self.admin_api.post_server_action(servers[1]['id'], post)
-        evacuated_server = self._wait_for_state_change(servers[1], 'ACTIVE')
+        evacuated_server = self._wait_for_state_change(
+            self.admin_api, servers[1], 'ACTIVE')
 
         # Note(gibi): need to get the server again as the state of the instance
         # goes to ACTIVE first then the host of the instance changes to the
@@ -825,3 +798,6 @@ class ServerGroupTestV215(ServerGroupTestV2):
             self._evacuate_with_soft_anti_affinity_policies(
                 self.soft_anti_affinity))
         self.assertEqual(evacuated_server, other_server)
+
+    def test_soft_affinity_not_supported(self):
+        pass

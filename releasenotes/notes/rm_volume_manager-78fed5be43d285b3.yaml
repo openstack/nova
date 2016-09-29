@@ -8,7 +8,7 @@ upgrade:
     is ``False`` to match existing defaults, however if
     ``network_api_class`` and/or ``security_group_api`` are set to
     known Neutron values, Neutron networking will still be used as
-    before. Installations are encourged to set this config option soon
+    before. Installations are encouraged to set this config option soon
     after upgrade as the legacy options will be removed by the Newton
     release.
 

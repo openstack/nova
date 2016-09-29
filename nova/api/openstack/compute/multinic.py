@@ -24,16 +24,16 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
 from nova import exception
+from nova.policies import multinic as multinic_policies
 
 
 ALIAS = "os-multinic"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class MultinicController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(MultinicController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
 
     @wsgi.response(202)
     @wsgi.action('addFixedIp')
@@ -42,7 +42,7 @@ class MultinicController(wsgi.Controller):
     def _add_fixed_ip(self, req, id, body):
         """Adds an IP on a given network to an instance."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(multinic_policies.BASE_POLICY_NAME)
 
         instance = common.get_instance(self.compute_api, context, id)
         network_id = body['addFixedIp']['networkId']
@@ -60,7 +60,7 @@ class MultinicController(wsgi.Controller):
     def _remove_fixed_ip(self, req, id, body):
         """Removes an IP from an instance."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(multinic_policies.BASE_POLICY_NAME)
 
         instance = common.get_instance(self.compute_api, context, id)
         address = body['removeFixedIp']['address']

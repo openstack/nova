@@ -13,15 +13,12 @@
 #    under the License.
 
 import datetime
+
 import iso8601
 
 from nova.api.openstack.compute import availability_zone as az_v21
 from nova.api.openstack.compute import extension_info
-from nova.api.openstack.compute.legacy_v2.contrib import availability_zone \
-        as az_v2
-from nova.api.openstack.compute.legacy_v2 import servers as servers_v2
 from nova.api.openstack.compute import servers as servers_v21
-from nova.api.openstack import extensions
 from nova import availability_zones
 from nova.compute import api as compute_api
 from nova.compute import flavors
@@ -178,19 +175,6 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
                         matchers.DictMatches(expected_response))
 
 
-class AvailabilityZoneApiTestV2(AvailabilityZoneApiTestV21):
-    availability_zone = az_v2
-
-    def setUp(self):
-        super(AvailabilityZoneApiTestV2, self).setUp()
-        self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
-        self.non_admin_req = fakes.HTTPRequest.blank('')
-
-    def test_availability_zone_detail_with_non_admin(self):
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.detail, self.non_admin_req)
-
-
 class ServersControllerCreateTestV21(test.TestCase):
     base_url = '/v2/fake/'
 
@@ -339,29 +323,3 @@ class ServersControllerCreateTestV21(test.TestCase):
         res = self.controller.create(self.req, body=body).obj
         server = res['server']
         self.assertEqual(fakes.FAKE_UUID, server['id'])
-
-
-class ServersControllerCreateTestV2(ServersControllerCreateTestV21):
-    def _set_up_controller(self):
-        ext_mgr = extensions.ExtensionManager()
-        ext_mgr.extensions = {'os-availability-zone': 'fake'}
-        self.controller = servers_v2.Controller(ext_mgr)
-        ext_mgr_no_az = extensions.ExtensionManager()
-        ext_mgr_no_az.extensions = {}
-        self.no_availability_zone_controller = servers_v2.Controller(
-                                                   ext_mgr_no_az)
-
-    def test_create_instance_with_invalid_availability_zone_too_long(self):
-        # NOTE: v2.0 API does not check this bad request case.
-        # So we skip this test for v2.0 API.
-        pass
-
-    def test_create_instance_with_invalid_availability_zone_too_short(self):
-        # NOTE: v2.0 API does not check this bad request case.
-        # So we skip this test for v2.0 API.
-        pass
-
-    def test_create_instance_with_invalid_availability_zone_not_str(self):
-        # NOTE: v2.0 API does not check this bad request case.
-        # So we skip this test for v2.0 API.
-        pass

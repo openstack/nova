@@ -13,14 +13,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from eventlet import greenthread
-import mock
 import uuid
 
 try:
     import xmlrpclib
 except ImportError:
     import six.moves.xmlrpc_client as xmlrpclib
+
+from eventlet import greenthread
+import mock
 
 from nova.compute import power_state
 from nova.compute import task_states
@@ -33,6 +34,7 @@ from nova import test
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.xenapi import stubs
+from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.virt import fake
 from nova.virt.xenapi import agent as xenapi_agent
@@ -94,30 +96,35 @@ class VMOpsTestCase(VMOpsTestBase):
                     'task_state': task_states.RESIZE_MIGRATING}
         context = 'fake_context'
 
-        self.mox.StubOutWithMock(vm_utils, 'lookup')
-        self.mox.StubOutWithMock(self._vmops, '_destroy')
-        self.mox.StubOutWithMock(vm_utils, 'set_vm_name_label')
-        self.mox.StubOutWithMock(self._vmops, '_attach_mapped_block_devices')
-        self.mox.StubOutWithMock(self._vmops, '_start')
-        self.mox.StubOutWithMock(vm_utils, 'is_vm_shutdown')
+        lookup_returns = [backup_made and 'foo' or None,
+                          (not backup_made or new_made) and 'foo' or None]
 
-        vm_utils.lookup(self._session, 'foo-orig').AndReturn(
-            backup_made and 'foo' or None)
-        vm_utils.lookup(self._session, 'foo').AndReturn(
-            (not backup_made or new_made) and 'foo' or None)
-        if backup_made:
-            if new_made:
-                self._vmops._destroy(instance, 'foo')
-            vm_utils.set_vm_name_label(self._session, 'foo', 'foo')
-            self._vmops._attach_mapped_block_devices(instance, [])
+        @mock.patch.object(vm_utils, 'lookup',
+                           side_effect=lookup_returns)
+        @mock.patch.object(self._vmops, '_destroy')
+        @mock.patch.object(vm_utils, 'set_vm_name_label')
+        @mock.patch.object(self._vmops, '_attach_mapped_block_devices')
+        @mock.patch.object(self._vmops, '_start')
+        @mock.patch.object(vm_utils, 'is_vm_shutdown',
+                           return_value=vm_shutdown)
+        def test(mock_is_vm, mock_start, mock_attach_bdm, mock_set_vm_name,
+                 mock_destroy, mock_lookup):
+            self._vmops.finish_revert_migration(context, instance, [])
 
-        vm_utils.is_vm_shutdown(self._session, 'foo').AndReturn(vm_shutdown)
-        if vm_shutdown:
-            self._vmops._start(instance, 'foo')
+            mock_lookup.assert_has_calls([mock.call(self._session, 'foo-orig'),
+                                          mock.call(self._session, 'foo')])
+            if backup_made:
+                if new_made:
+                    mock_destroy.assert_called_once_with(instance, 'foo')
+                mock_set_vm_name.assert_called_once_with(self._session, 'foo',
+                                                         'foo')
+                mock_attach_bdm.assert_called_once_with(instance, [])
 
-        self.mox.ReplayAll()
+            mock_is_vm.assert_called_once_with(self._session, 'foo')
+            if vm_shutdown:
+                mock_start.assert_called_once_with(instance, 'foo')
 
-        self._vmops.finish_revert_migration(context, instance, [])
+        test()
 
     def test_finish_revert_migration_after_crash(self):
         self._test_finish_revert_migration_after_crash(True, True)
@@ -143,14 +150,14 @@ class VMOpsTestCase(VMOpsTestBase):
 
         self.assertEqual(self.make_plugin_call_count, 1)
 
-    def test_get_vm_opaque_ref_raises_instance_not_found(self):
+    @mock.patch.object(vm_utils, 'lookup', return_value=None)
+    def test_get_vm_opaque_ref_raises_instance_not_found(self, mock_lookup):
         instance = {"name": "dummy"}
-        self.mox.StubOutWithMock(vm_utils, 'lookup')
-        vm_utils.lookup(self._session, instance['name'], False).AndReturn(None)
-        self.mox.ReplayAll()
 
         self.assertRaises(exception.InstanceNotFound,
                 self._vmops._get_vm_opaque_ref, instance)
+        mock_lookup.assert_called_once_with(self._session, instance['name'],
+                                            False)
 
     @mock.patch.object(vm_utils, 'destroy_vm')
     @mock.patch.object(vm_utils, 'clean_shutdown_vm')
@@ -201,7 +208,7 @@ class VMOpsTestCase(VMOpsTestBase):
             {'properties': {'auto_disk_config': 'false'}})
         vdis = {'root': {'ref': 'fake-ref'}}
         self.assertRaises(test.TestingException, self._vmops._attach_disks,
-                instance, image_meta=image_meta, vm_ref=None,
+                ctxt, instance, image_meta=image_meta, vm_ref=None,
                 name_label=None, vdis=vdis, disk_image_type='fake',
                 network_info=[], rescue=True)
         self.assertFalse(try_auto_config.called)
@@ -217,7 +224,7 @@ class VMOpsTestCase(VMOpsTestBase):
             {'properties': {'auto_disk_config': 'true'}})
         vdis = {'root': {'ref': 'fake-ref'}}
         self.assertRaises(test.TestingException, self._vmops._attach_disks,
-                instance, image_meta=image_meta, vm_ref=None,
+                ctxt, instance, image_meta=image_meta, vm_ref=None,
                 name_label=None, vdis=vdis, disk_image_type='fake',
                 network_info=[], rescue=True)
         try_auto_config.assert_called_once_with(self._vmops._session,
@@ -249,7 +256,8 @@ class GetConsoleOutputTestCase(VMOpsTestBase):
         self.vmops._get_last_dom_id(instance, check_rescue=True).AndReturn(42)
         self.mox.ReplayAll()
 
-        self.assertEqual("dom_id: 42", self.vmops.get_console_output(instance))
+        self.assertEqual(b"dom_id: 42",
+                         self.vmops.get_console_output(instance))
 
     def test_get_console_output_not_available(self):
         self.mox.StubOutWithMock(self.vmops, '_get_last_dom_id')
@@ -277,12 +285,21 @@ class GetConsoleOutputTestCase(VMOpsTestBase):
     def test_get_dom_id_raises_not_found(self):
         instance = {"name": "dummy"}
         self.create_vm("not-dummy")
-        self.assertRaises(exception.NotFound, self.vmops._get_dom_id, instance)
+        self.assertRaises(exception.InstanceNotFound,
+                          self.vmops._get_dom_id, instance)
 
     def test_get_dom_id_works_with_vmref(self):
         vm, vm_ref = self.create_vm("dummy")
+        instance = {'name': 'dummy'}
         self.assertEqual(vm["domid"],
-                         self.vmops._get_dom_id(vm_ref=vm_ref))
+                         self.vmops._get_dom_id(instance, vm_ref=vm_ref))
+
+    def test_get_dom_id_fails_if_shutdown(self):
+        vm, vm_ref = self.create_vm("dummy")
+        instance = {'name': 'dummy'}
+        self._session.VM.hard_shutdown(vm_ref)
+        self.assertRaises(exception.InstanceNotFound,
+                          self.vmops._get_dom_id, instance, vm_ref=vm_ref)
 
 
 class SpawnTestCase(VMOpsTestBase):
@@ -334,7 +351,7 @@ class SpawnTestCase(VMOpsTestBase):
         name_label = name_label_param
         if name_label is None:
             name_label = "dummy"
-        image_meta = objects.ImageMeta.from_dict({"id": "image_id"})
+        image_meta = objects.ImageMeta.from_dict({"id": uuids.image_id})
         context = "context"
         session = self.vmops._session
         injected_files = "fake_files"
@@ -381,8 +398,8 @@ class SpawnTestCase(VMOpsTestBase):
         step += 1
         self.vmops._update_instance_progress(context, instance, step, steps)
 
-        self.vmops._attach_disks(instance, image_meta, vm_ref, name_label,
-                            vdis, di_type, network_info, rescue,
+        self.vmops._attach_disks(context, instance, image_meta, vm_ref,
+                            name_label, vdis, di_type, network_info, rescue,
                             admin_password, injected_files)
         if attach_pci_dev:
             fake_dev = {
@@ -524,7 +541,7 @@ class SpawnTestCase(VMOpsTestBase):
                 "root_device_name": "/dev/xvda"}
         disk_info = "disk_info"
         network_info = "net_info"
-        image_meta = objects.ImageMeta.from_dict({"id": "image_id"})
+        image_meta = objects.ImageMeta.from_dict({"id": uuids.image_id})
         block_device_info = {}
         import_root = True
         if booted_from_volume:
@@ -563,8 +580,9 @@ class SpawnTestCase(VMOpsTestBase):
 
         if resize_instance:
             self.vmops._resize_up_vdis(instance, vdis)
-        self.vmops._attach_disks(instance, image_meta, vm_ref, name_label,
-                            vdis, di_type, network_info, False, None, None)
+        self.vmops._attach_disks(context, instance, image_meta, vm_ref,
+                            name_label, vdis, di_type, network_info, False,
+                            None, None)
         self.vmops._attach_mapped_block_devices(instance, block_device_info)
         pci_manager.get_instance_pci_devs(instance).AndReturn([])
 
@@ -704,23 +722,21 @@ class SpawnTestCase(VMOpsTestBase):
         self.mox.ReplayAll()
         self.vmops._wait_for_instance_to_start(instance, vm_ref)
 
-    def test_attach_orig_disks(self):
+    @mock.patch.object(vm_utils, 'lookup', return_value='ref')
+    @mock.patch.object(vm_utils, 'create_vbd')
+    def test_attach_orig_disks(self, mock_create_vbd, mock_lookup):
         instance = {"name": "dummy"}
         vm_ref = "vm_ref"
         vbd_refs = {vmops.DEVICE_ROOT: "vdi_ref"}
 
-        self.mox.StubOutWithMock(vm_utils, 'lookup')
-        self.mox.StubOutWithMock(self.vmops, '_find_vdi_refs')
-        self.mox.StubOutWithMock(vm_utils, 'create_vbd')
-
-        vm_utils.lookup(self.vmops._session, "dummy").AndReturn("ref")
-        self.vmops._find_vdi_refs("ref", exclude_volumes=True).AndReturn(
-                vbd_refs)
-        vm_utils.create_vbd(self.vmops._session, vm_ref, "vdi_ref",
-                            vmops.DEVICE_RESCUE, bootable=False)
-
-        self.mox.ReplayAll()
-        self.vmops._attach_orig_disks(instance, vm_ref)
+        with mock.patch.object(self.vmops, '_find_vdi_refs',
+                               return_value=vbd_refs) as mock_find_vdi:
+            self.vmops._attach_orig_disks(instance, vm_ref)
+            mock_lookup.assert_called_once_with(self.vmops._session, 'dummy')
+            mock_find_vdi.assert_called_once_with('ref', exclude_volumes=True)
+            mock_create_vbd.assert_called_once_with(
+                self.vmops._session, vm_ref, 'vdi_ref', vmops.DEVICE_RESCUE,
+                bootable=False)
 
     def test_agent_update_setup(self):
         # agent updates need to occur after networking is configured
@@ -880,7 +896,9 @@ class MigrateDiskAndPowerOffTestCase(VMOpsTestBase):
 
     def test_migrate_disk_and_power_off_works_down(self,
                 migrate_up, migrate_down, *mocks):
-        instance = {"root_gb": 2, "ephemeral_gb": 0, "uuid": "uuid"}
+        instance = objects.Instance(
+            flavor=objects.Flavor(root_gb=2, ephemeral_gb=0),
+            uuid=uuids.instance)
         flavor = fake_flavor.fake_flavor_obj(self.context, root_gb=1,
                                              ephemeral_gb=0)
 
@@ -892,7 +910,10 @@ class MigrateDiskAndPowerOffTestCase(VMOpsTestBase):
 
     def test_migrate_disk_and_power_off_works_up(self,
                 migrate_up, migrate_down, *mocks):
-        instance = {"root_gb": 1, "ephemeral_gb": 1, "uuid": "uuid"}
+        instance = objects.Instance(
+            flavor=objects.Flavor(root_gb=1,
+                                  ephemeral_gb=1),
+            uuid=uuids.instance)
         flavor = fake_flavor.fake_flavor_obj(self.context, root_gb=2,
                                              ephemeral_gb=2)
 
@@ -904,7 +925,7 @@ class MigrateDiskAndPowerOffTestCase(VMOpsTestBase):
 
     def test_migrate_disk_and_power_off_resize_down_ephemeral_fails(self,
                 migrate_up, migrate_down, *mocks):
-        instance = {"ephemeral_gb": 2}
+        instance = objects.Instance(flavor=objects.Flavor(ephemeral_gb=2))
         flavor = fake_flavor.fake_flavor_obj(self.context, ephemeral_gb=1)
 
         self.assertRaises(exception.ResizeError,
@@ -1107,7 +1128,7 @@ class CreateVMRecordTestCase(VMOpsTestBase):
             mock_get_vm_device_id, mock_determine_vm_mode):
 
         context = "context"
-        instance = objects.Instance(vm_mode="vm_mode", uuid="uuid123")
+        instance = objects.Instance(vm_mode="vm_mode", uuid=uuids.instance)
         name_label = "dummy"
         disk_image_type = "vhd"
         kernel_file = "kernel"
@@ -1170,19 +1191,22 @@ class BootableTestCase(VMOpsTestBase):
 @mock.patch.object(vm_utils, 'update_vdi_virtual_size', autospec=True)
 class ResizeVdisTestCase(VMOpsTestBase):
     def test_dont_resize_root_volumes_osvol_false(self, mock_resize):
-        instance = fake_instance.fake_db_instance(root_gb=20)
+        instance = fake_instance.fake_instance_obj(
+            None, flavor=objects.Flavor(root_gb=20))
         vdis = {'root': {'osvol': False, 'ref': 'vdi_ref'}}
         self.vmops._resize_up_vdis(instance, vdis)
         self.assertTrue(mock_resize.called)
 
     def test_dont_resize_root_volumes_osvol_true(self, mock_resize):
-        instance = fake_instance.fake_db_instance(root_gb=20)
+        instance = fake_instance.fake_instance_obj(
+            None, flavor=objects.Flavor(root_gb=20))
         vdis = {'root': {'osvol': True}}
         self.vmops._resize_up_vdis(instance, vdis)
         self.assertFalse(mock_resize.called)
 
     def test_dont_resize_root_volumes_no_osvol(self, mock_resize):
-        instance = fake_instance.fake_db_instance(root_gb=20)
+        instance = fake_instance.fake_instance_obj(
+            None, flavor=objects.Flavor(root_gb=20))
         vdis = {'root': {}}
         self.vmops._resize_up_vdis(instance, vdis)
         self.assertFalse(mock_resize.called)
@@ -1191,7 +1215,8 @@ class ResizeVdisTestCase(VMOpsTestBase):
     def test_ensure_ephemeral_resize_with_root_volume(self, mock_sizes,
                                                        mock_resize):
         mock_sizes.return_value = [2000, 1000]
-        instance = fake_instance.fake_db_instance(root_gb=20, ephemeral_gb=20)
+        instance = fake_instance.fake_instance_obj(
+            None, flavor=objects.Flavor(root_gb=20, ephemeral_gb=20))
         ephemerals = {"4": {"ref": 4}, "5": {"ref": 5}}
         vdis = {'root': {'osvol': True, 'ref': 'vdi_ref'},
                 'ephemerals': ephemerals}
@@ -1206,18 +1231,21 @@ class ResizeVdisTestCase(VMOpsTestBase):
             self.assertFalse(g.called)
 
     def test_resize_up_vdis_root(self, mock_resize):
-        instance = {"root_gb": 20, "ephemeral_gb": 0}
+        instance = objects.Instance(flavor=objects.Flavor(root_gb=20,
+                                                          ephemeral_gb=0))
         self.vmops._resize_up_vdis(instance, {"root": {"ref": "vdi_ref"}})
         mock_resize.assert_called_once_with(self.vmops._session, instance,
                                             "vdi_ref", 20)
 
     def test_resize_up_vdis_zero_disks(self, mock_resize):
-        instance = {"root_gb": 0, "ephemeral_gb": 0}
+        instance = objects.Instance(flavor=objects.Flavor(root_gb=0,
+                                                          ephemeral_gb=0))
         self.vmops._resize_up_vdis(instance, {"root": {}})
         self.assertFalse(mock_resize.called)
 
     def test_resize_up_vdis_no_vdis_like_initial_spawn(self, mock_resize):
-        instance = {"root_gb": 0, "ephemeral_gb": 3000}
+        instance = objects.Instance(flavor=objects.Flavor(root_gb=0,
+                                                          ephemeral_gb=3000))
         vdis = {}
 
         self.vmops._resize_up_vdis(instance, vdis)
@@ -1227,7 +1255,8 @@ class ResizeVdisTestCase(VMOpsTestBase):
     @mock.patch.object(vm_utils, 'get_ephemeral_disk_sizes')
     def test_resize_up_vdis_ephemeral(self, mock_sizes, mock_resize):
         mock_sizes.return_value = [2000, 1000]
-        instance = {"root_gb": 0, "ephemeral_gb": 3000}
+        instance = objects.Instance(flavor=objects.Flavor(root_gb=0,
+                                                          ephemeral_gb=3000))
         ephemerals = {"4": {"ref": 4}, "5": {"ref": 5}}
         vdis = {"ephemerals": ephemerals}
 
@@ -1244,7 +1273,9 @@ class ResizeVdisTestCase(VMOpsTestBase):
                                                     mock_generate,
                                                     mock_resize):
         mock_sizes.return_value = [2000, 1000]
-        instance = {"root_gb": 0, "ephemeral_gb": 3000, "uuid": "a"}
+        instance = objects.Instance(uuid=uuids.instance,
+                                    flavor=objects.Flavor(root_gb=0,
+                                                          ephemeral_gb=3000))
         ephemerals = {"4": {"ref": 4}}
         vdis = {"ephemerals": ephemerals}
 
@@ -1387,11 +1418,6 @@ class LiveMigrateTestCase(VMOpsTestBase):
         self.assertTrue(result.block_migration)
         self.assertEqual(result.sr_uuid_map, sr_uuid_map)
         mock_connect.assert_called_once_with("bdi")
-
-    def test_pre_live_migration_raises_with_no_data(self):
-        self.assertRaises(exception.InvalidParameterValue,
-                self.vmops.pre_live_migration,
-                None, None, "bdi", None, None, None)
 
 
 class LiveMigrateFakeVersionTestCase(VMOpsTestBase):

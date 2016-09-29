@@ -62,7 +62,7 @@ def execute(cmd, ok_exit_codes=None):
 
 
 def usage():
-    print "usage: %s <SR PATH> <print|delete|move>" % sys.argv[0]
+    print("usage: %s <SR PATH> <print|delete|move>" % sys.argv[0])
     sys.exit(1)
 
 
@@ -78,7 +78,7 @@ def main():
 
     if action == 'move':
         if len(sys.argv) < 4:
-            print "error: must specify where to move bad VHDs"
+            print("error: must specify where to move bad VHDs")
             sys.exit(1)
 
         bad_vhd_path = sys.argv[3]
@@ -111,7 +111,7 @@ def main():
 
     for bad_leaf in bad_leaves:
         for bad_vhd in walk_vhds(bad_leaf):
-            print bad_vhd
+            print(bad_vhd)
             if action == "print":
                 pass
             elif action == "delete":

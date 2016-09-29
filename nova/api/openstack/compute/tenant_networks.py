@@ -16,39 +16,32 @@
 
 import netaddr
 import netaddr.core as netexc
-from oslo_config import cfg
 from oslo_log import log as logging
 import six
 from webob import exc
 
+from nova.api.openstack.api_version_request \
+    import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack.compute.schemas import tenant_networks as schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
+import nova.conf
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
 import nova.network
+from nova.policies import tenant_networks as tn_policies
 from nova import quota
 
 
-CONF = cfg.CONF
-CONF.import_opt('enable_network_quota', 'nova.api.openstack.compute.'
-                'legacy_v2.contrib.os_tenant_networks')
-CONF.import_opt('use_neutron_default_nets', 'nova.api.openstack.compute.'
-                'legacy_v2.contrib.os_tenant_networks')
-CONF.import_opt('neutron_default_tenant_id', 'nova.api.openstack.compute.'
-                'legacy_v2.contrib.os_tenant_networks')
-CONF.import_opt('quota_networks', 'nova.api.openstack.compute.'
-                'legacy_v2.contrib.os_tenant_networks')
-
+CONF = nova.conf.CONF
 
 ALIAS = 'os-tenant-networks'
 
 QUOTAS = quota.QUOTAS
 LOG = logging.getLogger(__name__)
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def network_dict(network):
@@ -62,12 +55,12 @@ def network_dict(network):
 
 class TenantNetworkController(wsgi.Controller):
     def __init__(self, network_api=None):
-        self.network_api = nova.network.API(skip_policy_check=True)
+        self.network_api = nova.network.API()
         self._default_networks = []
 
     def _refresh_default_networks(self):
         self._default_networks = []
-        if CONF.use_neutron_default_nets == "True":
+        if CONF.use_neutron_default_nets:
             try:
                 self._default_networks = self._get_default_networks()
             except Exception:
@@ -82,20 +75,22 @@ class TenantNetworkController(wsgi.Controller):
             networks[n['id']] = n['label']
         return [{'id': k, 'label': v} for k, v in six.iteritems(networks)]
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(())
     def index(self, req):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(tn_policies.BASE_POLICY_NAME)
         networks = list(self.network_api.get_all(context))
         if not self._default_networks:
             self._refresh_default_networks()
         networks.extend(self._default_networks)
         return {'networks': [network_dict(n) for n in networks]}
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(404)
     def show(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(tn_policies.BASE_POLICY_NAME)
         try:
             network = self.network_api.get(context, id)
         except exception.NetworkNotFound:
@@ -103,11 +98,12 @@ class TenantNetworkController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
         return {'network': network_dict(network)}
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((403, 404, 409))
     @wsgi.response(202)
     def delete(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(tn_policies.BASE_POLICY_NAME)
         reservation = None
         try:
             if CONF.enable_network_quota:
@@ -138,11 +134,12 @@ class TenantNetworkController(wsgi.Controller):
         if CONF.enable_network_quota and reservation:
             QUOTAS.commit(context, reservation)
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((400, 403, 409, 503))
     @validation.schema(schema.create)
     def create(self, req, body):
         context = req.environ["nova.context"]
-        authorize(context)
+        context.can(tn_policies.BASE_POLICY_NAME)
 
         network = body["network"]
         keys = ["cidr", "cidr_v6", "ipam", "vlan_start", "network_size",
@@ -162,13 +159,12 @@ class TenantNetworkController(wsgi.Controller):
                 msg = _("Address could not be converted.")
                 raise exc.HTTPBadRequest(explanation=msg)
 
-        networks = []
         try:
             if CONF.enable_network_quota:
                 reservation = QUOTAS.reserve(context, networks=1)
         except exception.OverQuota:
             msg = _("Quota exceeded, too many networks.")
-            raise exc.HTTPBadRequest(explanation=msg)
+            raise exc.HTTPForbidden(explanation=msg)
 
         kwargs['project_id'] = context.project_id
 
@@ -212,7 +208,9 @@ def _sync_networks(context, project_id, session):
     return dict(networks=len(networks))
 
 
-if CONF.enable_network_quota:
-    QUOTAS.register_resource(quota.ReservableResource('networks',
-                                                      _sync_networks,
-                                                      'quota_networks'))
+def _register_network_quota():
+    if CONF.enable_network_quota:
+        QUOTAS.register_resource(quota.ReservableResource('networks',
+                                                          _sync_networks,
+                                                         'quota_networks'))
+_register_network_quota()

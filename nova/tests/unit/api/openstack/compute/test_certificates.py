@@ -15,15 +15,11 @@
 #    under the License.
 
 import mock
-from mox3 import mox
-from webob import exc
-
 from oslo_policy import policy as oslo_policy
+from webob import exc
 
 from nova.api.openstack.compute import certificates \
         as certificates_v21
-from nova.api.openstack.compute.legacy_v2.contrib import certificates \
-        as certificates_v2
 from nova.cert import rpcapi
 from nova import context
 from nova import exception
@@ -51,18 +47,13 @@ class CertificatesTestV21(test.NoDBTestCase):
         self.assertEqual(view['data'], cert)
         self.assertEqual(view['private_key'], pk)
 
-    def test_certificates_show_root(self):
-        self.mox.StubOutWithMock(self.controller.cert_rpcapi, 'fetch_ca')
-
-        self.controller.cert_rpcapi.fetch_ca(
-            mox.IgnoreArg(), project_id='fake').AndReturn('fakeroot')
-
-        self.mox.ReplayAll()
-
+    @mock.patch.object(rpcapi.CertAPI, 'fetch_ca', return_value='fakeroot')
+    def test_certificates_show_root(self, mock_fetch_ca):
         res_dict = self.controller.show(self.req, 'root')
 
         response = {'certificate': {'data': 'fakeroot', 'private_key': None}}
         self.assertEqual(res_dict, response)
+        mock_fetch_ca.assert_called_once_with(mock.ANY, project_id='fake')
 
     def test_certificates_show_policy_failed(self):
         rules = {
@@ -74,17 +65,9 @@ class CertificatesTestV21(test.NoDBTestCase):
         self.assertIn(self.certificate_show_extension,
                       exc.format_message())
 
-    def test_certificates_create_certificate(self):
-        self.mox.StubOutWithMock(self.controller.cert_rpcapi,
-                                 'generate_x509_cert')
-
-        self.controller.cert_rpcapi.generate_x509_cert(
-            mox.IgnoreArg(),
-            user_id='fake_user',
-            project_id='fake').AndReturn(('fakepk', 'fakecert'))
-
-        self.mox.ReplayAll()
-
+    @mock.patch.object(rpcapi.CertAPI, 'generate_x509_cert',
+                       return_value=('fakepk', 'fakecert'))
+    def test_certificates_create_certificate(self, mock_generate_x509_cert):
         res_dict = self.controller.create(self.req)
 
         response = {
@@ -92,6 +75,9 @@ class CertificatesTestV21(test.NoDBTestCase):
                             'private_key': 'fakepk'}
         }
         self.assertEqual(res_dict, response)
+        mock_generate_x509_cert.assert_called_once_with(mock.ANY,
+                                                        user_id='fake_user',
+                                                        project_id='fake')
 
     def test_certificates_create_policy_failed(self):
         rules = {
@@ -110,9 +96,3 @@ class CertificatesTestV21(test.NoDBTestCase):
             exc.HTTPNotFound,
             self.controller.show,
             self.req, 'root')
-
-
-class CertificatesTestV2(CertificatesTestV21):
-    certificates = certificates_v2
-    certificate_show_extension = 'compute_extension:certificates'
-    certificate_create_extension = 'compute_extension:certificates'

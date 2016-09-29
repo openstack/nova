@@ -13,26 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 from nova.tests.functional.api_sample_tests import api_sample_base
-
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class FlavorExtraSpecsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = 'flavor-extra-specs'
-
-    def _get_flags(self):
-        f = super(FlavorExtraSpecsSampleJsonTests, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.flavorextraspecs.'
-            'Flavorextraspecs')
-        return f
+    sample_dir = 'flavor-extra-specs'
 
     def _flavor_extra_specs_create(self):
         subs = {'value1': 'value1',

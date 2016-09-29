@@ -21,18 +21,11 @@ from webob import exc
 
 from nova.api.openstack.compute import baremetal_nodes \
         as b_nodes_v21
-from nova.api.openstack.compute.legacy_v2.contrib import baremetal_nodes \
-        as b_nodes_v2
-from nova.api.openstack import extensions
 from nova import context
+from nova import exception
 from nova import test
+from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.virt.ironic import utils as ironic_utils
-
-
-class FakeRequest(object):
-
-    def __init__(self, context):
-        self.environ = {"nova.context": context}
 
 
 def fake_node(**updates):
@@ -77,7 +70,7 @@ class BareMetalNodesTestV21(test.NoDBTestCase):
 
         self._setup()
         self.context = context.get_admin_context()
-        self.request = FakeRequest(self.context)
+        self.request = fakes.HTTPRequest.blank('', use_admin_context=True)
 
     def _setup(self):
         self.controller = b_nodes_v21.BareMetalNodeController()
@@ -218,12 +211,23 @@ class BareMetalNodesTestV21(test.NoDBTestCase):
                           self.request, 'fake-id', 'fake-body')
 
 
-@mock.patch.object(b_nodes_v2, '_get_ironic_client',
-                   lambda *_: FAKE_IRONIC_CLIENT)
-class BareMetalNodesTestV2(BareMetalNodesTestV21):
-    mod = b_nodes_v2
+class BareMetalNodesTestDeprecation(test.NoDBTestCase):
 
-    def _setup(self):
-        self.ext_mgr = extensions.ExtensionManager()
-        self.ext_mgr.extensions = {}
-        self.controller = b_nodes_v2.BareMetalNodeController(self.ext_mgr)
+    def setUp(self):
+        super(BareMetalNodesTestDeprecation, self).setUp()
+        self.controller = b_nodes_v21.BareMetalNodeController()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+
+    def test_all_apis_return_not_found(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.show, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.index, self.req)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.create, self.req, {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.delete, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller._add_interface, self.req, fakes.FAKE_UUID, {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller._remove_interface, self.req, fakes.FAKE_UUID, {})

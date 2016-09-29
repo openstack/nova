@@ -1,0 +1,6 @@
+---
+upgrade:
+  - Legacy v2 API code is already removed. A set of policy rules in the
+    policy.json, which are only used by legacy v2 API, are removed. Both v2.1
+    API and v2.1 compatible mode API are using same set of new policy rules
+    which are with prefix `os_compute_api`.

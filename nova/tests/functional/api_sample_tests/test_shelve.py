@@ -18,19 +18,10 @@ import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
 
 CONF = nova.conf.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class ShelveJsonTest(test_servers.ServersSampleBase):
-    extension_name = "os-shelve"
-
-    def _get_flags(self):
-        f = super(ShelveJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.shelve.Shelve')
-        return f
+    sample_dir = "os-shelve"
 
     def setUp(self):
         super(ShelveJsonTest, self).setUp()

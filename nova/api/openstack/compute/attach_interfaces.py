@@ -27,10 +27,10 @@ from nova import compute
 from nova import exception
 from nova.i18n import _
 from nova import network
+from nova.policies import attach_interfaces as ai_policies
 
 
 ALIAS = 'os-attach-interfaces'
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def _translate_interface_attachment_view(port_info):
@@ -48,8 +48,8 @@ class InterfaceAttachmentController(wsgi.Controller):
     """The interface attachment API controller for the OpenStack API."""
 
     def __init__(self):
-        self.compute_api = compute.API(skip_policy_check=True)
-        self.network_api = network.API(skip_policy_check=True)
+        self.compute_api = compute.API()
+        self.network_api = network.API()
         super(InterfaceAttachmentController, self).__init__()
 
     @extensions.expected_errors((404, 501))
@@ -62,7 +62,7 @@ class InterfaceAttachmentController(wsgi.Controller):
     def show(self, req, server_id, id):
         """Return data about the given interface attachment."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(ai_policies.BASE_POLICY_NAME)
 
         port_id = id
         # NOTE(mriedem): We need to verify the instance actually exists from
@@ -90,7 +90,8 @@ class InterfaceAttachmentController(wsgi.Controller):
     def create(self, req, server_id, body):
         """Attach an interface to an instance."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(ai_policies.BASE_POLICY_NAME)
+        context.can(ai_policies.POLICY_ROOT % 'create')
 
         network_id = None
         port_id = None
@@ -120,7 +121,8 @@ class InterfaceAttachmentController(wsgi.Controller):
                 exception.NetworkAmbiguous,
                 exception.NoMoreFixedIps,
                 exception.PortNotUsable,
-                exception.AttachInterfaceNotSupported) as e:
+                exception.AttachInterfaceNotSupported,
+                exception.SecurityGroupCannotBeApplied) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except (exception.InstanceIsLocked,
                 exception.FixedIpAlreadyInUse,
@@ -143,7 +145,8 @@ class InterfaceAttachmentController(wsgi.Controller):
     def delete(self, req, server_id, id):
         """Detach an interface from an instance."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(ai_policies.BASE_POLICY_NAME)
+        context.can(ai_policies.POLICY_ROOT % 'delete')
         port_id = id
 
         instance = common.get_instance(self.compute_api, context, server_id)
@@ -163,7 +166,7 @@ class InterfaceAttachmentController(wsgi.Controller):
     def _items(self, req, server_id, entity_maker):
         """Returns a list of attachments, transformed through entity_maker."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(ai_policies.BASE_POLICY_NAME)
 
         instance = common.get_instance(self.compute_api, context, server_id)
         search_opts = {'device_id': instance.uuid}

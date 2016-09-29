@@ -30,7 +30,7 @@ DISK_FORMATS_ALL = [DISK_FORMAT_ISO, DISK_FORMAT_VMDK]
 DISK_TYPE_THIN = 'thin'
 CONTAINER_FORMAT_BARE = 'bare'
 CONTAINER_FORMAT_OVA = 'ova'
-CONTAINER_FORMATS_ALL = [CONTAINER_FORMAT_BARE, DISK_FORMAT_VMDK]
+CONTAINER_FORMATS_ALL = [CONTAINER_FORMAT_BARE, CONTAINER_FORMAT_OVA]
 
 DISK_TYPE_SPARSE = 'sparse'
 DISK_TYPE_PREALLOCATED = 'preallocated'
@@ -65,7 +65,7 @@ SUPPORTED_FLAT_VARIANTS = ["thin", "preallocated", "thick", "eagerZeroedThick"]
 EXTENSION_KEY = 'org.openstack.compute'
 EXTENSION_TYPE_INSTANCE = 'instance'
 
-# The max number of devices that can be connnected to one adapter
+# The max number of devices that can be connected to one adapter
 # One adapter has 16 slots but one reserved for controller
 SCSI_MAX_CONNECT_NUMBER = 15
 

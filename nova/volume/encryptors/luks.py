@@ -50,9 +50,6 @@ class LuksEncryptor(cryptsetup.CryptsetupEncryptor):
 
     This VolumeEncryptor uses dm-crypt to encrypt the specified volume.
     """
-    def __init__(self, connection_info, **kwargs):
-        super(LuksEncryptor, self).__init__(connection_info, **kwargs)
-
     def _format_volume(self, passphrase, **kwargs):
         """Creates a LUKS header on the volume.
 

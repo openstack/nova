@@ -41,35 +41,27 @@ current development process and policies.
 Compute API References
 ======================
 
-Nova has had a v2 API for a long time. We are currently in the process of
-moving to a new implementation of that API, which we have called v2.1. v2.1
-started life as an API called v3, but that name should never be used any more.
-We are currently in the process of transitioning users over to the v2.1
-implementation, at which point the v2 code will be deleted.
+The Nova compute API is quite large, we provide a concept guide which
+gives some of the high level details, as well as a more detailed API
+reference.
 
-* `v2.1 (CURRENT)`_
-* `v2 (SUPPORTED)`_ and `v2 extensions (SUPPORTED)`_ (Will be deprecated in
-  the near future.)
-
-Changes to the Compute API post v2.1 are made using microversions. You can see a history of our microversions here:
+The API reference covers all versions of the API. Version 2.0 and
+Version 2.1 are actually the same API, and Version 2.1 evolves forward
+with microversions. The API ref starts with the base API version, and
+specifies all changes that exist to it as microversions roll
+forward. You can also see a history of our microversions here:
 
 .. toctree::
    :maxdepth: 1
 
    api_microversion_history
 
-We also publish end-user API docs as an API Guide.
 
-* `Compute API Guide`_
-
-.. _`v2.1 (CURRENT)`: http://developer.openstack.org/api-ref-compute-v2.1.html
-.. _`v2 (SUPPORTED)`: http://developer.openstack.org/api-ref-compute-v2.html
-.. _`v2 extensions (SUPPORTED)`: http://developer.openstack.org/api-ref-compute-v2-ext.html
 .. _`Compute API Guide`: http://developer.openstack.org/api-guide/compute/
+.. _`Compute API Reference`: http://developer.openstack.org/api-ref/compute/
 
 There was a session on the v2.1 API at the Liberty summit which you can watch
 `here <https://www.openstack.org/summit/vancouver-2015/summit-videos/presentation/introduction-of-a-new-nova-rest-api-why-we-need-to-use-nova-v2-1-api>`_.
-
 
 
 Feature Status
@@ -221,6 +213,14 @@ Module Reference
    # since that's already covered with modindex below.
 .. toctree::
    :hidden:
+
+Metadata
+========
+
+.. toctree::
+    :maxdepth: 1
+
+    vendordata
 
 Indices and tables
 ==================

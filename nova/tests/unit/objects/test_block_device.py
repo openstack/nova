@@ -81,7 +81,7 @@ class _TestBlockDeviceMappingObject(object):
                 self.assertFalse(cells_update_mock.called)
             else:
                 self.assertEqual(1, cells_update_mock.call_count)
-                self.assertTrue(len(cells_update_mock.call_args[0]) > 1)
+                self.assertGreater(len(cells_update_mock.call_args[0]), 1)
                 self.assertIsInstance(cells_update_mock.call_args[0][1],
                                       block_device_obj.BlockDeviceMapping)
                 self.assertEqual({'create': create},
@@ -133,7 +133,7 @@ class _TestBlockDeviceMappingObject(object):
                           self.context, 'fake-volume-id')
 
     @mock.patch.object(db, 'block_device_mapping_get_all_by_volume_id')
-    def test_get_by_volume_instance_uuid_missmatch(self, get_by_vol_id):
+    def test_get_by_volume_instance_uuid_mismatch(self, get_by_vol_id):
         fake_bdm_vol = self.fake_bdm(instance={'uuid': 'other-fake-instance'})
         get_by_vol_id.return_value = [fake_bdm_vol]
 
@@ -249,7 +249,7 @@ class _TestBlockDeviceMappingObject(object):
                             self.context, values, legacy=False)
                 if cell_type == 'compute' and 'device_name' in values:
                     self.assertEqual(1, cells_update_mock.call_count)
-                    self.assertTrue(len(cells_update_mock.call_args[0]) > 1)
+                    self.assertGreater(len(cells_update_mock.call_args[0]), 1)
                     self.assertEqual(self.context,
                                      cells_update_mock.call_args[0][0])
                     self.assertIsInstance(cells_update_mock.call_args[0][1],

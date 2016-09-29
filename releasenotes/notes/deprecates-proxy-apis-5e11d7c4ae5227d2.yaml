@@ -1,0 +1,29 @@
+---
+deprecations:
+  - |
+    All the APIs which proxy to other services were deprecated in this API
+    version. Those APIs will return 404 on Microversion 2.36 or higher. The API
+    user should use native API as instead of using those pure proxy for other
+    REST APIs. The quotas and limits related to network resources 'fixed_ips',
+    'floating ips', 'security_groups', 'security_group_rules', 'networks' are
+    filtered out of os-quotas and limit APIs respectively and those quotas
+    should be managed through OpenStack network service. For using
+    nova-network, you only can use API and manage quotas under Microversion
+    '2.36'. The 'os-fping' API was deprecated also, this API is only related to
+    nova-network and depend on the deployment. The deprecated APIs are as
+    below:
+
+    - /images
+    - /os-networks
+    - /os-fixed-ips
+    - /os-floating-ips
+    - /os-floating-ips-bulk
+    - /os-floating-ip-pools
+    - /os-floating-ip-dns
+    - /os-security-groups
+    - /os-security-group-rules
+    - /os-security-group-default-rules
+    - /os-volumes
+    - /os-snapshots
+    - /os-baremetal-nodes
+    - /os-fping

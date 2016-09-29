@@ -26,10 +26,9 @@ from nova.api import validation
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.policies import flavor_access as fa_policies
 
 ALIAS = 'os-flavor-access'
-soft_authorize = extensions.os_compute_soft_authorizer(ALIAS)
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def _marshall_flavor_access(flavor):
@@ -43,14 +42,10 @@ def _marshall_flavor_access(flavor):
 
 class FlavorAccessController(wsgi.Controller):
     """The flavor access API controller for the OpenStack API."""
-
-    def __init__(self):
-        super(FlavorAccessController, self).__init__()
-
     @extensions.expected_errors(404)
     def index(self, req, flavor_id):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fa_policies.BASE_POLICY_NAME)
 
         flavor = common.get_flavor(context, flavor_id)
 
@@ -72,7 +67,7 @@ class FlavorActionController(wsgi.Controller):
     @wsgi.extends
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
-        if soft_authorize(context):
+        if context.can(fa_policies.BASE_POLICY_NAME, fatal=False):
             db_flavor = req.get_db_flavor(id)
 
             self._extend_flavor(resp_obj.obj['flavor'], db_flavor)
@@ -80,7 +75,7 @@ class FlavorActionController(wsgi.Controller):
     @wsgi.extends
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
-        if soft_authorize(context):
+        if context.can(fa_policies.BASE_POLICY_NAME, fatal=False):
             flavors = list(resp_obj.obj['flavors'])
             for flavor_rval in flavors:
                 db_flavor = req.get_db_flavor(flavor_rval['id'])
@@ -89,7 +84,7 @@ class FlavorActionController(wsgi.Controller):
     @wsgi.extends(action='create')
     def create(self, req, body, resp_obj):
         context = req.environ['nova.context']
-        if soft_authorize(context):
+        if context.can(fa_policies.BASE_POLICY_NAME, fatal=False):
             db_flavor = req.get_db_flavor(resp_obj.obj['flavor']['id'])
 
             self._extend_flavor(resp_obj.obj['flavor'], db_flavor)
@@ -99,7 +94,7 @@ class FlavorActionController(wsgi.Controller):
     @validation.schema(flavor_access.add_tenant_access)
     def _add_tenant_access(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context, action="add_tenant_access")
+        context.can(fa_policies.POLICY_ROOT % "add_tenant_access")
 
         vals = body['addTenantAccess']
         tenant = vals['tenant']
@@ -125,7 +120,8 @@ class FlavorActionController(wsgi.Controller):
     @validation.schema(flavor_access.remove_tenant_access)
     def _remove_tenant_access(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context, action="remove_tenant_access")
+        context.can(
+            fa_policies.POLICY_ROOT % "remove_tenant_access")
 
         vals = body['removeTenantAccess']
         tenant = vals['tenant']

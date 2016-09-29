@@ -22,8 +22,6 @@ from oslo_utils import timeutils
 import six
 import webob
 
-from nova.api.openstack.compute.legacy_v2 import server_metadata \
-        as server_metadata_v2
 from nova.api.openstack.compute import server_metadata \
         as server_metadata_v21
 from nova.compute import rpcapi as compute_rpcapi
@@ -120,7 +118,7 @@ class ServerMetaDataTestV21(test.TestCase):
 
     def setUp(self):
         super(ServerMetaDataTestV21, self).setUp()
-        fakes.stub_out_key_pair_funcs(self.stubs)
+        fakes.stub_out_key_pair_funcs(self)
         self.stub_out('nova.db.instance_get', return_server)
         self.stub_out('nova.db.instance_get_by_uuid',
                       return_server_by_uuid)
@@ -669,24 +667,11 @@ class ServerMetaDataTestV21(test.TestCase):
                           body=data)
 
 
-class ServerMetaDataTestV2(ServerMetaDataTestV21):
-    validation_ex = webob.exc.HTTPBadRequest
-    validation_ex_large = webob.exc.HTTPRequestEntityTooLarge
-
-    def _set_up_resources(self):
-        self.controller = server_metadata_v2.Controller()
-        self.uuid = str(uuid.uuid4())
-        self.url = '/v1.1/fake/servers/%s/metadata' % self.uuid
-
-    def _get_request(self, param_url=''):
-        return fakes.HTTPRequest.blank(self.url + param_url)
-
-
 class BadStateServerMetaDataTestV21(test.TestCase):
 
     def setUp(self):
         super(BadStateServerMetaDataTestV21, self).setUp()
-        fakes.stub_out_key_pair_funcs(self.stubs)
+        fakes.stub_out_key_pair_funcs(self)
         self.stub_out('nova.db.instance_metadata_get',
                       return_server_metadata)
         self.stubs.Set(compute_rpcapi.ComputeAPI, 'change_instance_metadata',
@@ -760,16 +745,6 @@ class BadStateServerMetaDataTestV21(test.TestCase):
         req.body = jsonutils.dump_as_bytes(expected)
         self.assertRaises(webob.exc.HTTPConflict, self.controller.update_all,
                 req, self.uuid, body=expected)
-
-
-class BadStateServerMetaDataTestV2(BadStateServerMetaDataTestV21):
-    def _set_up_resources(self):
-        self.controller = server_metadata_v2.Controller()
-        self.uuid = str(uuid.uuid4())
-        self.url = '/v1.1/fake/servers/%s/metadata' % self.uuid
-
-    def _get_request(self, param_url=''):
-        return fakes.HTTPRequest.blank(self.url + param_url)
 
 
 class ServerMetaPolicyEnforcementV21(test.NoDBTestCase):

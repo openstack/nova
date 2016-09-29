@@ -27,10 +27,7 @@ import time
 
 from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
-from oslo_serialization import jsonutils
-from oslo_utils import fileutils
 
 import nova.conf
 from nova.i18n import _LE
@@ -42,58 +39,18 @@ from nova.virt.libvirt import utils as libvirt_utils
 
 LOG = logging.getLogger(__name__)
 
-imagecache_opts = [
-    cfg.StrOpt('image_info_filename_pattern',
-               default='$instances_path/$image_cache_subdirectory_name/'
-                       '%(image)s.info',
-               help='Allows image information files to be stored in '
-                    'non-standard locations'),
-    cfg.BoolOpt('remove_unused_kernels',
-                default=True,
-                deprecated_for_removal=True,
-                help='DEPRECATED: Should unused kernel images be removed? '
-                     'This is only safe to enable if all compute nodes have '
-                     'been updated to support this option (running Grizzly or '
-                     'newer level compute). This will be the default behavior '
-                     'in the 13.0.0 release.'),
-    cfg.IntOpt('remove_unused_resized_minimum_age_seconds',
-               default=3600,
-               help='Unused resized base images younger than this will not be '
-                    'removed'),
-    cfg.BoolOpt('checksum_base_images',
-                default=False,
-                help='Write a checksum for files in _base to disk'),
-    cfg.IntOpt('checksum_interval_seconds',
-               default=3600,
-               help='How frequently to checksum base images'),
-    ]
-
 CONF = nova.conf.CONF
-CONF.register_opts(imagecache_opts, 'libvirt')
 
 
-def get_cache_fname(images, key):
+def get_cache_fname(image_id):
     """Return a filename based on the SHA1 hash of a given image ID.
 
     Image files stored in the _base directory that match this pattern
     are considered for cleanup by the image cache manager. The cache
     manager considers the file to be in use if it matches an instance's
     image_ref, kernel_id or ramdisk_id property.
-
-    However, in grizzly-3 and before, only the image_ref property was
-    considered. This means that it's unsafe to store kernel and ramdisk
-    images using this pattern until we're sure that all compute nodes
-    are running a cache manager newer than grizzly-3. For now, we
-    require admins to confirm that by setting the remove_unused_kernels
-    boolean but, at some point in the future, we'll be safely able to
-    assume this.
     """
-    image_id = str(images[key])
-    if ((not CONF.libvirt.remove_unused_kernels and
-         key in ['kernel_id', 'ramdisk_id'])):
-        return image_id
-    else:
-        return hashlib.sha1(image_id).hexdigest()
+    return hashlib.sha1(image_id.encode('utf-8')).hexdigest()
 
 
 def get_info_filename(base_path):
@@ -123,116 +80,6 @@ def is_valid_info_file(path):
     return False
 
 
-def _read_possible_json(serialized, info_file):
-    try:
-        d = jsonutils.loads(serialized)
-
-    except ValueError as e:
-        LOG.error(_LE('Error reading image info file %(filename)s: '
-                      '%(error)s'),
-                  {'filename': info_file,
-                   'error': e})
-        d = {}
-
-    return d
-
-
-def read_stored_info(target, field=None, timestamped=False):
-    """Read information about an image.
-
-    Returns an empty dictionary if there is no info, just the field value if
-    a field is requested, or the entire dictionary otherwise.
-    """
-
-    info_file = get_info_filename(target)
-    if not os.path.exists(info_file):
-        # NOTE(mikal): Special case to handle essex checksums being converted.
-        # There is an assumption here that target is a base image filename.
-        old_filename = target + '.sha1'
-        if field == 'sha1' and os.path.exists(old_filename):
-            with open(old_filename) as hash_file:
-                hash_value = hash_file.read()
-
-            write_stored_info(target, field=field, value=hash_value)
-            os.remove(old_filename)
-            d = {field: hash_value}
-
-        else:
-            d = {}
-
-    else:
-        lock_name = 'info-%s' % os.path.split(target)[-1]
-        lock_path = os.path.join(CONF.instances_path, 'locks')
-
-        @utils.synchronized(lock_name, external=True, lock_path=lock_path)
-        def read_file(info_file):
-            LOG.debug('Reading image info file: %s', info_file)
-            with open(info_file, 'r') as f:
-                return f.read().rstrip()
-
-        serialized = read_file(info_file)
-        d = _read_possible_json(serialized, info_file)
-
-    if field:
-        if timestamped:
-            return (d.get(field, None), d.get('%s-timestamp' % field, None))
-        else:
-            return d.get(field, None)
-    return d
-
-
-def write_stored_info(target, field=None, value=None):
-    """Write information about an image."""
-
-    if not field:
-        return
-
-    info_file = get_info_filename(target)
-    LOG.info(_LI('Writing stored info to %s'), info_file)
-    fileutils.ensure_tree(os.path.dirname(info_file))
-
-    lock_name = 'info-%s' % os.path.split(target)[-1]
-    lock_path = os.path.join(CONF.instances_path, 'locks')
-
-    @utils.synchronized(lock_name, external=True, lock_path=lock_path)
-    def write_file(info_file, field, value):
-        d = {}
-
-        if os.path.exists(info_file):
-            with open(info_file, 'r') as f:
-                d = _read_possible_json(f.read(), info_file)
-
-        d[field] = value
-        d['%s-timestamp' % field] = time.time()
-
-        with open(info_file, 'w') as f:
-            f.write(jsonutils.dumps(d))
-
-    write_file(info_file, field, value)
-
-
-def _hash_file(filename):
-    """Generate a hash for the contents of a file."""
-    checksum = hashlib.sha1()
-    with open(filename) as f:
-        for chunk in iter(lambda: f.read(32768), b''):
-            checksum.update(chunk)
-    return checksum.hexdigest()
-
-
-def read_stored_checksum(target, timestamped=True):
-    """Read the checksum.
-
-    Returns the checksum (as hex) or None.
-    """
-    return read_stored_info(target, field='sha1', timestamped=timestamped)
-
-
-def write_stored_checksum(target):
-    """Write a checksum to disk for a file in _base."""
-    write_stored_info(target, field='sha1', value=_hash_file(target))
-
-
 class ImageCacheManager(imagecache.ImageCacheManager):
     def __init__(self):
         super(ImageCacheManager, self).__init__()
@@ -243,14 +90,12 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         """Reset state variables used for each pass."""
 
         self.used_images = {}
-        self.image_popularity = {}
         self.instance_names = set()
 
         self.back_swap_images = set()
         self.used_swap_images = set()
 
         self.active_base_files = []
-        self.corrupt_base_files = []
         self.originals = []
         self.removable_base_files = []
         self.unexplained_images = []
@@ -271,28 +116,44 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                 LOG.debug('Adding %s into backend swap images', ent)
                 self.back_swap_images.add(ent)
 
-    def _list_base_images(self, base_dir):
-        """Return a list of the images present in _base.
-
-        Determine what images we have on disk. There will be other files in
-        this directory so we only grab the ones which are the right length
-        to be disk images.
+    def _scan_base_images(self, base_dir):
+        """Scan base images in base_dir and call _store_image or
+        _store_swap_image on each as appropriate. These methods populate
+        self.unexplained_images, self.originals, and self.back_swap_images.
         """
 
         digest_size = hashlib.sha1().digestsize * 2
         for ent in os.listdir(base_dir):
-            if len(ent) == digest_size:
+            path = os.path.join(base_dir, ent)
+            if is_valid_info_file(path):
+                # TODO(mdbooth): In Newton we ignore these files, because if
+                # we're on shared storage they may be in use by a pre-Newton
+                # compute host. However, we have already removed all uses of
+                # these files in Newton, so once we can be sure that all
+                # compute hosts are running at least Newton (i.e. in  Ocata),
+                # we can be sure that nothing is using info files any more.
+                # Therefore in Ocata, we should update this to simply delete
+                # these files here, i.e.:
+                #   os.unlink(path)
+                #
+                # This will obsolete the code to cleanup these files in
+                # _remove_old_enough_file, so when updating this code to
+                # delete immediately, the cleanup code in
+                # _remove_old_enough_file can be removed.
+                #
+                # This cleanup code will delete all info files the first
+                # time it runs in Ocata, which means we can delete this
+                # block entirely in P.
+                pass
+
+            elif len(ent) == digest_size:
                 self._store_image(base_dir, ent, original=True)
 
-            elif (len(ent) > digest_size + 2 and
-                  ent[digest_size] == '_' and
-                  not is_valid_info_file(os.path.join(base_dir, ent))):
+            elif len(ent) > digest_size + 2 and ent[digest_size] == '_':
                 self._store_image(base_dir, ent, original=False)
+
             else:
                 self._store_swap_image(ent)
-
-        return {'unexplained_images': self.unexplained_images,
-                'originals': self.originals}
 
     def _list_backing_images(self):
         """List the backing images currently in use."""
@@ -364,72 +225,6 @@ class ImageCacheManager(imagecache.ImageCacheManager):
             if m:
                 yield img, False, True
 
-    def _verify_checksum(self, img_id, base_file, create_if_missing=True):
-        """Compare the checksum stored on disk with the current file.
-
-        Note that if the checksum fails to verify this is logged, but no actual
-        action occurs. This is something sysadmins should monitor for and
-        handle manually when it occurs.
-        """
-
-        if not CONF.libvirt.checksum_base_images:
-            return None
-
-        lock_name = 'hash-%s' % os.path.split(base_file)[-1]
-
-        # Protect against other nova-computes performing checksums at the same
-        # time if we are using shared storage
-        @utils.synchronized(lock_name, external=True, lock_path=self.lock_path)
-        def inner_verify_checksum():
-            (stored_checksum, stored_timestamp) = read_stored_checksum(
-                base_file, timestamped=True)
-            if stored_checksum:
-                # NOTE(mikal): Checksums are timestamped. If we have recently
-                # checksummed (possibly on another compute node if we are using
-                # shared storage), then we don't need to checksum again.
-                if (stored_timestamp and
-                    time.time() - stored_timestamp <
-                        CONF.libvirt.checksum_interval_seconds):
-                    return True
-
-                # NOTE(mikal): If there is no timestamp, then the checksum was
-                # performed by a previous version of the code.
-                if not stored_timestamp:
-                    write_stored_info(base_file, field='sha1',
-                                      value=stored_checksum)
-
-                current_checksum = _hash_file(base_file)
-
-                if current_checksum != stored_checksum:
-                    LOG.error(_LE('image %(id)s at (%(base_file)s): image '
-                                  'verification failed'),
-                              {'id': img_id,
-                               'base_file': base_file})
-                    return False
-
-                else:
-                    return True
-
-            else:
-                LOG.info(_LI('image %(id)s at (%(base_file)s): image '
-                             'verification skipped, no hash stored'),
-                         {'id': img_id,
-                          'base_file': base_file})
-
-                # NOTE(mikal): If the checksum file is missing, then we should
-                # create one. We don't create checksums when we download images
-                # from glance because that would delay VM startup.
-                if CONF.libvirt.checksum_base_images and create_if_missing:
-                    LOG.info(_LI('%(id)s (%(base_file)s): generating '
-                                 'checksum'),
-                             {'id': img_id,
-                              'base_file': base_file})
-                    write_stored_checksum(base_file)
-
-                return None
-
-        return inner_verify_checksum()
-
     @staticmethod
     def _get_age_of_file(base_file):
         if not os.path.exists(base_file):
@@ -441,8 +236,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
 
         return (True, age)
 
-    def _remove_old_enough_file(self, base_file, maxage, remove_sig=True,
-                                remove_lock=True):
+    def _remove_old_enough_file(self, base_file, maxage, remove_lock=True):
         """Remove a single swap or base file if it is old enough."""
         exists, age = self._get_age_of_file(base_file)
         if not exists:
@@ -463,10 +257,20 @@ class ImageCacheManager(imagecache.ImageCacheManager):
             LOG.info(_LI('Removing base or swap file: %s'), base_file)
             try:
                 os.remove(base_file)
-                if remove_sig:
-                    signature = get_info_filename(base_file)
-                    if os.path.exists(signature):
-                        os.remove(signature)
+
+                # TODO(mdbooth): We have removed all uses of info files in
+                # Newton and we no longer create them, but they may still
+                # exist from before we upgraded, and they may still be
+                # created by older compute hosts if we're on shared storage.
+                # While there may still be pre-Newton computes writing here,
+                # the only safe place to delete info files is here,
+                # when deleting the cache entry. Once we can be sure that
+                # all computes are running at least Newton (i.e. in Ocata),
+                # we can delete these files unconditionally during the
+                # periodic task, which will make this code obsolete.
+                signature = get_info_filename(base_file)
+                if os.path.exists(signature):
+                    os.remove(signature)
             except OSError as e:
                 LOG.error(_LE('Failed to remove %(base_file)s, '
                               'error was %(error)s'),
@@ -497,8 +301,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         """Remove a single swap base file if it is old enough."""
         maxage = CONF.remove_unused_original_minimum_age_seconds
 
-        self._remove_old_enough_file(base_file, maxage, remove_sig=False,
-                                     remove_lock=False)
+        self._remove_old_enough_file(base_file, maxage, remove_lock=False)
 
     def _remove_base_file(self, base_file):
         """Remove a single base file if it is old enough."""
@@ -511,7 +314,6 @@ class ImageCacheManager(imagecache.ImageCacheManager):
     def _handle_base_image(self, img_id, base_file):
         """Handle the checks for a single base image."""
 
-        image_bad = False
         image_in_use = False
 
         LOG.info(_LI('image %(id)s at (%(base_file)s): checking'),
@@ -520,17 +322,6 @@ class ImageCacheManager(imagecache.ImageCacheManager):
 
         if base_file in self.unexplained_images:
             self.unexplained_images.remove(base_file)
-
-        if (base_file and os.path.exists(base_file)
-                and os.path.isfile(base_file)):
-            # _verify_checksum returns True if the checksum is ok, and None if
-            # there is no checksum file
-            checksum_result = self._verify_checksum(img_id, base_file)
-            if checksum_result is not None:
-                image_bad = not checksum_result
-
-            # Give other threads a chance to run
-            time.sleep(0)
 
         if img_id in self.used_images:
             local, remote, instances = self.used_images[img_id]
@@ -555,9 +346,6 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                                 {'id': img_id,
                                  'base_file': base_file,
                                  'instance_list': ' '.join(instances)})
-
-        if image_bad:
-            self.corrupt_base_files.append(base_file)
 
         if base_file:
             if not image_in_use:
@@ -620,9 +408,6 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         if self.active_base_files:
             LOG.info(_LI('Active base files: %s'),
                      ' '.join(self.active_base_files))
-        if self.corrupt_base_files:
-            LOG.info(_LI('Corrupt base files: %s'),
-                     ' '.join(self.corrupt_base_files))
 
         if self.removable_base_files:
             LOG.info(_LI('Removable base files: %s'),
@@ -662,11 +447,10 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         # reset the local statistics
         self._reset_state()
         # read the cached images
-        self._list_base_images(base_dir)
+        self._scan_base_images(base_dir)
         # read running instances data
         running = self._list_running_instances(context, all_instances)
         self.used_images = running['used_images']
-        self.image_popularity = running['image_popularity']
         self.instance_names = running['instance_names']
         self.used_swap_images = running['used_swap_images']
         # perform the aging and image verification

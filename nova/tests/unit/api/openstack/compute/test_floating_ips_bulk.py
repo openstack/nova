@@ -19,8 +19,6 @@ import webob
 
 from nova.api.openstack.compute import floating_ips_bulk \
         as fipbulk_v21
-from nova.api.openstack.compute.legacy_v2.contrib import floating_ips_bulk \
-        as fipbulk_v2
 from nova import context
 from nova import exception
 from nova import objects
@@ -167,40 +165,6 @@ class FloatingIPBulkV21(test.TestCase):
                           self.req, body=body)
 
 
-class FloatingIPBulkV2(FloatingIPBulkV21):
-    floating_ips_bulk = fipbulk_v2
-    bad_request = webob.exc.HTTPBadRequest
-
-    def setUp(self):
-        super(FloatingIPBulkV2, self).setUp()
-        self.non_admin_req = fakes.HTTPRequest.blank('')
-        self.admin_req = fakes.HTTPRequest.blank('', use_admin_context=True)
-
-    def test_list_ips_with_non_admin(self):
-        ip_range = '192.168.1.1/28'
-        self._setup_floating_ips(ip_range)
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.index, self.non_admin_req)
-
-    def test_list_ip_with_non_admin(self):
-        ip_range = '192.168.1.1/28'
-        self._setup_floating_ips(ip_range)
-        self.assertRaises(exception.AdminRequired, self.controller.show,
-                          self.non_admin_req, "host")
-
-    def test_delete_ips(self):
-        self._test_delete_ips(self.admin_req)
-
-    def test_list_ip_by_host(self):
-        self._test_list_ip_by_host(self.admin_req)
-
-    def test_list_ips_associated(self):
-        self._test_list_ips_associated(self.admin_req)
-
-    def test_list_ips(self):
-        self._test_list_ips(self.admin_req)
-
-
 class FloatingIPBulkPolicyEnforcementV21(test.NoDBTestCase):
 
     def setUp(self):
@@ -234,3 +198,21 @@ class FloatingIPBulkPolicyEnforcementV21(test.NoDBTestCase):
         body = {'ip_range': ip_range}
         self._common_policy_check(self.controller.update, self.req,
                                   "delete", body=body)
+
+
+class FloatingIPBulkDeprecationTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FloatingIPBulkDeprecationTest, self).setUp()
+        self.controller = fipbulk_v21.FloatingIPBulkController()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+
+    def test_all_apis_return_not_found(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.index, self.req)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.show, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.create, self.req, {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.update, self.req, fakes.FAKE_UUID, {})

@@ -19,7 +19,7 @@ from nova.tests.unit.virt.xenapi.plugins import plugin_test
 class NovaPluginVersion(plugin_test.PluginTestBase):
     def setUp(self):
         super(NovaPluginVersion, self).setUp()
-        self.nova_plugin_version = self.load_plugin("nova_plugin_version")
+        self.nova_plugin_version = self.load_plugin('nova_plugin_version.py')
 
     def test_nova_plugin_version(self):
         session = 'fake_session'

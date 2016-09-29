@@ -71,23 +71,6 @@ class SchedulerManagerInitTestCase(test.NoDBTestCase):
         self.flags(scheduler_driver='nonexist_scheduler')
         self.assertRaises(RuntimeError, self.manager_cls)
 
-    # NOTE(Yingxin): Loading full class path is deprecated and should be
-    # removed in the N release.
-    @mock.patch.object(manager.LOG, 'warning')
-    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
-    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
-    def test_init_using_classpath_to_schedulerdriver(self,
-                                                     mock_init_agg,
-                                                     mock_init_inst,
-                                                     mock_warning):
-        self.flags(
-            scheduler_driver=
-            'nova.scheduler.chance.ChanceScheduler')
-        driver = self.manager_cls().driver
-        self.assertIsInstance(driver, chance.ChanceScheduler)
-        warn_args, kwargs = mock_warning.call_args
-        self.assertIn("DEPRECATED", warn_args[0])
-
 
 class SchedulerManagerTestCase(test.NoDBTestCase):
     """Test case for scheduler manager."""
@@ -107,7 +90,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         self.topic = 'fake_topic'
         self.fake_args = (1, 2, 3)
         self.fake_kwargs = {'cat': 'meow', 'dog': 'woof'}
-        fake_server_actions.stub_out_action_events(self.stubs)
+        fake_server_actions.stub_out_action_events(self)
 
     def test_1_correct_init(self):
         # Correct scheduler driver
@@ -190,7 +173,8 @@ class SchedulerInitTestCase(test.NoDBTestCase):
         manager = self.driver_cls().host_manager
         self.assertIsInstance(manager, host_manager.HostManager)
 
-    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(ironic_host_manager.IronicHostManager,
+                       '_init_instance_info')
     @mock.patch.object(host_manager.HostManager, '_init_aggregates')
     def test_init_using_ironic_hostmanager(self,
                                            mock_init_agg,
@@ -198,14 +182,6 @@ class SchedulerInitTestCase(test.NoDBTestCase):
         self.flags(scheduler_host_manager='ironic_host_manager')
         manager = self.driver_cls().host_manager
         self.assertIsInstance(manager, ironic_host_manager.IronicHostManager)
-
-    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
-    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
-    def test_init_nonexist_hostmanager(self,
-                                       mock_init_agg,
-                                       mock_init_inst):
-        self.flags(scheduler_host_manager='nonexist_host_manager')
-        self.assertRaises(RuntimeError, self.driver_cls)
 
 
 class SchedulerTestCase(test.NoDBTestCase):

@@ -116,21 +116,6 @@ very long. So here are some key points:
     * For all other successful operations: ``200 OK``
 
 
-Fixing bugs in v2.0
--------------------
-The v2.1 API was made the default in Liberty [1]_ and the ability to disable
-the v2.1 API was removed in Newton [2]_. The v2.0 legacy API code is also
-deprecated [3]_. As such, latent bugs do not need to be fixed in the legacy
-v2.0 API code, with the exception of critical bugs like security
-vulnerabilities. Also, new regressions should be avoided, like if raising a
-new exception would result in a 500 response from the REST API, that should be
-handled in the v2.0 API code as well as the v2.1 API.
-
-.. [1] https://github.com/openstack/nova/commit/4a18f7d3bafcdbede48500aac389e0a770b8e6a8
-.. [2] https://github.com/openstack/nova/commit/e65557c1933a563a106763e06d0d4f564d7a4174
-.. [3] https://github.com/openstack/nova/commit/fe057636a5eb5b95d03c15f13fff20f76b049d6c
-
-
 Config Options
 ==============
 
@@ -216,10 +201,17 @@ Please note:
 Microversion API
 ================
 
-* If an new microversion API is added, the following needs to happen:
+If a new microversion API is added, the following needs to happen:
 
- * A new patch for the microversion API change in python-novaclient side
-   should be submitted.
+* A new patch for the microversion API change in python-novaclient side
+  should be submitted.
+* If the microversion changes the response schema, a new schema and test for
+  the microversion must be added to Tempest. The microversion change in Nova
+  should not be merged until the Tempest test is submitted and at least
+  passing; it does not need to be merged yet as long as it is testing the
+  Nova change via Depends-On. The Nova microversion change commit message
+  should reference the Change-Id of the Tempest test for reviewers to identify
+  it.
 
 Release Notes
 =============

@@ -25,6 +25,7 @@ from oslo_utils import uuidutils
 import testtools
 
 from nova.compute import rpcapi as compute_rpcapi
+from nova import conductor
 from nova.db.sqlalchemy import api as session
 from nova import exception
 from nova.objects import base as obj_base
@@ -422,20 +423,6 @@ class TestBannedDBSchemaOperations(testtools.TestCase):
                               table.alter)
 
 
-class TestStableObjectJsonFixture(testtools.TestCase):
-    def test_changes_sort(self):
-        class TestObject(obj_base.NovaObject):
-            def obj_what_changed(self):
-                return ['z', 'a']
-
-        obj = TestObject()
-        self.assertEqual(['z', 'a'],
-                         obj.obj_to_primitive()['nova_object.changes'])
-        with fixtures.StableObjectJsonFixture():
-            self.assertEqual(['a', 'z'],
-                             obj.obj_to_primitive()['nova_object.changes'])
-
-
 class TestAllServicesCurrentFixture(testtools.TestCase):
     @mock.patch('nova.objects.Service._db_service_get_minimum_version')
     def test_services_current(self, mock_db):
@@ -452,3 +439,17 @@ class TestAllServicesCurrentFixture(testtools.TestCase):
                          service_obj.Service.get_minimum_version(
                              None, 'nova-compute'))
         self.assertFalse(mock_db.called)
+
+
+class TestNoopConductorFixture(testtools.TestCase):
+    @mock.patch('nova.conductor.api.ComputeTaskAPI.resize_instance')
+    def test_task_api_not_called(self, mock_resize):
+        self.useFixture(fixtures.NoopConductorFixture())
+        conductor.ComputeTaskAPI().resize_instance()
+        self.assertFalse(mock_resize.called)
+
+    @mock.patch('nova.conductor.api.API.wait_until_ready')
+    def test_api_not_called(self, mock_wait):
+        self.useFixture(fixtures.NoopConductorFixture())
+        conductor.API().wait_until_ready()
+        self.assertFalse(mock_wait.called)

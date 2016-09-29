@@ -22,14 +22,12 @@ from oslo_utils import fixture as utils_fixture
 import webob.exc
 
 from nova.api.openstack import api_version_request as api_version
-from nova.api.openstack.compute.legacy_v2.contrib import services \
-        as services_v2
 from nova.api.openstack.compute import services as services_v21
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi as os_wsgi
 from nova import availability_zones
 from nova.cells import utils as cells_utils
-from nova.compute import cells_api
+from nova import compute
 from nova import context
 from nova import exception
 from nova import objects
@@ -199,6 +197,8 @@ class ServicesTestV21(test.TestCase):
         self.ext_mgr = extensions.ExtensionManager()
         self.ext_mgr.extensions = {}
 
+        self.ctxt = context.get_admin_context()
+        self.host_api = compute.HostAPI()
         self._set_up_controller()
         self.controller.host_api.service_get_all = (
             mock.Mock(side_effect=fake_service_get_all(fake_services_list)))
@@ -554,11 +554,17 @@ class ServicesTestV21(test.TestCase):
     def test_services_delete(self):
         self.ext_mgr.extensions['os-extended-services-delete'] = True
 
+        compute = self.host_api.db.service_create(self.ctxt,
+            {'host': 'fake-compute-host',
+             'binary': 'nova-compute',
+             'topic': 'compute',
+             'report_count': 0})
+
         with mock.patch.object(self.controller.host_api,
                                'service_delete') as service_delete:
-            self.controller.delete(self.req, '1')
+            self.controller.delete(self.req, compute.id)
             service_delete.assert_called_once_with(
-                self.req.environ['nova.context'], '1')
+                self.req.environ['nova.context'], compute.id)
             self.assertEqual(self.controller.delete.wsgi_code, 204)
 
     def test_services_delete_not_found(self):
@@ -860,50 +866,12 @@ class ServicesTestV211(ServicesTestV21):
         self.assertEqual(res_dict, response)
 
 
-class ServicesTestV20(ServicesTestV21):
-    service_is_up_exc = KeyError
-    bad_request = webob.exc.HTTPBadRequest
-
-    def setUp(self):
-        super(ServicesTestV20, self).setUp()
-        self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
-        self.non_admin_req = fakes.HTTPRequest.blank('')
-
-    def _set_up_controller(self):
-        self.controller = services_v2.ServiceController(self.ext_mgr)
-
-    def test_services_delete_not_enabled(self):
-        self.assertRaises(webob.exc.HTTPMethodNotAllowed,
-                          self.controller.delete, self.req, '300')
-
-    def _process_output(self, services, has_disabled=False, has_id=False):
-        for service in services['services']:
-            if not has_disabled:
-                service.pop('disabled_reason')
-            if not has_id:
-                service.pop('id')
-        return services
-
-    def test_update_with_non_admin(self):
-        self.assertRaises(exception.AdminRequired, self.controller.update,
-                          self.non_admin_req, fakes.FAKE_UUID, body={})
-
-    def test_delete_with_non_admin(self):
-        self.ext_mgr.extensions['os-extended-services-delete'] = True
-        self.assertRaises(exception.AdminRequired, self.controller.delete,
-                          self.non_admin_req, fakes.FAKE_UUID)
-
-    def test_index_with_non_admin(self):
-        self.assertRaises(exception.AdminRequired, self.controller.index,
-                          self.non_admin_req)
-
-
 class ServicesCellsTestV21(test.TestCase):
 
     def setUp(self):
         super(ServicesCellsTestV21, self).setUp()
 
-        host_api = cells_api.HostAPI()
+        host_api = compute.cells_api.HostAPI()
 
         self.ext_mgr = extensions.ExtensionManager()
         self.ext_mgr.extensions = {}
@@ -970,15 +938,6 @@ class ServicesCellsTestV21(test.TestCase):
                                                      tzinfo=utc)}]}
         self._process_out(res_dict)
         self.assertEqual(response, res_dict)
-
-
-class ServicesCellsTestV20(ServicesCellsTestV21):
-
-    def _set_up_controller(self):
-        self.controller = services_v2.ServiceController(self.ext_mgr)
-
-    def _process_out(self, res_dict):
-        pass
 
 
 class ServicesPolicyEnforcementV21(test.NoDBTestCase):

@@ -19,8 +19,8 @@ from nova.virt.ironic import ironic_states
 
 def get_test_validation(**kw):
     return type('interfaces', (object,),
-               {'power': kw.get('power', True),
-                'deploy': kw.get('deploy', True),
+               {'power': kw.get('power', {'result': True}),
+                'deploy': kw.get('deploy', {'result': True}),
                 'console': kw.get('console', True),
                 'rescue': kw.get('rescue', True)})()
 
@@ -45,7 +45,8 @@ def get_test_node(**kw):
                 'properties': kw.get('properties', {}),
                 'reservation': kw.get('reservation'),
                 'maintenance': kw.get('maintenance', False),
-                'network_provider': kw.get('network_provider'),
+                'network_interface': kw.get('network_interface'),
+                'resource_class': kw.get('resource_class'),
                 'extra': kw.get('extra', {}),
                 'updated_at': kw.get('created_at'),
                 'created_at': kw.get('updated_at')})()
@@ -87,6 +88,9 @@ def get_test_flavor(**kw):
     flavor = {'name': kw.get('name', 'fake.flavor'),
               'extra_specs': kw.get('extra_specs', default_extra_specs),
               'swap': kw.get('swap', 0),
+              'root_gb': 1,
+              'memory_mb': 1,
+              'vcpus': 1,
               'ephemeral_gb': kw.get('ephemeral_gb', 0)}
     return objects.Flavor(**flavor)
 

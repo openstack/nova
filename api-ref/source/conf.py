@@ -27,6 +27,21 @@
 import os
 import subprocess
 import sys
+import warnings
+
+import openstackdocstheme
+
+extensions = [
+    'os_api_ref',
+]
+
+
+html_theme = 'openstackdocs'
+html_theme_path = [openstackdocstheme.get_html_theme_path()]
+html_theme_options = {
+    "sidebar_mode": "toc",
+}
+html_context = {'bug_project': 'nova', 'bug_tag': 'api-ref'}
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -39,11 +54,6 @@ sys.path.insert(0, os.path.abspath('./'))
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-
-extensions = [
-    'ext.rest_parameters',
-    'oslosphinx',
-]
 
 # The suffix of source filenames.
 source_suffix = '.rst'
@@ -138,15 +148,19 @@ pygments_style = 'sphinx'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+# html_static_path = ['_static']
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
 # html_last_updated_fmt = '%b %d, %Y'
 git_cmd = ["git", "log", "--pretty=format:'%ad, commit %h'", "--date=local",
     "-n1"]
-html_last_updated_fmt = subprocess.Popen(
-    git_cmd, stdout=subprocess.PIPE).communicate()[0]
+try:
+    html_last_updated_fmt = subprocess.Popen(
+        git_cmd, stdout=subprocess.PIPE).communicate()[0].decode()
+except Exception:
+    warnings.warn('Cannot get last updated time from git repository. '
+                  'Not setting "html_last_updated_fmt".')
 
 # If true, SmartyPants will be used to convert quotes and dashes to
 # typographically correct entities.

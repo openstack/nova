@@ -1,3 +1,10 @@
+# needs:fix_opt_description
+# needs:check_deprecation_status
+# needs:check_opt_group_and_type
+# needs:fix_opt_description_indentation
+# needs:fix_opt_registration_consistency
+
+
 # Copyright 2016 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -48,10 +55,8 @@ Host on which to listen for incoming requests
 """)
 
 
-html5proxy_port_opt = cfg.IntOpt('html5proxy_port',
+html5proxy_port_opt = cfg.PortOpt('html5proxy_port',
         default=6082,
-        min=1,
-        max=65535,
         help="""
 Port on which to listen for incoming requests
 """)

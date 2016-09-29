@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    Virtuozzo Storage is available as a volume backend in
+    libvirt virtualization driver.
+
+    .. note:: Only qcow2/raw volume format supported, but not ploop.
+
+upgrade:
+  - For the Virtuozzo Storage driver to work with os-brick <1.4.0,
+    you need to allow "pstorage-mount" in rootwrap filters
+    for nova-compute.

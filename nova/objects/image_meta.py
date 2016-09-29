@@ -161,12 +161,22 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.10: added hw_cpu_realtime_mask field
     # Version 1.11: Added hw_firmware_type field
     # Version 1.12: Added properties for image signature verification
-    VERSION = '1.12'
+    # Version 1.13: added os_secure_boot field
+    # Version 1.14: Added 'hw_pointer_model' field
+    # Version 1.15: Added hw_rescue_bus and hw_rescue_device.
+    VERSION = '1.15'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 15):
+            primitive.pop('hw_rescue_bus', None)
+            primitive.pop('hw_rescue_device', None)
+        if target_version < (1, 14):
+            primitive.pop('hw_pointer_model', None)
+        if target_version < (1, 13):
+            primitive.pop('os_secure_boot', None)
         if target_version < (1, 11):
             primitive.pop('hw_firmware_type', None)
         if target_version < (1, 10):
@@ -284,8 +294,17 @@ class ImageMetaProps(base.NovaObject):
         # list value indicates the memory size of that node.
         'hw_numa_mem': fields.ListOfIntegersField(),
 
+        # Generic property to specify the pointer model type.
+        'hw_pointer_model': fields.PointerModelField(),
+
         # boolean 'yes' or 'no' to enable QEMU guest agent
         'hw_qemu_guest_agent': fields.FlexibleBooleanField(),
+
+        # name of the rescue bus to use with the associated rescue device.
+        'hw_rescue_bus': fields.DiskBusField(),
+
+        # name of rescue device to use.
+        'hw_rescue_device': fields.BlockDeviceTypeField(),
 
         # name of the RNG device type eg virtio
         'hw_rng_model': fields.RNGModelField(),
@@ -356,7 +375,7 @@ class ImageMetaProps(base.NovaObject):
 
         # Image mappings - related to Block device mapping data - mapping
         # of virtual image names to device names. This could be represented
-        # as a formatl data type, but is left as dict for same reason as
+        # as a formal data type, but is left as dict for same reason as
         # img_block_device_mapping field. It would arguably make sense for
         # the two to be combined into a single field and data type in the
         # future.
@@ -403,6 +422,13 @@ class ImageMetaProps(base.NovaObject):
         # boolean - if true, then guest must support disk quiesce
         # or snapshot operation will be denied
         'os_require_quiesce': fields.FlexibleBooleanField(),
+
+        # Secure Boot feature will be enabled by setting the "os_secure_boot"
+        # image property to "required". Other options can be: "disabled" or
+        # "optional".
+        # "os:secure_boot" flavor extra spec value overrides the image property
+        # value.
+        'os_secure_boot': fields.SecureBootField(),
 
         # boolean - if using agent don't inject files, assume someone else is
         # doing that (cloud-init)

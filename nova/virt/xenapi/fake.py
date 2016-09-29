@@ -51,7 +51,6 @@ A fake XenAPI SDK.
 import base64
 import pickle
 import random
-import uuid
 from xml.sax import saxutils
 import zlib
 
@@ -59,6 +58,7 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 from oslo_utils import units
+from oslo_utils import uuidutils
 import six
 
 from nova import exception
@@ -68,10 +68,21 @@ from nova.virt.xenapi.client import session as xenapi_session
 
 _CLASSES = ['host', 'network', 'session', 'pool', 'SR', 'VBD',
             'PBD', 'VDI', 'VIF', 'PIF', 'VM', 'VLAN', 'task']
+_after_create_functions = {}
+_destroy_functions = {}
 
 _db_content = {}
 
 LOG = logging.getLogger(__name__)
+
+
+def add_to_dict(functions):
+    """A decorator that adds a function to dictionary."""
+
+    def decorator(func):
+        functions[func.__name__] = func
+        return func
+    return decorator
 
 
 def reset():
@@ -81,7 +92,8 @@ def reset():
     create_vm('fake dom 0',
               'Running',
               is_a_template=False,
-              is_control_domain=True)
+              is_control_domain=True,
+              domid='0')
 
 
 def reset_table(table):
@@ -119,23 +131,24 @@ def create_network(name_label, bridge):
 
 def create_vm(name_label, status, **kwargs):
     if status == 'Running':
-        domid = random.randrange(1, 1 << 16)
+        domid = "%d" % random.randrange(1, 1 << 16)
         resident_on = list(_db_content['host'])[0]
     else:
-        domid = -1
+        domid = "-1"
         resident_on = ''
 
-    vm_rec = kwargs.copy()
-    vm_rec.update({'name_label': name_label,
-                   'domid': domid,
-                   'power_state': status,
-                   'blocked_operations': {},
-                   'resident_on': resident_on})
+    vm_rec = {'name_label': name_label,
+              'domid': domid,
+              'power_state': status,
+              'blocked_operations': {},
+              'resident_on': resident_on}
+    vm_rec.update(kwargs.copy())
     vm_ref = _create_object('VM', vm_rec)
     after_VM_create(vm_ref, vm_rec)
     return vm_ref
 
 
+@add_to_dict(_destroy_functions)
 def destroy_vm(vm_ref):
     vm_rec = _db_content['VM'][vm_ref]
 
@@ -148,6 +161,7 @@ def destroy_vm(vm_ref):
     del _db_content['VM'][vm_ref]
 
 
+@add_to_dict(_destroy_functions)
 def destroy_vbd(vbd_ref):
     vbd_rec = _db_content['VBD'][vbd_ref]
 
@@ -162,6 +176,7 @@ def destroy_vbd(vbd_ref):
     del _db_content['VBD'][vbd_ref]
 
 
+@add_to_dict(_destroy_functions)
 def destroy_vdi(vdi_ref):
     vdi_rec = _db_content['VDI'][vdi_ref]
 
@@ -195,6 +210,7 @@ def create_vdi(name_label, sr_ref, **kwargs):
     return vdi_ref
 
 
+@add_to_dict(_after_create_functions)
 def after_VDI_create(vdi_ref, vdi_rec):
     vdi_rec.setdefault('VBDs', [])
 
@@ -213,6 +229,7 @@ def create_vbd(vm_ref, vdi_ref, userdevice=0, other_config=None):
     return vbd_ref
 
 
+@add_to_dict(_after_create_functions)
 def after_VBD_create(vbd_ref, vbd_rec):
     """Create read-only fields and backref from VM and VDI to VBD when VBD
     is created.
@@ -234,6 +251,7 @@ def after_VBD_create(vbd_ref, vbd_rec):
         vdi_rec['VBDs'].append(vbd_ref)
 
 
+@add_to_dict(_after_create_functions)
 def after_VIF_create(vif_ref, vif_rec):
     """Create backref from VM to VIF when VIF is created.
     """
@@ -242,9 +260,10 @@ def after_VIF_create(vif_ref, vif_rec):
     vm_rec['VIFs'].append(vif_ref)
 
 
+@add_to_dict(_after_create_functions)
 def after_VM_create(vm_ref, vm_rec):
     """Create read-only fields in the VM record."""
-    vm_rec.setdefault('domid', -1)
+    vm_rec.setdefault('domid', "-1")
     vm_rec.setdefault('is_control_domain', False)
     vm_rec.setdefault('is_a_template', False)
     vm_rec.setdefault('memory_static_max', str(8 * units.Gi))
@@ -331,8 +350,8 @@ def _create_local_pif(host_ref):
 
 
 def _create_object(table, obj):
-    ref = str(uuid.uuid4())
-    obj['uuid'] = str(uuid.uuid4())
+    ref = uuidutils.generate_uuid()
+    obj['uuid'] = uuidutils.generate_uuid()
     _db_content[table][ref] = obj
     return ref
 
@@ -494,7 +513,7 @@ class SessionBase(object):
         if rec['currently_attached']:
             raise Failure(['DEVICE_ALREADY_ATTACHED', ref])
         rec['currently_attached'] = True
-        rec['device'] = rec['userdevice']
+        rec['device'] = 'fakedev'
 
     def VBD_unplug(self, _1, ref):
         rec = get_record('VBD', ref)
@@ -663,7 +682,6 @@ class SessionBase(object):
         assert vdi_ref
         return pickle.dumps(None)
 
-    _plugin_glance_upload_vhd = _plugin_pickle_noop
     _plugin_glance_upload_vhd2 = _plugin_pickle_noop
     _plugin_kernel_copy_vdi = _plugin_noop
     _plugin_kernel_create_kernel_ramdisk = _plugin_noop
@@ -758,15 +776,21 @@ class SessionBase(object):
         dom_id = args["dom_id"]
         if dom_id == 0:
             raise Failure('Guest does not have a console')
-        return base64.b64encode(zlib.compress("dom_id: %s" % dom_id))
+        return base64.b64encode(
+            zlib.compress(("dom_id: %s" % dom_id).encode('utf-8')))
 
     def _plugin_nova_plugin_version_get_version(self, method, args):
-        return pickle.dumps("1.3")
+        return pickle.dumps("1.8")
 
     def _plugin_xenhost_query_gc(self, method, args):
         return pickle.dumps("False")
 
+    def _plugin_partition_utils_make_partition(self, method, args):
+        return pickle.dumps(None)
+
     def host_call_plugin(self, _1, _2, plugin, method, args):
+        plugin = plugin.rstrip('.py')
+
         func = getattr(self, '_plugin_%s_%s' % (plugin, method), None)
         if not func:
             raise Exception('No simulation in host_call_plugin for %s,%s' %
@@ -788,7 +812,7 @@ class SessionBase(object):
             raise Failure(['VM_BAD_POWER_STATE',
                 'fake-opaque-ref', db_ref['power_state'].lower(), 'halted'])
         db_ref['power_state'] = 'Running'
-        db_ref['domid'] = random.randrange(1, 1 << 16)
+        db_ref['domid'] = '%d' % (random.randrange(1, 1 << 16))
 
     def VM_clean_reboot(self, session, vm_ref):
         return self._VM_reboot(session, vm_ref)
@@ -799,7 +823,7 @@ class SessionBase(object):
     def VM_hard_shutdown(self, session, vm_ref):
         db_ref = _db_content['VM'][vm_ref]
         db_ref['power_state'] = 'Halted'
-        db_ref['domid'] = -1
+        db_ref['domid'] = "-1"
     VM_clean_shutdown = VM_hard_shutdown
 
     def VM_suspend(self, session, vm_ref):
@@ -852,8 +876,8 @@ class SessionBase(object):
             return meth(*full_params)
 
     def _login(self, method, params):
-        self._session = str(uuid.uuid4())
-        _session_info = {'uuid': str(uuid.uuid4()),
+        self._session = uuidutils.generate_uuid()
+        _session_info = {'uuid': uuidutils.generate_uuid(),
                          'this_host': list(_db_content['host'])[0]}
         _db_content['session'][self._session] = _session_info
 
@@ -994,8 +1018,12 @@ class SessionBase(object):
 
         # Call hook to provide any fixups needed (ex. creating backrefs)
         after_hook = 'after_%s_create' % cls
-        if after_hook in globals():
-            globals()[after_hook](ref, params[1])
+        try:
+            func = _after_create_functions[after_hook]
+        except KeyError:
+            pass
+        else:
+            func(ref, params[1])
 
         obj = get_record(cls, ref)
 
@@ -1013,7 +1041,7 @@ class SessionBase(object):
             raise Failure(['HANDLE_INVALID', table, ref])
 
         # Call destroy function (if exists)
-        destroy_func = globals().get('destroy_%s' % table.lower())
+        destroy_func = _destroy_functions.get('destroy_%s' % table.lower())
         if destroy_func:
             destroy_func(ref)
         else:

@@ -28,18 +28,16 @@ from oslo_log import log as logging
 from oslo_utils import excutils
 from six.moves import range
 
-from nova import block_device
 import nova.conf
 from nova import exception
-from nova.i18n import _, _LE, _LW
+from nova.i18n import _, _LE, _LI, _LW
 from nova import utils
 from nova.virt import driver
+from nova.virt.hyperv import constants
 
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
-CONF.import_opt('host', 'nova.netconf')
-CONF.import_opt('my_ip', 'nova.netconf')
 
 
 class VolumeOps(object):
@@ -61,14 +59,8 @@ class VolumeOps(object):
             raise exception.VolumeDriverNotFound(driver_type=driver_type)
         return self.volume_drivers[driver_type]
 
-    def attach_volumes(self, block_device_info, instance_name, ebs_root):
-        mapping = driver.block_device_info_get_mapping(block_device_info)
-
-        if ebs_root:
-            self.attach_volume(mapping[0]['connection_info'],
-                               instance_name, True)
-            mapping = mapping[1:]
-        for vol in mapping:
+    def attach_volumes(self, volumes, instance_name):
+        for vol in volumes:
             self.attach_volume(vol['connection_info'], instance_name)
 
     def disconnect_volumes(self, block_device_info):
@@ -79,23 +71,22 @@ class VolumeOps(object):
             volume_driver = self._get_volume_driver(driver_type)
             volume_driver.disconnect_volumes(block_device_mapping)
 
-    def attach_volume(self, connection_info, instance_name, ebs_root=False):
+    def attach_volume(self, connection_info, instance_name,
+                      disk_bus=constants.CTRL_TYPE_SCSI):
         volume_driver = self._get_volume_driver(
             connection_info=connection_info)
-        volume_driver.attach_volume(connection_info, instance_name, ebs_root)
+        volume_driver.attach_volume(connection_info, instance_name,
+                                    disk_bus=disk_bus)
+
+        qos_specs = connection_info['data'].get('qos_specs') or {}
+        if qos_specs:
+            volume_driver.set_disk_qos_specs(connection_info,
+                                             qos_specs)
 
     def detach_volume(self, connection_info, instance_name):
         volume_driver = self._get_volume_driver(
             connection_info=connection_info)
         volume_driver.detach_volume(connection_info, instance_name)
-
-    def ebs_root_in_block_devices(self, block_device_info):
-        if block_device_info:
-            root_device = block_device_info.get('root_device_name')
-            if not root_device:
-                root_device = self._default_root_device
-            return block_device.volume_in_mapping(root_device,
-                                                  block_device_info)
 
     def fix_instance_volume_disk_paths(self, instance_name, block_device_info):
         # Mapping containing the current disk paths for each volume.
@@ -160,6 +151,26 @@ class VolumeOps(object):
             connection_info=connection_info)
         return volume_driver.get_mounted_disk_path_from_volume(
             connection_info)
+
+    @staticmethod
+    def bytes_per_sec_to_iops(no_bytes):
+        # Hyper-v uses normalized IOPS (8 KB increments)
+        # as IOPS allocation units.
+        return (
+            (no_bytes + constants.IOPS_BASE_SIZE - 1) //
+            constants.IOPS_BASE_SIZE)
+
+    @staticmethod
+    def validate_qos_specs(qos_specs, supported_qos_specs):
+        unsupported_specs = set(qos_specs.keys()).difference(
+            supported_qos_specs)
+        if unsupported_specs:
+            msg = (_LW('Got unsupported QoS specs: '
+                       '%(unsupported_specs)s. '
+                       'Supported qos specs: %(supported_qos_specs)s') %
+                   {'unsupported_specs': unsupported_specs,
+                    'supported_qos_specs': supported_qos_specs})
+            LOG.warning(msg)
 
 
 class ISCSIVolumeDriver(object):
@@ -232,7 +243,8 @@ class ISCSIVolumeDriver(object):
         return self._get_mounted_disk_from_lun(target_iqn, target_lun,
                                                wait_for_device=True)
 
-    def attach_volume(self, connection_info, instance_name, ebs_root=False):
+    def attach_volume(self, connection_info, instance_name,
+                      disk_bus=constants.CTRL_TYPE_SCSI):
         """Attach a volume to the SCSI controller or to the IDE controller if
         ebs_root is True
         """
@@ -248,7 +260,7 @@ class ISCSIVolumeDriver(object):
             mounted_disk_path = self.get_mounted_disk_path_from_volume(
                 connection_info)
 
-            if ebs_root:
+            if disk_bus == constants.CTRL_TYPE_IDE:
                 # Find the IDE controller for the vm.
                 ctrller_path = self._vmutils.get_vm_ide_controller(
                     instance_name, 0)
@@ -338,6 +350,10 @@ class ISCSIVolumeDriver(object):
     def initialize_volume_connection(self, connection_info):
         self.login_storage_target(connection_info)
 
+    def set_disk_qos_specs(self, connection_info, disk_qos_specs):
+        LOG.info(_LI("The iSCSI Hyper-V volume driver does not support QoS. "
+                     "Ignoring QoS specs."))
+
 
 def export_path_synchronized(f):
     def wrapper(inst, connection_info, *args, **kwargs):
@@ -361,13 +377,14 @@ class SMBFSVolumeDriver(object):
         return self._get_disk_path(connection_info)
 
     @export_path_synchronized
-    def attach_volume(self, connection_info, instance_name, ebs_root=False):
+    def attach_volume(self, connection_info, instance_name,
+                      disk_bus=constants.CTRL_TYPE_SCSI):
         self.ensure_share_mounted(connection_info)
 
         disk_path = self._get_disk_path(connection_info)
 
         try:
-            if ebs_root:
+            if disk_bus == constants.CTRL_TYPE_IDE:
                 ctrller_path = self._vmutils.get_vm_ide_controller(
                     instance_name, 0)
                 slot = 0
@@ -451,3 +468,16 @@ class SMBFSVolumeDriver(object):
         def unmount_synchronized():
             self._smbutils.unmount_smb_share(export_path)
         unmount_synchronized()
+
+    def set_disk_qos_specs(self, connection_info, qos_specs):
+        supported_qos_specs = ['total_iops_sec', 'total_bytes_sec']
+        VolumeOps.validate_qos_specs(qos_specs, supported_qos_specs)
+
+        total_bytes_sec = int(qos_specs.get('total_bytes_sec') or 0)
+        total_iops_sec = int(qos_specs.get('total_iops_sec') or
+                             VolumeOps.bytes_per_sec_to_iops(
+                                total_bytes_sec))
+
+        if total_iops_sec:
+            disk_path = self._get_disk_path(connection_info)
+            self._vmutils.set_disk_qos_specs(disk_path, total_iops_sec)

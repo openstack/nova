@@ -24,9 +24,6 @@ class NoOpEncryptor(base.VolumeEncryptor):
     volume. This implementation performs no action when a volume is attached
     or detached.
     """
-    def __init__(self, connection_info, **kwargs):
-        super(NoOpEncryptor, self).__init__(connection_info, **kwargs)
-
     def attach_volume(self, context):
         pass
 

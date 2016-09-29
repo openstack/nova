@@ -49,11 +49,14 @@ DISK = "VHD"
 DISK_FORMAT = DISK
 DVD = "DVD"
 DVD_FORMAT = "ISO"
+VOLUME = "VOLUME"
 
 DISK_FORMAT_MAP = {
     DISK_FORMAT.lower(): DISK,
     DVD_FORMAT.lower(): DVD
 }
+
+BDI_DEVICE_TYPE_TO_DRIVE_TYPE = {'disk': DISK}
 
 DISK_FORMAT_VHD = "VHD"
 DISK_FORMAT_VHDX = "VHDX"
@@ -62,6 +65,7 @@ HOST_POWER_ACTION_SHUTDOWN = "shutdown"
 HOST_POWER_ACTION_REBOOT = "reboot"
 HOST_POWER_ACTION_STARTUP = "startup"
 
+FLAVOR_SPEC_SECURE_BOOT = "os:secure_boot"
 IMAGE_PROP_VM_GEN_1 = "hyperv-gen1"
 IMAGE_PROP_VM_GEN_2 = "hyperv-gen2"
 
@@ -69,3 +73,16 @@ VM_GEN_1 = 1
 VM_GEN_2 = 2
 
 SERIAL_CONSOLE_BUFFER_SIZE = 4 * units.Ki
+
+SERIAL_PORT_TYPE_RO = 'ro'
+SERIAL_PORT_TYPE_RW = 'rw'
+
+# The default serial console port number used for
+# logging and interactive sessions.
+DEFAULT_SERIAL_CONSOLE_PORT = 1
+
+FLAVOR_ESPEC_REMOTEFX_RES = 'os:resolution'
+FLAVOR_ESPEC_REMOTEFX_MONITORS = 'os:monitors'
+FLAVOR_ESPEC_REMOTEFX_VRAM = 'os:vram'
+
+IOPS_BASE_SIZE = 8 * units.Ki

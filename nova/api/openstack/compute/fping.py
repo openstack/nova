@@ -17,30 +17,29 @@
 import itertools
 import os
 
-from oslo_config import cfg
 import six
 from webob import exc
 
+from nova.api.openstack.api_version_request \
+    import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
+import nova.conf
 from nova.i18n import _
+from nova.policies import fping as fping_policies
 from nova import utils
 
 ALIAS = "os-fping"
 
-authorize = extensions.os_compute_authorizer(ALIAS)
-
-CONF = cfg.CONF
-CONF.import_opt('fping_path', 'nova.api.openstack.compute.legacy_v2.contrib.'
-                'fping')
+CONF = nova.conf.CONF
 
 
 class FpingController(wsgi.Controller):
 
     def __init__(self, network_api=None):
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
         self.last_call = {}
 
     def check_fping(self):
@@ -70,14 +69,15 @@ class FpingController(wsgi.Controller):
             ret += [ip["address"] for ip in all_ips]
         return ret
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(503)
     def index(self, req):
         context = req.environ["nova.context"]
         search_opts = dict(deleted=False)
         if "all_tenants" in req.GET:
-            authorize(context, action='all_tenants')
+            context.can(fping_policies.POLICY_ROOT % 'all_tenants')
         else:
-            authorize(context)
+            context.can(fping_policies.BASE_POLICY_NAME)
             if context.project_id:
                 search_opts["project_id"] = context.project_id
             else:
@@ -96,7 +96,7 @@ class FpingController(wsgi.Controller):
                 exclude = set()
 
         instance_list = self.compute_api.get_all(
-            context, search_opts=search_opts, want_objects=True)
+            context, search_opts=search_opts)
         ip_list = []
         instance_ips = {}
         instance_projects = {}
@@ -120,10 +120,11 @@ class FpingController(wsgi.Controller):
             })
         return {"servers": res}
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((404, 503))
     def show(self, req, id):
         context = req.environ["nova.context"]
-        authorize(context)
+        context.can(fping_policies.BASE_POLICY_NAME)
         self.check_fping()
         instance = common.get_instance(self.compute_api, context, id)
         ips = [str(ip) for ip in self._get_instance_ips(context, instance)]

@@ -12,27 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 from nova.compute import api as compute_api
 from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.unit.image import fake
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
-
 
 class PreserveEphemeralOnRebuildJsonTest(test_servers.ServersSampleBase):
-    extension_name = 'os-preserve-ephemeral-rebuild'
-
-    def _get_flags(self):
-        f = super(PreserveEphemeralOnRebuildJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.preserve_ephemeral_rebuild.'
-            'Preserve_ephemeral_rebuild')
-        return f
+    sample_dir = 'os-preserve-ephemeral-rebuild'
 
     def _test_server_rebuild_preserve_ephemeral(self, value, resp_tpl=None):
         uuid = self._post_server()

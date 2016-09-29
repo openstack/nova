@@ -13,12 +13,13 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from oslo_config import cfg
+
 from oslo_serialization import jsonutils
 from six.moves import range
 
 from nova.compute import api as compute_api
 from nova.compute import manager as compute_manager
+import nova.conf
 import nova.context
 from nova import db
 from nova import exception
@@ -36,8 +37,7 @@ from nova.tests import uuidsentinel as uuids
 
 
 HOST = "testhost"
-CONF = cfg.CONF
-CONF.import_opt('use_ipv6', 'nova.netconf')
+CONF = nova.conf.CONF
 
 
 class FakeModel(dict):
@@ -453,11 +453,11 @@ def _get_instances_with_cached_ips(orig_func, *args, **kwargs):
     if isinstance(instances, (list, obj_base.ObjectListBase)):
         for instance in instances:
             _info_cache_for(instance)
-            fake_device.claim(instance)
+            fake_device.claim(instance.uuid)
             fake_device.allocate(instance)
     else:
         _info_cache_for(instances)
-        fake_device.claim(instances)
+        fake_device.claim(instances.uuid)
         fake_device.allocate(instances)
     return instances
 
@@ -469,7 +469,7 @@ def _create_instances_with_cached_ips(orig_func, *args, **kwargs):
     instances, reservation_id = orig_func(*args, **kwargs)
     fake_cache = _get_fake_cache()
     for instance in instances:
-        instance['info_cache']['network_info'] = fake_cache
+        instance['info_cache'].network_info = fake_cache
         db.instance_info_cache_update(args[1], instance['uuid'],
                                       {'network_info': fake_cache})
     return (instances, reservation_id)

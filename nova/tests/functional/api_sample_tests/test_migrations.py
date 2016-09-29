@@ -15,15 +15,9 @@
 
 import datetime
 
-from oslo_config import cfg
-
 from nova import context
 from nova import objects
 from nova.tests.functional.api_sample_tests import api_sample_base
-
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 # NOTE(ShaoHe Feng) here I can not use uuidsentinel, it generate a random
@@ -32,62 +26,56 @@ INSTANCE_UUID_1 = "8600d31b-d1a1-4632-b2ff-45c2be1a70ff"
 INSTANCE_UUID_2 = "9128d044-7b61-403e-b766-7547076ff6c1"
 
 
+def _stub_migrations(stub_self, context, filters):
+    fake_migrations = [
+        {
+            'id': 1234,
+            'source_node': 'node1',
+            'dest_node': 'node2',
+            'source_compute': 'compute1',
+            'dest_compute': 'compute2',
+            'dest_host': '1.2.3.4',
+            'status': 'Done',
+            'instance_uuid': 'instance_id_123',
+            'old_instance_type_id': 1,
+            'new_instance_type_id': 2,
+            'migration_type': 'resize',
+            'hidden': False,
+            'created_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
+            'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
+            'deleted_at': None,
+            'deleted': False
+        },
+        {
+            'id': 5678,
+            'source_node': 'node10',
+            'dest_node': 'node20',
+            'source_compute': 'compute10',
+            'dest_compute': 'compute20',
+            'dest_host': '5.6.7.8',
+            'status': 'Done',
+            'instance_uuid': 'instance_id_456',
+            'old_instance_type_id': 5,
+            'new_instance_type_id': 6,
+            'migration_type': 'resize',
+            'hidden': False,
+            'created_at': datetime.datetime(2013, 10, 22, 13, 42, 2),
+            'updated_at': datetime.datetime(2013, 10, 22, 13, 42, 2),
+            'deleted_at': None,
+            'deleted': False
+        }
+    ]
+    return fake_migrations
+
+
 class MigrationsSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-migrations"
-
-    def _get_flags(self):
-        f = super(MigrationsSamplesJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.migrations.Migrations')
-        return f
-
-    def _stub_migrations(self, context, filters):
-        fake_migrations = [
-            {
-                'id': 1234,
-                'source_node': 'node1',
-                'dest_node': 'node2',
-                'source_compute': 'compute1',
-                'dest_compute': 'compute2',
-                'dest_host': '1.2.3.4',
-                'status': 'Done',
-                'instance_uuid': 'instance_id_123',
-                'old_instance_type_id': 1,
-                'new_instance_type_id': 2,
-                'migration_type': 'resize',
-                'hidden': False,
-                'created_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
-                'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
-                'deleted_at': None,
-                'deleted': False
-            },
-            {
-                'id': 5678,
-                'source_node': 'node10',
-                'dest_node': 'node20',
-                'source_compute': 'compute10',
-                'dest_compute': 'compute20',
-                'dest_host': '5.6.7.8',
-                'status': 'Done',
-                'instance_uuid': 'instance_id_456',
-                'old_instance_type_id': 5,
-                'new_instance_type_id': 6,
-                'migration_type': 'resize',
-                'hidden': False,
-                'created_at': datetime.datetime(2013, 10, 22, 13, 42, 2),
-                'updated_at': datetime.datetime(2013, 10, 22, 13, 42, 2),
-                'deleted_at': None,
-                'deleted': False
-            }
-        ]
-        return fake_migrations
+    sample_dir = "os-migrations"
 
     def setUp(self):
         super(MigrationsSamplesJsonTest, self).setUp()
         self.stub_out('nova.compute.api.API.get_migrations',
-                      self._stub_migrations)
+                      _stub_migrations)
 
     def test_get_migrations(self):
         response = self._do_get('os-migrations')
@@ -98,7 +86,7 @@ class MigrationsSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
 class MigrationsSamplesJsonTestV2_23(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-migrations"
+    sample_dir = "os-migrations"
     microversion = '2.23'
     scenarios = [('v2_23', {'api_major_version': 'v2.1'})]
 

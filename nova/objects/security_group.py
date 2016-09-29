@@ -18,10 +18,8 @@ from nova.objects import base
 from nova.objects import fields
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register
-class SecurityGroup(base.NovaPersistentObject, base.NovaObject,
-                    base.NovaObjectDictCompat):
+class SecurityGroup(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: String attributes updated to support unicode
     VERSION = '1.1'
@@ -38,7 +36,7 @@ class SecurityGroup(base.NovaPersistentObject, base.NovaObject,
     def _from_db_object(context, secgroup, db_secgroup):
         # NOTE(danms): These are identical right now
         for field in secgroup.fields:
-            secgroup[field] = db_secgroup[field]
+            setattr(secgroup, field, db_secgroup[field])
         secgroup._context = context
         secgroup.obj_reset_changes()
         return secgroup

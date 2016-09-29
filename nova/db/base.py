@@ -16,22 +16,12 @@
 
 """Base class for classes that need modular database access."""
 
-from oslo_config import cfg
 from oslo_utils import importutils
 
-# NOTE(sdague): we know of at least 1 instance of out of tree usage
-# for this config in RAX. They used this because of performance issues
-# with some queries. We think the right path forward is fixing the
-# SQLA queries to be more performant for everyone.
-db_driver_opt = cfg.StrOpt(
-    'db_driver',
-    default='nova.db',
-    help='DEPRECATED: The driver to use for database access',
-    deprecated_for_removal=True)
+import nova.conf
 
 
-CONF = cfg.CONF
-CONF.register_opt(db_driver_opt)
+CONF = nova.conf.CONF
 
 
 class Base(object):

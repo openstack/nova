@@ -18,6 +18,7 @@ import tempfile
 import fixtures
 import mock
 from oslo_concurrency import processutils
+from oslo_utils import units
 
 from nova import test
 from nova import utils
@@ -175,6 +176,24 @@ class APITestCase(test.NoDBTestCase):
         mock_execute.assert_called_once_with('qemu-img', 'resize', imgfile,
                                              imgsize)
         self.assertFalse(mock_extendable.called)
+
+    @mock.patch.object(api, 'can_resize_image', return_value=True)
+    @mock.patch.object(utils, 'execute')
+    def test_extend_ploop(self, mock_execute, mock_can_resize_image):
+        imgfile = tempfile.NamedTemporaryFile()
+        self.addCleanup(imgfile.close)
+        imgsize = 10 * units.Gi
+        imgsize_mb = str(imgsize // units.Mi) + 'M'
+        image = imgmodel.LocalFileImage(imgfile, imgmodel.FORMAT_PLOOP)
+
+        api.extend(image, imgsize)
+        mock_can_resize_image.assert_called_once_with(image.path,
+                                                      imgsize)
+        mock_execute.assert_called_once_with('prl_disk_tool', 'resize',
+                                             '--size', imgsize_mb,
+                                             '--resize_partition',
+                                             '--hdd', imgfile,
+                                             run_as_root=True)
 
     def test_extend_raw_success(self):
         imgfile = tempfile.NamedTemporaryFile()

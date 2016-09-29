@@ -15,6 +15,7 @@
 import mock
 
 from nova import objects
+from nova.objects import network_request
 from nova.tests.unit.objects import test_objects
 
 
@@ -27,10 +28,14 @@ class _TestNetworkRequestObject(object):
         request.network_id = '456'
         request.address = '1.2.3.4'
         request.port_id = FAKE_UUID
+        self.assertFalse(request.auto_allocate)
+        self.assertFalse(request.no_allocate)
 
     def test_load(self):
         request = objects.NetworkRequest()
         self.assertIsNone(request.port_id)
+        self.assertFalse(request.auto_allocate)
+        self.assertFalse(request.no_allocate)
 
     def test_to_tuple_neutron(self):
         request = objects.NetworkRequest(network_id='123',
@@ -86,6 +91,50 @@ class _TestNetworkRequestObject(object):
         requests = objects.NetworkRequestList(
             objects=[objects.NetworkRequest()])
         self.assertTrue(requests.is_single_unspecified)
+
+    def test_auto_allocate(self):
+        # no objects
+        requests = objects.NetworkRequestList()
+        self.assertFalse(requests.auto_allocate)
+        # single object with network uuid
+        requests = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id=FAKE_UUID)])
+        self.assertFalse(requests.auto_allocate)
+        # multiple objects
+        requests = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(),
+                     objects.NetworkRequest()])
+        self.assertFalse(requests.auto_allocate)
+        # single object, 'auto' case
+        requests = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(
+                network_id=network_request.NETWORK_ID_AUTO)])
+        self.assertTrue(requests.auto_allocate)
+
+    def test_no_allocate(self):
+        # no objects
+        requests = objects.NetworkRequestList()
+        self.assertFalse(requests.no_allocate)
+        # single object with network uuid
+        requests = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id=FAKE_UUID)])
+        self.assertFalse(requests.no_allocate)
+        # multiple objects
+        requests = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(),
+                     objects.NetworkRequest()])
+        self.assertFalse(requests.no_allocate)
+        # single object, 'none' case
+        requests = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(
+                network_id=network_request.NETWORK_ID_NONE)])
+        self.assertTrue(requests.no_allocate)
+
+    def test_obj_make_compatible_pre_1_2(self):
+        net_req = objects.NetworkRequest()
+        net_req.tag = 'foo'
+        primitive = net_req.obj_to_primitive(target_version='1.1')
+        self.assertNotIn('tag', primitive)
 
 
 class TestNetworkRequestObject(test_objects._LocalTest,

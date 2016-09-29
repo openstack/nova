@@ -1,0 +1,6 @@
+---
+deprecations:
+  - |
+    The config option ``snapshot_name_template`` in the ``DEFAULT`` group
+    is now deprecated and may be removed as early as the 15.0.0 release.
+    The code which used this option isn't used anymore since late 2012.

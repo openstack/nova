@@ -1,36 +1,41 @@
 .. -*- rst -*-
-.. needs:method_verification
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
-==========================
- Cloudpipe (os-cloudpipe)
-==========================
+======================================
+ Cloudpipe (os-cloudpipe) (DEPRECATED)
+======================================
+
+.. warning::
+
+   This API only works with ``nova-network`` which is
+   deprecated in favor of Neutron. It should be avoided
+   in any new applications.
 
 Manages virtual VPNs for projects.
 
 List Cloudpipes
 ===============
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-cloudpipe
+.. rest_method:: GET /os-cloudpipe
 
 Lists cloudpipes.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound (404)
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - cloudpipes: cloudpipes
+  - created_at: created
+  - instance_id: instance_id_cloudpipe
+  - internal_ip: fixed_ip
+  - project_id: project_id_instance_action
+  - public_ip: vpn_public_ip_resp
+  - public_port: vpn_public_port_resp
+  - state: vpn_state
 
 **Example List Cloudpipes: JSON response**
 
@@ -40,21 +45,20 @@ Response
 Create Cloudpipe
 ================
 
-.. rest_method:: POST /v2.1/{tenant_id}/os-cloudpipe
+.. rest_method:: POST /os-cloudpipe
 
 Creates a cloudpipe.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400),unauthorized(401), forbidden(403)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+  - cloudpipe: cloudpipe
   - project_id: project_id
 
 **Example Create Cloudpipe: JSON request**
@@ -65,6 +69,10 @@ Request
 Response
 --------
 
+.. rest_parameters:: parameters.yaml
+
+  - instance_id: instance_id_cloudpipe
+
 **Example Create Cloudpipe: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-cloudpipe/cloud-pipe-create-resp.json
@@ -73,23 +81,22 @@ Response
 Update Cloudpipe
 ================
 
-.. rest_method:: POST /v2.1/{tenant_id}/os-cloudpipe/configure-project
+.. rest_method:: PUT /os-cloudpipe/configure-project
 
 Updates the virtual private network (VPN) IP address and port for a cloudpipe instance.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - vpn_ip: vpn_ip
-  - vpn_port: vpn_port
+  - configure_project: configure_project_cloudpipe
+  - vpn_ip: vpn_public_ip
+  - vpn_port: vpn_public_port
 
 **Example Update Cloudpipe: JSON request**
 
@@ -99,3 +106,4 @@ Request
 Response
 --------
 
+There is no body content for the response of a successful PUT request

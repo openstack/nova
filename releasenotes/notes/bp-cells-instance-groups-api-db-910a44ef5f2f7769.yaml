@@ -1,0 +1,6 @@
+---
+upgrade:
+  - The nova-manage db online_data_migrations command will now migrate server
+    groups to the API database. New server groups will be automatically created
+    in the API database but existing server groups must be manually migrated
+    using the nova-manage command.

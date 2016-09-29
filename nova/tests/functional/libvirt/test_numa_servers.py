@@ -13,15 +13,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
-
 import fixtures
+import mock
 from oslo_config import cfg
 from oslo_log import log as logging
 
 from nova import test
 from nova.tests.functional.test_servers import ServersTestBase
 from nova.tests.unit import fake_network
+from nova.tests.unit.virt.libvirt import fake_imagebackend
 from nova.tests.unit.virt.libvirt import fake_libvirt_utils
 from nova.tests.unit.virt.libvirt import fakelibvirt
 
@@ -59,6 +59,7 @@ class NUMAServersTest(ServersTestBase):
         super(NUMAServersTest, self).setUp()
 
         # Replace libvirt with fakelibvirt
+        self.useFixture(fake_imagebackend.ImageBackendFixture())
         self.useFixture(fixtures.MonkeyPatch(
            'nova.virt.libvirt.driver.libvirt_utils',
            fake_libvirt_utils))
@@ -122,8 +123,7 @@ class NUMAServersTest(ServersTestBase):
         host_pass_mock = mock.Mock(wraps=numa_filter_class().host_passes)
         return host_pass_mock
 
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
-    def test_create_server_with_numa_topology(self, img_mock):
+    def test_create_server_with_numa_topology(self):
 
         host_info = NumaHostInfo(cpu_nodes=2, cpu_sockets=1, cpu_cores=2,
                                  cpu_threads=2, kB_mem=15740000)
@@ -145,8 +145,7 @@ class NUMAServersTest(ServersTestBase):
                                                        filter_mock):
             self._run_build_test(flavor_id, filter_mock)
 
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
-    def test_create_server_with_numa_fails(self, img_mock):
+    def test_create_server_with_numa_fails(self):
 
         host_info = NumaHostInfo(cpu_nodes=1, cpu_sockets=1, cpu_cores=2,
                                  kB_mem=15740000)

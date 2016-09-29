@@ -15,15 +15,17 @@
 
 from ironicclient import client as ironic_client
 from ironicclient import exc as ironic_exception
+import keystoneauth1.session
 import mock
 from oslo_config import cfg
 
+import nova.conf
 from nova import exception
 from nova import test
 from nova.tests.unit.virt.ironic import utils as ironic_utils
 from nova.virt.ironic import client_wrapper
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 
 FAKE_CLIENT = ironic_utils.FakeClient()
 
@@ -59,55 +61,51 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
         mock_multi_getattr.return_value.assert_called_once_with(
             'test', associated=True)
 
+    @mock.patch.object(keystoneauth1.session, 'Session')
     @mock.patch.object(ironic_client, 'get_client')
-    def test__get_client_no_auth_token(self, mock_ir_cli):
-        self.flags(admin_auth_token=None, group='ironic')
+    def test__get_client_session(self, mock_ir_cli, mock_session):
+        """An Ironicclient is called with a keystoneauth1 Session"""
+        mock_session.return_value = 'session'
         ironicclient = client_wrapper.IronicClientWrapper()
         # dummy call to have _get_client() called
         ironicclient.call("node.list")
-        expected = {'os_username': CONF.ironic.admin_username,
-                    'os_password': CONF.ironic.admin_password,
-                    'os_auth_url': CONF.ironic.admin_url,
-                    'os_tenant_name': CONF.ironic.admin_tenant_name,
-                    'os_service_type': 'baremetal',
-                    'os_endpoint_type': 'public',
-                    'ironic_url': CONF.ironic.api_endpoint,
+        expected = {'session': 'session',
                     'max_retries': CONF.ironic.api_max_retries,
                     'retry_interval': CONF.ironic.api_retry_interval,
-                    'os_ironic_api_version': '1.8'}
-        mock_ir_cli.assert_called_once_with(CONF.ironic.api_version,
-                                            **expected)
+                    'os_ironic_api_version': '1.21',
+                    'ironic_url': None}
+        mock_ir_cli.assert_called_once_with(1, **expected)
 
+    @mock.patch.object(keystoneauth1.session, 'Session')
+    @mock.patch.object(keystoneauth1.identity, 'V2Password')
     @mock.patch.object(ironic_client, 'get_client')
-    def test__get_client_with_auth_token(self, mock_ir_cli):
-        self.flags(admin_auth_token='fake-token', group='ironic')
+    def test__get_session_legacy(self, mock_ir_cli, mock_plugin, mock_session):
+        """Create a keystoneauth1 Session with a v2Password auth plugin."""
+        mock_plugin.return_value = 'v2password'
         ironicclient = client_wrapper.IronicClientWrapper()
         # dummy call to have _get_client() called
         ironicclient.call("node.list")
-        expected = {'os_auth_token': 'fake-token',
-                    'ironic_url': CONF.ironic.api_endpoint,
-                    'max_retries': CONF.ironic.api_max_retries,
-                    'retry_interval': CONF.ironic.api_retry_interval,
-                    'os_ironic_api_version': '1.8'}
-        mock_ir_cli.assert_called_once_with(CONF.ironic.api_version,
-                                            **expected)
+        expected = {'auth': 'v2password',
+                    'timeout': CONF.ironic.timeout,
+                    'cert': CONF.ironic.certfile,
+                    'verify': True}
+        mock_session.assert_called_once_with(**expected)
 
-    @mock.patch.object(ironic_client, 'get_client')
-    def test__get_client_cafile(self, mock_ir_cli):
-        self.flags(admin_auth_token='fake-token', group='ironic')
-        self.flags(cafile='fake-cafile', group='ironic')
+    @mock.patch.object(keystoneauth1.identity, 'V2Password')
+    @mock.patch.object(keystoneauth1.loading, 'load_auth_from_conf_options')
+    def test__get_auth_plugin_legacy(self, mock_loader, mock_v2password):
+        """The plugin loader fails to load an auth plugin from proper
+        parameters, returning None. Take the legacy path and load a v2Password
+        plugin from deprecated, legacy auth parameters.
+        """
         ironicclient = client_wrapper.IronicClientWrapper()
-        # dummy call to have _get_client() called
-        ironicclient.call("node.list")
-        expected = {'os_auth_token': 'fake-token',
-                    'ironic_url': CONF.ironic.api_endpoint,
-                    'max_retries': CONF.ironic.api_max_retries,
-                    'retry_interval': CONF.ironic.api_retry_interval,
-                    'os_ironic_api_version': '1.8',
-                    'os_cacert': 'fake-cafile',
-                    'ca_file': 'fake-cafile'}
-        mock_ir_cli.assert_called_once_with(CONF.ironic.api_version,
-                                            **expected)
+        mock_loader.return_value = None
+        ironicclient._get_auth_plugin()
+        auth = {'auth_url': CONF.ironic.admin_url,
+                'username': CONF.ironic.admin_username,
+                'password': CONF.ironic.admin_password,
+                'tenant_name': CONF.ironic.admin_tenant_name}
+        mock_v2password.assert_called_once_with(**auth)
 
     @mock.patch.object(client_wrapper.IronicClientWrapper, '_multi_getattr')
     @mock.patch.object(client_wrapper.IronicClientWrapper, '_get_client')

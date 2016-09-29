@@ -1,0 +1,6 @@
+---
+upgrade:
+  - The deprecated auth parameter `admin_auth_token`
+    was removed from the [ironic] config option group.
+    The use of `admin_auth_token` is insecure compared
+    to the use of a proper username/password.

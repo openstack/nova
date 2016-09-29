@@ -1,0 +1,13 @@
+---
+upgrade:
+  - A new nova-manage command has been added which will upgrade a deployment to
+    cells v2. Running the command will setup a single cell containing the
+    existing hosts and instances. No data or instances will be moved during
+    this operation, but new data will be added to the nova_api database.  New
+    instances booted after this point will be placed into the cell.  Please
+    note that this does not mean that cells v2 is fully functional at this
+    time, but this is a significant part of the effort to get there.
+    The new command is
+    "nova-manage cell_v2 simple_cell_setup --transport_url <transport_url>"
+    where transport_url is the connection information for the current message
+    queue used by Nova.

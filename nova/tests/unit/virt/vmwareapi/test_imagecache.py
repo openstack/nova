@@ -120,7 +120,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             self.assertIs(ds_browser, ret)
             self.assertIs(ds_browser, cache.get(moref.value))
 
-    def test_list_base_images(self):
+    def test_list_datastore_images(self):
         def fake_get_object_property(vim, mobj, property_name):
             return 'fake-ds-browser'
 

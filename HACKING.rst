@@ -26,8 +26,8 @@ Nova Specific Commandments
   assertIsInstance(A, B).
 - [N317] Change assertEqual(type(A), B) by optimal assert like
   assertIsInstance(A, B)
-- [N318] Change assertEqual(A, None) or assertEqual(None, A) by optimal assert like
-  assertIsNone(A)
+- [N318] Change assertEqual(A, None) or assertIs(A, None) to optimal assert
+  like assertIsNone(A)
 - [N319] Validate that debug level logs are not translated.
 - [N320] Setting CONF.* attributes directly in tests is forbidden. Use
   self.flags(option=value) instead.
@@ -37,6 +37,7 @@ Nova Specific Commandments
 - [N324] Ensure that jsonutils.%(fun)s must be used instead of json.%(fun)s
 - [N325] str() and unicode() cannot be used on an exception.  Remove use or use six.text_type()
 - [N326] Translated messages cannot be concatenated.  String should be included in translated message.
+- [N327] Do not use xrange(). xrange() is not compatible with Python 3. Use range() or six.moves.range() instead.
 - [N328] Validate that LOG.info messages use _LI.
 - [N329] Validate that LOG.exception messages use _LE.
 - [N330] Validate that LOG.warning and LOG.warn messages use _LW.
@@ -57,9 +58,11 @@ Nova Specific Commandments
 - [N344] Python 3: do not use dict.iteritems.
 - [N345] Python 3: do not use dict.iterkeys.
 - [N346] Python 3: do not use dict.itervalues.
-- [N347] Provide enough help text for config options
 - [N348] Deprecated library function os.popen()
 - [N349] Check for closures in tests which are not used
+- [N350] Policy registration should be in the central location ``nova/policies/``
+- [N351] Do not use the oslo_policy.policy.Enforcer.enforce() method.
+- [N352] LOG.warn is deprecated. Enforce use of LOG.warning.
 
 Creating Unit Tests
 -------------------

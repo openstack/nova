@@ -23,6 +23,7 @@ from nova import objects
 from nova import test
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import matchers
+from nova.tests import uuidsentinel as uuids
 
 
 class BlockDeviceTestCase(test.NoDBTestCase):
@@ -31,7 +32,7 @@ class BlockDeviceTestCase(test.NoDBTestCase):
         BDM = block_device.BlockDeviceDict
 
         self.new_mapping = [
-            BDM({'id': 1, 'instance_uuid': 'fake-instance',
+            BDM({'id': 1, 'instance_uuid': uuids.instance,
                  'device_name': '/dev/sdb1',
                  'source_type': 'blank',
                  'destination_type': 'local',
@@ -39,21 +40,21 @@ class BlockDeviceTestCase(test.NoDBTestCase):
                  'volume_size': 1,
                  'guest_format': 'swap',
                  'boot_index': -1}),
-            BDM({'id': 2, 'instance_uuid': 'fake-instance',
+            BDM({'id': 2, 'instance_uuid': uuids.instance,
                  'device_name': '/dev/sdc1',
                  'source_type': 'blank',
                  'destination_type': 'local',
                  'volume_size': 10,
                  'delete_on_termination': True,
                  'boot_index': -1}),
-            BDM({'id': 3, 'instance_uuid': 'fake-instance',
+            BDM({'id': 3, 'instance_uuid': uuids.instance,
                  'device_name': '/dev/sda1',
                  'source_type': 'volume',
                  'destination_type': 'volume',
                  'volume_id': 'fake-volume-id-1',
                  'connection_info': "{'fake': 'connection_info'}",
                  'boot_index': 0}),
-            BDM({'id': 4, 'instance_uuid': 'fake-instance',
+            BDM({'id': 4, 'instance_uuid': uuids.instance,
                  'device_name': '/dev/sda2',
                  'source_type': 'snapshot',
                  'destination_type': 'volume',
@@ -61,7 +62,7 @@ class BlockDeviceTestCase(test.NoDBTestCase):
                  'snapshot_id': 'fake-snapshot-id-1',
                  'volume_id': 'fake-volume-id-2',
                  'boot_index': -1}),
-            BDM({'id': 5, 'instance_uuid': 'fake-instance',
+            BDM({'id': 5, 'instance_uuid': uuids.instance,
                  'no_device': True,
                  'device_name': '/dev/vdc'}),
         ]
@@ -120,7 +121,8 @@ class BlockDeviceTestCase(test.NoDBTestCase):
             {'virtual': 'ephemeral2', 'device': '/dev/sde'}]
 
         prepended = block_device.mappings_prepend_dev(mapping)
-        self.assertEqual(expected.sort(), prepended.sort())
+        self.assertEqual(sorted(expected, key=lambda v: v['virtual']),
+                         sorted(prepended, key=lambda v: v['virtual']))
 
     def test_strip_dev(self):
         self.assertEqual('sda', block_device.strip_dev('/dev/sda'))
@@ -252,58 +254,58 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         BDM = block_device.BlockDeviceDict
 
         self.api_mapping = [
-            {'id': 1, 'instance_uuid': 'fake-instance',
+            {'id': 1, 'instance_uuid': uuids.instance,
              'device_name': '/dev/sdb1',
              'source_type': 'blank',
              'destination_type': 'local',
              'delete_on_termination': True,
              'guest_format': 'swap',
              'boot_index': -1},
-            {'id': 2, 'instance_uuid': 'fake-instance',
+            {'id': 2, 'instance_uuid': uuids.instance,
              'device_name': '/dev/sdc1',
              'source_type': 'blank',
              'destination_type': 'local',
              'delete_on_termination': True,
              'boot_index': -1},
-            {'id': 3, 'instance_uuid': 'fake-instance',
+            {'id': 3, 'instance_uuid': uuids.instance,
              'device_name': '/dev/sda1',
              'source_type': 'volume',
              'destination_type': 'volume',
              'uuid': 'fake-volume-id-1',
              'boot_index': 0},
-            {'id': 4, 'instance_uuid': 'fake-instance',
+            {'id': 4, 'instance_uuid': uuids.instance,
              'device_name': '/dev/sda2',
              'source_type': 'snapshot',
              'destination_type': 'volume',
              'uuid': 'fake-snapshot-id-1',
              'boot_index': -1},
-            {'id': 5, 'instance_uuid': 'fake-instance',
+            {'id': 5, 'instance_uuid': uuids.instance,
              'no_device': True,
              'device_name': '/dev/vdc'},
         ]
 
         self.new_mapping = [
-            BDM({'id': 1, 'instance_uuid': 'fake-instance',
+            BDM({'id': 1, 'instance_uuid': uuids.instance,
                  'device_name': '/dev/sdb1',
                  'source_type': 'blank',
                  'destination_type': 'local',
                  'delete_on_termination': True,
                  'guest_format': 'swap',
                  'boot_index': -1}),
-            BDM({'id': 2, 'instance_uuid': 'fake-instance',
+            BDM({'id': 2, 'instance_uuid': uuids.instance,
                  'device_name': '/dev/sdc1',
                  'source_type': 'blank',
                  'destination_type': 'local',
                  'delete_on_termination': True,
                  'boot_index': -1}),
-            BDM({'id': 3, 'instance_uuid': 'fake-instance',
+            BDM({'id': 3, 'instance_uuid': uuids.instance,
                  'device_name': '/dev/sda1',
                  'source_type': 'volume',
                  'destination_type': 'volume',
                  'volume_id': 'fake-volume-id-1',
                  'connection_info': "{'fake': 'connection_info'}",
                  'boot_index': 0}),
-            BDM({'id': 4, 'instance_uuid': 'fake-instance',
+            BDM({'id': 4, 'instance_uuid': uuids.instance,
                  'device_name': '/dev/sda2',
                  'source_type': 'snapshot',
                  'destination_type': 'volume',
@@ -311,43 +313,43 @@ class TestBlockDeviceDict(test.NoDBTestCase):
                  'snapshot_id': 'fake-snapshot-id-1',
                  'volume_id': 'fake-volume-id-2',
                  'boot_index': -1}),
-            BDM({'id': 5, 'instance_uuid': 'fake-instance',
+            BDM({'id': 5, 'instance_uuid': uuids.instance,
                  'no_device': True,
                  'device_name': '/dev/vdc'}),
         ]
 
         self.legacy_mapping = [
-            {'id': 1, 'instance_uuid': 'fake-instance',
+            {'id': 1, 'instance_uuid': uuids.instance,
              'device_name': '/dev/sdb1',
              'delete_on_termination': True,
              'virtual_name': 'swap'},
-            {'id': 2, 'instance_uuid': 'fake-instance',
+            {'id': 2, 'instance_uuid': uuids.instance,
              'device_name': '/dev/sdc1',
              'delete_on_termination': True,
              'virtual_name': 'ephemeral0'},
-            {'id': 3, 'instance_uuid': 'fake-instance',
+            {'id': 3, 'instance_uuid': uuids.instance,
              'device_name': '/dev/sda1',
              'volume_id': 'fake-volume-id-1',
              'connection_info': "{'fake': 'connection_info'}"},
-            {'id': 4, 'instance_uuid': 'fake-instance',
+            {'id': 4, 'instance_uuid': uuids.instance,
              'device_name': '/dev/sda2',
              'connection_info': "{'fake': 'connection_info'}",
              'snapshot_id': 'fake-snapshot-id-1',
              'volume_id': 'fake-volume-id-2'},
-            {'id': 5, 'instance_uuid': 'fake-instance',
+            {'id': 5, 'instance_uuid': uuids.instance,
              'no_device': True,
              'device_name': '/dev/vdc'},
         ]
 
         self.new_mapping_source_image = [
-            BDM({'id': 6, 'instance_uuid': 'fake-instance',
+            BDM({'id': 6, 'instance_uuid': uuids.instance,
                  'device_name': '/dev/sda3',
                  'source_type': 'image',
                  'destination_type': 'volume',
                  'connection_info': "{'fake': 'connection_info'}",
                  'volume_id': 'fake-volume-id-3',
                  'boot_index': -1}),
-            BDM({'id': 7, 'instance_uuid': 'fake-instance',
+            BDM({'id': 7, 'instance_uuid': uuids.instance,
                  'device_name': '/dev/sda4',
                  'source_type': 'image',
                  'destination_type': 'local',
@@ -357,7 +359,7 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         ]
 
         self.legacy_mapping_source_image = [
-            {'id': 6, 'instance_uuid': 'fake-instance',
+            {'id': 6, 'instance_uuid': uuids.instance,
              'device_name': '/dev/sda3',
              'connection_info': "{'fake': 'connection_info'}",
              'volume_id': 'fake-volume-id-3'},
@@ -411,7 +413,7 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         self.assertEqual('bar', dev_dict['field2'])
 
     def test_init_prepend_dev_to_device_name(self):
-        bdm = {'id': 3, 'instance_uuid': 'fake-instance',
+        bdm = {'id': 3, 'instance_uuid': uuids.instance,
                'device_name': 'vda',
                'source_type': 'volume',
                'destination_type': 'volume',
@@ -431,7 +433,7 @@ class TestBlockDeviceDict(test.NoDBTestCase):
     def test_init_boolify_delete_on_termination(self):
         # Make sure that when delete_on_termination is not passed it's
         # still set to False and not None
-        bdm = {'id': 3, 'instance_uuid': 'fake-instance',
+        bdm = {'id': 3, 'instance_uuid': uuids.instance,
                'device_name': 'vda',
                'source_type': 'volume',
                'destination_type': 'volume',
@@ -499,7 +501,9 @@ class TestBlockDeviceDict(test.NoDBTestCase):
             return [bdm for bdm in bdms if bdm['source_type'] == 'image']
 
         def _get_bootable_bdms(bdms):
-            return [bdm for bdm in bdms if bdm['boot_index'] >= 0]
+            return [bdm for bdm in bdms
+                    if (bdm['boot_index'] is not None and
+                        bdm['boot_index'] >= 0)]
 
         new_no_img = block_device.from_legacy_mapping(self.legacy_mapping)
         self.assertEqual(0, len(_get_image_bdms(new_no_img)))

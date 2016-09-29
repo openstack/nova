@@ -65,8 +65,8 @@ def main():
     options, days_old = _parse_args()
 
     if not os.path.exists(BASE):
-        print >> sys.stderr, "error: '%s' doesn't exist. Make sure you're"\
-                             " running this on the dom0." % BASE
+        sys.stderr.write("error: '%s' doesn't exist. Make sure you're"\
+                         " running this on the dom0." % BASE)
         sys.exit(1)
 
     lockpaths_removed = 0
@@ -89,8 +89,8 @@ def main():
                 removed += 1
 
                 if options.verbose:
-                    print 'Removing old lock: %03d %s' % (lock_age_days,
-                                                          lockpath)
+                    print('Removing old lock: %03d %s' % (lock_age_days,
+                                                          lockpath))
 
                 if not options.dry_run:
                     os.unlink(lockpath)
@@ -100,23 +100,23 @@ def main():
             nspaths_removed += 1
 
             if options.verbose:
-                print 'Removing empty namespace: %s' % nspath
+                print('Removing empty namespace: %s' % nspath)
 
             if not options.dry_run:
                 try:
                     os.rmdir(nspath)
                 except OSError, e:
                     if e.errno == errno.ENOTEMPTY:
-                        print >> sys.stderr, "warning: directory '%s'"\
-                                             " not empty" % nspath
+                        sys.stderr.write("warning: directory '%s'"\
+                                         " not empty" % nspath)
                     else:
                         raise
 
     if options.dry_run:
-        print "** Dry Run **"
+        print("** Dry Run **")
 
-    print "Total locks removed: ", lockpaths_removed
-    print "Total namespaces removed: ", nspaths_removed
+    print("Total locks removed: %d" % lockpaths_removed)
+    print("Total namespaces removed: %d" % nspaths_removed)
 
 
 if __name__ == '__main__':

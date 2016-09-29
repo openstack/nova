@@ -1,0 +1,7 @@
+---
+features:
+  - Libvirt driver will attempt to update the time of a suspended and/or
+    a migrated guest in order to keep the guest clock in sync.
+    This operation will require the guest agent to be
+    configured and running in order to be able to run. However, this operation
+    will not be disruptive.

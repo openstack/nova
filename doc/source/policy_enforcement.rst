@@ -34,7 +34,7 @@ There are several problems for current API policy.
   the APIs.
 
 * More easy way to override default policy settings for deployer. And
-  Currently all the API(EC2, V2, V2.1) rules mix in one policy.conf file.
+  Currently all the API(EC2, V2, V2.1) rules mix in one policy.json file.
 
 These are the kinds of things we need to make easier:
 
@@ -47,7 +47,7 @@ redundant check in the compute API can confuse developers and deployers.
 3. Operator can specify different rules for APIs that in same extension.
 
 4. Operator can override the default policy rule easily without mixing his own
-config and default config in one policy.conf file.
+config and default config in one policy.json file.
 
 Future of policy enforcement
 ----------------------------
@@ -134,7 +134,7 @@ After group the policy rules for different API, we can separate them into
 different files. Then deployer will more clear for which rule he can set for
 specific API. The rules can be grouped as below:
 
-  * policy.conf: It only contains the generic rule, like:
+  * policy.json: It only contains the generic rule, like:
 
 ::
     "context_is_admin":  "role:admin",
@@ -176,3 +176,12 @@ the policy rule more permissive. If the Operator make the API to be restricted
 that make break the existed API user or application. That's kind of
 back-incompatible. SO Operator can free to add additional permission to the
 existed API.
+
+Policy Enforcement by user_id
+-----------------------------
+
+In the legacy v2 API, the policy enforces with target object, and some operators
+implement user-based authorization based on that. Actually only project-based
+authorization is well tested, the user based authorization is untested and
+isn't supported by Nova. In the future, the nova will remove all the supports
+for user-based authorization.

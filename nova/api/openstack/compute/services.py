@@ -22,17 +22,18 @@ from nova.api import validation
 from nova import compute
 from nova import exception
 from nova.i18n import _
+from nova.policies import services as services_policies
 from nova import servicegroup
 from nova import utils
 
 ALIAS = "os-services"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class ServiceController(wsgi.Controller):
 
     def __init__(self):
         self.host_api = compute.HostAPI()
+        self.aggregate_api = compute.api.AggregateAPI()
         self.servicegroup_api = servicegroup.API()
         self.actions = {"enable": self._enable,
                         "disable": self._disable,
@@ -42,7 +43,7 @@ class ServiceController(wsgi.Controller):
         api_services = ('nova-osapi_compute', 'nova-ec2', 'nova-metadata')
 
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(services_policies.BASE_POLICY_NAME)
 
         _services = [
            s
@@ -155,7 +156,7 @@ class ServiceController(wsgi.Controller):
     def _perform_action(self, req, id, body, actions):
         """Calculate action dictionary dependent on provided fields"""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(services_policies.BASE_POLICY_NAME)
 
         try:
             action = actions[id]
@@ -170,7 +171,7 @@ class ServiceController(wsgi.Controller):
     def delete(self, req, id):
         """Deletes the specified service."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(services_policies.BASE_POLICY_NAME)
 
         try:
             utils.validate_integer(id, 'id')
@@ -178,7 +179,17 @@ class ServiceController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
 
         try:
+            service = self.host_api.service_get_by_id(context, id)
+            # remove the service from all the aggregates in which it's included
+            if service.binary == 'nova-compute':
+                aggrs = self.aggregate_api.get_aggregates_by_host(context,
+                                                                  service.host)
+                for ag in aggrs:
+                    self.aggregate_api.remove_host_from_aggregate(context,
+                                                                  ag.id,
+                                                                  service.host)
             self.host_api.service_delete(context, id)
+
         except exception.ServiceNotFound:
             explanation = _("Service %s not found.") % id
             raise webob.exc.HTTPNotFound(explanation=explanation)

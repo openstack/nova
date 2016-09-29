@@ -13,35 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 from nova.tests.functional.api_sample_tests import test_servers
 
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
-
-
 class RescueJsonTest(test_servers.ServersSampleBase):
-    extension_name = "os-rescue"
-
-    def _get_flags(self):
-        f = super(RescueJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.rescue.Rescue')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.extended_rescue_with_image.'
-            'Extended_rescue_with_image')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.keypairs.Keypairs')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.extended_ips.Extended_ips')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.extended_ips_mac.'
-            'Extended_ips_mac')
-        return f
+    sample_dir = "os-rescue"
 
     def _rescue(self, uuid):
         req_subs = {
@@ -69,6 +45,9 @@ class RescueJsonTest(test_servers.ServersSampleBase):
         subs['status'] = 'RESCUE'
         subs['access_ip_v4'] = '1.2.3.4'
         subs['access_ip_v6'] = '80fe::'
+        subs['instance_name'] = 'instance-\d{8}'
+        subs['hypervisor_hostname'] = r'[\w\.\-]+'
+        subs['cdrive'] = '.*'
         self._verify_response('server-get-resp-rescue', subs, response, 200)
 
     def test_server_rescue_with_image_ref_specified(self):
@@ -90,6 +69,9 @@ class RescueJsonTest(test_servers.ServersSampleBase):
         subs['status'] = 'RESCUE'
         subs['access_ip_v4'] = '1.2.3.4'
         subs['access_ip_v6'] = '80fe::'
+        subs['instance_name'] = 'instance-\d{8}'
+        subs['hypervisor_hostname'] = r'[\w\.\-]+'
+        subs['cdrive'] = '.*'
         self._verify_response('server-get-resp-rescue', subs, response, 200)
 
     def test_server_unrescue(self):
@@ -106,4 +88,7 @@ class RescueJsonTest(test_servers.ServersSampleBase):
         subs['status'] = 'ACTIVE'
         subs['access_ip_v4'] = '1.2.3.4'
         subs['access_ip_v6'] = '80fe::'
+        subs['instance_name'] = 'instance-\d{8}'
+        subs['hypervisor_hostname'] = r'[\w\.\-]+'
+        subs['cdrive'] = '.*'
         self._verify_response('server-get-resp-unrescue', subs, response, 200)

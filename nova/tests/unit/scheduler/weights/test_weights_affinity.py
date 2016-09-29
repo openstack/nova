@@ -112,7 +112,7 @@ class SoftAffinityWeigherTestCase(SoftWeigherTestBase):
         self._do_test(policy='soft-affinity',
                       expected_weight=0.0,
                       expected_host='host3')
-        self.assertEqual(1, mock_log.warn.call_count)
+        self.assertEqual(1, mock_log.warning.call_count)
 
 
 class SoftAntiAffinityWeigherTestCase(SoftWeigherTestBase):
@@ -150,4 +150,4 @@ class SoftAntiAffinityWeigherTestCase(SoftWeigherTestBase):
         self._do_test(policy='soft-anti-affinity',
                       expected_weight=0.0,
                       expected_host='host2')
-        self.assertEqual(1, mock_log.warn.call_count)
+        self.assertEqual(1, mock_log.warning.call_count)

@@ -21,14 +21,20 @@ from nova.objects import base
 from nova.objects import fields
 
 
+VIF_OPTIONAL_FIELDS = ['network_id']
+
+
 @base.NovaObjectRegistry.register
 class VirtualInterface(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Add tag field
-    VERSION = '1.1'
+    # Version 1.2: Adding a save method
+    # Version 1.3: Added destroy() method
+    VERSION = '1.3'
 
     fields = {
         'id': fields.IntegerField(),
+        # This is a MAC address.
         'address': fields.StringField(nullable=True),
         'network_id': fields.IntegerField(),
         'instance_uuid': fields.UUIDField(),
@@ -44,7 +50,15 @@ class VirtualInterface(base.NovaPersistentObject, base.NovaObject):
     @staticmethod
     def _from_db_object(context, vif, db_vif):
         for field in vif.fields:
-            setattr(vif, field, db_vif[field])
+            if not db_vif[field] and field in VIF_OPTIONAL_FIELDS:
+                continue
+            else:
+                setattr(vif, field, db_vif[field])
+        # NOTE(danms): The neutronv2 module namespaces mac addresses
+        # with port id to avoid uniqueness constraints currently on
+        # our table. Strip that out here so nobody else needs to care.
+        if 'address' in vif and '/' in vif.address:
+            vif.address, _ = vif.address.split('/', 1)
         vif._context = context
         vif.obj_reset_changes()
         return vif
@@ -83,9 +97,23 @@ class VirtualInterface(base.NovaPersistentObject, base.NovaObject):
         db_vif = db.virtual_interface_create(self._context, updates)
         self._from_db_object(self._context, self, db_vif)
 
+    @base.remotable
+    def save(self):
+        updates = self.obj_get_changes()
+        if 'address' in updates:
+            raise exception.ObjectActionError(action='save',
+                                              reason='address is not mutable')
+        db_vif = db.virtual_interface_update(self._context, self.address,
+                                             updates)
+        return self._from_db_object(self._context, self, db_vif)
+
     @base.remotable_classmethod
     def delete_by_instance_uuid(cls, context, instance_uuid):
         db.virtual_interface_delete_by_instance(context, instance_uuid)
+
+    @base.remotable
+    def destroy(self):
+        db.virtual_interface_delete(self._context, self.id)
 
 
 @base.NovaObjectRegistry.register

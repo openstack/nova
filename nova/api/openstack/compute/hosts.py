@@ -28,10 +28,10 @@ from nova import compute
 from nova import exception
 from nova.i18n import _LI
 from nova import objects
+from nova.policies import hosts as hosts_policies
 
 LOG = logging.getLogger(__name__)
 ALIAS = 'os-hosts'
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class HostController(wsgi.Controller):
@@ -59,7 +59,7 @@ class HostController(wsgi.Controller):
         |    {'host_name': 'network1.host.com',
         |     'service': 'network',
         |     'zone': 'internal'},
-        |    {'host_name': 'netwwork2.host.com',
+        |    {'host_name': 'network2.host.com',
         |     'service': 'network',
         |     'zone': 'internal'},
         |    {'host_name': 'compute1.host.com',
@@ -80,7 +80,7 @@ class HostController(wsgi.Controller):
 
         """
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(hosts_policies.BASE_POLICY_NAME)
         filters = {'disabled': False}
         zone = req.GET.get('zone', None)
         if zone:
@@ -116,7 +116,7 @@ class HostController(wsgi.Controller):
             return val == "enable"
 
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(hosts_policies.BASE_POLICY_NAME)
         # See what the user wants to 'update'
         status = body.get('status')
         maint_mode = body.get('maintenance_mode')
@@ -178,7 +178,7 @@ class HostController(wsgi.Controller):
     def _host_power_action(self, req, host_name, action):
         """Reboots, shuts down or powers up the host."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(hosts_policies.BASE_POLICY_NAME)
         try:
             result = self.api.host_power_action(context, host_name=host_name,
                                                 action=action)
@@ -264,7 +264,7 @@ class HostController(wsgi.Controller):
                     'cpu': 1, 'memory_mb': 2048, 'disk_gb': 30}
         """
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(hosts_policies.BASE_POLICY_NAME)
         host_name = id
         try:
             compute_node = (

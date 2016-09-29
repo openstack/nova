@@ -33,10 +33,6 @@ For postgres on Ubuntu this can be done with the following commands::
 """
 
 import glob
-# NOTE(dhellmann): Use stdlib logging instead of oslo.log because we
-# need to call methods on the logger that are not exposed through the
-# adapter provided by oslo.log.
-import logging
 import os
 
 from migrate import UniqueConstraint
@@ -59,12 +55,19 @@ from nova import exception
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 
+# TODO(sdague): no tests in the nova/tests tree should inherit from
+# base test classes in another library. This causes all kinds of havoc
+# in these doing things incorrectly for what we need in subunit
+# reporting. This is a long unwind, but should be done in the future
+# and any code needed out of oslo_db should be exported / accessed as
+# a fixture.
+
 
 class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
                              test_migrations.WalkVersionsMixin):
     """Test sqlalchemy-migrate migrations."""
 
-    TIMEOUT_SCALING_FACTOR = 2
+    TIMEOUT_SCALING_FACTOR = 4
 
     @property
     def INIT_VERSION(self):
@@ -84,16 +87,15 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         return self.engine
 
     def setUp(self):
-        super(NovaMigrationsCheckers, self).setUp()
-        # NOTE(viktors): We should reduce log output because it causes issues,
-        #                when we run tests with testr
-        migrate_log = logging.getLogger('migrate')
-        old_level = migrate_log.level
-        migrate_log.setLevel(logging.WARN)
-        self.addCleanup(migrate_log.setLevel, old_level)
+        # NOTE(sdague): the oslo_db base test case completely
+        # invalidates our logging setup, we actually have to do that
+        # before it is called to keep this from vomitting all over our
+        # test output.
+        self.useFixture(nova_fixtures.StandardLogging())
 
+        super(NovaMigrationsCheckers, self).setUp()
         # NOTE(rpodolyaka): we need to repeat the functionality of the base
-        # test case a bit here as this gets overriden by oslotest base test
+        # test case a bit here as this gets overridden by oslotest base test
         # case and nova base test case cleanup must be the last one (as it
         # deletes attributes of test case instances)
         self.useFixture(nova_fixtures.Timeout(
@@ -143,7 +145,7 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
                                return_value=engine):
             sa_migration.db_sync()
 
-    def get_engine(self):
+    def get_engine(self, context=None):
         return self.migrate_engine
 
     def get_metadata(self):
@@ -166,12 +168,13 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
             272,  # NOOP migration due to revert
         ]
 
-        havana_placeholders = range(217, 227)
-        icehouse_placeholders = range(235, 244)
-        juno_placeholders = range(255, 265)
-        kilo_placeholders = range(281, 291)
-        liberty_placeholders = range(303, 313)
-        mitaka_placeholders = range(320, 330)
+        havana_placeholders = list(range(217, 227))
+        icehouse_placeholders = list(range(235, 244))
+        juno_placeholders = list(range(255, 265))
+        kilo_placeholders = list(range(281, 291))
+        liberty_placeholders = list(range(303, 313))
+        mitaka_placeholders = list(range(320, 330))
+        newton_placeholders = list(range(335, 345))
 
         return (special +
                 havana_placeholders +
@@ -179,7 +182,8 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
                 juno_placeholders +
                 kilo_placeholders +
                 liberty_placeholders +
-                mitaka_placeholders)
+                mitaka_placeholders +
+                newton_placeholders)
 
     def migrate_up(self, version, with_data=False):
         if with_data:
@@ -332,10 +336,7 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.assertFalse(quota_usages.c.resource.nullable)
 
         pci_devices = oslodbutils.get_table(engine, 'pci_devices')
-        if engine.name == 'ibm_db_sa':
-            self.assertFalse(pci_devices.c.deleted.nullable)
-        else:
-            self.assertTrue(pci_devices.c.deleted.nullable)
+        self.assertTrue(pci_devices.c.deleted.nullable)
         self.assertFalse(pci_devices.c.product_id.nullable)
         self.assertFalse(pci_devices.c.vendor_id.nullable)
         self.assertFalse(pci_devices.c.dev_type.nullable)
@@ -751,12 +752,7 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
                                 'virtual_interfaces_uuid_idx', ['uuid'])
 
     def _check_296(self, engine, data):
-        if engine.name == 'ibm_db_sa':
-            # Make sure the last FK in the list was created.
-            inspector = reflection.Inspector.from_engine(engine)
-            fkeys = inspector.get_foreign_keys('instance_extra')
-            fkey_names = [fkey['name'] for fkey in fkeys]
-            self.assertIn('fk_instance_extra_instance_uuid', fkey_names)
+        pass
 
     def _check_297(self, engine, data):
         self.assertColumnExists(engine, 'services', 'forced_down')
@@ -773,7 +769,7 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         def removed_column(element):
             # Define a whitelist of columns that would be removed from the
             # DB at a later release.
-            column_whitelist = {'instances': ['scheduled_at']}
+            column_whitelist = {'instances': ['scheduled_at', 'internal_id']}
 
             if element[0] != 'remove_column':
                 return False
@@ -895,6 +891,39 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.assertColumnExists(engine, 'virtual_interfaces', 'tag')
         self.assertColumnExists(engine, 'block_device_mapping', 'tag')
 
+    def _check_332(self, engine, data):
+        self.assertColumnExists(engine, 'instance_extra', 'keypairs')
+
+    def _check_333(self, engine, data):
+        self.assertColumnExists(engine, 'console_auth_tokens', 'id')
+        self.assertColumnExists(engine, 'console_auth_tokens', 'token_hash')
+        self.assertColumnExists(engine, 'console_auth_tokens', 'console_type')
+        self.assertColumnExists(engine, 'console_auth_tokens', 'host')
+        self.assertColumnExists(engine, 'console_auth_tokens', 'port')
+        self.assertColumnExists(engine, 'console_auth_tokens',
+                                'internal_access_path')
+        self.assertColumnExists(engine, 'console_auth_tokens',
+                                'instance_uuid')
+        self.assertColumnExists(engine, 'console_auth_tokens', 'expires')
+        self.assertIndexMembers(engine, 'console_auth_tokens',
+            'console_auth_tokens_instance_uuid_idx',
+            ['instance_uuid'])
+        self.assertIndexMembers(engine, 'console_auth_tokens',
+            'console_auth_tokens_host_expires_idx',
+            ['host', 'expires'])
+        self.assertIndexMembers(engine, 'console_auth_tokens',
+            'console_auth_tokens_token_hash_idx',
+            ['token_hash'])
+
+    def _check_334(self, engine, data):
+        self.assertColumnExists(engine, 'instance_extra', 'device_metadata')
+        self.assertColumnExists(engine, 'shadow_instance_extra',
+                                        'device_metadata')
+
+    def _check_345(self, engine, data):
+        # NOTE(danms): Just a sanity-check migration
+        pass
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,
@@ -915,7 +944,7 @@ class TestNovaMigrationsMySQL(NovaMigrationsCheckers,
             "FROM information_schema.TABLES "
             "WHERE TABLE_SCHEMA = '%(database)s'" %
             {'database': self.migrate_engine.url.database})
-        self.assertTrue(total.scalar() > 0, "No tables found. Wrong schema?")
+        self.assertGreater(total.scalar(), 0, "No tables found. Wrong schema?")
 
         noninnodb = self.migrate_engine.execute(
             "SELECT count(*) "

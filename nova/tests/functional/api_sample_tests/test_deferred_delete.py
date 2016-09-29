@@ -13,25 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 from nova.tests.functional.api_sample_tests import test_servers
-
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class DeferredDeleteSampleJsonTests(test_servers.ServersSampleBase):
-    extension_name = "os-deferred-delete"
-
-    def _get_flags(self):
-        f = super(DeferredDeleteSampleJsonTests, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.deferred_delete.'
-            'Deferred_delete')
-        return f
+    sample_dir = "os-deferred-delete"
 
     def setUp(self):
         super(DeferredDeleteSampleJsonTests, self).setUp()

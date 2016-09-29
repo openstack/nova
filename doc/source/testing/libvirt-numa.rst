@@ -1,28 +1,25 @@
-
 ================================================
 Testing NUMA related hardware setup with libvirt
 ================================================
 
-This page describes how to test the libvirt driver's handling
-of the NUMA placement, large page allocation and CPU pinning
-features. It relies on setting up a virtual machine as the
-test environment and requires support for nested virtualization
-since plain QEMU is not sufficiently functional. The virtual
-machine will itself be given NUMA topology, so it can then
-act as a virtual "host" for testing purposes.
+This page describes how to test the libvirt driver's handling of the NUMA
+placement, large page allocation and CPU pinning features. It relies on setting
+up a virtual machine as the test environment and requires support for nested
+virtualization since plain QEMU is not sufficiently functional. The virtual
+machine will itself be given NUMA topology, so it can then act as a virtual
+"host" for testing purposes.
 
 ------------------------------------------
 Provisioning a virtual machine for testing
 ------------------------------------------
 
-The entire test process will take place inside a large virtual
-machine running Fedora 21. The instructions should work for any
-other Linux distribution which includes libvirt >= 1.2.9 and
-QEMU >= 2.1.2
+The entire test process will take place inside a large virtual machine running
+Fedora 21. The instructions should work for any other Linux distribution which
+includes libvirt >= 1.2.9 and QEMU >= 2.1.2
 
-The tests will require support for nested KVM, which is not enabled
-by default on hypervisor hosts. It must be explicitly turned on in
-the host when loading the kvm-intel/kvm-amd kernel modules.
+The tests will require support for nested KVM, which is not enabled by default
+on hypervisor hosts. It must be explicitly turned on in the host when loading
+the kvm-intel/kvm-amd kernel modules.
 
 On Intel hosts verify it with
 
@@ -52,9 +49,8 @@ While on AMD hosts verify it with
  # cat /sys/module/kvm_amd/parameters/nested
  1
 
-The virt-install command below shows how to provision a
-basic Fedora 21 x86_64 guest with 8 virtual CPUs, 8 GB
-of RAM and 20 GB of disk space:
+The virt-install command below shows how to provision a basic Fedora 21 x86_64
+guest with 8 virtual CPUs, 8 GB of RAM and 20 GB of disk space:
 
 .. code-block:: bash
 
@@ -70,29 +66,28 @@ of RAM and 20 GB of disk space:
     --cdrom /var/lib/libvirt/images/Fedora-Server-netinst-x86_64-21_Alpha.iso \
     --os-variant fedora20
 
-When the virt-viewer application displays the installer, follow
-the defaults for the installation with a couple of exceptions
+When the virt-viewer application displays the installer, follow the defaults
+for the installation with a couple of exceptions
 
-* The automatic disk partition setup can be optionally tweaked to
-  reduce the swap space allocated. No more than 500MB is required,
-  free'ing up an extra 1.5 GB for the root disk.
+* The automatic disk partition setup can be optionally tweaked to reduce the
+  swap space allocated. No more than 500MB is required, free'ing up an extra
+  1.5 GB for the root disk.
 
-* Select "Minimal install" when asked for the installation type
-  since a desktop environment is not required.
+* Select "Minimal install" when asked for the installation type since a desktop
+  environment is not required.
 
-* When creating a user account be sure to select the option
-  "Make this user administrator" so it gets 'sudo' rights
+* When creating a user account be sure to select the option "Make this user
+  administrator" so it gets 'sudo' rights
 
-Once the installation process has completed, the virtual machine
-will reboot into the final operating system. It is now ready to
-deploy an OpenStack development environment.
+Once the installation process has completed, the virtual machine will reboot
+into the final operating system. It is now ready to deploy an OpenStack
+development environment.
 
 ---------------------------------
 Setting up a devstack environment
 ---------------------------------
 
-For later ease of use, copy your SSH public key into the virtual
-machine
+For later ease of use, copy your SSH public key into the virtual machine
 
 .. code-block:: bash
 
@@ -104,7 +99,7 @@ Now login to the virtual machine
 
   # ssh <IP of VM>
 
-We'll install devstack under $HOME/src/cloud/.
+We'll install devstack under `$HOME/src/cloud/`.
 
 .. code-block:: bash
 
@@ -112,18 +107,17 @@ We'll install devstack under $HOME/src/cloud/.
   # cd $HOME/src/cloud
   # chmod go+rx $HOME
 
-The Fedora minimal install does not contain git and only
-has the crude & old-fashioned "vi" editor.
+The Fedora minimal install does not contain git and only has the crude &
+old-fashioned "vi" editor.
 
 .. code-block:: bash
 
   # sudo yum -y install git emacs
 
-At this point a fairly standard devstack setup can be
-done. The config below is just an example that is
-convenient to use to place everything in $HOME instead
-of /opt/stack. Change the IP addresses to something
-appropriate for your environment of course
+At this point a fairly standard devstack setup can be done. The config below is
+just an example that is convenient to use to place everything in `$HOME`
+instead of `/opt/stack`. Change the IP addresses to something appropriate for
+your environment of course
 
 .. code-block:: bash
 
@@ -158,10 +152,9 @@ appropriate for your environment of course
 
   # FORCE=yes ./stack.sh
 
-
-Unfortunately while devstack starts various system services and
-changes various system settings it doesn't make the changes
-persistent. Fix that now to avoid later surprises after reboots
+Unfortunately while devstack starts various system services and changes various
+system settings it doesn't make the changes persistent. Fix that now to avoid
+later surprises after reboots
 
 .. code-block:: bash
 
@@ -172,21 +165,20 @@ persistent. Fix that now to avoid later surprises after reboots
   # sudo emacs /etc/sysconfig/selinux
   SELINUX=permissive
 
-
 ----------------------------
 Testing basis non-NUMA usage
 ----------------------------
 
-First to confirm we've not done anything unusual to the traditional
-operation of Nova libvirt guests boot a tiny instance
+First to confirm we've not done anything unusual to the traditional operation
+of Nova libvirt guests boot a tiny instance
 
 .. code-block:: bash
 
   # . openrc admin
   # nova boot --image cirros-0.3.2-x86_64-uec --flavor m1.tiny cirros1
 
-The host will be reporting NUMA topology, but there should only
-be a single NUMA cell this point.
+The host will be reporting NUMA topology, but there should only be a single
+NUMA cell this point.
 
 .. code-block:: bash
 
@@ -233,9 +225,7 @@ be a single NUMA cell this point.
   | }
   +----------------------------------------------------------------------------+
 
-
-Meanwhile, the guest instance should not have any NUMA configuration
-recorded
+Meanwhile, the guest instance should not have any NUMA configuration recorded
 
 .. code-block:: bash
 
@@ -246,16 +236,14 @@ recorded
   | NULL          |
   +---------------+
 
-
-
 -----------------------------------------------------
 Reconfiguring the test instance to have NUMA topology
 -----------------------------------------------------
 
-Now that devstack is proved operational, it is time to configure some
-NUMA topology for the test VM, so that it can be used to verify the
-OpenStack NUMA support. To do the changes, the VM instance that is running
-devstack must be shut down.
+Now that devstack is proved operational, it is time to configure some NUMA
+topology for the test VM, so that it can be used to verify the OpenStack NUMA
+support. To do the changes, the VM instance that is running devstack must be
+shut down.
 
 .. code-block:: bash
 
@@ -267,14 +255,13 @@ And now back on the physical host edit the guest config as root
 
   # sudo virsh edit f21x86_64
 
-The first thing is to change the <cpu> block to do passthrough of the
-host CPU. In particular this exposes the "SVM" or "VMX" feature bits
-to the guest so that "Nested KVM" can work. At the same time we want
-to define the NUMA topology of the guest. To make things interesting
-we're going to give the guest an asymmetric topology with 4 CPUS and
-4 GBs of RAM in the first NUMA node and 2 CPUs and 2 GB of RAM in
-the second and third NUMA nodes. So modify the guest XML to include
-the following CPU XML
+The first thing is to change the `<cpu>` block to do passthrough of the host
+CPU. In particular this exposes the "SVM" or "VMX" feature bits to the guest so
+that "Nested KVM" can work. At the same time we want to define the NUMA
+topology of the guest. To make things interesting we're going to give the guest
+an asymmetric topology with 4 CPUS and 4 GBs of RAM in the first NUMA node and
+2 CPUs and 2 GB of RAM in the second and third NUMA nodes. So modify the guest
+XML to include the following CPU XML
 
 .. code-block:: bash
 
@@ -296,11 +283,9 @@ The guest can now be started again, and ssh back into it
 
   # ssh <IP of VM>
 
-
-Before starting OpenStack services again, it is necessary to
-reconfigure Nova to enable the NUMA scheduler filter. The libvirt
-virtualization type must also be explicitly set to KVM, so that
-guests can take advantage of nested KVM.
+Before starting OpenStack services again, it is necessary to reconfigure Nova
+to enable the NUMA scheduler filter. The libvirt virtualization type must also
+be explicitly set to KVM, so that guests can take advantage of nested KVM.
 
 .. code-block:: bash
 
@@ -316,7 +301,6 @@ Set the following parameters:
   [libvirt]
   virt_type = kvm
 
-
 With that done, OpenStack can be started again
 
 .. code-block:: bash
@@ -324,9 +308,8 @@ With that done, OpenStack can be started again
   # cd $HOME/src/cloud/devstack
   # ./rejoin-stack.sh
 
-
-The first thing is to check that the compute node picked up the
-new NUMA topology setup for the guest
+The first thing is to check that the compute node picked up the new NUMA
+topology setup for the guest
 
 .. code-block:: bash
 
@@ -433,29 +416,26 @@ new NUMA topology setup for the guest
   | }
   +----------------------------------------------------------------------------+
 
-This indeed shows that there are now 3 NUMA nodes for the "host"
-machine, the first with 4 GB of RAM and 4 CPUs, and others with
-2 GB of RAM and 2 CPUs each.
-
+This indeed shows that there are now 3 NUMA nodes for the "host" machine, the
+first with 4 GB of RAM and 4 CPUs, and others with 2 GB of RAM and 2 CPUs each.
 
 -----------------------------------------------------
 Testing instance boot with no NUMA topology requested
 -----------------------------------------------------
 
-For the sake of backwards compatibility, if the NUMA filter is
-enabled, but the flavor/image does not have any NUMA settings
-requested, it should be assumed that the guest will have a
-single NUMA node. The guest should be locked to a single host
-NUMA node too. Boot a guest with the m1.tiny flavor to test
-this condition
+For the sake of backwards compatibility, if the NUMA filter is enabled, but the
+flavor/image does not have any NUMA settings requested, it should be assumed
+that the guest will have a single NUMA node. The guest should be locked to a
+single host NUMA node too. Boot a guest with the `m1.tiny` flavor to test this
+condition
 
 .. code-block:: bash
 
   # . openrc admin admin
   # nova boot --image cirros-0.3.2-x86_64-uec --flavor m1.tiny cirros1
 
-Now look at the libvirt guest XML. It should show that the vCPUs are
-locked to pCPUs within a particular node.
+Now look at the libvirt guest XML. It should show that the vCPUs are locked to
+pCPUs within a particular node.
 
 .. code-block:: bash
 
@@ -466,18 +446,18 @@ locked to pCPUs within a particular node.
   <vcpu placement='static' cpuset='6-7'>1</vcpu>
   ...
 
-This example shows that the guest has been locked to the 3rd NUMA
-node (which contains pCPUs 6 and 7). Note that there is no explicit
-NUMA topology listed in the guest XML.
+This example shows that the guest has been locked to the 3rd NUMA node (which
+contains pCPUs 6 and 7). Note that there is no explicit NUMA topology listed in
+the guest XML.
 
 ------------------------------------------------
 Testing instance boot with 1 NUMA cell requested
 ------------------------------------------------
 
-Moving forward a little, explicitly tell Nova that the NUMA topology
-for the guest should have a single NUMA node. This should operate
-in an identical manner to the default behavior where no NUMA policy
-is set. To define the topology we will create a new flavor
+Moving forward a little, explicitly tell Nova that the NUMA topology for the
+guest should have a single NUMA node. This should operate in an identical
+manner to the default behavior where no NUMA policy is set. To define the
+topology we will create a new flavor
 
 .. code-block:: bash
 
@@ -520,19 +500,19 @@ Looking at the resulting guest XML from libvirt
 
 The XML shows:
 
-* Each guest CPU has been pinned to the physical CPUs
-  associated with a particular NUMA node
-* The emulator threads have been pinned to the union
-  of all physical CPUs in the host NUMA node that
-  the guest is placed on
-* The guest has been given a virtual NUMA topology
-  with a single node holding all RAM and CPUs
-* The guest NUMA node has been strictly pinned to
-  a host NUMA node.
+* Each guest CPU has been pinned to the physical CPUs associated with a
+  particular NUMA node
 
-As a further sanity test, check what Nova recorded for the
-instance in the database. This should match the <numatune>
-information
+* The emulator threads have been pinned to the union of all physical CPUs in
+  the host NUMA node that the guest is placed on
+
+* The guest has been given a virtual NUMA topology with a single node holding
+  all RAM and CPUs
+
+* The guest NUMA node has been strictly pinned to a host NUMA node.
+
+As a further sanity test, check what Nova recorded for the instance in the
+database. This should match the <numatune> information
 
 .. code-block:: bash
 
@@ -570,9 +550,8 @@ information
 Testing instance boot with 2 NUMA cells requested
 -------------------------------------------------
 
-Now getting more advanced we tell Nova that the guest will have two
-NUMA nodes. To define the topology we will change the previously
-defined flavor
+Now getting more advanced we tell Nova that the guest will have two NUMA nodes.
+To define the topology we will change the previously defined flavor
 
 .. code-block:: bash
 
@@ -616,19 +595,19 @@ Looking at the resulting guest XML from libvirt
 
 The XML shows:
 
-* Each guest CPU has been pinned to the physical CPUs
-  associated with particular NUMA nodes
-* The emulator threads have been pinned to the union
-  of all physical CPUs in the host NUMA nodes that
-  the guest is placed on
-* The guest has been given a virtual NUMA topology
-  with two nodes, each holding half the RAM and CPUs
-* The guest NUMA nodes have been strictly pinned to
-  different host NUMA node.
+* Each guest CPU has been pinned to the physical CPUs associated with
+  particular NUMA nodes
 
-As a further sanity test, check what Nova recorded for the
-instance in the database. This should match the <numatune>
-information
+* The emulator threads have been pinned to the union of all physical CPUs in
+  the host NUMA nodes that the guest is placed on
+
+* The guest has been given a virtual NUMA topology with two nodes, each holding
+  half the RAM and CPUs
+
+* The guest NUMA nodes have been strictly pinned to different host NUMA node
+
+As a further sanity test, check what Nova recorded for the instance in the
+database. This should match the <numatune> information
 
 .. code-block:: bash
 

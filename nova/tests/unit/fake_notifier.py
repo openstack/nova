@@ -75,18 +75,18 @@ class FakeVersionedNotifier(FakeNotifier):
                                         'payload': payload})
 
 
-def stub_notifier(stubs):
-    stubs.Set(messaging, 'Notifier', FakeNotifier)
+def stub_notifier(test):
+    test.stub_out('oslo_messaging.Notifier', FakeNotifier)
     if rpc.LEGACY_NOTIFIER and rpc.NOTIFIER:
-        stubs.Set(rpc, 'LEGACY_NOTIFIER',
-                  FakeNotifier(rpc.LEGACY_NOTIFIER.transport,
-                               rpc.LEGACY_NOTIFIER.publisher_id,
-                               serializer=getattr(rpc.LEGACY_NOTIFIER,
-                                                  '_serializer',
-                                                  None)))
-        stubs.Set(rpc, 'NOTIFIER',
-                  FakeVersionedNotifier(rpc.NOTIFIER.transport,
-                                        rpc.NOTIFIER.publisher_id,
-                                        serializer=getattr(rpc.NOTIFIER,
-                                                           '_serializer',
-                                                           None)))
+        test.stub_out('nova.rpc.LEGACY_NOTIFIER',
+              FakeNotifier(rpc.LEGACY_NOTIFIER.transport,
+                           rpc.LEGACY_NOTIFIER.publisher_id,
+                           serializer=getattr(rpc.LEGACY_NOTIFIER,
+                                              '_serializer',
+                                              None)))
+        test.stub_out('nova.rpc.NOTIFIER',
+              FakeVersionedNotifier(rpc.NOTIFIER.transport,
+                                    rpc.NOTIFIER.publisher_id,
+                                    serializer=getattr(rpc.NOTIFIER,
+                                                       '_serializer',
+                                                       None)))

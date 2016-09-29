@@ -16,18 +16,12 @@
 """Libvirt volume driver for DISCO."""
 
 from os_brick.initiator import connector
-from oslo_config import cfg
-from oslo_log import log as logging
 
+import nova.conf
 from nova import utils
 from nova.virt.libvirt.volume import volume as libvirt_volume
 
-LOG = logging.getLogger(__name__)
-
-CONF = cfg.CONF
-
-CONF.import_opt('num_iscsi_scan_tries', 'nova.virt.libvirt.volume.iscsi',
-                group='libvirt')
+CONF = nova.conf.CONF
 
 
 class LibvirtDISCOVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):

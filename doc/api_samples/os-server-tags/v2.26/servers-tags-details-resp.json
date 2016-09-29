@@ -55,8 +55,34 @@
             "updated": "2013-09-03T04:01:32Z",
             "user_id": "fake",
             "locked": false,
-            "tags": ["sometag"],
-            "description": null
+            "tags": ["tag1", "tag2"],
+            "description": null,
+            "config_drive": "",
+            "OS-DCF:diskConfig": "AUTO",
+            "OS-EXT-AZ:availability_zone": "nova",
+            "OS-EXT-SRV-ATTR:host": "c3f14e9812ad496baf92ccfb3c61e15f",
+            "OS-EXT-SRV-ATTR:hypervisor_hostname": "fake-mini",
+            "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
+            "OS-EXT-SRV-ATTR:reservation_id": "r-00000001",
+            "OS-EXT-SRV-ATTR:launch_index": 0,
+            "OS-EXT-SRV-ATTR:kernel_id": "",
+            "OS-EXT-SRV-ATTR:ramdisk_id": "",
+            "OS-EXT-SRV-ATTR:hostname": "fake-hostname",
+            "OS-EXT-SRV-ATTR:root_device_name": "/dev/sda",
+            "OS-EXT-SRV-ATTR:user_data": "IyEvYmluL2Jhc2gKL2Jpbi9zdQplY2hvICJJIGFtIGluIHlvdSEiCg==",
+            "OS-EXT-STS:power_state": 1,
+            "OS-EXT-STS:task_state": null,
+            "OS-EXT-STS:vm_state": "active",
+            "os-extended-volumes:volumes_attached": [],
+            "OS-SRV-USG:launched_at": "2013-09-23T13:53:12.774549",
+            "OS-SRV-USG:terminated_at": null,
+            "progress": 0,
+            "security_groups": [
+                {
+                    "name": "default"
+                }
+            ],
+            "host_status": "UP"
         }
     ]
 }

@@ -1,0 +1,343 @@
+# Tests of allocations API
+#
+# TODO(cdent): Where in the process is the consumer id being
+# validated?
+
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        accept: application/json
+
+tests:
+
+- name: get allocations no consumer is 404
+  GET: /allocations
+  status: 404
+
+- name: get allocations is empty dict
+  GET: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  response_json_paths:
+      $.allocations: {}
+
+- name: put an allocation no resource provider
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resources:
+              DISK_GB: 10
+  status: 400
+
+- name: create the resource provider
+  POST: /resource_providers
+  request_headers:
+      content-type: application/json
+  data:
+      name: $ENVIRON['RP_NAME']
+      uuid: $ENVIRON['RP_UUID']
+  status: 201
+
+- name: put an allocation no data
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  status: 400
+
+- name: put an allocation violate schema
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+                cow: 10
+  status: 400
+
+- name: put an allocation no inventory
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+                DISK_GB: 10
+  status: 409
+
+- name: post some inventory
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: DISK_GB
+      total: 2048
+      min_unit: 10
+      max_unit: 1024
+  status: 201
+
+- name: put an allocation
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+                DISK_GB: 10
+  status: 204
+
+- name: put an allocation different consumer
+  PUT: /allocations/39715579-2167-4c63-8247-301311cc6703
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+                DISK_GB: 10
+  status: 204
+
+- name: check usages after another 10
+  GET: /resource_providers/$ENVIRON['RP_UUID']/usages
+  response_json_paths:
+      $.usages.DISK_GB: 20
+
+# NOTE(cdent): Contravening the spec, we decided that it is
+# important to be able to update an existing allocation, so this
+# should work but it is important to check the usage.
+- name: put allocation again
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+                DISK_GB: 12
+  status: 204
+
+- name: check usages after 12
+  GET: /resource_providers/$ENVIRON['RP_UUID']/usages
+  response_json_paths:
+      $.usages.DISK_GB: 22
+
+- name: put allocation bad resource class
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+                COWS: 12
+  status: 400
+  response_strings:
+      - Field value COWS is invalid
+
+- name: delete allocation
+  DELETE: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  status: 204
+
+- name: delete allocation again
+  DELETE: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  status: 404
+
+- name: delete allocation of unknown consumer id
+  DELETE: /allocations/da78521f-bf7e-4e6e-9901-3f79bd94d55d
+  status: 404
+
+- name: redo an allocation
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+                DISK_GB: 10
+  status: 204
+
+- name: add other inventory
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: VCPU
+      total: 32
+      min_unit: 1
+      max_unit: 8
+  status: 201
+
+- name: multiple allocations 
+  PUT: /allocations/833f0885-f78c-4788-bb2b-3607b0656be7
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+                DISK_GB: 20
+                VCPU: 4
+  status: 204
+
+- name: check usages
+  GET: /resource_providers/$ENVIRON['RP_UUID']/usages
+  response_json_paths:
+      $.resource_provider_generation: 7
+      $.usages.DISK_GB: 40
+
+- name: check allocations for the resource provider
+  GET: /resource_providers/$ENVIRON['RP_UUID']/allocations
+  response_json_paths:
+      $.resource_provider_generation: 7
+      # allocations are keyed by consumer id, jsonpath-rw needs us
+      # to quote the uuids or its parser gets confused that maybe
+      # they are numbers on which math needs to be done.
+      $.allocations['833f0885-f78c-4788-bb2b-3607b0656be7'].resources.DISK_GB: 20
+      $.allocations['833f0885-f78c-4788-bb2b-3607b0656be7'].resources.VCPU: 4
+      $.allocations['599ffd2d-526a-4b2e-8683-f13ad25f9958'].resources.DISK_GB: 10
+      $.allocations['39715579-2167-4c63-8247-301311cc6703'].resources.DISK_GB: 10
+
+- name: confirm 404 for allocations of bad resource provider
+  GET: /resource_providers/cb8a3007-b93a-471f-9e1f-4d58355678bd/allocations
+  status: 404
+
+- name: check allocations by consumer id
+  GET: /allocations/833f0885-f78c-4788-bb2b-3607b0656be7
+  response_json_paths:
+      # TODO(cdent): Can't currently do substitution on the left hand
+      # side of json path in gabbi, a bug has been made. In the
+      # meantime we have to jump over it. This works because we only
+      # have one resource provider in this output.
+      $.allocations..generation: 7
+      $.allocations..resources.DISK_GB: 20
+      $.allocations..resources.VCPU: 4
+
+- name: check allocations by diferent consumer id
+  GET: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  response_json_paths:
+      # TODO(cdent): Can't currently do substitution on the left hand
+      # side of json path in gabbi, a bug has been made. In the
+      # meantime we have to jump over the resource provider (which
+      # we don't know as a static value). This works because we only
+      # have one resource provider in this output.
+      $.allocations..generation: 7
+      $.allocations..DISK_GB: 10
+
+# create another two resource providers to test retrieving
+# allocations
+- name: create resource provider 1
+  POST: /resource_providers
+  request_headers:
+      content-type: application/json
+  data:
+      name: rp1
+      uuid: 9229b2fc-d556-4e38-9c18-443e4bc6ceae
+  status: 201
+
+- name: create resource provider 2
+  POST: /resource_providers
+  request_headers:
+      content-type: application/json
+  data:
+      name: rp2
+      uuid: fcfa516a-abbe-45d1-8152-d5225d82e596
+  status: 201
+
+- name: set inventory on rp1
+  PUT: /resource_providers/9229b2fc-d556-4e38-9c18-443e4bc6ceae/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      # TODO(cdent): This format is going to go out of date because
+      # of other changes
+      resource_provider_generation: 0
+      inventories:
+        VCPU:
+          total: 32
+        DISK_GB:
+          total: 10
+
+- name: set inventory on rp2
+  PUT: /resource_providers/fcfa516a-abbe-45d1-8152-d5225d82e596/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      # TODO(cdent): This format is going to go out of date because
+      # of other changes
+      resource_provider_generation: 0
+      inventories:
+        VCPU:
+          total: 16
+        DISK_GB:
+          total: 20
+  status: 200
+
+- name: put allocations on both those providers one
+  PUT: /allocations/1835b1c9-1c61-45af-9eb3-3e0e9f29487b
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: fcfa516a-abbe-45d1-8152-d5225d82e596
+            resources:
+                DISK_GB: 10
+                VCPU: 8
+          - resource_provider:
+                uuid: 9229b2fc-d556-4e38-9c18-443e4bc6ceae
+            resources:
+                DISK_GB: 5
+                VCPU: 16
+  status: 204
+
+- name: put allocations on both those providers two
+  PUT: /allocations/75d0f5f7-75d9-458c-b204-f90ac91604ec
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: fcfa516a-abbe-45d1-8152-d5225d82e596
+            resources:
+                DISK_GB: 5
+                VCPU: 4
+          - resource_provider:
+                uuid: 9229b2fc-d556-4e38-9c18-443e4bc6ceae
+            resources:
+                DISK_GB: 2
+                VCPU: 8
+  status: 204
+
+- name: get those allocations for consumer
+  GET: /allocations/1835b1c9-1c61-45af-9eb3-3e0e9f29487b
+  response_json_paths:
+      $.allocations.['fcfa516a-abbe-45d1-8152-d5225d82e596'].generation: 3
+      $.allocations.['fcfa516a-abbe-45d1-8152-d5225d82e596'].resources.DISK_GB: 10
+      $.allocations.['fcfa516a-abbe-45d1-8152-d5225d82e596'].resources.VCPU: 8
+      $.allocations.['9229b2fc-d556-4e38-9c18-443e4bc6ceae'].generation: 3
+      $.allocations.['9229b2fc-d556-4e38-9c18-443e4bc6ceae'].resources.DISK_GB: 5
+      $.allocations.['9229b2fc-d556-4e38-9c18-443e4bc6ceae'].resources.VCPU: 16
+
+- name: get those allocations for resource provider
+  GET: /resource_providers/fcfa516a-abbe-45d1-8152-d5225d82e596/allocations
+  response_json_paths:
+      $.resource_provider_generation: 3
+      $.allocations.['75d0f5f7-75d9-458c-b204-f90ac91604ec'].resources.DISK_GB: 5
+      $.allocations.['75d0f5f7-75d9-458c-b204-f90ac91604ec'].resources.VCPU: 4
+      $.allocations.['1835b1c9-1c61-45af-9eb3-3e0e9f29487b'].resources.DISK_GB: 10
+      $.allocations.['1835b1c9-1c61-45af-9eb3-3e0e9f29487b'].resources.VCPU: 8

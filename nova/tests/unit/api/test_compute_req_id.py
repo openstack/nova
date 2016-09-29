@@ -37,4 +37,4 @@ class RequestIdTest(test.NoDBTestCase):
 
         res_id = res.headers.get(compute_req_id.HTTP_RESP_HEADER_REQUEST_ID)
         self.assertThat(res_id, matchers.StartsWith('req-'))
-        self.assertEqual(res_id, res.body)
+        self.assertEqual(res_id.encode('utf-8'), res.body)

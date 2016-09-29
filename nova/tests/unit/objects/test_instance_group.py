@@ -45,10 +45,12 @@ _INST_GROUP_DB = {
 class _TestInstanceGroupObject(object):
 
     @mock.patch('nova.db.instance_group_get', return_value=_INST_GROUP_DB)
-    def test_get_by_uuid(self, mock_db_get):
-        obj = objects.InstanceGroup.get_by_uuid(mock.sentinel.ctx,
+    @mock.patch('nova.objects.InstanceGroup._get_from_db_by_uuid',
+            side_effect=exception.InstanceGroupNotFound(group_uuid=_DB_UUID))
+    def test_get_by_uuid_main(self, mock_api_get, mock_db_get):
+        obj = objects.InstanceGroup.get_by_uuid(self.context,
                                                        _DB_UUID)
-        mock_db_get.assert_called_once_with(mock.sentinel.ctx, _DB_UUID)
+        mock_db_get.assert_called_once_with(self.context, _DB_UUID)
         self.assertEqual(_INST_GROUP_DB['members'], obj.members)
         self.assertEqual(_INST_GROUP_DB['policies'], obj.policies)
         self.assertEqual(_DB_UUID, obj.uuid)
@@ -58,18 +60,21 @@ class _TestInstanceGroupObject(object):
 
     @mock.patch('nova.db.instance_group_get_by_instance',
                 return_value=_INST_GROUP_DB)
-    def test_get_by_instance_uuid(self, mock_db_get):
+    @mock.patch('nova.objects.InstanceGroup._get_from_db_by_instance')
+    def test_get_by_instance_uuid_main(self, mock_api_get, mock_db_get):
+        error = exception.InstanceGroupNotFound(group_uuid='')
+        mock_api_get.side_effect = error
         objects.InstanceGroup.get_by_instance_uuid(
-                mock.sentinel.ctx, mock.sentinel.instance_uuid)
+                self.context, mock.sentinel.instance_uuid)
         mock_db_get.assert_called_once_with(
-                mock.sentinel.ctx, mock.sentinel.instance_uuid)
+                self.context, mock.sentinel.instance_uuid)
 
     @mock.patch('nova.db.instance_group_get')
     def test_refresh(self, mock_db_get):
         changed_group = copy.deepcopy(_INST_GROUP_DB)
         changed_group['name'] = 'new_name'
         mock_db_get.side_effect = [_INST_GROUP_DB, changed_group]
-        obj = objects.InstanceGroup.get_by_uuid(mock.sentinel.ctx,
+        obj = objects.InstanceGroup.get_by_uuid(self.context,
                                                        _DB_UUID)
         self.assertEqual(_INST_GROUP_DB['name'], obj.name)
         obj.refresh()
@@ -79,22 +84,22 @@ class _TestInstanceGroupObject(object):
     @mock.patch('nova.compute.utils.notify_about_server_group_update')
     @mock.patch('nova.db.instance_group_update')
     @mock.patch('nova.db.instance_group_get')
-    def test_save(self, mock_db_get, mock_db_update, mock_notify):
+    def test_save_main(self, mock_db_get, mock_db_update, mock_notify):
         changed_group = copy.deepcopy(_INST_GROUP_DB)
         changed_group['name'] = 'new_name'
         mock_db_get.side_effect = [_INST_GROUP_DB, changed_group]
-        obj = objects.InstanceGroup.get_by_uuid(mock.sentinel.ctx,
+        obj = objects.InstanceGroup.get_by_uuid(self.context,
                                                        _DB_UUID)
         self.assertEqual(obj.name, 'fake_name')
         obj.name = 'new_name'
         obj.policies = ['policy1']  # Remove policy 2
         obj.members = ['instance_id1']  # Remove member 2
         obj.save()
-        mock_db_update.assert_called_once_with(mock.sentinel.ctx, _DB_UUID,
+        mock_db_update.assert_called_once_with(self.context, _DB_UUID,
                                                {'name': 'new_name',
                                                 'members': ['instance_id1'],
                                                 'policies': ['policy1']})
-        mock_notify.assert_called_once_with(mock.sentinel.ctx, "update",
+        mock_notify.assert_called_once_with(self.context, "update",
                                                {'name': 'new_name',
                                                 'members': ['instance_id1'],
                                                 'policies': ['policy1'],
@@ -103,10 +108,10 @@ class _TestInstanceGroupObject(object):
     @mock.patch('nova.compute.utils.notify_about_server_group_update')
     @mock.patch('nova.db.instance_group_update')
     @mock.patch('nova.db.instance_group_get')
-    def test_save_without_hosts(self, mock_db_get, mock_db_update,
-                                mock_notify):
+    def test_save_without_hosts_main(self, mock_db_get, mock_db_update,
+                                     mock_notify):
         mock_db_get.side_effect = [_INST_GROUP_DB, _INST_GROUP_DB]
-        obj = objects.InstanceGroup.get_by_uuid(mock.sentinel.ctx, _DB_UUID)
+        obj = objects.InstanceGroup.get_by_uuid(self.context, _DB_UUID)
         obj.hosts = ['fake-host1']
         self.assertRaises(exception.InstanceGroupSaveException,
                           obj.save)
@@ -118,9 +123,10 @@ class _TestInstanceGroupObject(object):
         self.assertFalse(mock_notify.called)
 
     @mock.patch('nova.compute.utils.notify_about_server_group_update')
-    @mock.patch('nova.db.instance_group_create', return_value=_INST_GROUP_DB)
+    @mock.patch('nova.objects.InstanceGroup._create_in_db',
+                return_value=_INST_GROUP_DB)
     def test_create(self, mock_db_create, mock_notify):
-        obj = objects.InstanceGroup(context=mock.sentinel.ctx)
+        obj = objects.InstanceGroup(context=self.context)
         obj.uuid = _DB_UUID
         obj.name = _INST_GROUP_DB['name']
         obj.user_id = _INST_GROUP_DB['user_id']
@@ -133,7 +139,7 @@ class _TestInstanceGroupObject(object):
         obj.deleted = False
         obj.create()
         mock_db_create.assert_called_once_with(
-            mock.sentinel.ctx,
+            self.context,
             {'uuid': _DB_UUID,
              'name': _INST_GROUP_DB['name'],
              'user_id': _INST_GROUP_DB['user_id'],
@@ -146,7 +152,7 @@ class _TestInstanceGroupObject(object):
             members=_INST_GROUP_DB['members'],
             policies=_INST_GROUP_DB['policies'])
         mock_notify.assert_called_once_with(
-            mock.sentinel.ctx, "create",
+            self.context, "create",
             {'uuid': _DB_UUID,
              'name': _INST_GROUP_DB['name'],
              'user_id': _INST_GROUP_DB['user_id'],
@@ -162,60 +168,64 @@ class _TestInstanceGroupObject(object):
         self.assertRaises(exception.ObjectActionError, obj.create)
 
     @mock.patch('nova.compute.utils.notify_about_server_group_update')
-    @mock.patch('nova.db.instance_group_delete')
+    @mock.patch('nova.objects.InstanceGroup._destroy_in_db')
     def test_destroy(self, mock_db_delete, mock_notify):
-        obj = objects.InstanceGroup(context=mock.sentinel.ctx)
+        obj = objects.InstanceGroup(context=self.context)
         obj.uuid = _DB_UUID
         obj.destroy()
-        mock_db_delete.assert_called_once_with(mock.sentinel.ctx, _DB_UUID)
-        mock_notify.assert_called_once_with(mock.sentinel.ctx, "delete",
+        mock_db_delete.assert_called_once_with(self.context, _DB_UUID)
+        mock_notify.assert_called_once_with(self.context, "delete",
                                             {'server_group_id': _DB_UUID})
 
     @mock.patch('nova.compute.utils.notify_about_server_group_update')
-    @mock.patch('nova.db.instance_group_members_add')
+    @mock.patch('nova.objects.InstanceGroup._add_members_in_db')
     def test_add_members(self, mock_members_add_db, mock_notify):
-        mock_members_add_db.return_value = [mock.sentinel.members]
-        members = objects.InstanceGroup.add_members(mock.sentinel.ctx,
+        fake_member_models = [{'instance_uuid': mock.sentinel.uuid}]
+        fake_member_uuids = [mock.sentinel.uuid]
+        mock_members_add_db.return_value = fake_member_models
+        members = objects.InstanceGroup.add_members(self.context,
                                                     _DB_UUID,
-                                                    mock.sentinel.members)
-        self.assertEqual([mock.sentinel.members], members)
+                                                    fake_member_uuids)
+        self.assertEqual(fake_member_uuids, members)
         mock_members_add_db.assert_called_once_with(
-                mock.sentinel.ctx,
+                self.context,
                 _DB_UUID,
-                mock.sentinel.members)
+                fake_member_uuids)
         mock_notify.assert_called_once_with(
-                mock.sentinel.ctx, "addmember",
-                {'instance_uuids': mock.sentinel.members,
+                self.context, "addmember",
+                {'instance_uuids': fake_member_uuids,
                  'server_group_id': _DB_UUID})
 
     @mock.patch('nova.objects.InstanceList.get_by_filters')
-    @mock.patch('nova.db.instance_group_get', return_value=_INST_GROUP_DB)
+    @mock.patch('nova.objects.InstanceGroup._get_from_db_by_uuid',
+                return_value=_INST_GROUP_DB)
     def test_count_members_by_user(self, mock_get_db, mock_il_get):
         mock_il_get.return_value = [mock.ANY]
-        obj = objects.InstanceGroup.get_by_uuid(mock.sentinel.ctx, _DB_UUID)
+        obj = objects.InstanceGroup.get_by_uuid(self.context, _DB_UUID)
         expected_filters = {
             'uuid': ['instance_id1', 'instance_id2'],
             'user_id': 'fake_user',
             'deleted': False
         }
         self.assertEqual(1, obj.count_members_by_user('fake_user'))
-        mock_il_get.assert_called_once_with(mock.sentinel.ctx,
+        mock_il_get.assert_called_once_with(self.context,
                                             filters=expected_filters)
 
     @mock.patch('nova.objects.InstanceList.get_by_filters')
-    @mock.patch('nova.db.instance_group_get', return_value=_INST_GROUP_DB)
+    @mock.patch('nova.objects.InstanceGroup._get_from_db_by_uuid',
+                return_value=_INST_GROUP_DB)
     def test_get_hosts(self, mock_get_db, mock_il_get):
         mock_il_get.return_value = [objects.Instance(host='host1'),
                                     objects.Instance(host='host2'),
                                     objects.Instance(host=None)]
-        obj = objects.InstanceGroup.get_by_uuid(mock.sentinel.ctx, _DB_UUID)
+        obj = objects.InstanceGroup.get_by_uuid(self.context, _DB_UUID)
         hosts = obj.get_hosts()
         self.assertEqual(['instance_id1', 'instance_id2'], obj.members)
         expected_filters = {
             'uuid': ['instance_id1', 'instance_id2'],
             'deleted': False
         }
-        mock_il_get.assert_called_once_with(mock.sentinel.ctx,
+        mock_il_get.assert_called_once_with(self.context,
                                             filters=expected_filters)
         self.assertEqual(2, len(hosts))
         self.assertIn('host1', hosts)
@@ -228,12 +238,11 @@ class _TestInstanceGroupObject(object):
             'uuid': set(['instance_id2']),
             'deleted': False
         }
-        mock_il_get.assert_called_once_with(mock.sentinel.ctx,
+        mock_il_get.assert_called_once_with(self.context,
                                             filters=expected_filters)
 
-    @mock.patch('nova.db.instance_group_get', return_value=_INST_GROUP_DB)
-    def test_obj_make_compatible(self, mock_db_get):
-        obj = objects.InstanceGroup.get_by_uuid(mock.sentinel.ctx, _DB_UUID)
+    def test_obj_make_compatible(self):
+        obj = objects.InstanceGroup(self.context, **_INST_GROUP_DB)
         obj_primitive = obj.obj_to_primitive()
         self.assertNotIn('metadetails', obj_primitive)
         obj.obj_make_compatible(obj_primitive, '1.6')
@@ -244,14 +253,14 @@ class _TestInstanceGroupObject(object):
         mock_get_by_filt.return_value = [objects.Instance(host='host1'),
                                          objects.Instance(host='host2')]
 
-        obj = objects.InstanceGroup(mock.sentinel.ctx, members=['uuid1'])
+        obj = objects.InstanceGroup(self.context, members=['uuid1'])
         self.assertEqual(2, len(obj.hosts))
         self.assertIn('host1', obj.hosts)
         self.assertIn('host2', obj.hosts)
         self.assertNotIn('hosts', obj.obj_what_changed())
 
     def test_load_anything_else_but_hosts(self):
-        obj = objects.InstanceGroup(mock.sentinel.ctx)
+        obj = objects.InstanceGroup(self.context)
         self.assertRaises(exception.ObjectActionError, getattr, obj, 'members')
 
 
@@ -283,22 +292,29 @@ def _mock_db_list_get(*args):
 class _TestInstanceGroupListObject(object):
 
     @mock.patch('nova.db.instance_group_get_all')
-    def test_list_all(self, mock_db_get):
+    @mock.patch('nova.objects.InstanceGroupList._get_from_db')
+    def test_list_all_main(self, mock_api_get, mock_db_get):
+        mock_api_get.return_value = []
         mock_db_get.side_effect = _mock_db_list_get
-        inst_list = objects.InstanceGroupList.get_all(mock.sentinel.ctx)
+        inst_list = objects.InstanceGroupList.get_all(self.context)
         self.assertEqual(4, len(inst_list.objects))
-        mock_db_get.assert_called_once_with(mock.sentinel.ctx)
+        mock_db_get.assert_called_once_with(self.context)
 
     @mock.patch('nova.db.instance_group_get_all_by_project_id')
-    def test_list_by_project_id(self, mock_db_get):
+    @mock.patch('nova.objects.InstanceGroupList._get_from_db')
+    def test_list_by_project_id_main(self, mock_api_get, mock_db_get):
+        mock_api_get.return_value = []
         mock_db_get.side_effect = _mock_db_list_get
         objects.InstanceGroupList.get_by_project_id(
-                mock.sentinel.ctx, mock.sentinel.project_id)
+                self.context, mock.sentinel.project_id)
         mock_db_get.assert_called_once_with(
-                mock.sentinel.ctx, mock.sentinel.project_id)
+                self.context, mock.sentinel.project_id)
 
     @mock.patch('nova.db.instance_group_get_all_by_project_id')
-    def test_get_by_name(self, mock_db_get):
+    @mock.patch('nova.objects.InstanceGroup._get_from_db_by_name')
+    def test_get_by_name_main(self, mock_api_get, mock_db_get):
+        error = exception.InstanceGroupNotFound(group_uuid='f1')
+        mock_api_get.side_effect = error
         mock_db_get.side_effect = _mock_db_list_get
         # Need the project_id value set, otherwise we'd use mock.sentinel
         mock_ctx = mock.MagicMock()
@@ -313,10 +329,10 @@ class _TestInstanceGroupListObject(object):
     @mock.patch('nova.objects.InstanceGroup.get_by_uuid')
     @mock.patch('nova.objects.InstanceGroup.get_by_name')
     def test_get_by_hint(self, mock_name, mock_uuid):
-        objects.InstanceGroup.get_by_hint(mock.sentinel.ctx, _DB_UUID)
-        mock_uuid.assert_called_once_with(mock.sentinel.ctx, _DB_UUID)
-        objects.InstanceGroup.get_by_hint(mock.sentinel.ctx, 'name')
-        mock_name.assert_called_once_with(mock.sentinel.ctx, 'name')
+        objects.InstanceGroup.get_by_hint(self.context, _DB_UUID)
+        mock_uuid.assert_called_once_with(self.context, _DB_UUID)
+        objects.InstanceGroup.get_by_hint(self.context, 'name')
+        mock_name.assert_called_once_with(self.context, 'name')
 
 
 class TestInstanceGroupListObject(test_objects._LocalTest,

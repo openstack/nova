@@ -17,14 +17,19 @@ import mock
 import webob
 
 from nova.api.openstack.compute import admin_password as admin_password_v21
-from nova.api.openstack.compute.legacy_v2 import servers
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
+from nova.tests.unit import fake_instance
 
 
-def fake_get(self, context, id, expected_attrs=None, want_objects=False):
-    return {'uuid': id}
+def fake_get(self, context, id, expected_attrs=None):
+    return fake_instance.fake_instance_obj(
+        context,
+        uuid=id,
+        project_id=context.project_id,
+        user_id=context.user_id,
+        expected_attrs=expected_attrs)
 
 
 def fake_set_admin_password(self, context, instance, password=None):
@@ -32,7 +37,7 @@ def fake_set_admin_password(self, context, instance, password=None):
 
 
 class AdminPasswordTestV21(test.NoDBTestCase):
-    validiation_error = exception.ValidationError
+    validation_error = exception.ValidationError
 
     def setUp(self):
         super(AdminPasswordTestV21, self).setUp()
@@ -75,7 +80,7 @@ class AdminPasswordTestV21(test.NoDBTestCase):
 
     def test_change_password_with_non_string_password(self):
         body = {'changePassword': {'adminPass': 1234}}
-        self.assertRaises(self.validiation_error,
+        self.assertRaises(self.validation_error,
                           self._get_action(),
                           self.fake_req, '1', body=body)
 
@@ -88,27 +93,46 @@ class AdminPasswordTestV21(test.NoDBTestCase):
                           self._get_action(),
                           self.fake_req, '1', body=body)
 
+    @mock.patch('nova.compute.api.API.set_admin_password',
+                side_effect=exception.SetAdminPasswdNotSupported(instance="1",
+                                                                 reason=''))
+    def test_change_password_not_supported(self, mock_set_admin_password):
+        body = {'changePassword': {'adminPass': 'test'}}
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self._get_action(),
+                          self.fake_req, '1', body=body)
+
+    @mock.patch('nova.compute.api.API.set_admin_password',
+                side_effect=exception.InstanceAgentNotEnabled(instance="1",
+                                                              reason=''))
+    def test_change_password_guest_agent_disabled(self,
+                                                  mock_set_admin_password):
+        body = {'changePassword': {'adminPass': 'test'}}
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self._get_action(),
+                          self.fake_req, '1', body=body)
+
     def test_change_password_without_admin_password(self):
         body = {'changPassword': {}}
-        self.assertRaises(self.validiation_error,
+        self.assertRaises(self.validation_error,
                           self._get_action(),
                           self.fake_req, '1', body=body)
 
     def test_change_password_none(self):
         body = {'changePassword': {'adminPass': None}}
-        self.assertRaises(self.validiation_error,
+        self.assertRaises(self.validation_error,
                           self._get_action(),
                           self.fake_req, '1', body=body)
 
     def test_change_password_adminpass_none(self):
         body = {'changePassword': None}
-        self.assertRaises(self.validiation_error,
+        self.assertRaises(self.validation_error,
                           self._get_action(),
                           self.fake_req, '1', body=body)
 
     def test_change_password_bad_request(self):
         body = {'changePassword': {'pass': '12345'}}
-        self.assertRaises(self.validiation_error,
+        self.assertRaises(self.validation_error,
                           self._get_action(),
                           self.fake_req, '1', body=body)
 
@@ -131,35 +155,70 @@ class AdminPasswordTestV21(test.NoDBTestCase):
                           self.fake_req, 'fake', body=body)
 
 
-class AdminPasswordTestV2(AdminPasswordTestV21):
-    validiation_error = webob.exc.HTTPBadRequest
-
-    def _get_action(self):
-        class FakeExtManager(object):
-            def is_loaded(self, ext):
-                return False
-        return servers.Controller(ext_mgr=FakeExtManager()).\
-                                    _action_change_password
-
-    def _check_status(self, expected_status, res, controller_method):
-        self.assertEqual(expected_status, res.status_int)
-
-
 class AdminPasswordPolicyEnforcementV21(test.NoDBTestCase):
 
     def setUp(self):
         super(AdminPasswordPolicyEnforcementV21, self).setUp()
         self.controller = admin_password_v21.AdminPasswordController()
         self.req = fakes.HTTPRequest.blank('')
+        req_context = self.req.environ['nova.context']
 
-    def test_change_password_policy_failed(self):
-        rule_name = "os_compute_api:os-admin-password"
-        rule = {rule_name: "project:non_fake"}
-        self.policy.set_rules(rule)
-        body = {'changePassword': {'adminPass': '1234pass'}}
+        def fake_get_instance(self, context, id):
+            return fake_instance.fake_instance_obj(
+                req_context,
+                uuid=id,
+                project_id=req_context.project_id,
+                user_id=req_context.user_id)
+
+        self.stub_out(
+            'nova.api.openstack.common.get_instance', fake_get_instance)
+
+    def _common_policy_check(self, rules, rule_name, func, *arg, **kwarg):
+        self.policy.set_rules(rules)
         exc = self.assertRaises(
-            exception.PolicyNotAuthorized, self.controller.change_password,
-            self.req, fakes.FAKE_UUID, body=body)
+            exception.PolicyNotAuthorized, func, *arg, **kwarg)
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
+
+    def test_change_password_policy_failed_with_other_project(self):
+        rule_name = "os_compute_api:os-admin-password"
+        rule = {rule_name: "project_id:%(project_id)s"}
+        body = {'changePassword': {'adminPass': '1234pass'}}
+        # Change the project_id in request context.
+        req = fakes.HTTPRequest.blank('')
+        req.environ['nova.context'].project_id = 'other-project'
+        self._common_policy_check(
+            rule, rule_name, self.controller.change_password,
+            req, fakes.FAKE_UUID, body=body)
+
+    @mock.patch('nova.compute.api.API.set_admin_password')
+    def test_change_password_overridden_policy_pass_with_same_project(
+        self, password_mock):
+        rule_name = "os_compute_api:os-admin-password"
+        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
+        body = {'changePassword': {'adminPass': '1234pass'}}
+        self.controller.change_password(self.req, fakes.FAKE_UUID, body=body)
+        password_mock.assert_called_once_with(self.req.environ['nova.context'],
+                                              mock.ANY, '1234pass')
+
+    def test_change_password_overridden_policy_failed_with_other_user(self):
+        rule_name = "os_compute_api:os-admin-password"
+        rule = {rule_name: "user_id:%(user_id)s"}
+        # Change the user_id in request context.
+        req = fakes.HTTPRequest.blank('')
+        req.environ['nova.context'].user_id = 'other-user'
+        body = {'changePassword': {'adminPass': '1234pass'}}
+        self._common_policy_check(
+            rule, rule_name, self.controller.change_password,
+            req, fakes.FAKE_UUID, body=body)
+
+    @mock.patch('nova.compute.api.API.set_admin_password')
+    def test_change_password_overridden_policy_pass_with_same_user(
+        self, password_mock):
+        rule_name = "os_compute_api:os-admin-password"
+        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
+        body = {'changePassword': {'adminPass': '1234pass'}}
+        self.controller.change_password(self.req, fakes.FAKE_UUID, body=body)
+        password_mock.assert_called_once_with(self.req.environ['nova.context'],
+                                              mock.ANY, '1234pass')

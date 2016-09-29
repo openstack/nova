@@ -256,7 +256,7 @@ class ComputeTaskAPI(object):
     1.2 - Added build_instances
     1.3 - Added unshelve_instance
     1.4 - Added reservations to migrate_server.
-    1.5 - Added the leagacy_bdm parameter to build_instances
+    1.5 - Added the legacy_bdm parameter to build_instances
     1.6 - Made migrate_server use instance objects
     1.7 - Do not send block_device_mapping and legacy_bdm to build_instances
     1.8 - Add rebuild_instance
@@ -266,6 +266,7 @@ class ComputeTaskAPI(object):
     1.12 - Added request_spec to rebuild_instance()
     1.13 - Added request_spec to migrate_server()
     1.14 - Added request_spec to unshelve_instance()
+    1.15 - Added live_migrate_instance
     """
 
     def __init__(self):
@@ -275,6 +276,17 @@ class ComputeTaskAPI(object):
                                   version='1.0')
         serializer = objects_base.NovaObjectSerializer()
         self.client = rpc.get_client(target, serializer=serializer)
+
+    def live_migrate_instance(self, context, instance, scheduler_hint,
+                              block_migration, disk_over_commit, request_spec):
+        kw = {'instance': instance, 'scheduler_hint': scheduler_hint,
+              'block_migration': block_migration,
+              'disk_over_commit': disk_over_commit,
+              'request_spec': request_spec,
+              }
+        version = '1.15'
+        cctxt = self.client.prepare(version=version)
+        cctxt.cast(context, 'live_migrate_instance', **kw)
 
     def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
                   flavor, block_migration, disk_over_commit,

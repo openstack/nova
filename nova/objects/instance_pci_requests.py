@@ -30,21 +30,14 @@ class InstancePCIRequest(base.NovaObject,
         'count': fields.IntegerField(),
         'spec': fields.ListOfDictOfNullableStringsField(),
         'alias_name': fields.StringField(nullable=True),
-        # A stashed request related to a resize, not current
+        # Note(moshele): is_new is deprecated and should be removed
+        # on major version bump
         'is_new': fields.BooleanField(default=False),
         'request_id': fields.UUIDField(nullable=True),
     }
 
     def obj_load_attr(self, attr):
         setattr(self, attr, None)
-
-    # NOTE(danms): The dict that this object replaces uses a key of 'new'
-    # so we translate it here to our more appropropriately-named 'is_new'.
-    # This is not something that affects the obect version, so we could
-    # remove this later when all dependent code is fixed.
-    @property
-    def new(self):
-        return self.is_new
 
     def obj_make_compatible(self, primitive, target_version):
         target_version = versionutils.convert_version_to_tuple(target_version)
@@ -82,9 +75,11 @@ class InstancePCIRequests(base.NovaObject,
         else:
             requests = []
         for request in requests:
+            # Note(moshele): is_new is deprecated and therefore we load it
+            # with default value of False
             request_obj = InstancePCIRequest(
                 count=request['count'], spec=request['spec'],
-                alias_name=request['alias_name'], is_new=request['is_new'],
+                alias_name=request['alias_name'], is_new=False,
                 request_id=request['request_id'])
             request_obj.obj_reset_changes()
             self.requests.append(request_obj)
@@ -98,13 +93,6 @@ class InstancePCIRequests(base.NovaObject,
         if db_pci_requests is not None:
             db_pci_requests = db_pci_requests['pci_requests']
         return cls.obj_from_db(context, instance_uuid, db_pci_requests)
-
-    @classmethod
-    def get_by_instance_uuid_and_newness(cls, context, instance_uuid, is_new):
-        requests = cls.get_by_instance_uuid(context, instance_uuid)
-        requests.requests = [x for x in requests.requests
-                             if x.new == is_new]
-        return requests
 
     @staticmethod
     def _load_legacy_requests(sysmeta_value, is_new=False):

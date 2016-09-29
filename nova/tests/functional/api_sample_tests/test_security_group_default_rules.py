@@ -12,27 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 from nova.tests.functional.api_sample_tests import api_sample_base
-
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class SecurityGroupDefaultRulesSampleJsonTest(
         api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = 'os-security-group-default-rules'
-
-    def _get_flags(self):
-        f = super(SecurityGroupDefaultRulesSampleJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
-                      'contrib.security_group_default_rules.'
-                      'Security_group_default_rules')
-        return f
+    sample_dir = 'os-security-group-default-rules'
 
     def test_security_group_default_rules_create(self):
         response = self._do_post('os-security-group-default-rules',

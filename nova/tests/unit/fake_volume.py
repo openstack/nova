@@ -14,18 +14,16 @@
 
 import uuid
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import timeutils
 
+import nova.conf
 from nova import exception
 
 
 LOG = logging.getLogger(__name__)
 
-CONF = cfg.CONF
-CONF.import_opt('cross_az_attach',
-                'nova.volume.cinder', group='cinder')
+CONF = nova.conf.CONF
 
 
 class fake_volume(object):

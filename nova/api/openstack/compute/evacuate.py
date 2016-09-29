@@ -13,7 +13,6 @@
 #   under the License.
 
 
-from oslo_config import cfg
 from oslo_utils import strutils
 from webob import exc
 
@@ -24,22 +23,21 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
+import nova.conf
 from nova import exception
 from nova.i18n import _
+from nova.policies import evacuate as evac_policies
 from nova import utils
 
-CONF = cfg.CONF
-CONF.import_opt('enable_instance_password',
-                'nova.api.openstack.compute.legacy_v2.servers')
+CONF = nova.conf.CONF
 
 ALIAS = "os-evacuate"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class EvacuateController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(EvacuateController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
         self.host_api = compute.HostAPI()
 
     def _get_on_shared_storage(self, req, evacuate_body):
@@ -77,19 +75,30 @@ class EvacuateController(wsgi.Controller):
     @extensions.expected_errors((400, 404, 409))
     @wsgi.action('evacuate')
     @validation.schema(evacuate.evacuate, "2.1", "2.12")
-    @validation.schema(evacuate.evacuate_v214, "2.14")
+    @validation.schema(evacuate.evacuate_v214, "2.14", "2.28")
+    @validation.schema(evacuate.evacuate_v2_29, "2.29")
     def _evacuate(self, req, id, body):
         """Permit admins to evacuate a server from a failed host
         to a new one.
         """
         context = req.environ["nova.context"]
-        authorize(context)
+        instance = common.get_instance(self.compute_api, context, id)
+        context.can(evac_policies.BASE_POLICY_NAME,
+                    target={'user_id': instance.user_id,
+                            'project_id': instance.project_id})
 
         evacuate_body = body["evacuate"]
         host = evacuate_body.get("host")
+        force = None
 
         on_shared_storage = self._get_on_shared_storage(req, evacuate_body)
 
+        if api_version_request.is_supported(req, min_version='2.29'):
+            force = body["evacuate"].get("force", False)
+            force = strutils.bool_from_string(force, strict=True)
+            if force is True and not host:
+                message = _("Can't force to a non-provided destination")
+                raise exc.HTTPBadRequest(explanation=message)
         if api_version_request.is_supported(req, min_version='2.14'):
             password = self._get_password_v214(req, evacuate_body)
         else:
@@ -103,14 +112,13 @@ class EvacuateController(wsgi.Controller):
                 msg = _("Compute host %s not found.") % host
                 raise exc.HTTPNotFound(explanation=msg)
 
-        instance = common.get_instance(self.compute_api, context, id)
         if instance.host == host:
             msg = _("The target host can't be the same one.")
             raise exc.HTTPBadRequest(explanation=msg)
 
         try:
             self.compute_api.evacuate(context, instance, host,
-                                      on_shared_storage, password)
+                                      on_shared_storage, password, force)
         except exception.InstanceUnknownCell as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:

@@ -20,10 +20,8 @@ import webob
 from nova.api.openstack.compute import block_device_mapping \
         as block_device_mapping_v21
 from nova.api.openstack.compute import extension_info
-from nova.api.openstack.compute.legacy_v2 import servers as servers_v20
 from nova.api.openstack.compute import multiple_create as multiple_create_v21
 from nova.api.openstack.compute import servers as servers_v21
-from nova.api.openstack import extensions as extensions_v20
 from nova.compute import api as compute_api
 from nova.compute import flavors
 import nova.conf
@@ -114,8 +112,7 @@ class MultiCreateExtensionTestV21(test.TestCase):
         def project_get_networks(context, user_id):
             return dict(id='1', host='localhost')
 
-        fakes.stub_out_rate_limiting(self.stubs)
-        fakes.stub_out_key_pair_funcs(self.stubs)
+        fakes.stub_out_key_pair_funcs(self)
         fake.stub_out_image_service(self)
         fakes.stub_out_nw_api(self)
         self.stub_out('nova.db.instance_add_security_group',
@@ -406,7 +403,7 @@ class MultiCreateExtensionTestV21(test.TestCase):
         reservation_id = res.obj['reservation_id']
         self.assertNotEqual(reservation_id, "")
         self.assertIsNotNone(reservation_id)
-        self.assertTrue(len(reservation_id) > 1)
+        self.assertGreater(len(reservation_id), 1)
 
     def test_create_multiple_instances_with_resv_id_return(self):
         self._create_multiple_instances_resv_id_return(True)
@@ -496,82 +493,3 @@ class MultiCreateExtensionTestV21(test.TestCase):
 
         self.assertRaises(self.validation_error,
                           self.controller.create, self.req, body=body)
-
-
-class MultiCreateExtensionTestV2(MultiCreateExtensionTestV21):
-    validation_error = webob.exc.HTTPBadRequest
-
-    def setUp(self):
-        """Shared implementation for tests below that create instance."""
-        super(MultiCreateExtensionTestV2, self).setUp()
-
-        self.flags(verbose=True,
-                   enable_instance_password=True)
-        self.instance_cache_num = 0
-        self.instance_cache_by_id = {}
-        self.instance_cache_by_uuid = {}
-
-        fakes.stub_out_nw_api(self)
-
-        self.ext_mgr = extensions_v20.ExtensionManager()
-        self.ext_mgr.extensions = {
-            'os-volumes': 'fake',
-            'os-multiple-create': 'fake',
-            'os-block-device-mapping-v2-boot': 'fake'
-        }
-        self.controller = servers_v20.Controller(self.ext_mgr)
-
-        no_mult_ext_mgr = extensions_v20.ExtensionManager()
-        no_mult_ext_mgr.extensions = {
-            'os-volumes': 'fake',
-            'os-block-device-mapping-v2-boot': 'fake'
-        }
-        self.no_mult_create_controller = servers_v20.Controller(
-            no_mult_ext_mgr)
-
-        def instance_create(context, inst):
-            inst_type = flavors.get_flavor_by_flavor_id(3)
-            image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-            def_image_ref = 'http://localhost/images/%s' % image_uuid
-            self.instance_cache_num += 1
-            instance = fake_instance.fake_db_instance(**{
-                'id': self.instance_cache_num,
-                'display_name': inst['display_name'] or 'test',
-                'uuid': inst['uuid'],
-                'instance_type': inst_type,
-                'access_ip_v4': '1.2.3.4',
-                'access_ip_v6': 'fead::1234',
-                'image_ref': inst.get('image_ref', def_image_ref),
-                'user_id': 'fake',
-                'project_id': 'fake',
-                'reservation_id': inst['reservation_id'],
-                "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
-                "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
-                "config_drive": None,
-                "progress": 0,
-                "fixed_ips": [],
-                "task_state": "",
-                "vm_state": "",
-                "root_device_name": inst.get('root_device_name', 'vda'),
-                "security_groups": inst['security_groups'],
-            })
-
-            self.instance_cache_by_id[instance['id']] = instance
-            self.instance_cache_by_uuid[instance['uuid']] = instance
-            return instance
-
-        def instance_get(context, instance_id):
-            """Stub for compute/api create() pulling in instance after
-            scheduling
-            """
-            return self.instance_cache_by_id[instance_id]
-
-        fakes.stub_out_rate_limiting(self.stubs)
-        fakes.stub_out_key_pair_funcs(self.stubs)
-        fake.stub_out_image_service(self)
-        self.stub_out('nova.db.instance_create', instance_create)
-        self.stub_out('nova.db.instance_get', instance_get)
-
-    def _check_multiple_create_extension_disabled(self, **kwargs):
-        self.assertEqual(kwargs['min_count'], 1)
-        self.assertEqual(kwargs['max_count'], 1)

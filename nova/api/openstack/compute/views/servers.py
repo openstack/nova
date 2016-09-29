@@ -57,9 +57,9 @@ class ViewBuilder(common.ViewBuilder):
     def __init__(self):
         """Initialize view builder."""
         super(ViewBuilder, self).__init__()
-        self._address_builder = views_addresses.ViewBuilder()
-        self._flavor_builder = views_flavors.ViewBuilder()
+        self._address_builder = views_addresses.ViewBuilderV21()
         self._image_builder = views_images.ViewBuilder()
+        self._flavor_builder = views_flavors.ViewBuilder()
 
     def create(self, request, instance):
         """View that should be returned when an instance is created."""
@@ -69,6 +69,11 @@ class ViewBuilder(common.ViewBuilder):
                 "links": self._get_links(request,
                                          instance["uuid"],
                                          self._collection_name),
+                # NOTE(sdague): historically this was the
+                # os-disk-config extension, but now that extensions
+                # are gone, we merge these attributes here.
+                "OS-DCF:diskConfig": (
+                    'AUTO' if instance.get('auto_disk_config') else 'MANUAL'),
             },
         }
 
@@ -104,10 +109,11 @@ class ViewBuilder(common.ViewBuilder):
         # results.
         return sorted(list(set(self._show_expected_attrs + expected_attrs)))
 
-    def show(self, request, instance):
+    def show(self, request, instance, extend_address=True):
         """Detailed view of a single instance."""
         ip_v4 = instance.get('access_ip_v4')
         ip_v6 = instance.get('access_ip_v6')
+
         server = {
             "server": {
                 "id": instance["uuid"],
@@ -121,12 +127,18 @@ class ViewBuilder(common.ViewBuilder):
                 "flavor": self._get_flavor(request, instance),
                 "created": utils.isotime(instance["created_at"]),
                 "updated": utils.isotime(instance["updated_at"]),
-                "addresses": self._get_addresses(request, instance),
+                "addresses": self._get_addresses(request, instance,
+                                                 extend_address),
                 "accessIPv4": str(ip_v4) if ip_v4 is not None else '',
                 "accessIPv6": str(ip_v6) if ip_v6 is not None else '',
                 "links": self._get_links(request,
                                          instance["uuid"],
                                          self._collection_name),
+                # NOTE(sdague): historically this was the
+                # os-disk-config extension, but now that extensions
+                # are gone, we merge these attributes here.
+                "OS-DCF:diskConfig": (
+                    'AUTO' if instance.get('auto_disk_config') else 'MANUAL'),
             },
         }
         if server["server"]["status"] in self._fault_statuses:
@@ -136,6 +148,17 @@ class ViewBuilder(common.ViewBuilder):
 
         if server["server"]["status"] in self._progress_statuses:
             server["server"]["progress"] = instance.get("progress", 0)
+
+        if api_version_request.is_supported(request, min_version="2.9"):
+            server["server"]["locked"] = (True if instance["locked_by"]
+                                          else False)
+
+        if api_version_request.is_supported(request, min_version="2.19"):
+            server["server"]["description"] = instance.get(
+                                                "display_description")
+
+        if api_version_request.is_supported(request, min_version="2.26"):
+            server["server"]["tags"] = [t.tag for t in instance.tags]
 
         return server
 
@@ -192,7 +215,8 @@ class ViewBuilder(common.ViewBuilder):
         host = instance.get("host")
         project = str(instance.get("project_id"))
         if host:
-            sha_hash = hashlib.sha224(project + host)
+            data = (project + host).encode('utf-8')
+            sha_hash = hashlib.sha224(data)
             return sha_hash.hexdigest()
 
     def _get_addresses(self, request, instance, extend_address=False):
@@ -259,61 +283,3 @@ class ViewBuilder(common.ViewBuilder):
                 fault_dict['details'] = fault["details"]
 
         return fault_dict
-
-
-class ViewBuilderV21(ViewBuilder):
-    """Model a server v2.1 API response as a python dictionary."""
-
-    def __init__(self):
-        """Initialize view builder."""
-        super(ViewBuilderV21, self).__init__()
-        self._address_builder = views_addresses.ViewBuilderV21()
-        # TODO(alex_xu): In V3 API, we correct the image bookmark link to
-        # use glance endpoint. We revert back it to use nova endpoint for v2.1.
-        self._image_builder = views_images.ViewBuilder()
-
-    def show(self, request, instance, extend_address=True):
-        """Detailed view of a single instance."""
-        server = {
-            "server": {
-                "id": instance["uuid"],
-                "name": instance["display_name"],
-                "status": self._get_vm_status(instance),
-                "tenant_id": instance.get("project_id") or "",
-                "user_id": instance.get("user_id") or "",
-                "metadata": self._get_metadata(instance),
-                "hostId": self._get_host_id(instance) or "",
-                # TODO(alex_xu): '_get_image' return {} when there image_ref
-                # isn't existed in V3 API, we revert it back to return "" in
-                # V2.1.
-                "image": self._get_image(request, instance),
-                "flavor": self._get_flavor(request, instance),
-                "created": utils.isotime(instance["created_at"]),
-                "updated": utils.isotime(instance["updated_at"]),
-                "addresses": self._get_addresses(request, instance,
-                                                 extend_address),
-                "links": self._get_links(request,
-                                         instance["uuid"],
-                                         self._collection_name),
-            },
-        }
-        if server["server"]["status"] in self._fault_statuses:
-            _inst_fault = self._get_fault(request, instance)
-            if _inst_fault:
-                server['server']['fault'] = _inst_fault
-
-        if server["server"]["status"] in self._progress_statuses:
-            server["server"]["progress"] = instance.get("progress", 0)
-
-        if api_version_request.is_supported(request, min_version="2.9"):
-            server["server"]["locked"] = (True if instance["locked_by"]
-                                          else False)
-
-        if api_version_request.is_supported(request, min_version="2.19"):
-            server["server"]["description"] = instance.get(
-                                                "display_description")
-
-        if api_version_request.is_supported(request, min_version="2.26"):
-            server["server"]["tags"] = [t.tag for t in instance.tags]
-
-        return server

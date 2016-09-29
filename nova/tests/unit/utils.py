@@ -17,10 +17,10 @@ import platform
 import socket
 import sys
 
-from oslo_config import cfg
 from six.moves import range
 
 from nova.compute import flavors
+import nova.conf
 import nova.context
 import nova.db
 from nova import exception
@@ -28,10 +28,10 @@ from nova.image import glance
 from nova.network import minidns
 from nova.network import model as network_model
 from nova import objects
+from nova.objects import base as obj_base
 import nova.utils
 
-CONF = cfg.CONF
-CONF.import_opt('use_ipv6', 'nova.netconf')
+CONF = nova.conf.CONF
 
 
 def get_test_admin_context():
@@ -248,3 +248,42 @@ def is_ipv6_supported():
 def get_api_version(request):
     if request.path[2:3].isdigit():
         return int(request.path[2:3])
+
+
+def compare_obj_primitive(thing1, thing2):
+    if isinstance(thing1, obj_base.NovaObject):
+        return thing1.obj_to_primitive() == thing2.obj_to_primitive()
+    else:
+        return thing1 == thing2
+
+
+def _compare_args(args1, args2, cmp):
+    return all(cmp(*pair) for pair in zip(args1, args2))
+
+
+def _compare_kwargs(kwargs1, kwargs2, cmp):
+    return all(cmp(kwargs1[k], kwargs2[k])
+               for k in set(list(kwargs1.keys()) + list(kwargs2.keys())))
+
+
+def _obj_called_with(the_mock, *args, **kwargs):
+    if 'obj_cmp' in kwargs:
+        cmp = kwargs.pop('obj_cmp')
+    else:
+        cmp = compare_obj_primitive
+
+    count = 0
+    for call in the_mock.call_args_list:
+        if (_compare_args(call[0], args, cmp) and
+                _compare_kwargs(call[1], kwargs, cmp)):
+            count += 1
+
+    return count
+
+
+def obj_called_with(the_mock, *args, **kwargs):
+    return _obj_called_with(the_mock, *args, **kwargs) != 0
+
+
+def obj_called_once_with(the_mock, *args, **kwargs):
+    return _obj_called_with(the_mock, *args, **kwargs) == 1

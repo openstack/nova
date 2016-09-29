@@ -21,6 +21,7 @@ Tests for Consoleauth Code.
 import mock
 from mox3 import mox
 from oslo_utils import timeutils
+import six
 
 from nova.consoleauth import manager
 from nova import context
@@ -152,11 +153,11 @@ class ControlauthMemcacheEncodingTestCase(test.NoDBTestCase):
     def test_authorize_console_encoding(self):
         with test.nested(
                 mock.patch.object(self.manager.mc_instance,
-                                  'set', return_value=True),
+                                  'set', return_value=None),
                 mock.patch.object(self.manager.mc_instance,
                                   'get', return_value='["token"]'),
                 mock.patch.object(self.manager.mc,
-                                  'set', return_value=True),
+                                  'set', return_value=None),
                 mock.patch.object(self.manager.mc,
                                   'get', return_value=None),
                 mock.patch.object(self.manager.mc,
@@ -170,15 +171,15 @@ class ControlauthMemcacheEncodingTestCase(test.NoDBTestCase):
             self.manager.authorize_console(self.context, self.u_token,
                                            'novnc', '127.0.0.1', '8080',
                                            'host', self.u_instance)
-            mock_set.assert_has_calls([mock.call('token', mock.ANY)])
-            mock_instance_get.assert_has_calls([mock.call('instance')])
-            mock_get_multi.assert_has_calls([mock.call(['token'])])
+            mock_set.assert_has_calls([mock.call(b'token', mock.ANY)])
+            mock_instance_get.assert_has_calls([mock.call(b'instance')])
+            mock_get_multi.assert_has_calls([mock.call([b'token'])])
             mock_instance_set.assert_has_calls(
-                    [mock.call('instance', mock.ANY)])
+                    [mock.call(b'instance', mock.ANY)])
 
     def test_check_token_encoding(self):
         self.mox.StubOutWithMock(self.manager.mc, "get")
-        self.manager.mc.get(mox.IsA(str)).AndReturn(None)
+        self.manager.mc.get(mox.IsA(six.binary_type)).AndReturn(None)
 
         self.mox.ReplayAll()
 
@@ -201,9 +202,9 @@ class ControlauthMemcacheEncodingTestCase(test.NoDBTestCase):
                 mock_delete_multi):
             self.manager.delete_tokens_for_instance(self.context,
                                                     self.u_instance)
-            mock_instance_get.assert_has_calls([mock.call('instance')])
-            mock_instance_delete.assert_has_calls([mock.call('instance')])
-            mock_delete_multi.assert_has_calls([mock.call(['token'])])
+            mock_instance_get.assert_has_calls([mock.call(b'instance')])
+            mock_instance_delete.assert_has_calls([mock.call(b'instance')])
+            mock_delete_multi.assert_has_calls([mock.call([b'token'])])
 
 
 class CellsConsoleauthTestCase(ConsoleauthTestCase):

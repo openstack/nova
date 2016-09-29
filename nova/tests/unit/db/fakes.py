@@ -98,7 +98,7 @@ virtual_interface_fields = {'id': 0,
 
 fixed_ips = [fixed_ip_fields]
 floating_ips = [floating_ip_fields]
-virtual_interfacees = [virtual_interface_fields]
+virtual_interfaces = [virtual_interface_fields]
 networks = [network_fields]
 
 
@@ -219,7 +219,7 @@ def fake_fixed_ip_update(context, address, values):
         for key in values:
             ips[0][key] = values[key]
             if key == 'virtual_interface_id':
-                vif = [v for v in virtual_interfacees
+                vif = [v for v in virtual_interfaces
                        if v['id'] == values[key]]
                 if not vif:
                     continue
@@ -233,14 +233,14 @@ def fake_flavor_get(context, id):
 
 def fake_virtual_interface_create(context, values):
     vif = dict(virtual_interface_fields)
-    vif['id'] = max([m['id'] for m in virtual_interfacees] or [-1]) + 1
+    vif['id'] = max([m['id'] for m in virtual_interfaces] or [-1]) + 1
     for key in values:
         vif[key] = values[key]
     return FakeModel(vif)
 
 
 def fake_virtual_interface_delete_by_instance(context, instance_id):
-    vif = copy.copy(virtual_interfacees)
+    vif = copy.copy(virtual_interfaces)
     addresses = [m for m in vif
                  if m['instance_id'] == instance_id]
     try:
@@ -251,14 +251,14 @@ def fake_virtual_interface_delete_by_instance(context, instance_id):
 
 
 def fake_virtual_interface_get_by_instance(context, instance_id):
-    return [FakeModel(m) for m in virtual_interfacees
+    return [FakeModel(m) for m in virtual_interfaces
             if m['instance_id'] == instance_id]
 
 
 def fake_virtual_interface_get_by_instance_and_network(context,
                                                        instance_id,
                                                        network_id):
-    vif = [v for v in virtual_interfacees if v['instance_id'] == instance_id
+    vif = [v for v in virtual_interfaces if v['instance_id'] == instance_id
            and v['network_id'] == network_id]
     if not vif:
         return None

@@ -1,0 +1,5 @@
+---
+other:
+  - The XenServer configuration option 'iqn_prefix' has been removed.
+    It was not used anywhere and has no effect on any code, so there
+    should be no impact.

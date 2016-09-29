@@ -12,11 +12,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import urllib
-
 from oslo_utils import netutils
+from six.moves import urllib
 import webob
 
+from nova.api.openstack.api_version_request \
+    import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import floating_ip_dns
 from nova.api.openstack import extensions
@@ -25,10 +26,10 @@ from nova.api import validation
 from nova import exception
 from nova.i18n import _
 from nova import network
+from nova.policies import floating_ip_dns as fid_policies
 
 
 ALIAS = "os-floating-ip-dns"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def _translate_dns_entry_view(dns_entry):
@@ -68,7 +69,7 @@ def _unquote_domain(domain):
     but Routes tends to choke on them, so we need an extra level of
     by-hand quoting here.
     """
-    return urllib.unquote(domain).replace('%2E', '.')
+    return urllib.parse.unquote(domain).replace('%2E', '.')
 
 
 def _create_dns_entry(ip, name, domain):
@@ -85,13 +86,14 @@ class FloatingIPDNSDomainController(wsgi.Controller):
 
     def __init__(self):
         super(FloatingIPDNSDomainController, self).__init__()
-        self.network_api = network.API(skip_policy_check=True)
+        self.network_api = network.API()
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(501)
     def index(self, req):
         """Return a list of available DNS domains."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fid_policies.BASE_POLICY_NAME)
 
         try:
             domains = self.network_api.get_dns_domains(context)
@@ -106,12 +108,13 @@ class FloatingIPDNSDomainController(wsgi.Controller):
 
         return _translate_domain_entries_view(domainlist)
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((400, 501))
     @validation.schema(floating_ip_dns.domain_entry_update)
     def update(self, req, id, body):
         """Add or modify domain entry."""
         context = req.environ['nova.context']
-        authorize(context, action="domain:update")
+        context.can(fid_policies.POLICY_ROOT % "domain:update")
         fqdomain = _unquote_domain(id)
         entry = body['domain_entry']
         scope = entry['scope']
@@ -141,12 +144,13 @@ class FloatingIPDNSDomainController(wsgi.Controller):
                                              'scope': scope,
                                              area_name: area})
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((404, 501))
     @wsgi.response(202)
     def delete(self, req, id):
         """Delete the domain identified by id."""
         context = req.environ['nova.context']
-        authorize(context, action="domain:delete")
+        context.can(fid_policies.POLICY_ROOT % "domain:delete")
         domain = _unquote_domain(id)
 
         # Delete the whole domain
@@ -163,13 +167,14 @@ class FloatingIPDNSEntryController(wsgi.Controller):
 
     def __init__(self):
         super(FloatingIPDNSEntryController, self).__init__()
-        self.network_api = network.API(skip_policy_check=True)
+        self.network_api = network.API()
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((404, 501))
     def show(self, req, domain_id, id):
         """Return the DNS entry that corresponds to domain_id and id."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fid_policies.BASE_POLICY_NAME)
         domain = _unquote_domain(domain_id)
 
         floating_ip = None
@@ -202,12 +207,13 @@ class FloatingIPDNSEntryController(wsgi.Controller):
         entry = _create_dns_entry(entries[0], id, domain)
         return _translate_dns_entry_view(entry)
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(501)
     @validation.schema(floating_ip_dns.dns_entry_update)
     def update(self, req, domain_id, id, body):
         """Add or modify dns entry."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fid_policies.BASE_POLICY_NAME)
         domain = _unquote_domain(domain_id)
         name = id
         entry = body['dns_entry']
@@ -233,12 +239,13 @@ class FloatingIPDNSEntryController(wsgi.Controller):
                                           'type': dns_type,
                                           'domain': domain})
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((404, 501))
     @wsgi.response(202)
     def delete(self, req, domain_id, id):
         """Delete the entry identified by req and id."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fid_policies.BASE_POLICY_NAME)
         domain = _unquote_domain(domain_id)
         name = id
 

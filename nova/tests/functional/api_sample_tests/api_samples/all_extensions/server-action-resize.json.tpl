@@ -1,5 +1,0 @@
-{
-    "resize" : {
-        "flavorRef" : "%(id)s"
-    }
-}

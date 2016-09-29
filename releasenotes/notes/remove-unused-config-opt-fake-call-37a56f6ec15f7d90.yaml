@@ -1,0 +1,4 @@
+other:
+  - The network configuration option 'fake_call' has been removed. It hasn't
+    been used for several cycles, and has no effect on any code, so there
+    should be no impact.

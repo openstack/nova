@@ -13,8 +13,6 @@
 #   under the License.
 
 from nova.api.openstack.compute import admin_actions as admin_actions_v21
-from nova.api.openstack.compute.legacy_v2.contrib import admin_actions \
-        as admin_actions_v2
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
@@ -56,11 +54,6 @@ class AdminActionsTestV21(admin_only_action_common.CommonTests):
 
         self._test_actions_with_locked_instance(actions,
             method_translations=method_translations)
-
-
-class AdminActionsTestV2(AdminActionsTestV21):
-    admin_actions = admin_actions_v2
-    _api_version = '2'
 
 
 class AdminActionsPolicyEnforcementV21(test.NoDBTestCase):

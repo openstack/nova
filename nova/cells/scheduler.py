@@ -84,6 +84,9 @@ class CellsScheduler(base.Base):
         # FIXME(danms): Same for ec2_ids
         instance_values.pop('ec2_ids', None)
 
+        # FIXME(danms): Same for keypairs
+        instance_values.pop('keypairs', None)
+
         instances = []
         num_instances = len(instance_uuids)
         security_groups = (
@@ -104,6 +107,10 @@ class CellsScheduler(base.Base):
                     security_groups,
                     block_device_mapping,
                     num_instances, i)
+            block_device_mapping = (
+                self.compute_api._bdm_validate_set_size_and_instance(
+                    ctxt, instance, instance_type, block_device_mapping))
+            self.compute_api._create_block_device_mapping(block_device_mapping)
 
             instances.append(instance)
             self.msg_runner.instance_update_at_top(ctxt, instance)

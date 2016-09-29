@@ -86,6 +86,9 @@ tunctl: CommandFilter, tunctl, root
 # nova/network/linux_net.py: 'ovs-vsctl', ....
 ovs-vsctl: CommandFilter, ovs-vsctl, root
 
+# nova/network/linux_net.py: 'ivs-ctl', ....
+ivs-ctl: CommandFilter, ivs-ctl, root
+
 # nova/virt/libvirt/vif.py: 'vrouter-port-control', ...
 vrouter-port-control: CommandFilter, vrouter-port-control, root
 
@@ -224,7 +227,7 @@ sg_scan: CommandFilter, sg_scan, root
 
 # nova/volume/encryptors/cryptsetup.py:
 # nova/volume/encryptors/luks.py:
-ln: RegExpFilter, ln, root, ln, --symbolic, --force, /dev/mapper/.*, .*
+ln: RegExpFilter, ln, root, ln, --symbolic, --force, /dev/mapper/crypt-.+, .+
 
 # nova/volume/encryptors.py:
 # nova/virt/libvirt/dmcrypt.py:
@@ -246,10 +249,14 @@ cp: CommandFilter, cp, root
 sync: CommandFilter, sync, root
 
 # nova/virt/libvirt/imagebackend.py:
-ploop: CommandFilter, ploop, root
+ploop: RegExpFilter, ploop, root, ploop, restore-descriptor, .*
+prl_disk_tool: RegExpFilter, prl_disk_tool, root, prl_disk_tool, resize, --size, .*M$, --resize_partition, --hdd, .*
 
 # nova/virt/libvirt/utils.py: 'xend', 'status'
 xend: CommandFilter, xend, root
 
 # nova/virt/libvirt/utils.py:
 touch: CommandFilter, touch, root
+
+# nova/virt/libvirt/volume/vzstorage.py
+pstorage-mount: CommandFilter, pstorage-mount, root

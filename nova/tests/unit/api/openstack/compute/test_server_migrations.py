@@ -15,6 +15,7 @@
 
 import copy
 import datetime
+
 import mock
 import webob
 
@@ -175,8 +176,7 @@ class ServerMigrationsTestsV223(ServerMigrationsTestsV21):
         self.assertEqual(migrations_in_progress, response)
 
         m_get_instance.assert_called_once_with(self.context, SERVER_UUID,
-                                               expected_attrs=None,
-                                               want_objects=True)
+                                               expected_attrs=None)
 
     @mock.patch('nova.compute.api.API.get')
     def test_index_invalid_instance(self, m_get_instance):
@@ -186,8 +186,7 @@ class ServerMigrationsTestsV223(ServerMigrationsTestsV21):
                           self.req, SERVER_UUID)
 
         m_get_instance.assert_called_once_with(self.context, SERVER_UUID,
-                                               expected_attrs=None,
-                                               want_objects=True)
+                                               expected_attrs=None)
 
     @mock.patch('nova.compute.api.API.get_migration_by_id_and_instance')
     @mock.patch('nova.compute.api.API.get')
@@ -199,8 +198,7 @@ class ServerMigrationsTestsV223(ServerMigrationsTestsV21):
         self.assertEqual(migrations[0], response['migration'])
 
         m_get_instance.assert_called_once_with(self.context, SERVER_UUID,
-                                               expected_attrs=None,
-                                               want_objects=True)
+                                               expected_attrs=None)
 
     @mock.patch('nova.compute.api.API.get_migration_by_id_and_instance')
     @mock.patch('nova.compute.api.API.get')
@@ -214,8 +212,7 @@ class ServerMigrationsTestsV223(ServerMigrationsTestsV21):
                           non_progress_mig.id)
 
         m_get_instance.assert_called_once_with(self.context, SERVER_UUID,
-                                               expected_attrs=None,
-                                               want_objects=True)
+                                               expected_attrs=None)
 
     @mock.patch('nova.compute.api.API.get_migration_by_id_and_instance')
     @mock.patch('nova.compute.api.API.get')
@@ -230,8 +227,7 @@ class ServerMigrationsTestsV223(ServerMigrationsTestsV21):
                           non_progress_mig.id)
 
         m_get_instance.assert_called_once_with(self.context, SERVER_UUID,
-                                               expected_attrs=None,
-                                               want_objects=True)
+                                               expected_attrs=None)
 
     @mock.patch('nova.compute.api.API.get_migration_by_id_and_instance')
     @mock.patch('nova.compute.api.API.get')
@@ -245,8 +241,7 @@ class ServerMigrationsTestsV223(ServerMigrationsTestsV21):
                           migrations_obj[0].id)
 
         m_get_instance.assert_called_once_with(self.context, SERVER_UUID,
-                                               expected_attrs=None,
-                                               want_objects=True)
+                                               expected_attrs=None)
 
     @mock.patch('nova.compute.api.API.get')
     def test_show_migration_invalid_instance(self, m_get_instance):
@@ -257,8 +252,7 @@ class ServerMigrationsTestsV223(ServerMigrationsTestsV21):
                           migrations_obj[0].id)
 
         m_get_instance.assert_called_once_with(self.context, SERVER_UUID,
-                                               expected_attrs=None,
-                                               want_objects=True)
+                                               expected_attrs=None)
 
 
 class ServerMigrationsTestsV224(ServerMigrationsTestsV21):
@@ -348,9 +342,6 @@ class ServerMigrationsPolicyEnforcementV223(
 
     wsgi_api_version = '2.23'
 
-    def setUp(self):
-        super(ServerMigrationsPolicyEnforcementV223, self).setUp()
-
     def test_migration_index_failed(self):
         rule_name = "os_compute_api:servers:migrations:index"
         self.policy.set_rules({rule_name: "project:non_fake"})
@@ -374,9 +365,6 @@ class ServerMigrationsPolicyEnforcementV224(
                 ServerMigrationsPolicyEnforcementV223):
 
     wsgi_api_version = '2.24'
-
-    def setUp(self):
-        super(ServerMigrationsPolicyEnforcementV224, self).setUp()
 
     def test_migrate_delete_failed(self):
         rule_name = "os_compute_api:servers:migrations:delete"

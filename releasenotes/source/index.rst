@@ -7,10 +7,10 @@ Contents
 .. toctree::
    :maxdepth: 2
 
-   liberty
-   mitaka
    unreleased
-
+   newton
+   mitaka
+   liberty
 
 Indices and tables
 ==================

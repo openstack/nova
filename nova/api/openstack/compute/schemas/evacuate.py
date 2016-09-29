@@ -38,3 +38,7 @@ evacuate = {
 evacuate_v214 = copy.deepcopy(evacuate)
 del evacuate_v214['properties']['evacuate']['properties']['onSharedStorage']
 del evacuate_v214['properties']['evacuate']['required']
+
+evacuate_v2_29 = copy.deepcopy(evacuate_v214)
+evacuate_v2_29['properties']['evacuate']['properties'][
+    'force'] = parameter_types.boolean

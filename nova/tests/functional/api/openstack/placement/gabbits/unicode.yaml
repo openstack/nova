@@ -1,0 +1,72 @@
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        accept: application/json
+        x-auth-token: admin
+
+tests:
+
+- name: get a raw snowman unicode
+  desc: this should fall through to a NotFound on the resource provider object
+  GET: /resource_providers/☃
+  status: 404
+
+- name: get an encoded snowman
+  desc: this should fall through to a NotFound on the resource provider object
+  GET: /resources_providers/%e2%98%83
+  status: 404
+
+- name: post resource provider with snowman
+  POST: /resource_providers
+  request_headers:
+    content-type: application/json
+  data:
+      name: ☃
+      uuid: $ENVIRON['RP_UUID']
+  status: 201
+  response_headers:
+      location: //resource_providers/[a-f0-9-]+/
+
+- name: get that resource provider
+  GET: $LOCATION
+  response_json_paths:
+      $.name: ☃
+
+- name: query by name
+  GET: /resource_providers?name=%e2%98%83
+  response_json_paths:
+      $.resource_providers[0].name: ☃
+
+- name: delete that one
+  DELETE: /resource_providers/$ENVIRON['RP_UUID']
+  status: 204
+
+# These next three are expected to fail on many mysql
+# installations. It works with the local in-RAM sqlite
+# test database.
+- name: four byte utf8 smiley
+  xfail: true
+  POST: /resource_providers
+  request_headers:
+    content-type: application/json
+  data:
+      name: "\U0001F601"
+      uuid: $ENVIRON['RP_UUID']
+  status: 201
+  response_headers:
+      location: //resource_providers/[a-f0-9-]+/
+
+- name: get that wide resource provider
+  xfail: true
+  GET: $LOCATION
+  response_json_paths:
+      $.name: "\U0001F601"
+
+- name: query by wide name
+  xfail: true
+  GET: /resource_providers?name=%F0%9F%98%81
+  response_json_paths:
+      $.resource_providers[0].name: "\U0001F601"

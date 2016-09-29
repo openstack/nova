@@ -20,21 +20,21 @@ from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
+from nova.policies import server_password as sp_policies
 
 
 ALIAS = 'os-server-password'
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class ServerPasswordController(wsgi.Controller):
     """The Server Password API controller for the OpenStack API."""
     def __init__(self):
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
 
     @extensions.expected_errors(404)
     def index(self, req, server_id):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(sp_policies.BASE_POLICY_NAME)
         instance = common.get_instance(self.compute_api, context, server_id)
 
         passw = password.extract_password(instance)
@@ -50,7 +50,7 @@ class ServerPasswordController(wsgi.Controller):
         """
 
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(sp_policies.BASE_POLICY_NAME)
         instance = common.get_instance(self.compute_api, context, server_id)
         meta = password.convert_password(context, None)
         instance.system_metadata.update(meta)

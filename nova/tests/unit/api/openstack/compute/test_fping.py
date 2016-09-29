@@ -18,7 +18,6 @@ import mock
 import webob
 
 from nova.api.openstack.compute import fping as fping_v21
-from nova.api.openstack.compute.legacy_v2.contrib import fping
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -111,10 +110,6 @@ class FpingTestV21(test.TestCase):
                           self.controller.show, req, FAKE_UUID)
 
 
-class FpingTestV2(FpingTestV21):
-    controller_cls = fping.FpingController
-
-
 class FpingPolicyEnforcementV21(test.NoDBTestCase):
 
     def setUp(self):
@@ -143,3 +138,17 @@ class FpingPolicyEnforcementV21(test.NoDBTestCase):
         rule = {"os_compute_api:os-fping": "project:non_fake"}
         self.common_policy_check(
             rule, self.controller.show, self.req, FAKE_UUID)
+
+
+class FpingTestDeprecation(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FpingTestDeprecation, self).setUp()
+        self.controller = fping_v21.FpingController()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+
+    def test_all_apis_return_not_found(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.show, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.index, self.req)

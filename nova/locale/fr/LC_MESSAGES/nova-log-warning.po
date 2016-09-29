@@ -9,9 +9,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:29+0000\n"
+"POT-Creation-Date: 2016-08-25 06:14+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -53,10 +53,6 @@ msgstr "L'adresse |%(address)s| n'est pas allouée"
 #, python-format
 msgid "Address |%(address)s| is not allocated to your project |%(project)s|"
 msgstr "L'adresse |%(address)s| n'est pas allouée à votre projet |%(project)s|"
-
-#, python-format
-msgid "Arguments dropped when creating context: %s"
-msgstr "Arguments supprimés lors de la création du contexte : %s"
 
 #, python-format
 msgid ""
@@ -255,10 +251,6 @@ msgstr ""
 "aucune ressource"
 
 #, python-format
-msgid "Extensions in both blacklist and whitelist: %s"
-msgstr "Extensions à la fois dans la liste noire et la liste blanche : %s"
-
-#, python-format
 msgid "Failed to %(service)s_%(method)s: %(ex)s"
 msgstr "Échec de %(service)s_%(method)s : %(ex)s"
 
@@ -302,16 +294,8 @@ msgid "Failed to get cluster references %s"
 msgstr "Echec lors de la récupération des références %s de la grappe."
 
 #, python-format
-msgid "Failed to load extension %(classpath)s: %(exc)s"
-msgstr "Echec du chargement de l'extension %(classpath)s : %(exc)s"
-
-#, python-format
 msgid "Failed to load extension %(ext_factory)s: %(exc)s"
 msgstr "Echec du chargement de l'extension %(ext_factory)s : %(exc)s"
-
-#, python-format
-msgid "Failed to load extension %(ext_name)s:%(exc)s"
-msgstr "Echec de chargement de l'extension %(ext_name)s:%(exc)s"
 
 msgid "Failed to power off instance"
 msgstr "Echec de mise sous tension de l'instance"
@@ -420,12 +404,6 @@ msgid "Ignoring volume cleanup failure due to %s"
 msgstr "Echec de l'omission du nettoyage de volume. Cause : %s"
 
 #, python-format
-msgid "Image %s not found on disk storage. Continue without injecting data"
-msgstr ""
-"L'image %s n'est pas trouvée sur l'espace disque. Continuer sans injonction "
-"de données."
-
-#, python-format
 msgid ""
 "Instance %(instance)s is using a backing file %(backing)s which does not "
 "appear in the image service"
@@ -474,10 +452,6 @@ msgid ""
 msgstr ""
 "L'UUID d'instance n'a pu être récupéré pour l'instance %s. L’événement de "
 "changement d'état de l'instance va être ignoré."
-
-#, python-format
-msgid "Instance: %(instance_uuid)s failed to save into memcached"
-msgstr "Instance: %(instance_uuid)s a échoué à sauvegarder dans le memcached"
 
 #, python-format
 msgid "Invalid cachemode %(cache_mode)s specified for disk type %(disk_type)s."
@@ -722,17 +696,6 @@ msgstr ""
 "Tenant_id %(tenant_id)s ne correspond pas avec le tenant_id de l'instance "
 "%(instance_id)s."
 
-#, python-format
-msgid ""
-"The libvirt driver is not tested on %(type)s/%(arch)s by the OpenStack "
-"project and thus its quality can not be ensured. For more information, see: "
-"https://wiki.openstack.org/wiki/HypervisorSupportMatrix"
-msgstr ""
-"Le pilote libvirt n'est pas testé sur %(type)s/%(arch)s par le projet "
-"OpenStack et sa qualité ne peut donc être garantie. Pour plus "
-"d'informations, voir : https://wiki.openstack.org/wiki/"
-"HypervisorSupportMatrix"
-
 msgid "This shouldn't be getting called except during testing."
 msgstr "Le programme ne doit pas être appelé sauf pendant le test."
 
@@ -754,10 +717,6 @@ msgstr ""
 "Dépassement du délai d'attente pour le rappel de la connexion int. virt., "
 "pour l'instance %(uuid)s"
 
-#, python-format
-msgid "Token: %(token)s failed to save into memcached."
-msgstr "Jeton : %(token)s a échoué à sauvegarder dans memcached. "
-
 msgid "Too many id maps, only included first five."
 msgstr "Trop de cartes id, inclure uniquement les cinq premières."
 
@@ -774,14 +733,6 @@ msgid ""
 msgstr ""
 "La valeur négative (%(retries)s) de la configuration 'glance.num_retries' "
 "traitée comme 0."
-
-#, python-format
-msgid ""
-"Treating negative config value (%(retries)s) for 'network_allocate_retries' "
-"as 0."
-msgstr ""
-"La valeur négative (%(retries)s) de la configuration "
-"'network_allocate_retries' traitée comme 0."
 
 #, python-format
 msgid ""
@@ -958,15 +909,6 @@ msgstr "Échec de plug_vifs() %(cnt)d. Recommencer jusqu'à %(max_retry)d."
 #, python-format
 msgid "rbd remove %(volume)s in pool %(pool)s failed"
 msgstr "La suppression de rbd %(volume)s dans  le pool %(pool)s a échoué"
-
-#, python-format
-msgid ""
-"serial_console.port_range should be <num>:<num>. Given value %(port_range)s "
-"could not be parsed. Taking the default port range %(default)s."
-msgstr ""
-"serial_console.port_range devrait être <num>:<num>. La valeur donnée "
-"%(port_range)s ne peut être analysée. Prise en compte de la plage de ports "
-"par défaut %(default)s."
 
 msgid "set_admin_password is not implemented by this driver or guest instance."
 msgstr ""

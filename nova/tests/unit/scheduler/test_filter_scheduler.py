@@ -27,6 +27,7 @@ from nova.scheduler import weights
 from nova import test  # noqa
 from nova.tests.unit.scheduler import fakes
 from nova.tests.unit.scheduler import test_scheduler
+from nova.tests import uuidsentinel as uuids
 
 
 def fake_get_filtered_hosts(hosts, filter_properties, index):
@@ -70,7 +71,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                   vcpus=1),
             project_id=1,
             os_type='Linux',
-            uuid='fake-uuid',
+            uuid=uuids.instance,
             pci_requests=None,
             numa_topology=None,
             instance_group=None)
@@ -129,7 +130,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             num_instances=1,
             project_id=1,
             os_type='Linux',
-            uuid='fake-uuid',
+            uuid=uuids.instance,
             flavor=objects.Flavor(root_gb=512,
                                   memory_mb=512,
                                   ephemeral_gb=0,
@@ -166,7 +167,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             num_instances=1,
             project_id=1,
             os_type='Linux',
-            uuid='fake-uuid',
+            uuid=uuids.instance,
             flavor=objects.Flavor(root_gb=512,
                                   memory_mb=512,
                                   ephemeral_gb=0,
@@ -214,7 +215,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             num_instances=1,
             project_id=1,
             os_type='Linux',
-            uuid='fake-uuid',
+            uuid=uuids.instance,
             flavor=objects.Flavor(root_gb=512,
                                   memory_mb=512,
                                   ephemeral_gb=0,
@@ -271,7 +272,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                   vcpus=1),
             project_id=1,
             os_type='Linux',
-            instance_uuid='fake-uuid',
+            instance_uuid=uuids.instance,
             num_instances=1,
             pci_requests=None,
             numa_topology=None,
@@ -292,11 +293,11 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         with mock.patch.object(self.driver.notifier, 'info') as mock_info:
             expected = {'num_instances': 1,
-                        'instance_properties': {'uuid': 'uuid1'},
+                        'instance_properties': {'uuid': uuids.instance},
                         'instance_type': {},
                         'image': {}}
             spec_obj = objects.RequestSpec(num_instances=1,
-                                           instance_uuid='uuid1')
+                                           instance_uuid=uuids.instance)
 
             self.driver.select_destinations(self.context, spec_obj)
 
@@ -327,7 +328,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             except exception.NoValidHost as e:
                 # Make sure that we provided a reason why NoValidHost.
                 self.assertIn('reason', e.kwargs)
-                self.assertTrue(len(e.kwargs['reason']) > 0)
+                self.assertGreater(len(e.kwargs['reason']), 0)
                 # Make sure that the consumed hosts have chance to be reverted.
                 for host in consumed_hosts:
                     self.assertIsNone(host.obj.updated)

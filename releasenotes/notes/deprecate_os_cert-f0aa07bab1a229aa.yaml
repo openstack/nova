@@ -1,0 +1,11 @@
+---
+deprecations:
+
+  - The ``/os-certificates`` API is deprecated, as well as the
+    ``nova-cert`` service which powers it. The related config option
+    ``cert_topic`` is also now marked for deprecation and may be removed as
+    early as 15.0.0 Ocata release. This is a vestigial part of
+    the Nova API that existed only for EC2 support, which is now
+    maintained out of tree. It does not interact with any of the rest
+    of nova, and should not just be used as a certificates as a
+    service, which is all it is currently good for.

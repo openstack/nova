@@ -100,6 +100,10 @@ class ApplySessionHelpersTestCase(stubs.XenAPITestBaseNoDB):
         self.session.VDI.get_X("ref")
         self.session.call_xenapi.assert_called_once_with("VDI.get_X", "ref")
 
+    def test_apply_session_helpers_add_VIF(self):
+        self.session.VIF.get_X("ref")
+        self.session.call_xenapi.assert_called_once_with("VIF.get_X", "ref")
+
     def test_apply_session_helpers_add_VBD(self):
         self.session.VBD.get_X("ref")
         self.session.call_xenapi.assert_called_once_with("VBD.get_X", "ref")

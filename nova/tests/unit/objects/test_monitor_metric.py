@@ -85,6 +85,18 @@ class _TestMonitorMetricObject(object):
                 exp = spec['value'] * 100
             self.assertEqual(exp, metric.value)
 
+    def test_obj_make_compatible(self):
+        monitormetric_obj = objects.MonitorMetric(
+            name=fields.MonitorMetricType.NUMA_MEM_BW_CURRENT,
+            numa_membw_values={"0": 10, "1": 43},
+            timestamp=_ts_now.isoformat(),
+            source='nova.virt.libvirt.driver')
+        primitive = monitormetric_obj.obj_to_primitive()
+        self.assertIn('numa_membw_values', primitive['nova_object.data'])
+        monitormetric_obj.obj_make_compatible(primitive['nova_object.data'],
+                                              '1.0')
+        self.assertNotIn('numa_membw_values', primitive['nova_object.data'])
+
 
 class TestMonitorMetricObject(test_objects._LocalTest,
                               _TestMonitorMetricObject):

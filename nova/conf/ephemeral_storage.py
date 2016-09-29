@@ -1,3 +1,10 @@
+# needs:fix_opt_description
+# needs:check_deprecation_status
+# needs:check_opt_group_and_type
+# needs:fix_opt_description_indentation
+# needs:fix_opt_registration_consistency
+
+
 # Copyright 2015 Huawei Technology corp.
 # Copyright 2015 OpenStack Foundation
 # All Rights Reserved.
@@ -23,18 +30,35 @@ ephemeral_storage_encryption_group = cfg.OptGroup(
 ephemeral_storage_encryption_opts = [
     cfg.BoolOpt('enabled',
                 default=False,
-                help='Whether to encrypt ephemeral storage'),
+                help="""
+Enables/disables LVM ephemeral storage encryption.
+"""),
+
     cfg.StrOpt('cipher',
                default='aes-xts-plain64',
-               help='The cipher and mode to be used to encrypt ephemeral '
-                    'storage. Which ciphers are available ciphers depends '
-                    'on kernel support. See /proc/crypto for the list of '
-                    'available options.'),
+               help="""
+Cipher-mode string to be used
+
+The cipher and mode to be used to encrypt ephemeral
+storage. The set of cipher-mode combinations available
+depends on kernel support.
+
+Possible values:
+
+    * aes-xts-plain64 (Default), see /proc/crypto for available options.
+"""),
+
     cfg.IntOpt('key_size',
                default=512,
-               help='The bit length of the encryption key to be used to '
-                    'encrypt ephemeral storage (in XTS mode only half of '
-                    'the bits are used for encryption key)')
+               min=1,
+               help="""
+Encryption key length in bits
+
+The bit length of the encryption key to be used to
+encrypt ephemeral storage (in XTS mode only half of
+the bits are used for encryption key).
+"""),
+
 ]
 
 

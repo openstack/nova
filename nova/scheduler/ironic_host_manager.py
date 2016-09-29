@@ -23,6 +23,8 @@ subdivided into multiple instances.
 """
 from nova.compute import hv_type
 import nova.conf
+from nova import context as context_module
+from nova import objects
 from nova.scheduler import host_manager
 
 CONF = nova.conf.CONF
@@ -73,6 +75,11 @@ class IronicNodeState(host_manager.HostState):
 class IronicHostManager(host_manager.HostManager):
     """Ironic HostManager class."""
 
+    @staticmethod
+    def _is_ironic_compute(compute):
+        ht = compute.hypervisor_type if 'hypervisor_type' in compute else None
+        return ht == hv_type.IRONIC
+
     def _load_filters(self):
         if CONF.scheduler_use_baremetal_filters:
             return CONF.baremetal_scheduler_default_filters
@@ -81,17 +88,26 @@ class IronicHostManager(host_manager.HostManager):
     def host_state_cls(self, host, node, **kwargs):
         """Factory function/property to create a new HostState."""
         compute = kwargs.get('compute')
-        get_ht = lambda c: (c.hypervisor_type if 'hypervisor_type' in c
-                            else None)
-        if compute and get_ht(compute) == hv_type.IRONIC:
+        if compute and self._is_ironic_compute(compute):
             return IronicNodeState(host, node)
         else:
             return host_manager.HostState(host, node)
 
-    def _init_instance_info(self):
+    def _init_instance_info(self, compute_nodes=None):
         """Ironic hosts should not pass instance info."""
-        pass
+        context = context_module.RequestContext()
+        if not compute_nodes:
+            compute_nodes = objects.ComputeNodeList.get_all(context).objects
+
+        non_ironic_computes = [c for c in compute_nodes
+                               if not self._is_ironic_compute(c)]
+        super(IronicHostManager, self)._init_instance_info(non_ironic_computes)
 
     def _get_instance_info(self, context, compute):
         """Ironic hosts should not pass instance info."""
-        return {}
+
+        if compute and self._is_ironic_compute(compute):
+            return {}
+        else:
+            return super(IronicHostManager, self)._get_instance_info(context,
+                                                                     compute)

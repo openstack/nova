@@ -22,6 +22,7 @@ from nova.api import validation
 from nova import compute
 from nova.compute import vm_states
 from nova import exception
+from nova.policies import admin_actions as aa_policies
 
 ALIAS = "os-admin-actions"
 
@@ -30,13 +31,11 @@ ALIAS = "os-admin-actions"
 # schemas/reset_server_state.py, when updating this state_map.
 state_map = dict(active=vm_states.ACTIVE, error=vm_states.ERROR)
 
-authorize = extensions.os_compute_authorizer(ALIAS)
-
 
 class AdminActionsController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(AdminActionsController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
 
     @wsgi.response(202)
     @extensions.expected_errors((404, 409))
@@ -44,7 +43,7 @@ class AdminActionsController(wsgi.Controller):
     def _reset_network(self, req, id, body):
         """Permit admins to reset networking on a server."""
         context = req.environ['nova.context']
-        authorize(context, action='reset_network')
+        context.can(aa_policies.POLICY_ROOT % 'reset_network')
         try:
             instance = common.get_instance(self.compute_api, context, id)
             self.compute_api.reset_network(context, instance)
@@ -59,7 +58,7 @@ class AdminActionsController(wsgi.Controller):
     def _inject_network_info(self, req, id, body):
         """Permit admins to inject network info into a server."""
         context = req.environ['nova.context']
-        authorize(context, action='inject_network_info')
+        context.can(aa_policies.POLICY_ROOT % 'inject_network_info')
         try:
             instance = common.get_instance(self.compute_api, context, id)
             self.compute_api.inject_network_info(context, instance)
@@ -75,7 +74,7 @@ class AdminActionsController(wsgi.Controller):
     def _reset_state(self, req, id, body):
         """Permit admins to reset the state of a server."""
         context = req.environ["nova.context"]
-        authorize(context, action='reset_state')
+        context.can(aa_policies.POLICY_ROOT % 'reset_state')
 
         # Identify the desired state from the body
         state = state_map[body["os-resetState"]["state"]]

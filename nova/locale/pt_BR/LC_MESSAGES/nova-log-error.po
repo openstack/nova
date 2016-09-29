@@ -6,9 +6,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:29+0000\n"
+"POT-Creation-Date: 2016-08-25 06:15+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -29,14 +29,6 @@ msgid ""
 "%(size)s"
 msgstr ""
 "O tamanho virtual %(base_size)s  do %(base)s é maior que o tamanho do disco "
-"raiz de tipo %(size)s"
-
-#, python-format
-msgid ""
-"%(base)s virtual size %(disk_size)s larger than flavor root disk size "
-"%(size)s"
-msgstr ""
-"O tamanho virtual %(disk_size)s  do %(base)s é maior que o tamanho do disco "
 "raiz de tipo %(size)s"
 
 #, python-format
@@ -93,34 +85,6 @@ msgstr "Capturado o erro: %s"
 
 msgid "Compute driver option required, but not specified"
 msgstr "Opção de driver de cálculo necessária, mas não especificada"
-
-#, python-format
-msgid "Compute.api::inject_network_info %s"
-msgstr "Compute.api::inject_network_info %s"
-
-#, python-format
-msgid "Compute.api::lock %s"
-msgstr "Compute.api::lock %s"
-
-#, python-format
-msgid "Compute.api::pause %s"
-msgstr "Compute.api::pause %s"
-
-#, python-format
-msgid "Compute.api::resetState %s"
-msgstr "Compute.api::resetState %s"
-
-#, python-format
-msgid "Compute.api::reset_network %s"
-msgstr "Compute.api::reset_network %s"
-
-#, python-format
-msgid "Compute.api::unlock %s"
-msgstr "Compute.api::unlock %s"
-
-#, python-format
-msgid "Compute.api::unpause %s"
-msgstr "Compute.api::unpause %s"
 
 #, python-format
 msgid ""
@@ -246,18 +210,6 @@ msgstr ""
 "'%(method)s', %(extra)s."
 
 #, python-format
-msgid "Error copying key: %s"
-msgstr "Erro ao copiar chave: %s."
-
-#, python-format
-msgid "Error creating Barbican client: %s"
-msgstr "Erro ao criar o cliente Barbican: %s"
-
-#, python-format
-msgid "Error creating key: %s"
-msgstr "Erro ao criar chave: %s."
-
-#, python-format
 msgid "Error defining a domain with XML: %s"
 msgstr "Erro ao definir um domínio com XML: %s"
 
@@ -268,10 +220,6 @@ msgstr "Erro ao definir um segredo com XML: %s"
 #, python-format
 msgid "Error deleting conntrack entries for %s"
 msgstr "Erro ao excluir entradas conntrack para %s"
-
-#, python-format
-msgid "Error deleting key: %s"
-msgstr "Erro ao excluir chave: %s"
 
 #, python-format
 msgid "Error deploying instance %(instance)s on baremetal node %(node)s."
@@ -305,21 +253,6 @@ msgid ""
 msgstr ""
 "Erro de ibvirt ao injetar um NMI para %(instance_uuid)s: [Error Code "
 "%(error_code)s] %(ex)s"
-
-#, python-format
-msgid "Error getting key: %s"
-msgstr "Erro ao obter chave: %s."
-
-#, python-format
-msgid "Error getting secret data: %s"
-msgstr "Erro ao obter dados secretos: %s"
-
-#, python-format
-msgid "Error getting secret metadata: %s"
-msgstr "Erro ao obter metadados secretos: %s"
-
-msgid "Error in migrate"
-msgstr "Erro na migração"
 
 #, python-format
 msgid "Error injecting data into image %(img_id)s (%(e)s)"
@@ -366,10 +299,6 @@ msgid "Error processing message locally"
 msgstr "Erro ao processar a mensagem localmente"
 
 #, python-format
-msgid "Error reading image info file %(filename)s: %(error)s"
-msgstr "Erro ao ler arquivo de informações de imagem %(filename)s: %(error)s"
-
-#, python-format
 msgid "Error releasing DHCP for IP %(address)s with MAC %(mac_address)s"
 msgstr "Erro ao liberar DHCP para o IP %(address)s com MAC %(mac_address)s"
 
@@ -383,10 +312,6 @@ msgstr "Erro ao enviar mensagem para os próximos hops."
 #, python-format
 msgid "Error starting xvp: %s"
 msgstr "Erro ao iniciar xvp: %s"
-
-#, python-format
-msgid "Error storing key: %s"
-msgstr "Erro ao armazenar chave: %s."
 
 msgid "Error trying to Rescue Instance"
 msgstr "Erro ao tentar Resgatar Instância"
@@ -519,9 +444,6 @@ msgstr ""
 "Falha ao copiar a imagem em cache %(source)s para %(dest)s para o "
 "redimensionamento: %(error)s"
 
-msgid "Failed to deallocate network for instance."
-msgstr "Falha ao desalocar rede para a instância."
-
 msgid "Failed to deallocate networks"
 msgstr "Falha ao desalocar redes"
 
@@ -590,10 +512,6 @@ msgid ""
 msgstr ""
 "Falha ao obter o ID da instância para a solicitação de metadados, provedor "
 "%(provider)s, redes %(networks)s, solicitador %(requester)s. Erro: %(error)s"
-
-#, python-format
-msgid "Failed to get metadata for IP: %s"
-msgstr "Falha ao obter metadados para o IP: %s"
 
 #, python-format
 msgid "Failed to get metadata for instance id: %s"
@@ -848,10 +766,6 @@ msgid "Instance failed to spawn"
 msgstr "Falha da instância ao usar spawn"
 
 #, python-format
-msgid "Instance type %s not found for deletion"
-msgstr "Tipo de instância %s não localizado para exclusão"
-
-#, python-format
 msgid "Interface %s not found"
 msgstr "Interface %s não localizada"
 
@@ -946,18 +860,6 @@ msgstr "Erro de Neutron ao criar porta na rede %s"
 #, python-format
 msgid "No compute node record for host %s"
 msgstr "Nenhum registro de nó de cálculo para o host %s"
-
-#, python-format
-msgid "No db access allowed in nova-compute: %s"
-msgstr "Nenhum acesso de BD permitido em nova-compute: %s"
-
-#, python-format
-msgid "No db access allowed in nova-dhcpbridge: %s"
-msgstr "Nenhum acesso de BD permitido em nova-dhcpbridge: %s"
-
-#, python-format
-msgid "No db access allowed in nova-network: %s"
-msgstr "Nenhum acesso de BD permitido em nova-network: %s"
 
 #, python-format
 msgid "No load handler for %s"
@@ -1105,9 +1007,6 @@ msgstr ""
 msgid "Unable to destroy VBD"
 msgstr "Não é possível destruir o VBD"
 
-msgid "Unable to determine the glance API version"
-msgstr "Não é possível determinar a versão da API glance"
-
 #, python-format
 msgid "Unable to execute %(cmd)s. Exception: %(exception)s"
 msgstr "Não foi possível executar %(cmd)s. Exceção: %(exception)s"
@@ -1117,16 +1016,6 @@ msgstr "Não é possível localizar SR a partir do VBD "
 
 msgid "Unable to find SR from VDI"
 msgstr "Não é possível localizar SR a partir do VDI"
-
-#, python-format
-msgid "Unable to find a service record to update for %(binary)s on %(host)s"
-msgstr ""
-"Não é possível localizar um registro de serviço para atualizar %(binary)s no "
-"%(host)s"
-
-#, python-format
-msgid "Unable to find address %r"
-msgstr "Não foi possível localizar o endereço %r"
 
 msgid "Unable to get record of VDI"
 msgstr "Não é possível obter registro do VDI"
@@ -1172,10 +1061,6 @@ msgstr "Não é possível configurar o conjunto: %s"
 
 msgid "Unable to unplug VBD"
 msgstr "Não é possível desconectar o VBD"
-
-#, python-format
-msgid "Unable to update host of port %s"
-msgstr "Não é possível atualizar o host da porta %s"
 
 #, python-format
 msgid "Unable to update instance VNIC index for port %s."
@@ -1269,14 +1154,6 @@ msgstr "allocate_port_for_instance retornou %(ports)s portas"
 msgid "attaching network adapter failed."
 msgstr "a anexação do adaptador de rede falhou."
 
-#, python-format
-msgid "compute.api::resume %s"
-msgstr "compute.api::resume %s"
-
-#, python-format
-msgid "compute.api::suspend %s"
-msgstr "compute.api::suspend %s"
-
 msgid "detaching network adapter failed."
 msgstr "a remoção do adaptador de rede falhou."
 
@@ -1286,10 +1163,6 @@ msgstr "erro durante stop() em sync_power_state."
 #, python-format
 msgid "error opening rbd image %s"
 msgstr "Erro ao abrir a imagem rbd %s"
-
-#, python-format
-msgid "image %(id)s at (%(base_file)s): image verification failed"
-msgstr "imagem %(id)s em (%(base_file)s): falha na verificação da imagem"
 
 #, python-format
 msgid "image %(volume)s in pool %(pool)s has snapshots, failed to remove"

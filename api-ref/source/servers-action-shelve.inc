@@ -1,13 +1,9 @@
 .. -*- rst -*-
-.. needs:method_verification
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
-Shelve Server (Shelve Action)
+Shelve Server (shelve Action)
 =============================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Shelves a server.
 
@@ -35,30 +31,35 @@ If the server status does not change to ``SHELVED`` or ``SHELVED_OFFLOADED``, th
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), conflict(409)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - shelve: shelve
 
-**Example Shelve server: JSON request**
+|
+
+**Example Shelve server (shelve Action):**
 
 .. literalinclude:: ../../doc/api_samples/os-shelve/os-shelve.json
    :language: javascript
 
+
 Response
 --------
 
-Shelf-Offload (Remove) Server (Shelveoffload Action)
+No body is returned on successful request.
+
+
+Shelf-Offload (Remove) Server (shelveOffload Action)
 ====================================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Shelf-offloads, or removes, a shelved server.
 
@@ -84,30 +85,35 @@ If the server status does not change to ``SHELVED_OFFLOADED``, the shelve-offloa
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), conflict(409)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - shelveOffload: shelveOffload
 
-**Example Shelve server: JSON request**
+|
+
+**Example Shelf-Offload server (shelveOffload Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-shelve/os-shelve-offload.json
    :language: javascript
 
+
 Response
 --------
 
-Unshelve (Restore) Shelved Server (Unshelve Action)
+No body is returned on successful request.
+
+
+Unshelve (Restore) Shelved Server (unshelve Action)
 ===================================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Unshelves, or restores, a shelved server.
 
@@ -133,23 +139,26 @@ If the server status does not change to ``ACTIVE``, the unshelve operation faile
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes:  unauthorized(401), forbidden(403), itemNotFound(404), conflict(409)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - unshelve: unshelve
 
-**Example Unshelve server: JSON request**
+|
+
+**Example Unshelve server (unshelve Action):**
 
 .. literalinclude:: ../../doc/api_samples/os-shelve/os-unshelve.json
    :language: javascript
 
+
 Response
 --------
 
+No body is returned on successful request.

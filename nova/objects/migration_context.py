@@ -13,6 +13,7 @@
 #    under the License.
 
 from oslo_serialization import jsonutils
+from oslo_utils import versionutils
 
 from nova import db
 from nova import exception
@@ -33,7 +34,8 @@ class MigrationContext(base.NovaPersistentObject, base.NovaObject):
     """
 
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Add old/new pci_devices and pci_requests
+    VERSION = '1.1'
 
     fields = {
         'instance_uuid': fields.UUIDField(),
@@ -42,26 +44,29 @@ class MigrationContext(base.NovaPersistentObject, base.NovaObject):
                                                 nullable=True),
         'old_numa_topology': fields.ObjectField('InstanceNUMATopology',
                                                 nullable=True),
+        'new_pci_devices': fields.ObjectField('PciDeviceList',
+                                              nullable=True),
+        'old_pci_devices': fields.ObjectField('PciDeviceList',
+                                              nullable=True),
+        'new_pci_requests': fields.ObjectField('InstancePCIRequests',
+                                               nullable=True),
+        'old_pci_requests': fields.ObjectField('InstancePCIRequests',
+                                                nullable=True),
     }
+
+    @classmethod
+    def obj_make_compatible(cls, primitive, target_version):
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1):
+            primitive.pop('old_pci_devices', None)
+            primitive.pop('new_pci_devices', None)
+            primitive.pop('old_pci_requests', None)
+            primitive.pop('new_pci_requests', None)
 
     @classmethod
     def obj_from_db_obj(cls, db_obj):
         primitive = jsonutils.loads(db_obj)
         return cls.obj_from_primitive(primitive)
-
-    def _save(self):
-        primitive = self.obj_to_primitive()
-        payload = jsonutils.dumps(primitive)
-
-        values = {'migration_context': payload}
-        db.instance_extra_update_by_uuid(self._context, self.instance_uuid,
-                                         values)
-        self.obj_reset_changes()
-
-    @classmethod
-    def _destroy(cls, context, instance_uuid):
-        values = {'migration_context': None}
-        db.instance_extra_update_by_uuid(context, instance_uuid, values)
 
     @base.remotable_classmethod
     def get_by_instance_uuid(cls, context, instance_uuid):

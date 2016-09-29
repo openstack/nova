@@ -45,8 +45,14 @@ def _validate_datetime_format(instance):
 @jsonschema.FormatChecker.cls_checks('base64')
 def _validate_base64_format(instance):
     try:
+        if isinstance(instance, six.text_type):
+            instance = instance.encode('utf-8')
         base64.decodestring(instance)
     except base64.binascii.Error:
+        return False
+    except TypeError:
+        # The name must be string type. If instance isn't string type, the
+        # TypeError will be raised at here.
         return False
 
     return True

@@ -14,13 +14,18 @@
 #    under the License.
 
 import os
+import tempfile
+import time
 
 from os_win.utils import pathutils
+from oslo_log import log as logging
 
 import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.virt.hyperv import constants
+
+LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
 
@@ -37,7 +42,7 @@ class PathUtils(pathutils.PathUtils):
     def get_instances_dir(self, remote_server=None):
         local_instance_path = os.path.normpath(CONF.instances_path)
 
-        if remote_server:
+        if remote_server and not local_instance_path.startswith(r'\\'):
             if CONF.hyperv.instances_path_share:
                 path = CONF.hyperv.instances_path_share
             else:
@@ -80,43 +85,56 @@ class PathUtils(pathutils.PathUtils):
         return self._get_instances_sub_dir(instance_name, remote_server,
                                            create_dir, remove_dir)
 
-    def _lookup_vhd_path(self, instance_name, vhd_path_func):
+    def _lookup_vhd_path(self, instance_name, vhd_path_func,
+                         *args, **kwargs):
         vhd_path = None
         for format_ext in ['vhd', 'vhdx']:
-            test_path = vhd_path_func(instance_name, format_ext)
+            test_path = vhd_path_func(instance_name, format_ext,
+                                      *args, **kwargs)
             if self.exists(test_path):
                 vhd_path = test_path
                 break
         return vhd_path
 
-    def lookup_root_vhd_path(self, instance_name):
-        return self._lookup_vhd_path(instance_name, self.get_root_vhd_path)
+    def lookup_root_vhd_path(self, instance_name, rescue=False):
+        return self._lookup_vhd_path(instance_name, self.get_root_vhd_path,
+                                     rescue)
 
-    def lookup_configdrive_path(self, instance_name):
+    def lookup_configdrive_path(self, instance_name, rescue=False):
         configdrive_path = None
         for format_ext in constants.DISK_FORMAT_MAP:
-            test_path = self.get_configdrive_path(instance_name, format_ext)
+            test_path = self.get_configdrive_path(instance_name, format_ext,
+                                                  rescue=rescue)
             if self.exists(test_path):
                 configdrive_path = test_path
                 break
         return configdrive_path
 
-    def lookup_ephemeral_vhd_path(self, instance_name):
+    def lookup_ephemeral_vhd_path(self, instance_name, eph_name):
         return self._lookup_vhd_path(instance_name,
-                                     self.get_ephemeral_vhd_path)
+                                     self.get_ephemeral_vhd_path,
+                                     eph_name)
 
-    def get_root_vhd_path(self, instance_name, format_ext):
+    def get_root_vhd_path(self, instance_name, format_ext, rescue=False):
         instance_path = self.get_instance_dir(instance_name)
-        return os.path.join(instance_path, 'root.' + format_ext.lower())
+        image_name = 'root'
+        if rescue:
+            image_name += '-rescue'
+        return os.path.join(instance_path,
+                            image_name + '.' + format_ext.lower())
 
     def get_configdrive_path(self, instance_name, format_ext,
-                             remote_server=None):
+                             remote_server=None, rescue=False):
         instance_path = self.get_instance_dir(instance_name, remote_server)
-        return os.path.join(instance_path, 'configdrive.' + format_ext.lower())
+        configdrive_image_name = 'configdrive'
+        if rescue:
+            configdrive_image_name += '-rescue'
+        return os.path.join(instance_path,
+                            configdrive_image_name + '.' + format_ext.lower())
 
-    def get_ephemeral_vhd_path(self, instance_name, format_ext):
+    def get_ephemeral_vhd_path(self, instance_name, format_ext, eph_name):
         instance_path = self.get_instance_dir(instance_name)
-        return os.path.join(instance_path, 'ephemeral.' + format_ext.lower())
+        return os.path.join(instance_path, eph_name + '.' + format_ext.lower())
 
     def get_base_vhd_dir(self):
         return self._get_instances_sub_dir('_base')
@@ -126,8 +144,54 @@ class PathUtils(pathutils.PathUtils):
         return self._get_instances_sub_dir(dir_name, create_dir=True,
                                            remove_dir=True)
 
-    def get_vm_console_log_paths(self, vm_name, remote_server=None):
-        instance_dir = self.get_instance_dir(vm_name,
+    def get_vm_console_log_paths(self, instance_name, remote_server=None):
+        instance_dir = self.get_instance_dir(instance_name,
                                              remote_server)
         console_log_path = os.path.join(instance_dir, 'console.log')
         return console_log_path, console_log_path + '.1'
+
+    def copy_vm_console_logs(self, instance_name, dest_host):
+        local_log_paths = self.get_vm_console_log_paths(
+            instance_name)
+        remote_log_paths = self.get_vm_console_log_paths(
+            instance_name, remote_server=dest_host)
+
+        for local_log_path, remote_log_path in zip(local_log_paths,
+                                                   remote_log_paths):
+            if self.exists(local_log_path):
+                self.copy(local_log_path, remote_log_path)
+
+    def get_image_path(self, image_name):
+        # Note: it is possible that the path doesn't exist
+        base_dir = self.get_base_vhd_dir()
+        for ext in ['vhd', 'vhdx']:
+            file_path = os.path.join(base_dir,
+                                     image_name + '.' + ext.lower())
+            if self.exists(file_path):
+                return file_path
+        return None
+
+    def get_age_of_file(self, file_name):
+        return time.time() - os.path.getmtime(file_name)
+
+    def check_dirs_shared_storage(self, src_dir, dest_dir):
+        # Check if shared storage is being used by creating a temporary
+        # file at the destination path and checking if it exists at the
+        # source path.
+        LOG.debug("Checking if %(src_dir)s and %(dest_dir)s point "
+                  "to the same location.",
+                  dict(src_dir=src_dir, dest_dir=dest_dir))
+        with tempfile.NamedTemporaryFile(dir=dest_dir) as tmp_file:
+            src_path = os.path.join(src_dir,
+                                    os.path.basename(tmp_file.name))
+
+            shared_storage = os.path.exists(src_path)
+        return shared_storage
+
+    def check_remote_instances_dir_shared(self, dest):
+        # Checks if the instances dir from a remote host points
+        # to the same storage location as the local instances dir.
+        local_inst_dir = self.get_instances_dir()
+        remote_inst_dir = self.get_instances_dir(dest)
+        return self.check_dirs_shared_storage(local_inst_dir,
+                                              remote_inst_dir)

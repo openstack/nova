@@ -9,9 +9,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b2.dev117\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:28+0000\n"
+"POT-Creation-Date: 2016-06-08 04:30+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -22,10 +22,6 @@ msgstr ""
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
 "Language-Team: French\n"
-
-#, python-format
-msgid "%(id)s (%(base_file)s): generating checksum"
-msgstr "%(id)s (%(base_file)s) : génération d'un total de contrôle"
 
 #, python-format
 msgid "%(name)s listening on %(host)s:%(port)s"
@@ -57,14 +53,6 @@ msgstr "Fichiers de base actifs : %s"
 #, python-format
 msgid "Adding security group %(security_group_id)s to port %(port_id)s"
 msgstr "Ajout du groupe de sécurité %(security_group_id)s au port %(port_id)s"
-
-msgid "Attach interface"
-msgstr "Connexion à l'interface"
-
-#, python-format
-msgid "Attach volume %(volume_id)s to instance %(server_id)s at %(device)s"
-msgstr ""
-"Connexion du volume %(volume_id)s à l'instance %(server_id)s à %(device)s"
 
 #, python-format
 msgid "Attaching volume %(volume_id)s to %(mountpoint)s"
@@ -117,10 +105,6 @@ msgid "Configuring timezone for windows instance to localtime"
 msgstr "Configurer le fuseau horaire pour l'instance windows en heure locale"
 
 #, python-format
-msgid "Corrupt base files: %s"
-msgstr "Fichiers de base endommagés : %s"
-
-#, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats for "
 "device"
@@ -131,18 +115,6 @@ msgstr ""
 #, python-format
 msgid "Create Security Group %s"
 msgstr "Création du groupe de sécurité %s"
-
-#, python-format
-msgid "Create assisted snapshot from volume %s"
-msgstr "Créer un instantané assisté du volume %s"
-
-#, python-format
-msgid "Create snapshot from volume %s"
-msgstr "Créer un instantané depuis le volume %s"
-
-#, python-format
-msgid "Create volume of %s GB"
-msgstr "Création d'un volume de %s Go"
 
 #, python-format
 msgid "Creating config drive at %(path)s"
@@ -159,14 +131,6 @@ msgstr "Création de l'image"
 #, python-format
 msgid "Delete security group %s"
 msgstr "Suppression du groupe de sécurité %s"
-
-#, python-format
-msgid "Delete snapshot with id: %s"
-msgstr "Supprimer l'instantané avec l'ID : %s"
-
-#, python-format
-msgid "Delete volume with id: %s"
-msgstr "Supprimer le volume avec l'ID : %s"
 
 #, python-format
 msgid "Deleted %s snapshots."
@@ -198,16 +162,8 @@ msgid "Destroying VM"
 msgstr "Destruction de la machine virtuelle"
 
 #, python-format
-msgid "Detach interface %s"
-msgstr "Déconnexion de l'interface %s"
-
-#, python-format
 msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
 msgstr "Déconnexion du volume %(volume_id)s du point de montage %(mp)s"
-
-#, python-format
-msgid "Detach volume %s"
-msgstr "Dé-montage du volume %s"
 
 #, python-format
 msgid "Detaching from volume api: %s"
@@ -683,10 +639,6 @@ msgstr "Le serveur WSGI a été arrêté."
 msgid "Working on deleting snapshot %s from shelved instance..."
 msgstr "Supression de l'instantané %s de l'instance en attente en cours..."
 
-#, python-format
-msgid "Writing stored info to %s"
-msgstr "Ecriture d'informations stockées dans %s"
-
 msgid "XenServer tools are not installed in this image"
 msgstr "Les outils XenServer ne sont pas installés dans cette image"
 
@@ -744,13 +696,6 @@ msgstr "image %(id)s à (%(base_file)s) : vérification"
 
 #, python-format
 msgid ""
-"image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
-msgstr ""
-"image %(id)s à (%(base_file)s) : vérification d'image ignorée, aucun hachage "
-"stocké"
-
-#, python-format
-msgid ""
 "image %(id)s at (%(base_file)s): in use: on this node %(local)d local, "
 "%(remote)d on other nodes sharing this instance storage"
 msgstr ""
@@ -790,7 +735,3 @@ msgid "re-assign floating IP %(address)s from instance %(instance_id)s"
 msgstr ""
 "ré-affectation de l'adresse IP flottante %(address)s depuis l'instance "
 "%(instance_id)s"
-
-#, python-format
-msgid "vol=%s"
-msgstr "vol = %s"

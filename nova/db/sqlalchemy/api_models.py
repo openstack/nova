@@ -14,6 +14,7 @@
 from oslo_db.sqlalchemy import models
 from sqlalchemy import Boolean
 from sqlalchemy import Column
+from sqlalchemy.dialects.mysql import MEDIUMTEXT
 from sqlalchemy import Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Float
@@ -25,8 +26,11 @@ from sqlalchemy.orm import backref
 from sqlalchemy import schema
 from sqlalchemy import String
 from sqlalchemy import Text
+from sqlalchemy import Unicode
 
-from nova.db.sqlalchemy import types
+
+def MediumText():
+    return Text().with_variant(MEDIUMTEXT(), 'mysql')
 
 
 class _NovaAPIBase(models.ModelBase, models.TimestampMixin):
@@ -34,6 +38,70 @@ class _NovaAPIBase(models.ModelBase, models.TimestampMixin):
 
 
 API_BASE = declarative_base(cls=_NovaAPIBase)
+
+
+class AggregateHost(API_BASE):
+    """Represents a host that is member of an aggregate."""
+    __tablename__ = 'aggregate_hosts'
+    __table_args__ = (schema.UniqueConstraint(
+        "host", "aggregate_id",
+         name="uniq_aggregate_hosts0host0aggregate_id"
+        ),
+    )
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    host = Column(String(255))
+    aggregate_id = Column(Integer, ForeignKey('aggregates.id'), nullable=False)
+
+
+class AggregateMetadata(API_BASE):
+    """Represents a metadata key/value pair for an aggregate."""
+    __tablename__ = 'aggregate_metadata'
+    __table_args__ = (
+        schema.UniqueConstraint("aggregate_id", "key",
+            name="uniq_aggregate_metadata0aggregate_id0key"
+            ),
+        Index('aggregate_metadata_key_idx', 'key'),
+    )
+    id = Column(Integer, primary_key=True)
+    key = Column(String(255), nullable=False)
+    value = Column(String(255), nullable=False)
+    aggregate_id = Column(Integer, ForeignKey('aggregates.id'), nullable=False)
+
+
+class Aggregate(API_BASE):
+    """Represents a cluster of hosts that exists in this zone."""
+    __tablename__ = 'aggregates'
+    __table_args__ = (Index('aggregate_uuid_idx', 'uuid'),
+                      schema.UniqueConstraint(
+                      "name", name="uniq_aggregate0name")
+        )
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    uuid = Column(String(36))
+    name = Column(String(255))
+    _hosts = orm.relationship(AggregateHost,
+                    primaryjoin='Aggregate.id == AggregateHost.aggregate_id',
+                    cascade='delete')
+    _metadata = orm.relationship(AggregateMetadata,
+                primaryjoin='Aggregate.id == AggregateMetadata.aggregate_id',
+                cascade='delete')
+
+    @property
+    def _extra_keys(self):
+        return ['hosts', 'metadetails', 'availability_zone']
+
+    @property
+    def hosts(self):
+        return [h.host for h in self._hosts]
+
+    @property
+    def metadetails(self):
+        return {m.key: m.value for m in self._metadata}
+
+    @property
+    def availability_zone(self):
+        if 'availability_zone' not in self.metadetails:
+            return None
+        return self.metadetails['availability_zone']
 
 
 class CellMapping(API_BASE):
@@ -100,11 +168,6 @@ class RequestSpec(API_BASE):
     id = Column(Integer, primary_key=True)
     instance_uuid = Column(String(36), nullable=False)
     spec = Column(Text, nullable=False)
-    build_request = orm.relationship('BuildRequest',
-                    back_populates='request_spec',
-                    uselist=False,
-                    primaryjoin=(
-                        'RequestSpec.id == BuildRequest.request_spec_id'))
 
 
 class Flavors(API_BASE):
@@ -172,31 +235,180 @@ class BuildRequest(API_BASE):
         Index('build_requests_project_id_idx', 'project_id'),
         schema.UniqueConstraint('instance_uuid',
             name='uniq_build_requests0instance_uuid'),
-        schema.UniqueConstraint('request_spec_id',
-            name='uniq_build_requests0request_spec_id')
         )
 
     id = Column(Integer, primary_key=True)
-    request_spec_id = Column(Integer, ForeignKey('request_specs.id'),
-            nullable=False)
-    request_spec = orm.relationship(RequestSpec,
-            foreign_keys=request_spec_id,
-            back_populates='build_request',
-            primaryjoin=request_spec_id == RequestSpec.id)
     instance_uuid = Column(String(36))
     project_id = Column(String(255), nullable=False)
-    user_id = Column(String(255), nullable=False)
-    display_name = Column(String(255))
-    instance_metadata = Column(Text)
-    progress = Column(Integer)
-    vm_state = Column(String(255))
-    task_state = Column(String(255))
-    image_ref = Column(String(255))
-    access_ip_v4 = Column(types.IPAddress())
-    access_ip_v6 = Column(types.IPAddress())
-    info_cache = Column(Text)
-    security_groups = Column(Text, nullable=False)
-    config_drive = Column(Boolean, default=False, nullable=False)
-    key_name = Column(String(255))
-    locked_by = Column(Enum('owner', 'admin'))
     instance = Column(Text)
+    block_device_mappings = Column(MediumText())
+    # TODO(alaski): Drop these from the db in Ocata
+    # columns_to_drop = ['request_spec_id', 'user_id', 'display_name',
+    #         'instance_metadata', 'progress', 'vm_state', 'task_state',
+    #         'image_ref', 'access_ip_v4', 'access_ip_v6', 'info_cache',
+    #         'security_groups', 'config_drive', 'key_name', 'locked_by',
+    #         'reservation_id', 'launch_index', 'hostname', 'kernel_id',
+    #         'ramdisk_id', 'root_device_name', 'user_data']
+
+
+class KeyPair(API_BASE):
+    """Represents a public key pair for ssh / WinRM."""
+    __tablename__ = 'key_pairs'
+    __table_args__ = (
+        schema.UniqueConstraint("user_id", "name",
+                                name="uniq_key_pairs0user_id0name"),
+    )
+    id = Column(Integer, primary_key=True, nullable=False)
+
+    name = Column(String(255), nullable=False)
+
+    user_id = Column(String(255), nullable=False)
+
+    fingerprint = Column(String(255))
+    public_key = Column(Text())
+    type = Column(Enum('ssh', 'x509', name='keypair_types'),
+                  nullable=False, server_default='ssh')
+
+
+class ResourceProvider(API_BASE):
+    """Represents a mapping to a providers of resources."""
+
+    __tablename__ = "resource_providers"
+    __table_args__ = (
+        Index('resource_providers_uuid_idx', 'uuid'),
+        schema.UniqueConstraint('uuid',
+            name='uniq_resource_providers0uuid'),
+        Index('resource_providers_name_idx', 'name'),
+        schema.UniqueConstraint('name',
+            name='uniq_resource_providers0name')
+    )
+
+    id = Column(Integer, primary_key=True, nullable=False)
+    uuid = Column(String(36), nullable=False)
+    name = Column(Unicode(200), nullable=True)
+    generation = Column(Integer, default=0)
+    can_host = Column(Integer, default=0)
+
+
+class Inventory(API_BASE):
+    """Represents a quantity of available resource."""
+
+    __tablename__ = "inventories"
+    __table_args__ = (
+        Index('inventories_resource_provider_id_idx',
+              'resource_provider_id'),
+        Index('inventories_resource_class_id_idx',
+              'resource_class_id'),
+        Index('inventories_resource_provider_resource_class_idx',
+              'resource_provider_id', 'resource_class_id'),
+        schema.UniqueConstraint('resource_provider_id', 'resource_class_id',
+            name='uniq_inventories0resource_provider_resource_class')
+    )
+
+    id = Column(Integer, primary_key=True, nullable=False)
+    resource_provider_id = Column(Integer, nullable=False)
+    resource_class_id = Column(Integer, nullable=False)
+    total = Column(Integer, nullable=False)
+    reserved = Column(Integer, nullable=False)
+    min_unit = Column(Integer, nullable=False)
+    max_unit = Column(Integer, nullable=False)
+    step_size = Column(Integer, nullable=False)
+    allocation_ratio = Column(Float, nullable=False)
+    resource_provider = orm.relationship(
+        "ResourceProvider",
+        primaryjoin=('Inventory.resource_provider_id == '
+                     'ResourceProvider.id'),
+        foreign_keys=resource_provider_id)
+
+
+class Allocation(API_BASE):
+    """A use of inventory."""
+
+    __tablename__ = "allocations"
+    __table_args__ = (
+        Index('allocations_resource_provider_class_used_idx',
+              'resource_provider_id', 'resource_class_id',
+              'used'),
+        Index('allocations_resource_class_id_idx',
+              'resource_class_id'),
+        Index('allocations_consumer_id_idx', 'consumer_id')
+    )
+
+    id = Column(Integer, primary_key=True, nullable=False)
+    resource_provider_id = Column(Integer, nullable=False)
+    consumer_id = Column(String(36), nullable=False)
+    resource_class_id = Column(Integer, nullable=False)
+    used = Column(Integer, nullable=False)
+    resource_provider = orm.relationship(
+        "ResourceProvider",
+        primaryjoin=('Allocation.resource_provider_id == '
+                     'ResourceProvider.id'),
+        foreign_keys=resource_provider_id)
+
+
+class ResourceProviderAggregate(API_BASE):
+    """Associate a resource provider with an aggregate."""
+
+    __tablename__ = 'resource_provider_aggregates'
+    __table_args__ = (
+        Index('resource_provider_aggregates_aggregate_id_idx',
+              'aggregate_id'),
+    )
+
+    resource_provider_id = Column(Integer, primary_key=True, nullable=False)
+    aggregate_id = Column(Integer, primary_key=True, nullable=False)
+
+
+class InstanceGroupMember(API_BASE):
+    """Represents the members for an instance group."""
+    __tablename__ = 'instance_group_member'
+    __table_args__ = (
+        Index('instance_group_member_instance_idx', 'instance_uuid'),
+    )
+    id = Column(Integer, primary_key=True, nullable=False)
+    instance_uuid = Column(String(255))
+    group_id = Column(Integer, ForeignKey('instance_groups.id'),
+                      nullable=False)
+
+
+class InstanceGroupPolicy(API_BASE):
+    """Represents the policy type for an instance group."""
+    __tablename__ = 'instance_group_policy'
+    __table_args__ = (
+        Index('instance_group_policy_policy_idx', 'policy'),
+    )
+    id = Column(Integer, primary_key=True, nullable=False)
+    policy = Column(String(255))
+    group_id = Column(Integer, ForeignKey('instance_groups.id'),
+                      nullable=False)
+
+
+class InstanceGroup(API_BASE):
+    """Represents an instance group.
+
+    A group will maintain a collection of instances and the relationship
+    between them.
+    """
+
+    __tablename__ = 'instance_groups'
+    __table_args__ = (
+        schema.UniqueConstraint('uuid', name='uniq_instance_groups0uuid'),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(255))
+    project_id = Column(String(255))
+    uuid = Column(String(36), nullable=False)
+    name = Column(String(255))
+    _policies = orm.relationship(InstanceGroupPolicy,
+            primaryjoin='InstanceGroup.id == InstanceGroupPolicy.group_id')
+    _members = orm.relationship(InstanceGroupMember,
+            primaryjoin='InstanceGroup.id == InstanceGroupMember.group_id')
+
+    @property
+    def policies(self):
+        return [p.policy for p in self._policies]
+
+    @property
+    def members(self):
+        return [m.instance_uuid for m in self._members]

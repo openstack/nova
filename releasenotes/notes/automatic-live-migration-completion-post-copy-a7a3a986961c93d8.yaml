@@ -1,0 +1,10 @@
+---
+features:
+  - New configuration option live_migration_permit_post_copy
+    has been added to start live migrations in a way that allows
+    nova to switch an on-going live migration to post-copy mode.
+    Requires libvirt>=1.3.3 and QEMU>=2.5.0. If post copy is
+    permitted and version requirements are met it also changes
+    behaviour of 'live_migration_force_complete', so that it
+    switches on-going live migration to post-copy mode instead
+    of pausing an instance during live migration.

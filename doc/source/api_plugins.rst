@@ -16,7 +16,7 @@ made through V2.1 microversions.
 
 This document covers how to write plugins for the v2.1 framework. A
 `microversions specific document
-<http://docs.openstack.org/developer/nova/devref/api_microversions.html>`_
+<http://docs.openstack.org/developer/nova/api_microversion_dev.html>`_
 covers the details around what is required for the microversions
 part. It does not cover V2 plugins which should no longer be developed.
 
@@ -63,7 +63,7 @@ A very basic skeleton of a v2.1 plugin can be seen `here in the unittests <http:
         #   update -> PUT
         #   create -> POST
         #   show -> GET
-        # If a method is not definied a request to it will be a 404 response
+        # If a method is not defined a request to it will be a 404 response
 
         # It is also possible to define support for further responses
         # See `servers.py <http://git.openstack.org/cgit/openstack/nova/tree/nova/nova/api/openstack/compute/servers.py>`_.
@@ -77,7 +77,7 @@ A very basic skeleton of a v2.1 plugin can be seen `here in the unittests <http:
         version = 1
 
         # Both get_resources and get_controller_extensions must always
-        # be definied by can return an empty array
+        # be defined by can return an empty array
         def get_resources(self):
             resource = extensions.ResourceExtension('test', BasicController())
             return [resource]

@@ -12,30 +12,16 @@
 
 
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
 import six
 
 import nova.conf
-from nova.conf import paths
 from nova.i18n import _LE, _LW
 from nova import utils
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt.volume import fs
 
 CONF = nova.conf.CONF
-CONF.import_opt('qemu_allowed_storage_drivers',
-                'nova.virt.libvirt.volume.volume',
-                group='libvirt')
-
-volume_opts = [
-    cfg.StrOpt('glusterfs_mount_point_base',
-               default=paths.state_path_def('mnt'),
-               help='Directory where the glusterfs volume is mounted on the '
-                    'compute node'),
-    ]
-
-CONF.register_opts(volume_opts, 'libvirt')
 
 LOG = logging.getLogger(__name__)
 

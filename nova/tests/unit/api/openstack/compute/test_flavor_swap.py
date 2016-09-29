@@ -13,7 +13,6 @@
 #    under the License.
 
 from oslo_serialization import jsonutils
-import webob
 
 from nova.compute import flavors
 from nova import test
@@ -29,6 +28,8 @@ FAKE_FLAVORS = {
         "vcpus": 1,
         "ephemeral_gb": 1,
         "disabled": False,
+        "is_public": True,
+        "rxtx_factor": 1.0,
     },
     'flavor 2': {
         "flavorid": '2',
@@ -39,6 +40,8 @@ FAKE_FLAVORS = {
         "vcpus": 1,
         "ephemeral_gb": 1,
         "disabled": False,
+        "is_public": True,
+        "rxtx_factor": 1.0,
     },
 }
 
@@ -64,9 +67,6 @@ class FlavorSwapTestV21(test.NoDBTestCase):
 
     def setUp(self):
         super(FlavorSwapTestV21, self).setUp()
-        ext = ('nova.api.openstack.compute.contrib'
-              '.flavor_swap.Flavor_swap')
-        self.flags(osapi_compute_extension=[ext])
         fakes.stub_out_nw_api(self)
         self.stubs.Set(flavors, "get_all_flavors_sorted_list",
                        fake_get_all_flavors_sorted_list)
@@ -75,7 +75,7 @@ class FlavorSwapTestV21(test.NoDBTestCase):
                        fake_flavor_get_by_flavor_id)
 
     def _make_request(self, url):
-        req = webob.Request.blank(url)
+        req = fakes.HTTPRequest.blank(url)
         req.headers['Accept'] = self.content_type
         res = req.get_response(fakes.wsgi_app_v21(init_only=('flavors',)))
         return res
@@ -104,12 +104,3 @@ class FlavorSwapTestV21(test.NoDBTestCase):
         flavors = self._get_flavors(res.body)
         self.assertFlavorSwap(flavors[0], '512')
         self.assertFlavorSwap(flavors[1], '')
-
-
-class FlavorSwapTestV2(FlavorSwapTestV21):
-
-    def _make_request(self, url):
-        req = webob.Request.blank(url)
-        req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app(init_only=('flavors',)))
-        return res

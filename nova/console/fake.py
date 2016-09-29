@@ -44,9 +44,9 @@ class FakeConsoleProxy(object):
         return 5999
 
     def fix_pool_password(self, password):
-        """Trim password to length, and any other massaging."""
+        """Trim password to length, and any other messaging."""
         return password
 
     def fix_console_password(self, password):
-        """Trim password to length, and any other massaging."""
+        """Trim password to length, and any other messaging."""
         return password

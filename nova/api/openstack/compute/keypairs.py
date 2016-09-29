@@ -18,8 +18,10 @@
 import webob
 import webob.exc
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import keypairs
+from nova.api.openstack.compute.views import keypairs as keypairs_view
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
@@ -27,18 +29,21 @@ from nova.compute import api as compute_api
 from nova import exception
 from nova.i18n import _
 from nova.objects import keypair as keypair_obj
+from nova.policies import keypairs as kp_policies
 
 
 ALIAS = 'os-keypairs'
-authorize = extensions.os_compute_authorizer(ALIAS)
-soft_authorize = extensions.os_compute_soft_authorizer(ALIAS)
 
 
 class KeypairController(wsgi.Controller):
 
     """Keypair API controller for the OpenStack API."""
+
+    _view_builder_class = keypairs_view.ViewBuilder
+
     def __init__(self):
         self.api = compute_api.KeypairAPI()
+        super(KeypairController, self).__init__()
 
     def _filter_keypair(self, keypair, **attrs):
         # TODO(claudiub): After v2 and v2.1 is no longer supported,
@@ -116,9 +121,9 @@ class KeypairController(wsgi.Controller):
         name = common.normalize_name(params['name'])
         key_type = params.get('type', keypair_obj.KEYPAIR_TYPE_SSH)
         user_id = user_id or context.user_id
-        authorize(context, action='create',
-                           target={'user_id': user_id,
-                                   'project_id': context.project_id})
+        context.can(kp_policies.POLICY_ROOT % 'create',
+                    target={'user_id': user_id,
+                            'project_id': context.project_id})
 
         try:
             if 'public_key' in params:
@@ -169,9 +174,9 @@ class KeypairController(wsgi.Controller):
         context = req.environ['nova.context']
         # handle optional user-id for admin only
         user_id = user_id or context.user_id
-        authorize(context, action='delete',
-                  target={'user_id': user_id,
-                          'project_id': context.project_id})
+        context.can(kp_policies.POLICY_ROOT % 'delete',
+                    target={'user_id': user_id,
+                            'project_id': context.project_id})
         try:
             self.api.delete_key_pair(context, user_id, id)
         except exception.KeypairNotFound as exc:
@@ -203,9 +208,9 @@ class KeypairController(wsgi.Controller):
         """Return data for the given key name."""
         context = req.environ['nova.context']
         user_id = user_id or context.user_id
-        authorize(context, action='show',
-                  target={'user_id': user_id,
-                          'project_id': context.project_id})
+        context.can(kp_policies.POLICY_ROOT % 'show',
+                    target={'user_id': user_id,
+                            'project_id': context.project_id})
 
         try:
             # The return object needs to be a dict in order to pop the 'type'
@@ -222,7 +227,13 @@ class KeypairController(wsgi.Controller):
         # behaviors in this keypair resource.
         return {'keypair': keypair}
 
-    @wsgi.Controller.api_version("2.10")
+    @wsgi.Controller.api_version("2.35")
+    @extensions.expected_errors(400)
+    def index(self, req):
+        user_id = self._get_user_id(req)
+        return self._index(req, links=True, type=True, user_id=user_id)
+
+    @wsgi.Controller.api_version("2.10", "2.34")  # noqa
     @extensions.expected_errors(())
     def index(self, req):
         # handle optional user-id for admin only
@@ -239,20 +250,38 @@ class KeypairController(wsgi.Controller):
     def index(self, req):
         return self._index(req)
 
-    def _index(self, req, user_id=None, **keypair_filters):
+    def _index(self, req, user_id=None, links=False, **keypair_filters):
         """List of keypairs for a user."""
         context = req.environ['nova.context']
         user_id = user_id or context.user_id
-        authorize(context, action='index',
-                           target={'user_id': user_id,
-                                   'project_id': context.project_id})
-        key_pairs = self.api.get_key_pairs(context, user_id)
-        rval = []
-        for key_pair in key_pairs:
-            rval.append({'keypair': self._filter_keypair(key_pair,
-                                                         **keypair_filters)})
+        context.can(kp_policies.POLICY_ROOT % 'index',
+                    target={'user_id': user_id,
+                            'project_id': context.project_id})
 
-        return {'keypairs': rval}
+        if api_version_request.is_supported(req, min_version='2.35'):
+            limit, marker = common.get_limit_and_marker(req)
+        else:
+            limit = marker = None
+
+        try:
+            key_pairs = self.api.get_key_pairs(
+                context, user_id, limit=limit, marker=marker)
+        except exception.MarkerNotFound as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
+
+        key_pairs = [self._filter_keypair(key_pair, **keypair_filters)
+                     for key_pair in key_pairs]
+
+        keypairs_list = [{'keypair': key_pair} for key_pair in key_pairs]
+        keypairs_dict = {'keypairs': keypairs_list}
+
+        if links:
+            keypairs_links = self._view_builder.get_links(req, key_pairs)
+
+            if keypairs_links:
+                keypairs_dict['keypairs_links'] = keypairs_links
+
+        return keypairs_dict
 
 
 class Controller(wsgi.Controller):
@@ -272,13 +301,14 @@ class Controller(wsgi.Controller):
     @wsgi.extends
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
-        if soft_authorize(context):
+        if context.can(kp_policies.BASE_POLICY_NAME, fatal=False):
             self._show(req, resp_obj)
 
     @wsgi.extends
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
-        if 'servers' in resp_obj.obj and soft_authorize(context):
+        if 'servers' in resp_obj.obj and context.can(
+                kp_policies.BASE_POLICY_NAME, fatal=False):
             servers = resp_obj.obj['servers']
             self._add_key_name(req, servers)
 

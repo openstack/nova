@@ -1,0 +1,9 @@
+---
+issues:
+  - When running Nova Compute and Cinder Volume or Backup services on the same
+    host they must use a shared lock directory to avoid rare race conditions
+    that can cause volume operation failures (primarily attach/detach of
+    volumes). This is done by setting the "lock_path" to the same directory
+    in the "oslo_concurrency" section of nova.conf and cinder.conf. This issue
+    affects all previous releases utilizing os-brick and shared operations
+    on hosts between Nova Compute and Cinder data services.

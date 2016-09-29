@@ -15,13 +15,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_cache import core as cache
-from oslo_db import options
 from oslo_log import log
 
 from nova.common import config
 import nova.conf
-from nova.conf import paths
 from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova import rpc
 from nova import version
@@ -29,22 +26,19 @@ from nova import version
 
 CONF = nova.conf.CONF
 
-_DEFAULT_SQL_CONNECTION = 'sqlite:///' + paths.state_path_def('nova.sqlite')
-
-_EXTRA_DEFAULT_LOG_LEVELS = ['glanceclient=WARN']
-
 
 def parse_args(argv, default_config_files=None, configure_db=True,
                init_rpc=True):
     log.register_options(CONF)
     # We use the oslo.log default log levels which includes suds=INFO
     # and add only the extra levels that Nova needs
+    if CONF.glance.debug:
+        extra_default_log_levels = ['glanceclient=DEBUG']
+    else:
+        extra_default_log_levels = ['glanceclient=WARN']
     log.set_defaults(default_log_levels=log.get_default_log_levels() +
-                     _EXTRA_DEFAULT_LOG_LEVELS)
-    options.set_defaults(CONF, connection=_DEFAULT_SQL_CONNECTION,
-                         sqlite_db='nova.sqlite')
+                     extra_default_log_levels)
     rpc.set_defaults(control_exchange='nova')
-    cache.configure(CONF)
     config.set_middleware_defaults()
 
     CONF(argv[1:],

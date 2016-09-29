@@ -35,22 +35,19 @@ class IPv6RFC2462TestCase(test.NoDBTestCase):
 
     def test_to_global_with_bad_mac(self):
         bad_mac = '02:16:3e:33:44:5Z'
-        self.assertRaises(TypeError, ipv6.to_global,
+        expected_msg = 'Bad mac for to_global_ipv6: %s' % bad_mac
+        err = self.assertRaises(TypeError, ipv6.to_global,
                                     '2001:db8::', bad_mac, 'test')
+        self.assertEqual(expected_msg, str(err))
 
     def test_to_global_with_bad_prefix(self):
-        bad_prefix = '82'
-        self.assertRaises(TypeError, ipv6.to_global,
+        bad_prefix = '2001::1::2'
+        expected_msg = 'Bad prefix for to_global_ipv6: %s' % bad_prefix
+        err = self.assertRaises(TypeError, ipv6.to_global,
                                     bad_prefix,
-                                    '2001:db8::216:3eff:fe33:4455',
+                                    '02:16:3e:33:44:55',
                                     'test')
-
-    def test_to_global_with_bad_project(self):
-        bad_project = 'non-existent-project-name'
-        self.assertRaises(TypeError, ipv6.to_global,
-                                    '2001:db8::',
-                                    '2001:db8::a94a:8fe5:ff33:4455',
-                                    bad_project)
+        self.assertEqual(expected_msg, str(err))
 
 
 class IPv6AccountIdentiferTestCase(test.NoDBTestCase):
@@ -69,20 +66,17 @@ class IPv6AccountIdentiferTestCase(test.NoDBTestCase):
         self.assertEqual(mac, '02:16:3e:33:44:55')
 
     def test_to_global_with_bad_mac(self):
-        bad_mac = '02:16:3e:33:44:5X'
-        self.assertRaises(TypeError, ipv6.to_global,
+        bad_mac = '02:16:3e:33:44:5Z'
+        expected_msg = 'Bad mac for to_global_ipv6: %s' % bad_mac
+        err = self.assertRaises(TypeError, ipv6.to_global,
                                     '2001:db8::', bad_mac, 'test')
+        self.assertEqual(expected_msg, str(err))
 
     def test_to_global_with_bad_prefix(self):
-        bad_prefix = '78'
-        self.assertRaises(TypeError, ipv6.to_global,
+        bad_prefix = '2001::1::2'
+        expected_msg = 'Bad prefix for to_global_ipv6: %s' % bad_prefix
+        err = self.assertRaises(TypeError, ipv6.to_global,
                                     bad_prefix,
-                                    '2001:db8::a94a:8fe5:ff33:4455',
+                                    '02:16:3e:33:44:55',
                                     'test')
-
-    def test_to_global_with_bad_project(self):
-        bad_project = 'non-existent-project-name'
-        self.assertRaises(TypeError, ipv6.to_global,
-                                    '2001:db8::',
-                                    '2001:db8::a94a:8fe5:ff33:4455',
-                                    bad_project)
+        self.assertEqual(expected_msg, str(err))

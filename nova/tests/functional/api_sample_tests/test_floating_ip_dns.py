@@ -12,18 +12,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 from nova.tests.functional.api_sample_tests import api_sample_base
-
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class FloatingIpDNSTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-floating-ip-dns"
+    sample_dir = "os-floating-ip-dns"
 
     domain = 'domain1.example.org'
     name = 'instance1'
@@ -31,13 +25,6 @@ class FloatingIpDNSTest(api_sample_base.ApiSampleTestBaseV21):
     project = 'project1'
     dns_type = 'A'
     ip = '192.168.1.1'
-
-    def _get_flags(self):
-        f = super(FloatingIpDNSTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
-                      'contrib.floating_ip_dns.Floating_ip_dns')
-        return f
 
     def _create_or_update(self):
         subs = {'project': self.project,

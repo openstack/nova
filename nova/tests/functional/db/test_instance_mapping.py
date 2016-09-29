@@ -99,6 +99,30 @@ class InstanceMappingTestCase(test.NoDBTestCase):
         # Just ensure this doesn't raise
         create_mapping(cell_id=None)
 
+    def test_modify_cell_mapping(self):
+        inst_mapping = instance_mapping.InstanceMapping(context=self.context)
+        inst_mapping.instance_uuid = uuidutils.generate_uuid()
+        inst_mapping.project_id = self.context.project_id
+        inst_mapping.cell_mapping = None
+        inst_mapping.create()
+
+        c_mapping = cell_mapping.CellMapping(
+                self.context,
+                uuid=uuidutils.generate_uuid(),
+                name="cell0",
+                transport_url="none:///",
+                database_connection="fake:///")
+        c_mapping.create()
+
+        inst_mapping.cell_mapping = c_mapping
+        inst_mapping.save()
+
+        result_mapping = instance_mapping.InstanceMapping.get_by_instance_uuid(
+                                    self.context, inst_mapping.instance_uuid)
+
+        self.assertEqual(result_mapping.cell_mapping.id,
+                         c_mapping.id)
+
 
 class InstanceMappingListTestCase(test.NoDBTestCase):
     def setUp(self):

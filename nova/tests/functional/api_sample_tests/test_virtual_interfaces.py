@@ -13,34 +13,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 from nova.tests.functional.api_sample_tests import test_servers
-
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class VirtualInterfacesJsonTest(test_servers.ServersSampleBase):
-    extension_name = "os-virtual-interfaces"
+    sample_dir = "os-virtual-interfaces"
 
     def setUp(self):
         super(VirtualInterfacesJsonTest, self).setUp()
         self.template = 'vifs-list-resp'
         if self.api_major_version == 'v2':
             self.template = 'vifs-list-resp-v2'
-
-    def _get_flags(self):
-        f = super(VirtualInterfacesJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.legacy_v2.contrib.'
-            'virtual_interfaces.Virtual_interfaces')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.legacy_v2.contrib.'
-            'extended_virtual_interfaces_net.Extended_virtual_interfaces_net')
-        return f
 
     def test_vifs_list(self):
         uuid = self._post_server()

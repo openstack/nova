@@ -8,9 +8,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:28+0000\n"
+"POT-Creation-Date: 2016-08-25 06:14+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -103,10 +103,6 @@ msgid "%(value_name)s must be an integer"
 msgstr "%(value_name)s tam sayı olmalı"
 
 #, python-format
-msgid "%(vendor)s %(product)s %(version)s"
-msgstr "%(vendor)s %(product)s %(version)s"
-
-#, python-format
 msgid "%(worker_name)s value of %(workers)s is invalid, must be greater than 0"
 msgstr "%(workers)s in %(worker_name)s değeri geçersiz, 0'dan büyük olmalı"
 
@@ -138,14 +134,6 @@ msgstr "%s desteklenmiyor."
 msgid "%s must be either 'MANUAL' or 'AUTO'."
 msgstr "%s 'MANUAL' veya 'AUTO' olmak zorunda"
 
-#, python-format
-msgid "'%s' is either missing or empty."
-msgstr "'%s' ya eksik ya da boş."
-
-#, python-format
-msgid "'%s' is not a list"
-msgstr "'%s' bir liste değil"
-
 msgid "'qemu-img info' parsing failed."
 msgstr "'qemu-img info' ayrıştırma başarısız."
 
@@ -153,9 +141,6 @@ msgstr "'qemu-img info' ayrıştırma başarısız."
 msgid "'rxtx_factor' argument must be a float between 0 and %g"
 msgstr ""
 "'rxtx_factor' bağımsız değişkeni 0 ve %g arasında kesirli bir sayı olmalı "
-
-msgid "'status' or 'maintenance_mode' needed for host update"
-msgstr "istemci güncellemesi için 'status' veya 'maintenance_mode' gerekli"
 
 #, python-format
 msgid "/%s should be specified as single address(es) not in cidr format"
@@ -167,27 +152,6 @@ msgstr "İstemci CPU modeli istenirken CPU modeli ismi ayarlanmamalı"
 #, python-format
 msgid "A NetworkModel is required in field %s"
 msgstr "%s alanında bir AğModeli gerekli"
-
-msgid ""
-"A unique ID given to each file system.  This is value is set in Glance and "
-"agreed upon here so that the operator knowns they are dealing with the same "
-"file system."
-msgstr ""
-"Her dosya sistemine verilen benzersiz bir kimlik.  Bu değer Glance içinde "
-"ayarlanır ve burada kabul edilir böylece işleten aynı dosya sistemiyle "
-"karşılaştığını bilir."
-
-msgid "A valid disk parameter is required"
-msgstr "Geçerli bir disk parametresi gerekli"
-
-msgid "A valid name parameter is required"
-msgstr "Geçerli bir isim parametresi gerekli"
-
-msgid "A valid ram parameter is required"
-msgstr "Geçerli bir ram parametresi gerekli"
-
-msgid "A valid vcpus parameter is required"
-msgstr "Geçerli bir vcpus parametresi gerekli"
 
 #, python-format
 msgid ""
@@ -226,9 +190,6 @@ msgstr ""
 
 msgid "Address could not be converted."
 msgstr "Adres dönüştürülemedi."
-
-msgid "Address not specified"
-msgstr "Adres belirtilmedi"
 
 msgid "Affinity instance group policy was violated."
 msgstr "İlişki sunucu grubu ilkesi ihlal edildi."
@@ -276,10 +237,6 @@ msgstr "%(aggregate_name)s kümesi zaten var."
 msgid "Aggregate for host %(host)s count not be found."
 msgstr "İstemci %(host)s sayısı için takım bulunamadı."
 
-#, python-format
-msgid "Aggregates does not have %s action"
-msgstr "Kümeler %s işlemine sahip değil"
-
 msgid "An unknown error has occurred. Please try your request again."
 msgstr "Bilinmeyen bir hata oluştu. Lütfen tekrar deneyin."
 
@@ -296,16 +253,6 @@ msgstr "Mimari ismi '%(arch)s' tanınmıyor"
 #, python-format
 msgid "Architecture name '%s' is not valid"
 msgstr "Mimari adı '%s' geçerli değil"
-
-msgid "Argument 'type' for reboot is not HARD or SOFT"
-msgstr "Önyükleme için argüman türü HARD veya SOFT değil"
-
-msgid "Argument 'type' for reboot must be a string"
-msgstr "Yeniden başlatma için bağımsız değişken 'türü' karakter dizisi olmalı"
-
-msgid "Associate host is not implemented by the configured Network API"
-msgstr ""
-"İstemci ilişkilendirme yapılandırılan Ağ API'si tarafından uygulanmamış"
 
 msgid ""
 "Asymmetric NUMA topologies require explicit assignment of CPUs and memory to "
@@ -327,13 +274,6 @@ msgstr "Mevcut değerin üzerine yazılması girişimi."
 msgid "Attribute not supported: %(attr)s"
 msgstr "Öznitelik desteklenmiyor: %(attr)s"
 
-msgid "Bad extra_specs provided"
-msgstr "Kötü ek_özellik sağlandı"
-
-#, python-format
-msgid "Bad key(s) %s in quota_set"
-msgstr "quota_set içinde kötü anahtar(lar) %s"
-
 #, python-format
 msgid "Bad mac for to_global_ipv6: %s"
 msgstr "Global ipv6 için yanlış mac numarası: %s"
@@ -349,19 +289,6 @@ msgstr "Hatalı ağ biçimi"
 msgid "Bad networks format: network uuid is not in proper format (%s)"
 msgstr "Yanlış ağ biçimi: ağ UUID'si uygun formatta değil(%s)"
 
-msgid "Bad personality format"
-msgstr "Yanlış kişisel biçim"
-
-#, python-format
-msgid "Bad personality format: missing %s"
-msgstr "Yanlış kişisel biçim: %s bulunamadı"
-
-#, python-format
-msgid "Bad port format: port uuid is not in proper format (%s)"
-msgstr ""
-"Kötü bağlantı noktası biçimi: bağlantı noktası uuid'si düzgün biçimde değil "
-"(%s)"
-
 #, python-format
 msgid "Bad prefix for network in cidr %s"
 msgstr "%s cidr'indeki ağ için kötü ön ek"
@@ -369,14 +296,6 @@ msgstr "%s cidr'indeki ağ için kötü ön ek"
 #, python-format
 msgid "Bad prefix for to_global_ipv6: %s"
 msgstr "Global ipv6 için yanlış sonek: %s"
-
-#, python-format
-msgid "Bad project_id for to_global_ipv6: %s"
-msgstr "Global ipv6 için yanlış proje numarası: %s"
-
-#, python-format
-msgid "Bad volumeId format: volumeId is not in proper format (%s)"
-msgstr "Kötü volumeId biçimi: volumeId geçerli biçimde değil (%s)"
 
 msgid "Blank components"
 msgstr "Boş bileşenler"
@@ -440,9 +359,6 @@ msgstr "%(instance_uuid)s sunucusunun inşası iptal edildi: %(reason)s"
 #, python-format
 msgid "Build of instance %(instance_uuid)s was re-scheduled: %(reason)s"
 msgstr "%(instance_uuid)s sunucusunun inşası yeniden zamanlandı: %(reason)s"
-
-msgid "CIDR is malformed."
-msgstr "CIDR bozuk biçimde."
 
 msgid "CPU and memory allocation must be provided for all NUMA nodes"
 msgstr "Tüm NUMA düğümleri için ayrılan CPU ve hafıza sağlanmalıdır"
@@ -518,14 +434,6 @@ msgstr ""
 "uzak istemciye doğrulama yapamayan diğer hesaplarla çalıştırılmamalıdır."
 
 #, python-format
-msgid "Cannot add host %(host)s in aggregate %(id)s: host exists"
-msgstr "%(host)s istemcisi %(id)s takımına eklenemedi: istemci mevcut"
-
-#, python-format
-msgid "Cannot add host %(host)s in aggregate %(id)s: not found"
-msgstr "%(host)s istemcisi %(id)s takımına eklenemedi: bulunamadı"
-
-#, python-format
 msgid "Cannot add host to aggregate %(aggregate_id)s. Reason: %(reason)s."
 msgstr "İstemci %(aggregate_id)s takımına eklenemiyor. Sebep: %(reason)s."
 
@@ -554,23 +462,8 @@ msgid "Cannot find image for rebuild"
 msgstr "Yeniden kurulum için imaj dosyası bulunamadı."
 
 #, python-format
-msgid ""
-"Cannot pin/unpin cpus %(requested)s from the following pinned set %(pinned)s"
-msgstr ""
-"%(requested)s işlemcileri %(pinned)s iğnelenmiş kümeden iğnelenemiyor/"
-"ayrılamıyor"
-
-#, python-format
 msgid "Cannot remove host %(host)s in aggregate %(id)s"
 msgstr "%(id)s takımındaki %(host)s istemcisi çıkarılamıyor"
-
-#, python-format
-msgid "Cannot remove host %(host)s in aggregate %(id)s: invalid"
-msgstr "%(id)s takımındaki %(host)s istemcisi çıkarılamadı: geçersiz"
-
-#, python-format
-msgid "Cannot remove host %(host)s in aggregate %(id)s: not found"
-msgstr "%(host)s istemcisi %(id)s takımından çıkarılamadı: bulunamadı"
 
 #, python-format
 msgid "Cannot remove host from aggregate %(aggregate_id)s. Reason: %(reason)s."
@@ -581,10 +474,6 @@ msgstr "Mantıksal sürücü destekli sunucu kurtarılamıyor"
 
 msgid "Cannot run any more instances of this type."
 msgstr "Bu türde daha fazla sunucu çalıştırılamıyor."
-
-#, python-format
-msgid "Cannot set metadata %(metadata)s in aggregate %(id)s"
-msgstr "%(id)s takımında %(metadata)s metadata'sı ayarlanamadı"
 
 #, python-format
 msgid "Cannot update aggregate %(aggregate_id)s. Reason: %(reason)s."
@@ -604,10 +493,6 @@ msgid "Cell %(cell_name)s doesn't exist."
 msgstr "Hücre %(cell_name)s mevcut değil."
 
 #, python-format
-msgid "Cell %(id)s not found."
-msgstr "Hücre %(id)s bulunamadı."
-
-#, python-format
 msgid "Cell %(uuid)s has no mapping."
 msgstr "%(uuid)s hücresinin eşleştirmesi yok."
 
@@ -622,12 +507,6 @@ msgstr "Hücre %(instance_uuid)s sunucusu için bilinmiyor"
 #, python-format
 msgid "Cell message has reached maximum hop count: %(hop_count)s"
 msgstr "Hücre iletisi azami sekme sayısına ulaştı: %(hop_count)s"
-
-msgid "Cell name cannot be empty"
-msgstr "Hücre ismi boş olamaz"
-
-msgid "Cell type must be 'parent' or 'child'"
-msgstr "Hücre türü 'parent' veya 'child' olmalı"
 
 #, python-format
 msgid "Cell with name %(name)s already exists."
@@ -684,9 +563,6 @@ msgid ""
 msgstr ""
 "Yapılandırma belirli bir CPU modeli istedi, ama mevcut libvirt hipervizörü "
 "'%s' CPU modeli seçme desteklemiyor"
-
-msgid "Conflicting policies configured!"
-msgstr "Çatışan ilkeler yapılandırıldı!"
 
 #, python-format
 msgid "Connection to cinder host failed: %(reason)s"
@@ -787,9 +663,6 @@ msgstr ""
 "vfat yapılandırma sürücüsü bağlanamadı. %(operation)s başarısız. Hata: "
 "%(error)s"
 
-msgid "Could not parse imageRef from request."
-msgstr "İstekte bulunulan imaj referansı çözümlenemedi."
-
 #, python-format
 msgid "Could not read %s. Re-running with sudo"
 msgstr "%s okunamadı. Sudo ile tekrar çalıştırılıyor"
@@ -835,21 +708,8 @@ msgid "Deleting by fixed_range is not supported with the NeutronManager"
 msgstr "fixed_range ile silme NeutronManager ile desteklenmiyor"
 
 #, python-format
-msgid "Desired state must be specified.  Valid states are: %s"
-msgstr "İstenen durum belirtilmelidir.  Geçerli durumlar: %s"
-
-#, python-format
 msgid "Destination host:%s must be in the same aggregate as the source server"
 msgstr "Hedef istemci: %s kaynak sunucuyla aynı takımda olmalı"
-
-#, python-format
-msgid "Detaching PCI devices with libvirt < %(ver)s is not permitted"
-msgstr "libvirt < %(ver)s ile PCI aygıtlarının ayrılmasına izin verilmez"
-
-#, python-format
-msgid "Detaching SR-IOV ports with libvirt < %(ver)s is not permitted"
-msgstr ""
-"libvirt < %(ver)s ile SR-IOV bağlantı noktalarının ayrılmasına izin verilmez"
 
 #, python-format
 msgid "Detected existing vlan with id %(vlan)d"
@@ -875,15 +735,6 @@ msgid ""
 msgstr ""
 "%(table)s.%(column)s ve gölge tabloda değişik türler: %(c_type)s "
 "%(shadow_c_type)s"
-
-msgid "Disassociate host is not implemented by the configured Network API"
-msgstr "İstemci ilişiği kesme yapılandırılan Ağ API'si tarafından uygulanmamış"
-
-msgid "Disassociate network is not implemented by the configured Network API"
-msgstr "Ağ ilişiği kesme yapılandırılan Ağ API'si tarafından uygulanmamış"
-
-msgid "Disassociate project is not implemented by the configured Network API"
-msgstr "Proje ilişiği kesme yapılandırılan Ağ API'si tarafından uygulanmamış"
 
 #, python-format
 msgid "Disk contains a filesystem we are unable to resize: %s"
@@ -912,9 +763,6 @@ msgstr "Sürücü Hatası: %s"
 msgid "Duplicate networks (%s) are not allowed"
 msgstr "Tekrarlanan ağlara (%s) izin verilmiyor"
 
-msgid "Duplicate policies configured!"
-msgstr "Kopya ilkeler yapılandırıldı!"
-
 msgid ""
 "ERROR: Network commands are not supported when using the Neutron API.  Use "
 "python-neutronclient instead."
@@ -939,9 +787,6 @@ msgid ""
 "the project %(project_id)s."
 msgstr ""
 "Ya ağ uuid %(network_uuid)s yok ya da %(project_id)s projesine atanmamış."
-
-msgid "Ephemeral disks requested are larger than the instance type allows."
-msgstr "İstenen geçici diskler sunucu türünün izin verdiğinden daha büyük."
 
 #, python-format
 msgid ""
@@ -1037,9 +882,6 @@ msgstr "Gölge tabloda ek sütun %(table)s.%(column)s"
 msgid "Extracting vmdk from OVA failed."
 msgstr "OVA'dan vmdk çıkarma başarısız."
 
-msgid "Fail to validate provided extra specs keys. Expected string"
-msgstr "Sağlanan ek özellikler doğrulanamadı. Karakter dizisi beklendi"
-
 #, python-format
 msgid "Failed to access port %(port_id)s: %(reason)s"
 msgstr "%(port_id)s bağlantı noktasına erişim başarısız: %(reason)s"
@@ -1066,9 +908,6 @@ msgstr "Ağ(lar) ayırma %s hatasıyla başarısız, yeniden zamanlanmıyor."
 
 msgid "Failed to allocate the network(s), not rescheduling."
 msgstr "Ağ(lar) ayrılamadı, yeniden zamanlanmıyor."
-
-msgid "Failed to attach interface"
-msgstr "Arayüz ekleme başarısız"
 
 #, python-format
 msgid "Failed to attach network adapter device to %(instance_uuid)s"
@@ -1203,15 +1042,6 @@ msgstr "%(file_path)s dosyası bulunamadı."
 msgid "File path %s not valid"
 msgstr "Dosya yolu %s geçerli değil"
 
-msgid "Filename of private key"
-msgstr "Özel anahtarın dosya adı"
-
-msgid "Filename of root CA"
-msgstr "Kök sertifika yetkilisinin dosya adı"
-
-msgid "Filename of root Certificate Revocation List"
-msgstr "Kök sertifika iptali listesinin dosya adı"
-
 #, python-format
 msgid "Fixed IP %(ip)s is not a valid ip address for network %(network_id)s."
 msgstr "Sabit IP %(ip)s %(network_id)s için gereçli bir ip adresi değil."
@@ -1278,9 +1108,6 @@ msgstr ""
 msgid "Flavor access not found for %(flavor_id)s / %(project_id)s combination."
 msgstr ""
 "Nitelik erişimi %(flavor_id)s / %(project_id)s katışımı için bulunamadı."
-
-msgid "Flavor for vpn instances"
-msgstr "Vpn sunucular için nitelik"
 
 msgid ""
 "Flavor id can only contain letters from A-Z (both cases), periods, dashes, "
@@ -1378,14 +1205,8 @@ msgstr "İstemci NUMA toploji kümesine sahip konukları desteklemiyor"
 msgid "Host does not support guests with custom memory page sizes"
 msgstr "İstemci özel hafıza sayfa boyutlarına sahip konukları desteklemiyor"
 
-msgid "Host parameter must be specified"
-msgstr "İstemci parametresi belirtilmelidir"
-
 msgid "Host startup on XenServer is not supported."
 msgstr "XenSunucu üzerinde istemci başlatma desteklenmiyor."
-
-msgid "HostId cannot be updated."
-msgstr "HostId güncellenemiyor."
 
 msgid "Hypervisor driver does not support post_live_migration_at_source method"
 msgstr ""
@@ -1430,16 +1251,6 @@ msgstr "IPv6 ağ maskesi \"%s\" bir ağ maskesi ya da integral ön ek olmalı"
 #, python-format
 msgid "Image %(image_id)s could not be found."
 msgstr "%(image_id)s imaj kaynak dosyası bulunamadı."
-
-#, python-format
-msgid ""
-"Image %(image_id)s could not be found. The nova EC2 API assigns image ids "
-"dynamically when they are listed for the first time. Have you listed image "
-"ids since adding this image?"
-msgstr ""
-"%(image_id)s imajı bulunamadı. Nova EC2 API'si imaj kimliklerini otomatik "
-"olarak ilk defa listelendiklerinde atar. Bu imajı eklediğinizden beri imaj "
-"kimliklerini listelediniz mi?"
 
 #, python-format
 msgid "Image %(image_id)s is not active."
@@ -1535,9 +1346,6 @@ msgstr ""
 #, python-format
 msgid "Inconsistency in cell routing: %(reason)s"
 msgstr "Hücre yönlendirmede tutarsızlık: %(reason)s"
-
-msgid "Incorrect request body format"
-msgstr "Geçersiz gövde biçimi isteği."
 
 #, python-format
 msgid "Info cache for instance %(instance_uuid)s could not be found."
@@ -1664,12 +1472,6 @@ msgstr "Sunucu zaten Kurtarma Kipinde: %s"
 msgid "Instance is not a member of specified network"
 msgstr "Örnek belirlenmiş ağın bir üyesi değil"
 
-msgid "Instance not found"
-msgstr "Örnek bulunamadı"
-
-msgid "Instance not yet ready"
-msgstr "Sunucu henüz hazır değil"
-
 msgid "Instance recreate is not supported."
 msgstr "Sunucu yeniden oluşturma desteklenmiyor."
 
@@ -1737,14 +1539,8 @@ msgstr "Geçersiz PCI aygıtı Beyazlistesi yapılandırması %(reason)s"
 msgid "Invalid Regular Expression %s"
 msgstr "Geçersiz Düzenli İfade %s"
 
-msgid "Invalid adminPass"
-msgstr "Geçersiz yönetici parolası"
-
 msgid "Invalid association."
 msgstr "Geçersiz ilişkilendirme."
-
-msgid "Invalid attribute in the request"
-msgstr "İstekte geçersiz öznitelik"
 
 #, python-format
 msgid "Invalid broker_hosts value: %s. It should be in hostname:port format"
@@ -1793,10 +1589,6 @@ msgid "Invalid entry: '%s'; Expecting list or dict"
 msgstr "Geçersiz girdi: '%s'. liste veya sözlük bekleniyor"
 
 #, python-format
-msgid "Invalid event status `%s'"
-msgstr "Geçersiz eylem durumu `%s'"
-
-#, python-format
 msgid "Invalid exclusion expression %r"
 msgstr "Geçersiz dışlama ifadesi %r"
 
@@ -1809,19 +1601,8 @@ msgid "Invalid fixed IP Address %s in request"
 msgstr "İstekte %s geçersiz sabit IP Adresi"
 
 #, python-format
-msgid "Invalid fixed IP address (%s)"
-msgstr "Geçersiz değişken IP adresi (%s)"
-
-msgid "Invalid flavorRef provided."
-msgstr "Geçersiz örnek türü sağlayıcısı"
-
-#, python-format
 msgid "Invalid floating IP %s in request"
 msgstr "İstekte geçersiz değişken IP %s"
-
-#, python-format
-msgid "Invalid format for name: '%s'"
-msgstr "Şu isim için geçersiz biçim: '%s'"
 
 #, python-format
 msgid "Invalid id: %(instance_id)s (expecting \"i-...\")"
@@ -1842,9 +1623,6 @@ msgstr "Geçersiz %(image_href)s imaj kaynak dosyası."
 msgid "Invalid image metadata"
 msgstr "Geçersiz imaj metadata'sı"
 
-msgid "Invalid imageRef provided."
-msgstr "Geçersiz imaj referansı verildi."
-
 #, python-format
 msgid "Invalid inclusion expression %r"
 msgstr "Geçersiz dahil etme ifadesi %r"
@@ -1858,10 +1636,6 @@ msgstr ""
 #, python-format
 msgid "Invalid input received: %(reason)s"
 msgstr "Geçersiz girdi alındı: %(reason)s"
-
-#, python-format
-msgid "Invalid instance id %s in request"
-msgstr "İstekte geçersiz sunucu id'si %s"
 
 msgid "Invalid instance image."
 msgstr "Geçersiz sunucu imajı."
@@ -1881,9 +1655,6 @@ msgstr "Geçersiz libvirt sürümü %(version)s"
 msgid "Invalid memory page size '%(pagesize)s'"
 msgstr "Geçersiz hafıza sayfa boyutu '%(pagesize)s'"
 
-msgid "Invalid metadata"
-msgstr "Geçersiz metadata"
-
 msgid "Invalid metadata key"
 msgstr "Geçersiz özellik anahtarı"
 
@@ -1900,23 +1671,11 @@ msgid "Invalid minDisk filter [%s]"
 msgstr "Geçersiz minDisk filtresi [%s]"
 
 #, python-format
-msgid "Invalid minRam filter [%s]"
-msgstr "geçersiz minRam filtresi [%s]"
-
-#, python-format
 msgid "Invalid min_ram filter [%s]"
 msgstr "Geçersiz min_ram filtresi [%s]"
 
-#, python-format
-msgid "Invalid mode: '%s'"
-msgstr "Geçersiz kip: '%s'"
-
 msgid "Invalid name"
 msgstr "Geçersiz isim"
-
-#, python-format
-msgid "Invalid policies: %s"
-msgstr "Geçersiz ilkeler: %s"
 
 #, python-format
 msgid "Invalid port range %(from_port)s:%(to_port)s. %(msg)s"
@@ -1936,13 +1695,6 @@ msgstr "Geçersiz vekil istek imzası."
 #, python-format
 msgid "Invalid range expression %r"
 msgstr "Geçersiz aralık ifadesi %r"
-
-msgid "Invalid request body"
-msgstr "Geçersiz istek gövdesi"
-
-#, python-format
-msgid "Invalid request body: %s"
-msgstr "Geçersiz istek gövdesi: %s"
 
 #, python-format
 msgid "Invalid reservation expiration %(expire)s."
@@ -1965,10 +1717,6 @@ msgstr ""
 msgid "Invalid state of instance files on shared storage"
 msgstr "Paylaşımlı depolamada geçersiz sunucu durumu dosyaları"
 
-#, python-format
-msgid "Invalid status: '%s'"
-msgstr "Geçersiz durum: %s"
-
 msgid "Invalid target_lun"
 msgstr "Geçersiz target_lun"
 
@@ -1985,16 +1733,8 @@ msgid "Invalid type for %s entry"
 msgstr "%s girdisi için geçersiz tür"
 
 #, python-format
-msgid "Invalid update setting: '%s'"
-msgstr "Geçersiz güncelleme ayarı: '%s'"
-
-#, python-format
 msgid "Invalid usage_type: %s"
 msgstr "Geçersiz usage_type: %s"
-
-#, python-format
-msgid "Invalid value '%s' for force."
-msgstr "Zorlama için geçersiz değer '%s'."
 
 #, python-format
 msgid "Invalid value for Config Drive option: %(option)s"
@@ -2030,9 +1770,6 @@ msgstr "Geçersiz mantıksal sürücü: %(reason)s"
 msgid "Invalid volume_size."
 msgstr "Geçersiz volume_size."
 
-msgid "Ironic client unavailable, cannot access Ironic."
-msgstr "Ironic istemcisi kullanılamaz, Ironic'e erişilemiyor."
-
 #, python-format
 msgid "Ironic node uuid not supplied to driver for instance %s."
 msgstr "Ironic düğümü uuid'si %s sunucusu için sürücüye sağlanmamış."
@@ -2043,14 +1780,6 @@ msgid ""
 "%(power)s)"
 msgstr ""
 "Ironic düğümü: %(id)s doğrulayamadı. (açılma: %(deploy)s, güç: %(power)s)"
-
-#, python-format
-msgid ""
-"Ironic node: %(id)s virtual to physical interface count  missmatch (Vif "
-"count: %(vif_count)d, Pif count: %(pif_count)d)"
-msgstr ""
-"Ironic düğümü: %(id)s sanaldan fiziksele arayüz sayısı  uyuşmuyor (Vif "
-"sayısı: %(vif_count)d, Pif sayısı: %(pif_count)d)"
 
 msgid "Is the appropriate service running?"
 msgstr "Uygun servis çalışıyor mu?"
@@ -2101,16 +1830,6 @@ msgstr ""
 msgid "Last %s nova syslog entries:-"
 msgstr "Son %s nova syslog girdisi:-"
 
-msgid "Length in request body must be an integer value"
-msgstr "İstek gövdesindeki uzunluk bir tam sayı değer olmalı"
-
-#, python-format
-msgid ""
-"Libvirt '%s' or later is required for online deletion of volume snapshots."
-msgstr ""
-"Mantıksal sürücü anlık görüntülerinin çevirmiçi silinebilmesi için libvirt "
-"'%s' veya sonraki sürümleri gerekiyor."
-
 msgid "Limit"
 msgstr "Limit"
 
@@ -2123,30 +1842,12 @@ msgid "Link Local address is not found.:%s"
 msgstr "Yerel adres bağlantısı bulunamadı.:%s"
 
 msgid ""
-"List of file systems that are configured in this file in the image_file_url:"
-"<list entry name> sections"
-msgstr ""
-"Bu dosyada image_file_url:<list entry name> kısımlarında yapılandırılmış "
-"dosya sistemleri listesi"
-
-#, python-format
-msgid "Live migration of instance %(id)s to host %(host)s failed"
-msgstr "%(id)s'dan %(host)s sunucusuna örnek göçü hatalı"
-
-#, python-format
-msgid "Live migration of instance %s to another host failed"
-msgstr "%s sunucusunun başka bir istemciye göçü başarısız"
-
-msgid ""
 "Live migration of instances with config drives is not supported in libvirt "
 "unless libvirt instance path and drive data is shared across compute nodes."
 msgstr ""
 "libvirt sunucu yolu ve sürücü verisi hesaplama düğümleri arasında "
 "paylaşılmadığı sürece sunucuların yapılandırma aygıtlarıyla göçü libvirt'de "
 "desteklenmez."
-
-msgid "Malformed createBackup entity"
-msgstr "Bozuk yedekOluşturma birimi"
 
 #, python-format
 msgid "Malformed message body: %(reason)s"
@@ -2162,15 +1863,6 @@ msgstr ""
 
 msgid "Malformed request body"
 msgstr "Kusurlu istek gövdesi"
-
-msgid "Malformed request body. meta item must be object"
-msgstr "Bozulmuş istek gövdesi. meta öğesi nesne olmalı"
-
-msgid "Malformed request body. metadata must be object"
-msgstr "Bozulmuş istek gövdesi. metadata nesne olmalı"
-
-msgid "Malformed scheduler_hints attribute"
-msgstr "Bozuk scheduler_hints özelliği"
 
 msgid "Mapping image to local is not supported."
 msgstr "İmajın yerele eşleştirilmesi desteklenmiyor."
@@ -2240,15 +1932,6 @@ msgstr "%(status)s durumuyla %(instance_id)s örneği için göç bulunamadı."
 msgid "Migration pre-check error: %(reason)s"
 msgstr "Göç ön-kontrol hatası: %(reason)s"
 
-msgid "Missing 'address' argument for removeFixedIp"
-msgstr "removeFixedIp için 'address' argümanı bulunamadı"
-
-msgid "Missing 'networkId' argument for addFixedIp"
-msgstr "addFixedlp için 'networkld' argümanı bulunamadı"
-
-msgid "Missing argument 'type' for reboot"
-msgstr "Önyükleme için tür argümanı eksik"
-
 #, python-format
 msgid "Missing arguments: %s"
 msgstr "Eksik bağımsız değişken: %s"
@@ -2263,9 +1946,6 @@ msgstr "Eksik aygıt UUID."
 msgid "Missing disabled reason field"
 msgstr "Kapatılma sebebi alanı eksik"
 
-msgid "Missing flavorRef attribute"
-msgstr "Örnek türü referans özelliği eksik"
-
 msgid "Missing imageRef attribute"
 msgstr "İmaj referans özelliği eksik"
 
@@ -2273,18 +1953,12 @@ msgstr "İmaj referans özelliği eksik"
 msgid "Missing keys: %s"
 msgstr "Eksik anahtarlar: %s"
 
-msgid "Missing network in body"
-msgstr "Gövdede ağ eksik"
-
 #, python-format
 msgid "Missing parameter %s"
 msgstr "Eksik parametre %s"
 
 msgid "Missing parameter dict"
 msgstr "Parametre dizini eksik"
-
-msgid "Missing tenant parameter"
-msgstr "Kiracı parametresi eksik"
 
 msgid ""
 "More than one possible network found. Specify network ID(s) to select which "
@@ -2334,9 +2008,6 @@ msgstr "IP adresi istendiğinde network_id girdisi verilmelidir"
 msgid "Must not input both network_id and port_id"
 msgstr "Hem network_id hem port_id verilmemelidir"
 
-msgid "Must specify an ExtensionManager class"
-msgstr "UzantıYöneticisi sınıfı belirlenmek zorunda"
-
 msgid ""
 "Must specify connection_url, connection_username (optionally), and "
 "connection_password to use compute_driver=xenapi.XenAPIDriver"
@@ -2353,9 +2024,6 @@ msgstr ""
 
 msgid "Must supply a positive value for max_rows"
 msgstr "max_rows için pozitif bir değer verilmeli"
-
-msgid "Netmask to push into openvpn config"
-msgstr "Openvpn yapılandırmasına gönderilecek ağ maskesi"
 
 #, python-format
 msgid "Network \"%(val)s\" is not valid in field %(attr)s"
@@ -2383,9 +2051,6 @@ msgstr ""
 msgid "Network adapter %(adapter)s could not be found."
 msgstr "%(adapter)s ağ bağdaştırıcısı bulunamadı."
 
-msgid "Network cidr or cidr_v6 is required"
-msgstr "Ağ cidr veya cidr_v6 gerekli"
-
 #, python-format
 msgid "Network could not be found for bridge %(bridge)s"
 msgstr " %(bridge)s köprüsü için ağ bulunamadı."
@@ -2404,9 +2069,6 @@ msgstr "%(cidr)s CIDR ile bir ağ bulunamadı."
 
 msgid "Network driver does not support this function."
 msgstr "Ağ sürücüsü bu fonksiyonu desteklemiyor."
-
-msgid "Network label is required"
-msgstr "Ağ etiketi gerekli"
 
 #, python-format
 msgid ""
@@ -2430,9 +2092,6 @@ msgstr ""
 msgid "Network set host failed for network %(network_id)s."
 msgstr "%(network_id)s ağı için ağ istemci ayarlaması başarısız."
 
-msgid "Network to push into openvpn config"
-msgstr "Openvpn yapılandırmasına gönderilecek ağ"
-
 msgid "New volume must be detached in order to swap."
 msgstr ""
 "Yeni mantıksal sürücünün değiştirilebilmesi için ayrılmış olması gerekir."
@@ -2444,15 +2103,9 @@ msgstr "Yeni mantıksal sürücü aynı boyutta ya da daha büyük olmalı."
 msgid "No Block Device Mapping with id %(id)s."
 msgstr "%(id)s kimliğine sahip bir Blok Aygıt Eşleştirmesi yok."
 
-msgid "No CIDR requested"
-msgstr "İstenen bir CIDR yok"
-
 #, python-format
 msgid "No CPUs available after parsing %r"
 msgstr "%r ayrıştırıldıktan sonra kullanılabilir CPU yok"
-
-msgid "No Request Body"
-msgstr "İstek gövdesi yok"
 
 msgid "No Unique Match Found."
 msgstr "Benzersiz Eşleşme Bulunamadı."
@@ -2460,21 +2113,12 @@ msgstr "Benzersiz Eşleşme Bulunamadı."
 msgid "No access_url in connection_info. Cannot validate protocol"
 msgstr "Bağlantı bilgisinde erişim url'si yok. İletişim kuralı doğrulanamıyor"
 
-msgid "No adminPass was specified"
-msgstr "Belirlenmiş bir yönetici parolası yok"
-
 #, python-format
 msgid "No agent-build associated with id %(id)s."
 msgstr "Hiçbir ajan-inşası id %(id)s ile ilişkilendirilmemiş."
 
 msgid "No cell given in routing path."
 msgstr "Yönlendirme yolunda olan hiçbir hücre verilmemiş."
-
-msgid "No cell information in request"
-msgstr "İstekte hücre bilgisi yok"
-
-msgid "No cell name in request"
-msgstr "İstekte hücre ismi yok"
 
 msgid "No cells available matching scheduling criteria."
 msgstr "Zamanlama kıstasıyla eşleşen hücre yok."
@@ -2555,9 +2199,6 @@ msgstr "Ağ bulunamadı"
 msgid "No nova entries in syslog!"
 msgstr "Syslog'da nova girdisi yok!"
 
-msgid "No nw_info cache associated with instance"
-msgstr "Sunucu ile ilişkilendirilmiş nw_info zulası yok"
-
 #, python-format
 msgid "No operating system found in %s"
 msgstr "%s içinde işletim sistemi bulunamadı"
@@ -2565,9 +2206,6 @@ msgstr "%s içinde işletim sistemi bulunamadı"
 #, python-format
 msgid "No primary VDI found for %s"
 msgstr "%s için birincil VDI bulunamadı"
-
-msgid "No request body"
-msgstr "İstek gövdesi yok"
 
 msgid "No root disk defined."
 msgstr "Kök disk tanımlanmamış."
@@ -2656,17 +2294,6 @@ msgstr "Eski mantıksal sürücü başka bir sunucuya eklenmiş."
 msgid "One or more hosts already in availability zone(s) %s"
 msgstr "Bir ya da daha fazla istemci zaten kullanılabilir bölge(ler)de %s"
 
-#, python-format
-msgid ""
-"Only %(value)s %(verb)s request(s) can be made to %(uri)s every "
-"%(unit_string)s."
-msgstr ""
-"Yalnızca %(value)s %(verb)s istek(ler)i %(uri)s'ye her %(unit_string)s "
-"yapılabilir."
-
-msgid "Only 'updated_since', 'project_id' and 'deleted' are understood."
-msgstr "Yalnızca 'updated_since', 'project_id', ve 'deleted' anlaşıldı."
-
 msgid "Only administrators may list deleted instances"
 msgstr "Yalnızca yöneticiler silinen sunucuları listeleyebilir"
 
@@ -2677,9 +2304,6 @@ msgid ""
 msgstr ""
 "Bu özellik tarafından yalnızca dosya-tabanlı SR'ler (ext/NFS) desteklenir.  "
 "SR %(uuid)s ise %(type)s türünde"
-
-msgid "Only host parameter can be specified"
-msgstr "Yalnızca host parametresi belirtilebilir"
 
 msgid "Only root certificate can be retrieved."
 msgstr "Sadece kök sertifikası alınabilir."
@@ -2756,13 +2380,6 @@ msgstr "Yol %s LVM mantıksal sürücüsü olmalı"
 
 msgid "Paused"
 msgstr "Durduruldu"
-
-msgid "Personality cannot be updated."
-msgstr "Kişilik güncellenemedi."
-
-#, python-format
-msgid "Personality content for %s cannot be decoded"
-msgstr "%s için kişisel içerik çözümlenemedi"
 
 msgid "Personality file content too long"
 msgstr "Kişisel dosya içeriği çok uzun"
@@ -2884,10 +2501,6 @@ msgstr ""
 "%(project_id)s projesindeki %(user_id)s kullanıcısı için kota bulunamadı."
 
 #, python-format
-msgid "Quota limit %(limit)s for %(resource)s must be -1 or greater."
-msgstr "%(resource)s için kota sınırı %(limit)s -1 ya da daha büyük olmalı."
-
-#, python-format
 msgid ""
 "Quota limit %(limit)s for %(resource)s must be greater than or equal to "
 "already used and reserved %(minimum)s."
@@ -2937,9 +2550,6 @@ msgstr ""
 
 msgid "Request body and URI mismatch"
 msgstr "URI ve gövde isteği uyumsuz"
-
-msgid "Request body contains too many items"
-msgstr "İstek gövdesi çok sayıda öğe içeriyor"
 
 msgid "Request is too large."
 msgstr "İstek çok geniş"
@@ -2999,18 +2609,6 @@ msgstr "Ayrılmış"
 msgid "Resize error: %(reason)s"
 msgstr "Yeniden boyutlama hatası: %(reason)s"
 
-msgid "Resize request has invalid 'flavorRef' attribute."
-msgstr ""
-"Yeniden boyutlandırma isteği geçersiz örnek türü referansı özelliğine sahip."
-
-msgid "Resize requests require 'flavorRef' attribute."
-msgstr ""
-"Yeniden boyutlandırma isteği geçersiz örnek türü referansı özelliği "
-"gerektirir."
-
-msgid "Resize requires a flavor change."
-msgstr "Yeniden boyutlandırma nitelik değişikliği gerektiriyor"
-
 msgid "Resize to zero disk flavor is not allowed."
 msgstr "Sıfıra yeniden boyutlandırma disk niteliğine izin verilmiyor."
 
@@ -3049,24 +2647,8 @@ msgid "Scheduler Host Filter %(filter_name)s could not be found."
 msgstr "%(filter_name)s zamanlayıcı sunucu filtresi bulunamadı."
 
 #, python-format
-msgid ""
-"Security group %(name)s added %(protocol)s ingress (%(from_port)s:"
-"%(to_port)s)"
-msgstr ""
-"%(name)s güvenlik grubu %(protocol)s girişi ekledi (%(from_port)s:"
-"%(to_port)s)"
-
-#, python-format
 msgid "Security group %(name)s is not found for project %(project)s"
 msgstr "Güvenlik grubu %(name)s %(project)s projesi için bulunamadı"
-
-#, python-format
-msgid ""
-"Security group %(name)s removed %(protocol)s ingress (%(from_port)s:"
-"%(to_port)s)"
-msgstr ""
-"%(name)s güvenlik grubu %(protocol)s girişini kaldırdı (%(from_port)s:"
-"%(to_port)s)"
 
 #, python-format
 msgid ""
@@ -3148,15 +2730,6 @@ msgstr "Sunucu diski yeniden boyutlandırılamadı çünkü: %(reason)s"
 msgid "Server does not exist"
 msgstr "Sunucu mevcut değil"
 
-msgid "Server group scheduler hint must be a UUID."
-msgstr "Sunucu grup zamanlayıcı ipucu UUID olmalı."
-
-msgid "Server name is not defined"
-msgstr "Sunucu adı tanımlanmadı"
-
-msgid "Server not found"
-msgstr "Sunucu bulunamadı"
-
 #, python-format
 msgid "ServerGroup policy is not supported: %(reason)s"
 msgstr "SunucuGrubu ilkesi desteklenmiyor: %(reason)s"
@@ -3202,9 +2775,6 @@ msgstr "Paylaşım '%s' desteklenmiyor"
 msgid "Share level '%s' cannot have share configured"
 msgstr "Paylaşım seviyesi '%s' paylaşım yapılandırmasına sahip olamaz"
 
-msgid "Should we use a CA for each project?"
-msgstr "Her proje için sertifika yetkilisini kullanmalı mıyız?"
-
 msgid ""
 "Shrinking the filesystem down with resize2fs has failed, please check if you "
 "have enough free space on your disk."
@@ -3227,14 +2797,6 @@ msgstr "Sıralama yönü boyutu sııralama anahtarı boyutunu geçiyor"
 
 msgid "Sort key supplied was not valid."
 msgstr "Verilen sıralama anahtarı geçerli değil."
-
-#, python-format
-msgid ""
-"Specified Fixed IP '%(addr)s' cannot be used with port '%(port)s': port "
-"already has a Fixed IP allocated."
-msgstr ""
-"Belirtilen Sabit IP '%(addr)s' '%(port)s' bağlantı noktası ile kullanılamaz: "
-"bağlantı noktasının zaten ayrılmış Sabit IP'si var."
 
 msgid "Specified fixed address not assigned to instance"
 msgstr "Belirtilen sabit adres sunucuya atanmamış"
@@ -3259,15 +2821,6 @@ msgstr "Depolama hatası: %(reason)s"
 msgid "Storage policy %s did not match any datastores"
 msgstr "Depolama ilkesi %s hiçbir verideposuyla eşleşmedi"
 
-#, python-format
-msgid "Subject for certificate for projects, %s for project, timestamp"
-msgstr "Projelerin sertifika konusu, proje ve tarih bilgisi için %s"
-
-#, python-format
-msgid "Subject for certificate for users, %s for project, user, timestamp"
-msgstr ""
-"Kullanıcıların sertifika konusu, proje, kullanıcı ve tarih bilgisi için %s"
-
 msgid "Success"
 msgstr "Başarılı"
 
@@ -3288,9 +2841,6 @@ msgstr "Görev %(task_name)s zaten %(host)s istemcisi üstünde çalışıyor"
 msgid "Task %(task_name)s is not running on host %(host)s"
 msgstr "Görev %(task_name)s %(host)s istemcisi üzerinde çalışmıyor"
 
-msgid "Template for cloudpipe instance boot script"
-msgstr "Cloudpipe sunucusu ön yükleme betiği için şablon"
-
 #, python-format
 msgid "The CA file for %(project)s could not be found"
 msgstr "%(project)s için CA dosyası bulunamadı"
@@ -3302,10 +2852,6 @@ msgstr "%(project)s için CRL dosyası bulunamadı"
 #, python-format
 msgid "The DNS entry %(name)s already exists in domain %(domain)s."
 msgstr "%(domain)s alanında %(name)s DNS girdisi halen var."
-
-#, python-format
-msgid "The ID %(id)s is unknown."
-msgstr "Kimlik %(id)s bilinmiyor."
 
 #, python-format
 msgid "The PCI address %(address)s has an incorrect format."
@@ -3391,9 +2937,6 @@ msgstr ""
 msgid "The only partition should be partition 1."
 msgstr "Tek bölüm bölüm 1 olmalı."
 
-msgid "The path at which the file system is mounted."
-msgstr "Dosya sisteminin bağlı olduğu yol."
-
 #, python-format
 msgid "The provided RNG device path: (%(path)s) is not present on the host."
 msgstr "Sağlanan RNG aygıt yolu: (%(path)s) istemci üzerinde mevcut değil."
@@ -3420,13 +2963,6 @@ msgstr "İstenen konsol türü deteayları erişilebilir değil"
 
 msgid "The requested functionality is not supported."
 msgstr "İstenen işlevsellik desteklenmiyor"
-
-msgid ""
-"The string containing the reason for disabling the service contains invalid "
-"characters or is too long."
-msgstr ""
-"Servisi kapatma sebebini içeren karakter dizisi geçersiz karakterler "
-"içeriyor ya da çok uzun."
 
 msgid ""
 "The sum between the number of networks and the vlan start cannot be greater "
@@ -3462,9 +2998,6 @@ msgstr "Hedef istemci aynısı olamaz."
 #, python-format
 msgid "The token '%(token)s' is invalid or has expired"
 msgstr "Jeton '%(token)s' geçersiz ya da süresi dolmuş"
-
-msgid "The value of metadata must be a dict"
-msgstr "Metadata değeri sözlük olmalı"
 
 msgid "The vlan number cannot be greater than 4094"
 msgstr "Vlan numarası 4094'den büyük olamaz"
@@ -3538,9 +3071,6 @@ msgstr "Bu sürücü yalnızca 'a' türünü destekler"
 msgid "This driver only supports type 'a' entries."
 msgstr "Bu türücü sadece 'a' türü girdileri destekliyor."
 
-msgid "This request was rate-limited."
-msgstr "Bu istek sayı limitlidir."
-
 #, python-format
 msgid "This rule already exists in group %s"
 msgstr "Bu kural zaten grupta var %s"
@@ -3585,21 +3115,6 @@ msgstr ""
 #, python-format
 msgid "Unable to contact guest agent. The following call timed out: %(method)s"
 msgstr "Konuk ajana bağlanılamıyor. Şu çağrı zaman aşımına uğradı: %(method)s"
-
-msgid "Unable to create dns domain"
-msgstr "Dns alanı oluşturulamıyor"
-
-msgid "Unable to create dns entry"
-msgstr "Dns girdisi oluşturulamıyor"
-
-msgid "Unable to create flavor"
-msgstr "Nitelik oluşturulamıyor"
-
-msgid "Unable to delete dns domain"
-msgstr "Dns alanı silinemiyor"
-
-msgid "Unable to delete dns entry"
-msgstr "Dns girdisi silinemiyor"
 
 #, python-format
 msgid "Unable to delete system group '%s'"
@@ -3678,36 +3193,9 @@ msgstr "Sistem kayıt dosyası bulunamıyor!"
 msgid "Unable to find volume"
 msgstr "Mantıksal sürücü bulunamadı"
 
-msgid "Unable to get console"
-msgstr "Konsol alınamıyor"
-
-msgid "Unable to get console log, functionality not implemented"
-msgstr "Konsol kaydı alınamıyor, işlevsellik uygulanmamış"
-
-msgid "Unable to get diagnostics, functionality not implemented"
-msgstr "Tanılama alınamıyor, işlevsellik uygulanmamış"
-
-msgid "Unable to get dns domain"
-msgstr "Dns alanı alınamıyor"
-
-msgid "Unable to get dns entry"
-msgstr "Dns girdisi alınamıyor"
-
-msgid "Unable to get rdp console, functionality not implemented"
-msgstr "Rdp konsolu alınamıyor, işlevsellik uygulanmamış"
-
 #, python-format
 msgid "Unable to get record of VDI %s on"
 msgstr "VDI %s kaydı alınamadı"
-
-msgid "Unable to get serial console, functionality not implemented"
-msgstr "Seri konsolu alınamıyor, işlevsellik uygulanmamış"
-
-msgid "Unable to get spice console, functionality not implemented"
-msgstr "Spice konsolu alınamıyor, işlevsellik uygulanmamış"
-
-msgid "Unable to get vnc console, functionality not implemented"
-msgstr "Vnc konsolu alınamıyor, işlevsellik henüz uygulanmamış"
 
 #, python-format
 msgid "Unable to introduce VDI for SR %s"
@@ -3728,9 +3216,6 @@ msgstr ""
 "Birden fazla sunucu tekil yapılandırılan bağlantı noktası ID'si ile "
 "başlatılamadı. Lütfen sunucunuzu tek tek değişik bağlantı noktalarıyla "
 "başlatın."
-
-msgid "Unable to locate requested flavor."
-msgstr "İstenilen örnek türü konumlandırılamıyor."
 
 msgid "Unable to log in to XenAPI (is the Dom0 disk full?)"
 msgstr "XenAPI'ye giriş yapılamadı (Dom0 diski dolu mu?)"
@@ -3759,9 +3244,6 @@ msgstr "Mevcut (%(host)s) sunucusundan (%(instance_id)s) örneği geçirilemez."
 #, python-format
 msgid "Unable to obtain target information %s"
 msgstr "Hedef bilgi alınamadı %s"
-
-msgid "Unable to parse metadata key/value pairs."
-msgstr "Çözümlenemeyen metadata anahtar/değer çifti."
 
 msgid "Unable to resize disk down."
 msgstr "Disk boyutu küçültülemedi."
@@ -3833,9 +3315,6 @@ msgstr "Bilinmeyen eylem"
 msgid "Unknown action %s"
 msgstr "Bilinmeyen eylem %s"
 
-msgid "Unknown argument : port"
-msgstr "Bilinmeyen bağımsız değişken : port"
-
 msgid "Unknown argument: port"
 msgstr "Bilinmeyen bağımsız değişken: port"
 
@@ -3854,14 +3333,6 @@ msgstr "Bilinmeyen image_type=%s"
 #, python-format
 msgid "Unknown method '%(method)s' in compute API"
 msgstr "Hesap API'sinde bilinmeyen metod '%(method)s'"
-
-#, python-format
-msgid ""
-"Unknown osapi_compute_unique_server_name_scope value: %s Flag must be empty, "
-"\"global\" or \"project\""
-msgstr ""
-"Bilinmeyen osapi_compute_unique_server_name_scope değeri: %s Bayrağı boş, "
-"\"genel\" veya \"proje\" olmalı"
 
 #, python-format
 msgid "Unknown quota resources %(unknown)s."
@@ -3920,12 +3391,6 @@ msgstr ""
 msgid "User does not have admin privileges"
 msgstr "Kullanıcı yönetici ayrıcalıklarına sahip değil"
 
-msgid "User is not authorized to use key manager."
-msgstr "Kullanıcı anahtar yöneticisini kullanmak için yetkili değil."
-
-msgid "Userdata content cannot be decoded"
-msgstr "Kullanıcı verisi içeriği çözülemez"
-
 msgid ""
 "Using different block_device_mapping syntaxes is not allowed in the same "
 "request."
@@ -3952,18 +3417,11 @@ msgstr ""
 msgid "VHD coalesce attempts exceeded (%d), giving up..."
 msgstr "VHD ergitme girişimi aşıldı (%d), vaz geçiliyor..."
 
-#, python-format
-msgid "VIF driver not found for network_api_class: %s"
-msgstr "network_api_class: %s için VIF sürücüsü bulunamadı"
-
 msgid "VIF plugging is not supported by the Hyper-V driver."
 msgstr "VIF takma Hiper-V sürücüs tarafından desteklenmiyor."
 
 msgid "VIF unplugging is not supported by the Hyper-V driver."
 msgstr "VIF çıkarma Hiper-V sürücüsü tarafından desteklenmiyor."
-
-msgid "VLAN support must be enabled"
-msgstr "VLAN desteği etkinleştirilmelidir"
 
 #, python-format
 msgid ""
@@ -3988,18 +3446,6 @@ msgid ""
 msgstr ""
 "Sürüm %(req_ver)s API tarafından desteklenmiyor. Asgari %(min_ver)s ve azami "
 "%(max_ver)s."
-
-msgid "Virt driver does not implement host disabled status."
-msgstr "Virt sürücüsü istemci kapalı durumunu uygulamıyor."
-
-msgid "Virt driver does not implement host maintenance mode."
-msgstr "Virt sürücüsü istemci bakım kipini uygulamıyor."
-
-msgid "Virt driver does not implement host power management."
-msgstr "Virt sürücüsü istemci güç yönetimini uygulamıyor."
-
-msgid "Virt driver does not implement uptime function."
-msgstr "Virt sürücüsü uptime fonksiyonunu uygulamıyor."
 
 msgid "Virtual Interface creation failed"
 msgstr "Sanal arayüz oluşturma hatası"
@@ -4062,14 +3508,6 @@ msgstr ""
 
 #, python-format
 msgid ""
-"Volume sets discard option, but libvirt %(libvirt)s or later is required, "
-"qemu %(qemu)s or later is required."
-msgstr ""
-"Mantıksal sürücü çıkarma seçeneğini ayarlıyor, ama libvirt %(libvirt)s ya da "
-"daha ileri sürüm, qemu %(qemu)s ya da daha ileri sürüm gerekli."
-
-#, python-format
-msgid ""
 "We do not support scheme '%s' under Python < 2.7.4, please use http or https"
 msgstr ""
 "Python < 2.7.4 altında '%s' şablonunu desteklemiyoruz, lütfen http ya da "
@@ -4084,12 +3522,6 @@ msgid ""
 msgstr ""
 "Sunucu SSL kipinde çalıştırıldığında, yapılandırma dosyanızda hem cert_file "
 "hem key_file seçeneklerinin değerlerini belirtmelisiniz"
-
-msgid "Where we keep our keys"
-msgstr "Anahtarlarımızı tuttuğumuz yer"
-
-msgid "Where we keep our root CA"
-msgstr "Kök sertifika yetkilisini tutttuğumuz yer"
 
 #, python-format
 msgid "Wrong quota method %(method)s used on resource %(res)s"
@@ -4141,12 +3573,6 @@ msgstr ""
 "yakalayan (0.0.0.0 veya ::) ya da yerel adres (127.0.0.1 veya ::1) olarak "
 "yapılandırmalısınız."
 
-msgid "accessIPv4 is not proper IPv4 format"
-msgstr "IPv4 adresi uygun IPv4 formatında değil"
-
-msgid "accessIPv6 is not proper IPv6 format"
-msgstr "accessIPv6 uygun IPv6 biçimi değil"
-
 msgid "admin password can't be changed on existing disk"
 msgstr "yönetici parolası mevcut diskte değiştirilemez"
 
@@ -4159,18 +3585,6 @@ msgstr "takım hata durumunda"
 #, python-format
 msgid "assert_can_migrate failed because: %s"
 msgstr "assert_can_migrate başarısız çünkü: %s"
-
-msgid "block_device_mapping must be a list"
-msgstr "blok_aygıt_eşleştirmesi liste olmalı"
-
-msgid "block_device_mapping_v2 must be a list"
-msgstr "blok_aygıt_eşleşetirmesi_v2 bir liste olmalı"
-
-msgid "cannot delete non-existent key"
-msgstr "olmayan anahtar silinemez"
-
-msgid "cannot store arbitrary keys"
-msgstr "gelişigüzel anahtarlar depolanamaz"
 
 msgid "cannot understand JSON"
 msgstr "JSON dosyası anlaşılamadı"
@@ -4185,13 +3599,6 @@ msgstr "bağlantı bilgisi: %s"
 #, python-format
 msgid "connecting to: %(host)s:%(port)s"
 msgstr "bağlanılıyor: %(host)s:%(port)s"
-
-#, python-format
-msgid "createBackup entity requires %s attribute"
-msgstr "yedekOluşturma birimi %s özelliğini gerektiriyor"
-
-msgid "createImage entity requires name attribute"
-msgstr "createImage varlığının isim özelliğine ihtiyacı var"
 
 #, python-format
 msgid "destination is %(target_cell)s but routing_path is %(routing_path)s"
@@ -4216,14 +3623,6 @@ msgid "error: %s"
 msgstr "hata: %s"
 
 #, python-format
-msgid "event entity contains unsupported items: %s"
-msgstr "olay girdisi desteklenmeyen öğeler içeriyor: %s"
-
-#, python-format
-msgid "event entity requires key %(key)s"
-msgstr "olay birimi %(key)s anahtarına ihtiyaç duyar"
-
-#, python-format
 msgid "failed to generate X509 fingerprint. Error message: %s"
 msgstr "X509 parmak izi oluşturulamadı. Hata iletisi: %s"
 
@@ -4242,15 +3641,6 @@ msgstr "fping aracı bulunamadı."
 
 msgid "host"
 msgstr "Host"
-
-msgid "host must be specified."
-msgstr "istemci belirtilmelidir."
-
-msgid ""
-"host, block_migration and disk_over_commit must be specified for live "
-"migration."
-msgstr ""
-"istemci, block_migration ve disk_over_commit canlı göç için belirtilmelidir."
 
 msgid "hostname"
 msgstr "makine adı"
@@ -4335,9 +3725,6 @@ msgstr " [%s] göstergesi bulunamadı"
 msgid "max_count cannot be greater than 1 if an fixed_ip is specified."
 msgstr "sabit ip belirtildiyse max_count 1'den büyük olamaz."
 
-msgid "memcached_servers not defined"
-msgstr "memcached_servers tanımlanmamış"
-
 msgid "memory"
 msgstr "hafıza"
 
@@ -4368,14 +3755,8 @@ msgstr "düğüm"
 msgid "not able to execute ssh command: %s"
 msgstr "ssh komutu çalıştırılamadı: %s"
 
-msgid "onSharedStorage must be specified."
-msgstr "onSharedStorage belirtilmelidir."
-
 msgid "operation time out"
 msgstr "işlem zaman aşımına uğradı"
-
-msgid "os-getConsoleOutput malformed or missing from request body"
-msgstr "os-getConsoleOutpu kusurlu veya istek gövdesinde bulunmuyor"
 
 #, python-format
 msgid "partition %s not found"
@@ -4395,12 +3776,6 @@ msgstr "proje"
 msgid "qemu-nbd error: %s"
 msgstr "qemu-nbd hatası: %s"
 
-msgid "quota_class_set not specified"
-msgstr "quota_class_set belirtilmemiş"
-
-msgid "quota_set not specified"
-msgstr "quota_set belirtilmemiş"
-
 msgid "ramdisk"
 msgstr "ramdisk"
 
@@ -4412,12 +3787,6 @@ msgid "read_deleted can only be one of 'no', 'yes' or 'only', not %r"
 msgstr ""
 "read_deleted değişkeni 'no', 'yes' veya 'only' değerlerini alabilir, %r "
 "olamaz"
-
-msgid "rpc_port must be integer"
-msgstr "rpc_port tam sayı olmalı"
-
-msgid "security group default rule not found"
-msgstr "güvenlik grubu varsayılan kuralı bulunamadı"
 
 msgid "serve() can only be called once"
 msgstr "serve() yalnızca bir kere çağrılabilir"
@@ -4441,9 +3810,6 @@ msgstr "kurulum sürüyor"
 msgid "snapshot for %s"
 msgstr "%s için anlık görüntü"
 
-msgid "snapshot not specified"
-msgstr "anlık görüntü belirtilmemiş"
-
 msgid "snapshot_id required in create_info"
 msgstr "create_info'da snapshot_id gerekiyor"
 
@@ -4456,9 +3822,6 @@ msgstr "durum"
 msgid "sudo failed, continuing as if nothing happened"
 msgstr "sudo başarısız oldu, hiçbir şey olmamış gibi devam ediliyor"
 
-msgid "the body is invalid."
-msgstr "gövde geçersiz."
-
 msgid "token not provided"
 msgstr "jeton sağlanmamış"
 
@@ -4470,10 +3833,6 @@ msgstr "tür"
 
 msgid "unpause not supported for vmwareapi"
 msgstr "vmwareapi için sürdürme desteklenmiyor"
-
-#, python-format
-msgid "unsupported fields: %s"
-msgstr "desteklenmeyen alanlar: %s"
 
 msgid "user"
 msgstr "kullanıcı"
@@ -4528,15 +3887,6 @@ msgid ""
 msgstr ""
 "mantıksal sürücü '%(vol)s' durumu 'kullanımda' olmalı. Şu an '%(status)s' "
 "durumunda"
-
-msgid "volume not specified"
-msgstr "mantıksal sürücü belirtilmemiş"
-
-msgid "volumeAttachment not specified"
-msgstr "volumeAttachment belirtilmemiş"
-
-msgid "volumeId must be specified."
-msgstr "volumeId belirtilmeli."
 
 #, python-format
 msgid "volume_id not found: %s"

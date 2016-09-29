@@ -17,13 +17,11 @@
 Management class for host operations.
 """
 import datetime
-import os
 import platform
 import time
 
 from os_win import constants as os_win_const
 from os_win import utilsfactory
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import units
@@ -31,17 +29,18 @@ from oslo_utils import units
 from nova.compute import arch
 from nova.compute import hv_type
 from nova.compute import vm_mode
+import nova.conf
 from nova.i18n import _
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import pathutils
 
-CONF = cfg.CONF
-CONF.import_opt('my_ip', 'nova.netconf')
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
 class HostOps(object):
     def __init__(self):
+        self._diskutils = utilsfactory.get_diskutils()
         self._hostutils = utilsfactory.get_hostutils()
         self._pathutils = pathutils.PathUtils()
 
@@ -81,9 +80,10 @@ class HostOps(object):
         free_mem_mb = free_mem_kb // 1024
         return (total_mem_mb, free_mem_mb, total_mem_mb - free_mem_mb)
 
-    def _get_local_hdd_info_gb(self):
-        drive = os.path.splitdrive(self._pathutils.get_instances_dir())[0]
-        (size, free_space) = self._hostutils.get_volume_info(drive)
+    def _get_storage_info_gb(self):
+        instances_dir = self._pathutils.get_instances_dir()
+        (size, free_space) = self._diskutils.get_disk_capacity(
+            instances_dir)
 
         total_gb = size // units.Gi
         free_gb = free_space // units.Gi
@@ -106,6 +106,22 @@ class HostOps(object):
         LOG.debug('Windows version: %s ', version)
         return version
 
+    def _get_remotefx_gpu_info(self):
+        total_video_ram = 0
+        available_video_ram = 0
+
+        if CONF.hyperv.enable_remotefx:
+            gpus = self._hostutils.get_remotefx_gpu_info()
+            for gpu in gpus:
+                total_video_ram += int(gpu['total_video_ram'])
+                available_video_ram += int(gpu['available_video_ram'])
+        else:
+            gpus = []
+
+        return {'total_video_ram': total_video_ram,
+                'used_video_ram': total_video_ram - available_video_ram,
+                'gpu_info': jsonutils.dumps(gpus)}
+
     def get_available_resource(self):
         """Retrieve resource info.
 
@@ -123,7 +139,7 @@ class HostOps(object):
 
         (total_hdd_gb,
          free_hdd_gb,
-         used_hdd_gb) = self._get_local_hdd_info_gb()
+         used_hdd_gb) = self._get_storage_info_gb()
 
         cpu_info = self._get_cpu_info()
         cpu_topology = cpu_info['topology']
@@ -147,6 +163,8 @@ class HostOps(object):
                'numa_topology': None,
                }
 
+        gpu_info = self._get_remotefx_gpu_info()
+        dic.update(gpu_info)
         return dic
 
     def host_power_action(self, action):

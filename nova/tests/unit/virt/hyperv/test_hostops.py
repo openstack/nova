@@ -44,6 +44,7 @@ class HostOpsTestCase(test_base.HyperVBaseTestCase):
         self._hostops = hostops.HostOps()
         self._hostops._hostutils = mock.MagicMock()
         self._hostops._pathutils = mock.MagicMock()
+        self._hostops._diskutils = mock.MagicMock()
 
     def test_get_cpu_info(self):
         mock_processors = mock.MagicMock()
@@ -78,6 +79,11 @@ class HostOpsTestCase(test_base.HyperVBaseTestCase):
                              'threads': self.FAKE_NUM_CPUS,
                              'sockets': self.FAKE_NUM_CPUS}}
 
+    def _get_mock_gpu_info(self):
+        return {'remotefx_total_video_ram': 4096,
+                'remotefx_available_video_ram': 2048,
+                'remotefx_gpu_info': mock.sentinel.FAKE_GPU_INFO}
+
     def test_get_memory_info(self):
         self._hostops._hostutils.get_memory_info.return_value = (2 * units.Ki,
                                                                  1 * units.Ki)
@@ -85,13 +91,14 @@ class HostOpsTestCase(test_base.HyperVBaseTestCase):
         self._hostops._hostutils.get_memory_info.assert_called_once_with()
         self.assertEqual((2, 1, 1), response)
 
-    def test_get_local_hdd_info_gb(self):
+    def test_get_storage_info_gb(self):
         self._hostops._pathutils.get_instances_dir.return_value = ''
-        self._hostops._hostutils.get_volume_info.return_value = (2 * units.Gi,
-                                                                 1 * units.Gi)
-        response = self._hostops._get_local_hdd_info_gb()
+        self._hostops._diskutils.get_disk_capacity.return_value = (
+            2 * units.Gi, 1 * units.Gi)
+
+        response = self._hostops._get_storage_info_gb()
         self._hostops._pathutils.get_instances_dir.assert_called_once_with()
-        self._hostops._hostutils.get_volume_info.assert_called_once_with('')
+        self._hostops._diskutils.get_disk_capacity.assert_called_once_with('')
         self.assertEqual((2, 1, 1), response)
 
     def test_get_hypervisor_version(self):
@@ -104,24 +111,51 @@ class HostOpsTestCase(test_base.HyperVBaseTestCase):
         self.assertEqual(6003, response_lower)
         self.assertEqual(10001, response_higher)
 
+    def test_get_remotefx_gpu_info(self):
+        self.flags(enable_remotefx=True, group='hyperv')
+        fake_gpus = [{'total_video_ram': '2048',
+                      'available_video_ram': '1024'},
+                     {'total_video_ram': '1024',
+                      'available_video_ram': '1024'}]
+        self._hostops._hostutils.get_remotefx_gpu_info.return_value = fake_gpus
+
+        ret_val = self._hostops._get_remotefx_gpu_info()
+
+        self.assertEqual(3072, ret_val['total_video_ram'])
+        self.assertEqual(1024, ret_val['used_video_ram'])
+
+    def test_get_remotefx_gpu_info_disabled(self):
+        self.flags(enable_remotefx=False, group='hyperv')
+
+        ret_val = self._hostops._get_remotefx_gpu_info()
+
+        self.assertEqual(0, ret_val['total_video_ram'])
+        self.assertEqual(0, ret_val['used_video_ram'])
+        self._hostops._hostutils.get_remotefx_gpu_info.assert_not_called()
+
+    @mock.patch.object(hostops.HostOps, '_get_remotefx_gpu_info')
     @mock.patch.object(hostops.HostOps, '_get_cpu_info')
     @mock.patch.object(hostops.HostOps, '_get_memory_info')
     @mock.patch.object(hostops.HostOps, '_get_hypervisor_version')
-    @mock.patch.object(hostops.HostOps, '_get_local_hdd_info_gb')
+    @mock.patch.object(hostops.HostOps, '_get_storage_info_gb')
     @mock.patch('platform.node')
     def test_get_available_resource(self, mock_node,
-                                    mock_get_local_hdd_info_gb,
+                                    mock_get_storage_info_gb,
                                     mock_get_hypervisor_version,
-                                    mock_get_memory_info, mock_get_cpu_info):
-        mock_get_local_hdd_info_gb.return_value = (mock.sentinel.LOCAL_GB,
-                                                   mock.sentinel.LOCAL_GB_FREE,
-                                                   mock.sentinel.LOCAL_GB_USED)
+                                    mock_get_memory_info, mock_get_cpu_info,
+                                    mock_get_gpu_info):
+        mock_get_storage_info_gb.return_value = (mock.sentinel.LOCAL_GB,
+                                                 mock.sentinel.LOCAL_GB_FREE,
+                                                 mock.sentinel.LOCAL_GB_USED)
         mock_get_memory_info.return_value = (mock.sentinel.MEMORY_MB,
                                              mock.sentinel.MEMORY_MB_FREE,
                                              mock.sentinel.MEMORY_MB_USED)
         mock_cpu_info = self._get_mock_cpu_info()
         mock_get_cpu_info.return_value = mock_cpu_info
         mock_get_hypervisor_version.return_value = mock.sentinel.VERSION
+
+        mock_gpu_info = self._get_mock_gpu_info()
+        mock_get_gpu_info.return_value = mock_gpu_info
 
         response = self._hostops.get_available_resource()
 
@@ -141,6 +175,9 @@ class HostOpsTestCase(test_base.HyperVBaseTestCase):
                     'vcpus_used': 0,
                     'hypervisor_type': 'hyperv',
                     'numa_topology': None,
+                    'remotefx_available_video_ram': 2048,
+                    'remotefx_gpu_info': mock.sentinel.FAKE_GPU_INFO,
+                    'remotefx_total_video_ram': 4096,
                     }
         self.assertEqual(expected, response)
 

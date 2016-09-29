@@ -17,8 +17,6 @@ import mock
 import webob
 
 from nova.api.openstack import api_version_request
-from nova.api.openstack.compute.legacy_v2.contrib import consoles \
-    as console_v2
 from nova.api.openstack.compute import remote_consoles \
     as console_v21
 from nova.compute import api as compute_api
@@ -97,13 +95,11 @@ def fake_get_rdp_console_not_found(self, _context, instance, _console_type):
     raise exception.InstanceNotFound(instance_id=instance["uuid"])
 
 
-def fake_get(self, context, instance_uuid, want_objects=False,
-             expected_attrs=None):
+def fake_get(self, context, instance_uuid, expected_attrs=None):
     return {'uuid': instance_uuid}
 
 
-def fake_get_not_found(self, context, instance_uuid, want_objects=False,
-                       expected_attrs=None):
+def fake_get_not_found(self, context, instance_uuid, expected_attrs=None):
     raise exception.InstanceNotFound(instance_id=instance_uuid)
 
 
@@ -605,20 +601,6 @@ class ConsolesExtensionTestV28(ConsolesExtensionTestV26):
                                              'url': 'http://fake'}}, output)
         mock_handler.assert_called_once_with(self.context, 'fake_instance',
                                              'webmks')
-
-
-class ConsolesExtensionTestV2(ConsolesExtensionTestV21):
-    controller_class = console_v2.ConsolesController
-    validation_error = webob.exc.HTTPBadRequest
-
-    def test_get_vnc_console_with_undefined_param(self):
-        pass
-
-    def test_get_spice_console_with_undefined_param(self):
-        pass
-
-    def test_get_rdp_console_with_undefined_param(self):
-        pass
 
 
 class TestRemoteConsolePolicyEnforcementV21(test.NoDBTestCase):

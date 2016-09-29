@@ -16,7 +16,6 @@
 
 """The Assisted volume snapshots extension."""
 
-from oslo_log import log as logging
 from oslo_serialization import jsonutils
 import six
 from webob import exc
@@ -27,19 +26,17 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
 from nova import exception
-from nova.i18n import _LI
+from nova.policies import assisted_volume_snapshots as avs_policies
 
 
-LOG = logging.getLogger(__name__)
 ALIAS = 'os-assisted-volume-snapshots'
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class AssistedVolumeSnapshotsController(wsgi.Controller):
     """The Assisted volume snapshots API controller for the OpenStack API."""
 
     def __init__(self):
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
         super(AssistedVolumeSnapshotsController, self).__init__()
 
     @extensions.expected_errors(400)
@@ -47,14 +44,12 @@ class AssistedVolumeSnapshotsController(wsgi.Controller):
     def create(self, req, body):
         """Creates a new snapshot."""
         context = req.environ['nova.context']
-        authorize(context, action='create')
+        context.can(avs_policies.POLICY_ROOT % 'create')
 
         snapshot = body['snapshot']
         create_info = snapshot['create_info']
         volume_id = snapshot['volume_id']
 
-        LOG.info(_LI("Create assisted snapshot from volume %s"), volume_id,
-                  context=context)
         try:
             return self.compute_api.volume_snapshot_create(context, volume_id,
                                                            create_info)
@@ -67,9 +62,7 @@ class AssistedVolumeSnapshotsController(wsgi.Controller):
     def delete(self, req, id):
         """Delete a snapshot."""
         context = req.environ['nova.context']
-        authorize(context, action='delete')
-
-        LOG.info(_LI("Delete snapshot with id: %s"), id, context=context)
+        context.can(avs_policies.POLICY_ROOT % 'delete')
 
         delete_metadata = {}
         delete_metadata.update(req.GET)

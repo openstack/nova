@@ -13,32 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 from nova.tests.functional.api_sample_tests import api_sample_base
-
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class QuotaSetsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-quota-sets"
-
-    def _get_flags(self):
-        f = super(QuotaSetsSampleJsonTests, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
-                                    'contrib.server_group_quotas.'
-                                    'Server_group_quotas')
-        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
-                                    'contrib.quotas.Quotas')
-        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
-                                    'contrib.extended_quotas.Extended_quotas')
-        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
-                                    'contrib.user_quotas.User_quotas')
-        return f
+    sample_dir = "os-quota-sets"
 
     def test_show_quotas(self):
         # Get api sample to show quotas.
@@ -49,6 +29,12 @@ class QuotaSetsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
         # Get api sample to show quotas defaults.
         response = self._do_get('os-quota-sets/fake_tenant/defaults')
         self._verify_response('quotas-show-defaults-get-resp',
+                              {}, response, 200)
+
+    def test_show_quotas_detail(self):
+        # Get api sample to show quotas detail.
+        response = self._do_get('os-quota-sets/fake_tenant/detail')
+        self._verify_response('quotas-show-detail-get-resp',
                               {}, response, 200)
 
     def test_update_quotas(self):

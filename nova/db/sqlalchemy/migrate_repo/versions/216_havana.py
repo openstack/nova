@@ -301,13 +301,9 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
-    # NOTE(mriedem): DB2 can't create the FK since we don't have the unique
-    # constraint on instances.uuid because it's nullable (so a unique
-    # constraint isn't created for instances.uuid, only a unique index).
     consoles_instance_uuid_column_args = ['instance_uuid', String(length=36)]
-    if migrate_engine.name != 'ibm_db_sa':
-        consoles_instance_uuid_column_args.append(
-            ForeignKey('instances.uuid', name='consoles_instance_uuid_fkey'))
+    consoles_instance_uuid_column_args.append(
+        ForeignKey('instances.uuid', name='consoles_instance_uuid_fkey'))
 
     consoles = Table('consoles', meta,
         Column('created_at', DateTime),
@@ -1434,9 +1430,6 @@ def upgrade(migrate_engine):
         'block_device_mapping_instance_uuid_virtual_name_device_name_idx'
     ]
 
-    # NOTE(mriedem): DB2 doesn't allow duplicate indexes either.
-    DB2_INDEX_SKIPS = POSTGRES_INDEX_SKIPS
-
     MYSQL_INDEX_SKIPS = [
         # we create this one manually for MySQL above
         'migrations_by_host_nodes_and_status_idx'
@@ -1446,9 +1439,7 @@ def upgrade(migrate_engine):
         if ((migrate_engine.name == 'postgresql' and
                 index.name in POSTGRES_INDEX_SKIPS) or
             (migrate_engine.name == 'mysql' and
-                index.name in MYSQL_INDEX_SKIPS) or
-            (migrate_engine.name == 'ibm_db_sa' and
-                index.name in DB2_INDEX_SKIPS)):
+                index.name in MYSQL_INDEX_SKIPS)):
             continue
         else:
             index.create(migrate_engine)
@@ -1479,52 +1470,47 @@ def upgrade(migrate_engine):
 
             ]
 
-    # NOTE(mriedem): DB2 doesn't support unique constraints on columns that
-    # are nullable so we can only create foreign keys on unique constraints
-    # that actually exist, which excludes any FK on instances.uuid.
-    if migrate_engine.name != 'ibm_db_sa':
+    secgroup_instance_association_instance_uuid_fkey = (
+                'security_group_instance_association_instance_uuid_fkey')
+    fkeys.extend(
+            [
 
-        secgroup_instance_association_instance_uuid_fkey = (
-                    'security_group_instance_association_instance_uuid_fkey')
-        fkeys.extend(
-                [
+              [[fixed_ips.c.instance_uuid],
+                  [instances.c.uuid],
+                  'fixed_ips_instance_uuid_fkey'],
+              [[block_device_mapping.c.instance_uuid],
+                  [instances.c.uuid],
+                  'block_device_mapping_instance_uuid_fkey'],
+              [[instance_info_caches.c.instance_uuid],
+                  [instances.c.uuid],
+                  'instance_info_caches_instance_uuid_fkey'],
+              [[instance_metadata.c.instance_uuid],
+                  [instances.c.uuid],
+                  'instance_metadata_instance_uuid_fkey'],
+              [[instance_system_metadata.c.instance_uuid],
+                  [instances.c.uuid],
+                  'instance_system_metadata_ibfk_1'],
+              [[security_group_instance_association.c.instance_uuid],
+                  [instances.c.uuid],
+                  secgroup_instance_association_instance_uuid_fkey],
+              [[virtual_interfaces.c.instance_uuid],
+                  [instances.c.uuid],
+                  'virtual_interfaces_instance_uuid_fkey'],
+              [[instance_actions.c.instance_uuid],
+                  [instances.c.uuid],
+                  'fk_instance_actions_instance_uuid'],
+              [[instance_faults.c.instance_uuid],
+                  [instances.c.uuid],
+                  'fk_instance_faults_instance_uuid'],
+              [[migrations.c.instance_uuid],
+                  [instances.c.uuid],
+                  'fk_migrations_instance_uuid']
 
-                  [[fixed_ips.c.instance_uuid],
-                      [instances.c.uuid],
-                      'fixed_ips_instance_uuid_fkey'],
-                  [[block_device_mapping.c.instance_uuid],
-                      [instances.c.uuid],
-                      'block_device_mapping_instance_uuid_fkey'],
-                  [[instance_info_caches.c.instance_uuid],
-                      [instances.c.uuid],
-                      'instance_info_caches_instance_uuid_fkey'],
-                  [[instance_metadata.c.instance_uuid],
-                      [instances.c.uuid],
-                      'instance_metadata_instance_uuid_fkey'],
-                  [[instance_system_metadata.c.instance_uuid],
-                      [instances.c.uuid],
-                      'instance_system_metadata_ibfk_1'],
-                  [[security_group_instance_association.c.instance_uuid],
-                      [instances.c.uuid],
-                      secgroup_instance_association_instance_uuid_fkey],
-                  [[virtual_interfaces.c.instance_uuid],
-                      [instances.c.uuid],
-                      'virtual_interfaces_instance_uuid_fkey'],
-                  [[instance_actions.c.instance_uuid],
-                      [instances.c.uuid],
-                      'fk_instance_actions_instance_uuid'],
-                  [[instance_faults.c.instance_uuid],
-                      [instances.c.uuid],
-                      'fk_instance_faults_instance_uuid'],
-                  [[migrations.c.instance_uuid],
-                      [instances.c.uuid],
-                      'fk_migrations_instance_uuid']
-
-                ])
+            ])
 
     for fkey_pair in fkeys:
-        if migrate_engine.name in ('mysql', 'ibm_db_sa'):
-            # For MySQL and DB2 we name our fkeys explicitly
+        if migrate_engine.name in ('mysql'):
+            # For MySQL we name our fkeys explicitly
             # so they match Havana
             fkey = ForeignKeyConstraint(columns=fkey_pair[0],
                                    refcolumns=fkey_pair[1],

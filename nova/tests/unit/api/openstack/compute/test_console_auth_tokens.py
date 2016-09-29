@@ -15,12 +15,12 @@
 
 import copy
 
+import mock
 import webob
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack.compute import console_auth_tokens \
         as console_auth_tokens_v21
-from nova.api.openstack.compute.legacy_v2.contrib import console_auth_tokens \
-        as console_auth_tokens_v2
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -73,12 +73,26 @@ class ConsoleAuthTokensExtensionTestV21(test.NoDBTestCase):
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.show, self.req, fakes.FAKE_UUID)
 
-    def test_get_console_connect_info_unauthorized_console_type(self):
+    def test_get_console_connect_info_nonrdp_console_type(self):
         self.stubs.Set(consoleauth_rpcapi.ConsoleAuthAPI, 'check_token',
                        _fake_check_token_unauthorized)
         self.assertRaises(webob.exc.HTTPUnauthorized,
                           self.controller.show, self.req, fakes.FAKE_UUID)
 
 
-class ConsoleAuthTokensExtensionTestV2(ConsoleAuthTokensExtensionTestV21):
-    controller_class = console_auth_tokens_v2
+class ConsoleAuthTokensExtensionTestV231(ConsoleAuthTokensExtensionTestV21):
+
+    def setUp(self):
+        super(ConsoleAuthTokensExtensionTestV231, self).setUp()
+        self.req.api_version_request = api_version_request.APIVersionRequest(
+            '2.31')
+
+    @mock.patch.object(consoleauth_rpcapi.ConsoleAuthAPI, 'check_token')
+    def test_get_console_connect_info_nonrdp_console_type(self, mock_check):
+        mock_check.return_value = {'instance_uuid': 'fake_instance_uuid',
+                                   'host': 'fake_host',
+                                   'port': 'fake_port',
+                                   'internal_access_path': 'fake_access_path',
+                                   'console_type': 'webmks'}
+        output = self.controller.show(self.req, fakes.FAKE_UUID)
+        self.assertEqual(self._EXPECTED_OUTPUT, output)

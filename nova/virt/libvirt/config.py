@@ -26,7 +26,6 @@ helpers for populating up config object instances.
 import time
 
 from lxml import etree
-from oslo_log import log as logging
 from oslo_utils import units
 import six
 
@@ -35,8 +34,6 @@ from nova.i18n import _
 from nova.pci import utils as pci_utils
 from nova.virt import hardware
 
-
-LOG = logging.getLogger(__name__)
 
 # Namespace to use for Nova specific metadata items in XML
 NOVA_NS = "http://openstack.org/xmlns/libvirt/nova/1.0"
@@ -79,7 +76,6 @@ class LibvirtConfigObject(object):
     def to_xml(self, pretty_print=True):
         root = self.format_dom()
         xml_str = etree.tostring(root, pretty_print=pretty_print)
-        LOG.debug("Generated XML %s ", (xml_str,))
         return xml_str
 
 
@@ -739,6 +735,8 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self.shareable = False
         self.snapshot = None
         self.backing_store = None
+        self.device_addr = None
+        self.boot_order = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestDisk, self).format_dom()
@@ -843,6 +841,9 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         if self.shareable:
             dev.append(etree.Element("shareable"))
 
+        if self.boot_order:
+            dev.append(etree.Element("boot", order=self.boot_order))
+
         return dev
 
     def parse_dom(self, xmldoc):
@@ -890,6 +891,11 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
                 self.readonly = True
             elif c.tag == 'shareable':
                 self.shareable = True
+            elif c.tag == 'address':
+                obj = LibvirtConfigGuestDeviceAddress.parse_dom(c)
+                self.device_addr = obj
+            elif c.tag == 'boot':
+                self.boot_order = c.get('order')
 
 
 class LibvirtConfigGuestDiskBackingStore(LibvirtConfigObject):
@@ -1132,6 +1138,67 @@ class LibvirtConfigGuestGIDMap(LibvirtConfigGuestIDMap):
                                                        **kwargs)
 
 
+class LibvirtConfigGuestDeviceAddress(LibvirtConfigObject):
+    def __init__(self, type=None, **kwargs):
+        super(LibvirtConfigGuestDeviceAddress, self).__init__(
+            root_name='address', **kwargs)
+        self.type = type
+
+    @staticmethod
+    def parse_dom(xmldoc):
+        addr_type = xmldoc.get('type')
+        if addr_type == 'pci':
+            obj = LibvirtConfigGuestDeviceAddressPCI()
+        elif addr_type == 'drive':
+            obj = LibvirtConfigGuestDeviceAddressDrive()
+        else:
+            return None
+        obj.parse_dom(xmldoc)
+        return obj
+
+
+class LibvirtConfigGuestDeviceAddressDrive(LibvirtConfigGuestDeviceAddress):
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestDeviceAddressDrive, self).\
+                __init__(type='drive', **kwargs)
+        self.controller = None
+        self.bus = None
+        self.target = None
+        self.unit = None
+
+    def parse_dom(self, xmldoc):
+        self.controller = xmldoc.get('controller')
+        self.bus = xmldoc.get('bus')
+        self.target = xmldoc.get('target')
+        self.unit = xmldoc.get('unit')
+
+    def format_address(self):
+        return None
+
+
+class LibvirtConfigGuestDeviceAddressPCI(LibvirtConfigGuestDeviceAddress):
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestDeviceAddressPCI, self).\
+                __init__(type='pci', **kwargs)
+        self.domain = None
+        self.bus = None
+        self.slot = None
+        self.function = None
+
+    def parse_dom(self, xmldoc):
+        self.domain = xmldoc.get('domain')
+        self.bus = xmldoc.get('bus')
+        self.slot = xmldoc.get('slot')
+        self.function = xmldoc.get('function')
+
+    def format_address(self):
+        if self.domain is not None:
+            return pci_utils.get_pci_address(self.domain[2:],
+                                             self.bus[2:],
+                                             self.slot[2:],
+                                             self.function[2:])
+
+
 class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
 
     def __init__(self, **kwargs):
@@ -1162,6 +1229,7 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         self.vif_outbound_burst = None
         self.vif_outbound_average = None
         self.vlan = None
+        self.device_addr = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestInterface, self).format_dom()
@@ -1332,6 +1400,9 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
                             self.vif_outbound_burst = int(sub.get('burst'))
                         if sub.get('peak'):
                             self.vif_outbound_peak = int(sub.get('peak'))
+            elif c.tag == 'address':
+                obj = LibvirtConfigGuestDeviceAddress.parse_dom(c)
+                self.device_addr = obj
 
     def add_filter_param(self, key, value):
         self.filterparams.append({'key': key, 'value': value})
@@ -1536,6 +1607,7 @@ class LibvirtConfigGuestCharBase(LibvirtConfigGuestDevice):
         self.source_path = None
         self.listen_port = None
         self.listen_host = None
+        self.log = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestCharBase, self).format_dom()
@@ -1551,6 +1623,9 @@ class LibvirtConfigGuestCharBase(LibvirtConfigGuestDevice):
             dev.append(etree.Element("source", mode="bind",
                                      host=self.listen_host,
                                      service=str(self.listen_port)))
+
+        if self.log:
+            dev.append(self.log.format_dom())
 
         return dev
 
@@ -1575,6 +1650,27 @@ class LibvirtConfigGuestChar(LibvirtConfigGuestCharBase):
             dev.append(target)
 
         return dev
+
+
+class LibvirtConfigGuestCharDeviceLog(LibvirtConfigObject):
+    """Represents a sub-element to a character device."""
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestCharDeviceLog, self).__init__(root_name="log",
+                                                              **kwargs)
+        self.file = None
+        self.append = "off"
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigGuestCharDeviceLog, self).parse_dom(xmldoc)
+        self.file = xmldoc.get("file")
+        self.append = xmldoc.get("append")
+
+    def format_dom(self):
+        log = super(LibvirtConfigGuestCharDeviceLog, self).format_dom()
+        log.set("file", self.file)
+        log.set("append", self.append)
+        return log
 
 
 class LibvirtConfigGuestSerial(LibvirtConfigGuestChar):
@@ -1953,6 +2049,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.devices = []
         self.metadata = []
         self.idmaps = []
+        self.perf_events = []
 
     def _format_basic_props(self, root):
         root.append(self._text_node("uuid", self.uuid))
@@ -1992,9 +2089,6 @@ class LibvirtConfigGuest(LibvirtConfigObject):
                 loader.set("type", "pflash")
                 loader.set("readonly", "yes")
                 os.append(loader)
-                nvram = self._text_node("nvram", "")
-                nvram.set("template", self.os_loader)
-                os.append(nvram)
             else:
                 os.append(self._text_node("loader", self.os_loader))
         if self.os_initrd is not None:
@@ -2039,6 +2133,15 @@ class LibvirtConfigGuest(LibvirtConfigObject):
             idmaps.append(idmap.format_dom())
         root.append(idmaps)
 
+    def _format_perf_events(self, root):
+        if len(self.perf_events) == 0:
+            return
+        perfs = etree.Element("perf")
+        for pe in self.perf_events:
+            event = etree.Element("event", name=pe, enabled="yes")
+            perfs.append(event)
+        root.append(perfs)
+
     def format_dom(self):
         root = super(LibvirtConfigGuest, self).format_dom()
 
@@ -2064,6 +2167,8 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self._format_devices(root)
 
         self._format_idmaps(root)
+
+        self._format_perf_events(root)
 
         return root
 
@@ -2104,9 +2209,16 @@ class LibvirtConfigGuest(LibvirtConfigObject):
                 obj = LibvirtConfigGuestCPU()
                 obj.parse_dom(c)
                 self.cpu = obj
+            elif c.tag == 'perf':
+                for p in c.getchildren():
+                    if p.get('enabled') and p.get('enabled') == 'yes':
+                        self.add_perf_event(p.get('name'))
 
     def add_device(self, dev):
         self.devices.append(dev)
+
+    def add_perf_event(self, event):
+        self.perf_events.append(event)
 
     def set_clock(self, clk):
         self.clock = clk

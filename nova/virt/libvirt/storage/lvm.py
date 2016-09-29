@@ -20,7 +20,6 @@
 #
 
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import units
 import six
@@ -31,19 +30,7 @@ from nova.i18n import _
 from nova.i18n import _LW
 from nova.virt.libvirt import utils
 
-
-lvm_opts = [
-    cfg.StrOpt('volume_clear',
-               default='zero',
-               choices=('none', 'zero', 'shred'),
-               help='Method used to wipe old volumes.'),
-    cfg.IntOpt('volume_clear_size',
-               default=0,
-               help='Size in MiB to wipe at start of old volumes. 0 => all'),
-]
-
 CONF = nova.conf.CONF
-CONF.register_opts(lvm_opts, 'libvirt')
 LOG = logging.getLogger(__name__)
 
 
@@ -192,8 +179,8 @@ def _zero_volume(path, volume_size):
     # and caters for versions of dd that don't have
     # the easier to use iflag=count_bytes option.
     while remaining_bytes:
-        zero_blocks = remaining_bytes / bs
-        seek_blocks = (volume_size - remaining_bytes) / bs
+        zero_blocks = remaining_bytes // bs
+        seek_blocks = (volume_size - remaining_bytes) // bs
         zero_cmd = ('dd', 'bs=%s' % bs,
                     'if=/dev/zero', 'of=%s' % path,
                     'seek=%s' % seek_blocks, 'count=%s' % zero_blocks)
@@ -202,7 +189,7 @@ def _zero_volume(path, volume_size):
         if zero_blocks:
             utils.execute(*zero_cmd, run_as_root=True)
         remaining_bytes %= bs
-        bs /= units.Ki  # Limit to 3 iterations
+        bs //= units.Ki  # Limit to 3 iterations
         # Use O_DIRECT with initial block size and fdatasync otherwise
         direct_flags = ()
         sync_flags = ('conv=fdatasync',)

@@ -12,39 +12,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 from nova.tests.functional.api_sample_tests import api_sample_base
-
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class FlavorAccessTestsBase(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = 'flavor-access'
-
-    def _get_flags(self):
-        f = super(FlavorAccessTestsBase, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-                    'nova.api.openstack.compute.contrib.'
-                    'flavor_access.Flavor_access')
-        # FlavorAccess extension also needs Flavormanage to be loaded.
-        f['osapi_compute_extension'].append(
-                    'nova.api.openstack.compute.contrib.'
-                    'flavormanage.Flavormanage')
-        f['osapi_compute_extension'].append(
-                    'nova.api.openstack.compute.contrib.'
-                    'flavor_disabled.Flavor_disabled')
-        f['osapi_compute_extension'].append(
-                    'nova.api.openstack.compute.contrib.'
-                    'flavorextradata.Flavorextradata')
-        f['osapi_compute_extension'].append(
-                    'nova.api.openstack.compute.contrib.'
-                    'flavor_swap.Flavor_swap')
-        return f
+    sample_dir = 'flavor-access'
 
     def _add_tenant(self):
         subs = {
@@ -62,17 +35,12 @@ class FlavorAccessTestsBase(api_sample_base.ApiSampleTestBaseV21):
             'flavor_id': '10',
             'flavor_name': 'test_flavor'
         }
-        response = self._do_post("flavors",
-                                 "flavor-access-create-req",
-                                 subs)
-        self._verify_response("flavor-access-create-resp", subs, response, 200)
+        self._do_post("flavors",
+                      "flavor-create-req",
+                      subs)
 
 
 class FlavorAccessSampleJsonTests(FlavorAccessTestsBase):
-
-    def test_flavor_access_detail(self):
-        response = self._do_get('flavors/detail')
-        self._verify_response('flavor-access-detail-resp', {}, response, 200)
 
     def test_flavor_access_list(self):
         self._create_flavor()
@@ -84,14 +52,6 @@ class FlavorAccessSampleJsonTests(FlavorAccessTestsBase):
             'tenant_id': 'fake_tenant',
         }
         self._verify_response('flavor-access-list-resp', subs, response, 200)
-
-    def test_flavor_access_show(self):
-        flavor_id = '1'
-        response = self._do_get('flavors/%s' % flavor_id)
-        subs = {
-            'flavor_id': flavor_id
-        }
-        self._verify_response('flavor-access-show-resp', subs, response, 200)
 
     def test_flavor_access_add_tenant(self):
         self._create_flavor()
@@ -124,15 +84,7 @@ class FlavorAccessV27SampleJsonTests(FlavorAccessTestsBase):
         self.api.microversion = self.microversion
 
     def test_add_tenant_access_to_public_flavor(self):
-        subs = {
-            'flavor_id': '10',
-            'flavor_name': 'test_flavor'
-        }
-        # Create public flavor
-        response = self._do_post("flavors",
-                                 "flavor-access-create-req",
-                                 subs)
-        self.assertEqual(200, response.status_code)
+        self._create_flavor()
 
         subs = {
             'flavor_id': '10',

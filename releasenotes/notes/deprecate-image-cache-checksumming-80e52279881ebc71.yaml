@@ -1,0 +1,6 @@
+---
+deprecations:
+  - The ``image_info_filename_pattern``, ``checksum_base_images``, and
+    ``checksum_interval_seconds`` options have been deprecated in the
+    ``[libvirt]`` config section. They are no longer used. Any value given will
+    be ignored.

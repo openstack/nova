@@ -1,0 +1,5 @@
+--- 
+upgrade:
+  - Removed the ``security_group_api`` configuration option that was deprecated
+    in Mitaka. The correct security_group_api option will be chosen based on
+    the value of ``use_neutron`` which provides a more coherent user experience.

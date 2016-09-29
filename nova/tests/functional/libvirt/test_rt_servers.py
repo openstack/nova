@@ -13,19 +13,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
-
 import fixtures
-from oslo_log import log as logging
+import mock
 
 from nova.tests.functional.api import client
 from nova.tests.functional.test_servers import ServersTestBase
 from nova.tests.unit import fake_network
+from nova.tests.unit.virt.libvirt import fake_imagebackend
 from nova.tests.unit.virt.libvirt import fake_libvirt_utils
 from nova.tests.unit.virt.libvirt import fakelibvirt
-
-
-LOG = logging.getLogger(__name__)
 
 
 class NumaHostInfo(fakelibvirt.HostInfo):
@@ -57,6 +53,7 @@ class RealTimeServersTest(ServersTestBase):
         super(RealTimeServersTest, self).setUp()
 
         # Replace libvirt with fakelibvirt
+        self.useFixture(fake_imagebackend.ImageBackendFixture())
         self.useFixture(fixtures.MonkeyPatch(
            'nova.virt.libvirt.driver.libvirt_utils',
            fake_libvirt_utils))
@@ -94,8 +91,7 @@ class RealTimeServersTest(ServersTestBase):
             client.OpenStackApiException,
             self.api.post_server, {'server': server})
 
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
-    def test_invalid_libvirt_version(self, img_mock):
+    def test_invalid_libvirt_version(self):
         host_info = NumaHostInfo(cpu_nodes=2, cpu_sockets=1, cpu_cores=2,
                                  cpu_threads=2, kB_mem=15740000)
         fake_connection = fakelibvirt.Connection('qemu:///system',
@@ -120,8 +116,7 @@ class RealTimeServersTest(ServersTestBase):
             self.assertEqual('ERROR', instance['status'])
             self._delete_server(instance['id'])
 
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
-    def test_success(self, img_mock):
+    def test_success(self):
         host_info = NumaHostInfo(cpu_nodes=2, cpu_sockets=1, cpu_cores=2,
                                  cpu_threads=2, kB_mem=15740000)
         fake_connection = fakelibvirt.Connection('qemu:///system',

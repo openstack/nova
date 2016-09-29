@@ -13,6 +13,7 @@
 #    under the License.
 
 import copy
+
 import mock
 import netaddr
 from oslo_serialization import jsonutils
@@ -280,8 +281,7 @@ class _TestComputeNodeObject(object):
         compute.create()
         self.assertRaises(exception.ObjectActionError, compute.create)
 
-    @mock.patch('nova.db.compute_node_get', return_value=fake_compute_node)
-    def test_save(self, mock_get):
+    def test_save(self):
         self.mox.StubOutWithMock(db, 'compute_node_update')
         db.compute_node_update(
             self.context, 123,
@@ -306,14 +306,13 @@ class _TestComputeNodeObject(object):
                          subs=self.subs(),
                          comparators=self.comparators())
 
-    @mock.patch('nova.db.compute_node_get')
     @mock.patch('nova.db.compute_node_update')
-    def test_save_pci_device_pools_empty(self, mock_update, mock_get):
+    def test_save_pci_device_pools_empty(self, mock_update):
         fake_pci = jsonutils.dumps(
             objects.PciDevicePoolList(objects=[]).obj_to_primitive())
         compute_dict = fake_compute_node.copy()
         compute_dict['pci_stats'] = fake_pci
-        mock_get.return_value = compute_dict
+        mock_update.return_value = compute_dict
 
         compute = compute_node.ComputeNode(context=self.context)
         compute.id = 123
@@ -326,12 +325,11 @@ class _TestComputeNodeObject(object):
         mock_update.assert_called_once_with(
             self.context, 123, {'pci_stats': fake_pci})
 
-    @mock.patch('nova.db.compute_node_get')
     @mock.patch('nova.db.compute_node_update')
-    def test_save_pci_device_pools_null(self, mock_update, mock_get):
+    def test_save_pci_device_pools_null(self, mock_update):
         compute_dict = fake_compute_node.copy()
         compute_dict['pci_stats'] = None
-        mock_get.return_value = compute_dict
+        mock_update.return_value = compute_dict
 
         compute = compute_node.ComputeNode(context=self.context)
         compute.id = 123
@@ -380,6 +378,16 @@ class _TestComputeNodeObject(object):
         self.mox.ReplayAll()
         computes = compute_node.ComputeNodeList.get_by_hypervisor(self.context,
                                                                   'hyper')
+        self.assertEqual(1, len(computes))
+        self.compare_obj(computes[0], fake_compute_node,
+                         subs=self.subs(),
+                         comparators=self.comparators())
+
+    @mock.patch('nova.db.compute_node_get_all_by_pagination',
+                return_value=[fake_compute_node])
+    def test_get_by_pagination(self, fake_get_by_pagination):
+        computes = compute_node.ComputeNodeList.get_by_pagination(
+            self.context, limit=1, marker=1)
         self.assertEqual(1, len(computes))
         self.compare_obj(computes[0], fake_compute_node,
                          subs=self.subs(),

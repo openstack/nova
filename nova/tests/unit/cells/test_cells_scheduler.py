@@ -112,13 +112,14 @@ class CellsSchedulerTestCase(test.TestCase):
                           'project_id': self.ctxt.project_id}
 
         call_info = {'uuids': []}
-        block_device_mapping = [
+        block_device_mapping = objects.BlockDeviceMappingList(
+            objects=[
                 objects.BlockDeviceMapping(context=self.ctxt,
                     **fake_block_device.FakeDbBlockDeviceDict(
                             block_device.create_image_bdm(
                                 uuidsentinel.fake_image_ref),
                         anon=True))
-               ]
+               ])
 
         def _fake_instance_update_at_top(_ctxt, instance):
             call_info['uuids'].append(instance['uuid'])
@@ -132,6 +133,9 @@ class CellsSchedulerTestCase(test.TestCase):
         self.assertEqual(instance_uuids, call_info['uuids'])
 
         for count, instance_uuid in enumerate(instance_uuids):
+            bdms = db.block_device_mapping_get_all_by_instance(self.ctxt,
+                                                               instance_uuid)
+            self.assertIsNotNone(bdms)
             instance = db.instance_get_by_uuid(self.ctxt, instance_uuid)
             meta = utils.instance_meta(instance)
             self.assertEqual('cow', meta['moo'])
@@ -157,13 +161,22 @@ class CellsSchedulerTestCase(test.TestCase):
             'pci_requests': 'no thanks',
             'ec2_ids': 'prime',
         }
+        block_device_mapping = [
+                objects.BlockDeviceMapping(context=self.ctxt,
+                    **fake_block_device.FakeDbBlockDeviceDict(
+                            block_device.create_image_bdm(
+                                uuidsentinel.fake_image_ref),
+                            anon=True))
+               ]
 
         @mock.patch.object(self.scheduler.compute_api,
                            'create_db_entry_for_new_instance')
-        def test(mock_create_db):
+        @mock.patch.object(self.scheduler.compute_api,
+                           '_bdm_validate_set_size_and_instance')
+        def test(mock_bdm_validate, mock_create_db):
             self.scheduler._create_instances_here(
                 self.ctxt, [uuidsentinel.instance], values,
-                objects.Flavor(), 'foo', [], [])
+                objects.Flavor(), 'foo', [], block_device_mapping)
 
         test()
 

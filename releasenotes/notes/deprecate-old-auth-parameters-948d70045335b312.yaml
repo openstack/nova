@@ -1,0 +1,15 @@
+---
+deprecations:
+  - The auth parameters `admin_username`, `admin_password`,
+    `admin_tenant_name` and `admin_url` of the [ironic] config
+    option group are now deprecated and will be removed in a
+    future release. Using these parameters will log a warning.
+    Please use `username`, `password`, `project_id` (or
+    `project_name`) and `auth_url` instead. If you are using
+    Keystone v3 API, please note that the name uniqueness for
+    project and user only holds inside the same hierarchy level,
+    so you must also specify domain information for user (i.e.
+    `user_domain_id` or `user_domain_name`) and for project, if
+    you are using `project_name` (i.e. `project_domain_id` or
+    `project_domain_name`).
+

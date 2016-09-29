@@ -104,8 +104,8 @@ user documentation.
 2.9
 ---
 
-  Add a new ``locked`` attribute to the detailed view of
-  servers. ``locked`` will be ``true`` if anyone is currently holding
+  Add a new ``locked`` attribute to the detailed view, update,
+  and rebuild action. ``locked`` will be ``true`` if anyone is currently holding
   a lock on the server, ``false`` otherwise.
 
 2.10
@@ -283,3 +283,135 @@ user documentation.
   These filters can be combined. Also user can use more than one string tags
   for each filter. In this case string tags for each filter must be separated
   by comma: GET /servers?tags=red&tags-any=green,orange
+
+2.27
+----
+
+  Added support for the new form of microversion headers described in the
+  `Microversion Specification
+  <http://specs.openstack.org/openstack/api-wg/guidelines/microversion_specification.html>`_.
+  Both the original form of header and the new form is supported.
+
+2.28
+----
+
+  Nova API hypervisor.cpu_info change from string to JSON object.
+
+  From this version of the API the hypervisor's 'cpu_info' field will be
+  will returned as JSON object (not string) by sending GET request
+  to the /v2.1/os-hypervisors/{hypervisor_id}.
+
+2.29
+----
+
+  Updates the POST request body for the ``evacuate`` action to include the
+  optional ``force`` boolean field defaulted to False.
+  Also changes the evacuate action behaviour when providing a ``host`` string
+  field by calling the nova scheduler to verify the provided host unless the
+  ``force`` attribute is set.
+
+2.30
+----
+
+  Updates the POST request body for the ``live-migrate`` action to include the
+  optional ``force`` boolean field defaulted to False.
+  Also changes the live-migrate action behaviour when providing a ``host``
+  string field by calling the nova scheduler to verify the provided host unless
+  the ``force`` attribute is set.
+
+2.31
+----
+
+  Fix os-console-auth-tokens to return connection info for all types of tokens,
+  not just RDP.
+
+2.32
+----
+
+  Adds an optional, arbitrary 'tag' item to the 'networks' item in the server
+  boot request body. In addition, every item in the block_device_mapping_v2
+  array can also have an optional, arbitrary 'tag' item. These tags are used to
+  identify virtual device metadata, as exposed in the metadata API and on the
+  config drive. For example, a network interface on the virtual PCI bus tagged
+  with 'nic1' will appear in the metadata along with its bus (PCI), bus address
+  (ex: 0000:00:02.0), MAC address, and tag ('nic1').
+
+2.33
+----
+
+  Support pagination for hypervisor by accepting limit and marker from the GET
+  API request::
+
+    GET /v2.1/{tenant_id}/os-hypervisors?marker={hypervisor_id}&limit={limit}
+
+2.34
+----
+
+  Checks in ``os-migrateLive`` before live-migration actually starts are now
+  made in background. ``os-migrateLive`` is not throwing `400 Bad Request` if
+  pre-live-migration checks fail.
+
+2.35
+----
+
+  Added pagination support for keypairs.
+
+  Optional parameters 'limit' and 'marker' were added to GET /os-keypairs
+  request, the default sort_key was changed to 'name' field as ASC order,
+  the generic request format is::
+
+    GET /os-keypairs?limit={limit}&marker={kp_name}
+
+2.36
+----
+
+  All the APIs which proxy to another service were deprecated in this version,
+  also the fping API. Those APIs will return 404 with Microversion 2.36. The
+  network related quotas and limits are removed from API also. The deprecated
+  API endpoints as below::
+
+    '/images'
+    '/os-networks'
+    '/os-tenant-networks'
+    '/os-fixed-ips'
+    '/os-floating-ips'
+    '/os-floating-ips-bulk'
+    '/os-floating-ip-pools'
+    '/os-floating-ip-dns'
+    '/os-security-groups'
+    '/os-security-group-rules'
+    '/os-security-group-default-rules'
+    '/os-volumes'
+    '/os-snapshots'
+    '/os-baremetal-nodes'
+    '/os-fping'
+
+2.37
+----
+
+  Added support for automatic allocation of networking, also known as "Get Me a
+  Network". With this microversion, when requesting the creation of a new
+  server (or servers) the ``networks`` entry in the ``server`` portion of the
+  request body is required. The ``networks`` object in the request can either
+  be a list or an enum with values:
+
+  #. *none* which means no networking will be allocated for the created
+     server(s).
+  #. *auto* which means either a network that is already available to the
+     project will be used, or if one does not exist, will be automatically
+     created for the project. Automatic network allocation for a project only
+     happens once for a project. Subsequent requests using *auto* for the same
+     project will reuse the network that was previously allocated.
+
+  Also, the ``uuid`` field in the ``networks`` object in the server create
+  request is now strictly enforced to be in UUID format.
+
+2.38 (Maximum in Newton)
+------------------------
+
+  Before version 2.38, the command ``nova list --status invalid_status`` was
+  returning empty list for non admin user and 500 InternalServerError for admin
+  user. As there are sufficient statuses defined already, any invalid status
+  should not be accepted. From this version of the API admin as well as non
+  admin user will get 400 HTTPBadRequest if invalid status is passed to nova
+  list command.

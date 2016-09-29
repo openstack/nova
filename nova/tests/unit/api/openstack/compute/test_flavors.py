@@ -18,7 +18,6 @@ import webob
 
 from nova.api.openstack import common
 from nova.api.openstack.compute import flavors as flavors_v21
-from nova.api.openstack.compute.legacy_v2 import flavors as flavors_v2
 import nova.compute.flavors
 from nova import context
 from nova import exception
@@ -120,9 +119,7 @@ class FlavorsTestV21(test.TestCase):
 
     def setUp(self):
         super(FlavorsTestV21, self).setUp()
-        self.flags(osapi_compute_extension=[])
         fakes.stub_out_networking(self)
-        fakes.stub_out_rate_limiting(self.stubs)
         self.stubs.Set(nova.compute.flavors, "get_all_flavors_sorted_list",
                        fake_get_all_flavors_sorted_list)
         self.stubs.Set(nova.compute.flavors,
@@ -564,14 +561,6 @@ class FlavorsTestV21(test.TestCase):
         self.assertEqual(expected, flavor)
 
 
-class FlavorsTestV20(FlavorsTestV21):
-    Controller = flavors_v2.Controller
-    fake_request = fakes.HTTPRequest
-
-    def _set_expected_body(self, expected, ephemeral, swap, disabled):
-        pass
-
-
 class DisabledFlavorsWithRealDBTestV21(test.TestCase):
     """Tests that disabled flavors should not be shown nor listed."""
     Controller = flavors_v21.FlavorsController
@@ -649,13 +638,6 @@ class DisabledFlavorsWithRealDBTestV21(test.TestCase):
         self.assertEqual(flavor['name'], self.disabled_type['name'])
 
 
-class DisabledFlavorsWithRealDBTestV20(DisabledFlavorsWithRealDBTestV21):
-    """Tests that disabled flavors should not be shown nor listed."""
-    Controller = flavors_v2.Controller
-    _prefix = "/v2/fake"
-    fake_request = fakes.HTTPRequest
-
-
 class ParseIsPublicTestV21(test.TestCase):
     Controller = flavors_v21.FlavorsController
 
@@ -691,7 +673,3 @@ class ParseIsPublicTestV21(test.TestCase):
     def test_other(self):
         self.assertRaises(
                 webob.exc.HTTPBadRequest, self.assertPublic, None, 'other')
-
-
-class ParseIsPublicTestV20(ParseIsPublicTestV21):
-    Controller = flavors_v2.Controller

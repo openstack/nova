@@ -16,26 +16,16 @@
 Client side of the network RPC API.
 """
 
-from oslo_config import cfg
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 
 import nova.conf
+from nova import exception
 from nova.objects import base as objects_base
 from nova import rpc
 
-rpcapi_opts = [
-    cfg.StrOpt('network_topic',
-               default='network',
-               help='The topic network nodes listen on'),
-    cfg.BoolOpt('multi_host',
-                default=False,
-                help='Default value for multi_host in networks. Also, if set, '
-                     'some rpc network calls will be sent directly to host.'),
-]
 
 CONF = nova.conf.CONF
-CONF.register_opts(rpcapi_opts)
 
 
 class NetworkAPI(object):
@@ -114,6 +104,8 @@ class NetworkAPI(object):
         ... Liberty supports message version 1.16.  So, any changes to
         existing methods in 1.x after that point should be done such that they
         can handle the version_cap being set to 1.16.
+
+        * 1.17 - Add method release_dhcp()
     '''
 
     VERSION_ALIASES = {
@@ -183,6 +175,14 @@ class NetworkAPI(object):
         if CONF.multi_host:
             cctxt = cctxt.prepare(server=instance.host, version=version)
         return cctxt.call(ctxt, 'deallocate_for_instance', **kwargs)
+
+    def release_dhcp(self, ctxt, host, dev, address, vif_address):
+        if self.client.can_send_version('1.17'):
+            cctxt = self.client.prepare(version='1.17', server=host)
+            return cctxt.call(ctxt, 'release_dhcp', dev=dev, address=address,
+                              vif_address=vif_address)
+        else:
+            raise exception.RPCPinnedToOldVersion()
 
     def add_fixed_ip_to_instance(self, ctxt, instance_id, rxtx_factor,
                                  host, network_id):

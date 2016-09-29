@@ -15,8 +15,6 @@
 import mock
 import webob
 
-from nova.api.openstack.compute.legacy_v2.contrib import \
-    security_group_default_rules as security_group_default_rules_v2
 from nova.api.openstack.compute import \
     security_group_default_rules as security_group_default_rules_v21
 from nova import context
@@ -52,7 +50,7 @@ class TestSecurityGroupDefaultRulesNeutronV21(test.TestCase):
                       SecurityGroupDefaultRulesController)
 
     def setUp(self):
-        self.flags(security_group_api='neutron')
+        self.flags(use_neutron=True)
         super(TestSecurityGroupDefaultRulesNeutronV21, self).setUp()
         self.controller = self.controller_cls()
 
@@ -80,11 +78,6 @@ class TestSecurityGroupDefaultRulesNeutronV21(test.TestCase):
             '/v2/fake/os-security-group-default-rules', use_admin_context=True)
         self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.delete,
                           req, '602ed77c-a076-4f9b-a617-f93b847b62c5')
-
-
-class TestSecurityGroupDefaultRulesNeutronV2(test.TestCase):
-    controller_cls = (security_group_default_rules_v2.
-                      SecurityGroupDefaultRulesController)
 
 
 class TestSecurityGroupDefaultRulesV21(test.TestCase):
@@ -315,30 +308,6 @@ class TestSecurityGroupDefaultRulesV21(test.TestCase):
         self.assertEqual(sgr['cidr'], security_group_rule.cidr)
 
 
-class TestSecurityGroupDefaultRulesV2(test.TestCase):
-    controller_cls = (security_group_default_rules_v2.
-                      SecurityGroupDefaultRulesController)
-
-    def setUp(self):
-        super(TestSecurityGroupDefaultRulesV2, self).setUp()
-        self.req = fakes.HTTPRequest.blank(
-            '/v2/fake/os-security-group-default-rules', use_admin_context=True)
-        self.non_admin_req = fakes.HTTPRequest.blank(
-            '/v2/fake/os-security-group-default-rules')
-
-    def test_create_security_group_default_rules_with_non_admin(self):
-        self.controller = self.controller_cls()
-        sgr = security_group_default_rule_template()
-        sgr_dict = dict(security_group_default_rule=sgr)
-        self.assertRaises(exception.AdminRequired, self.controller.create,
-                          self.non_admin_req, sgr_dict)
-
-    def test_delete_security_group_default_rules_with_non_admin(self):
-        self.controller = self.controller_cls()
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.delete, self.non_admin_req, 1)
-
-
 class SecurityGroupDefaultRulesPolicyEnforcementV21(test.NoDBTestCase):
 
     def setUp(self):
@@ -370,3 +339,22 @@ class SecurityGroupDefaultRulesPolicyEnforcementV21(test.NoDBTestCase):
 
     def test_index_policy_failed(self):
         self._common_policy_check(self.controller.index, self.req)
+
+
+class TestSecurityGroupDefaultRulesDeprecation(test.NoDBTestCase):
+
+    def setUp(self):
+        super(TestSecurityGroupDefaultRulesDeprecation, self).setUp()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+        self.controller = (security_group_default_rules_v21.
+                           SecurityGroupDefaultRulesController())
+
+    def test_all_apis_return_not_found(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.create, self.req, {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.show, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.delete, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.index, self.req)

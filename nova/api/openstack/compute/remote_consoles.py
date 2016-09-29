@@ -21,15 +21,15 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
 from nova import exception
+from nova.policies import remote_consoles as rc_policies
 
 
 ALIAS = "os-remote-consoles"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class RemoteConsolesController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
         self.handlers = {'vnc': self.compute_api.get_vnc_console,
                          'spice': self.compute_api.get_spice_console,
                          'rdp': self.compute_api.get_rdp_console,
@@ -44,7 +44,7 @@ class RemoteConsolesController(wsgi.Controller):
     def get_vnc_console(self, req, id, body):
         """Get text console output."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(rc_policies.BASE_POLICY_NAME)
 
         # If type is not supplied or unknown, get_vnc_console below will cope
         console_type = body['os-getVNCConsole'].get('type')
@@ -73,7 +73,7 @@ class RemoteConsolesController(wsgi.Controller):
     def get_spice_console(self, req, id, body):
         """Get text console output."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(rc_policies.BASE_POLICY_NAME)
 
         # If type is not supplied or unknown, get_spice_console below will cope
         console_type = body['os-getSPICEConsole'].get('type')
@@ -102,7 +102,7 @@ class RemoteConsolesController(wsgi.Controller):
     def get_rdp_console(self, req, id, body):
         """Get text console output."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(rc_policies.BASE_POLICY_NAME)
 
         # If type is not supplied or unknown, get_rdp_console below will cope
         console_type = body['os-getRDPConsole'].get('type')
@@ -133,7 +133,7 @@ class RemoteConsolesController(wsgi.Controller):
     def get_serial_console(self, req, id, body):
         """Get connection to a serial console."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(rc_policies.BASE_POLICY_NAME)
 
         # If type is not supplied or unknown get_serial_console below will cope
         console_type = body['os-getSerialConsole'].get('type')
@@ -163,7 +163,7 @@ class RemoteConsolesController(wsgi.Controller):
     @validation.schema(remote_consoles.create_v28, "2.8")
     def create(self, req, server_id, body):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(rc_policies.BASE_POLICY_NAME)
         instance = common.get_instance(self.compute_api, context, server_id)
         protocol = body['remote_console']['protocol']
         console_type = body['remote_console']['type']

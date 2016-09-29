@@ -44,33 +44,47 @@ There are many standard filter classes which may be used
   treated as a namespace and anything after the colon is treated as the key to
   be matched. If a namespace is present and is not ``capabilities``, the filter
   ignores the namespace. For example ``capabilities:cpu_info:features`` is
-  a valid scope format. For backward compatibility, the filter also treats the
-  extra specs key as the key to be matched if no namespace is present; this
-  action is highly discouraged because it conflicts with
-  AggregateInstanceExtraSpecsFilter filter when you enable both filters
+  a valid scope format. For backward compatibility, when a key doesn't contain
+  a colon (:), the key's contents are important. If this key is an attribute of
+  HostState object, like ``free_disk_mb``, the filter also treats the extra
+  specs key as the key to be matched. If not, the filter will ignore the key.
 
   The extra specifications can have an operator at the beginning of the value
   string of a key/value pair. If there is no operator specified, then a
   default operator of ``s==`` is used. Valid operators are:
 
-::
+  ::
 
-  * = (equal to or greater than as a number; same as vcpus case)
-  * == (equal to as a number)
-  * != (not equal to as a number)
-  * >= (greater than or equal to as a number)
-  * <= (less than or equal to as a number)
-  * s== (equal to as a string)
-  * s!= (not equal to as a string)
-  * s>= (greater than or equal to as a string)
-  * s> (greater than as a string)
-  * s<= (less than or equal to as a string)
-  * s< (less than as a string)
-  * <in> (substring)
-  * <all-in> (all elements contained in collection)
-  * <or> (find one of these)
+    * = (equal to or greater than as a number; same as vcpus case)
+    * == (equal to as a number)
+    * != (not equal to as a number)
+    * >= (greater than or equal to as a number)
+    * <= (less than or equal to as a number)
+    * s== (equal to as a string)
+    * s!= (not equal to as a string)
+    * s>= (greater than or equal to as a string)
+    * s> (greater than as a string)
+    * s<= (less than or equal to as a string)
+    * s< (less than as a string)
+    * <in> (substring)
+    * <all-in> (all elements contained in collection)
+    * <or> (find one of these)
 
-  Examples are: ">= 5", "s== 2.1.0", "<in> gcc", "<all-in> aes mmx", and "<or> fpu <or> gpu"
+    Examples are: ">= 5", "s== 2.1.0", "<in> gcc", "<all-in> aes mmx", and "<or> fpu <or> gpu"
+
+  some of attributes that can be used as useful key and their values contains:
+
+  ::
+
+    * free_ram_mb (compared with a number, values like ">= 4096")
+    * free_disk_mb (compared with a number, values like ">= 10240")
+    * host (compared with a string, values like: "<in> compute","s== compute_01")
+    * hypervisor_type (compared with a string, values like: "s== QEMU", "s== powervm")
+    * hypervisor_version (compared with a number, values like : ">= 1005003", "== 2000000")
+    * num_instances (compared with a number, values like: "<= 10")
+    * num_io_ops (compared with a number, values like: "<= 5")
+    * vcpus_total (compared with a number, values like: "= 48", ">=24")
+    * vcpus_used (compared with a number, values like: "= 0", "<= 10")
 
 * |AggregateInstanceExtraSpecsFilter| - checks that the aggregate metadata
   satisfies any extra specifications associated with the instance type (that
@@ -299,6 +313,9 @@ filtering is done in the following manner:
 * If instance has a topology defined, it will be considered only for NUMA
   capable hosts.
 
+Configuring Filters
+-------------------
+
 To use filters you specify two settings:
 
 * ``scheduler_available_filters`` - Defines filter classes made available to the
@@ -319,6 +336,9 @@ would be available, and by default the |RamFilter|, |ComputeFilter|,
 |ImagePropertiesFilter|, |ServerGroupAntiAffinityFilter|,
 and |ServerGroupAffinityFilter| would be used.
 
+Writing Your Own Filter
+-----------------------
+
 To create **your own filter** you must inherit from
 |BaseHostFilter| and implement one method:
 ``host_passes``. This method should return ``True`` if a host passes the filter. It
@@ -334,6 +354,10 @@ settings:
     --scheduler_available_filters=nova.scheduler.filters.all_filters
     --scheduler_available_filters=myfilter.MyFilter
     --scheduler_default_filters=RamFilter,ComputeFilter,MyFilter
+
+.. note:: When writing your own filter, be sure to add it to the list of available filters
+   and enable it in the default filters. The "all_filters" setting  only includes the
+   filters shipped with nova.
 
 With these settings, nova will use the ``FilterScheduler`` for the scheduler
 driver.  The standard nova filters and MyFilter are available to the

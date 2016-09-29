@@ -61,17 +61,6 @@ DEFAULT_FLAVOR_OBJS = [
 
 class InstanceTypeTestCase(test.TestCase):
     """Test cases for flavor  code."""
-    def test_non_existent_inst_type_should_not_delete(self):
-        # Ensures that flavor creation fails with invalid args.
-        self.assertRaises(exception.FlavorNotFoundByName,
-                          flavors.destroy,
-                          'unknown_flavor')
-
-    def test_will_not_destroy_with_no_name(self):
-        # Ensure destroy said path of no name raises error.
-        self.assertRaises(exception.FlavorNotFoundByName,
-                          flavors.destroy, None)
-
     def test_will_not_get_bad_default_instance_type(self):
         # ensures error raised on bad default flavor.
         self.flags(default_flavor='unknown_flavor')
@@ -364,14 +353,14 @@ class CreateInstanceTypeTest(test.TestCase):
         db.flavor_get_all(_context)
         # We do * 10 since this is an approximation and we need to make sure
         # the difference is noticeble.
-        over_rxtx_factor = flavors.SQL_SP_FLOAT_MAX * 10
+        over_rxtx_factor = db.SQL_SP_FLOAT_MAX * 10
 
         self.assertInvalidInput('flavor1', 64, 1, 120,
                                 rxtx_factor=over_rxtx_factor)
 
         flavor = flavors.create('flavor2', 64, 1, 120,
-                                rxtx_factor=flavors.SQL_SP_FLOAT_MAX)
-        self.assertEqual(flavors.SQL_SP_FLOAT_MAX, flavor.rxtx_factor)
+                                rxtx_factor=db.SQL_SP_FLOAT_MAX)
+        self.assertEqual(db.SQL_SP_FLOAT_MAX, flavor.rxtx_factor)
 
     def test_is_public_must_be_valid_bool_string(self):
         self.assertInvalidInput('flavor1', 64, 1, 120, is_public='foo')
@@ -388,10 +377,10 @@ class CreateInstanceTypeTest(test.TestCase):
 
     def test_flavorid_populated(self):
         flavor1 = flavors.create('flavor1', 64, 1, 120)
-        self.assertIsNot(None, flavor1.flavorid)
+        self.assertIsNotNone(flavor1.flavorid)
 
         flavor2 = flavors.create('flavor2', 64, 1, 120, flavorid='')
-        self.assertIsNot(None, flavor2.flavorid)
+        self.assertIsNotNone(flavor2.flavorid)
 
         flavor3 = flavors.create('flavor3', 64, 1, 120, flavorid='foo')
         self.assertEqual('foo', flavor3.flavorid)
@@ -399,7 +388,7 @@ class CreateInstanceTypeTest(test.TestCase):
     def test_default_values(self):
         flavor1 = flavors.create('flavor1', 64, 1, 120)
 
-        self.assertIsNot(None, flavor1.flavorid)
+        self.assertIsNotNone(flavor1.flavorid)
         self.assertEqual(flavor1.ephemeral_gb, 0)
         self.assertEqual(flavor1.swap, 0)
         self.assertEqual(flavor1.rxtx_factor, 1.0)
@@ -432,7 +421,7 @@ class CreateInstanceTypeTest(test.TestCase):
         self.assertNotEqual(len(original_list), len(new_list),
                             'instance type was not created')
 
-        flavors.destroy('flavor')
+        flavor.destroy()
         self.assertRaises(exception.FlavorNotFound,
                           objects.Flavor.get_by_name, ctxt, flavor.name)
 
@@ -444,14 +433,14 @@ class CreateInstanceTypeTest(test.TestCase):
             self.assertEqual(f.flavorid, new_list[i].flavorid)
 
     def test_duplicate_names_fail(self):
-        # Ensures that name duplicates raise FlavorCreateFailed.
+        # Ensures that name duplicates raise FlavorExists
         flavors.create('flavor', 256, 1, 120, 200, 'flavor1')
         self.assertRaises(exception.FlavorExists,
                           flavors.create,
                           'flavor', 64, 1, 120)
 
     def test_duplicate_flavorids_fail(self):
-        # Ensures that flavorid duplicates raise FlavorCreateFailed.
+        # Ensures that flavorid duplicates raise FlavorExists
         flavors.create('flavor1', 64, 1, 120, flavorid='flavorid')
         self.assertRaises(exception.FlavorIdExists,
                           flavors.create,

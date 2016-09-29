@@ -17,8 +17,6 @@ import webob
 
 from nova.api.openstack.compute import admin_actions \
         as admin_actions_v21
-from nova.api.openstack.compute.legacy_v2.contrib import admin_actions \
-        as admin_actions_v2
 from nova.compute import vm_states
 from nova import exception
 from nova import objects
@@ -57,8 +55,8 @@ class ResetStateTestsV21(test.NoDBTestCase):
     def test_no_instance(self):
         self.mox.StubOutWithMock(self.compute_api, 'get')
         exc = exception.InstanceNotFound(instance_id='inst_ud')
-        self.compute_api.get(self.context, self.uuid, expected_attrs=None,
-                             want_objects=True).AndRaise(exc)
+        self.compute_api.get(
+            self.context, self.uuid, expected_attrs=None).AndRaise(exc)
         self.mox.ReplayAll()
 
         self.assertRaises(webob.exc.HTTPNotFound,
@@ -84,8 +82,8 @@ class ResetStateTestsV21(test.NoDBTestCase):
                                  "Instance.%s doesn't match" % k)
             instance.obj_reset_changes()
 
-        self.compute_api.get(self.context, instance.uuid, expected_attrs=None,
-                             want_objects=True).AndReturn(instance)
+        self.compute_api.get(self.context, instance.uuid,
+                             expected_attrs=None).AndReturn(instance)
         instance.save(admin_state_reset=True).WithSideEffects(check_state)
 
     def test_reset_active(self):
@@ -120,8 +118,3 @@ class ResetStateTestsV21(test.NoDBTestCase):
         else:
             status_int = result.status_int
         self.assertEqual(202, status_int)
-
-
-class ResetStateTestsV2(ResetStateTestsV21):
-    admin_act = admin_actions_v2
-    bad_request = webob.exc.HTTPBadRequest

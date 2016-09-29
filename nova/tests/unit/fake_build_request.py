@@ -15,57 +15,38 @@ import datetime
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 
-from nova.compute import task_states
-from nova.compute import vm_states
 from nova import context
-from nova.network import model as network_model
 from nova import objects
 from nova.objects import fields
+from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
-from nova.tests.unit import fake_request_spec
-
-
-def _req_spec_to_db_format(req_spec):
-    db_spec = {'spec': jsonutils.dumps(req_spec.obj_to_primitive()),
-               'id': req_spec.id,
-               'instance_uuid': req_spec.instance_uuid,
-               }
-    return db_spec
+from nova.tests import uuidsentinel as uuids
 
 
 def fake_db_req(**updates):
     ctxt = context.RequestContext('fake-user', 'fake-project')
     instance_uuid = uuidutils.generate_uuid()
-    info_cache = objects.InstanceInfoCache()
-    info_cache.instance_uuid = instance_uuid
-    info_cache.network_info = network_model.NetworkInfo()
-    req_spec = fake_request_spec.fake_spec_obj(
-            context.RequestContext('fake-user', 'fake-project'))
-    req_spec.id = 42
-    req_spec.obj_reset_changes()
     instance = fake_instance.fake_instance_obj(ctxt, objects.Instance,
             uuid=instance_uuid)
+    # This will always be set this way for an instance at build time
+    instance.host = None
+    block_devices = objects.BlockDeviceMappingList(
+        objects=[fake_block_device.fake_bdm_object(
+            context,
+            fake_block_device.FakeDbBlockDeviceDict(
+                source_type='blank', destination_type='local',
+                guest_format='foo', device_type='disk', disk_bus='',
+                boot_index=1, device_name='xvda', delete_on_termination=False,
+                snapshot_id=None, volume_id=None, volume_size=0,
+                image_id='bar', no_device=False, connection_info=None,
+                tag='', instance_uuid=uuids.instance))])
     db_build_request = {
             'id': 1,
             'project_id': 'fake-project',
             'instance_uuid': instance_uuid,
-            'user_id': 'fake-user',
-            'display_name': '',
-            'instance_metadata': jsonutils.dumps({'foo': 'bar'}),
-            'progress': 0,
-            'vm_state': vm_states.BUILDING,
-            'task_state': task_states.SCHEDULING,
-            'image_ref': None,
-            'access_ip_v4': '1.2.3.4',
-            'access_ip_v6': '::1',
-            'info_cache': jsonutils.dumps(info_cache.obj_to_primitive()),
-            'security_groups': jsonutils.dumps(
-                objects.SecurityGroupList().obj_to_primitive()),
-            'config_drive': False,
-            'key_name': None,
-            'locked_by': None,
-            'request_spec': _req_spec_to_db_format(req_spec),
             'instance': jsonutils.dumps(instance.obj_to_primitive()),
+            'block_device_mappings': jsonutils.dumps(
+                block_devices.obj_to_primitive()),
             'created_at': datetime.datetime(2016, 1, 16),
             'updated_at': datetime.datetime(2016, 1, 16),
     }
@@ -97,21 +78,13 @@ def fake_req_obj(ctxt, db_req=None):
             continue
         if isinstance(req_obj.fields[field], fields.ObjectField):
             value = value
-            if field == 'request_spec':
-                req_spec = objects.RequestSpec._from_db_object(context,
-                        objects.RequestSpec(), value)
-                req_obj.request_spec = req_spec
-            elif field == 'info_cache':
-                setattr(req_obj, field,
-                        objects.InstanceInfoCache.obj_from_primitive(
-                            jsonutils.loads(value)))
-            elif field == 'security_groups':
-                setattr(req_obj, field,
-                        objects.SecurityGroupList.obj_from_primitive(
-                            jsonutils.loads(value)))
-            elif field == 'instance':
+            if field == 'instance':
                 req_obj.instance = objects.Instance.obj_from_primitive(
                         jsonutils.loads(value))
+            elif field == 'block_device_mappings':
+                req_obj.block_device_mappings = (
+                    objects.BlockDeviceMappingList.obj_from_primitive(
+                        jsonutils.loads(value)))
         elif field == 'instance_metadata':
             setattr(req_obj, field, jsonutils.loads(value))
         else:

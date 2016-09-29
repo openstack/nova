@@ -15,6 +15,7 @@
 import copy
 
 from nova.api.validation import parameter_types
+from nova import db
 
 create = {
     'type': 'object',
@@ -30,17 +31,18 @@ create = {
                     'minLength': 1, 'maxLength': 255,
                     'pattern': '^(?! )[a-zA-Z0-9. _-]+(?<! )$'
                 },
-                'ram': parameter_types.positive_integer,
-                'vcpus': parameter_types.positive_integer,
-                'disk': parameter_types.non_negative_integer,
+                'ram': parameter_types.flavor_param_positive,
+                'vcpus': parameter_types.flavor_param_positive,
+                'disk': parameter_types.flavor_param_non_negative,
                 'OS-FLV-EXT-DATA:ephemeral':
-                    parameter_types.non_negative_integer,
-                'swap': parameter_types.non_negative_integer,
+                    parameter_types.flavor_param_non_negative,
+                'swap': parameter_types.flavor_param_non_negative,
                 # positive ( > 0) float
                 'rxtx_factor': {
                     'type': ['number', 'string'],
                     'pattern': '^[0-9]+(\.[0-9]+)?$',
-                    'minimum': 0, 'exclusiveMinimum': True
+                    'minimum': 0, 'exclusiveMinimum': True,
+                    'maximum': db.SQL_SP_FLOAT_MAX
                 },
                 'os-flavor-access:is_public': parameter_types.boolean,
             },

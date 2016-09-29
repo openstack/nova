@@ -19,28 +19,37 @@
 Test WSGI basics and provide some helper functions for other WSGI tests.
 """
 
-from nova import test
-
+import fixtures
 import routes
+from six.moves import StringIO
 import webob
 
+from nova import test
 from nova import wsgi
 
 
 class Test(test.NoDBTestCase):
 
     def test_debug(self):
+        """This tests optional middleware we have which dumps
+        the requests to stdout.
+        """
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
 
         class Application(wsgi.Application):
             """Dummy application to test debug."""
 
             def __call__(self, environ, start_response):
                 start_response("200", [("X-Test", "checking")])
-                return ['Test result']
+                return [b'Test result']
 
         application = wsgi.Debug(Application())
         result = webob.Request.blank('/').get_response(application)
-        self.assertEqual(result.body, "Test result")
+        self.assertEqual(result.body, b"Test result")
+        self.assertIn(
+            '**************************************** REQUEST ENVIRON',
+            self.output.getvalue())
 
     def test_router(self):
 

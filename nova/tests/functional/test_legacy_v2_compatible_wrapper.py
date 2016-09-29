@@ -34,14 +34,18 @@ class LegacyV2CompatibleTestBase(test_servers.ServersTestBase):
         response = self.api.api_post('os-keypairs',
             {"keypair": {"name": "test"}})
         self.assertNotIn(wsgi.API_VERSION_REQUEST_HEADER, response.headers)
+        self.assertNotIn(wsgi.LEGACY_API_VERSION_REQUEST_HEADER,
+                         response.headers)
         self.assertNotIn('Vary', response.headers)
         self.assertNotIn('type', response.body["keypair"])
 
-    def test_request_without_addtional_properties_check(self):
+    def test_request_without_additional_properties_check(self):
         self.api.microversion = '2.100'
         response = self.api.api_post('os-keypairs',
             {"keypair": {"name": "test", "foooooo": "barrrrrr"}})
         self.assertNotIn(wsgi.API_VERSION_REQUEST_HEADER, response.headers)
+        self.assertNotIn(wsgi.LEGACY_API_VERSION_REQUEST_HEADER,
+                         response.headers)
         self.assertNotIn('Vary', response.headers)
         self.assertNotIn('type', response.body["keypair"])
 

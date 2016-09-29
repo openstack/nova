@@ -13,39 +13,45 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack.compute.legacy_v2 import limits
+from nova.api.openstack.api_version_request \
+    import MAX_PROXY_API_SUPPORT_VERSION
+from nova.api.openstack.api_version_request \
+    import MIN_WITHOUT_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack.compute.views import limits as limits_views
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.policies import limits as limits_policies
 from nova import quota
 
 
-# NOTE(alex_xu): This is just for keeping backward compatible with v2 endpoint
-# in api-paste.ini. This will be removed after v2 API code deprecated in the
-# future.
-RateLimitingMiddleware = limits.RateLimitingMiddleware
-
 QUOTAS = quota.QUOTAS
 ALIAS = 'limits'
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class LimitsController(wsgi.Controller):
     """Controller for accessing limits in the OpenStack API."""
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(())
     def index(self, req):
-        """Return all global and rate limit information."""
+        return self._index(req)
+
+    @wsgi.Controller.api_version(MIN_WITHOUT_PROXY_API_SUPPORT_VERSION)  # noqa
+    @extensions.expected_errors(())
+    def index(self, req):
+        return self._index(req, filter_result=True)
+
+    def _index(self, req, filter_result=False):
+        """Return all global limit information."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(limits_policies.BASE_POLICY_NAME)
         project_id = req.params.get('tenant_id', context.project_id)
         quotas = QUOTAS.get_project_quotas(context, project_id,
                                            usages=False)
         abs_limits = {k: v['limit'] for k, v in quotas.items()}
-        rate_limits = req.environ.get("nova.limits", [])
 
         builder = self._get_view_builder(req)
-        return builder.build(rate_limits, abs_limits)
+        return builder.build(abs_limits, filter_result=filter_result)
 
     def _get_view_builder(self, req):
         return limits_views.ViewBuilderV21()

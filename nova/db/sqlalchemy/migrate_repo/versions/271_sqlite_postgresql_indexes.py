@@ -52,7 +52,7 @@ def upgrade(migrate_engine):
     # the missing indexes in PostgreSQL and SQLite have conflicting names
     # that MySQL allowed.
 
-    if migrate_engine.name in ('sqlite', 'postgresql', 'ibm_db_sa'):
+    if migrate_engine.name in ('sqlite', 'postgresql'):
         for table_name, index_name, column_names in INDEXES:
             ensure_index_exists(migrate_engine, table_name, index_name,
                                 column_names)

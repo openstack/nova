@@ -24,7 +24,6 @@ import errno
 import functools
 import hashlib
 import inspect
-import logging as std_logging
 import os
 import pyclbr
 import random
@@ -215,7 +214,7 @@ class RootwrapDaemonHelper(RootwrapProcessHelper):
         # rootwrap to honor the same set of flags in kwargs and to ensure
         # that we don't regress any current behavior.
         cmd = [str(c) for c in cmd]
-        loglevel = kwargs.pop('loglevel', std_logging.DEBUG)
+        loglevel = kwargs.pop('loglevel', logging.DEBUG)
         log_errors = kwargs.pop('log_errors', None)
         process_input = kwargs.pop('process_input', None)
         delay_on_retry = kwargs.pop('delay_on_retry', True)
@@ -603,6 +602,20 @@ def safe_ip_format(ip):
         pass
     # it's IPv4 or hostname
     return ip
+
+
+def format_remote_path(host, path):
+    """Returns remote path in format acceptable for scp/rsync.
+
+    If host is IPv6 address literal, return '[host]:path', otherwise
+    'host:path' is returned.
+
+    If host is None, only path is returned.
+    """
+    if host is None:
+        return path
+
+    return "%s:%s" % (safe_ip_format(host), path)
 
 
 def monkey_patch():
@@ -1093,10 +1106,7 @@ def is_neutron():
     if _IS_NEUTRON is not None:
         return _IS_NEUTRON
 
-    # TODO(sdague): As long as network_api_class is importable
-    # is_neutron can return None to mean we have no idea what their
-    # class is.
-    _IS_NEUTRON = (nova.network.is_neutron() is True)
+    _IS_NEUTRON = nova.network.is_neutron()
     return _IS_NEUTRON
 
 
@@ -1209,6 +1219,19 @@ def get_hash_str(base_str):
     if isinstance(base_str, six.text_type):
         base_str = base_str.encode('utf-8')
     return hashlib.md5(base_str).hexdigest()
+
+
+def get_sha256_str(base_str):
+    """Returns string that represents sha256 hash of base_str (in hex format).
+
+    sha1 and md5 are known to be breakable, so sha256 is a better option
+    when the hash is being used for security purposes. If hashing passwords
+    or anything else that needs to be retained for a long period a salted
+    hash is better.
+    """
+    if isinstance(base_str, six.text_type):
+        base_str = base_str.encode('utf-8')
+    return hashlib.sha256(base_str).hexdigest()
 
 
 def filter_and_format_resource_metadata(resource_type, resource_list,

@@ -178,10 +178,10 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
     def test_numa_topology_filter_pass_cpu_thread_policy_require(self):
         cpu_policy = fields.CPUAllocationPolicy.DEDICATED
         cpu_thread_policy = fields.CPUThreadAllocationPolicy.REQUIRE
-        numa_topology = fakes.NUMA_TOPOLOGY_W_HT
 
-        self._do_test_numa_topology_filter_cpu_policy(
-            numa_topology, cpu_policy, cpu_thread_policy, True)
+        for numa_topology in fakes.NUMA_TOPOLOGIES_W_HT:
+            self._do_test_numa_topology_filter_cpu_policy(
+                numa_topology, cpu_policy, cpu_thread_policy, True)
 
     def test_numa_topology_filter_pass_cpu_thread_policy_others(self):
         cpu_policy = fields.CPUAllocationPolicy.DEDICATED

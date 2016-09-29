@@ -46,9 +46,6 @@ LOG = logging.getLogger(__name__)
 
 
 CONF = nova.conf.CONF
-CONF.import_opt('host', 'nova.netconf')
-CONF.import_opt('use_ipv6', 'nova.netconf')
-CONF.import_opt('my_ip', 'nova.netconf')
 
 
 # NOTE(vish): Iptables supports chain names of up to 28 characters,  and we
@@ -1234,9 +1231,6 @@ def _ip_bridge_cmd(action, params, device):
 
 def _set_device_mtu(dev, mtu=None):
     """Set the device MTU."""
-
-    if not mtu:
-        mtu = CONF.network_device_mtu
     if mtu:
         utils.execute('ip', 'link', 'set', dev, 'mtu',
                       mtu, run_as_root=True,
@@ -1503,7 +1497,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             _execute('ip', 'link', 'set', interface, 'up', run_as_root=True,
                      check_exit_code=[0, 2, 254])
         # NOTE(vish): set mtu every time to ensure that changes to mtu get
-        #             propogated
+        #             propagated
         _set_device_mtu(interface, mtu)
         return interface
 
@@ -1663,8 +1657,6 @@ def _exec_ebtables(*cmd, **kwargs):
 
     # We always try at least once
     attempts = CONF.ebtables_exec_attempts
-    if attempts <= 0:
-        attempts = 1
     count = 1
     while count <= attempts:
         # Updated our counters if needed

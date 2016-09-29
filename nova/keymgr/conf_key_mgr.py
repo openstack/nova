@@ -31,15 +31,22 @@ encrypted with a key provided by this key manager actually share the same
 encryption key so *any* volume can be decrypted once the fixed key is known.
 """
 
+import binascii
+
+from castellan.common.objects import symmetric_key as key
+from castellan.key_manager import key_manager
+from oslo_log import log as logging
+
 import nova.conf
-from nova.i18n import _
-from nova.keymgr import single_key_mgr
+from nova import exception
+from nova.i18n import _, _LW
 
 
 CONF = nova.conf.CONF
+LOG = logging.getLogger(__name__)
 
 
-class ConfKeyManager(single_key_mgr.SingleKeyManager):
+class ConfKeyManager(key_manager.KeyManager):
     """This key manager implementation supports all the methods specified by
     the key manager interface. This implementation creates a single key in
     response to all invocations of create_key. Side effects
@@ -47,11 +54,78 @@ class ConfKeyManager(single_key_mgr.SingleKeyManager):
     as specified by the key manager interface.
     """
 
-    def __init__(self):
-        if CONF.keymgr.fixed_key is None:
-            raise ValueError(_('keymgr.fixed_key not defined'))
-        self._hex_key = CONF.keymgr.fixed_key
-        super(ConfKeyManager, self).__init__()
+    def __init__(self, configuration):
+        LOG.warning(_LW('This key manager is insecure and is not recommended '
+                        'for production deployments'))
+        super(ConfKeyManager, self).__init__(configuration)
 
-    def _generate_hex_key(self, **kwargs):
-        return self._hex_key
+        self.key_id = '00000000-0000-0000-0000-000000000000'
+
+        self.conf = CONF if configuration is None else configuration
+
+        if CONF.key_manager.fixed_key is None:
+            raise ValueError(_('keymgr.fixed_key not defined'))
+        self._hex_key = CONF.key_manager.fixed_key
+        super(ConfKeyManager, self).__init__(configuration)
+
+    def _get_key(self):
+        key_bytes = bytes(binascii.unhexlify(self._hex_key))
+        return key.SymmetricKey('AES', len(key_bytes) * 8, key_bytes)
+
+    def create_key(self, context, algorithm, length, **kwargs):
+        """Creates a symmetric key.
+
+        This implementation returns a UUID for the key read from the
+        configuration file. A Forbidden exception is raised if the
+        specified context is None.
+        """
+        if context is None:
+            raise exception.Forbidden()
+
+        return self.key_id
+
+    def create_key_pair(self, context, **kwargs):
+        raise NotImplementedError(
+            "ConfKeyManager does not support asymmetric keys")
+
+    def store(self, context, managed_object, **kwargs):
+        """Stores (i.e., registers) a key with the key manager."""
+        if context is None:
+            raise exception.Forbidden()
+
+        if managed_object != self._get_key():
+            raise exception.KeyManagerError(
+                reason="cannot store arbitrary keys")
+
+        return self.key_id
+
+    def get(self, context, managed_object_id):
+        """Retrieves the key identified by the specified id.
+
+        This implementation returns the key that is associated with the
+        specified UUID. A Forbidden exception is raised if the specified
+        context is None; a KeyError is raised if the UUID is invalid.
+        """
+        if context is None:
+            raise exception.Forbidden()
+
+        if managed_object_id != self.key_id:
+            raise KeyError(str(managed_object_id) + " != " + str(self.key_id))
+
+        return self._get_key()
+
+    def delete(self, context, managed_object_id):
+        """Represents deleting the key.
+
+        Because the ConfKeyManager has only one key, which is read from the
+        configuration file, the key is not actually deleted when this is
+        called.
+        """
+        if context is None:
+            raise exception.Forbidden()
+
+        if managed_object_id != self.key_id:
+            raise exception.KeyManagerError(
+                reason="cannot delete non-existent key")
+
+        LOG.warning(_LW("Not deleting key %s"), managed_object_id)

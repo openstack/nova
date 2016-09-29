@@ -1,0 +1,14 @@
+---
+features:
+
+  - Nova now defaults to using the glance version 2 protocol for all
+    backend operations for all virt drivers. A ``use_glance_v1``
+    config option exists to revert to glance version 1 protocol if
+    issues are seen, however that will be removed early in Ocata, and
+    only glance version 2 protocol will be used going forward.
+
+upgrade:
+
+  - It is now required that the glance environment used by Nova
+    exposes the version 2 REST API. This API has been available for
+    many years, but previously Nova only used the version 1 API.

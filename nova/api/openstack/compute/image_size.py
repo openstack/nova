@@ -15,10 +15,9 @@
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.policies import image_size as is_policies
 
 ALIAS = "image-size"
-
-authorize = extensions.os_compute_soft_authorizer(ALIAS)
 
 
 class ImageSizeController(wsgi.Controller):
@@ -33,7 +32,7 @@ class ImageSizeController(wsgi.Controller):
     @wsgi.extends
     def show(self, req, resp_obj, id):
         context = req.environ["nova.context"]
-        if authorize(context):
+        if context.can(is_policies.BASE_POLICY_NAME, fatal=False):
             image_resp = resp_obj.obj['image']
             # image guaranteed to be in the cache due to the core API adding
             # it in its 'show' method
@@ -43,7 +42,7 @@ class ImageSizeController(wsgi.Controller):
     @wsgi.extends
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
-        if authorize(context):
+        if context.can(is_policies.BASE_POLICY_NAME, fatal=False):
             images_resp = list(resp_obj.obj['images'])
             # images guaranteed to be in the cache due to the core API adding
             # it in its 'detail' method

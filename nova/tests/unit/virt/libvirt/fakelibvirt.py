@@ -94,6 +94,8 @@ VIR_MIGRATE_TUNNELLED = 4
 VIR_MIGRATE_PERSIST_DEST = 8
 VIR_MIGRATE_UNDEFINE_SOURCE = 16
 VIR_MIGRATE_NON_SHARED_INC = 128
+VIR_MIGRATE_AUTO_CONVERGE = 8192
+VIR_MIGRATE_POSTCOPY = 32768
 
 VIR_NODE_CPU_STATS_ALL_CPUS = -1
 
@@ -122,7 +124,8 @@ VIR_ERR_INTERNAL_ERROR = 950
 VIR_ERR_CONFIG_UNSUPPORTED = 951
 VIR_ERR_NO_NODE_DEVICE = 667
 VIR_ERR_NO_SECRET = 66
-
+VIR_ERR_AGENT_UNRESPONSIVE = 86
+VIR_ERR_ARGUMENT_UNSUPPORTED = 74
 # Readonly
 VIR_CONNECT_RO = 1
 
@@ -196,7 +199,7 @@ class HostInfo(object):
         self.disabled_cpus_list = cpu_disabled or []
 
     @classmethod
-    def _gen_numa_topology(self, cpu_nodes, cpu_sockets, cpu_cores,
+    def _gen_numa_topology(cls, cpu_nodes, cpu_sockets, cpu_cores,
                            cpu_threads, kb_mem, numa_mempages_list=None):
 
         topology = vconfig.LibvirtConfigCapsNUMATopology()
@@ -205,7 +208,7 @@ class HostInfo(object):
         for cell_count in range(cpu_nodes):
             cell = vconfig.LibvirtConfigCapsNUMACell()
             cell.id = cell_count
-            cell.memory = kb_mem / cpu_nodes
+            cell.memory = kb_mem // cpu_nodes
             for socket_count in range(cpu_sockets):
                 for cpu_num in range(cpu_cores * cpu_threads):
                     cpu = vconfig.LibvirtConfigCapsNUMACPU()
@@ -225,7 +228,7 @@ class HostInfo(object):
             else:
                 mempages = vconfig.LibvirtConfigCapsNUMAPages()
                 mempages.size = 4
-                mempages.total = cell.memory / mempages.size
+                mempages.total = cell.memory // mempages.size
                 mempages = [mempages]
             cell.mempages = mempages
             topology.cells.append(cell)
@@ -560,6 +563,9 @@ class Domain(object):
 
     def blockStats(self, device):
         return [2, 10000242400, 234, 2343424234, 34]
+
+    def setTime(self, time=None, flags=0):
+        pass
 
     def suspend(self):
         self._state = VIR_DOMAIN_PAUSED

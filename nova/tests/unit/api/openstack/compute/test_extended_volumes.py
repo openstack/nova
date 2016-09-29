@@ -15,7 +15,6 @@
 
 import mock
 from oslo_serialization import jsonutils
-import webob
 
 from nova.api.openstack.compute import (extended_volumes
                                                    as extended_volumes_v21)
@@ -114,10 +113,10 @@ class ExtendedVolumesTestV21(test.TestCase):
         self.stubs.Set(volume.cinder.API, 'get', fake_volume_get)
 
     def _make_request(self, url, body=None):
-        req = webob.Request.blank('/v2/fake/servers' + url)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers' + url)
         req.headers['Accept'] = self.content_type
         req.headers = {os_wsgi.API_VERSION_REQUEST_HEADER:
-                       self.wsgi_api_version}
+                       'compute %s' % self.wsgi_api_version}
         if body:
             req.body = jsonutils.dump_as_bytes(body)
             req.method = 'POST'
@@ -146,18 +145,6 @@ class ExtendedVolumesTestV21(test.TestCase):
         for i, server in enumerate(self._get_servers(res.body)):
             actual = server.get('%svolumes_attached' % self.prefix)
             self.assertEqual(self.exp_volumes_detail[i], actual)
-
-
-class ExtendedVolumesTestV2(ExtendedVolumesTestV21):
-
-    def _setup_app(self):
-        return fakes.wsgi_app(init_only=('servers',))
-
-    def _setUp(self):
-        self.flags(
-                   osapi_compute_extension=['nova.api.openstack.compute.'
-                                            'contrib.select_extensions'],
-                   osapi_compute_ext_list=['Extended_volumes'])
 
 
 class ExtendedVolumesTestV23(ExtendedVolumesTestV21):

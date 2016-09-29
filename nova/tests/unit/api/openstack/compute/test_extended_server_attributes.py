@@ -13,9 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
-import webob
 
 from nova.api.openstack import wsgi as os_wsgi
 from nova import compute
@@ -90,7 +90,7 @@ class ExtendedServerAttributesTestV21(test.TestCase):
         req = fakes.HTTPRequest.blank(url)
         req.headers['Accept'] = self.content_type
         req.headers = {os_wsgi.API_VERSION_REQUEST_HEADER:
-                       self.wsgi_api_version}
+                       'compute %s' % self.wsgi_api_version}
         res = req.get_response(
             fakes.wsgi_app_v21(init_only=('servers',
                                           'os-extended-server-attributes')))
@@ -130,6 +130,17 @@ class ExtendedServerAttributesTestV21(test.TestCase):
                                     node='node-%s' % (i + 1),
                                     instance_name=NAME_FMT % (i + 1))
 
+    @mock.patch.object(compute.api.API, 'get_all')
+    def test_detail_empty_instance_list_invalid_status(self,
+                                                       mock_get_all_method):
+        mock_get_all_method.return_value = objects.InstanceList(objects=[])
+
+        url = "%s%s" % (self.fake_url, '/servers/detail?status=invalid_status')
+        res = self._make_request(url)
+        # check status code 200 with empty instance list
+        self.assertEqual(200, res.status_int)
+        self.assertEqual(0, len(self._get_servers(res.body)))
+
     def test_no_instance_passthrough_404(self):
 
         def fake_compute_get(*args, **kwargs):
@@ -140,22 +151,6 @@ class ExtendedServerAttributesTestV21(test.TestCase):
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 404)
-
-
-class ExtendedServerAttributesTestV2(ExtendedServerAttributesTestV21):
-
-    def setUp(self):
-        super(ExtendedServerAttributesTestV2, self).setUp()
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Extended_server_attributes'])
-
-    def _make_request(self, url):
-        req = webob.Request.blank(url)
-        req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
-        return res
 
 
 class ExtendedServerAttributesTestV23(ExtendedServerAttributesTestV21):

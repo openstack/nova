@@ -20,10 +20,10 @@ from nova.api import validation
 from nova.compute import flavors
 from nova import exception
 from nova.i18n import _
+from nova import objects
+from nova.policies import flavor_manage as fm_policies
 
 ALIAS = "os-flavor-manage"
-
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class FlavorManageController(wsgi.Controller):
@@ -41,25 +41,23 @@ class FlavorManageController(wsgi.Controller):
     @wsgi.action("delete")
     def _delete(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fm_policies.BASE_POLICY_NAME)
 
+        flavor = objects.Flavor(context=context, flavorid=id)
         try:
-            flavor = flavors.get_flavor_by_flavor_id(
-                    id, ctxt=context, read_deleted="no")
+            flavor.destroy()
         except exception.FlavorNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
-
-        flavors.destroy(flavor['name'])
 
     # NOTE(oomichi): Return 200 for backwards compatibility but should be 201
     # as this operation complete the creation of flavor resource.
     @wsgi.action("create")
-    @extensions.expected_errors((400, 409, 500))
+    @extensions.expected_errors((400, 409))
     @validation.schema(flavor_manage.create_v20, '2.0', '2.0')
     @validation.schema(flavor_manage.create, '2.1')
     def _create(self, req, body):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fm_policies.BASE_POLICY_NAME)
 
         vals = body['flavor']
 
@@ -88,9 +86,6 @@ class FlavorManageController(wsgi.Controller):
         except exception.ObjectActionError:
             raise webob.exc.HTTPConflict(explanation=_(
                 'Not all flavors have been migrated to the API database'))
-        except exception.FlavorCreateFailed as err:
-            raise webob.exc.HTTPInternalServerError(explanation=
-                err.format_message())
 
         return self._view_builder.show(req, flavor)
 

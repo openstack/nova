@@ -577,7 +577,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             data = get_associated(self.context, 0, address=lease[2])[0]
             self.assertTrue(data['allocated'])
             self.assertTrue(data['leased'])
-            self.assertTrue(int(lease[0]) > seconds_since_epoch)
+            self.assertGreater(int(lease[0]), seconds_since_epoch)
             self.assertEqual(data['vif_address'], lease[1])
             self.assertEqual(data['address'], lease[2])
             self.assertEqual(data['instance_hostname'], lease[3])
@@ -594,7 +594,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             lease = lease.split(' ')
             data = get_associated(self.context, 1, address=lease[2])[0]
             self.assertTrue(data['leased'])
-            self.assertTrue(int(lease[0]) > seconds_since_epoch)
+            self.assertGreater(int(lease[0]), seconds_since_epoch)
             self.assertEqual(data['vif_address'], lease[1])
             self.assertEqual(data['address'], lease[2])
             self.assertEqual(data['instance_hostname'], lease[3])
@@ -1199,17 +1199,6 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             driver.ensure_bridge('brq1234567-89', '')
             device_exists.assert_called_once_with('brq1234567-89')
 
-    def test_set_device_mtu_configured(self):
-        self.flags(network_device_mtu=10000)
-        calls = [
-                mock.call('ip', 'link', 'set', 'fake-dev', 'mtu',
-                          10000, run_as_root=True,
-                          check_exit_code=[0, 2, 254])
-                ]
-        with mock.patch.object(utils, 'execute', return_value=('', '')) as ex:
-            linux_net._set_device_mtu('fake-dev')
-            ex.assert_has_calls(calls)
-
     def test_set_device_mtu_default(self):
         calls = []
         with mock.patch.object(utils, 'execute', return_value=('', '')) as ex:
@@ -1277,24 +1266,6 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.assertFalse(mock_set_device_mtu.called)
         self.assertTrue(mock_vsctl.called)
 
-    def test_ovs_vif_port_with_mtu(self):
-        self.flags(network_device_mtu=10000)
-        calls = [
-                mock.call('ovs-vsctl', '--timeout=120', '--', '--if-exists',
-                          'del-port', 'fake-dev', '--', 'add-port',
-                          'fake-bridge', 'fake-dev',
-                          '--', 'set', 'Interface', 'fake-dev',
-                          'external-ids:iface-id=fake-iface-id',
-                          'external-ids:iface-status=active',
-                          'external-ids:attached-mac=fake-mac',
-                          'external-ids:vm-uuid=fake-instance-uuid',
-                          run_as_root=True),
-                mock.call('ip', 'link', 'set', 'fake-dev', 'mtu',
-                          10000, run_as_root=True,
-                          check_exit_code=[0, 2, 254])
-                ]
-        self._ovs_vif_port(calls)
-
     def _create_veth_pair(self, calls):
         with mock.patch.object(utils, 'execute', return_value=('', '')) as ex:
             linux_net._create_veth_pair('fake-dev1', 'fake-dev2')
@@ -1312,28 +1283,6 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                       run_as_root=True),
             mock.call('ip', 'link', 'set', 'fake-dev2', 'promisc', 'on',
                       run_as_root=True)
-        ]
-        self._create_veth_pair(calls)
-
-    def test_create_veth_pair_with_mtu(self):
-        self.flags(network_device_mtu=10000)
-        calls = [
-            mock.call('ip', 'link', 'add', 'fake-dev1', 'type', 'veth',
-                      'peer', 'name', 'fake-dev2', run_as_root=True),
-            mock.call('ip', 'link', 'set', 'fake-dev1', 'up',
-                      run_as_root=True),
-            mock.call('ip', 'link', 'set', 'fake-dev1', 'promisc', 'on',
-                      run_as_root=True),
-            mock.call('ip', 'link', 'set', 'fake-dev1', 'mtu',
-                      10000, run_as_root=True,
-                      check_exit_code=[0, 2, 254]),
-            mock.call('ip', 'link', 'set', 'fake-dev2', 'up',
-                      run_as_root=True),
-            mock.call('ip', 'link', 'set', 'fake-dev2', 'promisc', 'on',
-                      run_as_root=True),
-            mock.call('ip', 'link', 'set', 'fake-dev2', 'mtu',
-                      10000, run_as_root=True,
-                      check_exit_code=[0, 2, 254])
         ]
         self._create_veth_pair(calls)
 

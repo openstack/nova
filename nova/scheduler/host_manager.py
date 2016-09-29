@@ -385,24 +385,31 @@ class HostManager(object):
         """
         if aggregate.id in self.aggs_by_id:
             del self.aggs_by_id[aggregate.id]
-        for host in aggregate.hosts:
+        for host in self.host_aggregates_map:
             if aggregate.id in self.host_aggregates_map[host]:
                 self.host_aggregates_map[host].remove(aggregate.id)
 
-    def _init_instance_info(self):
+    def _init_instance_info(self, compute_nodes=None):
         """Creates the initial view of instances for all hosts.
 
         As this initial population of instance information may take some time,
         we don't wish to block the scheduler's startup while this completes.
         The async method allows us to simply mock out the _init_instance_info()
         method in tests.
+
+        :param compute_nodes: a list of nodes to populate instances info for
+        if is None, compute_nodes will be looked up in database
         """
 
-        def _async_init_instance_info():
-            context = context_module.get_admin_context()
+        def _async_init_instance_info(compute_nodes):
+            context = context_module.RequestContext()
             LOG.debug("START:_async_init_instance_info")
             self._instance_info = {}
-            compute_nodes = objects.ComputeNodeList.get_all(context).objects
+
+            if not compute_nodes:
+                compute_nodes = objects.ComputeNodeList.get_all(
+                    context).objects
+
             LOG.debug("Total number of compute nodes: %s", len(compute_nodes))
             # Break the queries into batches of 10 to reduce the total number
             # of calls to the DB.
@@ -416,8 +423,8 @@ class HostManager(object):
                 filters = {"host": [curr_node.host
                                     for curr_node in curr_nodes],
                            "deleted": False}
-                result = objects.InstanceList.get_by_filters(context,
-                                                             filters)
+                result = objects.InstanceList.get_by_filters(
+                    context.elevated(), filters)
                 instances = result.objects
                 LOG.debug("Adding %s instances for hosts %s-%s",
                           len(instances), start_node, end_node)
@@ -433,7 +440,7 @@ class HostManager(object):
             LOG.debug("END:_async_init_instance_info")
 
         # Run this async so that we don't block the scheduler start-up
-        utils.spawn_n(_async_init_instance_info)
+        utils.spawn_n(_async_init_instance_info, compute_nodes)
 
     def _choose_host_filters(self, filter_cls_names):
         """Since the caller may specify which filters to use we need
@@ -505,10 +512,33 @@ class HostManager(object):
                           "'force_nodes' value of '%s'")
             LOG.info(msg % forced_nodes_str)
 
+        def _get_hosts_matching_request(hosts, requested_destination):
+            (host, node) = (requested_destination.host,
+                            requested_destination.node)
+            requested_nodes = [x for x in hosts
+                               if x.host == host and x.nodename == node]
+            if requested_nodes:
+                LOG.info(_LI('Host filter only checking host %(host)s and '
+                             'node %(node)s') % {'host': host, 'node': node})
+            else:
+                # NOTE(sbauza): The API level should prevent the user from
+                # providing a wrong destination but let's make sure a wrong
+                # destination doesn't trample the scheduler still.
+                LOG.info(_LI('No hosts matched due to not matching requested '
+                             'destination (%(host)s, %(node)s)'
+                             ) % {'host': host, 'node': node})
+            return iter(requested_nodes)
+
         ignore_hosts = spec_obj.ignore_hosts or []
         force_hosts = spec_obj.force_hosts or []
         force_nodes = spec_obj.force_nodes or []
+        requested_node = spec_obj.requested_destination
 
+        if requested_node is not None:
+            # NOTE(sbauza): Reduce a potentially long set of hosts as much as
+            # possible to any requested destination nodes before passing the
+            # list to the filters
+            hosts = _get_hosts_matching_request(hosts, requested_node)
         if ignore_hosts or force_hosts or force_nodes:
             # NOTE(deva): we can't assume "host" is unique because
             #             one host may have many nodes.

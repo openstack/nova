@@ -1,12 +1,16 @@
 .. -*- rst -*-
-.. needs:method_verification
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
-==========================================
- Floating IPs bulk (os-floating-ips-bulk)
-==========================================
+======================================================
+ Floating IPs bulk (os-floating-ips-bulk) (DEPRECATED)
+======================================================
+
+.. warning::
+
+   These APIs are proxy calls to the Network service. Nova has
+   deprecated all the proxy APIs and users should use the native APIs
+   instead. These will fail with a 404 after microversion 2.35.
+   See: `Relevant Network APIs
+   <http://developer.openstack.org/api-ref-networking-v2-ext.html>`__.
 
 (nova-network only) Bulk-creates, deletes, and lists floating IPs.
 Default pool name is ``nova``.
@@ -16,24 +20,27 @@ To view available pools, use the ``os-floating-ip-pools`` extension.
 List Floating Ips
 =================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-floating-ips-bulk
+.. rest_method:: GET /os-floating-ips-bulk
+
 
 Lists all floating IPs.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - floating_ip_info : floating_ips_list
+  - address : floating_ip
+  - fixed_ip : fixed_ip_address
+  - instance_uuid : server_id
+  - interface : virtual_interface
+  - pool: floating_ip_pool_name
+  - project_id : project_id_value
 
 **Example List Floating Ips: JSON response**
 
@@ -43,22 +50,25 @@ Response
 Create Floating Ips
 ===================
 
-.. rest_method:: POST /v2.1/{tenant_id}/os-floating-ips-bulk
+.. rest_method:: POST /os-floating-ips-bulk
 
 Bulk-creates floating IPs.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+conflict(409)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - ip_range: ip_range
+  - floating_ips_bulk_create : floating_ip_bulk_object
+  - ip_range : ip_range
+  - interface : virtual_interface_id_optional
+  - pool: floating_ip_pool_name_optional
+
 
 **Example Create Floating Ips: JSON request**
 
@@ -68,6 +78,13 @@ Request
 Response
 --------
 
+.. rest_parameters:: parameters.yaml
+
+  - floating_ips_bulk_create : floating_ip_bulk_object
+  - interface : virtual_interface
+  - ip_range : ip_range
+  - pool: floating_ip_pool_name
+
 **Example Create Floating Ips: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-floating-ips-bulk/floating-ips-bulk-create-resp.json
@@ -76,22 +93,20 @@ Response
 Bulk-Delete Floating Ips
 ========================
 
-.. rest_method:: POST /v2.1/{tenant_id}/os-floating-ips-bulk/delete
+.. rest_method:: PUT /os-floating-ips-bulk/delete
 
 Bulk-deletes floating IPs.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - ip_range: ip_range
+  - ip_range: ip_range_delete
 
 **Example Bulk-Delete Floating Ips: JSON request**
 
@@ -101,6 +116,10 @@ Request
 Response
 --------
 
+.. rest_parameters:: parameters.yaml
+
+  - floating_ips_bulk_delete : ip_range_delete
+
 **Example Bulk-Delete Floating Ips: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-floating-ips-bulk/floating-ips-bulk-delete-resp.json
@@ -109,28 +128,36 @@ Response
 List Floating Ips By Host
 =========================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-floating-ips-bulk/{host_name}
+.. rest_method:: GET /os-floating-ips-bulk/{host_name}
 
 Lists all floating IPs for a host.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - host_name: host_name
 
 Response
 --------
 
+.. rest_parameters:: parameters.yaml
+
+  - floating_ip_info : floating_ips_list
+  - address : floating_ip
+  - fixed_ip : fixed_ip_address
+  - instance_uuid : server_id
+  - interface : virtual_interface
+  - pool: floating_ip_pool_name
+  - project_id : project_id_value
+
+
 **Example List Floating Ips By Host: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-floating-ips-bulk/floating-ips-bulk-list-by-host-resp.json
    :language: javascript
-

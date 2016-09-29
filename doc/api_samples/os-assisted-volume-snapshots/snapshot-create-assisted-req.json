@@ -4,7 +4,8 @@
         "create_info": {
             "snapshot_id": "421752a6-acf6-4b2d-bc7a-119f9148cd8c",
             "type": "qcow2",
-            "new_file": "new_file_name"
+            "new_file": "new_file_name",
+            "id": "421752a6-acf6-4b2d-bc7a-119f9148cd8c"
         }
     }
 }

@@ -15,7 +15,6 @@
 import datetime
 import hashlib
 import importlib
-import logging
 import os
 import os.path
 import socket
@@ -29,6 +28,7 @@ from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_context import context as common_context
 from oslo_context import fixture as context_fixture
+from oslo_log import log as logging
 from oslo_utils import encodeutils
 from oslo_utils import fixture as utils_fixture
 from oslo_utils import units
@@ -37,7 +37,10 @@ import six
 import nova
 from nova import context
 from nova import exception
+from nova.objects import base as obj_base
 from nova import test
+from nova.tests.unit.objects import test_objects
+from nova.tests.unit import utils as test_utils
 from nova import utils
 
 CONF = cfg.CONF
@@ -217,6 +220,19 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         self.assertEqual("[::ffff:127.0.0.1]", utils.safe_ip_format(
                          "::ffff:127.0.0.1"))
         self.assertEqual("localhost", utils.safe_ip_format("localhost"))
+
+    def test_format_remote_path(self):
+        self.assertEqual("[::1]:/foo/bar",
+                         utils.format_remote_path("::1", "/foo/bar"))
+        self.assertEqual("127.0.0.1:/foo/bar",
+                         utils.format_remote_path("127.0.0.1", "/foo/bar"))
+        self.assertEqual("[::ffff:127.0.0.1]:/foo/bar",
+                         utils.format_remote_path("::ffff:127.0.0.1",
+                                                  "/foo/bar"))
+        self.assertEqual("localhost:/foo/bar",
+                         utils.format_remote_path("localhost", "/foo/bar"))
+        self.assertEqual("/foo/bar", utils.format_remote_path(None,
+                                                              "/foo/bar"))
 
     def test_get_hash_str(self):
         base_str = b"foo"
@@ -799,7 +815,7 @@ class LastBytesTestCase(test.NoDBTestCase):
         self.f.seek(0, os.SEEK_SET)
         out, remaining = utils.last_bytes(self.f, 5)
         self.assertEqual(out, b'67890')
-        self.assertTrue(remaining > 0)
+        self.assertGreater(remaining, 0)
 
     def test_read_all(self):
         self.f.seek(0, os.SEEK_SET)
@@ -1348,3 +1364,66 @@ class UT8TestCase(test.NoDBTestCase):
     def test_text_type_with_encoding(self):
         some_value = 'test\u2026config'
         self.assertEqual(some_value, utils.utf8(some_value).decode("utf-8"))
+
+
+class TestObjectCallHelpers(test.NoDBTestCase):
+    def test_with_primitives(self):
+        tester = mock.Mock()
+        tester.foo(1, 'two', three='four')
+        self.assertTrue(
+            test_utils.obj_called_with(tester.foo, 1, 'two', three='four'))
+        self.assertFalse(
+            test_utils.obj_called_with(tester.foo, 42, 'two', three='four'))
+
+    def test_with_object(self):
+        obj_base.NovaObjectRegistry.register(test_objects.MyObj)
+        obj = test_objects.MyObj(foo=1, bar='baz')
+        tester = mock.Mock()
+        tester.foo(1, obj)
+        self.assertTrue(
+            test_utils.obj_called_with(
+                tester.foo, 1,
+                test_objects.MyObj(foo=1, bar='baz')))
+        self.assertFalse(
+            test_utils.obj_called_with(
+                tester.foo, 1,
+                test_objects.MyObj(foo=2, bar='baz')))
+
+    def test_with_object_multiple(self):
+        obj_base.NovaObjectRegistry.register(test_objects.MyObj)
+        obj1 = test_objects.MyObj(foo=1, bar='baz')
+        obj2 = test_objects.MyObj(foo=3, bar='baz')
+        tester = mock.Mock()
+        tester.foo(1, obj1)
+        tester.foo(1, obj1)
+        tester.foo(3, obj2)
+
+        # Called at all
+        self.assertTrue(
+            test_utils.obj_called_with(
+                tester.foo, 1,
+                test_objects.MyObj(foo=1, bar='baz')))
+
+        # Called once (not true)
+        self.assertFalse(
+            test_utils.obj_called_once_with(
+                tester.foo, 1,
+                test_objects.MyObj(foo=1, bar='baz')))
+
+        # Not called with obj.foo=2
+        self.assertFalse(
+            test_utils.obj_called_with(
+                tester.foo, 1,
+                test_objects.MyObj(foo=2, bar='baz')))
+
+        # Called with obj.foo.3
+        self.assertTrue(
+            test_utils.obj_called_with(
+                tester.foo, 3,
+                test_objects.MyObj(foo=3, bar='baz')))
+
+        # Called once with obj.foo.3
+        self.assertTrue(
+            test_utils.obj_called_once_with(
+                tester.foo, 3,
+                test_objects.MyObj(foo=3, bar='baz')))

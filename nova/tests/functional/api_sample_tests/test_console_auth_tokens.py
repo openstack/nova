@@ -14,30 +14,14 @@
 
 import re
 
-from oslo_config import cfg
 from oslo_serialization import jsonutils
 
 from nova.tests.functional.api_sample_tests import test_servers
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
-
 
 class ConsoleAuthTokensSampleJsonTests(test_servers.ServersSampleBase):
     ADMIN_API = True
-    extension_name = "os-console-auth-tokens"
-    extra_extensions_to_load = ["os-remote-consoles", "os-access-ips"]
-
-    def _get_flags(self):
-        f = super(ConsoleAuthTokensSampleJsonTests, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.consoles.Consoles')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.console_auth_tokens.'
-            'Console_auth_tokens')
-        return f
+    sample_dir = "os-console-auth-tokens"
 
     def _get_console_url(self, data):
         return jsonutils.loads(data)["console"]["url"]

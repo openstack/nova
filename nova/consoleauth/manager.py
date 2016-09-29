@@ -26,7 +26,7 @@ from nova import cache_utils
 from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import rpcapi as compute_rpcapi
 import nova.conf
-from nova.i18n import _LI, _LW
+from nova.i18n import _LI
 from nova import manager
 from nova import objects
 
@@ -88,12 +88,7 @@ class ConsoleAuthManager(manager.Manager):
                       'last_activity_at': time.time()}
         data = jsonutils.dumps(token_dict)
 
-        # We need to log the warning message if the token is not cached
-        # successfully, because the failure will cause the console for
-        # instance to not be usable.
-        if not self.mc.set(token.encode('UTF-8'), data):
-            LOG.warning(_LW("Token: %(token)s failed to save into memcached."),
-                        {'token': token})
+        self.mc.set(token.encode('UTF-8'), data)
         tokens = self._get_tokens_for_instance(instance_uuid)
 
         # Remove the expired tokens from cache.
@@ -103,11 +98,8 @@ class ConsoleAuthManager(manager.Manager):
                   if value is not None]
         tokens.append(token)
 
-        if not self.mc_instance.set(instance_uuid.encode('UTF-8'),
-                           jsonutils.dumps(tokens)):
-            LOG.warning(_LW("Instance: %(instance_uuid)s failed to save "
-                            "into memcached"),
-                        {'instance_uuid': instance_uuid})
+        self.mc_instance.set(instance_uuid.encode('UTF-8'),
+                             jsonutils.dumps(tokens))
 
         LOG.info(_LI("Received Token: %(token)s, %(token_dict)s"),
                   {'token': token, 'token_dict': token_dict})

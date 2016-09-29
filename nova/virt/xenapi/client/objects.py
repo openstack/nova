@@ -100,6 +100,12 @@ class VDI(XenAPISessionObject):
         super(VDI, self).__init__(session, "VDI")
 
 
+class VIF(XenAPISessionObject):
+    """Virtual Network Interface."""
+    def __init__(self, session):
+        super(VIF, self).__init__(session, "VIF")
+
+
 class SR(XenAPISessionObject):
     """Storage Repository."""
     def __init__(self, session):

@@ -4,6 +4,7 @@
         "ram": 1024,
         "vcpus": 2,
         "disk": 10,
-        "id": "10"
+        "id": "10",
+        "rxtx_factor": 2.0
     }
 }

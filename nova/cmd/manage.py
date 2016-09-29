@@ -54,10 +54,9 @@
 
 from __future__ import print_function
 
-import argparse
+import functools
 import os
 import sys
-import urllib
 
 import decorator
 import netaddr
@@ -67,10 +66,13 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import importutils
 from oslo_utils import uuidutils
+import prettytable
 import six
+import six.moves.urllib.parse as urlparse
 
 from nova.api.ec2 import ec2utils
 from nova import availability_zones
+from nova.cmd import common as cmd_common
 import nova.conf
 from nova import config
 from nova import context
@@ -79,15 +81,18 @@ from nova.db import migration
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.objects import aggregate as aggregate_obj
 from nova.objects import flavor as flavor_obj
+from nova.objects import instance as instance_obj
+from nova.objects import instance_group as instance_group_obj
+from nova.objects import keypair as keypair_obj
+from nova.objects import request_spec
 from nova import quota
 from nova import rpc
 from nova import utils
 from nova import version
 
 CONF = nova.conf.CONF
-CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
-CONF.import_opt('connection', 'oslo_db.options', group='database')
 
 QUOTAS = quota.QUOTAS
 
@@ -95,11 +100,7 @@ _EXTRA_DEFAULT_LOG_LEVELS = ['oslo_db=INFO']
 
 
 # Decorators for actions
-def args(*args, **kwargs):
-    def _decorator(func):
-        func.__dict__.setdefault('args', []).insert(0, (args, kwargs))
-        return func
-    return _decorator
+args = cmd_common.args
 
 
 def param2id(object_id):
@@ -114,6 +115,11 @@ def param2id(object_id):
 
 class VpnCommands(object):
     """Class for managing VPNs."""
+
+    description = ('DEPRECATED: VPN commands are deprecated since '
+                   'nova-network is deprecated in favor of Neutron. The '
+                   'VPN commands will be removed in the Nova 15.0.0 '
+                   'Ocata release.')
 
     @args('--project', dest='project_id', metavar='<Project name>',
             help='Project name')
@@ -286,15 +292,44 @@ class ProjectCommands(object):
         else:
             quota = QUOTAS.get_project_quotas(ctxt, project_id)
         for key, value in six.iteritems(quota):
-            if value['limit'] < 0 or value['limit'] is None:
+            if value['limit'] is None or value['limit'] < 0:
                 value['limit'] = 'unlimited'
             print(print_format % (key, value['limit'], value['in_use'],
                                   value['reserved']))
 
+    @args('--project', dest='project_id', metavar='<Project Id>',
+            help='Project Id', required=True)
+    @args('--user', dest='user_id', metavar='<User Id>',
+            help='User Id')
+    @args('--key', metavar='<key>', help='Key')
+    def quota_usage_refresh(self, project_id, user_id=None, key=None):
+        """Refresh the quotas for project/user
+
+        If no quota key is provided, all the quota usages will be refreshed.
+        If a valid quota key is provided and it does not exist,
+        it will be created. Otherwise, it will be refreshed.
+        """
+        ctxt = context.get_admin_context()
+
+        keys = None
+        if key:
+            keys = [key]
+
+        try:
+            QUOTAS.usage_refresh(ctxt, project_id, user_id, keys)
+        except exception.QuotaUsageRefreshNotAllowed as e:
+            print(e.format_message())
+            return 2
+
     @args('--project', dest='project_id', metavar='<Project name>',
             help='Project name')
     def scrub(self, project_id):
-        """Deletes data associated with project."""
+        """DEPRECATED: Deletes network data associated with project.
+
+        This command is only for nova-network deployments and nova-network is
+        deprecated in favor of Neutron. This command will be removed in the
+        Nova 15.0.0 Ocata release.
+        """
         admin_context = context.get_admin_context()
         networks = db.project_get_networks(admin_context, project_id)
         for network in networks:
@@ -309,6 +344,11 @@ AccountCommands = ProjectCommands
 
 class FixedIpCommands(object):
     """Class for managing fixed IP."""
+
+    description = ('DEPRECATED: Fixed IP commands are deprecated since '
+                   'nova-network is deprecated in favor of Neutron. The '
+                   'fixed IP commands will be removed in the Nova 15.0.0 '
+                   'Ocata release.')
 
     @args('--host', metavar='<host>', help='Host')
     def list(self, host=None):
@@ -403,6 +443,11 @@ class FixedIpCommands(object):
 
 class FloatingIpCommands(object):
     """Class for managing floating IP."""
+
+    description = ('DEPRECATED: Floating IP commands are deprecated since '
+                   'nova-network is deprecated in favor of Neutron. The '
+                   'floating IP commands will be removed in the Nova 15.0.0 '
+                   'Ocata release.')
 
     @staticmethod
     def address_to_hosts(addresses):
@@ -502,6 +547,11 @@ def validate_network_plugin(f, *args, **kwargs):
 class NetworkCommands(object):
     """Class for managing networks."""
 
+    description = ('DEPRECATED: Network commands are deprecated since '
+                   'nova-network is deprecated in favor of Neutron. The '
+                   'network commands will be removed in the Nova 15.0.0 Ocata '
+                   'release.')
+
     @validate_network_plugin
     @args('--label', metavar='<label>', help='Label for network (ex: public)')
     @args('--fixed_range_v4', dest='cidr', metavar='<x.x.x.x/yy>',
@@ -539,6 +589,16 @@ class NetworkCommands(object):
                dns1=None, dns2=None, project_id=None, priority=None,
                uuid=None, fixed_cidr=None):
         """Creates fixed IPs for host by range."""
+
+        # NOTE(gmann): These checks are moved here as API layer does all these
+        # validation through JSON schema.
+        if not label:
+            raise exception.NetworkNotCreated(req="label")
+        if len(label) > 255:
+            raise exception.LabelTooLong()
+        if not (cidr or cidr_v6):
+            raise exception.NetworkNotCreated(req="cidr or cidr_v6")
+
         kwargs = {k: v for k, v in six.iteritems(locals())
                   if v and k != "self"}
         if multi_host is not None:
@@ -627,7 +687,7 @@ class NetworkCommands(object):
 
         # The --disassociate-X are boolean options, but if they user
         # mistakenly provides a value, it will be used as a positional argument
-        # and be erroneously interepreted as some other parameter (e.g.
+        # and be erroneously interpreted as some other parameter (e.g.
         # a project instead of host value). The safest thing to do is error-out
         # with a message indicating that there is probably a problem with
         # how the disassociate modifications are being used.
@@ -651,9 +711,13 @@ class NetworkCommands(object):
 class VmCommands(object):
     """Class for managing VM instances."""
 
+    description = ('DEPRECATED: Use the nova list command from '
+                   'python-novaclient instead. The vm subcommand will be '
+                   'removed in the 15.0.0 Ocata release.')
+
     @args('--host', metavar='<host>', help='Host')
     def list(self, host=None):
-        """Show a list of all instances."""
+        """DEPRECATED: Show a list of all instances."""
 
         print(("%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s"
                "  %-10s %-10s %-10s %-5s" % (_('instance'),
@@ -720,18 +784,41 @@ class DbCommands(object):
     """Class for managing the main database."""
 
     online_migrations = (
-        db.pcidevice_online_data_migration,
         db.aggregate_uuids_online_data_migration,
         flavor_obj.migrate_flavors,
         flavor_obj.migrate_flavor_reset_autoincrement,
+        instance_obj.migrate_instance_keypairs,
+        request_spec.migrate_instances_add_request_spec,
+        keypair_obj.migrate_keypairs_to_api_db,
+        aggregate_obj.migrate_aggregates,
+        aggregate_obj.migrate_aggregate_reset_autoincrement,
+        instance_group_obj.migrate_instance_groups_to_api_db,
     )
 
     def __init__(self):
         pass
 
     @args('--version', metavar='<version>', help='Database version')
-    def sync(self, version=None):
+    @args('--local_cell', action='store_true',
+          help='Only sync db in the local cell: do not attempt to fan-out'
+               'to all cells')
+    def sync(self, version=None, local_cell=False):
         """Sync the database up to the most recent version."""
+        if not local_cell:
+            ctxt = context.RequestContext()
+            # NOTE(mdoff): Multiple cells not yet implemented. Currently
+            # fanout only looks for cell0.
+            try:
+                cell_mapping = objects.CellMapping.get_by_uuid(ctxt,
+                                            objects.CellMapping.CELL0_UUID)
+                with context.target_cell(ctxt, cell_mapping):
+                    migration.db_sync(version, context=ctxt)
+            except exception.CellMappingNotFound:
+                print(_('WARNING: cell0 mapping not found - not'
+                        ' syncing cell0.'))
+            except Exception:
+                print(_('ERROR: could not access cell mapping database - has'
+                        ' api db been created?'))
         return migration.db_sync(version)
 
     def version(self):
@@ -794,6 +881,7 @@ class DbCommands(object):
 
     def _run_migration(self, ctxt, max_count):
         ran = 0
+        migrations = {}
         for migration_meth in self.online_migrations:
             count = max_count - ran
             try:
@@ -803,16 +891,20 @@ class DbCommands(object):
                       method=migration_meth))
                 found = done = 0
 
+            name = migration_meth.__name__
             if found:
                 print(_('%(total)i rows matched query %(meth)s, %(done)i '
                         'migrated') % {'total': found,
-                                       'meth': migration_meth.__name__,
+                                       'meth': name,
                                        'done': done})
+            migrations.setdefault(name, (0, 0))
+            migrations[name] = (migrations[name][0] + found,
+                                migrations[name][1] + done)
             if max_count is not None:
                 ran += done
                 if ran >= max_count:
                     break
-        return ran
+        return migrations
 
     @args('--max-count', metavar='<number>', dest='max_count',
           help='Maximum number of objects to consider')
@@ -833,10 +925,21 @@ class DbCommands(object):
             print(_('Running batches of %i until complete') % max_count)
 
         ran = None
+        migration_info = {}
         while ran is None or ran != 0:
-            ran = self._run_migration(ctxt, max_count)
+            migrations = self._run_migration(ctxt, max_count)
+            migration_info.update(migrations)
+            ran = sum([done for found, done in migrations.values()])
             if not unlimited:
                 break
+
+        t = prettytable.PrettyTable([_('Migration'),
+                                     _('Total Needed'),
+                                     _('Completed')])
+        for name in sorted(migration_info.keys()):
+            info = migration_info[name]
+            t.add_row([name, info[0], info[1]])
+        print(t)
 
         return ran and 1 or 0
 
@@ -1080,7 +1183,7 @@ class CellCommands(object):
             is_parent = True
         values = {'name': name,
                   'is_parent': is_parent,
-                  'transport_url': urllib.unquote(str(transport_url)),
+                  'transport_url': urlparse.unquote(str(transport_url)),
                   'weight_offset': float(woffset),
                   'weight_scale': float(wscale)}
         ctxt = context.get_admin_context()
@@ -1114,34 +1217,88 @@ class CellCommands(object):
 class CellV2Commands(object):
     """Commands for managing cells v2."""
 
-    @args('--cell_uuid', metavar='<cell_uuid>', required=True,
-            help='Unmigrated instances will be mapped to the cell with the '
-                 'uuid provided.')
-    @args('--limit', metavar='<limit>',
-          help='Maximum number of instances to map')
-    @args('--marker', metavar='<marker',
-          help='The last updated instance UUID')
-    @args('--verbose', metavar='<verbose>',
-          help='Provide output for the registration')
-    def map_instances(self, cell_uuid, limit=None,
-                      marker=None, verbose=0):
-        if limit is not None:
-            limit = int(limit)
-            if limit < 0:
-                print('Must supply a positive value for limit')
-                return(1)
-        ctxt = context.get_admin_context(read_deleted='yes')
-        # Validate the cell exists
-        cell_mapping = objects.CellMapping.get_by_uuid(ctxt, cell_uuid)
+    # TODO(melwitt): Remove this when the oslo.messaging function
+    # for assembling a transport url from ConfigOpts is available
+    @args('--transport-url', metavar='<transport url>', required=True,
+          dest='transport_url',
+          help='The transport url for the cell message queue')
+    def simple_cell_setup(self, transport_url):
+        """Simple cellsv2 setup.
+
+        This simplified command is for use by existing non-cells users to
+        configure the default environment. If you are using CellsV1, this
+        will not work for you. Returns 0 if setup is completed (or has
+        already been done), 1 if no hosts are reporting (and this cannot
+        be mapped) and 2 if run in a CellsV1 environment.
+        """
+        if CONF.cells.enable:
+            print('CellsV1 users cannot use this simplified setup command')
+            return 2
+        ctxt = context.RequestContext()
+        try:
+            cell0_mapping = self.map_cell0()
+        except db_exc.DBDuplicateEntry:
+            print('Already setup, nothing to do.')
+            return 0
+        # Run migrations so cell0 is usable
+        with context.target_cell(ctxt, cell0_mapping):
+            migration.db_sync(None, context=ctxt)
+        cell_uuid = self._map_cell_and_hosts(transport_url)
+        if cell_uuid is None:
+            # There are no compute hosts which means no cell_mapping was
+            # created. This should also mean that there are no instances.
+            return 1
+        self.map_instances(cell_uuid)
+        return 0
+
+    @args('--database_connection',
+          metavar='<database_connection>',
+          help='The database connection url for cell0. '
+               'This is optional. If not provided, a standard database '
+               'connection will be used based on the API database connection '
+               'from the Nova configuration.'
+         )
+    def map_cell0(self, database_connection=None):
+        """Create a cell mapping for cell0.
+
+        cell0 is used for instances that have not been scheduled to any cell.
+        This generally applies to instances that have encountered an error
+        before they have been scheduled.
+
+        This command creates a cell mapping for this special cell which
+        requires a database to store the instance data.
+        """
+        def cell0_default_connection():
+            # If no database connection is provided one is generated
+            # based on the API database connection url.
+            # The cell0 database will use the same database scheme and
+            # netloc as the API database, with a related path.
+            scheme, netloc, path, query, fragment = \
+                urlparse.urlsplit(CONF.api_database.connection)
+            root, ext = os.path.splitext(path)
+            path = root + "_cell0" + ext
+            return urlparse.urlunsplit((scheme, netloc, path, query,
+                                        fragment))
+
+        dbc = database_connection or cell0_default_connection()
+        ctxt = context.RequestContext()
+        # A transport url of 'none://' is provided for cell0. RPC should not
+        # be used to access cell0 objects. Cells transport switching will
+        # ignore any 'none' transport type.
+        cell_mapping = objects.CellMapping(
+                ctxt, uuid=objects.CellMapping.CELL0_UUID, name="cell0",
+                transport_url="none:///",
+                database_connection=dbc)
+        cell_mapping.create()
+        return cell_mapping
+
+    def _get_and_map_instances(self, ctxt, cell_mapping, limit, marker):
         filters = {}
         instances = objects.InstanceList.get_by_filters(
-                ctxt, filters, sort_key='created_at', sort_dir='asc',
-                limit=limit, marker=marker)
-        if verbose:
-            fmt = "%s instances retrieved to be mapped to cell %s"
-            print(fmt % (len(instances), cell_uuid))
+                ctxt.elevated(read_deleted='yes'), filters,
+                sort_key='created_at', sort_dir='asc', limit=limit,
+                marker=marker)
 
-        mapped = 0
         for instance in instances:
             try:
                 mapping = objects.InstanceMapping(ctxt)
@@ -1150,51 +1307,93 @@ class CellV2Commands(object):
                 mapping.project_id = instance.project_id
                 mapping.create()
             except db_exc.DBDuplicateEntry:
-                if verbose:
-                    print("%s already mapped to cell" % instance.uuid)
                 continue
-            mapped += 1
 
-        fmt = "%s instances registered to cell %s"
-        print(fmt % (mapped, cell_mapping.uuid))
-        if instances:
-            instance = instances[-1]
-            print('Next marker: - %s' % instance.uuid)
+        if len(instances) == 0 or len(instances) < limit:
+            # We've hit the end of the instances table
+            marker = None
+        else:
+            marker = instances[-1].uuid
+        return marker
 
-    # TODO(melwitt): Remove this when the oslo.messaging function
-    # for assembling a transport url from ConfigOpts is available
-    @args('--transport-url', metavar='<transport url>', required=True,
-          dest='transport_url',
-          help='The transport url for the cell message queue')
-    @args('--name', metavar='<name>', help='The name of the cell')
-    @args('--verbose', action='store_true',
-          help='Return and output the uuid of the created cell')
-    def map_cell_and_hosts(self, transport_url, name=None, verbose=False):
-        """EXPERIMENTAL. Create a cell mapping and host mappings for a cell.
+    @args('--cell_uuid', metavar='<cell_uuid>', required=True,
+            help='Unmigrated instances will be mapped to the cell with the '
+                 'uuid provided.')
+    @args('--max-count', metavar='<max_count>',
+          help='Maximum number of instances to map')
+    def map_instances(self, cell_uuid, max_count=None):
+        """Map instances into the provided cell.
 
-        Users not dividing their cloud into multiple cells will be a single
-        cell v2 deployment and should specify:
-
-          nova-manage cell_v2 map_cell_and_hosts --config-file <nova.conf>
-
-        Users running multiple cells can add a cell v2 by specifying:
-
-          nova-manage cell_v2 map_cell_and_hosts --config-file <cell nova.conf>
+        This assumes that Nova on this host is still configured to use the nova
+        database not just the nova-api database. Instances in the nova database
+        will be queried from oldest to newest and mapped to the provided cell.
+        A max-count can be set on the number of instance to map in a single
+        run. Repeated runs of the command will start from where the last run
+        finished so it is not necessary to increase max-count to finish. An
+        exit code of 0 indicates that all instances have been mapped.
         """
+
+        if max_count is not None:
+            try:
+                max_count = int(max_count)
+            except ValueError:
+                max_count = -1
+            map_all = False
+            if max_count < 1:
+                print(_('Must supply a positive value for max-count'))
+                return 127
+        else:
+            map_all = True
+            max_count = 50
+
+        ctxt = context.RequestContext()
+        marker_project_id = 'INSTANCE_MIGRATION_MARKER'
+
+        # Validate the cell exists, this will raise if not
+        cell_mapping = objects.CellMapping.get_by_uuid(ctxt, cell_uuid)
+
+        # Check for a marker from a previous run
+        marker_mapping = objects.InstanceMappingList.get_by_project_id(ctxt,
+                marker_project_id)
+        if len(marker_mapping) == 0:
+            marker = None
+        else:
+            # There should be only one here
+            marker = marker_mapping[0].instance_uuid.replace(' ', '-')
+            marker_mapping[0].destroy()
+
+        next_marker = True
+        while next_marker is not None:
+            next_marker = self._get_and_map_instances(ctxt, cell_mapping,
+                    max_count, marker)
+            marker = next_marker
+            if not map_all:
+                break
+
+        if next_marker:
+            # Don't judge me. There's already an InstanceMapping with this UUID
+            # so the marker needs to be non destructively modified.
+            next_marker = next_marker.replace('-', ' ')
+            objects.InstanceMapping(ctxt, instance_uuid=next_marker,
+                    project_id=marker_project_id).create()
+            return 1
+        return 0
+
+    def _map_cell_and_hosts(self, transport_url, name=None, verbose=False):
         ctxt = context.RequestContext()
         cell_mapping_uuid = cell_mapping = None
         # First, try to detect if a CellMapping has already been created
         compute_nodes = objects.ComputeNodeList.get_all(ctxt)
         if not compute_nodes:
             print(_('No hosts found to map to cell, exiting.'))
-            return(0)
-        missing_nodes = []
+            return None
+        missing_nodes = set()
         for compute_node in compute_nodes:
             try:
                 host_mapping = objects.HostMapping.get_by_host(
                     ctxt, compute_node.host)
             except exception.HostMappingNotFound:
-                missing_nodes.append(compute_node)
+                missing_nodes.add(compute_node.host)
             else:
                 if verbose:
                     print(_(
@@ -1209,7 +1408,7 @@ class CellV2Commands(object):
                 cell_mapping_uuid = host_mapping.cell_mapping.uuid
         if not missing_nodes:
             print(_('All hosts are already mapped to cell(s), exiting.'))
-            return(0)
+            return cell_mapping_uuid
         # Create the cell mapping in the API database
         if cell_mapping_uuid is not None:
             cell_mapping = objects.CellMapping.get_by_uuid(
@@ -1222,12 +1421,120 @@ class CellV2Commands(object):
                 database_connection=CONF.database.connection)
             cell_mapping.create()
         # Pull the hosts from the cell database and create the host mappings
-        for compute_node in missing_nodes:
+        for compute_host in missing_nodes:
             host_mapping = objects.HostMapping(
-                ctxt, host=compute_node.host, cell_mapping=cell_mapping)
+                ctxt, host=compute_host, cell_mapping=cell_mapping)
             host_mapping.create()
         if verbose:
             print(cell_mapping_uuid)
+        return cell_mapping_uuid
+
+    @args('--transport-url', metavar='<transport url>', dest='transport_url',
+          help='The transport url for the cell message queue')
+    @args('--name', metavar='<name>', help='The name of the cell')
+    @args('--verbose', action='store_true',
+          help='Return and output the uuid of the created cell')
+    def map_cell_and_hosts(self, transport_url=None, name=None, verbose=False):
+        """EXPERIMENTAL. Create a cell mapping and host mappings for a cell.
+
+        Users not dividing their cloud into multiple cells will be a single
+        cell v2 deployment and should specify:
+
+          nova-manage cell_v2 map_cell_and_hosts --config-file <nova.conf>
+
+        Users running multiple cells can add a cell v2 by specifying:
+
+          nova-manage cell_v2 map_cell_and_hosts --config-file <cell nova.conf>
+        """
+        transport_url = CONF.transport_url or transport_url
+        if not transport_url:
+            print('Must specify --transport-url if [DEFAULT]/transport_url '
+                  'is not set in the configuration file.')
+            return 1
+        self._map_cell_and_hosts(transport_url, name, verbose)
+        # online_data_migrations established a pattern of 0 meaning everything
+        # is done, 1 means run again to do more work. This command doesn't do
+        # partial work so 0 is appropriate.
+        return 0
+
+    @args('--uuid', metavar='<uuid>', dest='uuid', required=True,
+          help=_('The instance UUID to verify'))
+    @args('--quiet', action='store_true', dest='quiet',
+          help=_('Do not print anything'))
+    def verify_instance(self, uuid, quiet=False):
+        """Verify instance mapping to a cell.
+
+        This command is useful to determine if the cellsv2 environment is
+        properly setup, specifically in terms of the cell, host, and instance
+        mapping records required.
+
+        This prints one of three strings (and exits with a code) indicating
+        whether the instance is successfully mapped to a cell (0), is unmapped
+        due to an incomplete upgrade (1), or unmapped due to normally transient
+        state (2).
+        """
+        if not uuid:
+            print(_('Must specify --uuid'))
+            return 16
+
+        def say(string):
+            if not quiet:
+                print(string)
+
+        ctxt = context.RequestContext()
+        try:
+            mapping = objects.InstanceMapping.get_by_instance_uuid(
+                ctxt, uuid)
+        except exception.InstanceMappingNotFound:
+            say('Instance %s is not mapped to a cell '
+                '(upgrade is incomplete)' % uuid)
+            return 1
+        if mapping.cell_mapping is None:
+            say('Instance %s is not mapped to a cell' % uuid)
+            return 2
+        else:
+            say('Instance %s is in cell: %s (%s)' % (
+                uuid,
+                mapping.cell_mapping.name,
+                mapping.cell_mapping.uuid))
+            return 0
+
+    @args('--cell_uuid', metavar='<cell_uuid>', dest='cell_uuid',
+          help='If provided only this cell will be searched for new hosts to '
+               'map.')
+    def discover_hosts(self, cell_uuid=None):
+        """Searches cells, or a single cell, and maps found hosts.
+
+        When a new host is added to a deployment it will add a service entry
+        to the db it's configured to use. This command will check the db for
+        each cell, or a single one if passed in, and map any hosts which are
+        not currently mapped. If a host is already mapped nothing will be done.
+        """
+        ctxt = context.RequestContext()
+
+        # TODO(alaski): If this is not run on a host configured to use the API
+        # database most of the lookups below will fail and may not provide a
+        # great error message. Add a check which will raise a useful error
+        # message about running this from an API host.
+        if cell_uuid:
+            cell_mappings = [objects.CellMapping.get_by_uuid(ctxt, cell_uuid)]
+        else:
+            cell_mappings = objects.CellMappingList.get_all(context)
+
+        for cell_mapping in cell_mappings:
+            # TODO(alaski): Factor this into helper method on CellMapping
+            if cell_mapping.uuid == cell_mapping.CELL0_UUID:
+                continue
+            with context.target_cell(ctxt, cell_mapping):
+                compute_nodes = objects.ComputeNodeList.get_all(ctxt)
+            for compute in compute_nodes:
+                try:
+                    objects.HostMapping.get_by_host(ctxt, compute.host)
+                except exception.HostMappingNotFound:
+                    host_mapping = objects.HostMapping(
+                        ctxt, host=compute.host,
+                        cell_mapping=cell_mapping)
+                    host_mapping.create()
 
 
 CATEGORIES = {
@@ -1249,55 +1556,8 @@ CATEGORIES = {
 }
 
 
-def methods_of(obj):
-    """Get all callable methods of an object that don't start with underscore
-
-    returns a list of tuples of the form (method_name, method)
-    """
-    result = []
-    for i in dir(obj):
-        if callable(getattr(obj, i)) and not i.startswith('_'):
-            result.append((i, getattr(obj, i)))
-    return result
-
-
-def add_command_parsers(subparsers):
-    parser = subparsers.add_parser('version')
-
-    parser = subparsers.add_parser('bash-completion')
-    parser.add_argument('query_category', nargs='?')
-
-    for category in CATEGORIES:
-        command_object = CATEGORIES[category]()
-
-        desc = getattr(command_object, 'description', None)
-        parser = subparsers.add_parser(category, description=desc)
-        parser.set_defaults(command_object=command_object)
-
-        category_subparsers = parser.add_subparsers(dest='action')
-
-        for (action, action_fn) in methods_of(command_object):
-            parser = category_subparsers.add_parser(action, description=desc)
-
-            action_kwargs = []
-            for args, kwargs in getattr(action_fn, 'args', []):
-                # FIXME(markmc): hack to assume dest is the arg name without
-                # the leading hyphens if no dest is supplied
-                kwargs.setdefault('dest', args[0][2:])
-                if kwargs['dest'].startswith('action_kwarg_'):
-                    action_kwargs.append(
-                            kwargs['dest'][len('action_kwarg_'):])
-                else:
-                    action_kwargs.append(kwargs['dest'])
-                    kwargs['dest'] = 'action_kwarg_' + kwargs['dest']
-
-                parser.add_argument(*args, **kwargs)
-
-            parser.set_defaults(action_fn=action_fn)
-            parser.set_defaults(action_kwargs=action_kwargs)
-
-            parser.add_argument('action_args', nargs='*',
-                                help=argparse.SUPPRESS)
+add_command_parsers = functools.partial(cmd_common.add_command_parsers,
+                                        categories=CATEGORIES)
 
 
 category_opt = cfg.SubCommandOpt('category',
@@ -1335,38 +1595,11 @@ def main():
         return(0)
 
     if CONF.category.name == "bash-completion":
-        if not CONF.category.query_category:
-            print(" ".join(CATEGORIES.keys()))
-        elif CONF.category.query_category in CATEGORIES:
-            fn = CATEGORIES[CONF.category.query_category]
-            command_object = fn()
-            actions = methods_of(command_object)
-            print(" ".join([k for (k, v) in actions]))
+        cmd_common.print_bash_completion(CATEGORIES)
         return(0)
 
-    fn = CONF.category.action_fn
-    fn_args = [arg.decode('utf-8') for arg in CONF.category.action_args]
-    fn_kwargs = {}
-    for k in CONF.category.action_kwargs:
-        v = getattr(CONF.category, 'action_kwarg_' + k)
-        if v is None:
-            continue
-        if isinstance(v, six.string_types):
-            v = v.decode('utf-8')
-        fn_kwargs[k] = v
-
-    # call the action with the remaining arguments
-    # check arguments
-    missing = utils.validate_args(fn, *fn_args, **fn_kwargs)
-    if missing:
-        # NOTE(mikal): this isn't the most helpful error message ever. It is
-        # long, and tells you a lot of things you probably don't want to know
-        # if you just got a single arg wrong.
-        print(fn.__doc__)
-        CONF.print_help()
-        print(_("Missing arguments: %s") % ", ".join(missing))
-        return(1)
     try:
+        fn, fn_args, fn_kwargs = cmd_common.get_action_fn()
         ret = fn(*fn_args, **fn_kwargs)
         rpc.cleanup()
         return(ret)

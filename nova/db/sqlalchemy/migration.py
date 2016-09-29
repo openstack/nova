@@ -36,42 +36,46 @@ _REPOSITORY = {}
 LOG = logging.getLogger(__name__)
 
 
-def get_engine(database='main'):
+def get_engine(database='main', context=None):
     if database == 'main':
-        return db_session.get_engine()
+        return db_session.get_engine(context=context)
     if database == 'api':
         return db_session.get_api_engine()
 
 
-def db_sync(version=None, database='main'):
+def db_sync(version=None, database='main', context=None):
     if version is not None:
         try:
             version = int(version)
         except ValueError:
             raise exception.NovaException(_("version should be an integer"))
 
-    current_version = db_version(database)
+    current_version = db_version(database, context=context)
     repository = _find_migrate_repo(database)
     if version is None or version > current_version:
-        return versioning_api.upgrade(get_engine(database), repository,
-                version)
+        return versioning_api.upgrade(get_engine(database, context=context),
+                repository, version)
     else:
-        return versioning_api.downgrade(get_engine(database), repository,
-                version)
+        return versioning_api.downgrade(get_engine(database, context=context),
+                repository, version)
 
 
-def db_version(database='main'):
+def db_version(database='main', context=None):
     repository = _find_migrate_repo(database)
     try:
-        return versioning_api.db_version(get_engine(database), repository)
+        return versioning_api.db_version(get_engine(database, context=context),
+                                         repository)
     except versioning_exceptions.DatabaseNotControlledError as exc:
         meta = sqlalchemy.MetaData()
-        engine = get_engine(database)
+        engine = get_engine(database, context=context)
         meta.reflect(bind=engine)
         tables = meta.tables
         if len(tables) == 0:
-            db_version_control(INIT_VERSION[database], database)
-            return versioning_api.db_version(get_engine(database), repository)
+            db_version_control(INIT_VERSION[database],
+                               database,
+                               context=context)
+            return versioning_api.db_version(
+                        get_engine(database, context=context), repository)
         else:
             LOG.exception(exc)
             # Some pre-Essex DB's may not be version controlled.
@@ -153,9 +157,11 @@ def db_null_instance_uuid_scan(delete=False):
     return processed
 
 
-def db_version_control(version=None, database='main'):
+def db_version_control(version=None, database='main', context=None):
     repository = _find_migrate_repo(database)
-    versioning_api.version_control(get_engine(database), repository, version)
+    versioning_api.version_control(get_engine(database, context=context),
+                                   repository,
+                                   version)
     return version
 
 

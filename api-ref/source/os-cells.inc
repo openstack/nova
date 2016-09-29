@@ -1,8 +1,8 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
+
 
 ==============================
  Cells (os-cells, capacities)
@@ -14,14 +14,14 @@ the local cell.
 List Cells
 ==========
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-cells
+.. rest_method:: GET /os-cells
 
 Lists cells.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404), NotImplemented(501)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+NotImplemented(501)
 
 Request
 -------
@@ -29,6 +29,8 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
+
+.. TODO(cdent): How do we indicate optionality of a URI parameter?
 
 Response
 --------
@@ -38,51 +40,88 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-cells/cells-list-resp.json
    :language: javascript
 
+Create Cell
+===========
+
+.. rest_method:: POST /os-cells
+
+Create a new cell.
+
+Normal response code: 200
+
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+NotImplemented(501)
+
+.. TODO(cdent): need to figure out body stuff for request and response
+
+.. TODO(cdent): need a sample
+
+Capacities
+==========
+
+.. rest_method:: GET /os-cells/capacities
+
+Retrieve capacities.
+
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+NotImplemented(501)
+
+.. TODO(cdent): Need to do more digging, no idea.
+
 List Cells With Details
 =======================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-cells
+.. rest_method:: GET /os-cells/detail
 
-Lists cells with details.
+Lists cells with details of capabilities.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404), NotImplemented(501)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+NotImplemented(501)
 
 Response
 --------
 
 **Example List Cells With Details: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-cells/cells-list-empty-resp.json
+.. TODO(cdent): This sample was initially list with an empty list of cells.
+   The newly listed sample does not yet exist.
+
+.. TODO(cdent):  literal-include: ../../doc/api_samples/os-cells/cells-list-details-resp.json
    :language: javascript
+
+Info For This Cell
+==================
+
+.. rest_method:: GET /os-cells/info
+
+Retrieve info about the current cell.
+
+Normal response code: 200
+
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+NotImplemented(501)
+
+.. TODO(cdent): this is weird, data is structured entirely differently.
 
 Show Cell Data
 ==============
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-cells/{cell_id}
+.. rest_method:: GET /os-cells/{cell_id}
 
 Shows data for a cell.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404), NotImplemented(501)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), NotImplemented(501)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - cell_id: cell_id
 
 Response
@@ -93,24 +132,52 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-cells/cells-get-resp.json
    :language: javascript
 
+Update a Cell
+=============
+
+.. rest_method:: PUT /os-cells/{cell_od}
+
+
+Update an existing cell.
+
+Normal response code: 200
+
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), NotImplemented(501)
+
+.. TODO(cdent): Figure out what's going on here.
+
+Delete a Cell
+=============
+
+.. rest_method:: DELETE /os-cells/{cell_id}
+
+Remove a cell.
+
+Normal response code: 200
+
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), NotImplemented(501)
+
 Show Cell Capacities
 ====================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-cells/{cell_id}/capacities
+.. rest_method:: GET /os-cells/{cell_id}/capacities
 
 Shows capacities for a cell.
 
+.. TODO(cdent): What's a capacities.
+
 Normal response codes: 200,501
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404), NotImplemented(501)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), NotImplemented(501)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - cell_id: cell_id
 
 Response
@@ -120,4 +187,3 @@ Response
 
 .. literalinclude:: ../../doc/api_samples/os-cells/cells-capacities-resp.json
    :language: javascript
-

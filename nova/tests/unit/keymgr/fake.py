@@ -17,8 +17,8 @@
 """Implementation of a fake key manager."""
 
 
-from nova.keymgr import mock_key_mgr
+from castellan.tests.unit.key_manager import mock_key_manager
 
 
-def fake_api():
-    return mock_key_mgr.MockKeyManager()
+def fake_api(configuration=None):
+    return mock_key_manager.MockKeyManager(configuration)

@@ -26,7 +26,6 @@ from nova import objects
 from nova.objects import fields
 from nova.pci import stats
 from nova.pci import whitelist
-from nova.virt import hardware
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -40,8 +39,18 @@ class PciDevTracker(object):
 
     It's called by compute node resource tracker to allocate and free
     devices to/from instances, and to update the available pci passthrough
-    devices information from hypervisor periodically. The devices
-    information is updated to DB when devices information is changed.
+    devices information from hypervisor periodically.
+
+    `pci_devs` attribute of this class is the in-memory "master copy" of all
+    devices on each compute host, and all data changes that happen when
+    claiming/allocating/freeing
+    devices HAVE TO be made against instances contained in `pci_devs` list,
+    because they are periodically flushed to the DB when the save()
+    method is called.
+
+    It is unsafe to fetch PciDevice objects elsewhere in the code for update
+    purposes as those changes will end up being overwritten when the `pci_devs`
+    are saved.
     """
 
     def __init__(self, context, node_id=None):
@@ -63,6 +72,7 @@ class PciDevTracker(object):
                     context, node_id)
         else:
             self.pci_devs = objects.PciDeviceList(objects=[])
+        self._build_device_tree(self.pci_devs)
         self._initial_instance_usage()
 
     def _initial_instance_usage(self):
@@ -76,10 +86,6 @@ class PciDevTracker(object):
                 self.allocations[uuid].append(dev)
             elif dev.status == fields.PciDeviceStatus.AVAILABLE:
                 self.stats.add_device(dev)
-
-    @property
-    def all_devs(self):
-        return self.pci_devs
 
     def save(self, context):
         for dev in self.pci_devs:
@@ -116,6 +122,42 @@ class PciDevTracker(object):
             if self.dev_filter.device_assignable(dev):
                 devices.append(dev)
         self._set_hvdevs(devices)
+
+    @staticmethod
+    def _build_device_tree(all_devs):
+        """Build a tree of devices that represents parent-child relationships.
+
+        We need to have the relationships set up so that we can easily make
+        all the necessary changes to parent/child devices without having to
+        figure it out at each call site.
+
+        This method just adds references to relevant instances already found
+        in `pci_devs` to `child_devices` and `parent_device` fields of each
+        one.
+
+        Currently relationships are considered for SR-IOV PFs/VFs only.
+        """
+
+        # Ensures that devices are ordered in ASC so VFs will come
+        # after their PFs.
+        all_devs.sort(key=lambda x: x.address)
+
+        parents = {}
+        for dev in all_devs:
+            if dev.status in (fields.PciDeviceStatus.REMOVED,
+                              fields.PciDeviceStatus.DELETED):
+                # NOTE(ndipanov): Removed devs are pruned from
+                # self.pci_devs on save() so we need to make sure we
+                # are not looking at removed ones as we may build up
+                # the tree sooner than they are pruned.
+                continue
+            if dev.dev_type == fields.PciDeviceType.SRIOV_PF:
+                dev.child_devices = []
+                parents[dev.address] = dev
+            elif dev.dev_type == fields.PciDeviceType.SRIOV_VF:
+                dev.parent_device = parents.get(dev.parent_addr)
+                if dev.parent_device:
+                    parents[dev.parent_addr].child_devices.append(dev)
 
     def _set_hvdevs(self, devices):
         exist_addrs = set([dev.address for dev in self.pci_devs])
@@ -169,13 +211,9 @@ class PciDevTracker(object):
             self.pci_devs.objects.append(dev_obj)
             self.stats.add_device(dev_obj)
 
-    def _claim_instance(self, context, instance, prefix=''):
-        pci_requests = objects.InstancePCIRequests.get_by_instance(
-            context, instance)
-        if not pci_requests.requests:
-            return None
-        instance_numa_topology = hardware.instance_topology_from_instance(
-            instance)
+        self._build_device_tree(self.pci_devs)
+
+    def _claim_instance(self, context, pci_requests, instance_numa_topology):
         instance_cells = None
         if instance_numa_topology:
             instance_cells = instance_numa_topology.cells
@@ -185,13 +223,14 @@ class PciDevTracker(object):
         if not devs:
             return None
 
+        instance_uuid = pci_requests.instance_uuid
         for dev in devs:
-            dev.claim(instance)
+            dev.claim(instance_uuid)
         if instance_numa_topology and any(
                                         dev.numa_node is None for dev in devs):
             LOG.warning(_LW("Assigning a pci device without numa affinity to"
             "instance %(instance)s which has numa topology"),
-                        {'instance': instance['uuid']})
+                        {'instance': instance_uuid})
         return devs
 
     def _allocate_instance(self, instance, devs):
@@ -204,15 +243,28 @@ class PciDevTracker(object):
         if devs:
             self.allocations[instance['uuid']] += devs
 
-    def claim_instance(self, context, instance):
-        if not self.pci_devs:
-            return
+    def claim_instance(self, context, pci_requests, instance_numa_topology):
+        devs = []
+        if self.pci_devs and pci_requests.requests:
+            instance_uuid = pci_requests.instance_uuid
+            devs = self._claim_instance(context, pci_requests,
+                                        instance_numa_topology)
+            if devs:
+                self.claims[instance_uuid] = devs
+        return devs
 
-        devs = self._claim_instance(context, instance)
-        if devs:
-            self.claims[instance['uuid']] = devs
-            return devs
-        return None
+    def free_device(self, dev, instance):
+        """Free device from pci resource tracker
+
+        :param dev: cloned pci device object that needs to be free
+        :param instance: the instance that this pci device
+                         is allocated to
+        """
+        for pci_dev in self.pci_devs:
+            # find the matching pci device in the pci resource tracker
+            # pci device. Once found one free it.
+            if dev == pci_dev and dev.instance_uuid == instance['uuid']:
+                self._free_device(pci_dev)
 
     def _free_device(self, dev, instance=None):
         freed_devs = dev.free(instance)
@@ -251,22 +303,6 @@ class PciDevTracker(object):
         if sign == 1:
             self.allocate_instance(instance)
 
-    def update_pci_for_migration(self, context, instance, sign=1):
-        """Update instance's pci usage information when it is migrated.
-
-        The caller should hold the COMPUTE_RESOURCE_SEMAPHORE lock.
-
-        :param sign: claim devices for instance when sign is 1, remove
-                     the claims when sign is -1
-        """
-        uuid = instance['uuid']
-        if sign == 1 and uuid not in self.claims:
-            devs = self._claim_instance(context, instance, 'new_')
-            if devs:
-                self.claims[uuid] = devs
-        if sign == -1 and uuid in self.claims:
-            self._free_instance(instance)
-
     def clean_usage(self, instances, migrations, orphans):
         """Remove all usages for instances not passed in the parameter.
 
@@ -276,12 +312,14 @@ class PciDevTracker(object):
         existed |= set(mig['instance_uuid'] for mig in migrations)
         existed |= set(inst['uuid'] for inst in orphans)
 
-        for uuid in self.claims.keys():
+        # need to copy keys, because the dict is modified in the loop body
+        for uuid in list(self.claims):
             if uuid not in existed:
                 devs = self.claims.pop(uuid, [])
                 for dev in devs:
                     self._free_device(dev)
-        for uuid in self.allocations.keys():
+        # need to copy keys, because the dict is modified in the loop body
+        for uuid in list(self.allocations):
             if uuid not in existed:
                 devs = self.allocations.pop(uuid, [])
                 for dev in devs:

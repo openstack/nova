@@ -18,8 +18,6 @@ import six
 import webob
 
 from nova.api.openstack import api_version_request
-from nova.api.openstack.compute.legacy_v2.contrib import admin_actions as \
-    migrate_server_v2
 from nova.api.openstack.compute import migrate_server as \
     migrate_server_v21
 from nova import exception
@@ -34,6 +32,8 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
     validation_error = exception.ValidationError
     _api_version = '2.1'
     disk_over_commit = False
+    force = None
+    async = False
 
     def setUp(self):
         super(MigrateServerTestsV21, self).setUp()
@@ -60,7 +60,8 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
                                '_migrate_live': 'live_migrate'}
         body_map = {'_migrate_live': self._get_migration_body(host='hostname')}
         args_map = {'_migrate_live': ((False, self.disk_over_commit,
-                                       'hostname'), {})}
+                                       'hostname', self.force, self.async),
+                                      {})}
         self._test_actions(['_migrate', '_migrate_live'], body_map=body_map,
                            method_translations=method_translations,
                            args_map=args_map)
@@ -69,7 +70,8 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
         method_translations = {'_migrate': 'resize',
                                '_migrate_live': 'live_migrate'}
         body_map = {'_migrate_live': self._get_migration_body(host=None)}
-        args_map = {'_migrate_live': ((False, self.disk_over_commit, None),
+        args_map = {'_migrate_live': ((False, self.disk_over_commit, None,
+                                       self.force, self.async),
                                       {})}
         self._test_actions(['_migrate', '_migrate_live'], body_map=body_map,
                            method_translations=method_translations,
@@ -85,7 +87,8 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
                                '_migrate_live': 'live_migrate'}
         body_map = self._get_migration_body(host='hostname')
         args_map = {'_migrate_live': ((False, self.disk_over_commit,
-                                       'hostname'), {})}
+                                       'hostname', self.force, self.async),
+                                      {})}
         exception_arg = {'_migrate': 'migrate',
                          '_migrate_live': 'os-migrateLive'}
         self._test_actions_raise_conflict_on_invalid_state(
@@ -100,7 +103,8 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
         body_map = {'_migrate_live':
                     self._get_migration_body(host='hostname')}
         args_map = {'_migrate_live': ((False, self.disk_over_commit,
-                                       'hostname'), {})}
+                                       'hostname', self.force, self.async),
+                                      {})}
         self._test_actions_with_locked_instance(
             ['_migrate', '_migrate_live'], body_map=body_map,
             args_map=args_map, method_translations=method_translations)
@@ -124,19 +128,14 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
         self.mox.StubOutWithMock(self.compute_api, 'live_migrate')
         instance = self._stub_instance_get()
         self.compute_api.live_migrate(self.context, instance, False,
-                                      self.disk_over_commit, 'hostname')
+                                      self.disk_over_commit, 'hostname',
+                                      self.force, self.async)
 
         self.mox.ReplayAll()
-
-        res = self.controller._migrate_live(self.req, instance.uuid,
-                                            body={'os-migrateLive': param})
-        # NOTE: on v2.1, http status code is set as wsgi_code of API
-        # method instead of status_int in a response object.
-        if self._api_version == '2.1':
-            status_int = self.controller._migrate_live.wsgi_code
-        else:
-            status_int = res.status_int
-        self.assertEqual(202, status_int)
+        live_migrate_method = self.controller._migrate_live
+        live_migrate_method(self.req, instance.uuid,
+                            body={'os-migrateLive': param})
+        self.assertEqual(202, live_migrate_method.wsgi_code)
 
     def test_migrate_live_enabled(self):
         param = self._get_params(host='hostname')
@@ -203,8 +202,8 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
         instance = self._stub_instance_get(uuid=uuid)
         self.compute_api.live_migrate(self.context, instance, False,
                                       self.disk_over_commit,
-                                      'hostname').AndRaise(fake_exc)
-
+                                      'hostname', self.force, self.async
+                                      ).AndRaise(fake_exc)
         self.mox.ReplayAll()
 
         body = self._get_migration_body(host='hostname')
@@ -217,6 +216,10 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
     def test_migrate_live_compute_service_unavailable(self):
         self._test_migrate_live_failed_with_exception(
             exception.ComputeServiceUnavailable(host='host'))
+
+    def test_migrate_live_compute_service_not_found(self):
+        self._test_migrate_live_failed_with_exception(
+            exception.ComputeHostNotFound(host='host'))
 
     def test_migrate_live_invalid_hypervisor_type(self):
         self._test_migrate_live_failed_with_exception(
@@ -264,18 +267,17 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
         self._test_migrate_live_failed_with_exception(
             exception.MigrationPreCheckError(reason=''))
 
+    def test_migrate_live_migration_precheck_client_exception(self):
+        self._test_migrate_live_failed_with_exception(
+            exception.MigrationPreCheckClientException(reason=''),
+            expected_exc=webob.exc.HTTPInternalServerError,
+            check_response=False)
+
     def test_migrate_live_migration_with_unexpected_error(self):
         self._test_migrate_live_failed_with_exception(
             exception.MigrationError(reason=''),
             expected_exc=webob.exc.HTTPInternalServerError,
             check_response=False)
-
-
-class MigrateServerTestsV2(MigrateServerTestsV21):
-    migrate_server = migrate_server_v2
-    controller_name = 'AdminActionsController'
-    validation_error = webob.exc.HTTPBadRequest
-    _api_version = '2'
 
 
 class MigrateServerTestsV225(MigrateServerTestsV21):
@@ -307,7 +309,8 @@ class MigrateServerTestsV225(MigrateServerTestsV21):
         method_translations = {'_migrate_live': 'live_migrate'}
         body_map = {'_migrate_live': {'os-migrateLive': {'host': 'hostname',
                                       'block_migration': 'auto'}}}
-        args_map = {'_migrate_live': ((None, None, 'hostname'), {})}
+        args_map = {'_migrate_live': ((None, None, 'hostname', self.force,
+                                       self.async), {})}
         self._test_actions(['_migrate_live'], body_map=body_map,
                            method_translations=method_translations,
                            args_map=args_map)
@@ -324,6 +327,115 @@ class MigrateServerTestsV225(MigrateServerTestsV21):
     def test_migrate_live_migration_with_old_nova_not_supported(self):
         self._test_migrate_live_failed_with_exception(
             exception.LiveMigrationWithOldNovaNotSupported())
+
+
+class MigrateServerTestsV230(MigrateServerTestsV225):
+    force = False
+
+    def setUp(self):
+        super(MigrateServerTestsV230, self).setUp()
+        self.req.api_version_request = api_version_request.APIVersionRequest(
+            '2.30')
+
+    def _test_live_migrate(self, force=False):
+        if force is True:
+            litteral_force = 'true'
+        else:
+            litteral_force = 'false'
+        method_translations = {'_migrate_live': 'live_migrate'}
+        body_map = {'_migrate_live': {'os-migrateLive': {'host': 'hostname',
+                                      'block_migration': 'auto',
+                                      'force': litteral_force}}}
+        args_map = {'_migrate_live': ((None, None, 'hostname', force,
+                                       self.async), {})}
+        self._test_actions(['_migrate_live'], body_map=body_map,
+                           method_translations=method_translations,
+                           args_map=args_map)
+
+    def test_live_migrate(self):
+        self._test_live_migrate()
+
+    def test_live_migrate_with_forced_host(self):
+        self._test_live_migrate(force=True)
+
+    def test_forced_live_migrate_with_no_provided_host(self):
+        body = {'os-migrateLive':
+                {'force': 'true'}}
+        self.assertRaises(self.validation_error,
+                          self.controller._migrate_live,
+                          self.req, fakes.FAKE_UUID, body=body)
+
+
+class MigrateServerTestsV234(MigrateServerTestsV230):
+    async = True
+
+    def setUp(self):
+        super(MigrateServerTestsV230, self).setUp()
+        self.req.api_version_request = api_version_request.APIVersionRequest(
+            '2.34')
+
+    # NOTE(tdurakov): for REST API version 2.34 and above, tests below are not
+    # valid, as they are made in background.
+    def test_migrate_live_compute_service_unavailable(self):
+        pass
+
+    def test_migrate_live_compute_service_not_found(self):
+        pass
+
+    def test_migrate_live_invalid_hypervisor_type(self):
+        pass
+
+    def test_migrate_live_invalid_cpu_info(self):
+        pass
+
+    def test_migrate_live_unable_to_migrate_to_self(self):
+        pass
+
+    def test_migrate_live_destination_hypervisor_too_old(self):
+        pass
+
+    def test_migrate_live_no_valid_host(self):
+        pass
+
+    def test_migrate_live_invalid_local_storage(self):
+        pass
+
+    def test_migrate_live_invalid_shared_storage(self):
+        pass
+
+    def test_migrate_live_hypervisor_unavailable(self):
+        pass
+
+    def test_migrate_live_instance_not_active(self):
+        pass
+
+    def test_migrate_live_pre_check_error(self):
+        pass
+
+    def test_migrate_live_migration_precheck_client_exception(self):
+        pass
+
+    def test_migrate_live_migration_with_unexpected_error(self):
+        pass
+
+    def test_migrate_live_migration_with_old_nova_not_supported(self):
+        pass
+
+    def test_migrate_live_unexpected_error(self):
+        exc = exception.NoValidHost(reason="No valid host found")
+        self.mox.StubOutWithMock(self.compute_api, 'live_migrate')
+        instance = self._stub_instance_get()
+        self.compute_api.live_migrate(self.context, instance, None,
+                                      self.disk_over_commit, 'hostname',
+                                      self.force, self.async).AndRaise(exc)
+
+        self.mox.ReplayAll()
+        body = {'os-migrateLive':
+                {'host': 'hostname', 'block_migration': 'auto'}}
+
+        self.assertRaises(webob.exc.HTTPInternalServerError,
+                          self.controller._migrate_live,
+                          self.req, instance.uuid, body=body)
 
 
 class MigrateServerPolicyEnforcementV21(test.NoDBTestCase):

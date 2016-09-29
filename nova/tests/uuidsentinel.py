@@ -23,7 +23,7 @@ class UUIDSentinels(object):
         if name.startswith('_'):
             raise ValueError('Sentinels must not start with _')
         if name not in self._sentinels:
-            self._sentinels[name] = str(self._uuid_module.generate_uuid())
+            self._sentinels[name] = self._uuid_module.generate_uuid()
         return self._sentinels[name]
 
 

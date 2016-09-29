@@ -1,0 +1,12 @@
+---
+upgrade:
+    - The legacy v2 API code was deprecated since Liberty release. The legacy
+      v2 API code was removed in Newton release. We suggest that users should
+      move to v2.1 API which compatible v2 API with more restrict input
+      validation and microversions support. If users are still looking for v2
+      compatible API before switch to v2.1 API, users can use v2.1 API code as
+      v2 API compatible mode. That compatible mode is closer to v2 API
+      behaviour which is v2 API compatible without restrict input validation
+      and microversions support. So if using openstack_compute_api_legacy_v2
+      in /etc/nova/api-paste.ini for the API endpoint /v2, users need to switch
+      the endpoint to openstack_compute_api_v21_legacy_v2_compatible instead.

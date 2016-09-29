@@ -76,8 +76,8 @@ class UploadToGlanceAsRawTgz(object):
 
     def upload_image(self):
         vdi_ref = self._get_vdi_ref()
-        with vm_utils.vdi_attached_here(self.session, vdi_ref,
-                                        read_only=True) as dev:
+        with vm_utils.vdi_attached(self.session, vdi_ref,
+                                   read_only=True) as dev:
             devpath = utils.make_dev_path(dev)
             with utils.temporary_chown(devpath):
                 self._perform_upload(devpath)

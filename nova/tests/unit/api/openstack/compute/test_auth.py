@@ -14,9 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import webob
-import webob.dec
-
 import testscenarios
 
 from nova.api import openstack as openstack_api
@@ -40,7 +37,6 @@ class TestNoAuthMiddleware(testscenarios.WithScenarios, test.NoDBTestCase):
 
     def setUp(self):
         super(TestNoAuthMiddleware, self).setUp()
-        fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_networking(self)
         api_v21 = openstack_api.FaultWrapper(
             self.auth_middleware(
@@ -52,7 +48,7 @@ class TestNoAuthMiddleware(testscenarios.WithScenarios, test.NoDBTestCase):
         self.req_url = '/v2.1'
 
     def test_authorize_user(self):
-        req = webob.Request.blank(self.req_url)
+        req = fakes.HTTPRequest.blank(self.req_url, base_url='')
         req.headers['X-Auth-User'] = 'user1'
         req.headers['X-Auth-Key'] = 'user1_key'
         req.headers['X-Auth-Project-Id'] = 'user1_project'
@@ -64,7 +60,7 @@ class TestNoAuthMiddleware(testscenarios.WithScenarios, test.NoDBTestCase):
     def test_authorize_user_trailing_slash(self):
         # make sure it works with trailing slash on the request
         self.req_url = self.req_url + '/'
-        req = webob.Request.blank(self.req_url)
+        req = fakes.HTTPRequest.blank(self.req_url, base_url='')
         req.headers['X-Auth-User'] = 'user1'
         req.headers['X-Auth-Key'] = 'user1_key'
         req.headers['X-Auth-Project-Id'] = 'user1_project'
@@ -74,7 +70,7 @@ class TestNoAuthMiddleware(testscenarios.WithScenarios, test.NoDBTestCase):
             self.expected_url)
 
     def test_auth_token_no_empty_headers(self):
-        req = webob.Request.blank(self.req_url)
+        req = fakes.HTTPRequest.blank(self.req_url, base_url='')
         req.headers['X-Auth-User'] = 'user1'
         req.headers['X-Auth-Key'] = 'user1_key'
         req.headers['X-Auth-Project-Id'] = 'user1_project'

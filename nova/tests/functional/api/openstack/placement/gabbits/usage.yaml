@@ -1,0 +1,34 @@
+# More interesting tests for usages are in with_allocations
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+
+tests:
+
+- name: fail to get usages for missing provider
+  GET: /resource_providers/fae14fa3-4b43-498c-a33c-4a1d00edb577/usages
+  status: 404
+
+- name: create provider
+  POST: /resource_providers
+  request_headers:
+      content-type: application/json
+  data:
+      name: a name
+  status: 201
+
+- name: check provider exists
+  GET: $LOCATION
+  response_json_paths:
+      name: a name
+
+- name: get empty usages
+  GET: $LAST_URL/usages
+  request_headers:
+      content-type: application/json
+  response_json_paths:
+      usages: {}

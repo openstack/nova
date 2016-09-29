@@ -28,9 +28,7 @@ create_backup = {
                     'type': 'string',
                 },
                 'rotation': parameter_types.non_negative_integer,
-                'metadata': {
-                    'type': 'object',
-                }
+                'metadata': parameter_types.metadata,
             },
             'required': ['name', 'backup_type', 'rotation'],
             'additionalProperties': False,

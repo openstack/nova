@@ -4,10 +4,10 @@ Faults
 
 This doc explains how to understand what has happened to your API request.
 
-Every HTTP request has a status code. 2xx codes signify the API was a success.
-However, that is often not the end of the story. That generally only means the
-request to start the operation has been accepted. It does not mean the action
-you requested has successfully completed.
+Every HTTP request has a status code. 2xx codes signify the API call was a
+success. However, that is often not the end of the story. That generally only
+means the request to start the operation has been accepted. It does not mean
+the action you requested has successfully completed.
 
 
 Tracking Errors by Request ID
@@ -17,7 +17,7 @@ Every request made has a unique Request ID.
 This is returned in a response header.
 Here is an example response header:
 
-X-Compute-Request-ID: req-4b9e5c04-c40f-4b4f-960e-6ac0858dca6c
+X-Compute-Request-Id: req-4b9e5c04-c40f-4b4f-960e-6ac0858dca6c
 
 Server Actions
 --------------
@@ -26,7 +26,7 @@ There is an API for end users to list the outcome of Server Actions,
 referencing the requested action by request id.
 
 For more details, please see:
-http://developer.openstack.org/api-ref-compute-v2.1.html#os-instance-actions-v2.1
+http://developer.openstack.org/api-ref/compute/#servers-run-an-action-servers-action
 
 Logs
 ----
@@ -91,7 +91,7 @@ An error may occur in the background while a server is being built or while a
 server is executing an action.
 
 In these cases, the server is usually placed in an ``ERROR`` state. For some
-operations, like resize, its possible that the operations fails but
+operations, like resize, it is possible that the operation fails but
 the instance gracefully returned to its original state before attempting the
 operation. In both of these cases, you should be able to find out more from
 the Server Actions API described above.

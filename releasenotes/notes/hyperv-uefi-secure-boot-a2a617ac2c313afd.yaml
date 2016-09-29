@@ -1,0 +1,20 @@
+---
+features:
+  - |
+    Added support for Hyper-V VMs with UEFI Secure Boot enabled.
+    In order to create such VMs, there are a couple of things to consider:
+
+    * Images should be prepared for Generation 2 VMs. The image property
+      "hw_machine_type=hyperv-gen2" is mandatory.
+    * The guest OS type must be specified in order to properly spawn the VMs.
+      It can be specifed through the image property "os_type", and the
+      acceptable values are "windows" or "linux".
+    * The UEFI Secure Boot feature can be requested through the image property
+      "os_secure_boot" (acceptable values: "disabled", "optional", "required")
+      or flavor extra spec "os:secure_boot" (acceptable values: "disabled",
+      "required"). The flavor extra spec will take precedence. If the image
+      property and the flavor extra spec values are conflicting, then an
+      exception is raised.
+    * This feature is supported on Windows / Hyper-V Server 2012 R2 for
+      Windows guests, and Windows / Hyper-V Server 2016 for both
+      Windows and Linux guests.

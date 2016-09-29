@@ -1,0 +1,319 @@
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+
+tests:
+- name: inventories for missing provider
+  GET: /resource_providers/7260669a-e3d4-4867-aaa7-683e2ab6958c/inventories
+  status: 404
+
+- name: post new resource provider
+  POST: /resource_providers
+  request_headers:
+    content-type: application/json
+  data:
+      name: $ENVIRON['RP_NAME']
+      uuid: $ENVIRON['RP_UUID']
+  status: 201
+  response_headers:
+      location: //resource_providers/[a-f0-9-]+/
+
+- name: get empty inventories
+  GET: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  response_json_paths:
+      $.resource_provider_generation: 0
+      $.inventories: {}
+
+- name: post a conflicting capacity inventory
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: DISK_GB
+      total: 256
+      reserved: 512
+  status: 400
+  response_strings:
+      - Unable to create inventory for resource provider
+
+- name: post an inventory
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: DISK_GB
+      total: 2048
+      reserved: 512
+      min_unit: 10
+      max_unit: 1024
+      step_size: 10
+      allocation_ratio: 1.0
+  status: 201
+  response_headers:
+      location: $SCHEME://$NETLOC/resource_providers/$ENVIRON['RP_UUID']/inventories/DISK_GB
+  response_json_paths:
+      $.resource_provider_generation: 1
+      $.total: 2048
+      $.reserved: 512
+
+- name: get that inventory
+  GET: $LOCATION
+  status: 200
+  response_json_paths:
+      $.resource_provider_generation: 1
+      $.total: 2048
+      $.reserved: 512
+      $.min_unit: 10
+      $.max_unit: 1024
+      $.step_size: 10
+      $.allocation_ratio: 1.0
+
+- name: modify the inventory
+  PUT: $LAST_URL
+  request_headers:
+      content-type: application/json
+  data:
+      resource_provider_generation: 1
+      total: 2048
+      reserved: 1024
+      min_unit: 10
+      max_unit: 1024
+      step_size: 10
+      allocation_ratio: 1.0
+  status: 200
+  response_headers:
+      content-type: /application/json/
+  response_json_paths:
+      $.reserved: 1024
+
+- name: confirm inventory change
+  GET: $LAST_URL
+  response_json_paths:
+      $.resource_provider_generation: 2
+      $.total: 2048
+      $.reserved: 1024
+
+- name: modify inventory invalid generation
+  PUT: $LAST_URL
+  request_headers:
+      content-type: application/json
+  data:
+      resource_provider_generation: 5
+      total: 2048
+  status: 409
+  response_strings:
+      - resource provider generation conflict
+
+- name: modify inventory invalid data
+  desc: This should 400 because reserved is greater than total
+  PUT: $LAST_URL
+  request_headers:
+      content-type: application/json
+  data:
+      resource_provider_generation: 2
+      total: 2048
+      reserved: 4096
+      min_unit: 10
+      max_unit: 1024
+      step_size: 10
+      allocation_ratio: 1.0
+  status: 400
+  response_strings:
+      - Unable to update inventory for resource provider $ENVIRON['RP_UUID']
+
+- name: put inventory bad form
+  desc: This should 400 because reserved is greater than total
+  PUT: $LAST_URL
+  request_headers:
+      content-type: application/json
+  data:
+      house: red
+      car: blue
+  status: 400
+  response_strings:
+      - JSON does not validate
+
+- name: post inventory malformed json
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data: '{"foo": }'
+  status: 400
+  response_strings:
+      - Malformed JSON
+
+- name: post inventory bad syntax schema
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: bad_class
+      total: 2048
+  status: 400
+
+- name: post inventory bad resource class
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: NO_CLASS_14
+      total: 2048
+  status: 400
+  response_strings:
+      - Bad inventory NO_CLASS_14 for resource provider $ENVIRON['RP_UUID']
+
+- name: post inventory duplicated resource class
+  desc: DISK_GB was already created above
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: DISK_GB
+      total: 2048
+  status: 409
+  response_strings:
+      - Update conflict
+
+- name: get list of inventories
+  GET: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  response_json_paths:
+      $.resource_provider_generation: 2
+      $.inventories.DISK_GB.total: 2048
+      $.inventories.DISK_GB.reserved: 1024
+
+- name: delete the inventory
+  DELETE: /resource_providers/$ENVIRON['RP_UUID']/inventories/DISK_GB
+  status: 204
+
+- name: get now empty inventories
+  GET: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  response_json_paths:
+      $.resource_provider_generation: 3
+      $.inventories: {}
+
+- name: post new disk inventory
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: DISK_GB
+      total: 1024
+  status: 201
+
+- name: post new ipv4 address inventory
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: IPV4_ADDRESS
+      total: 255
+      reserved: 2
+  status: 201
+
+- name: list both those inventories
+  GET: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  response_json_paths:
+      $.resource_provider_generation: 5
+      $.inventories.DISK_GB.total: 1024
+      $.inventories.IPV4_ADDRESS.total: 255
+
+- name: post ipv4 address inventory again
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: IPV4_ADDRESS
+      total: 255
+      reserved: 2
+  status: 409
+
+- name: delete inventory
+  DELETE: /resource_providers/$ENVIRON['RP_UUID']/inventories/IPV4_ADDRESS
+  status: 204
+  response_forbidden_headers:
+      - content-type
+
+- name: delete inventory again
+  DELETE: /resource_providers/$ENVIRON['RP_UUID']/inventories/IPV4_ADDRESS
+  status: 404
+
+- name: get missing inventory class
+  GET: /resource_providers/$ENVIRON['RP_UUID']/inventories/IPV4_ADDRESS
+  status: 404
+
+- name: get invalid inventory class
+  GET: /resource_providers/$ENVIRON['RP_UUID']/inventories/HOUSE
+  status: 404
+
+- name: create another resource provider
+  POST: /resource_providers
+  request_headers:
+    content-type: application/json
+  data:
+      name: disk-network
+  status: 201
+
+- name: put all inventory
+  PUT: $LOCATION/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_provider_generation: 0
+      inventories:
+        IPV4_ADDRESS:
+          total: 253
+        DISK_GB:
+          total: 1024
+  status: 200
+  response_json_paths:
+      $.resource_provider_generation: 1
+      $.inventories.IPV4_ADDRESS.total: 253
+      $.inventories.IPV4_ADDRESS.reserved: 0
+      $.inventories.DISK_GB.total: 1024
+      $.inventories.DISK_GB.allocation_ratio: 1.0
+
+- name: check both inventory classes
+  GET: $LAST_URL
+  response_json_paths:
+      $.resource_provider_generation: 1
+      $.inventories.DISK_GB.total: 1024
+      $.inventories.IPV4_ADDRESS.total: 253
+
+- name: check one inventory class
+  GET: $LAST_URL/DISK_GB
+  response_json_paths:
+      $.total: 1024
+
+- name: put all inventory bad generation
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_provider_generation: 99
+      inventories:
+        IPV4_ADDRESS:
+          total: 253
+  status: 409
+  response_strings:
+      - resource provider generation conflict
+
+# NOTE(cdent): The generation is 6 now, based on the activity at
+# the start of this file.
+- name: put all inventory bad capacity
+  PUT: $LAST_URL
+  request_headers:
+      content-type: application/json
+  data:
+      resource_provider_generation: 6
+      inventories:
+        IPV4_ADDRESS:
+          total: 253
+          reserved: 512
+  status: 400
+  response_strings:
+      - Unable to update inventory

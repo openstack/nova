@@ -88,16 +88,13 @@ class _TestQuotasObject(object):
         self.assertEqual('fake_proj2', quotas.project_id)
         self.assertEqual('fake_user2', quotas.user_id)
 
-    def test_reserve(self):
+    @mock.patch.object(QUOTAS, 'reserve')
+    def test_reserve(self, reserve_mock):
         fake_reservations = ['1', '2']
         quotas = quotas_obj.Quotas(context=self.context)
 
-        self.mox.StubOutWithMock(QUOTAS, 'reserve')
-        QUOTAS.reserve(self.context, expire='expire',
-                       project_id='project_id', user_id='user_id',
-                       moo='cow').AndReturn(fake_reservations)
+        reserve_mock.return_value = fake_reservations
 
-        self.mox.ReplayAll()
         quotas.reserve(expire='expire',
                        project_id='project_id', user_id='user_id',
                        moo='cow')
@@ -105,44 +102,42 @@ class _TestQuotasObject(object):
         self.assertEqual(fake_reservations, quotas.reservations)
         self.assertEqual('project_id', quotas.project_id)
         self.assertEqual('user_id', quotas.user_id)
+        reserve_mock.assert_called_once_with(
+            self.context, expire='expire', project_id='project_id',
+            user_id='user_id', moo='cow')
 
-    def test_commit(self):
+    @mock.patch.object(QUOTAS, 'commit')
+    def test_commit(self, commit_mock):
+        fake_reservations = ['1', '2']
+        quotas = quotas_obj.Quotas.from_reservations(
+                self.context, fake_reservations)
+        quotas.commit()
+        self.assertIsNone(quotas.reservations)
+        commit_mock.assert_called_once_with(
+            self.context, fake_reservations, project_id=None, user_id=None)
+
+    @mock.patch.object(QUOTAS, 'commit')
+    def test_commit_none_reservations(self, commit_mock):
+        quotas = quotas_obj.Quotas.from_reservations(self.context, None)
+        quotas.commit()
+        self.assertFalse(commit_mock.called)
+
+    @mock.patch.object(QUOTAS, 'rollback')
+    def test_rollback(self, rollback_mock):
         fake_reservations = ['1', '2']
         quotas = quotas_obj.Quotas.from_reservations(
                 self.context, fake_reservations)
 
-        self.mox.StubOutWithMock(QUOTAS, 'commit')
-        QUOTAS.commit(self.context, fake_reservations,
-                      project_id=None, user_id=None)
-
-        self.mox.ReplayAll()
-        quotas.commit()
-        self.assertIsNone(quotas.reservations)
-
-    def test_commit_none_reservations(self):
-        quotas = quotas_obj.Quotas.from_reservations(self.context, None)
-        self.mox.StubOutWithMock(QUOTAS, 'commit')
-        self.mox.ReplayAll()
-        quotas.commit()
-
-    def test_rollback(self):
-        fake_reservations = ['1', '2']
-        quotas = quotas_obj.Quotas.from_reservations(
-                self.context, fake_reservations)
-
-        self.mox.StubOutWithMock(QUOTAS, 'rollback')
-        QUOTAS.rollback(self.context, fake_reservations,
-                        project_id=None, user_id=None)
-
-        self.mox.ReplayAll()
         quotas.rollback()
         self.assertIsNone(quotas.reservations)
+        rollback_mock.assert_called_once_with(
+            self.context, fake_reservations, project_id=None, user_id=None)
 
-    def test_rollback_none_reservations(self):
+    @mock.patch.object(QUOTAS, 'rollback')
+    def test_rollback_none_reservations(self, rollback_mock):
         quotas = quotas_obj.Quotas.from_reservations(self.context, None)
-        self.mox.StubOutWithMock(QUOTAS, 'rollback')
-        self.mox.ReplayAll()
         quotas.rollback()
+        self.assertFalse(rollback_mock.called)
 
     @mock.patch('nova.db.quota_create')
     def test_create_limit(self, mock_create):

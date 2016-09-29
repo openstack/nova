@@ -1,0 +1,25 @@
+---
+upgrade:
+  - |
+
+    The following policy enforcement points have been removed as part
+    of the restructuring of the Nova API code. The attributes that
+    could have been hidden with these policy points will now always be
+    shown / accepted.
+
+     * os_compute_api:os-disk-config - show / accept
+       ``OS-DCF:diskConfig`` parameter on servers
+
+     * os-access-ips - show / accept ``accessIPv4`` and ``accessIPv6``
+       parameters on servers
+
+    The following entry points have been removed
+
+     * nova.api.v21.extensions.server.resize - allowed accepting
+       additional parameters on server resize requests.
+
+     * nova.api.v21.extensions.server.update - allowed accepting
+       additional parameters on server update requests.
+
+     * nova.api.v21.extensions.server.rebuild - allowed accepting
+       additional parameters on server rebuild requests.

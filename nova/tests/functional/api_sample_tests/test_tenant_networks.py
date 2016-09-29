@@ -14,29 +14,17 @@
 #    under the License.
 
 
-from oslo_config import cfg
 from oslo_serialization import jsonutils
 
+import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
 
-CONF = cfg.CONF
-CONF.import_opt('enable_network_quota',
-                'nova.api.openstack.compute.legacy_v2.contrib.'
-                'os_tenant_networks')
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class TenantNetworksJsonTests(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-tenant-networks"
-
-    def _get_flags(self):
-        f = super(TenantNetworksJsonTests, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
-                      'contrib.os_tenant_networks.Os_tenant_networks')
-        return f
+    sample_dir = "os-tenant-networks"
 
     def setUp(self):
         super(TenantNetworksJsonTests, self).setUp()

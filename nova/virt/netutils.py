@@ -28,7 +28,6 @@ import nova.conf
 from nova.network import model
 
 CONF = nova.conf.CONF
-CONF.import_opt('use_ipv6', 'nova.netconf')
 
 
 def get_net_and_mask(cidr):
@@ -258,7 +257,7 @@ def _get_eth_link(vif, ifc_num):
         'id': link_id,
         'vif_id': vif['id'],
         'type': nic_type,
-        'mtu': vif['network'].get('mtu'),
+        'mtu': vif['network']['meta'].get('mtu'),
         'ethernet_mac_address': vif.get('address'),
     }
     return link

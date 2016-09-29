@@ -16,13 +16,10 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova.objects import base as obj_base
+from nova.policies import migrations as migrations_policies
 
 
 ALIAS = "os-migrations"
-
-
-def authorize(context, action_name):
-    extensions.os_compute_authorizer(ALIAS)(context, action=action_name)
 
 
 class MigrationsController(wsgi.Controller):
@@ -76,7 +73,7 @@ class MigrationsController(wsgi.Controller):
     def index(self, req):
         """Return all migrations in progress."""
         context = req.environ['nova.context']
-        authorize(context, "index")
+        context.can(migrations_policies.POLICY_ROOT % 'index')
         migrations = self.compute_api.get_migrations(context, req.GET)
 
         if api_version_request.is_supported(req, min_version='2.23'):

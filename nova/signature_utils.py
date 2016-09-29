@@ -225,7 +225,7 @@ def get_verifier(context, img_signature_certificate_uuid,
 def get_signature(signature_data):
     """Decode the signature data and returns the signature.
 
-    :param siganture_data: the base64-encoded signature data
+    :param signature_data: the base64-encoded signature data
     :returns: the decoded signature
     :raises: SignatureVerificationError if the signature data is malformatted
     """

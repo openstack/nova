@@ -18,9 +18,6 @@ import mock
 
 from nova.api.openstack.compute import hypervisors \
         as hypervisors_v21
-from nova.api.openstack.compute.legacy_v2.contrib import hypervisors \
-        as hypervisors_v2
-from nova.api.openstack import extensions
 from nova import exception
 from nova import objects
 from nova import test
@@ -35,7 +32,7 @@ def fake_compute_node_get(context, compute_id):
     raise exception.ComputeHostNotFound(host=compute_id)
 
 
-def fake_compute_node_get_all(context):
+def fake_compute_node_get_all(context, limit=None, marker=None):
     return test_hypervisors.TEST_HYPERS_OBJ
 
 
@@ -82,9 +79,10 @@ class ExtendedHypervisorsTestV21(test.NoDBTestCase):
                        fake_service_get_by_compute_host)
 
     def test_view_hypervisor_detail_noservers(self):
+        req = self._get_request()
         result = self.controller._view_hypervisor(
             test_hypervisors.TEST_HYPERS_OBJ[0],
-            test_hypervisors.TEST_SERVICES[0], True)
+            test_hypervisors.TEST_SERVICES[0], True, req)
 
         self.assertEqual(result, self.DETAIL_HYPERS_DICTS[0])
 
@@ -99,19 +97,3 @@ class ExtendedHypervisorsTestV21(test.NoDBTestCase):
         result = self.controller.show(req, '1')
 
         self.assertEqual(result, dict(hypervisor=self.DETAIL_HYPERS_DICTS[0]))
-
-
-class ExtendedHypervisorsTestV2(ExtendedHypervisorsTestV21):
-    DETAIL_HYPERS_DICTS = copy.deepcopy(test_hypervisors.TEST_HYPERS)
-    del DETAIL_HYPERS_DICTS[0]['service_id']
-    del DETAIL_HYPERS_DICTS[1]['service_id']
-    del DETAIL_HYPERS_DICTS[0]['host']
-    del DETAIL_HYPERS_DICTS[1]['host']
-    DETAIL_HYPERS_DICTS[0].update({'service': dict(id=1, host='compute1')})
-    DETAIL_HYPERS_DICTS[1].update({'service': dict(id=2, host='compute2')})
-
-    def _set_up_controller(self):
-        self.ext_mgr = extensions.ExtensionManager()
-        self.ext_mgr.extensions = {}
-        self.ext_mgr.extensions['os-extended-hypervisors'] = True
-        self.controller = hypervisors_v2.HypervisorsController(self.ext_mgr)

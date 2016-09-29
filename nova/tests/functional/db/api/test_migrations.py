@@ -28,7 +28,6 @@ For postgres on Ubuntu this can be done with the following commands::
 
 """
 
-import logging
 import os
 
 from migrate.versioning import repository
@@ -44,6 +43,7 @@ from nova.db.sqlalchemy.api_migrations import migrate_repo
 from nova.db.sqlalchemy import api_models
 from nova.db.sqlalchemy import migration as sa_migration
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 
 
 class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):
@@ -58,7 +58,7 @@ class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):
     def migrate_engine(self):
         return self.engine
 
-    def get_engine(self):
+    def get_engine(self, context=None):
         return self.migrate_engine
 
     def get_metadata(self):
@@ -72,6 +72,50 @@ class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):
                 return False
 
         return True
+
+    def filter_metadata_diff(self, diff):
+        # Filter out diffs that shouldn't cause a sync failure.
+
+        new_diff = []
+
+        # Define a whitelist of ForeignKeys that exist on the model but not in
+        # the database. They will be removed from the model at a later time.
+        fkey_whitelist = {'build_requests': ['request_spec_id']}
+
+        # Define a whitelist of columns that will be removed from the
+        # DB at a later release and aren't on a model anymore.
+
+        column_whitelist = {
+                'build_requests': ['vm_state', 'instance_metadata',
+                    'display_name', 'access_ip_v6', 'access_ip_v4', 'key_name',
+                    'locked_by', 'image_ref', 'progress', 'request_spec_id',
+                    'info_cache', 'user_id', 'task_state', 'security_groups',
+                    'config_drive']
+        }
+
+        for element in diff:
+            if isinstance(element, list):
+                # modify_nullable is a list
+                new_diff.append(element)
+            else:
+                # tuple with action as first element. Different actions have
+                # different tuple structures.
+                if element[0] == 'add_fk':
+                    fkey = element[1]
+                    tablename = fkey.table.name
+                    column_keys = fkey.column_keys
+                    if (tablename in fkey_whitelist and
+                            column_keys == fkey_whitelist[tablename]):
+                        continue
+                elif element[0] == 'remove_column':
+                    tablename = element[2]
+                    column = element[3]
+                    if (tablename in column_whitelist and
+                            column.name in column_whitelist[tablename]):
+                        continue
+
+                new_diff.append(element)
+        return new_diff
 
 
 class TestNovaAPIMigrationsSQLite(NovaAPIModelsSync,
@@ -93,13 +137,12 @@ class TestNovaAPIMigrationsPostgreSQL(NovaAPIModelsSync,
 
 class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
     def setUp(self):
+        # NOTE(sdague): the oslo_db base test case completely
+        # invalidates our logging setup, we actually have to do that
+        # before it is called to keep this from vomitting all over our
+        # test output.
+        self.useFixture(nova_fixtures.StandardLogging())
         super(NovaAPIMigrationsWalk, self).setUp()
-        # NOTE(viktors): We should reduce log output because it causes issues,
-        #                when we run tests with testr
-        migrate_log = logging.getLogger('migrate')
-        old_level = migrate_log.level
-        migrate_log.setLevel(logging.WARN)
-        self.addCleanup(migrate_log.setLevel, old_level)
 
     @property
     def INIT_VERSION(self):
@@ -120,7 +163,8 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
 
     def _skippable_migrations(self):
         mitaka_placeholders = range(8, 13)
-        return mitaka_placeholders
+        newton_placeholders = range(21, 26)
+        return mitaka_placeholders + newton_placeholders
 
     def migrate_up(self, version, with_data=False):
         if with_data:
@@ -203,9 +247,8 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
 
         self.assertUniqueConstraintExists(engine, 'request_specs',
                 ['instance_uuid'])
-        if engine.name != 'ibm_db_sa':
-            self.assertIndexExists(engine, 'request_specs',
-                    'request_spec_instance_uuid_idx')
+        self.assertIndexExists(engine, 'request_specs',
+                               'request_spec_instance_uuid_idx')
 
     def _check_005(self, engine, data):
         # flavors
@@ -223,9 +266,8 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
             'value']:
             self.assertColumnExists(engine, 'flavor_extra_specs', column)
 
-        if engine.name != 'ibm_db_sa':
-            self.assertIndexExists(engine, 'flavor_extra_specs',
-                'flavor_extra_specs_flavor_id_key_idx')
+        self.assertIndexExists(engine, 'flavor_extra_specs',
+                               'flavor_extra_specs_flavor_id_key_idx')
         self.assertUniqueConstraintExists(engine, 'flavor_extra_specs',
             ['flavor_id', 'key'])
 
@@ -289,6 +331,136 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
             'build_requests_instance_uuid_idx')
         self.assertUniqueConstraintExists(engine, 'build_requests',
                 ['instance_uuid'])
+
+    def _check_014(self, engine, data):
+        for column in ['name', 'public_key']:
+            self.assertColumnExists(engine, 'key_pairs', column)
+        self.assertUniqueConstraintExists(engine, 'key_pairs',
+                                          ['user_id', 'name'])
+
+    def _check_015(self, engine, data):
+        build_requests_table = db_utils.get_table(engine, 'build_requests')
+        for column in ['request_spec_id', 'user_id', 'security_groups',
+                'config_drive']:
+            self.assertTrue(build_requests_table.columns[column].nullable)
+        inspector = reflection.Inspector.from_engine(engine)
+        constrs = inspector.get_unique_constraints('build_requests')
+        constr_columns = [constr['column_names'] for constr in constrs]
+        self.assertNotIn(['request_spec_id'], constr_columns)
+
+    def _check_016(self, engine, data):
+        self.assertColumnExists(engine, 'resource_providers', 'id')
+        self.assertIndexExists(engine, 'resource_providers',
+                               'resource_providers_name_idx')
+        self.assertIndexExists(engine, 'resource_providers',
+                               'resource_providers_uuid_idx')
+
+        self.assertColumnExists(engine, 'inventories', 'id')
+        self.assertIndexExists(engine, 'inventories',
+                               'inventories_resource_class_id_idx')
+
+        self.assertColumnExists(engine, 'allocations', 'id')
+        self.assertColumnExists(engine, 'resource_provider_aggregates',
+                                'aggregate_id')
+
+    def _check_017(self, engine, data):
+        # aggregate_metadata
+        for column in ['created_at',
+                       'updated_at',
+                       'id',
+                       'aggregate_id',
+                       'key',
+                       'value']:
+            self.assertColumnExists(engine, 'aggregate_metadata', column)
+
+        self.assertUniqueConstraintExists(engine, 'aggregate_metadata',
+                ['aggregate_id', 'key'])
+        self.assertIndexExists(engine, 'aggregate_metadata',
+            'aggregate_metadata_key_idx')
+
+        # aggregate_hosts
+        for column in ['created_at',
+                       'updated_at',
+                       'id',
+                       'host',
+                       'aggregate_id']:
+            self.assertColumnExists(engine, 'aggregate_hosts', column)
+
+        self.assertUniqueConstraintExists(engine, 'aggregate_hosts',
+                ['host', 'aggregate_id'])
+
+        # aggregates
+        for column in ['created_at',
+                       'updated_at',
+                       'id',
+                       'name']:
+            self.assertColumnExists(engine, 'aggregates', column)
+
+        self.assertIndexExists(engine, 'aggregates',
+            'aggregate_uuid_idx')
+        self.assertUniqueConstraintExists(engine, 'aggregates', ['name'])
+
+    def _check_018(self, engine, data):
+        # instance_groups
+        for column in ['created_at',
+                       'updated_at',
+                       'id',
+                       'user_id',
+                       'project_id',
+                       'uuid',
+                       'name']:
+            self.assertColumnExists(engine, 'instance_groups', column)
+
+        self.assertUniqueConstraintExists(engine, 'instance_groups', ['uuid'])
+
+        # instance_group_policy
+        for column in ['created_at',
+                       'updated_at',
+                       'id',
+                       'policy',
+                       'group_id']:
+            self.assertColumnExists(engine, 'instance_group_policy', column)
+
+        self.assertIndexExists(engine, 'instance_group_policy',
+                               'instance_group_policy_policy_idx')
+        # Ensure the foreign key still exists
+        inspector = reflection.Inspector.from_engine(engine)
+        # There should only be one foreign key here
+        fk = inspector.get_foreign_keys('instance_group_policy')[0]
+        self.assertEqual('instance_groups', fk['referred_table'])
+        self.assertEqual(['id'], fk['referred_columns'])
+
+        # instance_group_member
+        for column in ['created_at',
+                       'updated_at',
+                       'id',
+                       'instance_uuid',
+                       'group_id']:
+            self.assertColumnExists(engine, 'instance_group_member', column)
+
+        self.assertIndexExists(engine, 'instance_group_member',
+                               'instance_group_member_instance_idx')
+
+    def _check_019(self, engine, data):
+        self.assertColumnExists(engine, 'build_requests',
+                                'block_device_mappings')
+
+    def _pre_upgrade_020(self, engine):
+        build_requests = db_utils.get_table(engine, 'build_requests')
+        fake_build_req = {'id': 2020,
+                          'project_id': 'fake_proj_id',
+                          'block_device_mappings': 'fake_BDM'}
+        build_requests.insert().execute(fake_build_req)
+
+    def _check_020(self, engine, data):
+        build_requests = db_utils.get_table(engine, 'build_requests')
+        if engine.name == 'mysql':
+            self.assertIsInstance(build_requests.c.block_device_mappings.type,
+                                  sqlalchemy.dialects.mysql.MEDIUMTEXT)
+
+        fake_build_req = build_requests.select(
+            build_requests.c.id == 2020).execute().first()
+        self.assertEqual('fake_BDM', fake_build_req.block_device_mappings)
 
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,

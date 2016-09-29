@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 import datetime
 
 from nova import context
@@ -25,26 +23,15 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
-
 
 class SnapshotsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
-    extension_name = "os-volumes"
+    sample_dir = "os-volumes"
 
     create_subs = {
             'snapshot_name': 'snap-001',
             'description': 'Daily backup',
             'volume_id': '521752a6-acf6-4b2d-bc7a-119f9148cd8c'
     }
-
-    def _get_flags(self):
-        f = super(SnapshotsSampleJsonTests, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.volumes.Volumes')
-        return f
 
     def setUp(self):
         super(SnapshotsSampleJsonTests, self).setUp()
@@ -92,70 +79,68 @@ class SnapshotsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
         self._verify_response('snapshots-show-resp', subs, response, 200)
 
 
+def _get_volume_id():
+    return 'a26887c6-c47b-4654-abb5-dfadf7d3f803'
+
+
+def _stub_volume(id, displayname="Volume Name",
+                 displaydesc="Volume Description", size=100):
+    volume = {
+              'id': id,
+              'size': size,
+              'availability_zone': 'zone1:host1',
+              'status': 'in-use',
+              'attach_status': 'attached',
+              'name': 'vol name',
+              'display_name': displayname,
+              'display_description': displaydesc,
+              'created_at': datetime.datetime(2008, 12, 1, 11, 1, 55),
+              'snapshot_id': None,
+              'volume_type_id': 'fakevoltype',
+              'volume_metadata': [],
+              'volume_type': {'name': 'Backup'},
+              'multiattach': False,
+              'attachments': {'3912f2b4-c5ba-4aec-9165-872876fe202e':
+                              {'mountpoint': '/',
+                               'attachment_id':
+                                   'a26887c6-c47b-4654-abb5-dfadf7d3f803'
+                               }
+                              }
+              }
+    return volume
+
+
+def _stub_volume_get(stub_self, context, volume_id):
+    return _stub_volume(volume_id)
+
+
+def _stub_volume_delete(stub_self, context, *args, **param):
+    pass
+
+
+def _stub_volume_get_all(stub_self, context, search_opts=None):
+    id = _get_volume_id()
+    return [_stub_volume(id)]
+
+
+def _stub_volume_create(stub_self, context, size, name, description,
+                        snapshot, **param):
+    id = _get_volume_id()
+    return _stub_volume(id)
+
+
 class VolumesSampleJsonTest(test_servers.ServersSampleBase):
-    extension_name = "os-volumes"
-
-    def _get_flags(self):
-        f = super(VolumesSampleJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.volumes.Volumes')
-        return f
-
-    def _get_volume_id(self):
-        return 'a26887c6-c47b-4654-abb5-dfadf7d3f803'
-
-    def _stub_volume(self, id, displayname="Volume Name",
-                     displaydesc="Volume Description", size=100):
-        volume = {
-                  'id': id,
-                  'size': size,
-                  'availability_zone': 'zone1:host1',
-                  'status': 'in-use',
-                  'attach_status': 'attached',
-                  'name': 'vol name',
-                  'display_name': displayname,
-                  'display_description': displaydesc,
-                  'created_at': datetime.datetime(2008, 12, 1, 11, 1, 55),
-                  'snapshot_id': None,
-                  'volume_type_id': 'fakevoltype',
-                  'volume_metadata': [],
-                  'volume_type': {'name': 'Backup'},
-                  'multiattach': False,
-                  'attachments': {'3912f2b4-c5ba-4aec-9165-872876fe202e':
-                                  {'mountpoint': '/',
-                                   'attachment_id':
-                                       'a26887c6-c47b-4654-abb5-dfadf7d3f803'
-                                   }
-                                  }
-                  }
-        return volume
-
-    def _stub_volume_get(self, context, volume_id):
-        return self._stub_volume(volume_id)
-
-    def _stub_volume_delete(self, context, *args, **param):
-        pass
-
-    def _stub_volume_get_all(self, context, search_opts=None):
-        id = self._get_volume_id()
-        return [self._stub_volume(id)]
-
-    def _stub_volume_create(self, context, size, name, description, snapshot,
-                       **param):
-        id = self._get_volume_id()
-        return self._stub_volume(id)
+    sample_dir = "os-volumes"
 
     def setUp(self):
         super(VolumesSampleJsonTest, self).setUp()
         fakes.stub_out_networking(self)
-        fakes.stub_out_rate_limiting(self.stubs)
 
         self.stub_out("nova.volume.cinder.API.delete",
-                      self._stub_volume_delete)
-        self.stub_out("nova.volume.cinder.API.get", self._stub_volume_get)
+                      _stub_volume_delete)
+        self.stub_out("nova.volume.cinder.API.get", _stub_volume_get)
         self.stub_out("nova.volume.cinder.API.get_all",
-                      self._stub_volume_get_all)
+                      _stub_volume_get_all)
 
     def _post_volume(self):
         subs_req = {
@@ -164,7 +149,7 @@ class VolumesSampleJsonTest(test_servers.ServersSampleBase):
         }
 
         self.stub_out("nova.volume.cinder.API.create",
-                      self._stub_volume_create)
+                      _stub_volume_create)
         response = self._do_post('os-volumes', 'os-volumes-post-req',
                                  subs_req)
         self._verify_response('os-volumes-post-resp', subs_req, response, 200)
@@ -174,7 +159,7 @@ class VolumesSampleJsonTest(test_servers.ServersSampleBase):
                 'volume_name': "Volume Name",
                 'volume_desc': "Volume Description",
         }
-        vol_id = self._get_volume_id()
+        vol_id = _get_volume_id()
         response = self._do_get('os-volumes/%s' % vol_id)
         self._verify_response('os-volumes-get-resp', subs, response, 200)
 
@@ -201,14 +186,14 @@ class VolumesSampleJsonTest(test_servers.ServersSampleBase):
 
     def test_volumes_delete(self):
         self._post_volume()
-        vol_id = self._get_volume_id()
+        vol_id = _get_volume_id()
         response = self._do_delete('os-volumes/%s' % vol_id)
         self.assertEqual(202, response.status_code)
         self.assertEqual('', response.content)
 
 
 class VolumeAttachmentsSample(test_servers.ServersSampleBase):
-    extension_name = "os-volumes"
+    sample_dir = "os-volumes"
 
     def _stub_db_bdms_get_all_by_instance(self, server_id):
 
@@ -232,24 +217,11 @@ class VolumeAttachmentsSample(test_servers.ServersSampleBase):
     def _stub_compute_api_get(self):
 
         def fake_compute_api_get(self, context, instance_id,
-                                 want_objects=False, expected_attrs=None):
-            if want_objects:
-                return fake_instance.fake_instance_obj(
-                        context, **{'uuid': instance_id})
-            else:
-                return {'uuid': instance_id}
+                                 expected_attrs=None):
+            return fake_instance.fake_instance_obj(
+                    context, **{'uuid': instance_id})
 
         self.stub_out('nova.compute.api.API.get', fake_compute_api_get)
-
-    def _get_flags(self):
-        f = super(VolumeAttachmentsSample, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.volumes.Volumes')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.'
-            'volume_attachment_update.Volume_attachment_update')
-        return f
 
     def test_attach_volume_to_server(self):
         self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)

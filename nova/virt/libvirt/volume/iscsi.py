@@ -13,39 +13,16 @@
 
 from os_brick import exception as os_brick_exception
 from os_brick.initiator import connector
-from oslo_config import cfg
 from oslo_log import log as logging
 
+import nova.conf
 from nova.i18n import _LW
 from nova import utils
 from nova.virt.libvirt.volume import volume as libvirt_volume
 
 LOG = logging.getLogger(__name__)
 
-volume_opts = [
-    cfg.IntOpt('num_iscsi_scan_tries',
-               default=5,
-               help='Number of times to rescan iSCSI target to find volume'),
-    cfg.BoolOpt('iscsi_use_multipath',
-                default=False,
-                help='Use multipath connection of the iSCSI or FC volume'),
-    cfg.StrOpt('iscsi_iface',
-               deprecated_name='iscsi_transport',
-               help='The iSCSI transport iface to use to connect to target in '
-                    'case offload support is desired. Default format is of '
-                    'the form <transport_name>.<hwaddress> where '
-                    '<transport_name> is one of (be2iscsi, bnx2i, cxgb3i, '
-                    'cxgb4i, qla4xxx, ocs) and <hwaddress> is the MAC address '
-                    'of the interface and can be generated via the '
-                    'iscsiadm -m iface command. Do not confuse the '
-                    'iscsi_iface parameter to be provided here with the '
-                    'actual transport name.'),
-                    # iser is also supported, but use LibvirtISERVolumeDriver
-                    # instead
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(volume_opts, 'libvirt')
+CONF = nova.conf.CONF
 
 
 class LibvirtISCSIVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
@@ -59,7 +36,7 @@ class LibvirtISCSIVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         # more than x86 architectures.
         self.connector = connector.InitiatorConnector.factory(
             'ISCSI', utils.get_root_helper(),
-            use_multipath=CONF.libvirt.iscsi_use_multipath,
+            use_multipath=CONF.libvirt.volume_use_multipath,
             device_scan_attempts=CONF.libvirt.num_iscsi_scan_tries,
             transport=self._get_transport())
 

@@ -13,27 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 from nova.tests.functional.api_sample_tests import api_sample_base
-
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class QuotaClassesSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-quota-class-sets"
+    sample_dir = "os-quota-class-sets"
     set_id = 'test_class'
-
-    def _get_flags(self):
-        f = super(QuotaClassesSampleJsonTests, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.quota_classes.'
-                      'Quota_classes')
-        return f
 
     def test_show_quota_classes(self):
         # Get api sample to show quota classes.

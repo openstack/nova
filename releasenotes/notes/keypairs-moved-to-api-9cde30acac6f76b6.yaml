@@ -1,0 +1,6 @@
+---
+upgrade:
+  - Keypairs have been moved to the API database, using an online
+    data migration. During the first phase of the migration, instances
+    will be given local storage of their key, after which keypairs will
+    be moved to the API database.

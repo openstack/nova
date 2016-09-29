@@ -14,33 +14,15 @@
 #    under the License.
 
 import mock
-from oslo_config import cfg
 
 from nova.cells import utils as cells_utils
 from nova import objects
 from nova.tests.functional.api_sample_tests import api_sample_base
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
-
 
 class HypervisorsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-hypervisors"
-
-    def _get_flags(self):
-        f = super(HypervisorsSampleJsonTests, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.hypervisors.Hypervisors')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.extended_hypervisors.'
-            'Extended_hypervisors')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.hypervisor_status.'
-            'Hypervisor_status')
-        return f
+    sample_dir = "os-hypervisors"
 
     def test_hypervisors_list(self):
         response = self._do_get('os-hypervisors')
@@ -112,17 +94,7 @@ class HypervisorsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
 @mock.patch("nova.servicegroup.API.service_is_up", return_value=True)
 class HypervisorsCellsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-hypervisors"
-
-    def _get_flags(self):
-        f = super(HypervisorsCellsSampleJsonTests, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.hypervisors.Hypervisors')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.hypervisor_status.'
-            'Hypervisor_status')
-        return f
+    sample_dir = "os-hypervisors"
 
     def setUp(self):
         self.flags(enable=True, cell_type='api', group='cells')
@@ -159,3 +131,39 @@ class HypervisorsCellsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
         response = self._do_get('os-hypervisors/%s/uptime' % hypervisor_id)
         subs = {'hypervisor_id': str(hypervisor_id)}
         self._verify_response('hypervisors-uptime-resp', subs, response, 200)
+
+
+class HypervisorsSampleJson228Tests(HypervisorsSampleJsonTests):
+    microversion = '2.28'
+    scenarios = [('v2_28', {'api_major_version': 'v2.1'})]
+
+    def setUp(self):
+        super(HypervisorsSampleJson228Tests, self).setUp()
+        self.api.microversion = self.microversion
+
+
+class HypervisorsSampleJson233Tests(api_sample_base.ApiSampleTestBaseV21):
+    ADMIN_API = True
+    sample_dir = "os-hypervisors"
+    microversion = '2.33'
+    scenarios = [('v2_33', {'api_major_version': 'v2.1'})]
+
+    def setUp(self):
+        super(HypervisorsSampleJson233Tests, self).setUp()
+        self.api.microversion = self.microversion
+        # Start a new compute service to fake a record with hypervisor id=2
+        # for pagination test.
+        self.start_service('compute', host='host1')
+
+    def test_hypervisors_list(self):
+        response = self._do_get('os-hypervisors?limit=1&marker=1')
+        self._verify_response('hypervisors-list-resp', {}, response, 200)
+
+    def test_hypervisors_detail(self):
+        subs = {
+            'hypervisor_id': '2',
+            'host': 'host1',
+            'host_name': 'host1'
+        }
+        response = self._do_get('os-hypervisors/detail?limit=1&marker=1')
+        self._verify_response('hypervisors-detail-resp', subs, response, 200)

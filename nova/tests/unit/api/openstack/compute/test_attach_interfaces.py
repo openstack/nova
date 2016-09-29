@@ -14,11 +14,10 @@
 #    under the License.
 
 import mock
+from webob import exc
 
 from nova.api.openstack.compute import attach_interfaces \
         as attach_interfaces_v21
-from nova.api.openstack.compute.legacy_v2.contrib import attach_interfaces \
-        as attach_interfaces_v2
 from nova.compute import api as compute_api
 from nova import exception
 from nova.network import api as network_api
@@ -26,8 +25,6 @@ from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_network_cache_model
-
-from webob import exc
 
 
 FAKE_UUID1 = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
@@ -220,7 +217,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
                           self.attachments.delete,
                           self.req,
                           FAKE_UUID1,
-                          'invaid-port-id')
+                          'invalid-port-id')
 
     def test_attach_interface_instance_locked(self):
         def fake_attach_interface_to_locked_server(self, context,
@@ -352,7 +349,6 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         attach_mock.assert_called_once_with(ctxt, fake_instance, None,
                                             None, None)
         get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
-                                         want_objects=True,
                                          expected_attrs=None)
 
     @mock.patch.object(compute_api.API, 'get')
@@ -372,7 +368,6 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         attach_mock.assert_called_once_with(ctxt, fake_instance, None,
                                             None, None)
         get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
-                                         want_objects=True,
                                          expected_attrs=None)
 
     @mock.patch.object(compute_api.API, 'get')
@@ -393,7 +388,6 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         attach_mock.assert_called_once_with(ctxt, fake_instance, None,
                                             None, None)
         get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
-                                         want_objects=True,
                                          expected_attrs=None)
 
     @mock.patch.object(compute_api.API, 'get')
@@ -410,7 +404,6 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         attach_mock.assert_called_once_with(ctxt, fake_instance, None,
                                             None, None)
         get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
-                                         want_objects=True,
                                          expected_attrs=None)
 
     @mock.patch.object(compute_api.API, 'get')
@@ -430,7 +423,23 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         attach_mock.assert_called_once_with(ctxt, fake_instance, None,
                                             None, None)
         get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
-                                         want_objects=True,
+                                         expected_attrs=None)
+
+    @mock.patch.object(compute_api.API, 'get')
+    @mock.patch.object(compute_api.API, 'attach_interface')
+    def test_attach_interface_failed_securitygroup_cannot_be_applied(
+        self, attach_mock, get_mock):
+        fake_instance = objects.Instance(uuid=FAKE_UUID1,
+                                         project_id=FAKE_UUID2)
+        get_mock.return_value = fake_instance
+        attach_mock.side_effect = (
+            exception.SecurityGroupCannotBeApplied())
+        self.assertRaises(exc.HTTPBadRequest, self.attachments.create,
+                          self.req, FAKE_UUID1, body={})
+        ctxt = self.req.environ['nova.context']
+        attach_mock.assert_called_once_with(ctxt, fake_instance, None,
+                                            None, None)
+        get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
                                          expected_attrs=None)
 
     def _test_attach_interface_with_invalid_parameter(self, param):
@@ -452,21 +461,6 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
     def test_attach_interface_instance_with_non_array_fixed_ips(self):
         param = {'fixed_ips': 'non_array'}
         self._test_attach_interface_with_invalid_parameter(param)
-
-
-class InterfaceAttachTestsV2(InterfaceAttachTestsV21):
-    controller_cls = attach_interfaces_v2.InterfaceAttachmentController
-    validate_exc = exc.HTTPBadRequest
-    in_use_exc = exc.HTTPBadRequest
-
-    def test_attach_interface_instance_with_non_uuid_net_id(self):
-        pass
-
-    def test_attach_interface_instance_with_non_uuid_port_id(self):
-        pass
-
-    def test_attach_interface_instance_with_non_array_fixed_ips(self):
-        pass
 
 
 class AttachInterfacesPolicyEnforcementv21(test.NoDBTestCase):
@@ -510,3 +504,25 @@ class AttachInterfacesPolicyEnforcementv21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % self.rule_name,
             exc.format_message())
+
+    def test_attach_interfaces_create_policy_failed(self):
+        self.policy.set_rules({self.rule_name: "@",
+                               'os_compute_api:os-attach-interfaces:create':
+                               "!"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.create, self.req, fakes.FAKE_UUID, body={})
+        self.assertEqual(
+            "Policy doesn't allow os_compute_api:os-attach-interfaces:create "
+            "to be performed.", exc.format_message())
+
+    def test_attach_interfaces_delete_policy_failed(self):
+        self.policy.set_rules({self.rule_name: "@",
+                               'os_compute_api:os-attach-interfaces:delete':
+                               "!"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.delete, self.req, fakes.FAKE_UUID, FAKE_PORT_ID1)
+        self.assertEqual(
+            "Policy doesn't allow os_compute_api:os-attach-interfaces:delete "
+            "to be performed.", exc.format_message())

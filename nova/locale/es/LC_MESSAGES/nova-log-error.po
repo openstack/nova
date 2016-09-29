@@ -12,9 +12,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:29+0000\n"
+"POT-Creation-Date: 2016-08-25 06:15+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -35,14 +35,6 @@ msgid ""
 "%(size)s"
 msgstr ""
 "El tamaño virtual %(base_size)s de %(base)s es más grande que el tamaño del "
-"disco raíz del sabor %(size)s"
-
-#, python-format
-msgid ""
-"%(base)s virtual size %(disk_size)s larger than flavor root disk size "
-"%(size)s"
-msgstr ""
-"El tamaño virtual %(disk_size)s de %(base)s es más grande que el tamaño del "
 "disco raíz del sabor %(size)s"
 
 #, python-format
@@ -81,34 +73,6 @@ msgstr "Capturado error: %s"
 msgid "Compute driver option required, but not specified"
 msgstr ""
 "La opción de controlador de cálculo es necesaria, pero no se ha especificado"
-
-#, python-format
-msgid "Compute.api::inject_network_info %s"
-msgstr "Compute.api::inject_network_info %s"
-
-#, python-format
-msgid "Compute.api::lock %s"
-msgstr "Compute.api::lock %s"
-
-#, python-format
-msgid "Compute.api::pause %s"
-msgstr "Compute.api::pause %s"
-
-#, python-format
-msgid "Compute.api::resetState %s"
-msgstr "Compute.api::resetState %s"
-
-#, python-format
-msgid "Compute.api::reset_network %s"
-msgstr "Compute.api::reset_network %s"
-
-#, python-format
-msgid "Compute.api::unlock %s"
-msgstr "Compute.api::unlock %s"
-
-#, python-format
-msgid "Compute.api::unpause %s"
-msgstr "Compute.api::unpause %s"
 
 #, python-format
 msgid "Connection to libvirt failed: %s"
@@ -201,18 +165,6 @@ msgid "Environment variable 'NETWORK_ID' must be set."
 msgstr "La variable de entorno 'NETWORK_ID' debe ser establecida."
 
 #, python-format
-msgid "Error copying key: %s"
-msgstr "Error al copiar la llave: %s"
-
-#, python-format
-msgid "Error creating Barbican client: %s"
-msgstr "Error al crear cliente Barbican: %s"
-
-#, python-format
-msgid "Error creating key: %s"
-msgstr "Error al crear clave: %s"
-
-#, python-format
 msgid "Error defining a domain with XML: %s"
 msgstr "Error definiendo el dominio con XML: %s"
 
@@ -223,10 +175,6 @@ msgstr "Error al definir un secreto con XML: %s"
 #, python-format
 msgid "Error deleting conntrack entries for %s"
 msgstr "Error al eliminar las entradas conntrack para %s"
-
-#, python-format
-msgid "Error deleting key: %s"
-msgstr "Error al eliminar clave: %s"
 
 #, python-format
 msgid "Error deploying instance %(instance)s on baremetal node %(node)s."
@@ -257,21 +205,6 @@ msgid "Error from libvirt during unfilter. Code=%(errcode)s Error=%(e)s"
 msgstr ""
 "Error de libvirt durante eliminación de filtro. Código=%(errcode)s Error="
 "%(e)s"
-
-#, python-format
-msgid "Error getting key: %s"
-msgstr "Error al obtener clave: %s"
-
-#, python-format
-msgid "Error getting secret data: %s"
-msgstr "Error al obtener los datos secretos: %s"
-
-#, python-format
-msgid "Error getting secret metadata: %s"
-msgstr "Error al obtener los metadatos secretos: %s"
-
-msgid "Error in migrate"
-msgstr "Error en la migración"
 
 #, python-format
 msgid "Error injecting data into image %(img_id)s (%(e)s)"
@@ -318,10 +251,6 @@ msgid "Error processing message locally"
 msgstr "Error al procesar el mensaje localmente"
 
 #, python-format
-msgid "Error reading image info file %(filename)s: %(error)s"
-msgstr "Error al leer imagen en archivo %(filename)s: %(error)s"
-
-#, python-format
 msgid "Error releasing DHCP for IP %(address)s with MAC %(mac_address)s"
 msgstr "Error al liberar DHCP para la IP %(address)s con MAC %(mac_address)s"
 
@@ -335,10 +264,6 @@ msgstr "Error al enviar el mensaje a los siguientes saltos"
 #, python-format
 msgid "Error starting xvp: %s"
 msgstr "Error al iniciar xvp: %s "
-
-#, python-format
-msgid "Error storing key: %s"
-msgstr "Error al almacenar la llave: %s"
 
 msgid "Error trying to Rescue Instance"
 msgstr "Error al intentar Rescatar Instancia"
@@ -456,9 +381,6 @@ msgid ""
 msgstr ""
 "Error al copiar la imagen en memoria cahé %(source)s a %(dest)s para "
 "redimensionamiento: %(error)s"
-
-msgid "Failed to deallocate network for instance."
-msgstr "Se ha encontrado un error al desasignar la red para la instancia"
 
 msgid "Failed to deallocate networks"
 msgstr "Fallo al desasociar redes"
@@ -716,10 +638,6 @@ msgid "Instance failed to spawn"
 msgstr "La instancia no se ha podido generar"
 
 #, python-format
-msgid "Instance type %s not found for deletion"
-msgstr "No se ha encontrado el tipo de instancia %s para suprimirse"
-
-#, python-format
 msgid "Interface %s not found"
 msgstr "Interfaz %s no encontrada"
 
@@ -812,18 +730,6 @@ msgstr "Error de Neutron al crear puerto en la red: %s"
 #, python-format
 msgid "No compute node record for host %s"
 msgstr "No hay registro de nodo de cómputo para host %s"
-
-#, python-format
-msgid "No db access allowed in nova-compute: %s"
-msgstr "No se permite acceso a la base de datos en nova-compute: %s"
-
-#, python-format
-msgid "No db access allowed in nova-dhcpbridge: %s"
-msgstr "No se permite acceso a la base de datos en nova-dhcpbridge: %s"
-
-#, python-format
-msgid "No db access allowed in nova-network: %s"
-msgstr "No se permite acceso a base de datos en nova-network: %s"
 
 #, python-format
 msgid "No save handler for %s"
@@ -966,10 +872,6 @@ msgstr "No es posible encontrar SR a partir de VBD"
 msgid "Unable to find SR from VDI"
 msgstr "No es posible encontrar SR a partir de VDI"
 
-#, python-format
-msgid "Unable to find address %r"
-msgstr "No se puede encontrar la dirección %r"
-
 msgid "Unable to get record of VDI"
 msgstr "No es posible obtener registro de VDI"
 
@@ -1011,10 +913,6 @@ msgstr "Incapaz de establecer conjunto: %s"
 
 msgid "Unable to unplug VBD"
 msgstr "No ha sido posible desconectar VBD"
-
-#, python-format
-msgid "Unable to update host of port %s"
-msgstr "Incapaz de actualizar el anfitrión del puerto %s"
 
 #, python-format
 msgid "Unable to update instance VNIC index for port %s."
@@ -1096,14 +994,6 @@ msgstr "allocate_port_for_instance ha regresado %(ports)s puertos"
 msgid "attaching network adapter failed."
 msgstr "se ha encontrado un error en la conexión del adaptador de red."
 
-#, python-format
-msgid "compute.api::resume %s"
-msgstr "compute.api::resume %s"
-
-#, python-format
-msgid "compute.api::suspend %s"
-msgstr "compute.api::suspend %s"
-
 msgid "detaching network adapter failed."
 msgstr "se ha encontrado un error en la desconexión del adaptador de red."
 
@@ -1113,10 +1003,6 @@ msgstr "error durante stop() en sync_power_state."
 #, python-format
 msgid "error opening rbd image %s"
 msgstr "Error al abrir imagen rbd %s"
-
-#, python-format
-msgid "image %(id)s at (%(base_file)s): image verification failed"
-msgstr "imagen %(id)s en (%(base_file)s): ha fallado la verificación de imagen"
 
 #, python-format
 msgid "kill -HUP dnsmasq threw %s"

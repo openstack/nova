@@ -13,14 +13,11 @@
 #    under the License.
 
 from migrate import UniqueConstraint
-from oslo_log import log as logging
 from sqlalchemy import MetaData
 from sqlalchemy.sql import null
 
 from nova import exception
 from nova.i18n import _
-
-LOG = logging.getLogger(__name__)
 
 UC_NAME = 'uniq_instances0uuid'
 

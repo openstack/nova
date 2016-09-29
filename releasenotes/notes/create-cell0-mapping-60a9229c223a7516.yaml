@@ -1,0 +1,7 @@
+---
+upgrade:
+  - |
+    A new nova-manage command 'nova-manage cell_v2 map_cell0' is
+    now available. Creates a cell mapping for cell0, which is used for
+    storing instances that cannot be scheduled to any cell. This command
+    only needs to be called when upgrading to CellsV2.

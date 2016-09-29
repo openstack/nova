@@ -31,7 +31,6 @@ from nova import utils
 
 
 CONF = nova.conf.CONF
-CONF.import_opt('host', 'nova.netconf')
 LOG = logging.getLogger(__name__)
 
 
@@ -39,7 +38,7 @@ class XVPConsoleProxy(object):
     """Sets up XVP config, and manages XVP daemon."""
 
     def __init__(self):
-        self.xvpconf_template = open(CONF.console_xvp_conf_template).read()
+        self.xvpconf_template = open(CONF.xvp.console_xvp_conf_template).read()
         self.host = CONF.host  # default, set by manager.
         super(XVPConsoleProxy, self).__init__()
 
@@ -52,7 +51,7 @@ class XVPConsoleProxy(object):
         # TODO(mdragon): implement port selection for non multiplex ports,
         #               we are not using that, but someone else may want
         #               it.
-        return CONF.console_xvp_multiplex_port
+        return CONF.xvp.console_xvp_multiplex_port
 
     def setup_console(self, context, console):
         """Sets up actual proxies."""
@@ -85,7 +84,7 @@ class XVPConsoleProxy(object):
             LOG.debug('No console pools!')
             self._xvp_stop()
             return
-        conf_data = {'multiplex_port': CONF.console_xvp_multiplex_port,
+        conf_data = {'multiplex_port': CONF.xvp.console_xvp_multiplex_port,
                      'pools': pools}
         tmpl_path, tmpl_file = os.path.split(CONF.injected_network_template)
         env = jinja2.Environment(loader=jinja2.FileSystemLoader(tmpl_path))
@@ -96,8 +95,8 @@ class XVPConsoleProxy(object):
 
     def _write_conf(self, config):
         try:
-            LOG.debug('Re-wrote %s', CONF.console_xvp_conf)
-            with open(CONF.console_xvp_conf, 'w') as cfile:
+            LOG.debug('Re-wrote %s', CONF.xvp.console_xvp_conf)
+            with open(CONF.xvp.console_xvp_conf, 'w') as cfile:
                 cfile.write(config)
         except IOError:
             with excutils.save_and_reraise_exception():
@@ -120,9 +119,9 @@ class XVPConsoleProxy(object):
         LOG.debug('Starting xvp')
         try:
             utils.execute('xvp',
-                          '-p', CONF.console_xvp_pid,
-                          '-c', CONF.console_xvp_conf,
-                          '-l', CONF.console_xvp_log)
+                          '-p', CONF.xvp.console_xvp_pid,
+                          '-c', CONF.xvp.console_xvp_conf,
+                          '-l', CONF.xvp.console_xvp_log)
         except processutils.ProcessExecutionError as err:
             LOG.error(_LE('Error starting xvp: %s'), err)
 
@@ -137,7 +136,7 @@ class XVPConsoleProxy(object):
 
     def _xvp_pid(self):
         try:
-            with open(CONF.console_xvp_pid, 'r') as pidfile:
+            with open(CONF.xvp.console_xvp_pid, 'r') as pidfile:
                 pid = int(pidfile.read())
         except IOError:
             return None

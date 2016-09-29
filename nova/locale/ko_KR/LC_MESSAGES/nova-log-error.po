@@ -7,9 +7,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:29+0000\n"
+"POT-Creation-Date: 2016-08-25 06:15+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -30,14 +30,6 @@ msgid ""
 "%(size)s"
 msgstr ""
 "%(base)s 가상 크기 %(base_size)s이(가) flavor 루트 디스크 크기 %(size)s보다 "
-"큼"
-
-#, python-format
-msgid ""
-"%(base)s virtual size %(disk_size)s larger than flavor root disk size "
-"%(size)s"
-msgstr ""
-"%(base)s 가상 크기 %(disk_size)s이(가) flavor 루트 디스크 크기 %(size)s보다 "
 "큼"
 
 #, python-format
@@ -93,34 +85,6 @@ msgstr "오류 발견: %s"
 
 msgid "Compute driver option required, but not specified"
 msgstr "계산 드라이버 옵션이 필수이지만 지정되지 않았음"
-
-#, python-format
-msgid "Compute.api::inject_network_info %s"
-msgstr "Compute.api::inject_network_info %s"
-
-#, python-format
-msgid "Compute.api::lock %s"
-msgstr "Compute.api::lock %s"
-
-#, python-format
-msgid "Compute.api::pause %s"
-msgstr "Compute.api::pause %s"
-
-#, python-format
-msgid "Compute.api::resetState %s"
-msgstr "Compute.api::resetState %s"
-
-#, python-format
-msgid "Compute.api::reset_network %s"
-msgstr "Compute.api::reset_network %s"
-
-#, python-format
-msgid "Compute.api::unlock %s"
-msgstr "Compute.api::unlock %s"
-
-#, python-format
-msgid "Compute.api::unpause %s"
-msgstr "Compute.api::unpause %s"
 
 #, python-format
 msgid ""
@@ -240,18 +204,6 @@ msgstr ""
 "했습니다."
 
 #, python-format
-msgid "Error copying key: %s"
-msgstr "키 복사 오류: %s"
-
-#, python-format
-msgid "Error creating Barbican client: %s"
-msgstr "Barbican 클라이언트 생성 오류: %s"
-
-#, python-format
-msgid "Error creating key: %s"
-msgstr "키 생성 오류: %s"
-
-#, python-format
 msgid "Error defining a domain with XML: %s"
 msgstr "XML로 도메인을 정의하는 중 오류 발생: %s"
 
@@ -262,10 +214,6 @@ msgstr "XML로 시크릿 정의 오류: %s"
 #, python-format
 msgid "Error deleting conntrack entries for %s"
 msgstr "%s의 conntrack 항목을 삭제하는 중 오류 발생"
-
-#, python-format
-msgid "Error deleting key: %s"
-msgstr "키 삭제 오류: %s"
 
 #, python-format
 msgid "Error deploying instance %(instance)s on baremetal node %(node)s."
@@ -301,21 +249,6 @@ msgid ""
 msgstr ""
 "NMI를 %(instance_uuid)s에 삽입하는 동안 libvirt에서 오류 발생: [오류 코드 "
 "%(error_code)s] %(ex)s"
-
-#, python-format
-msgid "Error getting key: %s"
-msgstr "키 가져오기 오류: %s"
-
-#, python-format
-msgid "Error getting secret data: %s"
-msgstr "시크릿 데이터 가져오기 오류: %s"
-
-#, python-format
-msgid "Error getting secret metadata: %s"
-msgstr "시크릿 메타데이터 가져오기 오류: %s"
-
-msgid "Error in migrate"
-msgstr "마이그레이션 오류"
 
 #, python-format
 msgid "Error injecting data into image %(img_id)s (%(e)s)"
@@ -360,10 +293,6 @@ msgid "Error processing message locally"
 msgstr "메시지를 로컬로 처리하는 중 오류 발생"
 
 #, python-format
-msgid "Error reading image info file %(filename)s: %(error)s"
-msgstr "이미지 정보 파일 %(filename)s 읽기 오류: %(error)s"
-
-#, python-format
 msgid "Error releasing DHCP for IP %(address)s with MAC %(mac_address)s"
 msgstr "MAC이 %(mac_address)s인 IP %(address)s의 DHCP를 해제하는 중 오류 발생"
 
@@ -377,10 +306,6 @@ msgstr "다음 hop에 메시지를 보내는 중 오류 발생"
 #, python-format
 msgid "Error starting xvp: %s"
 msgstr "xvp 시작 오류: %s"
-
-#, python-format
-msgid "Error storing key: %s"
-msgstr "키 저장 오류: %s"
 
 msgid "Error trying to Rescue Instance"
 msgstr "인스턴스를 복구하는 중 오류 발생"
@@ -508,9 +433,6 @@ msgstr ""
 "크기를 조정하기 위해 캐시된 이미지 %(source)s을(를) %(dest)s(으)로 복사하는 "
 "데 실패: %(error)s"
 
-msgid "Failed to deallocate network for instance."
-msgstr "인스턴스에 대한 네트워크 할당 해제에 실패했습니다."
-
 msgid "Failed to deallocate networks"
 msgstr "네트워크 할당 해제 실패"
 
@@ -577,10 +499,6 @@ msgid ""
 msgstr ""
 "메타데이터 요청의 인스턴스 ID, 제공자 %(provider)s 네트워크 %(networks)s 요청"
 "자 %(requester)s을(를) 가져오는 데 실패했습니다. 오류: %(error)s"
-
-#, python-format
-msgid "Failed to get metadata for IP: %s"
-msgstr "IP의 메타데이터를 가져오는 데 실패: %s"
 
 #, python-format
 msgid "Failed to get metadata for instance id: %s"
@@ -825,10 +743,6 @@ msgid "Instance failed to spawn"
 msgstr "인스턴스가 파생하지 못했음"
 
 #, python-format
-msgid "Instance type %s not found for deletion"
-msgstr "삭제할 인스턴스 유형 %s을(를) 찾을 수 없음"
-
-#, python-format
 msgid "Interface %s not found"
 msgstr "%s 인터페이스를 찾을 수 없음"
 
@@ -926,18 +840,6 @@ msgstr "%s 네트워크에서 포트를 생성하는 중 Neutron 오류 발생"
 #, python-format
 msgid "No compute node record for host %s"
 msgstr "%s 호스트의 컴퓨트 노드 레코드가 없음"
-
-#, python-format
-msgid "No db access allowed in nova-compute: %s"
-msgstr "nova-compute에서 db 액세스가 허용되지 않음: %s"
-
-#, python-format
-msgid "No db access allowed in nova-dhcpbridge: %s"
-msgstr "nova-dhcpbridge에서 db 액세스가 허용되지 않음: %s"
-
-#, python-format
-msgid "No db access allowed in nova-network: %s"
-msgstr "nova-network에서 db 액세스가 허용되지 않음: %s"
 
 #, python-format
 msgid "No load handler for %s"
@@ -1077,9 +979,6 @@ msgstr ""
 msgid "Unable to destroy VBD"
 msgstr "VBD를 영구 삭제할 수 없음"
 
-msgid "Unable to determine the glance API version"
-msgstr "Glance API 버전을 판별할 수 없음"
-
 #, python-format
 msgid "Unable to execute %(cmd)s. Exception: %(exception)s"
 msgstr "%(cmd)s을(를) 실행할 수 없습니다. 예외: %(exception)s"
@@ -1089,14 +988,6 @@ msgstr "VBD에서 SR을 찾을 수 없음"
 
 msgid "Unable to find SR from VDI"
 msgstr "VDI에서 SR을 찾을 수 없음"
-
-#, python-format
-msgid "Unable to find a service record to update for %(binary)s on %(host)s"
-msgstr "%(host)s에서 %(binary)s의 업데이트를 위한 서비스 레코드를 찾을 수 없음"
-
-#, python-format
-msgid "Unable to find address %r"
-msgstr "%r 주소를 찾을 수 없음"
 
 msgid "Unable to get record of VDI"
 msgstr "VDI 레코드를 가져올 수 없음"
@@ -1141,10 +1032,6 @@ msgstr "풀을 설정할 수 없음: %s."
 
 msgid "Unable to unplug VBD"
 msgstr "VBD 플러그를 해제할 수 없음"
-
-#, python-format
-msgid "Unable to update host of port %s"
-msgstr "%s 포트의 호스트를 업데이트할 수 없음"
 
 #, python-format
 msgid "Unable to update instance VNIC index for port %s."
@@ -1237,14 +1124,6 @@ msgstr "allocate_port_for_instance에서 %(ports)s 포트를 반환함"
 msgid "attaching network adapter failed."
 msgstr "네트워크 어댑터 첨부에 실패했습니다."
 
-#, python-format
-msgid "compute.api::resume %s"
-msgstr "compute.api::resume %s"
-
-#, python-format
-msgid "compute.api::suspend %s"
-msgstr "compute.api::suspend %s"
-
 msgid "detaching network adapter failed."
 msgstr "네트워크 어댑터 분리에 실패했습니다."
 
@@ -1254,10 +1133,6 @@ msgstr "sync_power_state에서 stop() 중에 오류 발생"
 #, python-format
 msgid "error opening rbd image %s"
 msgstr "rbd 이미지 %s 열기 오류"
-
-#, python-format
-msgid "image %(id)s at (%(base_file)s): image verification failed"
-msgstr "(%(base_file)s)의 이미지 %(id)s: 이미지 검증 실패"
 
 #, python-format
 msgid "image %(volume)s in pool %(pool)s has snapshots, failed to remove"

@@ -16,7 +16,6 @@
 import datetime
 
 from oslo_serialization import jsonutils
-import webob
 
 from nova.compute import flavors
 from nova import test
@@ -39,7 +38,9 @@ def fake_get_flavor_by_flavor_id(flavorid, ctxt=None):
         'deleted_at': None,
         'vcpu_weight': None,
         'swap': 0,
+        'is_public': True,
         'disabled': False,
+        'rxtx_factor': 1.0,
     }
 
 
@@ -57,9 +58,6 @@ class FlavorExtraDataTestV21(test.NoDBTestCase):
 
     def setUp(self):
         super(FlavorExtraDataTestV21, self).setUp()
-        ext = ('nova.api.openstack.compute.contrib'
-              '.flavorextradata.Flavorextradata')
-        self.flags(osapi_compute_extension=[ext])
         self.stubs.Set(flavors, 'get_flavor_by_flavor_id',
                                         fake_get_flavor_by_flavor_id)
         self.stubs.Set(flavors, 'get_all_flavors_sorted_list',
@@ -86,7 +84,7 @@ class FlavorExtraDataTestV21(test.NoDBTestCase):
         }
 
         url = self.base_url + '/1'
-        req = webob.Request.blank(url)
+        req = fakes.HTTPRequest.blank(url)
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(self.app)
         body = jsonutils.loads(res.body)
@@ -101,6 +99,8 @@ class FlavorExtraDataTestV21(test.NoDBTestCase):
                 'vcpus': 1,
                 'disk': 1,
                 'OS-FLV-EXT-DATA:ephemeral': 1,
+                'rxtx_factor': 1.0,
+                'os-flavor-access:is_public': True,
             },
             {
                 'id': '2',
@@ -109,20 +109,15 @@ class FlavorExtraDataTestV21(test.NoDBTestCase):
                 'vcpus': 1,
                 'disk': 1,
                 'OS-FLV-EXT-DATA:ephemeral': 1,
+                'rxtx_factor': 1.0,
+                'os-flavor-access:is_public': True,
             },
         ]
 
         url = self.base_url + '/detail'
-        req = webob.Request.blank(url)
+        req = fakes.HTTPRequest.blank(url)
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(self.app)
         body = jsonutils.loads(res.body)
         for i, flavor in enumerate(body['flavors']):
             self._verify_flavor_response(flavor, expected[i])
-
-
-class FlavorExtraDataTestV2(FlavorExtraDataTestV21):
-
-    @property
-    def app(self):
-        return fakes.wsgi_app(init_only=('flavors',))

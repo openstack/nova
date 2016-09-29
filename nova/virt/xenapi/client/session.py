@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import ast
 import contextlib
 
 try:
@@ -27,7 +28,9 @@ from eventlet import queue
 from eventlet import timeout
 from oslo_log import log as logging
 from oslo_utils import versionutils
+from six.moves import http_client
 from six.moves import range
+from six.moves import urllib
 
 try:
     import xmlrpclib
@@ -46,15 +49,14 @@ from nova.virt.xenapi import pool_states
 
 LOG = logging.getLogger(__name__)
 
-
 CONF = nova.conf.CONF
-CONF.import_opt('host', 'nova.netconf')
 
 
 def apply_session_helpers(session):
     session.VM = cli_objects.VM(session)
     session.SR = cli_objects.SR(session)
     session.VDI = cli_objects.VDI(session)
+    session.VIF = cli_objects.VIF(session)
     session.VBD = cli_objects.VBD(session)
     session.PBD = cli_objects.PBD(session)
     session.PIF = cli_objects.PIF(session)
@@ -71,7 +73,7 @@ class XenAPISession(object):
     # changed in development environments.
     # MAJOR VERSION: Incompatible changes with the plugins
     # MINOR VERSION: Compatible changes, new plguins, etc
-    PLUGIN_REQUIRED_VERSION = '1.3'
+    PLUGIN_REQUIRED_VERSION = '1.8'
 
     def __init__(self, url, user, pw):
         version_string = version.version_string_with_package()
@@ -83,9 +85,10 @@ class XenAPISession(object):
         self.XenAPI = XenAPI
         self._sessions = queue.Queue()
         self.is_slave = False
+        self.host_checked = False
         exception = self.XenAPI.Failure(_("Unable to log in to XenAPI "
                                           "(is the Dom0 disk full?)"))
-        url = self._create_first_session(url, user, pw, exception)
+        self.url = self._create_first_session(url, user, pw, exception)
         self._populate_session_pool(url, user, pw, exception)
         self.host_uuid = self._get_host_uuid()
         self.host_ref = self._get_host_ref()
@@ -104,7 +107,12 @@ class XenAPISession(object):
     def _verify_plugin_version(self):
         requested_version = self.PLUGIN_REQUIRED_VERSION
         current_version = self.call_plugin_serialized(
-            'nova_plugin_version', 'get_version')
+            'nova_plugin_version.py', 'get_version')
+
+        # v2.0 is the same as v1.8, with no version bumps. Remove this once
+        # Ocata is released
+        if requested_version == '2.0' and current_version == '1.8':
+            return
 
         if not versionutils.is_compatible(requested_version, current_version):
             raise self.XenAPI.Failure(
@@ -199,6 +207,17 @@ class XenAPISession(object):
         # the plugin gets executed on the right host when using XS pools
         args['host_uuid'] = self.host_uuid
 
+        # TODO(sfinucan): Once the required plugin version is bumped to v2.0,
+        # we can assume that all files will have a '.py' extension. Until then,
+        # handle hosts without this extension by rewriting all calls to plugins
+        # to exclude the '.py' extension. This is made possible through the
+        # temporary inclusion of symlinks to plugins.
+        # NOTE(sfinucan): 'partition_utils.py' was the only plugin with a '.py'
+        # extension before this change was enacted, hence this plugin is
+        # excluded
+        if not plugin == 'partition_utils.py':
+            plugin = plugin.rstrip('.py')
+
         with self._get_session() as session:
             return self._unwrap_plugin_exceptions(
                                  session.xenapi.host.call_plugin,
@@ -289,8 +308,7 @@ class XenAPISession(object):
                     exc.details[2] == 'Failure'):
                 params = None
                 try:
-                    # FIXME(comstud): eval is evil.
-                    params = eval(exc.details[3])
+                    params = ast.literal_eval(exc.details[3])
                 except Exception:
                     raise exc
                 raise self.XenAPI.Failure(params)
@@ -317,3 +335,33 @@ class XenAPISession(object):
         """
 
         return self.call_xenapi('%s.get_all_records' % record_type).items()
+
+    @contextlib.contextmanager
+    def custom_task(self, label, desc=''):
+        """Return exclusive session for scope of with statement."""
+        name = 'nova-%s' % (label)
+        task_ref = self.call_xenapi("task.create", name,
+                                       desc)
+        try:
+            LOG.debug('Created task %s with ref %s' % (name, task_ref))
+            yield task_ref
+        finally:
+            self.call_xenapi("task.destroy", task_ref)
+            LOG.debug('Destroyed task ref %s' % (task_ref))
+
+    @contextlib.contextmanager
+    def http_connection(session):
+        conn = None
+
+        xs_url = urllib.parse.urlparse(session.url)
+        LOG.debug("Creating http(s) connection to %s" % session.url)
+        if xs_url.scheme == 'http':
+            conn = http_client.HTTPConnection(xs_url.netloc)
+        elif xs_url.scheme == 'https':
+            conn = http_client.HTTPSConnection(xs_url.netloc)
+
+        conn.connect()
+        try:
+            yield conn
+        finally:
+            conn.close()

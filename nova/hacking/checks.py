@@ -18,6 +18,7 @@ import os
 import re
 
 import pep8
+import six
 
 """
 Guidelines for writing new hacking checks
@@ -39,6 +40,8 @@ session_check = re.compile(r"\w*def [a-zA-Z0-9].*[(].*session.*[)]")
 cfg_re = re.compile(r".*\scfg\.")
 # Excludes oslo.config OptGroup objects
 cfg_opt_re = re.compile(r".*[\s\[]cfg\.[a-zA-Z]*Opt\(")
+rule_default_re = re.compile(r".*RuleDefault\(")
+policy_enforce_re = re.compile(r".*_ENFORCER\.enforce\(")
 vi_header_re = re.compile(r"^#\s+vim?:.+")
 virt_file_re = re.compile(r"\./nova/(?:tests/)?virt/(\w+)/")
 virt_import_re = re.compile(
@@ -55,10 +58,6 @@ asse_equal_in_end_with_true_or_false_re = re.compile(r"assertEqual\("
                     r"(\w|[][.'\"])+ in (\w|[][.'\", ])+, (True|False)\)")
 asse_equal_in_start_with_true_or_false_re = re.compile(r"assertEqual\("
                     r"(True|False), (\w|[][.'\"])+ in (\w|[][.'\", ])+\)")
-asse_equal_end_with_none_re = re.compile(
-                           r"assertEqual\(.*?,\s+None\)$")
-asse_equal_start_with_none_re = re.compile(
-                           r"assertEqual\(None,")
 # NOTE(snikitin): Next two regexes weren't united to one for more readability.
 #                 asse_true_false_with_in_or_not_in regex checks
 #                 assertTrue/False(A in B) cases where B argument has no spaces
@@ -104,8 +103,6 @@ spawn_re = re.compile(
 contextlib_nested = re.compile(r"^with (contextlib\.)?nested\(")
 doubled_words_re = re.compile(
     r"\b(then?|[iao]n|i[fst]|but|f?or|at|and|[dt]o)\s+\1\b")
-
-opt_help_text_min_char_count = 10
 
 
 class BaseASTChecker(ast.NodeVisitor):
@@ -282,11 +279,26 @@ def assert_equal_none(logical_line):
 
     N318
     """
-    res = (asse_equal_start_with_none_re.search(logical_line) or
-           asse_equal_end_with_none_re.search(logical_line))
-    if res:
+    _start_re = re.compile(r"assertEqual\(.*?,\s+None\)$")
+    _end_re = re.compile(r"assertEqual\(None,")
+
+    if _start_re.search(logical_line) or _end_re.search(logical_line):
         yield (0, "N318: assertEqual(A, None) or assertEqual(None, A) "
-               "sentences not allowed")
+               "sentences not allowed. Use assertIsNone(A) instead.")
+
+    _start_re = re.compile(r"assertIs(Not)?\(None,")
+    _end_re = re.compile(r"assertIs(Not)?\(.*,\s+None\)$")
+
+    if _start_re.search(logical_line) or _end_re.search(logical_line):
+        yield (0, "N318: assertIsNot(A, None) or assertIsNot(None, A) must "
+               "not be used. Use assertIsNone(A) or assertIsNotNone(A) "
+               "instead.")
+
+
+def check_python3_xrange(logical_line):
+    if re.search(r"\bxrange\s*\(", logical_line):
+        yield(0, "N327: Do not use xrange(). 'xrange()' is not compatible "
+              "with Python 3. Use range() or six.moves.range() instead.")
 
 
 def no_translate_debug_logs(logical_line, filename):
@@ -429,14 +441,26 @@ class CheckForStrUnicodeExc(BaseASTChecker):
         self.name = []
         self.already_checked = []
 
-    def visit_TryExcept(self, node):
-        for handler in node.handlers:
-            if handler.name:
-                self.name.append(handler.name.id)
-                super(CheckForStrUnicodeExc, self).generic_visit(node)
-                self.name = self.name[:-1]
-            else:
-                super(CheckForStrUnicodeExc, self).generic_visit(node)
+    # Python 2 produces ast.TryExcept and ast.TryFinally nodes, but Python 3
+    # only produces ast.Try nodes.
+    if six.PY2:
+        def visit_TryExcept(self, node):
+            for handler in node.handlers:
+                if handler.name:
+                    self.name.append(handler.name.id)
+                    super(CheckForStrUnicodeExc, self).generic_visit(node)
+                    self.name = self.name[:-1]
+                else:
+                    super(CheckForStrUnicodeExc, self).generic_visit(node)
+    else:
+        def visit_Try(self, node):
+            for handler in node.handlers:
+                if handler.name:
+                    self.name.append(handler.name)
+                    super(CheckForStrUnicodeExc, self).generic_visit(node)
+                    self.name = self.name[:-1]
+                else:
+                    super(CheckForStrUnicodeExc, self).generic_visit(node)
 
     def visit_Call(self, node):
         if self._check_call_names(node, ['str', 'unicode']):
@@ -594,8 +618,7 @@ def check_http_not_implemented(logical_line, physical_line, filename):
            " common raise_feature_not_supported().")
     if pep8.noqa(physical_line):
         return
-    if ("nova/api/openstack/compute/legacy_v2" in filename or
-            "nova/api/openstack/compute" not in filename):
+    if ("nova/api/openstack/compute" not in filename):
         return
     if re.match(http_not_implemented_re, logical_line):
         yield(0, msg)
@@ -652,6 +675,38 @@ def check_config_option_in_central_place(logical_line, filename):
         yield(0, msg)
 
 
+def check_policy_registration_in_central_place(logical_line, filename):
+    msg = ('N350: Policy registration should be in the central location '
+           '"/nova/policies/*".')
+    # This is where registration should happen
+    if "nova/policies/" in filename:
+        return
+    # A couple of policy tests register rules
+    if "nova/tests/unit/test_policy.py" in filename:
+        return
+
+    if rule_default_re.match(logical_line):
+        yield(0, msg)
+
+
+def check_policy_enforce(logical_line, filename):
+    """Look for uses of nova.policy._ENFORCER.enforce()
+
+    Now that policy defaults are registered in code the _ENFORCER.authorize
+    method should be used. That ensures that only registered policies are used.
+    Uses of _ENFORCER.enforce could allow unregistered policies to be used, so
+    this check looks for uses of that method.
+
+    N351
+    """
+
+    msg = ('N351: nova.policy._ENFORCER.enforce() should not be used. '
+           'Use the authorize() method instead.')
+
+    if policy_enforce_re.match(logical_line):
+        yield(0, msg)
+
+
 def check_doubled_words(physical_line, filename):
     """Check for the common doubled-word typos
 
@@ -686,75 +741,6 @@ def check_python3_no_itervalues(logical_line):
         yield(0, msg)
 
 
-def cfg_help_with_enough_text(logical_line, tokens):
-    # TODO(markus_z): The count of 10 chars is the *highest* number I could
-    # use to introduce this new check without breaking the gate. IOW, if I
-    # use a value of 15 for example, the gate checks will fail because we have
-    # a few config options which use fewer chars than 15 to explain their
-    # usage (for example the options "ca_file" and "cert").
-    # As soon as the implementation of bp centralize-config-options is
-    # finished, I wanted to increase that magic number to a higher (to be
-    # defined) value.
-    # This check is an attempt to programmatically check a part of the review
-    #  guidelines http://docs.openstack.org/developer/nova/code-review.html
-
-    msg = ("N347: A config option is a public interface to the cloud admins "
-           "and should be properly documented. A part of that is to provide "
-           "enough help text to describe this option. Use at least %s chars "
-           "for that description. Is is likely that this minimum will be "
-           "increased in the future." % opt_help_text_min_char_count)
-
-    if not cfg_opt_re.match(logical_line):
-        return
-
-    # ignore DeprecatedOpt objects. They get mentioned in the release notes
-    # and don't need a lengthy help text anymore
-    if "DeprecatedOpt" in logical_line:
-        return
-
-    def get_token_value(idx):
-        return tokens[idx][1]
-
-    def get_token_values(start_index, length):
-        values = ""
-        for offset in range(length):
-            values += get_token_value(start_index + offset)
-        return values
-
-    def get_help_token_index():
-        for idx in range(len(tokens)):
-            if get_token_value(idx) == "help":
-                return idx
-        return -1
-
-    def has_help():
-        return get_help_token_index() >= 0
-
-    def get_trimmed_help_text(t):
-        txt = ""
-        # len(["help", "=", "_", "("]) ==> 4
-        if get_token_values(t, 4) == "help=_(":
-            txt = get_token_value(t + 4)
-        # len(["help", "=", "("]) ==> 3
-        elif get_token_values(t, 3) == "help=(":
-            txt = get_token_value(t + 3)
-        # len(["help", "="]) ==> 2
-        else:
-            txt = get_token_value(t + 2)
-        return " ".join(txt.strip('\"\'').split())
-
-    def has_enough_help_text(txt):
-        return len(txt) >= opt_help_text_min_char_count
-
-    if has_help():
-        t = get_help_token_index()
-        txt = get_trimmed_help_text(t)
-        if not has_enough_help_text(txt):
-            yield(0, msg)
-    else:
-        yield(0, msg)
-
-
 def no_os_popen(logical_line):
     """Disallow 'os.popen('
 
@@ -767,6 +753,20 @@ def no_os_popen(logical_line):
     if 'os.popen(' in logical_line:
         yield(0, 'N348 Deprecated library function os.popen(). '
                  'Replace it using subprocess module. ')
+
+
+def no_log_warn(logical_line):
+    """Disallow 'LOG.warn('
+
+    Deprecated LOG.warn(), instead use LOG.warning
+    https://bugs.launchpad.net/senlin/+bug/1508442
+
+    N352
+    """
+
+    msg = ("N352: LOG.warn is deprecated, please use LOG.warning!")
+    if "LOG.warn(" in logical_line:
+        yield (0, msg)
 
 
 def factory(register):
@@ -798,10 +798,13 @@ def factory(register):
     register(check_no_contextlib_nested)
     register(check_greenthread_spawns)
     register(check_config_option_in_central_place)
+    register(check_policy_registration_in_central_place)
+    register(check_policy_enforce)
     register(check_doubled_words)
     register(check_python3_no_iteritems)
     register(check_python3_no_iterkeys)
     register(check_python3_no_itervalues)
-    register(cfg_help_with_enough_text)
+    register(check_python3_xrange)
     register(no_os_popen)
+    register(no_log_warn)
     register(CheckForUncalledTestClosure)

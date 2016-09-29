@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
+import mock
 from webob import exc
 
 from nova.api.openstack.compute import pci
@@ -61,7 +61,7 @@ class PciServerControllerTestV21(test.NoDBTestCase):
                                        }]}
         self._create_fake_instance()
         self._create_fake_pci_device()
-        self.pci_device.claim(self.inst)
+        self.pci_device.claim(self.inst.uuid)
         self.pci_device.allocate(self.inst)
 
     def _create_fake_instance(self):
@@ -79,27 +79,29 @@ class PciServerControllerTestV21(test.NoDBTestCase):
         self.pci_device = objects.PciDevice.get_by_dev_addr(ctxt, 1, 'a')
 
     def test_show(self):
-        def fake_get_db_instance(id):
-            return self.inst
-
         resp = FakeResponse(self.fake_obj, '')
         req = fakes.HTTPRequest.blank('/os-pci/1', use_admin_context=True)
-        self.stubs.Set(req, 'get_db_instance', fake_get_db_instance)
-        self.controller.show(req, resp, '1')
-        self.assertEqual([{'id': 1}],
-                         resp.obj['server']['os-pci:pci_devices'])
+
+        with mock.patch.object(req, 'get_db_instance',
+                               return_value=self.inst) as mock_get_db_inst:
+            self.controller.show(req, resp, '1')
+            self.assertEqual([{'id': 1}],
+                             resp.obj['server']['os-pci:pci_devices'])
+            mock_get_db_inst.assert_called_once_with(
+                self.fake_obj['server']['id'])
 
     def test_detail(self):
-        def fake_get_db_instance(id):
-            return self.inst
-
         resp = FakeResponse(self.fake_list, '')
         req = fakes.HTTPRequest.blank('/os-pci/detail',
-                                        use_admin_context=True)
-        self.stubs.Set(req, 'get_db_instance', fake_get_db_instance)
-        self.controller.detail(req, resp)
-        self.assertEqual([{'id': 1}],
-                         resp.obj['servers'][0]['os-pci:pci_devices'])
+                                      use_admin_context=True)
+
+        with mock.patch.object(req, 'get_db_instance',
+                               return_value=self.inst) as mock_get_db_inst:
+            self.controller.detail(req, resp)
+            self.assertEqual([{'id': 1}],
+                             resp.obj['servers'][0]['os-pci:pci_devices'])
+            mock_get_db_inst.assert_called_once_with(
+                self.fake_list['servers'][0]['id'])
 
 
 class PciHypervisorControllerTestV21(test.NoDBTestCase):
@@ -120,30 +122,34 @@ class PciHypervisorControllerTestV21(test.NoDBTestCase):
             hypervisor_hostname="hyper1"))
 
     def test_show(self):
-        def fake_get_db_compute_node(id):
-            return fake_compute_node
-
         req = fakes.HTTPRequest.blank('/os-hypervisors/1',
-                                        use_admin_context=True)
+                                      use_admin_context=True)
         resp = FakeResponse(self.fake_obj, '')
-        self.stubs.Set(req, 'get_db_compute_node', fake_get_db_compute_node)
-        self.controller.show(req, resp, '1')
-        self.assertIn('os-pci:pci_stats', resp.obj['hypervisor'])
-        self.assertEqual(pci_stats[0],
-                         resp.obj['hypervisor']['os-pci:pci_stats'][0])
+
+        with mock.patch.object(req, 'get_db_compute_node',
+                               return_value=fake_compute_node
+        ) as mock_get_db_node:
+            self.controller.show(req, resp, '1')
+            self.assertIn('os-pci:pci_stats', resp.obj['hypervisor'])
+            self.assertEqual(pci_stats[0],
+                             resp.obj['hypervisor']['os-pci:pci_stats'][0])
+            mock_get_db_node.assert_called_once_with(
+                self.fake_obj['hypervisor']['id'])
 
     def test_detail(self):
-        def fake_get_db_compute_node(id):
-            return fake_compute_node
-
         req = fakes.HTTPRequest.blank('/os-hypervisors/detail',
-                                        use_admin_context=True)
+                                      use_admin_context=True)
         resp = FakeResponse(self.fake_objs, '')
-        self.stubs.Set(req, 'get_db_compute_node', fake_get_db_compute_node)
-        self.controller.detail(req, resp)
-        self.assertIn('os-pci:pci_stats', resp.obj['hypervisors'][0])
-        self.assertEqual(pci_stats[0],
-                         resp.obj['hypervisors'][0]['os-pci:pci_stats'][0])
+
+        with mock.patch.object(req, 'get_db_compute_node',
+                               return_value=fake_compute_node
+        ) as mock_get_db_node:
+            self.controller.detail(req, resp)
+            self.assertIn('os-pci:pci_stats', resp.obj['hypervisors'][0])
+            self.assertEqual(pci_stats[0],
+                             resp.obj['hypervisors'][0]['os-pci:pci_stats'][0])
+            mock_get_db_node.assert_called_once_with(
+                self.fake_objs['hypervisors'][0]['id'])
 
 
 class PciControlletestV21(test.NoDBTestCase):
@@ -192,44 +198,51 @@ class PciControlletestV21(test.NoDBTestCase):
         return [test_pci_device.fake_db_dev, test_pci_device.fake_db_dev_1]
 
     def test_index(self):
-        self.stubs.Set(self.controller.host_api, 'compute_node_get_all',
-                       self._fake_compute_node_get_all)
         self.stub_out('nova.db.pci_device_get_all_by_node',
                       self._fake_pci_device_get_all_by_node)
 
-        req = fakes.HTTPRequest.blank('/os-pci', use_admin_context=True)
-        result = self.controller.index(req)
-        dist = {'pci_devices': [test_pci_device.fake_db_dev,
-                                test_pci_device.fake_db_dev_1]}
-        for i in range(len(result['pci_devices'])):
-            self.assertEqual(dist['pci_devices'][i]['vendor_id'],
-                             result['pci_devices'][i]['vendor_id'])
-            self.assertEqual(dist['pci_devices'][i]['id'],
-                             result['pci_devices'][i]['id'])
-            self.assertEqual(dist['pci_devices'][i]['status'],
-                             result['pci_devices'][i]['status'])
-            self.assertEqual(dist['pci_devices'][i]['address'],
-                             result['pci_devices'][i]['address'])
+        with mock.patch.object(
+                self.controller.host_api, 'compute_node_get_all',
+                side_effect=self._fake_compute_node_get_all
+        ) as mock_node_get_all:
+            req = fakes.HTTPRequest.blank('/os-pci', use_admin_context=True)
+            result = self.controller.index(req)
+            dist = {'pci_devices': [test_pci_device.fake_db_dev,
+                                    test_pci_device.fake_db_dev_1]}
+            for i in range(len(result['pci_devices'])):
+                self.assertEqual(dist['pci_devices'][i]['vendor_id'],
+                                 result['pci_devices'][i]['vendor_id'])
+                self.assertEqual(dist['pci_devices'][i]['id'],
+                                 result['pci_devices'][i]['id'])
+                self.assertEqual(dist['pci_devices'][i]['status'],
+                                 result['pci_devices'][i]['status'])
+                self.assertEqual(dist['pci_devices'][i]['address'],
+                                 result['pci_devices'][i]['address'])
+            self.assertEqual(1, mock_node_get_all.call_count)
 
     def test_detail(self):
-        self.stubs.Set(self.controller.host_api, 'compute_node_get_all',
-                       self._fake_compute_node_get_all)
         self.stub_out('nova.db.pci_device_get_all_by_node',
                       self._fake_pci_device_get_all_by_node)
-        req = fakes.HTTPRequest.blank('/os-pci/detail',
-                                        use_admin_context=True)
-        result = self.controller.detail(req)
-        dist = {'pci_devices': [test_pci_device.fake_db_dev,
-                                test_pci_device.fake_db_dev_1]}
-        for i in range(len(result['pci_devices'])):
-            self.assertEqual(dist['pci_devices'][i]['vendor_id'],
-                             result['pci_devices'][i]['vendor_id'])
-            self.assertEqual(dist['pci_devices'][i]['id'],
-                             result['pci_devices'][i]['id'])
-            self.assertEqual(dist['pci_devices'][i]['label'],
-                             result['pci_devices'][i]['label'])
-            self.assertEqual(dist['pci_devices'][i]['dev_id'],
-                             result['pci_devices'][i]['dev_id'])
+
+        with mock.patch.object(
+                self.controller.host_api, 'compute_node_get_all',
+                side_effect=self._fake_compute_node_get_all
+        ) as mock_node_get_all:
+            req = fakes.HTTPRequest.blank('/os-pci/detail',
+                                          use_admin_context=True)
+            result = self.controller.detail(req)
+            dist = {'pci_devices': [test_pci_device.fake_db_dev,
+                                    test_pci_device.fake_db_dev_1]}
+            for i in range(len(result['pci_devices'])):
+                self.assertEqual(dist['pci_devices'][i]['vendor_id'],
+                                 result['pci_devices'][i]['vendor_id'])
+                self.assertEqual(dist['pci_devices'][i]['id'],
+                                 result['pci_devices'][i]['id'])
+                self.assertEqual(dist['pci_devices'][i]['label'],
+                                 result['pci_devices'][i]['label'])
+                self.assertEqual(dist['pci_devices'][i]['dev_id'],
+                                 result['pci_devices'][i]['dev_id'])
+            self.assertEqual(1, mock_node_get_all.call_count)
 
 
 class PciControllerPolicyEnforcementV21(test.NoDBTestCase):

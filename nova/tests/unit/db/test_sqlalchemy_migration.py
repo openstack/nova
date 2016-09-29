@@ -29,6 +29,7 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests import uuidsentinel
 
 
 class TestNullInstanceUuidScanDB(test.TestCase):
@@ -107,9 +108,9 @@ class TestDbSync(test.NoDBTestCase):
             mock_find_repo, mock_version):
         database = 'fake'
         migration.db_sync(database=database)
-        mock_version.assert_called_once_with(database)
+        mock_version.assert_called_once_with(database, context=None)
         mock_find_repo.assert_called_once_with(database)
-        mock_get_engine.assert_called_once_with(database)
+        mock_get_engine.assert_called_once_with(database, context=None)
         mock_upgrade.assert_called_once_with('engine', 'repo', None)
         self.assertFalse(mock_downgrade.called)
 
@@ -117,9 +118,9 @@ class TestDbSync(test.NoDBTestCase):
             mock_find_repo, mock_version):
         database = 'fake'
         migration.db_sync(1, database=database)
-        mock_version.assert_called_once_with(database)
+        mock_version.assert_called_once_with(database, context=None)
         mock_find_repo.assert_called_once_with(database)
-        mock_get_engine.assert_called_once_with(database)
+        mock_get_engine.assert_called_once_with(database, context=None)
         mock_downgrade.assert_called_once_with('engine', 'repo', 1)
         self.assertFalse(mock_upgrade.called)
 
@@ -149,10 +150,12 @@ class TestDbVersion(test.NoDBTestCase):
                 metadata), mock.patch.object(migration,
                         'db_version_control') as mock_version_control:
             migration.db_version(database)
-            mock_version_control.assert_called_once_with(0, database)
+            mock_version_control.assert_called_once_with(0,
+                                                         database,
+                                                         context=None)
             db_version_calls = [mock.call('engine', 'repo')] * 2
             self.assertEqual(db_version_calls, mock_db_version.call_args_list)
-        engine_calls = [mock.call(database)] * 3
+        engine_calls = [mock.call(database, context=None)] * 3
         self.assertEqual(engine_calls, mock_get_engine.call_args_list)
 
 
@@ -176,7 +179,7 @@ class TestGetEngine(test.NoDBTestCase):
                 return_value='engine') as mock_get_engine:
             engine = migration.get_engine()
             self.assertEqual('engine', engine)
-            mock_get_engine.assert_called_once_with()
+            mock_get_engine.assert_called_once_with(context=None)
 
     def test_get_api_engine(self):
         with mock.patch.object(db_api, 'get_api_engine',
@@ -261,8 +264,7 @@ class TestNewtonCheck(test.TestCase):
                           self.migration.upgrade, self.engine)
 
     def test_aggregate_not_migrated(self):
-        agg = objects.Aggregate(context=self.context, name='foo')
-        agg.create()
+        agg = db_api.aggregate_create(self.context, {"name": "foobar"})
         db_api.aggregate_update(self.context, agg.id, {'uuid': None})
         self.assertRaises(exception.ValidationError,
                           self.migration.upgrade, self.engine)
@@ -279,3 +281,87 @@ class TestNewtonCheck(test.TestCase):
                                   'status': 'whatisthis?'})
         self.assertRaises(exception.ValidationError,
                           self.migration.upgrade, self.engine)
+
+
+class TestOcataCheck(test.TestCase):
+    def setUp(self):
+        super(TestOcataCheck, self).setUp()
+        self.context = context.get_admin_context()
+        self.migration = importlib.import_module(
+            'nova.db.sqlalchemy.migrate_repo.versions.'
+            '345_require_online_migration_completion')
+        self.engine = db_api.get_engine()
+        self.flavor_values = {
+            'name': 'foo',
+            'memory_mb': 256,
+            'vcpus': 1,
+            'root_gb': 10,
+            'ephemeral_gb': 100,
+            'flavorid': 'bar',
+            'swap': 1,
+            'rxtx_factor': 1.0,
+            'vcpu_weight': 1,
+            'disabled': False,
+            'is_public': True,
+        }
+        self.keypair_values = {
+            'name': 'foo',
+            'user_ud': 'bar',
+            'fingerprint': 'baz',
+            'public_key': 'bat',
+            'type': 'ssh',
+        }
+        self.aggregate_values = {
+            'uuid': uuidsentinel.agg,
+            'name': 'foo',
+        }
+        self.ig_values = {
+            'user_id': 'foo',
+            'project_id': 'bar',
+            'uuid': uuidsentinel.ig,
+            'name': 'baz',
+        }
+
+    def test_upgrade_clean(self):
+        self.migration.upgrade(self.engine)
+
+    def test_upgrade_dirty_flavors(self):
+        db_api.flavor_create(self.context, self.flavor_values)
+        self.assertRaises(exception.ValidationError,
+                          self.migration.upgrade, self.engine)
+
+    def test_upgrade_with_deleted_flavors(self):
+        flavor = db_api.flavor_create(self.context, self.flavor_values)
+        db_api.flavor_destroy(self.context, flavor['flavorid'])
+        self.migration.upgrade(self.engine)
+
+    def test_upgrade_dirty_keypairs(self):
+        db_api.key_pair_create(self.context, self.keypair_values)
+        self.assertRaises(exception.ValidationError,
+                          self.migration.upgrade, self.engine)
+
+    def test_upgrade_with_deleted_keypairs(self):
+        keypair = db_api.key_pair_create(self.context, self.keypair_values)
+        db_api.key_pair_destroy(self.context,
+                                keypair['user_id'], keypair['name'])
+        self.migration.upgrade(self.engine)
+
+    def test_upgrade_dirty_aggregates(self):
+        db_api.aggregate_create(self.context, self.aggregate_values)
+        self.assertRaises(exception.ValidationError,
+                          self.migration.upgrade, self.engine)
+
+    def test_upgrade_with_deleted_aggregates(self):
+        agg = db_api.aggregate_create(self.context, self.aggregate_values)
+        db_api.aggregate_delete(self.context, agg['id'])
+        self.migration.upgrade(self.engine)
+
+    def test_upgrade_dirty_instance_groups(self):
+        db_api.instance_group_create(self.context, self.ig_values)
+        self.assertRaises(exception.ValidationError,
+                          self.migration.upgrade, self.engine)
+
+    def test_upgrade_with_deleted_instance_groups(self):
+        group = db_api.instance_group_create(self.context, self.ig_values)
+        db_api.instance_group_delete(self.context, group['uuid'])
+        self.migration.upgrade(self.engine)

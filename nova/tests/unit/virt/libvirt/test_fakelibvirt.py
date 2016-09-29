@@ -103,8 +103,8 @@ class FakeLibvirtTests(test.NoDBTestCase):
                         "Active CPU count unusually high or low.")
         self.assertTrue(800 <= res[3] <= 4500,
                         "CPU speed unusually high or low.")
-        self.assertTrue(res[2] <= (res[5] * res[6]),
-                        "More active CPUs than num_sockets*cores_per_socket")
+        self.assertLessEqual(res[2], (res[5] * res[6]), "More active CPUs "
+                             "than num_sockets*cores_per_socket")
 
     def test_createXML_detects_invalid_xml(self):
         self._test_XML_func_detects_invalid_xml('createXML', [0])
@@ -161,7 +161,7 @@ class FakeLibvirtTests(test.NoDBTestCase):
         info = dom.info()
         self.assertEqual(info[0], libvirt.VIR_DOMAIN_RUNNING)
         self.assertEqual(info[1], 128000)
-        self.assertTrue(info[2] <= 128000)
+        self.assertLessEqual(info[2], 128000)
         self.assertEqual(info[3], 1)
         self.assertIn(type(info[4]), six.integer_types)
 
@@ -386,7 +386,7 @@ class FakeLibvirtTests(test.NoDBTestCase):
                          libvirt.VIR_CPU_COMPARE_IDENTICAL)
 
     def test_numa_topology_generation(self):
-        topology = """<topology>
+        topology = b"""<topology>
   <cells num="2">
     <cell id="0">
       <memory unit="KiB">7870000</memory>

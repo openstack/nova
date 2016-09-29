@@ -40,6 +40,7 @@ from oslo_log.fixture import logging_error as log_fixture
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
+from oslo_versionedobjects import fixture as ovo_fixture
 from oslotest import moxstubout
 import six
 import testtools
@@ -190,7 +191,7 @@ class TestCase(testtools.TestCase):
         self.useFixture(nova_fixtures.StandardLogging())
 
         # NOTE(sdague): because of the way we were using the lock
-        # wrapper we eneded up with a lot of tests that started
+        # wrapper we ended up with a lot of tests that started
         # relying on global external locking being set up for them. We
         # consider all of these to be *bugs*. Tests should not require
         # global external locking, or if they do, they should
@@ -229,7 +230,7 @@ class TestCase(testtools.TestCase):
             objects_base.NovaObjectRegistry._registry._obj_classes)
         self.addCleanup(self._restore_obj_registry)
 
-        self.useFixture(nova_fixtures.StableObjectJsonFixture())
+        self.useFixture(ovo_fixture.StableObjectJsonFixture())
 
         # NOTE(mnaser): All calls to utils.is_neutron() are cached in
         # nova.utils._IS_NEUTRON.  We set it to None to avoid any
@@ -282,7 +283,7 @@ class TestCase(testtools.TestCase):
         """Override flag variables for a test."""
         group = kw.pop('group', None)
         for k, v in six.iteritems(kw):
-            CONF.set_override(k, v, group)
+            CONF.set_override(k, v, group, enforce_type=True)
 
     def start_service(self, name, host=None, **kwargs):
         svc = self.useFixture(
@@ -454,3 +455,42 @@ class MatchType(object):
 
     def __repr__(self):
         return "<MatchType:" + str(self.wanttype) + ">"
+
+
+class ContainKeyValue(object):
+    """Checks whether a key/value pair is in a dict parameter.
+
+    The ContainKeyValue class is a helper for use with the
+    mock.assert_*() method that lets you assert that a particular
+    dict contain a key/value pair. It enables strict check than
+    the built in mock.ANY helper, and is the equivalent of the
+    mox.ContainsKeyValue() function from the legacy mox library
+
+    Example usage could be:
+
+      mock_some_method.assert_called_once_with(
+            "hello",
+            ContainKeyValue('foo', bar),
+            mock.ANY,
+            "world",
+            ContainKeyValue('hello', world))
+    """
+    def __init__(self, wantkey, wantvalue):
+        self.wantkey = wantkey
+        self.wantvalue = wantvalue
+
+    def __eq__(self, other):
+        try:
+            return other[self.wantkey] == self.wantvalue
+        except (KeyError, TypeError):
+            return False
+
+    def __ne__(self, other):
+        try:
+            return other[self.wantkey] != self.wantvalue
+        except (KeyError, TypeError):
+            return True
+
+    def __repr__(self):
+        return "<ContainKeyValue: key " + str(self.wantkey) + \
+               " and value " + str(self.wantvalue) + ">"

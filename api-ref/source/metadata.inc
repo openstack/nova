@@ -1,8 +1,4 @@
 .. -*- rst -*-
-.. needs:method_verification
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
 =====================================
  Server metadata (servers, metadata)
@@ -17,7 +13,7 @@ key, for a server.
 List All Metadata
 =================
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}/metadata
+.. rest_method:: GET /servers/{server_id}/metadata
 
 Lists all metadata for a server.
 
@@ -25,58 +21,24 @@ Policy defaults enable only users with the administrative role or the owner of t
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
 
 Response
 --------
-
-**Example List All Metadata: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-resp.json
-   :language: javascript
-
-Create Or Replace Metadata Items
-================================
-
-.. rest_method:: PUT /v2.1/{tenant_id}/servers/{server_id}/metadata
-
-Creates or replaces one or more metadata items for a server.
-
-Creates any metadata items that do not already exist in the server. Removes and completely replaces any metadata items that already exist in the server with the metadata items in the request.
-
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+  - metadata: metadata_object
 
-**Example Create Or Replace Metadata Items: JSON request**
-
-.. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-req.json
-   :language: javascript
-
-Response
---------
-
-**Example Create Or Replace Metadata Items: JSON response**
+**Example List All Metadata:**
 
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-resp.json
    :language: javascript
@@ -84,7 +46,7 @@ Response
 Update Metadata Items
 =====================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/metadata
+.. rest_method:: POST /servers/{server_id}/metadata
 
 Updates one or more metadata items for a server.
 
@@ -94,18 +56,19 @@ Policy defaults enable only users with the administrative role or the owner of t
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
 
-**Example Update Metadata Items: JSON request**
+  - server_id: server_id
+  - metadata: metadata_object
+
+**Example Update Metadata Items:**
 
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-req.json
    :language: javascript
@@ -113,7 +76,53 @@ Request
 Response
 --------
 
-**Example Update Metadata Items: JSON response**
+.. rest_parameters:: parameters.yaml
+
+  - metadata: metadata_object
+
+**Example Update Metadata Items:**
+
+.. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-resp.json
+   :language: javascript
+
+Create Or Replace Metadata Items
+================================
+
+.. rest_method:: PUT /servers/{server_id}/metadata
+
+Creates or replaces one or more metadata items for a server.
+
+Creates any metadata items that do not already exist in the server. Removes and completely replaces any metadata items that already exist in the server with the metadata items in the request.
+
+Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+
+Normal response codes: 200
+
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+
+  - server_id: server_id
+  - metadata: metadata_object
+
+**Example Create Or Replace Metadata Items:**
+
+.. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-req.json
+   :language: javascript
+
+Response
+--------
+
+.. rest_parameters:: parameters.yaml
+
+  - metadata: metadata_object
+
+**Example Create Or Replace Metadata Items:**
 
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-resp.json
    :language: javascript
@@ -121,7 +130,7 @@ Response
 Show Metadata Item Details
 ==========================
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}/metadata/{key}
+.. rest_method:: GET /servers/{server_id}/metadata/{key}
 
 Shows details for a metadata item, by key, for a server.
 
@@ -129,22 +138,25 @@ Policy defaults enable only users with the administrative role or the owner of t
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - key: key
 
 Response
 --------
 
-**Example Show Metadata Item Details: JSON response**
+.. rest_parameters:: parameters.yaml
+
+  - meta: metadata_object
+
+**Example Show Metadata Item Details:**
 
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-resp.json
    :language: javascript
@@ -152,7 +164,7 @@ Response
 Create Or Update Metadata Item
 ==============================
 
-.. rest_method:: PUT /v2.1/{tenant_id}/servers/{server_id}/metadata/{key}
+.. rest_method:: PUT /servers/{server_id}/metadata/{key}
 
 Creates or replaces a metadata item, by key, for a server.
 
@@ -162,19 +174,19 @@ Policy defaults enable only users with the administrative role or the owner of t
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - key: key
 
-**Example Create Or Update Metadata Item: JSON request**
+**Example Create Or Update Metadata Item:**
 
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-req.json
    :language: javascript
@@ -182,7 +194,11 @@ Request
 Response
 --------
 
-**Example Create Or Update Metadata Item: JSON response**
+.. rest_parameters:: parameters.yaml
+
+  - meta: metadata_object
+
+**Example Create Or Update Metadata Item:**
 
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-resp.json
    :language: javascript
@@ -190,7 +206,7 @@ Response
 Delete Metadata Item
 ====================
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/servers/{server_id}/metadata/{key}
+.. rest_method:: DELETE /servers/{server_id}/metadata/{key}
 
 Deletes a metadata item, by key, from a server.
 
@@ -198,18 +214,18 @@ Policy defaults enable only users with the administrative role or the owner of t
 
 Normal response codes: 204
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), conflict(409)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - key: key
 
 Response
 --------
 
+There is no body content for the response of a successful DELETE action.

@@ -21,6 +21,7 @@ import os
 import sys
 
 from oslo_config import cfg
+from oslo_utils import timeutils
 import XenAPI
 
 possible_topdir = os.getcwd()
@@ -32,7 +33,6 @@ from nova import context
 import nova.conf
 from nova import db
 from nova import exception
-from oslo_utils import timeutils
 from nova.virt import virtapi
 from nova.virt.xenapi import driver as xenapi_driver
 
@@ -130,9 +130,9 @@ def print_xen_object(obj_type, obj, indent_level=0, spaces_per_indent=4):
         name_label = obj["name_label"]
     except KeyError:
         name_label = ""
-    msg = "%(obj_type)s (%(uuid)s) '%(name_label)s'" % locals()
+    msg = "%s (%s) '%s'" % (obj_type, uuid, name_label)
     indent = " " * spaces_per_indent * indent_level
-    print "".join([indent, msg])
+    print("".join([indent, msg]))
 
 
 def _find_vdis_connected_to_vm(xenapi, connected_vdi_uuids):
@@ -247,38 +247,38 @@ def list_orphaned_vdis(vdi_uuids):
     """List orphaned VDIs."""
     for vdi_uuid in vdi_uuids:
         if CONF.verbose:
-            print "ORPHANED VDI (%s)" % vdi_uuid
+            print("ORPHANED VDI (%s)" % vdi_uuid)
         else:
-            print vdi_uuid
+            print(vdi_uuid)
 
 
 def clean_orphaned_vdis(xenapi, vdi_uuids):
     """Clean orphaned VDIs."""
     for vdi_uuid in vdi_uuids:
         if CONF.verbose:
-            print "CLEANING VDI (%s)" % vdi_uuid
+            print("CLEANING VDI (%s)" % vdi_uuid)
 
         vdi_ref = call_xenapi(xenapi, 'VDI.get_by_uuid', vdi_uuid)
         try:
             call_xenapi(xenapi, 'VDI.destroy', vdi_ref)
         except XenAPI.Failure, exc:
-            print >> sys.stderr, "Skipping %s: %s" % (vdi_uuid, exc)
+            sys.stderr.write("Skipping %s: %s" % (vdi_uuid, exc))
 
 
 def list_orphaned_instances(orphaned_instances):
     """List orphaned instances."""
     for vm_ref, vm_rec, orphaned_instance in orphaned_instances:
         if CONF.verbose:
-            print "ORPHANED INSTANCE (%s)" % orphaned_instance.name
+            print("ORPHANED INSTANCE (%s)" % orphaned_instance.name)
         else:
-            print orphaned_instance.name
+            print(orphaned_instance.name)
 
 
 def clean_orphaned_instances(xenapi, orphaned_instances):
     """Clean orphaned instances."""
     for vm_ref, vm_rec, instance in orphaned_instances:
         if CONF.verbose:
-            print "CLEANING INSTANCE (%s)" % instance.name
+            print("CLEANING INSTANCE (%s)" % instance.name)
 
         cleanup_instance(xenapi, instance, vm_ref, vm_rec)
 
@@ -304,10 +304,10 @@ def main():
 
     if command == "list-vdis":
         if CONF.verbose:
-            print "Connected VDIs:\n"
+            print("Connected VDIs:\n")
         orphaned_vdi_uuids = find_orphaned_vdi_uuids(xenapi)
         if CONF.verbose:
-            print "\nOrphaned VDIs:\n"
+            print("\nOrphaned VDIs:\n")
         list_orphaned_vdis(orphaned_vdi_uuids)
     elif command == "clean-vdis":
         orphaned_vdi_uuids = find_orphaned_vdi_uuids(xenapi)
@@ -321,7 +321,7 @@ def main():
     elif command == "test":
         doctest.testmod()
     else:
-        print "Unknown command '%s'" % command
+        print("Unknown command '%s'" % command)
         sys.exit(1)
 
 

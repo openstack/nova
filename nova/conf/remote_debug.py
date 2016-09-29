@@ -19,26 +19,50 @@ from oslo_config import cfg
 debugger_group = cfg.OptGroup('remote_debug',
     title='debugger options')
 
-host = cfg.StrOpt('host',
-    help='Debug host (IP or name) to connect. Note '
-    'that using the remote debug option changes how '
-    'Nova uses the eventlet library to support async IO. '
-    'This could result in failures that do not occur '
-    'under normal operation. Use at your own risk.')
+CLI_OPTS = [
+    cfg.StrOpt('host',
+               help="""
+Debug host (IP or name) to connect to. This command line parameter is used when
+you want to connect to a nova service via a debugger running on a different
+host.
 
-port = cfg.IntOpt('port',
-    min=1,
-    max=65535,
-    help='Debug port to connect. Note '
-    'that using the remote debug option changes how '
-    'Nova uses the eventlet library to support async IO. '
-    'This could result in failures that do not occur '
-    'under normal operation. Use at your own risk.')
+Note that using the remote debug option changes how Nova uses the eventlet
+library to support async IO. This could result in failures that do not occur
+under normal operation. Use at your own risk.
 
-CLI_OPTS = [host, port]
+Possible Values:
+
+   * IP address of a remote host as a command line parameter
+     to a nova service. For Example:
+
+    /usr/local/bin/nova-compute --config-file /etc/nova/nova.conf
+    --remote_debug-host <IP address where the debugger is running>
+"""),
+
+    cfg.PortOpt('port',
+               help="""
+Debug port to connect to. This command line parameter allows you to specify
+the port you want to use to connect to a nova service via a debugger running
+on different host.
+
+Note that using the remote debug option changes how Nova uses the eventlet
+library to support async IO. This could result in failures that do not occur
+under normal operation. Use at your own risk.
+
+Possible Values:
+
+   * Port number you want to use as a command line parameter
+     to a nova service. For Example:
+
+    /usr/local/bin/nova-compute --config-file /etc/nova/nova.conf
+    --remote_debug-host <IP address where the debugger is running>
+    --remote_debug-port <port> it's listening on>.
+"""),
+]
 
 
 def register_cli_opts(conf):
+    conf.register_group(debugger_group)
     conf.register_cli_opts(CLI_OPTS, group=debugger_group)
 
 

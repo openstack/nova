@@ -20,6 +20,7 @@ an instance with it.
 
 """
 
+import base64
 import os
 import string
 import zipfile
@@ -42,20 +43,20 @@ LOG = logging.getLogger(__name__)
 
 
 def is_vpn_image(image_id):
-    return image_id == CONF.vpn_image_id
+    return image_id == CONF.cloudpipe.vpn_image_id
 
 
 def _load_boot_script():
-    with open(CONF.boot_script_template, "r") as shellfile:
+    with open(CONF.cloudpipe.boot_script_template, "r") as shellfile:
         s = string.Template(shellfile.read())
-    return s.substitute(dmz_net=CONF.dmz_net,
-                        dmz_mask=CONF.dmz_mask,
+    return s.substitute(dmz_net=CONF.cloudpipe.dmz_net,
+                        dmz_mask=CONF.cloudpipe.dmz_mask,
                         num_vpn=CONF.cnt_vpn_clients)
 
 
 class CloudPipe(object):
-    def __init__(self, skip_policy_check=False):
-        self.compute_api = compute.API(skip_policy_check=skip_policy_check)
+    def __init__(self):
+        self.compute_api = compute.API()
 
     def get_encoded_zip(self, project_id):
         # Make a payload.zip
@@ -78,12 +79,13 @@ class CloudPipe(object):
                                       'server.crt')
             z.write(server_crt, 'server.crt')
             z.close()
-            with open(zippath, "r") as zippy:
+            with open(zippath, "rb") as zippy:
                 # NOTE(vish): run instances expects encoded userdata,
                 # it is decoded in the get_metadata_call.
                 # autorun.sh also decodes the zip file,
                 # hence the double encoding.
-                encoded = zippy.read().encode("base64").encode("base64")
+                encoded = base64.b64encode(zippy.read())
+                encoded = base64.b64encode(encoded)
 
         return encoded
 
@@ -91,19 +93,21 @@ class CloudPipe(object):
         LOG.debug("Launching VPN for %s", context.project_id)
         key_name = self.setup_key_pair(context)
         group_name = self.setup_security_group(context)
-        flavor = flavors.get_flavor_by_name(CONF.vpn_flavor)
-        instance_name = '%s%s' % (context.project_id, CONF.vpn_key_suffix)
+        flavor = flavors.get_flavor_by_name(CONF.cloudpipe.vpn_flavor)
+        instance_name = '%s%s' % (context.project_id,
+                                  CONF.cloudpipe.vpn_key_suffix)
         user_data = self.get_encoded_zip(context.project_id)
         return self.compute_api.create(context,
                                        flavor,
-                                       CONF.vpn_image_id,
+                                       CONF.cloudpipe.vpn_image_id,
                                        display_name=instance_name,
                                        user_data=user_data,
                                        key_name=key_name,
                                        security_group=[group_name])
 
     def setup_security_group(self, context):
-        group_name = '%s%s' % (context.project_id, CONF.vpn_key_suffix)
+        group_name = '%s%s' % (context.project_id,
+                               CONF.cloudpipe.vpn_key_suffix)
         group = {'user_id': context.user_id,
                  'project_id': context.project_id,
                  'name': group_name,
@@ -129,7 +133,8 @@ class CloudPipe(object):
         return group_name
 
     def setup_key_pair(self, context):
-        key_name = '%s%s' % (context.project_id, CONF.vpn_key_suffix)
+        key_name = '%s%s' % (context.project_id,
+                             CONF.cloudpipe.vpn_key_suffix)
         try:
             keypair_api = compute.api.KeypairAPI()
             result, private_key = keypair_api.create_key_pair(context,

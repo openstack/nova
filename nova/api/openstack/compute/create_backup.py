@@ -22,15 +22,15 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
 from nova import exception
+from nova.policies import create_backup as cb_policies
 
 ALIAS = "os-create-backup"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class CreateBackupController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(CreateBackupController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
 
     @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.action('createBackup')
@@ -48,7 +48,7 @@ class CreateBackupController(wsgi.Controller):
 
         """
         context = req.environ["nova.context"]
-        authorize(context)
+        context.can(cb_policies.BASE_POLICY_NAME)
         entity = body["createBackup"]
 
         image_name = common.normalize_name(entity["name"])

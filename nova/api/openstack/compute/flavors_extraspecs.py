@@ -23,18 +23,14 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import exception
 from nova.i18n import _
+from nova.policies import flavor_extra_specs as fes_policies
 from nova import utils
 
 ALIAS = 'os-flavor-extra-specs'
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class FlavorExtraSpecsController(wsgi.Controller):
     """The flavor extra specs API controller for the OpenStack API."""
-
-    def __init__(self, *args, **kwargs):
-        super(FlavorExtraSpecsController, self).__init__(*args, **kwargs)
-
     def _get_extra_specs(self, context, flavor_id):
         flavor = common.get_flavor(context, flavor_id)
         return dict(extra_specs=flavor.extra_specs)
@@ -56,7 +52,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
     def index(self, req, flavor_id):
         """Returns the list of extra specs for a given flavor."""
         context = req.environ['nova.context']
-        authorize(context, action='index')
+        context.can(fes_policies.POLICY_ROOT % 'index')
         return self._get_extra_specs(context, flavor_id)
 
     # NOTE(gmann): Here should be 201 instead of 200 by v2.1
@@ -66,7 +62,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
     @validation.schema(flavors_extraspecs.create)
     def create(self, req, flavor_id, body):
         context = req.environ['nova.context']
-        authorize(context, action='create')
+        context.can(fes_policies.POLICY_ROOT % 'create')
 
         specs = body['extra_specs']
         self._check_extra_specs_value(specs)
@@ -84,7 +80,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
     @validation.schema(flavors_extraspecs.update)
     def update(self, req, flavor_id, id, body):
         context = req.environ['nova.context']
-        authorize(context, action='update')
+        context.can(fes_policies.POLICY_ROOT % 'update')
 
         self._check_extra_specs_value(body)
         if id not in body:
@@ -104,7 +100,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
     def show(self, req, flavor_id, id):
         """Return a single extra spec item."""
         context = req.environ['nova.context']
-        authorize(context, action='show')
+        context.can(fes_policies.POLICY_ROOT % 'show')
         flavor = common.get_flavor(context, flavor_id)
         try:
             return {id: flavor.extra_specs[id]}
@@ -121,7 +117,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
     def delete(self, req, flavor_id, id):
         """Deletes an existing extra spec."""
         context = req.environ['nova.context']
-        authorize(context, action='delete')
+        context.can(fes_policies.POLICY_ROOT % 'delete')
         flavor = common.get_flavor(context, flavor_id)
         try:
             del flavor.extra_specs[id]

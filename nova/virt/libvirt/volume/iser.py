@@ -11,22 +11,13 @@
 #    under the License.
 
 from os_brick.initiator import connector
-from oslo_config import cfg
 
+import nova.conf
 from nova import utils
 from nova.virt.libvirt.volume import iscsi
 
-volume_opts = [
-    cfg.IntOpt('num_iser_scan_tries',
-               default=5,
-               help='Number of times to rescan iSER target to find volume'),
-    cfg.BoolOpt('iser_use_multipath',
-                default=False,
-                help='Use multipath connection of the iSER volume'),
-    ]
 
-CONF = cfg.CONF
-CONF.register_opts(volume_opts, 'libvirt')
+CONF = nova.conf.CONF
 
 
 class LibvirtISERVolumeDriver(iscsi.LibvirtISCSIVolumeDriver):

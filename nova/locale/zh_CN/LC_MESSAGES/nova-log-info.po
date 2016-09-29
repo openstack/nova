@@ -10,9 +10,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b2.dev117\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:28+0000\n"
+"POT-Creation-Date: 2016-06-08 04:30+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -23,10 +23,6 @@ msgstr ""
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
 "Language-Team: Chinese (China)\n"
-
-#, python-format
-msgid "%(id)s (%(base_file)s): generating checksum"
-msgstr "%(id)s (%(base_file)s)：正在生成校验和"
 
 #, python-format
 msgid "%(name)s listening on %(host)s:%(port)s"
@@ -63,13 +59,6 @@ msgstr "正在将安全组 %(security_group_id)s 添加至端口 %(port_id)s"
 #, python-format
 msgid "Allocated network: '%s' for instance"
 msgstr "为实例分配网络： '%s' "
-
-msgid "Attach interface"
-msgstr "请连接接口"
-
-#, python-format
-msgid "Attach volume %(volume_id)s to instance %(server_id)s at %(device)s"
-msgstr "把卷 %(volume_id)s 附加到实例 %(server_id)s 的 %(device)s 设备上"
 
 #, python-format
 msgid "Attaching volume %(volume_id)s to %(mountpoint)s"
@@ -156,10 +145,6 @@ msgid "Copied virtual disk from %(src)s to %(dst)s."
 msgstr "从 %(src)s 到 %(dst)s 复制虚拟磁盘。"
 
 #, python-format
-msgid "Corrupt base files: %s"
-msgstr "损坏的基文件：%s"
-
-#, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats for "
 "device"
@@ -168,18 +153,6 @@ msgstr "对于实例 %s，在 libvirt 中找不到域。无法获取设备的块
 #, python-format
 msgid "Create Security Group %s"
 msgstr "创建安全组 %s"
-
-#, python-format
-msgid "Create assisted snapshot from volume %s"
-msgstr "从卷%s 创建辅助的快照"
-
-#, python-format
-msgid "Create snapshot from volume %s"
-msgstr "为卷 %s 创建快照"
-
-#, python-format
-msgid "Create volume of %s GB"
-msgstr "创建 %s GB的卷"
 
 msgid "Created linked-clone VM from snapshot"
 msgstr "从镜像创建链接-克隆的虚拟机VM"
@@ -204,14 +177,6 @@ msgstr "在%(last)d秒以前，数据剩余%(remaining)d 字节，低值%(waterm
 #, python-format
 msgid "Delete security group %s"
 msgstr "删除安全组 %s"
-
-#, python-format
-msgid "Delete snapshot with id: %s"
-msgstr "删除id为 %s 的快照"
-
-#, python-format
-msgid "Delete volume with id: %s"
-msgstr "删除id为 %s 的卷"
 
 #, python-format
 msgid "Deleted %s snapshots."
@@ -253,16 +218,8 @@ msgid ""
 msgstr "正在销毁名为’%s'的实例，其已被标记为‘已删除’状态，但仍然存在于主机上。"
 
 #, python-format
-msgid "Detach interface %s"
-msgstr "请与接口 %s 断开连接"
-
-#, python-format
 msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
 msgstr "卷 %(volume_id)s 从挂载点 %(mp)s 分离"
-
-#, python-format
-msgid "Detach volume %s"
-msgstr "分离卷 %s"
 
 #, python-format
 msgid "Detaching from volume api: %s"
@@ -955,11 +912,6 @@ msgstr "VM %(state)s (生命周期事件)"
 msgid "VMware vCenter version: %s"
 msgstr "VMware vCenter版本：%s"
 
-msgid ""
-"Virt driver does not support 'get_available_resource'. Compute tracking is "
-"disabled."
-msgstr "虚拟驱动不支持 'get_available_resource'。禁用计算追踪。"
-
 #, python-format
 msgid ""
 "Volume(%s) has lower stats then what is in the database. Instance must have "
@@ -972,10 +924,6 @@ msgstr "WSGI服务器已经停止。"
 #, python-format
 msgid "Working on deleting snapshot %s from shelved instance..."
 msgstr "正在从废弃的实例删除快照%s"
-
-#, python-format
-msgid "Writing stored info to %s"
-msgstr "正在将已存储的信息写入 %s"
 
 msgid "XenServer tools are not installed in this image"
 msgstr "没有在该镜像上安装XenServer工具"
@@ -1028,11 +976,6 @@ msgstr "(%(base_file)s) 处的映像 %(id)s：正在检查"
 
 #, python-format
 msgid ""
-"image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
-msgstr "(%(base_file)s) 处的映像 %(id)s：已跳过映像验证，未存储任何散列"
-
-#, python-format
-msgid ""
 "image %(id)s at (%(base_file)s): in use: on this node %(local)d local, "
 "%(remote)d on other nodes sharing this instance storage"
 msgstr ""
@@ -1082,7 +1025,3 @@ msgstr "请从实例 %(instance_id)s 重新分配浮动 IP %(address)s"
 #, python-format
 msgid "tap-ctl check: %s"
 msgstr "tap-ctl 检查：%s"
-
-#, python-format
-msgid "vol=%s"
-msgstr "vol=%s"

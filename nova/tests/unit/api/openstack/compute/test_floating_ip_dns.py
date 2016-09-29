@@ -14,15 +14,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import urllib
-
 import mock
+from six.moves import urllib
 import webob
 
 from nova.api.openstack.compute import floating_ip_dns \
         as fipdns_v21
-from nova.api.openstack.compute.legacy_v2.contrib import floating_ip_dns \
-        as fipdns_v2
 from nova import context
 from nova import db
 from nova import exception
@@ -50,7 +47,7 @@ def _quote_domain(domain):
     by-hand quoting here.  This function needs to duplicate the one in
     python-novaclient/novaclient/v1_1/floating_ip_dns.py
     """
-    return urllib.quote(domain.replace('.', '%2E'))
+    return urllib.parse.quote(domain.replace('.', '%2E'))
 
 
 def network_api_get_floating_ip(self, context, id):
@@ -112,8 +109,8 @@ class FloatingIpDNSTestV21(test.TestCase):
         db.floating_ip_destroy(self.context, test_ipv4_address)
         db.floating_ip_destroy(self.context, test_ipv6_address)
 
-    def _check_status(self, expected_status, res, controller_methord):
-        self.assertEqual(expected_status, controller_methord.wsgi_code)
+    def _check_status(self, expected_status, res, controller_method):
+        self.assertEqual(expected_status, controller_method.wsgi_code)
 
     def _bad_request(self):
         return webob.exc.HTTPBadRequest
@@ -256,11 +253,11 @@ class FloatingIpDNSTestV21(test.TestCase):
 
         self.stubs.Set(network.api.API, "delete_dns_entry",
                        network_delete_dns_entry)
-
-        res = self.entry_controller.delete(self.req, _quote_domain(domain),
+        delete = self.entry_controller.delete
+        res = delete(self.req, _quote_domain(domain),
                                            name)
 
-        self._check_status(202, res, self.entry_controller.delete)
+        self._check_status(202, res, delete)
         self.assertEqual([(name, domain)], calls)
 
     def test_delete_entry_notfound(self):
@@ -286,10 +283,10 @@ class FloatingIpDNSTestV21(test.TestCase):
         self.stubs.Set(network.api.API, "delete_dns_domain",
                        network_delete_dns_domain)
 
-        res = self.domain_controller.delete(req,
-                                            _quote_domain(domain))
+        delete = self.domain_controller.delete
+        res = delete(req, _quote_domain(domain))
 
-        self._check_status(202, res, self.domain_controller.delete)
+        self._check_status(202, res, delete)
         self.assertEqual([domain], calls)
 
     def test_delete_domain_notfound(self):
@@ -360,38 +357,6 @@ class FloatingIpDNSTestV21(test.TestCase):
                                side_effect=NotImplementedError()):
             self.assertRaises(webob.exc.HTTPNotImplemented,
                               self.domain_controller.index, self.req)
-
-
-class FloatingIpDNSTestV2(FloatingIpDNSTestV21):
-    floating_ip_dns = fipdns_v2
-
-    def _check_status(self, expected_status, res, controller_methord):
-        self.assertEqual(expected_status, res.status_int)
-
-    def _bad_request(self):
-        return webob.exc.HTTPUnprocessableEntity
-
-    def test_update_dns_domain_with_non_admin(self):
-        body = {'domain_entry':
-                {'scope': 'private',
-                 'project': 'testproject'}}
-        self.assertRaises(exception.AdminRequired,
-                          self.domain_controller.update,
-                          self.req, _quote_domain(domain), body=body)
-
-    def test_delete_dns_domain_with_non_admin(self):
-        self.assertRaises(exception.AdminRequired,
-                          self.domain_controller.delete,
-                          self.req, _quote_domain(domain))
-
-    def test_create_domain(self):
-        self._test_create_domain(self.admin_req)
-
-    def test_delete_domain(self):
-        self._test_delete_domain(self.admin_req)
-
-    def test_delete_domain_notfound(self):
-        self._test_delete_domain_notfound(self.admin_req)
 
 
 class FloatingIPDNSDomainPolicyEnforcementV21(test.NoDBTestCase):
@@ -474,3 +439,36 @@ class FloatingIPDNSEntryPolicyEnforcementV21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % self.rule_name,
             exc.format_message())
+
+
+class FloatingIpDNSDomainDeprecationTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FloatingIpDNSDomainDeprecationTest, self).setUp()
+        self.controller = fipdns_v21.FloatingIPDNSDomainController()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+
+    def test_all_apis_return_not_found(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.index, self.req)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.update, self.req, fakes.FAKE_UUID, {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.delete, self.req, fakes.FAKE_UUID)
+
+
+class FloatingIpDNSEntryDeprecationTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FloatingIpDNSEntryDeprecationTest, self).setUp()
+        self.controller = fipdns_v21.FloatingIPDNSEntryController()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+
+    def test_all_apis_return_not_found(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.show, self.req, fakes.FAKE_UUID, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.update, self.req, fakes.FAKE_UUID, fakes.FAKE_UUID,
+            {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.delete, self.req, fakes.FAKE_UUID, fakes.FAKE_UUID)

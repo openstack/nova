@@ -52,10 +52,10 @@ class VirtDriverCPUMonitorTestCase(test.NoDBTestCase):
         self.assertIn("cpu.iowait.percent", names)
         self.assertIn("cpu.percent", names)
 
-    def test_get_metrics(self):
+    def test_populate_metrics(self):
         metrics = objects.MonitorMetricList()
         monitor = virt_driver.Monitor(FakeResourceTracker())
-        monitor.add_metrics_to_list(metrics)
+        monitor.populate_metrics(metrics)
         names = monitor.get_metric_names()
         for metric in metrics.objects:
             self.assertIn(metric.name, names)
@@ -82,5 +82,5 @@ class VirtDriverCPUMonitorTestCase(test.NoDBTestCase):
         monitor = virt_driver.Monitor(FakeResourceTracker())
 
         with mock.patch.object(FakeDriver, 'get_host_cpu_stats') as mocked:
-            monitor.add_metrics_to_list(metrics)
+            monitor.populate_metrics(metrics)
             mocked.assert_called_once_with()

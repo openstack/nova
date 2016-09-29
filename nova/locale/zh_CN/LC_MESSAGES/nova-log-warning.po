@@ -9,9 +9,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:29+0000\n"
+"POT-Creation-Date: 2016-08-25 06:14+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -77,10 +77,6 @@ msgid "Address |%(address)s| is not allocated to your project |%(project)s|"
 msgstr "地址 |%(address)s| 没有分配给你的项目 |%(project)s|"
 
 #, python-format
-msgid "Arguments dropped when creating context: %s"
-msgstr "创建上下文时已删除自变量：%s"
-
-#, python-format
 msgid ""
 "Assigning a pci device without numa affinity toinstance %(instance)s which "
 "has numa topology"
@@ -93,10 +89,6 @@ msgstr "尝试自动配置磁盘auto_configure_disk 失败，原因是：%s"
 #, python-format
 msgid "Attempted to remove chain %s which does not exist"
 msgstr "试图移除不存在的链 %s。"
-
-msgid ""
-"Can't create a migration_context record without a migration object specified."
-msgstr "离开指定的迁移对象，不能创建一个迁移上下文 migration_context记录。"
 
 #, python-format
 msgid ""
@@ -190,17 +182,6 @@ msgid ""
 msgstr ""
 "数据库不一致：DNS域|%s| 在Nova数据库中注册，但是对浮动或者实例DNS驱动均不可"
 "见。将被忽略。"
-
-msgid ""
-"Deprecated: Starting with the Liberty release, the v2 API was already "
-"deprecated and the v2.1 API is set as the default. Nova also supports v2.1 "
-"API legacy v2 compatible mode for switching to v2.1 API smoothly. For more "
-"information on how to configure v2.1 API and legacy v2 compatible mode, "
-"please refer Nova api-paste.ini sample file."
-msgstr ""
-"废弃：从Liberty版本开始，V2 API废弃，缺省为V2.1 API。为了v2.1 API平滑切换，"
-"Nova也支持v2.1的兼容遗产v2模式。如何配置v2.1API 和遗产v2 兼容模式的更多信息，"
-"请参看Nova api-paste.ini 样例文件。"
 
 #, python-format
 msgid ""
@@ -305,10 +286,6 @@ msgid ""
 msgstr "扩展%(ext_name)s：无法扩展资源 %(collection)s：没有那种资源"
 
 #, python-format
-msgid "Extensions in both blacklist and whitelist: %s"
-msgstr "白名单和黑名单中包括扩展： %s"
-
-#, python-format
 msgid "Failed to %(service)s_%(method)s: %(ex)s"
 msgstr "%(service)s_%(method)s 失败：%(ex)s"
 
@@ -364,16 +341,8 @@ msgid ""
 msgstr "当删除实例时，杀死一个与它有关的长时间运行的进程%(pid)s失败。"
 
 #, python-format
-msgid "Failed to load extension %(classpath)s: %(exc)s"
-msgstr "加载扩展 %(classpath)s 失败：%(exc)s"
-
-#, python-format
 msgid "Failed to load extension %(ext_factory)s: %(exc)s"
 msgstr "加载扩展 %(ext_factory)s 失败：%(exc)s"
-
-#, python-format
-msgid "Failed to load extension %(ext_name)s:%(exc)s"
-msgstr "加载扩展%(ext_name)s:%(exc)s失败"
 
 msgid "Failed to power off instance"
 msgstr "关闭实例失败"
@@ -507,19 +476,8 @@ msgstr "忽略选项  %(name)s: %(options)s 中无效的元素。"
 msgid "Ignoring volume cleanup failure due to %s"
 msgstr "正在忽略由于 %s 而导致的卷清除故障"
 
-#, python-format
-msgid "Image %s not found on disk storage. Continue without injecting data"
-msgstr "在磁盘存储上，镜像 %s 没有找到。不注入数据，继续。"
-
 msgid "Image not found during snapshot"
 msgstr "快照期间，没有找到镜像"
-
-msgid ""
-"In the M release you must run all of the API. The concept of API extensions "
-"will be removed from the codebase to ensure there is a single Compute API."
-msgstr ""
-"在M版本，您必须运行所有的API。API扩展的概念将从代码基线移除，保证这是一个单一"
-"的计算API。"
 
 msgid ""
 "In vmwareapi:vmops:_destroy_instance, exception while deleting the VM "
@@ -535,10 +493,6 @@ msgstr ""
 
 msgid "Info cache for instance could not be found. Ignore."
 msgstr "实例的info 缓存没有找到。忽略。"
-
-#, python-format
-msgid "Info cache is %r during associate"
-msgstr "在绑定期间，Info 缓存是%r"
 
 #, python-format
 msgid ""
@@ -645,10 +599,6 @@ msgid ""
 "Instance uuid could not be retrieved for instance %s. Instance state change "
 "event will be ignored."
 msgstr "不能为实例%s 获取实例uuid。忽略实例状态变化事件。"
-
-#, python-format
-msgid "Instance: %(instance_uuid)s failed to save into memcached"
-msgstr "实例: %(instance_uuid)s 保存到memcached 失败。"
 
 msgid "Invalid 'agent_present' value. Falling back to the default."
 msgstr "无效 'agent_present' 值。回归到缺省。"
@@ -986,29 +936,6 @@ msgstr ""
 "是有风险的。同时注意到单元当前不支持回归更新，假设单元部署者升级中出现失败步"
 "骤，那么n-1个单元兼容性将不能正常工作。"
 
-msgid ""
-"The extension configure options are deprecated. In the near future you must "
-"run all of the API."
-msgstr "废弃扩展配置选项。在不远的未来，您必须运行API的所有部分。"
-
-#, python-format
-msgid ""
-"The legacy v2 API module already moved into'nova.api.openstack.compute."
-"legacy_v2.contrib'. Use new path instead of old path %s"
-msgstr ""
-"遗留的v2 模块移动到'nova.api.openstack.compute.legacy_v2.contrib' 。使用新路"
-"径代替旧路径 %s"
-
-#, python-format
-msgid ""
-"The libvirt driver is not tested on %(type)s/%(arch)s by the OpenStack "
-"project and thus its quality can not be ensured. For more information, see: "
-"https://wiki.openstack.org/wiki/HypervisorSupportMatrix"
-msgstr ""
-"OpenStack项目没有在 %(type)s/%(arch)s 架构上测试过libvirt驱动，因此它的质量不"
-"能保证。了解更多信息，请参考：https://wiki.openstack.org/wiki/"
-"HypervisorSupportMatrix"
-
 #, python-format
 msgid ""
 "The same keypair name '%(name)s' exists in the following cells: "
@@ -1021,9 +948,6 @@ msgid ""
 "This key manager is insecure and is not recommended for production "
 "deployments"
 msgstr "秘钥管理器是不安全的，不推荐在生产部署环境中使用"
-
-msgid "This key manager is not suitable for use in production deployments"
-msgstr "在生产部署环节中，秘钥 管理器key manager 不适合使用"
 
 msgid "This shouldn't be getting called except during testing."
 msgstr "不应该调用此项（在测试期间除外）。"
@@ -1043,10 +967,6 @@ msgstr "等待软关机时，超时。"
 msgid "Timeout waiting for vif plugging callback for instance %(uuid)s"
 msgstr "等待实例%(uuid)s的vif 插入回调超时"
 
-#, python-format
-msgid "Token: %(token)s failed to save into memcached."
-msgstr "令牌：%(token)s 保存到memcached 失败。"
-
 msgid "Too many id maps, only included first five."
 msgstr "太多id映射，只能包含前5个。"
 
@@ -1059,14 +979,6 @@ msgstr " 把'block_device_retries' 负数的配置值 (%(retries)s) 当做0。"
 msgid ""
 "Treating negative config value (%(retries)s) for 'glance.num_retries' as 0."
 msgstr "把'glance.num_retries' 的负数的配置值 (%(retries)s) 当做0。"
-
-#, python-format
-msgid ""
-"Treating negative config value (%(retries)s) for 'network_allocate_retries' "
-"as 0."
-msgstr ""
-"把网络分配重试次数'network_allocate_retries' 负数的配置值 (%(retries)s) 当做"
-"0。"
 
 #, python-format
 msgid ""
@@ -1339,14 +1251,6 @@ msgstr "plug_vifs() 失败 %(cnt)d。重试到%(max_retry)d。"
 #, python-format
 msgid "rbd remove %(volume)s in pool %(pool)s failed"
 msgstr "rbd 移除池 %(pool)s 的卷   %(volume)s 失败"
-
-#, python-format
-msgid ""
-"serial_console.port_range should be <num>:<num>. Given value %(port_range)s "
-"could not be parsed. Taking the default port range %(default)s."
-msgstr ""
-"串口端口范围serial_console.port_range 应该是 <num>:<num> 。给定值 "
-"%(port_range)s  不能够被解析。使用缺省端口范围%(default)s。"
 
 msgid "set_admin_password is not implemented by this driver or guest instance."
 msgstr "此驱动程序或 guest 实例未实现 set_admin_password。"

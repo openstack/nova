@@ -13,6 +13,7 @@
 #    under the License.
 
 import base64
+from collections import deque
 import sys
 import traceback
 
@@ -94,9 +95,7 @@ class _FakeDriverBackendTestCase(object):
         import nova.virt.libvirt.firewall
         import nova.virt.libvirt.host
 
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.driver.imagebackend',
-            fake_imagebackend))
+        self.useFixture(fake_imagebackend.ImageBackendFixture())
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.driver.libvirt',
             fakelibvirt))
@@ -129,7 +128,8 @@ class _FakeDriverBackendTestCase(object):
         def fake_extend(image, size):
             pass
 
-        def fake_migrateToURI(*a):
+        def fake_migrate(_self, destination, params=None, flags=0,
+                         domain_xml=None, bandwidth=0):
             pass
 
         def fake_make_drive(_self, _path):
@@ -162,7 +162,7 @@ class _FakeDriverBackendTestCase(object):
                        '_get_instance_disk_info',
                        fake_get_instance_disk_info)
 
-        self.stubs.Set(nova.virt.libvirt.driver.disk,
+        self.stubs.Set(nova.virt.libvirt.driver.disk_api,
                        'extend', fake_extend)
 
         self.stubs.Set(nova.virt.libvirt.driver.LibvirtDriver,
@@ -173,10 +173,8 @@ class _FakeDriverBackendTestCase(object):
                        'detach_device_with_retry',
                        fake_detach_device_with_retry)
 
-        # Like the existing fakelibvirt.migrateToURI, do nothing,
-        # but don't fail for these tests.
-        self.stubs.Set(nova.virt.libvirt.driver.libvirt.Domain,
-                       'migrateToURI', fake_migrateToURI)
+        self.stubs.Set(nova.virt.libvirt.guest.Guest,
+                       'migrate', fake_migrate)
 
         # We can't actually make a config drive v2 because ensure_tree has
         # been faked out
@@ -332,8 +330,8 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     def test_inject_file(self):
         instance_ref, network_info = self._get_running_instance()
         self.connection.inject_file(instance_ref,
-                                    base64.b64encode('/testfile'),
-                                    base64.b64encode('testcontents'))
+                                    base64.b64encode(b'/testfile'),
+                                    base64.b64encode(b'testcontents'))
 
     @catch_notimplementederror
     def test_resume_state_on_host_boot(self):
@@ -667,6 +665,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     @catch_notimplementederror
     def test_live_migration_force_complete(self):
         instance_ref, network_info = self._get_running_instance()
+        self.connection.active_migrations[instance_ref.uuid] = deque()
         self.connection.live_migration_force_complete(instance_ref)
 
     @catch_notimplementederror
@@ -800,6 +799,18 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
             virtevent.EVENT_LIFECYCLE_STARTED)
 
         self.connection.emit_event(event1)
+
+    def test_emit_unicode_event(self):
+        """Tests that we do not fail on translated unicode events."""
+        started_event = virtevent.LifecycleEvent(
+            "cef19ce0-0ca2-11df-855d-b19fbce37686",
+            virtevent.EVENT_LIFECYCLE_STARTED)
+        callback = mock.Mock()
+        self.connection.register_event_listener(callback)
+        with mock.patch.object(started_event, 'get_name',
+                               return_value=u'\xF0\x9F\x92\xA9'):
+            self.connection.emit_event(started_event)
+        callback.assert_called_once_with(started_event)
 
     def test_set_bootable(self):
         self.assertRaises(NotImplementedError, self.connection.set_bootable,

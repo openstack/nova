@@ -25,10 +25,8 @@ from nova.objects import fields
 LOG = logging.getLogger(__name__)
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register
-class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject,
-                        base.NovaObjectDictCompat):
+class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Converted network_info to store the model.
     # Version 1.2: Added new() and update_cells kwarg to save().
@@ -46,7 +44,7 @@ class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject,
     @staticmethod
     def _from_db_object(context, info_cache, db_obj):
         for field in info_cache.fields:
-            info_cache[field] = db_obj[field]
+            setattr(info_cache, field, db_obj[field])
         info_cache.obj_reset_changes()
         info_cache._context = context
         return info_cache
@@ -114,7 +112,8 @@ class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject,
         current._context = None
 
         for field in self.fields:
-            if self.obj_attr_is_set(field) and self[field] != current[field]:
-                self[field] = current[field]
+            if (self.obj_attr_is_set(field) and
+                    getattr(self, field) != getattr(current, field)):
+                setattr(self, field, getattr(current, field))
 
         self.obj_reset_changes()

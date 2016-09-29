@@ -12,7 +12,6 @@
 #    under the License.
 
 import ast
-import re
 
 from nova import exception
 from nova.i18n import _
@@ -25,7 +24,6 @@ MAX_DOMAIN = 0xFFFF
 MAX_BUS = 0xFF
 MAX_SLOT = 0x1F
 ANY = '*'
-VIRTFN_RE = re.compile("virtfn\d+")
 
 
 def get_value(v):
@@ -132,7 +130,6 @@ class PciDeviceSpec(object):
     def __init__(self, dev_spec):
         self.tags = dev_spec
         self._init_dev_details()
-        self.dev_count = 0
 
     def _init_dev_details(self):
         self.vendor_id = self.tags.pop("vendor_id", ANY)
@@ -144,28 +141,26 @@ class PciDeviceSpec(object):
         get_pci_dev_info(self, 'vendor_id', MAX_VENDOR_ID, '%04x')
         get_pci_dev_info(self, 'product_id', MAX_PRODUCT_ID, '%04x')
 
-        pf = False
         if self.address and self.dev_name:
             raise exception.PciDeviceInvalidDeviceName()
-        if not self.address:
-            if self.dev_name:
-                self.address, pf = utils.get_function_by_ifname(
-                    self.dev_name)
-                if not self.address:
-                    raise exception.PciDeviceNotFoundById(id=self.dev_name)
-            else:
-                self.address = "*:*:*.*"
-
-        self.address = PciAddress(self.address, pf)
+        if not self.dev_name:
+            address_str = self.address or "*:*:*.*"
+            self.address = PciAddress(address_str, False)
 
     def match(self, dev_dict):
-        conditions = [
+        if self.dev_name:
+            address_str, pf = utils.get_function_by_ifname(
+                self.dev_name)
+            if not address_str:
+                return False
+            address_obj = PciAddress(address_str, pf)
+        elif self.address:
+            address_obj = self.address
+        return all([
             self.vendor_id in (ANY, dev_dict['vendor_id']),
             self.product_id in (ANY, dev_dict['product_id']),
-            self.address.match(dev_dict['address'],
-                dev_dict.get('parent_addr'))
-            ]
-        return all(conditions)
+            address_obj.match(dev_dict['address'],
+                dev_dict.get('parent_addr'))])
 
     def match_pci_obj(self, pci_obj):
         return self.match({'vendor_id': pci_obj.vendor_id,

@@ -20,7 +20,6 @@ import base64
 import os
 import posixpath
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
@@ -29,34 +28,25 @@ import six
 
 from nova.api.ec2 import ec2utils
 from nova.api.metadata import password
+from nova.api.metadata import vendordata
+from nova.api.metadata import vendordata_dynamic
+from nova.api.metadata import vendordata_json
 from nova import availability_zones as az
 from nova import block_device
 from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
 import nova.conf
 from nova import context
+from nova.i18n import _LI, _LW
 from nova import network
 from nova.network.security_group import openstack_driver
 from nova import objects
-from nova.objects import keypair as keypair_obj
+from nova.objects import virt_device_metadata as metadata_obj
 from nova import utils
 from nova.virt import netutils
 
 
-metadata_opts = [
-    cfg.StrOpt('config_drive_skip_versions',
-               default=('1.0 2007-01-19 2007-03-01 2007-08-29 2007-10-10 '
-                        '2007-12-15 2008-02-01 2008-09-01'),
-               help='List of metadata versions to skip placing into the '
-                    'config drive'),
-    cfg.StrOpt('vendordata_driver',
-               default='nova.api.metadata.vendordata_json.JsonFileVendorData',
-               help='DEPRECATED: Driver to use for vendor data',
-               deprecated_for_removal=True),
-]
-
 CONF = nova.conf.CONF
-CONF.register_opts(metadata_opts)
 
 VERSIONS = [
     '1.0',
@@ -70,16 +60,26 @@ VERSIONS = [
     '2009-04-04',
 ]
 
+# NOTE(mikal): think of these strings as version numbers. They traditionally
+# correlate with OpenStack release dates, with all the changes for a given
+# release bundled into a single version. Note that versions in the future are
+# hidden from the listing, but can still be requested explicitly, which is
+# required for testing purposes. We know this isn't great, but its inherited
+# from EC2, which this needs to be compatible with.
 FOLSOM = '2012-08-10'
 GRIZZLY = '2013-04-04'
 HAVANA = '2013-10-17'
 LIBERTY = '2015-10-15'
+NEWTON_ONE = '2016-06-30'
+NEWTON_TWO = '2016-10-06'
 
 OPENSTACK_VERSIONS = [
     FOLSOM,
     GRIZZLY,
     HAVANA,
     LIBERTY,
+    NEWTON_ONE,
+    NEWTON_TWO,
 ]
 
 VERSION = "version"
@@ -87,6 +87,7 @@ CONTENT = "content"
 CONTENT_DIR = "content"
 MD_JSON_NAME = "meta_data.json"
 VD_JSON_NAME = "vendor_data.json"
+VD2_JSON_NAME = "vendor_data2.json"
 NW_JSON_NAME = "network_data.json"
 UD_NAME = "user_data"
 PASS_NAME = "password"
@@ -108,7 +109,8 @@ class InstanceMetadata(object):
     """Instance metadata."""
 
     def __init__(self, instance, address=None, content=None, extra_md=None,
-                 network_info=None, vd_driver=None, network_metadata=None):
+                 network_info=None, vd_driver=None, network_metadata=None,
+                 request_context=None):
         """Creation of this object should basically cover all time consuming
         collection.  Methods after that should not cause time delays due to
         network operations or lengthy cpu operations.
@@ -194,6 +196,19 @@ class InstanceMetadata(object):
 
         self.route_configuration = None
 
+        # NOTE(mikal): the decision to not pass extra_md here like we
+        # do to the StaticJSON driver is deliberate. extra_md will
+        # contain the admin password for the instance, and we shouldn't
+        # pass that to external services.
+        self.vendordata_providers = {
+            'StaticJSON': vendordata_json.JsonFileVendorData(
+                instance=instance, address=address,
+                extra_md=extra_md, network_info=network_info),
+            'DynamicJSON': vendordata_dynamic.DynamicVendorData(
+                instance=instance, address=address,
+                network_info=network_info, context=request_context)
+        }
+
     def _route_configuration(self):
         if self.route_configuration:
             return self.route_configuration
@@ -201,6 +216,7 @@ class InstanceMetadata(object):
         path_handlers = {UD_NAME: self._user_data,
                          PASS_NAME: self._password,
                          VD_JSON_NAME: self._vendor_data,
+                         VD2_JSON_NAME: self._vendor_data2,
                          MD_JSON_NAME: self._metadata_as_json,
                          NW_JSON_NAME: self._network_data,
                          VERSION: self._handle_version,
@@ -313,25 +329,35 @@ class InstanceMetadata(object):
             metadata.update(self.extra_md)
         if self.network_config:
             metadata['network_config'] = self.network_config
-        if self.instance.key_name:
-            metadata['public_keys'] = {
-                self.instance.key_name: self.instance.key_data
-            }
 
+        if self.instance.key_name:
             if cells_opts.get_cell_type() == 'compute':
                 cells_api = cells_rpcapi.CellsAPI()
                 keypair = cells_api.get_keypair_at_top(
                   context.get_admin_context(), self.instance.user_id,
                   self.instance.key_name)
             else:
-                keypair = keypair_obj.KeyPair.get_by_name(
-                    context.get_admin_context(), self.instance.user_id,
-                    self.instance.key_name)
-            metadata['keys'] = [
-                {'name': keypair.name,
-                 'type': keypair.type,
-                 'data': keypair.public_key}
-            ]
+                keypairs = self.instance.keypairs
+                # NOTE(mriedem): It's possible for the keypair to be deleted
+                # before it was migrated to the instance_extra table, in which
+                # case lazy-loading instance.keypairs will handle the 404 and
+                # just set an empty KeyPairList object on the instance.
+                keypair = keypairs[0] if keypairs else None
+
+            if keypair:
+                metadata['public_keys'] = {
+                    keypair.name: keypair.public_key,
+                }
+
+                metadata['keys'] = [
+                    {'name': keypair.name,
+                     'type': keypair.type,
+                     'data': keypair.public_key}
+                ]
+            else:
+                LOG.debug("Unable to find keypair for instance with "
+                          "key name '%s'.", self.instance.key_name,
+                          instance=self.instance)
 
         metadata['hostname'] = self._get_hostname()
         metadata['name'] = self.instance.display_name
@@ -344,8 +370,70 @@ class InstanceMetadata(object):
         if self._check_os_version(LIBERTY, version):
             metadata['project_id'] = self.instance.project_id
 
+        if self._check_os_version(NEWTON_ONE, version):
+            metadata['devices'] = self._get_device_metadata()
+
         self.set_mimetype(MIME_TYPE_APPLICATION_JSON)
         return jsonutils.dump_as_bytes(metadata)
+
+    def _get_device_metadata(self):
+        """Build a device metadata dict based on the metadata objects. This is
+        done here in the metadata API as opposed to in the objects themselves
+        because the metadata dict is part of the guest API and thus must be
+        controlled.
+        """
+        device_metadata_list = []
+
+        if self.instance.device_metadata is not None:
+            for device in self.instance.device_metadata.devices:
+                device_metadata = {}
+                bus = 'none'
+                address = 'none'
+
+                if 'bus' in device:
+                    # TODO(artom/mriedem) It would be nice if we had something
+                    # more generic, like a type identifier or something, built
+                    # into these types of objects, like a get_meta_type()
+                    # abstract method on the base DeviceBus class.
+                    if isinstance(device.bus, metadata_obj.PCIDeviceBus):
+                        bus = 'pci'
+                    elif isinstance(device.bus, metadata_obj.USBDeviceBus):
+                        bus = 'usb'
+                    elif isinstance(device.bus, metadata_obj.SCSIDeviceBus):
+                        bus = 'scsi'
+                    elif isinstance(device.bus, metadata_obj.IDEDeviceBus):
+                        bus = 'ide'
+                    else:
+                        LOG.debug('Metadata for device with unknown bus %s '
+                                  'has not been included in the '
+                                  'output' % device.bus.__class__.__name__)
+                        continue
+                    if 'address' in device.bus:
+                        address = device.bus.address
+
+                if isinstance(device, metadata_obj.NetworkInterfaceMetadata):
+                    device_metadata['type'] = 'nic'
+                    device_metadata['mac'] = device.mac
+                elif isinstance(device, metadata_obj.DiskMetadata):
+                    device_metadata['type'] = 'disk'
+                    # serial and path are optional parameters
+                    if 'serial' in device:
+                        device_metadata['serial'] = device.serial
+                    if 'path' in device:
+                        device_metadata['path'] = device.path
+                else:
+                    LOG.debug('Metadata for device of unknown type %s has not '
+                              'been included in the '
+                              'output' % device.__class__.__name__)
+                    continue
+
+                device_metadata['bus'] = bus
+                device_metadata['address'] = address
+                device_metadata['tags'] = device.tags
+
+                device_metadata_list.append(device_metadata)
+
+        return device_metadata_list
 
     def _handle_content(self, path_tokens):
         if len(path_tokens) == 1:
@@ -365,6 +453,8 @@ class InstanceMetadata(object):
             ret.append(VD_JSON_NAME)
         if self._check_os_version(LIBERTY, version):
             ret.append(NW_JSON_NAME)
+        if self._check_os_version(NEWTON_TWO, version):
+            ret.append(VD2_JSON_NAME)
 
         return ret
 
@@ -386,7 +476,43 @@ class InstanceMetadata(object):
     def _vendor_data(self, version, path):
         if self._check_os_version(HAVANA, version):
             self.set_mimetype(MIME_TYPE_APPLICATION_JSON)
-            return jsonutils.dump_as_bytes(self.vddriver.get())
+
+            # NOTE(mikal): backwards compatibility... If the deployer has
+            # specified providers, and one of those providers is StaticJSON,
+            # then do that thing here. Otherwise, if the deployer has
+            # specified an old style driver here, then use that. This second
+            # bit can be removed once old style vendordata is fully deprecated
+            # and removed.
+            if (CONF.vendordata_providers and
+                'StaticJSON' in CONF.vendordata_providers):
+                return jsonutils.dump_as_bytes(
+                    self.vendordata_providers['StaticJSON'].get())
+            else:
+                # TODO(mikal): when we removed the old style vendordata
+                # drivers, we need to remove self.vddriver as well.
+                return jsonutils.dump_as_bytes(self.vddriver.get())
+
+        raise KeyError(path)
+
+    def _vendor_data2(self, version, path):
+        if self._check_os_version(NEWTON_TWO, version):
+            self.set_mimetype(MIME_TYPE_APPLICATION_JSON)
+
+            j = {}
+            for provider in CONF.vendordata_providers:
+                if provider == 'StaticJSON':
+                    j['static'] = self.vendordata_providers['StaticJSON'].get()
+                else:
+                    values = self.vendordata_providers[provider].get()
+                    for key in list(values):
+                        if key in j:
+                            LOG.warning(_LW('Removing duplicate metadata key: '
+                                            '%s'), key, instance=self.instance)
+                            del values[key]
+                    j.update(values)
+
+            return jsonutils.dump_as_bytes(j)
+
         raise KeyError(path)
 
     def _check_version(self, required, requested, versions=VERSIONS):
@@ -430,7 +556,7 @@ class InstanceMetadata(object):
                 if OPENSTACK_VERSIONS != versions:
                     LOG.debug("future versions %s hidden in version list",
                               [v for v in OPENSTACK_VERSIONS
-                               if v not in versions])
+                               if v not in versions], instance=self.instance)
                 versions += ["latest"]
             else:
                 versions = VERSIONS + ["latest"]
@@ -484,6 +610,11 @@ class InstanceMetadata(object):
                 path = 'openstack/%s/%s' % (version, NW_JSON_NAME)
                 yield (path, self.lookup(path))
 
+            if self._check_version(NEWTON_TWO, version,
+                                   ALL_OPENSTACK_VERSIONS):
+                path = 'openstack/%s/%s' % (version, VD2_JSON_NAME)
+                yield (path, self.lookup(path))
+
         for (cid, content) in six.iteritems(self.content):
             yield ('%s/%s/%s' % ("openstack", CONTENT_DIR, cid), content)
 
@@ -518,24 +649,11 @@ class RouteConfiguration(object):
         return path_handler(version, path)
 
 
-class VendorDataDriver(object):
-    """The base VendorData Drivers should inherit from."""
-
-    def __init__(self, *args, **kwargs):
-        """Init method should do all expensive operations."""
-        self._data = {}
-
-    def get(self):
-        """Return a dictionary of primitives to be rendered in metadata
-
-        :return: A dictionary or primitives.
-        """
-        return self._data
-
-
 def get_metadata_by_address(address):
     ctxt = context.get_admin_context()
     fixed_ip = network.API().get_fixed_ip_by_address(ctxt, address)
+    LOG.info(_LI('Fixed IP %(ip)s translates to instance UUID %(uuid)s'),
+             {'ip': address, 'uuid': fixed_ip['instance_uuid']})
 
     return get_metadata_by_instance_id(fixed_ip['instance_uuid'],
                                        address,
@@ -547,7 +665,8 @@ def get_metadata_by_instance_id(instance_id, address, ctxt=None):
     instance = objects.Instance.get_by_uuid(
         ctxt, instance_id, expected_attrs=['ec2_ids', 'flavor', 'info_cache',
                                            'metadata', 'system_metadata',
-                                           'security_groups'])
+                                           'security_groups', 'keypairs',
+                                           'device_metadata'])
     return InstanceMetadata(instance, address)
 
 
@@ -592,3 +711,8 @@ def find_path_in_tree(data, path_tokens):
                 raise KeyError("/".join(path_tokens[0:i]))
             data = data[path_tokens[i]]
     return data
+
+
+# NOTE(mikal): this alias is to stop old style vendordata plugins from breaking
+# post refactor. It should be removed when we finish deprecating those plugins.
+VendorDataDriver = vendordata.VendorDataDriver

@@ -15,27 +15,14 @@
 import datetime
 import urllib
 
-from oslo_config import cfg
 from oslo_utils import timeutils
 
 from nova.tests.functional.api_sample_tests import test_servers
 import nova.tests.functional.api_samples_test_base as astb
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
-
 
 class SimpleTenantUsageSampleJsonTest(test_servers.ServersSampleBase):
-    extension_name = "os-simple-tenant-usage"
-
-    def _get_flags(self):
-        f = super(SimpleTenantUsageSampleJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.simple_tenant_usage.'
-            'Simple_tenant_usage')
-        return f
+    sample_dir = "os-simple-tenant-usage"
 
     def setUp(self):
         """setUp method for simple tenant usage."""
@@ -63,6 +50,15 @@ class SimpleTenantUsageSampleJsonTest(test_servers.ServersSampleBase):
         response = self._do_get('os-simple-tenant-usage?%s' % (
                                                 urllib.urlencode(self.query)))
         self._verify_response('simple-tenant-usage-get', {}, response, 200)
+
+    def test_get_tenants_usage_with_detail(self):
+        # Get all tenants usage information with detail.
+        query = self.query.copy()
+        query.update({'detailed': 1})
+        response = self._do_get('os-simple-tenant-usage?%s' % (
+                                                urllib.urlencode(query)))
+        self._verify_response('simple-tenant-usage-get-detail', {},
+                              response, 200)
 
     def test_get_tenant_usage_details(self):
         # Get api sample to get specific tenant usage request.

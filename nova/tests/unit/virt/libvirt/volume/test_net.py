@@ -11,16 +11,13 @@
 #    under the License.
 
 import mock
-from oslo_config import cfg
 
+import nova.conf
 from nova.tests.unit.virt.libvirt.volume import test_volume
 from nova.virt.libvirt import host
 from nova.virt.libvirt.volume import net
 
-CONF = cfg.CONF
-CONF.import_opt('rbd_user', 'nova.virt.libvirt.volume.net', group='libvirt')
-CONF.import_opt('rbd_secret_uuid', 'nova.virt.libvirt.volume.net',
-                group='libvirt')
+CONF = nova.conf.CONF
 
 
 class LibvirtNetVolumeDriverTestCase(

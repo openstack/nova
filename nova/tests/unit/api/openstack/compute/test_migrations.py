@@ -13,12 +13,10 @@
 #    under the License.
 
 import datetime
-import mock
 
+import mock
 from oslotest import moxstubout
 
-from nova.api.openstack.compute.legacy_v2.contrib import migrations \
-        as migrations_v2
 from nova.api.openstack.compute import migrations as migrations_v21
 from nova import context
 from nova import exception
@@ -181,28 +179,6 @@ class MigrationsTestCaseV21(test.NoDBTestCase):
 
         response = self.controller.index(self.req)
         self.assertEqual(migrations_in_progress, response)
-
-
-class MigrationsTestCaseV2(MigrationsTestCaseV21):
-    migrations = migrations_v2
-
-    def _migrations_output(self):
-        return self.migrations.output(migrations_obj)
-
-    def setUp(self):
-        super(MigrationsTestCaseV2, self).setUp()
-        self.context = self.req.environ['nova.context']
-
-    def test_index_needs_authorization(self):
-        user_context = context.RequestContext(user_id=None,
-                                              project_id=None,
-                                              is_admin=False,
-                                              read_deleted="no",
-                                              overwrite=False)
-        self.req.environ['nova.context'] = user_context
-
-        self.assertRaises(exception.PolicyNotAuthorized, self.controller.index,
-                          self.req)
 
 
 class MigrationsTestCaseV223(MigrationsTestCaseV21):

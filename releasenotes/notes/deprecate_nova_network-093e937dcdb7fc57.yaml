@@ -1,0 +1,8 @@
+---
+deprecations:
+
+  - Nova network is now deprecated. Based on the results of the
+    current OpenStack User Survey less than 10% of our users remain on
+    Nova network. This is the signal that it is time migrate to
+    Neutron. No new features will be added to Nova network, and bugs
+    will only be fixed on a case by case basis.

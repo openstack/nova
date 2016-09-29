@@ -1,0 +1,6 @@
+---
+deprecations:
+  - The ``fatal_exception_format_errors`` config option is now deprecated and
+    may be removed as early as the 15.0.0 release. It is an option which was
+    only relevant for Nova internal testing purposes to ensure that errors in
+    formatted exception messages got detected.

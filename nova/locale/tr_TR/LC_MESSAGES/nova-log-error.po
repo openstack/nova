@@ -6,9 +6,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:29+0000\n"
+"POT-Creation-Date: 2016-08-25 06:15+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -29,14 +29,6 @@ msgid ""
 "%(size)s"
 msgstr ""
 "%(base)s sanal boyutu %(base_size)s nitelik kök diski boyutu %(size)s den "
-"büyük"
-
-#, python-format
-msgid ""
-"%(base)s virtual size %(disk_size)s larger than flavor root disk size "
-"%(size)s"
-msgstr ""
-"%(base)s sanal boyutu %(disk_size)s nitelik kök disk boyutu %(size)s den "
 "büyük"
 
 #, python-format
@@ -74,34 +66,6 @@ msgstr "Yakalama hatası: %s"
 
 msgid "Compute driver option required, but not specified"
 msgstr "Hesaplama sürücüsü seçeneği gerekli, ama belirtilmemiş"
-
-#, python-format
-msgid "Compute.api::inject_network_info %s"
-msgstr "Compute.api::inject_network_info %s"
-
-#, python-format
-msgid "Compute.api::lock %s"
-msgstr "Compute.api::lock %s"
-
-#, python-format
-msgid "Compute.api::pause %s"
-msgstr "Compute.api::pause %s"
-
-#, python-format
-msgid "Compute.api::resetState %s"
-msgstr "Compute.api::resetState %s"
-
-#, python-format
-msgid "Compute.api::reset_network %s"
-msgstr "Compute.api::reset_network %s"
-
-#, python-format
-msgid "Compute.api::unlock %s"
-msgstr "Compute.api::unlock %s"
-
-#, python-format
-msgid "Compute.api::unpause %s"
-msgstr "Compute.api::unpause %s"
 
 #, python-format
 msgid "Connection to libvirt failed: %s"
@@ -186,18 +150,6 @@ msgid "Environment variable 'NETWORK_ID' must be set."
 msgstr "Çevresel değişken 'NETWORK_ID' ayarlanmış olmalı."
 
 #, python-format
-msgid "Error copying key: %s"
-msgstr "Anahtar kopyalanırken hata: %s"
-
-#, python-format
-msgid "Error creating Barbican client: %s"
-msgstr "Barbican istemcisi oluştururken hata: %s"
-
-#, python-format
-msgid "Error creating key: %s"
-msgstr "Anahtar oluştururken hata: %s"
-
-#, python-format
 msgid "Error defining a domain with XML: %s"
 msgstr "XML ile bir alanın tanımlanmasında hata: %s"
 
@@ -208,10 +160,6 @@ msgstr "Bir sırın XML ile tanımlanması başarısız: %s"
 #, python-format
 msgid "Error deleting conntrack entries for %s"
 msgstr "%s için conntrack girdileri silinirken hata"
-
-#, python-format
-msgid "Error deleting key: %s"
-msgstr "Anahtar silinirken hata: %s"
 
 #, python-format
 msgid "Error deploying instance %(instance)s on baremetal node %(node)s."
@@ -239,21 +187,6 @@ msgstr ""
 #, python-format
 msgid "Error from libvirt during unfilter. Code=%(errcode)s Error=%(e)s"
 msgstr "Filtre kaldırma sırasında libvirt hatası. Kod=%(errcode)s Hata=%(e)s"
-
-#, python-format
-msgid "Error getting key: %s"
-msgstr "Anahtar alınırken hata: %s"
-
-#, python-format
-msgid "Error getting secret data: %s"
-msgstr "Sır verisi alınırken hata: %s"
-
-#, python-format
-msgid "Error getting secret metadata: %s"
-msgstr "Sır metadata alınırken hata: %s"
-
-msgid "Error in migrate"
-msgstr "Göçte hata"
 
 #, python-format
 msgid "Error injecting data into image %(img_id)s (%(e)s)"
@@ -300,10 +233,6 @@ msgid "Error processing message locally"
 msgstr "İleti yerel olarak işlenirken hata"
 
 #, python-format
-msgid "Error reading image info file %(filename)s: %(error)s"
-msgstr "İmaj bilgi dosyası %(filename)s okumada hata: %(error)s"
-
-#, python-format
 msgid "Error releasing DHCP for IP %(address)s with MAC %(mac_address)s"
 msgstr ""
 "%(mac_address)s MAC'ine sahip %(address)s IP'si için DHCP serbest "
@@ -319,10 +248,6 @@ msgstr "İleti sonraki noktalara gönderilirken hata."
 #, python-format
 msgid "Error starting xvp: %s"
 msgstr "XVP başlatılırken hata oluştu: %s"
-
-#, python-format
-msgid "Error storing key: %s"
-msgstr "Anahtar depolanırken hata: %s"
 
 msgid "Error trying to Rescue Instance"
 msgstr "Sunucu Kurtarılmaya çalışılırken hata"
@@ -437,9 +362,6 @@ msgid ""
 msgstr ""
 "Zuladaki imaj %(source)s %(dest)s e yeniden boyutlandırma için "
 "kopyalanamadı: %(error)s"
-
-msgid "Failed to deallocate network for instance."
-msgstr "Sunucu için ağ ilişiği kesilemedi"
 
 msgid "Failed to deallocate networks"
 msgstr "Ağ ilişikleri kesilemedi"
@@ -681,10 +603,6 @@ msgid "Instance failed to spawn"
 msgstr "Örnek oluşturmada hata"
 
 #, python-format
-msgid "Instance type %s not found for deletion"
-msgstr "Silme işlemi için %s örnek türü bulunamadı"
-
-#, python-format
 msgid "Interface %s not found"
 msgstr "Arayüz %s bulunamadı"
 
@@ -773,18 +691,6 @@ msgstr "%s ağında bağlantı noktası oluştururken Neutron hatası"
 #, python-format
 msgid "No compute node record for host %s"
 msgstr "%s istemcisi için hesap düğüm kaydı yok"
-
-#, python-format
-msgid "No db access allowed in nova-compute: %s"
-msgstr "nova-compute'de db erişimine izin verilmiyor: %s"
-
-#, python-format
-msgid "No db access allowed in nova-dhcpbridge: %s"
-msgstr "nova-dhcpbridge'de db erişimine izin verilmiyor: %s"
-
-#, python-format
-msgid "No db access allowed in nova-network: %s"
-msgstr "nova-network'de db erişimine izin verilmiyor: %s"
 
 #, python-format
 msgid "No save handler for %s"
@@ -917,10 +823,6 @@ msgstr "VBD'den SR bulunamadı"
 msgid "Unable to find SR from VDI"
 msgstr "VDI'den SR bulunamadı"
 
-#, python-format
-msgid "Unable to find address %r"
-msgstr "%r adresini bulmak olanaksız"
-
 msgid "Unable to get record of VDI"
 msgstr "VDI kaydı alınamadı"
 
@@ -961,10 +863,6 @@ msgstr "Havuz ayarlanamıyor: %s."
 
 msgid "Unable to unplug VBD"
 msgstr "VBD sökülemedi"
-
-#, python-format
-msgid "Unable to update host of port %s"
-msgstr "%s bağlantı noktasının istemcisi güncellenemiyor"
 
 msgid "Unexpected build failure, not rescheduling build."
 msgstr "Beklenmeyen inşa başarısızlığı, inşa tekrar zamanlanmıyor."
@@ -1036,14 +934,6 @@ msgstr "allocate_port_for_instance %(ports)s bağlantı noktaları döndürdü"
 msgid "attaching network adapter failed."
 msgstr "ağ bağdaştırıcısı ekleme başarısız."
 
-#, python-format
-msgid "compute.api::resume %s"
-msgstr "compute.api::resume %s"
-
-#, python-format
-msgid "compute.api::suspend %s"
-msgstr "compute.api::suspend %s"
-
 msgid "detaching network adapter failed."
 msgstr "ağ bağdaştırıcısı ayırma başarısız."
 
@@ -1053,10 +943,6 @@ msgstr "sync_power_state stop() sırasında hata."
 #, python-format
 msgid "error opening rbd image %s"
 msgstr "%s rbd imajının açılmasında hata"
-
-#, python-format
-msgid "image %(id)s at (%(base_file)s): image verification failed"
-msgstr "(%(base_file)s) deki imaj %(id)s: imaj doğrulama başarısız"
 
 #, python-format
 msgid "kill -HUP dnsmasq threw %s"

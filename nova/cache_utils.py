@@ -14,89 +14,45 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Super simple fake memcache client."""
-
-import copy
+"""Simple wrapper for oslo_cache."""
 
 from oslo_cache import core as cache
-from oslo_config import cfg
+from oslo_log import log as logging
 
-from nova.i18n import _
+import nova.conf
+from nova.i18n import _, _LW
 
+CONF = nova.conf.CONF
 
-# NOTE(dims): There are many copies of memcache_opts with memcached_servers
-# in various projects as this used to be in a copy of memory_cache.py
-# Since we are making a change in just our copy, oslo-config-generator fails
-# with cfg.DuplicateOptError unless we override the comparison check
-class _DeprecatedListOpt(cfg.ListOpt):
-    def __ne__(self, another):
-        self_dict = copy.deepcopy(vars(self))
-        another_dict = copy.deepcopy(vars(another))
-        self_dict.pop('help')
-        self_dict.pop('deprecated_for_removal')
-        another_dict.pop('help')
-        another_dict.pop('deprecated_for_removal')
-        return self_dict != another_dict
-
-
-memcache_opts = [
-    _DeprecatedListOpt('memcached_servers',
-                       help='DEPRECATED: Memcached servers or None for in '
-                            'process cache. "memcached_servers" opt is '
-                            'deprecated in Mitaka. In Newton release '
-                            'oslo.cache config options should be used as '
-                            'this option will be removed. Please add a '
-                            '[cache] group in your nova.conf file and '
-                            'add "enable" and "memcache_servers" option in '
-                            'this section.',
-                       deprecated_for_removal=True),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(memcache_opts)
+LOG = logging.getLogger(__name__)
 
 WEEK = 604800
 
 
-def list_opts():
-    """Entry point for oslo-config-generator."""
-    return [(None, copy.deepcopy(memcache_opts))]
+def _warn_if_null_backend():
+    if CONF.cache.backend == 'dogpile.cache.null':
+        LOG.warning(_LW("Cache enabled with backend dogpile.cache.null."))
 
 
 def get_memcached_client(expiration_time=0):
     """Used ONLY when memcached is explicitly needed."""
-    # If the operator uses the old style [DEFAULT]/memcached_servers
-    # then we just respect that setting
-    if CONF.memcached_servers:
-        return CacheClient(
-                _get_custom_cache_region(expiration_time=expiration_time,
-                                         backend='dogpile.cache.memcached',
-                                         url=CONF.memcached_servers))
-    # If the operator still uses the new style [cache]/memcache_servers
-    # and has [cache]/enabled flag on then we let oslo_cache configure
-    # the region from the configuration settings
-    elif CONF.cache.enabled and CONF.cache.memcache_servers:
+    # If the operator has [cache]/enabled flag on then we let oslo_cache
+    # configure the region from the configuration settings
+    if CONF.cache.enabled and CONF.cache.memcache_servers:
+        _warn_if_null_backend()
         return CacheClient(
                 _get_default_cache_region(expiration_time=expiration_time))
-    raise RuntimeError(_('memcached_servers not defined'))
 
 
 def get_client(expiration_time=0):
     """Used to get a caching client."""
-    # If the operator still uses the old style [DEFAULT]/memcached_servers
-    # then we just respect that setting
-    if CONF.memcached_servers:
-        return CacheClient(
-                _get_custom_cache_region(expiration_time=expiration_time,
-                                         backend='dogpile.cache.memcached',
-                                         url=CONF.memcached_servers))
     # If the operator has [cache]/enabled flag on then we let oslo_cache
     # configure the region from configuration settings.
-    elif CONF.cache.enabled:
+    if CONF.cache.enabled:
+        _warn_if_null_backend()
         return CacheClient(
                 _get_default_cache_region(expiration_time=expiration_time))
-    # If [cache]/enabled flag is off and [DEFAULT]/memcached_servers is
-    # absent we use the dictionary backend
+    # If [cache]/enabled flag is off, we use the dictionary backend
     return CacheClient(
             _get_custom_cache_region(expiration_time=expiration_time,
                                      backend='oslo_cache.dict'))

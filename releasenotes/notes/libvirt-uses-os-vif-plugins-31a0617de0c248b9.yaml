@@ -1,0 +1,35 @@
+---
+features:
+  - The Libvirt driver now uses os-vif plugins for
+    handling plug/unplug actions for the Linux Bridge
+    and OpenVSwitch VIF types. Each os-vif plugin will
+    have its own group in nova.conf for configuration
+    parameters it needs. These plugins will be installed
+    by default as part of the os-vif module installation
+    so no special action is required.
+upgrade:
+  - With the introduction of os-vif, some networking related
+    configuration options have moved, and users will need to update
+    their ``nova.conf``.
+
+    For OpenVSwitch users the following options have moved from
+    ``[DEFAULT]`` to ``[vif_plug_ovs]``
+
+     - network_device_mtu
+     - ovs_vsctl_timeout
+
+    For Linux Bridge users the following options have moved from
+    ``[DEFAULT]`` to ``[vif_plug_linux_bridge]``
+
+     - use_ipv6
+     - iptables_top_regex
+     - iptables_bottom_regex
+     - iptables_drop_action
+     - forward_bridge_interface
+     - vlan_interface
+     - flat_interface
+     - network_device_mtu
+
+    For backwards compatibility, and ease of upgrade, these options
+    will continue to work from ``[DEFAULT]`` during the Newton
+    release. However they will not in future releases.

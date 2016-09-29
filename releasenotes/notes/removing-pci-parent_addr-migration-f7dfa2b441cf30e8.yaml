@@ -1,0 +1,7 @@
+---
+upgrade:
+  - In mitaka, an online migration was added to migrate older SRIOV parent
+    device information from extra_info to a new column. Since two releases
+    have gone out with that migration, it is removed in Ocata and operators
+    are expetected to have run it as part of either of the previous two
+    releases, if applicable.

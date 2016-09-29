@@ -652,8 +652,10 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
 
     def test_get_migrations(self):
         filters = {'status': 'confirmed'}
-        cell1_migrations = [{'id': 123}]
-        cell2_migrations = [{'id': 456}]
+        cell1_migrations = objects.MigrationList(
+            objects=[objects.Migration(id=123)])
+        cell2_migrations = objects.MigrationList(
+            objects=[objects.Migration(id=456)])
         fake_responses = [self._get_fake_response(cell1_migrations),
                           self._get_fake_response(cell2_migrations)]
         self.mox.StubOutWithMock(self.msg_runner,
@@ -664,12 +666,13 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
 
         response = self.cells_manager.get_migrations(self.ctxt, filters)
 
-        self.assertEqual([cell1_migrations[0], cell2_migrations[0]], response)
+        self.assertEqual(cell1_migrations.objects + cell2_migrations.objects,
+                         response.objects)
 
     def test_get_migrations_for_a_given_cell(self):
         filters = {'status': 'confirmed', 'cell_name': 'ChildCell1'}
         target_cell = '%s%s%s' % (CONF.cells.name, '!', filters['cell_name'])
-        migrations = [{'id': 123}]
+        migrations = objects.MigrationList(objects=[objects.Migration(id=123)])
         fake_responses = [self._get_fake_response(migrations)]
         self.mox.StubOutWithMock(self.msg_runner,
                                  'get_migrations')
@@ -678,7 +681,7 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
 
         response = self.cells_manager.get_migrations(self.ctxt, filters)
-        self.assertEqual(migrations, response)
+        self.assertEqual(migrations.objects, response.objects)
 
     def test_instance_update_from_api(self):
         self.mox.StubOutWithMock(self.msg_runner,

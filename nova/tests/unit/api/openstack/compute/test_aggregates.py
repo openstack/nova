@@ -20,8 +20,6 @@ import uuid
 from webob import exc
 
 from nova.api.openstack.compute import aggregates as aggregates_v21
-from nova.api.openstack.compute.legacy_v2.contrib import aggregates \
-        as aggregates_v2
 from nova.compute import api as compute_api
 from nova import context
 from nova import exception
@@ -156,6 +154,17 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                                      {"name": "test",
                                       "availability_zone": "nova1"}})
 
+    @mock.patch.object(compute_api.AggregateAPI, 'create_aggregate')
+    def test_create_with_unmigrated_aggregates(self, mock_create_aggregate):
+        mock_create_aggregate.side_effect = \
+                exception.ObjectActionError(action='create',
+                    reason='main database still contains aggregates')
+
+        self.assertRaises(exc.HTTPConflict, self.controller.create,
+                          self.req, body={"aggregate":
+                                     {"name": "test",
+                                      "availability_zone": "nova1"}})
+
     def test_create_with_incorrect_availability_zone(self):
         def stub_create_aggregate(context, name, availability_zone):
             raise exception.InvalidAggregateAction(action='create_aggregate',
@@ -243,7 +252,7 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                                           {"name": "test",
                                            "availability_zone": "  nova1  "}})
 
-    def test_create_availabiltiy_zone_with_leading_trailing_spaces_compat_mode(
+    def test_create_availability_zone_with_leading_trailing_spaces_compat_mode(
             self):
 
         def fake_mock_aggs(context, name, az):
@@ -745,78 +754,3 @@ class AggregateTestCaseV21(test.NoDBTestCase):
     def _assert_agg_data(self, expected, actual):
         self.assertTrue(obj_base.obj_equal_prims(expected, actual),
                         "The aggregate objects were not equal")
-
-
-class AggregateTestCaseV2(AggregateTestCaseV21):
-    add_host = 'self.controller.action'
-    remove_host = 'self.controller.action'
-    set_metadata = 'self.controller.action'
-    bad_request = exc.HTTPBadRequest
-
-    def _set_up(self):
-        self.controller = aggregates_v2.AggregateController()
-        self.req = FakeRequest()
-        self.user_req = fakes.HTTPRequest.blank('/v2/os-aggregates')
-        self.context = self.req.environ['nova.context']
-
-    def test_add_host_raises_key_error(self):
-        def stub_add_host_to_aggregate(context, aggregate, host):
-            raise KeyError
-        self.stubs.Set(self.controller.api, "add_host_to_aggregate",
-                       stub_add_host_to_aggregate)
-        # NOTE(mtreinish) The check for a KeyError here is to ensure that
-        # if add_host_to_aggregate() raises a KeyError it propagates. At
-        # one point the api code would mask the error as a HTTPBadRequest.
-        # This test is to ensure that this doesn't occur again.
-        self.assertRaises(KeyError, eval(self.add_host), self.req, "1",
-                          body={"add_host": {"host": "host1"}})
-
-    def test_add_host_to_aggregate_with_non_admin(self):
-        rule_name = "compute_extension:aggregates"
-        self.policy.set_rules({rule_name: ""})
-        self.assertRaises(exception.AdminRequired, self.controller._add_host,
-                          self.user_req, '1', {'host': 'fake_host'})
-
-    def test_remove_host_from_aggregate_with_non_admin(self):
-        rule_name = "compute_extension:aggregates"
-        self.policy.set_rules({rule_name: ""})
-        self.assertRaises(exception.AdminRequired,
-                          self.controller._remove_host, self.user_req,
-                          '1', {'host': 'fake_host'})
-
-    def test_create_name_with_leading_trailing_spaces(self):
-
-        def fake_mock_aggs(context, name, az):
-            # NOTE(alex_xu): legacy v2 api didn't strip the spaces.
-            self.assertEqual('  test  ', name)
-            return AGGREGATE
-
-        with mock.patch.object(compute_api.AggregateAPI,
-                               'create_aggregate') as mock_aggs:
-            mock_aggs.side_effect = fake_mock_aggs
-            self.controller.create(self.req,
-                                   body={"aggregate":
-                                         {"name": "  test  ",
-                                          "availability_zone": "nova1"}})
-
-    def test_create_name_with_leading_trailing_spaces_compat_mode(self):
-        pass
-
-    def test_create_availability_zone_with_leading_trailing_spaces(self):
-
-        def fake_mock_aggs(context, name, az):
-            # NOTE(alex_xu): legacy v2 api didn't strip the spaces.
-            self.assertEqual('  nova1  ', az)
-            return AGGREGATE
-
-        with mock.patch.object(compute_api.AggregateAPI,
-                               'create_aggregate') as mock_aggs:
-            mock_aggs.side_effect = fake_mock_aggs
-            self.controller.create(self.req,
-                                   body={"aggregate":
-                                         {"name": "  test  ",
-                                          "availability_zone": "  nova1  "}})
-
-    def test_create_availabiltiy_zone_with_leading_trailing_spaces_compat_mode(
-            self):
-        pass

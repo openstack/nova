@@ -41,11 +41,11 @@ tools (e.g. Libvirt or QEMU) or Nova itself under certain conditions. These
 should only be enabled in exceptional circumstances. All options are linked
 against bug IDs, where more information on the issue can be found.
 """)
-
-disable_rootwrap = cfg.BoolOpt(
-    'disable_rootwrap',
-    default=False,
-    help="""
+ALL_OPTS = [
+    cfg.BoolOpt(
+        'disable_rootwrap',
+        default=False,
+        help="""
 Use sudo instead of rootwrap.
 
 Allow fallback to sudo for performance reasons.
@@ -59,24 +59,26 @@ Possible values:
 * True: Use sudo instead of rootwrap
 * False: Use rootwrap as usual
 
-Services which consume this:
-
-* ``nova-compute``
-
 Interdependencies to other options:
 
-Any options that affect 'rootwrap' will be ignored.
-""")
+* Any options that affect 'rootwrap' will be ignored.
+"""),
 
-disable_libvirt_livesnapshot = cfg.BoolOpt(
-    'disable_libvirt_livesnapshot',
-    default=True,
-    help="""
+    cfg.BoolOpt(
+        'disable_libvirt_livesnapshot',
+        default=True,
+        help="""
 Disable live snapshots when using the libvirt driver.
 
-When using libvirt 1.2.2 live snapshots fail intermittently under load. This
-config option provides a mechanism to disable live snapshot, in favour of cold
-snapshot, while this is resolved.
+Live snapshots allow the snapshot of the disk to happen without an
+interruption to the guest, using coordination with a guest agent to
+quiesce the filesystem.
+
+When using libvirt 1.2.2 live snapshots fail intermittently under load
+(likely related to concurrent libvirt/qemu operations). This config
+option provides a mechanism to disable live snapshot, in favor of cold
+snapshot, while this is resolved. Cold snapshot causes an instance
+outage while the guest is going through the snapshotting process.
 
 For more information, refer to the bug report:
 
@@ -84,22 +86,15 @@ For more information, refer to the bug report:
 
 Possible values:
 
-* True: Live migrate is disabled when using libvirt
-* False: Live migrate functions as usual
+* True: Live snapshot is disabled when using libvirt
+* False: Live snapshots are always used when snapshotting (as long as
+  there is a new enough libvirt and the backend storage supports it)
+"""),
 
-Services which consume this:
-
-* ``nova-compute``
-
-Interdependencies to other options:
-
-* None
-""")
-
-handle_virt_lifecycle_events = cfg.BoolOpt(
-    'handle_virt_lifecycle_events',
-    default=True,
-    help="""
+    cfg.BoolOpt(
+        'handle_virt_lifecycle_events',
+        default=True,
+        help="""
 Enable handling of events emitted from compute drivers.
 
 Many compute drivers emit lifecycle events, which are events that occur when,
@@ -110,7 +105,7 @@ are ignored.
 This is an advanced feature which allows the hypervisor to signal to the
 compute service that an unexpected state change has occurred in an instance
 and that the instance can be shutdown automatically. Unfortunately, this can
-race in some conditions, for exmaple in reboot operations or when the compute
+race in some conditions, for example in reboot operations or when the compute
 service or when host is rebooted (planned or due to an outage). If such races
 are common, then it is advisable to disable this feature.
 
@@ -123,28 +118,17 @@ For more information, refer to the bug report:
 
   https://bugs.launchpad.net/bugs/1444630
 
-Possible values:
-
-* True: Enable the feature
-* False: Disable the feature
-
-Services which consume this:
-
-* ``nova-compute``
-
 Interdependencies to other options:
 
 * If ``sync_power_state_interval`` is negative and this feature is disabled,
   then instances that get out of sync between the hypervisor and the Nova
-  database will have to be synchonized manually.
-""")
-
-ALL_OPTS = [disable_rootwrap,
-            disable_libvirt_livesnapshot,
-            handle_virt_lifecycle_events]
+  database will have to be synchronized manually.
+"""),
+]
 
 
 def register_opts(conf):
+    conf.register_group(workarounds_group)
     conf.register_opts(ALL_OPTS, group=workarounds_group)
 
 

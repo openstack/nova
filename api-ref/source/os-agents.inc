@@ -1,8 +1,4 @@
-.. -*- rst -*-
-.. needs:method_verification
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
+.. -*- rst -*
 
 ==========================
  Guest agents (os-agents)
@@ -10,35 +6,72 @@
 
 Creates, lists, updates, and deletes guest agent builds. Use guest
 agents to access files on the disk, configure networking, or run other
-applications or scripts in the guest while the agent runs. This
-hypervisor-specific extension is not currently enabled for KVM. Use of
+applications or scripts in the guest while the agent is running. This
+hypervisor-specific extension is currently only for the Xen driver. Use of
 guest agents is possible only if the underlying service provider uses
 the Xen driver.
 
-Create Agent Build
-==================
+List Agent Builds
+=================
 
-.. rest_method:: POST /v2.1/{tenant_id}/os-agents
+.. rest_method:: GET /os-agents
 
-Creates an agent build.
+Lists agent builds.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - hypervisor: hypervisor_type
+  - hypervisor: hypervisor_query
+
+
+Response
+--------
+
+.. rest_parameters:: parameters.yaml
+
+  - agents: agents
+  - agent_id: agent_id
   - architecture: architecture
+  - hypervisor: hypervisor_type
+  - md5hash: md5hash
   - os: os
   - url: url
-  - md5hash: md5hash
   - version: version
+
+**Example List Agent Builds: JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-agents/agents-get-resp.json
+   :language: javascript
+
+Create Agent Build
+==================
+
+.. rest_method:: POST /os-agents
+
+Creates an agent build.
+
+Normal response codes: 200
+
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), conflict(409)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - agent: agent
+  - hypervisor: hypervisor_type
+  - os: os
+  - architecture: architecture
+  - version: version
+  - md5hash: md5hash
+  - url: url
 
 **Example Create Agent Build: JSON request**
 
@@ -50,93 +83,39 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-  - hypervisor: hypervisor_type
+  - agent: agent
+  - agent_id: agent_id
   - architecture: architecture
+  - hypervisor: hypervisor_type
+  - md5hash: md5hash
   - os: os
   - url: url
-  - md5hash: md5hash
   - version: version
-  - agent_id: agent_id
 
 **Example Create Agent Build: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-agents/agent-post-resp.json
    :language: javascript
 
-List Agent Builds
-=================
-
-.. rest_method:: GET /v2.1/{tenant_id}/os-agents
-
-Lists agent builds.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-  - agent_id: agent_id
-  - architecture: architecture
-  - hypervisor: hypervisor_type
-  - url: url
-  - md5hash: md5hash
-  - version: version
-
-Response
---------
-
-**Example List Agent Builds: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/os-agents/agents-get-resp.json
-   :language: javascript
-
-Delete Agent Build
-==================
-
-.. rest_method:: DELETE /v2.1/{tenant_id}/os-agents
-
-Deletes an existing agent build.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-
-Response
---------
-
 Update Agent Build
 ==================
 
-.. rest_method:: PUT /v2.1/{tenant_id}/os-agents/{agent_build_id}
+.. rest_method:: PUT /os-agents/{agent_build_id}
 
 Updates an agent build.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - agent_build_id: agent_build_id
+  - para: para
   - url: url
   - md5hash: md5hash
   - version: version
@@ -151,12 +130,37 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
+  - agent: agent
   - agent_id: agent_id_str
-  - url: url
   - md5hash: md5hash
+  - url: url
   - version: version
 
 **Example Update Agent Build: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-agents/agent-update-put-resp.json
    :language: javascript
+
+Delete Agent Build
+==================
+
+.. rest_method:: DELETE /os-agents/{agent_build_id}
+
+Deletes an existing agent build.
+
+Normal response codes: 200
+
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+
+  - agent_build_id: agent_build_id
+
+Response
+--------
+
+There is no body content for the response of a successful DELETE query

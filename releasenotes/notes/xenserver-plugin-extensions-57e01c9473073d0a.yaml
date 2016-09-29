@@ -1,0 +1,6 @@
+---
+upgrade:
+  - XenServer plugins have been renamed to include a '.py' extension. Code has
+    been included to handle plugins with and without the extension, but this
+    will be removed in the next release. The plugins with the extension should
+    be deployed on all compute nodes to mitigate any upgrade issues.

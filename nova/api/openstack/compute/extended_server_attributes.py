@@ -18,17 +18,17 @@ from nova.api.openstack import api_version_request
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
+from nova.policies import extended_server_attributes as esa_policies
+from nova.policies import servers as servers_policies
 
 ALIAS = "os-extended-server-attributes"
-authorize = extensions.os_compute_soft_authorizer(ALIAS)
-soft_authorize = extensions.os_compute_soft_authorizer('servers')
 
 
 class ExtendedServerAttributesController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(ExtendedServerAttributesController, self).__init__(*args,
                                                                  **kwargs)
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
 
     def _extend_server(self, context, server, instance, req):
         key = "OS-EXT-SRV-ATTR:hypervisor_hostname"
@@ -39,7 +39,7 @@ class ExtendedServerAttributesController(wsgi.Controller):
             # NOTE(mriedem): These will use the OS-EXT-SRV-ATTR prefix below
             # and that's OK for microversion 2.3 which is being compatible
             # with v2.0 for the ec2 API split out from Nova. After this,
-            # however, new microversoins should not be using the
+            # however, new microversions should not be using the
             # OS-EXT-SRV-ATTR prefix.
             properties += ['reservation_id', 'launch_index',
                            'hostname', 'kernel_id', 'ramdisk_id',
@@ -62,10 +62,11 @@ class ExtendedServerAttributesController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize_extend = False
         authorize_host_status = False
-        if authorize(context):
+        if context.can(esa_policies.BASE_POLICY_NAME, fatal=False):
             authorize_extend = True
         if (api_version_request.is_supported(req, min_version='2.16') and
-            soft_authorize(context, action='show:host_status')):
+            context.can(servers_policies.SERVERS % 'show:host_status',
+                        fatal=False)):
             authorize_host_status = True
         if authorize_extend or authorize_host_status:
             server = resp_obj.obj['server']
@@ -82,25 +83,29 @@ class ExtendedServerAttributesController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize_extend = False
         authorize_host_status = False
-        if authorize(context):
+        if context.can(esa_policies.BASE_POLICY_NAME, fatal=False):
             authorize_extend = True
         if (api_version_request.is_supported(req, min_version='2.16') and
-            soft_authorize(context, action='show:host_status')):
+            context.can(servers_policies.SERVERS % 'show:host_status',
+                        fatal=False)):
             authorize_host_status = True
         if authorize_extend or authorize_host_status:
             servers = list(resp_obj.obj['servers'])
-            instances = req.get_db_instances()
-            # Instances is guaranteed to be in the cache due to
-            # the core API adding it in its 'detail' method.
-            if authorize_host_status:
-                host_statuses = self.compute_api.get_instances_host_statuses(
-                                instances.values())
-            for server in servers:
-                if authorize_extend:
-                    instance = instances[server['id']]
-                    self._extend_server(context, server, instance, req)
+            # NOTE(dinesh-bhor): Skipping fetching of instances from cache as
+            # servers list can be empty if invalid status is provided to the
+            # core API 'detail' method.
+            if servers:
+                instances = req.get_db_instances()
                 if authorize_host_status:
-                    server['host_status'] = host_statuses[server['id']]
+                    host_statuses = (
+                        self.compute_api.get_instances_host_statuses(
+                                instances.values()))
+                for server in servers:
+                    if authorize_extend:
+                        instance = instances[server['id']]
+                        self._extend_server(context, server, instance, req)
+                    if authorize_host_status:
+                        server['host_status'] = host_statuses[server['id']]
 
 
 class ExtendedServerAttributes(extensions.V21APIExtensionBase):

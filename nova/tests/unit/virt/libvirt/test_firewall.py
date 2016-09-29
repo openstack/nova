@@ -30,6 +30,7 @@ from nova import objects
 from nova import test
 from nova.tests.unit import fake_network
 from nova.tests.unit.virt.libvirt import fakelibvirt
+from nova.tests import uuidsentinel as uuids
 from nova.virt.libvirt import firewall
 from nova.virt.libvirt import host
 from nova.virt import netutils
@@ -170,40 +171,40 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
                                              name='testsourcegroup',
                                              description='src group')
 
-        r1 = objects.SecurityGroupRule(parent_group_id=secgroup['id'],
+        r1 = objects.SecurityGroupRule(parent_group_id=secgroup.id,
                                        protocol='icmp',
                                        from_port=-1,
                                        to_port=-1,
                                        cidr='192.168.11.0/24',
                                        grantee_group=None)
 
-        r2 = objects.SecurityGroupRule(parent_group_id=secgroup['id'],
+        r2 = objects.SecurityGroupRule(parent_group_id=secgroup.id,
                                        protocol='icmp',
                                        from_port=8,
                                        to_port=-1,
                                        cidr='192.168.11.0/24',
                                        grantee_group=None)
 
-        r3 = objects.SecurityGroupRule(parent_group_id=secgroup['id'],
+        r3 = objects.SecurityGroupRule(parent_group_id=secgroup.id,
                                        protocol='tcp',
                                        from_port=80,
                                        to_port=81,
                                        cidr='192.168.10.0/24',
                                        grantee_group=None)
 
-        r4 = objects.SecurityGroupRule(parent_group_id=secgroup['id'],
+        r4 = objects.SecurityGroupRule(parent_group_id=secgroup.id,
                                        protocol='tcp',
                                        from_port=80,
                                        to_port=81,
                                        cidr=None,
                                        grantee_group=src_secgroup,
-                                       group_id=src_secgroup['id'])
+                                       group_id=src_secgroup.id)
 
-        r5 = objects.SecurityGroupRule(parent_group_id=secgroup['id'],
+        r5 = objects.SecurityGroupRule(parent_group_id=secgroup.id,
                                        protocol=None,
                                        cidr=None,
                                        grantee_group=src_secgroup,
-                                       group_id=src_secgroup['id'])
+                                       group_id=src_secgroup.id)
 
         secgroup_list = objects.SecurityGroupList()
         secgroup_list.objects.append(secgroup)
@@ -216,7 +217,7 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
             objects=[r1, r2, r3, r4, r5])
 
         def _fake_instlist(ctxt, id):
-            if id == src_secgroup['id']:
+            if id == src_secgroup.id:
                 insts = objects.InstanceList()
                 insts.objects.append(src_instance_ref)
                 return insts
@@ -254,8 +255,7 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
         self.fw.prepare_instance_filter(instance_ref, network_model)
         self.fw.apply_instance_filter(instance_ref, network_model)
 
-        in_rules = filter(lambda l: not l.startswith('#'),
-                          self.in_rules)
+        in_rules = [l for l in self.in_rules if not l.startswith('#')]
         for rule in in_rules:
             if 'nova' not in rule:
                 self.assertIn(rule, self.out_rules,
@@ -281,30 +281,31 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
 
         regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p icmp '
                            '-s 192.168.11.0/24')
-        self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
-                        "ICMP acceptance rule wasn't added")
+        self.assertGreater(len(filter(regex.match, self.out_rules)), 0,
+                           "ICMP acceptance rule wasn't added")
 
         regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p icmp -m icmp '
                            '--icmp-type 8 -s 192.168.11.0/24')
-        self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
-                        "ICMP Echo Request acceptance rule wasn't added")
+        self.assertGreater(len(filter(regex.match, self.out_rules)), 0,
+                           "ICMP Echo Request acceptance rule wasn't added")
 
         for ip in network_model.fixed_ips():
             if ip['version'] != 4:
                 continue
             regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p tcp -m multiport '
                                '--dports 80:81 -s %s' % ip['address'])
-            self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
-                            "TCP port 80/81 acceptance rule wasn't added")
+            self.assertGreater(len(filter(regex.match, self.out_rules)), 0,
+                               "TCP port 80/81 acceptance rule wasn't added")
             regex = re.compile('\[0\:0\] -A .* -j ACCEPT -s '
                                '%s' % ip['address'])
-            self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
-                            "Protocol/port-less acceptance rule wasn't added")
+            self.assertGreater(len(filter(regex.match, self.out_rules)), 0,
+                               "Protocol/port-less acceptance rule"
+                               " wasn't added")
 
         regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p tcp '
                            '-m multiport --dports 80:81 -s 192.168.10.0/24')
-        self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
-                        "TCP port 80/81 acceptance rule wasn't added")
+        self.assertGreater(len(filter(regex.match, self.out_rules)), 0,
+                           "TCP port 80/81 acceptance rule wasn't added")
 
     def test_filters_for_instance_with_ip_v6(self):
         self.flags(use_ipv6=True)
@@ -378,8 +379,8 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
         self.fw.do_refresh_security_group_rules("fake")
 
     def test_do_refresh_security_group_rules_instance_gone(self):
-        instance1 = objects.Instance(None, id=1, uuid='fake-uuid1')
-        instance2 = objects.Instance(None, id=2, uuid='fake-uuid2')
+        instance1 = objects.Instance(None, id=1, uuid=uuids.instance_1)
+        instance2 = objects.Instance(None, id=2, uuid=uuids.instance_2)
         self.fw.instance_info = {1: (instance1, 'netinfo1'),
                                  2: (instance2, 'netinfo2')}
         mock_filter = mock.MagicMock()

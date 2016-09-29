@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 from oslo_config import cfg
 
 from nova.cloudpipe import pipelib
@@ -41,16 +42,18 @@ class PipelibTest(test.TestCase):
             self.assertTrue(ret)
 
     def test_launch_vpn_instance(self):
-        self.stubs.Set(self.cloudpipe.compute_api,
-                       "create",
-                       lambda *a, **kw: (None, "r-fakeres"))
-        with utils.tempdir() as tmpdir:
-            self.flags(ca_path=tmpdir, keys_path=tmpdir, group='crypto')
-            crypto.ensure_ca_filesystem()
-            self.cloudpipe.launch_vpn_instance(self.context)
+        @mock.patch.object(self.cloudpipe.compute_api, 'create',
+                           return_value=lambda *a, **kw: (None, "r-fakeres"))
+        def _do_test(mock_create):
+            with utils.tempdir() as tmpdir:
+                self.flags(ca_path=tmpdir, keys_path=tmpdir, group='crypto')
+                crypto.ensure_ca_filesystem()
+                self.cloudpipe.launch_vpn_instance(self.context)
+
+        _do_test()
 
     def test_setup_security_group(self):
-        group_name = "%s%s" % (self.project, CONF.vpn_key_suffix)
+        group_name = "%s%s" % (self.project, CONF.cloudpipe.vpn_key_suffix)
 
         # First attempt, does not exist (thus its created)
         res1_group = self.cloudpipe.setup_security_group(self.context)
@@ -61,7 +64,7 @@ class PipelibTest(test.TestCase):
         self.assertEqual(res1_group, res2_group)
 
     def test_setup_key_pair(self):
-        key_name = "%s%s" % (self.project, CONF.vpn_key_suffix)
+        key_name = "%s%s" % (self.project, CONF.cloudpipe.vpn_key_suffix)
         with utils.tempdir() as tmpdir:
             self.flags(keys_path=tmpdir, group='crypto')
 

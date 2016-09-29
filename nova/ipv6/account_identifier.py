@@ -20,28 +20,32 @@
 import hashlib
 
 import netaddr
+import six
 
 from nova.i18n import _
 
 
 def to_global(prefix, mac, project_id):
-    project_hash = netaddr.IPAddress(
-                   int(hashlib.sha1(project_id).hexdigest()[:8], 16) << 32)
+    addr = project_id
+    if isinstance(addr, six.text_type):
+        addr = addr.encode('utf-8')
+    addr = hashlib.sha1(addr)
+    addr = int(addr.hexdigest()[:8], 16) << 32
+
+    project_hash = netaddr.IPAddress(addr)
     static_num = netaddr.IPAddress(0xff << 24)
 
     try:
-        mac_suffix = netaddr.EUI(mac).words[3:]
-        int_addr = int(''.join(['%02x' % i for i in mac_suffix]), 16)
-        mac_addr = netaddr.IPAddress(int_addr)
+        mac_suffix = netaddr.EUI(mac).value & 0xffffff
+        mac_addr = netaddr.IPAddress(mac_suffix)
+    except netaddr.AddrFormatError:
+        raise TypeError(_('Bad mac for to_global_ipv6: %s') % mac)
+
+    try:
         maskIP = netaddr.IPNetwork(prefix).ip
         return (project_hash ^ static_num ^ mac_addr | maskIP).format()
     except netaddr.AddrFormatError:
-        raise TypeError(_('Bad mac for to_global_ipv6: %s') % mac)
-    except TypeError:
         raise TypeError(_('Bad prefix for to_global_ipv6: %s') % prefix)
-    except NameError:
-        raise TypeError(_('Bad project_id for to_global_ipv6: %s') %
-                        project_id)
 
 
 def to_mac(ipv6_address):

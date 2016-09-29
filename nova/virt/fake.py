@@ -26,7 +26,6 @@ semantics of real hypervisor connections.
 import collections
 import contextlib
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
@@ -36,6 +35,7 @@ from nova.compute import hv_type
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
+import nova.conf
 from nova.console import type as ctype
 from nova import exception
 from nova.i18n import _LW
@@ -44,8 +44,7 @@ from nova.virt import driver
 from nova.virt import hardware
 from nova.virt import virtapi
 
-CONF = cfg.CONF
-CONF.import_opt('host', 'nova.netconf')
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
@@ -153,6 +152,7 @@ class FakeDriver(driver.ComputeDriver):
           }
         self._mounts = {}
         self._interfaces = {}
+        self.active_migrations = {}
         if not _FAKE_NODES:
             set_nodes([CONF.host])
 
@@ -367,6 +367,11 @@ class FakeDriver(driver.ComputeDriver):
            running VM.
         """
         bw = []
+        for instance in instances:
+            bw.append({'uuid': instance.uuid,
+                       'mac_address': 'fa:16:3e:4c:2c:30',
+                       'bw_in': 0,
+                       'bw_out': 0})
         return bw
 
     def get_all_volume_usage(self, context, compute_host_bdms):
@@ -474,8 +479,8 @@ class FakeDriver(driver.ComputeDriver):
     def live_migration_abort(self, instance):
         return
 
-    def check_can_live_migrate_destination_cleanup(self, context,
-                                                   dest_check_data):
+    def cleanup_live_migration_destination_check(self, context,
+                                                 dest_check_data):
         return
 
     def check_can_live_migrate_destination(self, context, instance,
@@ -497,7 +502,7 @@ class FakeDriver(driver.ComputeDriver):
         return
 
     def pre_live_migration(self, context, instance, block_device_info,
-                           network_info, disk_info, migrate_data=None):
+                           network_info, disk_info, migrate_data):
         return
 
     def unfilter_instance(self, instance, network_info):

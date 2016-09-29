@@ -17,15 +17,12 @@ from nova.api.openstack import api_version_request
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import objects
+from nova.policies import extended_volumes as ev_policies
 
 ALIAS = "os-extended-volumes"
-soft_authorize = extensions.os_compute_soft_authorizer(ALIAS)
 
 
 class ExtendedVolumesController(wsgi.Controller):
-    def __init__(self, *args, **kwargs):
-        super(ExtendedVolumesController, self).__init__(*args, **kwargs)
-
     def _extend_server(self, context, server, req, bdms):
         volumes_attached = []
         for bdm in bdms:
@@ -44,7 +41,7 @@ class ExtendedVolumesController(wsgi.Controller):
     @wsgi.extends
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
-        if soft_authorize(context):
+        if context.can(ev_policies.BASE_POLICY_NAME, fatal=False):
             server = resp_obj.obj['server']
             bdms = objects.BlockDeviceMappingList.bdms_by_instance_uuid(
                 context, [server['id']])
@@ -54,7 +51,7 @@ class ExtendedVolumesController(wsgi.Controller):
     @wsgi.extends
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
-        if soft_authorize(context):
+        if context.can(ev_policies.BASE_POLICY_NAME, fatal=False):
             servers = list(resp_obj.obj['servers'])
             instance_uuids = [server['id'] for server in servers]
             bdms = objects.BlockDeviceMappingList.bdms_by_instance_uuid(

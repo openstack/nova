@@ -24,9 +24,11 @@ from oslo_utils import excutils
 from oslo_utils import units
 
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _, _LW, _LE
 from nova import objects
 from nova.virt import configdrive
+from nova.virt.hyperv import block_device_manager
+from nova.virt.hyperv import constants
 from nova.virt.hyperv import imagecache
 from nova.virt.hyperv import pathutils
 from nova.virt.hyperv import vmops
@@ -37,52 +39,49 @@ LOG = logging.getLogger(__name__)
 
 class MigrationOps(object):
     def __init__(self):
-        self._hostutils = utilsfactory.get_hostutils()
         self._vmutils = utilsfactory.get_vmutils()
         self._vhdutils = utilsfactory.get_vhdutils()
         self._pathutils = pathutils.PathUtils()
         self._volumeops = volumeops.VolumeOps()
         self._vmops = vmops.VMOps()
         self._imagecache = imagecache.ImageCache()
+        self._block_dev_man = block_device_manager.BlockDeviceInfoManager()
 
     def _migrate_disk_files(self, instance_name, disk_files, dest):
         # TODO(mikal): it would be nice if this method took a full instance,
         # because it could then be passed to the log messages below.
-        same_host = False
-        if dest in self._hostutils.get_local_ips():
-            same_host = True
-            LOG.debug("Migration target is the source host")
-        else:
-            LOG.debug("Migration target host: %s", dest)
 
         instance_path = self._pathutils.get_instance_dir(instance_name)
+        dest_path = self._pathutils.get_instance_dir(instance_name, dest)
         revert_path = self._pathutils.get_instance_migr_revert_dir(
             instance_name, remove_dir=True, create_dir=True)
-        dest_path = None
+
+        shared_storage = (self._pathutils.exists(dest_path) and
+                          self._pathutils.check_dirs_shared_storage(
+                              instance_path, dest_path))
 
         try:
-            if same_host:
+            if shared_storage:
                 # Since source and target are the same, we copy the files to
-                # a temporary location before moving them into place
+                # a temporary location before moving them into place.
+                # This applies when the migration target is the source host or
+                # when shared storage is used for the instance files.
                 dest_path = '%s_tmp' % instance_path
-                if self._pathutils.exists(dest_path):
-                    self._pathutils.rmtree(dest_path)
-                self._pathutils.makedirs(dest_path)
-            else:
-                dest_path = self._pathutils.get_instance_dir(
-                    instance_name, dest, remove_dir=True)
+
+            self._pathutils.check_remove_dir(dest_path)
+            self._pathutils.makedirs(dest_path)
+
             for disk_file in disk_files:
-                # Skip the config drive as the instance is already configured
-                if os.path.basename(disk_file).lower() != 'configdrive.vhd':
-                    LOG.debug('Copying disk "%(disk_file)s" to '
-                              '"%(dest_path)s"',
-                              {'disk_file': disk_file, 'dest_path': dest_path})
-                    self._pathutils.copy(disk_file, dest_path)
+                LOG.debug('Copying disk "%(disk_file)s" to '
+                          '"%(dest_path)s"',
+                          {'disk_file': disk_file, 'dest_path': dest_path})
+                self._pathutils.copy(disk_file, dest_path)
 
             self._pathutils.move_folder_files(instance_path, revert_path)
 
-            if same_host:
+            if shared_storage:
                 self._pathutils.move_folder_files(dest_path, instance_path)
+                self._pathutils.rmtree(dest_path)
         except Exception:
             with excutils.save_and_reraise_exception():
                 self._cleanup_failed_disk_migration(instance_path, revert_path,
@@ -103,7 +102,7 @@ class MigrationOps(object):
 
     def _check_target_flavor(self, instance, flavor):
         new_root_gb = flavor.root_gb
-        curr_root_gb = instance.root_gb
+        curr_root_gb = instance.flavor.root_gb
 
         if new_root_gb < curr_root_gb:
             raise exception.InstanceFaultRollback(
@@ -167,18 +166,25 @@ class MigrationOps(object):
         instance_name = instance.name
         self._revert_migration_files(instance_name)
 
-        if self._volumeops.ebs_root_in_block_devices(block_device_info):
-            root_vhd_path = None
-        else:
-            root_vhd_path = self._pathutils.lookup_root_vhd_path(instance_name)
-
-        eph_vhd_path = self._pathutils.lookup_ephemeral_vhd_path(instance_name)
-
         image_meta = objects.ImageMeta.from_instance(instance)
-        vm_gen = self._vmops.get_image_vm_generation(
-            instance.uuid, root_vhd_path, image_meta)
-        self._vmops.create_instance(instance, network_info, block_device_info,
-                                    root_vhd_path, eph_vhd_path, vm_gen)
+        vm_gen = self._vmops.get_image_vm_generation(instance.uuid, image_meta)
+
+        self._block_dev_man.validate_and_update_bdi(instance, image_meta,
+                                                    vm_gen, block_device_info)
+        root_device = block_device_info['root_disk']
+
+        if root_device['type'] == constants.DISK:
+            root_vhd_path = self._pathutils.lookup_root_vhd_path(instance_name)
+            root_device['path'] = root_vhd_path
+            if not root_vhd_path:
+                base_vhd_path = self._pathutils.get_instance_dir(instance_name)
+                raise exception.DiskNotFound(location=base_vhd_path)
+
+        ephemerals = block_device_info['ephemerals']
+        self._check_ephemeral_disks(instance, ephemerals)
+
+        self._vmops.create_instance(instance, network_info, root_device,
+                                    block_device_info, vm_gen, image_meta)
 
         self._check_and_attach_config_drive(instance, vm_gen)
 
@@ -221,8 +227,8 @@ class MigrationOps(object):
                 reason=_("Cannot resize the root disk to a smaller size. "
                          "Current size: %(curr_root_gb)s GB. Requested "
                          "size: %(new_root_gb)s GB.") % {
-                             'curr_root_gb': curr_size,
-                             'new_root_gb': new_size})
+                             'curr_root_gb': curr_size / units.Gi,
+                             'new_root_gb': new_size / units.Gi})
         elif new_size > curr_size:
             self._resize_vhd(vhd_path, new_size)
 
@@ -260,13 +266,18 @@ class MigrationOps(object):
         LOG.debug("finish_migration called", instance=instance)
 
         instance_name = instance.name
+        vm_gen = self._vmops.get_image_vm_generation(instance.uuid, image_meta)
 
-        if self._volumeops.ebs_root_in_block_devices(block_device_info):
-            root_vhd_path = None
-        else:
+        self._block_dev_man.validate_and_update_bdi(instance, image_meta,
+                                                    vm_gen, block_device_info)
+        root_device = block_device_info['root_disk']
+
+        if root_device['type'] == constants.DISK:
             root_vhd_path = self._pathutils.lookup_root_vhd_path(instance_name)
+            root_device['path'] = root_vhd_path
             if not root_vhd_path:
-                raise exception.DiskNotFound(location=root_vhd_path)
+                base_vhd_path = self._pathutils.get_instance_dir(instance_name)
+                raise exception.DiskNotFound(location=base_vhd_path)
 
             root_vhd_info = self._vhdutils.get_vhd_info(root_vhd_path)
             src_base_disk_path = root_vhd_info.get("ParentPath")
@@ -275,25 +286,60 @@ class MigrationOps(object):
                                       src_base_disk_path)
 
             if resize_instance:
-                new_size = instance.root_gb * units.Gi
+                new_size = instance.flavor.root_gb * units.Gi
                 self._check_resize_vhd(root_vhd_path, root_vhd_info, new_size)
 
-        eph_vhd_path = self._pathutils.lookup_ephemeral_vhd_path(instance_name)
-        if resize_instance:
-            new_size = instance.get('ephemeral_gb', 0) * units.Gi
-            if not eph_vhd_path:
-                if new_size:
-                    eph_vhd_path = self._vmops.create_ephemeral_vhd(instance)
-            else:
-                eph_vhd_info = self._vhdutils.get_vhd_info(eph_vhd_path)
-                self._check_resize_vhd(eph_vhd_path, eph_vhd_info, new_size)
+        ephemerals = block_device_info['ephemerals']
+        self._check_ephemeral_disks(instance, ephemerals, resize_instance)
 
-        vm_gen = self._vmops.get_image_vm_generation(
-            instance.uuid, root_vhd_path, image_meta)
-        self._vmops.create_instance(instance, network_info, block_device_info,
-                                    root_vhd_path, eph_vhd_path, vm_gen)
+        self._vmops.create_instance(instance, network_info, root_device,
+                                    block_device_info, vm_gen, image_meta)
 
         self._check_and_attach_config_drive(instance, vm_gen)
 
         if power_on:
             self._vmops.power_on(instance)
+
+    def _check_ephemeral_disks(self, instance, ephemerals,
+                               resize_instance=False):
+        instance_name = instance.name
+        new_eph_gb = instance.get('ephemeral_gb', 0)
+
+        if len(ephemerals) == 1:
+            # NOTE(claudiub): Resize only if there is one ephemeral. If there
+            # are more than 1, resizing them can be problematic. This behaviour
+            # also exists in the libvirt driver and it has to be addressed in
+            # the future.
+            ephemerals[0]['size'] = new_eph_gb
+        elif sum(eph['size'] for eph in ephemerals) != new_eph_gb:
+            # New ephemeral size is different from the original ephemeral size
+            # and there are multiple ephemerals.
+            LOG.warning(_LW("Cannot resize multiple ephemeral disks for "
+                            "instance."), instance=instance)
+
+        for index, eph in enumerate(ephemerals):
+            eph_name = "eph%s" % index
+            existing_eph_path = self._pathutils.lookup_ephemeral_vhd_path(
+                instance_name, eph_name)
+
+            if not existing_eph_path:
+                eph['format'] = self._vhdutils.get_best_supported_vhd_format()
+                eph['path'] = self._pathutils.get_ephemeral_vhd_path(
+                    instance_name, eph['format'], eph_name)
+                if not resize_instance:
+                    # ephemerals should have existed.
+                    raise exception.DiskNotFound(location=eph['path'])
+
+                if eph['size']:
+                    # create ephemerals
+                    self._vmops.create_ephemeral_disk(instance.name, eph)
+            elif eph['size'] > 0:
+                # ephemerals exist. resize them.
+                eph['path'] = existing_eph_path
+                eph_vhd_info = self._vhdutils.get_vhd_info(eph['path'])
+                self._check_resize_vhd(
+                    eph['path'], eph_vhd_info, eph['size'] * units.Gi)
+            else:
+                # ephemeral new size is 0, remove it.
+                self._pathutils.remove(existing_eph_path)
+                eph['path'] = None

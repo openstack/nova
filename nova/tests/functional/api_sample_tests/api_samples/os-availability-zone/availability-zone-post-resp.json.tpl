@@ -11,6 +11,12 @@
                 "href": "%(compute_endpoint)s/servers/%(uuid)s",
                 "rel": "bookmark"
             }
+        ],
+        "OS-DCF:diskConfig": "AUTO",
+        "security_groups": [
+            {
+                "name": "default"
+            }
         ]
     }
 }

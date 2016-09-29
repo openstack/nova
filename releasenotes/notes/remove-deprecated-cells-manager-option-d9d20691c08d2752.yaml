@@ -1,0 +1,4 @@
+---
+upgrade:
+  - The 'manager' option in [cells] group was deprecated in Mitaka and
+    now it is removed completely in newton. There is no impact.

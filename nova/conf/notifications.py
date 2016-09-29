@@ -16,33 +16,61 @@
 
 from oslo_config import cfg
 
-notify_on_state_change = cfg.StrOpt('notify_on_state_change',
-        help='If set, send compute.instance.update notifications on instance '
-             'state changes.  Valid values are None for no notifications, '
-             '"vm_state" for notifications on VM state changes, or '
-             '"vm_and_task_state" for notifications on VM and task state '
-             'changes.')
+ALL_OPTS = [
+    cfg.StrOpt(
+        'notify_on_state_change',
+        choices=(None, 'vm_state', 'vm_and_task_state'),
+        help="""
+If set, send compute.instance.update notifications on instance state
+changes.
 
-notify_api_faults = cfg.BoolOpt('notify_api_faults', default=False,
-        help='If set, send api.fault notifications on caught exceptions '
-             'in the API service.')
+Please refer to https://wiki.openstack.org/wiki/SystemUsageData for
+additional information on notifications.
 
-default_notification_level = cfg.StrOpt('default_notification_level',
+Possible values:
+
+* None - no notifications
+* "vm_state" - notifications on VM state changes
+* "vm_and_task_state" - notifications on VM and task state changes
+"""),
+
+    cfg.BoolOpt(
+        'notify_api_faults',
+        default=False,
+        help="""
+If enabled, send api.fault notifications on caught exceptions in the
+API service.
+"""),
+
+    cfg.StrOpt(
+        'default_notification_level',
         default='INFO',
         choices=('DEBUG', 'INFO', 'WARN', 'ERROR', 'CRITICAL'),
-        help='Default notification level for outgoing notifications')
+        help="Default notification level for outgoing notifications."),
 
-default_publisher_id = cfg.StrOpt('default_publisher_id',
-        help='Default publisher_id for outgoing notifications')
+    cfg.StrOpt(
+        'default_publisher_id',
+        default='$my_ip',
+        help="""
+Default publisher_id for outgoing notifications. If you consider routing
+notifications using different publisher, change this value accordingly.
 
-ALL_OPTS = [notify_on_state_change, notify_api_faults,
-            default_notification_level,
-            default_publisher_id]
+Possible values:
+
+* Defaults to the IPv4 address of this host, but it can be any valid
+  oslo.messaging publisher_id
+
+Related options:
+
+*  my_ip - IP address of this host
+"""),
+]
 
 
 def register_opts(conf):
     conf.register_opts(ALL_OPTS)
 
 
+# TODO(johngarbutt): we should move this to a notification group.
 def list_opts():
     return {'DEFAULT': ALL_OPTS}

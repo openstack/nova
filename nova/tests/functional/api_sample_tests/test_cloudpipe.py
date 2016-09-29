@@ -14,30 +14,17 @@
 
 import uuid as uuid_lib
 
-from oslo_config import cfg
-
+import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit.image import fake
 
 
-CONF = cfg.CONF
-CONF.import_opt('vpn_image_id', 'nova.cloudpipe.pipelib')
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class CloudPipeSampleTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-cloudpipe"
-
-    def _get_flags(self):
-        f = super(CloudPipeSampleTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
-                      'contrib.cloudpipe.Cloudpipe')
-        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
-                      'contrib.cloudpipe_update.Cloudpipe_update')
-        return f
+    sample_dir = "os-cloudpipe"
 
     def setUp(self):
         super(CloudPipeSampleTest, self).setUp()
@@ -62,11 +49,11 @@ class CloudPipeSampleTest(api_sample_base.ApiSampleTestBaseV21):
 
     def test_cloud_pipe_create(self):
         # Get api samples of cloud pipe extension creation.
-        self.flags(vpn_image_id=fake.get_valid_image_id())
+        self.flags(vpn_image_id=fake.get_valid_image_id(), group='cloudpipe')
         subs = {'project_id': str(uuid_lib.uuid4().hex)}
         response = self._do_post('os-cloudpipe', 'cloud-pipe-create-req',
                                  subs)
-        subs['image_id'] = CONF.vpn_image_id
+        subs['image_id'] = CONF.cloudpipe.vpn_image_id
         self._verify_response('cloud-pipe-create-resp', subs, response, 200)
         return subs
 
@@ -74,7 +61,7 @@ class CloudPipeSampleTest(api_sample_base.ApiSampleTestBaseV21):
         # Get api samples of cloud pipe extension get request.
         subs = self.test_cloud_pipe_create()
         response = self._do_get('os-cloudpipe')
-        subs['image_id'] = CONF.vpn_image_id
+        subs['image_id'] = CONF.cloudpipe.vpn_image_id
         self._verify_response('cloud-pipe-get-resp', subs, response, 200)
 
     def test_cloud_pipe_update(self):

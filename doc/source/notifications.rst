@@ -106,20 +106,25 @@ How to add a new versioned notification
 
 To support the above contract from the Nova code every versioned notification
 is modeled with oslo versionedobjects. Every versioned notification class
-shall inherit from the `nova.objects.notification.NotificationBase` which
+shall inherit from the `nova.notifications.objects.base.NotificationBase` which
 already defines three mandatory fields of the notification `event_type`,
 `publisher_id` and `priority`. The new notification class shall add a new field
 `payload` with an appropriate payload type. The payload object of the
 notifications shall inherit from the
-`nova.objects.notification.NotificationPayloadBase` class and shall define the
-fields of the payload as versionedobject fields. The base classes are described
-in [3]_.
+`nova.objects.notifications.base.NotificationPayloadBase` class and shall
+define the fields of the payload as versionedobject fields. The base classes
+are described in [3]_.
+
+Please note that the notification objects shall not be registered to the
+NovaObjectRegistry to avoid mixing nova internal objects with the notification
+objects. Instead of that use the register_notification decorator on every
+concrete notification object.
 
 The following code example defines the necessary model classes for a new
 notification `myobject.update`::
 
     @notification.notification_sample('myobject-update.json')
-    @base.NovaObjectRegistry.register
+    @object_base.NovaObjectRegistry.register.register_notification
     class MyObjectNotification(notification.NotificationBase):
         # Version 1.0: Initial version
         VERSION = '1.0'
@@ -129,7 +134,7 @@ notification `myobject.update`::
         }
 
 
-    @base.NovaObjectRegistry.register
+    @object_base.NovaObjectRegistry.register.register_notification
     class MyObjectUpdatePayload(notification.NotificationPayloadBase):
         # Version 1.0: Initial version
         VERSION = '1.0'
@@ -177,7 +182,7 @@ object. For example the service.status notification reuses the existing
 `nova.objects.service.Service` object when defines the notification's payload::
 
     @notification.notification_sample('service-update.json')
-    @base.NovaObjectRegistry.register
+    @object_base.NovaObjectRegistry.register.register_notification
     class ServiceStatusNotification(notification.NotificationBase):
         # Version 1.0: Initial version
         VERSION = '1.0'
@@ -186,7 +191,7 @@ object. For example the service.status notification reuses the existing
             'payload': fields.ObjectField('ServiceStatusPayload')
         }
 
-    @base.NovaObjectRegistry.register
+    @object_base.NovaObjectRegistry.register.register_notification
     class ServiceStatusPayload(notification.NotificationPayloadBase):
         SCHEMA = {
             'host': ('service', 'host'),

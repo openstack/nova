@@ -10,13 +10,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
-
 from nova import context
-from nova import db
 from nova import objects
 from nova.objects import fields
 from nova import test
+from nova.tests import uuidsentinel
 
 
 class ComputeNodeTestCase(test.TestCase):
@@ -24,120 +22,50 @@ class ComputeNodeTestCase(test.TestCase):
         super(ComputeNodeTestCase, self).setUp()
         self.context = context.RequestContext('fake-user', 'fake-project')
         self.cn = objects.ComputeNode(context=self.context,
+                                      uuid=uuidsentinel.compute_node,
                                       memory_mb=512, local_gb=1000, vcpus=8,
                                       vcpus_used=0, local_gb_used=0,
                                       memory_mb_used=0, free_ram_mb=0,
                                       free_disk_gb=0, hypervisor_type='danvm',
                                       hypervisor_version=1, cpu_info='barf',
-                                      cpu_allocation_ratio=1.0,
+                                      cpu_allocation_ratio=1.0, host='foo',
                                       ram_allocation_ratio=1.0,
                                       disk_allocation_ratio=1.0)
 
-    @mock.patch('nova.objects.Service.get_minimum_version_multi')
-    def test_create_creates_inventories(self, mock_minver):
-        mock_minver.return_value = 10
-        self.cn.create()
-        self.assertEqual(512, self.cn.memory_mb)
-        self.assertEqual(1000, self.cn.local_gb)
-        self.assertEqual(8, self.cn.vcpus)
-        db_cn = db.compute_node_get(self.context, self.cn.id)
-        self.assertEqual(0, db_cn['memory_mb'])
-        self.assertEqual(0, db_cn['local_gb'])
-        self.assertEqual(0, db_cn['vcpus'])
-        inventories = objects.InventoryList.get_all_by_resource_provider_uuid(
+    def test_create_inventory(self):
+        self.cn.create_inventory()
+        objs = objects.InventoryList.get_all_by_resource_provider_uuid(
             self.context, self.cn.uuid)
-        self.assertEqual(3, len(inventories))
-        inv = {i.resource_class: i.total for i in inventories}
-        expected = {
-            fields.ResourceClass.DISK_GB: 1000,
-            fields.ResourceClass.MEMORY_MB: 512,
-            fields.ResourceClass.VCPU: 8,
-        }
-        self.assertEqual(expected, inv)
+        for obj in objs:
+            if obj.resource_class == fields.ResourceClass.VCPU:
+                self.assertEqual(8, obj.total)
+            elif obj.resource_class == fields.ResourceClass.MEMORY_MB:
+                self.assertEqual(512, obj.total)
+            elif obj.resource_class == fields.ResourceClass.DISK_GB:
+                self.assertEqual(1000, obj.total)
 
-    @mock.patch('nova.objects.Service.get_minimum_version_multi')
-    def test_save_updates_inventories(self, mock_minver):
-        mock_minver.return_value = 10
-        self.cn.create()
-        self.cn.memory_mb = 2048
+    def test_update_inventory(self):
+        self.cn.create_inventory()
+        self.cn.memory_mb = 1024
         self.cn.local_gb = 2000
-        self.cn.save()
-        self.assertEqual(2048, self.cn.memory_mb)
-        self.assertEqual(2000, self.cn.local_gb)
-        self.assertEqual(8, self.cn.vcpus)
-        db_cn = db.compute_node_get(self.context, self.cn.id)
-        self.assertEqual(0, db_cn['memory_mb'])
-        self.assertEqual(0, db_cn['local_gb'])
-        self.assertEqual(0, db_cn['vcpus'])
-        inventories = objects.InventoryList.get_all_by_resource_provider_uuid(
+        self.cn.vcpus = 16
+        self.cn.update_inventory()
+        objs = objects.InventoryList.get_all_by_resource_provider_uuid(
             self.context, self.cn.uuid)
-        self.assertEqual(3, len(inventories))
-        inv = {i.resource_class: i.total for i in inventories}
-        expected = {
-            fields.ResourceClass.DISK_GB: 2000,
-            fields.ResourceClass.MEMORY_MB: 2048,
-            fields.ResourceClass.VCPU: 8,
-        }
-        self.assertEqual(expected, inv)
+        for obj in objs:
+            if obj.resource_class == fields.ResourceClass.VCPU:
+                self.assertEqual(16, obj.total)
+            elif obj.resource_class == fields.ResourceClass.MEMORY_MB:
+                self.assertEqual(1024, obj.total)
+            elif obj.resource_class == fields.ResourceClass.DISK_GB:
+                self.assertEqual(2000, obj.total)
 
-    @mock.patch('nova.objects.Service.get_minimum_version_multi')
-    def test_save_creates_inventories(self, mock_minver):
-        mock_minver.return_value = 7
-        self.cn.create()
-        inventories = objects.InventoryList.get_all_by_resource_provider_uuid(
-            self.context, self.cn.uuid)
-        self.assertEqual(0, len(inventories))
-        mock_minver.return_value = 10
-        self.cn.memory_mb = 2048
-        self.cn.local_gb = 2000
-        self.cn.save()
-        self.assertEqual(2048, self.cn.memory_mb)
-        self.assertEqual(2000, self.cn.local_gb)
-        self.assertEqual(8, self.cn.vcpus)
-        db_cn = db.compute_node_get(self.context, self.cn.id)
-        self.assertEqual(0, db_cn['memory_mb'])
-        self.assertEqual(0, db_cn['local_gb'])
-        self.assertEqual(0, db_cn['vcpus'])
-        inventories = objects.InventoryList.get_all_by_resource_provider_uuid(
-            self.context, self.cn.uuid)
-        self.assertEqual(3, len(inventories))
-        inv = {i.resource_class: i.total for i in inventories}
-        expected = {
-            fields.ResourceClass.DISK_GB: 2000,
-            fields.ResourceClass.MEMORY_MB: 2048,
-            fields.ResourceClass.VCPU: 8,
-        }
-        self.assertEqual(expected, inv)
-
-    @mock.patch('nova.objects.Service.get_minimum_version_multi')
-    def test_create_honors_version(self, mock_minver):
-        mock_minver.return_value = 7
-        self.cn.create()
-        self.assertEqual(512, self.cn.memory_mb)
-        self.assertEqual(1000, self.cn.local_gb)
-        self.assertEqual(8, self.cn.vcpus)
-        db_cn = db.compute_node_get(self.context, self.cn.id)
-        self.assertEqual(512, db_cn['memory_mb'])
-        self.assertEqual(1000, db_cn['local_gb'])
-        self.assertEqual(8, db_cn['vcpus'])
-        inventories = objects.InventoryList.get_all_by_resource_provider_uuid(
-            self.context, self.cn.uuid)
-        self.assertEqual(0, len(inventories))
-
-    @mock.patch('nova.objects.Service.get_minimum_version_multi')
-    def test_save_honors_version(self, mock_minver):
-        mock_minver.return_value = 7
-        self.cn.create()
-        self.cn.memory_mb = 2048
-        self.cn.local_gb = 2000
-        self.cn.save()
-        self.assertEqual(2048, self.cn.memory_mb)
-        self.assertEqual(2000, self.cn.local_gb)
-        self.assertEqual(8, self.cn.vcpus)
-        db_cn = db.compute_node_get(self.context, self.cn.id)
-        self.assertEqual(2048, db_cn['memory_mb'])
-        self.assertEqual(2000, db_cn['local_gb'])
-        self.assertEqual(8, db_cn['vcpus'])
-        inventories = objects.InventoryList.get_all_by_resource_provider_uuid(
-            self.context, self.cn.uuid)
-        self.assertEqual(0, len(inventories))
+    def test_recreate_rp(self):
+        self.cn.create_inventory()
+        rp = self.cn._ensure_resource_provider()
+        self.assertEqual('compute-%s-%s' % ('foo', self.cn.uuid),
+                         rp.name)
+        self.cn.host = 'bar'
+        rp = self.cn._ensure_resource_provider()
+        self.assertEqual('compute-%s-%s' % ('bar', self.cn.uuid),
+                         rp.name)

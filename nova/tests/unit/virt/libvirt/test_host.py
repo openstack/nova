@@ -684,13 +684,6 @@ class HostTestCase(test.NoDBTestCase):
             self.assertRaises(fakelibvirt.libvirtError,
                               self.host.get_capabilities)
 
-    def test_lxc_get_host_capabilities_failed(self):
-        with mock.patch.object(fakelibvirt.virConnect, 'baselineCPU',
-                               return_value=-1):
-            caps = self.host.get_capabilities()
-            self.assertEqual(vconfig.LibvirtConfigCaps, type(caps))
-            self.assertNotIn('aes', [x.name for x in caps.host.cpu.features])
-
     def test_get_capabilities_no_host_cpu_model(self):
         """Tests that cpu features are not retrieved when the host cpu model
         is not in the capabilities.
@@ -876,9 +869,24 @@ Active:          8381604 kB
 
     @mock.patch.object(fakelibvirt.virConnect, "defineXML")
     def test_write_instance_config(self, mock_defineXML):
-        xml = "<x><name>foo</name></x>"
-        self.host.write_instance_config(xml)
-        mock_defineXML.assert_called_once_with(xml)
+        fake_dom_xml = """
+                <domain type='kvm'>
+                  <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+                  <devices>
+                    <disk type='file'>
+                      <source file='filename'/>
+                    </disk>
+                  </devices>
+                </domain>
+            """
+        conn = self.host.get_connection()
+        dom = fakelibvirt.Domain(conn,
+                                 fake_dom_xml,
+                                 False)
+        mock_defineXML.return_value = dom
+        guest = self.host.write_instance_config(fake_dom_xml)
+        mock_defineXML.assert_called_once_with(fake_dom_xml)
+        self.assertIsInstance(guest, libvirt_guest.Guest)
 
     @mock.patch.object(fakelibvirt.virConnect, "nodeDeviceLookupByName")
     def test_device_lookup_by_name(self, mock_nodeDeviceLookupByName):
@@ -916,197 +924,3 @@ cg /cgroup/memory cg opt1,opt2 0 0
     @mock.patch('six.moves.builtins.open', side_effect=IOError)
     def test_is_cpu_control_policy_capable_ioerror(self, mock_open):
         self.assertFalse(self.host.is_cpu_control_policy_capable())
-
-
-class DomainJobInfoTestCase(test.NoDBTestCase):
-
-    def setUp(self):
-        super(DomainJobInfoTestCase, self).setUp()
-
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
-
-        self.conn = fakelibvirt.openAuth("qemu:///system",
-                                         [[], lambda: True])
-        xml = ("<domain type='kvm'>"
-               "  <name>instance-0000000a</name>"
-               "</domain>")
-        self.dom = self.conn.createXML(xml, 0)
-        host.DomainJobInfo._have_job_stats = True
-
-    @mock.patch.object(fakelibvirt.virDomain, "jobInfo")
-    @mock.patch.object(fakelibvirt.virDomain, "jobStats")
-    def test_job_stats(self, mock_stats, mock_info):
-        mock_stats.return_value = {
-            "type": fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED,
-            "memory_total": 75,
-            "memory_processed": 50,
-            "memory_remaining": 33,
-            "some_new_libvirt_stat_we_dont_know_about": 83
-        }
-
-        info = host.DomainJobInfo.for_domain(self.dom)
-
-        self.assertIsInstance(info, host.DomainJobInfo)
-        self.assertEqual(fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED, info.type)
-        self.assertEqual(75, info.memory_total)
-        self.assertEqual(50, info.memory_processed)
-        self.assertEqual(33, info.memory_remaining)
-        self.assertEqual(0, info.disk_total)
-        self.assertEqual(0, info.disk_processed)
-        self.assertEqual(0, info.disk_remaining)
-
-        mock_stats.assert_called_once_with()
-        self.assertFalse(mock_info.called)
-
-    @mock.patch.object(fakelibvirt.virDomain, "jobInfo")
-    @mock.patch.object(fakelibvirt.virDomain, "jobStats")
-    def test_job_info_no_support(self, mock_stats, mock_info):
-        mock_stats.side_effect = fakelibvirt.make_libvirtError(
-            fakelibvirt.libvirtError,
-            "virDomainGetJobStats not implemented",
-            fakelibvirt.VIR_ERR_NO_SUPPORT)
-
-        mock_info.return_value = [
-            fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED,
-            100, 99, 10, 11, 12, 75, 50, 33, 1, 2, 3]
-
-        info = host.DomainJobInfo.for_domain(self.dom)
-
-        self.assertIsInstance(info, host.DomainJobInfo)
-        self.assertEqual(fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED, info.type)
-        self.assertEqual(100, info.time_elapsed)
-        self.assertEqual(99, info.time_remaining)
-        self.assertEqual(10, info.data_total)
-        self.assertEqual(11, info.data_processed)
-        self.assertEqual(12, info.data_remaining)
-        self.assertEqual(75, info.memory_total)
-        self.assertEqual(50, info.memory_processed)
-        self.assertEqual(33, info.memory_remaining)
-        self.assertEqual(1, info.disk_total)
-        self.assertEqual(2, info.disk_processed)
-        self.assertEqual(3, info.disk_remaining)
-
-        mock_stats.assert_called_once_with()
-        mock_info.assert_called_once_with()
-
-    @mock.patch.object(fakelibvirt.virDomain, "jobInfo")
-    @mock.patch.object(fakelibvirt.virDomain, "jobStats")
-    def test_job_info_attr_error(self, mock_stats, mock_info):
-        mock_stats.side_effect = AttributeError("No such API")
-
-        mock_info.return_value = [
-            fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED,
-            100, 99, 10, 11, 12, 75, 50, 33, 1, 2, 3]
-
-        info = host.DomainJobInfo.for_domain(self.dom)
-
-        self.assertIsInstance(info, host.DomainJobInfo)
-        self.assertEqual(fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED, info.type)
-        self.assertEqual(100, info.time_elapsed)
-        self.assertEqual(99, info.time_remaining)
-        self.assertEqual(10, info.data_total)
-        self.assertEqual(11, info.data_processed)
-        self.assertEqual(12, info.data_remaining)
-        self.assertEqual(75, info.memory_total)
-        self.assertEqual(50, info.memory_processed)
-        self.assertEqual(33, info.memory_remaining)
-        self.assertEqual(1, info.disk_total)
-        self.assertEqual(2, info.disk_processed)
-        self.assertEqual(3, info.disk_remaining)
-
-        mock_stats.assert_called_once_with()
-        mock_info.assert_called_once_with()
-
-    @mock.patch.object(fakelibvirt.virDomain, "jobInfo")
-    @mock.patch.object(fakelibvirt.virDomain, "jobStats")
-    def test_job_stats_no_domain(self, mock_stats, mock_info):
-        mock_stats.side_effect = fakelibvirt.make_libvirtError(
-            fakelibvirt.libvirtError,
-            "No such domain with UUID blah",
-            fakelibvirt.VIR_ERR_NO_DOMAIN)
-
-        info = host.DomainJobInfo.for_domain(self.dom)
-
-        self.assertIsInstance(info, host.DomainJobInfo)
-        self.assertEqual(fakelibvirt.VIR_DOMAIN_JOB_COMPLETED, info.type)
-        self.assertEqual(0, info.time_elapsed)
-        self.assertEqual(0, info.time_remaining)
-        self.assertEqual(0, info.memory_total)
-        self.assertEqual(0, info.memory_processed)
-        self.assertEqual(0, info.memory_remaining)
-
-        mock_stats.assert_called_once_with()
-        self.assertFalse(mock_info.called)
-
-    @mock.patch.object(fakelibvirt.virDomain, "jobInfo")
-    @mock.patch.object(fakelibvirt.virDomain, "jobStats")
-    def test_job_info_no_domain(self, mock_stats, mock_info):
-        mock_stats.side_effect = fakelibvirt.make_libvirtError(
-            fakelibvirt.libvirtError,
-            "virDomainGetJobStats not implemented",
-            fakelibvirt.VIR_ERR_NO_SUPPORT)
-
-        mock_info.side_effect = fakelibvirt.make_libvirtError(
-            fakelibvirt.libvirtError,
-            "No such domain with UUID blah",
-            fakelibvirt.VIR_ERR_NO_DOMAIN)
-
-        info = host.DomainJobInfo.for_domain(self.dom)
-
-        self.assertIsInstance(info, host.DomainJobInfo)
-        self.assertEqual(fakelibvirt.VIR_DOMAIN_JOB_COMPLETED, info.type)
-        self.assertEqual(0, info.time_elapsed)
-        self.assertEqual(0, info.time_remaining)
-        self.assertEqual(0, info.memory_total)
-        self.assertEqual(0, info.memory_processed)
-        self.assertEqual(0, info.memory_remaining)
-
-        mock_stats.assert_called_once_with()
-        mock_info.assert_called_once_with()
-
-    @mock.patch.object(fakelibvirt.virDomain, "jobInfo")
-    @mock.patch.object(fakelibvirt.virDomain, "jobStats")
-    def test_job_stats_operation_invalid(self, mock_stats, mock_info):
-        mock_stats.side_effect = fakelibvirt.make_libvirtError(
-            fakelibvirt.libvirtError,
-            "Domain is not running",
-            fakelibvirt.VIR_ERR_OPERATION_INVALID)
-
-        info = host.DomainJobInfo.for_domain(self.dom)
-
-        self.assertIsInstance(info, host.DomainJobInfo)
-        self.assertEqual(fakelibvirt.VIR_DOMAIN_JOB_COMPLETED, info.type)
-        self.assertEqual(0, info.time_elapsed)
-        self.assertEqual(0, info.time_remaining)
-        self.assertEqual(0, info.memory_total)
-        self.assertEqual(0, info.memory_processed)
-        self.assertEqual(0, info.memory_remaining)
-
-        mock_stats.assert_called_once_with()
-        self.assertFalse(mock_info.called)
-
-    @mock.patch.object(fakelibvirt.virDomain, "jobInfo")
-    @mock.patch.object(fakelibvirt.virDomain, "jobStats")
-    def test_job_info_operation_invalid(self, mock_stats, mock_info):
-        mock_stats.side_effect = fakelibvirt.make_libvirtError(
-            fakelibvirt.libvirtError,
-            "virDomainGetJobStats not implemented",
-            fakelibvirt.VIR_ERR_NO_SUPPORT)
-
-        mock_info.side_effect = fakelibvirt.make_libvirtError(
-            fakelibvirt.libvirtError,
-            "Domain is not running",
-            fakelibvirt.VIR_ERR_OPERATION_INVALID)
-
-        info = host.DomainJobInfo.for_domain(self.dom)
-
-        self.assertIsInstance(info, host.DomainJobInfo)
-        self.assertEqual(fakelibvirt.VIR_DOMAIN_JOB_COMPLETED, info.type)
-        self.assertEqual(0, info.time_elapsed)
-        self.assertEqual(0, info.time_remaining)
-        self.assertEqual(0, info.memory_total)
-        self.assertEqual(0, info.memory_processed)
-        self.assertEqual(0, info.memory_remaining)
-
-        mock_stats.assert_called_once_with()
-        mock_info.assert_called_once_with()

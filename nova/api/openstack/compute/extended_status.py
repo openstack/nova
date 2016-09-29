@@ -16,15 +16,12 @@
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.policies import extended_status as es_policies
 
 ALIAS = "os-extended-status"
-authorize = extensions.os_compute_soft_authorizer(ALIAS)
 
 
 class ExtendedStatusController(wsgi.Controller):
-    def __init__(self, *args, **kwargs):
-        super(ExtendedStatusController, self).__init__(*args, **kwargs)
-
     def _extend_server(self, server, instance):
         # Note(gmann): Removed 'locked_by' from extended status
         # to make it same as V2. If needed it can be added with
@@ -39,7 +36,7 @@ class ExtendedStatusController(wsgi.Controller):
     @wsgi.extends
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
-        if authorize(context):
+        if context.can(es_policies.BASE_POLICY_NAME, fatal=False):
             server = resp_obj.obj['server']
             db_instance = req.get_db_instance(server['id'])
             # server['id'] is guaranteed to be in the cache due to
@@ -49,7 +46,7 @@ class ExtendedStatusController(wsgi.Controller):
     @wsgi.extends
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
-        if authorize(context):
+        if context.can(es_policies.BASE_POLICY_NAME, fatal=False):
             servers = list(resp_obj.obj['servers'])
             for server in servers:
                 db_instance = req.get_db_instance(server['id'])

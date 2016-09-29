@@ -232,7 +232,7 @@ class ManagedObject(object):
 
     def delete(self, attr):
         """Deletes an attribute."""
-        self.propSet = filter(lambda elem: elem.name != attr, self.propSet)
+        self.propSet = [elem for elem in self.propSet if elem.name != attr]
 
     def __setattr__(self, attr, val):
         # TODO(hartsocks): this is adds unnecessary complexity to the class

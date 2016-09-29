@@ -1,0 +1,11 @@
+---
+features:
+  - The nova-compute worker now communicates with the new placement API
+    service. Nova determines the placement API service by querying the
+    OpenStack service catalog for the service with a service type of
+    'placement'. If there is no placement entry in the service catalog,
+    nova-compute will log a warning and no longer try to reconnect to the
+    placement API until the nova-worker process is restarted.
+  - A new [placement] section is added to the nova.conf configuration file for
+    configuration options affecting how Nova interacts with the new placement
+    API service. This contains the usual keystone auth and session options.

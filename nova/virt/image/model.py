@@ -20,10 +20,12 @@ from nova import exception
 
 FORMAT_RAW = "raw"
 FORMAT_QCOW2 = "qcow2"
+FORMAT_PLOOP = "ploop"
 
 ALL_FORMATS = [
     FORMAT_RAW,
     FORMAT_QCOW2,
+    FORMAT_PLOOP,
 ]
 
 

@@ -21,21 +21,10 @@ from webob.util import status_reasons
 
 from nova import context
 from nova import exception
+from nova import exception_wrapper
+from nova import rpc
 from nova import test
-
-
-class FakeNotifier(object):
-    """Acts like messaging.Notifier."""
-
-    def __init__(self):
-        self.provided_context = None
-        self.provided_event = None
-        self.provided_payload = None
-
-    def error(self, context, event, payload):
-        self.provided_context = context
-        self.provided_event = event
-        self.provided_payload = payload
+from nova.tests.unit import fake_notifier
 
 
 def good_function(self, context):
@@ -43,25 +32,52 @@ def good_function(self, context):
 
 
 def bad_function_exception(self, context, extra, blah="a", boo="b", zoo=None):
-    raise test.TestingException()
+    raise test.TestingException('bad things happened')
 
 
 class WrapExceptionTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super(WrapExceptionTestCase, self).setUp()
+        fake_notifier.stub_notifier(self)
+        self.addCleanup(fake_notifier.reset)
+
     def test_wrap_exception_good_return(self):
-        wrapped = exception.wrap_exception('foo')
+        wrapped = exception_wrapper.wrap_exception(rpc.get_notifier('fake'))
         self.assertEqual(99, wrapped(good_function)(1, 2))
+        self.assertEqual(0, len(fake_notifier.NOTIFICATIONS))
+        self.assertEqual(0, len(fake_notifier.VERSIONED_NOTIFICATIONS))
 
     def test_wrap_exception_with_notifier(self):
-        notifier = FakeNotifier()
-        wrapped = exception.wrap_exception(notifier)
+        wrapped = exception_wrapper.wrap_exception(rpc.get_notifier('fake'),
+                                                   binary='fake-binary')
         ctxt = context.get_admin_context()
         self.assertRaises(test.TestingException,
                           wrapped(bad_function_exception), 1, ctxt, 3, zoo=3)
-        self.assertEqual("bad_function_exception", notifier.provided_event)
-        self.assertEqual(notifier.provided_context, ctxt)
-        self.assertEqual(3, notifier.provided_payload['args']['extra'])
+
+        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
+        notification = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual('bad_function_exception', notification.event_type)
+        self.assertEqual(ctxt, notification.context)
+        self.assertEqual(3, notification.payload['args']['extra'])
         for key in ['exception', 'args']:
-            self.assertIn(key, notifier.provided_payload.keys())
+            self.assertIn(key, notification.payload.keys())
+
+        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+        self.assertEqual('compute.exception', notification['event_type'])
+        self.assertEqual('fake-binary:fake-mini', notification['publisher_id'])
+        self.assertEqual('ERROR', notification['priority'])
+
+        payload = notification['payload']
+        self.assertEqual('ExceptionPayload', payload['nova_object.name'])
+        self.assertEqual('1.0', payload['nova_object.version'])
+
+        payload = payload['nova_object.data']
+        self.assertEqual('TestingException', payload['exception'])
+        self.assertEqual('bad things happened', payload['exception_message'])
+        self.assertEqual('bad_function_exception', payload['function_name'])
+        self.assertEqual('nova.tests.unit.test_exception',
+                         payload['module_name'])
 
 
 class NovaExceptionTestCase(test.NoDBTestCase):
@@ -108,10 +124,10 @@ class NovaExceptionTestCase(test.NoDBTestCase):
 
     def test_cleanse_dict(self):
         kwargs = {'foo': 1, 'blah_pass': 2, 'zoo_password': 3, '_pass': 4}
-        self.assertEqual({'foo': 1}, exception._cleanse_dict(kwargs))
+        self.assertEqual({'foo': 1}, exception_wrapper._cleanse_dict(kwargs))
 
         kwargs = {}
-        self.assertEqual({}, exception._cleanse_dict(kwargs))
+        self.assertEqual({}, exception_wrapper._cleanse_dict(kwargs))
 
     def test_format_message_local(self):
         class FakeNovaException(exception.NovaException):

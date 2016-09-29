@@ -17,6 +17,7 @@ from oslo_context import context as o_context
 from oslo_context import fixture as o_fixture
 
 from nova import context
+from nova import exception
 from nova import objects
 from nova import test
 
@@ -30,7 +31,7 @@ class ContextTestCase(test.NoDBTestCase):
     def test_request_context_elevated(self):
         user_ctxt = context.RequestContext('111',
                                            '222',
-                                           admin=False)
+                                           is_admin=False)
         self.assertFalse(user_ctxt.is_admin)
         admin_ctxt = user_ctxt.elevated()
         self.assertTrue(admin_ctxt.is_admin)
@@ -78,22 +79,6 @@ class ContextTestCase(test.NoDBTestCase):
                           ctxt,
                           'read_deleted',
                           True)
-
-    def test_extra_args_to_context_get_logged(self):
-        info = {}
-
-        def fake_warn(log_msg, *args):
-            if args:
-                log_msg = log_msg % args
-            info['log_msg'] = log_msg
-
-        self.stub_out('nova.context.LOG.warning', fake_warn)
-
-        c = context.RequestContext('user', 'project',
-                extra_arg1='meow', extra_arg2='wuff')
-        self.assertTrue(c)
-        self.assertIn("'extra_arg1': 'meow'", info['log_msg'])
-        self.assertIn("'extra_arg2': 'wuff'", info['log_msg'])
 
     def test_service_catalog_default(self):
         ctxt = context.RequestContext('111', '222')
@@ -179,6 +164,7 @@ class ContextTestCase(test.NoDBTestCase):
                            'domain': None,
                            'instance_lock_checked': False,
                            'is_admin': False,
+                           'is_admin_project': True,
                            'project_id': 222,
                            'project_domain': None,
                            'project_name': None,
@@ -201,7 +187,9 @@ class ContextTestCase(test.NoDBTestCase):
                            'user_name': None}
         self.assertEqual(expected_values, values2)
 
-    def test_convert_from_dict_then_to_dict(self):
+    def test_convert_from_dict_to_dict_version_2_4_x(self):
+        # fake dict() created with oslo.context 2.4.x, Missing is_admin_project
+        # key
         values = {'user': '111',
                   'user_id': '111',
                   'tenant': '222',
@@ -225,8 +213,70 @@ class ContextTestCase(test.NoDBTestCase):
         self.assertEqual('222', ctx.tenant)
         self.assertEqual('111', ctx.user_id)
         self.assertEqual('222', ctx.project_id)
+        # to_dict() will add is_admin_project
+        values.update({'is_admin_project': True})
         values2 = ctx.to_dict()
         self.assertEqual(values, values2)
+
+    def test_convert_from_dict_then_to_dict(self):
+        values = {'user': '111',
+                  'user_id': '111',
+                  'tenant': '222',
+                  'project_id': '222',
+                  'domain': None, 'project_domain': None,
+                  'auth_token': None,
+                  'resource_uuid': None, 'read_only': False,
+                  'user_identity': '111 222 - - -',
+                  'instance_lock_checked': False,
+                  'user_name': None, 'project_name': None,
+                  'timestamp': '2015-03-02T20:03:59.416299',
+                  'remote_address': None, 'quota_class': None,
+                  'is_admin': True,
+                  'is_admin_project': True,
+                  'service_catalog': [],
+                  'read_deleted': 'no', 'show_deleted': False,
+                  'roles': [],
+                  'request_id': 'req-956637ad-354a-4bc5-b969-66fd1cc00f50',
+                  'user_domain': None}
+        ctx = context.RequestContext.from_dict(values)
+        self.assertEqual('111', ctx.user)
+        self.assertEqual('222', ctx.tenant)
+        self.assertEqual('111', ctx.user_id)
+        self.assertEqual('222', ctx.project_id)
+        values2 = ctx.to_dict()
+        self.assertEqual(values, values2)
+
+    @mock.patch.object(context.policy, 'authorize')
+    def test_can(self, mock_authorize):
+        mock_authorize.return_value = True
+        ctxt = context.RequestContext('111', '222')
+
+        result = ctxt.can(mock.sentinel.rule)
+
+        self.assertTrue(result)
+        mock_authorize.assert_called_once_with(
+          ctxt, mock.sentinel.rule,
+          {'project_id': ctxt.project_id, 'user_id': ctxt.user_id})
+
+    @mock.patch.object(context.policy, 'authorize')
+    def test_can_fatal(self, mock_authorize):
+        mock_authorize.side_effect = exception.Forbidden
+        ctxt = context.RequestContext('111', '222')
+
+        self.assertRaises(exception.Forbidden,
+                          ctxt.can, mock.sentinel.rule)
+
+    @mock.patch.object(context.policy, 'authorize')
+    def test_can_non_fatal(self, mock_authorize):
+        mock_authorize.side_effect = exception.Forbidden
+        ctxt = context.RequestContext('111', '222')
+
+        result = ctxt.can(mock.sentinel.rule, mock.sentinel.target,
+                          fatal=False)
+
+        self.assertFalse(result)
+        mock_authorize.assert_called_once_with(ctxt, mock.sentinel.rule,
+                                               mock.sentinel.target)
 
     @mock.patch('nova.db.create_context_manager')
     def test_target_cell(self, mock_create_ctxt_mgr):

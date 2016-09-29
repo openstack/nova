@@ -15,6 +15,7 @@
 import mock
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
+from oslo_versionedobjects import base as ovo_base
 
 from nova import context
 from nova import exception
@@ -498,7 +499,7 @@ class _TestRequestSpecObject(object):
         # object fields
         for field in ['image', 'numa_topology', 'pci_requests', 'flavor',
                 'retry', 'limits', 'instance_group']:
-            self.assertDictEqual(
+            self.assertEqual(
                     getattr(req_obj, field).obj_to_primitive(),
                     getattr(serialized_obj, field).obj_to_primitive())
 
@@ -545,6 +546,17 @@ class _TestRequestSpecObject(object):
         self.assertIsNone(req_obj.force_hosts)
         self.assertIsNone(req_obj.force_nodes)
         mock_reset.assert_called_once_with(['force_hosts', 'force_nodes'])
+
+    def test_compat_requested_destination(self):
+        req_obj = objects.RequestSpec()
+        versions = ovo_base.obj_tree_get_versions('RequestSpec')
+        primitive = req_obj.obj_to_primitive(target_version='1.5',
+                                             version_manifest=versions)
+        self.assertNotIn('requested_destination', primitive)
+
+    def test_default_requested_destination(self):
+        req_obj = objects.RequestSpec()
+        self.assertIsNone(req_obj.requested_destination)
 
 
 class TestRequestSpecObject(test_objects._LocalTest,

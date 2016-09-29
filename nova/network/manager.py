@@ -29,7 +29,6 @@ import datetime
 import functools
 import math
 import re
-import uuid
 
 import netaddr
 from oslo_log import log as logging
@@ -64,9 +63,6 @@ from nova import utils
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
-CONF.import_opt('use_ipv6', 'nova.netconf')
-CONF.import_opt('my_ip', 'nova.netconf')
-CONF.import_opt('network_topic', 'nova.network.rpcapi')
 
 
 class RPCAllocateFixedIP(object):
@@ -170,7 +166,7 @@ class NetworkManager(manager.Manager):
         The one at a time part is to flatten the layout to help scale
     """
 
-    target = messaging.Target(version='1.16')
+    target = messaging.Target(version='1.17')
 
     # If True, this manager requires VIF to create a bridge.
     SHOULD_CREATE_BRIDGE = False
@@ -410,7 +406,7 @@ class NetworkManager(manager.Manager):
 
         try:
             self._allocate_mac_addresses(admin_context, instance_uuid,
-                                         networks, macs)
+                                         networks, macs, requested_networks)
         except Exception:
             with excutils.save_and_reraise_exception():
                 # If we fail to allocate any one mac address, clean up all
@@ -666,26 +662,38 @@ class NetworkManager(manager.Manager):
 
         return subnets
 
-    def _allocate_mac_addresses(self, context, instance_uuid, networks, macs):
+    def _allocate_mac_addresses(self, context, instance_uuid, networks, macs,
+                                requested_networks):
         """Generates mac addresses and creates vif rows in db for them."""
         # make a copy we can mutate
         if macs is not None:
             available_macs = set(macs)
 
+        if requested_networks:
+            tags_by_network = {
+                network.network_id: network.tag if 'tag' in network else None
+                for network in requested_networks}
+        else:
+            tags_by_network = {}
+
         for network in networks:
             if macs is None:
-                self._add_virtual_interface(context, instance_uuid,
-                                           network['id'])
+                self._add_virtual_interface(
+                    context, instance_uuid,
+                    network['id'],
+                    tag=tags_by_network.get(network['uuid']))
             else:
                 try:
                     mac = available_macs.pop()
                 except KeyError:
                     raise exception.VirtualInterfaceCreateException()
-                self._add_virtual_interface(context, instance_uuid,
-                                           network['id'], mac)
+                self._add_virtual_interface(
+                    context, instance_uuid,
+                    network['id'], mac,
+                    tag=tags_by_network.get(network['uuid']))
 
     def _add_virtual_interface(self, context, instance_uuid, network_id,
-                              mac=None):
+                               mac=None, tag=None):
         attempts = 1 if mac else CONF.create_unique_mac_address_attempts
         for i in range(attempts):
             try:
@@ -693,7 +701,8 @@ class NetworkManager(manager.Manager):
                 vif.address = mac or utils.generate_mac_address()
                 vif.instance_uuid = instance_uuid
                 vif.network_id = network_id
-                vif.uuid = str(uuid.uuid4())
+                vif.uuid = uuidutils.generate_uuid()
+                vif.tag = tag
                 vif.create()
                 return vif
             except exception.VirtualInterfaceCreateException:
@@ -973,6 +982,13 @@ class NetworkManager(manager.Manager):
                     #             release_fixed_ip callback will
                     #             get called by nova-dhcpbridge.
                     try:
+                        self.network_rpcapi.release_dhcp(context,
+                                                         instance.launched_on,
+                                                         dev, address,
+                                                         vif.address)
+                    except exception.RPCPinnedToOldVersion:
+                        # Fall back on previous behaviour of calling
+                        # release_dhcp on the local driver
                         self.driver.release_dhcp(dev, address, vif.address)
                     except exception.NetworkDhcpReleaseFailed:
                         LOG.error(_LE("Error releasing DHCP for IP %(address)s"
@@ -1007,6 +1023,9 @@ class NetworkManager(manager.Manager):
 
         # Commit the reservations
         quotas.commit()
+
+    def release_dhcp(self, context, dev, address, vif_address):
+        self.driver.release_dhcp(dev, address, vif_address)
 
     def lease_fixed_ip(self, context, address):
         """Called by dhcp-bridge when IP is leased."""
@@ -1091,40 +1110,30 @@ class NetworkManager(manager.Manager):
                         bridge_interface=None, dns1=None, dns2=None,
                         fixed_cidr=None, allowed_start=None,
                         allowed_end=None, **kwargs):
-        arg_names = ("label", "cidr", "multi_host", "num_networks",
-                     "network_size", "cidr_v6",
-                     "gateway", "gateway_v6", "bridge",
-                     "bridge_interface", "dns1", "dns2",
-                     "fixed_cidr", "allowed_start", "allowed_end")
-        if 'mtu' not in kwargs:
-            kwargs['mtu'] = CONF.network_device_mtu
         if 'dhcp_server' not in kwargs:
             kwargs['dhcp_server'] = gateway
         if 'enable_dhcp' not in kwargs:
             kwargs['enable_dhcp'] = True
         if 'share_address' not in kwargs:
             kwargs['share_address'] = CONF.share_dhcp_address
-        for name in arg_names:
-            kwargs[name] = locals()[name]
+        kwargs.update({
+            'label': label,
+            'cidr': cidr,
+            'multi_host': multi_host,
+            'num_networks': num_networks,
+            'network_size': network_size,
+            'cidr_v6': cidr_v6,
+            'gateway': gateway,
+            'gateway_v6': gateway_v6,
+            'bridge': bridge,
+            'bridge_interface': bridge_interface,
+            'dns1': dns1,
+            'dns2': dns2,
+            'fixed_cidr': fixed_cidr,
+            'allowed_start': allowed_start,
+            'allowed_end': allowed_end,
+        })
         self._convert_int_args(kwargs)
-
-        # check for certain required inputs
-        # NOTE: We can remove this check after v2.0 API code is removed because
-        # jsonschema has checked already before this.
-        label = kwargs["label"]
-        if not label:
-            raise exception.NetworkNotCreated(req="label")
-
-        # Size of "label" column in nova.networks is 255, hence the restriction
-        # NOTE: We can remove this check after v2.0 API code is removed because
-        # jsonschema has checked already before this.
-        if len(label) > 255:
-            raise exception.LabelTooLong()
-
-        # NOTE: We can remove this check after v2.0 API code is removed because
-        # jsonschema has checked already before this.
-        if not (kwargs["cidr"] or kwargs["cidr_v6"]):
-            raise exception.NetworkNotCreated(req="cidr or cidr_v6")
 
         kwargs["bridge"] = kwargs["bridge"] or CONF.flat_network_bridge
         kwargs["bridge_interface"] = (kwargs["bridge_interface"] or

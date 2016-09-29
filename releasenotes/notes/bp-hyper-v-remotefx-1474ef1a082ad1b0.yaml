@@ -1,0 +1,63 @@
+---
+features:
+  - |
+    Hyper-V RemoteFX feature.
+
+    Microsoft RemoteFX enhances the visual experience in RDP connections,
+    including providing access to virtualized instances of a physical GPU to
+    multiple guests running on Hyper-V.
+
+    In order to use RemoteFX in Hyper-V 2012 R2, one or more DirectX 11
+    capable display adapters must be present and the RDS-Virtualization
+    server feature must be installed.
+
+    To enable this feature, the following config option must be set in
+    the Hyper-V compute node's 'nova.conf' file::
+
+        [hyperv]
+        enable_remotefx = True
+
+    To create instances with RemoteFX capabilities, the following flavor
+    extra specs must be used:
+
+    **os:resolution**. Guest VM screen resolution size. Acceptable values::
+
+        1024x768, 1280x1024, 1600x1200, 1920x1200, 2560x1600, 3840x2160
+
+    '3840x2160' is only available on Windows / Hyper-V Server 2016.
+
+    **os:monitors**. Guest VM number of monitors. Acceptable values::
+
+        [1, 4] - Windows / Hyper-V Server 2012 R2
+        [1, 8] - Windows / Hyper-V Server 2016
+
+    **os:vram**. Guest VM VRAM amount. Only available on
+    Windows / Hyper-V Server 2016. Acceptable values::
+
+        64, 128, 256, 512, 1024
+
+    There are a few considerations that needs to be kept in mind:
+
+    * Not all guests support RemoteFX capabilities.
+    * Windows / Hyper-V Server 2012 R2 does not support Generation 2 VMs
+      with RemoteFX capabilities.
+    * Per resolution, there is a maximum amount of monitors that can be
+      added. The limits are as follows:
+
+      For Windows / Hyper-V Server 2012 R2::
+
+          1024x768: 4
+          1280x1024: 4
+          1600x1200: 3
+          1920x1200: 2
+          2560x1600: 1
+
+      For Windows / Hyper-V Server 2016::
+
+          1024x768: 8
+          1280x1024: 8
+          1600x1200: 4
+          1920x1200: 4
+          2560x1600: 2
+          3840x2160: 1
+

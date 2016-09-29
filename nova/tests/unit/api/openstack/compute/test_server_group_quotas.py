@@ -17,9 +17,7 @@ from oslo_config import cfg
 from oslo_utils import uuidutils
 import webob
 
-from nova.api.openstack.compute.legacy_v2.contrib import server_groups
 from nova.api.openstack.compute import server_groups as sg_v21
-from nova.api.openstack import extensions
 from nova import context
 from nova import quota
 from nova import test
@@ -161,15 +159,3 @@ class ServerGroupQuotasTestV21(test.TestCase):
         else:
             status_int = resp.status_int
         self.assertEqual(204, status_int)
-
-
-class ServerGroupQuotasTestV2(ServerGroupQuotasTestV21):
-
-    def _setup_controller(self):
-        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
-        self.controller = server_groups.ServerGroupController(self.ext_mgr)
-
-    def _setup_quotas(self):
-        self.ext_mgr.is_loaded('os-server-group-quotas').MultipleTimes()\
-                                                        .AndReturn(True)
-        self.mox.ReplayAll()

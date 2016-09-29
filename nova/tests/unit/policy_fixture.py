@@ -21,6 +21,7 @@ import six
 
 import nova.conf
 from nova.conf import paths
+from nova import policies
 import nova.policy
 from nova.tests.unit import fake_policy
 
@@ -57,6 +58,18 @@ class RealPolicyFixture(fixtures.Fixture):
         policy = nova.policy._ENFORCER
         policy.set_rules(oslo_policy.Rules.from_dict(rules))
 
+    def add_missing_default_rules(self, rules):
+        """Adds default rules and their values to the given rules dict.
+
+        The given rulen dict may have an incomplete set of policy rules.
+        This method will add the default policy rules and their values to
+        the dict. It will not override the existing rules.
+        """
+
+        for rule in policies.list_rules():
+            if rule.name not in rules:
+                rules[rule.name] = rule.check_str
+
 
 class PolicyFixture(RealPolicyFixture):
     """Load a fake policy from nova.tests.unit.fake_policy
@@ -77,8 +90,12 @@ class PolicyFixture(RealPolicyFixture):
         self.policy_dir = self.useFixture(fixtures.TempDir())
         self.policy_file = os.path.join(self.policy_dir.path,
                                         'policy.json')
+
+        # load the fake_policy data and add the missing default rules.
+        policy_rules = jsonutils.loads(fake_policy.policy_data)
+        self.add_missing_default_rules(policy_rules)
         with open(self.policy_file, 'w') as f:
-            f.write(fake_policy.policy_data)
+            jsonutils.dump(policy_rules, f)
         CONF.set_override('policy_dirs', [], group='oslo_policy')
 
 
@@ -100,7 +117,10 @@ class RoleBasedPolicyFixture(RealPolicyFixture):
         self.role = role
 
     def _prepare_policy(self):
-        policy = jsonutils.load(open(CONF.oslo_policy.policy_file))
+        with open(CONF.oslo_policy.policy_file) as fp:
+            policy = fp.read()
+        policy = jsonutils.loads(policy)
+        self.add_missing_default_rules(policy)
 
         # Convert all actions to require specified role
         for action, rule in six.iteritems(policy):

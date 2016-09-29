@@ -227,8 +227,8 @@ def apply_ovs_ipv6_flows(ovs, bridge, params):
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
-        print ("usage: %s [online|offline] vif-domid-idx [ipv4|ipv6|all] " %
-               os.path.basename(sys.argv[0]))
+        print("usage: %s [online|offline] vif-domid-idx [ipv4|ipv6|all] " %
+              os.path.basename(sys.argv[0]))
         sys.exit(1)
     else:
         command, vif_raw, net_type = sys.argv[1:4]

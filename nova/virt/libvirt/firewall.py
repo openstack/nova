@@ -31,7 +31,6 @@ from nova.virt import netutils
 
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
-CONF.import_opt('use_ipv6', 'nova.netconf')
 
 libvirt = None
 

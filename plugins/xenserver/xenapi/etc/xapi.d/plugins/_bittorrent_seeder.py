@@ -1,0 +1,129 @@
+#!/usr/bin/env python
+
+# Copyright (c) 2012 OpenStack Foundation
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+# NOTE: XenServer still only supports Python 2.4 in it's dom0 userspace
+# which means the Nova xenapi plugins must use only Python 2.4 features
+
+# TODO(sfinucan): Resolve all 'noqa' items once the above is no longer true
+
+"""Seed a bittorent image. This file should not be executed directly, rather it
+should be kicked off by the `bittorent` dom0 plugin."""
+
+import os
+import sys
+import time
+
+import libtorrent
+
+import pluginlib_nova
+
+
+pluginlib_nova.configure_logging('_bittorrent_seeder')
+logging = pluginlib_nova.logging
+
+
+def _daemonize(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
+    """Daemonize the current process.
+
+    Do the UNIX double-fork magic, see Stevens' "Advanced Programming
+    in the UNIX Environment" for details (ISBN 0201563177).
+
+    Source: http://www.jejik.com/articles/2007/02/
+                a_simple_unix_linux_daemon_in_python/
+    """
+    # 1st fork
+    try:
+        pid = os.fork()
+        if pid > 0:
+            # first parent returns
+            return False
+    except OSError, e:  # noqa
+        logging.error("fork #1 failed: %d (%s)" % (
+            e.errno, e.strerror))
+        return
+
+    # decouple from parent environment
+    os.chdir("/")
+    os.setsid()
+    os.umask(0)
+
+    # 2nd fork
+    try:
+        pid = os.fork()
+        if pid > 0:
+            # second parent exits
+            sys.exit(0)
+    except OSError, e:  # noqa
+        logging.error("fork #2 failed: %d (%s)" % (
+            e.errno, e.strerror))
+        return
+
+    # redirect standard file descriptors
+    sys.stdout.flush()
+    sys.stderr.flush()
+    si = open(stdin, 'r')
+    so = open(stdout, 'a+')
+    se = open(stderr, 'a+', 0)
+    os.dup2(si.fileno(), sys.stdin.fileno())
+    os.dup2(so.fileno(), sys.stdout.fileno())
+    os.dup2(se.fileno(), sys.stderr.fileno())
+    return True
+
+
+def main(torrent_path, seed_cache_path, torrent_seed_duration,
+         torrent_listen_port_start, torrent_listen_port_end):
+    seed_time = time.time() + torrent_seed_duration
+    logging.debug("Seeding '%s' for %d secs" % (
+        torrent_path, torrent_seed_duration))
+
+    child = _daemonize()
+    if not child:
+        return
+
+    # At this point we're the daemonized child...
+    session = libtorrent.session()
+    session.listen_on(torrent_listen_port_start, torrent_listen_port_end)
+
+    torrent_file = open(torrent_path, 'rb')
+    try:
+        torrent_data = torrent_file.read()
+    finally:
+        torrent_file.close()
+
+    decoded_data = libtorrent.bdecode(torrent_data)
+
+    info = libtorrent.torrent_info(decoded_data)
+    torrent = session.add_torrent(
+            info, seed_cache_path,
+            storage_mode=libtorrent.storage_mode_t.storage_mode_sparse)
+    try:
+        while time.time() < seed_time:
+            time.sleep(5)
+    finally:
+        session.remove_torrent(torrent)
+
+    logging.debug("Seeding of '%s' finished" % torrent_path)
+
+
+if __name__ == "__main__":
+    (torrent_path, seed_cache_path, torrent_seed_duration,
+     torrent_listen_port_start, torrent_listen_port_end) = sys.argv[1:]
+    torrent_seed_duration = int(torrent_seed_duration)
+    torrent_listen_port_start = int(torrent_listen_port_start)
+    torrent_listen_port_end = int(torrent_listen_port_end)
+
+    main(torrent_path, seed_cache_path, torrent_seed_duration,
+         torrent_listen_port_start, torrent_listen_port_end)

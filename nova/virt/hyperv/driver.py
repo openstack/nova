@@ -31,9 +31,11 @@ from nova.i18n import _, _LE
 from nova.virt import driver
 from nova.virt.hyperv import eventhandler
 from nova.virt.hyperv import hostops
+from nova.virt.hyperv import imagecache
 from nova.virt.hyperv import livemigrationops
 from nova.virt.hyperv import migrationops
 from nova.virt.hyperv import rdpconsoleops
+from nova.virt.hyperv import serialconsoleops
 from nova.virt.hyperv import snapshotops
 from nova.virt.hyperv import vmops
 from nova.virt.hyperv import volumeops
@@ -92,10 +94,11 @@ exception_conversion_map = {
 @decorate_all_methods(convert_exceptions, exception_conversion_map)
 class HyperVDriver(driver.ComputeDriver):
     capabilities = {
-        "has_imagecache": False,
+        "has_imagecache": True,
         "supports_recreate": False,
         "supports_migrate_to_same_host": True,
-        "supports_attach_interface": True
+        "supports_attach_interface": True,
+        "supports_device_tagging": True,
     }
 
     def __init__(self, virtapi):
@@ -112,6 +115,8 @@ class HyperVDriver(driver.ComputeDriver):
         self._livemigrationops = livemigrationops.LiveMigrationOps()
         self._migrationops = migrationops.MigrationOps()
         self._rdpconsoleops = rdpconsoleops.RDPConsoleOps()
+        self._serialconsoleops = serialconsoleops.SerialConsoleOps()
+        self._imagecache = imagecache.ImageCache()
 
     def _check_minimum_windows_version(self):
         if not utilsfactory.get_hostutils().check_min_windows_version(6, 2):
@@ -124,11 +129,14 @@ class HyperVDriver(driver.ComputeDriver):
                           'Windows has been removed in Mitaka.'))
             raise exception.HypervisorTooOld(version='6.2')
 
+    @property
+    def need_legacy_block_device_info(self):
+        return False
+
     def init_host(self, host):
-        self._vmops.restart_vm_log_writers()
+        self._serialconsoleops.start_console_handlers()
         event_handler = eventhandler.InstanceEventHandler(
-            state_change_callback=self.emit_event,
-            running_state_callback=self._vmops.log_vm_serial_output)
+            state_change_callback=self.emit_event)
         event_handler.start_listener()
 
     def list_instance_uuids(self):
@@ -136,6 +144,9 @@ class HyperVDriver(driver.ComputeDriver):
 
     def list_instances(self):
         return self._vmops.list_instances()
+
+    def estimate_instance_overhead(self, instance_info):
+        return self._vmops.estimate_instance_overhead(instance_info)
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
@@ -222,18 +233,21 @@ class HyperVDriver(driver.ComputeDriver):
                                                block_device_info,
                                                destroy_disks=True,
                                                migrate_data=None):
-        self.destroy(context, instance, network_info, block_device_info)
+        self.destroy(context, instance, network_info, block_device_info,
+                     destroy_disks=destroy_disks)
 
     def pre_live_migration(self, context, instance, block_device_info,
-                           network_info, disk_info, migrate_data=None):
+                           network_info, disk_info, migrate_data):
         self._livemigrationops.pre_live_migration(context, instance,
                                                   block_device_info,
                                                   network_info)
+        return migrate_data
 
     def post_live_migration(self, context, instance, block_device_info,
                             migrate_data=None):
         self._livemigrationops.post_live_migration(context, instance,
-                                                   block_device_info)
+                                                   block_device_info,
+                                                   migrate_data)
 
     def post_live_migration_at_destination(self, context, instance,
                                            network_info,
@@ -253,9 +267,9 @@ class HyperVDriver(driver.ComputeDriver):
             context, instance, src_compute_info, dst_compute_info,
             block_migration, disk_over_commit)
 
-    def check_can_live_migrate_destination_cleanup(self, context,
-                                                   dest_check_data):
-        self._livemigrationops.check_can_live_migrate_destination_cleanup(
+    def cleanup_live_migration_destination_check(self, context,
+                                                 dest_check_data):
+        self._livemigrationops.cleanup_live_migration_destination_check(
             context, dest_check_data)
 
     def check_can_live_migrate_source(self, context, instance,
@@ -321,11 +335,25 @@ class HyperVDriver(driver.ComputeDriver):
     def get_rdp_console(self, context, instance):
         return self._rdpconsoleops.get_rdp_console(instance)
 
+    def get_serial_console(self, context, instance):
+        return self._serialconsoleops.get_serial_console(instance.name)
+
     def get_console_output(self, context, instance):
-        return self._vmops.get_console_output(instance)
+        return self._serialconsoleops.get_console_output(instance.name)
+
+    def manage_image_cache(self, context, all_instances):
+        self._imagecache.update(context, all_instances)
 
     def attach_interface(self, instance, image_meta, vif):
         return self._vmops.attach_interface(instance, vif)
 
     def detach_interface(self, instance, vif):
         return self._vmops.detach_interface(instance, vif)
+
+    def rescue(self, context, instance, network_info, image_meta,
+               rescue_password):
+        self._vmops.rescue_instance(context, instance, network_info,
+                                    image_meta, rescue_password)
+
+    def unrescue(self, instance, network_info):
+        self._vmops.unrescue_instance(instance)

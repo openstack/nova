@@ -18,21 +18,11 @@ from nova import context
 from nova.tests.functional.api_sample_tests import api_sample_base
 
 CONF = nova.conf.CONF
-CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class FloatingIpsBulkTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-floating-ips-bulk"
-
-    def _get_flags(self):
-        f = super(FloatingIpsBulkTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
-                      'contrib.floating_ips_bulk.Floating_ips_bulk')
-        return f
+    sample_dir = "os-floating-ips-bulk"
 
     def setUp(self):
         super(FloatingIpsBulkTest, self).setUp()

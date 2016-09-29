@@ -15,6 +15,8 @@
 import webob
 import webob.exc
 
+from nova.api.openstack.api_version_request \
+    import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack.compute.schemas import fixed_ips
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -22,9 +24,9 @@ from nova.api import validation
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.policies import fixed_ips as fi_policies
 
 ALIAS = 'os-fixed-ips'
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class FixedIPController(wsgi.Controller):
@@ -39,11 +41,12 @@ class FixedIPController(wsgi.Controller):
     def _fill_reserved_status(self, req, fixed_ip, fixed_ip_info):
         fixed_ip_info['fixed_ip']['reserved'] = fixed_ip.reserved
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((400, 404))
     def show(self, req, id):
         """Return data about the given fixed IP."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fi_policies.BASE_POLICY_NAME)
 
         attrs = ['network', 'instance']
         try:
@@ -73,23 +76,25 @@ class FixedIPController(wsgi.Controller):
 
         return fixed_ip_info
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.response(202)
     @extensions.expected_errors((400, 404))
     @validation.schema(fixed_ips.reserve)
     @wsgi.action('reserve')
     def reserve(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fi_policies.BASE_POLICY_NAME)
 
         return self._set_reserved(context, id, True)
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.response(202)
     @extensions.expected_errors((400, 404))
     @validation.schema(fixed_ips.unreserve)
     @wsgi.action('unreserve')
     def unreserve(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fi_policies.BASE_POLICY_NAME)
         return self._set_reserved(context, id, False)
 
     def _set_reserved(self, context, address, reserved):

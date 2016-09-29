@@ -16,21 +16,20 @@ import functools
 import itertools
 import operator
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
 import six
 
 from nova import block_device
+import nova.conf
 from nova import exception
 from nova.i18n import _LE
 from nova.i18n import _LI
 from nova.i18n import _LW
 from nova.volume import encryptors
 
-CONF = cfg.CONF
-CONF.import_opt('cross_az_attach', 'nova.volume.cinder', group='cinder')
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
@@ -40,10 +39,6 @@ class _NotTransformable(Exception):
 
 
 class _InvalidType(_NotTransformable):
-    pass
-
-
-class _NoLegacy(Exception):
     pass
 
 
@@ -528,16 +523,7 @@ def refresh_conn_infos(block_device_mapping, *refresh_args, **refresh_kwargs):
 
 
 def legacy_block_devices(block_device_mapping):
-    def _has_legacy(bdm):
-        try:
-            bdm.legacy()
-        except _NoLegacy:
-            return False
-        return True
-
-    bdms = [bdm.legacy()
-            for bdm in block_device_mapping
-            if _has_legacy(bdm)]
+    bdms = [bdm.legacy() for bdm in block_device_mapping]
 
     # Re-enumerate ephemeral devices
     if all(isinstance(bdm, DriverEphemeralBlockDevice)

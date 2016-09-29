@@ -12,28 +12,12 @@
 
 import re
 
-from oslo_config import cfg
-
 import nova.conf
-from nova.conf import paths
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt.volume import fs
 from nova.virt.libvirt.volume import remotefs
 
-volume_opts = [
-    cfg.StrOpt('smbfs_mount_point_base',
-               default=paths.state_path_def('mnt'),
-               help='Directory where the SMBFS shares are mounted on the '
-                    'compute node'),
-    cfg.StrOpt('smbfs_mount_options',
-               default='',
-               help='Mount options passed to the SMBFS client. See '
-                    'mount.cifs man page for details. Note that the '
-                    'libvirt-qemu uid and gid must be specified.'),
-    ]
-
 CONF = nova.conf.CONF
-CONF.register_opts(volume_opts, 'libvirt')
 
 USERNAME_REGEX = re.compile(r"(user(?:name)?)=(?:[^ ,]+\\)?([^ ,]+)")
 

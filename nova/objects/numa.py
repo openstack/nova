@@ -13,6 +13,7 @@
 #    under the License.
 
 from oslo_serialization import jsonutils
+from oslo_utils import versionutils
 
 from nova import exception
 from nova.objects import base
@@ -30,7 +31,7 @@ def all_things_equal(obj_a, obj_b):
             continue
 
         if getattr(obj_a, name) != getattr(obj_b, name):
-                return False
+            return False
     return True
 
 
@@ -81,16 +82,17 @@ class NUMACell(base.NovaObject):
                                               cpuset=list(self.pinned_cpus))
         if self.pinned_cpus & cpus:
             raise exception.CPUPinningInvalid(requested=list(cpus),
-                                              pinned=list(self.pinned_cpus))
+                                              free=list(self.cpuset -
+                                                        self.pinned_cpus))
         self.pinned_cpus |= cpus
 
     def unpin_cpus(self, cpus):
         if cpus - self.cpuset:
-            raise exception.CPUPinningUnknown(requested=list(cpus),
-                                              cpuset=list(self.pinned_cpus))
+            raise exception.CPUUnpinningUnknown(requested=list(cpus),
+                                                cpuset=list(self.pinned_cpus))
         if (self.pinned_cpus & cpus) != cpus:
-            raise exception.CPUPinningInvalid(requested=list(cpus),
-                                              pinned=list(self.pinned_cpus))
+            raise exception.CPUUnpinningInvalid(requested=list(cpus),
+                                                pinned=list(self.pinned_cpus))
         self.pinned_cpus -= cpus
 
     def pin_cpus_with_siblings(self, cpus):
@@ -148,13 +150,22 @@ class NUMACell(base.NovaObject):
 @base.NovaObjectRegistry.register
 class NUMAPagesTopology(base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Adds reserved field
+    VERSION = '1.1'
 
     fields = {
         'size_kb': fields.IntegerField(),
         'total': fields.IntegerField(),
         'used': fields.IntegerField(default=0),
+        'reserved': fields.IntegerField(default=0),
         }
+
+    def obj_make_compatible(self, primitive, target_version):
+        super(NUMAPagesTopology, self).obj_make_compatible(primitive,
+                                                           target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1):
+            primitive.pop('reserved', None)
 
     def __eq__(self, other):
         return all_things_equal(self, other)
@@ -165,7 +176,11 @@ class NUMAPagesTopology(base.NovaObject):
     @property
     def free(self):
         """Returns the number of avail pages."""
-        return self.total - self.used
+        if not self.obj_attr_is_set('reserved'):
+            # In case where an old compute node is sharing resource to
+            # an updated node we must ensure that this property is defined.
+            self.reserved = 0
+        return self.total - self.used - self.reserved
 
     @property
     def free_kb(self):

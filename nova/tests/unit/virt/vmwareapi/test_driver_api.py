@@ -67,7 +67,6 @@ from nova.virt.vmwareapi import vmops
 from nova.virt.vmwareapi import volumeops
 
 CONF = nova.conf.CONF
-CONF.import_opt('host', 'nova.netconf')
 
 
 def _fake_create_session(inst):
@@ -151,6 +150,15 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     REQUIRES_LOCKING = True
 
+    def _create_service(self, **kwargs):
+        service_ref = {'host': kwargs.get('host', 'dummy'),
+                       'disabled': kwargs.get('disabled', False),
+                       'binary': 'nova-compute',
+                       'topic': 'compute',
+                       'report_count': 0,
+                       'forced_down': kwargs.get('forced_down', False)}
+        return objects.Service(**service_ref)
+
     @mock.patch.object(driver.VMwareVCDriver, '_register_openstack_extension')
     def setUp(self, mock_register):
         super(VMwareAPIVMTestCase, self).setUp()
@@ -172,7 +180,10 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         stubs.set_stubs(self)
         vmwareapi_fake.reset()
         nova.tests.unit.image.fake.stub_out_image_service(self)
+        service = self._create_service(host='test_url')
+
         self.conn = driver.VMwareVCDriver(None, False)
+        self.assertFalse(service.disabled)
         self._set_exception_vars()
         self.node_name = self.conn._nodename
         self.ds = 'ds1'
@@ -808,7 +819,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             cached_image = ds_obj.DatastorePath(self.ds, 'vmware_base',
                                                  iid, '%s.80.vmdk' % iid)
             mock_extend.assert_called_once_with(
-                    self.instance, self.instance.root_gb * units.Mi,
+                    self.instance, self.instance.flavor.root_gb * units.Mi,
                     str(cached_image), "fake_dc_ref")
 
     def test_spawn_disk_extend_failed_copy(self):
@@ -1865,7 +1876,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                           instance=None)
 
     @mock.patch.object(objects.block_device.BlockDeviceMappingList,
-                       'get_by_instance_uuid')
+                       'get_by_instance_uuids')
     def test_image_aging_image_used(self, mock_get_by_inst):
         self._create_vm()
         all_instances = [self.instance]
@@ -1903,7 +1914,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._cached_files_exist()
         self._timestamp_file_exists()
 
-    def test_image_aging_image_marked_for_deletion(self):
+    @mock.patch.object(objects.block_device.BlockDeviceMappingList,
+                       'get_by_instance_uuids')
+    def test_image_aging_image_marked_for_deletion(self, mock_get_by_inst):
         self._override_time()
         self._image_aging_image_marked_for_deletion()
 
@@ -1914,11 +1927,13 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                         uuid=uuidutils.generate_uuid())
         self._timestamp_file_exists(exists=False)
 
-    def test_timestamp_file_removed_spawn(self):
+    @mock.patch.object(objects.block_device.BlockDeviceMappingList,
+                       'get_by_instance_uuids')
+    def test_timestamp_file_removed_spawn(self, mock_get_by_inst):
         self._timestamp_file_removed()
 
     @mock.patch.object(objects.block_device.BlockDeviceMappingList,
-                       'get_by_instance_uuid')
+                       'get_by_instance_uuids')
     def test_timestamp_file_removed_aging(self, mock_get_by_inst):
         self._timestamp_file_removed()
         ts = self._get_timestamp_filename()
@@ -1930,9 +1945,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.conn.manage_image_cache(self.context, all_instances)
         self._timestamp_file_exists(exists=False)
 
-    @mock.patch.object(objects.block_device.BlockDeviceMappingList,
-                       'get_by_instance_uuid')
-    def test_image_aging_disabled(self, mock_get_by_inst):
+    def test_image_aging_disabled(self):
         self._override_time()
         self.flags(remove_unused_base_images=False)
         self._create_vm()
@@ -1951,11 +1964,15 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.useFixture(utils_fixture.TimeFixture(cur_time))
         self.conn.manage_image_cache(self.context, all_instances)
 
-    def test_image_aging_aged(self):
+    @mock.patch.object(objects.block_device.BlockDeviceMappingList,
+                       'get_by_instance_uuids')
+    def test_image_aging_aged(self, mock_get_by_inst):
         self._image_aging_aged(aging_time=8)
         self._cached_files_exist(exists=False)
 
-    def test_image_aging_not_aged(self):
+    @mock.patch.object(objects.block_device.BlockDeviceMappingList,
+                       'get_by_instance_uuids')
+    def test_image_aging_not_aged(self, mock_get_by_inst):
         self._image_aging_aged()
         self._cached_files_exist()
 
@@ -2221,10 +2238,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertEqual(2, len(ds_util._DS_DC_MAPPING))
 
     def test_pre_live_migration(self):
+        migrate_data = objects.migrate_data.LiveMigrateData()
         self.assertRaises(NotImplementedError,
                           self.conn.pre_live_migration, self.context,
                           'fake_instance', 'fake_block_device_info',
-                          'fake_network_info', 'fake_disk_info')
+                          'fake_network_info', 'fake_disk_info', migrate_data)
 
     def test_live_migration(self):
         self.assertRaises(NotImplementedError,
@@ -2289,3 +2307,34 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                 version_arg_found = True
                 break
         self.assertTrue(version_arg_found)
+
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
+    def test_host_state_service_disabled(self, mock_service):
+        service = self._create_service(disabled=False, host='fake-mini')
+        mock_service.return_value = service
+
+        fake_stats = {'vcpus': 4, 'mem': {'total': '8194', 'free': '2048'}}
+        with test.nested(
+            mock.patch.object(vm_util, 'get_stats_from_cluster',
+                              side_effect=[vexc.VimConnectionException('fake'),
+                                           fake_stats, fake_stats]),
+            mock.patch.object(service, 'save')) as (mock_stats,
+                                                    mock_save):
+            self.conn._vc_state.update_status()
+            self.assertEqual(1, mock_save.call_count)
+            self.assertTrue(service.disabled)
+            self.assertTrue(self.conn._vc_state._auto_service_disabled)
+
+            # ensure the service is enabled again when there is no connection
+            # exception
+            self.conn._vc_state.update_status()
+            self.assertEqual(2, mock_save.call_count)
+            self.assertFalse(service.disabled)
+            self.assertFalse(self.conn._vc_state._auto_service_disabled)
+
+            # ensure objects.Service.save method is not called more than once
+            # after the service is enabled
+            self.conn._vc_state.update_status()
+            self.assertEqual(2, mock_save.call_count)
+            self.assertFalse(service.disabled)
+            self.assertFalse(self.conn._vc_state._auto_service_disabled)

@@ -15,7 +15,6 @@
 
 import copy
 
-from oslo_config import cfg
 import six
 
 from nova.tests.functional.api_sample_tests import api_sample_base
@@ -23,27 +22,11 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_server_actions
 from nova.tests.unit import utils as test_utils
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
-
 
 class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     microversion = None
     ADMIN_API = True
-    extension_name = 'os-instance-actions'
-
-    def _get_flags(self):
-        f = super(ServerActionsSampleJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
-                      'contrib.instance_actions.Instance_actions')
-        return f
-
-    def _fake_get(self, context, instance_uuid, expected_attrs=None,
-                 want_objects=True):
-        return fake_instance.fake_instance_obj(
-            None, **{'uuid': instance_uuid})
+    sample_dir = 'os-instance-actions'
 
     def setUp(self):
         super(ServerActionsSampleJsonTest, self).setUp()
@@ -51,6 +34,10 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         self.actions = fake_server_actions.FAKE_ACTIONS
         self.events = fake_server_actions.FAKE_EVENTS
         self.instance = test_utils.get_test_instance(obj=True)
+
+        def _fake_get(stub_self, context, instance_uuid, expected_attrs=None):
+            return fake_instance.fake_instance_obj(
+                None, **{'uuid': instance_uuid})
 
         def fake_instance_action_get_by_request_id(context, uuid, request_id):
             return copy.deepcopy(self.actions[uuid][request_id])
@@ -72,7 +59,7 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
                       fake_instance_action_events_get)
         self.stub_out('nova.db.instance_get_by_uuid',
                       fake_instance_get_by_uuid)
-        self.stub_out('nova.compute.api.API.get', self._fake_get)
+        self.stub_out('nova.compute.api.API.get', _fake_get)
 
     def test_instance_action_get(self):
         fake_uuid = fake_server_actions.FAKE_UUID
@@ -106,9 +93,3 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
 class ServerActionsV221SampleJsonTest(ServerActionsSampleJsonTest):
     microversion = '2.21'
     scenarios = [('v2_21', {'api_major_version': 'v2.1'})]
-
-    def _fake_get(self, context, instance_uuid, expected_attrs=None,
-                 want_objects=True):
-        self.assertEqual('yes', context.read_deleted)
-        return fake_instance.fake_instance_obj(
-            None, **{'uuid': instance_uuid})

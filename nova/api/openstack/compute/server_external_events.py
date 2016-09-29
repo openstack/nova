@@ -24,11 +24,11 @@ from nova import exception
 from nova.i18n import _
 from nova.i18n import _LI
 from nova import objects
+from nova.policies import server_external_events as see_policies
 
 
 LOG = logging.getLogger(__name__)
 ALIAS = 'os-server-external-events'
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class ServerExternalEventsController(wsgi.Controller):
@@ -43,7 +43,7 @@ class ServerExternalEventsController(wsgi.Controller):
     def create(self, req, body):
         """Creates a new instance event."""
         context = req.environ['nova.context']
-        authorize(context, action='create')
+        context.can(see_policies.POLICY_ROOT % 'create')
 
         response_events = []
         accepted_events = []

@@ -1,0 +1,8 @@
+---
+features:
+  - Starting from REST API microversion 2.34 pre-live-migration checks are
+    performed asynchronously. ``instance-actions`` should be used for getting
+    information about the checks results. New approach allows to reduce rpc
+    timeouts amount, as previous workflow was fully blocking and checks before
+    live-migration make blocking rpc request to both source and destination
+    compute node.

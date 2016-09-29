@@ -1,0 +1,64 @@
+#!/usr/bin/env python
+
+# Copyright (c) 2012 OpenStack Foundation
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+# NOTE: XenServer still only supports Python 2.4 in it's dom0 userspace
+# which means the Nova xenapi plugins must use only Python 2.4 features
+
+"""Fetch Bandwidth data from VIF network devices."""
+
+import utils
+
+import pluginlib_nova
+
+import re
+
+
+pluginlib_nova.configure_logging('bandwidth')
+
+
+def _read_proc_net():
+    f = open('/proc/net/dev', 'r')
+    try:
+        return f.readlines()
+    finally:
+        f.close()
+
+
+def _get_bandwitdth_from_proc():
+    devs = [l.strip() for l in _read_proc_net()]
+    # ignore headers
+    devs = devs[2:]
+    vif_pattern = re.compile("^vif(\d+)\.(\d+)")
+    dlist = [d.split(':', 1) for d in devs if vif_pattern.match(d)]
+    devmap = dict()
+    for name, stats in dlist:
+        slist = stats.split()
+        dom, vifnum = name[3:].split('.', 1)
+        dev = devmap.get(dom, {})
+        # Note, we deliberately swap in and out, as instance traffic
+        # shows up inverted due to going though the bridge. (mdragon)
+        dev[vifnum] = dict(bw_in=int(slist[8]), bw_out=int(slist[0]))
+        devmap[dom] = dev
+    return devmap
+
+
+def fetch_all_bandwidth(session):
+    return _get_bandwitdth_from_proc()
+
+
+if __name__ == '__main__':
+    utils.register_plugin_calls(fetch_all_bandwidth)

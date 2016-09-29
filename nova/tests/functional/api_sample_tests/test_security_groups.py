@@ -13,14 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
+from nova.tests import fixtures
 from nova.tests.functional.api_sample_tests import test_servers
 import nova.tests.functional.api_samples_test_base as astb
-
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 def fake_get(*args, **kwargs):
@@ -64,25 +59,12 @@ def fake_create_security_group(self, context, name, description):
 
 
 class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
-    extension_name = 'os-security-groups'
-
-    def _get_flags(self):
-        f = super(SecurityGroupsJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.security_groups.'
-            'Security_groups')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.keypairs.Keypairs')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.extended_ips.Extended_ips')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.extended_ips_mac.'
-            'Extended_ips_mac')
-        return f
+    sample_dir = 'os-security-groups'
 
     def setUp(self):
-        self.flags(security_group_api=('neutron'))
+        self.flags(use_neutron=True)
+        self.neutron = fixtures.NeutronFixture(self)
+        self.useFixture(self.neutron)
         super(SecurityGroupsJsonTest, self).setUp()
         path = 'nova.network.security_group.neutron_driver.SecurityGroupAPI.'
         self.stub_out(path + 'get', fake_get)
@@ -95,27 +77,6 @@ class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
                       fake_get_instance_security_groups)
         self.stub_out(path + 'create_security_group',
                       fake_create_security_group)
-
-    def test_server_create(self):
-        self._post_server(use_common_server_api_samples=False)
-
-    def test_server_get(self):
-        uuid = self._post_server(use_common_server_api_samples=False)
-        response = self._do_get('servers/%s' % uuid)
-        subs = {}
-        subs['hostid'] = '[a-f0-9]+'
-        subs['access_ip_v4'] = '1.2.3.4'
-        subs['access_ip_v6'] = '80fe::'
-        self._verify_response('server-get-resp', subs, response, 200)
-
-    def test_server_detail(self):
-        self._post_server(use_common_server_api_samples=False)
-        response = self._do_get('servers/detail')
-        subs = {}
-        subs['hostid'] = '[a-f0-9]+'
-        subs['access_ip_v4'] = '1.2.3.4'
-        subs['access_ip_v6'] = '80fe::'
-        self._verify_response('servers-detail-resp', subs, response, 200)
 
     def _get_create_subs(self):
         return {
@@ -155,21 +116,21 @@ class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
 
     def test_security_groups_list_server(self):
         # Get api sample of security groups for a specific server.
-        uuid = self._post_server(use_common_server_api_samples=False)
+        uuid = self._post_server()
         response = self._do_get('servers/%s/os-security-groups' % uuid)
         self._verify_response('server-security-groups-list-resp',
                               {}, response, 200)
 
     def test_security_groups_add(self):
         self._create_security_group()
-        uuid = self._post_server(use_common_server_api_samples=False)
+        uuid = self._post_server()
         response = self._add_group(uuid)
         self.assertEqual(202, response.status_code)
         self.assertEqual('', response.content)
 
     def test_security_groups_remove(self):
         self._create_security_group()
-        uuid = self._post_server(use_common_server_api_samples=False)
+        uuid = self._post_server()
         self._add_group(uuid)
         subs = {
                 'group_name': 'test'

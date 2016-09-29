@@ -15,9 +15,7 @@
 
 from oslo_serialization import jsonutils
 import six
-import webob
 
-from nova import compute
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -105,11 +103,11 @@ class ExtendedIpsTestV21(test.TestCase):
     def setUp(self):
         super(ExtendedIpsTestV21, self).setUp()
         fakes.stub_out_nw_api(self)
-        self.stubs.Set(compute.api.API, 'get', fake_compute_get)
-        self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
+        self.stub_out('nova.compute.api.API.get', fake_compute_get)
+        self.stub_out('nova.compute.api.API.get_all', fake_compute_get_all)
 
     def _make_request(self, url):
-        req = webob.Request.blank(url)
+        req = fakes.HTTPRequest.blank(url)
         req.headers['Accept'] = self.content_type
         res = req.get_response(fakes.wsgi_app_v21(init_only=('servers',)))
         return res
@@ -147,19 +145,3 @@ class ExtendedIpsTestV21(test.TestCase):
         self.assertEqual(res.status_int, 200)
         for i, server in enumerate(self._get_servers(res.body)):
             self.assertServerStates(server)
-
-
-class ExtendedIpsTestV2(ExtendedIpsTestV21):
-
-    def setUp(self):
-        super(ExtendedIpsTestV2, self).setUp()
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Extended_ips'])
-
-    def _make_request(self, url):
-        req = webob.Request.blank(url)
-        req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
-        return res

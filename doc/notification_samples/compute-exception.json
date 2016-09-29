@@ -1,0 +1,16 @@
+{
+    "event_type": "compute.exception",
+    "payload": {
+        "nova_object.data": {
+            "exception": "AggregateNameExists",
+            "exception_message": "Aggregate versioned_exc_aggregate already exists.",
+            "function_name": "_aggregate_create_in_db",
+            "module_name": "nova.objects.aggregate"
+        },
+        "nova_object.name": "ExceptionPayload",
+        "nova_object.namespace": "nova",
+        "nova_object.version": "1.0"
+    },
+    "priority": "ERROR",
+    "publisher_id": "nova-api:fake-mini"
+}

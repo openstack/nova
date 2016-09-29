@@ -1,35 +1,41 @@
 .. -*- rst -*-
-.. needs:method_verification
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
-============================
- Migrations (os-migrations)
-============================
+=========================================
+ Migrations (os-migrations) (frozen)
+=========================================
 
 Shows data on migrations.
+
+.. warning:: The old top-level resource `/os-migrations` is frozen,
+             it won't be extended anymore. Use /servers/{uuid}/migrations instead.
 
 List Migrations
 ===============
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-migrations
+.. rest_method:: GET /os-migrations
 
 Lists in-progress migrations.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role to perform
+this operation. Cloud providers can change these permissions through the
+``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
+  - status: migration_status
+  - host: migration_host
+  - source_compute: migration_source_compute
+  - migration_type: migration_type
+  - hidden: migration_hidden
+  - instance_uuid: migration_instance_uuid
 
 Response
 --------

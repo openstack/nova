@@ -47,7 +47,6 @@ from nova import context as nova_context
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova import objects
-from nova.objects import migrate_data as migrate_data_obj
 from nova.pci import manager as pci_manager
 from nova import utils
 from nova.virt import configdrive
@@ -64,7 +63,6 @@ LOG = logging.getLogger(__name__)
 
 
 CONF = nova.conf.CONF
-CONF.import_opt('host', 'nova.netconf')
 
 DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     firewall.__name__,
@@ -334,6 +332,18 @@ class VMOps(object):
         if bad_volumes_callback and bad_devices:
             bad_volumes_callback(bad_devices)
 
+        # Do some operations which have to be done after start:
+        #   e.g. The vif's interim bridge won't be created until VM starts.
+        #        So the operations on the interim bridge have be done after
+        #        start.
+        self._post_start_actions(instance)
+
+    def _post_start_actions(self, instance):
+        vm_ref = vm_utils.lookup(self._session, instance['name'])
+        vif_refs = self._session.call_xenapi("VM.get_VIFs", vm_ref)
+        for vif_ref in vif_refs:
+            self.vif_driver.post_start_actions(instance, vif_ref)
+
     def _get_vdis_for_instance(self, context, instance, name_label,
                                image_meta, image_type, block_device_info):
         """Create or connect to all virtual disks for this instance."""
@@ -445,8 +455,9 @@ class VMOps(object):
             if resize:
                 self._resize_up_vdis(instance, vdis)
 
-            self._attach_disks(instance, image_meta, vm_ref, name_label, vdis,
-                               disk_image_type, network_info, rescue,
+            self._attach_disks(context, instance, image_meta, vm_ref,
+                               name_label, vdis, disk_image_type,
+                               network_info, rescue,
                                admin_password, injected_files)
             if not first_boot:
                 self._attach_mapped_block_devices(instance,
@@ -603,8 +614,8 @@ class VMOps(object):
 
     def _handle_neutron_event_timeout(self, instance, undo_mgr):
         # We didn't get callback from Neutron within given time
-        LOG.warn(_LW('Timeout waiting for vif plugging callback'),
-                 instance=instance)
+        LOG.warning(_LW('Timeout waiting for vif plugging callback'),
+                    instance=instance)
         if CONF.vif_plugging_is_fatal:
             raise exception.VirtualInterfaceCreateException()
 
@@ -616,8 +627,8 @@ class VMOps(object):
             self._update_last_dom_id(vm_ref)
 
     def _neutron_failed_callback(self, event_name, instance):
-        LOG.warn(_LW('Neutron Reported failure on event %(event)s'),
-                {'event': event_name}, instance=instance)
+        LOG.warning(_LW('Neutron Reported failure on event %(event)s'),
+                   {'event': event_name}, instance=instance)
         if CONF.vif_plugging_is_fatal:
             raise exception.VirtualInterfaceCreateException()
 
@@ -707,8 +718,8 @@ class VMOps(object):
                                     use_pv_kernel, device_id)
         return vm_ref
 
-    def _attach_disks(self, instance, image_meta, vm_ref, name_label, vdis,
-                      disk_image_type, network_info, rescue=False,
+    def _attach_disks(self, context, instance, image_meta, vm_ref, name_label,
+                      vdis, disk_image_type, network_info, rescue=False,
                       admin_password=None, files=None):
         flavor = instance.get_flavor()
 
@@ -790,7 +801,8 @@ class VMOps(object):
 
         # Attach (optional) configdrive v2 disk
         if configdrive.required_by(instance):
-            vm_utils.generate_configdrive(self._session, instance, vm_ref,
+            vm_utils.generate_configdrive(self._session, context,
+                                          instance, vm_ref,
                                           DEVICE_CONFIGDRIVE,
                                           network_info,
                                           admin_password=admin_password,
@@ -1201,7 +1213,7 @@ class VMOps(object):
         vm_utils.set_vm_name_label(self._session, vm_ref, name_label)
 
     def _ensure_not_resize_down_ephemeral(self, instance, flavor):
-        old_gb = instance["ephemeral_gb"]
+        old_gb = instance.flavor.ephemeral_gb
         new_gb = flavor.ephemeral_gb
 
         if old_gb > new_gb:
@@ -1224,7 +1236,7 @@ class VMOps(object):
                                        step=0,
                                        total_steps=RESIZE_TOTAL_STEPS)
 
-        old_gb = instance['root_gb']
+        old_gb = instance.flavor.root_gb
         new_gb = flavor.root_gb
         resize_down = old_gb > new_gb
 
@@ -1261,7 +1273,7 @@ class VMOps(object):
                                           mount_device)
 
     def _resize_up_vdis(self, instance, vdis):
-        new_root_gb = instance['root_gb']
+        new_root_gb = instance.flavor.root_gb
         root_vdi = vdis.get('root')
         if new_root_gb and root_vdi:
             if root_vdi.get('osvol', False):  # Don't resize root volumes.
@@ -1278,7 +1290,7 @@ class VMOps(object):
             # to resize, so nothing more to do here.
             return
 
-        total_ephemeral_gb = instance['ephemeral_gb']
+        total_ephemeral_gb = instance.flavor.ephemeral_gb
         if total_ephemeral_gb:
             sizes = vm_utils.get_ephemeral_disk_sizes(total_ephemeral_gb)
             # resize existing (migrated) ephemeral disks,
@@ -1795,7 +1807,7 @@ class VMOps(object):
         dom_id = self._get_last_dom_id(instance, check_rescue=True)
 
         try:
-            raw_console_data = self._session.call_plugin('console',
+            raw_console_data = self._session.call_plugin('console.py',
                     'get_console_log', {'dom_id': dom_id})
         except self._session.XenAPI.Failure:
             LOG.exception(_LE("Guest does not have a console available"))
@@ -1921,13 +1933,20 @@ class VMOps(object):
         """Creates vifs for an instance."""
 
         LOG.debug("Creating vifs", instance=instance)
+        vif_refs = []
 
         # this function raises if vm_ref is not a vm_opaque_ref
         self._session.call_xenapi("VM.get_domid", vm_ref)
 
         for device, vif in enumerate(network_info):
             LOG.debug('Create VIF %s', vif, instance=instance)
-            self.vif_driver.plug(instance, vif, vm_ref=vm_ref, device=device)
+            vif_ref = self.vif_driver.plug(instance, vif,
+                                           vm_ref=vm_ref, device=device)
+            vif_refs.append(vif_ref)
+
+        LOG.debug('Created the vif_refs: %(vifs)s for VM name: %(name)s',
+                  {'vifs': vif_refs, 'name': instance['name']},
+                  instance=instance)
 
     def plug_vifs(self, instance, network_info):
         """Set up VIF networking on the host."""
@@ -2043,14 +2062,14 @@ class VMOps(object):
                           instance=instance)
                 return {'returncode': 'error', 'message': err_msg}
 
-    def _get_dom_id(self, instance=None, vm_ref=None, check_rescue=False):
+    def _get_dom_id(self, instance, vm_ref=None, check_rescue=False):
         vm_ref = vm_ref or self._get_vm_opaque_ref(instance, check_rescue)
         domid = self._session.call_xenapi("VM.get_domid", vm_ref)
-        if not domid or domid == -1:
+        if not domid or domid == "-1":
             raise exception.InstanceNotFound(instance_id=instance['name'])
         return domid
 
-    def _get_last_dom_id(self, instance=None, vm_ref=None, check_rescue=False):
+    def _get_last_dom_id(self, instance, vm_ref=None, check_rescue=False):
         vm_ref = vm_ref or self._get_vm_opaque_ref(instance, check_rescue)
         other_config = self._session.call_xenapi("VM.get_other_config", vm_ref)
         if 'last_dom_id' not in other_config:
@@ -2203,7 +2222,7 @@ class VMOps(object):
         except AttributeError:
             config_value = None
             try:
-                config_value = self._make_plugin_call('config_file',
+                config_value = self._make_plugin_call('config_file.py',
                                                       'get_val',
                                                       key='relax-xsm-sr-check')
             except Exception:
@@ -2227,11 +2246,6 @@ class VMOps(object):
             if not self._is_xsm_sr_check_relaxed():
                 raise exception.MigrationError(reason=_('XAPI supporting '
                                 'relax-xsm-sr-check=true required'))
-
-        if not isinstance(dest_check_data, migrate_data_obj.LiveMigrateData):
-            obj = objects.XenapiLiveMigrateData()
-            obj.from_legacy_dict(dest_check_data)
-            dest_check_data = obj
 
         if ('block_migration' in dest_check_data and
                 dest_check_data.block_migration):
@@ -2357,10 +2371,6 @@ class VMOps(object):
 
     def pre_live_migration(self, context, instance, block_device_info,
                            network_info, disk_info, migrate_data):
-        if migrate_data is None:
-            raise exception.InvalidParameterValue(
-                    'XenAPI requires migrate data')
-
         migrate_data.sr_uuid_map = self.connect_block_device_volumes(
                 block_device_info)
         return migrate_data

@@ -25,7 +25,6 @@ import six.moves.urllib.parse as urlparse
 import webob
 
 from nova.api.openstack.compute import images as images_v21
-from nova.api.openstack.compute.legacy_v2 import images
 from nova.api.openstack.compute.views import images as images_view
 from nova import exception
 from nova.image import glance
@@ -53,8 +52,7 @@ class ImagesControllerTestV21(test.NoDBTestCase):
         super(ImagesControllerTestV21, self).setUp()
         self.flags(api_servers=['http://localhost:9292'], group='glance')
         fakes.stub_out_networking(self)
-        fakes.stub_out_rate_limiting(self.stubs)
-        fakes.stub_out_key_pair_funcs(self.stubs)
+        fakes.stub_out_key_pair_funcs(self)
         fakes.stub_out_compute_api_snapshot(self.stubs)
         fakes.stub_out_compute_api_backup(self.stubs)
 
@@ -363,8 +361,9 @@ class ImagesControllerTestV21(test.NoDBTestCase):
     def test_delete_image(self, delete_mocked):
         request = self.http_request.blank(self.url_base + 'images/124')
         request.method = 'DELETE'
-        response = self.controller.delete(request, '124')
-        self._check_response(self.controller.delete, response, 204)
+        delete_method = self.controller.delete
+        response = delete_method(request, '124')
+        self._check_response(delete_method, response, 204)
         delete_mocked.assert_called_once_with(mock.ANY, '124')
 
     @mock.patch('nova.image.api.API.delete',
@@ -409,9 +408,19 @@ class ImagesControllerTestV21(test.NoDBTestCase):
                         matchers.DictMatches(params))
 
 
-class ImagesControllerTestV2(ImagesControllerTestV21):
-    image_controller_class = images.Controller
-    http_request = fakes.HTTPRequest
+class ImagesControllerDeprecationTest(test.NoDBTestCase):
 
-    def _check_response(self, controller_method, response, expected_code):
-        self.assertEqual(expected_code, response.status_int)
+    def setUp(self):
+        super(ImagesControllerDeprecationTest, self).setUp()
+        self.controller = images_v21.ImagesController()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+
+    def test_not_found_for_all_images_api(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+                          self.controller.show, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+                          self.controller.delete, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+                          self.controller.index, self.req)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+                          self.controller.detail, self.req)

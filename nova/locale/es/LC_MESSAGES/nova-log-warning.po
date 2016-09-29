@@ -9,9 +9,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:29+0000\n"
+"POT-Creation-Date: 2016-08-25 06:14+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -77,10 +77,6 @@ msgstr "La dirección |%(address)s| no está asignada"
 #, python-format
 msgid "Address |%(address)s| is not allocated to your project |%(project)s|"
 msgstr "La dirección |%(address)s| no está asignada al proyecto |%(project)s|"
-
-#, python-format
-msgid "Arguments dropped when creating context: %s"
-msgstr "Argumentos descartados al crear contexto: %s"
 
 #, python-format
 msgid ""
@@ -298,10 +294,6 @@ msgstr ""
 "existe dicho recurso."
 
 #, python-format
-msgid "Extensions in both blacklist and whitelist: %s"
-msgstr "Extensiones en lista restrictiva y lista permisiva: %s"
-
-#, python-format
 msgid "Failed to %(service)s_%(method)s: %(ex)s"
 msgstr "Fallo para %(service)s_%(method)s: %(ex)s"
 
@@ -351,16 +343,8 @@ msgid "Failed to get cluster references %s"
 msgstr "Fallo al obtener las referencias del cluster %s"
 
 #, python-format
-msgid "Failed to load extension %(classpath)s: %(exc)s"
-msgstr "No se ha podido cargar la ampliación %(classpath)s: %(exc)s"
-
-#, python-format
 msgid "Failed to load extension %(ext_factory)s: %(exc)s"
 msgstr "No se ha podido cargar la ampliación %(ext_factory)s: %(exc)s"
-
-#, python-format
-msgid "Failed to load extension %(ext_name)s:%(exc)s"
-msgstr "Fallo al cargar extensión %(ext_name)s:%(exc)s"
 
 msgid "Failed to power off instance"
 msgstr "Fallo al apagar la instancia"
@@ -493,12 +477,6 @@ msgstr "Ignorando los elementos inválidos de la opción %(name)s: %(options)s"
 msgid "Ignoring volume cleanup failure due to %s"
 msgstr "Ignorando la anomalía de limpieza de volumen debido a %s "
 
-#, python-format
-msgid "Image %s not found on disk storage. Continue without injecting data"
-msgstr ""
-"La imagen %s no se ha encontrado en el almacenamiento de disco. Continuando "
-"sin inyectar datos."
-
 msgid "Image not found during snapshot"
 msgstr "No se ha encontrado la imagen durante la instantánea"
 
@@ -516,10 +494,6 @@ msgid ""
 msgstr ""
 "En vmwareapi:vmops:_destroy_instance, se obtuvo esta excepción mientras se "
 "removía el registro de VM: %s"
-
-#, python-format
-msgid "Info cache is %r during associate"
-msgstr "Información almacenada en caché  durante la asociación es %r"
 
 #, python-format
 msgid ""
@@ -632,10 +606,6 @@ msgstr ""
 "%(vm_state)s, task_state actual: %(task_state)s, power_state de base de "
 "datos original: %(db_power_state)s, power_state actual de VM: "
 "%(vm_power_state)s"
-
-#, python-format
-msgid "Instance: %(instance_uuid)s failed to save into memcached"
-msgstr " Instancia: %(instance_uuid)s no se ha podido guardar en memcached."
 
 msgid "Invalid 'agent_present' value. Falling back to the default."
 msgstr ""
@@ -968,27 +938,12 @@ msgstr ""
 "Tenant_id %(tenant_id)s no coincide con tenant_id de la instancia "
 "%(instance_id)s."
 
-#, python-format
-msgid ""
-"The libvirt driver is not tested on %(type)s/%(arch)s by the OpenStack "
-"project and thus its quality can not be ensured. For more information, see: "
-"https://wiki.openstack.org/wiki/HypervisorSupportMatrix"
-msgstr ""
-"El controlador libvirt no ha sido probado en %(type)s/%(arch)s por el "
-"projecto de OpenStack  por lo cual su calidad no puede ser asegurada. Para "
-"mas información, ver: https://wiki.openstack.org/wiki/HypervisorSupportMatrix"
-
 msgid ""
 "This key manager is insecure and is not recommended for production "
 "deployments"
 msgstr ""
 "Este administrador de claves es inseguro y no se recomienda para "
 "liberaciones de producción."
-
-msgid "This key manager is not suitable for use in production deployments"
-msgstr ""
-"Este administrador de claves no es adecuado para uso en liberaciones de "
-"producción"
 
 msgid "This shouldn't be getting called except during testing."
 msgstr "Esto no se debe llamar excepto durante las pruebas. "
@@ -1011,10 +966,6 @@ msgstr ""
 "Tiempo excedido para la llamada inversa de la conexión vif para la instancia "
 "%(uuid)s"
 
-#, python-format
-msgid "Token: %(token)s failed to save into memcached."
-msgstr "Token: %(token)s no se ha podido guardar en memcached."
-
 msgid "Too many id maps, only included first five."
 msgstr "Demasiados mapas de IP, incluir únicamente los primeros cinco."
 
@@ -1031,14 +982,6 @@ msgid ""
 msgstr ""
 "Tratando como 0 el valor negativo de configuración (%(retries)s) para "
 "'glance.num_retries' ."
-
-#, python-format
-msgid ""
-"Treating negative config value (%(retries)s) for 'network_allocate_retries' "
-"as 0."
-msgstr ""
-"Tratando el valor negativo de configuración (%(retries)s) para "
-"'network_allocate_retries' como 0."
 
 #, python-format
 msgid ""
@@ -1322,14 +1265,6 @@ msgstr "plug_vifs() ha fallado %(cnt)d. Intentando hasta %(max_retry)d."
 #, python-format
 msgid "rbd remove %(volume)s in pool %(pool)s failed"
 msgstr "Falló la eliminación rbd %(volume)s en pool %(pool)s "
-
-#, python-format
-msgid ""
-"serial_console.port_range should be <num>:<num>. Given value %(port_range)s "
-"could not be parsed. Taking the default port range %(default)s."
-msgstr ""
-"serial_console.port_range debe ser <num>:<num>. El valor dado %(port_range)s "
-"no se puede analizar. Tomando el rango de puerto por defecto %(default)s."
 
 msgid "set_admin_password is not implemented by this driver or guest instance."
 msgstr ""

@@ -1,0 +1,7 @@
+---
+features:
+  - New configuration option live_migration_permit_auto_converge
+    has been added to allow hypervisor to throttle down CPU of an
+    instance during live migration in case of a slow progress due
+    to high ratio of dirty pages. Requires libvirt>=1.2.3 and
+    QEMU>=1.6.0.

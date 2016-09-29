@@ -63,7 +63,6 @@ from nova.virt.vmwareapi import vm_util
 
 
 CONF = nova.conf.CONF
-CONF.import_opt('my_ip', 'nova.netconf')
 
 LOG = logging.getLogger(__name__)
 
@@ -86,7 +85,7 @@ class VirtualMachineInstanceConfigInfo(object):
         self.instance = instance
 
         self.ii = image_info
-        self.root_gb = instance.root_gb
+        self.root_gb = instance.flavor.root_gb
         self.datastore = datastore
         self.dc_info = dc_info
         self._image_cache = image_cache
@@ -207,17 +206,19 @@ class VMwareVMOps(object):
     def _extend_if_required(self, dc_info, image_info, instance,
                             root_vmdk_path):
         """Increase the size of the root vmdk if necessary."""
-        if instance.root_gb * units.Gi > image_info.file_size:
-            size_in_kb = instance.root_gb * units.Mi
+        if instance.flavor.root_gb * units.Gi > image_info.file_size:
+            size_in_kb = instance.flavor.root_gb * units.Mi
             self._extend_virtual_disk(instance, size_in_kb,
                                       root_vmdk_path, dc_info.ref)
 
-    def _configure_config_drive(self, instance, vm_ref, dc_info, datastore,
-                                injected_files, admin_password, network_info):
+    def _configure_config_drive(self, context, instance, vm_ref, dc_info,
+                                datastore, injected_files, admin_password,
+                                network_info):
         session_vim = self._session.vim
         cookies = session_vim.client.options.transport.cookiejar
         dc_path = vutil.get_inventory_path(session_vim, dc_info.ref)
-        uploaded_iso_path = self._create_config_drive(instance,
+        uploaded_iso_path = self._create_config_drive(context,
+                                                      instance,
                                                       injected_files,
                                                       admin_password,
                                                       network_info,
@@ -233,31 +234,21 @@ class VMwareVMOps(object):
 
     def _get_instance_metadata(self, context, instance):
         flavor = instance.flavor
-        return ('name:%s\n'
-                'userid:%s\n'
-                'username:%s\n'
-                'projectid:%s\n'
-                'projectname:%s\n'
-                'flavor:name:%s\n'
-                'flavor:memory_mb:%s\n'
-                'flavor:vcpus:%s\n'
-                'flavor:ephemeral_gb:%s\n'
-                'flavor:root_gb:%s\n'
-                'flavor:swap:%s\n'
-                'imageid:%s\n'
-                'package:%s\n') % (instance.display_name,
-                                   context.user_id,
-                                   context.user_name,
-                                   context.project_id,
-                                   context.project_name,
-                                   flavor.name,
-                                   flavor.memory_mb,
-                                   flavor.vcpus,
-                                   flavor.ephemeral_gb,
-                                   flavor.root_gb,
-                                   flavor.swap,
-                                   instance.image_ref,
-                                   version.version_string_with_package())
+        metadata = [('name', instance.display_name),
+                    ('userid', context.user_id),
+                    ('username', context.user_name),
+                    ('projectid', context.project_id),
+                    ('projectname', context.project_name),
+                    ('flavor:name', flavor.name),
+                    ('flavor:memory_mb', flavor.memory_mb),
+                    ('flavor:vcpus', flavor.vcpus),
+                    ('flavor:ephemeral_gb', flavor.ephemeral_gb),
+                    ('flavor:root_gb', flavor.root_gb),
+                    ('flavor:swap', flavor.swap),
+                    ('imageid', instance.image_ref),
+                    ('package', version.version_string_with_package())]
+        # NOTE: formatted as lines like this: 'name:NAME\nuserid:ID\n...'
+        return ''.join(['%s:%s\n' % (k, v) for k, v in metadata])
 
     def _create_folders(self, parent_folder, folder_path):
         folders = folder_path.split('/')
@@ -356,6 +347,38 @@ class VMwareVMOps(object):
         Cookie = collections.namedtuple('Cookie', ['name', 'value'])
         return host_name, [Cookie(name, value)]
 
+    def _fetch_vsphere_image(self, context, vi, image_ds_loc):
+        """Fetch image which is located on a vSphere datastore."""
+        location = vi.ii.vsphere_location
+        LOG.debug("Using vSphere location: %s", location)
+
+        LOG.debug("Copying image file data %(image_id)s to "
+                  "%(file_path)s on the data store "
+                  "%(datastore_name)s",
+                  {'image_id': vi.ii.image_id,
+                   'file_path': image_ds_loc,
+                   'datastore_name': vi.datastore.name},
+                  instance=vi.instance)
+
+        location_url = ds_obj.DatastoreURL.urlparse(location)
+        datacenter_path = location_url.datacenter_path
+        datacenter_moref = ds_util.get_datacenter_ref(
+            self._session, datacenter_path)
+
+        datastore_name = location_url.datastore_name
+        src_path = ds_obj.DatastorePath(datastore_name, location_url.path)
+        ds_util.file_copy(
+            self._session, str(src_path), datacenter_moref,
+            str(image_ds_loc), vi.dc_info.ref)
+
+        LOG.debug("Copied image file data %(image_id)s to "
+                  "%(file_path)s on the data store "
+                  "%(datastore_name)s",
+                  {'image_id': vi.ii.image_id,
+                   'file_path': image_ds_loc,
+                   'datastore_name': vi.datastore.name},
+                  instance=vi.instance)
+
     def _fetch_image_as_file(self, context, vi, image_ds_loc):
         """Download image as an individual file to host via HTTP PUT."""
         session = self._session
@@ -442,6 +465,7 @@ class VMwareVMOps(object):
                 self._tmp_folder, uuidutils.generate_uuid())
         tmp_image_ds_loc = tmp_dir_loc.join(
                 vi.ii.image_id, "tmp-sparse.vmdk")
+        ds_util.mkdir(self._session, tmp_image_ds_loc.parent, vi.dc_info.ref)
         return tmp_dir_loc, tmp_image_ds_loc
 
     def _prepare_flat_image(self, vi):
@@ -531,8 +555,8 @@ class VMwareVMOps(object):
                             extra_specs):
         """Captures all relevant information from the spawn parameters."""
 
-        if (instance.root_gb != 0 and
-                image_info.file_size > instance.root_gb * units.Gi):
+        if (instance.flavor.root_gb != 0 and
+                image_info.file_size > instance.flavor.root_gb * units.Gi):
             reason = _("Image disk size greater than requested disk size")
             raise exception.InstanceUnacceptable(instance_id=instance.uuid,
                                                  reason=reason)
@@ -559,6 +583,8 @@ class VMwareVMOps(object):
             image_fetch = self._fetch_image_as_ova
         elif disk_type == constants.DISK_TYPE_STREAM_OPTIMIZED:
             image_fetch = self._fetch_image_as_vapp
+        elif vi.ii.vsphere_location:
+            image_fetch = self._fetch_vsphere_image
         else:
             image_fetch = self._fetch_image_as_file
 
@@ -637,8 +663,8 @@ class VMwareVMOps(object):
 
         # There may be block devices defined but no ephemerals. In this case
         # we need to allocate an ephemeral disk if required
-        if not ephemerals and instance.ephemeral_gb:
-            size = instance.ephemeral_gb * units.Mi
+        if not ephemerals and instance.flavor.ephemeral_gb:
+            size = instance.flavor.ephemeral_gb * units.Mi
             filename = vm_util.get_ephemeral_name(0)
             path = str(ds_obj.DatastorePath(datastore.name, folder,
                                              filename))
@@ -693,7 +719,8 @@ class VMwareVMOps(object):
               admin_password, network_info, block_device_info=None):
 
         client_factory = self._session.vim.client.factory
-        image_info = images.VMwareImage.from_image(instance.image_ref,
+        image_info = images.VMwareImage.from_image(context,
+                                                   instance.image_ref,
                                                    image_meta)
         extra_specs = self._get_extra_specs(instance.flavor, image_meta)
 
@@ -778,7 +805,7 @@ class VMwareVMOps(object):
 
         if configdrive.required_by(instance):
             self._configure_config_drive(
-                    instance, vm_ref, vi.dc_info, vi.datastore,
+                    context, instance, vm_ref, vi.dc_info, vi.datastore,
                     injected_files, admin_password, network_info)
 
         # Rename the VM. This is done after the spec is created to ensure
@@ -802,9 +829,9 @@ class VMwareVMOps(object):
                 raise exception.UnsupportedHardware(model=adapter_type,
                                                     virt="vmware")
 
-    def _create_config_drive(self, instance, injected_files, admin_password,
-                             network_info, data_store_name, dc_name,
-                             upload_folder, cookies):
+    def _create_config_drive(self, context, instance, injected_files,
+                             admin_password, network_info, data_store_name,
+                             dc_name, upload_folder, cookies):
         if CONF.config_drive_format != 'iso9660':
             reason = (_('Invalid config_drive_format "%s"') %
                       CONF.config_drive_format)
@@ -818,7 +845,8 @@ class VMwareVMOps(object):
         inst_md = instance_metadata.InstanceMetadata(instance,
                                                      content=injected_files,
                                                      extra_md=extra_md,
-                                                     network_info=network_info)
+                                                     network_info=network_info,
+                                                     request_context=context)
         try:
             with configdrive.ConfigDriveBuilder(instance_md=inst_md) as cdb:
                 with utils.tempdir() as tmp_path:
@@ -1171,7 +1199,8 @@ class VMwareVMOps(object):
         dc_info = self.get_datacenter_ref_and_name(datastore.ref)
 
         # Get the image details of the instance
-        image_info = images.VMwareImage.from_image(image_meta.id,
+        image_info = images.VMwareImage.from_image(context,
+                                                   image_meta.id,
                                                    image_meta)
         vi = VirtualMachineInstanceConfigInfo(instance,
                                               image_info,
@@ -1262,7 +1291,7 @@ class VMwareVMOps(object):
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 
     def _resize_disk(self, instance, vm_ref, vmdk, flavor):
-        if (flavor.root_gb > instance.root_gb and
+        if (flavor.root_gb > instance.flavor.root_gb and
             flavor.root_gb > vmdk.capacity_in_bytes / units.Gi):
             root_disk_in_kb = flavor.root_gb * units.Mi
             ds_ref = vmdk.device.backing.datastore
@@ -1321,7 +1350,7 @@ class VMwareVMOps(object):
                                      uuid=instance.uuid)
 
         # Checks if the migration needs a disk resize down.
-        if (flavor.root_gb < instance.root_gb or
+        if (flavor.root_gb < instance.flavor.root_gb or
             (flavor.root_gb != 0 and
              flavor.root_gb < vmdk.capacity_in_bytes / units.Gi)):
             reason = _("Unable to shrink disk.")
@@ -1416,11 +1445,12 @@ class VMwareVMOps(object):
         extra_specs = self._get_extra_specs(instance.flavor,
                                             instance.image_meta)
         metadata = self._get_instance_metadata(context, instance)
-        vm_resize_spec = vm_util.get_vm_resize_spec(client_factory,
-                                                    int(instance.vcpus),
-                                                    int(instance.memory_mb),
-                                                    extra_specs,
-                                                    metadata=metadata)
+        vm_resize_spec = vm_util.get_vm_resize_spec(
+            client_factory,
+            int(instance.flavor.vcpus),
+            int(instance.flavor.memory_mb),
+            extra_specs,
+            metadata=metadata)
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 
         vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
@@ -1724,8 +1754,11 @@ class VMwareVMOps(object):
                             lock_file_prefix='nova-vmware-hot-plug'):
             port_index = vm_util.get_attach_port_index(self._session, vm_ref)
             client_factory = self._session.vim.client.factory
+            extra_specs = self._get_extra_specs(instance.flavor)
+
             attach_config_spec = vm_util.get_network_attach_config_spec(
-                                        client_factory, vif_info, port_index)
+                                        client_factory, vif_info, port_index,
+                                        extra_specs.vif_limits)
             LOG.debug("Reconfiguring VM to attach interface",
                       instance=instance)
             try:

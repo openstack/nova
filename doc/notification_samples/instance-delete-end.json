@@ -1,0 +1,49 @@
+{
+    "event_type":"instance.delete.end",
+    "payload":{
+        "nova_object.data":{
+            "architecture":"x86_64",
+            "availability_zone":null,
+            "created_at":"2012-10-29T13:42:11Z",
+            "deleted_at":"2012-10-29T13:42:11Z",
+            "display_name":"some-server",
+            "fault":null,
+            "host":"compute",
+            "host_name":"some-server",
+            "ip_addresses":[],
+            "kernel_id":"",
+            "launched_at":"2012-10-29T13:42:11Z",
+            "image_uuid": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
+            "metadata":{},
+            "node":"fake-mini",
+            "os_type":null,
+            "progress":0,
+            "ramdisk_id":"",
+            "reservation_id":"r-npxv0e40",
+            "state":"deleted",
+            "task_state":null,
+            "power_state":"pending",
+            "tenant_id":"6f70656e737461636b20342065766572",
+            "terminated_at":"2012-10-29T13:42:11Z",
+            "flavor": {
+                "nova_object.name": "FlavorPayload",
+                "nova_object.data": {
+                    "flavorid": "a22d5517-147c-4147-a0d1-e698df5cd4e3",
+                    "root_gb": 1,
+                    "vcpus": 1,
+                    "ephemeral_gb": 0,
+                    "memory_mb": 512
+                },
+                "nova_object.version": "1.0",
+                "nova_object.namespace": "nova"
+            },
+            "user_id":"fake",
+            "uuid":"178b0921-8f85-4257-88b6-2e743b5a975c"
+        },
+        "nova_object.name":"InstanceActionPayload",
+        "nova_object.namespace":"nova",
+        "nova_object.version":"1.0"
+    },
+    "priority":"INFO",
+    "publisher_id":"nova-compute:compute"
+}

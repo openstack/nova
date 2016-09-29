@@ -60,10 +60,10 @@ class ServerGroupSoftAffinityWeigher(_SoftAffinityWeigherBase):
     def weight_multiplier(self):
         if (CONF.soft_affinity_weight_multiplier < 0 and
                 not self.warning_sent):
-            LOG.warn(_LW('For the soft_affinity_weight_multiplier only a '
-                         'positive value is meaningful as a negative value '
-                         'would mean that the affinity weigher would '
-                         'prefer non-collocating placement.'))
+            LOG.warning(_LW('For the soft_affinity_weight_multiplier only a '
+                            'positive value is meaningful as a negative value '
+                            'would mean that the affinity weigher would '
+                            'prefer non-collocating placement.'))
             self.warning_sent = True
 
         return CONF.soft_affinity_weight_multiplier
@@ -76,10 +76,10 @@ class ServerGroupSoftAntiAffinityWeigher(_SoftAffinityWeigherBase):
     def weight_multiplier(self):
         if (CONF.soft_anti_affinity_weight_multiplier < 0 and
                 not self.warning_sent):
-            LOG.warn(_LW('For the soft_anti_affinity_weight_multiplier only a '
-                         'positive value is meaningful as a negative value '
-                         'would mean that the anti-affinity weigher would '
-                         'prefer collocating placement.'))
+            LOG.warning(_LW('For the soft_anti_affinity_weight_multiplier '
+                            'only a positive value is meaningful as a '
+                            'negative value would mean that the anti-affinity '
+                            'weigher would prefer collocating placement.'))
             self.warning_sent = True
 
         return CONF.soft_anti_affinity_weight_multiplier

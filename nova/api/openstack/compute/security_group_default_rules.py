@@ -14,29 +14,32 @@
 
 from webob import exc
 
+from nova.api.openstack.api_version_request \
+    import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack.compute import security_groups as sg
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import exception
 from nova.i18n import _
 from nova.network.security_group import openstack_driver
+from nova.policies import security_group_default_rules as sgdr_policies
 
 
 ALIAS = "os-security-group-default-rules"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
-class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
+class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase,
+                                          wsgi.Controller):
 
     def __init__(self):
         self.security_group_api = (
-            openstack_driver.get_openstack_security_group_driver(
-                skip_policy_check=True))
+            openstack_driver.get_openstack_security_group_driver())
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((400, 409, 501))
     def create(self, req, body):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(sgdr_policies.BASE_POLICY_NAME)
 
         sg_rule = self._from_body(body, 'security_group_default_rule')
 
@@ -70,10 +73,11 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
         return self.security_group_api.new_cidr_ingress_rule(
             cidr, ip_protocol, from_port, to_port)
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((400, 404, 501))
     def show(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(sgdr_policies.BASE_POLICY_NAME)
 
         try:
             id = self.security_group_api.validate_id(id)
@@ -88,11 +92,12 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
         fmt_rule = self._format_security_group_default_rule(rule)
         return {"security_group_default_rule": fmt_rule}
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((400, 404, 501))
     @wsgi.response(204)
     def delete(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(sgdr_policies.BASE_POLICY_NAME)
 
         try:
             id = self.security_group_api.validate_id(id)
@@ -105,10 +110,11 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
         except exception.SecurityGroupDefaultRuleNotFound as ex:
             raise exc.HTTPNotFound(explanation=ex.format_message())
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((404, 501))
     def index(self, req):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(sgdr_policies.BASE_POLICY_NAME)
 
         ret = {'security_group_default_rules': []}
         try:

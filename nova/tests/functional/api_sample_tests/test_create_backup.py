@@ -13,27 +13,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 import mock
 
 from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.unit.image import fake
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
-
 
 class CreateBackupSamplesJsonTest(test_servers.ServersSampleBase):
-    extension_name = "os-create-backup"
-
-    def _get_flags(self):
-        f = super(CreateBackupSamplesJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.admin_actions.Admin_actions')
-        return f
+    sample_dir = "os-create-backup"
 
     def setUp(self):
         """setUp Method for PauseServer api samples extension

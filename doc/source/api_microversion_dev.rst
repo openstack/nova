@@ -9,9 +9,12 @@ to the API while preserving backward compatibility. The basic idea is
 that a user has to explicitly ask for their request to be treated with
 a particular version of the API. So breaking changes can be added to
 the API without breaking users who don't specifically ask for it. This
-is done with an HTTP header ``X-OpenStack-Nova-API-Version`` which
-is a monotonically increasing semantic version number starting from
-``2.1``.
+is done with an HTTP header ``OpenStack-API-Version`` which has as its
+value a string containing the name of the service, ``compute``, and a
+monotonically increasing semantic version number starting from ``2.1``.
+The full form of the header takes the form::
+
+    OpenStack-API-Version: compute 2.1
 
 If a user makes a request without specifying a version, they will get
 the ``DEFAULT_API_VERSION`` as defined in
@@ -29,8 +32,21 @@ responses from the server.
   microversion but limit what is acceptable to the version range that it
   understands at the time.
 
+.. warning:: To maintain compatibility, an earlier form of the microversion
+   header is acceptable. It takes the form::
+
+        X-OpenStack-Nova-API-Version: 2.1
+
+   This form will continue to be supported until the ``DEFAULT_API_VERSION``
+   is raised to version ``2.27`` or higher.
+
+   Clients accessing deployments of the Nova API which are not yet
+   providing microversion ``2.27`` must use the older form.
+
 For full details please read the `Kilo spec for microversions
 <http://git.openstack.org/cgit/openstack/nova-specs/tree/specs/kilo/implemented/api-microversions.rst>`_
+and `Microversion Specification
+<http://specs.openstack.org/openstack/api-wg/guidelines/microversion_specification.html>`_.
 
 When do I need a new Microversion?
 ----------------------------------
@@ -217,7 +233,7 @@ In the controller class::
         ....
 
 This method would only be available if the caller had specified an
-``X-OpenStack-Nova-API-Version`` of >= ``2.4``. If they had specified a
+``OpenStack-API-Version`` of >= ``2.4``. If they had specified a
 lower version (or not specified it and received the default of ``2.1``)
 the server would respond with ``HTTP/404``.
 
@@ -231,7 +247,7 @@ In the controller class::
         ....
 
 This method would only be available if the caller had specified an
-``X-OpenStack-Nova-API-Version`` of <= ``2.4``. If ``2.5`` or later
+``OpenStack-API-Version`` of <= ``2.4``. If ``2.5`` or later
 is specified the server will respond with ``HTTP/404``.
 
 Changing a method's behavior
@@ -333,12 +349,15 @@ necessary to add changes to other places which describe your change:
 * Update the expected versions in affected tests, for example in
   ``nova/tests/unit/api/openstack/compute/test_versions.py``.
 
-* Update the get versions api sample files:
+* Update the get versions api sample file:
   ``doc/api_samples/versions/versions-get-resp.json`` and
-  ``nova/tests/functional/api_samples/versions/versions-get-resp.json.tpl``.
+  ``doc/api_samples/versions/v21-version-get-resp.json``.
 
 * Make a new commit to python-novaclient and update corresponding
   files to enable the newly added microversion API.
+
+* If the microversion changes the response schema, a new schema and test for
+  the microversion must be added to Tempest.
 
 Allocating a microversion
 -------------------------
@@ -361,11 +380,11 @@ Testing Microversioned API Methods
 ----------------------------------
 
 Testing a microversioned API method is very similar to a normal controller
-method test, you just need to add the ``X-OpenStack-Nova-API-Version``
+method test, you just need to add the ``OpenStack-API-Version``
 header, for example::
 
     req = fakes.HTTPRequest.blank('/testable/url/endpoint')
-    req.headers = {'X-OpenStack-Nova-API-Version': '2.2'}
+    req.headers = {'OpenStack-API-Version': 'compute 2.28'}
     req.api_version_request = api_version.APIVersionRequest('2.6')
 
     controller = controller.TestableController()

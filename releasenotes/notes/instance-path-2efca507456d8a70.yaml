@@ -1,0 +1,14 @@
+---
+upgrade:
+  - |
+    Prior to Grizzly release default instance directory names were based on
+    instance.id field, for example directory for instance could be named
+    ``instance-00000008``. In Grizzly this mechanism was changed,
+    instance.uuid is used as an instance directory name, e.g. path to instance:
+
+    ``/opt/stack/data/nova/instances/34198248-5541-4d52-a0b4-a6635a7802dd/``.
+
+    In Newton backward compatibility is dropped. For instances that haven't
+    been restarted since Folsom and earlier maintanance should be scheduled
+    before upgrade(stop, rename directory to instance.uuid, then start) so Nova
+    will start using new paths for instances.

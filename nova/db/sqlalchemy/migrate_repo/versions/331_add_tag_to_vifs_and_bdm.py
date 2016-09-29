@@ -13,12 +13,12 @@
 #    under the License.
 
 
+from oslo_db.sqlalchemy import utils
 from sqlalchemy import Column
 from sqlalchemy import MetaData
 from sqlalchemy import String
 
 from nova.db.sqlalchemy import api
-from oslo_db.sqlalchemy import utils
 
 
 def upgrade(migrate_engine):

@@ -13,7 +13,7 @@ features:
     This functionality is added to Nova when the 'DNS Integration' extension
     is enabled in Neutron.
     The publication of 'dns_name' and 'dns_domain' combinations to an external
-    DNS as a service additionaly requires the configuration of the appropriate
+    DNS as a service additionally requires the configuration of the appropriate
     driver in Neutron.
     When the 'Port Binding' extension is also enabled in Neutron, the
     publication of a 'dns_name' and 'dns_domain' combination to the external

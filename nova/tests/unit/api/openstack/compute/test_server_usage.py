@@ -19,7 +19,6 @@ from oslo_serialization import jsonutils
 from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
 
-from nova import compute
 from nova import exception
 from nova import objects
 from nova.objects import instance as instance_obj
@@ -63,12 +62,8 @@ class ServerUsageTestV21(test.TestCase):
     def setUp(self):
         super(ServerUsageTestV21, self).setUp()
         fakes.stub_out_nw_api(self)
-        self.stubs.Set(compute.api.API, 'get', fake_compute_get)
-        self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Server_usage'])
+        self.stub_out('nova.compute.api.API.get', fake_compute_get)
+        self.stub_out('nova.compute.api.API.get_all', fake_compute_get_all)
         return_server = fakes.fake_instance_get()
         self.stub_out('nova.db.instance_get_by_uuid', return_server)
 
@@ -125,21 +120,8 @@ class ServerUsageTestV21(test.TestCase):
         def fake_compute_get(*args, **kwargs):
             raise exception.InstanceNotFound(instance_id='fake')
 
-        self.stubs.Set(compute.api.API, 'get', fake_compute_get)
+        self.stub_out('nova.compute.api.API.get', fake_compute_get)
         url = self._prefix + '/servers/70f6db34-de8d-4fbd-aafb-4065bdfa6115'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 404)
-
-
-class ServerUsageTestV20(ServerUsageTestV21):
-
-    def setUp(self):
-        super(ServerUsageTestV20, self).setUp()
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Server_usage'])
-
-    def _get_app(self):
-        return fakes.wsgi_app(init_only=('servers',))

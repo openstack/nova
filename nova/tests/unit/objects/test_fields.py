@@ -187,13 +187,13 @@ class TestImageSignatureTypes(TestField):
 
     def test_hashes(self):
         for hash_name in list(signature_utils.HASH_METHODS.keys()):
-            self.assertIn(hash_name, self.hash_field.hashes)
+            self.assertIn(hash_name, self.hash_field.ALL)
 
     def test_key_types(self):
         key_type_dict = signature_utils.SignatureKeyType._REGISTERED_TYPES
         key_types = list(key_type_dict.keys())
         for key_type in key_types:
-            self.assertIn(key_type, self.key_type_field.key_types)
+            self.assertIn(key_type, self.key_type_field.ALL)
 
 
 class TestResourceClass(TestField):
@@ -603,3 +603,21 @@ class TestIDEAddress(TestField):
         ]
         self.to_primitive_values = self.coerce_good_values
         self.from_primitive_values = self.coerce_good_values
+
+
+class TestSecureBoot(TestField):
+    def setUp(self):
+        super(TestSecureBoot, self).setUp()
+        self.field = fields.SecureBoot()
+        self.coerce_good_values = [('required', 'required'),
+                                   ('disabled', 'disabled'),
+                                   ('optional', 'optional')]
+        self.coerce_bad_values = ['enabled']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'required'", self.field.stringify('required'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'enabled')

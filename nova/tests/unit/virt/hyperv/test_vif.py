@@ -26,10 +26,10 @@ class HyperVNovaNetworkVIFDriverTestCase(test_base.HyperVBaseTestCase):
         self.vif_driver = vif.HyperVNovaNetworkVIFDriver()
 
     def test_plug(self):
-        self.flags(vswitch_name=mock.sentinel.vswitch_name, group='hyperv')
+        self.flags(vswitch_name='fake_vswitch_name', group='hyperv')
         fake_vif = {'id': mock.sentinel.fake_id}
 
         self.vif_driver.plug(mock.sentinel.instance, fake_vif)
         netutils = self.vif_driver._netutils
         netutils.connect_vnic_to_vswitch.assert_called_once_with(
-            mock.sentinel.vswitch_name, mock.sentinel.fake_id)
+            'fake_vswitch_name', mock.sentinel.fake_id)

@@ -48,6 +48,8 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
         self.driver._livemigrationops = mock.MagicMock()
         self.driver._migrationops = mock.MagicMock()
         self.driver._rdpconsoleops = mock.MagicMock()
+        self.driver._serialconsoleops = mock.MagicMock()
+        self.driver._imagecache = mock.MagicMock()
 
     @mock.patch.object(driver.utilsfactory, 'get_hostutils')
     def test_check_minimum_windows_version(self, mock_get_hostutils):
@@ -112,10 +114,11 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
     def test_init_host(self, mock_InstanceEventHandler):
         self.driver.init_host(mock.sentinel.host)
 
-        self.driver._vmops.restart_vm_log_writers.assert_called_once_with()
+        mock_start_console_handlers = (
+            self.driver._serialconsoleops.start_console_handlers)
+        mock_start_console_handlers.assert_called_once_with()
         mock_InstanceEventHandler.assert_called_once_with(
-            state_change_callback=self.driver.emit_event,
-            running_state_callback=self.driver._vmops.log_vm_serial_output)
+            state_change_callback=self.driver.emit_event)
         fake_event_handler = mock_InstanceEventHandler.return_value
         fake_event_handler.start_listener.assert_called_once_with()
 
@@ -126,6 +129,11 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
     def test_list_instances(self):
         self.driver.list_instances()
         self.driver._vmops.list_instances.assert_called_once_with()
+
+    def test_estimate_instance_overhead(self):
+        self.driver.estimate_instance_overhead(mock.sentinel.instance)
+        self.driver._vmops.estimate_instance_overhead.assert_called_once_with(
+            mock.sentinel.instance)
 
     def test_spawn(self):
         self.driver.spawn(
@@ -284,14 +292,16 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
 
         mock_destroy.assert_called_once_with(
             mock.sentinel.context, mock.sentinel.instance,
-            mock.sentinel.network_info, mock.sentinel.block_device_info)
+            mock.sentinel.network_info, mock.sentinel.block_device_info,
+            destroy_disks=mock.sentinel.destroy_disks)
 
     def test_pre_live_migration(self):
-        self.driver.pre_live_migration(
+        migrate_data = self.driver.pre_live_migration(
             mock.sentinel.context, mock.sentinel.instance,
             mock.sentinel.block_device_info, mock.sentinel.network_info,
             mock.sentinel.disk_info, mock.sentinel.migrate_data)
 
+        self.assertEqual(mock.sentinel.migrate_data, migrate_data)
         pre_live_migration = self.driver._livemigrationops.pre_live_migration
         pre_live_migration.assert_called_once_with(
             mock.sentinel.context, mock.sentinel.instance,
@@ -305,7 +315,8 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
         post_live_migration = self.driver._livemigrationops.post_live_migration
         post_live_migration.assert_called_once_with(
             mock.sentinel.context, mock.sentinel.instance,
-            mock.sentinel.block_device_info)
+            mock.sentinel.block_device_info,
+            mock.sentinel.migrate_data)
 
     def test_post_live_migration_at_destination(self):
         self.driver.post_live_migration_at_destination(
@@ -330,12 +341,12 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
             mock.sentinel.src_compute_info, mock.sentinel.dst_compute_info,
             mock.sentinel.block_migration, mock.sentinel.disk_over_commit)
 
-    def test_check_can_live_migrate_destination_cleanup(self):
-        self.driver.check_can_live_migrate_destination_cleanup(
+    def test_cleanup_live_migration_destination_check(self):
+        self.driver.cleanup_live_migration_destination_check(
             mock.sentinel.context, mock.sentinel.dest_check_data)
 
         _livemigrops = self.driver._livemigrationops
-        method = _livemigrops.check_can_live_migrate_destination_cleanup
+        method = _livemigrops.cleanup_live_migration_destination_check
         method.assert_called_once_with(
             mock.sentinel.context, mock.sentinel.dest_check_data)
 
@@ -428,7 +439,25 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
             mock.sentinel.instance)
 
     def test_get_console_output(self):
-        self.driver.get_console_output(
-            mock.sentinel.context, mock.sentinel.instance)
-        self.driver._vmops.get_console_output.assert_called_once_with(
-            mock.sentinel.instance)
+        mock_instance = fake_instance.fake_instance_obj(self.context)
+        self.driver.get_console_output(self.context, mock_instance)
+
+        mock_get_console_output = (
+            self.driver._serialconsoleops.get_console_output)
+        mock_get_console_output.assert_called_once_with(
+            mock_instance.name)
+
+    def test_get_serial_console(self):
+        mock_instance = fake_instance.fake_instance_obj(self.context)
+        self.driver.get_console_output(self.context, mock_instance)
+
+        mock_get_serial_console = (
+            self.driver._serialconsoleops.get_console_output)
+        mock_get_serial_console.assert_called_once_with(
+            mock_instance.name)
+
+    def test_manage_image_cache(self):
+        self.driver.manage_image_cache(mock.sentinel.context,
+                                       mock.sentinel.all_instances)
+        self.driver._imagecache.update.assert_called_once_with(
+            mock.sentinel.context, mock.sentinel.all_instances)

@@ -1,0 +1,28 @@
+---
+features:
+  - A new nova-manage command has been added to discover any new hosts that are
+    added to a cell. If a deployment has migrated to cellsv2 using either the
+    simple_cell_setup or the map_cell0/map_cell_and_hosts/map_instances combo
+    then anytime a new host is added to a cell this new
+    "nova-manage cell_v2 discover_hosts" needs to be run before instances can
+    be booted on that host. If multiple hosts are added at one time the command
+    only needs to be run one time to discover all of them. This command should
+    be run from an API host, or a host that is configured to use the nova_api
+    database.
+
+    Please note that adding a host to a cell and not running this command could
+    lead to build failures/reschedules if that host is selected by the
+    scheduler. The discover_hosts command is necessary to route requests to the
+    host but is not necessary in order for the scheduler to be aware of the
+    host. It is advised that nova-compute hosts are configured with
+    "enable_new_services=False" in order to avoid failures before the hosts
+    have been discovered.
+issues:
+  - If a deployer has updated their deployment to using cellsv2 using either
+    the simple_cell_setup or the map_cell0/map_cell_and_hosts/map_instances
+    combo and they add a new host into the cell it may cause build failures
+    or reschedules until they run the "nova-manage cell_v2 discover_hosts"
+    command. This is because the scheduler will quickly become aware of the
+    host but nova-api will not know how to route the request to that host until
+    it has been "discovered". In order to avoid that it is advised that
+    new computes are disabled until the discover command has been run.

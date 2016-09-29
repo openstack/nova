@@ -17,6 +17,7 @@ from nova.objects import instance
 from nova.objects import security_group
 from nova.tests.unit.objects import test_objects
 from nova.tests import uuidsentinel as uuids
+from oslo_versionedobjects import fixture as ovo_fixture
 
 
 fake_secgroup = {
@@ -42,8 +43,8 @@ class _TestSecurityGroupObject(object):
         db.security_group_get(self.context, 1).AndReturn(fake_secgroup)
         self.mox.ReplayAll()
         secgroup = security_group.SecurityGroup.get(self.context, 1)
-        self.assertEqual(self._fix_deleted(fake_secgroup),
-                         dict(secgroup.items()))
+        ovo_fixture.compare_obj(self, secgroup,
+                                self._fix_deleted(fake_secgroup))
         self.assertEqual(secgroup.obj_what_changed(), set())
 
     def test_get_by_name(self):
@@ -54,8 +55,8 @@ class _TestSecurityGroupObject(object):
         secgroup = security_group.SecurityGroup.get_by_name(self.context,
                                                             'fake-project',
                                                             'fake-name')
-        self.assertEqual(self._fix_deleted(fake_secgroup),
-                         dict(secgroup.items()))
+        ovo_fixture.compare_obj(self, secgroup,
+                                self._fix_deleted(fake_secgroup))
         self.assertEqual(secgroup.obj_what_changed(), set())
 
     def test_in_use(self):
@@ -78,8 +79,8 @@ class _TestSecurityGroupObject(object):
             fake_secgroup)
         secgroup.description = 'foobar'
         secgroup.save()
-        self.assertEqual(self._fix_deleted(updated_secgroup),
-                         dict(secgroup.items()))
+        ovo_fixture.compare_obj(self, secgroup,
+                                self._fix_deleted(updated_secgroup))
         self.assertEqual(secgroup.obj_what_changed(), set())
 
     def test_save_no_changes(self):
@@ -99,8 +100,8 @@ class _TestSecurityGroupObject(object):
             self.context, security_group.SecurityGroup(self.context),
             fake_secgroup)
         secgroup.refresh()
-        self.assertEqual(self._fix_deleted(updated_secgroup),
-                         dict(secgroup.items()))
+        ovo_fixture.compare_obj(self, secgroup,
+                                self._fix_deleted(updated_secgroup))
         self.assertEqual(secgroup.obj_what_changed(), set())
 
 
@@ -130,7 +131,7 @@ class _TestSecurityGroupListObject(object):
             self.assertIsInstance(secgroup_list[i],
                                   security_group.SecurityGroup)
             self.assertEqual(fake_secgroups[i]['id'],
-                             secgroup_list[i]['id'])
+                             secgroup_list[i].id)
             self.assertEqual(secgroup_list[i]._context, self.context)
 
     def test_get_by_project(self):
@@ -145,7 +146,7 @@ class _TestSecurityGroupListObject(object):
             self.assertIsInstance(secgroup_list[i],
                                   security_group.SecurityGroup)
             self.assertEqual(fake_secgroups[i]['id'],
-                             secgroup_list[i]['id'])
+                             secgroup_list[i].id)
 
     def test_get_by_instance(self):
         inst = instance.Instance()
@@ -161,7 +162,7 @@ class _TestSecurityGroupListObject(object):
             self.assertIsInstance(secgroup_list[i],
                                   security_group.SecurityGroup)
             self.assertEqual(fake_secgroups[i]['id'],
-                             secgroup_list[i]['id'])
+                             secgroup_list[i].id)
 
 
 class TestSecurityGroupListObject(test_objects._LocalTest,

@@ -85,6 +85,7 @@ def fake_spec_obj(remove_id=False):
     req_obj.force_hosts = ['host1', 'host3']
     req_obj.force_nodes = ['node1', 'node2']
     req_obj.scheduler_hints = {'hint': ['over-there']}
+    req_obj.requested_destination = None
     # This should never be a changed field
     req_obj.obj_reset_changes(['id'])
     return req_obj

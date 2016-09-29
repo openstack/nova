@@ -1,8 +1,4 @@
 .. -*- rst -*-
-.. needs:method_verification
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
 ==================================
  Server groups (os-server-groups)
@@ -13,7 +9,7 @@ Lists, shows information for, creates, and deletes server groups.
 List Server Groups
 ==================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-server-groups
+.. rest_method:: GET /os-server-groups
 
 Lists all server groups for the tenant.
 
@@ -21,18 +17,10 @@ Administrative users can use the ``all_projects`` query parameter to list all se
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403)
 
 Request
 -------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-
-Query Parameters
-~~~~~~~~~~~~~~~~
 
 .. rest_parameters:: parameters.yaml
 
@@ -43,14 +31,14 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-  - server_groups: server_groups
+  - server_groups: server_groups_list
   - id: server_group_id
-  - name: name
+  - name: name_server_group
   - policies: policies
   - members: members
-  - metadata: metadata
-  - project_id: project_id
-  - user_id: user_id
+  - metadata: metadata_required
+  - project_id: project_id_server_group
+  - user_id: user_id_server_group
 
 **Example List Server Groups: JSON response**
 
@@ -60,22 +48,20 @@ Response
 Create Server Group
 ===================
 
-.. rest_method:: POST /v2.1/{tenant_id}/os-server-groups
+.. rest_method:: POST /os-server-groups
 
 Creates a server group.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - name: name
+  - name: name_server_group
   - policies: policies
 
 **Example Create Server Group: JSON request**
@@ -88,14 +74,14 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-  - server_groups: server_groups
+  - server_groups: server_groups_list
   - id: server_group_id
-  - name: name
+  - name: name_server_group
   - policies: policies
   - members: members
-  - metadata: metadata
-  - project_id: project_id
-  - user_id: user_id
+  - metadata: metadata_required
+  - project_id: project_id_server_group
+  - user_id: user_id_server_group
 
 **Example Create Server Group: JSON response**
 
@@ -105,21 +91,19 @@ Response
 Show Server Group Details
 =========================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-server-groups/{server_group_id}
+.. rest_method:: GET /os-server-groups/{server_group_id}
 
 Shows details for a server group.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - server_group_id: server_group_id
 
 Response
@@ -127,14 +111,14 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-  - server_groups: server_groups
+  - server_groups: server_groups_list
   - id: server_group_id
-  - name: name
+  - name: name_server_group
   - policies: policies
   - members: members
-  - metadata: metadata
-  - project_id: project_id
-  - user_id: user_id
+  - metadata: metadata_required
+  - project_id: project_id_server_group
+  - user_id: user_id_server_group
 
 **Example Show Server Group Details: JSON response**
 
@@ -144,23 +128,22 @@ Response
 Delete Server Group
 ===================
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/os-server-groups/{server_group_id}
+.. rest_method:: DELETE /os-server-groups/{server_group_id}
 
 Deletes a server group.
 
 Normal response codes: 204
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - server_group_id: server_group_id
 
 Response
 --------
 
+There is no body content for the response of a successful DELETE action.

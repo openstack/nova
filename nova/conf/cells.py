@@ -13,10 +13,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import itertools
-
 from oslo_config import cfg
 
+cells_group = cfg.OptGroup('cells',
+                            title='Cells Options',
+                            help="""
+Cells options allow you to use cells functionality in openstack
+deployment.
+
+""")
 
 cells_opts = [
     cfg.BoolOpt('enable',
@@ -34,22 +39,12 @@ Compute cloud except for nova-api. You can think of cells as a normal
 Compute deployment in that each cell has its own database server and
 message queue broker.
 
-Possible values:
-
-* True: Enables the feature
-* False: Disables the feature
-
-Services which consume this:
-
-* nova-api
-* nova-cells
-* nova-compute
-
 Related options:
 
 * name: A unique cell name must be given when this functionality
   is enabled.
 * cell_type: Cell type should be defined for all cells.
+
 """),
     cfg.StrOpt('topic',
                 default='cells',
@@ -64,47 +59,7 @@ Possible values:
 
 * cells: This is the recommended and the default value.
 
-Services which consume this:
-
-* nova-cells
-
-Related options:
-
-* None
 """),
-    cfg.StrOpt('manager',
-               default='nova.cells.manager.CellsManager',
-               help="""
-DEPRECATED: Manager for cells
-
-The nova-cells manager class. This class defines RPC methods that
-the local cell may call. This class is NOT used for messages coming
-from other cells. That communication is driver-specific.
-
-Communication to other cells happens via the nova.cells.messaging module.
-The MessageRunner from that module will handle routing the message to
-the correct cell via the communication driver. Most methods below
-create 'targeted' (where we want to route a message to a specific cell)
-or 'broadcast' (where we want a message to go to multiple cells)
-messages.
-
-Scheduling requests get passed to the scheduler class.
-
-Possible values:
-
-* 'nova.cells.manager.CellsManager' is the only possible value for
-  this option as of the Mitaka release
-
-Services which consume this:
-
-* nova-cells
-
-Related options:
-
-* None
-""",
-        deprecated_for_removal=True
-    ),
     cfg.StrOpt('name',
                 default='nova',
                 help="""
@@ -114,18 +69,11 @@ This value must be unique for each cell. Name of a cell is used as
 its id, leaving this option unset or setting the same name for
 two or more cells may cause unexpected behaviour.
 
-Possible values:
-
-* Unique name string
-
-Services which consume this:
-
-* nova-cells
-
 Related options:
 
 * enabled: This option is meaningful only when cells service
   is enabled
+
 """),
     cfg.ListOpt('capabilities',
                 default=['hypervisor=xenserver;kvm', 'os=linux;windows'],
@@ -141,15 +89,9 @@ Possible values:
 * key=value pairs list for example;
   ``hypervisor=xenserver;kvm,os=linux;windows``
 
-Services which consume this:
-
-* nova-cells
-
-Related options:
-
-* None
 """),
     cfg.IntOpt('call_timeout',
+                min=0,
                 default=60,
                 help="""
 Call timeout
@@ -162,13 +104,6 @@ Possible values:
 
 * Time in seconds.
 
-Services which consume this:
-
-* nova-cells
-
-Related options:
-
-* None
 """),
     cfg.FloatOpt('reserve_percent',
                  default=10.0,
@@ -184,17 +119,6 @@ available for users who want to resize their instance to be larger.
 Note that currently once the capacity expands into this reserve
 space this option is ignored.
 
-Possible values:
-
-* Float percentage value
-
-Services which consume this:
-
-* nova-cells
-
-Related options:
-
-* None
 """),
     cfg.StrOpt('cell_type',
                default='compute',
@@ -206,15 +130,6 @@ When cells feature is enabled the hosts in the OpenStack Compute
 cloud are partitioned into groups. Cells are configured as a tree.
 The top-level cell's cell_type must be set to ``api``. All other
 cells are defined as a ``compute cell`` by default.
-
-Possible values:
-
-* api: Cell type of top-level cell.
-* compute: Cell type of all child cells. (Default)
-
-Services which consume this:
-
-* nova-cells
 
 Related options:
 
@@ -236,13 +151,6 @@ Possible values:
 
 * Time in seconds.
 
-Services which consume this:
-
-* nova-cells
-
-Related options:
-
-* None
 """),
     cfg.IntOpt('bandwidth_update_interval',
                 default=600,
@@ -255,13 +163,6 @@ Possible values:
 
 * Time in seconds.
 
-Services which consume this:
-
-* nova-compute
-
-Related options:
-
-* None
 """),
     cfg.IntOpt('instance_update_sync_database_limit',
             default=100,
@@ -276,13 +177,6 @@ Possible values:
 
 * Number of instances.
 
-Services which consume this:
-
-* nova-cells
-
-Related options:
-
-* None
 """),
 ]
 
@@ -300,13 +194,6 @@ Possible values:
 
 * Negative numeric number
 
-Services which consume this:
-
-* nova-cells
-
-Related options:
-
-* None
 """),
 ]
 
@@ -324,13 +211,6 @@ Possible values:
 
 * Numeric multiplier
 
-Services which consume this:
-
-* nova-cells
-
-Related options:
-
-* None
 """),
 ]
 
@@ -350,39 +230,23 @@ Possible values:
 
 * Numeric multiplier
 
-Services which consume this:
-
-* nova-cells
-
-Related options:
-
-* None
 """),
 ]
 
 cell_manager_opts = [
         cfg.StrOpt('driver',
                 default='nova.cells.rpc_driver.CellsRPCDriver',
-                help="""
-Cells communication driver
+                deprecated_for_removal=True,
+                deprecated_since="14.0.0",
+                deprecated_reason='The only available driver '
+                                  'is the RPC driver.',
+                help="""Cells communication driver
 
 Driver for cell<->cell communication via RPC. This is used to
 setup the RPC consumers as well as to send a message to another cell.
 'nova.cells.rpc_driver.CellsRPCDriver' starts up 2 separate servers
 for handling inter-cell communication via RPC.
 
-Possible values:
-
-* 'nova.cells.rpc_driver.CellsRPCDriver' is the default driver
-* Otherwise it should be the full Python path to the class to be used
-
-Services which consume this:
-
-* nova-cells
-
-Related options:
-
-* None
 """),
         cfg.IntOpt("instance_updated_at_threshold",
                 default=3600,
@@ -399,14 +263,11 @@ Possible values:
 
 * Threshold in seconds
 
-Services which consume this:
-
-* nova-cells
-
 Related options:
 
 * This value is used with the ``instance_update_num_instances``
   value in a periodic task run.
+
 """),
         cfg.IntOpt("instance_update_num_instances",
                 default=1,
@@ -423,14 +284,11 @@ Possible values:
 
 * Positive integer number
 
-Services which consume this:
-
-* nova-cells
-
 Related options:
 
 * This value is used with the ``instance_updated_at_threshold``
   value in a periodic task run.
+
 """)
 ]
 
@@ -449,13 +307,6 @@ Possible values:
 
 * Positive integer value
 
-Services which consume this:
-
-* nova-cells
-
-Related options:
-
-* None
 """),
     cfg.StrOpt('scheduler',
             default='nova.cells.scheduler.CellsScheduler',
@@ -466,19 +317,6 @@ The class of the driver used by the cells scheduler. This should be
 the full Python path to the class to be used. If nothing is specified
 in this option, the CellsScheduler is used.
 
-
-Possible values:
-
-* 'nova.cells.scheduler.CellsScheduler' is the default option
-* Otherwise it should be the full Python path to the class to be used
-
-Services which consume this:
-
-* nova-cells
-
-Related options:
-
-* None
 """)
 ]
 
@@ -497,13 +335,6 @@ Possible values:
 
 * The base queue name to be used when communicating between cells.
 
-Services which consume this:
-
-* nova-cells
-
-Related options:
-
-* None
 """)
 ]
 
@@ -538,19 +369,6 @@ to know whether the full path is a valid.
 As an admin user, you can also add a filter that directs builds
 to a particular cell.
 
-
-Possible values:
-
-* 'nova.cells.filters.all_filters' is the default option
-* Otherwise it should be the full Python path to the class to be used
-
-Services which consume this:
-
-* nova-cells
-
-Related options:
-
-* None
 """),
         cfg.ListOpt('scheduler_weight_classes',
                 default=['nova.cells.weights.all_weighers'],
@@ -584,18 +402,6 @@ have a lower weight, like if they're full. And when the weight_offset
 is set to a very high value (for example, '999999999999999'), it is
 likely to be picked if another cell do not have a higher weight.
 
-Possible values:
-
-* 'nova.cells.weights.all_weighers' is the default option
-* Otherwise it should be the full Python path to the class to be used
-
-Services which consume this:
-
-* nova-cells
-
-Related options:
-
-* None
 """),
         cfg.IntOpt('scheduler_retries',
                 default=10,
@@ -610,14 +416,11 @@ Possible values:
 
 * Positive integer value
 
-Services which consume this:
-
-* nova-cells
-
 Related options:
 
 * This value is used with the ``scheduler_retry_delay`` value
   while retrying to find a suitable cell.
+
 """),
         cfg.IntOpt('scheduler_retry_delay',
                 default=2,
@@ -634,14 +437,11 @@ Possible values:
 
 * Time in seconds.
 
-Services which consume this:
-
-* nova-cells
-
 Related options:
 
 * This value is used with the ``scheduler_retries`` value
   while retrying to find a suitable cell.
+
 """)
 ]
 
@@ -660,13 +460,6 @@ Possible values:
 
 * Interval time, in seconds.
 
-Services which consume this:
-
-* nova-cells
-
-Related options:
-
-* None
 """),
         cfg.StrOpt('cells_config',
                help="""
@@ -719,32 +512,24 @@ this optional configuration:
         }
     }
 
-Services which consume this:
-
-* nova-cells
-
-Related options:
-
-* None
 """)
 ]
 
-ALL_CELLS_OPTS = list(itertools.chain(
-            cells_opts,
-            mute_weigher_opts,
-            ram_weigher_opts,
-            weigher_opts,
-            cell_manager_opts,
-            cell_messaging_opts,
-            cell_rpc_driver_opts,
-            cell_scheduler_opts,
-            cell_state_manager_opts
-            ))
+ALL_CELLS_OPTS = (cells_opts +
+                  mute_weigher_opts +
+                  ram_weigher_opts +
+                  weigher_opts +
+                  cell_manager_opts +
+                  cell_messaging_opts +
+                  cell_rpc_driver_opts +
+                  cell_scheduler_opts +
+                  cell_state_manager_opts)
 
 
 def register_opts(conf):
-    conf.register_opts(ALL_CELLS_OPTS, group="cells")
+    conf.register_group(cells_group)
+    conf.register_opts(ALL_CELLS_OPTS, group=cells_group)
 
 
 def list_opts():
-    return {'cells': ALL_CELLS_OPTS}
+    return {cells_group: ALL_CELLS_OPTS}

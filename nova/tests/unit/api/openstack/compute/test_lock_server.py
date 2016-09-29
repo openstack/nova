@@ -13,13 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import webob
-
 import mock
 
 from nova.api.openstack import common
-from nova.api.openstack.compute.legacy_v2.contrib import admin_actions \
-        as lock_server_v2
 from nova.api.openstack.compute import lock_server as lock_server_v21
 from nova import context
 from nova import exception
@@ -67,12 +63,27 @@ class LockServerTestsV21(admin_only_action_common.CommonTests):
                           self.controller._unlock,
                           self.req, instance.uuid, body)
 
+    @mock.patch.object(common, 'get_instance')
+    def test_unlock_override_not_authorized_with_non_admin_user(
+            self, mock_get_instance):
+        instance = fake_instance.fake_instance_obj(self.context)
+        instance.locked_by = "owner"
+        mock_get_instance.return_value = instance
+        self.assertRaises(self.authorization_error,
+                          self.controller._unlock, self.req,
+                          instance.uuid,
+                          {'unlock': None})
 
-class LockServerTestsV2(LockServerTestsV21):
-    lock_server = lock_server_v2
-    controller_name = 'AdminActionsController'
-    authorization_error = webob.exc.HTTPForbidden
-    _api_version = '2'
+    @mock.patch.object(common, 'get_instance')
+    def test_unlock_override_with_admin_user(self, mock_get_instance):
+        admin_req = fakes.HTTPRequest.blank('', use_admin_context=True)
+        admin_ctxt = admin_req.environ['nova.context']
+        instance = fake_instance.fake_instance_obj(admin_ctxt)
+        instance.locked_by = "owner"
+        mock_get_instance.return_value = instance
+        with mock.patch.object(self.compute_api, 'unlock') as mock_unlock:
+            self.controller._unlock(admin_req, instance.uuid, {'unlock': None})
+            mock_unlock.assert_called_once_with(admin_ctxt, instance)
 
 
 class LockServerPolicyEnforcementV21(test.NoDBTestCase):
@@ -82,9 +93,15 @@ class LockServerPolicyEnforcementV21(test.NoDBTestCase):
         self.controller = lock_server_v21.LockServerController()
         self.req = fakes.HTTPRequest.blank('')
 
-    def test_lock_policy_failed(self):
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_lock_policy_failed_with_other_project(self, get_instance_mock):
+        get_instance_mock.return_value = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'],
+            project_id=self.req.environ['nova.context'].project_id)
         rule_name = "os_compute_api:os-lock-server:lock"
-        self.policy.set_rules({rule_name: "project:non_fake"})
+        self.policy.set_rules({rule_name: "project_id:%(project_id)s"})
+        # Change the project_id in request context.
+        self.req.environ['nova.context'].project_id = 'other-project'
         exc = self.assertRaises(
                                 exception.PolicyNotAuthorized,
                                 self.controller._lock, self.req,
@@ -93,6 +110,37 @@ class LockServerPolicyEnforcementV21(test.NoDBTestCase):
         self.assertEqual(
                       "Policy doesn't allow %s to be performed." % rule_name,
                       exc.format_message())
+
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_lock_overridden_policy_failed_with_other_user_in_same_project(
+        self, get_instance_mock):
+        get_instance_mock.return_value = (
+            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
+        rule_name = "os_compute_api:os-lock-server:lock"
+        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
+        # Change the user_id in request context.
+        self.req.environ['nova.context'].user_id = 'other-user'
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller._lock, self.req,
+                                fakes.FAKE_UUID, body={'lock': {}})
+        self.assertEqual(
+                      "Policy doesn't allow %s to be performed." % rule_name,
+                      exc.format_message())
+
+    @mock.patch('nova.compute.api.API.lock')
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_lock_overridden_policy_pass_with_same_user(self,
+                                                        get_instance_mock,
+                                                        lock_mock):
+        instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'],
+            user_id=self.req.environ['nova.context'].user_id)
+        get_instance_mock.return_value = instance
+        rule_name = "os_compute_api:os-lock-server:lock"
+        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
+        self.controller._lock(self.req, fakes.FAKE_UUID, body={'lock': {}})
+        lock_mock.assert_called_once_with(self.req.environ['nova.context'],
+                                          instance)
 
     def test_unlock_policy_failed(self):
         rule_name = "os_compute_api:os-lock-server:unlock"

@@ -23,6 +23,7 @@ It is used via a single directive in the .rst file
 """
 
 import re
+import sys
 
 import six
 from six.moves import configparser
@@ -129,7 +130,11 @@ class SupportMatrixDirective(rst.Directive):
         :returns: SupportMatrix instance
         """
 
-        cfg = configparser.SafeConfigParser()
+        # SafeConfigParser was deprecated in Python 3.2
+        if sys.version_info >= (3, 2):
+            cfg = configparser.ConfigParser()
+        else:
+            cfg = configparser.SafeConfigParser()
         env = self.state.document.settings.env
         fname = self.arguments[0]
         rel_fpath, fpath = env.relfn2path(fname)
@@ -317,7 +322,7 @@ class SupportMatrixDirective(rst.Directive):
         summaryhead.append(header)
 
         # then one column for each hypervisor driver
-        impls = matrix.targets.keys()
+        impls = list(matrix.targets.keys())
         impls.sort()
         for key in impls:
             target = matrix.targets[key]
@@ -350,7 +355,7 @@ class SupportMatrixDirective(rst.Directive):
                 classes=["sp_feature_" + feature.status]))
 
             # and then one column for each hypervisor driver
-            impls = matrix.targets.keys()
+            impls = list(matrix.targets.keys())
             impls.sort()
             for key in impls:
                 target = matrix.targets[key]

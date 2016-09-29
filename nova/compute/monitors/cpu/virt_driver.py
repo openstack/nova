@@ -24,6 +24,7 @@ from nova.compute.monitors import base
 import nova.conf
 from nova import exception
 from nova.i18n import _LE
+from nova import objects
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
@@ -39,12 +40,15 @@ class Monitor(base.CPUMonitorBase):
         self._data = {}
         self._cpu_stats = {}
 
-    def get_metrics(self):
-        metrics = []
+    def populate_metrics(self, metric_list):
         self._update_data()
         for name in self.get_metric_names():
-            metrics.append((name, self._data[name], self._data["timestamp"]))
-        return metrics
+            metric_object = objects.MonitorMetric()
+            metric_object.name = name
+            metric_object.value = self._data[name]
+            metric_object.timestamp = self._data["timestamp"]
+            metric_object.source = self.source
+            metric_list.objects.append(metric_object)
 
     def _update_data(self):
         self._data = {}

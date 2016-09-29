@@ -24,7 +24,6 @@ import time
 from eventlet import timeout as etimeout
 from os_win import constants as os_win_const
 from os_win import exceptions as os_win_exc
-from os_win.utils.io import ioutils
 from os_win import utilsfactory
 from oslo_concurrency import processutils
 from oslo_log import log as logging
@@ -34,18 +33,22 @@ from oslo_utils import fileutils
 from oslo_utils import importutils
 from oslo_utils import units
 from oslo_utils import uuidutils
-import six
 
 from nova.api.metadata import base as instance_metadata
+from nova.compute import vm_states
 import nova.conf
 from nova import exception
 from nova.i18n import _, _LI, _LE, _LW
+from nova import objects
+from nova.objects import fields
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import hardware
+from nova.virt.hyperv import block_device_manager
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import imagecache
 from nova.virt.hyperv import pathutils
+from nova.virt.hyperv import serialconsoleops
 from nova.virt.hyperv import volumeops
 
 LOG = logging.getLogger(__name__)
@@ -83,10 +86,7 @@ NOVA_VIF_DRIVER = 'nova.virt.hyperv.vif.HyperVNovaNetworkVIFDriver'
 
 def get_network_driver():
     """"Return the correct network module"""
-    if nova.network.is_neutron() is None:
-        # this is an unknown network type, not neutron or nova
-        raise KeyError()
-    elif nova.network.is_neutron():
+    if nova.network.is_neutron():
         return NEUTRON_VIF_DRIVER
     else:
         return NOVA_VIF_DRIVER
@@ -96,6 +96,7 @@ class VMOps(object):
     # The console log is stored in two files, each should have at most half of
     # the maximum console log size.
     _MAX_CONSOLE_LOG_FILE_SIZE = units.Mi / 2
+    _ROOT_DISK_CTRL_ADDR = 0
 
     def __init__(self):
         self._vmutils = utilsfactory.get_vmutils()
@@ -105,18 +106,15 @@ class VMOps(object):
         self._pathutils = pathutils.PathUtils()
         self._volumeops = volumeops.VolumeOps()
         self._imagecache = imagecache.ImageCache()
+        self._serial_console_ops = serialconsoleops.SerialConsoleOps()
+        self._block_dev_man = (
+            block_device_manager.BlockDeviceInfoManager())
         self._vif_driver = None
         self._load_vif_driver_class()
-        self._vm_log_writers = {}
 
     def _load_vif_driver_class(self):
-        try:
-            class_name = get_network_driver()
-            self._vif_driver = importutils.import_object(class_name)
-        except KeyError:
-            raise TypeError(_("VIF driver not found for "
-                              "network_api_class: %s") %
-                            CONF.network_api_class)
+        class_name = get_network_driver()
+        self._vif_driver = importutils.import_object(class_name)
 
     def list_instance_uuids(self):
         instance_uuids = []
@@ -130,6 +128,14 @@ class VMOps(object):
 
     def list_instances(self):
         return self._vmutils.list_instances()
+
+    def estimate_instance_overhead(self, instance_info):
+        # NOTE(claudiub): When an instance starts, Hyper-V creates a VM memory
+        # file on the local disk. The file size is the same as the VM's amount
+        # of memory. Since disk_gb must be an integer, and memory is MB, round
+        # up from X512 MB.
+        return {'memory_mb': 0,
+                'disk_gb': (instance_info['memory_mb'] + 512) // units.Ki}
 
     def get_info(self, instance):
         """Get information about the VM."""
@@ -148,14 +154,25 @@ class VMOps(object):
                                      num_cpu=info['NumberOfProcessors'],
                                      cpu_time_ns=info['UpTime'])
 
-    def _create_root_vhd(self, context, instance):
-        base_vhd_path = self._imagecache.get_cached_image(context, instance)
+    def _create_root_device(self, context, instance, root_disk_info, vm_gen):
+        path = None
+        if root_disk_info['type'] == constants.DISK:
+            path = self._create_root_vhd(context, instance)
+            self.check_vm_image_type(instance.uuid, vm_gen, path)
+        root_disk_info['path'] = path
+
+    def _create_root_vhd(self, context, instance, rescue_image_id=None):
+        is_rescue_vhd = rescue_image_id is not None
+
+        base_vhd_path = self._imagecache.get_cached_image(context, instance,
+                                                          rescue_image_id)
         base_vhd_info = self._vhdutils.get_vhd_info(base_vhd_path)
         base_vhd_size = base_vhd_info['VirtualSize']
         format_ext = base_vhd_path.split('.')[-1]
         root_vhd_path = self._pathutils.get_root_vhd_path(instance.name,
-                                                          format_ext)
-        root_vhd_size = instance.root_gb * units.Gi
+                                                          format_ext,
+                                                          is_rescue_vhd)
+        root_vhd_size = instance.flavor.root_gb * units.Gi
 
         try:
             if CONF.use_cow_images:
@@ -184,9 +201,9 @@ class VMOps(object):
                 self._vhdutils.get_internal_vhd_size_by_file_size(
                     base_vhd_path, root_vhd_size))
 
-            if self._is_resize_needed(root_vhd_path, base_vhd_size,
-                                      root_vhd_internal_size,
-                                      instance):
+            if not is_rescue_vhd and self._is_resize_needed(
+                    root_vhd_path, base_vhd_size,
+                    root_vhd_internal_size, instance):
                 self._vhdutils.resize_vhd(root_vhd_path,
                                           root_vhd_internal_size,
                                           is_file_max_size=False)
@@ -210,15 +227,47 @@ class VMOps(object):
             return True
         return False
 
-    def create_ephemeral_vhd(self, instance):
-        eph_vhd_size = instance.get('ephemeral_gb', 0) * units.Gi
-        if eph_vhd_size:
-            vhd_format = self._vhdutils.get_best_supported_vhd_format()
+    def _create_ephemerals(self, instance, ephemerals):
+        for index, eph in enumerate(ephemerals):
+            eph['format'] = self._vhdutils.get_best_supported_vhd_format()
+            eph_name = "eph%s" % index
+            eph['path'] = self._pathutils.get_ephemeral_vhd_path(
+                instance.name, eph['format'], eph_name)
+            self.create_ephemeral_disk(instance.name, eph)
 
-            eph_vhd_path = self._pathutils.get_ephemeral_vhd_path(
-                instance.name, vhd_format)
-            self._vhdutils.create_dynamic_vhd(eph_vhd_path, eph_vhd_size)
-            return eph_vhd_path
+    def create_ephemeral_disk(self, instance_name, eph_info):
+        self._vhdutils.create_dynamic_vhd(eph_info['path'],
+                                          eph_info['size'] * units.Gi)
+
+    @staticmethod
+    def _get_vif_metadata(context, instance_id):
+        vifs = objects.VirtualInterfaceList.get_by_instance_uuid(context,
+                                                                 instance_id)
+        vif_metadata = []
+        for vif in vifs:
+            if 'tag' in vif and vif.tag:
+                device = objects.NetworkInterfaceMetadata(
+                    mac=vif.address,
+                    bus=objects.PCIDeviceBus(),
+                    tags=[vif.tag])
+                vif_metadata.append(device)
+
+        return vif_metadata
+
+    def _save_device_metadata(self, context, instance, block_device_info):
+        """Builds a metadata object for instance devices, that maps the user
+           provided tag to the hypervisor assigned device address.
+        """
+        metadata = []
+
+        metadata.extend(self._get_vif_metadata(context, instance.uuid))
+        if block_device_info:
+            metadata.extend(self._block_dev_man.get_bdm_metadata(
+                context, instance, block_device_info))
+
+        if metadata:
+            instance.device_metadata = objects.InstanceDeviceMetadata(
+                devices=metadata)
 
     @check_admin_permissions
     def spawn(self, context, instance, image_meta, injected_files,
@@ -233,21 +282,22 @@ class VMOps(object):
         # Make sure we're starting with a clean slate.
         self._delete_disk_files(instance_name)
 
-        if self._volumeops.ebs_root_in_block_devices(block_device_info):
-            root_vhd_path = None
-        else:
-            root_vhd_path = self._create_root_vhd(context, instance)
+        vm_gen = self.get_image_vm_generation(instance.uuid, image_meta)
 
-        eph_vhd_path = self.create_ephemeral_vhd(instance)
-        vm_gen = self.get_image_vm_generation(
-            instance.uuid, root_vhd_path, image_meta)
+        self._block_dev_man.validate_and_update_bdi(
+            instance, image_meta, vm_gen, block_device_info)
+        root_device = block_device_info['root_disk']
+        self._create_root_device(context, instance, root_device, vm_gen)
+        self._create_ephemerals(instance, block_device_info['ephemerals'])
 
         try:
-            self.create_instance(instance, network_info, block_device_info,
-                                 root_vhd_path, eph_vhd_path, vm_gen)
+            self.create_instance(instance, network_info, root_device,
+                                 block_device_info, vm_gen, image_meta)
+            self._save_device_metadata(context, instance, block_device_info)
 
             if configdrive.required_by(instance):
-                configdrive_path = self._create_config_drive(instance,
+                configdrive_path = self._create_config_drive(context,
+                                                             instance,
                                                              injected_files,
                                                              admin_password,
                                                              network_info)
@@ -259,39 +309,39 @@ class VMOps(object):
             with excutils.save_and_reraise_exception():
                 self.destroy(instance)
 
-    def create_instance(self, instance, network_info, block_device_info,
-                        root_vhd_path, eph_vhd_path, vm_gen):
+    def create_instance(self, instance, network_info, root_device,
+                        block_device_info, vm_gen, image_meta):
         instance_name = instance.name
         instance_path = os.path.join(CONF.instances_path, instance_name)
+        secure_boot_enabled = self._requires_secure_boot(instance, image_meta,
+                                                         vm_gen)
 
         self._vmutils.create_vm(instance_name,
-                                instance.memory_mb,
-                                instance.vcpus,
+                                instance.flavor.memory_mb,
+                                instance.flavor.vcpus,
                                 CONF.hyperv.limit_cpu_features,
                                 CONF.hyperv.dynamic_memory_ratio,
                                 vm_gen,
                                 instance_path,
                                 [instance.uuid])
 
+        self._configure_remotefx(instance, vm_gen)
+
         self._vmutils.create_scsi_controller(instance_name)
-        controller_type = VM_GENERATIONS_CONTROLLER_TYPES[vm_gen]
+        self._attach_root_device(instance_name, root_device)
+        self._attach_ephemerals(instance_name, block_device_info['ephemerals'])
+        self._volumeops.attach_volumes(
+            block_device_info['block_device_mapping'], instance_name)
 
-        ctrl_disk_addr = 0
-        if root_vhd_path:
-            self._attach_drive(instance_name, root_vhd_path, 0, ctrl_disk_addr,
-                               controller_type)
-
-        ctrl_disk_addr = 1
-        if eph_vhd_path:
-            self._attach_drive(instance_name, eph_vhd_path, 0, ctrl_disk_addr,
-                               controller_type)
-
-        # If ebs_root is False, the first volume will be attached to SCSI
-        # controller. Generation 2 VMs only has a SCSI controller.
-        ebs_root = vm_gen is not constants.VM_GEN_2 and root_vhd_path is None
-        self._volumeops.attach_volumes(block_device_info,
-                                       instance_name,
-                                       ebs_root)
+        # For the moment, we use COM port 1 when getting the serial console
+        # log as well as interactive sessions. In the future, the way in which
+        # we consume instance serial ports may become configurable.
+        #
+        # Note that Hyper-V instances will always have 2 COM ports
+        serial_ports = {
+            constants.DEFAULT_SERIAL_CONSOLE_PORT:
+                constants.SERIAL_PORT_TYPE_RW}
+        self._create_vm_com_port_pipes(instance, serial_ports)
 
         for vif in network_info:
             LOG.debug('Creating nic for instance', instance=instance)
@@ -303,7 +353,74 @@ class VMOps(object):
         if CONF.hyperv.enable_instance_metrics_collection:
             self._metricsutils.enable_vm_metrics_collection(instance_name)
 
-        self._create_vm_com_port_pipe(instance)
+        self._set_instance_disk_qos_specs(instance)
+
+        if secure_boot_enabled:
+            certificate_required = self._requires_certificate(image_meta)
+            self._vmutils.enable_secure_boot(
+                instance.name, msft_ca_required=certificate_required)
+
+    def _configure_remotefx(self, instance, vm_gen):
+        extra_specs = instance.flavor.extra_specs
+        remotefx_max_resolution = extra_specs.get(
+            constants.FLAVOR_ESPEC_REMOTEFX_RES)
+        if not remotefx_max_resolution:
+            # RemoteFX not required.
+            return
+
+        if not CONF.hyperv.enable_remotefx:
+            raise exception.InstanceUnacceptable(
+                _("enable_remotefx configuration option needs to be set to "
+                  "True in order to use RemoteFX."))
+
+        if not self._hostutils.check_server_feature(
+                self._hostutils.FEATURE_RDS_VIRTUALIZATION):
+            raise exception.InstanceUnacceptable(
+                _("The RDS-Virtualization feature must be installed in order "
+                  "to use RemoteFX."))
+
+        if not self._vmutils.vm_gen_supports_remotefx(vm_gen):
+            raise exception.InstanceUnacceptable(
+                _("RemoteFX is not supported on generation %s virtual "
+                  "machines on this version of Windows.") % vm_gen)
+
+        instance_name = instance.name
+        LOG.debug('Configuring RemoteFX for instance: %s', instance_name)
+
+        remotefx_monitor_count = int(extra_specs.get(
+            constants.FLAVOR_ESPEC_REMOTEFX_MONITORS) or 1)
+        remotefx_vram = extra_specs.get(
+            constants.FLAVOR_ESPEC_REMOTEFX_VRAM)
+        vram_bytes = int(remotefx_vram) * units.Mi if remotefx_vram else None
+
+        self._vmutils.enable_remotefx_video_adapter(
+            instance_name,
+            remotefx_monitor_count,
+            remotefx_max_resolution,
+            vram_bytes)
+
+    def _attach_root_device(self, instance_name, root_dev_info):
+        if root_dev_info['type'] == constants.VOLUME:
+            self._volumeops.attach_volume(root_dev_info['connection_info'],
+                                          instance_name,
+                                          disk_bus=root_dev_info['disk_bus'])
+        else:
+            self._attach_drive(instance_name, root_dev_info['path'],
+                               root_dev_info['drive_addr'],
+                               root_dev_info['ctrl_disk_addr'],
+                               root_dev_info['disk_bus'],
+                               root_dev_info['type'])
+
+    def _attach_ephemerals(self, instance_name, ephemerals):
+        for eph in ephemerals:
+            # if an ephemeral doesn't have a path, it might have been removed
+            # during resize.
+            if eph.get('path'):
+                self._attach_drive(
+                    instance_name, eph['path'], eph['drive_addr'],
+                    eph['ctrl_disk_addr'], eph['disk_bus'],
+                    constants.BDI_DEVICE_TYPE_TO_DRIVE_TYPE[
+                        eph['device_type']])
 
     def _attach_drive(self, instance_name, path, drive_addr, ctrl_disk_addr,
                       controller_type, drive_type=constants.DISK):
@@ -313,18 +430,19 @@ class VMOps(object):
             self._vmutils.attach_ide_drive(instance_name, path, drive_addr,
                                            ctrl_disk_addr, drive_type)
 
-    def get_image_vm_generation(self, instance_id, root_vhd_path, image_meta):
+    def get_image_vm_generation(self, instance_id, image_meta):
         default_vm_gen = self._hostutils.get_default_vm_generation()
-        image_prop_vm = image_meta.properties.get(
-            'hw_machine_type', default_vm_gen)
+        image_prop_vm = image_meta.properties.get('hw_machine_type',
+                                                  default_vm_gen)
         if image_prop_vm not in self._hostutils.get_supported_vm_types():
             reason = _LE('Requested VM Generation %s is not supported on '
                          'this OS.') % image_prop_vm
             raise exception.InstanceUnacceptable(instance_id=instance_id,
                                                  reason=reason)
 
-        vm_gen = VM_GENERATIONS[image_prop_vm]
+        return VM_GENERATIONS[image_prop_vm]
 
+    def check_vm_image_type(self, instance_id, vm_gen, root_vhd_path):
         if (vm_gen != constants.VM_GEN_1 and root_vhd_path and
                 self._vhdutils.get_vhd_format(
                     root_vhd_path) == constants.DISK_FORMAT_VHD):
@@ -333,10 +451,64 @@ class VMOps(object):
             raise exception.InstanceUnacceptable(instance_id=instance_id,
                                                  reason=reason)
 
-        return vm_gen
+    def _requires_certificate(self, image_meta):
+        os_type = image_meta.properties.get('os_type')
+        if os_type == fields.OSType.WINDOWS:
+            return False
+        return True
 
-    def _create_config_drive(self, instance, injected_files, admin_password,
-                             network_info):
+    def _requires_secure_boot(self, instance, image_meta, vm_gen):
+        """Checks whether the given instance requires Secure Boot.
+
+        Secure Boot feature will be enabled by setting the "os_secure_boot"
+        image property or the "os:secure_boot" flavor extra spec to required.
+
+        :raises exception.InstanceUnacceptable: if the given image_meta has
+            no os_type property set, or if the image property value and the
+            flavor extra spec value are conflicting, or if Secure Boot is
+            required, but the instance's VM generation is 1.
+        """
+        os_type = image_meta.properties.get('os_type')
+        if not os_type:
+            reason = _('For secure boot, os_type must be specified in image '
+                       'properties.')
+            raise exception.InstanceUnacceptable(instance_id=instance.uuid,
+                                                 reason=reason)
+
+        img_secure_boot = image_meta.properties.get('os_secure_boot')
+        flavor_secure_boot = instance.flavor.extra_specs.get(
+            constants.FLAVOR_SPEC_SECURE_BOOT)
+
+        requires_sb = False
+        conflicting_values = False
+
+        if flavor_secure_boot == fields.SecureBoot.REQUIRED:
+            requires_sb = True
+            if img_secure_boot == fields.SecureBoot.DISABLED:
+                conflicting_values = True
+        elif img_secure_boot == fields.SecureBoot.REQUIRED:
+            requires_sb = True
+            if flavor_secure_boot == fields.SecureBoot.DISABLED:
+                conflicting_values = True
+
+        if conflicting_values:
+            reason = _(
+                "Conflicting image metadata property and flavor extra_specs "
+                "values: os_secure_boot (%(image_secure_boot)s) / "
+                "os:secure_boot (%(flavor_secure_boot)s)") % {
+                    'image_secure_boot': img_secure_boot,
+                    'flavor_secure_boot': flavor_secure_boot}
+            raise exception.InstanceUnacceptable(instance_id=instance.uuid,
+                                                 reason=reason)
+
+        if vm_gen != constants.VM_GEN_2 and requires_sb:
+            reason = _('Secure boot requires generation 2 VM.')
+            raise exception.InstanceUnacceptable(instance_id=instance.uuid,
+                                                 reason=reason)
+        return requires_sb
+
+    def _create_config_drive(self, context, instance, injected_files,
+                             admin_password, network_info, rescue=False):
         if CONF.config_drive_format != 'iso9660':
             raise exception.ConfigDriveUnsupportedFormat(
                 format=CONF.config_drive_format)
@@ -347,14 +519,12 @@ class VMOps(object):
         if admin_password and CONF.hyperv.config_drive_inject_password:
             extra_md['admin_pass'] = admin_password
 
-        inst_md = instance_metadata.InstanceMetadata(instance,
-                                                     content=injected_files,
-                                                     extra_md=extra_md,
-                                                     network_info=network_info)
+        inst_md = instance_metadata.InstanceMetadata(
+                      instance, content=injected_files, extra_md=extra_md,
+                      network_info=network_info, request_context=context)
 
-        instance_path = self._pathutils.get_instance_dir(
-            instance.name)
-        configdrive_path_iso = os.path.join(instance_path, 'configdrive.iso')
+        configdrive_path_iso = self._pathutils.get_configdrive_path(
+            instance.name, constants.DVD_FORMAT, rescue=rescue)
         LOG.info(_LI('Creating config drive at %(path)s'),
                  {'path': configdrive_path_iso}, instance=instance)
 
@@ -368,8 +538,8 @@ class VMOps(object):
                               e, instance=instance)
 
         if not CONF.hyperv.config_drive_cdrom:
-            configdrive_path = os.path.join(instance_path,
-                                            'configdrive.vhd')
+            configdrive_path = self._pathutils.get_configdrive_path(
+                instance.name, constants.DISK_FORMAT_VHD, rescue=rescue)
             utils.execute(CONF.hyperv.qemu_img_cmd,
                           'convert',
                           '-f',
@@ -396,6 +566,17 @@ class VMOps(object):
                                controller_type, drive_type)
         except KeyError:
             raise exception.InvalidDiskFormat(disk_format=configdrive_ext)
+
+    def _detach_config_drive(self, instance_name, rescue=False, delete=False):
+        configdrive_path = self._pathutils.lookup_configdrive_path(
+            instance_name, rescue=rescue)
+
+        if configdrive_path:
+            self._vmutils.detach_vm_disk(instance_name,
+                                         configdrive_path,
+                                         is_physical=False)
+            if delete:
+                self._pathutils.remove(configdrive_path)
 
     def _delete_disk_files(self, instance_name):
         self._pathutils.get_instance_dir(instance_name,
@@ -504,6 +685,11 @@ class VMOps(object):
     def power_off(self, instance, timeout=0, retry_interval=0):
         """Power off the specified instance."""
         LOG.debug("Power off instance", instance=instance)
+
+        # We must make sure that the console log workers are stopped,
+        # otherwise we won't be able to delete or move the VM log files.
+        self._serial_console_ops.stop_console_handler(instance.name)
+
         if retry_interval <= 0:
             retry_interval = SHUTDOWN_TIME_INCREMENT
 
@@ -535,18 +721,9 @@ class VMOps(object):
 
     def _set_vm_state(self, instance, req_state):
         instance_name = instance.name
-        instance_uuid = instance.uuid
 
         try:
             self._vmutils.set_vm_state(instance_name, req_state)
-
-            if req_state in (os_win_const.HYPERV_VM_STATE_DISABLED,
-                             os_win_const.HYPERV_VM_STATE_REBOOT):
-                self._delete_vm_console_log(instance)
-            if req_state in (os_win_const.HYPERV_VM_STATE_ENABLED,
-                             os_win_const.HYPERV_VM_STATE_REBOOT):
-                self.log_vm_serial_output(instance_name,
-                                          instance_uuid)
 
             LOG.debug("Successfully changed state of VM %(instance_name)s"
                       " to: %(req_state)s", {'instance_name': instance_name,
@@ -596,89 +773,11 @@ class VMOps(object):
         """Resume guest state when a host is booted."""
         self.power_on(instance, block_device_info)
 
-    def log_vm_serial_output(self, instance_name, instance_uuid):
-        # Uses a 'thread' that will run in background, reading
-        # the console output from the according named pipe and
-        # write it to a file.
-        console_log_path = self._pathutils.get_vm_console_log_paths(
-            instance_name)[0]
-        pipe_path = r'\\.\pipe\%s' % instance_uuid
-
-        @utils.synchronized(pipe_path)
-        def log_serial_output():
-            vm_log_writer = self._vm_log_writers.get(instance_uuid)
-            if vm_log_writer and vm_log_writer.is_active():
-                LOG.debug("Instance %s log writer is already running.",
-                          instance_name)
-            else:
-                vm_log_writer = ioutils.IOThread(
-                    pipe_path, console_log_path,
-                    self._MAX_CONSOLE_LOG_FILE_SIZE)
-                vm_log_writer.start()
-                self._vm_log_writers[instance_uuid] = vm_log_writer
-
-        log_serial_output()
-
-    def get_console_output(self, instance):
-        console_log_paths = (
-            self._pathutils.get_vm_console_log_paths(instance.name))
-
-        try:
-            instance_log = ''
-            # Start with the oldest console log file.
-            for console_log_path in console_log_paths[::-1]:
-                if os.path.exists(console_log_path):
-                    with open(console_log_path, 'rb') as fp:
-                        instance_log += fp.read()
-            return instance_log
-        except IOError as err:
-            raise exception.ConsoleLogOutputException(
-                instance_id=instance.uuid, reason=six.text_type(err))
-
-    def _delete_vm_console_log(self, instance):
-        console_log_files = self._pathutils.get_vm_console_log_paths(
-            instance.name)
-
-        vm_log_writer = self._vm_log_writers.get(instance.uuid)
-        if vm_log_writer:
-            vm_log_writer.join()
-
-        for log_file in console_log_files:
-            fileutils.delete_if_exists(log_file)
-
-    def copy_vm_console_logs(self, vm_name, dest_host):
-        local_log_paths = self._pathutils.get_vm_console_log_paths(
-            vm_name)
-        remote_log_paths = self._pathutils.get_vm_console_log_paths(
-            vm_name, remote_server=dest_host)
-
-        for local_log_path, remote_log_path in zip(local_log_paths,
-                                                   remote_log_paths):
-            if self._pathutils.exists(local_log_path):
-                self._pathutils.copy(local_log_path,
-                                     remote_log_path)
-
-    def _create_vm_com_port_pipe(self, instance):
-        # Creates a pipe to the COM 0 serial port of the specified vm.
-        pipe_path = r'\\.\pipe\%s' % instance.uuid
-        self._vmutils.get_vm_serial_port_connection(
-            instance.name, update_connection=pipe_path)
-
-    def restart_vm_log_writers(self):
-        # Restart the VM console log writers after nova compute restarts.
-        active_instances = self._vmutils.get_active_instances()
-        for instance_name in active_instances:
-            instance_path = self._pathutils.get_instance_dir(instance_name)
-
-            # Skip instances that are not created by Nova
-            if not os.path.exists(instance_path):
-                continue
-
-            vm_serial_conn = self._vmutils.get_vm_serial_port_connection(
-                instance_name)
-            if vm_serial_conn:
-                instance_uuid = os.path.basename(vm_serial_conn)
-                self.log_vm_serial_output(instance_name, instance_uuid)
+    def _create_vm_com_port_pipes(self, instance, serial_ports):
+        for port_number, port_type in serial_ports.items():
+            pipe_path = r'\\.\pipe\%s_%s' % (instance.uuid, port_type)
+            self._vmutils.set_vm_serial_port_connection(
+                instance.name, port_number, pipe_path)
 
     def copy_vm_dvd_disks(self, vm_name, dest_host):
         dvd_disk_paths = self._vmutils.get_vm_dvd_disk_paths(vm_name)
@@ -737,3 +836,134 @@ class VMOps(object):
                       "might have been destroyed beforehand.",
                       instance=instance)
             raise exception.InterfaceDetachFailed(instance_uuid=instance.uuid)
+
+    def rescue_instance(self, context, instance, network_info, image_meta,
+                        rescue_password):
+        try:
+            self._rescue_instance(context, instance, network_info,
+                                  image_meta, rescue_password)
+        except Exception as exc:
+            with excutils.save_and_reraise_exception():
+                err_msg = _LE("Instance rescue failed. Exception: %(exc)s. "
+                              "Attempting to unrescue the instance.")
+                LOG.error(err_msg, {'exc': exc}, instance=instance)
+                self.unrescue_instance(instance)
+
+    def _rescue_instance(self, context, instance, network_info, image_meta,
+                         rescue_password):
+        rescue_image_id = image_meta.id or instance.image_ref
+        rescue_vhd_path = self._create_root_vhd(
+            context, instance, rescue_image_id=rescue_image_id)
+
+        rescue_vm_gen = self.get_image_vm_generation(instance.uuid,
+                                                     image_meta)
+        vm_gen = self._vmutils.get_vm_generation(instance.name)
+        if rescue_vm_gen != vm_gen:
+            err_msg = _('The requested rescue image requires a different VM '
+                        'generation than the actual rescued instance. '
+                        'Rescue image VM generation: %(rescue_vm_gen)s. '
+                        'Rescued instance VM generation: %(vm_gen)s.') % dict(
+                            rescue_vm_gen=rescue_vm_gen,
+                            vm_gen=vm_gen)
+            raise exception.ImageUnacceptable(reason=err_msg,
+                                              image_id=rescue_image_id)
+
+        root_vhd_path = self._pathutils.lookup_root_vhd_path(instance.name)
+        if not root_vhd_path:
+            err_msg = _('Instance root disk image could not be found. '
+                        'Rescuing instances booted from volume is '
+                        'not supported.')
+            raise exception.InstanceNotRescuable(reason=err_msg,
+                                                 instance_id=instance.uuid)
+
+        controller_type = VM_GENERATIONS_CONTROLLER_TYPES[vm_gen]
+
+        self._vmutils.detach_vm_disk(instance.name, root_vhd_path,
+                                     is_physical=False)
+        self._attach_drive(instance.name, rescue_vhd_path, 0,
+                           self._ROOT_DISK_CTRL_ADDR, controller_type)
+        self._vmutils.attach_scsi_drive(instance.name, root_vhd_path,
+                                        drive_type=constants.DISK)
+
+        if configdrive.required_by(instance):
+            self._detach_config_drive(instance.name)
+            rescue_configdrive_path = self._create_config_drive(
+                context,
+                instance,
+                injected_files=None,
+                admin_password=rescue_password,
+                network_info=network_info,
+                rescue=True)
+            self.attach_config_drive(instance, rescue_configdrive_path,
+                                     vm_gen)
+
+        self.power_on(instance)
+
+    def unrescue_instance(self, instance):
+        self.power_off(instance)
+
+        root_vhd_path = self._pathutils.lookup_root_vhd_path(instance.name)
+        rescue_vhd_path = self._pathutils.lookup_root_vhd_path(instance.name,
+                                                               rescue=True)
+
+        if (instance.vm_state == vm_states.RESCUED and
+                not (rescue_vhd_path and root_vhd_path)):
+            err_msg = _('Missing instance root and/or rescue image. '
+                        'The instance cannot be unrescued.')
+            raise exception.InstanceNotRescuable(reason=err_msg,
+                                                 instance_id=instance.uuid)
+
+        vm_gen = self._vmutils.get_vm_generation(instance.name)
+        controller_type = VM_GENERATIONS_CONTROLLER_TYPES[vm_gen]
+
+        self._vmutils.detach_vm_disk(instance.name, root_vhd_path,
+                                     is_physical=False)
+        if rescue_vhd_path:
+            self._vmutils.detach_vm_disk(instance.name, rescue_vhd_path,
+                                         is_physical=False)
+            fileutils.delete_if_exists(rescue_vhd_path)
+        self._attach_drive(instance.name, root_vhd_path, 0,
+                           self._ROOT_DISK_CTRL_ADDR, controller_type)
+
+        self._detach_config_drive(instance.name, rescue=True, delete=True)
+
+        # Reattach the configdrive, if exists and not already attached.
+        configdrive_path = self._pathutils.lookup_configdrive_path(
+            instance.name)
+        if configdrive_path and not self._vmutils.is_disk_attached(
+                configdrive_path, is_physical=False):
+            self.attach_config_drive(instance, configdrive_path, vm_gen)
+
+        self.power_on(instance)
+
+    def _set_instance_disk_qos_specs(self, instance):
+        quota_specs = self._get_scoped_flavor_extra_specs(instance, 'quota')
+
+        disk_total_bytes_sec = int(
+            quota_specs.get('disk_total_bytes_sec') or 0)
+        disk_total_iops_sec = int(
+            quota_specs.get('disk_total_iops_sec') or
+            self._volumeops.bytes_per_sec_to_iops(disk_total_bytes_sec))
+
+        if disk_total_iops_sec:
+            local_disks = self._get_instance_local_disks(instance.name)
+            for disk_path in local_disks:
+                self._vmutils.set_disk_qos_specs(disk_path,
+                                                 disk_total_iops_sec)
+
+    def _get_instance_local_disks(self, instance_name):
+        instance_path = self._pathutils.get_instance_dir(instance_name)
+        instance_disks = self._vmutils.get_vm_storage_paths(instance_name)[0]
+        local_disks = [disk_path for disk_path in instance_disks
+                       if instance_path in disk_path]
+        return local_disks
+
+    def _get_scoped_flavor_extra_specs(self, instance, scope):
+        extra_specs = instance.flavor.extra_specs or {}
+        filtered_specs = {}
+        for spec, value in extra_specs.items():
+            if ':' in spec:
+                _scope, key = spec.split(':')
+                if _scope == scope:
+                    filtered_specs[key] = value
+        return filtered_specs

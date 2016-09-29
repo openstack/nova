@@ -1,38 +1,56 @@
 .. -*- rst -*-
-.. needs:method_verification
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
-=============================================
- Volume extension (os-volumes, os-snapshots)
-=============================================
+=========================================================
+ Volume extension (os-volumes, os-snapshots) (DEPRECATED)
+=========================================================
+
+.. warning::
+
+   These APIs are proxy calls to the Volume service. Nova has
+   deprecated all the proxy APIs and users should use the native APIs
+   instead. These will fail with a 404 after microversion 2.35.
+   See: `Relevant Volume APIs
+   <http://developer.openstack.org/api-ref-blockstorage-v2.html#volumes-v2-volumes>`__.
 
 Manages volumes and snapshots for use with the Compute API.
+Lists, shows details, creates, and deletes volumes and snapshots.
 
 List Volumes
 ============
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-volumes
+.. rest_method:: GET /os-volumes
 
 Lists the volumes associated with the account.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
+Error response codes: unauthorized(401), forbidden(403)
 
 Response
 --------
 
-**Example List Volumes: JSON response**
+.. rest_parameters:: parameters.yaml
+
+  - volumes: volumes
+  - attachments: volumeAttachments
+  - attachments.device: attachment_device_resp
+  - attachments.id: attachment_id_resp
+  - attachments.serverId: attachment_server_id_resp
+  - attachments.volumeId: attachment_volumeId_resp
+  - availabilityZone: OS-EXT-AZ:availability_zone
+  - createdAt: created
+  - displayDescription: display_description
+  - displayName: display_name
+  - id: volume_id_resp
+  - metadata: metadata_set_required
+  - size: size
+  - snapshotId: snapshot_id
+  - status: volume_status
+  - volumeType: volume_type
+
+|
+
+**Example List Volumes**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/os-volumes-index-resp.json
    :language: javascript
@@ -40,31 +58,30 @@ Response
 Create Volume
 =============
 
-.. rest_method:: POST /v2.1/{tenant_id}/os-volumes
+.. rest_method:: POST /os-volumes
 
-Creates a volume.
+Creates a new volume.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - volume: volume
-  - display_name: display_name
-  - display_description: display_description
   - size: size
-  - volume_type: volume_type
+  - availability_zone: OS-EXT-AZ:availability_zone_optional
+  - display_name: display_name_optional
+  - display_description: display_description_optional
   - metadata: metadata
-  - availability_zone: availability_zone
-  - snapshot_id: snapshot_id
+  - volume_type: volume_type_optional
+  - snapshot_id: snapshot_id_optional
 
-**Example Create Volume: JSON request**
+**Example Create Volume**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/os-volumes-post-req.json
    :language: javascript
@@ -72,7 +89,28 @@ Request
 Response
 --------
 
-**Example Create Volume: JSON response**
+.. rest_parameters:: parameters.yaml
+
+  - volume: volume
+  - attachments: volumeAttachments
+  - attachments.device: attachment_device_resp
+  - attachments.id: attachment_id_resp
+  - attachments.serverId: attachment_server_id_resp
+  - attachments.volumeId: attachment_volumeId_resp
+  - availabilityZone: OS-EXT-AZ:availability_zone
+  - createdAt: created
+  - displayName: display_name
+  - displayDescription: display_description
+  - id: volume_id_resp
+  - metadata: metadata_set_required
+  - size: size
+  - snapshotId: snapshot_id
+  - status: volume_status
+  - volumeType: volume_type
+
+|
+
+**Example Create Volume**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/os-volumes-post-resp.json
    :language: javascript
@@ -80,26 +118,39 @@ Response
 List Volumes With Details
 =========================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-volumes/detail
+.. rest_method:: GET /os-volumes/detail
 
 Lists all volumes with details.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
+Error response codes: unauthorized(401), forbidden(403)
 
 Response
 --------
 
-**Example List Volumes With Details: JSON response**
+.. rest_parameters:: parameters.yaml
+
+  - volumes: volumes
+  - attachments: volumeAttachments
+  - attachments.device: attachment_device_resp
+  - attachments.id: attachment_id_resp
+  - attachments.serverId: attachment_server_id_resp
+  - attachments.volumeId: attachment_volumeId_resp
+  - availabilityZone: OS-EXT-AZ:availability_zone
+  - createdAt: created
+  - displayName: display_name
+  - displayDescription: display_description
+  - id: volume_id_resp
+  - metadata: metadata_set_required
+  - size: size
+  - snapshotId: snapshot_id
+  - status: volume_status
+  - volumeType: volume_type
+
+|
+
+**Example List Volumes With Details**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/os-volumes-detail-resp.json
    :language: javascript
@@ -107,27 +158,46 @@ Response
 Show Volume Details
 ===================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-volumes/{volume_id}
+.. rest_method:: GET /os-volumes/{volume_id}
 
-Shows details for a volume.
+Shows details for a given volume.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - volume_id: volume_id
+  - volume_id: volume_id_path
 
 Response
 --------
 
-**Example Show Volume Details: JSON response**
+.. rest_parameters:: parameters.yaml
+
+  - volume: volume
+  - attachments: volumeAttachments
+  - attachment.device: attachment_device_resp
+  - attachments.id: attachment_id_resp
+  - attachments.serverId: attachment_server_id_resp
+  - attachments.volumeId: attachment_volumeId_resp
+  - availabilityZone: OS-EXT-AZ:availability_zone
+  - createdAt: created
+  - displayName: display_name
+  - displayDescription: display_description
+  - id: volume_id_resp
+  - metadata: metadata_set_required
+  - size: size
+  - snapshotId: snapshot_id
+  - status: volume_status
+  - volumeType: volume_type
+
+|
+
+**Example Show Volume Details**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/os-volumes-get-resp.json
    :language: javascript
@@ -135,47 +205,82 @@ Response
 Delete Volume
 =============
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/os-volumes/{volume_id}
+.. rest_method:: DELETE /os-volumes/{volume_id}
 
 Deletes a volume.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - volume_id: volume_id
+  - volume_id: volume_id_path
 
 Response
 --------
 
-Create Snapshot
-===============
+There is no body content for the response of a successful DELETE query
 
-.. rest_method:: POST /v2.1/{tenant_id}/os-snapshots
 
-Creates a snapshot.
+List Snapshots
+==============
+
+.. rest_method:: GET /os-snapshots
+
+Lists snapshots.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403)
+
+Response
+--------
+
+.. rest_parameters:: parameters.yaml
+
+  - snapshots: snapshots
+  - id: snapshot_id
+  - createdAt: created
+  - displayName: display_name
+  - displayDescription: display_description
+  - size: size
+  - status: snapshot_status
+  - volumeId: volume_id
+
+|
+
+**Example List Snapshots**
+
+.. literalinclude:: ../../doc/api_samples/os-volumes/snapshots-list-resp.json
+   :language: javascript
+
+Create Snapshot
+===============
+
+.. rest_method:: POST /os-snapshots
+
+Creates a new snapshot.
+
+Normal response codes: 200
+
+Error response codes: badRequest(400), unauthorized(401), forbidden(403)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - snapshot: snapshot
+  - volume_id: volume_id
+  - display_description: display_description_optional
+  - display_name: display_name_optional
+  - force: force_snapshot
 
-**Example Create Snapshot: JSON request**
+**Example Create Snapshot**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/snapshot-create-req.json
    :language: javascript
@@ -183,61 +288,50 @@ Request
 Response
 --------
 
-**Example Create Snapshot: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/os-volumes/snapshot-create-resp.json
-   :language: javascript
-
-List Snapshots
-==============
-
-.. rest_method:: GET /v2.1/{tenant_id}/os-snapshots
-
-Lists snapshots.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+  - snapshot: snapshot
+  - id: snapshot_id
+  - createdAt: created
+  - displayName: display_name
+  - displayDescription: display_description
+  - volumeId: volume_id
+  - size: size
+  - status: snapshot_status
 
-Response
---------
+**Example Create Snapshot**
 
-**Example List Snapshots: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/os-volumes/snapshots-list-resp.json
+.. literalinclude:: ../../doc/api_samples/os-volumes/snapshot-create-resp.json
    :language: javascript
 
 List Snapshots With Details
 ===========================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-snapshots/detail
+.. rest_method:: GET /os-snapshots/detail
 
 Lists all snapshots with details.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
+Error response codes: unauthorized(401), forbidden(403)
 
 Response
 --------
 
-**Example List Snapshots With Details: JSON response**
+.. rest_parameters:: parameters.yaml
+
+  - snapshots: snapshots
+  - id: snapshot_id
+  - createdAt: created
+  - displayName: display_name
+  - displayDescription: display_description
+  - volumeId: volume_id
+  - size: size
+  - status: snapshot_status
+
+|
+
+**Example List Snapshots With Details**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/snapshots-detail-resp.json
    :language: javascript
@@ -245,27 +339,38 @@ Response
 Show Snapshot Details
 =====================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-snapshots/{snapshot_id}
+.. rest_method:: GET /os-snapshots/{snapshot_id}
 
-Shows details for a snapshot.
+Shows details for a given snapshot.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - snapshot_id: snapshot_id
+  - snapshot_id: snapshot_id_path
 
 Response
 --------
 
-**Example Show Snapshot Details: JSON response**
+.. rest_parameters:: parameters.yaml
+
+  - snapshot: snapshot
+  - id: snapshot_id
+  - createdAt: created
+  - displayName: display_name
+  - displayDescription: display_description
+  - volumeId: volume_id
+  - size: size
+  - status: snapshot_status
+
+|
+
+**Example Show Snapshot Details**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/snapshots-show-resp.json
    :language: javascript
@@ -273,7 +378,7 @@ Response
 Delete Snapshot
 ===============
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/os-snapshots/{snapshot_id}
+.. rest_method:: DELETE /os-snapshots/{snapshot_id}
 
 Deletes a snapshot from the account.
 
@@ -281,16 +386,17 @@ This operation is asynchronous. You must list snapshots repeatedly to determine 
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - snapshot_id: snapshot_id
+  - snapshot_id: snapshot_id_path
+
 
 Response
 --------
+
+There is no body content for the response of a successful DELETE query

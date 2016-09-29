@@ -13,14 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 from oslo_utils import uuidutils
 import webob
 
-import mock
-
-from nova.api.openstack.compute.legacy_v2.contrib import server_groups
 from nova.api.openstack.compute import server_groups as sg_v21
-from nova.api.openstack import extensions
 from nova import context
 import nova.db
 from nova import exception
@@ -28,10 +25,6 @@ from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests import uuidsentinel
-
-FAKE_UUID1 = 'a47ae74e-ab08-447f-8eee-ffd43fc46c16'
-FAKE_UUID2 = 'c6e6430a-6563-4efa-9542-5e93c9e97d18'
-FAKE_UUID3 = 'b8713410-9ba3-e913-901b-13410ca90121'
 
 
 class AttrDict(dict):
@@ -422,15 +415,6 @@ class ServerGroupTestV21(test.TestCase):
     def test_delete_non_existing_server_group(self):
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
                           self.req, 'invalid')
-
-
-class ServerGroupTestV2(ServerGroupTestV21):
-    validation_error = webob.exc.HTTPBadRequest
-
-    def _setup_controller(self):
-        ext_mgr = extensions.ExtensionManager()
-        ext_mgr.extensions = {}
-        self.controller = server_groups.ServerGroupController(ext_mgr)
 
 
 class ServerGroupTestV213(ServerGroupTestV21):

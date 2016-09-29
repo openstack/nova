@@ -6,9 +6,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:29+0000\n"
+"POT-Creation-Date: 2016-08-25 06:14+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -64,10 +64,6 @@ msgstr "|%(address)s| adresi tahsis edilemedi"
 msgid "Address |%(address)s| is not allocated to your project |%(project)s|"
 msgstr ""
 "Sizin |%(project)s| projeniz için |%(address)s| adresi tahsis edilemedi"
-
-#, python-format
-msgid "Arguments dropped when creating context: %s"
-msgstr "İçerik oluşturulurken bağımsız değişkenler bırakıldı: %s"
 
 #, python-format
 msgid ""
@@ -281,10 +277,6 @@ msgstr ""
 "kaynak yok"
 
 #, python-format
-msgid "Extensions in both blacklist and whitelist: %s"
-msgstr "Eklentiler hem kara hem beyaz listede: %s"
-
-#, python-format
 msgid "Failed to %(service)s_%(method)s: %(ex)s"
 msgstr "%(service)s_%(method)s başarısız: %(ex)s"
 
@@ -332,16 +324,8 @@ msgid "Failed to get cluster references %s"
 msgstr "Küme başvuruları alınamıyor %s"
 
 #, python-format
-msgid "Failed to load extension %(classpath)s: %(exc)s"
-msgstr "%(classpath)s uzantısı yüklemede hata: %(exc)s"
-
-#, python-format
 msgid "Failed to load extension %(ext_factory)s: %(exc)s"
 msgstr "%(ext_factory)s uzantısı yüklemede hata: %(exc)s"
-
-#, python-format
-msgid "Failed to load extension %(ext_name)s:%(exc)s"
-msgstr "%(ext_name)s:%(exc)s eklentisi yüklenemedi"
 
 msgid "Failed to power off instance"
 msgstr "Sunucu gücü kapatma başarısız"
@@ -465,10 +449,6 @@ msgstr "%(name)s seçeneğinin geçersiz öğeleri göz ardı ediliyor: %(option
 msgid "Ignoring volume cleanup failure due to %s"
 msgstr "%s sebebiyle mantıksal sürücü temizliği göz ardı edildi"
 
-#, python-format
-msgid "Image %s not found on disk storage. Continue without injecting data"
-msgstr "İmaj %s disk depolamada bulunamadı. Veri eklemeden devam et"
-
 msgid "Image not found during snapshot"
 msgstr "İmaj anlık görüntü sırasında bulunamadı"
 
@@ -486,10 +466,6 @@ msgid ""
 msgstr ""
 "vmwareapi:vmops:_destroy_instance içinde, VM kaydı silinirken şu istisna "
 "alındı: %s"
-
-#, python-format
-msgid "Info cache is %r during associate"
-msgstr "Bilgi zulası ilişkilendirme sırasında %r"
 
 #, python-format
 msgid ""
@@ -590,10 +566,6 @@ msgstr ""
 "Sunucu kendi kendine kapandı. Durdurma API'si çağrılıyor. Mevcut vm_state: "
 "%(vm_state)s, mevcut task_state: %(task_state)s, asıl DB power_state: "
 "%(db_power_state)s, mevcut VM power_state: %(vm_power_state)s"
-
-#, python-format
-msgid "Instance: %(instance_uuid)s failed to save into memcached"
-msgstr "Sunucu: %(instance_uuid)s memcached'ye kaydedilemedi"
 
 msgid "Invalid 'agent_present' value. Falling back to the default."
 msgstr "Geçersiz 'agent_present' değeri. Varsayılan kullanılıyor."
@@ -913,25 +885,12 @@ msgstr ""
 "Tenant_id %(tenant_id)s %(instance_id)s sunucusunun tenant_id'si ile "
 "eşleşmiyor."
 
-#, python-format
-msgid ""
-"The libvirt driver is not tested on %(type)s/%(arch)s by the OpenStack "
-"project and thus its quality can not be ensured. For more information, see: "
-"https://wiki.openstack.org/wiki/HypervisorSupportMatrix"
-msgstr ""
-"libvirt sürücüsü %(type)s/%(arch)s üzerinde OpenStack projesi tarafından "
-"test edilmedi dolayısıyla kalitesinden emin olunamaz. Daha fazla bilgi için, "
-"bknz: https://wiki.openstack.org/wiki/HypervisorSupportMatrix"
-
 msgid ""
 "This key manager is insecure and is not recommended for production "
 "deployments"
 msgstr ""
 "Bu anahtar yönetici güvenli değil ve üretim ortamlarında kullanılmaması "
 "önerilir"
-
-msgid "This key manager is not suitable for use in production deployments"
-msgstr "Bu anahtar yönetici üretim kurulumlarında kullanılmaya uygun değil"
 
 msgid "This shouldn't be getting called except during testing."
 msgstr "Bu test sırası dışında çağrılmamalıdır."
@@ -952,10 +911,6 @@ msgstr "Yumuşak kapatma beklenirken zaman aşımı."
 msgid "Timeout waiting for vif plugging callback for instance %(uuid)s"
 msgstr "%(uuid)s sunucusu için vif takma geri çağrısı beklerken zaman aşımı"
 
-#, python-format
-msgid "Token: %(token)s failed to save into memcached."
-msgstr "Jeton: %(token)s memcached'e kaydedilemedi."
-
 msgid "Too many id maps, only included first five."
 msgstr "Çok fazla id eşleşmesi, yalnızca ilk beşi dahil edildi."
 
@@ -972,14 +927,6 @@ msgid ""
 msgstr ""
 "'glance.num_retries' için negatif yapılandırma değeri (%(retries)s) 0 olarak "
 "ele alınıyor."
-
-#, python-format
-msgid ""
-"Treating negative config value (%(retries)s) for 'network_allocate_retries' "
-"as 0."
-msgstr ""
-"'network_allocate_retries' için (%(retries)s) negatif yapılandırma değeri 0 "
-"olarak ele alınıyor."
 
 #, python-format
 msgid ""
@@ -1243,14 +1190,6 @@ msgstr "plug_vifs() başarısız %(cnt)d. %(max_retry)d kadar tekrar dene."
 #, python-format
 msgid "rbd remove %(volume)s in pool %(pool)s failed"
 msgstr "%(pool)s havuzunda rbd remove %(volume)s başarısız"
-
-#, python-format
-msgid ""
-"serial_console.port_range should be <num>:<num>. Given value %(port_range)s "
-"could not be parsed. Taking the default port range %(default)s."
-msgstr ""
-"serial_console.port_range <num>:<num> olmalı. Verilen değer %(port_range)s "
-"ayrıştırılamadı. Varsayılan bağlantı noktası %(default)s alınıyor."
 
 msgid "set_admin_password is not implemented by this driver or guest instance."
 msgstr ""

@@ -1,0 +1,7 @@
+---
+security:
+  - The qemu-img tool now has resource limits applied
+    which prevent it from using more than 1GB of address
+    space or more than 2 seconds of CPU time. This provides
+    protection against denial of service attacks from
+    maliciously crafted or corrupted disk images.

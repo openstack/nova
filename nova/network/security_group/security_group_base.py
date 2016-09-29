@@ -17,7 +17,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import urllib
+from six.moves import urllib
 
 from nova import exception
 from nova.i18n import _
@@ -26,13 +26,10 @@ from nova import utils
 
 class SecurityGroupBase(object):
 
-    def __init__(self, skip_policy_check=False):
-        self.skip_policy_check = skip_policy_check
-
     def parse_cidr(self, cidr):
         if cidr:
             try:
-                cidr = urllib.unquote(cidr).decode()
+                cidr = urllib.parse.unquote(cidr).decode()
             except Exception as e:
                 self.raise_invalid_cidr(cidr, e)
 

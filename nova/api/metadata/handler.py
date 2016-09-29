@@ -19,7 +19,6 @@ import hashlib
 import hmac
 import os
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import secretutils as secutils
 import six
@@ -38,21 +37,6 @@ from nova.network.neutronv2 import api as neutronapi
 from nova import wsgi
 
 CONF = nova.conf.CONF
-CONF.import_opt('use_forwarded_for', 'nova.api.auth')
-
-metadata_opts = [
-    cfg.IntOpt('metadata_cache_expiration',
-               default=15,
-               help='Time in seconds to cache metadata; 0 to disable '
-                    'metadata caching entirely (not recommended). Increasing'
-                    'this should improve response times of the metadata API '
-                    'when under heavy load. Higher values may increase memory'
-                    'usage and result in longer times for host metadata '
-                    'changes to take effect.')
-]
-
-CONF.register_opts(metadata_opts)
-
 LOG = logging.getLogger(__name__)
 
 
@@ -62,6 +46,11 @@ class MetadataRequestHandler(wsgi.Application):
     def __init__(self):
         self._cache = cache_utils.get_client(
                 expiration_time=CONF.metadata_cache_expiration)
+        if (CONF.neutron.service_metadata_proxy and
+            not CONF.neutron.metadata_proxy_shared_secret):
+            LOG.warning(_LW("metadata_proxy_shared_secret is not configured, "
+                            "the metadata information returned by the proxy "
+                            "cannot be trusted"))
 
     def get_metadata_by_remote_address(self, address):
         if not address:
@@ -149,7 +138,7 @@ class MetadataRequestHandler(wsgi.Application):
         try:
             meta_data = self.get_metadata_by_remote_address(remote_address)
         except Exception:
-            LOG.exception(_LE('Failed to get metadata for IP: %s'),
+            LOG.exception(_LE('Failed to get metadata for IP %s'),
                           remote_address)
             msg = _('An unknown error has occurred. '
                     'Please try your request again.')
@@ -157,7 +146,7 @@ class MetadataRequestHandler(wsgi.Application):
                                                explanation=six.text_type(msg))
 
         if meta_data is None:
-            LOG.error(_LE('Failed to get metadata for IP: %s'),
+            LOG.error(_LE('Failed to get metadata for IP %s: no metadata'),
                       remote_address)
 
         return meta_data

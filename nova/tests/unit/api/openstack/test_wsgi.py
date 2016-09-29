@@ -10,10 +10,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import inspect
-
 import mock
 import six
+import testscenarios
 import webob
 
 from nova.api.openstack import api_version_request as api_version
@@ -29,8 +28,25 @@ from nova.tests.unit import utils
 from oslo_serialization import jsonutils
 
 
-class RequestTest(test.NoDBTestCase):
-    header_name = 'X-OpenStack-Nova-API-Version'
+class MicroversionedTest(testscenarios.WithScenarios, test.NoDBTestCase):
+
+    scenarios = [
+        ('legacy-microverison', {
+            'header_name': 'X-OpenStack-Nova-API-Version',
+        }),
+        ('modern-microversion', {
+            'header_name': 'OpenStack-API-Version',
+        })
+    ]
+
+    def _make_microversion_header(self, value):
+        if 'nova' in self.header_name.lower():
+            return {self.header_name: value}
+        else:
+            return {self.header_name: 'compute %s' % value}
+
+
+class RequestTest(MicroversionedTest):
 
     def test_content_type_missing(self):
         request = wsgi.Request.blank('/tests/123', method='POST')
@@ -143,7 +159,7 @@ class RequestTest(test.NoDBTestCase):
         request = wsgi.Request.blank('/')
         accepted = 'nb-no'
         request.headers = {'Accept-Language': accepted}
-        self.assertIs(request.best_match_language(), None)
+        self.assertIsNone(request.best_match_language())
 
     def test_no_lang_header(self):
         self.stubs.Set(i18n, 'get_available_languages',
@@ -152,7 +168,7 @@ class RequestTest(test.NoDBTestCase):
         request = wsgi.Request.blank('/')
         accepted = ''
         request.headers = {'Accept-Language': accepted}
-        self.assertIs(request.best_match_language(), None)
+        self.assertIsNone(request.best_match_language())
 
     def test_api_version_request_header_none(self):
         request = wsgi.Request.blank('/')
@@ -165,7 +181,7 @@ class RequestTest(test.NoDBTestCase):
         mock_maxver.return_value = api_version.APIVersionRequest("2.14")
 
         request = wsgi.Request.blank('/')
-        request.headers = {self.header_name: '2.14'}
+        request.headers = self._make_microversion_header('2.14')
         request.set_api_version_request()
         self.assertEqual(api_version.APIVersionRequest("2.14"),
                          request.api_version_request)
@@ -175,14 +191,14 @@ class RequestTest(test.NoDBTestCase):
         mock_maxver.return_value = api_version.APIVersionRequest("3.5")
 
         request = wsgi.Request.blank('/')
-        request.headers = {self.header_name: 'latest'}
+        request.headers = self._make_microversion_header('latest')
         request.set_api_version_request()
         self.assertEqual(api_version.APIVersionRequest("3.5"),
                          request.api_version_request)
 
     def test_api_version_request_header_invalid(self):
         request = wsgi.Request.blank('/')
-        request.headers = {self.header_name: '2.1.3'}
+        request.headers = self._make_microversion_header('2.1.3')
 
         self.assertRaises(exception.InvalidAPIVersionString,
                           request.set_api_version_request)
@@ -269,8 +285,7 @@ class JSONDeserializerTest(test.NoDBTestCase):
                           deserializer.deserialize, data)
 
 
-class ResourceTest(test.NoDBTestCase):
-    header_name = 'X-OpenStack-Nova-API-Version'
+class ResourceTest(MicroversionedTest):
 
     def get_req_id_header_name(self, request):
         header_name = 'x-openstack-request-id'
@@ -308,7 +323,7 @@ class ResourceTest(test.NoDBTestCase):
 
         app = fakes.TestRouterV21(Controller())
         req = webob.Request.blank('/tests')
-        req.headers = {self.header_name: version}
+        req.headers = self._make_microversion_header(version)
         response = req.get_response(app)
         self.assertEqual(b'success', response.body)
         self.assertEqual(response.status_int, 200)
@@ -322,7 +337,7 @@ class ResourceTest(test.NoDBTestCase):
 
         app = fakes.TestRouterV21(Controller())
         req = webob.Request.blank('/tests')
-        req.headers = {self.header_name: invalid_version}
+        req.headers = self._make_microversion_header(invalid_version)
         response = req.get_response(app)
         self.assertEqual(400, response.status_int)
 
@@ -433,7 +448,7 @@ class ResourceTest(test.NoDBTestCase):
         self.assertEqual(response.status_int, 200)
         self.assertEqual(b'success', response.body)
 
-    def test_resource_not_authorized(self):
+    def test_resource_forbidden(self):
         class Controller(object):
             def index(self, req):
                 raise exception.Forbidden()
@@ -442,6 +457,16 @@ class ResourceTest(test.NoDBTestCase):
         app = fakes.TestRouter(Controller())
         response = req.get_response(app)
         self.assertEqual(response.status_int, 403)
+
+    def test_resource_not_authorized(self):
+        class Controller(object):
+            def index(self, req):
+                raise exception.Unauthorized()
+
+        req = webob.Request.blank('/tests')
+        app = fakes.TestRouter(Controller())
+        self.assertRaises(
+            exception.Unauthorized, req.get_response, app)
 
     def test_dispatch(self):
         class Controller(object):
@@ -768,7 +793,7 @@ class ResourceTest(test.NoDBTestCase):
         self.assertEqual(method, extended._delete)
         self.assertEqual(extensions, [])
 
-    def test_pre_process_extensions_regular(self):
+    def test_process_extensions_regular(self):
         class Controller(object):
             def index(self, req, pants=None):
                 return pants
@@ -786,96 +811,12 @@ class ResourceTest(test.NoDBTestCase):
             called.append(2)
             return None
 
-        extensions = [extension1, extension2]
-        response, post = resource.pre_process_extensions(extensions, None, {})
-        self.assertEqual(called, [])
-        self.assertIsNone(response)
-        self.assertEqual(list(post), [extension2, extension1])
-
-    def test_pre_process_extensions_generator(self):
-        class Controller(object):
-            def index(self, req, pants=None):
-                return pants
-
-        controller = Controller()
-        resource = wsgi.Resource(controller)
-
-        called = []
-
-        def extension1(req):
-            called.append('pre1')
-            yield
-            called.append('post1')
-
-        def extension2(req):
-            called.append('pre2')
-            yield
-            called.append('post2')
-
-        extensions = [extension1, extension2]
-        response, post = resource.pre_process_extensions(extensions, None, {})
-        post = list(post)
-        self.assertEqual(called, ['pre1', 'pre2'])
-        self.assertIsNone(response)
-        self.assertEqual(len(post), 2)
-        self.assertTrue(inspect.isgenerator(post[0]))
-        self.assertTrue(inspect.isgenerator(post[1]))
-
-        for gen in post:
-            try:
-                gen.send(None)
-            except StopIteration:
-                continue
-
-        self.assertEqual(called, ['pre1', 'pre2', 'post2', 'post1'])
-
-    def test_pre_process_extensions_generator_response(self):
-        class Controller(object):
-            def index(self, req, pants=None):
-                return pants
-
-        controller = Controller()
-        resource = wsgi.Resource(controller)
-
-        called = []
-
-        def extension1(req):
-            called.append('pre1')
-            yield 'foo'
-
-        def extension2(req):
-            called.append('pre2')
-
-        extensions = [extension1, extension2]
-        response, post = resource.pre_process_extensions(extensions, None, {})
-        self.assertEqual(called, ['pre1'])
-        self.assertEqual(response, 'foo')
-        self.assertEqual(post, [])
-
-    def test_post_process_extensions_regular(self):
-        class Controller(object):
-            def index(self, req, pants=None):
-                return pants
-
-        controller = Controller()
-        resource = wsgi.Resource(controller)
-
-        called = []
-
-        def extension1(req, resp_obj):
-            called.append(1)
-            return None
-
-        def extension2(req, resp_obj):
-            called.append(2)
-            return None
-
-        response = resource.post_process_extensions([extension2, extension1],
+        response = resource.process_extensions([extension2, extension1],
                                                     None, None, {})
         self.assertEqual(called, [2, 1])
         self.assertIsNone(response)
 
-    def test_post_process_extensions_regular_response(self):
+    def test_process_extensions_regular_response(self):
         class Controller(object):
             def index(self, req, pants=None):
                 return pants
@@ -893,67 +834,8 @@ class ResourceTest(test.NoDBTestCase):
             called.append(2)
             return 'foo'
 
-        response = resource.post_process_extensions([extension2, extension1],
+        response = resource.process_extensions([extension2, extension1],
                                                     None, None, {})
-        self.assertEqual(called, [2])
-        self.assertEqual(response, 'foo')
-
-    def test_post_process_extensions_generator(self):
-        class Controller(object):
-            def index(self, req, pants=None):
-                return pants
-
-        controller = Controller()
-        resource = wsgi.Resource(controller)
-
-        called = []
-
-        def extension1(req):
-            yield
-            called.append(1)
-
-        def extension2(req):
-            yield
-            called.append(2)
-
-        ext1 = extension1(None)
-        next(ext1)
-        ext2 = extension2(None)
-        next(ext2)
-
-        response = resource.post_process_extensions([ext2, ext1],
-                                                    None, None, {})
-
-        self.assertEqual(called, [2, 1])
-        self.assertIsNone(response)
-
-    def test_post_process_extensions_generator_response(self):
-        class Controller(object):
-            def index(self, req, pants=None):
-                return pants
-
-        controller = Controller()
-        resource = wsgi.Resource(controller)
-
-        called = []
-
-        def extension1(req):
-            yield
-            called.append(1)
-
-        def extension2(req):
-            yield
-            called.append(2)
-            yield 'foo'
-
-        ext1 = extension1(None)
-        next(ext1)
-        ext2 = extension2(None)
-        next(ext2)
-
-        response = resource.post_process_extensions([ext2, ext1],
-                                                    None, None, {})
-
         self.assertEqual(called, [2])
         self.assertEqual(response, 'foo')
 

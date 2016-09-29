@@ -7,9 +7,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b2.dev117\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:28+0000\n"
+"POT-Creation-Date: 2016-06-08 04:30+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -20,10 +20,6 @@ msgstr ""
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
 "Language-Team: Portuguese (Brazil)\n"
-
-#, python-format
-msgid "%(id)s (%(base_file)s): generating checksum"
-msgstr "%(id)s (%(base_file)s): gerando soma de verificação"
 
 #, python-format
 msgid "%(name)s listening on %(host)s:%(port)s"
@@ -70,13 +66,6 @@ msgstr ""
 #, python-format
 msgid "Allocated network: '%s' for instance"
 msgstr "Rede alocada: '%s' para a instância"
-
-msgid "Attach interface"
-msgstr "Anexar interface"
-
-#, python-format
-msgid "Attach volume %(volume_id)s to instance %(server_id)s at %(device)s"
-msgstr "Conectar volume %(volume_id)s à instância %(server_id)s em %(device)s"
 
 #, python-format
 msgid "Attaching volume %(volume_id)s to %(mountpoint)s"
@@ -205,10 +194,6 @@ msgid "Copied virtual disk from %(src)s to %(dst)s."
 msgstr "Disco virtual copiado de %(src)s parao %(dst)s."
 
 #, python-format
-msgid "Corrupt base files: %s"
-msgstr "Arquivos base corrompidos: %s"
-
-#, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats for "
 "device"
@@ -219,18 +204,6 @@ msgstr ""
 #, python-format
 msgid "Create Security Group %s"
 msgstr "Criar Grupo de Segurança %s"
-
-#, python-format
-msgid "Create assisted snapshot from volume %s"
-msgstr "Criar captura instantânea assistida do volume %s"
-
-#, python-format
-msgid "Create snapshot from volume %s"
-msgstr "Criar captura instantânea a partir do volume %s"
-
-#, python-format
-msgid "Create volume of %s GB"
-msgstr "Criar volume de %s GB"
 
 #, python-format
 msgid "Created folder: %(name)s in parent %(parent)s."
@@ -261,14 +234,6 @@ msgstr ""
 #, python-format
 msgid "Delete security group %s"
 msgstr "Excluir grupo de segurança %s"
-
-#, python-format
-msgid "Delete snapshot with id: %s"
-msgstr "Excluir captura instantânea com o id: %s"
-
-#, python-format
-msgid "Delete volume with id: %s"
-msgstr "Excluir o volume com o ID: %s"
 
 #, python-format
 msgid "Deleted %s snapshots."
@@ -312,16 +277,8 @@ msgstr ""
 "mas ainda está presente no host."
 
 #, python-format
-msgid "Detach interface %s"
-msgstr "Remover interface %s"
-
-#, python-format
 msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
 msgstr "Remover o volume %(volume_id)s do ponto de montagem %(mp)s"
-
-#, python-format
-msgid "Detach volume %s"
-msgstr "Desanexar volume %s"
 
 #, python-format
 msgid "Detaching from volume api: %s"
@@ -1152,13 +1109,6 @@ msgstr "MV %(state)s (Evento de Ciclo de Vida)"
 msgid "VMware vCenter version: %s"
 msgstr "Versão do VMware vCenter: %s"
 
-msgid ""
-"Virt driver does not support 'get_available_resource'. Compute tracking is "
-"disabled."
-msgstr ""
-"O driver virtual não suporta 'get_available_resource'. O rastreamento de "
-"cálculo está desativado."
-
 #, python-format
 msgid ""
 "Volume(%s) has lower stats then what is in the database. Instance must have "
@@ -1175,10 +1125,6 @@ msgid "Working on deleting snapshot %s from shelved instance..."
 msgstr ""
 "Trabalhando na exclusão da captura instantânea %s a partir da instância "
 "arquivada..."
-
-#, python-format
-msgid "Writing stored info to %s"
-msgstr "Gravando informações armazenadas em %s"
 
 msgid "XenServer tools are not installed in this image"
 msgstr "As ferramentas XenServer não estão instaladas nesta imagem"
@@ -1234,13 +1180,6 @@ msgstr "Ferramenta findmnt não está instalada."
 #, python-format
 msgid "image %(id)s at (%(base_file)s): checking"
 msgstr "imagem %(id)s em (%(base_file)s): verificando"
-
-#, python-format
-msgid ""
-"image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
-msgstr ""
-"imagem %(id)s em (%(base_file)s): verificação de imagem ignorada, nenhum "
-"hash armazenado"
 
 #, python-format
 msgid ""
@@ -1305,7 +1244,3 @@ msgstr ""
 #, python-format
 msgid "tap-ctl check: %s"
 msgstr "Verificação de tap-ctl: %s"
-
-#, python-format
-msgid "vol=%s"
-msgstr "vol=%s"

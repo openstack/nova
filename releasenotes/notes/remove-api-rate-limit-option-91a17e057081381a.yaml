@@ -1,0 +1,6 @@
+---
+other:
+  - The ``api_rate_limit`` configuration option has been removed. The option
+    was disabled by default back in the Havana release since it's effectively
+    broken for more than one API worker. It has been removed because the legacy
+    v2 API code that was using it has also been removed.

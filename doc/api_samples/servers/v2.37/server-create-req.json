@@ -1,0 +1,8 @@
+{
+    "server": {
+        "name": "auto-allocate-network",
+        "imageRef": "70a599e0-31e7-49b7-b260-868f441e862b",
+        "flavorRef": "http://openstack.example.com/flavors/1",
+        "networks": "auto"
+    }
+}

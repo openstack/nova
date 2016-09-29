@@ -29,6 +29,7 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit import fake_instance
+from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt import images
@@ -43,7 +44,7 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
     @mock.patch('nova.utils.execute')
     def test_copy_image_local(self, mock_execute):
         libvirt_utils.copy_image('src', 'dest')
-        mock_execute.assert_called_once_with('cp', 'src', 'dest')
+        mock_execute.assert_called_once_with('cp', '-r', 'src', 'dest')
 
     @mock.patch('nova.virt.libvirt.volume.remotefs.SshDriver.copy_file')
     def test_copy_image_remote_ssh(self, mock_rem_fs_remove):
@@ -101,7 +102,8 @@ disk size: 96K
         mock_execute.return_value = (output, '')
         d_backing = libvirt_utils.get_disk_backing_file(path)
         mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
-                                             'qemu-img', 'info', path)
+                                             'qemu-img', 'info', path,
+                                             prlimit=images.QEMU_IMG_LIMITS)
         mock_exists.assert_called_once_with(path)
         self.assertIsNone(d_backing)
 
@@ -109,7 +111,8 @@ disk size: 96K
         d_size = libvirt_utils.get_disk_size(path)
         self.assertEqual(expected_size, d_size)
         mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
-                                             'qemu-img', 'info', path)
+                                             'qemu-img', 'info', path,
+                                             prlimit=images.QEMU_IMG_LIMITS)
 
     @mock.patch('os.path.exists', return_value=True)
     def test_disk_size(self, mock_exists):
@@ -155,7 +158,8 @@ blah BLAH: bb
         mock_execute.return_value = (example_output, '')
         image_info = images.qemu_img_info(path)
         mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
-                                             'qemu-img', 'info', path)
+                                             'qemu-img', 'info', path,
+                                             prlimit=images.QEMU_IMG_LIMITS)
         mock_exists.assert_called_once_with(path)
         self.assertEqual('disk.config', image_info.image)
         self.assertEqual('raw', image_info.file_format)
@@ -177,7 +181,8 @@ backing file: /var/lib/nova/a328c7998805951a_2
         mock_execute.return_value = (example_output, '')
         image_info = images.qemu_img_info(path)
         mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
-                                             'qemu-img', 'info', path)
+                                             'qemu-img', 'info', path,
+                                             prlimit=images.QEMU_IMG_LIMITS)
         mock_exists.assert_called_once_with(path)
         self.assertEqual('disk.config', image_info.image)
         self.assertEqual('qcow2', image_info.file_format)
@@ -186,6 +191,32 @@ backing file: /var/lib/nova/a328c7998805951a_2
         self.assertEqual(65536, image_info.cluster_size)
         self.assertEqual('/var/lib/nova/a328c7998805951a_2',
                          image_info.backing_file)
+
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('os.path.isdir', return_value=True)
+    @mock.patch('nova.utils.execute')
+    def test_qemu_info_ploop(self, mock_execute, mock_isdir, mock_exists):
+        path = "/var/lib/nova"
+        example_output = """image: root.hds
+file format: parallels
+virtual size: 3.0G (3221225472 bytes)
+disk size: 706M
+"""
+        mock_execute.return_value = (example_output, '')
+        image_info = images.qemu_img_info(path)
+        mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
+                                             'qemu-img', 'info',
+                                             os.path.join(path, 'root.hds'),
+                                             prlimit=images.QEMU_IMG_LIMITS)
+        mock_isdir.assert_called_once_with(path)
+        self.assertEqual(2, mock_exists.call_count)
+        self.assertEqual(path, mock_exists.call_args_list[0][0][0])
+        self.assertEqual(os.path.join(path, 'DiskDescriptor.xml'),
+                             mock_exists.call_args_list[1][0][0])
+        self.assertEqual('root.hds', image_info.image)
+        self.assertEqual('parallels', image_info.file_format)
+        self.assertEqual(3221225472, image_info.virtual_size)
+        self.assertEqual(740294656, image_info.disk_size)
 
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('nova.utils.execute')
@@ -205,7 +236,8 @@ backing file: /var/lib/nova/a328c7998805951a_2 (actual path: /b/3a988059e51a_2)
         mock_execute.return_value = (example_output, '')
         image_info = images.qemu_img_info(path)
         mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
-                                             'qemu-img', 'info', path)
+                                             'qemu-img', 'info', path,
+                                             prlimit=images.QEMU_IMG_LIMITS)
         mock_exists.assert_called_once_with(path)
         self.assertEqual('disk.config', image_info.image)
         self.assertEqual('raw', image_info.file_format)
@@ -233,7 +265,8 @@ junk stuff: bbb
         mock_execute.return_value = (example_output, '')
         image_info = images.qemu_img_info(path)
         mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
-                                             'qemu-img', 'info', path)
+                                             'qemu-img', 'info', path,
+                                             prlimit=images.QEMU_IMG_LIMITS)
         mock_exists.assert_called_once_with(path)
         self.assertEqual('disk.config', image_info.image)
         self.assertEqual('raw', image_info.file_format)
@@ -257,7 +290,8 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
         mock_execute.return_value = (example_output, '')
         image_info = images.qemu_img_info(path)
         mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
-                                             'qemu-img', 'info', path)
+                                             'qemu-img', 'info', path,
+                                             prlimit=images.QEMU_IMG_LIMITS)
         mock_exists.assert_called_once_with(path)
         self.assertEqual('disk.config', image_info.image)
         self.assertEqual('raw', image_info.file_format)
@@ -293,7 +327,8 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
         mock_execute.return_value = ('stdout', None)
         libvirt_utils.create_cow_image('/some/path', '/the/new/cow')
         expected_args = [(('env', 'LC_ALL=C', 'LANG=C',
-                           'qemu-img', 'info', '/some/path'),),
+                           'qemu-img', 'info', '/some/path'),
+                           {'prlimit': images.QEMU_IMG_LIMITS}),
                          (('qemu-img', 'create', '-f', 'qcow2',
                            '-o', 'backing_file=/some/path',
                            '/the/new/cow'),)]
@@ -379,7 +414,8 @@ disk size: 4.4M
         mock_execute.return_value = (example_output, '')
         self.assertEqual(4592640, disk.get_disk_size('/some/path'))
         mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
-                                             'qemu-img', 'info', path)
+                                             'qemu-img', 'info', path,
+                                             prlimit=images.QEMU_IMG_LIMITS)
         mock_exists.assert_called_once_with(path)
 
     def test_copy_image(self):
@@ -540,13 +576,9 @@ disk size: 4.4M
         context = 'opaque context'
         target = '/tmp/targetfile'
         image_id = '4'
-        user_id = 'fake'
-        project_id = 'fake'
-        libvirt_utils.fetch_image(context, target, image_id,
-                                  user_id, project_id)
+        libvirt_utils.fetch_image(context, target, image_id)
         mock_images.assert_called_once_with(
-            context, image_id, target, user_id, project_id,
-            max_size=0)
+            context, image_id, target)
 
     @mock.patch('nova.virt.images.fetch')
     def test_fetch_initrd_image(self, mock_images):
@@ -556,13 +588,9 @@ disk size: 4.4M
                                           user_name="pie")
         target = '/tmp/targetfile'
         image_id = '4'
-        user_id = 'fake'
-        project_id = 'fake'
-        libvirt_utils.fetch_raw_image(_context, target, image_id,
-                                      user_id, project_id)
+        libvirt_utils.fetch_raw_image(_context, target, image_id)
         mock_images.assert_called_once_with(
-            _context, image_id, target, user_id, project_id,
-            max_size=0)
+            _context, image_id, target)
 
     def test_fetch_raw_image(self):
 
@@ -594,14 +622,9 @@ disk size: 4.4M
             else:
                 backing_file = None
 
-            if 'big' in path:
-                virtual_size = 2
-            else:
-                virtual_size = 1
-
             FakeImgInfo.file_format = file_format
             FakeImgInfo.backing_file = backing_file
-            FakeImgInfo.virtual_size = virtual_size
+            FakeImgInfo.virtual_size = 1
 
             return FakeImgInfo()
 
@@ -621,8 +644,6 @@ disk size: 4.4M
 
         context = 'opaque context'
         image_id = '4'
-        user_id = 'fake'
-        project_id = 'fake'
 
         target = 't.qcow2'
         self.executes = []
@@ -631,31 +652,20 @@ disk size: 4.4M
                               '-f', 'qcow2'),
                              ('rm', 't.qcow2.part'),
                              ('mv', 't.qcow2.converted', 't.qcow2')]
-        images.fetch_to_raw(context, image_id, target, user_id, project_id,
-                            max_size=1)
+        images.fetch_to_raw(context, image_id, target)
         self.assertEqual(self.executes, expected_commands)
 
         target = 't.raw'
         self.executes = []
         expected_commands = [('mv', 't.raw.part', 't.raw')]
-        images.fetch_to_raw(context, image_id, target, user_id, project_id)
+        images.fetch_to_raw(context, image_id, target)
         self.assertEqual(self.executes, expected_commands)
 
         target = 'backing.qcow2'
         self.executes = []
         expected_commands = [('rm', '-f', 'backing.qcow2.part')]
         self.assertRaises(exception.ImageUnacceptable,
-                          images.fetch_to_raw,
-                          context, image_id, target, user_id, project_id)
-        self.assertEqual(self.executes, expected_commands)
-
-        target = 'big.qcow2'
-        self.executes = []
-        expected_commands = [('rm', '-f', 'big.qcow2.part')]
-        self.assertRaises(exception.FlavorDiskSmallerThanImage,
-                          images.fetch_to_raw,
-                          context, image_id, target, user_id, project_id,
-                          max_size=1)
+                          images.fetch_to_raw, context, image_id, target)
         self.assertEqual(self.executes, expected_commands)
 
         del self.executes
@@ -687,7 +697,7 @@ disk size: 4.4M
 
     def test_get_instance_path_at_destination(self):
         instance = fake_instance.fake_instance_obj(None, name='fake_inst',
-                                                   uuid='fake_uuid')
+                                                   uuid=uuids.instance)
 
         migrate_data = None
         inst_path_at_dest = libvirt_utils.get_instance_path_at_destination(

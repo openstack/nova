@@ -19,17 +19,18 @@ from nova import availability_zones
 from nova import db
 from nova import exception
 from nova.i18n import _LW
+from nova.notifications.objects import base as notification
+from nova.notifications.objects import service as service_notification
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
-from nova.objects import notification
 
 
 LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 10
+SERVICE_VERSION = 15
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -49,30 +50,48 @@ SERVICE_VERSION = 10
 # which will not be caught by the test. An example of this would be
 # triggering (or disabling) an online data migration once all services
 # in the cluster are at the same level.
+#
+# If a version bump is required for something mechanical, just document
+# that generic thing here (like compute RPC version bumps). No need to
+# replicate the details from compute/rpcapi.py here. However, for more
+# complex service interactions, extra detail should be provided
 SERVICE_VERSION_HISTORY = (
     # Version 0: Pre-history
     {'compute_rpc': '4.0'},
 
     # Version 1: Introduction of SERVICE_VERSION
     {'compute_rpc': '4.4'},
-    # Version 2: Changes to rebuild_instance signature in the compute_rpc
+    # Version 2: Compute RPC version 4.5
     {'compute_rpc': '4.5'},
-    # Version 3: Add trigger_crash_dump method to compute rpc api
+    # Version 3: Compute RPC version 4.6
     {'compute_rpc': '4.6'},
     # Version 4: Add PciDevice.parent_addr (data migration needed)
     {'compute_rpc': '4.6'},
-    # Version 5: Add attachment_id kwarg to detach_volume()
+    # Version 5: Compute RPC version 4.7
     {'compute_rpc': '4.7'},
     # Version 6: Compute RPC version 4.8
     {'compute_rpc': '4.8'},
-    # Version 7: Add live_migration_force_complete in the compute_rpc
+    # Version 7: Compute RPC version 4.9
     {'compute_rpc': '4.9'},
-    # Version 8: Add live_migration_abort in the compute_rpc
+    # Version 8: Compute RPC version 4.10
     {'compute_rpc': '4.10'},
-    # Version 9: Allow block_migration and disk_over_commit be None
+    # Version 9: Compute RPC version 4.11
     {'compute_rpc': '4.11'},
     # Version 10: Compute node conversion to Inventories
     {'compute_rpc': '4.11'},
+    # Version 11: Compute RPC version 4.12
+    {'compute_rpc': '4.12'},
+    # Version 12: The network APIs and compute manager support a NetworkRequest
+    # object where the network_id value is 'auto' or 'none'. BuildRequest
+    # objects are populated by nova-api during instance boot.
+    {'compute_rpc': '4.12'},
+    # Version 13: Compute RPC version 4.13
+    {'compute_rpc': '4.13'},
+    # Version 14: The compute manager supports setting device tags.
+    {'compute_rpc': '4.13'},
+    # Version 15: Indicate that nova-conductor will stop a boot if BuildRequest
+    # is deleted before RPC to nova-compute.
+    {'compute_rpc': '4.13'},
 )
 
 
@@ -291,11 +310,6 @@ class Service(base.NovaPersistentObject, base.NovaObject,
     def save(self):
         updates = self.obj_get_changes()
         updates.pop('id', None)
-        if list(updates.keys()) == ['version']:
-            # NOTE(danms): Since we set/dirty version in init, don't
-            # do a save if that's all that has changed. This keeps the
-            # "save is a no-op if nothing has changed" behavior.
-            return
         self._check_minimum_version()
         db_service = db.service_update(self._context, self.id, updates)
         self._from_db_object(self._context, self, db_service)
@@ -308,8 +322,8 @@ class Service(base.NovaPersistentObject, base.NovaObject,
         # every other field change. See the comment in save() too.
         if set(updates.keys()).intersection(
                 {'disabled', 'disabled_reason', 'forced_down'}):
-            payload = ServiceStatusPayload(self)
-            ServiceStatusNotification(
+            payload = service_notification.ServiceStatusPayload(self)
+            service_notification.ServiceStatusNotification(
                 publisher=notification.NotificationPublisher.from_service_obj(
                     self),
                 event_type=notification.EventType(
@@ -396,7 +410,8 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
     # Version 1.16: Service version 1.18
     # Version 1.17: Service version 1.19
     # Version 1.18: Added include_disabled parameter to get_by_binary()
-    VERSION = '1.18'
+    # Version 1.19: Added get_all_computes_by_hv_type()
+    VERSION = '1.19'
 
     fields = {
         'objects': fields.ListOfObjectsField('Service'),
@@ -432,47 +447,9 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(context, cls(context), objects.Service,
                                   db_services)
 
-
-@notification.notification_sample('service-update.json')
-@base.NovaObjectRegistry.register
-class ServiceStatusNotification(notification.NotificationBase):
-    # Version 1.0: Initial version
-    VERSION = '1.0'
-
-    fields = {
-        'payload': fields.ObjectField('ServiceStatusPayload')
-    }
-
-
-@base.NovaObjectRegistry.register
-class ServiceStatusPayload(notification.NotificationPayloadBase):
-    SCHEMA = {
-        'host': ('service', 'host'),
-        'binary': ('service', 'binary'),
-        'topic': ('service', 'topic'),
-        'report_count': ('service', 'report_count'),
-        'disabled': ('service', 'disabled'),
-        'disabled_reason': ('service', 'disabled_reason'),
-        'availability_zone': ('service', 'availability_zone'),
-        'last_seen_up': ('service', 'last_seen_up'),
-        'forced_down': ('service', 'forced_down'),
-        'version': ('service', 'version')
-    }
-    # Version 1.0: Initial version
-    VERSION = '1.0'
-    fields = {
-        'host': fields.StringField(nullable=True),
-        'binary': fields.StringField(nullable=True),
-        'topic': fields.StringField(nullable=True),
-        'report_count': fields.IntegerField(),
-        'disabled': fields.BooleanField(),
-        'disabled_reason': fields.StringField(nullable=True),
-        'availability_zone': fields.StringField(nullable=True),
-        'last_seen_up': fields.DateTimeField(nullable=True),
-        'forced_down': fields.BooleanField(),
-        'version': fields.IntegerField(),
-    }
-
-    def __init__(self, service):
-        super(ServiceStatusPayload, self).__init__()
-        self.populate_schema(service=service)
+    @base.remotable_classmethod
+    def get_all_computes_by_hv_type(cls, context, hv_type):
+        db_services = db.service_get_all_computes_by_hv_type(
+            context, hv_type, include_disabled=False)
+        return base.obj_make_list(context, cls(context), objects.Service,
+                                  db_services)

@@ -12,29 +12,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 from nova import exception
 from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.unit.objects import test_network
 from nova.tests.unit import utils as test_utils
-
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+from nova.tests import uuidsentinel as uuids
 
 
 class FixedIpTest(test_servers.ServersSampleBase):
-    extension_name = "os-fixed-ips"
-
+    sample_dir = "os-fixed-ips"
     microversion = None
-
-    def _get_flags(self):
-        f = super(FixedIpTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.fixed_ips.Fixed_ips')
-        return f
 
     def setUp(self):
         super(FixedIpTest, self).setUp()
@@ -45,7 +32,7 @@ class FixedIpTest(test_servers.ServersSampleBase):
                    'address': '192.168.1.1',
                    'network_id': 1,
                    'virtual_interface_id': 1,
-                   'instance_uuid': '1',
+                   'instance_uuid': uuids.instance_1,
                    'allocated': False,
                    'leased': False,
                    'reserved': False,
@@ -60,7 +47,7 @@ class FixedIpTest(test_servers.ServersSampleBase):
                    'address': '192.168.1.2',
                    'network_id': 1,
                    'virtual_interface_id': 2,
-                   'instance_uuid': '2',
+                   'instance_uuid': uuids.instance_2,
                    'allocated': False,
                    'leased': False,
                    'reserved': False,

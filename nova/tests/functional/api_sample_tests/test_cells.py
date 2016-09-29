@@ -23,27 +23,17 @@ from nova import exception
 from nova.tests.functional.api_sample_tests import api_sample_base
 
 CONF = nova.conf.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class CellsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
-    extension_name = "os-cells"
-
-    def _get_flags(self):
-        f = super(CellsSampleJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.cells.Cells')
-        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
-                      'contrib.cell_capacities.Cell_capacities')
-        return f
+    sample_dir = "os-cells"
 
     def setUp(self):
         # db_check_interval < 0 makes cells manager always hit the DB
         self.flags(enable=True, db_check_interval=-1, group='cells')
         super(CellsSampleJsonTest, self).setUp()
-        self.cells = self.start_service('cells', manager=CONF.cells.manager)
+        self.cells = self.start_service('cells',
+                                 manager='nova.cells.manager.CellsManager')
         self._stub_cells()
 
     def _stub_cells(self, num_cells=5):

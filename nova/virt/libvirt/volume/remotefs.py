@@ -19,26 +19,17 @@ import os
 import tempfile
 
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import importutils
 import six
 
+import nova.conf
 from nova.i18n import _LE, _LW
 from nova import utils
 
 LOG = logging.getLogger(__name__)
 
-libvirt_opts = [
-    cfg.StrOpt('remote_filesystem_transport',
-               default='ssh',
-               choices=('ssh', 'rsync'),
-               help='Use ssh or rsync transport for creating, copying, '
-                    'removing files on the remote host.'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(libvirt_opts, 'libvirt')
+CONF = nova.conf.CONF
 
 
 def mount_share(mount_path, export_path,
@@ -189,23 +180,24 @@ class RemoteFilesystemDriver(object):
 class SshDriver(RemoteFilesystemDriver):
 
     def create_file(self, host, dst_path, on_execute, on_completion):
-        utils.execute('ssh', host, 'touch', dst_path,
-                      on_execute=on_execute, on_completion=on_completion)
+        utils.ssh_execute(host, 'touch', dst_path,
+                          on_execute=on_execute, on_completion=on_completion)
 
     def remove_file(self, host, dst, on_execute, on_completion):
-        utils.execute('ssh', host, 'rm', dst,
-                      on_execute=on_execute, on_completion=on_completion)
+        utils.ssh_execute(host, 'rm', dst,
+                          on_execute=on_execute, on_completion=on_completion)
 
     def create_dir(self, host, dst_path, on_execute, on_completion):
-        utils.execute('ssh', host, 'mkdir', '-p', dst_path,
-                      on_execute=on_execute, on_completion=on_completion)
+        utils.ssh_execute(host, 'mkdir', '-p', dst_path,
+                          on_execute=on_execute, on_completion=on_completion)
 
     def remove_dir(self, host, dst, on_execute, on_completion):
-        utils.execute('ssh', host, 'rm', '-rf', dst,
-                      on_execute=on_execute, on_completion=on_completion)
+        utils.ssh_execute(host, 'rm', '-rf', dst,
+                          on_execute=on_execute, on_completion=on_completion)
 
     def copy_file(self, src, dst, on_execute, on_completion, compression):
-        utils.execute('scp', src, dst,
+        # As far as ploop disks are in fact directories we add '-r' argument
+        utils.execute('scp', '-r', src, dst,
                       on_execute=on_execute, on_completion=on_completion)
 
 
@@ -277,7 +269,7 @@ class RsyncDriver(RemoteFilesystemDriver):
         # Remove remote directory's content
         utils.execute('rsync', '--archive', '--delete-excluded',
                       kwargs['tmp_dir_path'] + os.path.sep,
-                      '%s:%s' % (host, dst),
+                      utils.format_remote_path(host, dst),
                       on_execute=on_execute, on_completion=on_completion)
 
         # Delete empty directory
@@ -300,7 +292,8 @@ class RsyncDriver(RemoteFilesystemDriver):
                       '--include', os.path.basename(os.path.normpath(dst)),
                       '--exclude', '*',
                       os.path.normpath(src) + os.path.sep,
-                      '%s:%s' % (host, os.path.dirname(os.path.normpath(dst))),
+                      utils.format_remote_path(host,
+                                 os.path.dirname(os.path.normpath(dst))),
                       on_execute=on_execute, on_completion=on_completion)
 
     @staticmethod
@@ -329,11 +322,13 @@ class RsyncDriver(RemoteFilesystemDriver):
 
         # Do relative rsync local directory with remote root directory
         utils.execute('rsync', '--archive', '--relative', '--no-implied-dirs',
-                      relative_tmp_file_path, '%s:%s' % (host, os.path.sep),
+                      relative_tmp_file_path,
+                      utils.format_remote_path(host, os.path.sep),
                       on_execute=on_execute, on_completion=on_completion)
 
     def copy_file(self, src, dst, on_execute, on_completion, compression):
-        args = ['rsync', '--sparse', src, dst]
+        # As far as ploop disks are in fact directories we add '-r' argument
+        args = ['rsync', '-r', '--sparse', src, dst]
         if compression:
             args.append('--compress')
         utils.execute(*args,

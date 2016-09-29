@@ -27,28 +27,15 @@ these objects be simple dictionaries.
 
 """
 
-from oslo_config import cfg
 from oslo_db import concurrency
 from oslo_log import log as logging
 
 from nova.cells import rpcapi as cells_rpcapi
+import nova.conf
 from nova.i18n import _LE
 
 
-db_opts = [
-    cfg.BoolOpt('enable_new_services',
-                default=True,
-                help='Services to be added to the available pool on create'),
-    cfg.StrOpt('instance_name_template',
-               default='instance-%08x',
-               help='Template string to be used to generate instance names'),
-    cfg.StrOpt('snapshot_name_template',
-               default='snapshot-%s',
-               help='Template string to be used to generate snapshot names'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(db_opts)
+CONF = nova.conf.CONF
 
 _BACKEND_MAPPING = {'sqlalchemy': 'nova.db.sqlalchemy.api'}
 
@@ -59,6 +46,15 @@ LOG = logging.getLogger(__name__)
 
 # The maximum value a signed INT type may have
 MAX_INT = 0x7FFFFFFF
+
+# NOTE(dosaboy): This is supposed to represent the maximum value that we can
+# place into a SQL single precision float so that we can check whether values
+# are oversize. Postgres and MySQL both define this as their max whereas Sqlite
+# uses dynamic typing so this would not apply. Different dbs react in different
+# ways to oversize values e.g. postgres will raise an exception while mysql
+# will round off the value. Nevertheless we may still want to know prior to
+# insert whether the value is oversize or not.
+SQL_SP_FLOAT_MAX = 3.40282e+38
 
 ###################
 
@@ -148,6 +144,16 @@ def service_get_all_by_binary(context, binary, include_disabled=False):
     """
     return IMPL.service_get_all_by_binary(context, binary,
                                           include_disabled=include_disabled)
+
+
+def service_get_all_computes_by_hv_type(context, hv_type,
+                                        include_disabled=False):
+    """Get all compute services for a given hypervisor type.
+
+    Includes disabled services if 'include_disabled' parameter is True.
+    """
+    return IMPL.service_get_all_computes_by_hv_type(context, hv_type,
+        include_disabled=include_disabled)
 
 
 def service_get_all_by_host(context, host):
@@ -246,6 +252,19 @@ def compute_node_get_all(context):
     :returns: List of dictionaries each containing compute node properties
     """
     return IMPL.compute_node_get_all(context)
+
+
+def compute_node_get_all_by_pagination(context, limit=None, marker=None):
+    """Get compute nodes by pagination.
+    :param context: The security context
+    :param limit: Maximum number of items to return
+    :param marker: The last item of the previous page, the next results after
+                   this value will be returned
+
+    :returns: List of dictionaries each containing compute node properties
+    """
+    return IMPL.compute_node_get_all_by_pagination(context,
+                                                   limit=limit, marker=marker)
 
 
 def compute_node_get_all_by_host(context, host):
@@ -640,6 +659,11 @@ def virtual_interface_create(context, values):
     return IMPL.virtual_interface_create(context, values)
 
 
+def virtual_interface_update(context, address, values):
+    """Create a virtual interface record in the database."""
+    return IMPL.virtual_interface_update(context, address, values)
+
+
 def virtual_interface_get(context, vif_id):
     """Gets a virtual interface from the table."""
     return IMPL.virtual_interface_get(context, vif_id)
@@ -671,6 +695,11 @@ def virtual_interface_get_by_instance_and_network(context, instance_id,
 def virtual_interface_delete_by_instance(context, instance_id):
     """Delete virtual interface records associated with instance."""
     return IMPL.virtual_interface_delete_by_instance(context, instance_id)
+
+
+def virtual_interface_delete(context, id):
+    """Delete virtual interface by id."""
+    return IMPL.virtual_interface_delete(context, id)
 
 
 def virtual_interface_get_all(context):
@@ -950,9 +979,10 @@ def key_pair_get(context, user_id, name):
     return IMPL.key_pair_get(context, user_id, name)
 
 
-def key_pair_get_all_by_user(context, user_id):
+def key_pair_get_all_by_user(context, user_id, limit=None, marker=None):
     """Get all key_pairs by user."""
-    return IMPL.key_pair_get_all_by_user(context, user_id)
+    return IMPL.key_pair_get_all_by_user(
+        context, user_id, limit=limit, marker=marker)
 
 
 def key_pair_count_by_user(context, user_id):
@@ -1540,9 +1570,9 @@ def flavor_get_by_flavor_id(context, id, read_deleted=None):
     return IMPL.flavor_get_by_flavor_id(context, id, read_deleted)
 
 
-def flavor_destroy(context, name):
+def flavor_destroy(context, flavor_id):
     """Delete an instance type."""
-    return IMPL.flavor_destroy(context, name)
+    return IMPL.flavor_destroy(context, flavor_id)
 
 
 def flavor_access_get_by_flavor_id(context, flavor_id):
@@ -1796,6 +1826,11 @@ def aggregate_get_by_host(context, host, key=None):
     return IMPL.aggregate_get_by_host(context, host, key)
 
 
+def aggregate_get_by_uuid(context, uuid):
+    """Get a specific aggregate by uuid."""
+    return IMPL.aggregate_get_by_uuid(context, uuid)
+
+
 def aggregate_metadata_get_by_host(context, host, key=None):
     """Get metadata for all aggregates that host belongs to.
 
@@ -2044,3 +2079,39 @@ def instance_tag_delete_all(context, instance_uuid):
 def instance_tag_exists(context, instance_uuid, tag):
     """Check if specified tag exist on the instance."""
     return IMPL.instance_tag_exists(context, instance_uuid, tag)
+
+
+####################
+
+
+def console_auth_token_create(context, values):
+    """Create a console authorization."""
+    return IMPL.console_auth_token_create(context, values)
+
+
+def console_auth_token_get_valid(context, token_hash, instance_uuid):
+    """Get a valid console authorization by token_hash and instance_uuid.
+
+    The console authorizations expire at the time specified by their
+    'expires' column. An expired console auth token will not be returned
+    to the caller - it is treated as if it does not exist.
+    """
+    return IMPL.console_auth_token_get_valid(context,
+                                             token_hash,
+                                             instance_uuid)
+
+
+def console_auth_token_destroy_all_by_instance(context, instance_uuid):
+    """Delete all console authorizations belonging to the instance."""
+    return IMPL.console_auth_token_destroy_all_by_instance(context,
+                                                           instance_uuid)
+
+
+def console_auth_token_destroy_expired_by_host(context, host):
+    """Delete expired console authorizations belonging to the host.
+
+    The console authorizations expire at the time specified by their
+    'expires' column. This function is used to garbage collect expired
+    tokens associated with the given host.
+    """
+    return IMPL.console_auth_token_destroy_expired_by_host(context, host)

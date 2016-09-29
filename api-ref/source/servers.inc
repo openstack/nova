@@ -1,6 +1,6 @@
 .. -*- rst -*-
-.. needs:method_verification
-.. needs:parameter_verification
+.. TODO(sdague) parameter microversions need to be gone through in the
+   response (request side should be good)
 .. needs:example_verification
 .. needs:body_verification
 
@@ -98,7 +98,7 @@ access the server directly.
 List Servers
 ============
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers
+.. rest_method:: GET /servers
 
 Lists IDs, names, and links for all servers.
 
@@ -148,23 +148,33 @@ body. The possible server status values are:
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401),
+forbidden(403)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - changes-since: changes-since
+
+  - limit: limit
+  - marker: marker
+  - sort_key: sort_key_server
+  - sort_dir: sort_dir_server
+  - changes-since: changes_since_server
   - image: image_query
   - flavor: flavor_query
   - name: server_name_query
   - status: server_status_query
-  - host: host_query
-  - limit: limit
-  - marker: marker
+  - ip: ip_query
+  - reservation_id: reservation_id_query
+  - all_tenants: all_tenants_query
+  - deleted: deleted_query
+  - ip6: ip6_query
+  - tags: tags_query
+  - tags-any: tags_any_query
+  - not-tags: not_tags_query
+  - not-tags-any: not_tags_any_query
 
 Response
 --------
@@ -185,7 +195,7 @@ Response
 Create Server
 =============
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers
+.. rest_method:: POST /servers
 
 Creates a server.
 
@@ -211,8 +221,10 @@ request body to boot a server from a volume.
 Include the ``key_name`` parameter in the create request body to add a
 keypair to the server when you create it. To create a keypair, make a
 `create keypair
-<http://developer.openstack.org/api-ref-compute-v2.1.html#createKeypair>`__
+<http://developer.openstack.org/api-ref/compute/#create-or-import-keypair>`__
 request.
+
+.. note:: Starting with microversion 2.37 the ``networks`` field is required.
 
 Preconditions
 
@@ -245,27 +257,45 @@ Troubleshooting
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401),
+forbidden(403), itemNotFound(404), conflict(409), entityTooLarge(413)
+
+..
+  TODO(sdague): leave these notes for later when fixing the body
+  language. They are commented out so they won't render, but are
+  useful to not have to look this up again later.
+
+  A conflict(409) is returned in the event of trying to allocated already
+  allocated resources (such as networks) to the server in question.
+
+  entityTooLarge(413) is returned if the ``user_data`` exceeds what is
+  allowed by the backend.
+
+  All other failure conditions map to 400, and will need to be
+  disambiguated by the error string returned.
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server: server
   - name: server_name
   - flavorRef: flavorRef
   - imageRef: imageRef
   - security_groups: security_groups
   - metadata: metadata
+  - accessIPv4: accessIPv4_in
+  - accessIPv6: accessIPv6_in
+  - adminPass: adminPass
   - user_data: user_data
-  - os-availability-zone:availability_zone: os-availability-zone:availability_zone
+  - availability_zone: os-availability-zone:availability_zone
   - networks: networks
   - networks.uuid: network_uuid
   - networks.port: port
   - networks.fixed_ip: fixed_ip
+  - networks.tag: device_tag
   - personality: personality
   - block_device_mapping_v2: block_device_mapping_v2
   - block_device_mapping_v2.device_name: device_name
@@ -274,14 +304,21 @@ Request
   - block_device_mapping_v2.delete_on_termination: delete_on_termination
   - block_device_mapping_v2.guest_format: guest_format
   - block_device_mapping_v2.boot_index: boot_index
+  - block_device_mapping_v2.tag: device_tag
   - config_drive: config_drive
   - key_name: key_name
   - os:scheduler_hints: os:scheduler_hints
   - OS-DCF:diskConfig: OS-DCF:diskConfig
+  - description: server_description
 
 **Example Create Server: JSON request**
 
 .. literalinclude:: ../../doc/api_samples/servers/server-create-req.json
+   :language: javascript
+
+**Example Create Server With Automatic Networking (v2.37)**
+
+.. literalinclude:: ../../doc/api_samples/servers/v2.37/server-create-req.json
    :language: javascript
 
 Response
@@ -290,22 +327,112 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - server: server
-  - adminPass: adminPass
+  - addresses: addresses
+  - created: created
+  - flavor: flavor
+  - hostId: hostId
   - id: server_id
+  - image: image
+  - key_name: key_name_resp
   - links: links
-  - OS-DCF:diskConfig: OS-DCF:diskConfig
-  - security_groups: security_groups
+  - metadata: metadata_compat
+  - name: server_name
+  - accessIPv4: accessIPv4
+  - accessIPv6: accessIPv6
+  - config_drive: config_drive_resp
+  - OS-DCF:diskConfig: disk_config
+  - OS-EXT-AZ:availability_zone: OS-EXT-AZ:availability_zone
+  - OS-EXT-SRV-ATTR:host: OS-EXT-SRV-ATTR:host
+  - OS-EXT-SRV-ATTR:hypervisor_hostname: OS-EXT-SRV-ATTR:hypervisor_hostname
+  - OS-EXT-SRV-ATTR:instance_name: OS-EXT-SRV-ATTR:instance_name
+  - OS-EXT-STS:power_state: OS-EXT-STS:power_state
+  - OS-EXT-STS:task_state: OS-EXT-STS:task_state
+  - OS-EXT-STS:vm_state: OS-EXT-STS:vm_state
+  - os-extended-volumes:volumes_attached: os-extended-volumes:volumes_attached
+  - OS-SRV-USG:launched_at: OS-SRV-USG:launched_at
+  - OS-SRV-USG:terminated_at: OS-SRV-USG:terminated_at
+  - progress: progress
+  - security_groups: security_groups_obj
+  - security_group.name: name
+  - status: server_status
+  - host_status: host_status
+  - tenant_id: tenant_id_body
+  - updated: updated
+  - user_id: user_id
+  - OS-EXT-SERV-ATTR:hostname: server_hostname
+  - OS-EXT-SERV-ATTR:reservation_id: server_reservation_id
+  - OS-EXT-SERV-ATTR:launch_index: server_launch_index
+  - OS-EXT-SERV-ATTR:kernel_id: server_kernel_id
+  - OS-EXT-SERV-ATTR:ramdisk_id: server_ramdisk_id
+  - OS-EXT-SERV-ATTR:root_device_name: server_root_device_name
+  - OS-EXT-SERV-ATTR:user_data: server_user_data
 
 **Example Create Server: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/servers/server-create-resp.json
    :language: javascript
 
+Create Multiple Servers
+=======================
+
+.. rest_method:: POST /servers
+
+There is a second kind of create call which can build multiple servers
+at once. This supports all the same parameters as create with a few
+additional attributes specific to multiple create.
+
+Error handling for multiple create is not as consistent as for single
+server create, and there is no guarantee that all the servers will be
+built. This call should generally be avoided in favor of clients doing
+direct individual server creates.
+
+Request (Additional Parameters)
+-------------------------------
+
+These are the parameters beyond single create that are supported.
+
+.. rest_parameters:: parameters.yaml
+
+   - name: servers_multiple_create_name
+   - min_count: servers_min_count
+   - max_count: servers_max_count
+   - return_reservation_id: return_reservation_id
+
+**Example Multiple Create with reservation ID**
+
+.. literalinclude:: ../../doc/api_samples/os-multiple-create/multiple-create-post-req.json
+   :language: javascript
+
+Response
+--------
+
+.. rest_parameters:: parameters.yaml
+
+   - reservation_id: reservation_id
+
+If ``return_reservation_id`` is set to ``true`` only the
+``reservation_id`` will be returned. This can be used as a filter with
+list servers detailed to see the status of all the servers being
+built.
+
+**Example Create multiple servers with reservation ID**
+
+.. literalinclude:: ../../doc/api_samples/os-multiple-create/multiple-create-post-resp.json
+   :language: javascript
+
+If ``return_reservation_id`` is set to ``false`` a representation of
+the ``first`` server will be returned.
+
+**Example Create multiple servers without reservation ID**
+
+.. literalinclude:: ../../doc/api_samples/os-multiple-create/multiple-create-no-resv-post-resp.json
+   :language: javascript
+
 
 List Servers Detailed
 =====================
 
-.. rest_method:: GET /v2.1/​{tenant_id}​/servers/detail
+.. rest_method:: GET /servers/detail
 
 For each server, shows server details including configuration drive,
 extended status, and server usage information.
@@ -324,25 +451,33 @@ HostId is unique per account and is not globally unique.
 
 Normal response codes: 200
 
-Error response codes: computeFault (400, 500, …), serviceUnavailable
-(503), badRequest (400), unauthorized (401), forbidden (403),
-badMethod (405)
-
+Error response codes: badRequest(400), unauthorized(401),
+forbidden(403)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - changes-since: changes-since
+
+  - limit: limit
+  - marker: marker
+  - sort_key: sort_key_server
+  - sort_dir: sort_dir_server
+  - changes-since: changes_since_server
   - image: image_query
   - flavor: flavor_query
   - name: server_name_query
   - status: server_status_query
-  - host: host_query
-  - limit: limit
-  - marker: marker
+  - ip: ip_query
+  - reservation_id: reservation_id_query
+  - all_tenants: all_tenants_query
+  - deleted: deleted_query
+  - ip6: ip6_query
+  - tags: tags_query
+  - tags-any: tags_any_query
+  - not-tags: not_tags_query
+  - not-tags-any: not_tags_any_query
 
 Response
 --------
@@ -356,11 +491,14 @@ Response
   - hostId: hostId
   - id: server_id
   - image: image
-  - key_name: key_name
+  - key_name: key_name_resp
   - links: links
-  - metadata: metadata
-  - name: name
-  - OS-DCF:diskConfig: OS-DCF:diskConfig
+  - metadata: metadata_compat
+  - name: server_name
+  - accessIPv4: accessIPv4
+  - accessIPv6: accessIPv6
+  - config_drive: config_drive_resp
+  - OS-DCF:diskConfig: disk_config
   - OS-EXT-AZ:availability_zone: OS-EXT-AZ:availability_zone
   - OS-EXT-SRV-ATTR:host: OS-EXT-SRV-ATTR:host
   - OS-EXT-SRV-ATTR:hypervisor_hostname: OS-EXT-SRV-ATTR:hypervisor_hostname
@@ -373,15 +511,19 @@ Response
   - OS-SRV-USG:terminated_at: OS-SRV-USG:terminated_at
   - progress: progress
   - security_groups: security_groups_obj
-  - security_group.description: description
-  - security_group.id: id
   - security_group.name: name
-  - security_group.rules: rules
   - status: server_status
   - host_status: host_status
-  - tenant_id: tenant_id
+  - tenant_id: tenant_id_body
   - updated: updated
   - user_id: user_id
+  - OS-EXT-SERV-ATTR:hostname: server_hostname
+  - OS-EXT-SERV-ATTR:reservation_id: server_reservation_id
+  - OS-EXT-SERV-ATTR:launch_index: server_launch_index
+  - OS-EXT-SERV-ATTR:kernel_id: server_kernel_id
+  - OS-EXT-SERV-ATTR:ramdisk_id: server_ramdisk_id
+  - OS-EXT-SERV-ATTR:root_device_name: server_root_device_name
+  - OS-EXT-SERV-ATTR:user_data: server_user_data
 
 **Example List Servers Detailed: JSON response**
 
@@ -392,7 +534,7 @@ Response
 Show Server Details
 ===================
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}
+.. rest_method:: GET /servers/{server_id}
 
 Shows details for a server.
 
@@ -404,7 +546,7 @@ The server usage information appears in the ``OS-SRV-USG:launched_at`` and ``OS-
 
 To hide ``addresses`` information for instances in a certain state, set the ``osapi_hide_server_address_states`` configuration option. Set this option to a valid VM state in the ``nova.conf`` configuration file.
 
-HostId is unique peraccount and is not globally unique.
+HostId is unique per account and is not globally unique.
 
 Preconditions
 
@@ -412,15 +554,15 @@ The server must exist.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403),
+itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id_path
 
 Response
@@ -435,11 +577,14 @@ Response
   - hostId: hostId
   - id: server_id
   - image: image
-  - key_name: key_name
+  - key_name: key_name_resp
   - links: links
-  - metadata: metadata
+  - metadata: metadata_compat
   - name: server_name
-  - OS-DCF:diskConfig: OS-DCF:diskConfig
+  - accessIPv4: accessIPv4
+  - accessIPv6: accessIPv6
+  - config_drive: config_drive_resp
+  - OS-DCF:diskConfig: disk_config
   - OS-EXT-AZ:availability_zone: OS-EXT-AZ:availability_zone
   - OS-EXT-SRV-ATTR:host: OS-EXT-SRV-ATTR:host
   - OS-EXT-SRV-ATTR:hypervisor_hostname: OS-EXT-SRV-ATTR:hypervisor_hostname
@@ -452,15 +597,20 @@ Response
   - OS-SRV-USG:terminated_at: OS-SRV-USG:terminated_at
   - progress: progress
   - security_groups: security_groups_obj
-  - security_group.description: description
-  - security_group.id: id
   - security_group.name: name
-  - security_group.rules: rules
   - status: server_status
   - host_status: host_status
-  - tenant_id: tenant_id
+  - tenant_id: tenant_id_body
   - updated: updated
   - user_id: user_id
+  - fault: fault
+  - OS-EXT-SERV-ATTR:hostname: server_hostname
+  - OS-EXT-SERV-ATTR:reservation_id: server_reservation_id
+  - OS-EXT-SERV-ATTR:launch_index: server_launch_index
+  - OS-EXT-SERV-ATTR:kernel_id: server_kernel_id
+  - OS-EXT-SERV-ATTR:ramdisk_id: server_ramdisk_id
+  - OS-EXT-SERV-ATTR:root_device_name: server_root_device_name
+  - OS-EXT-SERV-ATTR:user_data: server_user_data
 
 **Example Show Server Details: JSON response**
 
@@ -470,32 +620,27 @@ Response
 Update Server
 =============
 
-.. rest_method:: PUT /v2.1/{tenant_id}/servers/{server_id}
+.. rest_method:: PUT /servers/{server_id}
 
-Updates the editable attributes of a server.
-
-Preconditions
-
-The server must exist.
-
-You can edit the ``accessIPv4``, ``accessIPv6``, ``diskConfig`` and ``name`` attributes.
+Updates the editable attributes of an existing server.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401),
+forbidden(403), itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id_path
-  - accessIPv4: accessIPv4
-  - accessIPv6: accessIPv6
+  - accessIPv4: accessIPv4_in
+  - accessIPv6: accessIPv6_in
   - name: server_name
   - OS-DCF:diskConfig: OS-DCF:diskConfig
+  - description: server_description
 
 **Example Update server name: JSON request**
 
@@ -531,7 +676,9 @@ Response
   - key_name: key_name
   - links: links
   - metadata: metadata
-  - name: name
+  - name: server_name
+  - accessIPv4: accessIPv4
+  - accessIPv6: accessIPv6
   - OS-DCF:diskConfig: OS-DCF:diskConfig
   - OS-EXT-AZ:availability_zone: OS-EXT-AZ:availability_zone
   - OS-EXT-SRV-ATTR:host: OS-EXT-SRV-ATTR:host
@@ -545,15 +692,19 @@ Response
   - OS-SRV-USG:terminated_at: OS-SRV-USG:terminated_at
   - progress: progress
   - security_groups: security_groups_obj
-  - security_group.description: description
-  - security_group.id: id
   - security_group.name: name
-  - security_group.rules: rules
   - status: server_status
   - host_status: host_status
-  - tenant_id: tenant_id
+  - tenant_id: tenant_id_body
   - updated: updated
   - user_id: user_id
+  - OS-EXT-SERV-ATTR:hostname: server_hostname
+  - OS-EXT-SERV-ATTR:reservation_id: server_reservation_id
+  - OS-EXT-SERV-ATTR:launch_index: server_launch_index
+  - OS-EXT-SERV-ATTR:kernel_id: server_kernel_id
+  - OS-EXT-SERV-ATTR:ramdisk_id: server_ramdisk_id
+  - OS-EXT-SERV-ATTR:root_device_name: server_root_device_name
+  - OS-EXT-SERV-ATTR:user_data: server_user_data
 
 **Example Update server name: JSON response**
 
@@ -563,7 +714,7 @@ Response
 Delete Server
 =============
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/servers/{server_id}
+.. rest_method:: DELETE /servers/{server_id}
 
 Deletes a server.
 
@@ -597,15 +748,23 @@ Troubleshooting
 
 Normal response codes: 204
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409)
+
+..
+   TODO(sdague): for later phase of updating body.
+
+   conflict is returned under 2 conditions. When the instance is
+   locked, so can't be deleted, or if the instance is in some other
+   state which makes it not possible to delete.
+
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id_path
 
 Response

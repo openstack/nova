@@ -24,7 +24,6 @@ from nova import exception as ex
 from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.functional import api_paste_fixture
 from nova.tests.functional import integrated_helpers as helper
 from nova.tests.unit import policy_fixture
 
@@ -84,11 +83,6 @@ class FlavorManageFullstack(testscenarios.WithScenarios, test.TestCase):
         # test v2.1 base microversion
         ('v2_1', {
             'api_major_version': 'v2.1'}),
-        # test v2 with the v2 legacy code
-        ('v2legacy', {
-            'api_major_version': 'v2',
-            '_additional_fixtures': [
-                api_paste_fixture.ApiPasteLegacyV2Fixture]})
     ]
 
     def setUp(self):

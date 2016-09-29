@@ -8,9 +8,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:29+0000\n"
+"POT-Creation-Date: 2016-08-25 06:15+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -30,12 +30,6 @@ msgid ""
 "%(base)s virtual size %(base_size)s larger than flavor root disk size "
 "%(size)s"
 msgstr "%(base)s 虚拟大小 %(base_size)s 比云主机类型的根磁盘大小 %(size)s 大"
-
-#, python-format
-msgid ""
-"%(base)s virtual size %(disk_size)s larger than flavor root disk size "
-"%(size)s"
-msgstr "%(base)s 虚拟大小 %(disk_size)s 大于云主机根磁盘大小 %(size)s"
 
 #, python-format
 msgid ""
@@ -71,34 +65,6 @@ msgstr "抓到错误：%s"
 
 msgid "Compute driver option required, but not specified"
 msgstr "需要计算驱动程序选项，但是未指定"
-
-#, python-format
-msgid "Compute.api::inject_network_info %s"
-msgstr "Compute.api::inject_network_info %s"
-
-#, python-format
-msgid "Compute.api::lock %s"
-msgstr "compute.api::加锁 %s"
-
-#, python-format
-msgid "Compute.api::pause %s"
-msgstr "Compute.api::暂停 %s"
-
-#, python-format
-msgid "Compute.api::resetState %s"
-msgstr "Compute.api::resetState %s"
-
-#, python-format
-msgid "Compute.api::reset_network %s"
-msgstr "Compute.api::reset_network %s"
-
-#, python-format
-msgid "Compute.api::unlock %s"
-msgstr "compute.api::解锁 %s"
-
-#, python-format
-msgid "Compute.api::unpause %s"
-msgstr "Compute.api::取消暂停 %s"
 
 #, python-format
 msgid "Connection to libvirt failed: %s"
@@ -193,18 +159,6 @@ msgid "Environment variable 'NETWORK_ID' must be set."
 msgstr "必须设置环境变量'NETWORK_ID'。"
 
 #, python-format
-msgid "Error copying key: %s"
-msgstr "复制key：%s 出错"
-
-#, python-format
-msgid "Error creating Barbican client: %s"
-msgstr "创建Barbican客户端：%s 出错"
-
-#, python-format
-msgid "Error creating key: %s"
-msgstr "创建key：%s 出错"
-
-#, python-format
 msgid "Error defining a domain with XML: %s"
 msgstr "定义实体出错，XML：%s"
 
@@ -215,10 +169,6 @@ msgstr "定义加密失败，XML：%s"
 #, python-format
 msgid "Error deleting conntrack entries for %s"
 msgstr "删除跟踪连接项 %s"
-
-#, python-format
-msgid "Error deleting key: %s"
-msgstr "删除key：%s 出错"
 
 #, python-format
 msgid "Error deploying instance %(instance)s on baremetal node %(node)s."
@@ -243,21 +193,6 @@ msgstr "在 undefine 时 libvirt 发生错误。Code=%(errcode)s Error=%(e)s"
 #, python-format
 msgid "Error from libvirt during unfilter. Code=%(errcode)s Error=%(e)s"
 msgstr "在 unfilter 期间，libvirt 中出错。Code=%(errcode)s Error=%(e)s"
-
-#, python-format
-msgid "Error getting key: %s"
-msgstr "获取key：%s 出错"
-
-#, python-format
-msgid "Error getting secret data: %s"
-msgstr "获取机密数据：%s 出错"
-
-#, python-format
-msgid "Error getting secret metadata: %s"
-msgstr "获取机密元数据：%s 出错"
-
-msgid "Error in migrate"
-msgstr "移植中发生错误"
 
 #, python-format
 msgid "Error injecting data into image %(img_id)s (%(e)s)"
@@ -298,10 +233,6 @@ msgid "Error processing message locally"
 msgstr "本地消息处理发生错误"
 
 #, python-format
-msgid "Error reading image info file %(filename)s: %(error)s"
-msgstr "读取映像信息文件 %(filename)s 时出错：%(error)s"
-
-#, python-format
 msgid "Error releasing DHCP for IP %(address)s with MAC %(mac_address)s"
 msgstr "释放带有MAC %(mac_address)s 的IP %(address)s 的DHCP时出错"
 
@@ -315,10 +246,6 @@ msgstr "发送消息到下一跳失败"
 #, python-format
 msgid "Error starting xvp: %s"
 msgstr "启动xvp发生错误：%s"
-
-#, python-format
-msgid "Error storing key: %s"
-msgstr "存储key：%s 出错"
 
 msgid "Error trying to Rescue Instance"
 msgstr "尝试救援实例时发生错误"
@@ -435,9 +362,6 @@ msgid ""
 "Failed to copy cached image %(source)s to %(dest)s for resize: %(error)s"
 msgstr "为调整大小，从%(source)s 到 %(dest)s复制缓存镜像失败：%(error)s"
 
-msgid "Failed to deallocate network for instance."
-msgstr "未能对实例释放网络。"
-
 msgid "Failed to deallocate networks"
 msgstr "释放网络失败"
 
@@ -490,10 +414,6 @@ msgid ""
 msgstr ""
 "从元数据请求中获取实例id失败，提供方 %(provider)s 网络 %(networks)s 请求方 "
 "%(requester)s。错误：%(error)s"
-
-#, python-format
-msgid "Failed to get metadata for IP: %s"
-msgstr "获取IP： %s元数据失败"
 
 #, python-format
 msgid "Failed to get metadata for instance id: %s"
@@ -697,10 +617,6 @@ msgid "Instance failed to spawn"
 msgstr "实例生产失败"
 
 #, python-format
-msgid "Instance type %s not found for deletion"
-msgstr "未找到要删除的实例类型 %s"
-
-#, python-format
 msgid "Interface %s not found"
 msgstr "没有找到接口%s"
 
@@ -787,18 +703,6 @@ msgstr "在网络 %s 上创建端口发生Neutron错误"
 #, python-format
 msgid "No compute node record for host %s"
 msgstr "没有host %s 的计算节点记录"
-
-#, python-format
-msgid "No db access allowed in nova-compute: %s"
-msgstr "nova-compute: %s 中不允许访问数据库"
-
-#, python-format
-msgid "No db access allowed in nova-dhcpbridge: %s"
-msgstr "nova-dhcpbridge: %s 中不允许访问数据库"
-
-#, python-format
-msgid "No db access allowed in nova-network: %s"
-msgstr "nova-network: %s中不允许访问数据库"
 
 #, python-format
 msgid "No save handler for %s"
@@ -920,9 +824,6 @@ msgstr "无法创建停顿VM的快照，禁用停顿后再尝试一次。"
 msgid "Unable to destroy VBD"
 msgstr "不能销毁VBD"
 
-msgid "Unable to determine the glance API version"
-msgstr "无法判断Glance API版本。"
-
 #, python-format
 msgid "Unable to execute %(cmd)s. Exception: %(exception)s"
 msgstr "无法执行 %(cmd)s。发生异常：%(exception)s"
@@ -932,10 +833,6 @@ msgstr "不能从VBD找到SR"
 
 msgid "Unable to find SR from VDI"
 msgstr "不能从VDI找到SR"
-
-#, python-format
-msgid "Unable to find address %r"
-msgstr "无法找到地址 %r"
 
 msgid "Unable to get record of VDI"
 msgstr "不能获取VDI记录"
@@ -975,10 +872,6 @@ msgstr "不能建立池：%s"
 
 msgid "Unable to unplug VBD"
 msgstr "不能拔出VBD"
-
-#, python-format
-msgid "Unable to update host of port %s"
-msgstr "无法更新端口 %s 的主机"
 
 #, python-format
 msgid "Unable to update instance VNIC index for port %s."
@@ -1053,14 +946,6 @@ msgstr "allocate_port_for_instance 返回端口 %(ports)s"
 msgid "attaching network adapter failed."
 msgstr "连接网络适配器失败。"
 
-#, python-format
-msgid "compute.api::resume %s"
-msgstr "compute.api::resume %s"
-
-#, python-format
-msgid "compute.api::suspend %s"
-msgstr "compute.api::挂起 %s"
-
 msgid "detaching network adapter failed."
 msgstr "未能与网络适配器断开连接。"
 
@@ -1070,10 +955,6 @@ msgstr "在 stop()（处于 sync_power_state）期间出错。"
 #, python-format
 msgid "error opening rbd image %s"
 msgstr "打开rbd镜像%s 出错"
-
-#, python-format
-msgid "image %(id)s at (%(base_file)s): image verification failed"
-msgstr "(%(base_file)s) 处的映像 %(id)s：映像验证失败"
 
 #, python-format
 msgid "image %(volume)s in pool %(pool)s has snapshots, failed to remove"

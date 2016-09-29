@@ -18,6 +18,7 @@
         "vcpus": 1,
         "OS-FLV-DISABLED:disabled": false,
         "OS-FLV-EXT-DATA:ephemeral": 0,
-        "swap": ""
+        "swap": "",
+        "rxtx_factor": 1.0
     }
 }

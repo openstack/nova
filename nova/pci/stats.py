@@ -22,7 +22,6 @@ import six
 
 from nova import exception
 from nova.i18n import _LE
-from nova import objects
 from nova.objects import fields
 from nova.objects import pci_device_pool
 from nova.pci import utils
@@ -192,18 +191,13 @@ class PciDeviceStats(object):
         decreased, unless it is no longer in a pool.
         """
         if pci_dev.dev_type == fields.PciDeviceType.SRIOV_PF:
-            vfs_list = objects.PciDeviceList.get_by_parent_address(
-                                       pci_dev._context,
-                                       pci_dev.compute_node_id,
-                                       pci_dev.address)
+            vfs_list = pci_dev.child_devices
             if vfs_list:
                 for vf in vfs_list:
                     self.remove_device(vf)
         elif pci_dev.dev_type == fields.PciDeviceType.SRIOV_VF:
             try:
-                parent = pci_dev.get_by_dev_addr(pci_dev._context,
-                                                 pci_dev.compute_node_id,
-                                                 pci_dev.parent_addr)
+                parent = pci_dev.parent_device
                 # Make sure not to decrease PF pool count if this parent has
                 # been already removed from pools
                 if parent in self.get_free_devs():
@@ -302,10 +296,11 @@ class PciDeviceStats(object):
         self.pools = []
 
     def __eq__(self, other):
-        return cmp(self.pools, other.pools) == 0
+        return self.pools == other.pools
 
-    def __ne__(self, other):
-        return not (self == other)
+    if six.PY2:
+        def __ne__(self, other):
+            return not (self == other)
 
     def to_device_pools_obj(self):
         """Return the contents of the pools as a PciDevicePoolList object."""

@@ -1,0 +1,65 @@
+{
+    "event_type": "instance.update",
+    "payload": {
+        "nova_object.data": {
+            "architecture": "x86_64",
+            "audit_period": {
+                "nova_object.data": {
+                    "audit_period_beginning": "2012-10-01T00:00:00Z",
+                    "audit_period_ending": "2012-10-29T13:42:11Z"},
+                "nova_object.name": "AuditPeriodPayload",
+                "nova_object.namespace": "nova",
+                "nova_object.version": "1.0"
+            },
+            "availability_zone": null,
+            "bandwidth": [],
+            "created_at": "2012-10-29T13:42:11Z",
+            "deleted_at": null,
+            "display_name": "some-server",
+            "host": "compute",
+            "host_name": "some-server",
+            "image_uuid": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
+            "kernel_id": "",
+            "launched_at": null,
+            "metadata": {},
+            "node": "fake-mini",
+            "old_display_name": null,
+            "os_type": null,
+            "progress": 0,
+            "ramdisk_id": "",
+            "reservation_id": "r-sd3ygfjj",
+            "state": "building",
+            "task_state": "scheduling",
+            "power_state": "pending",
+            "ip_addresses": [],
+            "state_update": {
+                "nova_object.data": {
+                    "new_task_state": null,
+                    "old_state": "building",
+                    "old_task_state": null,
+                    "state": "building"},
+                "nova_object.name": "InstanceStateUpdatePayload",
+                "nova_object.namespace": "nova",
+                "nova_object.version": "1.0"},
+            "tenant_id": "6f70656e737461636b20342065766572",
+            "terminated_at": null,
+            "flavor": {
+                "nova_object.name": "FlavorPayload",
+                "nova_object.data": {
+                    "flavorid": "a22d5517-147c-4147-a0d1-e698df5cd4e3",
+                    "root_gb": 1,
+                    "vcpus": 1,
+                    "ephemeral_gb": 0,
+                    "memory_mb": 512
+                },
+                "nova_object.version": "1.0",
+                "nova_object.namespace": "nova"
+            },
+            "user_id": "fake",
+            "uuid": "c03c0bf9-f46e-4e4f-93f1-817568567ee2"},
+        "nova_object.name": "InstanceUpdatePayload",
+        "nova_object.namespace": "nova",
+        "nova_object.version": "1.0"},
+    "priority": "INFO",
+    "publisher_id": "nova-compute:fake-mini"
+}

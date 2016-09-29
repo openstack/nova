@@ -58,18 +58,12 @@ def upgrade(migrate_engine):
         Column('value', String(length=255)),
         UniqueConstraint('flavor_id', 'key',
             name='uniq_flavor_extra_specs0flavor_id0key'),
+        Index('flavor_extra_specs_flavor_id_key_idx', 'flavor_id', 'key'),
         ForeignKeyConstraint(columns=['flavor_id'], refcolumns=[flavors.c.id]),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
 
-    # NOTE(mriedem): DB2 creates an index when a unique constraint is created
-    # so trying to add a second index on the flavor_id/key column will fail
-    # with error SQL0605W, so omit the index in the case of DB2.
-    if migrate_engine.name != 'ibm_db_sa':
-        Index('flavor_extra_specs_flavor_id_key_idx',
-              flavor_extra_specs.c.flavor_id,
-              flavor_extra_specs.c.key)
     flavor_extra_specs.create(checkfirst=True)
 
     flavor_projects = Table('flavor_projects', meta,

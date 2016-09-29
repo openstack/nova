@@ -14,6 +14,7 @@
 #    under the License.
 
 import os
+import pprint
 import re
 
 from oslo_serialization import jsonutils
@@ -23,6 +24,9 @@ from nova import test
 from nova.tests.functional import integrated_helpers
 
 PROJECT_ID = "6f70656e737461636b20342065766572"
+
+# for pretty printing errors
+pp = pprint.PrettyPrinter(indent=4)
 
 
 class NoMatch(test.TestingException):
@@ -63,8 +67,7 @@ def objectify(data):
 
 
 class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
-    all_extensions = False
-    extension_name = None
+    all_extensions = True
     sample_dir = None
     microversion = None
     _use_common_server_api_samples = False
@@ -94,25 +97,15 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
     def _get_sample_path(cls, name, dirname, suffix='', api_version=None):
         parts = [dirname]
         parts.append('api_samples')
-        # TODO(gmann): Once all tests gets merged for all extension
-        # then we need to have a simple logic here to select sample file
-        # directory which will be based on cls.sample_dir and api_version.
-        # All other things will go away from here. Currently hacking this
-        # till we merge every extensions tests.
-        if cls.all_extensions and not cls.sample_dir:
-            parts.append('all_extensions')
         # Note(gmann): if _use_common_server_api_samples is set to True
         # then common server sample files present in 'servers' directory
         # will be used. As of now it is being used for server POST request
         # to avoid duplicate copy of server req and resp sample files.
         # Example - ServersSampleBase's _post_server method.
-        elif cls._use_common_server_api_samples:
+        if cls._use_common_server_api_samples:
             parts.append('servers')
         else:
-            if cls.sample_dir:
-                parts.append(cls.sample_dir)
-            elif cls.extension_name:
-                parts.append(cls.extension_name)
+            parts.append(cls.sample_dir)
             if api_version:
                 parts.append('v' + api_version)
         parts.append(name + ".json" + suffix)
@@ -196,6 +189,24 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
 
             expected = expected[:]
             extra = []
+
+            # if it's a list of 1, do the simple compare which gives a
+            # better error message.
+            if len(result) == len(expected) == 1:
+                return self._compare_result(expected[0], result[0], result_str)
+
+            # This is clever enough to need some explanation. What we
+            # are doing here is looping the result list, and trying to
+            # compare it to every item in the expected list. If there
+            # is more than one, we're going to get fails. We ignore
+            # those. But every time we match an expected we drop it,
+            # and break to the next iteration. Every time we hit the
+            # end of the iteration, we add our results into a bucket
+            # of non matched.
+            #
+            # This results in poor error messages because we don't
+            # really know why the elements failed to match each
+            # other. A more complicated diff might be nice.
             for res_obj in result:
                 for i, ex_obj in enumerate(expected):
                     try:
@@ -340,10 +351,10 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             template_data = response_data
         else:
             template_data = self._read_template(name)
-
         if (self.generate_samples and
                 not os.path.exists(self._get_sample(
                     name, self.microversion))):
+
             self._write_sample(name, response_data)
             sample_data = response_data
         else:
@@ -358,6 +369,15 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             response_data = objectify(response_data)
             response_result = self._compare_result(template_data,
                                                    response_data, "Response")
+        except NoMatch as e:
+            raise NoMatch("\nFailed to match Template to Response: \n%s\n"
+                          "Template: %s\n\n"
+                          "Respones: %s\n\n" %
+                          (e,
+                           pp.pformat(template_data),
+                           pp.pformat(response_data)))
+
+        try:
             # NOTE(danms): replace some of the subs with patterns for the
             # doc/api_samples check, which won't have things like the
             # correct compute host name. Also let the test do some of its
@@ -372,8 +392,13 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             sample_data = objectify(sample_data)
             self._compare_result(template_data, sample_data, "Sample")
             return response_result
-        except NoMatch:
-            raise
+        except NoMatch as e:
+            raise NoMatch("\nFailed to match Template to Sample: \n%s\n"
+                          "Template: %s\n\n"
+                          "Sample: %s\n\n" %
+                          (e,
+                           pp.pformat(template_data),
+                           pp.pformat(sample_data)))
 
     def _get_host(self):
         return 'http://openstack.example.com'

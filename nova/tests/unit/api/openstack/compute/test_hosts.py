@@ -17,7 +17,6 @@ import testtools
 import webob.exc
 
 from nova.api.openstack.compute import hosts as os_hosts_v21
-from nova.api.openstack.compute.legacy_v2.contrib import hosts as os_hosts_v2
 from nova.compute import power_state
 from nova.compute import vm_states
 from nova import context as context_maker
@@ -375,43 +374,6 @@ class HostTestCaseV21(test.TestCase):
         self.assertIn('hosts', result)
         hosts = result['hosts']
         self.assertEqual(fake_hosts.HOST_LIST_NOVA_ZONE, hosts)
-
-
-class HostTestCaseV20(HostTestCaseV21):
-    validation_ex = webob.exc.HTTPBadRequest
-    policy_ex = webob.exc.HTTPForbidden
-    Controller = os_hosts_v2.HostController
-
-    def test_list_hosts_with_non_admin(self):
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.index, fakes.HTTPRequest.blank(''))
-
-    def test_host_maintenance_with_non_admin(self):
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.update, fakes.HTTPRequest.blank(''),
-                          'host_c1', {'maintenance_mode': 'enable'})
-
-    def test_startup_with_non_admin(self):
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.startup, fakes.HTTPRequest.blank(''),
-                          'host_c1')
-
-    def test_reboot_with_non_admin(self):
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.reboot, fakes.HTTPRequest.blank(''),
-                          'host_c1')
-
-    def test_shutdown_with_non_admin(self):
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.shutdown,
-                          fakes.HTTPRequest.blank(''),
-                          'host_c1')
-
-    def test_show_non_admin(self):
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.show,
-                          fakes.HTTPRequest.blank(''),
-                          1)
 
 
 class HostsPolicyEnforcementV21(test.NoDBTestCase):

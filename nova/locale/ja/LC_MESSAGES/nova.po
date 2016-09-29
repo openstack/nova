@@ -11,9 +11,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:28+0000\n"
+"POT-Creation-Date: 2016-08-25 06:14+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -147,10 +147,6 @@ msgid "%(value_name)s must be an integer"
 msgstr "%(value_name)s は整数でなければなりません"
 
 #, python-format
-msgid "%(vendor)s %(product)s %(version)s"
-msgstr "%(vendor)s %(product)s %(version)s"
-
-#, python-format
 msgid "%(worker_name)s value of %(workers)s is invalid, must be greater than 0"
 msgstr ""
 "%(workers)s の %(worker_name)s 値が無効です。0 より大きい値にしなければなりま"
@@ -177,10 +173,6 @@ msgid "%s is not a string or unicode"
 msgstr "%s が文字列でも Unicode でもありません"
 
 #, python-format
-msgid "%s is not a valid IP network"
-msgstr "%s は有効な IP ネットワークではありません"
-
-#, python-format
 msgid "%s is not a valid node managed by this compute host."
 msgstr "%s は、このコンピュートホストが管理する有効なノードではありません。"
 
@@ -196,14 +188,6 @@ msgstr "%s は 'MANUAL' または 'AUTO' のいずれかでなければいけま
 msgid "'%(other)s' should be an instance of '%(cls)s'"
 msgstr "'%(other)s' は'%(cls)s' のインスタンスである必要があります"
 
-#, python-format
-msgid "'%s' is either missing or empty."
-msgstr "'%s' がないか、空です。"
-
-#, python-format
-msgid "'%s' is not a list"
-msgstr "'%s' はリストではありません"
-
 msgid "'qemu-img info' parsing failed."
 msgstr "'qemu-img info' の解析に失敗しました。"
 
@@ -211,9 +195,6 @@ msgstr "'qemu-img info' の解析に失敗しました。"
 msgid "'rxtx_factor' argument must be a float between 0 and %g"
 msgstr ""
 "'rxtx_factor' 引数は 0 から %g の範囲内の浮動小数点数でなければなりません"
-
-msgid "'status' or 'maintenance_mode' needed for host update"
-msgstr "ホストの更新には 'status' または 'maintenance_mode' が必要です"
 
 #, python-format
 msgid "/%s should be specified as single address(es) not in cidr format"
@@ -226,27 +207,6 @@ msgstr "ホスト CPU モデルの要求時に CPU モデル名は設定でき�
 #, python-format
 msgid "A NetworkModel is required in field %s"
 msgstr "フィールド %s に NetworkModel が必要です"
-
-msgid ""
-"A unique ID given to each file system.  This is value is set in Glance and "
-"agreed upon here so that the operator knowns they are dealing with the same "
-"file system."
-msgstr ""
-"固有の ID が各ファイルシステムに割り当てられました。この値は Glance に設定さ"
-"れ、ファイルシステムと関連付けされるため、オペレーターはこの IDでファイルシス"
-"テムを識別できます。"
-
-msgid "A valid disk parameter is required"
-msgstr "有効なディスクパラメーターが必要です"
-
-msgid "A valid name parameter is required"
-msgstr "有効な名前パラメーターが必要です"
-
-msgid "A valid ram parameter is required"
-msgstr "有効な RAM パラメーターが必要です"
-
-msgid "A valid vcpus parameter is required"
-msgstr "有効な vCPU パラメーターが必要です"
 
 #, python-format
 msgid ""
@@ -286,9 +246,6 @@ msgstr ""
 
 msgid "Address could not be converted."
 msgstr "アドレスを変換できませんでした。"
-
-msgid "Address not specified"
-msgstr "アドレスが指定されていません"
 
 msgid "Affinity instance group policy was violated."
 msgstr "Affinity インスタンスグループポリシーに違反しました"
@@ -342,10 +299,6 @@ msgstr "アグリゲート %s は空の名前のアベイラビリティーゾ�
 msgid "Aggregate for host %(host)s count not be found."
 msgstr "ホスト %(host)s カウントの総計が見つかりません。"
 
-#, python-format
-msgid "Aggregates does not have %s action"
-msgstr "アグリゲートにはアクション %s はありません"
-
 msgid "All hosts are already mapped to cell(s), exiting."
 msgstr "すべてのホストが既にセルにマッピングされています。処理を終了します。"
 
@@ -372,15 +325,6 @@ msgstr "アーキテクチャー名 '%(arch)s' は認識できません"
 msgid "Architecture name '%s' is not valid"
 msgstr "アーキテクチャー名 '%s' が有効ではありません"
 
-msgid "Argument 'type' for reboot is not HARD or SOFT"
-msgstr "リブートの引数 'type' が HARD でも SOFT でもありません"
-
-msgid "Argument 'type' for reboot must be a string"
-msgstr "リブートの引数 'type' は文字列でなければなりません"
-
-msgid "Associate host is not implemented by the configured Network API"
-msgstr "ホストの関連付けは設定されたネットワーク API では実装されていません"
-
 msgid ""
 "Asymmetric NUMA topologies require explicit assignment of CPUs and memory to "
 "nodes in image or flavor"
@@ -402,13 +346,6 @@ msgstr "既存の値を上書きしようとしました。"
 msgid "Attribute not supported: %(attr)s"
 msgstr "この属性はサポートされていません: %(attr)s"
 
-msgid "Bad extra_specs provided"
-msgstr "指定された extra_specs が正しくありません"
-
-#, python-format
-msgid "Bad key(s) %s in quota_set"
-msgstr "無効なキー %s が quota_set 内にあります"
-
 #, python-format
 msgid "Bad mac for to_global_ipv6: %s"
 msgstr "to_global_ipv6 の MAC が正しくありません: %s"
@@ -426,18 +363,6 @@ msgstr ""
 "ネットワークの形式が正しくありません。ネットワーク UUID が適切な形式になって"
 "いません (%s)"
 
-msgid "Bad personality format"
-msgstr "パーソナリティーの形式が正しくありません"
-
-#, python-format
-msgid "Bad personality format: missing %s"
-msgstr "パーソナリティーの形式が正しくありません。%s が指定されていません"
-
-#, python-format
-msgid "Bad port format: port uuid is not in proper format (%s)"
-msgstr ""
-"ポートの形式が正しくありません。ポート UUID が適切な形式になっていません (%s)"
-
 #, python-format
 msgid "Bad prefix for network in cidr %s"
 msgstr "CIDR %s 内のネットワークでは無効なプレフィックス"
@@ -445,14 +370,6 @@ msgstr "CIDR %s 内のネットワークでは無効なプレフィックス"
 #, python-format
 msgid "Bad prefix for to_global_ipv6: %s"
 msgstr "to_global_ipv6 のプレフィックスが正しくありません: %s"
-
-#, python-format
-msgid "Bad project_id for to_global_ipv6: %s"
-msgstr "to_global_ipv6 の project_id が正しくありません: %s"
-
-#, python-format
-msgid "Bad volumeId format: volumeId is not in proper format (%s)"
-msgstr "無効な volumeId の形式: volumeId が適切な形式になっていません (%s)"
 
 #, python-format
 msgid ""
@@ -550,9 +467,6 @@ msgstr ""
 msgid "BuildRequest not found for instance %(uuid)s"
 msgstr "インスタンス %(uuid)s に関する BuildRequest が見つかりません"
 
-msgid "CIDR is malformed."
-msgstr "CIDR の形式に誤りがあります。"
-
 msgid "CPU and memory allocation must be provided for all NUMA nodes"
 msgstr ""
 "CPU とメモリーの割り当ては、すべての NUMA ノードに指定しなければなりません"
@@ -586,14 +500,6 @@ msgstr "CPU 番号 %(cpuset)s はノードに割り当てられていません"
 #, python-format
 msgid "CPU pinning is not supported by the host: %(reason)s"
 msgstr "ホストは CPU の固定を行うことができません: %(reason)s"
-
-#, python-format
-msgid ""
-"CPU set to pin/unpin %(requested)s must be a subset of known CPU set "
-"%(cpuset)s"
-msgstr ""
-"固定/固定解除 %(requested)s の設定が行われる CPU は、既知の CPU セット "
-"%(cpuset)s のサブセットである必要があります"
 
 msgid "Can not add access to a public flavor."
 msgstr "パブリックフレーバーにアクセスを追加できません"
@@ -642,15 +548,6 @@ msgstr ""
 #, python-format
 msgid "Cannot access 'scality_sofs_config': %s"
 msgstr "'scality_sofs_config' にアクセスできません: %s"
-
-#, python-format
-msgid "Cannot add host %(host)s in aggregate %(id)s: host exists"
-msgstr ""
-"ホスト %(host)s をアグリゲート %(id)s に追加できません: ホストが存在します"
-
-#, python-format
-msgid "Cannot add host %(host)s in aggregate %(id)s: not found"
-msgstr "ホスト %(host)s をアグリゲート %(id)s に追加できません: 見つかりません"
 
 #, python-format
 msgid "Cannot add host to aggregate %(aggregate_id)s. Reason: %(reason)s."
@@ -713,23 +610,8 @@ msgid "Cannot mount Scality SOFS, check syslog for errors"
 msgstr "Scality SOFS をマウントできません。syslog でエラーを確認してください"
 
 #, python-format
-msgid ""
-"Cannot pin/unpin cpus %(requested)s from the following pinned set %(pinned)s"
-msgstr ""
-"固定されたセット %(pinned)s から CPU %(requested)s を固定/固定解除できません"
-
-#, python-format
 msgid "Cannot remove host %(host)s in aggregate %(id)s"
 msgstr "ホスト %(host)s をアグリゲート %(id)s から削除できません"
-
-#, python-format
-msgid "Cannot remove host %(host)s in aggregate %(id)s: invalid"
-msgstr "ホスト %(host)s をアグリゲート %(id)s から削除できません: 無効"
-
-#, python-format
-msgid "Cannot remove host %(host)s in aggregate %(id)s: not found"
-msgstr ""
-"ホスト %(host)s をアグリゲート %(id)s から削除できません: 見つかりません"
 
 #, python-format
 msgid "Cannot remove host from aggregate %(aggregate_id)s. Reason: %(reason)s."
@@ -755,10 +637,6 @@ msgid ""
 msgstr ""
 "専用でない CPU の固定ポリシーではCPU スレッドの固定ポリシーを設定できません"
 
-#, python-format
-msgid "Cannot set metadata %(metadata)s in aggregate %(id)s"
-msgstr "メタデータ %(metadata)s をアグリゲート %(id)s 内に設定できません"
-
 msgid "Cannot set realtime policy in a non dedicated cpu pinning policy"
 msgstr ""
 "専用でない CPU の固定ポリシーではリアルタイムのポリシーを設定できません"
@@ -782,10 +660,6 @@ msgid "Cell %(cell_name)s doesn't exist."
 msgstr "セル %(cell_name)s は存在しません。"
 
 #, python-format
-msgid "Cell %(id)s not found."
-msgstr "セル %(id)s が見つかりません。"
-
-#, python-format
 msgid "Cell %(uuid)s has no mapping."
 msgstr "セル %(uuid)s にはマッピングがありません。"
 
@@ -800,15 +674,6 @@ msgstr "セルはインスタンス %(instance_uuid)s で認識されていま�
 #, python-format
 msgid "Cell message has reached maximum hop count: %(hop_count)s"
 msgstr "セルメッセージが最大ホップ数 %(hop_count)s に達しました"
-
-msgid "Cell name cannot be empty"
-msgstr "セル名を空にすることはできません"
-
-msgid "Cell name cannot contain '!', '.' or '@'"
-msgstr "セルの名前は '!'、'.'、'@' を含むことはできません"
-
-msgid "Cell type must be 'parent' or 'child'"
-msgstr "セルタイプは 'parent' または 'child' でなければなりません"
 
 #, python-format
 msgid "Cell with name %(name)s already exists."
@@ -894,9 +759,6 @@ msgid ""
 msgstr ""
 "インスタンス %(instance_uuid)s の更新で競合が発生しました。%(expected)s を期"
 "待したものの、実際には %(actual)s が得られました"
-
-msgid "Conflicting policies configured!"
-msgstr "競合するポリシーが設定されています"
 
 #, python-format
 msgid "Connection to cinder host failed: %(reason)s"
@@ -1013,9 +875,6 @@ msgstr ""
 "vfat コンフィグドライブをマウントできません。%(operation)s が失敗しました。エ"
 "ラー: %(error)s"
 
-msgid "Could not parse imageRef from request."
-msgstr "リクエストから imageRef を解析できませんでした。"
-
 #, python-format
 msgid "Could not read %s. Re-running with sudo"
 msgstr "%s を読み取ることができませんでした。sudo で再実行します"
@@ -1061,23 +920,9 @@ msgid "Deleting by fixed_range is not supported with the NeutronManager"
 msgstr "fixed_range による削除は、NeutronManager ではサポートされていません"
 
 #, python-format
-msgid "Desired state must be specified.  Valid states are: %s"
-msgstr "希望する状態を指定する必要があります。指定できる状態は %s です"
-
-#, python-format
 msgid "Destination host:%s must be in the same aggregate as the source server"
 msgstr ""
 "宛先ホスト:%s は移動元サーバーと同じアグリゲート内に存在しなければなりません"
-
-#, python-format
-msgid "Detaching PCI devices with libvirt < %(ver)s is not permitted"
-msgstr ""
-"バージョン %(ver)s 未満の libvirt では PCI デバイスの切り離しはできません"
-
-#, python-format
-msgid "Detaching SR-IOV ports with libvirt < %(ver)s is not permitted"
-msgstr ""
-"バージョン %(ver)s 未満の libvirt では SR-IOV ポートの切り離しはできません"
 
 #, python-format
 msgid "Detected existing vlan with id %(vlan)d"
@@ -1086,10 +931,6 @@ msgstr "ID %(vlan)d を持つ既存の VLAN が検出されました"
 #, python-format
 msgid "Device '%(device)s' not found."
 msgstr "デバイス '%(device)s' が見つかりません。"
-
-#, python-format
-msgid "Device detach failed for %(device)s: %(reason)s)"
-msgstr "%(device)s についてデバイスの切り離しが失敗しました: %(reason)s)"
 
 #, python-format
 msgid ""
@@ -1115,18 +956,6 @@ msgid ""
 msgstr ""
 "%(table)s.%(column)s とシャドーテーブル内のタイプが異なります: %(c_type)s "
 "%(shadow_c_type)s"
-
-msgid "Disassociate host is not implemented by the configured Network API"
-msgstr ""
-"ホストの関連付け解除は設定されたネットワーク API では実装されていません"
-
-msgid "Disassociate network is not implemented by the configured Network API"
-msgstr ""
-"ネットワークの関連付け解除は設定されたネットワーク API では実装されていません"
-
-msgid "Disassociate project is not implemented by the configured Network API"
-msgstr ""
-"プロジェクトの関連付け解除は設定されたネットワーク API では実装されていません"
 
 #, python-format
 msgid "Disk contains a filesystem we are unable to resize: %s"
@@ -1155,9 +984,6 @@ msgstr "ドライバーエラー: %s"
 msgid "Duplicate networks (%s) are not allowed"
 msgstr "ネットワークの重複 (%s) は許可されません"
 
-msgid "Duplicate policies configured!"
-msgstr "重複するポリシーが設定されています。"
-
 msgid ""
 "ERROR: Network commands are not supported when using the Neutron API.  Use "
 "python-neutronclient instead."
@@ -1182,11 +1008,6 @@ msgid ""
 msgstr ""
 "ネットワーク UUID %(network_uuid)s が存在しないか、またはプロジェクト "
 "%(project_id)s に割り当てられていません。"
-
-msgid "Ephemeral disks requested are larger than the instance type allows."
-msgstr ""
-"要求された一時ディスクのサイズが、インスタンスタイプで許可されているサイズを"
-"超えています。"
 
 #, python-format
 msgid "Error attempting to run %(method)s"
@@ -1315,10 +1136,6 @@ msgstr "シャドーテーブルに余分なカラム %(table)s.%(column)s が�
 msgid "Extracting vmdk from OVA failed."
 msgstr "OVA からの vmdk の取得に失敗しました。"
 
-msgid "Fail to validate provided extra specs keys. Expected string"
-msgstr ""
-"指定された追加スペックのキーの検証に失敗しました。文字列が期待されています"
-
 #, python-format
 msgid "Failed to access port %(port_id)s: %(reason)s"
 msgstr "ポート %(port_id)s へのアクセスに失敗しました: %(reason)s"
@@ -1349,9 +1166,6 @@ msgid "Failed to allocate the network(s), not rescheduling."
 msgstr ""
 "ネットワークを割り当てることができませんでした。再スケジュールは行われませ"
 "ん。"
-
-msgid "Failed to attach interface"
-msgstr "インターフェースの接続に失敗しました"
 
 #, python-format
 msgid "Failed to attach network adapter device to %(instance_uuid)s"
@@ -1499,15 +1313,6 @@ msgstr "ファイル %(file_path)s が見つかりませんでした。"
 msgid "File path %s not valid"
 msgstr "ファイルパス %s は無効です"
 
-msgid "Filename of private key"
-msgstr "秘密鍵のファイル名"
-
-msgid "Filename of root CA"
-msgstr "ルート CA のファイル名"
-
-msgid "Filename of root Certificate Revocation List"
-msgstr "ルート証明書失効リスト (CRL) のファイル名"
-
 #, python-format
 msgid "Fixed IP %(address)s already exists."
 msgstr "Fixed IP %(address)s が既に存在しています。"
@@ -1596,9 +1401,6 @@ msgid "Flavor access not found for %(flavor_id)s / %(project_id)s combination."
 msgstr ""
 "%(flavor_id)s / %(project_id)s の組み合わせに対応するフレーバーアクセスが見つ"
 "かりません。"
-
-msgid "Flavor for vpn instances"
-msgstr "VPN インスタンスのフレーバー"
 
 msgid ""
 "Flavor id can only contain letters from A-Z (both cases), periods, dashes, "
@@ -1767,14 +1569,8 @@ msgstr ""
 "ホストがカスタムのメモリーページサイズが指定されたゲストをサポートしていませ"
 "ん"
 
-msgid "Host parameter must be specified"
-msgstr "ホストパラメーターを指定する必要があります"
-
 msgid "Host startup on XenServer is not supported."
 msgstr "XenServer 上でのホストの起動はサポートされていません。"
-
-msgid "HostId cannot be updated."
-msgstr "HostId を更新できません。"
 
 msgid "Hypervisor driver does not support post_live_migration_at_source method"
 msgstr ""
@@ -1822,16 +1618,6 @@ msgstr ""
 #, python-format
 msgid "Image %(image_id)s could not be found."
 msgstr "イメージ %(image_id)s が見つかりませんでした。"
-
-#, python-format
-msgid ""
-"Image %(image_id)s could not be found. The nova EC2 API assigns image ids "
-"dynamically when they are listed for the first time. Have you listed image "
-"ids since adding this image?"
-msgstr ""
-"イメージ %(image_id)s が見つかりませんでした。Nova EC2 API は、イメージ ID の"
-"初回リスト時に、ID を動的に割り当てます。このイメージの追加後に、イメージ ID "
-"をリストしましたか?"
 
 #, python-format
 msgid "Image %(image_id)s is not active."
@@ -1939,9 +1725,6 @@ msgstr ""
 #, python-format
 msgid "Inconsistency in cell routing: %(reason)s"
 msgstr "セルルーティングの不整合: %(reason)s"
-
-msgid "Incorrect request body format"
-msgstr "リクエスト本文が正しくありません"
 
 #, python-format
 msgid "Info cache for instance %(instance_uuid)s could not be found."
@@ -2098,12 +1881,6 @@ msgstr "インスタンスは既にレスキューモードです: %s"
 msgid "Instance is not a member of specified network"
 msgstr "インスタンスは指定されたネットワークのメンバーではありません"
 
-msgid "Instance not found"
-msgstr "インスタンスが見つかりません"
-
-msgid "Instance not yet ready"
-msgstr "インスタンスは準備ができていません"
-
 msgid "Instance recreate is not supported."
 msgstr "インスタンスの再作成はサポートされていません。"
 
@@ -2181,14 +1958,8 @@ msgstr "PCI デバイスのホワイトリスト設定が無効です: %(reason)
 msgid "Invalid Regular Expression %s"
 msgstr "正規表現 %s は無効です"
 
-msgid "Invalid adminPass"
-msgstr "無効な adminPass"
-
 msgid "Invalid association."
 msgstr "無効な関連付けです。"
-
-msgid "Invalid attribute in the request"
-msgstr "リクエスト内の無効な属性"
 
 #, python-format
 msgid "Invalid broker_hosts value: %s. It should be in hostname:port format"
@@ -2241,14 +2012,6 @@ msgid "Invalid entry: '%s'; Expecting list or dict"
 msgstr "項目 '%s' は無効です。リストまたは辞書型が期待されています"
 
 #, python-format
-msgid "Invalid event name %s"
-msgstr "イベント名 %s は無効です"
-
-#, python-format
-msgid "Invalid event status `%s'"
-msgstr "イベント状態 '%s' は無効です"
-
-#, python-format
 msgid "Invalid exclusion expression %r"
 msgstr "排他式 %r は無効です"
 
@@ -2261,19 +2024,8 @@ msgid "Invalid fixed IP Address %s in request"
 msgstr "リクエストに無効な Fixed IP アドレス %s が含まれています"
 
 #, python-format
-msgid "Invalid fixed IP address (%s)"
-msgstr "無効な Fixed IP アドレス (%s)"
-
-msgid "Invalid flavorRef provided."
-msgstr "無効な flavorRef が指定されました。"
-
-#, python-format
 msgid "Invalid floating IP %s in request"
 msgstr "リクエストに無効な Floating IP %s が含まれています"
-
-#, python-format
-msgid "Invalid format for name: '%s'"
-msgstr "名前 '%s' の形式が無効です"
 
 #, python-format
 msgid "Invalid id: %(instance_id)s (expecting \"i-...\")"
@@ -2294,9 +2046,6 @@ msgstr "無効なイメージ href %(image_href)s。"
 msgid "Invalid image metadata"
 msgstr "イメージメタデータが無効です"
 
-msgid "Invalid imageRef provided."
-msgstr "無効な imageRef が指定されました。"
-
 #, python-format
 msgid "Invalid inclusion expression %r"
 msgstr "包含式 %r は無効です"
@@ -2309,10 +2058,6 @@ msgstr "フィールド/属性 %(path)s の入力が無効です。値: %(value)
 #, python-format
 msgid "Invalid input received: %(reason)s"
 msgstr "無効な入力を受信しました: %(reason)s"
-
-#, python-format
-msgid "Invalid instance id %s in request"
-msgstr "リクエストに無効なインスタンス ID %s が含まれています"
 
 msgid "Invalid instance image."
 msgstr "インスタンスイメージが無効です。"
@@ -2332,9 +2077,6 @@ msgstr "libvirt のバージョン %(version)s が無効です"
 msgid "Invalid memory page size '%(pagesize)s'"
 msgstr "メモリーページサイズ \"%(pagesize)s\" が無効です"
 
-msgid "Invalid metadata"
-msgstr "無効なメタデータ"
-
 msgid "Invalid metadata key"
 msgstr "無効なメタデータキーです"
 
@@ -2351,23 +2093,11 @@ msgid "Invalid minDisk filter [%s]"
 msgstr "無効な minDisk フィルター [%s]"
 
 #, python-format
-msgid "Invalid minRam filter [%s]"
-msgstr "無効な minRam フィルター [%s]"
-
-#, python-format
 msgid "Invalid min_ram filter [%s]"
 msgstr "無効な min_ram フィルター [%s]"
 
-#, python-format
-msgid "Invalid mode: '%s'"
-msgstr "無効なモード: '%s'"
-
 msgid "Invalid name"
 msgstr "無効な名前"
-
-#, python-format
-msgid "Invalid policies: %s"
-msgstr "無効なポリシー: %s"
 
 #, python-format
 msgid "Invalid port range %(from_port)s:%(to_port)s. %(msg)s"
@@ -2391,13 +2121,6 @@ msgstr "シグニチャーの鍵タイプの無効な公開鍵: %s"
 #, python-format
 msgid "Invalid range expression %r"
 msgstr "範囲式 %r は無効です"
-
-msgid "Invalid request body"
-msgstr "無効なリクエスト本文"
-
-#, python-format
-msgid "Invalid request body: %s"
-msgstr "無効なリクエスト本文: %s"
 
 #, python-format
 msgid "Invalid reservation expiration %(expire)s."
@@ -2427,10 +2150,6 @@ msgstr "無効な開始時刻。開始時刻を終了時刻より後にするこ
 msgid "Invalid state of instance files on shared storage"
 msgstr "共有ストレージ上のインスタンスファイルの無効な状態"
 
-#, python-format
-msgid "Invalid status: '%s'"
-msgstr "無効な状況: '%s'"
-
 msgid "Invalid target_lun"
 msgstr "無効な target_lun"
 
@@ -2447,16 +2166,8 @@ msgid "Invalid type for %s entry"
 msgstr "%s 項目のタイプが無効です"
 
 #, python-format
-msgid "Invalid update setting: '%s'"
-msgstr "無効な更新設定: '%s'"
-
-#, python-format
 msgid "Invalid usage_type: %s"
 msgstr "usage_type %s は無効です"
-
-#, python-format
-msgid "Invalid value '%s' for force."
-msgstr "force の値 '%s' は無効です。"
 
 #, python-format
 msgid "Invalid value for Config Drive option: %(option)s"
@@ -2492,9 +2203,6 @@ msgstr "無効なボリューム: %(reason)s"
 msgid "Invalid volume_size."
 msgstr "volume_size が無効です。"
 
-msgid "Ironic client unavailable, cannot access Ironic."
-msgstr "Ironic クライアントが使用できません。Ironic にアクセスできません。"
-
 #, python-format
 msgid "Ironic node uuid not supplied to driver for instance %s."
 msgstr ""
@@ -2507,14 +2215,6 @@ msgid ""
 msgstr ""
 "Ironic ノード %(id)s を検証できませんでした。(デプロイ: %(deploy)s、電源: "
 "%(power)s)"
-
-#, python-format
-msgid ""
-"Ironic node: %(id)s virtual to physical interface count  missmatch (Vif "
-"count: %(vif_count)d, Pif count: %(pif_count)d)"
-msgstr ""
-"Ironic ノード %(id)s の仮想インターフェース数と物理インターフェース数が一致し"
-"ていません。(Vif 数: %(vif_count)d、Pif 数: %(pif_count)d)"
 
 msgid "Is the appropriate service running?"
 msgstr "適切なサービスが実行されていますか?"
@@ -2566,16 +2266,6 @@ msgstr "キーペア名は 1 から 255 文字の長さの文字列でなけれ�
 msgid "Last %s nova syslog entries:-"
 msgstr "最後の %s nova syslog 項目:-"
 
-msgid "Length in request body must be an integer value"
-msgstr "リクエスト本文の長さは整数値でなければなりません"
-
-#, python-format
-msgid ""
-"Libvirt '%s' or later is required for online deletion of volume snapshots."
-msgstr ""
-"ボリュームスナップショットをオンラインで削除するには、libvirt '%s' 以降が必要"
-"です。"
-
 msgid "Limit"
 msgstr "上限値"
 
@@ -2590,13 +2280,6 @@ msgstr "行 %(linenum)d : %(line)s"
 msgid "Link Local address is not found.:%s"
 msgstr "リンクローカルアドレスが見つかりません: %s"
 
-msgid ""
-"List of file systems that are configured in this file in the image_file_url:"
-"<list entry name> sections"
-msgstr ""
-"このファイルの image_file_url:<list entry name> セクションで設定されている"
-"ファイルシステムのリスト"
-
 msgid "Listing virtual interfaces is not supported by this cloud."
 msgstr "このクラウドでは仮想インターフェースの一覧表示を行うことができません。"
 
@@ -2610,16 +2293,6 @@ msgid ""
 msgstr ""
 "ローカルディスクを持たないボリューム VM から起動する場合を除いて、共有スト"
 "レージなしにはライブマイグレーションを行うことはできません。"
-
-#, python-format
-msgid "Live migration of instance %(id)s to host %(host)s failed"
-msgstr ""
-"インスタンス %(id)s のホスト %(host)s へのライブマイグレーションが失敗しまし"
-"た"
-
-#, python-format
-msgid "Live migration of instance %s to another host failed"
-msgstr "インスタンス %s の別のホストへのライブマイグレーションに失敗しました"
 
 msgid ""
 "Live migration of instances with config drives is not supported in libvirt "
@@ -2636,9 +2309,6 @@ msgstr ""
 "API v2.25 でライブマイグレーションを行うには、実行前にすべての Mitaka を更新"
 "する必要があります。"
 
-msgid "Malformed createBackup entity"
-msgstr "createBackup エンティティーの形式に誤りがあります"
-
 #, python-format
 msgid "Malformed message body: %(reason)s"
 msgstr "メッセージ本文の形式に誤りがあります: %(reason)s"
@@ -2653,19 +2323,6 @@ msgstr ""
 
 msgid "Malformed request body"
 msgstr "誤った形式のリクエスト本文"
-
-msgid "Malformed request body. meta item must be object"
-msgstr ""
-"リクエスト本文の形式が誤っています。メタ項目はオブジェクトでなければなりませ"
-"ん"
-
-msgid "Malformed request body. metadata must be object"
-msgstr ""
-"リクエスト本文の形式が誤っています。メタデータはオブジェクトでなければなりま"
-"せん"
-
-msgid "Malformed scheduler_hints attribute"
-msgstr "scheduler_hints 属性の形式に誤りがあります"
 
 msgid "Mapping image to local is not supported."
 msgstr "ローカルへのイメージマッピングはサポートしていません。"
@@ -2771,15 +2428,6 @@ msgstr "マイグレーション事前検査エラー: %(reason)s"
 msgid "Migration select destinations error: %(reason)s"
 msgstr "マイグレーション先の選択エラー: %(reason)s"
 
-msgid "Missing 'address' argument for removeFixedIp"
-msgstr "removeFixedIp の 'address' 引数が指定されていません"
-
-msgid "Missing 'networkId' argument for addFixedIp"
-msgstr "addFixedIp の 'networkId' 引数が指定されていません"
-
-msgid "Missing argument 'type' for reboot"
-msgstr "リブートの引数 'type' が指定されていません"
-
 #, python-format
 msgid "Missing arguments: %s"
 msgstr "引数 %s がありません"
@@ -2794,9 +2442,6 @@ msgstr "デバイス UUID がありません。"
 msgid "Missing disabled reason field"
 msgstr "「無効化の理由」フィールドがありません"
 
-msgid "Missing flavorRef attribute"
-msgstr "flavorRef 属性が指定されていません"
-
 msgid "Missing forced_down field"
 msgstr "forced_down フィールドがありません"
 
@@ -2807,18 +2452,12 @@ msgstr "imageRef 属性が指定されていません"
 msgid "Missing keys: %s"
 msgstr "キーがありません: %s"
 
-msgid "Missing network in body"
-msgstr "本文にネットワークが指定されていません"
-
 #, python-format
 msgid "Missing parameter %s"
 msgstr "パラメーター %s が欠落しています"
 
 msgid "Missing parameter dict"
 msgstr "パラメーター dict が指定されていません"
-
-msgid "Missing tenant parameter"
-msgstr "テナントパラメーターがありません"
 
 #, python-format
 msgid ""
@@ -2879,9 +2518,6 @@ msgstr "IP アドレスを要求するときは、network_id を入力する必�
 msgid "Must not input both network_id and port_id"
 msgstr "network_id と port_id の両方を入力しないでください"
 
-msgid "Must specify an ExtensionManager class"
-msgstr "ExtensionManager クラスを指定する必要があります"
-
 msgid ""
 "Must specify connection_url, connection_username (optionally), and "
 "connection_password to use compute_driver=xenapi.XenAPIDriver"
@@ -2902,9 +2538,6 @@ msgstr "max_number には正の値を指定する必要があります"
 
 msgid "Must supply a positive value for max_rows"
 msgstr "max_rows には正の値を指定する必要があります"
-
-msgid "Netmask to push into openvpn config"
-msgstr "openvpn の設定に入れるネットマスクの値"
 
 #, python-format
 msgid "Network \"%(val)s\" is not valid in field %(attr)s"
@@ -2933,9 +2566,6 @@ msgstr ""
 msgid "Network adapter %(adapter)s could not be found."
 msgstr "ネットワークアダプター %(adapter)s が見つかりませんでした。"
 
-msgid "Network cidr or cidr_v6 is required"
-msgstr "ネットワークの cidr または cidr_v6 が必要です"
-
 #, python-format
 msgid "Network could not be found for bridge %(bridge)s"
 msgstr "ブリッジ %(bridge)s のネットワークが見つかりませんでした"
@@ -2961,9 +2591,6 @@ msgstr ""
 "ネットワーク %(network_id)s 上で、ネットワークホスト %(host)s に Fixed IP が"
 "ありません。"
 
-msgid "Network label is required"
-msgstr "ネットワークラベルが必要です"
-
 #, python-format
 msgid ""
 "Network must be disassociated from project %(project_id)s before it can be "
@@ -2988,9 +2615,6 @@ msgstr ""
 "ネットワーク %(network_id)s においてネットワークが設定したホストで障害が発生"
 "しました。"
 
-msgid "Network to push into openvpn config"
-msgstr "openvpn の設定に入れるネットワークの値"
-
 msgid "New volume must be detached in order to swap."
 msgstr "スワップを行うには、新規ボリュームを切断する必要があります。"
 
@@ -3001,15 +2625,9 @@ msgstr "新規ボリュームは同じサイズか、それ以上でなければ
 msgid "No Block Device Mapping with id %(id)s."
 msgstr "ID %(id)s を持つブロックデバイスマッピングがありません。"
 
-msgid "No CIDR requested"
-msgstr "CIDR は要求されていません"
-
 #, python-format
 msgid "No CPUs available after parsing %r"
 msgstr "%r の解釈を行ったところ、使用可能な CPU はありません"
-
-msgid "No Request Body"
-msgstr "リクエスト本文がありません"
 
 msgid "No Unique Match Found."
 msgstr "1 つだけ一致するデータが見つかりません。"
@@ -3018,21 +2636,12 @@ msgid "No access_url in connection_info. Cannot validate protocol"
 msgstr ""
 "connection_info に access_url がありません。プロトコルを検証できません。"
 
-msgid "No adminPass was specified"
-msgstr "adminPass が指定されませんでした"
-
 #, python-format
 msgid "No agent-build associated with id %(id)s."
 msgstr "ID %(id)s に関連付けられたエージェントビルドはありません。"
 
 msgid "No cell given in routing path."
 msgstr "ルーティングパスにセルが指定されていません。"
-
-msgid "No cell information in request"
-msgstr "リクエストにセル情報がありません"
-
-msgid "No cell name in request"
-msgstr "リクエストにセル名がありません"
 
 msgid "No cells available matching scheduling criteria."
 msgstr "スケジューリング基準を満たす利用可能なセルがありません"
@@ -3138,9 +2747,6 @@ msgstr "ネットワークが見つかりません"
 msgid "No nova entries in syslog!"
 msgstr "syslog 内に nova 項目がありません。"
 
-msgid "No nw_info cache associated with instance"
-msgstr "インスタンスに nw_info キャッシュが関連付けられていません"
-
 #, python-format
 msgid "No operating system found in %s"
 msgstr "%s 内にオペレーティングシステムが見つかりません"
@@ -3148,9 +2754,6 @@ msgstr "%s 内にオペレーティングシステムが見つかりません"
 #, python-format
 msgid "No primary VDI found for %s"
 msgstr "%s のプライマリー VDI が見つかりません"
-
-msgid "No request body"
-msgstr "リクエスト本文がありません"
 
 msgid "No root disk defined."
 msgstr "ルートディスクが定義されていません。"
@@ -3263,17 +2866,6 @@ msgstr "旧ボリュームは別のインスタンスに接続されています
 msgid "One or more hosts already in availability zone(s) %s"
 msgstr "アベイラビリティーゾーン %s に 1 つ以上のホストが既にあります"
 
-#, fuzzy, python-format
-msgid ""
-"Only %(value)s %(verb)s request(s) can be made to %(uri)s every "
-"%(unit_string)s."
-msgstr ""
-"%(uri)s に対して実行できる要求は、%(unit_string)s につき %(value)s %(verb)s "
-"要求に限られます。"
-
-msgid "Only 'updated_since', 'project_id' and 'deleted' are understood."
-msgstr "'updated_since'、'project_id'、および 'deleted' のみが認識できます。"
-
 msgid "Only administrators may list deleted instances"
 msgstr "削除済みインスタンスの一覧を取得できるのは管理者のみです。"
 
@@ -3284,9 +2876,6 @@ msgid ""
 msgstr ""
 "この機能でサポートされるのは、ファイルベースの SR (ext/NFS) のみです。SR "
 "%(uuid)s のタイプは %(type)s です。"
-
-msgid "Only host parameter can be specified"
-msgstr "指定できるのはホストパラメーターのみです"
 
 msgid "Only root certificate can be retrieved."
 msgstr "ルート証明書のみが取得可能です。"
@@ -3381,13 +2970,6 @@ msgstr "パス %s は LVM 論理ボリュームでなければなりません"
 
 msgid "Paused"
 msgstr "一時停止済み"
-
-msgid "Personality cannot be updated."
-msgstr "パーソナリティーを更新できません。"
-
-#, python-format
-msgid "Personality content for %s cannot be decoded"
-msgstr "%s のパーソナリティーの内容をデコードできません"
 
 msgid "Personality file content too long"
 msgstr "パーソナリティーファイルの内容が長すぎます"
@@ -3541,24 +3123,12 @@ msgstr ""
 "でした。"
 
 #, python-format
-msgid "Quota limit %(limit)s for %(resource)s must be -1 or greater."
-msgstr "%(resource)s のクォータ上限 %(limit)s は -1 以上でなければなりません。"
-
-#, python-format
 msgid ""
 "Quota limit %(limit)s for %(resource)s must be greater than or equal to "
 "already used and reserved %(minimum)s."
 msgstr ""
 "%(resource)s のクォータ上限 %(limit)s は、既に使用もしくは予約されている数で"
 "ある %(minimum)s 以上でなければなりません。"
-
-#, python-format
-msgid ""
-"Quota limit %(limit)s for %(resource)s must be in the range of -1 and "
-"%(max)s."
-msgstr ""
-"%(resource)s のクォータ上限 %(limit)s は -1 以上 %(max)s 以下でなければなりま"
-"せん。"
 
 #, python-format
 msgid ""
@@ -3613,9 +3183,6 @@ msgstr ""
 
 msgid "Request body and URI mismatch"
 msgstr "リクエスト本文と URI の不一致"
-
-msgid "Request body contains too many items"
-msgstr "リクエスト本文に含まれる項目が多すぎます"
 
 msgid "Request is too large."
 msgstr "リクエストが大きすぎます。"
@@ -3700,15 +3267,6 @@ msgstr "予約済み"
 msgid "Resize error: %(reason)s"
 msgstr "サイズ変更エラー: %(reason)s"
 
-msgid "Resize request has invalid 'flavorRef' attribute."
-msgstr "サイズ変更リクエストに無効な 'flavorRef' 属性が指定されています。"
-
-msgid "Resize requests require 'flavorRef' attribute."
-msgstr "サイズ変更リクエストには 'flavorRef' 属性が必要です。"
-
-msgid "Resize requires a flavor change."
-msgstr "サイズ変更ではフレーバーを変更する必要があります。"
-
 msgid "Resize to zero disk flavor is not allowed."
 msgstr "ディスクが 0 のフレーバーにサイズ変更することはできません。"
 
@@ -3762,25 +3320,9 @@ msgstr ""
 "スケジューラーホストフィルター %(filter_name)s が見つかりませんでした。"
 
 #, python-format
-msgid ""
-"Security group %(name)s added %(protocol)s ingress (%(from_port)s:"
-"%(to_port)s)"
-msgstr ""
-"セキュリティーグループ %(name)s に %(protocol)s 受信が追加されました "
-"(%(from_port)s:%(to_port)s)"
-
-#, python-format
 msgid "Security group %(name)s is not found for project %(project)s"
 msgstr ""
 "プロジェクト %(project)s のセキュリティーグループ %(name)s が見つかりません"
-
-#, python-format
-msgid ""
-"Security group %(name)s removed %(protocol)s ingress (%(from_port)s:"
-"%(to_port)s)"
-msgstr ""
-"セキュリティーグループ %(name)s から %(protocol)s 受信が削除されました "
-"(%(from_port)s:%(to_port)s)"
 
 #, python-format
 msgid ""
@@ -3863,15 +3405,6 @@ msgstr "サーバーディスクのサイズを変更できませんでした。
 msgid "Server does not exist"
 msgstr "サーバーが存在しません。"
 
-msgid "Server group scheduler hint must be a UUID."
-msgstr "サーバーグループのスケジューラーヒントは UUID でなければなりません。"
-
-msgid "Server name is not defined"
-msgstr "サーバー名が定義されていません"
-
-msgid "Server not found"
-msgstr "サーバーが見つかりません"
-
 #, python-format
 msgid "ServerGroup policy is not supported: %(reason)s"
 msgstr "サーバーグループポリシーはサポートされていません: %(reason)s"
@@ -3927,9 +3460,6 @@ msgstr "シェア '%s' はサポートされません"
 msgid "Share level '%s' cannot have share configured"
 msgstr "シェアレベル '%s' に設定されたシェアがありません"
 
-msgid "Should we use a CA for each project?"
-msgstr "プロジェクトごとに CA を使用するか否かのフラグ"
-
 msgid ""
 "Shrinking the filesystem down with resize2fs has failed, please check if you "
 "have enough free space on your disk."
@@ -3966,14 +3496,6 @@ msgstr "ソート方向の数がソートキーの数より多いです"
 msgid "Sort key supplied was not valid."
 msgstr "指定されたソートキーが無効でした。"
 
-#, python-format
-msgid ""
-"Specified Fixed IP '%(addr)s' cannot be used with port '%(port)s': port "
-"already has a Fixed IP allocated."
-msgstr ""
-"指定された Fixed IP '%(addr)s' は、ポート '%(port)s' と一緒には使用できませ"
-"ん。ポートには既に Fixed IP が割り振られています。"
-
 msgid "Specified fixed address not assigned to instance"
 msgstr "指定された固定アドレスはインスタンスに割り当てられていません"
 
@@ -3998,16 +3520,6 @@ msgstr "ストレージエラー: %(reason)s"
 #, python-format
 msgid "Storage policy %s did not match any datastores"
 msgstr "ストレージポリシー %s がどのデータストアにも一致しませんでした"
-
-#, python-format
-msgid "Subject for certificate for projects, %s for project, timestamp"
-msgstr ""
-"プロジェクトの証明書のサブジェクト、%s はプロジェクト、およびタイムスタンプ"
-
-#, python-format
-msgid "Subject for certificate for users, %s for project, user, timestamp"
-msgstr ""
-"ユーザーの証明書のサブジェクト、%s はプロジェクト、ユーザー、タイムスタンプ"
 
 msgid "Success"
 msgstr "成功"
@@ -4034,9 +3546,6 @@ msgstr "タスク %(task_name)s はホスト %(host)s 上で既に実行中で�
 msgid "Task %(task_name)s is not running on host %(host)s"
 msgstr "タスク %(task_name)s はホスト %(host)s 上で実行されていません"
 
-msgid "Template for cloudpipe instance boot script"
-msgstr "cloudpipe インスタンスのブートスクリプト用テンプレート"
-
 #, python-format
 msgid "The CA file for %(project)s could not be found"
 msgstr "%(project)s 用の CA ファイルが見つかりませんでした"
@@ -4048,10 +3557,6 @@ msgstr "%(project)s 用の CRL ファイルが見つかりませんでした"
 #, python-format
 msgid "The DNS entry %(name)s already exists in domain %(domain)s."
 msgstr "DNS エントリー %(name)s はドメイン %(domain)s 内に既に存在します。"
-
-#, python-format
-msgid "The ID %(id)s is unknown."
-msgstr "ID %(id)s は不明です。"
 
 #, python-format
 msgid "The PCI address %(address)s has an incorrect format."
@@ -4160,9 +3665,6 @@ msgstr "定義したポート %(ports)d の数が上限 %(quota)d を超えて�
 msgid "The only partition should be partition 1."
 msgstr "唯一のパーティションはパーティション 1 でなければなりません。"
 
-msgid "The path at which the file system is mounted."
-msgstr "ファイルシステムがマウントされているパス。"
-
 #, python-format
 msgid "The provided RNG device path: (%(path)s) is not present on the host."
 msgstr "指定された RNG デバイスパス (%(path)s) がホスト上にありません。"
@@ -4199,13 +3701,6 @@ msgid "The specified cluster '%s' was not found in vCenter"
 msgstr "指定されたクラスター '%s' が vCenter で見つかりませんでした"
 
 msgid ""
-"The string containing the reason for disabling the service contains invalid "
-"characters or is too long."
-msgstr ""
-"サービスを無効にする理由が入った文字列に、無効な文字が含まれているか、または"
-"その文字列が長すぎます。"
-
-msgid ""
 "The sum between the number of networks and the vlan start cannot be greater "
 "than 4094"
 msgstr "ネットワーク数と VLAN の開始番号の和は 4094 より大きくできません。"
@@ -4239,9 +3734,6 @@ msgstr "宛先ホストを同じホストにすることはできません。"
 #, python-format
 msgid "The token '%(token)s' is invalid or has expired"
 msgstr "トークン \"%(token)s\" が無効か、有効期限切れです"
-
-msgid "The value of metadata must be a dict"
-msgstr "メタデータの値は辞書型でなければなりません"
 
 msgid "The vlan number cannot be greater than 4094"
 msgstr "VLAN 番号を 4094 より大きくすることはできません"
@@ -4334,9 +3826,6 @@ msgstr ""
 "このメソッドを呼び出すには、networks と port_ids に None を設定するか、 "
 "port_ids と networks に None 以外の値を設定する必要があります。"
 
-msgid "This request was rate-limited."
-msgstr "このリクエストはレート制限が適用されました。"
-
 #, python-format
 msgid "This rule already exists in group %s"
 msgstr "指定されたルールは既にグループ %s に存在しています。"
@@ -4427,24 +3916,6 @@ msgstr "イメージを %(format)s に変換できません: %(exp)s"
 msgid "Unable to convert image to raw: %(exp)s"
 msgstr "イメージを raw 形式に変換できません: %(exp)s"
 
-msgid "Unable to create Barbican Client without project_id."
-msgstr "project_id なしでは Barbican Client を作成できません。"
-
-msgid "Unable to create dns domain"
-msgstr "DNS ドメインを作成できません"
-
-msgid "Unable to create dns entry"
-msgstr "DNS エントリーを作成できません"
-
-msgid "Unable to create flavor"
-msgstr "フレーバーを作成できません。"
-
-msgid "Unable to delete dns domain"
-msgstr "DNS ドメインを削除できません"
-
-msgid "Unable to delete dns entry"
-msgstr "DNS エントリーを削除できません"
-
 #, python-format
 msgid "Unable to delete system group '%s'"
 msgstr "システムグループ  '%s' を削除できません"
@@ -4525,42 +3996,15 @@ msgstr "システムログファイルが見つかりません。"
 msgid "Unable to find volume"
 msgstr "ボリュームが見つかりません"
 
-msgid "Unable to get console"
-msgstr "コンソールを取得できません"
-
-msgid "Unable to get console log, functionality not implemented"
-msgstr "コンソールログを取得できません。機能が実装されていません"
-
-msgid "Unable to get diagnostics, functionality not implemented"
-msgstr "診断情報を取得できません。機能が実装されていません"
-
-msgid "Unable to get dns domain"
-msgstr "DNS ドメインを取得できません"
-
-msgid "Unable to get dns entry"
-msgstr "DNS エントリーを取得できません"
-
 msgid "Unable to get host UUID: /etc/machine-id does not exist"
 msgstr " ホストの UUID を取得できません: /etc/machine-id が存在しません"
 
 msgid "Unable to get host UUID: /etc/machine-id is empty"
 msgstr "ホストの UUID が取得できません: /etc/machine-id が空です"
 
-msgid "Unable to get rdp console, functionality not implemented"
-msgstr "RDP コンソールを取得できません。機能が実装されていません"
-
 #, python-format
 msgid "Unable to get record of VDI %s on"
 msgstr "VDI %s のレコードを取得できません。"
-
-msgid "Unable to get serial console, functionality not implemented"
-msgstr "シリアルコンソールを取得できません。機能が実装されていません"
-
-msgid "Unable to get spice console, functionality not implemented"
-msgstr "SPICE コンソールを取得できません。機能が実装されていません"
-
-msgid "Unable to get vnc console, functionality not implemented"
-msgstr "VNC コンソールを取得できません。機能が実装されていません"
 
 #, python-format
 msgid "Unable to introduce VDI for SR %s"
@@ -4580,9 +4024,6 @@ msgid ""
 msgstr ""
 "1個の作成済みのポート ID で複数のインスタンスの起動はできません。1 つ 1 つの"
 "インスタンスを別々のポートで起動してください。"
-
-msgid "Unable to locate requested flavor."
-msgstr "要求されたフレーバーが見つかりません。"
 
 msgid "Unable to log in to XenAPI (is the Dom0 disk full?)"
 msgstr "XenAPI にログインできません (Dom0 ディスクフル?)"
@@ -4613,9 +4054,6 @@ msgstr ""
 #, python-format
 msgid "Unable to obtain target information %s"
 msgstr "ターゲットの情報 %s を取得できません"
-
-msgid "Unable to parse metadata key/value pairs."
-msgstr "メタデータのキー/値のペアを解析できません。"
 
 msgid "Unable to resize disk down."
 msgstr "ディスクのサイズを縮小することができません。"
@@ -4700,15 +4138,8 @@ msgstr "不明なアクション"
 msgid "Unknown action %s"
 msgstr "不明なアクション %s"
 
-msgid "Unknown argument : port"
-msgstr "不明な引数: port"
-
 msgid "Unknown argument: port"
 msgstr "不明な引数: port"
-
-#, python-format
-msgid "Unknown auth plugin: %s"
-msgstr "不明な認証プラグイン: %s"
 
 #, python-format
 msgid "Unknown chain: %r"
@@ -4731,14 +4162,6 @@ msgstr "不明な image_type=%s"
 #, python-format
 msgid "Unknown method '%(method)s' in compute API"
 msgstr "コンピュート API 内の不明なメソッド '%(method)s'"
-
-#, python-format
-msgid ""
-"Unknown osapi_compute_unique_server_name_scope value: %s Flag must be empty, "
-"\"global\" or \"project\""
-msgstr ""
-"不明な osapi_compute_unique_server_name_scope 値: %s フラグは、空、\"global"
-"\"、\"project\" のいずれかでなければいけません"
 
 #, python-format
 msgid "Unknown quota resources %(unknown)s."
@@ -4798,12 +4221,6 @@ msgstr ""
 msgid "User does not have admin privileges"
 msgstr "ユーザーに管理者権限がありません"
 
-msgid "User is not authorized to use key manager."
-msgstr "ユーザーは鍵マネージャーの使用を許可されていません。"
-
-msgid "Userdata content cannot be decoded"
-msgstr "ユーザーデータの内容を復号化できません"
-
 msgid ""
 "Using different block_device_mapping syntaxes is not allowed in the same "
 "request."
@@ -4828,18 +4245,11 @@ msgstr ""
 msgid "VHD coalesce attempts exceeded (%d), giving up..."
 msgstr "VHD 統合の試行時に (%d) を超過したため、中止します..."
 
-#, python-format
-msgid "VIF driver not found for network_api_class: %s"
-msgstr "network_api_class %s 用の VIF ドライバーが見つかりません"
-
 msgid "VIF plugging is not supported by the Hyper-V driver."
 msgstr "VIF 接続は Hyper-V ドライバーではサポートされていません。"
 
 msgid "VIF unplugging is not supported by the Hyper-V driver."
 msgstr "VIF 切断は Hyper-V ドライバーではサポートされていません。"
-
-msgid "VLAN support must be enabled"
-msgstr "VLAN サポートを有効にする必要があります"
 
 #, python-format
 msgid ""
@@ -4871,18 +4281,6 @@ msgid ""
 msgstr ""
 "バージョン %(req_ver)s はこの API ではサポートされていません。最小"
 "は%(min_ver)s、最大は %(max_ver)s です。"
-
-msgid "Virt driver does not implement host disabled status."
-msgstr "virt ドライバーがホスト無効化時のステータスを実装していません。"
-
-msgid "Virt driver does not implement host maintenance mode."
-msgstr "virt ドライバーがホスト保守モードを実装していません。"
-
-msgid "Virt driver does not implement host power management."
-msgstr "virt ドライバーがホスト電源管理を実装していません。"
-
-msgid "Virt driver does not implement uptime function."
-msgstr "virt ドライバーは、アップタイム関数を実装していません。"
 
 msgid "Virtual Interface creation failed"
 msgstr "仮想インターフェースの作成に失敗しました"
@@ -4969,14 +4367,6 @@ msgstr ""
 "ザー '%s' はカスタムブロックサイズをサポートしていません"
 
 #, python-format
-msgid ""
-"Volume sets discard option, but libvirt %(libvirt)s or later is required, "
-"qemu %(qemu)s or later is required."
-msgstr ""
-"ボリュームに破棄オプションが設定されていますが、libvirt %(libvirt)s 以降、お"
-"よび qemu %(qemu)s 以降が必要です。"
-
-#, python-format
 msgid "WARNING: fixed IP %s allocated to missing instance"
 msgstr "警告: Fixed IP %s が存在しないインスタンスに割り当てられています"
 
@@ -4996,12 +4386,6 @@ msgid ""
 msgstr ""
 "サーバーを SSL モードで実行する場合は、設定ファイルで cert_file と key_file "
 "の両方のオプションに値を指定する必要があります"
-
-msgid "Where we keep our keys"
-msgstr "キーを格納するパス"
-
-msgid "Where we keep our root CA"
-msgstr "ルート CA を格納するパス"
 
 #, python-format
 msgid "Wrong quota method %(method)s used on resource %(res)s"
@@ -5085,12 +4469,6 @@ msgstr "使用可能な Floating IP はありません。"
 msgid "Zero floating IPs exist."
 msgstr "Floating IP が存在しません。"
 
-msgid "accessIPv4 is not proper IPv4 format"
-msgstr "accessIPv4 は正しい IPv4 形式ではありません"
-
-msgid "accessIPv6 is not proper IPv6 format"
-msgstr "accessIPv6 は正しい IPv6 形式ではありません"
-
 msgid "admin password can't be changed on existing disk"
 msgstr "既存のディスク上で管理者パスワードを変更することはできません"
 
@@ -5103,18 +4481,6 @@ msgstr "アグリゲートでエラーが発生しました"
 #, python-format
 msgid "assert_can_migrate failed because: %s"
 msgstr "assert_can_migrate が失敗しました: 理由 %s"
-
-msgid "block_device_mapping must be a list"
-msgstr "block_device_mapping はリストでなければなりません"
-
-msgid "block_device_mapping_v2 must be a list"
-msgstr "block_device_mapping_v2 はリストでなければなりません"
-
-msgid "cannot delete non-existent key"
-msgstr "存在しないキーは削除できません"
-
-msgid "cannot store arbitrary keys"
-msgstr "任意のキーを保存できるわけではありません"
 
 msgid "cannot understand JSON"
 msgstr "JSON を解釈できません"
@@ -5129,13 +4495,6 @@ msgstr "接続情報: %s"
 #, python-format
 msgid "connecting to: %(host)s:%(port)s"
 msgstr "%(host)s:%(port)s に接続中です"
-
-#, python-format
-msgid "createBackup entity requires %s attribute"
-msgstr "createBackup エンティティーには %s 属性が必要です"
-
-msgid "createImage entity requires name attribute"
-msgstr "createImage エンティティーには name 属性が必要です"
 
 #, python-format
 msgid "destination is %(target_cell)s but routing_path is %(routing_path)s"
@@ -5163,14 +4522,6 @@ msgid "error: %s"
 msgstr "エラー: %s"
 
 #, python-format
-msgid "event entity contains unsupported items: %s"
-msgstr "イベントエンティティーにサポートされない項目が含まれています: %s"
-
-#, python-format
-msgid "event entity requires key %(key)s"
-msgstr "イベントエンティティーにはキー %(key)s が必要です"
-
-#, python-format
 msgid "failed to generate X509 fingerprint. Error message: %s"
 msgstr "X.509 フィンガープリントの生成に失敗しました。エラーメッセージ: %s"
 
@@ -5195,16 +4546,6 @@ msgstr "fping ユーティリティーが見つかりません。"
 
 msgid "host"
 msgstr "ホスト"
-
-msgid "host must be specified."
-msgstr "ホストを指定する必要があります。"
-
-msgid ""
-"host, block_migration and disk_over_commit must be specified for live "
-"migration."
-msgstr ""
-"ライブマイグレーションには、ホスト、block_migration、および disk_over_commit "
-"を指定する必要があります。"
 
 msgid "hostname"
 msgstr "ホスト名"
@@ -5302,9 +4643,6 @@ msgstr ""
 "fixed_ip が指定されている場合、max_count を 1 より大きくすることはできませ"
 "ん。"
 
-msgid "memcached_servers not defined"
-msgstr "memcached_servers が定義されていません"
-
 msgid "memory"
 msgstr "メモリー"
 
@@ -5357,15 +4695,8 @@ msgstr ""
 "古い形式の設定では、ディクショナリーと memcached のバックエンドのみを使用でき"
 "ます"
 
-msgid "onSharedStorage must be specified."
-msgstr "onSharedStorage を指定する必要があります。"
-
 msgid "operation time out"
 msgstr "操作がタイムアウトしました"
-
-msgid "os-getConsoleOutput malformed or missing from request body"
-msgstr ""
-"os-getConsoleOutput は、形式に誤りがあるか、リクエスト本文に含まれていません"
 
 #, python-format
 msgid "partition %s not found"
@@ -5405,12 +4736,6 @@ msgstr "%(path)s で qemu-img を実行できませんでした: %(exp)s"
 msgid "qemu-nbd error: %s"
 msgstr "qemu-nbd エラー: %s"
 
-msgid "quota_class_set not specified"
-msgstr "quota_class_set が指定されていません"
-
-msgid "quota_set not specified"
-msgstr "quota_set が指定されていません"
-
 msgid "ramdisk"
 msgstr "RAM ディスク"
 
@@ -5422,12 +4747,6 @@ msgid "read_deleted can only be one of 'no', 'yes' or 'only', not %r"
 msgstr ""
 "read_deleted に指定できるのは 'no', 'yes', 'only' のいずれかです。%r は指定で"
 "きません。"
-
-msgid "rpc_port must be integer"
-msgstr "rpc_port は整数でなければなりません"
-
-msgid "security group default rule not found"
-msgstr "セキュリティーグループのデフォルトルールが見つかりません"
 
 msgid "serve() can only be called once"
 msgstr "serve() は一度しか呼び出せません"
@@ -5450,9 +4769,6 @@ msgstr "セットアップが進行中です"
 msgid "snapshot for %s"
 msgstr "%s のスナップショット"
 
-msgid "snapshot not specified"
-msgstr "スナップショットが指定されていません"
-
 msgid "snapshot_id required in create_info"
 msgstr "create_info には snapshot_id が必要です"
 
@@ -5465,9 +4781,6 @@ msgstr "状態"
 msgid "sudo failed, continuing as if nothing happened"
 msgstr "sudo が失敗しました。何も起こらなかったものとして続行します"
 
-msgid "the body is invalid."
-msgstr "本文が無効です。"
-
 msgid "token not provided"
 msgstr "トークンが指定されていません"
 
@@ -5479,10 +4792,6 @@ msgstr "タイプ"
 
 msgid "unpause not supported for vmwareapi"
 msgstr "vmwareapi では一時停止解除はサポートされていません"
-
-#, python-format
-msgid "unsupported fields: %s"
-msgstr "サポートされないフィールド: %s"
 
 msgid "user"
 msgstr "ユーザー"
@@ -5544,15 +4853,6 @@ msgid ""
 msgstr ""
 "ボリューム '%(vol)s' の状況は「使用中」でなければなりませんが、現在の状況は "
 "'%(status)s' です"
-
-msgid "volume not specified"
-msgstr "ボリュームが指定されていません"
-
-msgid "volumeAttachment not specified"
-msgstr "volumeAttachment が指定されていません"
-
-msgid "volumeId must be specified."
-msgstr "ボリューム ID を指定する必要があります。"
 
 #, python-format
 msgid "volume_id not found: %s"

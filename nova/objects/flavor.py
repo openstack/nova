@@ -168,20 +168,17 @@ def _flavor_create(context, values):
 
 
 @db_api.api_context_manager.writer
-def _flavor_destroy(context, flavor_id=None, name=None):
+def _flavor_destroy(context, flavor_id=None, flavorid=None):
     query = context.session.query(api_models.Flavors)
 
     if flavor_id is not None:
         query = query.filter(api_models.Flavors.id == flavor_id)
     else:
-        query = query.filter(api_models.Flavors.name == name)
+        query = query.filter(api_models.Flavors.flavorid == flavorid)
     result = query.first()
 
     if not result:
-        if flavor_id is not None:
-            raise exception.FlavorNotFound(flavor_id=flavor_id)
-        else:
-            raise exception.FlavorNotFoundByName(flavor_name=name)
+        raise exception.FlavorNotFound(flavor_id=(flavor_id or flavorid))
 
     context.session.query(api_models.FlavorProjects).\
         filter_by(flavor_id=result.id).delete()
@@ -576,8 +573,8 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
             self.save_projects(added_projects, deleted_projects)
 
     @staticmethod
-    def _flavor_destroy(context, flavor_id=None, name=None):
-        return _flavor_destroy(context, flavor_id=flavor_id, name=name)
+    def _flavor_destroy(context, flavor_id=None, flavorid=None):
+        return _flavor_destroy(context, flavor_id=flavor_id, flavorid=flavorid)
 
     @base.remotable
     def destroy(self):
@@ -591,9 +588,9 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
             if 'id' in self:
                 self._flavor_destroy(self._context, flavor_id=self.id)
             else:
-                self._flavor_destroy(self._context, name=self.name)
+                self._flavor_destroy(self._context, flavorid=self.flavorid)
         except exception.FlavorNotFound:
-            db.flavor_destroy(self._context, self.name)
+            db.flavor_destroy(self._context, self.flavorid)
 
 
 @db_api.api_context_manager.reader
@@ -632,7 +629,7 @@ def _flavor_get_all_from_db(context, inactive, filters, sort_key, sort_dir,
                     filter_by(flavorid=marker).\
                     first()
         if not marker_row:
-            raise exception.MarkerNotFound(marker)
+            raise exception.MarkerNotFound(marker=marker)
 
     query = sqlalchemyutils.paginate_query(query, api_models.Flavors,
                                            limit,
@@ -721,7 +718,7 @@ def migrate_flavors(ctxt, count, hard_delete=False):
             if hard_delete:
                 _destroy_flavor_hard(ctxt, flavor.name)
             else:
-                db.flavor_destroy(ctxt, flavor.name)
+                db.flavor_destroy(ctxt, flavor.flavorid)
         except exception.FlavorNotFound:
             LOG.warning(_LW('Flavor id %(id)i disappeared during migration'),
                         {'id': flavor_id})

@@ -15,7 +15,6 @@ import mock
 from nova.compute import rpcapi as compute_rpcapi
 from nova.conductor.tasks import migrate
 from nova import objects
-from nova.objects import base as obj_base
 from nova.scheduler import client as scheduler_client
 from nova.scheduler import utils as scheduler_utils
 from nova import test
@@ -30,16 +29,18 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = FakeContext(self.user_id, self.project_id)
-        inst = fake_instance.fake_db_instance(image_ref='image_ref')
-        self.instance = objects.Instance._from_db_object(
-            self.context, objects.Instance(), inst, [])
-        self.instance.system_metadata = {'image_hw_disk_bus': 'scsi'}
         self.flavor = fake_flavor.fake_flavor_obj(self.context)
         self.flavor.extra_specs = {'extra_specs': 'fake'}
-        self.request_spec = {'instance_type':
-                                 obj_base.obj_to_primitive(self.flavor),
-                             'instance_properties': {},
-                             'image': 'image'}
+        inst = fake_instance.fake_db_instance(image_ref='image_ref',
+                                              instance_type=self.flavor)
+        inst_object = objects.Instance(
+            flavor=self.flavor,
+            numa_topology=None,
+            pci_requests=None,
+            system_metadata={'image_hw_disk_bus': 'scsi'})
+        self.instance = objects.Instance._from_db_object(
+            self.context, inst_object, inst, [])
+        self.request_spec = objects.RequestSpec(image=objects.ImageMeta())
         self.hosts = [dict(host='host1', nodename=None, limits={})]
         self.filter_properties = {'limits': {}, 'retry': {'num_attempts': 1,
                                   'hosts': [['host1', None]]}}
@@ -48,37 +49,42 @@ class MigrationTaskTestCase(test.NoDBTestCase):
 
     def _generate_task(self):
         return migrate.MigrationTask(self.context, self.instance, self.flavor,
-                                     self.filter_properties, self.request_spec,
-                                     self.reservations, self.clean_shutdown,
+                                     self.request_spec, self.reservations,
+                                     self.clean_shutdown,
                                      compute_rpcapi.ComputeAPI(),
                                      scheduler_client.SchedulerClient())
 
-    @mock.patch.object(scheduler_utils, 'build_request_spec')
+    @mock.patch.object(objects.RequestSpec, 'from_components')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
-    @mock.patch.object(objects.RequestSpec, 'from_primitives')
     @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'prep_resize')
     @mock.patch.object(objects.Quotas, 'from_reservations')
     def test_execute(self, quotas_mock, prep_resize_mock,
-                     sel_dest_mock, spec_fp_mock, sig_mock, brs_mock):
-        brs_mock.return_value = self.request_spec
-        fake_spec = objects.RequestSpec()
-        spec_fp_mock.return_value = fake_spec
+                     sel_dest_mock, sig_mock, request_spec_from_components):
         sel_dest_mock.return_value = self.hosts
         task = self._generate_task()
-
+        request_spec_from_components.return_value = self.request_spec
+        legacy_request_spec = self.request_spec.to_legacy_request_spec_dict()
+        expected_props = {'retry': {'num_attempts': 1,
+                                    'hosts': [['host1', None]]},
+                          'limits': {}}
         task.execute()
 
+        request_spec_from_components.assert_called_once_with(
+            self.context, self.instance.uuid, self.request_spec.image,
+            task.flavor, self.instance.numa_topology,
+            self.instance.pci_requests, expected_props, None,
+            self.instance.availability_zone)
         quotas_mock.assert_called_once_with(self.context, self.reservations,
                                             instance=self.instance)
-        sig_mock.assert_called_once_with(self.context, self.request_spec,
+        sig_mock.assert_called_once_with(self.context, legacy_request_spec,
                                          self.filter_properties)
         task.scheduler_client.select_destinations.assert_called_once_with(
-            self.context, fake_spec)
+            self.context, self.request_spec)
         prep_resize_mock.assert_called_once_with(
-            self.context, 'image', self.instance, self.flavor,
-            self.hosts[0]['host'], self.reservations,
-            request_spec=self.request_spec,
+            self.context, self.instance, legacy_request_spec['image'],
+            self.flavor, self.hosts[0]['host'], self.reservations,
+            request_spec=legacy_request_spec,
             filter_properties=self.filter_properties,
             node=self.hosts[0]['nodename'], clean_shutdown=self.clean_shutdown)
         self.assertFalse(quotas_mock.return_value.rollback.called)

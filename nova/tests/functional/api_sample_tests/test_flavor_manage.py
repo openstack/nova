@@ -13,38 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 from nova.tests.functional.api_sample_tests import api_sample_base
-
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class FlavorManageSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = 'flavor-manage'
-
-    def _get_flags(self):
-        f = super(FlavorManageSampleJsonTests, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.flavormanage.'
-            'Flavormanage')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.flavor_disabled.'
-            'Flavor_disabled')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.flavor_access.'
-            'Flavor_access')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.flavorextradata.'
-            'Flavorextradata')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.flavor_swap.'
-            'Flavor_swap')
-        return f
+    sample_dir = 'flavor-manage'
 
     def _create_flavor(self):
         """Create a flavor."""
@@ -57,13 +31,8 @@ class FlavorManageSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
                                  subs)
         self._verify_response("flavor-create-post-resp", subs, response, 200)
 
-    # TODO(sdague): remove duplication
-    def test_create_flavor(self):
-        # Get api sample to create a flavor.
-        self._create_flavor()
-
-    def test_delete_flavor(self):
-        # Get api sample to delete a flavor.
+    def test_create_delete_flavor(self):
+        # Get api sample to create and delete a flavor.
         self._create_flavor()
         response = self._do_delete("flavors/10")
         self.assertEqual(202, response.status_code)

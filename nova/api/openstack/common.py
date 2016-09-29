@@ -18,7 +18,6 @@ import functools
 import itertools
 import re
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import strutils
 import six
@@ -38,20 +37,7 @@ from nova import objects
 from nova import quota
 from nova import utils
 
-osapi_opts = [
-    cfg.IntOpt('osapi_max_limit',
-               default=1000,
-               help='The maximum number of items returned in a single '
-                    'response from a collection resource'),
-    cfg.StrOpt('osapi_compute_link_prefix',
-               help='Base URL that will be presented to users in links '
-                    'to the OpenStack Compute API'),
-    cfg.StrOpt('osapi_glance_link_prefix',
-               help='Base URL that will be presented to users in links '
-                    'to glance resources'),
-]
 CONF = nova.conf.CONF
-CONF.register_opts(osapi_opts)
 
 LOG = logging.getLogger(__name__)
 QUOTAS = quota.QUOTAS
@@ -208,6 +194,8 @@ def get_pagination_params(request):
         params['page_size'] = _get_int_param(request, 'page_size')
     if 'marker' in request.GET:
         params['marker'] = _get_marker_param(request)
+    if 'offset' in request.GET:
+        params['offset'] = _get_int_param(request, 'offset')
     return params
 
 
@@ -226,7 +214,7 @@ def _get_marker_param(request):
     return request.GET['marker']
 
 
-def limited(items, request, max_limit=CONF.osapi_max_limit):
+def limited(items, request):
     """Return a slice of items according to requested offset and limit.
 
     :param items: A sliceable entity
@@ -236,28 +224,21 @@ def limited(items, request, max_limit=CONF.osapi_max_limit):
                     'limit' is not specified, 0, or > max_limit, we default
                     to max_limit. Negative values for either offset or limit
                     will cause exc.HTTPBadRequest() exceptions to be raised.
-    :kwarg max_limit: The maximum number of items to return from 'items'
     """
-    offset = request.GET.get("offset", 0)
-    limit = request.GET.get('limit', max_limit)
-
-    try:
-        offset = utils.validate_integer(offset, "offset", min_value=0)
-        limit = utils.validate_integer(limit, "limit", min_value=0)
-    except exception.InvalidInput as e:
-        raise webob.exc.HTTPBadRequest(explanation=e.format_message())
-
-    limit = min(max_limit, limit or max_limit)
-    range_end = offset + limit
-    return items[offset:range_end]
-
-
-def get_limit_and_marker(request, max_limit=CONF.osapi_max_limit):
-    """get limited parameter from request."""
     params = get_pagination_params(request)
-    limit = params.get('limit', max_limit)
-    limit = min(max_limit, limit)
-    marker = params.get('marker')
+    offset = params.get('offset', 0)
+    limit = CONF.osapi_max_limit
+    limit = min(limit, params.get('limit') or limit)
+
+    return items[offset:(offset + limit)]
+
+
+def get_limit_and_marker(request):
+    """Get limited parameter from request."""
+    params = get_pagination_params(request)
+    limit = CONF.osapi_max_limit
+    limit = min(limit, params.get('limit', limit))
+    marker = params.get('marker', None)
 
     return limit, marker
 
@@ -308,19 +289,6 @@ def check_img_metadata_properties_quota(context, metadata):
     except exception.OverQuota:
         expl = _("Image metadata limit exceeded")
         raise webob.exc.HTTPForbidden(explanation=expl)
-
-    #  check the key length.
-    if isinstance(metadata, dict):
-        for key, value in six.iteritems(metadata):
-            if len(key) == 0:
-                expl = _("Image metadata key cannot be blank")
-                raise webob.exc.HTTPBadRequest(explanation=expl)
-            if len(key) > 255:
-                expl = _("Image metadata key too long")
-                raise webob.exc.HTTPBadRequest(explanation=expl)
-    else:
-        expl = _("Invalid image metadata")
-        raise webob.exc.HTTPBadRequest(explanation=expl)
 
 
 def get_networks_for_instance_from_nw_info(nw_info):
@@ -512,7 +480,6 @@ def get_instance(compute_api, context, instance_id, expected_attrs=None):
     """Fetch an instance from the compute API, handling error checking."""
     try:
         return compute_api.get(context, instance_id,
-                               want_objects=True,
                                expected_attrs=expected_attrs)
     except exception.InstanceNotFound as e:
         raise exc.HTTPNotFound(explanation=e.format_message())

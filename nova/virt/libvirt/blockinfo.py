@@ -262,7 +262,7 @@ def get_disk_bus_for_device_type(instance,
         if device_type == "cdrom":
             guestarch = libvirt_utils.get_arch(image_meta)
             if guestarch in (arch.PPC, arch.PPC64, arch.PPCLE, arch.PPC64LE,
-                arch.S390, arch.S390X):
+                arch.S390, arch.S390X, arch.AARCH64):
                 return "scsi"
             else:
                 return "ide"
@@ -473,9 +473,9 @@ def default_device_names(virt_type, context, instance, block_device_info,
         driver_bdm.save()
 
 
-def has_default_ephemeral(instance, disk_bus, block_device_info, mapping):
+def get_default_ephemeral_info(instance, disk_bus, block_device_info, mapping):
     ephemerals = driver.block_device_info_get_ephemerals(block_device_info)
-    if instance.ephemeral_gb <= 0 or ephemerals:
+    if not instance.ephemeral_gb or instance.ephemeral_gb <= 0 or ephemerals:
         return None
     else:
         info = get_next_disk_info(mapping, disk_bus)
@@ -522,6 +522,18 @@ def get_disk_mapping(virt_type, instance,
                                      disk_bus)
         mapping['disk'] = os_info
 
+        if configdrive.required_by(instance):
+            device_type = get_config_drive_type()
+            disk_bus = get_disk_bus_for_device_type(instance,
+                                                    virt_type,
+                                                    image_meta,
+                                                    device_type)
+            config_info = get_next_disk_info(mapping,
+                                             disk_bus,
+                                             device_type,
+                                             last_device=True)
+            mapping['disk.config.rescue'] = config_info
+
         return mapping
 
     pre_assigned_device_names = \
@@ -532,7 +544,7 @@ def get_disk_mapping(virt_type, instance,
      if get_device_name(bdm)]
 
     # NOTE (ndipanov): root_bdm can be None when we boot from image
-    # as there is no driver represenation of local targeted images
+    # as there is no driver representation of local targeted images
     # and they will not be in block_device_info list.
     root_bdm = block_device.get_root_bdm(
         driver.block_device_info_get_mapping(block_device_info))
@@ -559,8 +571,8 @@ def get_disk_mapping(virt_type, instance,
         # set, nothing is changed.
         update_bdm(root_bdm, root_info)
 
-    default_eph = has_default_ephemeral(instance, disk_bus, block_device_info,
-                                        mapping)
+    default_eph = get_default_ephemeral_info(instance, disk_bus,
+                                             block_device_info, mapping)
     if default_eph:
         mapping['disk.local'] = default_eph
 

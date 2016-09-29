@@ -24,6 +24,7 @@ import sys
 
 from oslo_log import log as logging
 from oslo_utils import importutils
+import six
 
 import nova.conf
 from nova.i18n import _, _LE, _LI
@@ -136,7 +137,8 @@ class ComputeDriver(object):
         "has_imagecache": False,
         "supports_recreate": False,
         "supports_migrate_to_same_host": False,
-        "supports_attach_interface": False
+        "supports_attach_interface": False,
+        "supports_device_tagging": False,
     }
 
     def __init__(self, virtapi):
@@ -211,7 +213,8 @@ class ComputeDriver(object):
         :param instance_info: Instance/flavor to calculate overhead for.
         :returns: Dict of estimated overhead values.
         """
-        return {'memory_mb': 0}
+        return {'memory_mb': 0,
+                'disk_gb': 0}
 
     def list_instances(self):
         """Return the names of all the instances known to the virtualization
@@ -257,8 +260,7 @@ class ComputeDriver(object):
         :param attach_block_devices: function to attach block devices. See
             nova.compute.manager.ComputeManager:_rebuild_default_impl for
             usage.
-        :param network_info:
-           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param network_info: instance network information
         :param recreate: True if the instance is being recreated on a new
             hypervisor - all the cleanup of old state is skipped.
         :param block_device_info: Information about block devices to be
@@ -287,8 +289,7 @@ class ComputeDriver(object):
             The metadata of the image of the instance.
         :param injected_files: User files to inject into instance.
         :param admin_password: Administrator password to set in instance.
-        :param network_info:
-           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param network_info: instance network information
         :param block_device_info: Information about block devices to be
                                   attached to the instance.
         """
@@ -304,8 +305,7 @@ class ComputeDriver(object):
 
         :param context: security context
         :param instance: Instance object as returned by DB layer.
-        :param network_info:
-           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param network_info: instance network information
         :param block_device_info: Information about block devices that should
                                   be detached from the instance.
         :param destroy_disks: Indicates if disks should be destroyed
@@ -322,8 +322,7 @@ class ComputeDriver(object):
 
         :param context: security context
         :param instance: Instance object as returned by DB layer.
-        :param network_info:
-           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param network_info: instance network information
         :param block_device_info: Information about block devices that should
                                   be detached from the instance.
         :param destroy_disks: Indicates if disks should be destroyed
@@ -342,8 +341,7 @@ class ComputeDriver(object):
         is paused or halted/stopped.
 
         :param instance: nova.objects.instance.Instance
-        :param network_info:
-           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param network_info: instance network information
         :param reboot_type: Either a HARD or SOFT reboot
         :param block_device_info: Info pertaining to attached volumes
         :param bad_volumes_callback: Function to handle any bad volumes
@@ -559,6 +557,12 @@ class ComputeDriver(object):
         :param instance: nova.objects.instance.Instance
         :param image_id: Reference to a pre-created image that will
                          hold the snapshot.
+        :param update_task_state: Callback function to update the task_state
+            on the instance while the snapshot operation progresses. The
+            function takes a task_state argument and an optional
+            expected_task_state kwarg which defaults to
+            nova.compute.task_states.IMAGE_SNAPSHOT. See
+            nova.objects.instance.Instance.save for expected_task_state usage.
         """
         raise NotImplementedError()
 
@@ -579,8 +583,7 @@ class ComputeDriver(object):
         :param migration: the migrate/resize information
         :param instance: nova.objects.instance.Instance being migrated/resized
         :param disk_info: the newly transferred disk information
-        :param network_info:
-           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param network_info: instance network information
         :param nova.objects.ImageMeta image_meta:
             The metadata of the image of the instance.
         :param resize_instance: True if the instance is being resized,
@@ -605,8 +608,7 @@ class ComputeDriver(object):
 
         :param context: the context for the finish_revert_migration
         :param instance: nova.objects.instance.Instance being migrated/resized
-        :param network_info:
-           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param network_info: instance network information
         :param block_device_info: instance volume block device info
         :param power_on: True if the instance should be powered on, False
                          otherwise
@@ -796,7 +798,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def pre_live_migration(self, context, instance, block_device_info,
-                           network_info, disk_info, migrate_data=None):
+                           network_info, disk_info, migrate_data):
         """Prepare an instance for live migration
 
         :param context: security context
@@ -944,8 +946,8 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def check_can_live_migrate_destination_cleanup(self, context,
-                                                   dest_check_data):
+    def cleanup_live_migration_destination_check(self, context,
+                                                 dest_check_data):
         """Do required cleanup on dest host after check_can_live_migrate calls
 
         :param context: security context
@@ -1253,14 +1255,14 @@ class ComputeDriver(object):
     def macs_for_instance(self, instance):
         """What MAC addresses must this instance have?
 
-        Some hypervisors (such as bare metal) cannot do freeform virtualisation
+        Some hypervisors (such as bare metal) cannot do freeform virtualization
         of MAC addresses. This method allows drivers to return a set of MAC
         addresses that the instance is to have. allocate_for_instance will take
         this into consideration when provisioning networking for the instance.
 
         Mapping of MAC addresses to actual networks (or permitting them to be
         freeform) is up to the network implementation layer. For instance,
-        with openflow switches, fixed MAC addresses can still be virtualised
+        with openflow switches, fixed MAC addresses can still be virtualized
         onto any L2 domain, with arbitrary VLANs etc, but regular switches
         require pre-configured MAC->network mappings that will match the
         actual configuration.
@@ -1433,7 +1435,7 @@ class ComputeDriver(object):
         """
 
         if not self._compute_event_callback:
-            LOG.debug("Discarding event %s", str(event))
+            LOG.debug("Discarding event %s", six.text_type(event))
             return
 
         if not isinstance(event, virtevent.Event):
@@ -1441,7 +1443,7 @@ class ComputeDriver(object):
                 _("Event must be an instance of nova.virt.event.Event"))
 
         try:
-            LOG.debug("Emitting event %s", str(event))
+            LOG.debug("Emitting event %s", six.text_type(event))
             self._compute_event_callback(event)
         except Exception as ex:
             LOG.error(_LE("Exception dispatching event %(event)s: %(ex)s"),

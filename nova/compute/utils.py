@@ -14,29 +14,34 @@
 
 """Compute-related Utilities and helpers."""
 
+import functools
+import inspect
 import itertools
 import string
 import traceback
 
 import netifaces
-from oslo_config import cfg
 from oslo_log import log
 import six
 
 from nova import block_device
 from nova.compute import power_state
 from nova.compute import task_states
+import nova.conf
 from nova import exception
 from nova.i18n import _LW
 from nova.network import model as network_model
 from nova import notifications
+from nova.notifications.objects import base as notification_base
+from nova.notifications.objects import instance as instance_notification
 from nova import objects
+from nova.objects import fields
 from nova import rpc
+from nova import safe_utils
 from nova import utils
 from nova.virt import driver
 
-CONF = cfg.CONF
-CONF.import_opt('host', 'nova.netconf')
+CONF = nova.conf.CONF
 LOG = log.getLogger(__name__)
 
 
@@ -187,6 +192,30 @@ def get_next_device_name(instance, device_name_list,
     return prefix + req_letter
 
 
+def get_root_bdm(context, instance, bdms=None):
+    if bdms is None:
+        if isinstance(instance, objects.Instance):
+            uuid = instance.uuid
+        else:
+            uuid = instance['uuid']
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                context, uuid)
+
+    return bdms.root_bdm()
+
+
+def is_volume_backed_instance(context, instance, bdms=None):
+    root_bdm = get_root_bdm(context, instance, bdms)
+    if root_bdm is not None:
+        return root_bdm.is_volume
+    # in case we hit a very old instance without root bdm, we _assume_ that
+    # instance is backed by a volume, if and only if image_ref is not set
+    if isinstance(instance, objects.Instance):
+        return not instance.image_ref
+
+    return not instance['image_ref']
+
+
 def _get_unused_letter(used_letters):
     doubles = [first + second for second in string.ascii_lowercase
                for first in string.ascii_lowercase]
@@ -290,6 +319,49 @@ def notify_about_instance_usage(notifier, context, instance, event_suffix,
         method = notifier.info
 
     method(context, 'compute.instance.%s' % event_suffix, usage_info)
+
+
+def notify_about_instance_action(context, instance, host, action, phase=None,
+                                 binary='nova-compute'):
+    """Send versioned notification about the action made on the instance
+    :param instance: the instance which the action performed on
+    :param host: the host emitting the notification
+    :param action: the name of the action
+    :param phase: the phase of the action
+    :param binary: the binary emitting the notification
+    """
+    network_info = get_nw_info_for_instance(instance)
+    ips = []
+    if network_info is not None:
+        for vif in network_info:
+            for ip in vif.fixed_ips():
+                ips.append(instance_notification.IpPayload(
+                    label=vif["network"]["label"],
+                    mac=vif["address"],
+                    meta=vif["meta"],
+                    port_uuid=vif["id"],
+                    version=ip["version"],
+                    address=ip["address"],
+                    device_name=vif["devname"]))
+    flavor = instance_notification.FlavorPayload(instance=instance)
+    # TODO(gibi): handle fault during the transformation of the first error
+    # notifications
+    payload = instance_notification.InstanceActionPayload(
+            instance=instance,
+            fault=None,
+            ip_addresses=ips,
+            flavor=flavor)
+    notification = instance_notification.InstanceActionNotification(
+            context=context,
+            priority=fields.NotificationPriority.INFO,
+            publisher=notification_base.NotificationPublisher(
+                    context=context, host=host, binary=binary),
+            event_type=notification_base.EventType(
+                    object='instance',
+                    action=action,
+                    phase=phase),
+            payload=payload)
+    notification.emit(context)
 
 
 def notify_about_server_group_update(context, event_suffix, sg_payload):
@@ -518,6 +590,29 @@ class EventReporter(object):
                 self.context, uuid, self.event_name, exc_val=exc_val,
                 exc_tb=exc_tb, want_result=False)
         return False
+
+
+def wrap_instance_event(prefix):
+    """Wraps a method to log the event taken on the instance, and result.
+
+    This decorator wraps a method to log the start and result of an event, as
+    part of an action taken on an instance.
+    """
+    @utils.expects_func_args('instance')
+    def helper(function):
+
+        @functools.wraps(function)
+        def decorated_function(self, context, *args, **kwargs):
+            wrapped_func = safe_utils.get_wrapped_function(function)
+            keyed_args = inspect.getcallargs(wrapped_func, self, context,
+                                             *args, **kwargs)
+            instance_uuid = keyed_args['instance']['uuid']
+
+            event_name = '{0}_{1}'.format(prefix, function.__name__)
+            with EventReporter(context, event_name, instance_uuid):
+                return function(self, context, *args, **kwargs)
+        return decorated_function
+    return helper
 
 
 class UnlimitedSemaphore(object):

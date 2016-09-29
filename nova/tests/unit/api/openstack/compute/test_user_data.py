@@ -18,6 +18,7 @@ import base64
 import datetime
 import uuid
 
+import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
 
@@ -117,8 +118,7 @@ class ServersControllerCreateTest(test.TestCase):
         def project_get_networks(context, user_id):
             return dict(id='1', host='localhost')
 
-        fakes.stub_out_rate_limiting(self.stubs)
-        fakes.stub_out_key_pair_funcs(self.stubs)
+        fakes.stub_out_key_pair_funcs(self)
         fake.stub_out_image_service(self)
         fakes.stub_out_nw_api(self)
         self.stubs.Set(uuid, 'uuid4', fake_gen_uuid)
@@ -135,7 +135,7 @@ class ServersControllerCreateTest(test.TestCase):
                        fake_method)
 
     def _test_create_extra(self, params, no_image=False,
-                           override_controller=None):
+                           override_controller=None, legacy_v2=False):
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
         server = dict(name='server_test', imageRef=image_uuid, flavorRef=2)
         if no_image:
@@ -146,6 +146,8 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dump_as_bytes(body)
         req.headers["content-type"] = "application/json"
+        if legacy_v2:
+            req.set_legacy_v2()
         if override_controller:
             server = override_controller.create(req, body=body).obj['server']
         else:
@@ -187,3 +189,15 @@ class ServersControllerCreateTest(test.TestCase):
         params = {user_data.ATTRIBUTE_NAME: value}
         self.assertRaises(exception.ValidationError,
                           self._test_create_extra, params)
+
+    @mock.patch('nova.compute.api.API.create')
+    def test_create_instance_with_none_allowd_for_v20_compat_mode(self,
+            mock_create):
+
+        def create(context, *args, **kwargs):
+            self.assertIsNone(kwargs['user_data'])
+            return ([fakes.stub_instance_obj(context)], None)
+
+        mock_create.side_effect = create
+        params = {user_data.ATTRIBUTE_NAME: None}
+        self._test_create_extra(params, legacy_v2=True)

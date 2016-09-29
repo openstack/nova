@@ -7,18 +7,20 @@ formats, with a mime-type of ``application/json``. As there is only
 one supported content type, all content is assumed to be
 ``application/json`` in both request and response formats.
 
-Request and response examples
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Request and response example
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The examples below show a request body in JSON format.
+The example below shows a request body in JSON format:
 
-**Example: JSON request with headers**
-
-| POST /v2/010101/servers HTTP/1.1
-|  Host: servers.api.openstack.org
-|  X-Auth-Token: eaaafd18-0fed-4b3a-81b4-663c99ec1cbb
+**Example: JSON request with headers**
 
 .. code::
+
+   POST /v2.1/servers HTTP/1.1
+   Host: servers.api.openstack.org
+   X-Auth-Token: eaaafd18-0fed-4b3a-81b4-663c99ec1cbb
+
+.. code:: JSON
 
     {
         "server": {

@@ -20,7 +20,6 @@ from nova import objects
 from nova.virt import block_device as driver_block_device
 
 CONF = nova.conf.CONF
-CONF.import_opt('host', 'nova.netconf')
 
 
 class ImageCacheManager(object):
@@ -45,11 +44,10 @@ class ImageCacheManager(object):
 
         This method returns a dictionary with the following keys:
             - used_images
-            - image_popularity
             - instance_names
+            - used_swap_images
         """
         used_images = {}
-        image_popularity = {}
         instance_names = set()
         used_swap_images = set()
         instance_bdms = objects.BlockDeviceMappingList.bdms_by_instance_uuid(
@@ -79,9 +77,6 @@ class ImageCacheManager(object):
                 insts.append(instance.name)
                 used_images[image_ref_str] = (local, remote, insts)
 
-                image_popularity.setdefault(image_ref_str, 0)
-                image_popularity[image_ref_str] += 1
-
             bdms = instance_bdms.get(instance.uuid)
             if bdms:
                 swap = driver_block_device.convert_swap(bdms)
@@ -90,19 +85,14 @@ class ImageCacheManager(object):
                     used_swap_images.add(swap_image)
 
         return {'used_images': used_images,
-                'image_popularity': image_popularity,
                 'instance_names': instance_names,
                 'used_swap_images': used_swap_images}
 
-    def _list_base_images(self, base_dir):
-        """Return a list of the images present in _base.
-
-        This method returns a dictionary with the following keys:
-            - unexplained_images
-            - originals
+    def _scan_base_images(self, base_dir):
+        """Scan base images present in base_dir and populate internal
+        state.
         """
-        return {'unexplained_images': [],
-                'originals': []}
+        raise NotImplementedError()
 
     def _age_and_verify_cached_images(self, context, all_instances, base_dir):
         """Ages and verifies cached images."""

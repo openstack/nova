@@ -102,6 +102,11 @@ class InstanceMapping(base.NovaTimestampObject, base.NovaObject):
             raise exception.InstanceMappingNotFound(uuid=instance_uuid)
 
         db_mapping.update(updates)
+        # NOTE: This is done because a later access will trigger a lazy load
+        # outside of the db session so it will fail. We don't lazy load
+        # cell_mapping on the object later because we never need an
+        # InstanceMapping without the CellMapping.
+        db_mapping.cell_mapping
         context.session.add(db_mapping)
         return db_mapping
 

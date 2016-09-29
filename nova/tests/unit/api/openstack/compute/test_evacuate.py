@@ -19,9 +19,6 @@ import testtools
 import webob
 
 from nova.api.openstack.compute import evacuate as evacuate_v21
-from nova.api.openstack.compute.legacy_v2.contrib import evacuate \
-        as evacuate_v2
-from nova.api.openstack import extensions
 from nova.compute import api as compute_api
 from nova.compute import vm_states
 import nova.conf
@@ -38,8 +35,7 @@ def fake_compute_api(*args, **kwargs):
     return True
 
 
-def fake_compute_api_get(self, context, instance_id, want_objects=False,
-                         **kwargs):
+def fake_compute_api_get(self, context, instance_id, **kwargs):
     # BAD_UUID is something that does not exist
     if instance_id == 'BAD_UUID':
         raise exception.InstanceNotFound(instance_id=instance_id)
@@ -217,10 +213,10 @@ class EvacuateTestV21(test.NoDBTestCase):
         self.assertEqual(admin_pass, res['adminPass'])
 
     def test_evacuate_disable_password_return(self):
-        self._test_evacuate_enable_instance_password_conf(False)
+        self._test_evacuate_enable_instance_password_conf(enable_pass=False)
 
     def test_evacuate_enable_password_return(self):
-        self._test_evacuate_enable_instance_password_conf(True)
+        self._test_evacuate_enable_instance_password_conf(enable_pass=True)
 
     @mock.patch('nova.objects.Instance.save')
     def _test_evacuate_enable_instance_password_conf(self, mock_save,
@@ -232,44 +228,7 @@ class EvacuateTestV21(test.NoDBTestCase):
         if enable_pass:
             self.assertIn('adminPass', res)
         else:
-            self.assertIsNone(res.get('adminPass'))
-
-
-class EvacuateTestV2(EvacuateTestV21):
-    validation_error = webob.exc.HTTPBadRequest
-
-    def _set_up_controller(self):
-        ext_mgr = extensions.ExtensionManager()
-        ext_mgr.extensions = {'os-extended-evacuate-find-host': 'fake'}
-        self.controller = evacuate_v2.Controller(ext_mgr)
-        ext_mgr_no_ext = extensions.ExtensionManager()
-        ext_mgr_no_ext.extensions = {}
-        self.controller_no_ext = evacuate_v2.Controller(ext_mgr_no_ext)
-
-    def test_no_target_fails_if_extension_not_loaded(self):
-        self._check_evacuate_failure(webob.exc.HTTPBadRequest,
-                                     {'onSharedStorage': 'False',
-                                      'adminPass': 'MyNewPass'},
-                                     controller=self.controller_no_ext)
-
-    def test_evacuate_instance_with_too_long_host(self):
-        pass
-
-    def test_evacuate_instance_with_invalid_characters_host(self):
-        pass
-
-    def test_evacuate_instance_with_invalid_on_shared_storage(self):
-        pass
-
-    def test_evacuate_disable_password_return(self):
-        pass
-
-    def test_evacuate_enable_password_return(self):
-        pass
-
-    def tet_evacuate_with_non_admin(self):
-        self.assertRaises(exception.AdminRequired, self.controller.evacuate,
-                          self.req, fakes.FAKE_UUID, {})
+            self.assertIsNone(res)
 
 
 class EvacuatePolicyEnforcementv21(test.NoDBTestCase):
@@ -277,11 +236,26 @@ class EvacuatePolicyEnforcementv21(test.NoDBTestCase):
     def setUp(self):
         super(EvacuatePolicyEnforcementv21, self).setUp()
         self.controller = evacuate_v21.EvacuateController()
+        self.req = fakes.HTTPRequest.blank('')
+        req_context = self.req.environ['nova.context']
+        self.stub_out('nova.compute.api.HostAPI.service_get_by_compute_host',
+                       fake_service_get_by_compute_host)
 
-    def test_evacuate_policy_failed(self):
+        def fake_get_instance(self, context, id):
+            return fake_instance.fake_instance_obj(
+                req_context,
+                project_id=req_context.project_id,
+                user_id=req_context.user_id)
+
+        self.stub_out(
+            'nova.api.openstack.common.get_instance', fake_get_instance)
+
+    def test_evacuate_policy_failed_with_other_project(self):
         rule_name = "os_compute_api:os-evacuate"
-        self.policy.set_rules({rule_name: "project:non_fake"})
+        self.policy.set_rules({rule_name: "project_id:%(project_id)s"})
         req = fakes.HTTPRequest.blank('')
+        # Change the project_id in request context.
+        req.environ['nova.context'].project_id = 'other-project'
         body = {'evacuate': {'host': 'my-host',
                              'onSharedStorage': 'False',
                              'adminPass': 'MyNewPass'
@@ -293,6 +267,51 @@ class EvacuatePolicyEnforcementv21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
+
+    @mock.patch('nova.compute.api.API.evacuate')
+    def test_evacuate_overridden_policy_pass_with_same_project(self,
+                                                               evacuate_mock):
+        rule_name = "os_compute_api:os-evacuate"
+        self.policy.set_rules({rule_name: "project_id:%(project_id)s"})
+        body = {'evacuate': {'host': 'my-host',
+                             'onSharedStorage': 'False',
+                             'adminPass': 'MyNewPass'
+                             }}
+        self.controller._evacuate(self.req, fakes.FAKE_UUID, body=body)
+        evacuate_mock.assert_called_once_with(self.req.environ['nova.context'],
+                                              mock.ANY, 'my-host', False,
+                                              'MyNewPass', None)
+
+    def test_evacuate_overridden_policy_failed_with_other_user(self):
+        rule_name = "os_compute_api:os-evacuate"
+        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
+        req = fakes.HTTPRequest.blank('')
+        # Change the user_id in request context.
+        req.environ['nova.context'].user_id = 'other-user'
+        body = {'evacuate': {'host': 'my-host',
+                             'onSharedStorage': 'False',
+                             'adminPass': 'MyNewPass'
+                             }}
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller._evacuate, req,
+                                fakes.FAKE_UUID, body=body)
+        self.assertEqual(
+                      "Policy doesn't allow %s to be performed." % rule_name,
+                      exc.format_message())
+
+    @mock.patch('nova.compute.api.API.evacuate')
+    def test_evacuate_overridden_policy_pass_with_same_user(self,
+                                                        evacuate_mock):
+        rule_name = "os_compute_api:os-evacuate"
+        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
+        body = {'evacuate': {'host': 'my-host',
+                             'onSharedStorage': 'False',
+                             'adminPass': 'MyNewPass'
+                             }}
+        self.controller._evacuate(self.req, fakes.FAKE_UUID, body=body)
+        evacuate_mock.assert_called_once_with(self.req.environ['nova.context'],
+                                              mock.ANY, 'my-host', False,
+                                              'MyNewPass', None)
 
 
 class EvacuateTestV214(EvacuateTestV21):
@@ -391,3 +410,39 @@ class EvacuateTestV214(EvacuateTestV21):
         # underscores in hostnames. However, we should test that it
         # is supported because it sometimes occurs in real systems.
         self._get_evacuate_response({'host': 'underscore_hostname'})
+
+
+class EvacuateTestV229(EvacuateTestV214):
+    def setUp(self):
+        super(EvacuateTestV229, self).setUp()
+        self.admin_req = fakes.HTTPRequest.blank('', use_admin_context=True,
+                                                 version='2.29')
+        self.req = fakes.HTTPRequest.blank('', version='2.29')
+
+    @mock.patch.object(compute_api.API, 'evacuate')
+    def test_evacuate_instance(self, mock_evacuate):
+        self._get_evacuate_response({})
+        admin_pass = mock_evacuate.call_args_list[0][0][4]
+        on_shared_storage = mock_evacuate.call_args_list[0][0][3]
+        force = mock_evacuate.call_args_list[0][0][5]
+        self.assertEqual(CONF.password_length, len(admin_pass))
+        self.assertIsNone(on_shared_storage)
+        self.assertEqual(False, force)
+
+    def test_evacuate_with_valid_instance(self):
+        admin_pass = 'MyNewPass'
+        res = self._get_evacuate_response({'host': 'my-host',
+                                           'adminPass': admin_pass,
+                                           'force': 'false'})
+        self.assertIsNone(res)
+
+    @mock.patch.object(compute_api.API, 'evacuate')
+    def test_evacuate_instance_with_forced_host(self, mock_evacuate):
+        self._get_evacuate_response({'host': 'my-host',
+                                     'force': 'true'})
+        force = mock_evacuate.call_args_list[0][0][5]
+        self.assertEqual(True, force)
+
+    def test_forced_evacuate_with_no_host_provided(self):
+        self._check_evacuate_failure(webob.exc.HTTPBadRequest,
+                                     {'force': 'true'})

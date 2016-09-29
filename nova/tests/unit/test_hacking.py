@@ -168,9 +168,19 @@ class HackingTestCase(test.NoDBTestCase):
         self.assertEqual(
             len(list(checks.assert_equal_none("self.assertIsNone()"))), 0)
 
-    def test_assert_true_or_false_with_in_or_not_in(self):
         self.assertEqual(len(list(checks.assert_equal_none(
-            "self.assertEqual(A, None)"))), 1)
+            "self.assertIs(A, None)"))), 1)
+
+        self.assertEqual(len(list(checks.assert_equal_none(
+            "self.assertIsNot(A, None)"))), 1)
+
+        self.assertEqual(len(list(checks.assert_equal_none(
+            "self.assertIs(None, A)"))), 1)
+
+        self.assertEqual(len(list(checks.assert_equal_none(
+            "self.assertIsNot(None, A)"))), 1)
+
+    def test_assert_true_or_false_with_in_or_not_in(self):
         self.assertEqual(len(list(checks.assert_true_or_false_with_in(
             "self.assertTrue(A in B)"))), 1)
 
@@ -343,7 +353,11 @@ class HackingTestCase(test.NoDBTestCase):
         lines = textwrap.dedent(code).strip().splitlines(True)
 
         checker = pep8.Checker(filename=filename, lines=lines)
-        checker.check_all()
+        # NOTE(sdague): the standard reporter has printing to stdout
+        # as a normal part of check_all, which bleeds through to the
+        # test output stream in an unhelpful way. This blocks that printing.
+        with mock.patch('pep8.StandardReport.get_file_results'):
+            checker.check_all()
         checker.report._deferred_print.sort()
         return checker.report._deferred_print
 
@@ -531,10 +545,6 @@ class HackingTestCase(test.NoDBTestCase):
         self._assert_has_errors(code, checks.check_http_not_implemented,
                                 expected_errors=errors, filename=filename)
 
-        filename = "nova/api/openstack/compute/legacy_v2/test.py"
-        self._assert_has_no_errors(code, checks.check_http_not_implemented,
-                                   filename=filename)
-
     def test_check_contextlib_use(self):
         code = """
                with test.nested(
@@ -618,7 +628,7 @@ class HackingTestCase(test.NoDBTestCase):
                                    checks.check_config_option_in_central_place,
                                    filename="nova/conf/serial_console.py")
         # option at a location which is not in scope right now
-        # TODO(markus_z): This is remporary until all config options are
+        # TODO(markus_z): This is temporary until all config options are
         # moved to /nova/conf
         self._assert_has_no_errors(code,
                                    checks.check_config_option_in_central_place,
@@ -661,78 +671,6 @@ class HackingTestCase(test.NoDBTestCase):
         self.assertEqual(0, len(list(checks.check_python3_no_itervalues(
             "six.itervalues(ob))"))))
 
-    def test_cfg_help_with_enough_text(self):
-        errors = [(1, 0, 'N347')]
-
-        # Doesn't have help text at all => should raise error
-        code1 = """
-        opt = cfg.StrOpt("opt1")
-        """
-        self._assert_has_errors(code1, checks.cfg_help_with_enough_text,
-                                expected_errors=errors)
-
-        # Explicitly sets an empty string => should raise error
-        code2 = """
-        opt = cfg.StrOpt("opt2", help="")
-        """
-        self._assert_has_errors(code2, checks.cfg_help_with_enough_text,
-                                expected_errors=errors)
-
-        # Has help text but too few characters => should raise error
-        code3 = """
-        opt = cfg.StrOpt("opt3", help="meh")
-        """
-        self._assert_has_errors(code3, checks.cfg_help_with_enough_text,
-                                expected_errors=errors)
-
-        # Has long enough help text => should *not* raise an error
-        code4 = """
-        opt = cfg.StrOpt("opt4", help="This option does stuff")
-        """
-        self._assert_has_no_errors(code4, checks.cfg_help_with_enough_text)
-
-        # OptGroup objects help is optional => should *not* raise error
-        code5 = """
-        opt_group = cfg.OptGroup(name="group1", title="group title")
-        """
-        self._assert_has_no_errors(code5, checks.cfg_help_with_enough_text)
-
-        # The help text gets translated
-        code6 = """
-        opt = cfg.StrOpt("opt6",
-                         help=_("help with translation usage"))
-        """
-        self._assert_has_no_errors(code6, checks.cfg_help_with_enough_text)
-
-        # The help text uses a paranthesis (weird, but produces a valid string)
-        code7 = """
-        opt = cfg.StrOpt("opt7",
-                         help=("help text uses extra paranthesis"))
-        """
-        self._assert_has_no_errors(code7, checks.cfg_help_with_enough_text)
-
-        # Ignore deprecated options. They should be in the release notes
-        code8 = """
-        opt = cfg.DeprecatedOpt('opt8')
-        """
-        self._assert_has_no_errors(code8, checks.cfg_help_with_enough_text)
-
-        code9 = """
-        opt = cfg.StrOpt("opt9",
-                     help=\"\"\"
-        This
-
-        is
-
-        multiline
-
-        help
-
-        text.
-        \"\"\")
-        """
-        self._assert_has_no_errors(code9, checks.cfg_help_with_enough_text)
-
     def test_no_os_popen(self):
         code = """
                import os
@@ -750,6 +688,18 @@ class HackingTestCase(test.NoDBTestCase):
         errors = [(4, 0, 'N348'), (8, 8, 'N348')]
         self._assert_has_errors(code, checks.no_os_popen,
                                 expected_errors=errors)
+
+    def test_no_log_warn(self):
+        code = """
+                  LOG.warn("LOG.warn is deprecated")
+               """
+        errors = [(1, 0, 'N352')]
+        self._assert_has_errors(code, checks.no_log_warn,
+                                expected_errors=errors)
+        code = """
+                  LOG.warning("LOG.warn is deprecated")
+               """
+        self._assert_has_no_errors(code, checks.no_log_warn)
 
     def test_uncalled_closures(self):
 
@@ -777,3 +727,46 @@ class HackingTestCase(test.NoDBTestCase):
                    self.assertRaises(FakeExcepion, _test)
                """
         self._assert_has_no_errors(code, checker)
+
+    def test_check_policy_registration_in_central_place(self):
+        errors = [(3, 0, "N350")]
+        code = """
+        from nova import policy
+
+        policy.RuleDefault('context_is_admin', 'role:admin')
+        """
+        # registration in the proper place
+        self._assert_has_no_errors(
+            code, checks.check_policy_registration_in_central_place,
+            filename="nova/policies/base.py")
+        # option at a location which is not in scope right now
+        self._assert_has_errors(
+            code, checks.check_policy_registration_in_central_place,
+            filename="nova/api/openstack/compute/non_existent.py",
+            expected_errors=errors)
+
+    def test_check_policy_enforce(self):
+        errors = [(3, 0, "N351")]
+        code = """
+        from nova import policy
+
+        policy._ENFORCER.enforce('context_is_admin', target, credentials)
+        """
+        self._assert_has_errors(code, checks.check_policy_enforce,
+                                expected_errors=errors)
+
+    def test_check_policy_enforce_does_not_catch_other_enforce(self):
+        # Simulate a different enforce method defined in Nova
+        code = """
+        from nova import foo
+
+        foo.enforce()
+        """
+        self._assert_has_no_errors(code, checks.check_policy_enforce)
+
+    def test_check_python3_xrange(self):
+        func = checks.check_python3_xrange
+        self.assertEqual(1, len(list(func('for i in xrange(10)'))))
+        self.assertEqual(1, len(list(func('for i in xrange    (10)'))))
+        self.assertEqual(0, len(list(func('for i in range(10)'))))
+        self.assertEqual(0, len(list(func('for i in six.moves.range(10)'))))

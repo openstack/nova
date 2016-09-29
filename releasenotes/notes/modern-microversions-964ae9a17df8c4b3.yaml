@@ -1,0 +1,7 @@
+---
+features:
+  - >
+    Microversions may now (with microversion 2.27) be requested with
+    the "OpenStack-API-Version: compute 2.27" header, in alignment with
+    OpenStack-wide standards. The original format,
+    "X-OpenStack-Nova-API-Version: 2.27", may still be used.

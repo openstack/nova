@@ -1,38 +1,48 @@
 .. -*- rst -*-
-.. needs:method_verification
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
-==========================
- Fixed IPs (os-fixed-ips)
-==========================
+======================================
+ Fixed IPs (os-fixed-ips) (DEPRECATED)
+======================================
+
+.. warning::
+
+   These APIs are proxy calls to the Network service. Nova has
+   deprecated all the proxy APIs and users should use the native APIs
+   instead. These will fail with a 404 after microversion 2.35.
 
 Shows data for a fixed IP, such as host name, CIDR, and address. Also,
-reserves and frees a fixed IP address.
+reserves and releases a fixed IP address.
 
 Show Fixed Ip Details
 =====================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-fixed-ips/{fixed_ip}
+.. rest_method:: GET /os-fixed-ips/{fixed_ip}
 
 Shows details for a fixed IP address.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - fixed_ip: fixed_ip
+  - fixed_ip: fixed_ip_path
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - fixed_ip: fixed_ip_obj
+  - address: ip_address
+  - cidr: cidr
+  - host: fixed_ip_host
+  - hostname: fixed_ip_hostname
+  - reserved: reserved_fixedip
+
 
 **Example Show Fixed Ip Details: JSON response**
 
@@ -42,24 +52,26 @@ Response
 Reserve Or Release A Fixed Ip
 =============================
 
-.. rest_method:: POST /v2.1/{tenant_id}/os-fixed-ips/{fixed_ip}/action
+.. rest_method:: POST /os-fixed-ips/{fixed_ip}/action
 
 Reserves or releases a fixed IP.
 
-To reserve a fixed IP address, specify ``reserve`` in the request body. To release a fixed IP address, specify ``unreserve`` in the request body.
+To reserve a fixed IP address, specify ``reserve`` in the request body.
+To release a fixed IP address, specify ``unreserve`` in the request body.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - fixed_ip: fixed_ip
+  - fixed_ip: fixed_ip_path
+  - reserve: action_reserve
+  - unreserve: action_unreserve
+
 
 **Example Reserve Or Release A Fixed Ip: JSON request**
 
@@ -69,3 +81,4 @@ Request
 Response
 --------
 
+There is no body content for the response of a successful POST operation.

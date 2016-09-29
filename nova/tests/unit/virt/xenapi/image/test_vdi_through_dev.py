@@ -58,7 +58,7 @@ class TestUploadToGlanceAsRawTgz(test.NoDBTestCase):
         self.mox.StubOutWithMock(vdi_through_dev, 'utils')
 
         store._get_vdi_ref().AndReturn('vdi_ref')
-        vdi_through_dev.vm_utils.vdi_attached_here(
+        vdi_through_dev.vm_utils.vdi_attached(
             'session', 'vdi_ref', read_only=True).AndReturn(
                 fake_context('dev'))
         vdi_through_dev.utils.make_dev_path('dev').AndReturn('devpath')

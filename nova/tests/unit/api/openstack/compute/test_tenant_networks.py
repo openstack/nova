@@ -18,8 +18,6 @@ import mock
 from oslo_config import cfg
 import webob
 
-from nova.api.openstack.compute.legacy_v2.contrib import os_tenant_networks \
-        as networks
 from nova.api.openstack.compute import tenant_networks \
         as networks_v21
 from nova import exception
@@ -41,21 +39,23 @@ NETWORKS = [
     }
 ]
 
-DEFAULT_NETWORK = {
-    "id": 3,
-    "cidr": "10.20.105.0/24",
-    "label": "default"
-}
+DEFAULT_NETWORK = [
+    {
+        "id": 3,
+        "cidr": "None",
+        "label": "default"
+    }
+]
 
 NETWORKS_WITH_DEFAULT_NET = copy.deepcopy(NETWORKS)
-NETWORKS_WITH_DEFAULT_NET.append(DEFAULT_NETWORK)
+NETWORKS_WITH_DEFAULT_NET.extend(DEFAULT_NETWORK)
 
-DEFAULT_TENANT_ID = 1
+DEFAULT_TENANT_ID = CONF.neutron_default_tenant_id
 
 
 def fake_network_api_get_all(context):
     if (context.project_id == DEFAULT_TENANT_ID):
-        return NETWORKS_WITH_DEFAULT_NET
+        return DEFAULT_NETWORK
     else:
         return NETWORKS
 
@@ -127,11 +127,12 @@ class TenantNetworksTestV21(test.NoDBTestCase):
 
         reserve_mock.return_value = 'rv'
 
-        res = self.controller.delete(self.req, 1)
+        delete_method = self.controller.delete
+        res = delete_method(self.req, 1)
         # NOTE: on v2.1, http status code is set as wsgi_code of API
         # method instead of status_int in a response object.
         if isinstance(self.controller, networks_v21.TenantNetworkController):
-            status_int = self.controller.delete.wsgi_code
+            status_int = delete_method.wsgi_code
         else:
             status_int = res.status_int
         self.assertEqual(202, status_int)
@@ -162,8 +163,7 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         get_all_mock.side_effect = fake_network_api_get_all
 
         expected = NETWORKS
-        if default_net is True:
-            self.req.environ['nova.context'].project_id = DEFAULT_TENANT_ID
+        if default_net:
             expected = NETWORKS_WITH_DEFAULT_NET
 
         res = self.controller.index(self.req)
@@ -200,7 +200,7 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         reserve_mock.side_effect = exception.OverQuota(overs='fake')
         body = {'network': {"cidr": "10.20.105.0/24",
                             "label": "new net 1"}}
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(webob.exc.HTTPForbidden,
                           self.controller.create, self.req, body=body)
         reserve_mock.assert_called_once_with(ctxt, networks=1)
 
@@ -259,19 +259,6 @@ class TenantNetworksTestV21(test.NoDBTestCase):
                           self.controller.create, self.req, body=body)
 
 
-class TenantNetworksTestV2(TenantNetworksTestV21):
-    ctrlr = networks.NetworkController
-    validation_error = webob.exc.HTTPBadRequest
-
-    def setUp(self):
-        super(TenantNetworksTestV2, self).setUp()
-        self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
-
-    def test_network_create_empty_body(self):
-        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
-                          self.controller.create, self.req, {})
-
-
 class TenantNetworksEnforcementV21(test.NoDBTestCase):
 
     def setUp(self):
@@ -323,3 +310,23 @@ class TenantNetworksEnforcementV21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
+
+
+class TenantNetworksDeprecationTest(test.NoDBTestCase):
+    ctrlr = networks_v21.TenantNetworkController
+    validation_error = exception.ValidationError
+
+    def setUp(self):
+        super(TenantNetworksDeprecationTest, self).setUp()
+        self.controller = networks_v21.TenantNetworkController()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+
+    def test_all_apis_return_not_found(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.index, self.req)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.show, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.delete, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.create, self.req, {})

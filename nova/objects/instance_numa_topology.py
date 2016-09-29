@@ -178,25 +178,10 @@ class InstanceNUMATopology(base.NovaObject,
     # TODO(ndipanov) Remove this method on the major version bump to 2.0
     @base.remotable
     def create(self):
-        self._save()
-
-    # NOTE(ndipanov): We can't rename create and want to avoid version bump
-    # as this needs to be backported to stable so this is not a @remotable
-    # That's OK since we only call it from inside Instance.save() which is.
-    def _save(self):
         values = {'numa_topology': self._to_json()}
         db.instance_extra_update_by_uuid(self._context, self.instance_uuid,
                                          values)
         self.obj_reset_changes()
-
-    # NOTE(ndipanov): We want to avoid version bump
-    # as this needs to be backported to stable so this is not a @remotable
-    # That's OK since we only call it from inside Instance.save() which is.
-    @classmethod
-    def delete_by_instance_uuid(cls, context, instance_uuid):
-        values = {'numa_topology': None}
-        db.instance_extra_update_by_uuid(context, instance_uuid,
-                                         values)
 
     @base.remotable_classmethod
     def get_by_instance_uuid(cls, context, instance_uuid):

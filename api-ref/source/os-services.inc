@@ -1,7 +1,4 @@
 .. -*- rst -*-
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
 ================================
  Compute services (os-services)
@@ -17,22 +14,15 @@ Compute <http://docs.openstack.org/liberty/install-guide-obs/common/get_started_
 List Compute Services
 =====================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-services
+.. rest_method:: GET /os-services
 
 Lists all running Compute services.
 
-Includes reasons, if available, for why any services were disabled.
+Provides details why any services were disabled.
 
 Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
 
 Response
 --------
@@ -40,69 +30,27 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - services: services
-  - id: id
+  - id: service_id_body
   - binary: binary
-  - disabled_reason: disabled_reason
-  - host: host
+  - disabled_reason: disabled_reason_body
+  - host: host_name_body
   - state: service_state
-  - status: status
+  - status: service_status
   - updated_at: updated
   - forced_down: forced_down
   - zone: OS-EXT-AZ:availability_zone
 
-**Example List Compute Services: JSON response**
+**Example List Compute Services**
 
-.. literalinclude:: ../../doc/api_samples/os-services/services-list-get-resp.json
-   :language: javascript
-
-Enable Scheduling For A Compute Service
-=======================================
-
-.. rest_method:: PUT /v2.1/{tenant_id}/os-services/enable
-
-Enables scheduling for a Compute service.
-
-Specify the service by its host name and binary name.
-
-Normal response codes: 200
-
-Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-  - host: host
-  - binary: binary
-
-**Example Enable Scheduling For A Compute Service: JSON request**
-
-.. literalinclude:: ../../doc/api_samples/os-services/service-enable-put-req.json
-   :language: javascript
-
-Response
---------
-
-.. rest_parameters:: parameters.yaml
-
-  - service: service
-  - binary: binary
-  - host: host
-  - status: status
-
-**Example Enable Scheduling For A Compute Service: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/os-services/service-enable-put-resp.json
+.. literalinclude:: ../../doc/api_samples/os-services/v2.11/services-list-get-resp.json
    :language: javascript
 
 Disable Scheduling For A Compute Service
 ========================================
 
-.. rest_method:: PUT /v2.1/{tenant_id}/os-services/disable
+.. rest_method:: PUT /os-services/disable
 
-Disables scheduling for a Compute service.
+Disables scheduling for a Compute service with optional logging.
 
 Specify the service by its host name and binary name.
 
@@ -115,11 +63,10 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - host: host
+  - host: host_name_body
   - binary: binary
 
-**Example Disable Scheduling For A Compute Service: JSON request**
+**Example Disable Scheduling For A Compute Service**
 
 .. literalinclude:: ../../doc/api_samples/os-services/service-disable-put-req.json
    :language: javascript
@@ -131,10 +78,10 @@ Response
 
   - service: service
   - binary: binary
-  - host: host
-  - status: status
+  - host: host_name_body
+  - status: service_status
 
-**Example Disable Scheduling For A Compute Service: JSON response**
+**Example Disable Scheduling For A Compute Service**
 
 .. literalinclude:: ../../doc/api_samples/os-services/service-disable-put-resp.json
    :language: javascript
@@ -142,7 +89,7 @@ Response
 Log Disabled Compute Service Information
 ========================================
 
-.. rest_method:: PUT /v2.1/{tenant_id}/os-services/disable-log-reason
+.. rest_method:: PUT /os-services/disable-log-reason
 
 Logs information to the Compute service table about why a Compute service was disabled.
 
@@ -157,12 +104,11 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - host: host
+  - host: host_name_body
   - binary: binary
-  - disabled_reason: disabled_reason
+  - disabled_reason: disabled_reason_body
 
-**Example Log Disabled Compute Service Information: JSON request**
+**Example Log Disabled Compute Service Information**
 
 .. literalinclude:: ../../doc/api_samples/os-services/service-disable-log-put-req.json
    :language: javascript
@@ -174,21 +120,109 @@ Response
 
   - service: service
   - binary: binary
-  - disabled_reason: disabled_reason
-  - host: host
-  - status: status
+  - disabled_reason: disabled_reason_body
+  - host: host_name_body
+  - status: service_status
 
-**Example Log Disabled Compute Service Information: JSON response**
+**Example Log Disabled Compute Service Information**
 
 .. literalinclude:: ../../doc/api_samples/os-services/service-disable-log-put-resp.json
+   :language: javascript
+
+Enable Scheduling For A Compute Service
+=======================================
+
+.. rest_method:: PUT /os-services/enable
+
+Enables scheduling for a Compute service.
+
+Specify the service by its host name and binary name.
+
+Normal response codes: 200
+
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - host: host_name_body
+  - binary: binary
+
+**Example Enable Scheduling For A Compute Service**
+
+.. literalinclude:: ../../doc/api_samples/os-services/service-enable-put-req.json
+   :language: javascript
+
+Response
+--------
+
+.. rest_parameters:: parameters.yaml
+
+  - service: service
+  - binary: binary
+  - host: host_name_body
+  - status: service_status
+
+**Example Enable Scheduling For A Compute Service**
+
+.. literalinclude:: ../../doc/api_samples/os-services/service-enable-put-resp.json
+   :language: javascript
+
+Update Forced Down
+==================
+
+.. rest_method:: PUT /os-services/force-down
+
+Set or unset ``forced_down`` flag for the service.
+
+Action ``force-down`` available as of microversion 2.11.
+
+Specify the service by its host name and binary name.
+
+Normal response codes: 200
+
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - host: host_name_body
+  - binary: binary
+  - forced_down: forced_down
+
+**Example Update Forced Down**
+
+.. literalinclude:: ../../doc/api_samples/os-services/v2.11/service-force-down-put-req.json
+   :language: javascript
+
+Response
+--------
+
+.. rest_parameters:: parameters.yaml
+
+  - service: service
+  - binary: binary
+  - forced_down: forced_down
+  - host: host_name_body
+
+|
+
+**Example Update Forced Down**
+
+.. literalinclude:: ../../doc/api_samples/os-services/v2.11/service-force-down-put-resp.json
    :language: javascript
 
 Delete Compute Service
 ======================
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/os-services/{service_id}
+.. rest_method:: DELETE /os-services/{service_id}
 
-Deletes a Compute service.
+Deletes a Compute service. If it's a nova-compute service, then corresponding host will
+removed from all the host aggregates as well.
 
 Normal response codes: 204
 
@@ -199,8 +233,10 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - service_id: service_id_path
 
 Response
 --------
+
+There is no body content for the response of a successful DELETE query

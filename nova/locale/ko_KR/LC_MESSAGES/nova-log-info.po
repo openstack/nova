@@ -6,9 +6,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b2.dev117\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:28+0000\n"
+"POT-Creation-Date: 2016-06-08 04:30+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -19,10 +19,6 @@ msgstr ""
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
 "Language-Team: Korean (South Korea)\n"
-
-#, python-format
-msgid "%(id)s (%(base_file)s): generating checksum"
-msgstr "%(id)s (%(base_file)s): 체크섬 생성 중"
 
 #, python-format
 msgid "%(name)s listening on %(host)s:%(port)s"
@@ -63,13 +59,6 @@ msgstr "보안 그룹 %(security_group_id)s을(를) %(port_id)s 포트에 추가
 #, python-format
 msgid "Allocated network: '%s' for instance"
 msgstr "인스턴스에 할당된 네트워크: '%s'"
-
-msgid "Attach interface"
-msgstr "인터페이스 첨부"
-
-#, python-format
-msgid "Attach volume %(volume_id)s to instance %(server_id)s at %(device)s"
-msgstr "%(volume_id)s 볼륨을 %(device)s의 %(server_id)s 인스턴스에 첨부"
 
 #, python-format
 msgid "Attaching volume %(volume_id)s to %(mountpoint)s"
@@ -194,10 +183,6 @@ msgid "Copied virtual disk from %(src)s to %(dst)s."
 msgstr "가상 디스크를 %(src)s에서 %(dst)s(으)로 복사했습니다."
 
 #, python-format
-msgid "Corrupt base files: %s"
-msgstr "손상된 기본 파일: %s"
-
-#, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats for "
 "device"
@@ -208,18 +193,6 @@ msgstr ""
 #, python-format
 msgid "Create Security Group %s"
 msgstr "%s 보안 그룹 작성"
-
-#, python-format
-msgid "Create assisted snapshot from volume %s"
-msgstr "%s 볼륨에서 지원된 스냅샷 생성"
-
-#, python-format
-msgid "Create snapshot from volume %s"
-msgstr "%s 볼륨에서 스냅샷 작성"
-
-#, python-format
-msgid "Create volume of %s GB"
-msgstr "%s GB의 볼륨 작성"
 
 #, python-format
 msgid "Created folder: %(name)s in parent %(parent)s."
@@ -250,14 +223,6 @@ msgstr ""
 #, python-format
 msgid "Delete security group %s"
 msgstr "%s 보안 그룹 삭제"
-
-#, python-format
-msgid "Delete snapshot with id: %s"
-msgstr "ID가 %s인 스냅샷 삭제"
-
-#, python-format
-msgid "Delete volume with id: %s"
-msgstr "ID가 %s인 볼륨 삭제"
 
 #, python-format
 msgid "Deleted %s snapshots."
@@ -301,16 +266,8 @@ msgstr ""
 "트에 있습니다."
 
 #, python-format
-msgid "Detach interface %s"
-msgstr "%s 인터페이스와 분리"
-
-#, python-format
 msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
 msgstr "%(mp)s 마운트 지점에서 %(volume_id)s 볼륨 분리"
-
-#, python-format
-msgid "Detach volume %s"
-msgstr "%s 볼륨 분리"
 
 #, python-format
 msgid "Detaching from volume api: %s"
@@ -1109,13 +1066,6 @@ msgstr "VM %(state)s (라이프사이클 이벤트)"
 msgid "VMware vCenter version: %s"
 msgstr "VMware vCenter 버전: %s"
 
-msgid ""
-"Virt driver does not support 'get_available_resource'. Compute tracking is "
-"disabled."
-msgstr ""
-"가상 드라이버에서 'get_available_resource'를 지원하지 않습니다. 컴퓨트 추적"
-"을 사용하지 않습니다."
-
 #, python-format
 msgid ""
 "Volume(%s) has lower stats then what is in the database. Instance must have "
@@ -1130,10 +1080,6 @@ msgstr "WSGI 서버가 중지되었습니다. "
 #, python-format
 msgid "Working on deleting snapshot %s from shelved instance..."
 msgstr "Shelve된 인스턴스에서 %s 스냅샷을 삭제하기 위해 작업 중..."
-
-#, python-format
-msgid "Writing stored info to %s"
-msgstr "%s에 저장된 정보 기록 중"
 
 msgid "XenServer tools are not installed in this image"
 msgstr "XenServer 도구가 이 이미지에 설치되지 않았음"
@@ -1185,12 +1131,6 @@ msgstr "findmnt 도구가 설치되지 않음"
 #, python-format
 msgid "image %(id)s at (%(base_file)s): checking"
 msgstr "(%(base_file)s)의 이미지 %(id)s: 검사 중"
-
-#, python-format
-msgid ""
-"image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
-msgstr ""
-"(%(base_file)s)의 이미지 %(id)s: 이미지 검증 건너뜀. 해시가 저장되지 않음"
 
 #, python-format
 msgid ""
@@ -1253,7 +1193,3 @@ msgstr "%(instance_id)s에서 부동 IP %(address)s 재지정"
 #, python-format
 msgid "tap-ctl check: %s"
 msgstr "tap-ctl 확인: %s"
-
-#, python-format
-msgid "vol=%s"
-msgstr "vol=%s"

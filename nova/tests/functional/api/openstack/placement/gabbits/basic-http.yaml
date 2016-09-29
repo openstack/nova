@@ -1,0 +1,137 @@
+#
+# Test the basic handling of HTTP (expected response codes and the
+# like).
+#
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        # NOTE(cdent): Get past keystone, even though at this stage
+        # we don't require auth.
+        x-auth-token: admin
+        accept: application/json
+
+tests:
+- name: 404 at no service
+  GET: /barnabas
+  status: 404
+  response_json_paths:
+      $.errors[0].title: Not Found
+
+- name: error message has request id
+  GET: /barnabas
+  status: 404
+  response_json_paths:
+      $.errors[0].request_id: /req-[a-fA-F0-9-]+/
+
+- name: 404 at no resource provider
+  GET: /resource_providers/fd0dd55c-6330-463b-876c-31c54e95cb95
+  status: 404
+
+- name: 405 on bad method at root
+  DELETE: /
+  status: 405
+  response_headers:
+      allow: GET
+  response_json_paths:
+      $.errors[0].title: Method Not Allowed
+
+- name: 200 at home
+  GET: /
+  status: 200
+
+- name: 405 on bad method on app
+  DELETE: /resource_providers
+  status: 405
+  response_headers:
+      allow: /(GET|POST), (POST|GET)/
+  response_json_paths:
+      $.errors[0].title: Method Not Allowed
+  response_strings:
+    - The method DELETE is not allowed for this resource.
+
+- name: bad accept resource providers
+  GET: /resource_providers
+  request_headers:
+      accept: text/plain
+  status: 406
+
+- name: complex accept resource providers
+  GET: /resource_providers
+  request_headers:
+      accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+  status: 200
+  response_json_paths:
+      $.resource_providers: []
+
+- name: post resource provider wrong content-type
+  POST: /resource_providers
+  request_headers:
+    content-type: text/plain
+  data: I want a resource provider please
+  status: 415
+
+- name: post resource provider missing content-type
+  POST: /resource_providers
+  data: I want a resource provider please
+  status: 400
+
+- name: post resource provider schema mismatch
+  POST: /resource_providers
+  request_headers:
+      content-type: application/json
+  data:
+      transport: car
+      color: blue
+  status: 400
+
+- name: post good resource provider
+  POST: /resource_providers
+  request_headers:
+    content-type: application/json
+  data:
+      name: $ENVIRON['RP_NAME']
+      uuid: $ENVIRON['RP_UUID']
+  status: 201
+
+- name: get resource provider wrong accept
+  GET: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      accept: text/plain
+  status: 406
+  response_strings:
+      - Only application/json is provided
+
+- name: get resource provider complex accept wild match
+  desc: like a browser, */* should match
+  GET: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+  response_json_paths:
+      $.uuid: $ENVIRON['RP_UUID']
+
+- name: get resource provider complex accept no match
+  desc: no */*, no match
+  GET: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      accept: text/html,application/xhtml+xml,application/xml;q=0.9
+  status: 406
+
+- name: put poor format resource provider
+  PUT: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+    content-type: text/plain
+  data: Why U no provide?
+  status: 415
+
+- name: non inventory sub resource provider path
+  GET: /resource_providers/7850178f-1807-4512-b135-0b174985405b/cows
+  request_headers:
+      accept: application/json
+  status: 404
+  response_json_paths:
+      $.errors[0].title:  Not Found
+  response_strings:
+      - The resource could not be found.

@@ -18,8 +18,6 @@ import webob
 from nova.api.openstack import common
 from nova.api.openstack.compute import create_backup \
         as create_backup_v21
-from nova.api.openstack.compute.legacy_v2.contrib import admin_actions \
-        as create_backup_v2
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
@@ -326,52 +324,6 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._create_backup,
                           self.req, instance['uuid'], body=body)
-
-
-class CreateBackupTestsV2(CreateBackupTestsV21):
-    create_backup = create_backup_v2
-    controller_name = 'AdminActionsController'
-    validation_error = webob.exc.HTTPBadRequest
-
-    def test_create_backup_with_invalid_create_backup(self):
-        # NOTE(gmann):V2 API does not raise bad request for below type of
-        # invalid body in controller method.
-        body = {
-            'createBackupup': {
-                'name': 'Backup 1',
-                'backup_type': 'daily',
-                'rotation': 1,
-            },
-        }
-        self.assertRaises(KeyError,
-                          self.controller._create_backup,
-                          self.req, fakes.FAKE_UUID, body=body)
-
-    def test_create_backup_non_dict_metadata(self):
-        pass
-
-    def test_create_backup_name_with_leading_trailing_spaces(self):
-        body = {
-            'createBackup': {
-                'name': '  test  ',
-                'backup_type': 'daily',
-                'rotation': 1,
-            },
-        }
-        image = dict(id='fake-image-id', status='ACTIVE', name='Backup 1',
-                     properties={})
-        common.check_img_metadata_properties_quota(self.context, {})
-        instance = self._stub_instance_get()
-        self.compute_api.backup(self.context, instance, '  test  ',
-                                'daily', 1,
-                                extra_properties={}).AndReturn(image)
-        self.mox.ReplayAll()
-        self.controller._create_backup(self.req, instance.uuid,
-                                       body=body)
-
-    def test_create_backup_name_with_leading_trailing_spaces_compat_mode(
-            self):
-        pass
 
 
 class CreateBackupPolicyEnforcementv21(test.NoDBTestCase):

@@ -1,0 +1,17 @@
+---
+upgrade:
+  - imageRef input to the REST API is now restricted
+    to be UUID or an empty string only. imageRef
+    input while create, rebuild and rescue server etc
+    must be a valid UUID now. Previously, a random
+    image ref url containing image UUID was accepted.
+    But now all the reference of imageRef must be a
+    valid UUID (with below exception) otherwise API
+    will return 400.
+
+    Exception- In case boot server from volume.
+    Previously empty string was allowed in imageRef
+    and which is ok in case of boot from volume.
+    Nova will keep the same behavior and allow empty
+    string in case of boot from volume only and 400
+    in all other case.

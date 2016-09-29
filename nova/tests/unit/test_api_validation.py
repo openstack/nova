@@ -18,6 +18,7 @@ import re
 import fixtures
 from jsonschema import exceptions as jsonschema_exc
 import six
+import sys
 
 from nova.api.openstack import api_version_request as api_version
 from nova.api import validation
@@ -354,7 +355,13 @@ class PatternPropertiesTestCase(APIValidationTestCase):
         self.check_validation_error(self.post, body={'0123456789a': 'bar'},
                                     expected_detail=detail)
 
-        detail = "expected string or buffer"
+        # Note(jrosenboom): This is referencing an internal python error
+        # string, which is no stable interface. We need a patch in the
+        # jsonschema library in order to fix this properly.
+        if sys.version[:3] == '3.5':
+            detail = "expected string or bytes-like object"
+        else:
+            detail = "expected string or buffer"
         self.check_validation_error(self.post, body={None: 'bar'},
                                     expected_detail=detail)
 

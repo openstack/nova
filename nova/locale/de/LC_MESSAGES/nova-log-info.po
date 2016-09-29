@@ -7,9 +7,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b2.dev117\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:28+0000\n"
+"POT-Creation-Date: 2016-06-08 04:30+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -20,10 +20,6 @@ msgstr ""
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
 "Language-Team: German\n"
-
-#, python-format
-msgid "%(id)s (%(base_file)s): generating checksum"
-msgstr "%(id)s (%(base_file)s): Prüfsumme wird erzeugt"
 
 #, python-format
 msgid "%(name)s listening on %(host)s:%(port)s"
@@ -61,13 +57,6 @@ msgstr "Füge Sicherheitsgruppe %(security_group_id)s zu Port %(port_id)s"
 #, python-format
 msgid "Allocated network: '%s' for instance"
 msgstr "Netwerkzuweisung: '%s' für Instanz"
-
-msgid "Attach interface"
-msgstr "Schnittstelle hinzufügen"
-
-#, python-format
-msgid "Attach volume %(volume_id)s to instance %(server_id)s at %(device)s"
-msgstr "Hänge Volume %(volume_id)s an Instanz %(server_id)s via %(device)s"
 
 #, python-format
 msgid "Attaching volume %(volume_id)s to %(mountpoint)s"
@@ -160,10 +149,6 @@ msgid "Copied virtual disk from %(src)s to %(dst)s."
 msgstr "Virtuelle Festplatte kopiert von %(src)s nach %(dst)s."
 
 #, python-format
-msgid "Corrupt base files: %s"
-msgstr "Fehlerhafte Basisdateien: %s"
-
-#, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats for "
 "device"
@@ -174,18 +159,6 @@ msgstr ""
 #, python-format
 msgid "Create Security Group %s"
 msgstr "Sicherheitsgruppe %s erstellen"
-
-#, python-format
-msgid "Create assisted snapshot from volume %s"
-msgstr "Erstelle Schattenkopievorlage vom Datenträger %s"
-
-#, python-format
-msgid "Create snapshot from volume %s"
-msgstr "Momentaufnahme aus Datenträger %s erstellen"
-
-#, python-format
-msgid "Create volume of %s GB"
-msgstr "Datenträger mit %s GB erstellen"
 
 msgid "Created linked-clone VM from snapshot"
 msgstr "Link-Clone VM von Schattenkopie erstellt"
@@ -212,14 +185,6 @@ msgstr ""
 #, python-format
 msgid "Delete security group %s"
 msgstr "Sicherheitsgruppe %s löschen"
-
-#, python-format
-msgid "Delete snapshot with id: %s"
-msgstr "Momentaufnahme mit folgender ID löschen: %s"
-
-#, python-format
-msgid "Delete volume with id: %s"
-msgstr "Datenträger mit folgender ID löschen: %s"
 
 #, python-format
 msgid "Deleted %s snapshots."
@@ -263,16 +228,8 @@ msgstr ""
 "aber weiter auf dem Host existiert."
 
 #, python-format
-msgid "Detach interface %s"
-msgstr "Schnittstelle %s abtrennen"
-
-#, python-format
 msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
 msgstr "Abhängen des Datenträgers %(volume_id)s vom Einhängepunkt %(mp)s"
-
-#, python-format
-msgid "Detach volume %s"
-msgstr "Datenträger %s abtrennen"
 
 #, python-format
 msgid "Detaching from volume api: %s"
@@ -1026,13 +983,6 @@ msgstr "VM %(state)s (Ereignis im Lebenszyklus)"
 msgid "VMware vCenter version: %s"
 msgstr "VMware vCenter Version: %s"
 
-msgid ""
-"Virt driver does not support 'get_available_resource'. Compute tracking is "
-"disabled."
-msgstr ""
-"Virt Treiber unterstützt kein 'get_available_resource'. Compute Tracking ist "
-"deaktiviert"
-
 #, python-format
 msgid ""
 "Volume(%s) has lower stats then what is in the database. Instance must have "
@@ -1047,10 +997,6 @@ msgstr "WSGI-Server wurde gestoppt."
 #, python-format
 msgid "Working on deleting snapshot %s from shelved instance..."
 msgstr "Arbeite am Löschen der Schattenkopie %s der eingestellten Instanz...."
-
-#, python-format
-msgid "Writing stored info to %s"
-msgstr "Schreibe Speicherinformationen zu %s"
 
 msgid "XenServer tools are not installed in this image"
 msgstr "XenServer-Werkzeuge sind in diesem Abbild nicht installiert"
@@ -1109,13 +1055,6 @@ msgstr "Abbild %(id)s auf (%(base_file)s): wird überprüft"
 
 #, python-format
 msgid ""
-"image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
-msgstr ""
-"Abbild %(id)s at (%(base_file)s): Abbildverifizierung übersprungen, kein "
-"Hash gespeichert"
-
-#, python-format
-msgid ""
 "image %(id)s at (%(base_file)s): in use: on this node %(local)d local, "
 "%(remote)d on other nodes sharing this instance storage"
 msgstr ""
@@ -1167,7 +1106,3 @@ msgstr "Weise Floating IP %(address)s der Instanz %(instance_id)s wieder zu"
 #, python-format
 msgid "tap-ctl check: %s"
 msgstr "tap-ctl überprüft %s"
-
-#, python-format
-msgid "vol=%s"
-msgstr "vol=%s"

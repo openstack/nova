@@ -36,6 +36,15 @@ class DsUtilTestCase(test.NoDBTestCase):
         super(DsUtilTestCase, self).tearDown()
         fake.reset()
 
+    def test_get_datacenter_ref(self):
+        with mock.patch.object(self.session, '_call_method') as call_method:
+            ds_util.get_datacenter_ref(self.session, "datacenter")
+            call_method.assert_called_once_with(
+                self.session.vim,
+                "FindByInventoryPath",
+                self.session.vim.service_content.searchIndex,
+                inventoryPath="datacenter")
+
     def test_file_delete(self):
         def fake_call_method(module, method, *args, **kwargs):
             self.assertEqual('DeleteDatastoreFile_Task', method)

@@ -163,10 +163,11 @@ class TestCellsStateManager(test.NoDBTestCase):
         # utilize entire cell
         cap = self._capacity(0.0)
 
-        cell_free_ram = sum(compute[3] for compute in FAKE_COMPUTES)
+        cell_free_ram = sum(max(0, compute[3]) for compute in FAKE_COMPUTES)
         self.assertEqual(cell_free_ram, cap['ram_free']['total_mb'])
 
-        cell_free_disk = 1024 * sum(compute[4] for compute in FAKE_COMPUTES)
+        cell_free_disk = 1024 * sum(max(0, compute[4])
+                                    for compute in FAKE_COMPUTES)
         self.assertEqual(cell_free_disk, cap['disk_free']['total_mb'])
 
         self.assertEqual(0, cap['ram_free']['units_by_mb']['0'])
@@ -183,10 +184,11 @@ class TestCellsStateManager(test.NoDBTestCase):
         # reserve the entire cell. (utilize zero percent)
         cap = self._capacity(100.0)
 
-        cell_free_ram = sum(compute[3] for compute in FAKE_COMPUTES)
+        cell_free_ram = sum(max(0, compute[3]) for compute in FAKE_COMPUTES)
         self.assertEqual(cell_free_ram, cap['ram_free']['total_mb'])
 
-        cell_free_disk = 1024 * sum(compute[4] for compute in FAKE_COMPUTES)
+        cell_free_disk = 1024 * sum(max(0, compute[4])
+                                    for compute in FAKE_COMPUTES)
         self.assertEqual(cell_free_disk, cap['disk_free']['total_mb'])
 
         self.assertEqual(0, cap['ram_free']['units_by_mb']['0'])
@@ -200,10 +202,11 @@ class TestCellsStateManager(test.NoDBTestCase):
         # utilize half the cell's free capacity
         cap = self._capacity(50.0)
 
-        cell_free_ram = sum(compute[3] for compute in FAKE_COMPUTES)
+        cell_free_ram = sum(max(0, compute[3]) for compute in FAKE_COMPUTES)
         self.assertEqual(cell_free_ram, cap['ram_free']['total_mb'])
 
-        cell_free_disk = 1024 * sum(compute[4] for compute in FAKE_COMPUTES)
+        cell_free_disk = 1024 * sum(max(0, compute[4])
+                                    for compute in FAKE_COMPUTES)
         self.assertEqual(cell_free_disk, cap['disk_free']['total_mb'])
 
         self.assertEqual(0, cap['ram_free']['units_by_mb']['0'])
@@ -237,11 +240,13 @@ class TestCellsStateManagerNToOne(TestCellsStateManager):
         # utilize half the cell's free capacity
         cap = self._capacity(50.0)
 
-        cell_free_ram = sum(compute[3] for compute in FAKE_COMPUTES_N_TO_ONE)
+        cell_free_ram = sum(max(0, compute[3])
+                            for compute in FAKE_COMPUTES_N_TO_ONE)
         self.assertEqual(cell_free_ram, cap['ram_free']['total_mb'])
 
         cell_free_disk = (1024 *
-                sum(compute[4] for compute in FAKE_COMPUTES_N_TO_ONE))
+                sum(max(0, compute[4])
+                    for compute in FAKE_COMPUTES_N_TO_ONE))
         self.assertEqual(cell_free_disk, cap['disk_free']['total_mb'])
 
         self.assertEqual(0, cap['ram_free']['units_by_mb']['0'])
@@ -269,10 +274,12 @@ class TestCellsStateManagerNodeDown(test.NoDBTestCase):
     def test_capacity_no_reserve_nodedown(self):
         cap = self._capacity(0.0)
 
-        cell_free_ram = sum(compute[3] for compute in FAKE_COMPUTES[:-1])
+        cell_free_ram = sum(max(0, compute[3])
+                            for compute in FAKE_COMPUTES[:-1])
         self.assertEqual(cell_free_ram, cap['ram_free']['total_mb'])
 
-        free_disk = sum(compute[4] for compute in FAKE_COMPUTES[:-1])
+        free_disk = sum(max(0, compute[4])
+                        for compute in FAKE_COMPUTES[:-1])
         cell_free_disk = 1024 * free_disk
         self.assertEqual(cell_free_disk, cap['disk_free']['total_mb'])
 

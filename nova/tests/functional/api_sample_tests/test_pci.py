@@ -68,7 +68,7 @@ fake_db_dev_2 = {
 
 
 class ExtendedServerPciSampleJsonTest(test_servers.ServersSampleBase):
-    extension_name = "os-pci"
+    sample_dir = "os-pci"
 
     def setUp(self):
         raise testtools.TestCase.skipException(skip_msg)
@@ -88,8 +88,7 @@ class ExtendedServerPciSampleJsonTest(test_servers.ServersSampleBase):
 
 class ExtendedHyervisorPciSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extra_extensions_to_load = ['os-hypervisors']
-    extension_name = 'os-pci'
+    sample_dir = 'os-pci'
 
     def setUp(self):
         raise testtools.TestCase.skipException(skip_msg)
@@ -172,7 +171,7 @@ class ExtendedHyervisorPciSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
 class PciSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-pci"
+    sample_dir = "os-pci"
 
     def setUp(self):
         raise testtools.TestCase.skipException(skip_msg)

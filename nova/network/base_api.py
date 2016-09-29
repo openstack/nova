@@ -89,10 +89,6 @@ class NetworkAPI(base.Base):
     """Base Network API for doing networking operations.
     New operations available on specific clients must be added here as well.
     """
-    def __init__(self, skip_policy_check=False, **kwargs):
-        self.skip_policy_check = skip_policy_check
-        super(NetworkAPI, self).__init__(**kwargs)
-
     def get_all(self, context):
         """Get all the networks for client."""
         raise NotImplementedError()
@@ -190,7 +186,7 @@ class NetworkAPI(base.Base):
         :param context: The request context.
         :param instance: nova.objects.instance.Instance object.
         :param vpn: A boolean, if True, indicate a vpn to access the instance.
-        :param requested_networks: A dictionary of requested_networks,
+        :param requested_networks: A list of requested_networks,
             Optional value containing network_id, fixed_ip, and port_id.
         :param macs: None or a set of MAC addresses that the instance
             should use. macs is supplied by the hypervisor driver (contrast

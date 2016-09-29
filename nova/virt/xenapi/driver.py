@@ -34,6 +34,7 @@ import six.moves.urllib.parse as urlparse
 
 import nova.conf
 from nova.i18n import _, _LE, _LW
+from nova import exception
 from nova.virt import driver
 from nova.virt.xenapi.client import session
 from nova.virt.xenapi import host
@@ -45,11 +46,22 @@ from nova.virt.xenapi import volumeops
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
-CONF.import_opt('host', 'nova.netconf')
 
 OVERHEAD_BASE = 3
 OVERHEAD_PER_MB = 0.00781
 OVERHEAD_PER_VCPU = 1.5
+
+
+def invalid_option(option_name, recommended_value):
+    LOG.exception(_LE('Current value of '
+                      'CONF.xenserver.%(option)s option incompatible with '
+                      'CONF.xenserver.independent_compute=True.  '
+                      'Consider using "%(recommended)s"') % {
+                          'option': option_name,
+                          'recommended': recommended_value})
+    raise exception.NotSupportedWithOption(
+        operation=option_name,
+        option='CONF.xenserver.independent_compute')
 
 
 class XenAPIDriver(driver.ComputeDriver):
@@ -83,13 +95,24 @@ class XenAPIDriver(driver.ComputeDriver):
         return self._host_state
 
     def init_host(self, host):
+        if CONF.xenserver.independent_compute:
+            # Check various options are in the correct state:
+            if CONF.xenserver.check_host:
+                invalid_option('CONF.xenserver.check_host', False)
+            if CONF.flat_injected:
+                invalid_option('CONF.flat_injected', False)
+            if CONF.default_ephemeral_format and \
+               CONF.default_ephemeral_format != 'ext3':
+                invalid_option('CONF.default_ephemeral_format', 'ext3')
+
         if CONF.xenserver.check_host:
             vm_utils.ensure_correct_host(self._session)
 
-        try:
-            vm_utils.cleanup_attached_vdis(self._session)
-        except Exception:
-            LOG.exception(_LE('Failure while cleaning up attached VDIs'))
+        if not CONF.xenserver.independent_compute:
+            try:
+                vm_utils.cleanup_attached_vdis(self._session)
+            except Exception:
+                LOG.exception(_LE('Failure while cleaning up attached VDIs'))
 
     def instance_exists(self, instance):
         """Checks existence of an instance on the host.
@@ -434,8 +457,8 @@ class XenAPIDriver(driver.ComputeDriver):
                                                               block_migration,
                                                               disk_over_commit)
 
-    def check_can_live_migrate_destination_cleanup(self, context,
-                                                   dest_check_data):
+    def cleanup_live_migration_destination_check(self, context,
+                                                 dest_check_data):
         """Do required cleanup on dest host after check_can_live_migrate calls
 
         :param context: security context
@@ -515,7 +538,7 @@ class XenAPIDriver(driver.ComputeDriver):
                                                            block_device_info)
 
     def pre_live_migration(self, context, instance, block_device_info,
-                           network_info, disk_info, migrate_data=None):
+                           network_info, disk_info, migrate_data):
         """Preparation live migration.
 
         :param block_device_info:

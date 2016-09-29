@@ -1,0 +1,6 @@
+---
+features:
+  - Add perf event support for libvirt driver.
+    This can be done by adding new configure option
+    'enabled_perf_events' in libvirt section of
+    nova.conf. This feature requires libvirt>=2.0.0.

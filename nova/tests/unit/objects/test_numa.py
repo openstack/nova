@@ -93,9 +93,9 @@ class _TestNUMA(object):
                           numacell.pin_cpus, set([1, 55]))
         self.assertRaises(exception.CPUPinningInvalid,
                           numacell.pin_cpus, set([1, 4]))
-        self.assertRaises(exception.CPUPinningUnknown,
+        self.assertRaises(exception.CPUUnpinningUnknown,
                           numacell.unpin_cpus, set([1, 55]))
-        self.assertRaises(exception.CPUPinningInvalid,
+        self.assertRaises(exception.CPUUnpinningInvalid,
                           numacell.unpin_cpus, set([1, 4]))
         numacell.unpin_cpus(set([1, 2, 3]))
         self.assertEqual(set([1, 2, 3, 4]), numacell.free_cpus)
@@ -111,13 +111,13 @@ class _TestNUMA(object):
         self.assertEqual(set(), numacell.free_cpus)
         numacell.unpin_cpus_with_siblings(set([1]))
         self.assertEqual(set([1, 3]), numacell.free_cpus)
-        self.assertRaises(exception.CPUPinningInvalid,
+        self.assertRaises(exception.CPUUnpinningInvalid,
                           numacell.unpin_cpus_with_siblings,
                           set([3]))
         self.assertRaises(exception.CPUPinningInvalid,
                           numacell.pin_cpus_with_siblings,
                           set([4]))
-        self.assertRaises(exception.CPUPinningInvalid,
+        self.assertRaises(exception.CPUUnpinningInvalid,
                           numacell.unpin_cpus_with_siblings,
                           set([3, 4]))
         self.assertEqual(set([1, 3]), numacell.free_cpus)
@@ -142,13 +142,20 @@ class _TestNUMA(object):
                 objects.NUMAPagesTopology(
                     size_kb=4, total=1548736, used=0),
                 objects.NUMAPagesTopology(
-                    size_kb=2048, total=513, used=0)])  # 1,002G
+                    size_kb=2048, total=513, used=0),
+                objects.NUMAPagesTopology(
+                    size_kb=1048576, total=4, used=1, reserved=1)])
 
         pagesize = 2048
-
         self.assertTrue(cell.can_fit_hugepages(pagesize, 2 ** 20))
         self.assertFalse(cell.can_fit_hugepages(pagesize, 2 ** 21))
         self.assertFalse(cell.can_fit_hugepages(pagesize, 2 ** 19 + 1))
+
+        pagesize = 1048576
+        self.assertTrue(cell.can_fit_hugepages(pagesize, 2 ** 20))
+        self.assertTrue(cell.can_fit_hugepages(pagesize, 2 ** 20 * 2))
+        self.assertFalse(cell.can_fit_hugepages(pagesize, 2 ** 20 * 3))
+
         self.assertRaises(
             exception.MemoryPageSizeNotSupported,
             cell.can_fit_hugepages, 12345, 2 ** 20)
@@ -238,6 +245,13 @@ class _TestNUMA(object):
                                  siblings=[set([5, 6])],
                                  mempages=[pt2])
         self.assertNotEqual(cell1, cell2)
+
+    def test_reserved_property_not_set(self):
+        p = objects.NUMAPagesTopology(
+            # To have reserved not set is similar than to have receive
+            # a NUMAPageTopology version 1.0
+            size_kb=1024, total=64, used=32)
+        self.assertEqual(32, p.free)
 
 
 class TestNUMA(test_objects._LocalTest,

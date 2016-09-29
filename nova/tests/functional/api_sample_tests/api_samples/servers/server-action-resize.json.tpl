@@ -1,5 +1,6 @@
 {
     "resize" : {
-        "flavorRef" : "%(id)s"
+        "flavorRef" : "%(id)s",
+        "OS-DCF:diskConfig": "AUTO"
     }
 }

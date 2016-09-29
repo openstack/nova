@@ -1,35 +1,34 @@
 .. -*- rst -*-
-.. needs:method_verification
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
-==========================================
- Floating IP pools (os-floating-ip-pools)
-==========================================
+======================================================
+ Floating IP pools (os-floating-ip-pools) (DEPRECATED)
+======================================================
+
+.. warning::
+
+   These APIs are proxy calls to the Network service. Nova has
+   deprecated all the proxy APIs and users should use the native APIs
+   instead. These will fail with a 404 after microversion 2.35.
+   See: `Relevant Network APIs
+   <http://developer.openstack.org/api-ref-networking-v2-ext.html>`__.
 
 Manages groups of floating IPs.
 
 List Floating Ip Pools
 ======================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-floating-ip-pools
+.. rest_method:: GET /os-floating-ip-pools
 
 Lists floating IP pools.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or user
+who is authorized to operate on tenant <tenant_id> to perform this
+operation. Cloud providers can change these permissions through the
+``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
+Error response codes: unauthorized(401), forbidden(403)
 
 Response
 --------
@@ -37,10 +36,9 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - floating_ip_pools: floating_ip_pools
-  - name: name
+  - name: floating_ip_pool_name
 
 **Example List Floating Ip Pools: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-floating-ip-pools/floatingippools-list-resp.json
    :language: javascript
-

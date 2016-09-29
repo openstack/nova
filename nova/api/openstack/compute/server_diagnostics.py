@@ -13,25 +13,27 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import webob
+
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
+from nova.policies import server_diagnostics as sd_policies
 
 
 ALIAS = "os-server-diagnostics"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class ServerDiagnosticsController(wsgi.Controller):
     def __init__(self):
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
 
     @extensions.expected_errors((404, 409, 501))
     def index(self, req, server_id):
         context = req.environ["nova.context"]
-        authorize(context)
+        context.can(sd_policies.BASE_POLICY_NAME)
 
         instance = common.get_instance(self.compute_api, context, server_id)
 
@@ -45,6 +47,8 @@ class ServerDiagnosticsController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'get_diagnostics', server_id)
+        except exception.InstanceNotReady as e:
+            raise webob.exc.HTTPConflict(explanation=e.format_message())
         except NotImplementedError:
             common.raise_feature_not_supported()
 

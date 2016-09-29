@@ -84,7 +84,7 @@ class MockedHookTestCase(test.BaseHookTestCase):
         hooks.reset()
 
         hook_manager = hooks.HookManager.make_test_instance(self.PLUGINS)
-        self.stubs.Set(hooks, 'HookManager', lambda x: hook_manager)
+        self.stub_out('nova.hooks.HookManager', lambda x: hook_manager)
 
 
 class HookTestCase(MockedHookTestCase):
@@ -163,8 +163,9 @@ class HookFailPreTestCase(MockedHookTestCase):
         self.assertEqual(SampleHookExceptionPre, mgr.extensions[0].plugin)
 
     def test_hook_fail_should_raise_fatal(self):
-        self.stubs.Set(SampleHookExceptionPre, 'exception',
-                       hooks.FatalHookException())
+        self.stub_out('nova.tests.unit.test_hooks.'
+                      'SampleHookExceptionPre.exception',
+                      hooks.FatalHookException())
 
         self.assertRaises(hooks.FatalHookException,
                           self._hooked, 1)
@@ -190,8 +191,9 @@ class HookFailPostTestCase(MockedHookTestCase):
         self.assertEqual(SampleHookExceptionPost, mgr.extensions[0].plugin)
 
     def test_hook_fail_should_raise_fatal(self):
-        self.stubs.Set(SampleHookExceptionPost, 'exception',
-                       hooks.FatalHookException())
+        self.stub_out('nova.tests.unit.test_hooks.'
+                      'SampleHookExceptionPost.exception',
+                      hooks.FatalHookException())
 
         self.assertRaises(hooks.FatalHookException,
                           self._hooked, 1)

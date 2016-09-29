@@ -1,3 +1,10 @@
+# needs:fix_opt_description
+# needs:check_deprecation_status
+# needs:check_opt_group_and_type
+# needs:fix_opt_description_indentation
+# needs:fix_opt_registration_consistency
+
+
 # Copyright 2016 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -20,31 +27,19 @@ notification_format = cfg.StrOpt(
     default='both',
     help="""Specifies which notification format shall be used by nova.
 
+The default value is fine for most deployments and rarely needs to be changed.
+This value can be set to 'versioned' once the infrastructure moves closer to
+consuming the newer format of notifications. After this occurs, this option
+will be removed (possibly in the "P" release).
+
 Possible values:
 * unversioned: Only the legacy unversioned notifications are emitted.
 * versioned: Only the new versioned notifications are emitted.
 * both: Both the legacy unversioned and the new versioned notifications are
   emitted. (Default)
 
-Currently there is no feature parity between unversioned and versioned
-notifications. If the deployment needs the full range of legacy notifications
-then the recommended setting is 'both' or 'unversioned'. Nova does not allow
-adding new legacy notifications so new notification will be emitted as
-versioned notifications. If the deployment needs the new notifications then
-either 'both' or 'versioned' value is required. The list of versioned
-notifications is visible in
+The list of versioned notifications is visible in
 http://docs.openstack.org/developer/nova/notifications.html
-Nova is planning to deprecate this parameter as soon as feature parity is
-achieved.
-
-This is an advanced option, deployers rarely needs to change the default value.
-
-Services which consume this:
-
-* nova-api
-* nova-conductor
-* nova-compute
-* nova-scheduler
 
 Related options:
 

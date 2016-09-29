@@ -55,6 +55,11 @@ class ObjectsTestCase(stubs.XenAPITestBaseNoDB):
         vdi.get_X("ref")
         self.session.call_xenapi.assert_called_once_with("VDI.get_X", "ref")
 
+    def test_VIF(self):
+        vdi = objects.VIF(self.session)
+        vdi.get_X("ref")
+        self.session.call_xenapi.assert_called_once_with("VIF.get_X", "ref")
+
     def test_VBD(self):
         vbd = objects.VBD(self.session)
         vbd.get_X("ref")

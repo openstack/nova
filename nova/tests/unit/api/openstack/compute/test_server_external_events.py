@@ -15,8 +15,6 @@
 import mock
 import webob
 
-from nova.api.openstack.compute.legacy_v2.contrib import server_external_events \
-                                                 as server_external_events_v2
 from nova.api.openstack.compute import server_external_events \
                                                  as server_external_events_v21
 from nova import exception
@@ -147,14 +145,8 @@ class ServerExternalEventsTestV21(test.NoDBTestCase):
         self.assertRaises(self.invalid_error,
                           self.api.create, self.req, body=body)
 
-    def test_create_unkown_events(self):
+    def test_create_unknown_events(self):
         self.event_1['name'] = 'unkown_event'
         body = {'events': self.event_1}
         self.assertRaises(self.invalid_error,
                           self.api.create, self.req, body=body)
-
-
-@mock.patch('nova.objects.instance.Instance.get_by_uuid', fake_get_by_uuid)
-class ServerExternalEventsTestV2(ServerExternalEventsTestV21):
-    server_external_events = server_external_events_v2
-    invalid_error = webob.exc.HTTPBadRequest

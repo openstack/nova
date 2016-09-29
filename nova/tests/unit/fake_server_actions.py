@@ -14,8 +14,6 @@
 
 import datetime
 
-from nova import db
-
 
 FAKE_UUID = 'b48316c5-71e8-45e4-9884-6c78055b9b13'
 FAKE_REQUEST_ID1 = 'req-3293a3f1-b44c-4609-b8d2-d81b105636b8'
@@ -114,6 +112,6 @@ def fake_action_event_finish(*args):
     return FAKE_EVENTS[FAKE_ACTION_ID1][0]
 
 
-def stub_out_action_events(stubs):
-    stubs.Set(db, 'action_event_start', fake_action_event_start)
-    stubs.Set(db, 'action_event_finish', fake_action_event_finish)
+def stub_out_action_events(test):
+    test.stub_out('nova.db.action_event_start', fake_action_event_start)
+    test.stub_out('nova.db.action_event_finish', fake_action_event_finish)

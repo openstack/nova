@@ -40,9 +40,13 @@ class ConnectionSwitchTestCase(test.TestCase):
             pass
 
     def test_connection_switch(self):
-        # Make a request context with a cell mapping
-        mapping = objects.CellMapping(database_connection=self.fake_conn)
         ctxt = context.RequestContext('fake-user', 'fake-project')
+        # Make a request context with a cell mapping
+        mapping = objects.CellMapping(context=ctxt,
+                                      uuid=uuidutils.generate_uuid(),
+                                      database_connection=self.fake_conn,
+                                      transport_url='none:///')
+        mapping.create()
         # Create an instance in the cell database
         uuid = uuidutils.generate_uuid()
         with context.target_cell(ctxt, mapping):

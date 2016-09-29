@@ -23,10 +23,10 @@ from nova.api import validation
 from nova import compute
 from nova import exception
 from nova.i18n import _
+from nova.policies import servers_migrations as sm_policies
 
 
 ALIAS = 'servers:migrations'
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def output(migration):
@@ -59,7 +59,7 @@ class ServerMigrationsController(wsgi.Controller):
     """The server migrations API controller for the OpenStack API."""
 
     def __init__(self):
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
         super(ServerMigrationsController, self).__init__()
 
     @wsgi.Controller.api_version("2.22")
@@ -69,7 +69,7 @@ class ServerMigrationsController(wsgi.Controller):
     @validation.schema(server_migrations.force_complete)
     def _force_complete(self, req, id, server_id, body):
         context = req.environ['nova.context']
-        authorize(context, action='force_complete')
+        context.can(sm_policies.POLICY_ROOT % 'force_complete')
 
         instance = common.get_instance(self.compute_api, context, server_id)
         try:
@@ -91,7 +91,7 @@ class ServerMigrationsController(wsgi.Controller):
     def index(self, req, server_id):
         """Return all migrations of an instance in progress."""
         context = req.environ['nova.context']
-        authorize(context, action="index")
+        context.can(sm_policies.POLICY_ROOT % 'index')
 
         # NOTE(Shaohe Feng) just check the instance is available. To keep
         # consistency with other API, check it before get migrations.
@@ -107,7 +107,7 @@ class ServerMigrationsController(wsgi.Controller):
     def show(self, req, server_id, id):
         """Return the migration of an instance in progress by id."""
         context = req.environ['nova.context']
-        authorize(context, action="show")
+        context.can(sm_policies.POLICY_ROOT % 'show')
 
         # NOTE(Shaohe Feng) just check the instance is available. To keep
         # consistency with other API, check it before get migrations.
@@ -141,7 +141,7 @@ class ServerMigrationsController(wsgi.Controller):
     def delete(self, req, server_id, id):
         """Abort an in progress migration of an instance."""
         context = req.environ['nova.context']
-        authorize(context, action="delete")
+        context.can(sm_policies.POLICY_ROOT % 'delete')
 
         instance = common.get_instance(self.compute_api, context, server_id)
         try:

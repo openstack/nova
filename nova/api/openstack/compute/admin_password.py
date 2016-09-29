@@ -22,20 +22,20 @@ from nova.api import validation
 from nova import compute
 from nova import exception
 from nova.i18n import _
+from nova.policies import admin_password as ap_policies
 
 
 ALIAS = "os-admin-password"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class AdminPasswordController(wsgi.Controller):
 
     def __init__(self, *args, **kwargs):
         super(AdminPasswordController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
 
-    # TODO(eliqiao): Here should be 204(No content) instead of 202 by v2.1
-    # +micorversions because the password has been changed when returning
+    # TODO(eliqiao): Here should be 204(No content) instead of 202 by v2.1+
+    # microversions because the password has been changed when returning
     # a response.
     @wsgi.action('changePassword')
     @wsgi.response(202)
@@ -43,15 +43,19 @@ class AdminPasswordController(wsgi.Controller):
     @validation.schema(admin_password.change_password)
     def change_password(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context)
+        instance = common.get_instance(self.compute_api, context, id)
+        context.can(ap_policies.BASE_POLICY_NAME,
+                    target={'user_id': instance.user_id,
+                            'project_id': instance.project_id})
 
         password = body['changePassword']['adminPass']
-        instance = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.set_admin_password(context, instance, password)
         except exception.InstanceUnknownCell as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
-        except exception.InstancePasswordSetFailed as e:
+        except (exception.InstancePasswordSetFailed,
+                exception.SetAdminPasswdNotSupported,
+                exception.InstanceAgentNotEnabled) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as e:
             raise common.raise_http_conflict_for_instance_invalid_state(

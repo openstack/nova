@@ -1,5 +1,3 @@
 {
-    "tags": [
-        "sometag"
-    ]
+    "tags": ["tag1", "tag2"]
 }

@@ -18,12 +18,12 @@ from nova.api.openstack import wsgi
 from nova import availability_zones
 import nova.conf
 from nova import objects
+from nova.policies import availability_zone as az_policies
 from nova import servicegroup
 
 CONF = nova.conf.CONF
 ALIAS = "os-availability-zone"
 ATTRIBUTE_NAME = "availability_zone"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class AvailabilityZoneController(wsgi.Controller):
@@ -106,7 +106,7 @@ class AvailabilityZoneController(wsgi.Controller):
     def index(self, req):
         """Returns a summary list of availability zone."""
         context = req.environ['nova.context']
-        authorize(context, action='list')
+        context.can(az_policies.POLICY_ROOT % 'list')
 
         return self._describe_availability_zones(context)
 
@@ -114,7 +114,7 @@ class AvailabilityZoneController(wsgi.Controller):
     def detail(self, req):
         """Returns a detailed list of availability zone."""
         context = req.environ['nova.context']
-        authorize(context, action='detail')
+        context.can(az_policies.POLICY_ROOT % 'detail')
 
         return self._describe_availability_zones_verbose(context)
 

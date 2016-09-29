@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    The previously deprecated config option ``listen```of the group
+    ``serial_console`` has been removed, as it was never used in the code.
+

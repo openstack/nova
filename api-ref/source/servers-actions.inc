@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
@@ -8,11 +7,11 @@
  Servers - run an action (servers, action)
 ===========================================
 
-Enables all users to performs an action on a server. Specify the action
+Enables all users to perform an action on a server. Specify the action
 in the request body.
 
-You can associate a fixed or floating IP address with a server instance,
-or disassociate a fixed or floating IP address from a server instance.
+You can associate a fixed or floating IP address with a server,
+or disassociate a fixed or floating IP address from a server.
 You can attach a volume to a server.
 
 You can create an image from a server, evacuate a server from a failed
@@ -26,16 +25,25 @@ into a server since Mitaka release.
 
 You can get an RDP, serial, SPICE, or VNC console for a server.
 
-Add (Associate) Floating Ip (Addfloatingip Action)
+Add (Associate) Floating Ip (addFloatingIp Action)
 ==================================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
-Adds a floating IP address to a server, which associates that address with the server.
+Adds a floating IP address to a server, which associates
+that address with the server.
 
-A pool of floating IP addresses, configured by the cloud administrator, is available in OpenStack Compute. The project quota defines the maximum number of floating IP addresses that you can allocate to the project. After you `create (allocate) a floating IPaddress <http://developer.openstack.org/api-ref-compute-v2.1.html#createFloatingIP>`__ for a project, you can associate that address with the server. Specify the ``addFloatingIp`` action in the request body.
+A pool of floating IP addresses, configured by the cloud administrator,
+is available in OpenStack Compute. The project quota defines the maximum
+number of floating IP addresses that you can allocate to the project.
+After you `create (allocate) a floating IPaddress
+<http://developer.openstack.org/api-ref/compute/#create-allocate-floating-ip-address>`__
+for a project, you can associate that address with the server. Specify
+the ``addFloatingIp`` action in the request body.
 
-If an instance is connected to multiple networks, you can associate a floating IP address with a specific fixed IP address by using the optional ``fixed_address`` parameter.
+If an instance is connected to multiple networks, you can associate a
+floating IP address with a specific fixed IP address by using the
+optional ``fixed_address`` parameter.
 
 Preconditions
 
@@ -45,22 +53,22 @@ You can only add a floating IP address to the server when its status is ``availa
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - addFloatingIp: addFloatingIp
   - address: address
   - fixed_address: fixed_address
 
 .. TODO(gmann) Need to create the sample file for this action.
-   **Example Add (Associate) Floating Ip (Addfloatingip Action): JSON request**
+   **Example Add (Associate) Floating Ip (addFloatingIp Action): JSON request**
 
    .. literalinclude:: ../../doc/api_samples/os-floating-ips/floating-ips-create-resp.json
       :language: javascript
@@ -68,10 +76,12 @@ Request
 Response
 --------
 
-Add Security Group To A Server (Addsecuritygroup Action)
+There is no body content for the response of a successful POST operation.
+
+Add Security Group To A Server (addSecurityGroup Action)
 ========================================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Adds a security group to a server.
 
@@ -79,20 +89,20 @@ Specify the ``addSecurityGroup`` action in the request body.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - addSecurityGroup: addSecurityGroup
   - name: name
 
-**Example Add Security Group To A Server (Addsecuritygroup Action): JSON request**
+**Example Add Security Group To A Server (addSecurityGroup Action): JSON request**
 
 .. literalinclude:: ../../doc/api_samples/os-security-groups/security-group-add-post-req.json
    :language: javascript
@@ -100,32 +110,36 @@ Request
 Response
 --------
 
-Change Administrative Password (Changepassword Action)
+There is no body content for the response of a successful POST operation.
+
+Change Administrative Password (changePassword Action)
 ======================================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Changes the administrative password for a server.
 
 Specify the ``changePassword`` action in the request body.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or
+the owner of the server to perform this operation. Cloud providers can
+change these permissions through the ``policy.json`` file.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409), notImplemented(501)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - changePassword: changePassword
 
-**Example Change Administrative Password (Changepassword Action): JSON request**
+**Example Change Administrative Password (changePassword Action): JSON request**
 
 .. literalinclude:: ../../doc/api_samples/os-admin-password/admin-password-change-password.json
    :language: javascript
@@ -133,42 +147,53 @@ Request
 Response
 --------
 
-Confirm Resized Server (Confirmresize Action)
+There is no body content for the response of a successful POST operation.
+
+Confirm Resized Server (confirmResize Action)
 =============================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Confirms a pending resize action for a server.
 
 Specify the ``confirmResize`` action in the request body.
 
-After you make this request, you typically must keep polling the server status to determine whether the request succeeded. A successfully confirming resize operation shows a status of ``ACTIVE`` or ``SHUTOFF`` and a migration_status of ``confirmed``. You can also see the resized server in the compute node that OpenStack Compute manages.
+After you make this request, you typically must keep polling the server
+status to determine whether the request succeeded. A successfully
+confirming resize operation shows a status of ``ACTIVE`` or ``SHUTOFF``
+and a migration_status of ``confirmed``. You can also see the resized
+server in the compute node that OpenStack Compute manages.
 
 Preconditions
 
-You can only confirm the resized server where the status is ``VERIFY_RESIZED``, the vm_status is ``RESIZED``, and the migration_status is ``finished`` or ``confirming``.
+You can only confirm the resized server where the status is
+``VERIFY_RESIZED``, the vm_status is ``RESIZED``, and the
+migration_status is ``finished`` or ``confirming``.
 
-If the server is locked, you must have administrator privileges to confirm the server.
+If the server is locked, you must have administrator privileges
+to confirm the server.
 
 Troubleshooting
 
-If the server status remains ``RESIZED``, the request failed. Ensure you meet the preconditions and run the request again. If the request fails again, investigate the compute back end or ask your cloud provider.
+If the server status remains ``RESIZED``, the request failed. Ensure you
+meet the preconditions and run the request again. If the request fails
+again, investigate the compute back end or ask your cloud provider.
 
 Normal response codes: 204
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - confirmResize: confirmResize
 
-**Example Confirm Resized Server (Confirmresize Action): JSON request**
+**Example Confirm Resized Server (confirmResize Action): JSON request**
 
 .. literalinclude:: ../../doc/api_samples/servers/server-action-confirm-resize.json
    :language: javascript
@@ -176,50 +201,65 @@ Request
 Response
 --------
 
-Create Image (Createimage Action)
+There is no body content for the response of a successful POST operation.
+
+Create Image (createImage Action)
 =================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Creates an image from a server.
 
 Specify the ``createImage`` action in the request body.
 
-After you make this request, you typically must keep polling the status of the created image to determine whether the request succeeded.
+After you make this request, you typically must keep polling the status of
+the created image to determine whether the request succeeded.
 
-If the operation succeeds, the created image has a status of ``active`` and the server status returns to the original status. You can also see the new image in the image back end that OpenStack Image service manages.
+If the operation succeeds, the created image has a status of ``active`` and
+the server status returns to the original status. You can also see the new
+image in the image back end that OpenStack Image service manages.
 
 Preconditions
 
 The server must exist.
 
-You can only create a new image from the server when its status is ``ACTIVE``, ``SHUTOFF``, ``PAUSED``, or ``SUSPENDED``.
+You can only create a new image from the server when its status is ``ACTIVE``,
+``SHUTOFF``, ``PAUSED``, or ``SUSPENDED``.
 
 The connection to the Image service is valid.
 
 Troubleshooting
 
-If the image status remains uploading or shows another error status, the request failed. Ensure you meet the preconditions and run the request again. If the request fails again, investigate the image back end.
+If the image status remains uploading or shows another error status,
+the request failed. Ensure you meet the preconditions and run the request
+again. If the request fails again, investigate the image back end.
 
-If the server status does not go back to an original server's status, the request failed. Ensure you meet the preconditions, or check if there is another operation that causes race conditions for the server, then run the request again. If the request fails again, investigate the compute back end or ask your cloud provider.
+If the server status does not go back to an original server's status,
+the request failed. Ensure you meet the preconditions, or check if
+there is another operation that causes race conditions for the server,
+then run the request again. If the request fails again, investigate the
+compute back end or ask your cloud provider.
 
-If the request fails due to an error on OpenStack Compute service, the image is purged from the image store that OpenStack Image service manages. Ensure you meet the preconditions and run the request again. If the request fails again, investigate OpenStack Compute service or ask your cloud provider.
+If the request fails due to an error on OpenStack Compute service, the image
+is purged from the image store that OpenStack Image service manages. Ensure
+you meet the preconditions and run the request again. If the request fails
+again, investigate OpenStack Compute service or ask your cloud provider.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - createImage: createImage
 
-**Example Create Image (Createimage Action): JSON request**
+**Example Create Image (createImage Action): JSON request**
 
 .. literalinclude:: ../../doc/api_samples/servers/server-action-create-image.json
    :language: javascript
@@ -227,32 +267,35 @@ Request
 Response
 --------
 
-Lock Server (Lock Action)
+There is no body content for the response of a successful POST operation.
+
+Lock Server (lock Action)
 =========================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Locks a server.
 
 Specify the ``lock`` action in the request body.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or
+the owner of the server to perform this operation. Cloud providers
+can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - lock: lock
 
-**Example Lock Server (Lock Action): JSON request**
+**Example Lock Server (lock Action): JSON request**
 
 .. literalinclude:: ../../doc/api_samples/os-lock-server/lock-server.json
    :language: javascript
@@ -260,32 +303,36 @@ Request
 Response
 --------
 
-Pause Server (Pause Action)
+There is no body content for the response of a successful POST operation.
+
+Pause Server (pause Action)
 ===========================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Pauses a server. Changes its status to ``PAUSED``.
 
 Specify the ``pause`` action in the request body.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or
+the owner of the server to perform this operation. Cloud providers
+can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
+conflict(409), notImplemented(501)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - pause: pause
 
-**Example Pause Server (Pause Action): JSON request**
+**Example Pause Server (pause Action): JSON request**
 
 .. literalinclude:: ../../doc/api_samples/os-pause-server/pause-server.json
    :language: javascript
@@ -293,10 +340,12 @@ Request
 Response
 --------
 
-Reboot Server (Reboot Action)
+There is no body content for the response of a successful POST operation.
+
+Reboot Server (reboot Action)
 =============================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Reboots a server.
 
@@ -304,19 +353,19 @@ Specify the ``reboot`` action in the request body.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
+conflict(409)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - reboot: reboot
 
-**Example Reboot Server (Reboot Action): JSON request**
+**Example Reboot Server (reboot Action): JSON request**
 
 .. literalinclude:: ../../doc/api_samples/servers/server-action-reboot.json
    :language: javascript
@@ -324,38 +373,41 @@ Request
 Response
 --------
 
-Rebuild Server (Rebuild Action)
+There is no body content for the response of a successful POST operation.
+
+Rebuild Server (rebuild Action)
 ===============================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Rebuilds a server.
 
 Specify the ``rebuild`` action in the request body.
 
-To rebuild the server with preservation of the ephemeral partition, set the ``preserve_ephemeral`` parameter to ``true``.
+To rebuild the server with preservation of the ephemeral partition,
+set the ``preserve_ephemeral`` parameter to ``true``.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400),unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409), payloadTooLarge(413)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - rebuild: rebuild
   - imageRef: imageRef
-  - name: name
+  - name: server_name_optional
   - adminPass: adminPass_evacuate_rebuild
   - metadata: metadata
   - personality: personality
   - preserve_ephemeral: preserve_ephemeral
 
-**Example Rebuild Server (Rebuild Action): JSON request**
+**Example Rebuild Server (rebuild Action): JSON request**
 
 Preserving the ephemeral disk
 
@@ -365,39 +417,42 @@ Preserving the ephemeral disk
 Response
 --------
 
-**Example Rebuild Server (Rebuild Action): JSON response**
+**Example Rebuild Server (rebuild Action): JSON response**
 
 .. literalinclude:: ../../doc/api_samples/servers/server-action-rebuild-resp.json
    :language: javascript
 
-Remove (Disassociate) Floating Ip (Removefloatingip Action)
+Remove (Disassociate) Floating Ip (removeFloatingIp Action)
 ===========================================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Removes, or disassociates, a floating IP address from a server.
 
-The IP address is returned to the pool of IP addresses that is available for all projects. When you remove a floating IP address and that IP address is still associated with a running instance, it is automatically disassociated from that instance.
+The IP address is returned to the pool of IP addresses that is available
+for all projects. When you remove a floating IP address and that IP address
+is still associated with a running instance, it is automatically
+disassociated from that instance.
 
 Specify the ``removeFloatingIp`` action in the request body.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - removeFloatingIp: removeFloatingIp
   - address: address
 
 .. TODO(sdague) build example for this
-   **Example Remove (Disassociate) Floating Ip (Removefloatingip Action): JSON request**
+   **Example Remove (Disassociate) Floating Ip (removeFloatingIp Action): JSON request**
 
    .. literalinclude:: ../../doc/api_samples/servers-action/removeFloatingIp-req.json
                        :language: javascript
@@ -405,10 +460,12 @@ Request
 Response
 --------
 
-Remove Security Group From A Server (Removesecuritygroup Action)
+There is no body content for the response of a successful POST operation.
+
+Remove Security Group From A Server (removeSecurityGroup Action)
 ================================================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Removes a security group from a server.
 
@@ -416,20 +473,20 @@ Specify the ``removeSecurityGroup`` action in the request body.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - removeSecurityGroup: removeSecurityGroup
   - name: name
 
-**Example Remove Security Group From A Server (Removesecuritygroup Action): JSON request**
+**Example Remove Security Group From A Server (removeSecurityGroup Action): JSON request**
 
 .. literalinclude:: ../../doc/api_samples/os-security-groups/security-group-remove-post-req.json
    :language: javascript
@@ -437,33 +494,38 @@ Request
 Response
 --------
 
-Rescue Server (Rescue Action)
+There is no body content for the response of a successful POST operation.
+
+Rescue Server (rescue Action)
 =============================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Puts a server in rescue mode and changes its status to ``RESCUE``.
 
 Specify the ``rescue`` action in the request body.
 
-If you specify the ``rescue_image_ref`` extended attribute, the image is used to rescue the instance. If you omit an image reference, the base image reference is used by default.
+If you specify the ``rescue_image_ref`` extended attribute,
+the image is used to rescue the instance. If you omit an image
+reference, the base image reference is used by default.
 
 Asynchronous Postconditions
 
-After you successfully rescue a server and make a ``GET /v2.1/​{tenant_id}​/servers/​{server_id}​`` request, its status changes to ``RESCUE``.
+After you successfully rescue a server and make a ``GET
+/servers/​{server_id}​`` request, its status changes to ``RESCUE``.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409), notImplemented(501)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - rescue: rescue
   - adminPass: adminPass_rescue
   - rescue_image_ref: rescue_image_ref
@@ -485,35 +547,40 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-rescue/server-rescue.json
    :language: javascript
 
-Resize Server (Resize Action)
+Resize Server (resize Action)
 =============================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Resizes a server.
 
 Specify the ``resize`` action in the request body.
 
-A successfully resized server shows a ``VERIFY_RESIZE`` status, ``RESIZED`` VM status, and ``finished`` migration status. If you set the ``resize_confirm_window`` option of the Compute service to an integer value, the Compute service automatically confirms the resize operation after the set interval in seconds.
+A successfully resized server shows a ``VERIFY_RESIZE`` status,
+``RESIZED`` VM status, and ``finished`` migration status. If you set the
+``resize_confirm_window`` option of the Compute service to an integer value,
+the Compute service automatically confirms the resize operation after
+the set interval in seconds.
 
 Preconditions
 
 You can only resize a server when its status is ``ACTIVE`` or ``SHUTOFF``.
 
-If the server is locked, you must have administrator privileges to resize the server.
+If the server is locked, you must have administrator privileges
+to resize the server.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - resize: resize
 
 **Example Resize Server (Resize Action): JSON request**
@@ -524,29 +591,33 @@ Request
 Response
 --------
 
-Resume Suspended Server (Resume Action)
+There is no body content for the response of a successful POST operation.
+
+Resume Suspended Server (resume Action)
 =======================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Resumes a suspended server and changes its status to ``ACTIVE``.
 
 Specify the ``resume`` action in the request body.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or
+the owner of the server to perform this operation. Cloud providers
+can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - resume: resume
 
 **Example Resume Suspended Server (Resume Action): JSON request**
@@ -557,44 +628,56 @@ Request
 Response
 --------
 
-Revert Resized Server (Revertresize Action)
+There is no body content for the response of a successful POST operation.
+
+Revert Resized Server (revertResize Action)
 ===========================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Cancels and reverts a pending resize action for a server.
 
 Specify the ``revertResize`` action in the request body.
 
-After you make this request, you typically must keep polling the server status to determine whether the request succeeded. A successfully reverting resize operation shows a status of ``ACTIVE`` or ``SHUTOFF`` and a migration_status of ``reverted``. You can also see the reverted server in the compute node that OpenStack Compute manages.
-
 Preconditions
 
-You can only confirm the resized server where the status is ``VERIFY_RESIZE`` and the vm_status is ``RESIZED``.
+You can only revert the resized server where the status is
+``VERIFY_RESIZE`` and the OS-EXT-STS:vm_state is ``resized``.
 
-If the server is locked, you must have administrator privileges to revert the resizing.
+If the server is locked, you must have administrator privileges to revert
+the resizing.
+
+Asynchronous Postconditions
+
+After you make this request, you typically must keep polling the server status
+to determine whether the request succeeded. A reverting resize operation shows
+a status of ``REVERT_RESIZE`` and a task_state of ``resize_reverting``. If
+successful, the status will return to ``ACTIVE`` or ``SHUTOFF``. You can also
+see the reverted server in the compute node that OpenStack Compute manages.
 
 Troubleshooting
 
-If the server status remains ``RESIZED``, the request failed. Ensure you meet the preconditions and run the request again. If the request fails again, investigate the compute back end.
+If the server status remains ``VERIFY_RESIZE``, the request failed. Ensure you
+meet the preconditions and run the request again. If the request fails again,
+investigate the compute back end.
 
 The server is not reverted in the compute node that OpenStack Compute manages.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - revertResize: revertResize
 
-**Example Revert Resized Server (Revertresize Action): JSON request**
+**Example Revert Resized Server (revertResize Action): JSON request**
 
 .. literalinclude:: ../../doc/api_samples/servers/server-action-revert-resize.json
    :language: javascript
@@ -602,10 +685,12 @@ Request
 Response
 --------
 
-Start Server (Os-Start Action)
+There is no body content for the response of a successful POST operation.
+
+Start Server (os-start Action)
 ==============================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Starts a stopped server and changes its status to ``ACTIVE``.
 
@@ -615,28 +700,33 @@ Preconditions
 
 The server status must be ``SHUTOFF``.
 
-If the server is locked, you must have administrator privileges to start the server.
+If the server is locked, you must have administrator privileges
+to start the server.
 
 Asynchronous Postconditions
 
-After you successfully start a server, its status changes to ``ACTIVE``. The server appears on the compute node that the Compute service manages.
+After you successfully start a server, its status changes to ``ACTIVE``.
+The server appears on the compute node that the Compute service manages.
 
 Troubleshooting
 
-If the server status does not change to ``ACTIVE``, the start operation failed. Ensure that you meet the preconditions and run the request again. If the request fails again, investigate whether another operation is running that causes a race condition.
+If the server status does not change to ``ACTIVE``, the start operation failed.
+Ensure that you meet the preconditions and run the request again.
+If the request fails again, investigate whether another operation is running
+that causes a race condition.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
+conflict(409)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - os-start: os-start
 
 **Example Start server: JSON request**
@@ -647,10 +737,12 @@ Request
 Response
 --------
 
-Stop Server (Os-Stop Action)
+There is no body content for the response of a successful POST operation.
+
+Stop Server (os-stop Action)
 ============================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Stops a running server and changes its status to ``SHUTOFF``.
 
@@ -660,24 +752,27 @@ Preconditions
 
 The server status must be ``ACTIVE`` or ``ERROR``.
 
-If the server is locked, you must have administrator privileges to stop the server.
+If the server is locked, you must have administrator privileges
+to stop the server.
 
 Asynchronous Postconditions
 
-After you successfully stop a server, its status changes to ``SHUTOFF``. The server instance data appears only on the compute node that Compute service manages.
+After you successfully stop a server, its status changes to ``SHUTOFF``.
+The server instance data appears only on the compute node that
+Compute service manages.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
+conflict(409)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - os-stop: os-stop
 
 **Example Stop server: JSON request**
@@ -688,32 +783,36 @@ Request
 Response
 --------
 
-Suspend Server (Suspend Action)
+There is no body content for the response of a successful POST operation.
+
+Suspend Server (suspend Action)
 ===============================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Suspends a server and changes its status to ``SUSPENDED``.
 
 Specify the ``suspend`` action in the request body.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or
+the owner of the server to perform this operation. Cloud providers
+can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
+conflict(409)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - suspend: suspend
 
-**Example Suspend Server (Suspend Action): JSON request**
+**Example Suspend Server (suspend Action): JSON request**
 
 .. literalinclude:: ../../doc/api_samples/os-suspend-server/server-suspend.json
    :language: javascript
@@ -721,32 +820,35 @@ Request
 Response
 --------
 
-Unlock Server (Unlock Action)
+There is no body content for the response of a successful POST operation.
+
+Unlock Server (unlock Action)
 =============================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Unlocks a locked server.
 
 Specify the ``unlock`` action in the request body.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or
+the owner of the server to perform this operation. Cloud providers
+can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - unlock: unlock
 
-**Example Unlock Server (Unlock Action): JSON request**
+**Example Unlock Server (unlock Action): JSON request**
 
 .. literalinclude:: ../../doc/api_samples/os-lock-server/unlock-server.json
    :language: javascript
@@ -754,32 +856,36 @@ Request
 Response
 --------
 
-Unpause Server (Unpause Action)
+There is no body content for the response of a successful POST operation.
+
+Unpause Server (unpause Action)
 ===============================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Unpauses a paused server and changes its status to ``ACTIVE``.
 
 Specify the ``unpause`` action in the request body.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or
+the owner of the server to perform this operation. Cloud providers
+can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
+conflict(409), notImplemented(501)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - unpause: unpause
 
-**Example Unpause Server (Unpause Action): JSON request**
+**Example Unpause Server (unpause Action): JSON request**
 
 .. literalinclude:: ../../doc/api_samples/os-pause-server/unpause-server.json
    :language: javascript
@@ -787,10 +893,12 @@ Request
 Response
 --------
 
-Unrescue Server (Unrescue Action)
+There is no body content for the response of a successful POST operation.
+
+Unrescue Server (unrescue Action)
 =================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Unrescues a server. Changes status to ``ACTIVE``.
 
@@ -804,20 +912,22 @@ You can only unrescue a server when its status is ``RESCUE``.
 
 Asynchronous Postconditions
 
-After you successfully unrescue a server and make a ``GET /v2.1/​{tenant_id}​/servers/​{server_id}​`` request, its status changes to ``ACTIVE``.
+After you successfully unrescue a server and make a
+``GET /servers/​{server_id}​``
+request, its status changes to ``ACTIVE``.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
+conflict(409), notImplemented(501)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
-  - server_id: server_id
+
+  - server_id: server_id_path
   - unrescue: unrescue
 
 **Example Unrescue server: JSON request**
@@ -827,3 +937,5 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful POST operation.

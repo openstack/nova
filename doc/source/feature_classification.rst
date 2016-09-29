@@ -15,75 +15,117 @@
 Feature Classification
 ======================
 
-This document aims to define how we describe features listed in the
-:doc:`support-matrix`.
+This document presents a matrix that describes which features are ready to be
+used and which features are works in progress. It includes links to relevant
+documentation and functional tests.
+
+.. warning:: Please note: this is a work in progress!
 
 Aims
 ====
 
-Our users want the features they rely on to be reliable and always continue
-to solve for their use case.
-When things break, users request that we solve their issues quickly.
-It would be better if we never had those regressions in the first place.
+Users want reliable, long-term solutions for their use cases.
+The feature classification matrix identifies which features are
+complete and ready to use, and which should be used with caution.
 
-We are taking a two-pronged approach:
+The matrix also benefits developers by providing a list of features that
+require further work to be considered complete.
 
-* Tell our users what features are complete, well-documented, and are kept
-  stable by good tests. They will get a good experience if they stick to
-  using those features.
-  Please note that the tests are specific to particular combinations of
-  technologies. A deployment's choice of storage, networking and
-  hypervisor makes a big difference to what features will work.
+Below is a matrix for a selection of important verticals:
 
-* Get help for the features that are not in the above state, and warn our
-  users about the risks of using those features before they are ready.
-  It should make it much clearer how to help improve the feature.
+* :ref:`matrix-gp`
+* :ref:`matrix-nfv`
+* :ref:`matrix-hpc`
 
-Concepts
-========
+For more details on the concepts in each matrix,
+please see :ref:`notes-on-concepts`.
 
-Some definitions to help understand the later part of the document.
+.. _matrix-gp:
+
+General Purpose Cloud Features
+===============================
+
+This is a summary of the key features dev/test clouds, and other similar
+general purpose clouds need, and it describes their current state.
+
+Below there are sections on NFV and HPC specific features. These look at
+specific features and scenarios that are important to those more specific
+sets of use cases.
+
+.. feature_matrix:: feature_matrix_gp.ini
+
+.. _matrix-nfv:
+
+NFV Cloud Features
+==================
+
+Network Function Virtualization (NFV) is about virtualizing network node
+functions into building blocks that may connect, or chain together to
+create a particular service. It is common for this workloads needing
+bare metal like performance, i.e. low latency and close to line speed
+performance.
+
+.. feature_matrix:: feature_matrix_nfv.ini
+
+.. _matrix-hpc:
+
+HPC Cloud Features
+==================
+
+High Performance Compute (HPC) cloud have some specific needs that are covered
+in this set of features.
+
+.. feature_matrix:: feature_matrix_hpc.ini
+
+.. _notes-on-concepts:
+
+Notes on Concepts
+=================
+
+This document uses the following terminology.
 
 Users
 -----
 
-These are the users we will talk about in this document:
+These are the users we talk about in this document:
 
-* application deployer: creates/deletes servers, directly or indirect via API
-* application developer: creates images and apps that run on the cloud
-* cloud operator: administers the cloud
-* self service administrator: both runs and uses the cloud
+application deployer
+   creates and deletes servers, directly or indirectly using an API
 
-Now in reality the picture is way more complex. Specifically, there are
-likely to be different roles for observer, creator and admin roles for
-the application developer. Similarly, there are likely to be various
-levels of cloud operator permissions, some read only, see a subset of
-tenants, etc.
+application developer
+   creates images and apps that run on the cloud
 
-Note: this is not attempting to be an exhaustive set of personas that consider
-various facets of the different users, but instead aims to be a minimal set of
-users, such that we use a consistent terminology throughout this document.
+cloud operator
+   administers the cloud
+
+self service administrator
+   runs and uses the cloud
+
+.. note::
+
+   This is not an exhaustive list of personas, but rather an indicative set of
+   users.
 
 Feature Group
 -------------
 
 To reduce the size of the matrix, we organize the features into groups.
-Each group maps to a set of user stories, that can be validated by a set
-of scenarios, tests. Typically, this means a set of tempest tests.
+Each group maps to a set of user stories that can be validated by a set
+of scenarios and tests. Typically, this means a set of tempest tests.
 
-This list focuses on API concepts like attach and detach volumes, rather
-than deployment specific concepts like attach iSCSI volume to KVM based VM.
+This list focuses on API concepts like attach and detach volumes, rather than
+deployment specific concepts like attach an iSCSI volume to a KVM based VM.
 
 Deployment
 ----------
 
-A deployment maps to a specific test environment. A full description of the
-environment should be provided, so its possible to reproduce the test results
-that are reported for each of the Feature Groups.
+A deployment maps to a specific test environment. We provide a full description
+of the environment, so it is possible to reproduce the reported test results
+for each of the Feature Groups.
 
-Note: this description includes all aspects of the deployment:
-the hypervisor, the number of nova-compute services, the storage being used,
-the network driver being used, the types of images being tested, etc.
+This description includes all aspects of the deployment, for example
+the hypervisor, number of nova-compute services, storage, network driver,
+and types of images being tested.
 
 Feature Group Maturity
 -----------------------
@@ -92,81 +134,73 @@ The Feature Group Maturity rating is specific to the API concepts, rather than
 specific to a particular deployment. That detail is covered in the deployment
 rating for each feature group.
 
-We are starting out these Feature Group ratings:
+.. note::
 
-* Incomplete
-* Experimental
-* Complete
-* Complete and Required
-* Deprecated (scheduled to be removed in a future release)
+   Although having some similarities, this list is not directly related
+   to the DefCore effort.
 
-Incomplete features are those that don't have enough functionality to satisfy
-real world use cases.
+**Feature Group ratings:**
 
-Experimental features should be used with extreme caution.
-They are likely to have little or no upstream testing.
-With little testing there are likely to be many unknown bugs.
+Incomplete
+  Incomplete features are those that do not have enough functionality to
+  satisfy real world use cases.
 
-For a feature to be considered complete, we must have:
+Experimental
+  Experimental features should be used with extreme caution. They are likely
+  to have little or no upstream testing, and are therefore likely to
+  contain bugs.
 
-* Complete API docs (concept and REST call definition)
-* Complete Administrator docs
-* Tempest tests that define if the feature works correctly
-* Has enough functionality, and works reliably enough to be useful
-  in real world scenarios
-* Unlikely to ever have a reason to drop support for the feature
+Complete
+  For a feature to be considered complete, it must have:
 
-There are various reasons why a feature, once complete, becomes required, but
-currently its largely when a feature is supported by all drivers. Note that
-any new drivers need to prove they support all required features before it
-would be allowed in upstream Nova.
-Please note that this list is technically unrelated to the DefCore
-effort, despite there being obvious parallels that could be drawn.
+  * complete API docs (concept and REST call definition)
+  * complete Administrator docs
+  * tempest tests that define if the feature works correctly
+  * sufficient functionality and reliability to be useful in real world
+    scenarios
+  * a reasonable expectation that the feature will be supported long-term
 
-Required features are those that any new technology must support before
-being allowed into tree. The larger the list, the more features can be
-expected to be available on all Nova based clouds.
+Complete and Required
+  There are various reasons why a complete feature may be required, but
+  generally it is when all drivers support that feature. New
+  drivers need to prove they support all required features before they are
+  allowed in upstream Nova.
 
-Deprecated features are those that are scheduled to be removed in a future
-major release of Nova. If a feature is marked as complete, it should
-never be deprecated.
-If a feature is incomplete or experimental for several releases,
-it runs the risk of being deprecated, and later removed from the code base.
+  Required features are those that any new technology must support before
+  being allowed into tree. The larger the list, the more features are
+  available on all Nova based clouds.
+
+Deprecated
+  Deprecated features are those that are scheduled to be removed in a future
+  major release of Nova. If a feature is marked as complete, it should
+  never be deprecated.
+
+  If a feature is incomplete or experimental for several releases,
+  it runs the risk of being deprecated and later removed from the code base.
 
 Deployment Rating for a Feature Group
 --------------------------------------
 
-The deployment rating is purely about the state of the tests for each
+The deployment rating refers to the state of the tests for each
 Feature Group on a particular deployment.
 
-There will the following ratings:
+**Deployment ratings:**
 
-* unknown
-* not implemented
-* implemented: self declare the tempest tests pass
-* regularly tested: tested by third party CI
-* checked: Tested as part of the check or gate queue
+Unknown
+   No data is available.
 
-The eventual goal is to automate this list from some third party CI reporting
-system, but so we can make progress, this will be a manual inspection that is
-documented by an hand written ini file. Ideally, this will be reviewed every
-milestone.
+Not Implemented
+   No tests exist.
 
-Feature Group Definitions
-=========================
+Implemented
+   Self declared that the tempest tests pass.
 
-This is a look at features targeted at application developers, and the current
-state of each feature, independent of the specific deployment.
+Regularly Tested
+   Tested by third party CI.
 
-Please note: this is still a work in progress!
+Checked
+   Tested as part of the check or gate queue.
 
-Key TODOs:
-
-* use new API docs as a template for the feature groups, into ini file
-* add lists of tempest UUIDs for each group
-* link from hypervisor support matrix into feature group maturity ratings
-* add maturity rating into the feature groups, with a justification, which
-  is likely to include lints to API docs, etc
-* replace tick and cross in support matrix with "deployment ratings"
-* eventually generate the tick and cross from live, historical, CI results
-
+The eventual goal is to automate this list from a third party CI reporting
+system, but currently we document manual inspections in an ini file.
+Ideally, we will review the list at every milestone.

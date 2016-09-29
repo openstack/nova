@@ -17,57 +17,89 @@ import os
 from oslo_config import cfg
 
 from nova.conf import paths
-from nova.i18n import _
 
-crypto_opts_group = cfg.OptGroup(
-    'crypto',
-    title='Crypto Options')
+crypto_opts_group = cfg.OptGroup("crypto",
+        title="Crypto Options")
 
 crypto_opts = [
-    cfg.StrOpt(
-        'ca_file',
-        default='cacert.pem',
-        deprecated_group='DEFAULT',
-        help=_('Filename of root CA')),
-    cfg.StrOpt(
-        'key_file',
-        default=os.path.join('private', 'cakey.pem'),
-        deprecated_group='DEFAULT',
-        help=_('Filename of private key')),
-    cfg.StrOpt(
-        'crl_file',
-        default='crl.pem',
-        deprecated_group='DEFAULT',
-        help=_('Filename of root Certificate Revocation List')),
-    cfg.StrOpt(
-        'keys_path',
-        default=paths.state_path_def('keys'),
-        deprecated_group='DEFAULT',
-        help=_('Where we keep our keys')),
-    cfg.StrOpt(
-        'ca_path',
-        default=paths.state_path_def('CA'),
-        deprecated_group='DEFAULT',
-        help=_('Where we keep our root CA')),
-    cfg.BoolOpt(
-        'use_project_ca',
+    cfg.StrOpt("ca_file",
+        default="cacert.pem",
+        deprecated_group="DEFAULT",
+        help="""
+Filename of root CA (Certificate Authority). This is a container format
+and includes root certificates.
+
+Possible values:
+
+* Any file name containing root CA, cacert.pem is default
+
+Related options:
+
+* ca_path
+"""),
+    cfg.StrOpt("key_file",
+        default=os.path.join("private", "cakey.pem"),
+        deprecated_group="DEFAULT",
+        help="""
+Filename of a private key.
+
+Related options:
+
+* keys_path
+"""),
+    cfg.StrOpt("crl_file",
+        default="crl.pem",
+        deprecated_group="DEFAULT",
+        help="""
+Filename of root Certificate Revocation List (CRL). This is a list of
+certificates that have been revoked, and therefore, entities presenting
+those (revoked) certificates should no longer be trusted.
+
+Related options:
+
+* ca_path
+"""),
+    cfg.StrOpt("keys_path",
+        default=paths.state_path_def("keys"),
+        deprecated_group="DEFAULT",
+        help="""
+Directory path where keys are located.
+
+Related options:
+
+* key_file
+"""),
+    cfg.StrOpt("ca_path",
+        default=paths.state_path_def("CA"),
+        deprecated_group="DEFAULT",
+        help="""
+Directory path where root CA is located.
+
+Related options:
+
+* ca_file
+"""),
+    cfg.BoolOpt("use_project_ca",
         default=False,
-        deprecated_group='DEFAULT',
-        help=_('Should we use a CA for each project?')),
-    cfg.StrOpt(
-        'user_cert_subject',
-        default='/C=US/ST=California/O=OpenStack/'
-                'OU=NovaDev/CN=%.16s-%.16s-%s',
-        deprecated_group='DEFAULT',
-        help=_('Subject for certificate for users, %s for '
-               'project, user, timestamp')),
-    cfg.StrOpt(
-        'project_cert_subject',
-        default='/C=US/ST=California/O=OpenStack/'
-                'OU=NovaDev/CN=project-ca-%.16s-%s',
-        deprecated_group='DEFAULT',
-        help=_('Subject for certificate for projects, %s for '
-               'project, timestamp'))]
+        deprecated_group="DEFAULT",
+        help="Option to enable/disable use of CA for each project."),
+    cfg.StrOpt("user_cert_subject",
+        default="/C=US/ST=California/O=OpenStack/"
+                "OU=NovaDev/CN=%.16s-%.16s-%s",
+        deprecated_group="DEFAULT",
+        help="""
+Subject for certificate for users, %s for
+project, user, timestamp
+"""),
+    cfg.StrOpt("project_cert_subject",
+        default="/C=US/ST=California/O=OpenStack/"
+                "OU=NovaDev/CN=project-ca-%.16s-%s",
+        deprecated_group="DEFAULT",
+        help="""
+Subject for certificate for projects, %s for
+project, timestamp
+"""),
+]
 
 
 def register_opts(conf):

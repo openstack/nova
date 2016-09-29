@@ -15,8 +15,6 @@
 
 from nova.api.openstack.compute import floating_ip_pools \
         as fipp_v21
-from nova.api.openstack.compute.legacy_v2.contrib import floating_ip_pools \
-        as fipp_v2
 from nova import context
 from nova import exception
 from nova import network
@@ -57,10 +55,6 @@ class FloatingIpPoolTestV21(test.NoDBTestCase):
         self.assertEqual(res_dict, response)
 
 
-class FloatingIpPoolTestV2(FloatingIpPoolTestV21):
-    floating_ip_pools = fipp_v2
-
-
 class FloatingIPPoolsPolicyEnforcementV21(test.NoDBTestCase):
 
     def setUp(self):
@@ -77,3 +71,15 @@ class FloatingIPPoolsPolicyEnforcementV21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." %
             rule_name, exc.format_message())
+
+
+class FloatingIpPoolDeprecationTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FloatingIpPoolDeprecationTest, self).setUp()
+        self.controller = fipp_v21.FloatingIPPoolsController()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+
+    def test_not_found_for_fip_pool_api(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.index, self.req)

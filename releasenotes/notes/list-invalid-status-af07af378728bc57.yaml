@@ -1,0 +1,9 @@
+---
+fixes:
+  - Corrected response for the case where an invalid status value is passed as
+    a filter to the list servers API call. As there are sufficient statuses
+    defined already, any invalid status should not be accepted. As of
+    microversion 2.38, the API will return 400 HTTPBadRequest if an invalid
+    status is passed to list servers API for both admin as well as non admin
+    user.
+

@@ -21,6 +21,7 @@ import unicodedata
 
 import six
 
+from nova import db
 from nova.i18n import _
 
 
@@ -268,6 +269,14 @@ image_id = {
 }
 
 
+image_id_or_empty_string = {
+    'oneOf': [
+        {'type': 'string', 'format': 'uuid'},
+        {'type': 'string', 'maxLength': 0}
+    ]
+}
+
+
 volume_id = {
     'type': 'string', 'format': 'uuid'
 }
@@ -289,11 +298,6 @@ admin_password = {
     # In addition, users set sometimes long/strange string
     # as password. It is unnecessary to limit string length
     # and string pattern.
-    'type': 'string',
-}
-
-
-image_ref = {
     'type': 'string',
 }
 
@@ -346,4 +350,48 @@ ipv6 = {
 
 cidr = {
     'type': 'string', 'format': 'cidr'
+}
+
+
+volume_size = {
+    'type': ['integer', 'string'],
+    'pattern': '^[0-9]+$',
+    'minimum': 1,
+    'maximum': db.MAX_INT
+}
+
+disk_config = {
+    'type': 'string',
+    'enum': ['AUTO', 'MANUAL']
+}
+
+accessIPv4 = {
+    'type': 'string',
+    'format': 'ipv4',
+}
+
+accessIPv6 = {
+    'type': 'string',
+    'format': 'ipv6',
+}
+
+flavor_param_positive = copy.deepcopy(volume_size)
+
+
+flavor_param_non_negative = copy.deepcopy(volume_size)
+flavor_param_non_negative['minimum'] = 0
+
+personality = {
+    'type': 'array',
+    'items': {
+        'type': 'object',
+        'properties': {
+            'path': {'type': 'string'},
+            'contents': {
+                'type': 'string',
+                'format': 'base64'
+            }
+        },
+        'additionalProperties': False,
+    }
 }

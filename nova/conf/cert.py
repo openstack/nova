@@ -16,29 +16,26 @@
 
 from oslo_config import cfg
 
-cert_topic_opt = cfg.StrOpt("cert_topic",
+cert_opts = [
+    cfg.StrOpt("cert_topic",
+        deprecated_for_removal=True,
+        deprecated_since="14.0.0",
+        deprecated_reason="""
+Since the nova-cert service is marked for deprecation, the feature to change
+RPC topic that cert nodes listen may be removed as early as the 15.0.0
+Ocata release.
+""",
         default="cert",
         help="""
-Determines the RPC topic that the cert nodes listen on. The default is 'cert',
-and for most deployments there is no need to ever change it.
-
-Possible values:
-
-Any string.
-
-* Services which consume this:
-
-    ``nova-cert``
-
-* Related options:
-
-    None
-""")
+Determines the RPC topic that the cert nodes listen on. For most deployments
+there is no need to ever change it.
+"""),
+]
 
 
 def register_opts(conf):
-    conf.register_opts([cert_topic_opt])
+    conf.register_opts(cert_opts)
 
 
 def list_opts():
-    return {"DEFAULT": [cert_topic_opt]}
+    return {"DEFAULT": cert_opts}
