@@ -7483,7 +7483,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     @staticmethod
     def _prepare_device_bus(dev):
-        """Determins the device bus and it's hypervisor assigned address
+        """Determines the device bus and its hypervisor assigned address
         """
         bus = None
         address = (dev.device_addr.format_address() if
@@ -7527,7 +7527,7 @@ class LibvirtDriver(driver.ComputeDriver):
         guest_config.parse_dom(xml_dom)
 
         for dev in guest_config.devices:
-            # Build network intefaces related metedata
+            # Build network interfaces related metadata
             if isinstance(dev, vconfig.LibvirtConfigGuestInterface):
                 vif = tagged_vifs.get(dev.mac_addr)
                 if not vif:
@@ -7541,7 +7541,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     device.bus = bus
                 devices.append(device)
 
-            # Build disks related metedata
+            # Build disks related metadata
             if isinstance(dev, vconfig.LibvirtConfigGuestDisk):
                 bdm = tagged_bdms.get(dev.target_dev)
                 if not bdm:
