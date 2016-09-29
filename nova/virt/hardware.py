@@ -1314,32 +1314,32 @@ def numa_fit_instance_to_host(
                   {'required': len(instance_topology),
                    'actual': len(host_topology)})
         return
-    else:
-        # TODO(ndipanov): We may want to sort permutations differently
-        # depending on whether we want packing/spreading over NUMA nodes
-        for host_cell_perm in itertools.permutations(
-                host_topology.cells, len(instance_topology)):
-            cells = []
-            for host_cell, instance_cell in zip(
-                    host_cell_perm, instance_topology.cells):
-                try:
-                    got_cell = _numa_fit_instance_cell(
-                        host_cell, instance_cell, limits)
-                except exception.MemoryPageSizeNotSupported:
-                    # This exception will been raised if instance cell's
-                    # custom pagesize is not supported with host cell in
-                    # _numa_cell_supports_pagesize_request function.
-                    break
-                if got_cell is None:
-                    break
-                cells.append(got_cell)
-            if len(cells) == len(host_cell_perm):
-                if not pci_requests:
-                    return objects.InstanceNUMATopology(cells=cells)
-                elif ((pci_stats is not None) and
-                    pci_stats.support_requests(pci_requests,
-                                                     cells)):
-                    return objects.InstanceNUMATopology(cells=cells)
+
+    # TODO(ndipanov): We may want to sort permutations differently
+    # depending on whether we want packing/spreading over NUMA nodes
+    for host_cell_perm in itertools.permutations(
+            host_topology.cells, len(instance_topology)):
+        cells = []
+        for host_cell, instance_cell in zip(
+                host_cell_perm, instance_topology.cells):
+            try:
+                got_cell = _numa_fit_instance_cell(
+                    host_cell, instance_cell, limits)
+            except exception.MemoryPageSizeNotSupported:
+                # This exception will been raised if instance cell's
+                # custom pagesize is not supported with host cell in
+                # _numa_cell_supports_pagesize_request function.
+                break
+            if got_cell is None:
+                break
+            cells.append(got_cell)
+
+        if len(cells) != len(host_cell_perm):
+            continue
+
+        if not pci_requests or ((pci_stats is not None) and
+                pci_stats.support_requests(pci_requests, cells)):
+            return objects.InstanceNUMATopology(cells=cells)
 
 
 def numa_get_reserved_huge_pages():
