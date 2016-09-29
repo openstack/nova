@@ -468,13 +468,6 @@ class VMOps(object):
             flavor extra spec value are conflicting, or if Secure Boot is
             required, but the instance's VM generation is 1.
         """
-        os_type = image_meta.properties.get('os_type')
-        if not os_type:
-            reason = _('For secure boot, os_type must be specified in image '
-                       'properties.')
-            raise exception.InstanceUnacceptable(instance_id=instance.uuid,
-                                                 reason=reason)
-
         img_secure_boot = image_meta.properties.get('os_secure_boot')
         flavor_secure_boot = instance.flavor.extra_specs.get(
             constants.FLAVOR_SPEC_SECURE_BOOT)
@@ -501,10 +494,18 @@ class VMOps(object):
             raise exception.InstanceUnacceptable(instance_id=instance.uuid,
                                                  reason=reason)
 
-        if vm_gen != constants.VM_GEN_2 and requires_sb:
-            reason = _('Secure boot requires generation 2 VM.')
-            raise exception.InstanceUnacceptable(instance_id=instance.uuid,
-                                                 reason=reason)
+        if requires_sb:
+            if vm_gen != constants.VM_GEN_2:
+                reason = _('Secure boot requires generation 2 VM.')
+                raise exception.InstanceUnacceptable(instance_id=instance.uuid,
+                                                     reason=reason)
+
+            os_type = image_meta.properties.get('os_type')
+            if not os_type:
+                reason = _('For secure boot, os_type must be specified in '
+                           'image properties.')
+                raise exception.InstanceUnacceptable(instance_id=instance.uuid,
+                                                     reason=reason)
         return requires_sb
 
     def _create_config_drive(self, context, instance, injected_files,
