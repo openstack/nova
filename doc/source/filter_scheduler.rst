@@ -433,6 +433,24 @@ The Filter Scheduler weighs hosts based on the config option
   hosts. If the multiplier is positive, the weigher prefer choosing heavy
   workload compute hosts, the weighing has the opposite effect of the default.
 
+* |PCIWeigher| Compute a weighting based on the number of PCI devices on the
+  host and the number of PCI devices requested by the instance. For example,
+  given three hosts - one with a single PCI device, one with many PCI devices,
+  and one with no PCI devices - nova should prioritise these differently based
+  on the demands of the instance. If the instance requests a single PCI device,
+  then the first of the hosts should be preferred. Similarly, if the instance
+  requests multiple PCI devices, then the second of these hosts would be
+  preferred. Finally, if the instance does not request a PCI device, then the
+  last of these hosts should be preferred.
+
+  For this to be of any value, at least one of the |PciPassthroughFilter| or
+  |NUMATopologyFilter| filters must be enabled.
+
+  :Configuration Option: ``[filter_scheduler] pci_weight_multiplier``. Only
+    positive values are allowed for the multiplier as a negative value would
+    force non-PCI instances away from non-PCI hosts, thus, causing future
+    scheduling issues.
+
 * |ServerGroupSoftAffinityWeigher| The weigher can compute the weight based
   on the number of instances that run on the same server group. The largest
   weight defines the preferred host for the new instance. For the multiplier
@@ -496,6 +514,7 @@ in :mod:`nova.tests.scheduler`.
 .. |MetricsFilter| replace:: :class:`MetricsFilter <nova.scheduler.filters.metrics_filter.MetricsFilter>`
 .. |MetricsWeigher| replace:: :class:`MetricsWeigher <nova.scheduler.weights.metrics.MetricsWeigher>`
 .. |IoOpsWeigher| replace:: :class:`IoOpsWeigher <nova.scheduler.weights.io_ops.IoOpsWeigher>`
+.. |PCIWeigher| replace:: :class:`PCIWeigher <nova.scheduler.weights.pci.PCIWeigher>`
 .. |ServerGroupSoftAffinityWeigher| replace:: :class:`ServerGroupSoftAffinityWeigher <nova.scheduler.weights.affinity.ServerGroupSoftAffinityWeigher>`
 .. |ServerGroupSoftAntiAffinityWeigher| replace:: :class:`ServerGroupSoftAntiAffinityWeigher <nova.scheduler.weights.affinity.ServerGroupSoftAntiAffinityWeigher>`
 .. |DiskWeigher| replace:: :class:`DiskWeigher <nova.scheduler.weights.disk.DiskWeigher>`
