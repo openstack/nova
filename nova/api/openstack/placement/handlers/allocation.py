@@ -240,18 +240,11 @@ def set_allocations(req):
 
         resources = allocation['resources']
         for resource_class in resources:
-            try:
-                allocation = objects.Allocation(
-                    resource_provider=resource_provider,
-                    consumer_id=consumer_uuid,
-                    resource_class=resource_class,
-                    used=resources[resource_class])
-            except ValueError as exc:
-                raise webob.exc.HTTPBadRequest(
-                    _("Allocation of class '%(class)s' for "
-                      "resource provider '%(rp_uuid)s' invalid: %(error)s") %
-                    {'class': resource_class, 'rp_uuid':
-                     resource_provider_uuid, 'error': exc})
+            allocation = objects.Allocation(
+                resource_provider=resource_provider,
+                consumer_id=consumer_uuid,
+                resource_class=resource_class,
+                used=resources[resource_class])
             allocation_objects.append(allocation)
 
     allocations = objects.AllocationList(context, objects=allocation_objects)
@@ -262,6 +255,11 @@ def set_allocations(req):
     # InvalidInventory is a parent for several exceptions that
     # indicate either that Inventory is not present, or that
     # capacity limits have been exceeded.
+    except exception.NotFound as exc:
+        raise webob.exc.HTTPBadRequest(
+                _("Unable to allocate inventory for resource provider "
+                  "%(rp_uuid)s: %(error)s") %
+            {'rp_uuid': resource_provider_uuid, 'error': exc})
     except exception.InvalidInventory as exc:
         LOG.exception(_LE("Bad inventory"))
         raise webob.exc.HTTPConflict(

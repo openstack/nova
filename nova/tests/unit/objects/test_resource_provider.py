@@ -23,6 +23,11 @@ from nova.tests import uuidsentinel as uuids
 
 _RESOURCE_CLASS_NAME = 'DISK_GB'
 _RESOURCE_CLASS_ID = 2
+IPV4_ADDRESS_ID = objects.fields.ResourceClass.ALL.index(
+    fields.ResourceClass.IPV4_ADDRESS)
+VCPU_ID = objects.fields.ResourceClass.ALL.index(
+    fields.ResourceClass.VCPU)
+
 _RESOURCE_PROVIDER_ID = 1
 _RESOURCE_PROVIDER_UUID = uuids.resource_provider
 _RESOURCE_PROVIDER_NAME = uuids.resource_name
@@ -312,9 +317,6 @@ class TestInventory(test_objects._LocalTest):
                                         {'total': 32})
 
         # Create IPV4_ADDRESS resources for each provider.
-        IPV4_ADDRESS_ID = objects.fields.ResourceClass.index(
-            objects.fields.ResourceClass.IPV4_ADDRESS)
-
         self._create_inventory_in_db(db_rp1.id,
                                      resource_provider_id=db_rp1.id,
                                      resource_class_id=IPV4_ADDRESS_ID,
@@ -430,16 +432,32 @@ class TestInventory(test_objects._LocalTest):
         self.assertIsNone(found)
 
         # Try an integer resource class identifier...
-        found = inv_list.find(fields.ResourceClass.index(
-            fields.ResourceClass.VCPU))
-        self.assertIsNotNone(found)
-        self.assertEqual(24, found.total)
+        self.assertRaises(ValueError, inv_list.find, VCPU_ID)
 
         # Use an invalid string...
-        error = self.assertRaises(exception.NotFound,
-                                  inv_list.find,
-                                  'HOUSE')
-        self.assertIn('No such resource class', str(error))
+        self.assertIsNone(inv_list.find('HOUSE'))
+
+    def test_custom_resource_raises(self):
+        """Ensure that if we send an inventory object to a backversioned 1.0
+        receiver, that we raise ValueError if the inventory record contains a
+        custom (non-standardized) resource class.
+        """
+        values = {
+            # NOTE(danms): We don't include an actual resource provider
+            # here because chained backporting of that is handled by
+            # the infrastructure and requires us to have a manifest
+            'resource_class': 'custom_resource',
+            'total': 1,
+            'reserved': 0,
+            'min_unit': 1,
+            'max_unit': 1,
+            'step_size': 1,
+            'allocation_ratio': 1.0,
+        }
+        bdm = objects.Inventory(context=self.context, **values)
+        self.assertRaises(ValueError,
+                          bdm.obj_to_primitive,
+                          target_version='1.0')
 
 
 class _TestAllocationNoDB(object):
@@ -469,6 +487,24 @@ class _TestAllocationNoDB(object):
                                  consumer_id=uuids.fake_instance,
                                  used=8)
         self.assertRaises(exception.ObjectActionError, obj.create)
+
+    def test_custom_resource_raises(self):
+        """Ensure that if we send an inventory object to a backversioned 1.0
+        receiver, that we raise ValueError if the inventory record contains a
+        custom (non-standardized) resource class.
+        """
+        values = {
+            # NOTE(danms): We don't include an actual resource provider
+            # here because chained backporting of that is handled by
+            # the infrastructure and requires us to have a manifest
+            'resource_class': 'custom_resource',
+            'consumer_id': uuids.consumer_id,
+            'used': 1,
+        }
+        bdm = objects.Allocation(context=self.context, **values)
+        self.assertRaises(ValueError,
+                          bdm.obj_to_primitive,
+                          target_version='1.0')
 
 
 class TestAllocationNoDB(test_objects._LocalTest,

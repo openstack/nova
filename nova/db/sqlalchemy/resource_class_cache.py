@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
 import sqlalchemy as sa
 
 from nova.db.sqlalchemy import api as db_api
@@ -17,6 +18,23 @@ from nova.db.sqlalchemy import api_models as models
 from nova.objects import fields
 
 _RC_TBL = models.ResourceClass.__table__
+
+
+def raise_if_custom_resource_class_pre_v1_1(rc):
+    """Raises ValueError if the supplied resource class identifier is
+    *not* in the set of standard resource classes as of Inventory/Allocation
+    object version 1.1
+
+    param rc: Integer or string identifier for a resource class
+    """
+    if isinstance(rc, six.string_types):
+        if rc not in fields.ResourceClass.V1_0:
+            raise ValueError
+    else:
+        try:
+            fields.ResourceClass.V1_0[rc]
+        except IndexError:
+            raise ValueError
 
 
 @db_api.api_context_manager.reader
