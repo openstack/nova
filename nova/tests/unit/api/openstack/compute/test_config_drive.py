@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import datetime
-
 import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
@@ -22,12 +20,10 @@ from oslo_serialization import jsonutils
 from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute import servers as servers_v21
 from nova.compute import api as compute_api
-from nova.compute import flavors
 from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-from nova.tests.unit import fake_instance
 from nova.tests.unit.image import fake
 from nova.tests import uuidsentinel as uuids
 
@@ -109,35 +105,15 @@ class ServersControllerCreateTestV21(test.TestCase):
         fakes.stub_out_nw_api(self)
         self._set_up_controller()
 
-        def instance_create(context, inst):
-            inst_type = flavors.get_flavor_by_flavor_id(3)
-            image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-            def_image_ref = 'http://localhost/images/%s' % image_uuid
-            self.instance_cache_num += 1
-            instance = fake_instance.fake_db_instance(**{
-                'id': self.instance_cache_num,
-                'display_name': inst['display_name'] or 'test',
-                'uuid': fakes.FAKE_UUID,
-                'instance_type': inst_type,
-                'access_ip_v4': '1.2.3.4',
-                'access_ip_v6': 'fead::1234',
-                'image_ref': inst.get('image_ref', def_image_ref),
-                'user_id': 'fake',
-                'project_id': 'fake',
-                'reservation_id': inst['reservation_id'],
-                "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
-                "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
-                "progress": 0,
-                "fixed_ips": [],
-                "task_state": "",
-                "vm_state": "",
-                "root_device_name": inst.get('root_device_name', 'vda'),
-            })
+        fake.stub_out_image_service(self)
 
+        def create_db_entry_for_new_instance(*args, **kwargs):
+            instance = args[4]
+            instance.uuid = fakes.FAKE_UUID
             return instance
 
-        fake.stub_out_image_service(self)
-        self.stub_out('nova.db.instance_create', instance_create)
+        self.stub_out('nova.compute.api.API.create_db_entry_for_new_instance',
+                      create_db_entry_for_new_instance)
 
     def _test_create_extra(self, params, override_controller):
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'

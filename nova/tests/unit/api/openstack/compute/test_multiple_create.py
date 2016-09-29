@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import datetime
-
 import webob
 
 from nova.api.openstack.compute import block_device_mapping \
@@ -23,12 +21,10 @@ from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute import multiple_create as multiple_create_v21
 from nova.api.openstack.compute import servers as servers_v21
 from nova.compute import api as compute_api
-from nova.compute import flavors
 import nova.conf
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-from nova.tests.unit import fake_instance
 from nova.tests.unit.image import fake
 
 CONF = nova.conf.CONF
@@ -62,35 +58,6 @@ class MultiCreateExtensionTestV21(test.TestCase):
         self.no_mult_create_controller = servers_v21.ServersController(
             extension_info=ext_info)
 
-        def instance_create(context, inst):
-            inst_type = flavors.get_flavor_by_flavor_id(3)
-            image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-            def_image_ref = 'http://localhost/images/%s' % image_uuid
-            self.instance_cache_num += 1
-            instance = fake_instance.fake_db_instance(**{
-                'id': self.instance_cache_num,
-                'display_name': inst['display_name'] or 'test',
-                'uuid': inst['uuid'],
-                'instance_type': inst_type,
-                'access_ip_v4': '1.2.3.4',
-                'access_ip_v6': 'fead::1234',
-                'image_ref': inst.get('image_ref', def_image_ref),
-                'user_id': 'fake',
-                'project_id': 'fake',
-                'reservation_id': inst['reservation_id'],
-                "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
-                "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
-                "progress": 0,
-                "fixed_ips": [],
-                "task_state": "",
-                "vm_state": "",
-                "security_groups": inst['security_groups'],
-            })
-
-            self.instance_cache_by_id[instance['id']] = instance
-            self.instance_cache_by_uuid[instance['uuid']] = instance
-            return instance
-
         def instance_get(context, instance_id):
             """Stub for compute/api create() pulling in instance after
             scheduling
@@ -114,12 +81,18 @@ class MultiCreateExtensionTestV21(test.TestCase):
         def project_get_networks(context, user_id):
             return dict(id='1', host='localhost')
 
+        def create_db_entry_for_new_instance(*args, **kwargs):
+            instance = args[4]
+            self.instance_cache_by_uuid[instance.uuid] = instance
+            return instance
+
         fakes.stub_out_key_pair_funcs(self)
         fake.stub_out_image_service(self)
         self.stub_out('nova.db.instance_add_security_group',
                       return_security_group)
         self.stub_out('nova.db.project_get_networks', project_get_networks)
-        self.stub_out('nova.db.instance_create', instance_create)
+        self.stub_out('nova.compute.api.API.create_db_entry_for_new_instance',
+                      create_db_entry_for_new_instance)
         self.stub_out('nova.db.instance_system_metadata_update', fake_method)
         self.stub_out('nova.db.instance_get', instance_get)
         self.stub_out('nova.db.instance_update', instance_update)

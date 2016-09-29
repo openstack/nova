@@ -155,11 +155,11 @@ class TestInstanceNotificationSample(
 
         instance_updates = self._get_notifications('instance.update')
 
-        # The first notification comes from the nova-api the rest is from the
-        # nova-compute. To keep the test simpler assert this fact and then
-        # modify the publisher_id of the first notification to match the
-        # template
-        self.assertEqual('nova-api:fake-mini',
+        # The first notification comes from the nova-conductor the
+        # rest is from the nova-compute. To keep the test simpler
+        # assert this fact and then modify the publisher_id of the
+        # first notification to match the template
+        self.assertEqual('conductor:fake-mini',
                          instance_updates[0]['publisher_id'])
         instance_updates[0]['publisher_id'] = 'nova-compute:fake-mini'
 

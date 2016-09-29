@@ -21,14 +21,12 @@ from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute import servers as servers_v21
 from nova import availability_zones
 from nova.compute import api as compute_api
-from nova.compute import flavors
 from nova import context
 from nova import db
 from nova import exception
 from nova import servicegroup
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-from nova.tests.unit import fake_instance
 from nova.tests.unit.image import fake
 from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_service
@@ -187,37 +185,14 @@ class ServersControllerCreateTestV21(test.TestCase):
         fakes.stub_out_nw_api(self)
         self._set_up_controller()
 
-        def instance_create(context, inst):
-            inst_type = flavors.get_flavor_by_flavor_id(3)
-            image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-            def_image_ref = 'http://localhost/images/%s' % image_uuid
-            self.instance_cache_num += 1
-            instance = fake_instance.fake_db_instance(**{
-                'id': self.instance_cache_num,
-                'display_name': inst['display_name'] or 'test',
-                'uuid': FAKE_UUID,
-                'instance_type': inst_type,
-                'access_ip_v4': '1.2.3.4',
-                'access_ip_v6': 'fead::1234',
-                'image_ref': inst.get('image_ref', def_image_ref),
-                'user_id': 'fake',
-                'project_id': 'fake',
-                'availability_zone': 'nova',
-                'reservation_id': inst['reservation_id'],
-                "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
-                "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
-                "progress": 0,
-                "fixed_ips": [],
-                "task_state": "",
-                "vm_state": "",
-                "root_device_name": inst.get('root_device_name', 'vda'),
-            })
-
+        def create_db_entry_for_new_instance(*args, **kwargs):
+            instance = args[4]
+            instance.uuid = FAKE_UUID
             return instance
 
         fake.stub_out_image_service(self)
-        self.stub_out('nova.db.instance_create', instance_create)
-
+        self.stub_out('nova.compute.api.API.create_db_entry_for_new_instance',
+                      create_db_entry_for_new_instance)
         self.req = fakes.HTTPRequest.blank('')
 
     def _set_up_controller(self):

@@ -147,9 +147,18 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
     def test_error_evacuate(self):
         self.skipTest("Test is incompatible with cells.")
 
+    def test_create_instance_sets_system_metadata(self):
+        self.skipTest("Test is incompatible with cells.")
+
+    def test_create_saves_flavor(self):
+        self.skipTest("Test is incompatible with cells.")
+
+    def test_create_instance_associates_security_groups(self):
+        self.skipTest("Test is incompatible with cells.")
+
     @mock.patch.object(compute_api.API, '_local_delete')
     @mock.patch.object(compute_api.API, '_lookup_instance',
-                       return_value=None)
+                       return_value=(None, None))
     def test_delete_instance_no_cell_instance_disappear(self, mock_lookup,
                                                         mock_local_delete):
         inst = self._create_fake_instance_obj()
@@ -175,7 +184,7 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         cells_rpcapi.instance_delete_everywhere(self.context,
                 inst, delete_type)
         compute_api.API._lookup_instance(self.context,
-                                         inst.uuid).AndReturn(inst)
+                                         inst.uuid).AndReturn((None, inst))
         compute_api.API._local_delete(self.context, inst,
                                       mox.IsA(objects.BlockDeviceMappingList),
                                       method_name, mox.IgnoreArg())
@@ -196,7 +205,7 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         @mock.patch.object(self.compute_api.cells_rpcapi,
                            'instance_delete_everywhere')
         @mock.patch.object(compute_api.API, '_lookup_instance',
-                           return_value=inst)
+                           return_value=(None, inst))
         def _test(_mock_lookup_inst, _mock_delete_everywhere):
             self.assertRaises(exception.ObjectActionError,
                     self.compute_api.delete, self.context, inst)
@@ -221,7 +230,7 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         @mock.patch.object(self.compute_api.cells_rpcapi,
                 'instance_delete_everywhere', side_effect=add_cell_name)
         @mock.patch.object(compute_api.API, '_lookup_instance',
-                           return_value=inst)
+                           return_value=(None, inst))
         def _test(_mock_lookup_inst, mock_delete_everywhere,
                   mock_compute_delete):
             self.compute_api.delete(self.context, inst)
@@ -249,7 +258,7 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
                            side_effect=actionerror)
         @mock.patch.object(instance, 'refresh', side_effect=notfound)
         @mock.patch.object(compute_api.API, '_lookup_instance',
-                           return_value=instance)
+                           return_value=(None, instance))
         def _test(_mock_lookup_instance, mock_refresh, mock_local_delete,
                   mock_delete_everywhere, mock_compute_delete):
             self.compute_api.delete(self.context, instance)
@@ -276,7 +285,7 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         @mock.patch.object(self.compute_api.cells_rpcapi,
                            'instance_delete_everywhere')
         @mock.patch.object(compute_api.API, '_lookup_instance',
-                           return_value=instance)
+                           return_value=(None, instance))
         @mock.patch.object(compute_api.API, '_local_delete',
                            side_effect=notfound)
         def _test(mock_local_delete, _mock_lookup, mock_delete_everywhere,
@@ -315,7 +324,7 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         instance = self._create_fake_instance_obj()
         instance_with_cell = copy.deepcopy(instance)
         instance_with_cell.cell_name = 'foo'
-        mock_lookup_instance.return_value = instance_with_cell
+        mock_lookup_instance.return_value = None, instance_with_cell
 
         cells_rpcapi = self.compute_api.cells_rpcapi
 
@@ -341,7 +350,7 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         # and therefore no host, set but instance.destroy fails because
         # there is now a host. And then the instance can't be looked up.
         instance = self._create_fake_instance_obj()
-        mock_lookup_instance.return_value = None
+        mock_lookup_instance.return_value = None, None
 
         cells_rpcapi = self.compute_api.cells_rpcapi
 
@@ -495,11 +504,14 @@ class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
         _check_bdm.return_value = objects.BlockDeviceMappingList()
         _provision.return_value = []
 
-        self.compute_api.create(self.context, 'fake-flavor', 'fake-image')
+        with mock.patch.object(self.compute_api.compute_task_api,
+                               'schedule_and_build_instances') as sbi:
+            self.compute_api.create(self.context, 'fake-flavor', 'fake-image')
 
-        # Subsequent tests in class are verifying the hooking.  We don't check
-        # args since this is verified in compute test code.
-        self.assertTrue(self.cells_rpcapi.build_instances.called)
+            # Subsequent tests in class are verifying the hooking.  We
+            # don't check args since this is verified in compute test
+            # code.
+            self.assertTrue(sbi.called)
 
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch.object(compute_api.API, '_record_action_start')

@@ -232,7 +232,8 @@ class ComputeCellsAPI(compute_api.API):
                 # set now.  We handle this similarly to how the
                 # ObjectActionError is handled below.
                 with excutils.save_and_reraise_exception() as exc:
-                    instance = self._lookup_instance(context, instance.uuid)
+                    _cell, instance = self._lookup_instance(context,
+                                                            instance.uuid)
                     if instance is None:
                         exc.reraise = False
                     elif instance.cell_name:
@@ -247,7 +248,7 @@ class ComputeCellsAPI(compute_api.API):
             # lookup is attempted which will either return a full Instance or
             # None if not found. If not found then it's acceptable to skip the
             # rest of the delete processing.
-            instance = self._lookup_instance(context, instance.uuid)
+            _cell, instance = self._lookup_instance(context, instance.uuid)
             if instance is None:
                 # Instance has been deleted out from under us
                 return
