@@ -397,8 +397,14 @@ The Filter Scheduler weighs hosts based on the config option
 `nova.scheduler.weights.all_weighers`, which selects the following weighers:
 
 * |RAMWeigher| Compute weight based on available RAM on the compute node.
-  Sort with the largest weight winning. If the multiplier is negative, the
+  Sort with the largest weight winning. If the multiplier,
+  :oslo.config:opt:`filter_scheduler.ram_weight_multiplier`, is negative, the
   host with least RAM available will win (useful for stacking hosts, instead
+  of spreading).
+* |CPUWeigher| Compute weight based on available vCPUs on the compute node.
+  Sort with the largest weight winning. If the multiplier,
+  :oslo.config:opt:`filter_scheduler.cpu_weight_multiplier`, is negative, the
+  host with least CPUs available will win (useful for stacking hosts, instead
   of spreading).
 * |DiskWeigher| Hosts are weighted and sorted by free disk space with the largest
   weight winning.  If the multiplier is negative, the host with less disk space available
@@ -489,6 +495,7 @@ in :mod:`nova.tests.scheduler`.
 .. |AggregateMultiTenancyIsolation| replace:: :class:`AggregateMultiTenancyIsolation <nova.scheduler.filters.aggregate_multitenancy_isolation.AggregateMultiTenancyIsolation>`
 .. |NUMATopologyFilter| replace:: :class:`NUMATopologyFilter <nova.scheduler.filters.numa_topology_filter.NUMATopologyFilter>`
 .. |RAMWeigher| replace:: :class:`RAMWeigher <nova.scheduler.weights.ram.RAMWeigher>`
+.. |CPUWeigher| replace:: :class:`CPUWeigher <nova.scheduler.weights.cpu.CPUWeigher>`
 .. |AggregateImagePropertiesIsolation| replace:: :class:`AggregateImagePropertiesIsolation <nova.scheduler.filters.aggregate_image_properties_isolation.AggregateImagePropertiesIsolation>`
 .. |MetricsFilter| replace:: :class:`MetricsFilter <nova.scheduler.filters.metrics_filter.MetricsFilter>`
 .. |MetricsWeigher| replace:: :class:`MetricsWeigher <nova.scheduler.weights.metrics.MetricsWeigher>`

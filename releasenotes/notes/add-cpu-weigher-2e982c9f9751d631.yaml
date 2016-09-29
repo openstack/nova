@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Add ``CPUWeigher`` weigher. This can be used to spread (default) or pack
+    workloads on hosts based on their vCPU usage. This can be configured using
+    the ``[filter_scheduler] cpu_weight_multiplier`` configuration option.
