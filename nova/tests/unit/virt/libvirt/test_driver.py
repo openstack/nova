@@ -1230,6 +1230,20 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         mock_guest.set_user_password.assert_called_once_with("root", "123")
 
+    @mock.patch.object(host.Host,
+                       'has_min_version', return_value=True)
+    @mock.patch('nova.virt.libvirt.host.Host.get_guest')
+    def test_set_admin_password_parallels(self, mock_get_guest, ver):
+        self.flags(virt_type='parallels', group='libvirt')
+        instance = objects.Instance(**self.test_instance)
+        mock_guest = mock.Mock(spec=libvirt_guest.Guest)
+        mock_get_guest.return_value = mock_guest
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr.set_admin_password(instance, "123")
+
+        mock_guest.set_user_password.assert_called_once_with("root", "123")
+
     @mock.patch('nova.utils.get_image_from_system_metadata')
     @mock.patch.object(host.Host,
                        'has_min_version', return_value=True)
@@ -1272,13 +1286,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(host.Host,
                        'has_min_version', return_value=False)
     def test_set_admin_password_bad_version(self, mock_svc, mock_image):
-        self.flags(virt_type='kvm', group='libvirt')
+
         instance = objects.Instance(**self.test_instance)
         mock_image.return_value = {"properties": {
             "hw_qemu_guest_agent": "yes"}}
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.assertRaises(exception.SetAdminPasswdNotSupported,
-                          drvr.set_admin_password, instance, "123")
+        for hyp in ('kvm', 'parallels'):
+            self.flags(virt_type=hyp, group='libvirt')
+            drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+            self.assertRaises(exception.SetAdminPasswdNotSupported,
+                              drvr.set_admin_password, instance, "123")
 
     @mock.patch('nova.utils.get_image_from_system_metadata')
     @mock.patch.object(host.Host,
