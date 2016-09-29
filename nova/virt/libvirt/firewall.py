@@ -20,6 +20,7 @@ import uuid
 from eventlet import greenthread
 from lxml import etree
 from oslo_log import log as logging
+from oslo_utils import excutils
 from oslo_utils import importutils
 
 from nova.cloudpipe import pipelib
@@ -259,7 +260,20 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
     def _define_filter(self, xml):
         if callable(xml):
             xml = xml()
-        self._conn.nwfilterDefineXML(xml)
+        try:
+            self._conn.nwfilterDefineXML(xml)
+        except libvirt.libvirtError as ex:
+            with excutils.save_and_reraise_exception() as ctxt:
+                errcode = ex.get_error_code()
+                if errcode == libvirt.VIR_ERR_OPERATION_FAILED:
+                    # Since libvirt 1.2.7 this operation can fail if the filter
+                    # with the same name already exists for the given uuid.
+                    # Unfortunately there is not a specific error code for this
+                    # so we have to parse the error message to see if that was
+                    # the failure.
+                    errmsg = ex.get_error_message()
+                    if 'already exists with uuid' in errmsg:
+                        ctxt.reraise = False
 
     def unfilter_instance(self, instance, network_info):
         """Clear out the nwfilter rules."""

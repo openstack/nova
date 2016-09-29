@@ -713,3 +713,40 @@ class NWFilterTestCase(test.NoDBTestCase):
         self.assertEqual(2, debug.call_count)
         self.assertEqual(u"Cannot find UUID for filter '%(name)s': '%(e)s'",
                          debug.call_args_list[0][0][0])
+
+    def test_define_filter_already_exists(self):
+        """Tests that we ignore a libvirt error when the nw filter already
+        exists for a given name.
+        """
+        error = fakelibvirt.libvirtError('already exists')
+        error.err = (fakelibvirt.VIR_ERR_OPERATION_FAILED, None,
+                     "filter 'nova-no-nd-reflection' already exists with uuid "
+                     "e740c5ec-c715-4f73-9874-630cc73d4ac2",)
+        with mock.patch.object(self.fw._conn, 'nwfilterDefineXML',
+                               side_effect=error) as define:
+            self.fw._define_filter(mock.sentinel.xml)
+        define.assert_called_once_with(mock.sentinel.xml)
+
+    def test_define_filter_fails_wrong_message(self):
+        """Tests that we reraise the libvirt error for an operational failure
+        if the error message is something unexpected.
+        """
+        error = fakelibvirt.libvirtError('already exists')
+        error.err = (fakelibvirt.VIR_ERR_OPERATION_FAILED, None, 'oops',)
+        with mock.patch.object(self.fw._conn, 'nwfilterDefineXML',
+                               side_effect=error) as define:
+            self.assertRaises(fakelibvirt.libvirtError,
+                              self.fw._define_filter, mock.sentinel.xml)
+        define.assert_called_once_with(mock.sentinel.xml)
+
+    def test_define_filter_fails_wrong_code(self):
+        """Tests that we reraise the libvirt error for an operational failure
+        if the error code is something unexpected.
+        """
+        error = fakelibvirt.libvirtError('already exists')
+        error.err = (fakelibvirt.VIR_ERR_OPERATION_TIMEOUT, None, 'timeout',)
+        with mock.patch.object(self.fw._conn, 'nwfilterDefineXML',
+                               side_effect=error) as define:
+            self.assertRaises(fakelibvirt.libvirtError,
+                              self.fw._define_filter, mock.sentinel.xml)
+        define.assert_called_once_with(mock.sentinel.xml)
