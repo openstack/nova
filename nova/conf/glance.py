@@ -25,7 +25,7 @@ glance_opts = [
     # service catalog, however we don't have a good path there atm.
     # TODO(raj_singh): Add "required=True" flag to this option.
     cfg.ListOpt('api_servers',
-                help="""
+        help="""
 List of glance api servers endpoints available to nova.
 
 https is used for ssl-based glance api servers.
@@ -36,25 +36,25 @@ Possible values:
   (i.e. "http://10.0.1.0:9292" or "https://my.glance.server/image").
 """),
     cfg.BoolOpt('api_insecure',
-                default=False,
-                help="""
+        default=False,
+        help="""
 Enable insecure SSL (https) requests to glance.
 
 This setting can be used to turn off verification of the glance server
 certificate against the certificate authorities.
 """),
-# TODO(raj_singh): Add min=0 flag in num_retries
     cfg.IntOpt('num_retries',
-               default=0,
-               help="""
+        default=0,
+        min=0,
+        help="""
 Enable glance operation retries.
 
 Specifies the number of retries when uploading / downloading
 an image to / from glance. 0 means no retries.
 """),
     cfg.ListOpt('allowed_direct_url_schemes',
-                default=[],
-                help="""
+        default=[],
+        help="""
 List of url schemes that can be directly accessed.
 
 This option specifies a list of url schemes that can be downloaded
@@ -68,19 +68,19 @@ Possible values:
 * [file], Empty list (default)
 """),
     cfg.BoolOpt('use_glance_v1',
-                default=False,
-                deprecated_for_removal=True,
-                deprecated_since="14.0.0",
-                deprecated_reason='Glance v1 support will be removed in '
-                                  'Ocata',
-                help="""
+        default=False,
+        deprecated_for_removal=True,
+        deprecated_since="14.0.0",
+        deprecated_reason='Glance v1 support will be removed in '
+                          'Ocata',
+        help="""
 This flag allows reverting to glance v1 if for some reason glance v2 doesn't
 work in your environment. This will only exist in Newton, and a fully working
 Glance v2 will be a hard requirement in Ocata.
 """),
     cfg.BoolOpt('verify_glance_signatures',
-                default=False,
-                help="""
+        default=False,
+        help="""
 Enable image signature verification.
 
 nova uses the image signature metadata from glance and verifies the signature
@@ -96,8 +96,8 @@ Related options:
   for the signature validation.
 """),
     cfg.BoolOpt('debug',
-                default=False,
-                help='Enable or disable debug logging with glanceclient.')
+         default=False,
+         help='Enable or disable debug logging with glanceclient.')
 ]
 
 
