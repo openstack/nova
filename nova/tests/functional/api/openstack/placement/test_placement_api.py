@@ -14,6 +14,7 @@ import os
 
 from gabbi import driver
 
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api.openstack.placement import fixtures
 
 TESTS_DIR = 'gabbits'
@@ -22,7 +23,14 @@ TESTS_DIR = 'gabbits'
 def load_tests(loader, tests, pattern):
     """Provide a TestSuite to the discovery process."""
     test_dir = os.path.join(os.path.dirname(__file__), TESTS_DIR)
+    # These inner fixtures provide per test request output and log
+    # capture, for cleaner results reporting.
+    inner_fixtures = [
+        nova_fixtures.OutputStreamCapture,
+        nova_fixtures.StandardLogging,
+    ]
     return driver.build_tests(test_dir, loader, host=None,
                               test_loader_name=__name__,
                               intercept=fixtures.setup_app,
+                              inner_fixtures=inner_fixtures,
                               fixture_module=fixtures)
