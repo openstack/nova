@@ -2423,6 +2423,7 @@ class ComputeTestCase(BaseTestCase):
                          'compute.instance.pause.end')
         instance.task_state = task_states.UNPAUSING
         instance.save()
+        mock_notify.reset_mock()
         fake_notifier.NOTIFICATIONS = []
         self.compute.unpause_instance(self.context, instance=instance)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
@@ -2432,6 +2433,11 @@ class ComputeTestCase(BaseTestCase):
         msg = fake_notifier.NOTIFICATIONS[1]
         self.assertEqual(msg.event_type,
                          'compute.instance.unpause.end')
+        mock_notify.assert_has_calls([
+            mock.call(ctxt, instance, 'fake-mini',
+                      action='unpause', phase='start'),
+            mock.call(ctxt, instance, 'fake-mini',
+                      action='unpause', phase='end')])
         self.compute.terminate_instance(self.context, instance, [], [])
 
     @mock.patch('nova.compute.utils.notify_about_instance_action')
