@@ -363,7 +363,8 @@ class ComputeVolumeTestCase(BaseTestCase):
         }
         self.fake_volume = fake_block_device.FakeDbBlockDeviceDict(
                 {'source_type': 'volume', 'destination_type': 'volume',
-                 'volume_id': uuids.volume_id, 'device_name': '/dev/vdb'})
+                 'volume_id': uuids.volume_id, 'device_name': '/dev/vdb',
+                 'connection_info': jsonutils.dumps({})})
         self.instance_object = objects.Instance._from_db_object(
                 self.context, objects.Instance(),
                 fake_instance.fake_db_instance())
@@ -440,7 +441,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                     self.context, 'fake', instance, 'fake_id')
             mock_internal_detach.assert_called_once_with(self.context,
                                                          instance,
-                                                         fake_bdm)
+                                                         fake_bdm, {})
             self.assertTrue(mock_destroy.called)
 
     def test_await_block_device_created_too_slow(self):
@@ -11552,8 +11553,10 @@ class EvacuateHostTestCase(BaseTestCase):
         instance = db.instance_get(self.context, self.inst.id)
         self.assertEqual(instance['host'], 'fake_host_2')
 
-    def test_rebuild_on_host_with_volumes(self):
-        """Confirm evacuate scenario reconnects volumes."""
+    def test_rebuild_on_remote_host_with_volumes(self):
+        """Confirm that the evacuate scenario does not attempt a driver detach
+        when rebuilding an instance with volumes on a remote host
+        """
         values = {'instance_uuid': self.inst.uuid,
                   'source_type': 'volume',
                   'device_name': '/dev/vdc',
@@ -11574,11 +11577,6 @@ class EvacuateHostTestCase(BaseTestCase):
             result["detached"] = volume["id"] == 'fake_volume_id'
         self.stubs.Set(cinder.API, "detach", fake_detach)
 
-        self.mox.StubOutWithMock(self.compute, '_driver_detach_volume')
-        self.compute._driver_detach_volume(mox.IsA(self.context),
-                                           mox.IsA(instance_obj.Instance),
-                                           mox.IsA(objects.BlockDeviceMapping))
-
         def fake_terminate_connection(self, context, volume, connector):
             return {}
         self.stubs.Set(cinder.API, "terminate_connection",
@@ -11598,6 +11596,7 @@ class EvacuateHostTestCase(BaseTestCase):
         self.mox.ReplayAll()
 
         self._rebuild()
+        self.mox.VerifyAll()
 
         # cleanup
         bdms = db.block_device_mapping_get_all_by_instance(self.context,
