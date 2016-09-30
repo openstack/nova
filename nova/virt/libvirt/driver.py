@@ -1701,6 +1701,9 @@ class LibvirtDriver(driver.ComputeDriver):
         if not image_meta.properties.get('hw_qemu_guest_agent', False):
             raise exception.QemuGuestAgentNotEnabled()
 
+    def _requires_quiesce(self, image_meta):
+        return image_meta.properties.get('os_require_quiesce', False)
+
     def _set_quiesced(self, context, instance, image_meta, quiesced):
         self._can_quiesce(instance, image_meta)
         try:
@@ -1761,7 +1764,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self._set_quiesced(context, instance, image_meta, True)
             quiesced = True
         except exception.NovaException as err:
-            if image_meta.properties.get('os_require_quiesce', False):
+            if self._requires_quiesce(image_meta):
                 raise
             LOG.info(_LI('Skipping quiescing instance: %(reason)s.'),
                      {'reason': err}, instance=instance)
@@ -1908,14 +1911,29 @@ class LibvirtDriver(driver.ComputeDriver):
         snapshot_xml = snapshot.to_xml()
         LOG.debug("snap xml: %s", snapshot_xml, instance=instance)
 
+        image_meta = instance.image_meta
         try:
-            guest.snapshot(snapshot, no_metadata=True, disk_only=True,
-                           reuse_ext=True, quiesce=True)
-            return
-        except libvirt.libvirtError:
-            LOG.exception(_LE('Unable to create quiesced VM snapshot, '
-                              'attempting again with quiescing disabled.'),
-                          instance=instance)
+            # Check to see if we can quiesce the guest before taking the
+            # snapshot.
+            self._can_quiesce(instance, image_meta)
+            try:
+                guest.snapshot(snapshot, no_metadata=True, disk_only=True,
+                               reuse_ext=True, quiesce=True)
+                return
+            except libvirt.libvirtError:
+                # If the image says that quiesce is required then we fail.
+                if self._requires_quiesce(image_meta):
+                    raise
+                LOG.exception(_LE('Unable to create quiesced VM snapshot, '
+                                  'attempting again with quiescing disabled.'),
+                              instance=instance)
+        except (exception.InstanceQuiesceNotSupported,
+                exception.QemuGuestAgentNotEnabled) as err:
+            # If the image says that quiesce is required then we need to fail.
+            if self._requires_quiesce(image_meta):
+                raise
+            LOG.info(_LI('Skipping quiescing instance: %(reason)s.'),
+                     {'reason': err}, instance=instance)
 
         try:
             guest.snapshot(snapshot, no_metadata=True, disk_only=True,
