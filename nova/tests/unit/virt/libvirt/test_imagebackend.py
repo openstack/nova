@@ -277,6 +277,72 @@ class RawTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.mox.VerifyAll()
 
+    @mock.patch('os.path.exists')
+    def test_cache_generating_resize(self, mock_path_exists):
+        # Test for bug 1608934
+
+        # The Raw backend doesn't write to the image cache when creating a
+        # non-image backend. Test that we don't try to get the disk size of
+        # a non-existent backend.
+
+        base_dir = os.path.join(CONF.instances_path,
+                                CONF.image_cache_subdirectory_name)
+
+        # Lets assume the base image cache directory already exists
+        existing = set([base_dir])
+
+        def fake_exists(path):
+            # Return True only for files previously created during
+            # execution. This allows us to test that we're not calling
+            # get_disk_size() on something which hasn't been previously
+            # created.
+            return path in existing
+
+        def fake_get_disk_size(path):
+            # get_disk_size will explode if called on a path which doesn't
+            # exist. Specific exception not important for this test.
+            if path not in existing:
+                raise AssertionError
+
+            # Not important, won't actually be called by patched code.
+            return 2 * units.Gi
+
+        def fake_template(target=None, **kwargs):
+            # The template function we pass to cache. Calling this will
+            # cause target to be created.
+            existing.add(target)
+
+        mock_path_exists.side_effect = fake_exists
+
+        image = self.image_class(self.INSTANCE, self.NAME)
+
+        # We're not testing preallocation
+        image.preallocate = False
+
+        with test.nested(
+            mock.patch.object(image, 'check_image_exists'),
+            mock.patch.object(image, 'correct_format'),
+            mock.patch.object(image, 'get_disk_size'),
+            mock.patch.object(image, 'resize_image')
+        ) as (
+            mock_disk_exists, mock_correct_format, mock_get_disk_size,
+            mock_resize_image
+        ):
+            # Assume the disk doesn't already exist
+            mock_disk_exists.return_value = False
+
+            # This won't actually be executed since change I46b5658e,
+            # but this is how the unpatched code will fail. We include this
+            # here as a belt-and-braces sentinel.
+            mock_get_disk_size.side_effect = fake_get_disk_size
+
+            # Try to create a 2G image
+            image.cache(fake_template, 'fake_cache_name', 2 * units.Gi)
+
+            # The real assertion is that the above call to cache() didn't
+            # raise AssertionError which, if we get here, it clearly didn't.
+            self.assertFalse(image.resize_image.called)
+
     def test_create_image(self):
         fn = self.prepare_mocks()
         fn(target=self.TEMPLATE_PATH, max_size=None, image_id=None)
