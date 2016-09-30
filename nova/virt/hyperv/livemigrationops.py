@@ -71,8 +71,10 @@ class LiveMigrationOps(object):
                 self._pathutils.copy_vm_console_logs(instance_name, dest)
                 self._vmops.copy_vm_dvd_disks(instance_name, dest)
 
-            self._livemigrutils.live_migrate_vm(instance_name,
-                                                dest)
+            self._livemigrutils.live_migrate_vm(
+                instance_name,
+                dest,
+                migrate_disks=not shared_storage)
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.debug("Calling live migration recover_method "
