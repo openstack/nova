@@ -2289,18 +2289,17 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                          self.conn._create_nodename(test_mor),
                          "VC driver failed to create the proper node name")
 
-    @mock.patch.object(driver.LOG, 'warning')
-    def test_min_version(self, mock_warning):
-        self.conn._check_min_version()
-        self.assertFalse(mock_warning.called)
+    @mock.patch.object(oslo_vim_util, 'get_vc_version', return_value='5.0.0')
+    def test_invalid_min_version(self, mock_version):
+        self.assertRaises(exception.NovaException,
+                          self.conn._check_min_version)
 
     @mock.patch.object(driver.LOG, 'warning')
-    @mock.patch.object(oslo_vim_util, 'get_vc_version',
-                       return_value='5.0.0')
-    def test_invalid_min_version(self, mock_version, mock_warning):
+    @mock.patch.object(oslo_vim_util, 'get_vc_version', return_value='5.1.0')
+    def test_warning_deprecated_version(self, mock_version, mock_warning):
         self.conn._check_min_version()
-        # assert that the min version is in a warning message
-        expected_arg = {'version': constants.MIN_VC_VERSION}
+        # assert that the next min version is in the warning message
+        expected_arg = {'version': constants.NEXT_MIN_VC_VERSION}
         version_arg_found = False
         for call in mock_warning.call_args_list:
             if call[0][1] == expected_arg:

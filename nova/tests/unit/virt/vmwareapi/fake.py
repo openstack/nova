@@ -1242,7 +1242,7 @@ class FakeVim(object):
 
         about_info = DataObject()
         about_info.name = "VMware vCenter Server"
-        about_info.version = "5.1.0"
+        about_info.version = constants.MIN_VC_VERSION
         about_info.instanceUuid = _FAKE_VCENTER_UUID
 
         service_content.about = about_info
