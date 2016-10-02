@@ -16,7 +16,7 @@ WebOb>=1.2.3 # MIT
 greenlet>=0.3.2 # MIT
 PasteDeploy>=1.5.0 # MIT
 Paste # MIT
-PrettyTable<0.8,>=0.7 # BSD
+PrettyTable<0.8,>=0.7.1 # BSD
 sqlalchemy-migrate>=0.9.6 # Apache-2.0
 netaddr!=0.7.16,>=0.7.13 # BSD
 netifaces>=0.10.4 # MIT
