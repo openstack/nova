@@ -214,6 +214,11 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
             # 292 drops completely orphaned tables with no users, so
             # it can be done without affecting anything.
             292,
+
+            # 346 Drops column scheduled_at from instances table since it
+            # is no longer used. The field value is always NULL so
+            # it does not affect anything.
+            346,
         ]
         # Reviewers: DO NOT ALLOW THINGS TO BE ADDED HERE
 
@@ -769,7 +774,7 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         def removed_column(element):
             # Define a whitelist of columns that would be removed from the
             # DB at a later release.
-            column_whitelist = {'instances': ['scheduled_at', 'internal_id']}
+            column_whitelist = {'instances': ['internal_id']}
 
             if element[0] != 'remove_column':
                 return False
@@ -923,6 +928,10 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
     def _check_345(self, engine, data):
         # NOTE(danms): Just a sanity-check migration
         pass
+
+    def _check_346(self, engine, data):
+        self.assertColumnNotExists(engine, 'instances', 'scheduled_at')
+        self.assertColumnNotExists(engine, 'shadow_instances', 'scheduled_at')
 
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
