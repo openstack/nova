@@ -38,7 +38,8 @@ class RequestSpec(base.NovaObject):
     # Version 1.4: ImageMeta version 1.7
     # Version 1.5: Added get_by_instance_uuid(), create(), save()
     # Version 1.6: Added requested_destination
-    VERSION = '1.6'
+    # Version 1.7: Added destroy()
+    VERSION = '1.7'
 
     fields = {
         'id': fields.IntegerField(),
@@ -484,6 +485,18 @@ class RequestSpec(base.NovaObject):
         db_spec = self._save_in_db(self._context, self.instance_uuid, updates)
         self._from_db_object(self._context, self, db_spec)
         self.obj_reset_changes()
+
+    @staticmethod
+    @db.api_context_manager.writer
+    def _destroy_in_db(context, instance_uuid):
+        result = context.session.query(api_models.RequestSpec).filter_by(
+            instance_uuid=instance_uuid).delete()
+        if not result:
+            raise exception.RequestSpecNotFound(instance_uuid=instance_uuid)
+
+    @base.remotable
+    def destroy(self):
+        self._destroy_in_db(self._context, self.instance_uuid)
 
     def reset_forced_destinations(self):
         """Clears the forced destination fields from the RequestSpec object.
