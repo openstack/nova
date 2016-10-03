@@ -97,7 +97,7 @@ class FloatingIP(object):
                 True)
             LOG.debug("floating IP allocation for instance "
                       "|%s|", floating_address,
-                      instance_uuid=instance_uuid, context=context)
+                      instance_uuid=instance_uuid)
 
             # get the first fixed address belonging to the instance
             fixed_ips = nw_info.fixed_ips()

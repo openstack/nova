@@ -770,3 +770,24 @@ class HackingTestCase(test.NoDBTestCase):
         self.assertEqual(1, len(list(func('for i in xrange    (10)'))))
         self.assertEqual(0, len(list(func('for i in range(10)'))))
         self.assertEqual(0, len(list(func('for i in six.moves.range(10)'))))
+
+    def test_log_context(self):
+        code = """
+                  LOG.info(_LI("Rebooting instance"),
+                            context=context, instance=instance)
+               """
+        errors = [(1, 0, 'N353')]
+        self._assert_has_errors(code, checks.check_context_log,
+                                expected_errors=errors)
+        code = """
+                  LOG.info(_LI("Rebooting instance"),
+                            context=admin_context, instance=instance)
+               """
+        errors = [(1, 0, 'N353')]
+        self._assert_has_errors(code, checks.check_context_log,
+                                expected_errors=errors)
+        code = """
+                  LOG.info(_LI("Rebooting instance"),
+                            instance=instance)
+               """
+        self._assert_has_no_errors(code, checks.check_context_log)

@@ -103,6 +103,8 @@ spawn_re = re.compile(
 contextlib_nested = re.compile(r"^with (contextlib\.)?nested\(")
 doubled_words_re = re.compile(
     r"\b(then?|[iao]n|i[fst]|but|f?or|at|and|[dt]o)\s+\1\b")
+log_remove_context = re.compile(
+    r"(.)*LOG\.(.*)\(.*(context=[_a-zA-Z0-9].*)+.*\)")
 
 
 class BaseASTChecker(ast.NodeVisitor):
@@ -769,6 +771,29 @@ def no_log_warn(logical_line):
         yield (0, msg)
 
 
+def check_context_log(logical_line, physical_line, filename):
+    """check whether context is being passed to the logs
+
+    Not correct: LOG.info(_LI("Rebooting instance"), context=context)
+    Correct:  LOG.info(_LI("Rebooting instance"))
+    https://bugs.launchpad.net/nova/+bug/1500896
+
+    N353
+    """
+    if "nova/tests" in filename:
+        return
+
+    if pep8.noqa(physical_line):
+        return
+
+    if log_remove_context.match(logical_line):
+        yield(0,
+              "N353: Nova is using oslo.context's RequestContext "
+              "which means the context object is in scope when "
+              "doing logging using oslo.log, so no need to pass it as"
+              "kwarg.")
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -808,3 +833,4 @@ def factory(register):
     register(no_os_popen)
     register(no_log_warn)
     register(CheckForUncalledTestClosure)
+    register(check_context_log)

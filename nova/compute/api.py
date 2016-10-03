@@ -1827,14 +1827,14 @@ class API(base.Base):
                              'id: %(id)s, status: %(status)s'),
                          {'id': migration.id,
                           'status': migration.status},
-                         context=context, instance=instance)
+                         instance=instance)
                 break
             except exception.MigrationNotFoundByStatus:
                 pass
 
         if not migration:
             LOG.info(_LI('Instance may have been confirmed during delete'),
-                     context=context, instance=instance)
+                     instance=instance)
             return
 
         src_host = migration.source_compute
@@ -1851,8 +1851,7 @@ class API(base.Base):
             deltas = compute_utils.downsize_quota_delta(context, instance)
         except KeyError:
             LOG.info(_LI('Migration %s may have been confirmed during '
-                         'delete'),
-                     migration.id, context=context, instance=instance)
+                         'delete'), migration.id, instance=instance)
             return
         quotas = compute_utils.reserve_quota_delta(context, deltas, instance)
 
@@ -2500,7 +2499,7 @@ class API(base.Base):
 
         if compute_utils.is_volume_backed_instance(context, instance):
             LOG.info(_LI("It's not supported to backup volume backed "
-                         "instance."), context=context, instance=instance)
+                         "instance."), instance=instance)
             raise exception.InvalidRequest()
         else:
             image_meta = self._create_image(context, instance,
@@ -2646,7 +2645,7 @@ class API(base.Base):
                 else:
                     LOG.info(_LI('Skipping quiescing instance: '
                                  '%(reason)s.'), {'reason': err},
-                             context=context, instance=instance)
+                             instance=instance)
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
@@ -3312,7 +3311,7 @@ class API(base.Base):
             return
 
         context = context.elevated()
-        LOG.debug('Locking', context=context, instance=instance)
+        LOG.debug('Locking', instance=instance)
         instance.locked = True
         instance.locked_by = 'owner' if is_owner else 'admin'
         instance.save()
@@ -3328,7 +3327,7 @@ class API(base.Base):
     def unlock(self, context, instance):
         """Unlock the given instance."""
         context = context.elevated()
-        LOG.debug('Unlocking', context=context, instance=instance)
+        LOG.debug('Unlocking', instance=instance)
         instance.locked = False
         instance.locked_by = None
         instance.save()
@@ -4443,7 +4442,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
             msg = _("Quota exceeded, too many security groups.")
             self.raise_over_quota(msg)
 
-        LOG.info(_LI("Create Security Group %s"), name, context=context)
+        LOG.info(_LI("Create Security Group %s"), name)
 
         try:
             self.ensure_default(context)
@@ -4551,8 +4550,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
             LOG.exception(_LE("Failed to update usages deallocating "
                               "security group"))
 
-        LOG.info(_LI("Delete security group %s"), security_group['name'],
-                  context=context)
+        LOG.info(_LI("Delete security group %s"), security_group['name'])
         self.db.security_group_destroy(context, security_group['id'])
 
         # Commit the reservations
