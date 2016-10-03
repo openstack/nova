@@ -286,7 +286,25 @@ class RequestContext(context.RequestContext):
         return "<Context %s>" % self.to_dict()
 
 
+def get_context():
+    """A helper method to get a blank context.
+
+    Note that overwrite is False here so this context will not update the
+    greenthread-local stored context that is used when logging.
+    """
+    return RequestContext(user_id=None,
+                          project_id=None,
+                          is_admin=False,
+                          overwrite=False)
+
+
 def get_admin_context(read_deleted="no"):
+    # NOTE(alaski): This method should only be used when an admin context is
+    # necessary for the entirety of the context lifetime. If that's not the
+    # case please use get_context(), or create the RequestContext manually, and
+    # use context.elevated() where necessary. Some periodic tasks may use
+    # get_admin_context so that their database calls are not filtered on
+    # project_id.
     return RequestContext(user_id=None,
                           project_id=None,
                           is_admin=True,
