@@ -88,7 +88,13 @@ def _expected_cols(expected_attrs):
     if complex_cols:
         simple_cols.append('extra')
     simple_cols = [x for x in simple_cols if x not in _INSTANCE_EXTRA_FIELDS]
-    return simple_cols + complex_cols
+    expected_cols = simple_cols + complex_cols
+    # NOTE(pumaranikar): expected_cols list can contain duplicates since
+    # caller appends column attributes to expected_attr without checking if
+    # it is already present in the list or not. Hence, we remove duplicates
+    # here, if any. The resultant list is sorted based on list index to
+    # maintain the insertion order.
+    return sorted(list(set(expected_cols)), key=expected_cols.index)
 
 
 _NO_DATA_SENTINEL = object()
