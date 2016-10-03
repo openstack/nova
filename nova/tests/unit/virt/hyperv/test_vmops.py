@@ -731,6 +731,13 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         self._check_requires_secure_boot(
             image_prop_os_type=None)
 
+    def test_requires_secure_boot_flavor_no_os_type_no_exc(self):
+        self._check_requires_secure_boot(
+            image_prop_os_type=None,
+            image_prop_secure_boot=fields.SecureBoot.DISABLED,
+            flavor_secure_boot=fields.SecureBoot.DISABLED,
+            expected_exception=False)
+
     def test_requires_secure_boot_flavor_disabled(self):
         self._check_requires_secure_boot(
             flavor_secure_boot=fields.SecureBoot.DISABLED)
