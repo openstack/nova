@@ -370,7 +370,7 @@ class MigrateServerTestsV234(MigrateServerTestsV230):
     async = True
 
     def setUp(self):
-        super(MigrateServerTestsV230, self).setUp()
+        super(MigrateServerTestsV234, self).setUp()
         self.req.api_version_request = api_version_request.APIVersionRequest(
             '2.34')
 
