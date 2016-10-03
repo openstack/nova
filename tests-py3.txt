@@ -64,8 +64,6 @@ nova.tests.unit.virt.libvirt.test_imagebackend.RbdTestCase
 nova.tests.unit.virt.libvirt.test_imagecache.ImageCacheManagerTestCase
 nova.tests.unit.virt.libvirt.test_imagecache.VerifyChecksumTestCase
 nova.tests.unit.virt.libvirt.test_vif.LibvirtVifTestCase
-nova.tests.unit.virt.test_hardware.CPUPinningCellTestCase
-nova.tests.unit.virt.test_hardware.CPUPinningTestCase
 nova.tests.unit.virt.test_virt_drivers.FakeConnectionTestCase
 nova.tests.unit.virt.test_virt_drivers.LibvirtConnTestCase
 nova.tests.unit.virt.vmwareapi.test_images.VMwareImagesTestCase
