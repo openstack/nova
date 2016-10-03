@@ -14560,19 +14560,51 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         string_ver = driver._version_to_string((4, 33, 173))
         self.assertEqual("4.33.173", string_ver)
 
-    def test_parallels_min_version_fail(self):
+    def test_virtuozzo_min_version_fail(self):
         self.flags(virt_type='parallels', group='libvirt')
         driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        with mock.patch.object(driver._conn, 'getLibVersion',
-                               return_value=1002011):
+        with test.nested(
+                    mock.patch.object(
+                        driver._conn, 'getVersion'),
+                    mock.patch.object(
+                        driver._conn, 'getLibVersion'))\
+            as (mock_getver, mock_getlibver):
+            mock_getver.return_value = \
+                versionutils.convert_version_to_int(
+                    libvirt_driver.MIN_VIRTUOZZO_VERSION) - 1
+            mock_getlibver.return_value = \
+                versionutils.convert_version_to_int(
+                    libvirt_driver.MIN_LIBVIRT_VIRTUOZZO_VERSION)
+
             self.assertRaises(exception.NovaException,
                               driver.init_host, 'wibble')
 
-    def test_parallels_min_version_ok(self):
+            mock_getver.return_value = \
+                versionutils.convert_version_to_int(
+                    libvirt_driver.MIN_VIRTUOZZO_VERSION)
+            mock_getlibver.return_value = \
+                versionutils.convert_version_to_int(
+                    libvirt_driver.MIN_LIBVIRT_VIRTUOZZO_VERSION) - 1
+
+            self.assertRaises(exception.NovaException,
+                              driver.init_host, 'wibble')
+
+    def test_virtuozzo_min_version_ok(self):
         self.flags(virt_type='parallels', group='libvirt')
         driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        with mock.patch.object(driver._conn, 'getLibVersion',
-                               return_value=1002012):
+        with test.nested(
+                    mock.patch.object(
+                        driver._conn, 'getVersion'),
+                    mock.patch.object(
+                        driver._conn, 'getLibVersion'))\
+            as (mock_getver, mock_getlibver):
+            mock_getver.return_value = \
+                versionutils.convert_version_to_int(
+                    libvirt_driver.MIN_VIRTUOZZO_VERSION)
+            mock_getlibver.return_value = \
+                versionutils.convert_version_to_int(
+                    libvirt_driver.MIN_LIBVIRT_VIRTUOZZO_VERSION)
+
             driver.init_host('wibble')
 
     def test_get_guest_config_parallels_vm(self):

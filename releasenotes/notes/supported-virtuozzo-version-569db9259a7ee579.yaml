@@ -1,0 +1,5 @@
+---
+upgrade:
+  - As of Ocata, the minimum version of Virtuozzo that nova compute will
+    interoperate with will be 7.0.0. Deployments using older versions of
+    Virtuozzo should upgrade.
