@@ -2208,6 +2208,7 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           {'project_id': 'fake_proj1'})
 
 
+@mock.patch('time.sleep', new=lambda x: None)
 class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     """Tests for db.api.instance_* methods."""
@@ -4607,6 +4608,7 @@ class InstanceTypeAccessTestCase(BaseInstanceTypeTestCase):
         self.assertEqual(0, len(db.flavor_access_get_by_flavor_id(*p)))
 
 
+@mock.patch('time.sleep', new=lambda x: None)
 class FixedIPTestCase(BaseInstanceTypeTestCase):
     def _timeout_test(self, ctxt, timeout, multi_host):
         instance = db.instance_create(ctxt, dict(host='foo'))
@@ -5269,6 +5271,7 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
         self._assertEqualObjects(param_2, fixed_ip_after_update, ignored_keys)
 
 
+@mock.patch('time.sleep', new=lambda x: None)
 class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def setUp(self):
@@ -6688,6 +6691,7 @@ class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assertEqualObjects(updated, updated_vif, ignored_keys)
 
 
+@mock.patch('time.sleep', new=lambda x: None)
 class NetworkTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     """Tests for db.api.network_* methods."""
@@ -9692,6 +9696,7 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(0, done)
 
 
+@mock.patch('time.sleep', new=lambda x: None)
 class RetryOnDeadlockTestCase(test.TestCase):
     def test_without_deadlock(self):
         @oslo_db_api.wrap_db_retry(max_retries=5,
@@ -9994,6 +9999,7 @@ class TestDBInstanceTags(test.TestCase):
                           self.context, 'fake_uuid', 'tag')
 
 
+@mock.patch('time.sleep', new=lambda x: None)
 class TestInstanceInfoCache(test.TestCase):
     def setUp(self):
         super(TestInstanceInfoCache, self).setUp()
