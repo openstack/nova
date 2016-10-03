@@ -96,7 +96,7 @@ class HyperVDriver(driver.ComputeDriver):
     capabilities = {
         "has_imagecache": True,
         "supports_recreate": False,
-        "supports_migrate_to_same_host": True,
+        "supports_migrate_to_same_host": False,
         "supports_attach_interface": True,
         "supports_device_tagging": True,
     }

@@ -1,0 +1,5 @@
+---
+fixes:
+  - The Hyper-V driver no longer accepts cold migrating
+    instances to the same host. Note that this does not
+    apply to resizes, in which case this is still allowed.
