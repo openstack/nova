@@ -134,9 +134,8 @@ After group the policy rules for different API, we can separate them into
 different files. Then deployer will more clear for which rule he can set for
 specific API. The rules can be grouped as below:
 
-  * policy.json: It only contains the generic rule, like:
+  * policy.json: It only contains the generic rule, like: ::
 
-::
     "context_is_admin":  "role:admin",
     "admin_or_owner":  "is_admin:True or project_id:%(project_id)s",
     "default": "rule:admin_or_owner",
