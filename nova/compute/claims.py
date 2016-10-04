@@ -75,13 +75,14 @@ class Claim(NopClaim):
     correct decisions with respect to host selection.
     """
 
-    def __init__(self, context, instance, tracker, resources, overhead=None,
-                 limits=None):
+    def __init__(self, context, instance, tracker, resources, pci_requests,
+                 overhead=None, limits=None):
         super(Claim, self).__init__()
         # Stash a copy of the instance at the current point of time
         self.instance = instance.obj_clone()
         self._numa_topology_loaded = False
         self.tracker = tracker
+        self._pci_requests = pci_requests
 
         if not overhead:
             overhead = {'memory_mb': 0}
@@ -186,9 +187,7 @@ class Claim(NopClaim):
         return self._test(type_, unit, total, used, requested, limit)
 
     def _test_pci(self):
-        pci_requests = objects.InstancePCIRequests.get_by_instance_uuid(
-            self.context, self.instance.uuid)
-
+        pci_requests = self._pci_requests
         if pci_requests.requests:
             stats = self.tracker.pci_tracker.stats
             if not stats.support_requests(pci_requests.requests):
@@ -265,15 +264,15 @@ class MoveClaim(Claim):
     Move can be either a migrate/resize, live-migrate or an evacuate operation.
     """
     def __init__(self, context, instance, instance_type, image_meta, tracker,
-                 resources, overhead=None, limits=None):
+                 resources, pci_requests, overhead=None, limits=None):
         self.context = context
         self.instance_type = instance_type
         if isinstance(image_meta, dict):
             image_meta = objects.ImageMeta.from_dict(image_meta)
         self.image_meta = image_meta
         super(MoveClaim, self).__init__(context, instance, tracker,
-                                         resources, overhead=overhead,
-                                         limits=limits)
+                                        resources, pci_requests,
+                                        overhead=overhead, limits=limits)
         self.migration = None
 
     @property
@@ -293,16 +292,6 @@ class MoveClaim(Claim):
     def numa_topology(self):
         return hardware.numa_get_constraints(self.instance_type,
                                              self.image_meta)
-
-    def _test_pci(self):
-        pci_requests = objects.InstancePCIRequests.\
-                       get_by_instance_uuid_and_newness(
-                           self.context, self.instance.uuid, True)
-        if pci_requests.requests:
-            claim = self.tracker.pci_tracker.stats.support_requests(
-                pci_requests.requests)
-            if not claim:
-                return _('Claim pci failed.')
 
     def _test_ext_resources(self, limits):
         return self.tracker.ext_resources_handler.test_resources(

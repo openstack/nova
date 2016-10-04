@@ -195,8 +195,10 @@ class ResourceTracker(object):
                   "MB", {'flavor': instance_ref.memory_mb,
                           'overhead': overhead['memory_mb']})
 
+        pci_requests = objects.InstancePCIRequests.get_by_instance_uuid(
+            context, instance_ref.uuid)
         claim = claims.Claim(context, instance_ref, self, self.compute_node,
-                             overhead=overhead, limits=limits)
+                             pci_requests, overhead=overhead, limits=limits)
 
         if self.pci_tracker:
             # NOTE(jaypipes): ComputeNode.pci_device_pools is set below
@@ -274,9 +276,13 @@ class ResourceTracker(object):
                   "MB", {'flavor': new_instance_type.memory_mb,
                           'overhead': overhead['memory_mb']})
 
+        pci_requests = objects.InstancePCIRequests.\
+                       get_by_instance_uuid_and_newness(
+                           context, instance.uuid, True)
         claim = claims.MoveClaim(context, instance, new_instance_type,
                                  image_meta, self, self.compute_node,
-                                 overhead=overhead, limits=limits)
+                                 pci_requests, overhead=overhead,
+                                 limits=limits)
         claim.migration = migration
         instance.migration_context = claim.create_migration_context()
         instance.save()
