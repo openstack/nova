@@ -268,6 +268,8 @@ class MoveClaim(Claim):
                  resources, overhead=None, limits=None):
         self.context = context
         self.instance_type = instance_type
+        if isinstance(image_meta, dict):
+            image_meta = objects.ImageMeta.from_dict(image_meta)
         self.image_meta = image_meta
         super(MoveClaim, self).__init__(context, instance, tracker,
                                          resources, overhead=overhead,
@@ -289,9 +291,8 @@ class MoveClaim(Claim):
 
     @property
     def numa_topology(self):
-        image_meta = objects.ImageMeta.from_dict(self.image_meta)
-        return hardware.numa_get_constraints(
-            self.instance_type, image_meta)
+        return hardware.numa_get_constraints(self.instance_type,
+                                             self.image_meta)
 
     def _test_pci(self):
         pci_requests = objects.InstancePCIRequests.\
