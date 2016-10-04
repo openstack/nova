@@ -94,8 +94,8 @@ class MigrateServerController(wsgi.Controller):
             disk_over_commit = strutils.bool_from_string(disk_over_commit,
                                                          strict=True)
 
+        instance = common.get_instance(self.compute_api, context, id)
         try:
-            instance = common.get_instance(self.compute_api, context, id)
             self.compute_api.live_migrate(context, instance, block_migration,
                                           disk_over_commit, host, force, async)
         except exception.InstanceUnknownCell as e:

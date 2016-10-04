@@ -44,8 +44,8 @@ class AdminActionsController(wsgi.Controller):
         """Permit admins to reset networking on a server."""
         context = req.environ['nova.context']
         context.can(aa_policies.POLICY_ROOT % 'reset_network')
+        instance = common.get_instance(self.compute_api, context, id)
         try:
-            instance = common.get_instance(self.compute_api, context, id)
             self.compute_api.reset_network(context, instance)
         except exception.InstanceUnknownCell as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
@@ -59,8 +59,8 @@ class AdminActionsController(wsgi.Controller):
         """Permit admins to inject network info into a server."""
         context = req.environ['nova.context']
         context.can(aa_policies.POLICY_ROOT % 'inject_network_info')
+        instance = common.get_instance(self.compute_api, context, id)
         try:
-            instance = common.get_instance(self.compute_api, context, id)
             self.compute_api.inject_network_info(context, instance)
         except exception.InstanceUnknownCell as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
