@@ -314,7 +314,8 @@ def fake_disk_info_byname(instance, type='qcow2'):
     disk_info = OrderedDict()
 
     # root disk
-    if instance.image_ref is not None:
+    if (instance.image_ref is not None and
+            instance.image_ref != uuids.fake_volume_backed_image_ref):
         cache_name = imagecache.get_cache_fname(instance.image_ref)
         disk_info['disk'] = {
             'type': type,
@@ -13581,7 +13582,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual('/dev/nbd0', inst_sys_meta['rootfs_device_name'])
         self.assertFalse(mock_instance.called)
         mock_get_inst_path.assert_has_calls([mock.call(mock_instance)])
-        mock_is_booted_from_volume.assert_called_once_with(mock_instance, {})
         mock_ensure_tree.assert_has_calls([mock.call('/tmp/rootfs')])
         drvr.image_backend.image.assert_has_calls([mock.call(mock_instance,
                                                              'disk')])
@@ -15262,22 +15262,52 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
     def test_migrate_disk_and_power_off_boot_from_volume(self,
                                                          disconnect_volume):
-        info = {'block_device_mapping': [{'boot_index': None,
-                                          'mount_device': '/dev/vdd',
-                                          'connection_info': None},
-                                         {'boot_index': 0,
-                                          'mount_device': '/dev/vda',
-                                          'connection_info': None}]}
+        info = {
+            'block_device_mapping': [
+                {'boot_index': None,
+                 'mount_device': '/dev/vdd',
+                 'connection_info': mock.sentinel.conn_info_vdd},
+                {'boot_index': 0,
+                 'mount_device': '/dev/vda',
+                 'connection_info': mock.sentinel.conn_info_vda}]}
         flavor = {'root_gb': 1, 'ephemeral_gb': 0}
         flavor_obj = objects.Flavor(**flavor)
         # Note(Mike_D): The size of instance's ephemeral_gb is 0 gb.
         self._test_migrate_disk_and_power_off(
             flavor_obj, block_device_info=info,
             params_for_instance={'image_ref': None,
-                                 'flavor': {'root_gb': 1,
+                                 'root_gb': 10,
+                                 'ephemeral_gb': 0,
+                                 'flavor': {'root_gb': 10,
                                             'ephemeral_gb': 0}})
         disconnect_volume.assert_called_with(
-            info['block_device_mapping'][1]['connection_info'], 'vda')
+            mock.sentinel.conn_info_vda, 'vda')
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
+    def test_migrate_disk_and_power_off_boot_from_volume_backed_snapshot(
+            self, disconnect_volume):
+        # Such instance has not empty image_ref, but must be considered as
+        # booted from volume.
+        info = {
+            'block_device_mapping': [
+                {'boot_index': None,
+                 'mount_device': '/dev/vdd',
+                 'connection_info': mock.sentinel.conn_info_vdd},
+                {'boot_index': 0,
+                 'mount_device': '/dev/vda',
+                 'connection_info': mock.sentinel.conn_info_vda}]}
+        flavor = {'root_gb': 1, 'ephemeral_gb': 0}
+        flavor_obj = objects.Flavor(**flavor)
+        self._test_migrate_disk_and_power_off(
+            flavor_obj, block_device_info=info,
+            params_for_instance={
+                'image_ref': uuids.fake_volume_backed_image_ref,
+                'root_gb': 10,
+                'ephemeral_gb': 0,
+                'flavor': {'root_gb': 10,
+                           'ephemeral_gb': 0}})
+        disconnect_volume.assert_called_with(
+            mock.sentinel.conn_info_vda, 'vda')
 
     @mock.patch('nova.utils.execute')
     @mock.patch('nova.virt.libvirt.utils.copy_image')
@@ -15442,6 +15472,26 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         flavor = {'root_gb': 5, 'ephemeral_gb': 10}
         flavor_obj = objects.Flavor(**flavor)
         mock_get_disk_info.return_value = fake_disk_info_json(instance)
+
+        self.assertRaises(
+            exception.InstanceFaultRollback,
+            self.drvr.migrate_disk_and_power_off,
+            'ctx', instance, '10.0.0.1', flavor_obj, None)
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
+                '.get_instance_disk_info')
+    def test_migrate_disk_and_power_off_resize_error_rbd(self,
+                                                         mock_get_disk_info):
+        # Check error on resize root disk down for rbd.
+        # The difference is that get_instance_disk_info always returns
+        # an emply list for rbd.
+        # Ephemeral size is not changed in this case (otherwise other check
+        # will raise the same error).
+        self.flags(images_type='rbd', group='libvirt')
+        instance = self._create_instance()
+        flavor = {'root_gb': 5, 'ephemeral_gb': 20}
+        flavor_obj = objects.Flavor(**flavor)
+        mock_get_disk_info.return_value = []
 
         self.assertRaises(
             exception.InstanceFaultRollback,
@@ -16132,14 +16182,22 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
     def test_is_booted_from_volume(self):
         func = libvirt_driver.LibvirtDriver._is_booted_from_volume
-        instance, disk_mapping = {}, {}
+        bdm = []
+        bdi = {'block_device_mapping': bdm}
 
-        self.assertTrue(func(instance, disk_mapping))
-        disk_mapping['disk'] = 'map'
-        self.assertTrue(func(instance, disk_mapping))
+        self.assertFalse(func(bdi))
 
-        instance['image_ref'] = 'uuid'
-        self.assertFalse(func(instance, disk_mapping))
+        bdm.append({'boot_index': -1})
+        self.assertFalse(func(bdi))
+
+        bdm.append({'boot_index': None})
+        self.assertFalse(func(bdi))
+
+        bdm.append({'boot_index': 1})
+        self.assertFalse(func(bdi))
+
+        bdm.append({'boot_index': 0})
+        self.assertTrue(func(bdi))
 
     @mock.patch(
         'nova.virt.libvirt.driver.LibvirtDriver._try_fetch_image_cache')
