@@ -6635,6 +6635,10 @@ class ComputeManager(manager.Manager):
             LOG.debug('Processing event %(event)s',
                       {'event': event.key}, instance=instance)
             _event.send(event)
+        else:
+            LOG.warning(_LW('Received unexpected event %(event)s for '
+                            'instance'),
+                        {'event': event.key}, instance=instance)
 
     def _process_instance_vif_deleted_event(self, context, instance,
                                             deleted_vif_id):
