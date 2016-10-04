@@ -2929,14 +2929,15 @@ class LibvirtDriver(driver.ComputeDriver):
         return 'rbd' if CONF.libvirt.images_type == 'rbd' else 'raw'
 
     @staticmethod
-    def _is_booted_from_volume(instance, disk_mapping):
+    def _is_booted_from_volume(block_device_info):
         """Determines whether the VM is booting from volume
 
-        Determines whether the disk mapping indicates that the VM
+        Determines whether the block device info indicates that the VM
         is booting from a volume.
         """
-        return ((not bool(instance.get('image_ref')))
-                or 'disk' not in disk_mapping)
+        block_device_mapping = driver.block_device_info_get_mapping(
+            block_device_info)
+        return bool(block_device.get_root_bdm(block_device_mapping))
 
     def _inject_data(self, injection_image, instance, network_info,
                      admin_pass, files):
@@ -3001,8 +3002,7 @@ class LibvirtDriver(driver.ComputeDriver):
                       admin_pass=None, inject_files=True,
                       fallback_from_host=None,
                       ignore_bdi_for_swap=False):
-        booted_from_volume = self._is_booted_from_volume(
-            instance, disk_mapping)
+        booted_from_volume = self._is_booted_from_volume(block_device_info)
 
         def image(fname, image_type=CONF.libvirt.images_type):
             return self.image_backend.by_name(instance,
@@ -4755,13 +4755,10 @@ class LibvirtDriver(driver.ComputeDriver):
     def _create_domain_setup_lxc(self, instance, image_meta,
                                  block_device_info, disk_info):
         inst_path = libvirt_utils.get_instance_path(instance)
-        disk_info = disk_info or {}
-        disk_mapping = disk_info.get('mapping', {})
-
-        if self._is_booted_from_volume(instance, disk_mapping):
-            block_device_mapping = driver.block_device_info_get_mapping(
-                                                            block_device_info)
-            root_disk = block_device.get_root_bdm(block_device_mapping)
+        block_device_mapping = driver.block_device_info_get_mapping(
+            block_device_info)
+        root_disk = block_device.get_root_bdm(block_device_mapping)
+        if root_disk:
             disk_info = blockinfo.get_info_from_bdm(
                 instance, CONF.libvirt.virt_type, image_meta, root_disk)
             self._connect_volume(root_disk['connection_info'], disk_info)
@@ -7094,16 +7091,12 @@ class LibvirtDriver(driver.ComputeDriver):
         # Checks if the migration needs a disk resize down.
         root_down = flavor.root_gb < instance.flavor.root_gb
         ephemeral_down = flavor.ephemeral_gb < eph_size
-        disk_info_text = self.get_instance_disk_info(
-            instance, block_device_info=block_device_info)
-        booted_from_volume = self._is_booted_from_volume(instance,
-                                                         disk_info_text)
+        booted_from_volume = self._is_booted_from_volume(block_device_info)
+
         if (root_down and not booted_from_volume) or ephemeral_down:
             reason = _("Unable to resize disk down.")
             raise exception.InstanceFaultRollback(
                 exception.ResizeError(reason=reason))
-
-        disk_info = jsonutils.loads(disk_info_text)
 
         # NOTE(dgenin): Migration is not implemented for LVM backed instances.
         if CONF.libvirt.images_type == 'lvm' and not booted_from_volume:
@@ -7137,6 +7130,10 @@ class LibvirtDriver(driver.ComputeDriver):
             connection_info = vol['connection_info']
             disk_dev = vol['mount_device'].rpartition("/")[2]
             self._disconnect_volume(connection_info, disk_dev)
+
+        disk_info_text = self.get_instance_disk_info(
+            instance, block_device_info=block_device_info)
+        disk_info = jsonutils.loads(disk_info_text)
 
         try:
             utils.execute('mv', inst_base, inst_base_resize)
