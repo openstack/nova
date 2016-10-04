@@ -141,11 +141,18 @@ Related options:
 xenapi_session_opts = [
     cfg.IntOpt('login_timeout',
                default=10,
+               min=0,
                help='Timeout in seconds for XenAPI login.'),
     cfg.IntOpt('connection_concurrent',
                default=5,
-               help='Maximum number of concurrent XenAPI connections. '
-                    'Used only if compute_driver=xenapi.XenAPIDriver'),
+               min=1,
+               help="""
+Maximum number of concurrent XenAPI connections.
+
+In nova, multiple XenAPI requests can happen at a time.
+Configuring this option will parallelize access to the XenAPI
+session, which allows you to make concurrent XenAPI connections.
+"""),
 ]
 
 
