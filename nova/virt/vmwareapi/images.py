@@ -23,17 +23,17 @@ import tarfile
 from lxml import etree
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_service import loopingcall
 from oslo_utils import strutils
 from oslo_utils import units
 from oslo_vmware import rw_handles
 import six
 
 from nova import exception
-from nova.i18n import _, _LE, _LI
+from nova.i18n import _, _LI
 from nova import image
 from nova.objects import fields
 from nova.virt.vmwareapi import constants
-from nova.virt.vmwareapi import io_util
 from nova.virt.vmwareapi import vm_util
 
 # NOTE(mdbooth): We use use_linked_clone below, but don't have to import it
@@ -47,6 +47,8 @@ LOG = logging.getLogger(__name__)
 IMAGE_API = image.API()
 
 QUEUE_BUFFER_SIZE = 10
+NFC_LEASE_UPDATE_PERIOD = 60  # update NFC lease every 60sec.
+CHUNK_SIZE = 64 * units.Ki  # default chunk size for image transfer
 
 
 class VMwareImage(object):
@@ -172,60 +174,22 @@ class VMwareImage(object):
         return cls(**props)
 
 
-def start_transfer(context, read_file_handle, data_size,
-        write_file_handle=None, image_id=None, image_meta=None):
-    """Start the data transfer from the reader to the writer.
-    Reader writes to the pipe and the writer reads from the pipe. This means
-    that the total transfer time boils down to the slower of the read/write
-    and not the addition of the two times.
-    """
-
-    if not image_meta:
-        image_meta = {}
-
-    # The pipe that acts as an intermediate store of data for reader to write
-    # to and writer to grab from.
-    thread_safe_pipe = io_util.ThreadSafePipe(QUEUE_BUFFER_SIZE, data_size)
-    # The read thread. In case of glance it is the instance of the
-    # GlanceFileRead class. The glance client read returns an iterator
-    # and this class wraps that iterator to provide datachunks in calls
-    # to read.
-    read_thread = io_util.IOThread(read_file_handle, thread_safe_pipe)
-
-    # In case of Glance - VMware transfer, we just need a handle to the
-    # HTTP Connection that is to send transfer data to the VMware datastore.
-    if write_file_handle:
-        write_thread = io_util.IOThread(thread_safe_pipe, write_file_handle)
-    # In case of VMware - Glance transfer, we relinquish VMware HTTP file read
-    # handle to Glance Client instance, but to be sure of the transfer we need
-    # to be sure of the status of the image on glance changing to active.
-    # The GlanceWriteThread handles the same for us.
-    elif image_id:
-        write_thread = io_util.GlanceWriteThread(context, thread_safe_pipe,
-                image_id, image_meta)
-    # Start the read and write threads.
-    read_event = read_thread.start()
-    write_event = write_thread.start()
+def image_transfer(read_handle, write_handle):
+    # write_handle could be an NFC lease, so we need to periodically
+    # update its progress
+    update_cb = getattr(write_handle, 'update_progress', lambda: None)
+    updater = loopingcall.FixedIntervalLoopingCall(update_cb)
     try:
-        # Wait on the read and write events to signal their end
-        read_event.wait()
-        write_event.wait()
-    except Exception as exc:
-        # In case of any of the reads or writes raising an exception,
-        # stop the threads so that we un-necessarily don't keep the other one
-        # waiting.
-        read_thread.stop()
-        write_thread.stop()
-
-        # Log and raise the exception.
-        LOG.exception(_LE('Transfer data failed'))
-        raise exception.NovaException(exc)
+        updater.start(interval=NFC_LEASE_UPDATE_PERIOD)
+        while True:
+            data = read_handle.read(CHUNK_SIZE)
+            if not data:
+                break
+            write_handle.write(data)
     finally:
-        # No matter what, try closing the read and write handles, if it so
-        # applies.
-        read_file_handle.close()
-        if write_file_handle:
-            write_file_handle.close()
+        updater.stop()
+        read_handle.close()
+        write_handle.close()
 
 
 def upload_iso_to_datastore(iso_path, instance, **kwargs):
@@ -270,8 +234,7 @@ def fetch_image(context, instance, host, port, dc_name, ds_name, file_path,
     read_file_handle = rw_handles.ImageReadHandle(read_iter)
     write_file_handle = rw_handles.FileWriteHandle(
         host, port, dc_name, ds_name, cookies, file_path, file_size)
-    start_transfer(context, read_file_handle, file_size,
-                   write_file_handle=write_file_handle)
+    image_transfer(read_file_handle, write_file_handle)
     LOG.debug("Downloaded image file data %(image_ref)s to "
               "%(upload_name)s on the data store "
               "%(data_store_name)s",
@@ -371,10 +334,7 @@ def fetch_image_stream_optimized(context, instance, session, vm_name,
                                               vm_folder_ref,
                                               vm_import_spec,
                                               file_size)
-    start_transfer(context,
-                   read_handle,
-                   file_size,
-                   write_file_handle=write_handle)
+    image_transfer(read_handle, write_handle)
 
     imported_vm_ref = write_handle.get_imported_vm()
 
@@ -439,11 +399,7 @@ def fetch_image_ova(context, instance, session, vm_name, ds_name,
                     vm_folder_ref,
                     vm_import_spec,
                     file_size)
-                start_transfer(context,
-                               extracted,
-                               file_size,
-                               write_file_handle=write_handle)
-                extracted.close()
+                image_transfer(extracted, write_handle)
                 LOG.info(_LI("Downloaded OVA image file %(image_ref)s"),
                     {'image_ref': instance.image_ref}, instance=instance)
                 imported_vm_ref = write_handle.get_imported_vm()
@@ -487,13 +443,13 @@ def upload_image_stream_optimized(context, image_id, instance, session,
                                      'vmware_disktype': 'streamOptimized',
                                      'owner_id': instance.project_id}}
 
-    # Passing 0 as the file size since data size to be transferred cannot be
-    # predetermined.
-    start_transfer(context,
-                   read_handle,
-                   0,
-                   image_id=image_id,
-                   image_meta=image_metadata)
+    updater = loopingcall.FixedIntervalLoopingCall(read_handle.update_progress)
+    try:
+        updater.start(interval=NFC_LEASE_UPDATE_PERIOD)
+        IMAGE_API.update(context, image_id, image_metadata, data=read_handle)
+    finally:
+        updater.stop()
+        read_handle.close()
 
     LOG.debug("Uploaded image %s to the Glance image server", image_id,
               instance=instance)
