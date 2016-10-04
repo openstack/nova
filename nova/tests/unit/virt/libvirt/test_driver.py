@@ -6984,6 +6984,28 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr.cleanup_live_migration_destination_check(self.context,
                                                       dest_check_data)
 
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('os.utime')
+    def test_check_shared_storage_test_file_exists(self, mock_utime,
+                                                   mock_path_exists):
+        tmpfile_path = os.path.join(CONF.instances_path, 'tmp123')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertTrue(drvr._check_shared_storage_test_file(
+            'tmp123', mock.sentinel.instance))
+        mock_utime.assert_called_once_with(CONF.instances_path, None)
+        mock_path_exists.assert_called_once_with(tmpfile_path)
+
+    @mock.patch('os.path.exists', return_value=False)
+    @mock.patch('os.utime')
+    def test_check_shared_storage_test_file_does_not_exist(self, mock_utime,
+                                                   mock_path_exists):
+        tmpfile_path = os.path.join(CONF.instances_path, 'tmp123')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertFalse(drvr._check_shared_storage_test_file(
+            'tmp123', mock.sentinel.instance))
+        mock_utime.assert_called_once_with(CONF.instances_path, None)
+        mock_path_exists.assert_called_once_with(tmpfile_path)
+
     def _mock_can_live_migrate_source(self, block_migration=False,
                                       is_shared_block_storage=False,
                                       is_shared_instance_path=False,
