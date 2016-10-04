@@ -449,11 +449,11 @@ def _get_instances_with_cached_ips(orig_func, *args, **kwargs):
     if isinstance(instances, (list, obj_base.ObjectListBase)):
         for instance in instances:
             _info_cache_for(instance)
-            fake_device.claim(instance)
+            fake_device.claim(instance.uuid)
             fake_device.allocate(instance)
     else:
         _info_cache_for(instances)
-        fake_device.claim(instances)
+        fake_device.claim(instances.uuid)
         fake_device.allocate(instances)
     return instances
 

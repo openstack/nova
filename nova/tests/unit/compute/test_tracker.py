@@ -1325,7 +1325,8 @@ class TestInstanceClaim(BaseTestCase):
                 self.rt.instance_claim(self.ctx, self.instance, None)
             update_mock.assert_called_once_with(self.elevated)
             pci_manager_mock.assert_called_once_with(mock.ANY,  # context...
-                                                     self.instance)
+                                                     pci_mock.return_value,
+                                                     None)
             self.assertTrue(obj_base.obj_equal_prims(expected,
                                                      self.rt.compute_node))
 

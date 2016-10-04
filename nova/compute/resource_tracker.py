@@ -200,17 +200,19 @@ class ResourceTracker(object):
         claim = claims.Claim(context, instance_ref, self, self.compute_node,
                              pci_requests, overhead=overhead, limits=limits)
 
-        if self.pci_tracker:
-            # NOTE(jaypipes): ComputeNode.pci_device_pools is set below
-            # in _update_usage_from_instance().
-            self.pci_tracker.claim_instance(context, instance_ref)
-
         # self._set_instance_host_and_node() will save instance_ref to the DB
         # so set instance_ref['numa_topology'] first.  We need to make sure
         # that numa_topology is saved while under COMPUTE_RESOURCE_SEMAPHORE
         # so that the resource audit knows about any cpus we've pinned.
-        instance_ref.numa_topology = claim.claimed_numa_topology
+        instance_numa_topology = claim.claimed_numa_topology
+        instance_ref.numa_topology = instance_numa_topology
         self._set_instance_host_and_node(instance_ref)
+
+        if self.pci_tracker:
+            # NOTE(jaypipes): ComputeNode.pci_device_pools is set below
+            # in _update_usage_from_instance().
+            self.pci_tracker.claim_instance(context, pci_requests,
+                                            instance_numa_topology)
 
         # Mark resources in-use and update stats
         self._update_usage_from_instance(context, instance_ref)

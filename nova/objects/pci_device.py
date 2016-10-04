@@ -264,7 +264,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         for dev in dev_list:
             dev.status = status
 
-    def claim(self, instance):
+    def claim(self, instance_uuid):
         if self.status != fields.PciDeviceStatus.AVAILABLE:
             raise exception.PciDeviceInvalidStatus(
                 compute_node_id=self.compute_node_id,
@@ -316,7 +316,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                             'vf_addr': self.address})
 
         self.status = fields.PciDeviceStatus.CLAIMED
-        self.instance_uuid = instance['uuid']
+        self.instance_uuid = instance_uuid
 
     def allocate(self, instance):
         ok_statuses = (fields.PciDeviceStatus.AVAILABLE,
