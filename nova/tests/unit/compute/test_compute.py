@@ -67,6 +67,7 @@ from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import block_device as block_device_obj
+from nova.objects import fields as obj_fields
 from nova.objects import instance as instance_obj
 from nova.objects import migrate_data as migrate_data_obj
 from nova import policy
@@ -5273,6 +5274,86 @@ class ComputeTestCase(BaseTestCase):
             test_instance_numa_topology.get_fake_obj_numa_topology(
                 self.context))
         self._test_confirm_resize(power_on=True, numa_topology=numa_topology)
+
+    def test_confirm_resize_with_numa_topology_and_cpu_pinning(self):
+        instance = self._create_fake_instance_obj()
+        instance.old_flavor = instance.flavor
+        instance.new_flavor = instance.flavor
+
+        # we have two hosts with the same NUMA topologies.
+        # now instance use two cpus from node_0 (cpu1 and cpu2) on current host
+        old_inst_topology = objects.InstanceNUMATopology(
+            instance_uuid=instance.uuid, cells=[
+                objects.InstanceNUMACell(
+                    id=0, cpuset=set([1, 2]), memory=512, pagesize=2048,
+                    cpu_policy=obj_fields.CPUAllocationPolicy.DEDICATED,
+                    cpu_pinning={'0': 1, '1': 2})
+        ])
+        # instance will use two cpus from node_1 (cpu3 and cpu4)
+        # on *some other host*
+        new_inst_topology = objects.InstanceNUMATopology(
+            instance_uuid=instance.uuid, cells=[
+                objects.InstanceNUMACell(
+                    id=1, cpuset=set([3, 4]), memory=512, pagesize=2048,
+                    cpu_policy=obj_fields.CPUAllocationPolicy.DEDICATED,
+                    cpu_pinning={'0': 3, '1': 4})
+        ])
+
+        instance.numa_topology = old_inst_topology
+
+        # instance placed in node_0 on current host. cpu1 and cpu2 from node_0
+        # are used
+        cell1 = objects.NUMACell(
+            id=0, cpuset=set([1, 2]), pinned_cpus=set([1, 2]), memory=512,
+            pagesize=2048, cpu_usage=2, memory_usage=0, siblings=[],
+            mempages=[objects.NUMAPagesTopology(
+                size_kb=2048, total=256, used=256)])
+        # as instance placed in node_0 all cpus from node_1 (cpu3 and cpu4)
+        # are free (on current host)
+        cell2 = objects.NUMACell(
+            id=1, cpuset=set([3, 4]), pinned_cpus=set(), memory=512,
+            pagesize=2048, memory_usage=0, cpu_usage=0, siblings=[],
+            mempages=[objects.NUMAPagesTopology(
+                size_kb=2048, total=256, used=0)])
+        host_numa_topology = objects.NUMATopology(cells=[cell1, cell2])
+
+        migration = objects.Migration(context=self.context.elevated())
+        migration.instance_uuid = instance.uuid
+        migration.status = 'finished'
+        migration.migration_type = 'migration'
+        migration.source_node = NODENAME
+        migration.create()
+
+        migration_context = objects.MigrationContext()
+        migration_context.migration_id = migration.id
+        migration_context.old_numa_topology = old_inst_topology
+        migration_context.new_numa_topology = new_inst_topology
+
+        instance.migration_context = migration_context
+        instance.vm_state = vm_states.RESIZED
+        instance.system_metadata = {}
+        instance.save()
+
+        self.rt.tracked_migrations[instance.uuid] = (migration,
+                                                     instance.flavor)
+        self.rt.compute_node.numa_topology = jsonutils.dumps(
+            host_numa_topology.obj_to_primitive())
+
+        with mock.patch.object(self.compute.network_api,
+                               'setup_networks_on_host'):
+            self.compute.confirm_resize(self.context, instance=instance,
+                                        migration=migration, reservations=[])
+        instance.refresh()
+        self.assertEqual(vm_states.ACTIVE, instance['vm_state'])
+
+        updated_topology = objects.NUMATopology.obj_from_primitive(
+            jsonutils.loads(self.rt.compute_node.numa_topology))
+
+        # after confirming resize all cpus on currect host must be free
+        self.assertEqual(2, len(updated_topology.cells))
+        for cell in updated_topology.cells:
+            self.assertEqual(0, cell.cpu_usage)
+            self.assertEqual(set(), cell.pinned_cpus)
 
     def _test_finish_revert_resize(self, power_on,
                                    remove_old_vm_state=False,
