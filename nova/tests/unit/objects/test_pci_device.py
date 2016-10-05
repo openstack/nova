@@ -307,6 +307,16 @@ class _TestPciDeviceObject(object):
             self.assertIn("other",
                           update_mock.call_args[0][3]['extra_info'])
 
+    @mock.patch('nova.objects.Service.get_minimum_version')
+    @mock.patch('nova.context.get_admin_context')
+    def test_should_migrate_checks_correct_services(self, mock_gc, mock_gmv):
+        mock_gmv.return_value = 100
+        self.assertTrue(objects.PciDevice.should_migrate_data())
+        mock_gmv.assert_has_calls([
+            mock.call(mock_gc.return_value, 'nova-conductor'),
+            mock.call(mock_gc.return_value, 'nova-osapi_compute'),
+        ])
+
     def test_update_numa_node(self):
         self.pci_device = pci_device.PciDevice.create(None, dev_dict)
         self.assertEqual(0, self.pci_device.numa_node)
