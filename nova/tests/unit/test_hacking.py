@@ -209,9 +209,6 @@ class HackingTestCase(test.NoDBTestCase):
             "self.assertTrue(A in 'some string with spaces')"))), 1)
 
         self.assertEqual(len(list(checks.assert_true_or_false_with_in(
-            "self.assertTrue(A in 'some string with spaces')"))), 1)
-
-        self.assertEqual(len(list(checks.assert_true_or_false_with_in(
             "self.assertTrue(A in ['1', '2', '3'])"))), 1)
 
         self.assertEqual(len(list(checks.assert_true_or_false_with_in(
