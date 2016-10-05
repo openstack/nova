@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    Support for archiving all deleted rows from the database has
+    been added to the ``nova-manage db archive_deleted_rows``
+    command. The ``--until-complete`` option will continuously
+    run the process until no more rows are available for archiving.
