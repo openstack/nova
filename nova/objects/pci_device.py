@@ -118,7 +118,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
     def should_migrate_data():
         # NOTE(ndipanov): Only migrate parent_addr if all services are up to at
         # least version 4 - this should only ever be called from save()
-        services = ('conductor', 'api')
+        services = ('conductor', 'osapi_compute')
         min_parent_addr_version = 4
 
         min_deployed = min(objects.Service.get_minimum_version(
