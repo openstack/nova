@@ -11,6 +11,7 @@
 #    under the License.
 
 
+from eventlet import tpool
 import mock
 
 from nova.compute import task_states
@@ -81,6 +82,17 @@ class RbdTestCase(test.NoDBTestCase):
 
     def tearDown(self):
         super(RbdTestCase, self).tearDown()
+
+    @mock.patch.object(rbd_utils, 'rbd')
+    def test_rbdproxy_wraps_rbd(self, mock_rbd):
+        proxy = rbd_utils.RbdProxy()
+        self.assertIsInstance(proxy._rbd, tpool.Proxy)
+
+    @mock.patch.object(rbd_utils, 'rbd')
+    def test_rbdproxy_attribute_access_proxying(self, mock_rbd):
+        client = mock.MagicMock(ioctx='fake_ioctx')
+        rbd_utils.RbdProxy().list(client.ioctx)
+        mock_rbd.RBD.return_value.list.assert_called_once_with(client.ioctx)
 
     def test_good_locations(self):
         locations = ['rbd://fsid/pool/image/snap',
