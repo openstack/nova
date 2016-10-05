@@ -24,6 +24,7 @@ from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import utils as cells_utils
 from nova.compute import api as compute_api
 from nova.compute import rpcapi as compute_rpcapi
+from nova.compute import vm_states
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
@@ -321,10 +322,10 @@ class ComputeCellsAPI(compute_api.API):
 
     @wrap_check_policy
     @check_instance_cell
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
+                                    vm_states.PAUSED, vm_states.SUSPENDED])
     def shelve(self, context, instance, clean_shutdown=True):
         """Shelve the given instance."""
-        super(ComputeCellsAPI, self).shelve(context, instance,
-                clean_shutdown=clean_shutdown)
         self._cast_to_cells(context, instance, 'shelve',
                 clean_shutdown=clean_shutdown)
 
@@ -339,9 +340,10 @@ class ComputeCellsAPI(compute_api.API):
 
     @wrap_check_policy
     @check_instance_cell
+    @check_instance_state(vm_state=[vm_states.SHELVED,
+                                    vm_states.SHELVED_OFFLOADED])
     def unshelve(self, context, instance):
         """Unshelve the given instance."""
-        super(ComputeCellsAPI, self).unshelve(context, instance)
         self._cast_to_cells(context, instance, 'unshelve')
 
     @wrap_check_policy

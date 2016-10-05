@@ -27,6 +27,7 @@ from nova.cells import manager
 from nova.compute import api as compute_api
 from nova.compute import cells_api as compute_cells_api
 from nova.compute import flavors
+from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 import nova.conf
@@ -37,6 +38,7 @@ from nova import objects
 from nova import quota
 from nova import test
 from nova.tests.unit.compute import test_compute
+from nova.tests.unit.compute import test_shelve
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_flavor
 from nova.tests import uuidsentinel as uuids
@@ -320,6 +322,49 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
 
         # one targeted message should have been created
         self.assertEqual(1, mock_msg.call_count)
+
+
+class CellsShelveComputeAPITestCase(test_shelve.ShelveComputeAPITestCase):
+    def setUp(self):
+        super(CellsShelveComputeAPITestCase, self).setUp()
+        global ORIG_COMPUTE_API
+        ORIG_COMPUTE_API = self.compute_api
+        self.compute_api = compute_cells_api.ComputeCellsAPI()
+
+        def _fake_validate_cell(*args, **kwargs):
+            return
+
+        def _fake_cast_to_cells(self, context, instance, method,
+                                *args, **kwargs):
+            fn = getattr(ORIG_COMPUTE_API, method)
+            fn(context, instance, *args, **kwargs)
+
+        self.stub_out('nova.compute.api.API._validate_cell',
+                      _fake_validate_cell)
+        self.stub_out('nova.compute.cells_api.ComputeCellsAPI._cast_to_cells',
+                      _fake_cast_to_cells)
+
+    def test_unshelve(self):
+        # Ensure instance can be unshelved on cell environment.
+        # The super class tests nova-shelve.
+        instance = self._create_fake_instance_obj()
+
+        self.assertIsNone(instance['task_state'])
+
+        self.compute_api.shelve(self.context, instance)
+
+        instance.task_state = None
+        instance.vm_state = vm_states.SHELVED
+        instance.save()
+
+        self.compute_api.unshelve(self.context, instance)
+
+        self.assertEqual(task_states.UNSHELVING, instance.task_state)
+
+    def tearDown(self):
+        global ORIG_COMPUTE_API
+        self.compute_api = ORIG_COMPUTE_API
+        super(CellsShelveComputeAPITestCase, self).tearDown()
 
 
 class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
