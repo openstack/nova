@@ -3125,9 +3125,12 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def test_external_instance_event(self):
         instances = [
-            objects.Instance(uuid=uuids.instance_1, host='host1'),
-            objects.Instance(uuid=uuids.instance_2, host='host1'),
-            objects.Instance(uuid=uuids.instance_3, host='host2'),
+            objects.Instance(uuid=uuids.instance_1, host='host1',
+                             migration_context=None),
+            objects.Instance(uuid=uuids.instance_2, host='host1',
+                             migration_context=None),
+            objects.Instance(uuid=uuids.instance_3, host='host2',
+                             migration_context=None),
             ]
         events = [
             objects.InstanceExternalEvent(
@@ -3141,9 +3144,60 @@ class _ComputeAPIUnitTestMixIn(object):
         self.compute_api.external_instance_event(self.context,
                                                  instances, events)
         method = self.compute_api.compute_rpcapi.external_instance_event
-        method.assert_any_call(self.context, instances[0:2], events[0:2])
-        method.assert_any_call(self.context, instances[2:], events[2:])
+        method.assert_any_call(self.context, instances[0:2], events[0:2],
+                               host='host1')
+        method.assert_any_call(self.context, instances[2:], events[2:],
+                               host='host2')
         self.assertEqual(2, method.call_count)
+
+    def test_external_instance_event_evacuating_instance(self):
+        # Since we're patching the db's migration_get(), use a dict here so
+        # that we can validate the id is making its way correctly to the db api
+        migrations = {}
+        migrations[42] = {'id': 42, 'source_compute': 'host1',
+                          'dest_compute': 'host2', 'source_node': None,
+                          'dest_node': None, 'dest_host': None,
+                          'old_instance_type_id': None,
+                          'new_instance_type_id': None,
+                          'instance_uuid': uuids.instance_2, 'status': None,
+                          'migration_type': 'evacuation', 'memory_total': None,
+                          'memory_processed': None, 'memory_remaining': None,
+                          'disk_total': None, 'disk_processed': None,
+                          'disk_remaining': None, 'deleted': False,
+                          'hidden': False, 'created_at': None,
+                          'updated_at': None, 'deleted_at': None}
+
+        def migration_get(context, id):
+            return migrations[id]
+
+        instances = [
+            objects.Instance(uuid=uuids.instance_1, host='host1',
+                             migration_context=None),
+            objects.Instance(uuid=uuids.instance_2, host='host1',
+                             migration_context=objects.MigrationContext(
+                                 migration_id=42)),
+            objects.Instance(uuid=uuids.instance_3, host='host2',
+                             migration_context=None)
+            ]
+        events = [
+            objects.InstanceExternalEvent(
+                instance_uuid=uuids.instance_1),
+            objects.InstanceExternalEvent(
+                instance_uuid=uuids.instance_2),
+            objects.InstanceExternalEvent(
+                instance_uuid=uuids.instance_3),
+            ]
+
+        with mock.patch('nova.db.sqlalchemy.api.migration_get', migration_get):
+            self.compute_api.compute_rpcapi = mock.MagicMock()
+            self.compute_api.external_instance_event(self.context,
+                                                     instances, events)
+            method = self.compute_api.compute_rpcapi.external_instance_event
+            method.assert_any_call(self.context, instances[0:2], events[0:2],
+                                   host='host1')
+            method.assert_any_call(self.context, instances[1:], events[1:],
+                                   host='host2')
+            self.assertEqual(2, method.call_count)
 
     def test_volume_ops_invalid_task_state(self):
         instance = self._create_instance_obj()
