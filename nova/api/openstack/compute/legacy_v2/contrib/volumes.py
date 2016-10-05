@@ -124,6 +124,8 @@ class VolumeController(wsgi.Controller):
 
         try:
             self.volume_api.delete(context, id)
+        except exception.InvalidInput as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
         except exception.NotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         return webob.Response(status_int=202)
