@@ -37,7 +37,7 @@ MISSING_UUID = '00000000-0000-0000-0000-000000000005'
 
 
 @classmethod
-def fake_get_by_uuid(cls, context, uuid):
+def fake_get_by_uuid(cls, context, uuid, **kwargs):
     try:
         return fake_instances[uuid]
     except KeyError:
