@@ -757,6 +757,14 @@ class BadRequestVolumeTestCaseV21(CommonBadRequestTestCase,
     controller_cls = volumes_v21.VolumeController
     bad_request = exception.ValidationError
 
+    @mock.patch.object(cinder.API, 'delete',
+        side_effect=exception.InvalidInput(reason='vol attach'))
+    def test_delete_invalid_status_volume(self, mock_delete):
+        req = fakes.HTTPRequest.blank('/v2.1/os-volumes')
+        req.method = 'DELETE'
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.delete, req, FAKE_UUID)
+
 
 class BadRequestVolumeTestCaseV2(BadRequestVolumeTestCaseV21):
     controller_cls = volumes.VolumeController
