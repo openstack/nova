@@ -288,11 +288,6 @@ class Service(base.NovaPersistentObject, base.NovaObject,
     def save(self):
         updates = self.obj_get_changes()
         updates.pop('id', None)
-        if list(updates.keys()) == ['version']:
-            # NOTE(danms): Since we set/dirty version in init, don't
-            # do a save if that's all that has changed. This keeps the
-            # "save is a no-op if nothing has changed" behavior.
-            return
         self._check_minimum_version()
         db_service = db.service_update(self._context, self.id, updates)
         self._from_db_object(self._context, self, db_service)

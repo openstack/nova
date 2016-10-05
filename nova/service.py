@@ -139,21 +139,12 @@ def _create_service_ref(this_service, context):
     return service
 
 
-def _update_service_ref(this_service, context):
-    service = objects.Service.get_by_host_and_binary(context,
-                                                     this_service.host,
-                                                     this_service.binary)
-    if not service:
-        LOG.error(_LE('Unable to find a service record to update for '
-                      '%(binary)s on %(host)s'),
-                  {'binary': this_service.binary,
-                   'host': this_service.host})
-        return
+def _update_service_ref(service):
     if service.version != service_obj.SERVICE_VERSION:
         LOG.info(_LI('Updating service version for %(binary)s on '
                      '%(host)s from %(old)i to %(new)i'),
-                 {'binary': this_service.binary,
-                  'host': this_service.host,
+                 {'binary': service.binary,
+                  'host': service.host,
                   'old': service.version,
                   'new': service_obj.SERVICE_VERSION})
         service.version = service_obj.SERVICE_VERSION
@@ -200,7 +191,10 @@ class Service(service.Service):
         ctxt = context.get_admin_context()
         self.service_ref = objects.Service.get_by_host_and_binary(
             ctxt, self.host, self.binary)
-        if not self.service_ref:
+        if self.service_ref:
+            _update_service_ref(self.service_ref)
+
+        else:
             try:
                 self.service_ref = _create_service_ref(self, ctxt)
             except (exception.ServiceTopicExists,
@@ -432,7 +426,9 @@ class WSGIService(service.Service):
         ctxt = context.get_admin_context()
         service_ref = objects.Service.get_by_host_and_binary(ctxt, self.host,
                                                              self.binary)
-        if not service_ref:
+        if service_ref:
+            _update_service_ref(service_ref)
+        else:
             try:
                 service_ref = _create_service_ref(self, ctxt)
             except (exception.ServiceTopicExists,
@@ -441,7 +437,6 @@ class WSGIService(service.Service):
                 # don't fail here.
                 service_ref = objects.Service.get_by_host_and_binary(
                     ctxt, self.host, self.binary)
-        _update_service_ref(service_ref, ctxt)
 
         if self.manager:
             self.manager.init_host()

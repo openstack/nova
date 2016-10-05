@@ -420,22 +420,6 @@ class TestServiceVersion(test.TestCase):
         obj._from_db_object(self.ctxt, obj, fake_different_service)
         self.assertEqual(fake_version, obj.version)
 
-    def test_save_noop_with_only_version(self):
-        o = objects.Service(context=self.ctxt, id=fake_service['id'])
-        o.obj_reset_changes(['id'])
-        self.assertEqual(set(['version']), o.obj_what_changed())
-        with mock.patch('nova.db.service_update') as mock_update:
-            o.save()
-            self.assertFalse(mock_update.called)
-        o.host = 'foo'
-        with mock.patch('nova.db.service_update') as mock_update:
-            mock_update.return_value = fake_service
-            o.save()
-            mock_update.assert_called_once_with(
-                self.ctxt, fake_service['id'],
-                {'version': service.SERVICE_VERSION,
-                 'host': 'foo'})
-
 
 class TestServiceStatusNotification(test.TestCase):
     def setUp(self):
