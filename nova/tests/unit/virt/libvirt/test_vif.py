@@ -900,23 +900,27 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         d = vif.LibvirtGenericVIFDriver()
         with mock.patch.object(utils, 'execute') as execute:
             execute.side_effect = processutils.ProcessExecutionError
-            mynetwork = network_model.Network(id='network-id-xxx-yyy-zzz',
-                                              label='mylabel')
-            myvif = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                      address='ca:fe:de:ad:be:ef',
-                                      network=mynetwork)
-            d.unplug_iovisor(None, myvif)
+            d.unplug_iovisor(None, self.vif_iovisor)
 
     @mock.patch('nova.network.linux_net.device_exists')
     def test_plug_iovisor(self, device_exists):
         device_exists.return_value = True
         d = vif.LibvirtGenericVIFDriver()
         with mock.patch.object(utils, 'execute') as execute:
-            execute.side_effect = processutils.ProcessExecutionError
             instance = objects.Instance(id=1,
                            uuid='f0000000-0000-0000-0000-000000000001',
                            project_id='myproject')
-            d.plug_iovisor(instance, self.vif_ivs)
+            d.plug_iovisor(instance, self.vif_iovisor)
+            execute.assert_has_calls([
+                mock.call('ifc_ctl', 'gateway', 'add_port',
+                          'tap-xxx-yyy-zzz', run_as_root=True),
+                mock.call('ifc_ctl', 'gateway', 'ifup',
+                          'tap-xxx-yyy-zzz',
+                          'access_vm', self.vif_iovisor['id'],
+                          self.vif_iovisor['address'],
+                          'pgtag2=%s' % self.vif_iovisor['network']['id'],
+                          'pgtag1=%s' % instance.project_id,
+                          run_as_root=True)])
 
     def test_unplug_vrouter_with_details(self):
         d = vif.LibvirtGenericVIFDriver()

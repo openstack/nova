@@ -624,10 +624,9 @@ class LibvirtGenericVIFDriver(object):
             utils.execute('ifc_ctl', 'gateway', 'add_port', dev,
                           run_as_root=True)
             utils.execute('ifc_ctl', 'gateway', 'ifup', dev,
-                          'access_vm',
-                          vif['network']['label'] + "_" + iface_id,
-                          vif['address'], 'pgtag2=%s' % net_id,
-                          'pgtag1=%s' % tenant_id, run_as_root=True)
+                          'access_vm', iface_id, vif['address'],
+                          'pgtag2=%s' % net_id, 'pgtag1=%s' % tenant_id,
+                          run_as_root=True)
         except processutils.ProcessExecutionError:
             LOG.exception(_LE("Failed while plugging vif"), instance=instance)
 
@@ -886,13 +885,10 @@ class LibvirtGenericVIFDriver(object):
         Delete network device and to their respective
         connection to the Virtual Domain in PLUMgrid Platform.
         """
-        iface_id = vif['id']
         dev = self.get_vif_devname(vif)
         try:
             utils.execute('ifc_ctl', 'gateway', 'ifdown',
-                          dev, 'access_vm',
-                          vif['network']['label'] + "_" + iface_id,
-                          vif['address'], run_as_root=True)
+                          dev, run_as_root=True)
             utils.execute('ifc_ctl', 'gateway', 'del_port', dev,
                           run_as_root=True)
             linux_net.delete_net_dev(dev)
