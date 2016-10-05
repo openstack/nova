@@ -271,8 +271,9 @@ class ResourceClass(StringField):
 
     # The ordering here is relevant. If you must add a value, only
     # append.
-    ALL = (VCPU, MEMORY_MB, DISK_GB, PCI_DEVICE, SRIOV_NET_VF, NUMA_SOCKET,
-           NUMA_CORE, NUMA_THREAD, NUMA_MEMORY_MB, IPV4_ADDRESS)
+    STANDARD = (VCPU, MEMORY_MB, DISK_GB, PCI_DEVICE, SRIOV_NET_VF,
+                NUMA_SOCKET, NUMA_CORE, NUMA_THREAD, NUMA_MEMORY_MB,
+                IPV4_ADDRESS)
 
     # This is the set of standard resource classes that existed before
     # we opened up for custom resource classes in version 1.1 of various
