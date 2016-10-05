@@ -1185,7 +1185,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # allow writing to existing external volume file
             dev.rebase(new_path, copy=True, reuse_ext=True)
 
-            while dev.wait_for_job():
+            while not dev.is_job_complete():
                 time.sleep(0.5)
 
             dev.abort_job(pivot=True)
@@ -1193,7 +1193,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # NOTE(alex_xu): domain.blockJobAbort isn't sync call. This
                 # is bug in libvirt. So we need waiting for the pivot is
                 # finished. libvirt bug #1119173
-                while dev.wait_for_job(wait_for_job_clean=True):
+                while not dev.is_job_complete():
                     time.sleep(0.5)
                 dev.resize(resize_to * units.Gi / units.Ki)
         finally:
@@ -1693,7 +1693,7 @@ class LibvirtDriver(driver.ComputeDriver):
             #             issue an abort once we have a complete copy.
             dev.rebase(disk_delta, copy=True, reuse_ext=True, shallow=True)
 
-            while dev.wait_for_job():
+            while not dev.is_job_complete():
                 time.sleep(0.5)
 
             dev.abort_job()
@@ -2099,7 +2099,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     LOG.debug('blockRebase started successfully',
                               instance=instance)
 
-                while dev.wait_for_job(abort_on_error=True):
+                while not dev.is_job_complete():
                     LOG.debug('waiting for blockRebase job completion',
                               instance=instance)
                     time.sleep(0.5)
@@ -2160,7 +2160,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.debug('blockCommit started successfully',
                           instance=instance)
 
-            while dev.wait_for_job(abort_on_error=True):
+            while not dev.is_job_complete():
                 LOG.debug('waiting for blockCommit job completion',
                           instance=instance)
                 time.sleep(0.5)
