@@ -4325,6 +4325,10 @@ class ComputeManager(manager.Manager):
                            node):
         LOG.info(_LI('Unshelving'), instance=instance)
         self._notify_about_instance_usage(context, instance, 'unshelve.start')
+        compute_utils.notify_about_instance_action(context, instance,
+                self.host, action=fields.NotificationAction.UNSHELVE,
+                phase=fields.NotificationPhase.START)
+
         instance.task_state = task_states.SPAWNING
         instance.save()
 
@@ -4379,6 +4383,9 @@ class ComputeManager(manager.Manager):
         instance.save(expected_task_state=task_states.SPAWNING)
         self._update_scheduler_instance_info(context, instance)
         self._notify_about_instance_usage(context, instance, 'unshelve.end')
+        compute_utils.notify_about_instance_action(context, instance,
+                self.host, action=fields.NotificationAction.UNSHELVE,
+                phase=fields.NotificationPhase.END)
 
     @messaging.expected_exceptions(NotImplementedError)
     @wrap_instance_fault

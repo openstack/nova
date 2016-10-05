@@ -302,8 +302,8 @@ class InstanceStateUpdatePayload(base.NotificationPayloadBase):
 # @base.notification_sample('instance-trigger_crash_dump-end.json')
 # @base.notification_sample('instance-unrescue-start.json')
 # @base.notification_sample('instance-unrescue-end.json')
-# @base.notification_sample('instance-unshelve-start.json')
-# @base.notification_sample('instance-unshelve-end.json')
+@base.notification_sample('instance-unshelve-start.json')
+@base.notification_sample('instance-unshelve-end.json')
 @nova_base.NovaObjectRegistry.register_notification
 class InstanceActionNotification(base.NotificationBase):
     # Version 1.0: Initial version
