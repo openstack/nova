@@ -28,15 +28,15 @@ from nova.conf import paths
 
 compute_opts = [
     cfg.BoolOpt('allow_resize_to_same_host',
-                default=False,
-                help="""
+        default=False,
+        help="""
 Allow destination machine to match source for resize. Useful when
 testing in single-host environments. By default it is not allowed
 to resize to the same host. Setting this option to true will add
 the same host to the destination options.
 """),
     cfg.StrOpt('default_schedule_zone',
-               help="""
+        help="""
 Availability zone to use when user doesn't specify one.
 
 This option is used by the scheduler to determine which availability
@@ -49,9 +49,8 @@ Possible values:
 * Default value is None.
 """),
     cfg.ListOpt('non_inheritable_image_properties',
-                default=['cache_in_nova',
-                         'bittorrent'],
-                help="""
+        default=['cache_in_nova', 'bittorrent'],
+        help="""
 Image properties that should not be inherited from the instance
 when taking a snapshot.
 
@@ -68,8 +67,8 @@ Possible values:
 """),
     # TODO(aunnam): This option needs to be deprecated
     cfg.StrOpt('null_kernel',
-               default='nokernel',
-               help="""
+        default='nokernel',
+        help="""
 This option is used to decide when an image should have no external
 ramdisk or kernel. By default this is set to 'nokernel', so when an
 image is booted with the property 'kernel_id' with the value
@@ -78,8 +77,8 @@ and ramdisk.
 """),
     # TODO(aunnam): This option needs to be deprecated
     cfg.StrOpt('multi_instance_display_name_template',
-               default='%(name)s-%(count)d',
-               help="""
+        default='%(name)s-%(count)d',
+        help="""
 When creating multiple instances with a single request using the
 os-multiple-create API extension, this template will be used to build
 the display name for each instance. The benefit is that the instances
@@ -91,8 +90,8 @@ Possible values:
 * Valid keys for the template are: name, uuid, count.
 """),
     cfg.IntOpt('max_local_block_devices',
-               default=3,
-               help="""
+        default=3,
+        help="""
 Maximum number of devices that will result in a local image being
 created on the hypervisor node.
 
@@ -113,19 +112,19 @@ Possible values:
                        (Default value is 3).
 """),
     cfg.MultiStrOpt('compute_available_monitors',
-                    deprecated_for_removal=True,
-                    deprecated_since='12.0.0',
-                    deprecated_reason='stevedore and setuptools entry points '
-                                      'now allow a set of plugins to be '
-                                      'specified without this config option.',
-                    help="""
+        deprecated_for_removal=True,
+        deprecated_since='12.0.0',
+        deprecated_reason="""
+stevedore and setuptools entry points now allow a set of plugins to be
+specified without this config option.""",
+        help="""
 Monitor classes available to the compute which may be specified more than once.
 This option is DEPRECATED and no longer used. Use setuptools entry points to
 list available monitor plugins.
 """),
     cfg.ListOpt('compute_monitors',
-                default=[],
-                help="""
+        default=[],
+        help="""
 A list of monitors that can be used for getting compute metrics.
 You can use the alias/name from the setuptools entry points for
 nova.compute.monitors.* namespaces. If no namespace is supplied,
@@ -142,9 +141,9 @@ Possible values:
 
 resource_tracker_opts = [
     cfg.IntOpt('reserved_host_disk_mb',
-               min=0,
-               default=0,
-               help="""
+        min=0,
+        default=0,
+        help="""
 Amount of disk resources in MB to make them always available to host. The
 disk usage gets reported back to the scheduler from nova-compute running
 on the compute nodes. To prevent the disk resources from being considered
@@ -155,11 +154,10 @@ Possible values:
   * Any positive integer representing amount of disk in MB to reserve
     for the host.
 """),
-
     cfg.IntOpt('reserved_host_memory_mb',
-               min=0,
-               default=512,
-               help="""
+        default=512,
+        min=0,
+        help="""
 Amount of memory in MB to reserve for the host so that it is always available
 to host processes. The host resources usage is reported back to the scheduler
 continuously from nova-compute running on the compute node. To prevent the host
@@ -171,12 +169,11 @@ Possible values:
   * Any positive integer representing amount of memory in MB to reserve
     for the host.
 """),
-
     cfg.StrOpt('compute_stats_class',
-               default='nova.compute.stats.Stats',
-               deprecated_for_removal=True,
-               deprecated_since='13.0.0',
-               help="""
+        default='nova.compute.stats.Stats',
+        deprecated_for_removal=True,
+        deprecated_since='13.0.0',
+        help="""
 Abstracts out managing compute host stats to pluggable class. This class
 manages and updates stats for the local compute host after an instance
 is changed. These configurable compute stats may be useful for a
@@ -189,6 +186,7 @@ Possible values
 ]
 
 allocation_ratio_opts = [
+    # TODO(sfinucan): Add min parameter
     cfg.FloatOpt('cpu_allocation_ratio',
         default=0.0,
         help="""
@@ -199,15 +197,15 @@ This configuration specifies ratio for CoreFilter which can be set
 per compute node. For AggregateCoreFilter, it will fall back to this
 configuration value if no per-aggregate setting is found.
 
-Possible values:
-
-    * Any valid positive integer or float value
-    * Default value is 0.0
-
 NOTE: This can be set per-compute, or if set to 0.0, the value
 set on the scheduler node(s) or compute node(s) will be used
 and defaulted to 16.0'.
+
+Possible values:
+
+* Any valid positive integer or float value
 """),
+    # TODO(sfinucan): Add min parameter
     cfg.FloatOpt('ram_allocation_ratio',
         default=0.0,
         help="""
@@ -218,15 +216,15 @@ This configuration specifies ratio for RamFilter which can be set
 per compute node. For AggregateRamFilter, it will fall back to this
 configuration value if no per-aggregate setting found.
 
-Possible values:
-
-    * Any valid positive integer or float value
-    * Default value is 0.0
-
 NOTE: This can be set per-compute, or if set to 0.0, the value
 set on the scheduler node(s) or compute node(s) will be used and
 defaulted to 1.5.
+
+Possible values:
+
+* Any valid positive integer or float value
 """),
+    # TODO(sfinucan): Add min parameter
     cfg.FloatOpt('disk_allocation_ratio',
         default=0.0,
         help="""
@@ -242,22 +240,21 @@ images. It can be set to a value between 0.0 and 1.0 in order
 to preserve a percentage of the disk for uses other than
 instances.
 
-Possible values:
-
-    * Any valid positive integer or float value
-    * Default value is 0.0
-
 NOTE: This can be set per-compute, or if set to 0.0, the value
 set on the scheduler node(s) or compute node(s) will be used and
 defaulted to 1.0'.
+
+Possible values:
+
+* Any valid positive integer or float value
 """)
 ]
 
 compute_manager_opts = [
     cfg.StrOpt('console_host',
-               default=socket.gethostname(),
-               sample_default="socket.gethostname()",
-               help="""
+        default=socket.gethostname(),
+        sample_default="socket.gethostname()",
+        help="""
 Console proxy host to be used to connect to instances on this host. It is the
 publicly visible name for the console host.
 
@@ -266,7 +263,7 @@ Possible values:
 * Current hostname (default) or any string representing hostname.
 """),
     cfg.StrOpt('default_access_ip_network_name',
-               help="""
+        help="""
 Name of the network to be used to set access IPs for instances. If there are
 multiple IPs to choose from, an arbitrary one will be chosen.
 
@@ -276,16 +273,15 @@ Possible values:
 * Any string representing network name.
 """),
     cfg.BoolOpt('defer_iptables_apply',
-                default=False,
-                help="""
+        default=False,
+        help="""
 Whether to batch up the application of IPTables rules during a host restart
 and apply all at the end of the init phase.
 """),
-
     cfg.StrOpt('instances_path',
-               default=paths.state_path_def('instances'),
-               sample_default="$state_path/instances",
-               help="""
+        default=paths.state_path_def('instances'),
+        sample_default="$state_path/instances",
+        help="""
 Specifies where instances are stored on the hypervisor's disk.
 It can point to locally attached storage or a directory on NFS.
 
@@ -296,16 +292,16 @@ Possible values:
   Any string representing directory path.
 """),
     cfg.BoolOpt('instance_usage_audit',
-                default=False,
-                help="""
+        default=False,
+        help="""
 This option enables periodic compute.instance.exists notifications. Each
 compute node must be configured to generate system usage data. These
 notifications are consumed by OpenStack Telemetry service.
 """),
     cfg.IntOpt('live_migration_retry_count',
-               min=0,
-               default=30,
-               help="""
+        default=30,
+        min=0,
+        help="""
 Maximum number of 1 second retries in live_migration. It specifies number
 of retries to iptables when it complains. It happens when an user continously
 sends live-migration request to same host leading to concurrent request
@@ -316,16 +312,16 @@ Possible values:
 * Any positive integer representing retry count.
 """),
     cfg.BoolOpt('resume_guests_state_on_host_boot',
-                default=False,
-                help="""
+        default=False,
+        help="""
 This option specifies whether to start guests that were running before the
 host rebooted. It ensures that all of the instances on a Nova compute node
 resume their state each time the compute node boots or restarts.
 """),
     cfg.IntOpt('network_allocate_retries',
-               min=0,
-               default=0,
-               help="""
+        default=0,
+        min=0,
+        help="""
 Number of times to retry network allocation. It is required to attempt network
 allocation retries if the virtual interface plug fails.
 
@@ -334,9 +330,9 @@ Possible values:
 * Any positive integer representing retry count.
 """),
     cfg.IntOpt('max_concurrent_builds',
-               min=0,
-               default=10,
-               help="""
+        default=10,
+        min=0,
+        help="""
 Limits the maximum number of instance builds to run concurrently by
 nova-compute. Compute service can attempt to build an infinite number of
 instances, if asked to do so. This limit is enforced to avoid building
@@ -348,9 +344,10 @@ Possible Values:
 * 0 : treated as unlimited.
 * Any positive integer representing maximum concurrent builds.
 """),
+    # TODO(sfinucan): Add min parameter
     cfg.IntOpt('max_concurrent_live_migrations',
-               default=1,
-               help="""
+        default=1,
+        help="""
 Maximum number of live migrations to run concurrently. This limit is enforced
 to avoid outbound live migrations overwhelming the host/network and causing
 failures. It is not recommended that you change this unless you are very sure
@@ -364,8 +361,8 @@ Possible values:
   to run concurrently.
 """),
     cfg.IntOpt('block_device_allocate_retries',
-               default=60,
-               help="""
+        default=60,
+        help="""
 Number of times to retry block device allocation on failures. Starting with
 Liberty, Cinder can use image volume cache. This may help with block device
 allocation performance. Look at the cinder image_volume_cache_enabled
@@ -379,8 +376,8 @@ Possible values:
 * For any value > 0, total attempts are (value + 1)
 """),
     cfg.IntOpt('sync_power_state_pool_size',
-               default=1000,
-               help="""
+        default=1000,
+        help="""
 Number of greenthreads available for use to sync power states.
 
 This option can be used to reduce the number of concurrent requests
@@ -454,9 +451,9 @@ interval_opts = [
 
 timeout_opts = [
     cfg.IntOpt("reboot_timeout",
-            default=0,
-            min=0,
-            help="""
+        default=0,
+        min=0,
+        help="""
 Time interval after which an instance is hard rebooted automatically.
 
 When doing a soft reboot, it is possible that a guest kernel is
@@ -471,9 +468,9 @@ Possible values:
 * Any positive integer in seconds: Enables the option.
 """),
     cfg.IntOpt("instance_build_timeout",
-            default=0,
-            min=0,
-            help="""
+        default=0,
+        min=0,
+        help="""
 Maximum time in seconds that an instance can take to build.
 
 If this timer expires, instance status will be changed to ERROR.
@@ -486,9 +483,9 @@ Possible values:
 * Any positive integer in seconds: Enables the option.
 """),
     cfg.IntOpt("rescue_timeout",
-            default=0,
-            min=0,
-            help="""
+        default=0,
+        min=0,
+        help="""
 Interval to wait before un-rescuing an instance stuck in RESCUE.
 
 Possible values:
@@ -497,9 +494,9 @@ Possible values:
 * Any positive integer in seconds: Enables the option.
 """),
     cfg.IntOpt("resize_confirm_window",
-            default=0,
-            min=0,
-            help="""
+        default=0,
+        min=0,
+        help="""
 Automatically confirm resizes after N seconds.
 
 Resize functionality will save the existing server before resizing.
@@ -516,9 +513,9 @@ Possible values:
 * Any positive integer in seconds: Enables the option.
 """),
     cfg.IntOpt("shutdown_timeout",
-            default=60,
-            min=1,
-            help="""
+        default=60,
+        min=1,
+        help="""
 Total time to wait in seconds for an instance toperform a clean
 shutdown.
 
@@ -541,9 +538,9 @@ Possible values:
 
 running_deleted_opts = [
     cfg.StrOpt("running_deleted_instance_action",
-               default="reap",
-               choices=('noop', 'log', 'shutdown', 'reap'),
-               help="""
+        default="reap",
+        choices=('noop', 'log', 'shutdown', 'reap'),
+        help="""
 The compute service periodically checks for instances that have been
 deleted in the database but remain running on the compute node. The
 above option enables action to be taken when such instances are
@@ -563,8 +560,8 @@ Related options:
 * running_deleted_instance_timeout
 """),
     cfg.IntOpt("running_deleted_instance_poll_interval",
-               default=1800,
-               help="""
+        default=1800,
+        help="""
 Time interval in seconds to wait between runs for the clean up action.
 If set to 0, above check will be disabled. If "running_deleted_instance
 _action" is set to "log" or "reap", a value greater than 0 must be set.
@@ -580,8 +577,8 @@ Related options:
 * running_deleted_instance_action
 """),
     cfg.IntOpt("running_deleted_instance_timeout",
-               default=0,
-               help="""
+        default=0,
+        help="""
 Time interval in seconds to wait for the instances that have
 been marked as deleted in database to be eligible for cleanup.
 
@@ -597,47 +594,38 @@ Related options:
 
 instance_cleaning_opts = [
     cfg.IntOpt('maximum_instance_delete_attempts',
-               default=5,
-               help='The number of times to attempt to reap an instance\'s '
-                    'files.'),
+        default=5,
+        help='The number of times to attempt to reap an instance\'s '
+             'files.'),
 ]
 
 rpcapi_opts = [
     cfg.StrOpt("compute_topic",
-            default="compute",
-            deprecated_for_removal=True,
-            deprecated_since="15.0.0",
-            deprecated_reason="""
+        default="compute",
+        deprecated_for_removal=True,
+        deprecated_since="15.0.0",
+        deprecated_reason="""
 There is no need to let users choose the RPC topic for all services - there
 is little gain from this. Furthermore, it makes it really easy to break Nova
 by using this option.
 """,
-            help="""
+        help="""
 This is the message queue topic that the compute service 'listens' on. It is
 used when the compute service is started up to configure the queue, and
 whenever an RPC call to the compute service is made.
 
-* Possible values:
+Possible values:
 
-    Any string, but there is almost never any reason to ever change this value
-    from its default of 'compute'.
-
-* Services that use this:
-
-    ``nova-compute``
-
-* Related options:
-
-    None
+* Any string, but there is almost never any reason to ever change this value
+  from its default of 'compute'.
 """),
 ]
 
 db_opts = [
-
     cfg.StrOpt('osapi_compute_unique_server_name_scope',
-               default='',
-               choices=['', 'project', 'global'],
-               help="""
+        default='',
+        choices=['', 'project', 'global'],
+        help="""
 Sets the scope of the check for unique instance names.
 
 The default doesn't check for unique names. If a scope for the name check is
@@ -656,10 +644,9 @@ Possible values:
 * "global": The instance name check is done for all instances regardless of
   the project.
 """),
-
     cfg.BoolOpt('enable_new_services',
-                default=True,
-                help="""
+        default=True,
+        help="""
 Enable new services on this host automatically.
 
 When a new service (for example "nova-compute") starts up, it gets
@@ -674,10 +661,9 @@ Possible values:
   with ``nova service-enable <hostname> <binary>``, otherwise they are not
   ready to use.
 """),
-
     cfg.StrOpt('instance_name_template',
-               default='instance-%08x',
-               help="""
+         default='instance-%08x',
+         help="""
 Template string to be used to generate instance names.
 
 This template controls the creation of the database name of an instance. This
@@ -699,7 +685,6 @@ Related options:
 
 * not to be confused with: ``multi_instance_display_name_template``
 """),
-
     # TODO(markus_z): 2016-04-04: This is not used anymore. The class
     # "models.Snapshot" uses it but this class is not used anymore.
     # This class got introduced with commit 0ba0859 but all calls
@@ -707,11 +692,11 @@ Related options:
     # have missed the class "models.Snapshot" and a new change
     # should remove it completely.
     cfg.StrOpt('snapshot_name_template',
-               default='snapshot-%s',
-               deprecated_for_removal=True,
-               deprecated_since='14.0.0',
-               deprecated_reason='This is not used anymore.',
-               help='Template string to be used to generate snapshot names')
+         default='snapshot-%s',
+         deprecated_for_removal=True,
+         deprecated_since='14.0.0',
+         deprecated_reason='This is not used anymore.',
+         help='Template string to be used to generate snapshot names')
 ]
 
 
