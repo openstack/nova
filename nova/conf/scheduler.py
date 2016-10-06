@@ -18,9 +18,15 @@
 from oslo_config import cfg
 
 scheduler_opts = [
-    # TODO(sfinucan): Deprecate this option
     cfg.StrOpt("scheduler_topic",
         default="scheduler",
+        deprecated_for_removal=True,
+        deprecated_since="15.0.0",
+        deprecated_reason="""
+There is no need to let users choose the RPC topic for all services - there
+is little gain from this. Furthermore, it makes it really easy to break Nova
+by using this option.
+""",
         help="""
 Scheduler message queue topic.
 

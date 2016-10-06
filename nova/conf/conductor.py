@@ -1,6 +1,3 @@
-# needs:check_deprecation_status
-
-
 # Copyright (c) 2010 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -41,10 +38,16 @@ It no longer represents a reasonable alternative for deployers.
 
 Removal may be as early as 14.0.
 """),
-    # TODO(macsz) deprecate this option
     cfg.StrOpt(
         'topic',
         default='conductor',
+        deprecated_for_removal=True,
+        deprecated_since='15.0.0',
+        deprecated_reason="""
+There is no need to let users choose the RPC topic for all services - there
+is little gain from this. Furthermore, it makes it really easy to break Nova
+by using this option.
+""",
         help="""
 Topic exchange name on which conductor nodes listen.
 """),

@@ -605,6 +605,13 @@ instance_cleaning_opts = [
 rpcapi_opts = [
     cfg.StrOpt("compute_topic",
             default="compute",
+            deprecated_for_removal=True,
+            deprecated_since="15.0.0",
+            deprecated_reason="""
+There is no need to let users choose the RPC topic for all services - there
+is little gain from this. Furthermore, it makes it really easy to break Nova
+by using this option.
+""",
             help="""
 This is the message queue topic that the compute service 'listens' on. It is
 used when the compute service is started up to configure the queue, and

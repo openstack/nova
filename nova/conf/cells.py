@@ -48,6 +48,12 @@ Related options:
 """),
     cfg.StrOpt('topic',
                 default='cells',
+                deprecated_for_removal=True,
+                deprecated_since='15.0.0',
+                deprecated_reason="""
+Configurable RPC topics provide little value and can result in a wide variety
+of errors. They should not be used.
+""",
                 help="""
 Topic
 

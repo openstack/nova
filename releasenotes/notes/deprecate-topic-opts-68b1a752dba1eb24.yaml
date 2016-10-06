@@ -1,0 +1,13 @@
+---
+deprecations:
+  - |
+    The ``topic`` config options are now deprecated and will be removed
+    in the next release. The deprecated options are as below:
+
+    * cells.topic
+    * compute_topic
+    * conductor.topic
+    * console_topic
+    * consoleauth_topic
+    * network_topic
+    * scheduler_topic
