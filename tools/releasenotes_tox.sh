@@ -9,7 +9,7 @@ sphinx-build -a -E -W \
 BUILD_RESULT=$?
 
 UNCOMMITTED_NOTES=$(git status --porcelain | \
-    awk '$1 == "M" && $2 ~ /releasenotes\/notes/ {print $2}')
+    awk '$1 ~ "M|A|??" && $2 ~ /releasenotes\/notes/ {print $2}')
 
 if [ "${UNCOMMITTED_NOTES}" ]
 then
