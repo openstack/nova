@@ -244,7 +244,7 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
     @mock.patch('nova.objects.flavor._flavor_extra_specs_add')
     def test_create_valid_specs_key(self, mock_flavor_extra_specs):
         valid_keys = ("key1", "month.price", "I_am-a Key", "finance:g2")
-        mock_flavor_extra_specs.side_effects = return_create_flavor_extra_specs
+        mock_flavor_extra_specs.side_effect = return_create_flavor_extra_specs
 
         for key in valid_keys:
             body = {"extra_specs": {key: "value1"}}
