@@ -14,7 +14,6 @@
 #    under the License.
 
 import mock
-from oslo_config import cfg
 import webob.exc
 
 from nova.api.openstack import compute
@@ -22,8 +21,6 @@ from nova.api.openstack.compute import extension_info
 from nova.api.openstack import extensions
 from nova import exception
 from nova import test
-
-CONF = cfg.CONF
 
 
 class fake_bad_extension(object):

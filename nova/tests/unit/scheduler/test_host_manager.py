@@ -27,7 +27,6 @@ import six
 import nova
 from nova.compute import task_states
 from nova.compute import vm_states
-import nova.conf
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
@@ -40,8 +39,6 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit import matchers
 from nova.tests.unit.scheduler import fakes
 from nova.tests import uuidsentinel as uuids
-
-CONF = nova.conf.CONF
 
 
 class FakeFilterClass1(filters.BaseHostFilter):

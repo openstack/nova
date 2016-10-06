@@ -13,14 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 from nova.api.openstack import api_version_request
 from nova.api.openstack.compute.views import versions as views_versions
 from nova.api.openstack import wsgi
 
-
-CONF = cfg.CONF
 
 LINKS = {
    'v2.0': {

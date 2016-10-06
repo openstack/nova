@@ -12,8 +12,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from oslo_config import cfg
-
 import nova.scheduler.utils
 import nova.servicegroup
 from nova import test
@@ -21,8 +19,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
-
-CONF = cfg.CONF
 
 
 class TestServerValidation(test.TestCase):
