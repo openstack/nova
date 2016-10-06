@@ -64,6 +64,27 @@ Related options:
 
 *  my_ip - IP address of this host
 """),
+    cfg.StrOpt(
+        'notification_format',
+        choices=['unversioned', 'versioned', 'both'],
+        default='both',
+        help="""
+Specifies which notification format shall be used by nova.
+
+The default value is fine for most deployments and rarely needs to be changed.
+This value can be set to 'versioned' once the infrastructure moves closer to
+consuming the newer format of notifications. After this occurs, this option
+will be removed (possibly in the "P" release).
+
+Possible values:
+* unversioned: Only the legacy unversioned notifications are emitted.
+* versioned: Only the new versioned notifications are emitted.
+* both: Both the legacy unversioned and the new versioned notifications are
+  emitted. (Default)
+
+The list of versioned notifications is visible in
+http://docs.openstack.org/developer/nova/notifications.html
+"""),
 ]
 
 
