@@ -3481,7 +3481,7 @@ class ComputeManager(manager.Manager):
 
             network_info = self.network_api.get_instance_nw_info(context,
                                                                  instance)
-            self.driver.confirm_migration(migration, instance,
+            self.driver.confirm_migration(context, migration, instance,
                                           network_info)
 
             migration.status = 'confirmed'

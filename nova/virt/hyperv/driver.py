@@ -309,8 +309,9 @@ class HyperVDriver(driver.ComputeDriver):
                                                              timeout,
                                                              retry_interval)
 
-    def confirm_migration(self, migration, instance, network_info):
-        self._migrationops.confirm_migration(migration, instance, network_info)
+    def confirm_migration(self, context, migration, instance, network_info):
+        self._migrationops.confirm_migration(context, migration,
+                                             instance, network_info)
 
     def finish_revert_migration(self, context, instance, network_info,
                                 block_device_info=None, power_on=True):

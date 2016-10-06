@@ -388,10 +388,12 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
 
     def test_confirm_migration(self):
         self.driver.confirm_migration(
+            mock.sentinel.context,
             mock.sentinel.migration, mock.sentinel.instance,
             mock.sentinel.network_info)
 
         self.driver._migrationops.confirm_migration.assert_called_once_with(
+            mock.sentinel.context,
             mock.sentinel.migration, mock.sentinel.instance,
             mock.sentinel.network_info)
 

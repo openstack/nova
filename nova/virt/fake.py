@@ -498,7 +498,7 @@ class FakeDriver(driver.ComputeDriver):
                          block_device_info=None, power_on=True):
         return
 
-    def confirm_migration(self, migration, instance, network_info):
+    def confirm_migration(self, context, migration, instance, network_info):
         return
 
     def pre_live_migration(self, context, instance, block_device_info,
