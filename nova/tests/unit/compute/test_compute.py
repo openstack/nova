@@ -2852,10 +2852,12 @@ class ComputeTestCase(BaseTestCase):
     @mock.patch.object(compute_manager.ComputeManager, '_instance_update')
     @mock.patch.object(db, 'instance_update_and_get_original')
     @mock.patch.object(compute_manager.ComputeManager, '_get_power_state')
-    def _test_reboot(self, soft, mock_get_power, mock_get_orig,
-                 mock_update, mock_notify, mock_get_blk,
-                 test_delete=False, test_unrescue=False,
-                 fail_reboot=False, fail_running=False):
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    def _test_reboot(self, soft, mock_notify_action, mock_get_power,
+                     mock_get_orig, mock_update, mock_notify_usage,
+                     mock_get_blk, test_delete=False,
+                     test_unrescue=False, fail_reboot=False,
+                     fail_running=False):
         reboot_type = soft and 'SOFT' or 'HARD'
         task_pending = (soft and task_states.REBOOT_PENDING
                         or task_states.REBOOT_PENDING_HARD)
@@ -2927,6 +2929,10 @@ class ComputeTestCase(BaseTestCase):
         mock_get_orig.side_effect = [(None, updated_dbinstance1),
                                      (None, updated_dbinstance1)]
         notify_call_list = [mock.call(econtext, instance, 'reboot.start')]
+        notify_action_call_list = [
+            mock.call(econtext, instance, 'fake-mini', action='reboot',
+                      phase='start')]
+
         ps_call_list = [mock.call(econtext, instance)]
         db_call_list = [mock.call(econtext, instance['uuid'],
                                   {'task_state': task_pending,
@@ -2990,6 +2996,9 @@ class ComputeTestCase(BaseTestCase):
                           columns_to_join=['system_metadata']))
             notify_call_list.append(mock.call(econtext, instance,
                                               'reboot.end'))
+            notify_action_call_list.append(
+                mock.call(econtext, instance, 'fake-mini',
+                          action='reboot', phase='end'))
         elif fail_reboot and not fail_running:
             mock_get_orig.side_effect = chain(mock_get_orig.side_effect,
                                               [fault])
@@ -3011,6 +3020,9 @@ class ComputeTestCase(BaseTestCase):
                                                   'reboot.error', fault=fault))
             notify_call_list.append(mock.call(econtext, instance,
                                               'reboot.end'))
+            notify_action_call_list.append(
+                mock.call(econtext, instance, 'fake-mini',
+                          action='reboot', phase='end'))
 
         if not fail_reboot or fail_running:
             self.compute.reboot_instance(self.context, instance=instance,
@@ -3026,7 +3038,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(expected_call_info, reboot_call_info)
         mock_get_blk.assert_called_once_with(econtext, instance)
         mock_get_nw.assert_called_once_with(econtext, instance)
-        mock_notify.assert_has_calls(notify_call_list)
+        mock_notify_usage.assert_has_calls(notify_call_list)
+        mock_notify_action.assert_has_calls(notify_action_call_list)
         mock_get_power.assert_has_calls(ps_call_list)
         mock_get_orig.assert_has_calls(db_call_list)
 
