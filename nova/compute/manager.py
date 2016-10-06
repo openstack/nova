@@ -2959,8 +2959,14 @@ class ComputeManager(manager.Manager):
             # are so similar, we should really try to unify them.
             self.network_api.setup_instance_network_on_host(
                     context, instance, self.host, migration)
+            # TODO(mriedem): Consider decorating setup_instance_network_on_host
+            # with @base_api.refresh_cache and then we wouldn't need this
+            # explicit call to get_instance_nw_info.
+            network_info = self.network_api.get_instance_nw_info(context,
+                                                                 instance)
+        else:
+            network_info = instance.get_network_info()
 
-        network_info = instance.get_network_info()
         if bdms is None:
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid)
