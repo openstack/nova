@@ -10212,11 +10212,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                        '_create_domain_and_network')
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'get_info')
     # Methods called by _create_configdrive via post_xml_callback
+    @mock.patch('nova.virt.configdrive.ConfigDriveBuilder._make_iso9660')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_build_device_metadata')
     @mock.patch.object(instance_metadata, 'InstanceMetadata')
     def test_spawn_with_config_drive(self, mock_instance_metadata,
                                      mock_build_device_metadata,
-                                     mock_get_info,
+                                     mock_mkisofs, mock_get_info,
                                      mock_create_domain_and_network,
                                      mock_get_guest_xml):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -17052,7 +17053,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.assertEqual(expected_kernel_ramdisk_paths,
                          kernel_ramdisk_paths)
 
-    def test_rescue_config_drive(self):
+    @mock.patch('nova.virt.configdrive.ConfigDriveBuilder._make_iso9660')
+    def test_rescue_config_drive(self, mock_mkisofs):
         instance = self._create_instance({'config_drive': str(True)})
         backend, doc = self._test_rescue(
             instance, exists=lambda name: name != 'disk.config.rescue')
