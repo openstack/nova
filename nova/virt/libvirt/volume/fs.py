@@ -18,6 +18,7 @@ import os
 import six
 
 from nova import utils
+from nova.virt.libvirt.volume import mount
 from nova.virt.libvirt.volume import volume as libvirt_volume
 
 
@@ -93,3 +94,40 @@ class LibvirtBaseFileSystemVolumeDriver(
         """
         mount_path = self._get_mount_path(connection_info)
         return os.path.join(mount_path, connection_info['data']['name'])
+
+
+@six.add_metaclass(abc.ABCMeta)
+class LibvirtMountedFileSystemVolumeDriver(LibvirtBaseFileSystemVolumeDriver):
+    # NOTE(mdbooth): Hopefully we'll get to the point where everything which
+    # previously subclassed LibvirtBaseFileSystemVolumeDriver now subclasses
+    # LibvirtMountedFileSystemVolumeDriver. If we get there, we should fold
+    # this class into the base class.
+    def __init__(self, host, fstype):
+        super(LibvirtMountedFileSystemVolumeDriver, self).__init__(host)
+
+        self.fstype = fstype
+
+    def connect_volume(self, connection_info, disk_info, instance):
+        """Connect the volume."""
+        export = connection_info['data']['export']
+        vol_name = connection_info['data']['name']
+        mountpoint = self._get_mount_path(connection_info)
+
+        mount.mount(self.fstype, export, vol_name, mountpoint, instance,
+                    self._mount_options(connection_info))
+
+        connection_info['data']['device_path'] = \
+            self._get_device_path(connection_info)
+
+    def disconnect_volume(self, connection_info, disk_dev, instance):
+        """Disconnect the volume."""
+        vol_name = connection_info['data']['name']
+        mountpoint = self._get_mount_path(connection_info)
+
+        mount.umount(vol_name, mountpoint, instance)
+
+    @abc.abstractmethod
+    def _mount_options(self, connection_info):
+        """Return a list of additional arguments to pass to the mount command.
+        """
+        pass
