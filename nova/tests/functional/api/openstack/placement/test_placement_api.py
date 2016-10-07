@@ -12,11 +12,16 @@
 
 import os
 
+import wsgi_intercept
+
 from gabbi import driver
 
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api.openstack.placement import fixtures
 
+# Check that wsgi application response headers are always
+# native str.
+wsgi_intercept.STRICT_RESPONSE_HEADERS = True
 TESTS_DIR = 'gabbits'
 
 
