@@ -3436,6 +3436,7 @@ class ComputeManager(manager.Manager):
             rt = self._get_resource_tracker(migration.source_node)
             rt.drop_move_claim(context, instance, old_instance_type,
                                prefix='old_')
+            instance.drop_migration_context()
 
             # NOTE(mriedem): The old_vm_state could be STOPPED but the user
             # might have manually powered up the instance to confirm the
@@ -3587,6 +3588,7 @@ class ComputeManager(manager.Manager):
                                        network_info,
                                        block_device_info, power_on)
 
+            instance.drop_migration_context()
             instance.launched_at = timeutils.utcnow()
             instance.save(expected_task_state=task_states.RESIZE_REVERTING)
 

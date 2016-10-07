@@ -298,3 +298,4 @@ class MoveClaim(Claim):
         self.tracker.drop_move_claim(
             self.context,
             self.instance, instance_type=self.instance_type)
+        self.instance.drop_migration_context()
