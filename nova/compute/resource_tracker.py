@@ -30,7 +30,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
 from nova import exception
-from nova.i18n import _, _LE, _LI, _LW
+from nova.i18n import _, _LI, _LW
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import migration as migration_obj
@@ -534,9 +534,12 @@ class ResourceTracker(object):
                 # NOTE(danms): If this happens, we don't set it here, and
                 # let the code either fail or lazy-load the instance later
                 # which is what happened before we added this optimization.
-                # This _should_ not be possible, of course.
-                LOG.error(_LE('Migration for instance %(uuid)s refers to '
-                              'another host\'s instance!'),
+                # NOTE(tdurakov) this situation is possible for resize/cold
+                # migration when migration is finished but haven't yet
+                # confirmed/reverted in that case instance already changed host
+                # to destination and no matching happens
+                LOG.debug('Migration for instance %(uuid)s refers to '
+                              'another host\'s instance!',
                           {'uuid': migration.instance_uuid})
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
