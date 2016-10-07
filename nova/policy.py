@@ -162,7 +162,6 @@ def authorize(context, action, target, do_raise=True, exc=None):
         with excutils.save_and_reraise_exception():
             LOG.exception(_LE('Policy not registered'))
     except Exception:
-        credentials.pop('auth_token', None)
         with excutils.save_and_reraise_exception():
             LOG.debug('Policy check for %(action)s failed with credentials '
                       '%(credentials)s',
