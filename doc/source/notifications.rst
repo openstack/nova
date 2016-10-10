@@ -113,7 +113,14 @@ already defines three mandatory fields of the notification `event_type`,
 notifications shall inherit from the
 `nova.objects.notifications.base.NotificationPayloadBase` class and shall
 define the fields of the payload as versionedobject fields. The base classes
-are described in [3]_.
+are described in the following section.
+
+The nova.notifications.objects.base module
+..........................................
+.. automodule:: nova.notifications.objects.base
+    :noindex:
+    :members:
+    :show-inheritance:
 
 Please note that the notification objects shall not be registered to the
 NovaObjectRegistry to avoid mixing nova internal objects with the notification
@@ -278,4 +285,3 @@ Existing versioned notifications
 
 .. [1] http://docs.openstack.org/developer/oslo.messaging/notifier.html
 .. [2] http://docs.openstack.org/developer/oslo.versionedobjects
-.. [3] http://docs.openstack.org/developer/nova/devref/api/nova.objects.notification.html
