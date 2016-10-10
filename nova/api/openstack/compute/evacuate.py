@@ -128,7 +128,7 @@ class EvacuateController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
         if (not api_version_request.is_supported(req, min_version='2.14') and
-                CONF.enable_instance_password):
+                CONF.api.enable_instance_password):
             return {'adminPass': password}
         else:
             return None

@@ -78,9 +78,10 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
     ]
 
     def setUp(self):
-        self.flags(use_ipv6=False,
-                   osapi_compute_link_prefix=self._get_host(),
-                   osapi_glance_link_prefix=self._get_glance_host())
+        self.flags(use_ipv6=False)
+        self.flags(glance_link_prefix=self._get_glance_host(),
+                   compute_link_prefix=self._get_host(),
+                   group='api')
 
         # load any additional fixtures specified by the scenario
         for fix in self._additional_fixtures:

@@ -89,7 +89,8 @@ class ServerActionsControllerTestV21(test.TestCase):
         fakes.stub_out_compute_api_snapshot(self.stubs)
         fake.stub_out_image_service(self)
         self.flags(allow_instance_snapshots=True,
-                   enable_instance_password=True)
+                   enable_instance_password=True,
+                   group='api')
         self._image_href = '155d900f-4e14-4e4c-a73d-069cbf4541e6'
 
         self.controller = self._get_controller()
@@ -354,7 +355,7 @@ class ServerActionsControllerTestV21(test.TestCase):
     def test_rebuild_accepted_minimum_pass_disabled(self):
         # run with enable_instance_password disabled to verify adminPass
         # is missing from response. See lp bug 921814
-        self.flags(enable_instance_password=False)
+        self.flags(enable_instance_password=False, group='api')
 
         return_server = fakes.fake_instance_get(image_ref='2',
                 vm_state=vm_states.ACTIVE, host='fake_host')
@@ -470,7 +471,7 @@ class ServerActionsControllerTestV21(test.TestCase):
     def test_rebuild_admin_pass_pass_disabled(self):
         # run with enable_instance_password disabled to verify adminPass
         # is missing from response. See lp bug 921814
-        self.flags(enable_instance_password=False)
+        self.flags(enable_instance_password=False, group='api')
 
         return_server = fakes.fake_instance_get(image_ref='2',
                 vm_state=vm_states.ACTIVE, host='fake_host')
@@ -1103,7 +1104,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         """Don't permit a snapshot if the allow_instance_snapshots flag is
         False
         """
-        self.flags(allow_instance_snapshots=False)
+        self.flags(allow_instance_snapshots=False, group='api')
         body = {
             'createImage': {
                 'name': 'Snapshot 1',

@@ -2359,8 +2359,8 @@ class ServersControllerCreateTest(test.TestCase):
         """Shared implementation for tests below that create instance."""
         super(ServersControllerCreateTest, self).setUp()
 
-        self.flags(verbose=True,
-                   enable_instance_password=True)
+        self.flags(verbose=True)
+        self.flags(enable_instance_password=True, group='api')
         self.instance_cache_num = 0
         self.instance_cache_by_id = {}
         self.instance_cache_by_uuid = {}
@@ -2744,9 +2744,9 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_with_pass_disabled(self):
         # test with admin passwords disabled See lp bug 921814
-        self.flags(enable_instance_password=False)
+        self.flags(enable_instance_password=False, group='api')
 
-        self.flags(enable_instance_password=False)
+        self.flags(enable_instance_password=False, group='api')
         self.req.body = jsonutils.dump_as_bytes(self.body)
         res = self.controller.create(self.req, body=self.body).obj
 
@@ -2853,7 +2853,7 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create, req, body=body)
 
     def test_create_instance_pass_disabled(self):
-        self.flags(enable_instance_password=False)
+        self.flags(enable_instance_password=False, group='api')
         self.req.body = jsonutils.dump_as_bytes(self.body)
         res = self.controller.create(self.req, body=self.body).obj
 
@@ -3016,7 +3016,7 @@ class ServersControllerCreateTest(test.TestCase):
                          self.body['server']['adminPass'])
 
     def test_create_instance_admin_password_pass_disabled(self):
-        self.flags(enable_instance_password=False)
+        self.flags(enable_instance_password=False, group='api')
         self.body['server']['flavorRef'] = 3
         self.body['server']['adminPass'] = 'testpass'
         self.req.body = jsonutils.dump_as_bytes(self.body)
@@ -3621,8 +3621,8 @@ class ServersControllerCreateTestWithMock(test.TestCase):
         """Shared implementation for tests below that create instance."""
         super(ServersControllerCreateTestWithMock, self).setUp()
 
-        self.flags(verbose=True,
-                   enable_instance_password=True)
+        self.flags(verbose=True)
+        self.flags(enable_instance_password=True, group='api')
         self.instance_cache_num = 0
         self.instance_cache_by_id = {}
         self.instance_cache_by_uuid = {}

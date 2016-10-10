@@ -46,8 +46,8 @@ class MultiCreateExtensionTestV21(test.TestCase):
         """Shared implementation for tests below that create instance."""
         super(MultiCreateExtensionTestV21, self).setUp()
 
-        self.flags(verbose=True,
-                   enable_instance_password=True)
+        self.flags(verbose=True)
+        self.flags(enable_instance_password=True, group='api')
         self.instance_cache_num = 0
         self.instance_cache_by_id = {}
         self.instance_cache_by_uuid = {}
@@ -352,7 +352,7 @@ class MultiCreateExtensionTestV21(test.TestCase):
         """Test creating multiple instances but not asking for
         reservation_id
         """
-        self.flags(enable_instance_password=False)
+        self.flags(enable_instance_password=False, group='api')
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         flavor_ref = 'http://localhost/123/flavors/3'
         body = {

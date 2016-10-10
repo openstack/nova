@@ -45,7 +45,7 @@ class MetadataRequestHandler(wsgi.Application):
 
     def __init__(self):
         self._cache = cache_utils.get_client(
-                expiration_time=CONF.metadata_cache_expiration)
+                expiration_time=CONF.api.metadata_cache_expiration)
         if (CONF.neutron.service_metadata_proxy and
             not CONF.neutron.metadata_proxy_shared_secret):
             LOG.warning(_LW("metadata_proxy_shared_secret is not configured, "
@@ -67,7 +67,7 @@ class MetadataRequestHandler(wsgi.Application):
         except exception.NotFound:
             return None
 
-        if CONF.metadata_cache_expiration > 0:
+        if CONF.api.metadata_cache_expiration > 0:
             self._cache.set(cache_key, data)
 
         return data
@@ -84,7 +84,7 @@ class MetadataRequestHandler(wsgi.Application):
         except exception.NotFound:
             return None
 
-        if CONF.metadata_cache_expiration > 0:
+        if CONF.api.metadata_cache_expiration > 0:
             self._cache.set(cache_key, data)
 
         return data
@@ -132,7 +132,7 @@ class MetadataRequestHandler(wsgi.Application):
 
     def _handle_remote_ip_request(self, req):
         remote_address = req.remote_addr
-        if CONF.use_forwarded_for:
+        if CONF.api.use_forwarded_for:
             remote_address = req.headers.get('X-Forwarded-For', remote_address)
 
         try:

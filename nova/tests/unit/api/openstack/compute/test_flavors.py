@@ -100,8 +100,9 @@ class FlavorsTestV21(test.TestCase):
         self.assertEqual(flavor, expected)
 
     def test_get_flavor_with_custom_link_prefix(self):
-        self.flags(osapi_compute_link_prefix='http://zoo.com:42',
-                   osapi_glance_link_prefix='http://circus.com:34')
+        self.flags(compute_link_prefix='http://zoo.com:42',
+                   glance_link_prefix='http://circus.com:34',
+                   group='api')
         req = self.fake_request.blank(self._prefix + '/flavors/1')
         flavor = self.controller.show(req, '1')
         expected = {
@@ -297,7 +298,7 @@ class FlavorsTestV21(test.TestCase):
     def test_get_flavor_with_default_limit(self):
         self.stubs.Set(common, "get_limit_and_marker",
                        fake_get_limit_and_marker)
-        self.flags(osapi_max_limit=1)
+        self.flags(max_limit=1, group='api')
         req = fakes.HTTPRequest.blank('/v2/fake/flavors?limit=2')
         response = self.controller.index(req)
         response_list = response["flavors"]

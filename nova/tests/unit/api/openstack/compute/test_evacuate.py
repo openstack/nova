@@ -222,7 +222,7 @@ class EvacuateTestV21(test.NoDBTestCase):
     @mock.patch('nova.objects.Instance.save')
     def _test_evacuate_enable_instance_password_conf(self, mock_save,
                                                      enable_pass):
-        self.flags(enable_instance_password=enable_pass)
+        self.flags(enable_instance_password=enable_pass, group='api')
 
         res = self._get_evacuate_response({'host': 'underscore_hostname',
                                            'onSharedStorage': 'False'})

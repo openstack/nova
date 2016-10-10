@@ -77,7 +77,7 @@ class RescueController(wsgi.Controller):
             raise exc.HTTPBadRequest(
                 explanation=non_rescuable.format_message())
 
-        if CONF.enable_instance_password:
+        if CONF.api.enable_instance_password:
             return {'adminPass': password}
         else:
             return {}

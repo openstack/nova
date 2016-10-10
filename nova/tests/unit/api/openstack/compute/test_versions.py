@@ -383,7 +383,7 @@ class VersionsViewBuilderTests(test.NoDBTestCase):
         self.assertEqual(expected, output)
 
     def test_view_builder_with_osapi_compute_link_prefix(self):
-        self.flags(osapi_compute_link_prefix='http://zoo.com:42')
+        self.flags(compute_link_prefix='http://zoo.com:42', group='api')
         href = "http://zoo.com:42/v2.1/"
         self._test_view_builder_osapi_compute_link_prefix(href)
 

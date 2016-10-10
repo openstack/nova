@@ -48,7 +48,7 @@ class SchedulerReportClientTests(test.TestCase):
 
     def setUp(self):
         super(SchedulerReportClientTests, self).setUp()
-        self.flags(auth_strategy='noauth2')
+        self.flags(auth_strategy='noauth2', group='api')
 
         self.app = lambda: deploy.loadapp(CONF)
         self.client = NoAuthReportClient()

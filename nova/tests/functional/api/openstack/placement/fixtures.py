@@ -47,7 +47,7 @@ class APIFixture(fixture.GabbiFixture):
         self.output_stream_fixture.setUp()
 
         self.conf = CONF
-        self.conf.set_override('auth_strategy', 'noauth2')
+        self.conf.set_override('auth_strategy', 'noauth2', group='api')
         # Be explicit about all three database connections to avoid
         # potential conflicts with config on disk.
         self.conf.set_override('connection', "sqlite://", group='database')

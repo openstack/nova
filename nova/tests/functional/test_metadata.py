@@ -107,7 +107,8 @@ class MetadataTest(test.TestCase):
             vendordata_dynamic_targets=[
                 'testing@http://127.0.0.1:123',
                 'hamster@http://127.0.0.1:123'
-                ]
+                ],
+            group='api'
             )
 
         self.useFixture(fixtures.MonkeyPatch('requests.request',
@@ -130,7 +131,8 @@ class MetadataTest(test.TestCase):
             vendordata_dynamic_targets=[
                 'testing@http://127.0.0.1:123',
                 'testing@http://127.0.0.1:124'
-                ]
+                ],
+            group='api'
             )
 
         self.useFixture(fixtures.MonkeyPatch('requests.request',
@@ -156,7 +158,8 @@ class MetadataTest(test.TestCase):
             vendordata_providers=['DynamicJSON'],
             vendordata_dynamic_targets=[
                 'testing@http://127.0.0.1:125'
-                ]
+                ],
+            group='api'
             )
 
         self.useFixture(fixtures.MonkeyPatch('requests.request',

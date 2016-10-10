@@ -55,7 +55,7 @@ def pipeline_factory(loader, global_conf, **local_conf):
 
 def pipeline_factory_v21(loader, global_conf, **local_conf):
     """A paste pipeline replica that keys off of auth_strategy."""
-    return _load_pipeline(loader, local_conf[CONF.auth_strategy].split())
+    return _load_pipeline(loader, local_conf[CONF.api.auth_strategy].split())
 
 
 class InjectContext(wsgi.Middleware):
@@ -82,7 +82,7 @@ class NovaKeystoneContext(wsgi.Middleware):
 
         # Build a context, including the auth_token...
         remote_address = req.remote_addr
-        if CONF.use_forwarded_for:
+        if CONF.api.use_forwarded_for:
             remote_address = req.headers.get('X-Forwarded-For', remote_address)
 
         service_catalog = None

@@ -227,7 +227,7 @@ def limited(items, request):
     """
     params = get_pagination_params(request)
     offset = params.get('offset', 0)
-    limit = CONF.osapi_max_limit
+    limit = CONF.api.max_limit
     limit = min(limit, params.get('limit') or limit)
 
     return items[offset:(offset + limit)]
@@ -236,7 +236,7 @@ def limited(items, request):
 def get_limit_and_marker(request):
     """Get limited parameter from request."""
     params = get_pagination_params(request)
-    limit = CONF.osapi_max_limit
+    limit = CONF.api.max_limit
     limit = min(limit, params.get('limit', limit))
     marker = params.get('marker', None)
 
@@ -351,7 +351,7 @@ def raise_http_conflict_for_instance_invalid_state(exc, action, server_id):
 def check_snapshots_enabled(f):
     @functools.wraps(f)
     def inner(*args, **kwargs):
-        if not CONF.allow_instance_snapshots:
+        if not CONF.api.allow_instance_snapshots:
             LOG.warning(_LW('Rejecting snapshot request, snapshots currently'
                             ' disabled'))
             msg = _("Instance snapshots are not permitted at this time.")
@@ -433,15 +433,15 @@ class ViewBuilder(object):
                               id_key="uuid"):
         """Retrieve 'next' link, if applicable. This is included if:
         1) 'limit' param is specified and equals the number of items.
-        2) 'limit' param is specified but it exceeds CONF.osapi_max_limit,
-        in this case the number of items is CONF.osapi_max_limit.
+        2) 'limit' param is specified but it exceeds CONF.api.max_limit,
+        in this case the number of items is CONF.api.max_limit.
         3) 'limit' param is NOT specified but the number of items is
-        CONF.osapi_max_limit.
+        CONF.api.max_limit.
         """
         links = []
         max_items = min(
-            int(request.params.get("limit", CONF.osapi_max_limit)),
-            CONF.osapi_max_limit)
+            int(request.params.get("limit", CONF.api.max_limit)),
+            CONF.api.max_limit)
         if max_items and max_items == len(items):
             last_item = items[-1]
             if id_key in last_item:
@@ -468,12 +468,10 @@ class ViewBuilder(object):
         return urlparse.urlunsplit(url_parts).rstrip('/')
 
     def _update_glance_link_prefix(self, orig_url):
-        return self._update_link_prefix(orig_url,
-                                        CONF.osapi_glance_link_prefix)
+        return self._update_link_prefix(orig_url, CONF.api.glance_link_prefix)
 
     def _update_compute_link_prefix(self, orig_url):
-        return self._update_link_prefix(orig_url,
-                                        CONF.osapi_compute_link_prefix)
+        return self._update_link_prefix(orig_url, CONF.api.compute_link_prefix)
 
 
 def get_instance(compute_api, context, instance_id, expected_attrs=None):

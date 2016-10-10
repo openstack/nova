@@ -152,8 +152,9 @@ class ImagesControllerTestV21(test.NoDBTestCase):
 
     @mock.patch('nova.image.api.API.get', return_value=IMAGE_FIXTURES[1])
     def test_get_image_with_custom_prefix(self, _get_mocked):
-        self.flags(osapi_compute_link_prefix='https://zoo.com:42',
-                   osapi_glance_link_prefix='http://circus.com:34')
+        self.flags(compute_link_prefix='https://zoo.com:42',
+                   glance_link_prefix='http://circus.com:34',
+                   group='api')
         fake_req = self.http_request.blank(self.url_base + 'images/124')
         actual_image = self.controller.show(fake_req, '124')
 
