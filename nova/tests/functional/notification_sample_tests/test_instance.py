@@ -81,31 +81,24 @@ class TestInstanceNotificationSample(
             extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
         self.api.delete_server(server['id'])
         self._wait_until_deleted(server)
-        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
-        self._verify_notification(
+        self.assertEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+
+        # This list needs to be in order.
+        expected_notifications = [
+            'instance-create-start',
+            'instance-create-end',
             'instance-delete-start',
-            replacements={
-                'reservation_id': server['reservation_id'],
-                'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
-        self._verify_notification(
             'instance-shutdown-start',
-            replacements={
-                'reservation_id': server['reservation_id'],
-                'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
-        self._verify_notification(
             'instance-shutdown-end',
-            replacements={
-                'reservation_id': server['reservation_id'],
-                'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
-        self._verify_notification(
-            'instance-delete-end',
-            replacements={
-                'reservation_id': server['reservation_id'],
-                'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
+            'instance-delete-end'
+        ]
+        for idx, notification in enumerate(expected_notifications):
+            self._verify_notification(
+                notification,
+                replacements={
+                    'reservation_id': server['reservation_id'],
+                    'uuid': server['id']},
+                actual=fake_notifier.VERSIONED_NOTIFICATIONS[idx])
 
     def _verify_instance_update_steps(self, steps, notifications,
                                       initial=None):
@@ -515,19 +508,19 @@ class TestInstanceNotificationSample(
                                  self.cinder.SWAP_NEW_VOL)
         self._wait_until_swap_volume(server, self.cinder.SWAP_NEW_VOL)
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'instance-volume_swap-start',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
         self._verify_notification(
             'instance-volume_swap-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
 
     def test_volume_swap_server_with_error(self):
         server = self._boot_a_server(
@@ -540,11 +533,13 @@ class TestInstanceNotificationSample(
                                  self.cinder.SWAP_ERR_NEW_VOL)
         self._wait_until_swap_volume_error()
 
-        # Three versioned notifications are generated.
-        # 0. instance-volume_swap-start
-        # 1. instance-volume_swap-error
-        # 2. compute.exception
-        self.assertEqual(3, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        # Five versioned notifications are generated.
+        # 0. instance-create-start
+        # 1. instance-create-start
+        # 2. instance-volume_swap-start
+        # 3. instance-volume_swap-error
+        # 4. compute.exception
+        self.assertEqual(5, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'instance-volume_swap-start',
             replacements={
@@ -552,10 +547,10 @@ class TestInstanceNotificationSample(
                 'old_volume_id': self.cinder.SWAP_ERR_OLD_VOL,
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
         self._verify_notification(
             'instance-volume_swap-error',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
