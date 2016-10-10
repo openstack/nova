@@ -198,6 +198,17 @@ Please note:
 * We are only talking about the testing of in-tree code. Please note the only
   public API is our REST API, see: :doc:`policies`
 
+Database Schema
+===============
+
+* Use the ``utf8`` charset only where necessary. Some string fields, such as
+  hex-stringified UUID values, MD5 fingerprints, SHA1 hashes or base64-encoded
+  data, are always interpreted using ASCII encoding. A hex-stringified UUID
+  value in ``latin1`` is 1/3 the size of the same field in ``utf8``, impacting
+  performance without bringing any benefit. If there are no string type columns
+  in the table, or the string type columns contain **only** the data described
+  above, then stick with ``latin1``.
+
 Microversion API
 ================
 
