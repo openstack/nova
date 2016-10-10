@@ -62,12 +62,13 @@ class EvacuateTestV21(test.NoDBTestCase):
 
     def setUp(self):
         super(EvacuateTestV21, self).setUp()
-        self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
-        self.stubs.Set(compute_api.HostAPI, 'service_get_by_compute_host',
-                       fake_service_get_by_compute_host)
+        self.stub_out('nova.compute.api.API.get', fake_compute_api_get)
+        self.stub_out('nova.compute.api.HostAPI.service_get_by_compute_host',
+                      fake_service_get_by_compute_host)
         self.UUID = uuid.uuid4()
         for _method in self._methods:
-            self.stubs.Set(compute_api.API, _method, fake_compute_api)
+            self.stub_out('nova.compute.api.API.%s' % _method,
+                          fake_compute_api)
         self._set_up_controller()
         self.admin_req = fakes.HTTPRequest.blank('', use_admin_context=True)
         self.req = fakes.HTTPRequest.blank('')
@@ -110,7 +111,7 @@ class EvacuateTestV21(test.NoDBTestCase):
         def fake_evacuate(*args, **kwargs):
             raise exception.ComputeServiceInUse("Service still in use")
 
-        self.stubs.Set(compute_api.API, 'evacuate', fake_evacuate)
+        self.stub_out('nova.compute.api.API.evacuate', fake_evacuate)
         self._check_evacuate_failure(webob.exc.HTTPBadRequest,
                                      {'host': 'my-host',
                                       'onSharedStorage': 'False',
