@@ -6275,6 +6275,49 @@ def task_log_end_task(context, task_name, period_beginning, period_ending,
 ##################
 
 
+def _archive_if_instance_deleted(table, shadow_table, instances, conn,
+                                 max_rows):
+    """Look for records that pertain to deleted instances, but may not be
+    deleted themselves. This catches cases where we delete an instance,
+    but leave some residue because of a failure in a cleanup path or
+    similar.
+
+    Logic is: if I have a column called instance_uuid, and that instance
+    is deleted, then I can be deleted.
+    """
+    # NOTE(guochbo): There is a circular import, nova.db.sqlalchemy.utils
+    # imports nova.db.sqlalchemy.api.
+    from nova.db.sqlalchemy import utils as db_utils
+
+    query_insert = shadow_table.insert(inline=True).\
+        from_select(
+            [c.name for c in table.c],
+            sql.select(
+                [table],
+                and_(instances.c.deleted != instances.c.deleted.default.arg,
+                     instances.c.uuid == table.c.instance_uuid)).
+            order_by(table.c.id).limit(max_rows))
+
+    query_delete = sql.select(
+        [table.c.id],
+        and_(instances.c.deleted != instances.c.deleted.default.arg,
+             instances.c.uuid == table.c.instance_uuid)).\
+        order_by(table.c.id).limit(max_rows)
+    delete_statement = db_utils.DeleteFromSelect(table, query_delete,
+                                                 table.c.id)
+
+    try:
+        with conn.begin():
+            conn.execute(query_insert)
+            result_delete = conn.execute(delete_statement)
+            return result_delete.rowcount
+    except db_exc.DBReferenceError as ex:
+        LOG.warning(_LW('Failed to archive %(table)s: %(error)s'),
+                    {'table': table.__tablename__,
+                     'error': six.text_type(ex)})
+        return 0
+
+
 def _archive_deleted_rows_for_table(tablename, max_rows):
     """Move up to max_rows rows from one tables to the corresponding
     shadow table.
@@ -6360,6 +6403,7 @@ def _archive_deleted_rows_for_table(tablename, max_rows):
         with conn.begin():
             conn.execute(insert)
             result_delete = conn.execute(delete_statement)
+        rows_archived = result_delete.rowcount
     except db_exc.DBReferenceError as ex:
         # A foreign key constraint keeps us from deleting some of
         # these rows until we clean up a dependent table.  Just
@@ -6367,9 +6411,14 @@ def _archive_deleted_rows_for_table(tablename, max_rows):
         LOG.warning(_LW("IntegrityError detected when archiving table "
                         "%(tablename)s: %(error)s"),
                     {'tablename': tablename, 'error': six.text_type(ex)})
-        return rows_archived
 
-    rows_archived = result_delete.rowcount
+    if ((max_rows is None or rows_archived < max_rows)
+            and 'instance_uuid' in columns):
+        instances = models.BASE.metadata.tables['instances']
+        limit = max_rows - rows_archived if max_rows is not None else None
+        extra = _archive_if_instance_deleted(table, shadow_table, instances,
+                                             conn, limit)
+        rows_archived += extra
 
     return rows_archived
 
