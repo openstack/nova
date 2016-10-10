@@ -1,0 +1,30 @@
+---
+prelude: >
+    Nova 14.0.0 release is including a lot of new features and bugfixes. It can
+    be extremely hard to mention all the changes we introduced during that
+    release but we beg you to read at least the upgrade section which describes
+    the required modifications that you need to do for upgrading your cloud
+    from 13.0.0 (Mitaka) to 14.0.0 (Newton).
+
+    That said, a few major changes are worth to notice here. This is not an
+    exhaustive list of things to notice, rather just important things you need
+    to know :
+
+      - Latest API microversion supported for Newton is v2.38
+      - Nova now provides a new placement RESTful API endpoint that is for
+        the moment optional where Nova compute nodes use it for providing
+        resources. For the moment, the nova-scheduler is not using it but we
+        plan to check the placement resources for Ocata. In case you plan to
+        rolling-upgrade the compute nodes between Newton and Ocata, please
+        look in the notes below how to use the new placement API.
+      - Cells V2 now supports booting instances for one cell v2 only. We plan
+        to add a multi-cell support for Ocata. You can prepare for Ocata now
+        by creating a cellv2 now using the nova-manage related commands, but
+        configuring Cells V2 is still fully optional for this cycle.
+      - Nova is now using Glance v2 API for getting image resources.
+      - API microversions 2.36 and above now deprecate the REST resources in
+        Nova used to proxy calls to other service type APIs (eg. /os-volumes).
+        We'll still supporting those until we raise our minimum API version
+        to 2.36 which is not planned yet (we're supporting v2.1 as of now) but
+        you're encouraged to stop using those resources and rather calling the
+        other services that provide those natively.
