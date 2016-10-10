@@ -9252,10 +9252,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                 CONF.image_cache_subdirectory_name)
         instance = objects.Instance(**self.test_instance)
         disk_info_byname = fake_disk_info_byname(instance)
-        disk_info = disk_info_byname.values()
 
-        # Give the ephemeral disk a non-default name
         disk_info_byname['disk.local']['backing_file'] = 'ephemeral_foo'
+        disk_info_byname['disk.local']['virt_disk_size'] = 1 * units.Gi
+
+        disk_info = disk_info_byname.values()
 
         with test.nested(
             mock.patch.object(libvirt_driver.libvirt_utils, 'fetch_image'),
@@ -9283,8 +9284,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
             verify_base_size_mock.assert_has_calls([
                 mock.call(root_backing, instance.flavor.root_gb * units.Gi),
-                mock.call(ephemeral_backing,
-                          instance.flavor.ephemeral_gb * units.Gi)
+                mock.call(ephemeral_backing, 1 * units.Gi)
             ])
 
     def test_create_images_and_backing_disk_info_none(self):
