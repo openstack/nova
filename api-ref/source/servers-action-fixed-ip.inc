@@ -27,17 +27,17 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
-  - server_id: server_id
+  - server_id: server_id_path
   - addFixedIp: addFixedIp
 
-**Example Add (Associate) Fixed Ip (Addfixedip Action): JSON request**
+**Example Add (Associate) Fixed Ip (Addfixedip Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-multinic/multinic-add-fixed-ip-req.json
    :language: javascript
 
 Response
 --------
+
 
 Remove (Disassociate) Fixed Ip (Removefixedip Action)
 =====================================================
@@ -62,10 +62,10 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - removeFixedIp: removeFixedIp
 
-**Example Remove (Disassociate) Fixed Ip (Removefixedip Action): JSON request**
+**Example Remove (Disassociate) Fixed Ip (Removefixedip Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-multinic/multinic-remove-fixed-ip-req.json
    :language: javascript

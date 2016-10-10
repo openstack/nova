@@ -22,7 +22,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - server_id: server_id
+  - server_id: server_id_path
 
 Response
 --------
@@ -37,7 +37,7 @@ Response
   - tenant_id: tenant_id_body
 
 
-**Example List security groups by server: JSON response**
+**Example List security groups by server**
 
 .. literalinclude:: ../../doc/api_samples/os-security-groups/server-security-groups-list-resp.json
    :language: javascript

@@ -21,8 +21,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
-  - server_id: server_id
+  - server_id: server_id_path
   - evacuate: evacuate
   - host: host
   - adminPass: adminPass_evacuate_rebuild_request
@@ -31,7 +30,7 @@ Request
 
 |
 
-**Example Evacuate Server (evacuate Action):**
+**Example Evacuate Server (evacuate Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-evacuate/server-evacuate-req.json
    :language: javascript
@@ -46,7 +45,7 @@ Response
 
 |
 
-**Example Evacuate Server (evacuate Action):**
+**Example Evacuate Server (evacuate Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-evacuate/server-evacuate-resp.json
    :language: javascript

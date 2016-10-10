@@ -22,9 +22,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
-  - server_id: server_id
-
+  - server_id: server_id_path
 
 Response
 --------
@@ -60,14 +58,12 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
-  - server_id: server_id
-
+  - server_id: server_id_path
 
 Response
 --------
 
-No body content is returned on a successful POST.
+If successful, this method does not return a response body.
 
 
 Show Console Details
@@ -86,10 +82,8 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
-  - server_id: server_id
+  - server_id: server_id_path
   - console_id: console_id
-
 
 Response
 --------
@@ -128,14 +122,14 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
-  - server_id: server_id
+  - server_id: server_id_path
   - console_id: console_id
+
 
 Response
 --------
 
-There is no body content for the response of a successful DELETE query
+If successful, this method does not return a response body.
 
 
 Show Console Connection Information
