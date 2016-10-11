@@ -270,6 +270,17 @@ class KeyPair(API_BASE):
                   nullable=False, server_default='ssh')
 
 
+class ResourceClass(API_BASE):
+    """Represents the type of resource for an inventory or allocation."""
+    __tablename__ = 'resource_classes'
+    __table_args__ = (
+        schema.UniqueConstraint("name", name="uniq_resource_classes0name"),
+    )
+
+    id = Column(Integer, primary_key=True, nullable=False)
+    name = Column(String(255), nullable=False)
+
+
 class ResourceProvider(API_BASE):
     """Represents a mapping to a providers of resources."""
 
