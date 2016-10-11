@@ -148,6 +148,9 @@ class ResourceTracker(object):
         LOG.debug("Disk overhead for %(flavor)d GB instance; %(overhead)d "
                   "GB", {'flavor': instance.flavor.root_gb,
                          'overhead': overhead.get('disk_gb', 0)})
+        LOG.debug("CPU overhead for %(flavor)d vCPUs instance; %(overhead)d "
+                  "vCPU(s)", {'flavor': instance.flavor.vcpus,
+                              'overhead': overhead.get('vcpus', 0)})
 
         cn = self.compute_nodes[nodename]
         pci_requests = objects.InstancePCIRequests.get_by_instance_uuid(
@@ -238,6 +241,9 @@ class ResourceTracker(object):
         LOG.debug("Disk overhead for %(flavor)d GB instance; %(overhead)d "
                   "GB", {'flavor': instance.flavor.root_gb,
                          'overhead': overhead.get('disk_gb', 0)})
+        LOG.debug("CPU overhead for %(flavor)d vCPUs instance; %(overhead)d "
+                  "vCPU(s)", {'flavor': instance.flavor.vcpus,
+                              'overhead': overhead.get('vcpus', 0)})
 
         cn = self.compute_nodes[nodename]
 
@@ -763,16 +769,18 @@ class ResourceTracker(object):
     def _update_usage(self, usage, nodename, sign=1):
         mem_usage = usage['memory_mb']
         disk_usage = usage.get('root_gb', 0)
+        vcpus_usage = usage.get('vcpus', 0)
 
         overhead = self.driver.estimate_instance_overhead(usage)
         mem_usage += overhead['memory_mb']
         disk_usage += overhead.get('disk_gb', 0)
+        vcpus_usage += overhead.get('vcpus', 0)
 
         cn = self.compute_nodes[nodename]
         cn.memory_mb_used += sign * mem_usage
         cn.local_gb_used += sign * disk_usage
         cn.local_gb_used += sign * usage.get('ephemeral_gb', 0)
-        cn.vcpus_used += sign * usage.get('vcpus', 0)
+        cn.vcpus_used += sign * vcpus_usage
 
         # free ram and disk may be negative, depending on policy:
         cn.free_ram_mb = cn.memory_mb - cn.memory_mb_used
