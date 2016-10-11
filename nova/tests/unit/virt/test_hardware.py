@@ -2041,7 +2041,7 @@ class VirtMemoryPagesTestCase(test.NoDBTestCase):
         flavor = objects.Flavor(vcpus=16, memory_mb=2048,
                                 extra_specs=spec or {})
         image_meta = objects.ImageMeta.from_dict({"properties": props or {}})
-        return hw._numa_get_pagesize_constraints(flavor, image_meta)
+        return hw._get_numa_pagesize_constraint(flavor, image_meta)
 
     def test_get_requested_mempages_pagesize_from_flavor_swipe(self):
         self.assertEqual(

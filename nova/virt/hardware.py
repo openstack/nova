@@ -1078,7 +1078,7 @@ def _get_flavor_image_meta(key, flavor, image_meta, default=None):
     return flavor_policy, image_policy
 
 
-def _numa_get_pagesize_constraints(flavor, image_meta):
+def _get_numa_pagesize_constraint(flavor, image_meta):
     """Return the requested memory page size
 
     :param flavor: a Flavor object to read extra specs from
@@ -1137,7 +1137,7 @@ def _numa_get_pagesize_constraints(flavor, image_meta):
     return pagesize
 
 
-def _numa_get_flavor_numa_map(flavor, key, func):
+def _get_constraint_mappings_from_flavor(flavor, key, func):
     hw_numa_map = []
     extra_specs = flavor.get('extra_specs', {})
     for cellid in range(objects.ImageMetaProps.NUMA_NODES_MAX):
@@ -1149,9 +1149,24 @@ def _numa_get_flavor_numa_map(flavor, key, func):
     return hw_numa_map or None
 
 
-def _numa_get_cpu_map_list(flavor, image_meta):
-    flavor_cpu_list = _numa_get_flavor_numa_map(flavor, 'hw:numa_cpus',
-                                                parse_cpu_spec)
+def _get_numa_cpu_constraint(flavor, image_meta):
+    # type: (objects.Flavor, objects.ImageMeta) -> Optional[List[Set[int]]]
+    """Validate and return the requested guest NUMA-guest CPU mapping.
+
+    Extract the user-provided mapping of guest CPUs to guest NUMA nodes. For
+    example, the flavor extra spec ``hw:numa_cpus.0=0-1,4`` will map guest
+    cores ``0``, ``1``, ``4`` to guest NUMA node ``0``.
+
+    :param flavor: ``nova.objects.Flavor`` instance
+    :param image_meta: ``nova.objects.ImageMeta`` instance
+    :raises: exception.ImageNUMATopologyForbidden if both image metadata and
+        flavor extra specs are defined.
+    :return: An ordered list of sets of CPU indexes to assign to each guest
+        NUMA node if matching extra specs or image metadata properties found,
+        else None.
+    """
+    flavor_cpu_list = _get_constraint_mappings_from_flavor(
+        flavor, 'hw:numa_cpus', parse_cpu_spec)
     image_cpu_list = image_meta.properties.get('hw_numa_cpus', None)
 
     if flavor_cpu_list is None:
@@ -1164,8 +1179,24 @@ def _numa_get_cpu_map_list(flavor, image_meta):
     return flavor_cpu_list
 
 
-def _numa_get_mem_map_list(flavor, image_meta):
-    flavor_mem_list = _numa_get_flavor_numa_map(flavor, 'hw:numa_mem', int)
+def _get_numa_mem_constraint(flavor, image_meta):
+    # type: (objects.Flavor, objects.ImageMeta) -> Optional[List[Set[int]]]
+    """Validate and return the requested guest NUMA-guest memory mapping.
+
+    Extract the user-provided mapping of guest memory to guest NUMA nodes. For
+    example, the flavor extra spec ``hw:numa_mem.0=1`` will map 1 GB of guest
+    memory to guest NUMA node ``0``.
+
+    :param flavor: ``nova.objects.Flavor`` instance
+    :param image_meta: ``nova.objects.ImageMeta`` instance
+    :raises: exception.ImageNUMATopologyForbidden if both image metadata and
+        flavor extra specs are defined
+    :return: An ordered list of memory (in GB) to assign to each guest NUMA
+        node if matching extra specs or image metadata properties found, else
+        None.
+    """
+    flavor_mem_list = _get_constraint_mappings_from_flavor(
+        flavor, 'hw:numa_mem', int)
     image_mem_list = image_meta.properties.get('hw_numa_mem', None)
 
     if flavor_mem_list is None:
@@ -1178,8 +1209,42 @@ def _numa_get_mem_map_list(flavor, image_meta):
     return flavor_mem_list
 
 
-def _get_cpu_policy_constraints(flavor, image_meta):
-    """Validate and return the requested CPU policy."""
+def _get_numa_node_count_constraint(flavor, image_meta):
+    # type: (objects.Flavor, objects.ImageMeta) -> Optional[int]
+    """Validate and return the requested NUMA nodes.
+
+    :param flavor: ``nova.objects.Flavor`` instance
+    :param image_meta: ``nova.objects.ImageMeta`` instance
+    :raises: exception.ImageNUMATopologyForbidden if both image metadata and
+        flavor extra specs are defined
+    :raises: exception.InvalidNUMANodesNumber if the number of NUMA
+        nodes is less than 1 or not an integer
+    :returns: The number of NUMA nodes requested in either the flavor or image,
+        else None.
+    """
+    flavor_nodes, image_nodes = _get_flavor_image_meta(
+        'numa_nodes', flavor, image_meta)
+    if flavor_nodes and image_nodes:
+        raise exception.ImageNUMATopologyForbidden(name='hw_numa_nodes')
+
+    nodes = flavor_nodes or image_nodes
+    if nodes is not None and (not strutils.is_int_like(nodes) or
+            int(nodes) < 1):
+        raise exception.InvalidNUMANodesNumber(nodes=nodes)
+
+    return int(nodes) if nodes else nodes
+
+
+def _get_cpu_policy_constraint(flavor, image_meta):
+    # type: (objects.Flavor, objects.ImageMeta) -> Optional[str]
+    """Validate and return the requested CPU policy.
+
+    :param flavor: ``nova.objects.Flavor`` instance
+    :param image_meta: ``nova.objects.ImageMeta`` instance
+    :raises: exception.ImageCPUPinningForbidden if policy is defined on both
+        image and flavor and these policies conflict.
+    :returns: The CPU policy requested.
+    """
     flavor_policy, image_policy = _get_flavor_image_meta(
         'cpu_policy', flavor, image_meta)
 
@@ -1197,8 +1262,16 @@ def _get_cpu_policy_constraints(flavor, image_meta):
     return cpu_policy
 
 
-def _get_cpu_thread_policy_constraints(flavor, image_meta):
-    """Validate and return the requested CPU thread policy."""
+def _get_cpu_thread_policy_constraint(flavor, image_meta):
+    # type: (objects.Flavor, objects.ImageMeta) -> Optional[str]
+    """Validate and return the requested CPU thread policy.
+
+    :param flavor: ``nova.objects.Flavor`` instance
+    :param image_meta: ``nova.objects.ImageMeta`` instance
+    :raises: exception.ImageCPUThreadPolicyForbidden if policy is defined on
+        both image and flavor and these policies conflict.
+    :returns: The CPU thread policy requested.
+    """
     flavor_policy, image_policy = _get_flavor_image_meta(
         'cpu_thread_policy', flavor, image_meta)
 
@@ -1272,19 +1345,33 @@ def is_realtime_enabled(flavor):
     return strutils.bool_from_string(flavor_rt)
 
 
-def _get_realtime_mask(flavor, image):
-    """Returns realtime mask based on flavor/image meta"""
+def _get_realtime_constraint(flavor, image_meta):
+    # type: (objects.Flavor, objects.ImageMeta) -> Optional[str]
+    """Validate and return the requested realtime CPU mask.
+
+    :param flavor: ``nova.objects.Flavor`` instance
+    :param image_meta: ``nova.objects.ImageMeta`` instance
+    :returns: The realtime CPU mask requested, else None.
+    """
     flavor_mask, image_mask = _get_flavor_image_meta(
-        'cpu_realtime_mask', flavor, image)
+        'cpu_realtime_mask', flavor, image_meta)
 
     # Image masks are used ahead of flavor masks as they will have more
     # specific requirements
     return image_mask or flavor_mask
 
 
-def vcpus_realtime_topology(flavor, image):
-    """Determines instance vCPUs used as RT for a given spec"""
-    mask = _get_realtime_mask(flavor, image)
+def vcpus_realtime_topology(flavor, image_meta):
+    # type: (objects.Flavor, objects.ImageMeta) -> List[int]
+    """Determines instance vCPUs used as RT for a given spec.
+
+    :param flavor: ``nova.objects.Flavor`` instance
+    :param image_meta: ``nova.objects.ImageMeta`` instance
+    :raises: exception.RealtimeMaskNotFoundOrInvalid if mask was not found or
+        is invalid.
+    :returns: The realtime CPU mask requested, else None.
+    """
+    mask = _get_realtime_constraint(flavor, image_meta)
     if not mask:
         raise exception.RealtimeMaskNotFoundOrInvalid()
 
@@ -1295,11 +1382,18 @@ def vcpus_realtime_topology(flavor, image):
     return vcpus_rt
 
 
-def get_emulator_threads_constraint(flavor, image_meta):
-    """Determines the emulator threads policy"""
+# NOTE(stephenfin): This must be public as it's used elsewhere
+def get_emulator_thread_policy_constraint(flavor):
+    # type: (objects.Flavor) -> Optional[str]
+    """Validate and return the requested emulator threads policy.
+
+    :param flavor: ``nova.objects.Flavor`` instance
+    :raises: exception.InvalidEmulatorThreadsPolicy if mask was not found or
+        is invalid.
+    :returns: The emulator thread policy requested, else None.
+    """
     emu_threads_policy = flavor.get('extra_specs', {}).get(
         'hw:emulator_threads_policy')
-    LOG.debug("emulator threads policy constraint: %s", emu_threads_policy)
 
     if not emu_threads_policy:
         return
@@ -1309,27 +1403,7 @@ def get_emulator_threads_constraint(flavor, image_meta):
             requested=emu_threads_policy,
             available=str(fields.CPUEmulatorThreadsPolicy.ALL))
 
-    if emu_threads_policy == fields.CPUEmulatorThreadsPolicy.ISOLATE:
-        # In order to make available emulator threads policy, a dedicated
-        # CPU policy is necessary.
-        cpu_policy = _get_cpu_policy_constraints(flavor, image_meta)
-        if cpu_policy != fields.CPUAllocationPolicy.DEDICATED:
-            raise exception.BadRequirementEmulatorThreadsPolicy()
-
     return emu_threads_policy
-
-
-def _validate_numa_nodes(nodes):
-    """Validate NUMA nodes number
-
-    :param nodes: number of NUMA nodes
-
-    :raises: exception.InvalidNUMANodesNumber if the number of NUMA
-             nodes is less than 1 or not an integer
-    """
-    if nodes is not None and (not strutils.is_int_like(nodes) or
-       int(nodes) < 1):
-        raise exception.InvalidNUMANodesNumber(nodes=nodes)
 
 
 # TODO(sahid): Move numa related to hardware/numa.py
@@ -1373,29 +1447,16 @@ def numa_get_constraints(flavor, image_meta):
              specified in a flavor conflicts with one defined in image metadata
     :returns: objects.InstanceNUMATopology, or None
     """
-    flavor_nodes, image_nodes = _get_flavor_image_meta(
-        'numa_nodes', flavor, image_meta)
-    if flavor_nodes and image_nodes:
-        raise exception.ImageNUMATopologyForbidden(
-            name='hw_numa_nodes')
-
-    nodes = None
-    if flavor_nodes:
-        _validate_numa_nodes(flavor_nodes)
-        nodes = int(flavor_nodes)
-    else:
-        _validate_numa_nodes(image_nodes)
-        nodes = image_nodes
-
-    pagesize = _numa_get_pagesize_constraints(
-        flavor, image_meta)
-
     numa_topology = None
+
+    nodes = _get_numa_node_count_constraint(flavor, image_meta)
+    pagesize = _get_numa_pagesize_constraint(flavor, image_meta)
+
     if nodes or pagesize:
         nodes = nodes or 1
 
-        cpu_list = _numa_get_cpu_map_list(flavor, image_meta)
-        mem_list = _numa_get_mem_map_list(flavor, image_meta)
+        cpu_list = _get_numa_cpu_constraint(flavor, image_meta)
+        mem_list = _get_numa_mem_constraint(flavor, image_meta)
 
         # If one property list is specified both must be
         if ((cpu_list is None and mem_list is not None) or
@@ -1418,25 +1479,27 @@ def numa_get_constraints(flavor, image_meta):
         for c in numa_topology.cells:
             setattr(c, 'pagesize', pagesize)
 
-    cpu_policy = _get_cpu_policy_constraints(flavor, image_meta)
-    cpu_thread_policy = _get_cpu_thread_policy_constraints(flavor, image_meta)
-    rt_mask = _get_realtime_mask(flavor, image_meta)
-    emu_thread_policy = get_emulator_threads_constraint(flavor, image_meta)
+    cpu_policy = _get_cpu_policy_constraint(flavor, image_meta)
+    cpu_thread_policy = _get_cpu_thread_policy_constraint(flavor, image_meta)
+    rt_mask = _get_realtime_constraint(flavor, image_meta)
+    emu_threads_policy = get_emulator_thread_policy_constraint(flavor)
 
     # sanity checks
-
-    rt = is_realtime_enabled(flavor)
-
-    if rt and cpu_policy != fields.CPUAllocationPolicy.DEDICATED:
-        raise exception.RealtimeConfigurationInvalid()
-
-    if rt and not rt_mask:
-        raise exception.RealtimeMaskNotFoundOrInvalid()
 
     if cpu_policy == fields.CPUAllocationPolicy.SHARED:
         if cpu_thread_policy:
             raise exception.CPUThreadPolicyConfigurationInvalid()
+
+        if emu_threads_policy == fields.CPUEmulatorThreadsPolicy.ISOLATE:
+            raise exception.BadRequirementEmulatorThreadsPolicy()
+
+        if is_realtime_enabled(flavor):
+            raise exception.RealtimeConfigurationInvalid()
+
         return numa_topology
+
+    if is_realtime_enabled(flavor) and not rt_mask:
+        raise exception.RealtimeMaskNotFoundOrInvalid()
 
     if numa_topology:
         for cell in numa_topology.cells:
@@ -1451,8 +1514,8 @@ def numa_get_constraints(flavor, image_meta):
             cpu_thread_policy=cpu_thread_policy)
         numa_topology = objects.InstanceNUMATopology(cells=[single_cell])
 
-    if emu_thread_policy:
-        numa_topology.emulator_threads_policy = emu_thread_policy
+    if emu_threads_policy:
+        numa_topology.emulator_threads_policy = emu_threads_policy
 
     return numa_topology
 
