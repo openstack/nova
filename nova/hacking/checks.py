@@ -660,17 +660,21 @@ def check_config_option_in_central_place(logical_line, filename):
     # That's the correct location
     if "nova/conf/" in filename:
         return
-    # TODO(markus_z) This is just temporary until all config options are
-    # moved to the central place. To avoid that a once cleaned up place
-    # introduces new config options, we do a check here. This array will
-    # get quite huge over the time, but will be removed at the end of the
-    # reorganization.
-    # You can add the full path to a module or folder. It's just a substring
-    # check, which makes it flexible enough.
-    cleaned_up = ["nova/console/serial.py",
-                  "nova/cmd/serialproxy.py",
-                  ]
-    if not any(c in filename for c in cleaned_up):
+
+    # (macsz) All config options (with exceptions that are clarified
+    # in the list below) were moved to the central place. List below is for
+    # all options that were impossible to move without doing a major impact
+    # on code. Add full path to a module or folder.
+    conf_exceptions = [
+        # CLI opts are allowed to be outside of nova/conf directory
+        'nova/cmd/manage.py',
+        'nova/cmd/policy_check.py',
+        # config options should not be declared in tests, but there is
+        # another checker for it (N320)
+        'nova/tests',
+    ]
+
+    if any(f in filename for f in conf_exceptions):
         return
 
     if cfg_opt_re.match(logical_line):

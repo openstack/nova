@@ -624,17 +624,21 @@ class HackingTestCase(test.NoDBTestCase):
         self._assert_has_no_errors(code,
                                    checks.check_config_option_in_central_place,
                                    filename="nova/conf/serial_console.py")
-        # option at a location which is not in scope right now
-        # TODO(markus_z): This is temporary until all config options are
-        # moved to /nova/conf
-        self._assert_has_no_errors(code,
-                                   checks.check_config_option_in_central_place,
-                                   filename="nova/dummy/non_existent.py")
         # option at the wrong place in the tree
         self._assert_has_errors(code,
                                 checks.check_config_option_in_central_place,
                                 filename="nova/cmd/serialproxy.py",
                                 expected_errors=errors)
+
+        # option at a location which is marked as an exception
+        # TODO(macsz) remove testing exceptions as they are removed from
+        # check_config_option_in_central_place
+        self._assert_has_no_errors(code,
+                                   checks.check_config_option_in_central_place,
+                                   filename="nova/cmd/manage.py")
+        self._assert_has_no_errors(code,
+                                   checks.check_config_option_in_central_place,
+                                   filename="nova/tests/dummy_test.py")
 
     def test_check_doubled_words(self):
         errors = [(1, 0, "N343")]
