@@ -265,6 +265,9 @@ notification_object_data = {
     'FlavorPayload': '1.0-8ad962ab0bafc7270f474c7dda0b7c20',
     'InstanceActionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'InstanceActionPayload': '1.0-d94994d6043bb87fde603976ce811cba',
+    'InstanceActionVolumeSwapNotification':
+    '1.0-a73147b93b520ff0061865849d3dfa56',
+    'InstanceActionVolumeSwapPayload': '1.0-1043222e12be67403cab471ea1989b76',
     'InstancePayload': '1.0-4473793aa2a0a4083d328847f3ab638a',
     'InstanceStateUpdatePayload': '1.0-a934d04e1b314318e42e8062647edd11',
     'InstanceUpdateNotification': '1.0-a73147b93b520ff0061865849d3dfa56',

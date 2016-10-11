@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    The following versioned swap volume notifications have been added
+    in the compute manager:
+
+    * instance.volume_swap.start
+    * instance.volume_swap.end

@@ -4916,6 +4916,12 @@ class ComputeManager(manager.Manager):
         """Swap volume for an instance."""
         context = context.elevated()
 
+        compute_utils.notify_about_volume_swap(
+            context, instance, self.host,
+            fields.NotificationAction.VOLUME_SWAP,
+            fields.NotificationPhase.START,
+            old_volume_id, new_volume_id)
+
         bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
                 context, old_volume_id, instance.uuid)
         connector = self.driver.get_volume_connector(instance)
@@ -4956,6 +4962,12 @@ class ComputeManager(manager.Manager):
                   instance=instance)
         bdm.update(values)
         bdm.save()
+
+        compute_utils.notify_about_volume_swap(
+            context, instance, self.host,
+            fields.NotificationAction.VOLUME_SWAP,
+            fields.NotificationPhase.END,
+            old_volume_id, new_volume_id)
 
     @wrap_exception()
     def remove_volume_connection(self, context, volume_id, instance):

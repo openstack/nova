@@ -790,3 +790,83 @@ class NoopConductorFixture(fixtures.Fixture):
             'nova.conductor.ComputeTaskAPI', _NoopConductor))
         self.useFixture(fixtures.MonkeyPatch(
             'nova.conductor.API', _NoopConductor))
+
+
+class CinderFixture(fixtures.Fixture):
+    """A fixture to volume operations"""
+
+    # the default project_id in OSAPIFixtures
+    tenant_id = '6f70656e737461636b20342065766572'
+
+    SWAP_OLD_VOL = 'a07f71dc-8151-4e7d-a0cc-cd24a3f11113'
+    SWAP_NEW_VOL = '227cc671-f30b-4488-96fd-7d0bf13648d8'
+
+    def __init__(self, test):
+        super(CinderFixture, self).__init__()
+        self.test = test
+        self.swap_volume_instance_uuid = None
+
+    def setUp(self):
+        super(CinderFixture, self).setUp()
+
+        def fake_get(self_api, context, volume_id):
+            if volume_id == CinderFixture.SWAP_OLD_VOL:
+                volume = {
+                             'status': 'available',
+                             'display_name': 'TEST1',
+                             'attach_status': 'detached',
+                             'id': volume_id,
+                             'size': 1
+                         }
+                if (self.swap_volume_instance_uuid and
+                     volume_id == CinderFixture.SWAP_OLD_VOL):
+                    instance_uuid = self.swap_volume_instance_uuid
+
+                    volume.update({
+                        'status': 'in-use',
+                        'attachments': {
+                            instance_uuid: {
+                                'mountpoint': '/dev/vdb',
+                                'attachment_id': volume_id
+                            }
+                        },
+                        'attach_status': 'attached'
+                    })
+                return volume
+            else:
+                return {
+                           'status': 'available',
+                           'display_name': 'TEST2',
+                           'attach_status': 'detached',
+                           'id': volume_id,
+                           'size': 1
+                       }
+
+        def fake_initialize_connection(self, context, volume_id, connector):
+            return {}
+
+        def fake_migrate_volume_completion(self, context, old_volume_id,
+                                           new_volume_id, error):
+            return {'save_volume_id': new_volume_id}
+
+        self.test.stub_out('nova.volume.cinder.API.attach',
+                           lambda *args, **kwargs: None)
+        self.test.stub_out('nova.volume.cinder.API.begin_detaching',
+                           lambda *args, **kwargs: None)
+        self.test.stub_out('nova.volume.cinder.API.check_attach',
+                           lambda *args, **kwargs: None)
+        self.test.stub_out('nova.volume.cinder.API.check_detach',
+                           lambda *args, **kwargs: None)
+        self.test.stub_out('nova.volume.cinder.API.get',
+                           fake_get)
+        self.test.stub_out('nova.volume.cinder.API.initialize_connection',
+                           fake_initialize_connection)
+        self.test.stub_out(
+            'nova.volume.cinder.API.migrate_volume_completion',
+            fake_migrate_volume_completion)
+        self.test.stub_out('nova.volume.cinder.API.reserve_volume',
+                           lambda *args, **kwargs: None)
+        self.test.stub_out('nova.volume.cinder.API.roll_detaching',
+                           lambda *args, **kwargs: None)
+        self.test.stub_out('nova.volume.cinder.API.terminate_connection',
+                           lambda *args, **kwargs: None)
