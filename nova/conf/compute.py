@@ -169,20 +169,6 @@ Possible values:
   * Any positive integer representing amount of memory in MB to reserve
     for the host.
 """),
-    cfg.StrOpt('compute_stats_class',
-        default='nova.compute.stats.Stats',
-        deprecated_for_removal=True,
-        deprecated_since='13.0.0',
-        help="""
-Abstracts out managing compute host stats to pluggable class. This class
-manages and updates stats for the local compute host after an instance
-is changed. These configurable compute stats may be useful for a
-particular scheduler implementation.
-
-Possible values
-
-  * A string representing fully qualified class name.
-"""),
 ]
 
 allocation_ratio_opts = [
