@@ -15,7 +15,6 @@
 """
 Tests For Scheduler Utils
 """
-import uuid
 
 import mock
 import six
@@ -271,7 +270,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
 
         group = objects.InstanceGroup()
         group.name = 'pele'
-        group.uuid = str(uuid.uuid4())
+        group.uuid = uuids.fake
         group.members = [instance.uuid]
         group.policies = [policy]
         return group
@@ -311,7 +310,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
                 params={'host': 'hostA'})
 
         group = objects.InstanceGroup()
-        group.uuid = str(uuid.uuid4())
+        group.uuid = uuids.fake
         group.members = [instance.uuid]
         group.policies = [policy]
 

@@ -13,11 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import uuid
+from oslo_utils import uuidutils
 
 from nova.objects import keypair as keypair_obj
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit import fake_crypto
+from nova.tests import uuidsentinel as uuids
 
 
 class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
@@ -43,7 +44,7 @@ class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         """Get api sample of key pairs post request."""
         key_name = kwargs.pop('kp_name', None)
         if not key_name:
-            key_name = 'keypair-' + str(uuid.uuid4())
+            key_name = 'keypair-' + uuids.fake
 
         subs = dict(keypair_name=key_name, **kwargs)
         response = self._do_post('os-keypairs', 'keypairs-post-req', subs)
@@ -62,7 +63,7 @@ class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
     def _check_keypairs_import_key_post(self, public_key, **kwargs):
         # Get api sample of key pairs post to import user's key.
-        key_name = 'keypair-' + str(uuid.uuid4())
+        key_name = 'keypair-' + uuids.fake
         subs = {
             'keypair_name': key_name,
         }
@@ -116,7 +117,7 @@ class KeyPairsV22SampleJsonTest(KeyPairsSampleJsonTest):
             keypair_type=keypair_obj.KEYPAIR_TYPE_X509)
 
     def test_keypairs_post_invalid(self):
-        key_name = 'keypair-' + str(uuid.uuid4())
+        key_name = 'keypair-' + uuids.fake
         subs = dict(keypair_name=key_name, keypair_type='fakey_type')
         response = self._do_post('os-keypairs', 'keypairs-post-req', subs)
 
@@ -136,7 +137,7 @@ class KeyPairsV22SampleJsonTest(KeyPairsSampleJsonTest):
             public_key, keypair_type=keypair_obj.KEYPAIR_TYPE_X509)
 
     def _check_keypairs_import_key_post_invalid(self, keypair_type):
-        key_name = 'keypair-' + str(uuid.uuid4())
+        key_name = 'keypair-' + uuids.fake
         subs = {
             'keypair_name': key_name,
             'keypair_type': keypair_type,
@@ -200,7 +201,7 @@ class KeyPairsV210SampleJsonTest(KeyPairsSampleJsonTest):
         # Get api sample of key pairs list request.
 
         # create common kp_name for two users
-        kp_name = 'keypair-' + str(uuid.uuid4())
+        kp_name = 'keypair-' + uuids.fake
 
         keypair_user1 = self._check_keypairs_post(
             keypair_type=keypair_obj.KEYPAIR_TYPE_SSH,
@@ -229,7 +230,7 @@ class KeyPairsV210SampleJsonTestNotAdmin(KeyPairsV210SampleJsonTest):
             user_id="fake")
 
     def test_keypairs_post_for_other_user(self):
-        key_name = 'keypair-' + str(uuid.uuid4())
+        key_name = 'keypair-' + uuids.fake
         subs = dict(keypair_name=key_name,
                     keypair_type=keypair_obj.KEYPAIR_TYPE_SSH,
                     user_id='fake1')
@@ -269,7 +270,7 @@ class KeyPairsV235SampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         """Get api sample of key pairs post request."""
         key_name = kwargs.pop('kp_name', None)
         if not key_name:
-            key_name = 'keypair-' + str(uuid.uuid4())
+            key_name = 'keypair-' + uuidutils.generate_uuid()
 
         subs = dict(keypair_name=key_name, **kwargs)
         response = self._do_post('os-keypairs', 'keypairs-post-req', subs)
@@ -293,7 +294,7 @@ class KeyPairsV235SampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         # Get api sample of key pairs list request.
 
         # create common kp_names for two users
-        kp_names = ['keypair-' + str(uuid.uuid4()) for i in range(3)]
+        kp_names = ['keypair-' + uuidutils.generate_uuid() for i in range(3)]
 
         # sort key_pairs by name before paging
         keypairs_user1 = sorted([self.test_keypairs_post(

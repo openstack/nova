@@ -16,7 +16,6 @@
 """Tests for the conductor service."""
 
 import copy
-import uuid
 
 import mock
 from mox3 import mox
@@ -427,7 +426,7 @@ class _BaseTaskTestCase(object):
         instance_type.created_at = None
         instances = [objects.Instance(context=self.context,
                                       id=i,
-                                      uuid=uuid.uuid4(),
+                                      uuid=uuids.fake,
                                       flavor=instance_type) for i in range(2)]
         instance_type_p = obj_base.obj_to_primitive(instance_type)
         instance_properties = obj_base.obj_to_primitive(instances[0])

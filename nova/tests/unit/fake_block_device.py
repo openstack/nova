@@ -13,12 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import uuid
-
 from oslo_utils import timeutils
 
 from nova import block_device
 from nova import objects
+from nova.tests import uuidsentinel as uuids
 
 
 def fake_bdm_object(context, bdm_dict):
@@ -40,7 +39,7 @@ class FakeDbBlockDeviceDict(block_device.BlockDeviceDict):
     def __init__(self, bdm_dict=None, anon=False, **kwargs):
         bdm_dict = bdm_dict or {}
         db_id = bdm_dict.pop('id', 1)
-        instance_uuid = bdm_dict.pop('instance_uuid', str(uuid.uuid4()))
+        instance_uuid = bdm_dict.pop('instance_uuid', uuids.fake)
 
         super(FakeDbBlockDeviceDict, self).__init__(bdm_dict=bdm_dict,
                                                     **kwargs)
