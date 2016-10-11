@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
 from nova.tests.unit.virt.xenapi.plugins import plugin_test
 
 
@@ -26,7 +28,8 @@ class PluginlibNova(plugin_test.PluginTestBase):
         super(PluginlibNova, self).setUp()
         self.pluginlib_nova = self.load_plugin("pluginlib_nova.py")
 
-    def test_configure_logging(self):
+    @mock.patch('socket.socket.connect')
+    def test_configure_logging(self, mock_connect):
         name = 'fake_name'
         mock_Logger_setLevel = self.mock_patch_object(
             self.pluginlib_nova.logging.Logger, 'setLevel')
