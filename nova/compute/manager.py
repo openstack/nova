@@ -5177,7 +5177,7 @@ class ComputeManager(manager.Manager):
                                        network_info,
                                        disk,
                                        migrate_data)
-        LOG.debug('driver pre_live_migration data is %s' % migrate_data)
+        LOG.debug('driver pre_live_migration data is %s', migrate_data)
 
         # NOTE(tr3buchet): setup networks on destination host
         self.network_api.setup_networks_on_host(context, instance,
@@ -6171,9 +6171,9 @@ class ComputeManager(manager.Manager):
             # block entire periodic task thread
             uuid = db_instance.uuid
             if uuid in self._syncs_in_progress:
-                LOG.debug('Sync already in progress for %s' % uuid)
+                LOG.debug('Sync already in progress for %s', uuid)
             else:
-                LOG.debug('Triggering sync for uuid %s' % uuid)
+                LOG.debug('Triggering sync for uuid %s', uuid)
                 self._syncs_in_progress[uuid] = True
                 self._sync_power_pool.spawn_n(_sync, db_instance)
 

@@ -65,7 +65,7 @@ class BuildRequest(base.NovaObject):
                     jsonutils.loads(db_instance))
         except TypeError:
             LOG.debug('Failed to load instance from BuildRequest with uuid '
-                      '%s because it is None' % (self.instance_uuid))
+                      '%s because it is None', self.instance_uuid)
             raise exception.BuildRequestNotFound(uuid=self.instance_uuid)
         except ovoo_exc.IncompatibleObjectVersion as exc:
             # This should only happen if proper service upgrade strategies are

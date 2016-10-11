@@ -833,7 +833,7 @@ class NetworkManager(manager.Manager):
                 if address:
                     LOG.debug('Associating instance with specified fixed IP '
                               '%(address)s in network %(network)s on subnet '
-                              '%(cidr)s.' %
+                              '%(cidr)s.',
                               {'address': address, 'network': network['id'],
                                'cidr': network['cidr']},
                               instance=instance)
@@ -842,7 +842,7 @@ class NetworkManager(manager.Manager):
                             vif_id=vif.id)
                 else:
                     LOG.debug('Associating instance with fixed IP from pool '
-                              'in network %(network)s on subnet %(cidr)s.' %
+                              'in network %(network)s on subnet %(cidr)s.',
                               {'network': network['id'],
                                'cidr': network['cidr']},
                               instance=instance)
@@ -879,7 +879,7 @@ class NetworkManager(manager.Manager):
                         self.instance_dns_manager.delete_entry,
                         instance_id, self.instance_dns_domain))
 
-            LOG.debug('Setting up network %(network)s on host %(host)s.' %
+            LOG.debug('Setting up network %(network)s on host %(host)s.',
                       {'network': network['id'], 'host': self.host},
                       instance=instance)
             self._setup_network_on_host(context, network)

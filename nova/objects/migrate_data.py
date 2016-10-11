@@ -170,7 +170,7 @@ class LibvirtLiveMigrateData(LiveMigrateData):
             self.bdms.append(bdmi)
 
     def to_legacy_dict(self, pre_migration_result=False):
-        LOG.debug('Converting to legacy: %s' % self)
+        LOG.debug('Converting to legacy: %s', self)
         legacy = super(LibvirtLiveMigrateData, self).to_legacy_dict()
         keys = (set(self.fields.keys()) -
                 set(LiveMigrateData.fields.keys()) - {'bdms'})
@@ -193,11 +193,11 @@ class LibvirtLiveMigrateData(LiveMigrateData):
             legacy['pre_live_migration_result'] = live_result
             self._bdms_to_legacy(live_result)
 
-        LOG.debug('Legacy result: %s' % legacy)
+        LOG.debug('Legacy result: %s', legacy)
         return legacy
 
     def from_legacy_dict(self, legacy):
-        LOG.debug('Converting legacy dict to obj: %s' % legacy)
+        LOG.debug('Converting legacy dict to obj: %s', legacy)
         super(LibvirtLiveMigrateData, self).from_legacy_dict(legacy)
         keys = set(self.fields.keys()) - set(LiveMigrateData.fields.keys())
         for k in keys - {'bdms'}:
@@ -213,7 +213,7 @@ class LibvirtLiveMigrateData(LiveMigrateData):
             if 'serial_listen_addr' in pre_result:
                 self.serial_listen_addr = pre_result['serial_listen_addr']
             self._bdms_from_legacy(pre_result)
-        LOG.debug('Converted object: %s' % self)
+        LOG.debug('Converted object: %s', self)
 
     def is_on_shared_storage(self):
         return self.is_shared_block_storage or self.is_shared_instance_path

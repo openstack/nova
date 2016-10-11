@@ -220,7 +220,7 @@ class RBDDriver(object):
         try:
             return self.exists(image, pool=pool, snapshot=snapshot)
         except rbd.Error as e:
-            LOG.debug('Unable to open image %(loc)s: %(err)s' %
+            LOG.debug('Unable to open image %(loc)s: %(err)s',
                       dict(loc=url, err=e))
             return False
 

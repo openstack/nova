@@ -267,9 +267,9 @@ class Image(object):
         if size < base_size:
             msg = _LE('%(base)s virtual size %(base_size)s '
                       'larger than flavor root disk size %(size)s')
-            LOG.error(msg % {'base': base,
-                              'base_size': base_size,
-                              'size': size})
+            LOG.error(msg, {'base': base,
+                            'base_size': base_size,
+                            'size': size})
             raise exception.FlavorDiskSmallerThanImage(
                 flavor_size=size, image_size=base_size)
 
@@ -871,7 +871,7 @@ class Rbd(Image):
                                    include_locations=True)
         locations = image_meta['locations']
 
-        LOG.debug('Image locations are: %(locs)s' % {'locs': locations})
+        LOG.debug('Image locations are: %(locs)s', {'locs': locations})
 
         if image_meta.get('disk_format') not in ['raw', 'iso']:
             reason = _('Image is not raw format')

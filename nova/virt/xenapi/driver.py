@@ -56,9 +56,9 @@ def invalid_option(option_name, recommended_value):
     LOG.exception(_LE('Current value of '
                       'CONF.xenserver.%(option)s option incompatible with '
                       'CONF.xenserver.independent_compute=True.  '
-                      'Consider using "%(recommended)s"') % {
-                          'option': option_name,
-                          'recommended': recommended_value})
+                      'Consider using "%(recommended)s"'),
+                  {'option': option_name,
+                   'recommended': recommended_value})
     raise exception.NotSupportedWithOption(
         operation=option_name,
         option='CONF.xenserver.independent_compute')

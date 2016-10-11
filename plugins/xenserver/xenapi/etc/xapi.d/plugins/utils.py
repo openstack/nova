@@ -45,24 +45,24 @@ def delete_if_exists(path):
         os.unlink(path)
     except OSError, e:  # noqa
         if e.errno == errno.ENOENT:
-            LOG.warning("'%s' was already deleted, skipping delete" % path)
+            LOG.warning("'%s' was already deleted, skipping delete", path)
         else:
             raise
 
 
 def _link(src, dst):
-    LOG.info("Hard-linking file '%s' -> '%s'" % (src, dst))
+    LOG.info("Hard-linking file '%s' -> '%s'", src, dst)
     os.link(src, dst)
 
 
 def _rename(src, dst):
-    LOG.info("Renaming file '%s' -> '%s'" % (src, dst))
+    LOG.info("Renaming file '%s' -> '%s'", src, dst)
     try:
         os.rename(src, dst)
     except OSError, e:  # noqa
         if e.errno == errno.EXDEV:
             LOG.error("Invalid cross-device link.  Perhaps %s and %s should "
-                      "be symlinked on the same filesystem?" % (src, dst))
+                      "be symlinked on the same filesystem?", src, dst)
         raise
 
 
@@ -70,7 +70,7 @@ def make_subprocess(cmdline, stdout=False, stderr=False, stdin=False,
                     universal_newlines=False, close_fds=True, env=None):
     """Make a subprocess according to the given command-line string
     """
-    LOG.info("Running cmd '%s'" % " ".join(cmdline))
+    LOG.info("Running cmd '%s'", " ".join(cmdline))
     kwargs = {}
     kwargs['stdout'] = stdout and subprocess.PIPE or None
     kwargs['stderr'] = stderr and subprocess.PIPE or None
@@ -109,7 +109,7 @@ def finish_subprocess(proc, cmdline, cmd_input=None, ok_exit_codes=None):
     ret = proc.returncode
     if ret not in ok_exit_codes:
         LOG.error("Command '%(cmdline)s' with process id '%(pid)s' expected "
-                  "return code in '%(ok)s' but got '%(rc)s': %(err)s" %
+                  "return code in '%(ok)s' but got '%(rc)s': %(err)s",
                   {'cmdline': cmdline, 'pid': proc.pid, 'ok': ok_exit_codes,
                    'rc': ret, 'err': err})
         raise SubprocessException(' '.join(cmdline), ret, out, err)
@@ -132,11 +132,11 @@ def run_command(cmd, cmd_input=None, ok_exit_codes=None):
 def try_kill_process(proc):
     """Sends the given process the SIGKILL signal."""
     pid = proc.pid
-    LOG.info("Killing process %s" % pid)
+    LOG.info("Killing process %s", pid)
     try:
         os.kill(pid, signal.SIGKILL)
     except Exception:
-        LOG.exception("Failed to kill %s" % pid)
+        LOG.exception("Failed to kill %s", pid)
 
 
 def make_staging_area(sr_path):
@@ -279,14 +279,14 @@ def _validate_vhd(vdi_path):
             extra = (" ensure source and destination host machines have "
                      "time set correctly")
 
-        LOG.info("VDI Error details: %s" % out)
+        LOG.info("VDI Error details: %s", out)
 
         raise Exception(
             "VDI '%(vdi_path)s' has an invalid %(part)s: '%(details)s'"
             "%(extra)s" % {'vdi_path': vdi_path, 'part': part,
                            'details': details, 'extra': extra})
 
-    LOG.info("VDI is valid: %s" % vdi_path)
+    LOG.info("VDI is valid: %s", vdi_path)
 
 
 def _validate_vdi_chain(vdi_path):
@@ -470,7 +470,7 @@ def extract_tarball(fileobj, path, callback=None):
             tar_pid = tar_proc.pid
             if returncode is not None:
                 LOG.error("tar extract with process id '%(pid)s' "
-                          "exited early with '%(rc)s'" %
+                          "exited early with '%(rc)s'",
                           {'pid': tar_pid, 'rc': returncode})
                 raise SubprocessException(
                     ' '.join(tar_cmd), returncode, "", "")
@@ -479,7 +479,7 @@ def extract_tarball(fileobj, path, callback=None):
         # no need to kill already dead process
         raise
     except Exception:
-        LOG.exception("Failed while sending data to tar pid: %s" % tar_pid)
+        LOG.exception("Failed while sending data to tar pid: %s", tar_pid)
         try_kill_process(tar_proc)
         raise
 

@@ -51,8 +51,8 @@ class AggregateImagePropertiesIsolation(filters.BaseHostFilter):
                 prop = image_props.get(key)
             except AttributeError:
                 LOG.warning(_LW("Host '%(host)s' has a metadata key '%(key)s' "
-                                "that is not present in the image metadata.") %
-                                {"host": host_state.host, "key": key})
+                                "that is not present in the image metadata."),
+                            {"host": host_state.host, "key": key})
                 continue
 
             # NOTE(sbauza): Aggregate metadata is only strings, we need to

@@ -224,5 +224,5 @@ class VolumeOps(object):
                 # Forget (i.e. disconnect) SR only if not in use
                 volume_utils.purge_sr(self._session, sr_ref)
             except Exception:
-                LOG.debug('Ignoring error while purging sr: %s' % sr_ref,
-                        exc_info=True)
+                LOG.debug('Ignoring error while purging sr: %s', sr_ref,
+                          exc_info=True)

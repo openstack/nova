@@ -64,6 +64,7 @@ Nova Specific Commandments
 - [N351] Do not use the oslo_policy.policy.Enforcer.enforce() method.
 - [N352] LOG.warn is deprecated. Enforce use of LOG.warning.
 - [N353] Validate that context objects is not passed in logging calls.
+- [N354] String interpolation should be delayed at logging calls.
 
 Creating Unit Tests
 -------------------

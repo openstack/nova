@@ -363,8 +363,8 @@ def _stream_to_vdi(conn, vdi_import_path, file_size, file_obj):
                'Content-Length': '%s' % file_size}
 
     CHUNK_SIZE = 16 * 1024
-    LOG.debug('Initialising PUT request to %s (Headers: %s)' % (
-        vdi_import_path, headers))
+    LOG.debug('Initialising PUT request to %s (Headers: %s)',
+              vdi_import_path, headers)
     conn.request('PUT', vdi_import_path, headers=headers)
     remain_size = file_size
     while remain_size >= CHUNK_SIZE:
