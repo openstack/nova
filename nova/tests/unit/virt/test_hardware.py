@@ -1197,6 +1197,66 @@ class NUMATopologyTest(test.NoDBTestCase):
                 },
                 "expect": exception.RealtimeMaskNotFoundOrInvalid,
             },
+            {   # We pass an invalid option
+                "flavor": objects.Flavor(vcpus=16, memory_mb=2048,
+                                         extra_specs={
+                    "hw:emulator_threads_policy": "foo",
+                }),
+                "image": {
+                    "properties": {}
+                },
+                "expect": exception.InvalidEmulatorThreadsPolicy,
+            },
+            {   # We request emulator threads option without numa topology
+                "flavor": objects.Flavor(vcpus=16, memory_mb=2048,
+                                         extra_specs={
+                    "hw:emulator_threads_policy": "isolate",
+                }),
+                "image": {
+                    "properties": {}
+                },
+                "expect": exception.BadRequirementEmulatorThreadsPolicy,
+            },
+            {   # We request a valid emulator threads options with
+                # cpu_policy based from flavor
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                    "hw:emulator_threads_policy": "isolate",
+                    "hw:cpu_policy": "dedicated",
+                }),
+                "image": {
+                    "properties": {}
+                },
+                "expect": objects.InstanceNUMATopology(
+                    emulator_threads_policy=
+                      fields.CPUEmulatorThreadsPolicy.ISOLATE,
+                    cells=[
+                        objects.InstanceNUMACell(
+                            id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
+                            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                        )]),
+            },
+            {   # We request a valid emulator threads options with cpu
+                # policy based from image
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                    "hw:emulator_threads_policy": "isolate",
+                }),
+                "image": {
+                    "properties": {
+                        "hw_cpu_policy": "dedicated",
+                    }
+                },
+                "expect": objects.InstanceNUMATopology(
+                    emulator_threads_policy=
+                      fields.CPUEmulatorThreadsPolicy.ISOLATE,
+                    cells=[
+                        objects.InstanceNUMACell(
+                            id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
+                            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                        )]),
+            },
+
         ]
 
         for testitem in testdata:
@@ -1216,6 +1276,10 @@ class NUMATopologyTest(test.NoDBTestCase):
                 self.assertIsNotNone(topology)
                 self.assertEqual(len(testitem["expect"].cells),
                                  len(topology.cells))
+                self.assertEqual(
+                    testitem["expect"].emulator_threads_isolated,
+                    topology.emulator_threads_isolated)
+
                 for i in range(len(topology.cells)):
                     self.assertEqual(testitem["expect"].cells[i].id,
                                      topology.cells[i].id)
