@@ -2,8 +2,18 @@
 # This is a hack of the builtin todo extension, to make the todo_list
 # more user friendly.
 
-from sphinx.ext.todo import *
 import re
+
+from sphinx.ext.todo import depart_todo_node
+from sphinx.ext.todo import NoUri
+from sphinx.ext.todo import nodes
+from sphinx.ext.todo import process_todos
+from sphinx.ext.todo import purge_todos
+from sphinx.ext.todo import Todo
+from sphinx.ext.todo import TodoList
+from sphinx.ext.todo import todolist
+from sphinx.ext.todo import todo_node
+from sphinx.ext.todo import visit_todo_node
 
 
 def _(s):
