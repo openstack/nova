@@ -67,17 +67,6 @@ Possible values:
 
 * [file], Empty list (default)
 """),
-    cfg.BoolOpt('use_glance_v1',
-        default=False,
-        deprecated_for_removal=True,
-        deprecated_since="14.0.0",
-        deprecated_reason='Glance v1 support will be removed in '
-                          'Ocata',
-        help="""
-This flag allows reverting to glance v1 if for some reason glance v2 doesn't
-work in your environment. This will only exist in Newton, and a fully working
-Glance v2 will be a hard requirement in Ocata.
-"""),
     cfg.BoolOpt('verify_glance_signatures',
         default=False,
         help="""

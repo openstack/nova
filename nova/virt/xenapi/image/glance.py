@@ -37,7 +37,7 @@ class GlanceStore(object):
         def pick_glance(kwargs):
             server = next(glance_api_servers)
             kwargs['endpoint'] = server
-            kwargs['api_version'] = 1 if CONF.glance.use_glance_v1 else 2
+            kwargs['api_version'] = 2
             # NOTE(sdague): is the return significant here at all?
             return server
 

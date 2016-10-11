@@ -1,0 +1,5 @@
+---
+upgrade:
+  - |
+    ``use_glance_v1`` option was removed due to plans to remove Glance V1
+    support during Ocata development.
