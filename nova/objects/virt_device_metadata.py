@@ -94,12 +94,12 @@ class InstanceDeviceMetadata(base.NovaObject):
     VERSION = '1.0'
     fields = {
         'devices': fields.ListOfObjectsField('DeviceMetadata',
-                                                     subclasses=True),
+                                             subclasses=True),
     }
 
     @classmethod
-    def obj_from_db(cls, context, db_requests):
-        primitive = jsonutils.loads(db_requests)
+    def obj_from_db(cls, context, db_dev_meta):
+        primitive = jsonutils.loads(db_dev_meta)
         device_metadata = cls.obj_from_primitive(primitive)
         return device_metadata
 

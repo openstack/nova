@@ -840,11 +840,11 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 objects.InstancePCIRequests.get_by_instance_uuid(
                     self._context, self.uuid)
 
-    def _load_device_metadata(self, db_requests=None):
-        if db_requests is not None:
+    def _load_device_metadata(self, db_dev_meta=None):
+        if db_dev_meta is not None:
             self.device_metadata = \
                 objects.InstanceDeviceMetadata.obj_from_db(
-                self._context, db_requests)
+                self._context, db_dev_meta)
         else:
             self.device_metadata = \
                 objects.InstanceDeviceMetadata.get_by_instance_uuid(
