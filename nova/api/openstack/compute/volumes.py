@@ -333,7 +333,7 @@ class VolumeAttachmentController(wsgi.Controller):
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'attach_volume', server_id)
         except (exception.InvalidVolume,
-                exception.InvalidDevicePath) as e:
+                exception.InvalidDevicePath, exception.InvalidInput) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
         # The attach is async

@@ -669,6 +669,23 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         self.assertRaises(self.validation_error, self.attachments.create,
                           req, FAKE_UUID, body=body)
 
+    @mock.patch.object(compute_api.API, 'attach_volume')
+    def test_attach_volume_with_invalid_input(self, mock_attach):
+        mock_attach.side_effect = exception.InvalidInput(
+            reason='Invalid volume')
+
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
+                                     'device': '/dev/fake'}}
+
+        req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
+        req.method = 'POST'
+        req.body = jsonutils.dump_as_bytes({})
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = self.context
+
+        self.assertRaises(exc.HTTPBadRequest, self.attachments.create,
+                          req, FAKE_UUID, body=body)
+
     def _test_swap(self, attachments, uuid=FAKE_UUID_A,
                    fake_func=None, body=None):
         fake_func = fake_func or fake_swap_volume
