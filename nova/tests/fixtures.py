@@ -624,7 +624,7 @@ class EngineFacadeFixture(fixtures.Fixture):
     through it. This means that the initialization of sqlite in
     databases in our Database fixture will drive all connections to
     sqlite. While that's fine in a production environment, during
-    testing this means we can't test againts multiple backends in the
+    testing this means we can't test against multiple backends in the
     same test run.
 
     oslo.db does not yet support a reset mechanism here. This builds a
