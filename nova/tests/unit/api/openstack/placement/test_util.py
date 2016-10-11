@@ -13,6 +13,7 @@
 """Unit tests for the utility functions used by the placement API."""
 
 
+import fixtures
 from oslo_middleware import request_id
 import webob
 
@@ -143,6 +144,15 @@ class TestJSONErrorFormatter(test.NoDBTestCase):
     def setUp(self):
         super(TestJSONErrorFormatter, self).setUp()
         self.environ = {}
+        # TODO(jaypipes): Remove this when we get more than a single version
+        # in the placement API. The fact that we only had a single version was
+        # masking a bug in the utils code.
+        _versions = [
+            '1.0',
+            '1.1',
+        ]
+        mod_str = 'nova.api.openstack.placement.microversion.VERSIONS'
+        self.useFixture(fixtures.MonkeyPatch(mod_str, _versions))
 
     def test_status_to_int_code(self):
         body = ''
