@@ -22,6 +22,11 @@ wiring in out of tree code, upstream doesn't actively make any guarantees
 about these extensibility points; we don't support them, make any guarantees
 about compatibility, stability, etc.
 
+Furthermore, hooks and extension points in the code impede efforts in Nova to
+support interoperability between OpenStack clouds. Therefore an effort is
+being made to systematically deprecate and remove hooks, extension points, and
+classloading of managers and other services.
+
 Public Contractual APIs
 ========================
 
