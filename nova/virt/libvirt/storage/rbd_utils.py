@@ -30,7 +30,6 @@ from oslo_service import loopingcall
 from oslo_utils import excutils
 from oslo_utils import units
 
-from nova.compute import task_states
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
@@ -359,22 +358,10 @@ class RBDDriver(object):
             except loopingcall.LoopingCallDone:
                 pass
 
-    def cleanup_volumes(self, instance):
+    def cleanup_volumes(self, filter_fn):
         with RADOSClient(self, self.pool) as client:
-
-            def belongs_to_instance(disk):
-                # NOTE(nic): On revert_resize, the cleanup steps for the root
-                # volume are handled with an "rbd snap rollback" command,
-                # and none of this is needed (and is, in fact, harmful) so
-                # filter out non-ephemerals from the list
-                if instance.task_state == task_states.RESIZE_REVERTING:
-                    return (disk.startswith(instance.uuid) and
-                            disk.endswith('disk.local'))
-                else:
-                    return disk.startswith(instance.uuid)
-
             volumes = RbdProxy().list(client.ioctx)
-            for volume in filter(belongs_to_instance, volumes):
+            for volume in filter(filter_fn, volumes):
                 self._destroy_volume(client, volume)
 
     def get_pool_info(self):
