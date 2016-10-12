@@ -65,6 +65,8 @@ Nova Specific Commandments
 - [N352] LOG.warn is deprecated. Enforce use of LOG.warning.
 - [N353] Validate that context objects is not passed in logging calls.
 - [N354] String interpolation should be delayed at logging calls.
+- [N355] Enforce use of assertTrue/assertFalse
+- [N356] Enforce use of assertIs/assertIsNot
 
 Creating Unit Tests
 -------------------
