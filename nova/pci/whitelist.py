@@ -96,5 +96,5 @@ class Whitelist(object):
 
 
 def get_pci_device_devspec(pci_dev):
-    dev_filter = Whitelist(CONF.pci_passthrough_whitelist)
+    dev_filter = Whitelist(CONF.pci.passthrough_whitelist)
     return dev_filter.get_devspec(pci_dev)

@@ -15,7 +15,8 @@
 
 """ Example of a PCI alias::
 
-        | pci_alias = '{
+        | [pci]
+        | alias = '{
         |   "name": "QuicAssist",
         |   "product_id": "0443",
         |   "vendor_id": "8086",
@@ -24,7 +25,8 @@
 
     Aliases with the same name and the same device_type are OR operation::
 
-        | pci_alias = '{
+        | [pci]
+        | alias = '{
         |   "name": "QuicAssist",
         |   "product_id": "0442",
         |   "vendor_id": "8086",
@@ -97,7 +99,7 @@ _ALIAS_SCHEMA = {
 
 def _get_alias_from_config():
     """Parse and validate PCI aliases from the nova config."""
-    jaliases = CONF.pci_alias
+    jaliases = CONF.pci.alias
     aliases = {}  # map alias name to alias spec list
     try:
         for jsonspecs in jaliases:
@@ -150,7 +152,7 @@ def get_pci_requests_from_flavor(flavor):
     describes the flavor's pci requests, the key is
     'pci_passthrough:alias' and the value has format
     'alias_name_x:count, alias_name_y:count, ... '. The alias_name is
-    defined in 'pci_alias' configurations.
+    defined in 'pci.alias' configurations.
 
     The flavor's requirement is translated into pci requests list,
     each entry in the list is a dictionary. The dictionary has

@@ -212,7 +212,7 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         'nova.pci.whitelist.Whitelist._parse_white_list_from_config')
     def test_white_list_parsing(self, mock_whitelist_parse):
         white_list = '{"product_id":"0001", "vendor_id":"8086"}'
-        CONF.set_override('pci_passthrough_whitelist', white_list)
+        CONF.set_override('passthrough_whitelist', white_list, 'pci')
         pci_stats = stats.PciDeviceStats()
         pci_stats.add_device(self.fake_dev_2)
         pci_stats.remove_device(self.fake_dev_2)
@@ -226,7 +226,7 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
         white_list = ['{"vendor_id":"1137","product_id":"0071",'
                         '"address":"*:0a:00.*","physical_network":"physnet1"}',
                        '{"vendor_id":"1137","product_id":"0072"}']
-        self.flags(pci_passthrough_whitelist=white_list)
+        self.flags(passthrough_whitelist=white_list, group='pci')
         dev_filter = whitelist.Whitelist(white_list)
         self.pci_stats = stats.PciDeviceStats(dev_filter=dev_filter)
 
@@ -356,7 +356,7 @@ class PciDeviceVFPFStatsTestCase(test.NoDBTestCase):
         super(PciDeviceVFPFStatsTestCase, self).setUp()
         white_list = ['{"vendor_id":"8086","product_id":"1528"}',
                       '{"vendor_id":"8086","product_id":"1515"}']
-        self.flags(pci_passthrough_whitelist=white_list)
+        self.flags(passthrough_whitelist=white_list, group='pci')
         self.pci_stats = stats.PciDeviceStats()
 
     def _create_pci_devices(self, vf_product_id=1515, pf_product_id=1528):
