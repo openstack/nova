@@ -101,3 +101,32 @@ procedure is:
    design spec might be the best way to achieve this.
 
 .. _`an enforced time-based solution`: https://lists.launchpad.net/openstack/msg08574.html
+
+Metrics Gathering
+=================
+
+Nova currently has a monitor plugin to gather CPU metrics on compute nodes.
+This feeds into the MetricsFilter and MetricsWeigher in the scheduler. The
+CPU metrics monitor is only implemented for the libvirt compute driver.
+External projects like `Ceilometer`_ and `Watcher`_ consume these metrics.
+
+Over time people have tried to add new monitor plugins for things like memory
+bandwidth. There have also been attempts to expose these monitors over CLI,
+the REST API, and notifications.
+
+At the `Newton midcycle`_ it was decided that Nova does a poor job as a metrics
+gathering tool, especially as it's incomplete, not tested, and there are
+numerous other tools available to get this information as their primary
+function.
+
+Therefore, there is a freeze on adding new metrics monitoring plugins which
+also includes exposing existing monitored metrics outside of Nova, like with
+the nova-manage CLI, the REST API, or the notification bus. Long-term, metrics
+gathering will likely be deprecated within Nova. Since there is not yet a clear
+replacement, the deprecation is open-ended, but serves as a signal that new
+deployments should not rely on the metrics that Nova gathers and should instead
+focus their efforts on alternative solutions for placement.
+
+.. _Ceilometer: http://docs.openstack.org/developer/ceilometer/
+.. _Watcher: http://docs.openstack.org/developer/watcher/
+.. _Newton midcycle: http://lists.openstack.org/pipermail/openstack-dev/2016-August/100600.html
