@@ -362,9 +362,8 @@ class ResourceProvider(base.NovaObject):
     @db_api.api_context_manager.writer
     def _delete(context, _id):
         # Don't delete the resource provider if it has allocations.
-        rp_allocations = context.session.query(models.Allocation).\
-                         filter(models.Allocation.resource_provider_id == _id).\
-                         count()
+        rp_allocations = context.session.query(models.Allocation).filter(
+                models.Allocation.resource_provider_id == _id).count()
         if rp_allocations:
             raise exception.ResourceProviderInUse()
         # Delete any inventory associated with the resource provider
