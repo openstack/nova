@@ -42,6 +42,7 @@ WARN_EVERY = 10
 PLACEMENT_CLIENT_SEMAPHORE = 'placement_client'
 # Number of seconds between attempts to update the aggregate map
 AGGREGATE_REFRESH = 300
+NESTED_PROVIDER_API_VERSION = '1.14'
 
 
 def warn_limit(self, msg):
@@ -400,7 +401,8 @@ class SchedulerReportClient(object):
                  such resource provider could be found.
         :raise: ResourceProviderRetrievalFailed on error.
         """
-        resp = self.get("/resource_providers/%s" % uuid)
+        resp = self.get("/resource_providers/%s" % uuid,
+                        version=NESTED_PROVIDER_API_VERSION)
         if resp.status_code == 200:
             data = resp.json()
             return data
@@ -421,11 +423,13 @@ class SchedulerReportClient(object):
             raise exception.ResourceProviderRetrievalFailed(uuid=uuid)
 
     @safe_connect
-    def _create_resource_provider(self, uuid, name):
+    def _create_resource_provider(self, uuid, name,
+                                  parent_provider_uuid=None):
         """Calls the placement API to create a new resource provider record.
 
         :param uuid: UUID of the new resource provider
         :param name: Name of the resource provider
+        :param parent_provider_uuid: Optional UUID of the immediate parent
         :return: A dict of resource provider information object representing
                  the newly-created resource provider.
         :raise: ResourceProviderCreationFailed or
@@ -436,7 +440,10 @@ class SchedulerReportClient(object):
             'uuid': uuid,
             'name': name,
         }
-        resp = self.post(url, payload)
+        if parent_provider_uuid is not None:
+            payload['parent_provider_uuid'] = parent_provider_uuid
+
+        resp = self.post(url, payload, version=NESTED_PROVIDER_API_VERSION)
         placement_req_id = get_placement_request_id(resp)
         if resp.status_code == 201:
             msg = ("[%(placement_req_id)s] Created resource provider record "
@@ -452,6 +459,7 @@ class SchedulerReportClient(object):
                     uuid=uuid,
                     name=name,
                     generation=0,
+                    parent_provider_uuid=parent_provider_uuid,
             )
 
         # TODO(efried): Push error codes from placement, and use 'em.

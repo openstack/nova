@@ -1252,6 +1252,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             'uuid': uuid,
             'name': uuid,
             'generation': 42,
+            'parent_provider_uuid': None,
         }
         resp_mock.json.return_value = json_data
         self.ks_adap_mock.get.return_value = resp_mock
@@ -1262,10 +1263,11 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                 uuid=uuid,
                 name=uuid,
                 generation=42,
+                parent_provider_uuid=None,
         )
         expected_url = '/resource_providers/' + uuid
         self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, raise_exc=False, microversion=None)
+            expected_url, raise_exc=False, microversion='1.14')
         self.assertEqual(expected_provider_dict, result)
 
     def test_get_resource_provider_not_found(self):
@@ -1279,7 +1281,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
 
         expected_url = '/resource_providers/' + uuid
         self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, raise_exc=False, microversion=None)
+            expected_url, raise_exc=False, microversion='1.14')
         self.assertIsNone(result)
 
     @mock.patch.object(report.LOG, 'error')
@@ -1299,38 +1301,66 @@ class TestProviderOperations(SchedulerReportClientTestCase):
 
         expected_url = '/resource_providers/' + uuid
         self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, raise_exc=False, microversion=None)
-        # A 503 Service Unavailable should trigger an error log
-        # that includes the placement request id and return None
+            expected_url, raise_exc=False, microversion='1.14')
+        # A 503 Service Unavailable should trigger an error log that
+        # includes the placement request id and return None
         # from _get_resource_provider()
         self.assertTrue(logging_mock.called)
         self.assertEqual(uuids.request_id,
                          logging_mock.call_args[0][1]['placement_req_id'])
 
     def test_create_resource_provider(self):
-        # Ensure _create_resource_provider() returns a dict of resource
-        # provider constructed after creating a resource provider record in the
-        # placement API
+        """Test that _create_resource_provider() sends a dict of resource
+        provider information without a parent provider UUID.
+        """
         uuid = uuids.compute_node
         name = 'computehost'
         resp_mock = mock.Mock(status_code=201)
         self.ks_adap_mock.post.return_value = resp_mock
 
-        result = self.client._create_resource_provider(uuid, name)
+        self.client._create_resource_provider(uuid, name)
 
         expected_payload = {
             'uuid': uuid,
             'name': name,
         }
+
+        expected_url = '/resource_providers'
+        self.ks_adap_mock.post.assert_called_once_with(
+            expected_url, json=expected_payload, raise_exc=False,
+            microversion='1.14')
+
+    def test_create_resource_provider_with_parent(self):
+        """Test that when specifying a parent provider UUID, that the
+        parent_provider_uuid part of the payload is properly specified.
+        """
+        parent_uuid = uuids.parent
+        uuid = uuids.compute_node
+        name = 'computehost'
+        resp_mock = mock.Mock(status_code=201)
+        self.ks_adap_mock.post.return_value = resp_mock
+
+        result = self.client._create_resource_provider(
+            uuid,
+            name,
+            parent_provider_uuid=parent_uuid,
+        )
+
+        expected_payload = {
+            'uuid': uuid,
+            'name': name,
+            'parent_provider_uuid': parent_uuid,
+        }
         expected_provider_dict = dict(
             uuid=uuid,
             name=name,
             generation=0,
+            parent_provider_uuid=parent_uuid,
         )
         expected_url = '/resource_providers'
         self.ks_adap_mock.post.assert_called_once_with(
             expected_url, json=expected_payload, raise_exc=False,
-            microversion=None)
+            microversion='1.14')
         self.assertEqual(expected_provider_dict, result)
 
     @mock.patch.object(report.LOG, 'info')
@@ -1361,7 +1391,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         expected_url = '/resource_providers'
         self.ks_adap_mock.post.assert_called_once_with(
             expected_url, json=expected_payload, raise_exc=False,
-            microversion=None)
+            microversion='1.14')
         self.assertEqual(mock.sentinel.get_rp, result)
         # The 409 response will produce a message to the info log.
         self.assertTrue(logging_mock.called)
@@ -1403,7 +1433,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         expected_url = '/resource_providers'
         self.ks_adap_mock.post.assert_called_once_with(
             expected_url, json=expected_payload, raise_exc=False,
-            microversion=None)
+            microversion='1.14')
         # A 503 Service Unavailable should log an error that
         # includes the placement request id and
         # _create_resource_provider() should return None
