@@ -3531,6 +3531,23 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         mock_attach_delete.assert_called_once_with(
             self.context, uuids.attach_id)
 
+    def test_instance_soft_delete_notification(self):
+        inst_obj = fake_instance.fake_instance_obj(self.context,
+            vm_state=vm_states.ACTIVE)
+        with test.nested(
+            mock.patch.object(nova.compute.utils,
+                              'notify_about_instance_action'),
+            mock.patch.object(self.compute, '_notify_about_instance_usage'),
+            mock.patch.object(objects.Instance, 'save'),
+            mock.patch.object(self.compute.driver, 'soft_delete')
+        ) as (fake_notify, fake_notify_usage, fake_save, fake_soft_delete):
+            self.compute.soft_delete_instance(self.context, inst_obj, [])
+            fake_notify.assert_has_calls([
+                mock.call(self.context, inst_obj, 'fake-mini',
+                          action='soft_delete', phase='start'),
+                mock.call(self.context, inst_obj, 'fake-mini',
+                          action='soft_delete', phase='end')])
+
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def setUp(self):
