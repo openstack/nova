@@ -16,6 +16,8 @@
 import base64
 import time
 
+import six
+
 from nova.api.openstack import api_version_request as avr
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit.api.openstack import fakes
@@ -26,7 +28,7 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
     microversion = None
     sample_dir = 'servers'
 
-    user_data_contents = '#!/bin/bash\n/bin/su\necho "I am in you!"\n'
+    user_data_contents = six.b('#!/bin/bash\n/bin/su\necho "I am in you!"\n')
     user_data = base64.b64encode(user_data_contents)
 
     common_req_names = [
