@@ -20,10 +20,8 @@ from xml.dom import minidom
 from eventlet import greenthread
 from lxml import etree
 import mock
-from mox3 import mox
 from oslo_concurrency.fixture import lockutils as lock_fixture
 
-from nova.compute import utils as compute_utils
 from nova import exception
 from nova.network import linux_net
 from nova import objects
@@ -249,8 +247,8 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
 
         linux_net.iptables_manager.execute = fake_iptables_execute
 
-        self.stubs.Set(compute_utils, 'get_nw_info_for_instance',
-                       lambda instance: network_model)
+        self.stub_out('nova.compute.utils.get_nw_info_for_instance',
+                      lambda instance: network_model)
 
         self.fw.prepare_instance_filter(instance_ref, network_model)
         self.fw.apply_instance_filter(instance_ref, network_model)
@@ -352,31 +350,31 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
         self.assertEqual(ipv6_network_rules,
                   ipv6_rules_per_addr * ipv6_addr_per_network * networks_count)
 
-    def test_do_refresh_security_group_rules(self):
+    @mock.patch.object(firewall.IptablesFirewallDriver, 'instance_rules')
+    @mock.patch.object(firewall.IptablesFirewallDriver,
+                       'add_filters_for_instance')
+    @mock.patch.object(linux_net.IptablesTable, 'has_chain')
+    def test_do_refresh_security_group_rules(self, mock_has_chain,
+             mock_add_filters, mock_instance_rules):
         instance_ref = self._create_instance_ref()
-        self.mox.StubOutWithMock(self.fw,
-                                 'instance_rules')
-        self.mox.StubOutWithMock(self.fw,
-                                 'add_filters_for_instance',
-                                 use_mock_anything=True)
-        self.mox.StubOutWithMock(self.fw.iptables.ipv4['filter'],
-                                 'has_chain')
 
-        self.fw.instance_rules(instance_ref,
-                               mox.IgnoreArg()).AndReturn((None, None))
-        self.fw.add_filters_for_instance(instance_ref, mox.IgnoreArg(),
-                                         mox.IgnoreArg(), mox.IgnoreArg())
-        self.fw.instance_rules(instance_ref,
-                               mox.IgnoreArg()).AndReturn((None, None))
-        self.fw.iptables.ipv4['filter'].has_chain(mox.IgnoreArg()
-                                                  ).AndReturn(True)
-        self.fw.add_filters_for_instance(instance_ref, mox.IgnoreArg(),
-                                         mox.IgnoreArg(), mox.IgnoreArg())
-        self.mox.ReplayAll()
+        mock_instance_rules.return_value = (None, None)
+        mock_has_chain.return_value = True
 
-        self.fw.prepare_instance_filter(instance_ref, mox.IgnoreArg())
+        self.fw.prepare_instance_filter(instance_ref, mock.ANY)
         self.fw.instance_info[instance_ref['id']] = (instance_ref, None)
         self.fw.do_refresh_security_group_rules("fake")
+
+        expected_rules_calls = [mock.call(instance_ref, None),
+                                  mock.call(instance_ref, None)]
+        expected_filter_calls = [mock.call(instance_ref, mock.ANY, mock.ANY,
+                                mock.ANY),
+                                mock.call(instance_ref, mock.ANY, mock.ANY,
+                                mock.ANY)]
+        self.assertEqual(mock_instance_rules.mock_calls,
+                         expected_rules_calls)
+        self.assertEqual(mock_add_filters.mock_calls, expected_filter_calls)
+        mock_has_chain.assert_called_once_with(mock.ANY)
 
     def test_do_refresh_security_group_rules_instance_gone(self):
         instance1 = objects.Instance(None, id=1, uuid=uuids.instance_1)
