@@ -129,10 +129,7 @@ class GlanceClientWrapper(object):
     """Glance client wrapper class that implements retries."""
 
     def __init__(self, context=None, endpoint=None):
-        if CONF.glance.use_glance_v1:
-            version = 1
-        else:
-            version = 2
+        version = 2
         if endpoint is not None:
             self.client = self._create_static_client(context,
                                                      endpoint,
@@ -872,11 +869,7 @@ def _is_image_available(context, image):
 def _translate_to_glance(image_meta):
     image_meta = _convert_to_string(image_meta)
     image_meta = _remove_read_only(image_meta)
-    # TODO(mfedosin): Remove this check once we move to glance V2
-    # completely and enable convert to v2 every time.
-    if not CONF.glance.use_glance_v1:
-        # v2 requires several additional changes
-        image_meta = _convert_to_v2(image_meta)
+    image_meta = _convert_to_v2(image_meta)
     return image_meta
 
 
@@ -913,14 +906,8 @@ def _convert_to_v2(image_meta):
 
 
 def _translate_from_glance(image, include_locations=False):
-    # TODO(mfedosin): Remove this check once we move to glance V2
-    # completely.
-    if CONF.glance.use_glance_v1:
-        image_meta = _extract_attributes(
-            image, include_locations=include_locations)
-    else:
-        image_meta = _extract_attributes_v2(
-            image, include_locations=include_locations)
+    image_meta = _extract_attributes_v2(
+        image, include_locations=include_locations)
 
     image_meta = _convert_timestamps_to_datetimes(image_meta)
     image_meta = _convert_from_string(image_meta)
@@ -1118,22 +1105,12 @@ def get_remote_image_service(context, image_href):
     except ValueError:
         raise exception.InvalidImageRef(image_href=image_href)
 
-    # TODO(sbiswas7): Remove this check once we move to glance V2
-    # completely.
-    if CONF.glance.use_glance_v1:
-        image_service = GlanceImageService(client=glance_client)
-    else:
-        image_service = GlanceImageServiceV2(client=glance_client)
+    image_service = GlanceImageServiceV2(client=glance_client)
     return image_service, image_id
 
 
 def get_default_image_service():
-    # TODO(sbiswas7): Remove this check once we move to glance V2
-    # completely.
-    if CONF.glance.use_glance_v1:
-        return GlanceImageService()
-    else:
-        return GlanceImageServiceV2()
+    return GlanceImageServiceV2()
 
 
 class UpdateGlanceImage(object):
