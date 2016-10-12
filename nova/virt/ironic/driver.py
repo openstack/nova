@@ -353,8 +353,8 @@ class IronicDriver(virt_driver.ComputeDriver):
     def _stop_firewall(self, instance, network_info):
         self.firewall_driver.unfilter_instance(instance, network_info)
 
-    def _add_driver_fields(self, node, instance, image_meta, flavor,
-                           preserve_ephemeral=None):
+    def _add_instance_info_to_node(self, node, instance, image_meta, flavor,
+                                   preserve_ephemeral=None):
         patch = patcher.create(node).get_deploy_patch(instance,
                                                       image_meta,
                                                       flavor,
@@ -377,7 +377,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             LOG.error(msg)
             raise exception.InstanceDeployFailure(msg)
 
-    def _remove_driver_fields(self, node, instance):
+    def _remove_instance_info_from_node(self, node, instance):
         patch = [{'path': '/instance_info', 'op': 'remove'},
                  {'path': '/instance_uuid', 'op': 'remove'}]
         try:
@@ -746,7 +746,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         node = self._get_node(node_uuid)
         flavor = instance.flavor
 
-        self._add_driver_fields(node, instance, image_meta, flavor)
+        self._add_instance_info_to_node(node, instance, image_meta, flavor)
 
         # NOTE(Shrews): The default ephemeral device needs to be set for
         # services (like cloud-init) that depend on it being returned by the
@@ -914,7 +914,10 @@ class IronicDriver(virt_driver.ComputeDriver):
         if node.provision_state in _UNPROVISION_STATES:
             self._unprovision(instance, node)
         else:
-            self._remove_driver_fields(node, instance)
+            # NOTE(hshiina): if spawn() fails before ironic starts
+            #                provisioning, instance information should be
+            #                removed from ironic node.
+            self._remove_instance_info_from_node(node, instance)
 
         self._cleanup_deploy(node, instance, network_info)
         LOG.info(_LI('Successfully unprovisioned Ironic node %s'),
@@ -1169,8 +1172,8 @@ class IronicDriver(virt_driver.ComputeDriver):
         node_uuid = instance.node
         node = self._get_node(node_uuid)
 
-        self._add_driver_fields(node, instance, image_meta, instance.flavor,
-                                preserve_ephemeral)
+        self._add_instance_info_to_node(node, instance, image_meta,
+                                        instance.flavor, preserve_ephemeral)
 
         # Trigger the node rebuild/redeploy.
         try:
