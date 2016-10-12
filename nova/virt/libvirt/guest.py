@@ -363,12 +363,31 @@ class Guest(object):
                                inc_sleep_time. On reaching this threshold,
                                max_sleep_time will be used as the sleep time.
         """
+        def _try_detach_device(conf, persistent=False, live=False):
+            # Raise DeviceNotFound if the device isn't found during detach
+            try:
+                self.detach_device(conf, persistent=persistent, live=live)
+            except libvirt.libvirtError as ex:
+                with excutils.save_and_reraise_exception():
+                    errcode = ex.get_error_code()
+                    if errcode == libvirt.VIR_ERR_OPERATION_FAILED:
+                        errmsg = ex.get_error_message()
+                        if 'not found' in errmsg:
+                            # This will be raised if the live domain
+                            # detach fails because the device is not found
+                            raise exception.DeviceNotFound(device=device)
+                    elif errcode == libvirt.VIR_ERR_INVALID_ARG:
+                        errmsg = ex.get_error_message()
+                        if 'no target device' in errmsg:
+                            # This will be raised if the persistent domain
+                            # detach fails because the device is not found
+                            raise exception.DeviceNotFound(device=device)
 
         conf = get_device_conf_func(device)
         if conf is None:
             raise exception.DeviceNotFound(device=device)
 
-        self.detach_device(conf, persistent, live)
+        _try_detach_device(conf, persistent, live)
 
         @loopingcall.RetryDecorator(max_retry_count=max_retry_count,
                                     inc_sleep_time=inc_sleep_time,
@@ -377,17 +396,9 @@ class Guest(object):
         def _do_wait_and_retry_detach():
             config = get_device_conf_func(device)
             if config is not None:
-                try:
-                    # Device is already detached from persistent domain
-                    # and only transient domain needs update
-                    self.detach_device(config, persistent=False, live=live)
-                except libvirt.libvirtError as ex:
-                    with excutils.save_and_reraise_exception():
-                        errcode = ex.get_error_code()
-                        if errcode == libvirt.VIR_ERR_OPERATION_FAILED:
-                            errmsg = ex.get_error_message()
-                            if 'not found' in errmsg:
-                                raise exception.DeviceNotFound(device=device)
+                # Device is already detached from persistent domain
+                # and only transient domain needs update
+                _try_detach_device(config, persistent=False, live=live)
 
                 reason = _("Unable to detach from guest transient domain.")
                 raise exception.DeviceDetachFailed(device=device,
