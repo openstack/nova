@@ -5958,6 +5958,78 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_get_guest.side_effect = exception.InternalError
         self.assertFalse(drvr.instance_exists(None))
 
+    def test_estimate_instance_overhead_spawn(self):
+        # test that method when called with instance ref
+        instance_topology = objects.InstanceNUMATopology(
+            emulator_threads_policy=(
+                fields.CPUEmulatorThreadsPolicy.ISOLATE),
+            cells=[objects.InstanceNUMACell(
+                id=0, cpuset=set([0]), memory=1024)])
+        instance_info = objects.Instance(**self.test_instance)
+        instance_info.numa_topology = instance_topology
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        overhead = drvr.estimate_instance_overhead(instance_info)
+        self.assertEqual(1, overhead['vcpus'])
+
+    def test_estimate_instance_overhead_spawn_no_overhead(self):
+        # test that method when called with instance ref, no overhead
+        instance_topology = objects.InstanceNUMATopology(
+            emulator_threads_policy=(
+                fields.CPUEmulatorThreadsPolicy.SHARE),
+            cells=[objects.InstanceNUMACell(
+                id=0, cpuset=set([0]), memory=1024)])
+        instance_info = objects.Instance(**self.test_instance)
+        instance_info.numa_topology = instance_topology
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        overhead = drvr.estimate_instance_overhead(instance_info)
+        self.assertEqual(0, overhead['vcpus'])
+
+    def test_estimate_instance_overhead_migrate(self):
+        # test that method when called with flavor ref
+        instance_info = objects.Flavor(extra_specs={
+            'hw:emulator_threads_policy': (
+                fields.CPUEmulatorThreadsPolicy.ISOLATE),
+            'hw:cpu_policy': fields.CPUAllocationPolicy.DEDICATED,
+        })
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        overhead = drvr.estimate_instance_overhead(instance_info)
+        self.assertEqual(1, overhead['vcpus'])
+
+    def test_estimate_instance_overhead_migrate_no_overhead(self):
+        # test that method when called with flavor ref, no overhead
+        instance_info = objects.Flavor(extra_specs={
+            'hw:emulator_threads_policy': (
+                fields.CPUEmulatorThreadsPolicy.SHARE),
+            'hw:cpu_policy': fields.CPUAllocationPolicy.DEDICATED,
+        })
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        overhead = drvr.estimate_instance_overhead(instance_info)
+        self.assertEqual(0, overhead['vcpus'])
+
+    def test_estimate_instance_overhead_usage(self):
+        # test that method when called with usage dict
+        instance_info = objects.Flavor(extra_specs={
+            'hw:emulator_threads_policy': (
+                fields.CPUEmulatorThreadsPolicy.ISOLATE),
+            'hw:cpu_policy': fields.CPUAllocationPolicy.DEDICATED,
+        })
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        overhead = drvr.estimate_instance_overhead(instance_info)
+        self.assertEqual(1, overhead['vcpus'])
+
+    def test_estimate_instance_overhead_usage_no_overhead(self):
+        # test that method when called with usage dict, no overhead
+        instance_info = objects.Flavor(extra_specs={
+            'hw:emulator_threads_policy': (
+                fields.CPUEmulatorThreadsPolicy.SHARE),
+            'hw:cpu_policy': fields.CPUAllocationPolicy.DEDICATED,
+        })
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        overhead = drvr.estimate_instance_overhead(instance_info)
+        self.assertEqual(0, overhead['vcpus'])
+
     @mock.patch.object(host.Host, "list_instance_domains")
     def test_list_instances(self, mock_list):
         vm1 = FakeVirtDomain(id=3, name="instance00000001")
