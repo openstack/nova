@@ -132,8 +132,8 @@ class AggregateObjectDbTestCase(test.NoDBTestCase):
         cell_db_agg = aggregate_obj.Aggregate.get_by_id(
                                                     self.context, ca2['id'])
 
-        self.assertEqual(api_db_agg.in_api, True)
-        self.assertEqual(cell_db_agg.in_api, False)
+        self.assertTrue(api_db_agg.in_api)
+        self.assertFalse(cell_db_agg.in_api)
 
     def test_aggregate_get_from_db(self):
         result = _create_aggregate_with_hosts(self.context)

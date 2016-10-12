@@ -704,7 +704,7 @@ class ServersControllerTest(ControllerTest):
 
     def test_tenant_id_filter_no_admin_context(self):
         def fake_get_all(context, search_opts=None, **kwargs):
-            self.assertNotEqual(search_opts, None)
+            self.assertIsNotNone(search_opts)
             self.assertEqual(search_opts['project_id'], 'fake')
             return [fakes.stub_instance_obj(100)]
 

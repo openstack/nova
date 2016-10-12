@@ -299,7 +299,7 @@ class _TestPciDeviceObject(object):
 
     def test_pci_device_not_equivalent_with_not_pci_device(self):
         pci_device1 = pci_device.PciDevice.create(None, dev_dict)
-        self.assertNotEqual(pci_device1, None)
+        self.assertIsNotNone(pci_device1)
         self.assertNotEqual(pci_device1, 'foo')
         self.assertNotEqual(pci_device1, 1)
         self.assertNotEqual(pci_device1, objects.PciDeviceList())

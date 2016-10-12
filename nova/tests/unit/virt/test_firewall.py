@@ -35,8 +35,8 @@ class TestIptablesFirewallDriver(test.NoDBTestCase):
         self.driver.__init__()
 
         self.assertEqual({}, self.driver.instance_info)
-        self.assertEqual(False, self.driver.dhcp_create)
-        self.assertEqual(False, self.driver.dhcp_created)
+        self.assertFalse(self.driver.dhcp_create)
+        self.assertFalse(self.driver.dhcp_created)
         self.assertEqual(iptm_mock, self.driver.iptables)
 
         # NOTE(jaypipes): Here we are not testing the IptablesManager

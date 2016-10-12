@@ -392,7 +392,7 @@ class APICoverage(object):
     cover_api = None
 
     def test_api_methods(self):
-        self.assertTrue(self.cover_api is not None)
+        self.assertIsNotNone(self.cover_api)
         api_methods = [x for x in dir(self.cover_api)
                        if not x.startswith('_')]
         test_methods = [x[5:] for x in dir(self)

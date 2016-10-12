@@ -204,18 +204,18 @@ class IsAdminCheckTestCase(test.NoDBTestCase):
     def test_call_true(self):
         check = policy.IsAdminCheck('is_admin', 'True')
 
-        self.assertEqual(check('target', dict(is_admin=True),
-                               policy._ENFORCER), True)
-        self.assertEqual(check('target', dict(is_admin=False),
-                               policy._ENFORCER), False)
+        self.assertTrue(check('target', dict(is_admin=True),
+                              policy._ENFORCER))
+        self.assertFalse(check('target', dict(is_admin=False),
+                               policy._ENFORCER))
 
     def test_call_false(self):
         check = policy.IsAdminCheck('is_admin', 'False')
 
-        self.assertEqual(check('target', dict(is_admin=True),
-                               policy._ENFORCER), False)
-        self.assertEqual(check('target', dict(is_admin=False),
-                               policy._ENFORCER), True)
+        self.assertFalse(check('target', dict(is_admin=True),
+                               policy._ENFORCER))
+        self.assertTrue(check('target', dict(is_admin=False),
+                              policy._ENFORCER))
 
 
 class AdminRolePolicyTestCase(test.NoDBTestCase):
