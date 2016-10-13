@@ -1,0 +1,6 @@
+---
+issues:
+  - Use of the newly introduced optional placement RESTful API in Newton
+    requires WebOb>=1.6.0. This requirement was not reflected prior to the
+    release of Newton in requirements.txt with the lower limit being set to
+    WebOb>=1.2.3.
