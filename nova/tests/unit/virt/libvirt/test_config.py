@@ -57,6 +57,13 @@ class LibvirtConfigTest(LibvirtConfigBaseTest):
         self.assertXmlEqual('<demo><foo>&#240;&#159;&#146;&#169;</foo></demo>',
                             etree.tostring(root))
 
+    def test_config_text_node_name_attr(self):
+        obj = config.LibvirtConfigObject(root_name='demo')
+        root = obj.format_dom()
+        root.append(obj._text_node('foo', 'bar', name='foobar'))
+        self.assertXmlEqual('<demo><foo name="foobar">bar</foo></demo>',
+                            etree.tostring(root))
+
     def test_config_parse(self):
         inxml = "<demo><foo/></demo>"
         obj = config.LibvirtConfigObject(root_name="demo")
