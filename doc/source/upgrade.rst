@@ -30,6 +30,110 @@ Once we have introduced the key concepts relating to upgrade, we will
 introduce the process needed for a no downtime upgrade of nova.
 
 
+Minimal Downtime Upgrade Process
+--------------------------------
+
+
+Plan your upgrade
+'''''''''''''''''
+
+* Read and ensure you understand the release notes for the next release.
+
+* You should ensure all required steps from the previous upgrade have been
+  completed, such as data migrations.
+
+* Make a backup of your database. Nova does not support downgrading of the
+  database. Hence, in case of upgrade failure, restoring database from backup
+  is the only choice.
+
+* During upgrade be aware that there will be additional load on nova-conductor.
+  You may find you need to add extra nova-conductor workers to deal with the
+  additional upgrade related load.
+
+
+Rolling upgrade process
+'''''''''''''''''''''''
+
+To reduce downtime, the services can be upgraded in a rolling fashion. It
+means upgrading a few services at a time. This results in a condition where
+both old (N) and new (N+1) nova-compute services co-exist for a certain time
+period. Note that, there is no upgrade of the hypervisor here, this is just
+upgrading the nova services.
+
+#. Before maintenance window:
+
+   * Start the process with the controller node. Install the code for the next
+     version of Nova, either in a venv or a separate control plane node,
+     including all the python dependencies.
+
+   * Using the newly installed nova code, run the DB sync.
+     (``nova-manage db sync``; ``nova-manage api_db sync``). These schema
+     change operations should have minimal or no effect on performance, and
+     should not cause any operations to fail.
+
+   * At this point, new columns and tables may exist in the database. These
+     DB schema changes are done in a way that both the N and N+1 release can
+     perform operations against the same schema.
+
+#. During maintenance window:
+
+   * For maximum safety (no failed API operations), gracefully shutdown all
+     the services (i.e. SIG_TERM) except nova-compute.
+
+   * Start all services, with ``[upgrade_levels]compute=auto`` in nova.conf.
+     It is safest to start nova-conductor first and nova-api last. Note that
+     for older releases, before Liberty, you need to use a static alias name
+     instead of ``auto``, such as ``[upgrade_levels]compute=mitaka``
+
+   * In small batches gracefully shutdown nova-compute (i.e. SIG_TERM), then
+     start the new version of the code with: ``[upgrade_levels]compute=auto``
+     Note this is done in batches so only a few compute nodes will have any
+     delayed API actions, and to ensure there is enough capacity online to
+     service any boot requests that happen during this time.
+
+#. After maintenance window:
+
+   * Once all services are running the new code, double check in the DB that
+     there are no old orphaned service records.
+
+   * Now all services are upgraded, we need to send the SIG_HUP signal, so all
+     the services clear any cached service version data. When a new service
+     starts, it automatically detects which version of the compute RPC protocol
+     to use, and it can decide if it is safe to do any online data migrations.
+     Note, if you used a static value for the upgrade_level, such as
+     ``[upgrade_levels]compute=mitaka``, you must update nova.conf to remove
+     that configuration value before you send the SIG_HUP signal.
+
+   * Now all the services are upgraded, the system is able to use the latest
+     version of the RPC protocol and so get access to all the new features in
+     the new release.
+
+   * Now all the services are running the latest version of the code, and all
+     the services are aware they all have been upgraded, it is safe to
+     transform the data in the database into its new format. While this
+     happens on demand when the system reads a database row that needs
+     updating, we must get all the data transformed into the current version
+     before we next upgrade.
+
+   * This process can also put significant extra write load on the database.
+     Complete all online data migrations using:
+     ``nova-manage db online_data_migrations --limit <number>``. Note that you
+     can use the limit argument to reduce the load this operation will place
+     on the database.
+
+   * The limit argument in online data migrations allows you to run a small
+     chunk of upgrades until all of the work is done. Each time it is run, it
+     will show summary of completed and remaining records. You run this command
+     until you see completed and remaining records as zeros. The size of
+     chunks you should use depend on your infrastructure.
+
+   * At this point, you must also ensure you update the configuration, to stop
+     using any deprecated features or options, and perform any required work
+     to transition to alternative features. All the deprecated options should
+     be supported for one cycle, but should be removed before your next
+     upgrade is performed.
+
+
 Current Database Upgrade Types
 ------------------------------
 
@@ -197,41 +301,6 @@ nova-conductor object backports
     new for the old service to understand, so you are able to send the object
     back to the nova-conductor to be downgraded to a version the older service
     can understand.
-
-
-Process
--------
-
-NOTE:
-    This still requires much work before it can become reality.
-    This is more an aspirational plan that helps describe how all the
-    pieces of the jigsaw fit together.
-
-This is the planned process for a zero downtime upgrade:
-
-#. Prune deleted DB rows, check previous migrations are complete
-
-#. Expand DB schema (e.g. add new column)
-
-#. Pin RPC versions for all services that are upgraded from this point,
-   using the current version
-
-#. Upgrade all nova-conductor nodes (to do object backports)
-
-#. Upgrade all other services, except nova-compute and nova-api,
-   using graceful shutdown
-
-#. Upgrade nova-compute nodes (this is the bulk of the work).
-
-#. Unpin RPC versions
-
-#. Add new API nodes, and enable new features, while using a load balancer
-   to "drain" the traffic from old API nodes
-
-#. Run the new nova-manage command that ensures all DB records are "upgraded"
-   to new data version
-
-#. "Contract" DB schema (e.g. drop unused columns)
 
 
 Testing
