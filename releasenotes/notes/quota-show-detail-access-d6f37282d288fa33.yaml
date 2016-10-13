@@ -1,0 +1,5 @@
+---
+upgrade:
+  - The default policy for os_compute_api:os-quota-sets:detail has
+    been changed to permit listing of quotas with details to project
+    users, not only to admins.
