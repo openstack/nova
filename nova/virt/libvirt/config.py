@@ -625,68 +625,45 @@ class LibvirtConfigGuestSysinfo(LibvirtConfigObject):
 
         sysinfo.set("type", self.type)
 
-        bios = None
-        system = None
+        bios = etree.Element("bios")
+        system = etree.Element("system")
 
         if self.bios_vendor is not None:
-            if bios is None:
-                bios = etree.Element("bios")
-            info = etree.Element("entry", name="vendor")
-            info.text = self.bios_vendor
-            bios.append(info)
+            bios.append(self._text_node("entry", self.bios_vendor,
+                                        name="vendor"))
 
         if self.bios_version is not None:
-            if bios is None:
-                bios = etree.Element("bios")
-            info = etree.Element("entry", name="version")
-            info.text = self.bios_version
-            bios.append(info)
+            bios.append(self._text_node("entry", self.bios_version,
+                                        name="version"))
 
         if self.system_manufacturer is not None:
-            if system is None:
-                system = etree.Element("system")
-            info = etree.Element("entry", name="manufacturer")
-            info.text = self.system_manufacturer
-            system.append(info)
+            system.append(self._text_node("entry", self.system_manufacturer,
+                                          name="manufacturer"))
 
         if self.system_product is not None:
-            if system is None:
-                system = etree.Element("system")
-            info = etree.Element("entry", name="product")
-            info.text = self.system_product
-            system.append(info)
+            system.append(self._text_node("entry", self.system_product,
+                                          name="product"))
 
         if self.system_version is not None:
-            if system is None:
-                system = etree.Element("system")
-            info = etree.Element("entry", name="version")
-            info.text = self.system_version
-            system.append(info)
+            system.append(self._text_node("entry", self.system_version,
+                                          name="version"))
 
         if self.system_serial is not None:
-            if system is None:
-                system = etree.Element("system")
-            info = etree.Element("entry", name="serial")
-            info.text = self.system_serial
-            system.append(info)
+            system.append(self._text_node("entry", self.system_serial,
+                                          name="serial"))
 
         if self.system_uuid is not None:
-            if system is None:
-                system = etree.Element("system")
-            info = etree.Element("entry", name="uuid")
-            info.text = self.system_uuid
-            system.append(info)
+            system.append(self._text_node("entry", self.system_uuid,
+                                          name="uuid"))
 
         if self.system_family is not None:
-            if system is None:
-                system = etree.Element("system")
-            info = etree.Element("entry", name="family")
-            info.text = self.system_family
-            system.append(info)
+            system.append(self._text_node("entry", self.system_family,
+                                          name="family"))
 
-        if bios is not None:
+        if len(list(bios)) > 0:
             sysinfo.append(bios)
-        if system is not None:
+
+        if len(list(system)) > 0:
             sysinfo.append(system)
 
         return sysinfo
