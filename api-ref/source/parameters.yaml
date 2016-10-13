@@ -717,6 +717,25 @@ tags_query:
     all tags in this list will be returned. Boolean expression in this
     case is 't1 AND t2'. Tags in query must be separated by comma.
   min_version: 2.26
+usage_limit:
+  description: |
+    Requests a page size of items. Calculate usage for the limited number of
+    instances. Use the ``limit`` parameter to make an initial limited request
+    and use the last-seen instance UUID from the response as the ``marker``
+    parameter value in a subsequent limited request.
+  in: query
+  required: false
+  type: integer
+  min_version: 2.40
+usage_marker:
+  description: |
+    The last-seen item. Use the ``limit`` parameter to make an initial limited
+    request and use the last-seen instance UUID from the response as the
+    ``marker`` parameter value in a subsequent limited request.
+  in: query
+  required: false
+  type: string
+  min_version: 2.40
 user_id_query_quota:
   description: |
     ID of user to list the quotas for.

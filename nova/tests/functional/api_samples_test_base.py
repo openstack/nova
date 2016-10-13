@@ -410,6 +410,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         text = r'(\\"|[^"])*'
         isotime_re = '\d{4}-[0,1]\d-[0-3]\dT\d{2}:\d{2}:\d{2}Z'
         strtime_re = '\d{4}-[0,1]\d-[0-3]\dT\d{2}:\d{2}:\d{2}\.\d{6}'
+        strtime_url_re = ('\d{4}-[0,1]\d-[0-3]\d'
+                          '\+\d{2}\%3A\d{2}\%3A\d{2}\.\d{6}')
         xmltime_re = ('\d{4}-[0,1]\d-[0-3]\d '
                       '\d{2}:\d{2}:\d{2}'
                       '(\.\d{6})?(\+00:00)?')
@@ -419,6 +421,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         return {
             'isotime': isotime_re,
             'strtime': strtime_re,
+            'strtime_url': strtime_url_re,
             'strtime_or_none': r'None|%s' % strtime_re,
             'xmltime': xmltime_re,
             'password': '[0-9a-zA-Z]{1,12}',

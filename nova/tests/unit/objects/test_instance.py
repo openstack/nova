@@ -1757,7 +1757,8 @@ class _TestInstanceListObject(object):
 
         def fake_instance_get_active_by_window_joined(context, begin, end,
                                                       project_id, host,
-                                                      columns_to_join):
+                                                      columns_to_join,
+                                                      limit=None, marker=None):
             # make sure begin is tz-aware
             self.assertIsNotNone(begin.utcoffset())
             self.assertIsNone(end)

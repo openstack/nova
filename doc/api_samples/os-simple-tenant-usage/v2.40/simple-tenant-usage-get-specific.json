@@ -1,0 +1,33 @@
+{
+    "tenant_usage": {
+        "server_usages": [
+            {
+                "ended_at": null,
+                "flavor": "m1.tiny",
+                "hours": 1.0,
+                "instance_id": "1f1deceb-17b5-4c04-84c7-e0d4499c8fe0",
+                "local_gb": 1,
+                "memory_mb": 512,
+                "name": "instance-2",
+                "started_at": "2012-10-08T20:10:44.541277",
+                "state": "active",
+                "tenant_id": "6f70656e737461636b20342065766572",
+                "uptime": 3600,
+                "vcpus": 1
+            }
+        ],
+        "start": "2012-10-08T20:10:44.587336",
+        "stop": "2012-10-08T21:10:44.587336",
+        "tenant_id": "6f70656e737461636b20342065766572",
+        "total_hours": 1.0,
+        "total_local_gb_usage": 1.0,
+        "total_memory_mb_usage": 512.0,
+        "total_vcpus_usage": 1.0
+    },
+    "tenant_usage_links": [
+        {
+            "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/os-simple-tenant-usage/6f70656e737461636b20342065766572?end=2016-10-12+18%3A22%3A04.868106&limit=1&marker=1f1deceb-17b5-4c04-84c7-e0d4499c8fe0&start=2016-10-12+18%3A22%3A04.868106",
+            "rel": "next"
+        }
+    ]
+}

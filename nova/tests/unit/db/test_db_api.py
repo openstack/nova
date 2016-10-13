@@ -1199,6 +1199,41 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
         self.assertEqual(2, len(result))
         self.assertEqual(six.text_type, type(result[0]))
 
+    @mock.patch('oslo_utils.uuidutils.generate_uuid')
+    def test_instance_get_active_by_window_joined_paging(self, mock_uuids):
+        mock_uuids.side_effect = ['BBB', 'ZZZ', 'AAA', 'CCC']
+
+        ctxt = context.get_admin_context()
+        now = datetime.datetime(2015, 10, 2)
+        self.create_instance_with_args(project_id='project-ZZZ')
+        self.create_instance_with_args(project_id='project-ZZZ')
+        self.create_instance_with_args(project_id='project-ZZZ')
+        self.create_instance_with_args(project_id='project-AAA')
+
+        # no limit or marker
+        result = sqlalchemy_api.instance_get_active_by_window_joined(
+            ctxt, begin=now, columns_to_join=[])
+        actual_uuids = [row['uuid'] for row in result]
+        self.assertEqual(['CCC', 'AAA', 'BBB', 'ZZZ'], actual_uuids)
+
+        # just limit
+        result = sqlalchemy_api.instance_get_active_by_window_joined(
+            ctxt, begin=now, columns_to_join=[], limit=2)
+        actual_uuids = [row['uuid'] for row in result]
+        self.assertEqual(['CCC', 'AAA'], actual_uuids)
+
+        # limit & marker
+        result = sqlalchemy_api.instance_get_active_by_window_joined(
+            ctxt, begin=now, columns_to_join=[], limit=2, marker='CCC')
+        actual_uuids = [row['uuid'] for row in result]
+        self.assertEqual(['AAA', 'BBB'], actual_uuids)
+
+        # unknown marker
+        self.assertRaises(
+            exception.MarkerNotFound,
+            sqlalchemy_api.instance_get_active_by_window_joined,
+            ctxt, begin=now, columns_to_join=[], limit=2, marker='unknown')
+
     def test_instance_get_active_by_window_joined(self):
         now = datetime.datetime(2013, 10, 10, 17, 16, 37, 156701)
         start_time = now - datetime.timedelta(minutes=10)
