@@ -5799,9 +5799,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if ((CONF.vnc.enabled and not local_vnc) or
             (CONF.spice.enabled and not local_spice)):
 
-            msg = _('Your libvirt version does not support the'
-                    ' VIR_DOMAIN_XML_MIGRATABLE flag or your'
-                    ' destination node does not support'
+            msg = _('Your destination node does not support'
                     ' retrieving listen addresses.  In order'
                     ' for live migration to work properly, you'
                     ' must configure the graphics (VNC and/or'
@@ -5817,9 +5815,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if ((CONF.vnc.enabled and not dest_local_vnc) or
                 (CONF.spice.enabled and not dest_local_spice)):
 
-                LOG.warning(_LW('Your libvirt version does not support the'
-                             ' VIR_DOMAIN_XML_MIGRATABLE flag, and the'
-                             ' graphics (VNC and/or SPICE) listen'
+                LOG.warning(_LW('The graphics (VNC and/or SPICE) listen'
                              ' addresses on the destination node do not'
                              ' match the addresses on the source node.'
                              ' Since the source node has listen'
@@ -5833,13 +5829,10 @@ class LibvirtDriver(driver.ComputeDriver):
     def _verify_serial_console_is_disabled(self):
         if CONF.serial_console.enabled:
 
-            msg = _('Your libvirt version does not support the'
-                    ' VIR_DOMAIN_XML_MIGRATABLE flag or your'
-                    ' destination node does not support'
+            msg = _('Your destination node does not support'
                     ' retrieving listen addresses.  In order'
                     ' for live migration to work properly you'
-                    ' must either disable serial console or'
-                    ' upgrade your libvirt version.')
+                    ' must disable serial console.')
             raise exception.MigrationError(reason=msg)
 
     def _live_migration_operation(self, context, instance, dest,
@@ -5870,8 +5863,7 @@ class LibvirtDriver(driver.ComputeDriver):
             listen_addrs = libvirt_migrate.graphics_listen_addrs(
                 migrate_data)
 
-            migratable_flag = self._host.is_migratable_xml_flag()
-            if not migratable_flag or not listen_addrs:
+            if not listen_addrs:
                 # In this context want to ensure we do not have to migrate
                 # graphic or serial consoles since we can't update guest's
                 # domain XML to make it handle destination host.
@@ -5886,8 +5878,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
             new_xml_str = None
             params = None
-            if (self._host.is_migratable_xml_flag() and (
-                    listen_addrs or migrate_data.bdms)):
+            if listen_addrs or migrate_data.bdms:
                 new_xml_str = libvirt_migrate.get_updated_guest_xml(
                     # TODO(sahid): It's not a really well idea to pass
                     # the method _get_volume_config and we should to find
