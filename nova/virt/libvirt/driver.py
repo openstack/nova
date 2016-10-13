@@ -110,7 +110,6 @@ from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import vif as libvirt_vif
 from nova.virt.libvirt.volume import remotefs
 from nova.virt import netutils
-from nova.virt import watchdog_actions
 from nova.volume import cinder
 from nova.volume import encryptors
 
@@ -4552,7 +4551,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # NB(sross): currently only actually supported by KVM/QEmu
         if watchdog_action != 'disabled':
-            if watchdog_actions.is_valid_watchdog_action(watchdog_action):
+            if watchdog_action in fields.WatchdogAction.ALL:
                 bark = vconfig.LibvirtConfigGuestWatchdog()
                 bark.action = watchdog_action
                 guest.add_device(bark)
