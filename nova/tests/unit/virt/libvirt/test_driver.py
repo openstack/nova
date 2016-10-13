@@ -4282,14 +4282,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self._test_get_guest_usb_tablet,
             True, True, vm_mode.XEN, image_meta=image_meta)
 
-    def _test_get_guest_config_with_watchdog_action_flavor(self,
-            hw_watchdog_action="hw:watchdog_action"):
+    def test_get_guest_config_with_watchdog_action_flavor(self):
         self.flags(virt_type='kvm', group='libvirt')
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
         instance_ref = objects.Instance(**self.test_instance)
-        instance_ref.flavor.extra_specs = {hw_watchdog_action: 'none'}
+        instance_ref.flavor.extra_specs = {"hw:watchdog_action": 'none'}
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -4321,23 +4320,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.assertEqual("none", cfg.devices[7].action)
 
-    def test_get_guest_config_with_watchdog_action_through_flavor(self):
-        self._test_get_guest_config_with_watchdog_action_flavor()
-
-    # TODO(pkholkin): the test accepting old property name 'hw_watchdog_action'
-    #                should be removed in the next release
-    def test_get_guest_config_with_watchdog_action_through_flavor_no_scope(
-            self):
-        self._test_get_guest_config_with_watchdog_action_flavor(
-            hw_watchdog_action="hw_watchdog_action")
-
     def test_get_guest_config_with_watchdog_overrides_flavor(self):
         self.flags(virt_type='kvm', group='libvirt')
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
         instance_ref = objects.Instance(**self.test_instance)
-        instance_ref.flavor.extra_specs = {'hw_watchdog_action': 'none'}
+        instance_ref.flavor.extra_specs = {'hw:watchdog_action': 'none'}
         image_meta = objects.ImageMeta.from_dict({
             "disk_format": "raw",
             "properties": {"hw_watchdog_action": "pause"}})
