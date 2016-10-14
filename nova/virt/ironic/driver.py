@@ -31,6 +31,7 @@ from oslo_service import loopingcall
 from oslo_utils import excutils
 from oslo_utils import importutils
 import six
+import six.moves.urllib.parse as urlparse
 
 from nova.api.metadata import base as instance_metadata
 from nova.compute import arch
@@ -40,6 +41,7 @@ from nova.compute import task_states
 from nova.compute import vm_mode
 from nova.compute import vm_states
 import nova.conf
+from nova.console import type as console_type
 from nova import context as nova_context
 from nova import exception
 from nova import hash_ring
@@ -78,6 +80,9 @@ _UNPROVISION_STATES = (ironic_states.ACTIVE, ironic_states.DEPLOYFAIL,
 _NODE_FIELDS = ('uuid', 'power_state', 'target_power_state', 'provision_state',
                 'target_provision_state', 'last_error', 'maintenance',
                 'properties', 'instance_uuid')
+
+# Console state checking interval in seconds
+_CONSOLE_STATE_CHECKING_INTERVAL = 1
 
 
 def map_power_state(state):
@@ -1228,3 +1233,154 @@ class IronicDriver(virt_driver.ComputeDriver):
         # flat network, go ahead and allow the port to be bound
         return super(IronicDriver, self).network_binding_host_id(
             context, instance)
+
+    def _get_node_console_with_reset(self, instance):
+        """Acquire console information for an instance.
+
+        If the console is enabled, the console will be re-enabled
+        before returning.
+
+        :param instance: nova instance
+        :return: a dictionary with below values
+            { 'node': ironic node
+              'console_info': node console info }
+        :raise ConsoleNotAvailable: if console is unavailable
+            for the instance
+        """
+        node = self._validate_instance_and_node(instance)
+        node_uuid = node.uuid
+
+        def _get_console():
+            """Request ironicclient to acquire node console."""
+            try:
+                return self.ironicclient.call('node.get_console', node_uuid)
+            except (exception.NovaException,  # Retry failed
+                    ironic.exc.InternalServerError,  # Validations
+                    ironic.exc.BadRequest) as e:  # Maintenance
+                LOG.error(_LE('Failed to acquire console information for '
+                              'instance %(inst)s: %(reason)s'),
+                          {'inst': instance.uuid,
+                           'reason': e})
+                raise exception.ConsoleNotAvailable()
+
+        def _wait_state(state):
+            """Wait for the expected console mode to be set on node."""
+            console = _get_console()
+            if console['console_enabled'] == state:
+                raise loopingcall.LoopingCallDone(retvalue=console)
+
+            _log_ironic_polling('set console mode', node, instance)
+
+            # Return False to start backing off
+            return False
+
+        def _enable_console(mode):
+            """Request ironicclient to enable/disable node console."""
+            try:
+                self.ironicclient.call('node.set_console_mode', node_uuid,
+                                       mode)
+            except (exception.NovaException,  # Retry failed
+                    ironic.exc.InternalServerError,  # Validations
+                    ironic.exc.BadRequest) as e:  # Maintenance
+                LOG.error(_LE('Failed to set console mode to "%(mode)s" '
+                              'for instance %(inst)s: %(reason)s'),
+                          {'mode': mode,
+                           'inst': instance.uuid,
+                           'reason': e})
+                raise exception.ConsoleNotAvailable()
+
+            # Waiting for the console state to change (disabled/enabled)
+            try:
+                timer = loopingcall.BackOffLoopingCall(_wait_state, state=mode)
+                return timer.start(
+                    starting_interval=_CONSOLE_STATE_CHECKING_INTERVAL,
+                    timeout=CONF.ironic.serial_console_state_timeout,
+                    jitter=0.5).wait()
+            except loopingcall.LoopingCallTimeOut:
+                LOG.error(_LE('Timeout while waiting for console mode to be '
+                              'set to "%(mode)s" on node %(node)s'),
+                          {'mode': mode,
+                           'node': node_uuid})
+                raise exception.ConsoleNotAvailable()
+
+        # Acquire the console
+        console = _get_console()
+
+        # NOTE: Resetting console is a workaround to force acquiring
+        # console when it has already been acquired by another user/operator.
+        # IPMI serial console does not support multi session, so
+        # resetting console will deactivate any active one without
+        # warning the operator.
+        if console['console_enabled']:
+            try:
+                # Disable console
+                _enable_console(False)
+                # Then re-enable it
+                console = _enable_console(True)
+            except exception.ConsoleNotAvailable:
+                # NOTE: We try to do recover on failure.
+                # But if recover fails, the console may remain in
+                # "disabled" state and cause any new connection
+                # will be refused.
+                console = _enable_console(True)
+
+        if console['console_enabled']:
+            return {'node': node,
+                    'console_info': console['console_info']}
+        else:
+            LOG.debug('Console is disabled for instance %s',
+                      instance.uuid)
+            raise exception.ConsoleNotAvailable()
+
+    def get_serial_console(self, context, instance):
+        """Acquire serial console information.
+
+        :param context: request context
+        :param instance: nova instance
+        :return: ConsoleSerial object
+        :raise ConsoleTypeUnavailable: if serial console is unavailable
+            for the instance
+        """
+        LOG.debug('Getting serial console', instance=instance)
+        try:
+            result = self._get_node_console_with_reset(instance)
+        except exception.ConsoleNotAvailable:
+            raise exception.ConsoleTypeUnavailable(console_type='serial')
+
+        node = result['node']
+        console_info = result['console_info']
+
+        if console_info["type"] != "socat":
+            LOG.warning(_LW('Console type "%(type)s" (of ironic node '
+                            '%(node)s) does not support Nova serial console'),
+                        {'type': console_info["type"],
+                         'node': node.uuid},
+                        instance=instance)
+            raise exception.ConsoleTypeUnavailable(console_type='serial')
+
+        # Parse and check the console url
+        url = urlparse.urlparse(console_info["url"])
+        try:
+            scheme = url.scheme
+            hostname = url.hostname
+            port = url.port
+            if not (scheme and hostname and port):
+                raise AssertionError()
+        except (ValueError, AssertionError):
+            LOG.error(_LE('Invalid Socat console URL "%(url)s" '
+                          '(ironic node %(node)s)'),
+                      {'url': console_info["url"],
+                       'node': node.uuid},
+                      instance=instance)
+            raise exception.ConsoleTypeUnavailable(console_type='serial')
+
+        if scheme == "tcp":
+            return console_type.ConsoleSerial(host=hostname,
+                                              port=port)
+        else:
+            LOG.warning(_LW('Socat serial console only supports "tcp". '
+                            'This URL is "%(url)s" (ironic node %(node)s).'),
+                        {'url': console_info["url"],
+                         'node': node.uuid},
+                        instance=instance)
+            raise exception.ConsoleTypeUnavailable(console_type='serial')

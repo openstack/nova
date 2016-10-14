@@ -27,6 +27,7 @@ from nova.api.metadata import base as instance_metadata
 from nova.compute import power_state as nova_states
 from nova.compute import task_states
 from nova.compute import vm_states
+from nova.console import type as console_type
 from nova import context as nova_context
 from nova import exception
 from nova import hash_ring
@@ -34,6 +35,7 @@ from nova import objects
 from nova import servicegroup
 from nova import test
 from nova.tests.unit import fake_instance
+from nova.tests.unit import matchers as nova_matchers
 from nova.tests.unit import utils
 from nova.tests.unit.virt.ironic import utils as ironic_utils
 from nova.virt import configdrive
@@ -1925,3 +1927,311 @@ class NodeCacheTestCase(test.NoDBTestCase):
 
         expected_cache = {n.uuid: n for n in nodes[1:]}
         self.assertEqual(expected_cache, self.driver.node_cache)
+
+
+@mock.patch.object(FAKE_CLIENT, 'node')
+class IronicDriverConsoleTestCase(test.NoDBTestCase):
+    @mock.patch.object(cw, 'IronicClientWrapper',
+                       lambda *_: FAKE_CLIENT_WRAPPER)
+    def setUp(self):
+        super(IronicDriverConsoleTestCase, self).setUp()
+
+        self.driver = ironic_driver.IronicDriver(fake.FakeVirtAPI())
+        self.ctx = nova_context.get_admin_context()
+        node_uuid = uuidutils.generate_uuid()
+        self.node = ironic_utils.get_test_node(driver='fake', uuid=node_uuid)
+        self.instance = fake_instance.fake_instance_obj(self.ctx,
+                                                        node=node_uuid)
+
+        # mock retries configs to avoid sleeps and make tests run quicker
+        CONF.set_default('api_max_retries', default=1, group='ironic')
+        CONF.set_default('api_retry_interval', default=0, group='ironic')
+
+        self.stub_out('nova.virt.ironic.driver.IronicDriver.'
+                      '_validate_instance_and_node',
+                      lambda _, inst: self.node)
+
+    def _create_console_data(self, enabled=True, console_type='socat',
+                             url='tcp://127.0.0.1:10000'):
+        return {
+            'console_enabled': enabled,
+            'console_info': {
+                'type': console_type,
+                'url': url
+            }
+        }
+
+    def test__get_node_console_with_reset_success(self, mock_node):
+        temp_data = {'target_mode': True}
+
+        def _fake_get_console(node_uuid):
+            return self._create_console_data(enabled=temp_data['target_mode'])
+
+        def _fake_set_console_mode(node_uuid, mode):
+            # Set it up so that _fake_get_console() returns 'mode'
+            temp_data['target_mode'] = mode
+
+        mock_node.get_console.side_effect = _fake_get_console
+        mock_node.set_console_mode.side_effect = _fake_set_console_mode
+
+        expected = self._create_console_data()['console_info']
+
+        result = self.driver._get_node_console_with_reset(self.instance)
+
+        self.assertGreater(mock_node.get_console.call_count, 1)
+        self.assertEqual(2, mock_node.set_console_mode.call_count)
+        self.assertEqual(self.node.uuid, result['node'].uuid)
+        self.assertThat(result['console_info'],
+                        nova_matchers.DictMatches(expected))
+
+    @mock.patch.object(ironic_driver, 'LOG', autospec=True)
+    def test__get_node_console_with_reset_console_disabled(self, mock_log,
+                                                           mock_node):
+        def _fake_log_debug(msg, *args, **kwargs):
+            regex = r'Console is disabled for instance .*'
+            self.assertThat(msg, matchers.MatchesRegex(regex))
+
+        mock_node.get_console.return_value = \
+            self._create_console_data(enabled=False)
+        mock_log.debug.side_effect = _fake_log_debug
+
+        self.assertRaises(exception.ConsoleNotAvailable,
+                          self.driver._get_node_console_with_reset,
+                          self.instance)
+
+        mock_node.get_console.assert_called_once_with(self.node.uuid)
+        mock_node.set_console_mode.assert_not_called()
+        self.assertTrue(mock_log.debug.called)
+
+    @mock.patch.object(ironic_driver, 'LOG', autospec=True)
+    def test__get_node_console_with_reset_set_mode_failed(self, mock_log,
+                                                          mock_node):
+        def _fake_log_error(msg, *args, **kwargs):
+            regex = r'Failed to set console mode .*'
+            self.assertThat(msg, matchers.MatchesRegex(regex))
+
+        mock_node.get_console.return_value = self._create_console_data()
+        mock_node.set_console_mode.side_effect = exception.NovaException()
+        mock_log.error.side_effect = _fake_log_error
+
+        self.assertRaises(exception.ConsoleNotAvailable,
+                          self.driver._get_node_console_with_reset,
+                          self.instance)
+
+        mock_node.get_console.assert_called_once_with(self.node.uuid)
+        self.assertEqual(2, mock_node.set_console_mode.call_count)
+        self.assertTrue(mock_log.error.called)
+
+    @mock.patch.object(ironic_driver, 'LOG', autospec=True)
+    def test__get_node_console_with_reset_wait_failed(self, mock_log,
+                                                      mock_node):
+        def _fake_get_console(node_uuid):
+            if mock_node.set_console_mode.called:
+                # After the call to set_console_mode(), then _wait_state()
+                # will call _get_console() to check the result.
+                raise exception.NovaException()
+            else:
+                return self._create_console_data()
+
+        def _fake_log_error(msg, *args, **kwargs):
+            regex = r'Failed to acquire console information for instance .*'
+            self.assertThat(msg, matchers.MatchesRegex(regex))
+
+        mock_node.get_console.side_effect = _fake_get_console
+        mock_log.error.side_effect = _fake_log_error
+
+        self.assertRaises(exception.ConsoleNotAvailable,
+                          self.driver._get_node_console_with_reset,
+                          self.instance)
+
+        self.assertGreater(mock_node.get_console.call_count, 1)
+        self.assertEqual(2, mock_node.set_console_mode.call_count)
+        self.assertTrue(mock_log.error.called)
+
+    @mock.patch.object(ironic_driver, '_CONSOLE_STATE_CHECKING_INTERVAL', 0.05)
+    @mock.patch.object(ironic_driver, 'LOG', autospec=True)
+    def test__get_node_console_with_reset_wait_timeout(self, mock_log,
+                                                       mock_node):
+        # Set timeout to a small value to reduce testing time
+        # Note: timeout value is integer, use enforce_type=False to set it
+        # to a floating number.
+        CONF.set_override('serial_console_state_timeout', 0.1,
+                          group='ironic', enforce_type=False)
+        temp_data = {'target_mode': True}
+
+        def _fake_get_console(node_uuid):
+            return self._create_console_data(enabled=temp_data['target_mode'])
+
+        def _fake_set_console_mode(node_uuid, mode):
+            # This causes the _wait_state() will timeout because
+            # the target mode never gets set successfully.
+            temp_data['target_mode'] = not mode
+
+        def _fake_log_error(msg, *args, **kwargs):
+            regex = r'Timeout while waiting for console mode to be set .*'
+            self.assertThat(msg, matchers.MatchesRegex(regex))
+
+        mock_node.get_console.side_effect = _fake_get_console
+        mock_node.set_console_mode.side_effect = _fake_set_console_mode
+        mock_log.error.side_effect = _fake_log_error
+
+        self.assertRaises(exception.ConsoleNotAvailable,
+                          self.driver._get_node_console_with_reset,
+                          self.instance)
+
+        self.assertGreater(mock_node.get_console.call_count, 1)
+        self.assertEqual(2, mock_node.set_console_mode.call_count)
+        self.assertTrue(mock_log.error.called)
+
+    def test_get_serial_console_socat(self, mock_node):
+        temp_data = {'target_mode': True}
+
+        def _fake_get_console(node_uuid):
+            return self._create_console_data(enabled=temp_data['target_mode'])
+
+        def _fake_set_console_mode(node_uuid, mode):
+            temp_data['target_mode'] = mode
+
+        mock_node.get_console.side_effect = _fake_get_console
+        mock_node.set_console_mode.side_effect = _fake_set_console_mode
+
+        result = self.driver.get_serial_console(self.ctx, self.instance)
+
+        self.assertGreater(mock_node.get_console.call_count, 1)
+        self.assertEqual(2, mock_node.set_console_mode.call_count)
+        self.assertIsInstance(result, console_type.ConsoleSerial)
+        self.assertEqual('127.0.0.1', result.host)
+        self.assertEqual(10000, result.port)
+
+    def test_get_serial_console_socat_disabled(self, mock_node):
+        mock_node.get_console.return_value = \
+            self._create_console_data(enabled=False)
+
+        self.assertRaises(exception.ConsoleTypeUnavailable,
+                          self.driver.get_serial_console,
+                          self.ctx, self.instance)
+        mock_node.get_console.assert_called_once_with(self.node.uuid)
+        mock_node.set_console_mode.assert_not_called()
+
+    @mock.patch.object(ironic_driver, 'LOG', autospec=True)
+    def test_get_serial_console_socat_invalid_url(self, mock_log, mock_node):
+        temp_data = {'target_mode': True}
+
+        def _fake_get_console(node_uuid):
+            return self._create_console_data(enabled=temp_data['target_mode'],
+                                             url='an invalid url')
+
+        def _fake_set_console_mode(node_uuid, mode):
+            temp_data['target_mode'] = mode
+
+        def _fake_log_error(msg, *args, **kwargs):
+            regex = r'Invalid Socat console URL .*'
+            self.assertThat(msg, matchers.MatchesRegex(regex))
+
+        mock_node.get_console.side_effect = _fake_get_console
+        mock_node.set_console_mode.side_effect = _fake_set_console_mode
+        mock_log.error.side_effect = _fake_log_error
+
+        self.assertRaises(exception.ConsoleTypeUnavailable,
+                          self.driver.get_serial_console,
+                          self.ctx, self.instance)
+
+        self.assertGreater(mock_node.get_console.call_count, 1)
+        self.assertEqual(2, mock_node.set_console_mode.call_count)
+        self.assertTrue(mock_log.error.called)
+
+    @mock.patch.object(ironic_driver, 'LOG', autospec=True)
+    def test_get_serial_console_socat_invalid_url_2(self, mock_log, mock_node):
+        temp_data = {'target_mode': True}
+
+        def _fake_get_console(node_uuid):
+            return self._create_console_data(enabled=temp_data['target_mode'],
+                                             url='http://abcxyz:1a1b')
+
+        def _fake_set_console_mode(node_uuid, mode):
+            temp_data['target_mode'] = mode
+
+        def _fake_log_error(msg, *args, **kwargs):
+            regex = r'Invalid Socat console URL .*'
+            self.assertThat(msg, matchers.MatchesRegex(regex))
+
+        mock_node.get_console.side_effect = _fake_get_console
+        mock_node.set_console_mode.side_effect = _fake_set_console_mode
+        mock_log.error.side_effect = _fake_log_error
+
+        self.assertRaises(exception.ConsoleTypeUnavailable,
+                          self.driver.get_serial_console,
+                          self.ctx, self.instance)
+
+        self.assertGreater(mock_node.get_console.call_count, 1)
+        self.assertEqual(2, mock_node.set_console_mode.call_count)
+        self.assertTrue(mock_log.error.called)
+
+    @mock.patch.object(ironic_driver, 'LOG', autospec=True)
+    def test_get_serial_console_socat_unsupported_scheme(self, mock_log,
+                                                         mock_node):
+        temp_data = {'target_mode': True}
+
+        def _fake_get_console(node_uuid):
+            return self._create_console_data(enabled=temp_data['target_mode'],
+                                             url='ssl://127.0.0.1:10000')
+
+        def _fake_set_console_mode(node_uuid, mode):
+            temp_data['target_mode'] = mode
+
+        def _fake_log_warning(msg, *args, **kwargs):
+            regex = r'Socat serial console only supports \"tcp\".*'
+            self.assertThat(msg, matchers.MatchesRegex(regex))
+
+        mock_node.get_console.side_effect = _fake_get_console
+        mock_node.set_console_mode.side_effect = _fake_set_console_mode
+        mock_log.warning.side_effect = _fake_log_warning
+
+        self.assertRaises(exception.ConsoleTypeUnavailable,
+                          self.driver.get_serial_console,
+                          self.ctx, self.instance)
+
+        self.assertGreater(mock_node.get_console.call_count, 1)
+        self.assertEqual(2, mock_node.set_console_mode.call_count)
+        self.assertTrue(mock_log.warning.called)
+
+    def test_get_serial_console_socat_tcp6(self, mock_node):
+        temp_data = {'target_mode': True}
+
+        def _fake_get_console(node_uuid):
+            return self._create_console_data(enabled=temp_data['target_mode'],
+                                             url='tcp://[::1]:10000')
+
+        def _fake_set_console_mode(node_uuid, mode):
+            temp_data['target_mode'] = mode
+
+        mock_node.get_console.side_effect = _fake_get_console
+        mock_node.set_console_mode.side_effect = _fake_set_console_mode
+
+        result = self.driver.get_serial_console(self.ctx, self.instance)
+
+        self.assertGreater(mock_node.get_console.call_count, 1)
+        self.assertEqual(2, mock_node.set_console_mode.call_count)
+        self.assertIsInstance(result, console_type.ConsoleSerial)
+        self.assertEqual('::1', result.host)
+        self.assertEqual(10000, result.port)
+
+    def test_get_serial_console_shellinabox(self, mock_node):
+        temp_data = {'target_mode': True}
+
+        def _fake_get_console(node_uuid):
+            return self._create_console_data(enabled=temp_data['target_mode'],
+                                             console_type='shellinabox')
+
+        def _fake_set_console_mode(node_uuid, mode):
+            temp_data['target_mode'] = mode
+
+        mock_node.get_console.side_effect = _fake_get_console
+        mock_node.set_console_mode.side_effect = _fake_set_console_mode
+
+        self.assertRaises(exception.ConsoleTypeUnavailable,
+                          self.driver.get_serial_console,
+                          self.ctx, self.instance)
+
+        self.assertGreater(mock_node.get_console.call_count, 1)
+        self.assertEqual(2, mock_node.set_console_mode.call_count)

@@ -90,6 +90,12 @@ Related options:
 
 * api_max_retries
 """),
+    cfg.IntOpt(
+        'serial_console_state_timeout',
+        default=10,
+        min=0,
+        help='Timeout (seconds) to wait for node serial console state '
+             'changed. Set to 0 to disable timeout.'),
 ]
 
 
