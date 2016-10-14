@@ -181,6 +181,11 @@ class HostState(object):
 
     def _update_from_compute_node(self, compute):
         """Update information about a host from a ComputeNode object."""
+        # NOTE(jichenjc): if the compute record is just created but not updated
+        # some field such as free_disk_gb can be None
+        if compute.updated_at is None:
+            return
+
         if (self.updated and compute.updated_at
                 and self.updated > compute.updated_at):
             return
