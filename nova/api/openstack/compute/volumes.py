@@ -114,7 +114,7 @@ class VolumeController(wsgi.Controller):
         return {'volume': _translate_volume_detail_view(context, vol)}
 
     @wsgi.response(202)
-    @extensions.expected_errors(404)
+    @extensions.expected_errors((400, 404))
     def delete(self, req, id):
         """Delete a volume."""
         context = req.environ['nova.context']
@@ -122,6 +122,8 @@ class VolumeController(wsgi.Controller):
 
         try:
             self.volume_api.delete(context, id)
+        except exception.InvalidInput as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
         except exception.VolumeNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
 
