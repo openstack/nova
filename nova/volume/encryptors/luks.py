@@ -85,6 +85,40 @@ class LuksEncryptor(cryptsetup.CryptsetupEncryptor):
                       self.dev_path, self.dev_name, process_input=passphrase,
                       run_as_root=True, check_exit_code=True)
 
+    def _unmangle_volume(self, key, passphrase, **kwargs):
+        """Workaround bug#1633518 by first identifying if a mangled passphrase
+        is used before replacing it with the correct passphrase.
+        """
+        mangled_passphrase = self._get_mangled_passphrase(key)
+        self._open_volume(mangled_passphrase, **kwargs)
+        self._close_volume(**kwargs)
+        LOG.debug("%s correctly opened with a mangled passphrase, replacing"
+                  "this with the original passphrase", self.dev_path)
+
+        # NOTE(lyarwood): Now that we are sure that the mangled passphrase is
+        # used attempt to add the correct passphrase before removing the
+        # mangled version from the volume.
+
+        # luksAddKey currently prompts for the following input :
+        # Enter any existing passphrase:
+        # Enter new passphrase for key slot:
+        # Verify passphrase:
+        utils.execute('cryptsetup', 'luksAddKey', self.dev_path,
+                      process_input=''.join([mangled_passphrase, '\n',
+                                             passphrase, '\n', passphrase]),
+                      run_as_root=True, check_exit_code=True)
+
+        # Verify that we can open the volume with the current passphrase
+        # before removing the mangled passphrase.
+        self._open_volume(passphrase, **kwargs)
+        self._close_volume(**kwargs)
+
+        # luksRemoveKey only prompts for the key to remove.
+        utils.execute('cryptsetup', 'luksRemoveKey', self.dev_path,
+                      process_input=mangled_passphrase,
+                      run_as_root=True, check_exit_code=True)
+        LOG.debug("%s mangled passphrase successfully replaced", self.dev_path)
+
     def attach_volume(self, context, **kwargs):
         """Shadows the device and passes an unencrypted version to the
         instance.
@@ -107,6 +141,16 @@ class LuksEncryptor(cryptsetup.CryptsetupEncryptor):
                              " formatting device for first use"),
                          self.dev_path)
                 self._format_volume(passphrase, **kwargs)
+                self._open_volume(passphrase, **kwargs)
+            elif e.exit_code == 2:
+                # NOTE(lyarwood): Workaround bug#1633518 by replacing any
+                # mangled passphrases that are found on the volume.
+                # TODO(lyarwood): Remove workaround during R.
+                LOG.warning(_LW("%s is not usable with the current "
+                                "passphrase, attempting to use a mangled "
+                                "passphrase to open the volume."),
+                            self.dev_path)
+                self._unmangle_volume(key, passphrase, **kwargs)
                 self._open_volume(passphrase, **kwargs)
             else:
                 raise
