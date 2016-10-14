@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_db import exception as db_exc
 from oslo_log import log as logging
 from oslo_utils import versionutils
 import six
@@ -1047,9 +1048,17 @@ class ResourceClass(base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
 
+    CUSTOM_NAMESPACE = 'CUSTOM_'
+    """All non-standard resource classes must begin with this string."""
+
+    MIN_CUSTOM_RESOURCE_CLASS_ID = 10000
+    """Any user-defined resource classes must have an identifier greater than
+    or equal to this number.
+    """
+
     fields = {
         'id': fields.IntegerField(read_only=True),
-        'name': fields.ResourceClassField(read_only=True),
+        'name': fields.ResourceClassField(nullable=False),
     }
 
     @staticmethod
@@ -1060,6 +1069,51 @@ class ResourceClass(base.NovaObject):
         target._context = context
         target.obj_reset_changes()
         return target
+
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_next_id(context):
+        """Utility method to grab the next resource class identifier to use for
+         user-defined resource classes.
+        """
+        query = context.session.query(func.max(models.ResourceClass.id))
+        max_id = query.one()[0]
+        if not max_id:
+            return ResourceClass.MIN_CUSTOM_RESOURCE_CLASS_ID
+        else:
+            return max_id + 1
+
+    def create(self):
+        if 'id' in self:
+            raise exception.ObjectActionError(action='create',
+                                              reason='already created')
+        if 'name' not in self:
+            raise exception.ObjectActionError(action='create',
+                                              reason='name is required')
+        if self.name in fields.ResourceClass.STANDARD:
+            raise exception.ResourceClassExists(resource_class=self.name)
+
+        if not self.name.startswith(self.CUSTOM_NAMESPACE):
+            raise exception.ObjectActionError(
+                action='create',
+                reason='name must start with ' + self.CUSTOM_NAMESPACE)
+
+        updates = self.obj_get_changes()
+        try:
+            rc = self._create_in_db(self._context, updates)
+            self._from_db_object(self._context, self, rc)
+        except db_exc.DBDuplicateEntry:
+            raise exception.ResourceClassExists(resource_class=self.name)
+
+    @staticmethod
+    @db_api.api_context_manager.writer
+    def _create_in_db(context, updates):
+        next_id = ResourceClass._get_next_id(context)
+        rc = models.ResourceClass()
+        rc.update(updates)
+        rc.id = next_id
+        context.session.add(rc)
+        return rc
 
 
 @base.NovaObjectRegistry.register
