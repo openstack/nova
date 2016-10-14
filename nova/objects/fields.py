@@ -516,10 +516,39 @@ class NotificationAction(BaseNovaEnum):
     SHELVE = 'shelve'
     RESUME = 'resume'
     RESTORE = 'restore'
+    EXISTS = 'exists'
+    RESCUE = 'rescue'
+    VOLUME_ATTACH = 'volume_attach'
+    VOLUME_DETACH = 'volume_detach'
+    CREATE = 'create'
+    EVACUATE = 'evacuate'
+    RESIZE_FINISH = 'resize_finish'
+    LIVE_MIGRATION_ABORT = 'live_migration_abort'
+    LIVE_MIGRATION_POST_DEST = 'live_migration_post_dest'
+    LIVE_MIGRATION_POST = 'live_migration_post'
+    LIVE_MIGRATION_PRE = 'live_migration_pre'
+    LIVE_MIGRATION_ROLLBACK_DEST = 'live_migration_rollback_dest'
+    LIVE_MIGRATION_ROLLBACK = 'live_migration_rollback'
+    REBUILD = 'rebuild'
+    REMOVE_FIXED_IP = 'remove_fixed_ip'
+    RESIZE_CONFIRM = 'resize_confirm'
+    RESIZE_PREP = 'resize_prep'
+    RESIZE_REVERT = 'resize_revert'
+    SHELVE_OFFLOAD = 'shelve_offload'
+    SOFT_DELETE = 'soft_delete'
+    TRIGGER_CRASH_DUMP = 'trigger_crash_dump'
+    UNRESCUE = 'unrescue'
+    UNSHELVE = 'unshelve'
 
     ALL = (UPDATE, EXCEPTION, DELETE, PAUSE, UNPAUSE, RESIZE, VOLUME_SWAP,
            SUSPEND, POWER_ON, REBOOT, SHUTDOWN, SNAPSHOT, ADD_FIXED_IP,
-           POWER_OFF, SHELVE, RESUME, RESTORE)
+           POWER_OFF, SHELVE, RESUME, RESTORE, EXISTS, RESCUE, VOLUME_ATTACH,
+           VOLUME_DETACH, CREATE, EVACUATE, RESIZE_FINISH,
+           LIVE_MIGRATION_ABORT, LIVE_MIGRATION_POST_DEST, LIVE_MIGRATION_POST,
+           LIVE_MIGRATION_PRE, LIVE_MIGRATION_ROLLBACK,
+           LIVE_MIGRATION_ROLLBACK_DEST, REBUILD, REMOVE_FIXED_IP,
+           RESIZE_CONFIRM, RESIZE_PREP, RESIZE_REVERT, SHELVE_OFFLOAD,
+           SOFT_DELETE, TRIGGER_CRASH_DUMP, UNRESCUE, UNSHELVE)
 
 
 # TODO(rlrossit): These should be changed over to be a StateMachine enum from

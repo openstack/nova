@@ -259,7 +259,7 @@ class TestNotificationBase(test.NoDBTestCase):
 notification_object_data = {
     'AuditPeriodPayload': '1.0-28345f72ca9d805eeb61b2c2385805dd',
     'BandwidthPayload': '1.0-49278639296f9939ff2c8947b2078a82',
-    'EventType': '1.3-6ef678bfe9a4ebfd669c96d2d2c124a5',
+    'EventType': '1.4-da0f0fbcda143ca96c2ac1b93937c22c',
     'ExceptionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'ExceptionPayload': '1.0-4516ae282a55fe2fd5c754967ee6248b',
     'FlavorPayload': '1.0-8ad962ab0bafc7270f474c7dda0b7c20',
