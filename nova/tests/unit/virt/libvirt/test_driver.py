@@ -5907,6 +5907,16 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(uuids[3], vm4.UUIDString())
         mock_list.assert_called_with(only_guests=True, only_running=False)
 
+    @mock.patch('nova.virt.libvirt.host.Host.get_online_cpus',
+                return_value=None)
+    @mock.patch('nova.virt.libvirt.host.Host.get_cpu_count',
+                return_value=4)
+    def test_get_host_vcpus_is_empty(self, get_cpu_count, get_online_cpus):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.flags(vcpu_pin_set="")
+        vcpus = drvr._get_vcpu_total()
+        self.assertEqual(4, vcpus)
+
     @mock.patch('nova.virt.libvirt.host.Host.get_online_cpus')
     def test_get_host_vcpus(self, get_online_cpus):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
