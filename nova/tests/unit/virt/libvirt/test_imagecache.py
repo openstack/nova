@@ -155,12 +155,12 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
     def test_list_backing_images_small(self):
         self.stub_out('os.listdir',
-                       lambda x: ['_base', 'instance-00000001',
-                                  'instance-00000002', 'instance-00000003'])
+                      lambda x: ['_base', 'instance-00000001',
+                                 'instance-00000002', 'instance-00000003'])
         self.stub_out('os.path.exists',
-                       lambda x: x.find('instance-') != -1)
-        self.stubs.Set(libvirt_utils, 'get_disk_backing_file',
-                       lambda x: 'e97222e91fc4241f49a7f520d1dcf446751129b3_sm')
+                      lambda x: x.find('instance-') != -1)
+        self.stub_out('nova.virt.libvirt.utils.get_disk_backing_file',
+                      lambda x: 'e97222e91fc4241f49a7f520d1dcf446751129b3_sm')
 
         found = os.path.join(CONF.instances_path,
                              CONF.image_cache_subdirectory_name,
@@ -177,13 +177,13 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
     def test_list_backing_images_resized(self):
         self.stub_out('os.listdir',
-                       lambda x: ['_base', 'instance-00000001',
-                                  'instance-00000002', 'instance-00000003'])
+                      lambda x: ['_base', 'instance-00000001',
+                                 'instance-00000002', 'instance-00000003'])
         self.stub_out('os.path.exists',
-                       lambda x: x.find('instance-') != -1)
-        self.stubs.Set(libvirt_utils, 'get_disk_backing_file',
-                       lambda x: ('e97222e91fc4241f49a7f520d1dcf446751129b3_'
-                                  '10737418240'))
+                      lambda x: x.find('instance-') != -1)
+        self.stub_out('nova.virt.libvirt.utils.get_disk_backing_file',
+                      lambda x: ('e97222e91fc4241f49a7f520d1dcf446751129b3_'
+                                 '10737418240'))
 
         found = os.path.join(CONF.instances_path,
                              CONF.image_cache_subdirectory_name,
@@ -201,11 +201,11 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
     def test_list_backing_images_instancename(self):
         self.stub_out('os.listdir',
-                       lambda x: ['_base', 'banana-42-hamster'])
+                      lambda x: ['_base', 'banana-42-hamster'])
         self.stub_out('os.path.exists',
-                       lambda x: x.find('banana-42-hamster') != -1)
-        self.stubs.Set(libvirt_utils, 'get_disk_backing_file',
-                       lambda x: 'e97222e91fc4241f49a7f520d1dcf446751129b3_sm')
+                      lambda x: x.find('banana-42-hamster') != -1)
+        self.stub_out('nova.virt.libvirt.utils.get_disk_backing_file',
+                      lambda x: 'e97222e91fc4241f49a7f520d1dcf446751129b3_sm')
 
         found = os.path.join(CONF.instances_path,
                              CONF.image_cache_subdirectory_name,
@@ -222,14 +222,15 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
     def test_list_backing_images_disk_notexist(self):
         self.stub_out('os.listdir',
-                       lambda x: ['_base', 'banana-42-hamster'])
+                      lambda x: ['_base', 'banana-42-hamster'])
         self.stub_out('os.path.exists',
-                       lambda x: x.find('banana-42-hamster') != -1)
+                      lambda x: x.find('banana-42-hamster') != -1)
 
         def fake_get_disk(disk_path):
             raise processutils.ProcessExecutionError()
 
-        self.stubs.Set(libvirt_utils, 'get_disk_backing_file', fake_get_disk)
+        self.stub_out('nova.virt.libvirt.utils.get_disk_backing_file',
+                      fake_get_disk)
 
         image_cache_manager = imagecache.ImageCacheManager()
         image_cache_manager.unexplained_images = []
@@ -443,8 +444,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             image_cache_manager._handle_base_image(img, fname)
 
             self.assertEqual(image_cache_manager.unexplained_images, [])
-            self.assertEqual(image_cache_manager.removable_base_files,
-                             [fname])
+            self.assertEqual(image_cache_manager.removable_base_files, [fname])
 
     @mock.patch.object(libvirt_utils, 'update_mtime')
     def test_handle_base_image_used(self, mock_mtime):
@@ -624,8 +624,8 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                 return fq_path('%s_5368709120' % hashed_1)
             self.fail('Unexpected backing file lookup: %s' % path)
 
-        self.stubs.Set(libvirt_utils, 'get_disk_backing_file',
-                       lambda x: get_disk_backing_file(x))
+        self.stub_out('nova.virt.libvirt.utils.get_disk_backing_file',
+                      lambda x: get_disk_backing_file(x))
 
         # Fake getmtime as well
         orig_getmtime = os.path.getmtime
@@ -650,31 +650,30 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
         self.stub_out('os.remove', lambda x: remove(x))
 
-        self.mox.StubOutWithMock(objects.block_device.BlockDeviceMappingList,
-                   'bdms_by_instance_uuid')
+        with mock.patch.object(objects.block_device.BlockDeviceMappingList,
+                               'bdms_by_instance_uuid', return_value={}
+                               ) as mock_bdms:
+            ctxt = context.get_admin_context()
+            # And finally we can make the call we're actually testing...
+            # The argument here should be a context, but it is mocked out
+            image_cache_manager.update(ctxt, all_instances)
 
-        ctxt = context.get_admin_context()
-        objects.block_device.BlockDeviceMappingList.bdms_by_instance_uuid(
-                ctxt, [uuids.instance_1, uuids.instance_2]).AndReturn({})
+            # Verify
+            active = [fq_path(hashed_1), fq_path('%s_5368709120' % hashed_1),
+                      fq_path(hashed_21), fq_path(hashed_22)]
+            for act in active:
+                self.assertIn(act, image_cache_manager.active_base_files)
+            self.assertEqual(len(image_cache_manager.active_base_files),
+                             len(active))
 
-        self.mox.ReplayAll()
-        # And finally we can make the call we're actually testing...
-        # The argument here should be a context, but it is mocked out
-        image_cache_manager.update(ctxt, all_instances)
+            for rem in [fq_path('e97222e91fc4241f49a7f520d1dcf446751129b3_sm'),
+                        fq_path('e09c675c2d1cfac32dae3c2d83689c8c94bc693b_sm'),
+                        fq_path(hashed_42),
+                        fq_path('%s_10737418240' % hashed_1)]:
+                self.assertIn(rem, image_cache_manager.removable_base_files)
 
-        # Verify
-        active = [fq_path(hashed_1), fq_path('%s_5368709120' % hashed_1),
-                  fq_path(hashed_21), fq_path(hashed_22)]
-        for act in active:
-            self.assertIn(act, image_cache_manager.active_base_files)
-        self.assertEqual(len(image_cache_manager.active_base_files),
-                         len(active))
-
-        for rem in [fq_path('e97222e91fc4241f49a7f520d1dcf446751129b3_sm'),
-                    fq_path('e09c675c2d1cfac32dae3c2d83689c8c94bc693b_sm'),
-                    fq_path(hashed_42),
-                    fq_path('%s_10737418240' % hashed_1)]:
-            self.assertIn(rem, image_cache_manager.removable_base_files)
+            mock_bdms.assert_called_once_with(ctxt,
+                [uuids.instance_1, uuids.instance_2])
 
     def test_verify_base_images_no_base(self):
         self.flags(instances_path='/tmp/no/such/dir/name/please')
