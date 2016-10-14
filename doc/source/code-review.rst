@@ -195,6 +195,24 @@ Please note:
 * We are only talking about the testing of in-tree code. Please note the only
   public API is our REST API, see: :doc:`policies`
 
+Should I run the experimental queue jobs on this change?
+========================================================
+
+Because we can't run all CI jobs in the check and gate pipelines, some
+jobs can be executed on demand, thanks to the experimental pipeline.
+To run the experimental jobs, you need to comment your Gerrit review
+with "check experimental".
+
+The experimental jobs aim to test specific features, such as LXC containers
+or DVR with multiple nodes.  Also, it might be useful to run them when
+we want to test backward compatibility with tools that deploy OpenStack
+outside Devstack (e.g. TripleO, etc).  They can produce a non-voting
+feedback of whether the system continues to work when we deprecate
+or remove some options or features in Nova.
+
+The experimental queue can also be used to test that new CI jobs are
+correct before making them voting.
+
 Database Schema
 ===============
 
