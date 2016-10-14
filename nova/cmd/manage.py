@@ -114,36 +114,6 @@ def param2id(object_id):
         return object_id
 
 
-class VpnCommands(object):
-    """Class for managing VPNs."""
-
-    description = ('DEPRECATED: VPN commands are deprecated since '
-                   'nova-network is deprecated in favor of Neutron. The '
-                   'VPN commands will be removed in the Nova 15.0.0 '
-                   'Ocata release.')
-
-    @args('--project', dest='project_id', metavar='<Project name>',
-            help='Project name')
-    @args('--ip', metavar='<IP Address>', help='IP Address')
-    @args('--port', metavar='<Port>', help='Port')
-    def change(self, project_id, ip, port):
-        """Change the IP and port for a VPN.
-
-        This will update all networks associated with a project
-        not sure if that's the desired behavior or not, patches accepted.
-
-        """
-        # TODO(tr3buchet): perhaps this shouldn't update all networks
-        # associated with a project in the future
-        admin_context = context.get_admin_context()
-        networks = db.project_get_networks(admin_context, project_id)
-        for network in networks:
-            db.network_update(admin_context,
-                              network['id'],
-                              {'vpn_public_address': ip,
-                               'vpn_public_port': int(port)})
-
-
 class ShellCommands(object):
     def bpython(self):
         """Runs a bpython shell.
@@ -322,124 +292,8 @@ class ProjectCommands(object):
             print(e.format_message())
             return 2
 
-    @args('--project', dest='project_id', metavar='<Project name>',
-            help='Project name')
-    def scrub(self, project_id):
-        """DEPRECATED: Deletes network data associated with project.
-
-        This command is only for nova-network deployments and nova-network is
-        deprecated in favor of Neutron. This command will be removed in the
-        Nova 15.0.0 Ocata release.
-        """
-        admin_context = context.get_admin_context()
-        networks = db.project_get_networks(admin_context, project_id)
-        for network in networks:
-            db.network_disassociate(admin_context, network['id'])
-        groups = db.security_group_get_by_project(admin_context, project_id)
-        for group in groups:
-            db.security_group_destroy(admin_context, group['id'])
-
 
 AccountCommands = ProjectCommands
-
-
-class FixedIpCommands(object):
-    """Class for managing fixed IP."""
-
-    description = ('DEPRECATED: Fixed IP commands are deprecated since '
-                   'nova-network is deprecated in favor of Neutron. The '
-                   'fixed IP commands will be removed in the Nova 15.0.0 '
-                   'Ocata release.')
-
-    @args('--host', metavar='<host>', help='Host')
-    def list(self, host=None):
-        """Lists all fixed IPs (optionally by host)."""
-        ctxt = context.get_admin_context()
-
-        try:
-            if host is None:
-                fixed_ips = db.fixed_ip_get_all(ctxt)
-            else:
-                fixed_ips = db.fixed_ip_get_by_host(ctxt, host)
-
-        except exception.NotFound as ex:
-            print(_("error: %s") % ex)
-            return(2)
-
-        instances = db.instance_get_all(context.get_admin_context())
-        instances_by_uuid = {}
-        for instance in instances:
-            instances_by_uuid[instance['uuid']] = instance
-
-        print("%-18s\t%-15s\t%-15s\t%s" % (_('network'),
-                                              _('IP address'),
-                                              _('hostname'),
-                                              _('host')))
-
-        all_networks = {}
-        try:
-            # use network_get_all to retrieve all existing networks
-            # this is to ensure that IPs associated with deleted networks
-            # will not throw exceptions.
-            for network in db.network_get_all(context.get_admin_context()):
-                all_networks[network.id] = network
-        except exception.NoNetworksFound:
-            # do not have any networks, so even if there are IPs, these
-            # IPs should have been deleted ones, so return.
-            print(_('No fixed IP found.'))
-            return
-
-        has_ip = False
-        for fixed_ip in fixed_ips:
-            hostname = None
-            host = None
-            network = all_networks.get(fixed_ip['network_id'])
-            if network:
-                has_ip = True
-                if fixed_ip.get('instance_uuid'):
-                    instance = instances_by_uuid.get(fixed_ip['instance_uuid'])
-                    if instance:
-                        hostname = instance['hostname']
-                        host = instance['host']
-                    else:
-                        print(_('WARNING: fixed IP %s allocated to missing'
-                                ' instance') % str(fixed_ip['address']))
-                print("%-18s\t%-15s\t%-15s\t%s" % (
-                        network['cidr'],
-                        fixed_ip['address'],
-                        hostname, host))
-
-        if not has_ip:
-            print(_('No fixed IP found.'))
-
-    @args('--address', metavar='<ip address>', help='IP address')
-    def reserve(self, address):
-        """Mark fixed IP as reserved
-
-        arguments: address
-        """
-        return self._set_reserved(address, True)
-
-    @args('--address', metavar='<ip address>', help='IP address')
-    def unreserve(self, address):
-        """Mark fixed IP as free to use
-
-        arguments: address
-        """
-        return self._set_reserved(address, False)
-
-    def _set_reserved(self, address, reserved):
-        ctxt = context.get_admin_context()
-
-        try:
-            fixed_ip = db.fixed_ip_get_by_address(ctxt, address)
-            if fixed_ip is None:
-                raise exception.NotFound('Could not find address')
-            db.fixed_ip_update(ctxt, fixed_ip['address'],
-                                {'reserved': reserved})
-        except exception.NotFound as ex:
-            print(_("error: %s") % ex)
-            return(2)
 
 
 class FloatingIpCommands(object):
@@ -1540,14 +1394,12 @@ CATEGORIES = {
     'cell': CellCommands,
     'cell_v2': CellV2Commands,
     'db': DbCommands,
-    'fixed': FixedIpCommands,
     'floating': FloatingIpCommands,
     'host': HostCommands,
     'logs': GetLogCommands,
     'network': NetworkCommands,
     'project': ProjectCommands,
     'shell': ShellCommands,
-    'vpn': VpnCommands,
 }
 
 

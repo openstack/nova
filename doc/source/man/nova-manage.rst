@@ -35,7 +35,7 @@ Run without arguments to see a list of available command categories:
 Categories are project, shell, vpn, and floating. Detailed descriptions are below.
 
 You can also run with a category argument such as user to see a list of all commands in that category:
-``nova-manage floating``
+``nova-manage db``
 
 These sections describe the available categories and arguments for nova-manage.
 
@@ -118,41 +118,6 @@ Nova Project
     Refresh the quota usages for the project/user so that the
     usage record matches the actual used.  If a key is not specified
     then all quota usages relevant to the project/user are refreshed.
-
-``nova-manage project scrub <project-id>``
-
-    Deletes data associated with project.
-
-Nova VPN
-~~~~~~~~
-
-``nova-manage vpn list``
-
-    Displays a list of projects, their IP port numbers, and what state they're in.
-
-``nova-manage vpn run <projectname>``
-
-    Starts the VPN for the named project.
-
-``nova-manage vpn spawn``
-
-    Runs all VPNs.
-
-Nova Floating IPs
-~~~~~~~~~~~~~~~~~
-
-``nova-manage floating create <ip_range> [--pool <pool>] [--interface <interface>]``
-
-    Creates floating IP addresses for the given range, optionally specifying
-    a floating pool and a network interface.
-
-``nova-manage floating delete <ip_range>``
-
-    Deletes floating IP addresses in the range given.
-
-``nova-manage floating list``
-
-    Displays a list of all floating IP addresses.
 
 Nova Images
 ~~~~~~~~~~~

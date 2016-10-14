@@ -37,49 +37,6 @@ from nova.tests import uuidsentinel
 CONF = conf.CONF
 
 
-class FixedIpCommandsTestCase(test.TestCase):
-    def setUp(self):
-        super(FixedIpCommandsTestCase, self).setUp()
-        self.output = StringIO()
-        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
-        db_fakes.stub_out_db_network_api(self)
-        self.commands = manage.FixedIpCommands()
-
-    def test_reserve(self):
-        self.commands.reserve('192.168.0.100')
-        address = db.fixed_ip_get_by_address(context.get_admin_context(),
-                                             '192.168.0.100')
-        self.assertTrue(address['reserved'])
-
-    def test_reserve_nonexistent_address(self):
-        self.assertEqual(2, self.commands.reserve('55.55.55.55'))
-
-    def test_unreserve(self):
-        self.commands.unreserve('192.168.0.100')
-        address = db.fixed_ip_get_by_address(context.get_admin_context(),
-                                             '192.168.0.100')
-        self.assertFalse(address['reserved'])
-
-    def test_unreserve_nonexistent_address(self):
-        self.assertEqual(2, self.commands.unreserve('55.55.55.55'))
-
-    def test_list(self):
-        self.useFixture(fixtures.MonkeyPatch('sys.stdout',
-                                             StringIO()))
-        self.commands.list()
-        self.assertNotEqual(1, sys.stdout.getvalue().find('192.168.0.100'))
-
-    def test_list_just_one_host(self):
-        def fake_fixed_ip_get_by_host(*args, **kwargs):
-            return [db_fakes.fixed_ip_fields]
-
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.db.fixed_ip_get_by_host',
-            fake_fixed_ip_get_by_host))
-        self.commands.list('banana')
-        self.assertNotEqual(1, self.output.getvalue().find('192.168.0.100'))
-
-
 class FloatingIpCommandsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(FloatingIpCommandsTestCase, self).setUp()

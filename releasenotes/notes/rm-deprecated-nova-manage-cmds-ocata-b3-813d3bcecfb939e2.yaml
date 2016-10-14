@@ -1,0 +1,9 @@
+---
+upgrade:
+  - |
+    The following deprecated nova-manage commands have been removed:
+
+    * ``nova-manage account scrub``
+    * ``nova-manage fixed *``
+    * ``nova-manage project scrub``
+    * ``nova-manage vpn *``
