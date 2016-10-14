@@ -82,7 +82,7 @@ def get_function_by_ifname(ifname):
     if os.path.isdir(dev_path):
         try:
             # sriov_totalvfs contains the maximum possible VFs for this PF
-            with open(dev_path + _SRIOV_TOTALVFS) as fd:
+            with open(os.path.join(dev_path, _SRIOV_TOTALVFS)) as fd:
                 sriov_totalvfs = int(fd.read())
                 return (os.readlink(dev_path).strip("./"),
                         sriov_totalvfs > 0)
