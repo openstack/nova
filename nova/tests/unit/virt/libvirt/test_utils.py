@@ -628,19 +628,20 @@ disk size: 4.4M
 
             return FakeImgInfo()
 
-        self.stubs.Set(utils, 'execute', fake_execute)
+        self.stub_out('nova.utils.execute', fake_execute)
         self.stub_out('os.rename', fake_rename)
         self.stub_out('os.unlink', fake_unlink)
-        self.stubs.Set(images, 'fetch', lambda *_, **__: None)
-        self.stubs.Set(images, 'qemu_img_info', fake_qemu_img_info)
-        self.stubs.Set(fileutils, 'delete_if_exists', fake_rm_on_error)
+        self.stub_out('nova.virt.images.fetch', lambda *_, **__: None)
+        self.stub_out('nova.virt.images.qemu_img_info', fake_qemu_img_info)
+        self.stub_out('oslo_utils.fileutils.delete_if_exists',
+                      fake_rm_on_error)
 
         # Since the remove param of fileutils.remove_path_on_error()
         # is initialized at load time, we must provide a wrapper
         # that explicitly resets it to our fake delete_if_exists()
         old_rm_path_on_error = fileutils.remove_path_on_error
         f = functools.partial(old_rm_path_on_error, remove=fake_rm_on_error)
-        self.stubs.Set(fileutils, 'remove_path_on_error', f)
+        self.stub_out('oslo_utils.fileutils.remove_path_on_error', f)
 
         context = 'opaque context'
         image_id = '4'
@@ -686,7 +687,7 @@ disk size: 4.4M
         def return_true(*args, **kwargs):
             return True
 
-        self.stubs.Set(utils, 'execute', fake_execute)
+        self.stub_out('nova.utils.execute', fake_execute)
         self.stub_out('os.path.exists', return_true)
 
         out = libvirt_utils.get_disk_backing_file('')
