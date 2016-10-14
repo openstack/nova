@@ -65,6 +65,13 @@ class ResourceClassCache(object):
         self.id_cache = {}
         self.str_cache = {}
 
+    def get_standards(self):
+        """Return a list of {'id': <ID>, 'name': <NAME> for all standard
+        resource classes.
+        """
+        return [{'id': fields.ResourceClass.STANDARD.index(s), 'name': s}
+                for s in fields.ResourceClass.STANDARD]
+
     def id_from_string(self, rc_str):
         """Given a string representation of a resource class -- e.g. "DISK_GB"
         or "IRON_SILVER" -- return the integer code for the resource class. For

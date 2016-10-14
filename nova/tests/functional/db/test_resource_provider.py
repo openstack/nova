@@ -18,6 +18,7 @@ from nova import context
 from nova import exception
 from nova import objects
 from nova.objects import fields
+from nova.objects import resource_provider as rp_obj
 from nova import test
 from nova.tests import fixtures
 from nova.tests import uuidsentinel
@@ -39,10 +40,14 @@ DISK_ALLOCATION = dict(
 )
 
 
-class ResourceProviderBaseCase(test.TestCase):
+class ResourceProviderBaseCase(test.NoDBTestCase):
+
+    USES_DB_SELF = True
 
     def setUp(self):
         super(ResourceProviderBaseCase, self).setUp()
+        self.useFixture(fixtures.Database())
+        self.api_db = self.useFixture(fixtures.Database(database='api'))
         self.context = context.RequestContext('fake-user', 'fake-project')
 
     def _make_allocation(self, rp_uuid=None):
@@ -894,3 +899,33 @@ class UsageListTestCase(ResourceProviderBaseCase):
         usage_list = objects.UsageList.get_all_by_resource_provider_uuid(
             self.context, db_rp.uuid)
         self.assertEqual(2, len(usage_list))
+
+
+class ResourceClassListTestCase(ResourceProviderBaseCase):
+
+    def test_get_all_no_custom(self):
+        """Test that if we haven't yet added any custom resource classes, that
+        we only get a list of ResourceClass objects representing the standard
+        classes.
+        """
+        rcs = objects.ResourceClassList.get_all(self.context)
+        self.assertEqual(len(fields.ResourceClass.STANDARD), len(rcs))
+
+    def test_get_all_with_custom(self):
+        """Test that if we add some custom resource classes, that we get a list
+        of ResourceClass objects representing the standard classes as well as
+        the custom classes.
+        """
+        customs = [
+            ('IRON_NFV', 10001),
+            ('IRON_ENTERPRISE', 10002),
+        ]
+        with self.api_db.get_engine().connect() as conn:
+            for custom in customs:
+                c_name, c_id = custom
+                ins = rp_obj._RC_TBL.insert().values(id=c_id, name=c_name)
+                conn.execute(ins)
+
+        rcs = objects.ResourceClassList.get_all(self.context)
+        expected_count = len(fields.ResourceClass.STANDARD) + len(customs)
+        self.assertEqual(expected_count, len(rcs))
