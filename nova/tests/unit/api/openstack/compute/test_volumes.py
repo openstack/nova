@@ -635,6 +635,26 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         self.assertRaises(self.validation_error, self.attachments.create,
                           req, FAKE_UUID, body=body)
 
+    @mock.patch.object(compute_api.API, 'attach_volume',
+                       side_effect=exception.DevicePathInUse(path='/dev/sda'))
+    def test_attach_volume_device_in_use(self, mock_attach):
+
+        body = {
+            'volumeAttachment': {
+                'device': '/dev/sda',
+                'volumeId': FAKE_UUID_A,
+            }
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
+        req.method = 'POST'
+        req.body = jsonutils.dump_as_bytes({})
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = self.context
+
+        self.assertRaises(webob.exc.HTTPConflict, self.attachments.create,
+                          req, FAKE_UUID, body=body)
+
     def test_attach_volume_without_volumeId(self):
         self.stubs.Set(compute_api.API,
                        'attach_volume',
