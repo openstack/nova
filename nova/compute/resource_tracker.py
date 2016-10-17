@@ -377,8 +377,6 @@ class ResourceTracker(object):
                 ctxt = context.elevated()
                 self._update(ctxt)
 
-            instance.drop_migration_context()
-
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def update_usage(self, context, instance):
         """Update the resource usage and stats after a change in an
