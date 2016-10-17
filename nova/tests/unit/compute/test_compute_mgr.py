@@ -1599,8 +1599,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 {'read_deleted': 'yes'},
                 {'deleted': True, 'soft_deleted': False, 'host': 'fake-mini',
                  'cleaned': False},
-                expected_attrs=['info_cache', 'security_groups',
-                                'system_metadata'],
+                expected_attrs=['system_metadata'],
                 use_slave=True)
             return [a, b, c]
 
