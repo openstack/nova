@@ -72,12 +72,10 @@ class MigrationOps(object):
             self._pathutils.makedirs(dest_path)
 
             for disk_file in disk_files:
-                # Skip the config drive as the instance is already configured
-                if os.path.basename(disk_file).lower() != 'configdrive.vhd':
-                    LOG.debug('Copying disk "%(disk_file)s" to '
-                              '"%(dest_path)s"',
-                              {'disk_file': disk_file, 'dest_path': dest_path})
-                    self._pathutils.copy(disk_file, dest_path)
+                LOG.debug('Copying disk "%(disk_file)s" to '
+                          '"%(dest_path)s"',
+                          {'disk_file': disk_file, 'dest_path': dest_path})
+                self._pathutils.copy(disk_file, dest_path)
 
             self._pathutils.move_folder_files(instance_path, revert_path)
 
