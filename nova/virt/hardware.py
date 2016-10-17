@@ -1053,6 +1053,40 @@ def _numa_get_mem_map_list(flavor, image_meta):
         return flavor_mem_list
 
 
+def _get_cpu_policy_constraints(flavor, image_meta):
+    """Validate and return the requested CPU policy."""
+    flavor_policy, image_policy = _get_flavor_image_meta(
+        'cpu_policy', flavor, image_meta)
+
+    if flavor_policy == fields.CPUAllocationPolicy.DEDICATED:
+        cpu_policy = flavor_policy
+    elif flavor_policy == fields.CPUAllocationPolicy.SHARED:
+        if image_policy == fields.CPUAllocationPolicy.DEDICATED:
+            raise exception.ImageCPUPinningForbidden()
+        cpu_policy = flavor_policy
+    elif image_policy == fields.CPUAllocationPolicy.DEDICATED:
+        cpu_policy = image_policy
+    else:
+        cpu_policy = fields.CPUAllocationPolicy.SHARED
+
+    return cpu_policy
+
+
+def _get_cpu_thread_policy_constraints(flavor, image_meta):
+    """Validate and return the requested CPU thread policy."""
+    flavor_policy, image_policy = _get_flavor_image_meta(
+        'cpu_thread_policy', flavor, image_meta)
+
+    if flavor_policy in [None, fields.CPUThreadAllocationPolicy.PREFER]:
+        policy = flavor_policy or image_policy
+    elif image_policy and image_policy != flavor_policy:
+        raise exception.ImageCPUThreadPolicyForbidden()
+    else:
+        policy = flavor_policy
+
+    return policy
+
+
 def _numa_get_constraints_manual(nodes, flavor, cpu_list, mem_list):
     cells = []
     totalmem = 0
@@ -1134,58 +1168,6 @@ def _numa_get_constraints_auto(nodes, flavor):
             id=node, cpuset=cpuset, memory=mem))
 
     return objects.InstanceNUMATopology(cells=cells)
-
-
-def _add_cpu_pinning_constraint(flavor, image_meta, numa_topology):
-    flavor_policy, image_policy = _get_flavor_image_meta(
-        'cpu_policy', flavor, image_meta)
-
-    if flavor_policy == fields.CPUAllocationPolicy.DEDICATED:
-        cpu_policy = flavor_policy
-    elif flavor_policy == fields.CPUAllocationPolicy.SHARED:
-        if image_policy == fields.CPUAllocationPolicy.DEDICATED:
-            raise exception.ImageCPUPinningForbidden()
-        cpu_policy = flavor_policy
-    elif image_policy == fields.CPUAllocationPolicy.DEDICATED:
-        cpu_policy = image_policy
-    else:
-        cpu_policy = fields.CPUAllocationPolicy.SHARED
-
-    rt = is_realtime_enabled(flavor)
-    if (rt and cpu_policy != fields.CPUAllocationPolicy.DEDICATED):
-        raise exception.RealtimeConfigurationInvalid()
-    elif rt and not _get_realtime_mask(flavor, image_meta):
-        raise exception.RealtimeMaskNotFoundOrInvalid()
-
-    flavor_thread_policy, image_thread_policy = _get_flavor_image_meta(
-        'cpu_thread_policy', flavor, image_meta)
-
-    if cpu_policy == fields.CPUAllocationPolicy.SHARED:
-        if flavor_thread_policy or image_thread_policy:
-            raise exception.CPUThreadPolicyConfigurationInvalid()
-        return numa_topology
-
-    if flavor_thread_policy in [None, fields.CPUThreadAllocationPolicy.PREFER]:
-        cpu_thread_policy = flavor_thread_policy or image_thread_policy
-    elif image_thread_policy and image_thread_policy != flavor_thread_policy:
-        raise exception.ImageCPUThreadPolicyForbidden()
-    else:
-        cpu_thread_policy = flavor_thread_policy
-
-    if numa_topology:
-        for cell in numa_topology.cells:
-            cell.cpu_policy = cpu_policy
-            cell.cpu_thread_policy = cpu_thread_policy
-    else:
-        single_cell = objects.InstanceNUMACell(
-                id=0,
-                cpuset=set(range(flavor.vcpus)),
-                memory=flavor.memory_mb,
-                cpu_policy=cpu_policy,
-                cpu_thread_policy=cpu_thread_policy)
-        numa_topology = objects.InstanceNUMATopology(cells=[single_cell])
-
-    return numa_topology
 
 
 def _validate_numa_nodes(nodes):
@@ -1279,7 +1261,39 @@ def numa_get_constraints(flavor, image_meta):
         # We currently support same pagesize for all cells.
         [setattr(c, 'pagesize', pagesize) for c in numa_topology.cells]
 
-    return _add_cpu_pinning_constraint(flavor, image_meta, numa_topology)
+    cpu_policy = _get_cpu_policy_constraints(flavor, image_meta)
+    cpu_thread_policy = _get_cpu_thread_policy_constraints(flavor, image_meta)
+    rt_mask = _get_realtime_mask(flavor, image_meta)
+
+    # sanity checks
+
+    rt = is_realtime_enabled(flavor)
+
+    if rt and cpu_policy != fields.CPUAllocationPolicy.DEDICATED:
+        raise exception.RealtimeConfigurationInvalid()
+
+    if rt and not rt_mask:
+        raise exception.RealtimeMaskNotFoundOrInvalid()
+
+    if cpu_policy == fields.CPUAllocationPolicy.SHARED:
+        if cpu_thread_policy:
+            raise exception.CPUThreadPolicyConfigurationInvalid()
+        return numa_topology
+
+    if numa_topology:
+        for cell in numa_topology.cells:
+            cell.cpu_policy = cpu_policy
+            cell.cpu_thread_policy = cpu_thread_policy
+    else:
+        single_cell = objects.InstanceNUMACell(
+                id=0,
+                cpuset=set(range(flavor.vcpus)),
+                memory=flavor.memory_mb,
+                cpu_policy=cpu_policy,
+                cpu_thread_policy=cpu_thread_policy)
+        numa_topology = objects.InstanceNUMATopology(cells=[single_cell])
+
+    return numa_topology
 
 
 def numa_fit_instance_to_host(
