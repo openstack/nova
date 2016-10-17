@@ -930,6 +930,17 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None):
     return instance_cell
 
 
+def _get_flavor_image_meta(key, flavor, image_meta):
+    """Extract both flavor- and image-based variants of metadata."""
+    flavor_key = ':'.join(['hw', key])
+    image_key = '_'.join(['hw', key])
+
+    flavor_policy = flavor.get('extra_specs', {}).get(flavor_key)
+    image_policy = image_meta.properties.get(image_key)
+
+    return flavor_policy, image_policy
+
+
 def _numa_get_pagesize_constraints(flavor, image_meta):
     """Return the requested memory page size
 
@@ -965,8 +976,8 @@ def _numa_get_pagesize_constraints(flavor, image_meta):
 
         return request
 
-    flavor_request = flavor.get('extra_specs', {}).get("hw:mem_page_size", "")
-    image_request = image_meta.properties.get("hw_mem_page_size", "")
+    flavor_request, image_request = _get_flavor_image_meta(
+        'mem_page_size', flavor, image_meta)
 
     if not flavor_request and image_request:
         raise exception.MemoryPageSizeForbidden(
@@ -1086,8 +1097,11 @@ def is_realtime_enabled(flavor):
 
 def _get_realtime_mask(flavor, image):
     """Returns realtime mask based on flavor/image meta"""
-    flavor_mask = flavor.get('extra_specs', {}).get("hw:cpu_realtime_mask")
-    image_mask = image.properties.get("hw_cpu_realtime_mask")
+    flavor_mask, image_mask = _get_flavor_image_meta(
+        'cpu_realtime_mask', flavor, image)
+
+    # Image masks are used ahead of flavor masks as they will have more
+    # specific requirements
     return image_mask or flavor_mask
 
 
@@ -1130,8 +1144,9 @@ def _numa_get_constraints_auto(nodes, flavor):
 
 
 def _add_cpu_pinning_constraint(flavor, image_meta, numa_topology):
-    flavor_policy = flavor.get('extra_specs', {}).get('hw:cpu_policy')
-    image_policy = image_meta.properties.get('hw_cpu_policy')
+    flavor_policy, image_policy = _get_flavor_image_meta(
+        'cpu_policy', flavor, image_meta)
+
     if flavor_policy == fields.CPUAllocationPolicy.DEDICATED:
         cpu_policy = flavor_policy
     elif flavor_policy == fields.CPUAllocationPolicy.SHARED:
@@ -1149,9 +1164,8 @@ def _add_cpu_pinning_constraint(flavor, image_meta, numa_topology):
     elif rt and not _get_realtime_mask(flavor, image_meta):
         raise exception.RealtimeMaskNotFoundOrInvalid()
 
-    flavor_thread_policy = flavor.get('extra_specs', {}).get(
-        'hw:cpu_thread_policy')
-    image_thread_policy = image_meta.properties.get('hw_cpu_thread_policy')
+    flavor_thread_policy, image_thread_policy = _get_flavor_image_meta(
+        'cpu_thread_policy', flavor, image_meta)
 
     if cpu_policy == fields.CPUAllocationPolicy.SHARED:
         if flavor_thread_policy or image_thread_policy:
@@ -1228,17 +1242,19 @@ def numa_get_constraints(flavor, image_meta):
              requested but no mask provided
     :returns: objects.InstanceNUMATopology, or None
     """
-    nodes = flavor.get('extra_specs', {}).get("hw:numa_nodes")
-    props = image_meta.properties
-    if nodes is not None:
-        _validate_numa_nodes(nodes)
-        if props.obj_attr_is_set("hw_numa_nodes"):
-            raise exception.ImageNUMATopologyForbidden(
-                name='hw_numa_nodes')
-        nodes = int(nodes)
+    flavor_nodes, image_nodes = _get_flavor_image_meta(
+        'numa_nodes', flavor, image_meta)
+    if flavor_nodes and image_nodes:
+        raise exception.ImageNUMATopologyForbidden(
+            name='hw_numa_nodes')
+
+    nodes = None
+    if flavor_nodes:
+        _validate_numa_nodes(flavor_nodes)
+        nodes = int(flavor_nodes)
     else:
-        nodes = props.get("hw_numa_nodes")
-        _validate_numa_nodes(nodes)
+        _validate_numa_nodes(image_nodes)
+        nodes = image_nodes
 
     pagesize = _numa_get_pagesize_constraints(
         flavor, image_meta)
