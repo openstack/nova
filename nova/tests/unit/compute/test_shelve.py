@@ -161,7 +161,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
     def test_shelve_and_offload(self):
         self._shelve_instance(0)
 
-    def _shelve_offload(self, clean_shutdown=True):
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    def _shelve_offload(self, mock_notify, clean_shutdown=True):
         host = 'fake-mini'
         instance = self._create_fake_instance_obj(params={'host': host})
         instance.task_state = task_states.SHELVING
@@ -195,6 +196,12 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         with mock.patch.object(instance, 'save'):
             self.compute.shelve_offload_instance(self.context, instance,
                                                  clean_shutdown=clean_shutdown)
+            mock_notify.assert_has_calls([
+                mock.call(self.context, instance, 'fake-mini',
+                          action='shelve_offload', phase='start'),
+                mock.call(self.context, instance, 'fake-mini',
+                          action='shelve_offload', phase='end')])
+
         self.assertEqual(vm_states.SHELVED_OFFLOADED, instance.vm_state)
         self.assertIsNone(instance.task_state)
 

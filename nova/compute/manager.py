@@ -4244,6 +4244,9 @@ class ComputeManager(manager.Manager):
         LOG.info(_LI('Shelve offloading'), instance=instance)
         self._notify_about_instance_usage(context, instance,
                 'shelve_offload.start')
+        compute_utils.notify_about_instance_action(context, instance,
+                self.host, action=fields.NotificationAction.SHELVE_OFFLOAD,
+                phase=fields.NotificationPhase.START)
 
         self._power_off_instance(context, instance, clean_shutdown)
         current_power_state = self._get_power_state(context, instance)
@@ -4277,6 +4280,9 @@ class ComputeManager(manager.Manager):
         self._delete_scheduler_instance_info(context, instance.uuid)
         self._notify_about_instance_usage(context, instance,
                 'shelve_offload.end')
+        compute_utils.notify_about_instance_action(context, instance,
+                self.host, action=fields.NotificationAction.SHELVE_OFFLOAD,
+                phase=fields.NotificationPhase.END)
 
     @wrap_exception()
     @reverts_task_state
