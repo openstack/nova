@@ -3196,7 +3196,12 @@ class ComputeManager(manager.Manager):
                 image_id = image['id']
                 LOG.debug("Deleting image %s", image_id,
                           instance=instance)
-                self.image_api.delete(context, image_id)
+                try:
+                    self.image_api.delete(context, image_id)
+                except exception.ImageNotFound:
+                    LOG.info(_LI("Failed to find image %(image_id)s to "
+                                 "delete"), {'image_id': image_id},
+                             instance=instance)
 
     @wrap_exception()
     @reverts_task_state
