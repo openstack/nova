@@ -96,9 +96,10 @@ def convert_image_unsafe(source, dest, out_format, run_as_root=False):
 
 
 def _convert_image(source, dest, in_format, out_format, run_as_root):
-    cmd = ('qemu-img', 'convert', '-O', out_format, source, dest)
+    cmd = ('qemu-img', 'convert', '-O', out_format)
     if in_format is not None:
         cmd = cmd + ('-f', in_format)
+    cmd = cmd + (source, dest)
     try:
         utils.execute(*cmd, run_as_root=run_as_root)
     except processutils.ProcessExecutionError as exp:
