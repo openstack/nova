@@ -114,15 +114,18 @@ def delete_resource_provider(req):
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     context = req.environ['placement.context']
     # The containing application will catch a not found here.
-    resource_provider = objects.ResourceProvider.get_by_uuid(
-        context, uuid)
     try:
+        resource_provider = objects.ResourceProvider.get_by_uuid(
+            context, uuid)
         resource_provider.destroy()
     except exception.ResourceProviderInUse as exc:
         raise webob.exc.HTTPConflict(
             _('Unable to delete resource provider %(rp_uuid)s: %(error)s') %
             {'rp_uuid': uuid, 'error': exc},
             json_formatter=util.json_error_formatter)
+    except exception.NotFound as exc:
+        raise webob.exc.HTTPNotFound(
+            _("No resource provider with uuid %s found for delete") % uuid)
     req.response.status = 204
     req.response.content_type = None
     return req.response

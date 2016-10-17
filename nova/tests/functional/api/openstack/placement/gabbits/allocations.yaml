@@ -153,6 +153,8 @@ tests:
 - name: delete allocation again
   DELETE: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
   status: 404
+  response_strings:
+      - No allocations for consumer '599ffd2d-526a-4b2e-8683-f13ad25f9958'
 
 - name: delete allocation of unknown consumer id
   DELETE: /allocations/da78521f-bf7e-4e6e-9901-3f79bd94d55d

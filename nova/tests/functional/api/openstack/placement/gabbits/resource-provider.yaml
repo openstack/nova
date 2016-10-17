@@ -86,6 +86,12 @@ tests:
   response_json_paths:
       $.uuid: $ENVIRON['RP_UUID']
 
+- name: get non-existing resource provider
+  GET: /resource_providers/d67370b5-4dc0-470d-a4fa-85e8e89abc6c
+  status: 404
+  response_strings:
+      - No resource provider with uuid d67370b5-4dc0-470d-a4fa-85e8e89abc6c found
+
 - name: list one resource providers
   GET: /resource_providers
   response_json_paths:
@@ -212,6 +218,12 @@ tests:
 - name: fail to get a provider
   GET: /resource_providers/random_sauce
   status: 404
+
+- name: delete non-existing resource provider
+  DELETE: /resource_providers/d67370b5-4dc0-470d-a4fa-85e8e89abc6c
+  status: 404
+  response_strings:
+      - No resource provider with uuid d67370b5-4dc0-470d-a4fa-85e8e89abc6c found for delete
 
 - name: post resource provider no uuid
   POST: /resource_providers
