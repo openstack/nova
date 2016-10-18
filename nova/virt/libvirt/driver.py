@@ -5392,6 +5392,9 @@ class LibvirtDriver(driver.ComputeDriver):
         data = objects.LibvirtLiveMigrateData()
         data.filename = filename
         data.image_type = CONF.libvirt.images_type
+        data.graphics_listen_addr_vnc = CONF.vnc.vncserver_listen
+        data.graphics_listen_addr_spice = CONF.spice.server_listen
+        data.serial_listen_addr = CONF.serial_console.proxyclient_address
         # Notes(eliqiao): block_migration and disk_over_commit are not
         # nullable, so just don't set them if they are None
         if block_migration is not None:
@@ -6506,10 +6509,6 @@ class LibvirtDriver(driver.ComputeDriver):
             migrate_data = objects.LibvirtLiveMigrateData(bdms=[])
         else:
             migrate_data.bdms = []
-        migrate_data.graphics_listen_addr_vnc = CONF.vnc.vncserver_listen
-        migrate_data.graphics_listen_addr_spice = CONF.spice.server_listen
-        migrate_data.serial_listen_addr = \
-            CONF.serial_console.proxyclient_address
         # Store live_migration_inbound_addr
         migrate_data.target_connect_addr = \
             CONF.libvirt.live_migration_inbound_addr
