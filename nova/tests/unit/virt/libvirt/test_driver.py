@@ -11959,7 +11959,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             DiagFakeDomain("instance0000001"),
             DiagFakeDomain("instance0000002"),
             DiagFakeDomain("instance0000003"),
-            DiagFakeDomain("instance0000004")]
+            DiagFakeDomain("instance0000004"),
+            DiagFakeDomain("instance0000005")]
         mock_list.return_value = instance_domains
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -12022,14 +12023,21 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             root_device_name='/dev/vdc'),
             objects.Instance(
             uuid=instance_uuids[3],
-            root_device_name='/dev/vdd')
+            root_device_name='/dev/vdd'),
         ]
         mock_get.return_value = instances
+
+        # NOTE(danms): We need to have found bdms for our instances,
+        # but we don't really need them to be complete as we just need
+        # to make it to our side_effect above. Exclude the last domain
+        # to simulate the case where we have an instance with no BDMs.
+        mock_bdms.return_value = {uuid: [] for uuid in instance_uuids
+                                  if uuid != instance_domains[-1].UUIDString()}
 
         result = drvr._get_disk_over_committed_size_total()
         self.assertEqual(42949672960, result)
         mock_list.assert_called_once_with()
-        self.assertEqual(4, get_disk_info.call_count)
+        self.assertEqual(5, get_disk_info.call_count)
         filters = {'uuid': instance_uuids}
         mock_get.assert_called_once_with(mock.ANY, filters, use_slave=True)
         mock_bdms.assert_called_with(mock.ANY, instance_uuids)
