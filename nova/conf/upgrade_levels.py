@@ -1,10 +1,3 @@
-# needs:fix_opt_description
-# needs:check_deprecation_status
-# needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
-
-
 # Copyright 2016 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -20,146 +13,78 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
 from oslo_config import cfg
 
 upgrade_group = cfg.OptGroup('upgrade_levels',
-        title='Upgrade levels Options')
-
-rpcapi_cap_cells_opt = cfg.StrOpt('cells',
+        title='Upgrade levels Options',
         help="""
-Cells version
+upgrade_levels options are used to set version cap for RPC
+messages sent between different nova services.
 
-Cells client-side RPC API version. Use this option to set a version
-cap for messages sent to local cells services.
+By default all services send messages using the latest version
+they know about.
+
+The compute upgrade level is an important part of rolling upgrades
+where old and new nova-compute services run side by side.
+
+The other options can largely be ignored, and are only kept to
+help with a possible future backport issue.
+""")
+
+# TODO(sneti): Add default=auto for compute
+upgrade_levels_opts = [
+    cfg.StrOpt('compute',
+        help="""
+Compute RPC API version cap.
+
+By default, we always send messages using the most recent version
+the client knows about.
+
+Where you have old and new compute services running, you should set
+this to the lowest deployed version. This is to guarantee that all
+services never send messages that one of the compute nodes can't
+understand. Note that we only support upgrading from release N to
+release N+1.
+
+Set this option to "auto" if you want to let the compute RPC module
+automatically determine what version to use based on the service
+versions in the deployment.
 
 Possible values:
 
-* None: This is the default value.
-* grizzly: message version 1.6.
-* havana: message version 1.24.
-* icehouse: message version 1.27.
-* juno: message version 1.29.
-* kilo: message version 1.34.
-* liberty: message version 1.37.
-
-Services which consume this:
-
-* nova-cells
-
-Related options:
-
-* None
-""")
-
-rpcapi_cap_intercell_opt = cfg.StrOpt('intercell',
-        help="""
-Intercell version
-
-Intercell RPC API is the client side of the Cell<->Cell RPC API.
-Use this option to set a version cap for messages sent between
-cells services.
-
-Possible values:
-
-* None: This is the default value.
-* grizzly: message version 1.0.
-
-Services which consume this:
-
-* nova-cells
-
-Related options:
-
-* None
-""")
-
-rpcapi_cap_cert_opt = cfg.StrOpt("cert",
-        help="""
-
-Specifies the maximum version for messages sent from cert services. This should
-be the minimum value that is supported by all of the deployed cert services.
-
-Possible values:
-
-Any valid OpenStack release name, in lower case, such as 'mitaka' or 'liberty'.
-Alternatively, it can be any string representing a version number in the format
-'N.N'; for example, possible values might be '1.12' or '2.0'.
-
-Services which consume this:
-
-* nova-cert
-
-Related options:
-
-* None
-""")
-
-rpcapi_cap_compute_opt = cfg.StrOpt('compute',
-        help='Set a version cap for messages sent to compute services. '
-             'Set this option to "auto" if you want to let the compute RPC '
-             'module automatically determine what version to use based on '
-             'the service versions in the deployment. '
-             'Otherwise, you can set this to a specific version to pin this '
-             'service to messages at a particular level. '
-             'All services of a single type (i.e. compute) should be '
-             'configured to use the same version, and it should be set '
-             'to the minimum commonly-supported version of all those '
-             'services in the deployment.')
-
-rpcapi_cap_scheduler_opt = cfg.StrOpt("scheduler",
-        help="""
-Sets a version cap (limit) for messages sent to scheduler services. In the
-situation where there were multiple scheduler services running, and they were
-not being upgraded together, you would set this to the lowest deployed version
-to guarantee that other services never send messages that any of your running
-schedulers cannot understand.
-
-This is rarely needed in practice as most deployments run a single scheduler.
-It exists mainly for design compatibility with the other services, such as
-compute, which are routinely upgraded in a rolling fashion.
-
-Services that use this:
-
-* nova-compute, nova-conductor
-
-Related options:
-
-* None
-""")
-
-rpcapi_cap_conductor_opt = cfg.StrOpt('conductor',
-        help='Set a version cap for messages sent to conductor services')
-
-rpcapi_cap_console_opt = cfg.StrOpt('console',
-        help='Set a version cap for messages sent to console services')
-
-rpcapi_cap_consoleauth_opt = cfg.StrOpt('consoleauth',
-        help='Set a version cap for messages sent to consoleauth services')
-
-rpcapi_cap_network_opt = cfg.StrOpt('network',
-        help='Set a version cap for messages sent to network services')
-
-rpcapi_cap_baseapi_opt = cfg.StrOpt('baseapi',
-        help='Set a version cap for messages sent to the base api in any '
-             'service')
-
-ALL_OPTS = [rpcapi_cap_cells_opt,
-            rpcapi_cap_intercell_opt,
-            rpcapi_cap_cert_opt,
-            rpcapi_cap_compute_opt,
-            rpcapi_cap_scheduler_opt,
-            rpcapi_cap_conductor_opt,
-            rpcapi_cap_console_opt,
-            rpcapi_cap_consoleauth_opt,
-            rpcapi_cap_network_opt,
-            rpcapi_cap_baseapi_opt]
+* By default send the latest version the client knows about
+* 'auto': Automatically determines what version to use based on
+  the service versions in the deployment.
+* A string representing a version number in the format 'N.N';
+  for example, possible values might be '1.12' or '2.0'.
+* An OpenStack release name, in lower case, such as 'mitaka' or
+  'liberty'.
+"""),
+    cfg.StrOpt('cells',
+        help='Cells RPC API version cap'),
+    cfg.StrOpt('intercell',
+        help='Intercell RPC API version cap'),
+    cfg.StrOpt("cert",
+        help='Cert RPC API version cap'),
+    cfg.StrOpt("scheduler",
+        help='Scheduler RPC API version cap'),
+    cfg.StrOpt('conductor',
+        help='Conductor RPC API version cap'),
+    cfg.StrOpt('console',
+        help='Console RPC API version cap'),
+    cfg.StrOpt('consoleauth',
+        help='Consoleauth RPC API version cap'),
+    cfg.StrOpt('network',
+        help='Network RPC API version cap'),
+    cfg.StrOpt('baseapi',
+        help='Base API RPC API version cap')
+]
 
 
 def register_opts(conf):
     conf.register_group(upgrade_group)
-    conf.register_opts(ALL_OPTS, group=upgrade_group)
+    conf.register_opts(upgrade_levels_opts, group=upgrade_group)
 
 
 def list_opts():
-    return {upgrade_group: ALL_OPTS}
+    return {upgrade_group: upgrade_levels_opts}
