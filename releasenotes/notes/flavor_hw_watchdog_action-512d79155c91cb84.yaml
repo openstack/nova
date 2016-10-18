@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    Support for **hw_watchdog_action** as a flavor extra spec has been removed.
+    The valid flavor extra spec is **hw:watchdog_action** and the image
+    property, which takes precedence, is **hw_watchdog_action**.
