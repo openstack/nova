@@ -508,7 +508,8 @@ def attach_block_devices(block_device_mapping, *attach_args, **attach_kwargs):
 
         bdm.attach(*attach_args, **attach_kwargs)
 
-    map(_log_and_attach, block_device_mapping)
+    for device in block_device_mapping:
+        _log_and_attach(device)
     return block_device_mapping
 
 

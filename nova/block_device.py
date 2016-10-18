@@ -541,7 +541,9 @@ def instance_block_mapping(instance, bdms):
     #                 Right now sort by device name for deterministic
     #                 result.
     if ebs_devices:
-        ebs_devices.sort()
+        # NOTE(claudiub): python2.7 sort places None values first.
+        # this sort will maintain the same behaviour for both py27 and py34.
+        ebs_devices = sorted(ebs_devices, key=lambda x: (x is not None, x))
         for nebs, ebs in enumerate(ebs_devices):
             mappings['ebs%d' % nebs] = ebs
 
