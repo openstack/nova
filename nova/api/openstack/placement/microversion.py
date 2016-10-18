@@ -17,6 +17,7 @@
 # the code now used in microversion_parse library.
 
 import collections
+import inspect
 
 import microversion_parse
 import webob
@@ -29,6 +30,7 @@ from nova.i18n import _
 
 SERVICE_TYPE = 'placement'
 MICROVERSION_ENVIRON = '%s.microversion' % SERVICE_TYPE
+VERSIONED_METHODS = collections.defaultdict(list)
 
 # The Canonical Version List
 VERSIONS = [
@@ -117,6 +119,9 @@ class Version(collections.namedtuple('Version', 'major minor')):
     def __str__(self):
         return '%s.%s' % (self.major, self.minor)
 
+    def __float__(self):
+        return float(self.__str__())
+
     @property
     def max_version(self):
         if not self.MAX_VERSION:
@@ -154,3 +159,84 @@ def extract_version(headers):
     if (str(request_version) in VERSIONS and request_version.matches()):
         return request_version
     raise ValueError('Unacceptable version header: %s' % version_string)
+
+
+# From twisted
+# https://github.com/twisted/twisted/blob/trunk/twisted/python/deprecate.py
+def _fully_qualified_name(obj):
+    """Return the fully qualified name of a module, class, method or function.
+
+    Classes and functions need to be module level ones to be correctly
+    qualified.
+    """
+    try:
+        name = obj.__qualname__
+    except AttributeError:
+        name = obj.__name__
+
+    if inspect.isclass(obj) or inspect.isfunction(obj):
+        moduleName = obj.__module__
+        return "%s.%s" % (moduleName, name)
+    elif inspect.ismethod(obj):
+        try:
+            cls = obj.im_class
+        except AttributeError:
+            # Python 3 eliminates im_class, substitutes __module__ and
+            # __qualname__ to provide similar information.
+            return "%s.%s" % (obj.__module__, obj.__qualname__)
+        else:
+            className = _fully_qualified_name(cls)
+            return "%s.%s" % (className, name)
+    return name
+
+
+def _find_method(f, version_float):
+    """Look in VERSIONED_METHODS for method with right name matching version.
+
+    If no match is found raise a 404.
+    """
+    qualified_name = _fully_qualified_name(f)
+    # A KeyError shouldn't be possible here, but let's be robust
+    # just in case.
+    method_list = VERSIONED_METHODS.get(qualified_name, [])
+    for min_version, max_version, func in method_list:
+        if min_version <= version_float <= max_version:
+            return func
+
+    raise webob.exc.HTTPNotFound()
+
+
+def version_handler(min_ver, max_ver=None):
+    """Decorator for versioning API methods.
+
+    Add as a decorator to a placement API handler to constrain
+    the microversions at which it will run. Add after the
+    ``wsgify`` decorator.
+
+    This does not check for version intersections. That's the
+    domain of tests.
+
+    :param min_ver: A string of two numerals, X.Y indicating the
+                    minimum version allowed for the decorated method.
+    :param min_ver: A string of two numerals, X.Y, indicating the
+                    maximum version allowed for the decorated method.
+    """
+    def decorator(f):
+        min_version_float = float(min_ver)
+        if max_ver:
+            max_version_float = float(max_ver)
+        else:
+            max_version_float = float(max_version_string())
+        qualified_name = _fully_qualified_name(f)
+        VERSIONED_METHODS[qualified_name].append(
+            (min_version_float, max_version_float, f))
+
+        def decorated_func(req, *args, **kwargs):
+            version_float = float(req.environ[MICROVERSION_ENVIRON])
+            return _find_method(f, version_float)(req, *args, **kwargs)
+
+        # Sort highest min version to beginning of list.
+        VERSIONED_METHODS[qualified_name].sort(key=lambda x: x[0],
+                                               reverse=True)
+        return decorated_func
+    return decorator
