@@ -56,6 +56,9 @@ forward. You can also see a history of our microversions here:
 
    api_microversion_history
 
+.. note::
+    Only Version 2.1 APIs should be used from this point forward, Version 2.0
+    APIs are only provided for backward compatibility purposes.
 
 .. _`Compute API Guide`: http://developer.openstack.org/api-guide/compute/
 .. _`Compute API Reference`: http://developer.openstack.org/api-ref/compute/
