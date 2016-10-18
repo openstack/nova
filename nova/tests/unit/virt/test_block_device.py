@@ -1052,3 +1052,36 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         instance = fake_instance.fake_instance_obj(self.context, **updates)
         self.assertIsNone(
             driver_block_device._get_volume_create_az_value(instance))
+
+    def test_refresh_conn_infos(self):
+        # Only DriverVolumeBlockDevice derived devices should refresh their
+        # connection_info during a refresh_conn_infos call.
+        test_volume = mock.MagicMock(
+            spec=driver_block_device.DriverVolumeBlockDevice)
+        test_image = mock.MagicMock(
+            spec=driver_block_device.DriverImageBlockDevice)
+        test_snapshot = mock.MagicMock(
+            spec=driver_block_device.DriverSnapshotBlockDevice)
+        test_blank = mock.MagicMock(
+            spec=driver_block_device.DriverBlankBlockDevice)
+        test_eph = mock.MagicMock(
+            spec=driver_block_device.DriverEphemeralBlockDevice)
+        test_swap = mock.MagicMock(
+            spec=driver_block_device.DriverSwapBlockDevice)
+        block_device_mapping = [test_volume, test_image, test_eph,
+                                test_snapshot, test_swap, test_blank]
+        driver_block_device.refresh_conn_infos(block_device_mapping,
+                                               mock.sentinel.refresh_context,
+                                               mock.sentinel.refresh_instance,
+                                               mock.sentinel.refresh_vol_api,
+                                               mock.sentinel.refresh_virt_drv)
+        for test_mock in [test_volume, test_image, test_snapshot, test_blank]:
+            test_mock.refresh_connection_info.assert_called_once_with(
+                mock.sentinel.refresh_context,
+                mock.sentinel.refresh_instance,
+                mock.sentinel.refresh_vol_api,
+                mock.sentinel.refresh_virt_drv)
+        # NOTE(lyarwood): Can't think of a better way of testing this as we
+        # can't assert_not_called if the method isn't in the spec.
+        self.assertFalse(hasattr(test_eph, 'refresh_connection_info'))
+        self.assertFalse(hasattr(test_swap, 'refresh_connection_info'))
