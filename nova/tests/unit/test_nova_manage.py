@@ -30,8 +30,6 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit.db import fakes as db_fakes
-from nova.tests.unit import fake_flavor
-from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_network
 from nova.tests import uuidsentinel
 
@@ -420,46 +418,6 @@ class ProjectCommandsTestCase(test.TestCase):
             'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
             None,
             'ram'))
-
-
-class VmCommandsTestCase(test.NoDBTestCase):
-    def setUp(self):
-        super(VmCommandsTestCase, self).setUp()
-        self.output = StringIO()
-        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
-        self.commands = manage.VmCommands()
-        self.context = context.get_admin_context()
-        self.fake_flavor = fake_flavor.fake_flavor_obj(self.context)
-
-    def test_list_without_host(self):
-        with mock.patch.object(objects.InstanceList, 'get_by_filters') as get:
-            get.return_value = objects.InstanceList(
-                objects=[fake_instance.fake_instance_obj(
-                    self.context, host='foo-host',
-                    flavor=self.fake_flavor,
-                    system_metadata={})])
-            self.commands.list()
-
-        result = self.output.getvalue()
-
-        self.assertIn('node', result)   # check the header line
-        self.assertIn('fake_flavor', result)    # flavor.name
-        self.assertIn('foo-host', result)
-
-    def test_list_with_host(self):
-        with mock.patch.object(objects.InstanceList, 'get_by_host') as get:
-            get.return_value = objects.InstanceList(
-                objects=[fake_instance.fake_instance_obj(
-                    self.context,
-                    flavor=self.fake_flavor,
-                    system_metadata={})])
-            self.commands.list(host='fake-host')
-
-        result = self.output.getvalue()
-
-        self.assertIn('node', result)   # check the header line
-        self.assertIn('fake_flavor', result)    # flavor.name
-        self.assertIn('fake-host', result)
 
 
 class DBCommandsTestCase(test.NoDBTestCase):
