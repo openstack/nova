@@ -22,43 +22,6 @@ from nova.objects import base as obj_base
 from nova import test
 
 
-DEFAULT_FLAVORS = [
-    {'memory_mb': 512, 'root_gb': 1, 'deleted_at': None, 'name': 'm1.tiny',
-     'deleted': 0, 'created_at': None, 'ephemeral_gb': 0, 'updated_at': None,
-     'disabled': False, 'vcpus': 1, 'extra_specs': {}, 'swap': 0,
-     'rxtx_factor': 1.0, 'is_public': True, 'flavorid': '1',
-     'vcpu_weight': None, 'id': 2},
-    {'memory_mb': 2048, 'root_gb': 20, 'deleted_at': None, 'name': 'm1.small',
-     'deleted': 0, 'created_at': None, 'ephemeral_gb': 0, 'updated_at': None,
-     'disabled': False, 'vcpus': 1, 'extra_specs': {}, 'swap': 0,
-     'rxtx_factor': 1.0, 'is_public': True, 'flavorid': '2',
-     'vcpu_weight': None, 'id': 5},
-    {'memory_mb': 4096, 'root_gb': 40, 'deleted_at': None, 'name': 'm1.medium',
-     'deleted': 0, 'created_at': None, 'ephemeral_gb': 0, 'updated_at': None,
-     'disabled': False, 'vcpus': 2, 'extra_specs': {}, 'swap': 0,
-     'rxtx_factor': 1.0, 'is_public': True, 'flavorid': '3',
-     'vcpu_weight': None, 'id': 1},
-    {'memory_mb': 8192, 'root_gb': 80, 'deleted_at': None, 'name': 'm1.large',
-     'deleted': 0, 'created_at': None, 'ephemeral_gb': 0, 'updated_at': None,
-     'disabled': False, 'vcpus': 4, 'extra_specs': {}, 'swap': 0,
-     'rxtx_factor': 1.0, 'is_public': True, 'flavorid': '4',
-     'vcpu_weight': None, 'id': 3},
-    {'memory_mb': 16384, 'root_gb': 160, 'deleted_at': None,
-     'name': 'm1.xlarge', 'deleted': 0, 'created_at': None, 'ephemeral_gb': 0,
-     'updated_at': None, 'disabled': False, 'vcpus': 8, 'extra_specs': {},
-     'swap': 0, 'rxtx_factor': 1.0, 'is_public': True, 'flavorid': '5',
-     'vcpu_weight': None, 'id': 4}
-]
-
-CONTEXT = context.RequestContext('fake', 'fake', is_admin=False)
-
-DEFAULT_FLAVOR_OBJS = [
-    objects.Flavor._obj_from_primitive(CONTEXT, objects.Flavor.VERSION,
-                                       {'nova_object.data': flavor})
-    for flavor in DEFAULT_FLAVORS
-]
-
-
 class InstanceTypeTestCase(test.TestCase):
     """Test cases for flavor  code."""
     def test_will_not_get_bad_default_instance_type(self):
