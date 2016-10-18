@@ -26,7 +26,6 @@ from oslo_log import log as logging
 from oslo_utils import importutils
 from six.moves import cStringIO
 
-from nova import conductor
 import nova.conf
 from nova import context
 from nova import objects
@@ -718,8 +717,6 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             ctxt = context.get_admin_context()
             mock_instance_list.return_value = fake_instances(ctxt)
             compute = importutils.import_object(CONF.compute_manager)
-            self.flags(use_local=True, group='conductor')
-            compute.conductor_api = conductor.API()
             compute._run_image_cache_manager_pass(ctxt)
             filters = {
                 'host': ['fake-mini'],

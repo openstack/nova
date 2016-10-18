@@ -818,7 +818,6 @@ class FlatDHCPNetworkTestCase(test.TestCase):
     def setUp(self):
         super(FlatDHCPNetworkTestCase, self).setUp()
         self.useFixture(test.SampleNetworks())
-        self.flags(use_local=True, group='conductor')
         self.network = network_manager.FlatDHCPManager(host=HOST)
         self.network.db = db
         self.context = context.RequestContext('testuser',

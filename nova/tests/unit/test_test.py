@@ -38,7 +38,6 @@ class IsolationTestCase(test.TestCase):
 
     """
     def test_service_isolation(self):
-        self.flags(use_local=True, group='conductor')
         self.useFixture(fixtures.ServiceFixture('compute'))
 
     def test_rpc_consumer_isolation(self):
