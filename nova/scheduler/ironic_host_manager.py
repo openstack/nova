@@ -81,8 +81,8 @@ class IronicHostManager(host_manager.HostManager):
         return ht == hv_type.IRONIC
 
     def _load_filters(self):
-        if CONF.scheduler_use_baremetal_filters:
-            return CONF.baremetal_scheduler_default_filters
+        if CONF.filter_scheduler.use_baremetal_filters:
+            return CONF.filter_scheduler.baremetal_enabled_filters
         return super(IronicHostManager, self)._load_filters()
 
     def host_state_cls(self, host, node, **kwargs):

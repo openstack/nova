@@ -94,8 +94,10 @@ class TestAggImagePropsIsolationFilter(test.NoDBTestCase):
 
     def test_aggregate_image_properties_isolation_props_namespace(self,
             agg_mock):
-        self.flags(aggregate_image_properties_isolation_namespace="hw")
-        self.flags(aggregate_image_properties_isolation_separator="_")
+        self.flags(aggregate_image_properties_isolation_namespace='hw',
+                   group='filter_scheduler')
+        self.flags(aggregate_image_properties_isolation_separator='_',
+                   group='filter_scheduler')
         agg_mock.return_value = {'hw_vm_mode': 'hvm', 'img_owner_id': 'foo'}
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx,

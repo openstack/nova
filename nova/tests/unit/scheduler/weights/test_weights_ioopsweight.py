@@ -28,7 +28,8 @@ class IoOpsWeigherTestCase(test.NoDBTestCase):
 
     def _get_weighed_host(self, hosts, io_ops_weight_multiplier):
         if io_ops_weight_multiplier is not None:
-            self.flags(io_ops_weight_multiplier=io_ops_weight_multiplier)
+            self.flags(io_ops_weight_multiplier=io_ops_weight_multiplier,
+                       group='filter_scheduler')
         return self.weight_handler.get_weighed_objects(self.weighers,
                                                        hosts, {})[0]
 

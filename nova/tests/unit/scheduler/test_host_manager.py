@@ -58,10 +58,11 @@ class HostManagerTestCase(test.NoDBTestCase):
     @mock.patch.object(host_manager.HostManager, '_init_aggregates')
     def setUp(self, mock_init_agg, mock_init_inst):
         super(HostManagerTestCase, self).setUp()
-        self.flags(scheduler_available_filters=['%s.%s' % (__name__, cls) for
-                                                cls in ['FakeFilterClass1',
-                                                        'FakeFilterClass2']])
-        self.flags(scheduler_default_filters=['FakeFilterClass1'])
+        self.flags(available_filters=[
+            __name__ + '.FakeFilterClass1', __name__ + '.FakeFilterClass2'],
+            group='filter_scheduler')
+        self.flags(enabled_filters=['FakeFilterClass1'],
+                   group='filter_scheduler')
         self.host_manager = host_manager.HostManager()
         self.fake_hosts = [host_manager.HostState('fake_host%s' % x,
                 'fake-node') for x in range(1, 5)]
@@ -133,10 +134,10 @@ class HostManagerTestCase(test.NoDBTestCase):
         # should not be called if the list of nodes was passed explicitly
         self.assertFalse(mock_get_all.called)
 
-    def test_default_filters(self):
-        default_filters = self.host_manager.default_filters
-        self.assertEqual(1, len(default_filters))
-        self.assertIsInstance(default_filters[0], FakeFilterClass1)
+    def test_enabled_filters(self):
+        enabled_filters = self.host_manager.enabled_filters
+        self.assertEqual(1, len(enabled_filters))
+        self.assertIsInstance(enabled_filters[0], FakeFilterClass1)
 
     @mock.patch.object(host_manager.HostManager, '_init_instance_info')
     @mock.patch.object(objects.AggregateList, 'get_all')

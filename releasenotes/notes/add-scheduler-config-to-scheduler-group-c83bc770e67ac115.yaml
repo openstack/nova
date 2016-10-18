@@ -1,0 +1,35 @@
+---
+upgrade:
+  - |
+    All general scheduler configuration options have been added to the
+    ``scheduler`` group.
+
+    - ``scheduler_driver`` (now ``driver``)
+    - ``scheduler_host_manager`` (now ``host_manager``)
+    - ``scheduler_driver_task_period`` (now ``periodic_task_interval``)
+    - ``scheduler_max_attempts`` (now ``max_attempts``)
+
+    In addition, all filter scheduler configuration options have been added to
+    the ``filter_scheduler`` group.
+
+    - ``scheduler_host_subset_size`` (now ``host_subset_size``)
+    - ``scheduler_max_instances_per_host`` (now ``max_instances_per_host``)
+    - ``scheduler_tracks_instance_changes`` (now ``track_instance_changes``)
+    - ``scheduler_available_filters`` (now ``available_filters``)
+    - ``scheduler_default_filters`` (now ``enabled_filters``)
+    - ``baremetal_scheduler_default_filters`` (now
+      ``baremetal_enabled_filters``)
+    - ``scheduler_use_baremetal_filters`` (now ``use_baremetal_filters``)
+    - ``scheduler_weight_classes`` (now ``weight_classes``)
+    - ``ram_weight_multiplier``
+    - ``disk_weight_multipler``
+    - ``io_ops_weight_multipler``
+    - ``soft_affinity_weight_multiplier``
+    - ``soft_anti_affinity_weight_multiplier``
+    - ``isolated_images``
+    - ``isolated_hosts``
+    - ``restrict_isolated_hosts_to_isolated_images``
+    - ``aggregate_image_properties_isolation_namespace``
+    - ``aggregate_image_properties_isolation_separator``
+
+    These options should no longer be included in the ``DEFAULT`` group.

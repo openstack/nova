@@ -31,7 +31,7 @@ class DiskWeigher(weights.BaseHostWeigher):
 
     def weight_multiplier(self):
         """Override the weight multiplier."""
-        return CONF.disk_weight_multiplier
+        return CONF.filter_scheduler.disk_weight_multiplier
 
     def _weigh_object(self, host_state, weight_properties):
         """Higher weights win.  We want spreading to be the default."""

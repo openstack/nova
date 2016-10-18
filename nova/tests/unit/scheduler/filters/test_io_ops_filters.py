@@ -22,7 +22,7 @@ from nova.tests.unit.scheduler import fakes
 class TestNumInstancesFilter(test.NoDBTestCase):
 
     def test_filter_num_iops_passes(self):
-        self.flags(max_io_ops_per_host=8)
+        self.flags(max_io_ops_per_host=8, group='filter_scheduler')
         self.filt_cls = io_ops_filter.IoOpsFilter()
         host = fakes.FakeHostState('host1', 'node1',
                                    {'num_io_ops': 7})
@@ -30,7 +30,7 @@ class TestNumInstancesFilter(test.NoDBTestCase):
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
     def test_filter_num_iops_fails(self):
-        self.flags(max_io_ops_per_host=8)
+        self.flags(max_io_ops_per_host=8, group='filter_scheduler')
         self.filt_cls = io_ops_filter.IoOpsFilter()
         host = fakes.FakeHostState('host1', 'node1',
                                    {'num_io_ops': 8})
@@ -39,7 +39,7 @@ class TestNumInstancesFilter(test.NoDBTestCase):
 
     @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_key')
     def test_aggregate_filter_num_iops_value(self, agg_mock):
-        self.flags(max_io_ops_per_host=7)
+        self.flags(max_io_ops_per_host=7, group='filter_scheduler')
         self.filt_cls = io_ops_filter.AggregateIoOpsFilter()
         host = fakes.FakeHostState('host1', 'node1',
                                    {'num_io_ops': 7})
@@ -52,7 +52,7 @@ class TestNumInstancesFilter(test.NoDBTestCase):
 
     @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_key')
     def test_aggregate_filter_num_iops_value_error(self, agg_mock):
-        self.flags(max_io_ops_per_host=8)
+        self.flags(max_io_ops_per_host=8, group='filter_scheduler')
         self.filt_cls = io_ops_filter.AggregateIoOpsFilter()
         host = fakes.FakeHostState('host1', 'node1',
                                    {'num_io_ops': 7})

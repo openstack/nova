@@ -1,5 +1,3 @@
-# needs:check_opt_group_and_type
-
 # Copyright 2015 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -17,7 +15,7 @@
 
 from oslo_config import cfg
 
-scheduler_opts = [
+default_opts = [
     cfg.StrOpt("scheduler_topic",
         default="scheduler",
         deprecated_for_removal=True,
@@ -39,8 +37,8 @@ Possible values:
 
 * A valid AMQP topic name
 """),
-    cfg.StrOpt(
-        "scheduler_json_config_location",
+    # TODO(sfinucan): Deprecate this option
+    cfg.StrOpt("scheduler_json_config_location",
         default="",
         help="""
 The absolute path to the scheduler configuration JSON file, if any.
@@ -53,10 +51,17 @@ dynamic configuration.
 Possible values:
 
 * A valid file path, or an empty string
-"""),
-    cfg.StrOpt("scheduler_host_manager",
+""")]
+
+scheduler_group = cfg.OptGroup(name="scheduler",
+                               title="Scheduler configuration")
+
+scheduler_opts = [
+    cfg.StrOpt("host_manager",
         default="host_manager",
         choices=("host_manager", "ironic_host_manager"),
+        deprecated_name="scheduler_host_manager",
+        deprecated_group="DEFAULT",
         help="""
 The scheduler host manager to use.
 
@@ -64,10 +69,12 @@ The host manager manages the in-memory picture of the hosts that the scheduler
 uses. The options values are chosen from the entry points under the namespace
 'nova.scheduler.host_manager' in 'setup.cfg'.
 """),
-    cfg.StrOpt("scheduler_driver",
+    cfg.StrOpt("driver",
         default="filter_scheduler",
         choices=("filter_scheduler", "caching_scheduler",
                  "chance_scheduler", "fake_scheduler"),
+        deprecated_name="scheduler_driver",
+        deprecated_group="DEFAULT",
         help="""
 The class of the driver used by the scheduler.
 
@@ -86,9 +93,10 @@ Possible values:
 ** A custom scheduler driver. In this case, you will be responsible for
    creating and maintaining the entry point in your 'setup.cfg' file
 """),
-    # TODO(sfinucan): Add 'min' paramter
-    cfg.IntOpt("scheduler_driver_task_period",
+    cfg.IntOpt("periodic_task_interval",
         default=60,
+        deprecated_name="scheduler_driver_task_period",
+        deprecated_group="DEFAULT",
         help="""
 Periodic task interval.
 
@@ -111,9 +119,11 @@ Related options:
 
 * ``nova-service service_down_time``
 """),
-    cfg.IntOpt("scheduler_max_attempts",
+    cfg.IntOpt("max_attempts",
         default=3,
         min=1,
+        deprecated_name="scheduler_max_attempts",
+        deprecated_group="DEFAULT",
         help="""
 Maximum number of schedule attempts for a chosen host.
 
@@ -129,10 +139,15 @@ Possible values:
   attempts that can be made when scheduling an instance.
 """)]
 
+filter_scheduler_group = cfg.OptGroup(name="filter_scheduler",
+                           title="Filter scheduler options")
+
 filter_scheduler_opts = [
     # TODO(sfinucan): Add 'min' paramter
-    cfg.IntOpt("scheduler_host_subset_size",
+    cfg.IntOpt("host_subset_size",
         default=1,
+        deprecated_name="scheduler_host_subset_size",
+        deprecated_group="DEFAULT",
         help="""
 Size of subset of best hosts selected by scheduler.
 
@@ -172,8 +187,10 @@ Possible values:
 * An integer, where the integer corresponds to the max number of instances
   that can be actively performing IO on any given host.
 """),
+    # TODO(sfinucan): Add 'min' parameter
     cfg.IntOpt("max_instances_per_host",
         default=50,
+        deprecated_group="DEFAULT",
         help="""
 Maximum number of instances that be active on a host.
 
@@ -191,8 +208,10 @@ Possible values:
 * An integer, where the integer corresponds to the max instances that can be
   scheduled on a host.
 """),
-    cfg.BoolOpt("scheduler_tracks_instance_changes",
+    cfg.BoolOpt("track_instance_changes",
         default=True,
+        deprecated_name="scheduler_tracks_instance_changes",
+        deprecated_group="DEFAULT",
         help="""
 Enable querying of individual hosts for instance information.
 
@@ -209,13 +228,15 @@ usage data to query the database on each request instead.
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
 """),
-    cfg.MultiStrOpt("scheduler_available_filters",
+    cfg.MultiStrOpt("available_filters",
         default=["nova.scheduler.filters.all_filters"],
+        deprecated_name="scheduler_available_filters",
+        deprecated_group="DEFAULT",
         help="""
 Filters that the scheduler can use.
 
 An unordered list of the filter classes the nova scheduler may apply.  Only the
-filters specified in the 'scheduler_default_filters' option will be used, but
+filters specified in the 'scheduler_enabled_filters' option will be used, but
 any filter appearing in that option must also be included in this list.
 
 By default, this is set to all filters that are included with nova.
@@ -230,9 +251,9 @@ Possible values:
 
 Related options:
 
-* scheduler_default_filters
+* scheduler_enabled_filters
 """),
-    cfg.ListOpt("scheduler_default_filters",
+    cfg.ListOpt("enabled_filters",
         default=[
           "RetryFilter",
           "AvailabilityZoneFilter",
@@ -244,6 +265,8 @@ Related options:
           "ServerGroupAntiAffinityFilter",
           "ServerGroupAffinityFilter",
           ],
+        deprecated_name="scheduler_default_filters",
+        deprecated_group="DEFAULT",
         help="""
 Filters that the scheduler will use.
 
@@ -267,7 +290,7 @@ Related options:
   'scheduler_available_filters' option, or a SchedulerHostFilterNotFound
   exception will be raised.
 """),
-    cfg.ListOpt("baremetal_scheduler_default_filters",
+    cfg.ListOpt("baremetal_enabled_filters",
         default=[
             "RetryFilter",
             "AvailabilityZoneFilter",
@@ -278,6 +301,8 @@ Related options:
             "ExactDiskFilter",
             "ExactCoreFilter",
         ],
+        deprecated_name="baremetal_scheduler_default_filters",
+        deprecated_group="DEFAULT",
         help="""
 Filters used for filtering baremetal hosts.
 
@@ -297,13 +322,15 @@ Related options:
 * If the 'scheduler_use_baremetal_filters' option is False, this option has
   no effect.
 """),
-    cfg.BoolOpt("scheduler_use_baremetal_filters",
+    cfg.BoolOpt("use_baremetal_filters",
+        deprecated_name="scheduler_use_baremetal_filters",
+        deprecated_group="DEFAULT",
         default=False,
         help="""
 Enable baremetal filters.
 
 Set this to True to tell the nova scheduler that it should use the filters
-specified in the 'baremetal_scheduler_default_filters' option. If you are not
+specified in the 'baremetal_scheduler_enabled_filters' option. If you are not
 scheduling baremetal nodes, leave this at the default setting of False.
 
 This option is only used by the FilterScheduler and its subclasses; if you use
@@ -312,11 +339,13 @@ a different scheduler, this option has no effect.
 Related options:
 
 * If this option is set to True, then the filters specified in the
-  'baremetal_scheduler_default_filters' are used instead of the filters
-  specified in 'scheduler_default_filters'.
+  'baremetal_scheduler_enabled_filters' are used instead of the filters
+  specified in 'scheduler_enabled_filters'.
 """),
-    cfg.ListOpt("scheduler_weight_classes",
+    cfg.ListOpt("weight_classes",
         default=["nova.scheduler.weights.all_weighers"],
+        deprecated_name="scheduler_weight_classes",
+        deprecated_group="DEFAULT",
         help="""
 Weighers that the scheduler will use.
 
@@ -338,6 +367,7 @@ Possible values:
 """),
     cfg.FloatOpt("ram_weight_multiplier",
         default=1.0,
+        deprecated_group="DEFAULT",
         help="""
 Ram weight multipler ratio.
 
@@ -361,6 +391,7 @@ Possible values:
 """),
     cfg.FloatOpt("disk_weight_multiplier",
         default=1.0,
+        deprecated_group="DEFAULT",
         help="""
 Disk weight multipler ratio.
 
@@ -378,6 +409,7 @@ Possible values:
 """),
     cfg.FloatOpt("io_ops_weight_multiplier",
         default=-1.0,
+        deprecated_group="DEFAULT",
         help="""
 IO operations weight multipler ratio.
 
@@ -401,6 +433,7 @@ Possible values:
 """),
     cfg.FloatOpt("soft_affinity_weight_multiplier",
         default=1.0,
+        deprecated_group="DEFAULT",
         help="""
 Multiplier used for weighing hosts for group soft-affinity.
 
@@ -413,6 +446,7 @@ Possible values:
     cfg.FloatOpt(
         "soft_anti_affinity_weight_multiplier",
         default=1.0,
+        deprecated_group="DEFAULT",
         help="""
 Multiplier used for weighing hosts for group soft-anti-affinity.
 
@@ -423,10 +457,10 @@ Possible values:
   meaningful, as negative values would make this behave as a soft affinity
   weigher.
 """),
-
     # TODO(mikal): replace this option with something involving host aggregates
     cfg.ListOpt("isolated_images",
         default=[],
+        deprecated_group="DEFAULT",
         help="""
 List of UUIDs for images that can only be run on certain hosts.
 
@@ -449,6 +483,7 @@ Related options:
 """),
     cfg.ListOpt("isolated_hosts",
         default=[],
+        deprecated_group="DEFAULT",
         help="""
 List of hosts that can only run certain images.
 
@@ -471,6 +506,7 @@ Related options:
     cfg.BoolOpt(
         "restrict_isolated_hosts_to_isolated_images",
         default=True,
+        deprecated_group="DEFAULT",
         help="""
 Prevent non-isolated images from being built on isolated hosts.
 
@@ -487,6 +523,7 @@ Related options:
 """),
     cfg.StrOpt(
         "aggregate_image_properties_isolation_namespace",
+        deprecated_group="DEFAULT",
         help="""
 Image property namespace for use in the host aggregate.
 
@@ -513,6 +550,7 @@ Related options:
     cfg.StrOpt(
         "aggregate_image_properties_isolation_separator",
         default=".",
+        deprecated_group="DEFAULT",
         help="""
 Separator character(s) for image property namespace and name.
 
@@ -523,8 +561,8 @@ separator. This option defines the separator to be used.
 
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
-only affects scheduling if the 'aggregate_image_properties_isolation' filter is
-enabled.
+only affects scheduling if the 'aggregate_image_properties_isolation' filter
+is enabled.
 
 Possible values:
 
@@ -534,8 +572,7 @@ Possible values:
 Related options:
 
 * aggregate_image_properties_isolation_namespace
-"""),
-]
+""")]
 
 trust_group = cfg.OptGroup(name="trusted_computing",
                            title="Trust parameters",
@@ -717,7 +754,6 @@ Related options:
 """),
 ]
 
-
 metrics_group = cfg.OptGroup(name="metrics",
                              title="Metrics parameters",
                              help="""
@@ -726,7 +762,6 @@ Configuration options for metrics
 Options under this group allow to adjust how values assigned to metrics are
 calculated.
 """)
-
 
 metrics_weight_opts = [
      cfg.FloatOpt("weight_multiplier",
@@ -840,7 +875,13 @@ Related options:
 
 
 def register_opts(conf):
-    conf.register_opts(scheduler_opts + filter_scheduler_opts)
+    conf.register_opts(default_opts)
+
+    conf.register_group(scheduler_group)
+    conf.register_opts(scheduler_opts, group=scheduler_group)
+
+    conf.register_group(filter_scheduler_group)
+    conf.register_opts(filter_scheduler_opts, group=filter_scheduler_group)
 
     conf.register_group(trust_group)
     conf.register_opts(trusted_opts, group=trust_group)
@@ -850,6 +891,7 @@ def register_opts(conf):
 
 
 def list_opts():
-    return {"DEFAULT": scheduler_opts + filter_scheduler_opts,
+    return {scheduler_group: scheduler_opts,
+            filter_scheduler_group: filter_scheduler_opts,
             trust_group: trusted_opts,
             metrics_group: metrics_weight_opts}

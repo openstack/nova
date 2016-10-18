@@ -58,7 +58,7 @@ class RamWeigherTestCase(test.NoDBTestCase):
         self.assertEqual('host4', weighed_host.obj.host)
 
     def test_ram_filter_multiplier1(self):
-        self.flags(ram_weight_multiplier=0.0)
+        self.flags(ram_weight_multiplier=0.0, group='filter_scheduler')
         hostinfo_list = self._get_all_hosts()
 
         # host1: free_ram_mb=512
@@ -71,7 +71,7 @@ class RamWeigherTestCase(test.NoDBTestCase):
         self.assertEqual(0.0, weighed_host.weight)
 
     def test_ram_filter_multiplier2(self):
-        self.flags(ram_weight_multiplier=2.0)
+        self.flags(ram_weight_multiplier=2.0, group='filter_scheduler')
         hostinfo_list = self._get_all_hosts()
 
         # host1: free_ram_mb=512
@@ -85,7 +85,7 @@ class RamWeigherTestCase(test.NoDBTestCase):
         self.assertEqual('host4', weighed_host.obj.host)
 
     def test_ram_filter_negative(self):
-        self.flags(ram_weight_multiplier=1.0)
+        self.flags(ram_weight_multiplier=1.0, group='filter_scheduler')
         hostinfo_list = self._get_all_hosts()
         host_attr = {'id': 100, 'memory_mb': 8192, 'free_ram_mb': -512}
         host_state = fakes.FakeHostState('negative', 'negative', host_attr)

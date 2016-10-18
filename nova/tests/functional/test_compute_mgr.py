@@ -46,7 +46,7 @@ class ComputeManagerTestCase(test.TestCase):
         last exception. The fault message field is limited in size and a long
         message with a traceback displaces the original error message.
         """
-        self.flags(scheduler_max_attempts=3)
+        self.flags(max_attempts=3, group='scheduler')
         flavor = objects.Flavor(
                 id=1, name='flavor1', memory_mb=256, vcpus=1, root_gb=1,
                 ephemeral_gb=1, flavorid='1', swap=0, rxtx_factor=1.0,

@@ -151,7 +151,7 @@ def populate_filter_properties(filter_properties, host_state):
 
 
 def populate_retry(filter_properties, instance_uuid):
-    max_attempts = CONF.scheduler_max_attempts
+    max_attempts = CONF.scheduler.max_attempts
     force_hosts = filter_properties.get('force_hosts', [])
     force_nodes = filter_properties.get('force_nodes', [])
 
@@ -252,14 +252,15 @@ def parse_options(opts, sep='=', converter=str, name=""):
 
 def validate_filter(filter):
     """Validates that the filter is configured in the default filters."""
-    return filter in CONF.scheduler_default_filters
+    return filter in CONF.filter_scheduler.enabled_filters
 
 
 def validate_weigher(weigher):
     """Validates that the weigher is configured in the default weighers."""
-    if 'nova.scheduler.weights.all_weighers' in CONF.scheduler_weight_classes:
+    weight_classes = CONF.filter_scheduler.weight_classes
+    if 'nova.scheduler.weights.all_weighers' in weight_classes:
         return True
-    return weigher in CONF.scheduler_weight_classes
+    return weigher in weight_classes
 
 
 _SUPPORTS_AFFINITY = None
@@ -381,4 +382,4 @@ def retry_on_timeout(retries=1):
         return wrapped
     return outer
 
-retry_select_destinations = retry_on_timeout(CONF.scheduler_max_attempts - 1)
+retry_select_destinations = retry_on_timeout(CONF.scheduler.max_attempts - 1)

@@ -29,7 +29,7 @@ class NumInstancesFilter(filters.BaseHostFilter):
     """Filter out hosts with too many instances."""
 
     def _get_max_instances_per_host(self, host_state, spec_obj):
-        return CONF.max_instances_per_host
+        return CONF.filter_scheduler.max_instances_per_host
 
     def host_passes(self, host_state, spec_obj):
         num_instances = host_state.num_instances
@@ -52,15 +52,16 @@ class AggregateNumInstancesFilter(NumInstancesFilter):
     """
 
     def _get_max_instances_per_host(self, host_state, spec_obj):
+        max_instances_per_host = CONF.filter_scheduler.max_instances_per_host
         aggregate_vals = utils.aggregate_values_from_key(
             host_state,
             'max_instances_per_host')
         try:
             value = utils.validate_num_values(
-                aggregate_vals, CONF.max_instances_per_host, cast_to=int)
+                aggregate_vals, max_instances_per_host, cast_to=int)
         except ValueError as e:
             LOG.warning(_LW("Could not decode max_instances_per_host: '%s'"),
                         e)
-            value = CONF.max_instances_per_host
+            value = max_instances_per_host
 
         return value

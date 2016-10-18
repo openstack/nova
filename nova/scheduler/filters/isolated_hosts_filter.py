@@ -46,10 +46,10 @@ class IsolatedHostsFilter(filters.BaseHostFilter):
         # If the configuration does not list any hosts, the filter will always
         # return True, assuming a configuration error, so letting all hosts
         # through.
-        isolated_hosts = CONF.isolated_hosts
-        isolated_images = CONF.isolated_images
-        restrict_isolated_hosts_to_isolated_images = (CONF.
-                                   restrict_isolated_hosts_to_isolated_images)
+        isolated_hosts = CONF.filter_scheduler.isolated_hosts
+        isolated_images = CONF.filter_scheduler.isolated_images
+        restrict_isolated_hosts_to_isolated_images = (
+            CONF.filter_scheduler.restrict_isolated_hosts_to_isolated_images)
         if not isolated_images:
             # As there are no images to match, return True if the filter is
             # not restrictive otherwise return False if the host is in the

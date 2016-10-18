@@ -31,7 +31,7 @@ class RAMWeigher(weights.BaseHostWeigher):
 
     def weight_multiplier(self):
         """Override the weight multiplier."""
-        return CONF.ram_weight_multiplier
+        return CONF.filter_scheduler.ram_weight_multiplier
 
     def _weigh_object(self, host_state, weight_properties):
         """Higher weights win.  We want spreading to be the default."""

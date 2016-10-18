@@ -67,7 +67,7 @@ class TestSerialConsoleLiveMigrate(test.TestCase):
         self.flags(host="test_compute1")
 
         self.start_service('conductor', manager=CONF.conductor.manager)
-        self.flags(scheduler_driver='chance_scheduler')
+        self.flags(driver='chance_scheduler', group='scheduler')
         self.start_service('scheduler')
         self.network = self.start_service('network')
         self.compute = self.start_service('compute', host='test_compute1')

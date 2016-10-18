@@ -335,13 +335,13 @@ class HostManager(object):
         self.host_state_map = {}
         self.filter_handler = filters.HostFilterHandler()
         filter_classes = self.filter_handler.get_matching_classes(
-                CONF.scheduler_available_filters)
+                CONF.filter_scheduler.available_filters)
         self.filter_cls_map = {cls.__name__: cls for cls in filter_classes}
         self.filter_obj_map = {}
-        self.default_filters = self._choose_host_filters(self._load_filters())
+        self.enabled_filters = self._choose_host_filters(self._load_filters())
         self.weight_handler = weights.HostWeightHandler()
         weigher_classes = self.weight_handler.get_matching_classes(
-                CONF.scheduler_weight_classes)
+                CONF.filter_scheduler.weight_classes)
         self.weighers = [cls() for cls in weigher_classes]
         # Dict of aggregates keyed by their ID
         self.aggs_by_id = {}
@@ -349,14 +349,15 @@ class HostManager(object):
         # to those aggregates
         self.host_aggregates_map = collections.defaultdict(set)
         self._init_aggregates()
-        self.tracks_instance_changes = CONF.scheduler_tracks_instance_changes
+        self.track_instance_changes = (
+                CONF.filter_scheduler.track_instance_changes)
         # Dict of instances and status, keyed by host
         self._instance_info = {}
-        if self.tracks_instance_changes:
+        if self.track_instance_changes:
             self._init_instance_info()
 
     def _load_filters(self):
-        return CONF.scheduler_default_filters
+        return CONF.filter_scheduler.enabled_filters
 
     def _init_aggregates(self):
         elevated = context_module.get_admin_context()
@@ -565,7 +566,7 @@ class HostManager(object):
                     return []
             hosts = six.itervalues(name_to_cls_map)
 
-        return self.filter_handler.get_filtered_objects(self.default_filters,
+        return self.filter_handler.get_filtered_objects(self.enabled_filters,
                 hosts, spec_obj, index)
 
     def get_weighed_hosts(self, hosts, spec_obj):

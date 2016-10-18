@@ -91,20 +91,23 @@ class SoftAffinityWeigherTestCase(SoftWeigherTestBase):
 
     def test_soft_affinity_weight_multiplier_zero_value(self):
         # We do not know the host, all have same weight.
-        self.flags(soft_affinity_weight_multiplier=0.0)
+        self.flags(soft_affinity_weight_multiplier=0.0,
+                   group='filter_scheduler')
         self._do_test(policy='soft-affinity',
                       expected_weight=0.0,
                       expected_host=None)
 
     def test_soft_affinity_weight_multiplier_positive_value(self):
-        self.flags(soft_affinity_weight_multiplier=2.0)
+        self.flags(soft_affinity_weight_multiplier=2.0,
+                   group='filter_scheduler')
         self._do_test(policy='soft-affinity',
                       expected_weight=2.0,
                       expected_host='host2')
 
     @mock.patch.object(affinity, 'LOG')
     def test_soft_affinity_weight_multiplier_negative_value(self, mock_log):
-        self.flags(soft_affinity_weight_multiplier=-1.0)
+        self.flags(soft_affinity_weight_multiplier=-1.0,
+                   group='filter_scheduler')
         self._do_test(policy='soft-affinity',
                       expected_weight=0.0,
                       expected_host='host3')
@@ -128,13 +131,15 @@ class SoftAntiAffinityWeigherTestCase(SoftWeigherTestBase):
 
     def test_soft_anti_affinity_weight_multiplier_zero_value(self):
         # We do not know the host, all have same weight.
-        self.flags(soft_anti_affinity_weight_multiplier=0.0)
+        self.flags(soft_anti_affinity_weight_multiplier=0.0,
+                   group='filter_scheduler')
         self._do_test(policy='soft-anti-affinity',
                       expected_weight=0.0,
                       expected_host=None)
 
     def test_soft_anti_affinity_weight_multiplier_positive_value(self):
-        self.flags(soft_anti_affinity_weight_multiplier=2.0)
+        self.flags(soft_anti_affinity_weight_multiplier=2.0,
+                   group='filter_scheduler')
         self._do_test(policy='soft-anti-affinity',
                       expected_weight=2.0,
                       expected_host='host3')
@@ -142,7 +147,8 @@ class SoftAntiAffinityWeigherTestCase(SoftWeigherTestBase):
     @mock.patch.object(affinity, 'LOG')
     def test_soft_anti_affinity_weight_multiplier_negative_value(self,
                                                                  mock_log):
-        self.flags(soft_anti_affinity_weight_multiplier=-1.0)
+        self.flags(soft_anti_affinity_weight_multiplier=-1.0,
+                   group='filter_scheduler')
         self._do_test(policy='soft-anti-affinity',
                       expected_weight=0.0,
                       expected_host='host2')
