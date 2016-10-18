@@ -155,18 +155,6 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
     return flavor
 
 
-def get_all_flavors_sorted_list(ctxt=None, filters=None, sort_key='flavorid',
-                                sort_dir='asc', limit=None, marker=None):
-    """Get all non-deleted flavors as a sorted list.
-    """
-    if ctxt is None:
-        ctxt = context.get_admin_context()
-
-    return objects.FlavorList.get_all(ctxt, filters=filters, sort_key=sort_key,
-                                      sort_dir=sort_dir, limit=limit,
-                                      marker=marker)
-
-
 def get_default_flavor():
     """Get the default flavor."""
     name = CONF.default_flavor
