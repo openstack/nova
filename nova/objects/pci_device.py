@@ -256,7 +256,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
 
         elif self.dev_type == fields.PciDeviceType.SRIOV_VF:
             # Update VF status to CLAIMED if it's parent has not been
-            # previuosly allocated or claimed
+            # previously allocated or claimed
             # When claiming/allocating a VF, it's parent PF becomes
             # unclaimable/unavailable. Therefore, it is expected to find the
             # parent PF in an unclaimable/unavailable state for any following
