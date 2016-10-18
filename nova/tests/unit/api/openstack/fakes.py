@@ -667,3 +667,81 @@ def fake_get_available_languages():
 
 def fake_not_implemented(*args, **kwargs):
     raise NotImplementedError()
+
+
+FLAVORS = {
+    '1': objects.Flavor(
+        id=1,
+        name='flavor 1',
+        memory_mb=256,
+        vcpus=1,
+        root_gb=10,
+        ephemeral_gb=20,
+        flavorid='1',
+        swap=10,
+        rxtx_factor=1.0,
+        vcpu_weight=None,
+        disabled=False,
+        is_public=True,
+    ),
+    '2': objects.Flavor(
+        id=2,
+        name='flavor 2',
+        memory_mb=512,
+        vcpus=1,
+        root_gb=20,
+        ephemeral_gb=10,
+        flavorid='2',
+        swap=5,
+        rxtx_factor=None,
+        vcpu_weight=None,
+        disabled=True,
+        is_public=True,
+    ),
+}
+
+
+def stub_out_flavor_get_by_flavor_id(test):
+    @staticmethod
+    def fake_get_by_flavor_id(context, flavor_id, read_deleted=None):
+        return FLAVORS[flavor_id]
+
+    test.stub_out('nova.objects.Flavor.get_by_flavor_id',
+                  fake_get_by_flavor_id)
+
+
+def stub_out_flavor_get_all(test):
+    @staticmethod
+    def fake_get_all(context, inactive=False, filters=None,
+                     sort_key='flavorid', sort_dir='asc', limit=None,
+                     marker=None):
+        if marker in ['99999']:
+            raise exc.MarkerNotFound(marker)
+
+        def reject_min(db_attr, filter_attr):
+            return (filter_attr in filters and
+                    getattr(flavor, db_attr) < int(filters[filter_attr]))
+
+        filters = filters or {}
+        res = []
+        for flavor in FLAVORS.values():
+            if reject_min('memory_mb', 'min_memory_mb'):
+                continue
+            elif reject_min('root_gb', 'min_root_gb'):
+                continue
+
+            res.append(flavor)
+
+        res = sorted(res, key=lambda item: getattr(item, sort_key))
+        output = []
+        marker_found = True if marker is None else False
+        for flavor in res:
+            if not marker_found and marker == flavor.flavorid:
+                marker_found = True
+            elif marker_found:
+                if limit is None or len(output) < int(limit):
+                    output.append(flavor)
+
+        return objects.FlavorList(objects=output)
+
+    test.stub_out('nova.objects.FlavorList.get_all', fake_get_all)
