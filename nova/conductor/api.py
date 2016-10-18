@@ -16,121 +16,27 @@
 
 from oslo_log import log as logging
 import oslo_messaging as messaging
-from oslo_versionedobjects import base as ovo_base
 
 from nova import baserpc
-from nova.conductor import manager
 from nova.conductor import rpcapi
 import nova.conf
 from nova.i18n import _LI, _LW
-from nova import utils
 
 CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
 
-class LocalAPI(object):
-    """A local version of the conductor API that does database updates
-    locally instead of via RPC.
-    """
-
-    def __init__(self):
-        # TODO(danms): This needs to be something more generic for
-        # other/future users of this sort of functionality.
-        self._manager = utils.ExceptionHelper(manager.ConductorManager())
-
-    def wait_until_ready(self, context, *args, **kwargs):
-        # nothing to wait for in the local case.
-        pass
-
-    def object_backport(self, context, objinst, target_version):
-        # NOTE(hanlind): This shouldn't be called anymore but leaving it for
-        # now just in case. Collect the object version manifest and redirect
-        # to the newer backport call.
-        object_versions = ovo_base.obj_tree_get_versions(objinst.obj_name())
-        return self.object_backport_versions(context, objinst, object_versions)
-
-    def object_backport_versions(self, context, objinst, object_versions):
-        return self._manager.object_backport_versions(context, objinst,
-                                                      object_versions)
-
-
-class LocalComputeTaskAPI(object):
-    def __init__(self):
-        # TODO(danms): This needs to be something more generic for
-        # other/future users of this sort of functionality.
-        self._manager = utils.ExceptionHelper(
-                manager.ComputeTaskManager())
-
-    def resize_instance(self, context, instance, extra_instance_updates,
-                        scheduler_hint, flavor, reservations,
-                        clean_shutdown=True, request_spec=None):
-        # NOTE(comstud): 'extra_instance_updates' is not used here but is
-        # needed for compatibility with the cells_rpcapi version of this
-        # method.
-        self._manager.migrate_server(
-            context, instance, scheduler_hint, live=False, rebuild=False,
-            flavor=flavor, block_migration=None, disk_over_commit=None,
-            reservations=reservations, clean_shutdown=clean_shutdown,
-            request_spec=request_spec)
-
-    def live_migrate_instance(self, context, instance, host_name,
-                              block_migration, disk_over_commit,
-                              request_spec=None, async=False):
-        scheduler_hint = {'host': host_name}
-        if async:
-            wrap = lambda *args: utils.spawn_n(*args)
-        else:
-            wrap = lambda *args: args[0](*args[1:])
-
-        wrap(self._manager.live_migrate_instance, context, instance,
-             scheduler_hint, block_migration, disk_over_commit, request_spec)
-
-    def build_instances(self, context, instances, image,
-            filter_properties, admin_password, injected_files,
-            requested_networks, security_groups, block_device_mapping,
-            legacy_bdm=True):
-        utils.spawn_n(self._manager.build_instances, context,
-                instances=instances, image=image,
-                filter_properties=filter_properties,
-                admin_password=admin_password, injected_files=injected_files,
-                requested_networks=requested_networks,
-                security_groups=security_groups,
-                block_device_mapping=block_device_mapping,
-                legacy_bdm=legacy_bdm)
-
-    def unshelve_instance(self, context, instance, request_spec=None):
-        utils.spawn_n(self._manager.unshelve_instance, context,
-                instance=instance, request_spec=request_spec)
-
-    def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
-                         injected_files, new_pass, orig_sys_metadata,
-                         bdms, recreate=False, on_shared_storage=False,
-                         preserve_ephemeral=False, host=None,
-                         request_spec=None, kwargs=None):
-        # kwargs unused but required for cell compatibility.
-        utils.spawn_n(self._manager.rebuild_instance, context,
-                instance=instance,
-                new_pass=new_pass,
-                injected_files=injected_files,
-                image_ref=image_ref,
-                orig_image_ref=orig_image_ref,
-                orig_sys_metadata=orig_sys_metadata,
-                bdms=bdms,
-                recreate=recreate,
-                on_shared_storage=on_shared_storage,
-                host=host,
-                preserve_ephemeral=preserve_ephemeral,
-                request_spec=request_spec)
-
-
-class API(LocalAPI):
+class API(object):
     """Conductor API that does updates via RPC to the ConductorManager."""
 
     def __init__(self):
-        self._manager = rpcapi.ConductorAPI()
+        self.conductor_rpcapi = rpcapi.ConductorAPI()
         self.base_rpcapi = baserpc.BaseAPI(topic=CONF.conductor.topic)
+
+    def object_backport_versions(self, context, objinst, object_versions):
+        return self.conductor_rpcapi.object_backport_versions(context, objinst,
+                                                              object_versions)
 
     def wait_until_ready(self, context, early_timeout=10, early_attempts=10):
         '''Wait until a conductor service is up and running.

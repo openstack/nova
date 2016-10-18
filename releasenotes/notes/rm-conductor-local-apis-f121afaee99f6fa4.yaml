@@ -1,0 +1,9 @@
+---
+upgrade:
+  - |
+    The ''use_local'' option, which made it possible to
+    perform nova-conductor operations locally, has been
+    removed. This legacy mode was introduced to bridge a
+    gap during the transition to the conductor service.
+    It no longer represents a reasonable alternative for
+    deployers.
