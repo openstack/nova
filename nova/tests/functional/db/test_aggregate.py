@@ -21,7 +21,6 @@ from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova import test
-from nova.tests import fixtures
 from nova.tests.unit import matchers
 from nova.tests.unit.objects.test_objects import compare_obj as base_compare
 from nova.tests import uuidsentinel
@@ -110,14 +109,10 @@ def _aggregate_metadata_get_all(context, aggregate_id):
     return metadata
 
 
-class AggregateObjectDbTestCase(test.NoDBTestCase):
-
-    USES_DB_SELF = True
+class AggregateObjectDbTestCase(test.TestCase):
 
     def setUp(self):
         super(AggregateObjectDbTestCase, self).setUp()
-        self.useFixture(fixtures.Database())
-        self.useFixture(fixtures.Database(database='api'))
         self.context = context.RequestContext('fake-user', 'fake-project')
 
     def test_in_api(self):
@@ -495,15 +490,12 @@ def compare_obj(test, result, source):
                         comparators={'updated_at': updated_at_comparator})
 
 
-class AggregateObjectCellTestCase(test.NoDBTestCase):
+class AggregateObjectCellTestCase(test.TestCase):
     """Tests for the case where all aggregate data is in Cell DB"""
-    USES_DB_SELF = True
 
     def setUp(self):
         super(AggregateObjectCellTestCase, self).setUp()
         self.context = context.RequestContext('fake-user', 'fake-project')
-        self.useFixture(fixtures.Database())
-        self.useFixture(fixtures.Database(database='api'))
         self._seed_data()
 
     def _seed_data(self):
@@ -610,13 +602,10 @@ class AggregateObjectMigrationTestCase(AggregateObjectCellTestCase):
         self.assertEqual(new_agg.name, result.name)
 
 
-class AggregateMigrationTestCase(test.NoDBTestCase):
-    USES_DB_SELF = True
+class AggregateMigrationTestCase(test.TestCase):
 
     def setUp(self):
         super(AggregateMigrationTestCase, self).setUp()
-        self.useFixture(fixtures.Database())
-        self.useFixture(fixtures.Database(database='api'))
         self.context = context.get_admin_context()
 
     def test_migration(self):

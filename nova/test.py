@@ -169,7 +169,14 @@ class TestCase(testtools.TestCase):
     Due to the slowness of DB access, please consider deriving from
     `NoDBTestCase` first.
     """
+    # USES_DB is set to False for tests that inherit from NoDBTestCase.
     USES_DB = True
+    # USES_DB_SELF is set to True in tests that specifically want to use the
+    # database but need to configure it themselves, for example to setup the
+    # API DB but not the cell DB. In those cases the test will override
+    # USES_DB_SELF = True but inherit from the NoDBTestCase class so it does
+    # not get the default fixture setup when using a database (which is the
+    # API and cell DBs, and adding the default flavors).
     USES_DB_SELF = False
     REQUIRES_LOCKING = False
 
