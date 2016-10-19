@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    The following deprecated nova-manage commands have been removed:
+
+    * nova-manage vm list

@@ -708,55 +708,6 @@ class NetworkCommands(object):
         db.network_update(admin_context, network['id'], net)
 
 
-class VmCommands(object):
-    """Class for managing VM instances."""
-
-    description = ('DEPRECATED: Use the nova list command from '
-                   'python-novaclient instead. The vm subcommand will be '
-                   'removed in the 15.0.0 Ocata release.')
-
-    @args('--host', metavar='<host>', help='Host')
-    def list(self, host=None):
-        """DEPRECATED: Show a list of all instances."""
-
-        print(("%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s"
-               "  %-10s %-10s %-10s %-5s" % (_('instance'),
-                                             _('node'),
-                                             _('type'),
-                                             _('state'),
-                                             _('launched'),
-                                             _('image'),
-                                             _('kernel'),
-                                             _('ramdisk'),
-                                             _('project'),
-                                             _('user'),
-                                             _('zone'),
-                                             _('index'))))
-
-        if host is None:
-            instances = objects.InstanceList.get_by_filters(
-                context.get_admin_context(), {}, expected_attrs=['flavor'])
-        else:
-            instances = objects.InstanceList.get_by_host(
-                context.get_admin_context(), host, expected_attrs=['flavor'])
-
-        for instance in instances:
-            instance_type = instance.get_flavor()
-            print(("%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s"
-                   " %-10s %-10s %-10s %-5d" % (instance.display_name,
-                                                instance.host,
-                                                instance_type.name,
-                                                instance.vm_state,
-                                                instance.launched_at,
-                                                instance.image_ref,
-                                                instance.kernel_id,
-                                                instance.ramdisk_id,
-                                                instance.project_id,
-                                                instance.user_id,
-                                                instance.availability_zone,
-                                                instance.launch_index or 0)))
-
-
 class HostCommands(object):
     """List hosts."""
 
@@ -1591,7 +1542,6 @@ CATEGORIES = {
     'network': NetworkCommands,
     'project': ProjectCommands,
     'shell': ShellCommands,
-    'vm': VmCommands,
     'vpn': VpnCommands,
 }
 
