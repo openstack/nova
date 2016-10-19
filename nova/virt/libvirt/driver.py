@@ -2325,7 +2325,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def unpause(self, instance):
         """Unpause paused VM instance."""
-        self._host.get_guest(instance).resume()
+        guest = self._host.get_guest(instance)
+        guest.resume()
+        guest.sync_guest_time()
 
     def _clean_shutdown(self, instance, timeout, retry_interval):
         """Attempt to shutdown the instance gracefully.
@@ -2458,6 +2460,10 @@ class LibvirtDriver(driver.ComputeDriver):
         self._attach_pci_devices(guest,
             pci_manager.get_instance_pci_devs(instance))
         self._attach_sriov_ports(context, instance, guest, network_info)
+        timer = loopingcall.FixedIntervalLoopingCall(self._wait_for_running,
+                                                     instance)
+        timer.start(interval=0.5).wait()
+        guest.sync_guest_time()
 
     def resume_state_on_host_boot(self, context, instance, network_info,
                                   block_device_info=None):
@@ -7261,7 +7267,8 @@ class LibvirtDriver(driver.ComputeDriver):
         # and the status change in the port might go undetected by the neutron
         # L2 agent (or neutron server) so neutron may not know that the VIF was
         # unplugged in the first place and never send an event.
-        self._create_domain_and_network(context, xml, instance, network_info,
+        guest = self._create_domain_and_network(context, xml, instance,
+                                        network_info,
                                         block_disk_info,
                                         block_device_info=block_device_info,
                                         power_on=power_on,
@@ -7272,6 +7279,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                                     self._wait_for_running,
                                                     instance)
             timer.start(interval=0.5).wait()
+
+            # Sync guest time after migration.
+            guest.sync_guest_time()
 
         LOG.debug("finish_migration finished successfully.", instance=instance)
 
