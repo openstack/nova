@@ -16964,6 +16964,20 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             self.assertRaises(fakelibvirt.libvirtError,
                               self.drvr.trigger_crash_dump, instance)
 
+    def test_valid_graphic_addresses_for_migration(self):
+        LOCALS = ("127.0.0.1", "::1", "::", "0000::", "::0001", "0.0.0.0")
+        for addr in LOCALS:
+            self.assertTrue(
+                libvirt_driver.LibvirtDriver._check_ip_address_local(
+                    addr, "Address is not local/catch all"))
+
+    def test_invalid_graphic_addresses_for_migration(self):
+        NONLOCALS = ("::2", "192.0.4.1", "bogus")
+        for addr in NONLOCALS:
+            self.assertFalse(
+                libvirt_driver.LibvirtDriver._check_ip_address_local(
+                    addr, "Address is not local/catch all"))
+
 
 class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
     """Test for LibvirtDriver.get_all_volume_usage."""

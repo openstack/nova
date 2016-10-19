@@ -33,6 +33,7 @@ import functools
 import glob
 import itertools
 import mmap
+import netaddr
 import operator
 import os
 import shutil
@@ -5806,11 +5807,28 @@ class LibvirtDriver(driver.ComputeDriver):
                       e, instance=instance)
             raise
 
-    def _check_graphics_addresses_can_live_migrate(self, listen_addrs):
+    @staticmethod
+    def _check_ip_address_local(addr, error_msg=None):
         LOCAL_ADDRS = ('0.0.0.0', '127.0.0.1', '::', '::1')
+        try:
+            val = netaddr.IPAddress(addr).format()
+        except (netaddr.AddrFormatError, ValueError):
+            LOG.warning(_LW('Invalid Address - %(addr)s: '
+                       '%(errmsg)s'),
+                         {'addr': addr, 'errmsg': error_msg})
+            val = addr
+        return val in LOCAL_ADDRS
 
-        local_vnc = CONF.vnc.vncserver_listen in LOCAL_ADDRS
-        local_spice = CONF.spice.server_listen in LOCAL_ADDRS
+    def _check_graphics_addresses_can_live_migrate(self, listen_addrs):
+        error_msg = _LW("CONF.vnc.vncserver_listen network "
+                        "address is not correctly formatted.")
+        local_vnc = self._check_ip_address_local(
+            CONF.vnc.vncserver_listen, error_msg)
+
+        error_msg = _LW("CONF.spice.server_listen network "
+                        "address is not correctly formatted.")
+        local_spice = self._check_ip_address_local(
+            CONF.spice.server_listen, error_msg)
 
         if ((CONF.vnc.enabled and not local_vnc) or
             (CONF.spice.enabled and not local_spice)):
@@ -5825,8 +5843,15 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.MigrationError(reason=msg)
 
         if listen_addrs:
-            dest_local_vnc = listen_addrs.get('vnc') in LOCAL_ADDRS
-            dest_local_spice = listen_addrs.get('spice') in LOCAL_ADDRS
+            error_msg = _LW("VNC listen address network "
+                            "address is not correctly formatted.")
+            dest_local_vnc = self._check_ip_address_local(
+                listen_addrs.get('vnc'), error_msg)
+
+            error_msg = _LW("SPICE listen address network "
+                            "address is not correctly formatted.")
+            dest_local_spice = self._check_ip_address_local(
+                listen_addrs.get('spice'), error_msg)
 
             if ((CONF.vnc.enabled and not dest_local_vnc) or
                 (CONF.spice.enabled and not dest_local_spice)):
