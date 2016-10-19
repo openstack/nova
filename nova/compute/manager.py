@@ -3907,6 +3907,9 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(
             context, instance, "finish_resize.start",
             network_info=network_info)
+        compute_utils.notify_about_instance_action(context, instance,
+               self.host, action=fields.NotificationAction.RESIZE_FINISH,
+               phase=fields.NotificationPhase.START)
 
         block_device_info = self._get_instance_block_device_info(
                             context, instance, refresh_conn_info=True)
@@ -3940,6 +3943,9 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(
             context, instance, "finish_resize.end",
             network_info=network_info)
+        compute_utils.notify_about_instance_action(context, instance,
+               self.host, action=fields.NotificationAction.RESIZE_FINISH,
+               phase=fields.NotificationPhase.END)
 
     @wrap_exception()
     @reverts_task_state

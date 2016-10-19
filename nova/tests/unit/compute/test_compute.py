@@ -4450,14 +4450,15 @@ class ComputeTestCase(BaseTestCase):
             mock.patch.object(self.compute.network_api,
                               'get_instance_nw_info'),
             mock.patch.object(self.compute, '_notify_about_instance_usage'),
+            mock.patch.object(compute_utils, 'notify_about_instance_action'),
             mock.patch.object(self.compute.driver, 'finish_migration'),
             mock.patch.object(self.compute, '_get_instance_block_device_info'),
             mock.patch.object(migration, 'save'),
             mock.patch.object(instance, 'save'),
             mock.patch.object(nova.quota.QUOTAS, 'commit')
         ) as (mock_setup, mock_net_mig, mock_get_nw, mock_notify,
-              mock_virt_mig, mock_get_blk, mock_mig_save, mock_inst_save,
-              mock_commit):
+              mock_notify_action, mock_virt_mig, mock_get_blk, mock_mig_save,
+              mock_inst_save, mock_commit):
             def _mig_save():
                 self.assertEqual(migration.status, 'finished')
                 self.assertEqual(vm_state, instance.vm_state)
@@ -4516,6 +4517,11 @@ class ComputeTestCase(BaseTestCase):
                           network_info='fake-nwinfo1'),
                 mock.call(self.context, instance, 'finish_resize.end',
                           network_info='fake-nwinfo1')])
+            mock_notify_action.assert_has_calls([
+                mock.call(self.context, instance, 'fake-mini',
+                          action='resize_finish', phase='start'),
+                mock.call(self.context, instance, 'fake-mini',
+                          action='resize_finish', phase='end')])
             # nova.conf sets the default flavor to m1.small and the test
             # sets the default flavor to m1.tiny so they should be different
             # which makes this a resize
