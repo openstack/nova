@@ -1,0 +1,7 @@
+---
+upgrade:
+  - The three configuration options ``cpu_allocation_ratio``,
+    ``ram_allocation_ratio`` and ``disk_allocation_ratio`` for
+    the nova compute are now checked against negative values.
+    If any of these three options is set to negative value
+    then nova compute service will fail to start.

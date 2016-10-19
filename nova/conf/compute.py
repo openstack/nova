@@ -189,6 +189,7 @@ allocation_ratio_opts = [
     # TODO(sfinucan): Add min parameter
     cfg.FloatOpt('cpu_allocation_ratio',
         default=0.0,
+        min=0.0,
         help="""
 This option helps you specify virtual CPU to physical CPU allocation
 ratio which affects all CPU filters.
@@ -208,6 +209,7 @@ Possible values:
     # TODO(sfinucan): Add min parameter
     cfg.FloatOpt('ram_allocation_ratio',
         default=0.0,
+        min=0.0,
         help="""
 This option helps you specify virtual RAM to physical RAM
 allocation ratio which affects all RAM filters.
@@ -227,6 +229,7 @@ Possible values:
     # TODO(sfinucan): Add min parameter
     cfg.FloatOpt('disk_allocation_ratio',
         default=0.0,
+        min=0.0,
         help="""
 This option helps you specify virtual disk to physical disk
 allocation ratio used by the disk_filter.py script to determine if
