@@ -6828,6 +6828,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(vncserver_listen='192.0.2.12', group='vnc')
         self.flags(server_listen='198.51.100.34', group='spice')
         self.flags(proxyclient_address='203.0.113.56', group='serial_console')
+        mock_cpu.return_value = 1
 
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
