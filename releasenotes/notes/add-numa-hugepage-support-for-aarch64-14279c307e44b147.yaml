@@ -1,0 +1,4 @@
+---
+features:
+  - Adding aarch64 to the list of supported architectures for NUMA and hugepage features.
+    This requires libvirt>=1.2.7 for NUMA, libvirt>=1.2.8 for hugepage and qemu v2.1.0 for both.
