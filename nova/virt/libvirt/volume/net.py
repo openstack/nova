@@ -50,6 +50,28 @@ class LibvirtNetVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
                           netdisk_properties)
             self.host.delete_secret(usage_type, usage_name)
 
+    def _set_auth_config_rbd(self, conf, netdisk_properties):
+        auth_enabled = netdisk_properties.get('auth_enabled')
+        if CONF.libvirt.rbd_secret_uuid:
+            conf.auth_secret_uuid = CONF.libvirt.rbd_secret_uuid
+            auth_enabled = True  # Force authentication locally
+            if CONF.libvirt.rbd_user:
+                conf.auth_username = CONF.libvirt.rbd_user
+        if auth_enabled:
+            conf.auth_username = (conf.auth_username or
+                                  netdisk_properties['auth_username'])
+            conf.auth_secret_type = (conf.auth_secret_type or
+                                     netdisk_properties['secret_type'])
+            conf.auth_secret_uuid = (conf.auth_secret_uuid or
+                                     netdisk_properties['secret_uuid'])
+
+    def _set_auth_config_iscsi(self, conf, netdisk_properties):
+        if netdisk_properties.get('auth_method') == 'CHAP':
+            conf.auth_secret_type = 'iscsi'
+            password = netdisk_properties.get('auth_password')
+            conf.auth_secret_uuid = self._get_secret_uuid(conf, password)
+            conf.auth_username = netdisk_properties['auth_username']
+
     def get_config(self, connection_info, disk_info):
         """Returns xml for libvirt."""
         conf = super(LibvirtNetVolumeDriver,
@@ -61,14 +83,9 @@ class LibvirtNetVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         conf.source_name = netdisk_properties.get('name')
         conf.source_hosts = netdisk_properties.get('hosts', [])
         conf.source_ports = netdisk_properties.get('ports', [])
-        auth_enabled = netdisk_properties.get('auth_enabled')
-        if (conf.source_protocol == 'rbd' and
-                CONF.libvirt.rbd_secret_uuid):
-            conf.auth_secret_uuid = CONF.libvirt.rbd_secret_uuid
-            auth_enabled = True  # Force authentication locally
-            if CONF.libvirt.rbd_user:
-                conf.auth_username = CONF.libvirt.rbd_user
-        if conf.source_protocol == 'iscsi':
+        if conf.source_protocol == 'rbd':
+            self._set_auth_config_rbd(conf, netdisk_properties)
+        elif conf.source_protocol == 'iscsi':
             try:
                 conf.source_name = ("%(target_iqn)s/%(target_lun)s" %
                                     netdisk_properties)
@@ -81,18 +98,7 @@ class LibvirtNetVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
                 raise exception.NovaException(_("Invalid target_lun"))
             conf.source_hosts = [ip]
             conf.source_ports = [port]
-            if netdisk_properties.get('auth_method') == 'CHAP':
-                auth_enabled = True
-                conf.auth_secret_type = 'iscsi'
-                password = netdisk_properties.get('auth_password')
-                conf.auth_secret_uuid = self._get_secret_uuid(conf, password)
-        if auth_enabled:
-            conf.auth_username = (conf.auth_username or
-                                  netdisk_properties['auth_username'])
-            conf.auth_secret_type = (conf.auth_secret_type or
-                                     netdisk_properties['secret_type'])
-            conf.auth_secret_uuid = (conf.auth_secret_uuid or
-                                     netdisk_properties['secret_uuid'])
+            self._set_auth_config_iscsi(conf, netdisk_properties)
         return conf
 
     def disconnect_volume(self, connection_info, disk_dev):
