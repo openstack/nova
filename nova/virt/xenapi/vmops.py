@@ -2216,20 +2216,6 @@ class VMOps(object):
             # block migration work will be able to resolve this
         return dest_check_data
 
-    def _is_xsm_sr_check_relaxed(self):
-        try:
-            return self.cached_xsm_sr_relaxed
-        except AttributeError:
-            config_value = None
-            try:
-                config_value = self._make_plugin_call('config_file.py',
-                                                      'get_val',
-                                                      key='relax-xsm-sr-check')
-            except Exception:
-                LOG.exception(_LE('Plugin config_file get_val failed'))
-            self.cached_xsm_sr_relaxed = config_value == "true"
-            return self.cached_xsm_sr_relaxed
-
     def check_can_live_migrate_source(self, ctxt, instance_ref,
                                       dest_check_data):
         """Check if it's possible to execute live migration on the source side.
@@ -2243,7 +2229,7 @@ class VMOps(object):
         if len(self._get_iscsi_srs(ctxt, instance_ref)) > 0:
             # XAPI must support the relaxed SR check for live migrating with
             # iSCSI VBDs
-            if not self._is_xsm_sr_check_relaxed():
+            if not self._session.is_xsm_sr_check_relaxed():
                 raise exception.MigrationError(reason=_('XAPI supporting '
                                 'relax-xsm-sr-check=true required'))
 

@@ -135,21 +135,6 @@ class VMOpsTestCase(VMOpsTestBase):
     def test_finish_revert_migration_after_crash_before_backup(self):
         self._test_finish_revert_migration_after_crash(False, False)
 
-    def test_xsm_sr_check_relaxed_cached(self):
-        self.make_plugin_call_count = 0
-
-        def fake_make_plugin_call(plugin, method, **args):
-            self.make_plugin_call_count = self.make_plugin_call_count + 1
-            return "true"
-
-        self.stubs.Set(self._vmops, "_make_plugin_call",
-                       fake_make_plugin_call)
-
-        self.assertTrue(self._vmops._is_xsm_sr_check_relaxed())
-        self.assertTrue(self._vmops._is_xsm_sr_check_relaxed())
-
-        self.assertEqual(self.make_plugin_call_count, 1)
-
     @mock.patch.object(vm_utils, 'lookup', return_value=None)
     def test_get_vm_opaque_ref_raises_instance_not_found(self, mock_lookup):
         instance = {"name": "dummy"}
