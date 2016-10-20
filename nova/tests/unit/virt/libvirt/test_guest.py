@@ -518,7 +518,7 @@ class GuestTestCase(test.NoDBTestCase):
     def test_migrate_v2(self):
         self.guest.migrate('an-uri', domain_xml='</xml>', flags=1, bandwidth=2)
         self.domain.migrateToURI2.assert_called_once_with(
-            'an-uri', dxml='</xml>', flags=1, bandwidth=2)
+            'an-uri', miguri=None, dxml='</xml>', flags=1, bandwidth=2)
 
     def test_migrate_v3(self):
         self.guest.migrate('an-uri', domain_xml='</xml>',
