@@ -5477,8 +5477,15 @@ class ComputeManager(manager.Manager):
 
         # Define domain at destination host, without doing it,
         # pause/suspend/terminate do not work.
-        self.compute_rpcapi.post_live_migration_at_destination(ctxt,
-                instance, block_migration, dest)
+        try:
+            self.compute_rpcapi.post_live_migration_at_destination(ctxt,
+                    instance, block_migration, dest)
+        except Exception as error:
+            # We don't want to break _post_live_migration() if
+            # post_live_migration_at_destination() fails as it should never
+            # affect cleaning up source node.
+            LOG.exception(_LE("Post live migration at destination %s failed"),
+                    dest, instance=instance, error=error)
 
         do_cleanup, destroy_disks = self._live_migration_cleanup_flags(
                 migrate_data)
