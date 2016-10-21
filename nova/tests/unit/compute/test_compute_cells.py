@@ -20,7 +20,6 @@ import functools
 import inspect
 
 import mock
-from mox3 import mox
 from oslo_utils import timeutils
 
 from nova import block_device
@@ -173,25 +172,28 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
 
         test()
 
-    def _test_delete_instance_no_cell(self, method_name):
+    @mock.patch.object(compute_api.API, '_local_delete')
+    def _test_delete_instance_no_cell(self, method_name, mock_local_delete):
         cells_rpcapi = self.compute_api.cells_rpcapi
-        self.mox.StubOutWithMock(cells_rpcapi,
-                                 'instance_delete_everywhere')
-        self.mox.StubOutWithMock(compute_api.API, '_local_delete')
-        self.mox.StubOutWithMock(compute_api.API, '_lookup_instance')
         inst = self._create_fake_instance_obj()
         delete_type = method_name == 'soft_delete' and 'soft' or 'hard'
-        cells_rpcapi.instance_delete_everywhere(self.context,
-                inst, delete_type)
-        compute_api.API._lookup_instance(self.context,
-                                         inst.uuid).AndReturn((None, inst))
-        compute_api.API._local_delete(self.context, inst,
-                                      mox.IsA(objects.BlockDeviceMappingList),
-                                      method_name, mox.IgnoreArg())
-        self.mox.ReplayAll()
-        self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
-                       lambda *a, **kw: None)
-        getattr(self.compute_api, method_name)(self.context, inst)
+
+        @mock.patch.object(cells_rpcapi,
+                           'instance_delete_everywhere')
+        @mock.patch.object(compute_api.API, '_lookup_instance',
+                           return_value=(None, inst))
+        def test(mock_lookup, mock_inst_del):
+            self.stub_out('nova.network.api.deallocate_for_instance',
+                          lambda *a, **kw: None)
+            getattr(self.compute_api, method_name)(self.context, inst)
+            mock_lookup.assert_called_once_with(self.context, inst.uuid)
+            mock_local_delete.assert_called_once_with(self.context, inst,
+                                                      mock.ANY, method_name,
+                                                      mock.ANY)
+            mock_inst_del.assert_called_once_with(self.context,
+                                                  inst, delete_type)
+
+        test()
 
     def test_delete_instance_no_cell_constraint_failure_does_not_loop(self):
         inst = self._create_fake_instance_obj()
@@ -365,15 +367,17 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
     def test_get_migrations(self):
         filters = {'cell_name': 'ChildCell', 'status': 'confirmed'}
         migrations = {'migrations': [{'id': 1234}]}
-        cells_rpcapi = self.compute_api.cells_rpcapi
-        self.mox.StubOutWithMock(cells_rpcapi, 'get_migrations')
-        cells_rpcapi.get_migrations(self.context,
-                                        filters).AndReturn(migrations)
-        self.mox.ReplayAll()
 
-        response = self.compute_api.get_migrations(self.context, filters)
+        @mock.patch.object(self.compute_api.cells_rpcapi, 'get_migrations',
+                           return_value=migrations)
+        def test(mock_cell_get_migrations):
+            response = self.compute_api.get_migrations(self.context,
+                                                       filters)
+            mock_cell_get_migrations.assert_called_once_with(self.context,
+                                                             filters)
+            self.assertEqual(migrations, response)
 
-        self.assertEqual(migrations, response)
+        test()
 
     def test_create_block_device_mapping(self):
         instance_type = {'swap': 1, 'ephemeral_gb': 1}
