@@ -27,8 +27,9 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
     def setUp(self):
         super(NovaProxyRequestHandlerBaseTestCase, self).setUp()
 
-        self.flags(console_allowed_origins = ['allowed-origin-example-1.net',
-                                              'allowed-origin-example-2.net'])
+        self.flags(allowed_origins=['allowed-origin-example-1.net',
+                                    'allowed-origin-example-2.net'],
+                   group='console')
         self.wh = websocketproxy.NovaProxyRequestHandlerBase()
         self.wh.socket = mock.MagicMock()
         self.wh.msg = mock.MagicMock()

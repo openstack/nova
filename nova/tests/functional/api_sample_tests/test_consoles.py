@@ -22,7 +22,7 @@ class ConsolesSamplesJsonTest(test_servers.ServersSampleBase):
 
     def setUp(self):
         super(ConsolesSamplesJsonTest, self).setUp()
-        self.flags(console_public_hostname='fake')
+        self.flags(console_public_hostname='fake', group='xenserver')
         self.flags(console_host='fake')
         self.flags(console_driver='nova.console.fake.FakeConsoleProxy')
         self.console = self.start_service('console', host='fake')

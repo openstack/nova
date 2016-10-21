@@ -13,8 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 from oslo_config import cfg
 from oslo_utils import units
+import socket
 
 xenserver_group = cfg.OptGroup('xenserver',
                                title='Xenserver Options',
@@ -585,6 +587,18 @@ that adding new host will fail, thus option to force join was introduced.
 """),
 ]
 
+xenapi_console_opts = [
+    cfg.StrOpt('console_public_hostname',
+        default=socket.gethostname(),
+        deprecated_group='DEFAULT',
+        help="""
+Publicly visible name for this console host.
+
+Possible values:
+
+* A string representing a valid hostname
+"""),
+]
 
 ALL_XENSERVER_OPTS = (xenapi_agent_opts +
                       xenapi_session_opts +
@@ -594,7 +608,8 @@ ALL_XENSERVER_OPTS = (xenapi_agent_opts +
                       xenapi_vmops_opts +
                       xenapi_volume_utils_opts +
                       xenapi_ovs_integration_bridge_opts +
-                      xenapi_pool_opts)
+                      xenapi_pool_opts +
+                      xenapi_console_opts)
 
 
 def register_opts(conf):
