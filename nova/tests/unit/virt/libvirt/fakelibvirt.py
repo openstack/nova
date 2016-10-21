@@ -158,6 +158,124 @@ FAKE_LIBVIRT_VERSION = 1002001
 # Libvirt version to match MIN_QEMU_VERSION in driver.py
 FAKE_QEMU_VERSION = 1005003
 
+PF_CAP_TYPE = 'virt_functions'
+VF_CAP_TYPE = 'phys_function'
+PF_PROD_NAME = 'Ethernet Controller 10-Gigabit X540-AT2'
+VF_PROD_NAME = 'X540 Ethernet Controller Virtual Function'
+PF_DRIVER_NAME = 'ixgbe'
+VF_DRIVER_NAME = 'ixgbevf'
+VF_SLOT = '10'
+PF_SLOT = '00'
+
+
+class FakePciDevice(object):
+    pci_dev_template = """<device>
+  <name>pci_0000_81_%(slot)s_%(dev)d</name>
+  <path>/sys/devices/pci0000:80/0000:80:01.0/0000:81:%(slot)s.%(dev)d</path>
+  <parent>pci_0000_80_01_0</parent>
+  <driver>
+    <name>%(driver)s</name>
+  </driver>
+  <capability type='pci'>
+    <domain>0</domain>
+    <bus>129</bus>
+    <slot>0</slot>
+    <function>%(dev)d</function>
+    <product id='0x%(prod)d'>%(prod_name)s</product>
+    <vendor id='0x8086'>Intel Corporation</vendor>
+    <capability type='%(cap_type)s'>
+    %(functions)s
+    </capability>
+    <iommuGroup number='%(group_id)d'>
+ <address domain='0x0000' bus='0x81' slot='0x%(slot)s' function='0x%(dev)d'/>
+    </iommuGroup>
+    <numa node='0'/>
+    <pci-express>
+      <link validity='cap' port='0' speed='5' width='8'/>
+      <link validity='sta' speed='5' width='8'/>
+    </pci-express>
+  </capability>
+</device>"""
+
+    def __init__(self, dev_type, vf_ratio, group, dev, product_id):
+        """Populate pci devices
+
+        :param dev_type: (string) Indicates the type of the device (PF, VF)
+        :param vf_ratio: (int) Ratio of Virtual Functions on Physical
+        :param group: (int) iommu group id
+        :param dev: (int) function number of the device
+        :param product_id: (int) Device product ID
+        """
+        addr_templ = ("  <address domain='0x0000' bus='0x81' slot='0x%(slot)s'"
+                      " function='0x%(dev)d'/>")
+        self.pci_dev = None
+
+        if dev_type == 'PF':
+            pf_caps = [addr_templ % {'dev': x, 'slot': VF_SLOT}
+                                     for x in range(dev * vf_ratio,
+                                                    (dev + 1) * vf_ratio)]
+            self.pci_dev = self.pci_dev_template % {'dev': dev,
+                         'prod': product_id, 'group_id': group,
+                         'functions': '\n'.join(pf_caps), 'slot': 0,
+                         'cap_type': PF_CAP_TYPE, 'prod_name': PF_PROD_NAME,
+                         'driver': PF_DRIVER_NAME}
+        elif dev_type == 'VF':
+            vf_caps = [addr_templ % {'dev': int(dev / vf_ratio),
+                                     'slot': PF_SLOT}]
+            self.pci_dev = self.pci_dev_template % {'dev': dev,
+                         'prod': product_id, 'group_id': group,
+                         'functions': '\n'.join(vf_caps), 'slot': VF_SLOT,
+                         'cap_type': VF_CAP_TYPE, 'prod_name': VF_PROD_NAME,
+                         'driver': VF_DRIVER_NAME}
+
+    def XMLDesc(self, flags):
+        return self.pci_dev
+
+
+class HostPciSRIOVDevicesInfo(object):
+
+    def __init__(self):
+        self.sriov_devices = {}
+
+    def create_pci_devices(self, vf_product_id=1515, pf_product_id=1528,
+                            num_pfs=2, num_vfs=8, group=47):
+        """Populate pci devices
+
+        :param vf_product_id: (int) Product ID of the Virtual Functions
+        :param pf_product_id=1528: (int) Product ID of the Physical Functions
+        :param num_pfs: (int) The number of the Physical Functions
+        :param num_vfs: (int) The number of the Virtual Functions
+        :param group: (int) Initial group id
+        """
+
+        vf_ratio = num_vfs / num_pfs
+
+        # Generate PFs
+        for dev in range(num_pfs):
+            dev_group = group + dev + 1
+            pci_dev_name = 'pci_0000_81_%(slot)s_%(dev)d' % {'slot': PF_SLOT,
+                                                             'dev': dev}
+            self.sriov_devices[pci_dev_name] = FakePciDevice('PF', vf_ratio,
+                                                             dev_group, dev,
+                                                             pf_product_id)
+
+        # Generate VFs
+        for dev in range(num_vfs):
+            dev_group = group + dev + 1
+            pci_dev_name = 'pci_0000_81_%(slot)s_%(dev)d' % {'slot': VF_SLOT,
+                                                             'dev': dev}
+            self.sriov_devices[pci_dev_name] = FakePciDevice('VF', vf_ratio,
+                                                             dev_group, dev,
+                                                             vf_product_id)
+
+    def get_all_devices(self):
+        return self.sriov_devices.keys()
+
+    def get_device_by_name(self, device_name):
+
+        pci_dev = self.sriov_devices.get(device_name)
+        return pci_dev
+
 
 class HostInfo(object):
     def __init__(self, arch=arch.X86_64, kB_mem=4096,
@@ -807,7 +925,7 @@ class DomainSnapshot(object):
 
 class Connection(object):
     def __init__(self, uri=None, readonly=False, version=FAKE_LIBVIRT_VERSION,
-                 hv_version=FAKE_QEMU_VERSION, host_info=None):
+                 hv_version=FAKE_QEMU_VERSION, host_info=None, pci_info=None):
         if not uri or uri == '':
             if allow_default_uri_connection:
                 uri = 'qemu:///session'
@@ -841,6 +959,7 @@ class Connection(object):
         self.fakeLibVersion = version
         self.fakeVersion = hv_version
         self.host_info = host_info or HostInfo()
+        self.pci_info = pci_info or HostPciSRIOVDevicesInfo()
 
     def _add_filter(self, nwfilter):
         self._nwfilters[nwfilter._name] = nwfilter
@@ -1259,7 +1378,13 @@ class Connection(object):
         nwfilter = NWFilter(self, xml)
         self._add_filter(nwfilter)
 
+    def device_lookup_by_name(self, dev_name):
+        return self.pci_info.get_device_by_name(dev_name)
+
     def nodeDeviceLookupByName(self, name):
+        pci_dev = self.pci_info.get_device_by_name(name)
+        if pci_dev:
+            return pci_dev
         try:
             return self._nodedevs[name]
         except KeyError:
@@ -1273,7 +1398,7 @@ class Connection(object):
         return []
 
     def listDevices(self, cap, flags):
-        return []
+        return self.pci_info.get_all_devices()
 
     def baselineCPU(self, cpu, flag):
         """Add new libvirt API."""
