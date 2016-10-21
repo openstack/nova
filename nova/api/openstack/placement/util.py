@@ -109,7 +109,7 @@ def json_error_formatter(body, status, title, environ):
     microversion = nova.api.openstack.placement.microversion
     if status_code == 406 and microversion.MICROVERSION_ENVIRON not in environ:
         error_dict['max_version'] = microversion.max_version_string()
-        error_dict['min_version'] = microversion.max_version_string()
+        error_dict['min_version'] = microversion.min_version_string()
 
     return {'errors': [error_dict]}
 
