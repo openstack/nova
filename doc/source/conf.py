@@ -34,14 +34,18 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.coverage',
               'sphinx.ext.graphviz',
               'oslosphinx',
-              "ext.support_matrix",
+              'ext.support_matrix',
               'oslo_config.sphinxconfiggen',
+              'oslo_policy.sphinxpolicygen',
               'ext.versioned_notifications',
               'ext.feature_matrix',
               ]
 
 config_generator_config_file = '../../etc/nova/nova-config-generator.conf'
 sample_config_basename = '_static/nova'
+
+policy_generator_config_file = '../../etc/nova/nova-policy-generator.conf'
+sample_policy_basename = '_static/nova'
 
 todo_include_todos = True
 
