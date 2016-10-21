@@ -1857,13 +1857,20 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                           instance2)
         self.assertEqual(volumes[old_volume_id]['status'], 'in-use')
         self.assertEqual(volumes[new_volume_id]['status'], 'available')
-        self.assertEqual(1, mock_notify.call_count)
-        mock_notify.assert_called_once_with(
+        self.assertEqual(2, mock_notify.call_count)
+        mock_notify.assert_any_call(
             test.MatchType(context.RequestContext), instance2,
             self.compute.host,
             fields.NotificationAction.VOLUME_SWAP,
             fields.NotificationPhase.START,
             old_volume_id, new_volume_id)
+        mock_notify.assert_any_call(
+            test.MatchType(context.RequestContext), instance2,
+            self.compute.host,
+            fields.NotificationAction.VOLUME_SWAP,
+            fields.NotificationPhase.ERROR,
+            old_volume_id, new_volume_id,
+            test.MatchType(AttributeError))
 
         mock_notify.reset_mock()
         volumes[old_volume_id]['status'] = 'detaching'
@@ -1877,13 +1884,20 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                           instance3)
         self.assertEqual(volumes[old_volume_id]['status'], 'in-use')
         self.assertEqual(volumes[new_volume_id]['status'], 'available')
-        self.assertEqual(1, mock_notify.call_count)
-        mock_notify.assert_called_once_with(
+        self.assertEqual(2, mock_notify.call_count)
+        mock_notify.assert_any_call(
             test.MatchType(context.RequestContext), instance3,
             self.compute.host,
             fields.NotificationAction.VOLUME_SWAP,
             fields.NotificationPhase.START,
             old_volume_id, new_volume_id)
+        mock_notify.assert_any_call(
+            test.MatchType(context.RequestContext), instance3,
+            self.compute.host,
+            fields.NotificationAction.VOLUME_SWAP,
+            fields.NotificationPhase.ERROR,
+            old_volume_id, new_volume_id,
+            test.MatchType(AttributeError))
 
     @mock.patch('nova.compute.utils.notify_about_volume_swap')
     @mock.patch('nova.db.block_device_mapping_get_by_instance_and_volume_id')
