@@ -83,8 +83,8 @@ class ResourceClassCache(object):
             return self.id_cache[rc_str]
 
         # First check the standard resource classes
-        if rc_str in fields.ResourceClass.ALL:
-            return fields.ResourceClass.ALL.index(rc_str)
+        if rc_str in fields.ResourceClass.STANDARD:
+            return fields.ResourceClass.STANDARD.index(rc_str)
         else:
             # Otherwise, check the database table
             _refresh_from_db(self.ctx, self)
@@ -106,9 +106,9 @@ class ResourceClassCache(object):
         if rc_id in self.str_cache:
             return self.str_cache[rc_id]
 
-        # First check the fields.ResourceClass.ALL enum
+        # First check the fields.ResourceClass.STANDARD values
         try:
-            return fields.ResourceClass.ALL[rc_id]
+            return fields.ResourceClass.STANDARD[rc_id]
         except IndexError:
             # Otherwise, check the database table
             _refresh_from_db(self.ctx, self)

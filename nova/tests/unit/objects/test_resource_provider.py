@@ -23,9 +23,9 @@ from nova.tests import uuidsentinel as uuids
 
 _RESOURCE_CLASS_NAME = 'DISK_GB'
 _RESOURCE_CLASS_ID = 2
-IPV4_ADDRESS_ID = objects.fields.ResourceClass.ALL.index(
+IPV4_ADDRESS_ID = objects.fields.ResourceClass.STANDARD.index(
     fields.ResourceClass.IPV4_ADDRESS)
-VCPU_ID = objects.fields.ResourceClass.ALL.index(
+VCPU_ID = objects.fields.ResourceClass.STANDARD.index(
     fields.ResourceClass.VCPU)
 
 _RESOURCE_PROVIDER_ID = 1
