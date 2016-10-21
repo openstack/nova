@@ -215,7 +215,8 @@ def create_inventory(req):
         raise webob.exc.HTTPConflict(
             _('Update conflict: %(error)s') % {'error': exc},
             json_formatter=util.json_error_formatter)
-    except exception.InvalidInventoryCapacity as exc:
+    except (exception.InvalidInventoryCapacity,
+            exception.NotFound) as exc:
         raise webob.exc.HTTPBadRequest(
             _('Unable to create inventory for resource provider '
               '%(rp_uuid)s: %(error)s') % {'rp_uuid': resource_provider.uuid,

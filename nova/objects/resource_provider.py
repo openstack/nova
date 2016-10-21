@@ -11,6 +11,7 @@
 #    under the License.
 
 from oslo_log import log as logging
+from oslo_utils import versionutils
 import six
 import sqlalchemy as sa
 from sqlalchemy import func
@@ -19,6 +20,7 @@ from sqlalchemy import sql
 
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models as models
+from nova.db.sqlalchemy import resource_class_cache as rc_cache
 from nova import exception
 from nova.i18n import _LW
 from nova import objects
@@ -28,8 +30,23 @@ from nova.objects import fields
 _ALLOC_TBL = models.Allocation.__table__
 _INV_TBL = models.Inventory.__table__
 _RP_TBL = models.ResourceProvider.__table__
+_RC_CACHE = None
 
 LOG = logging.getLogger(__name__)
+
+
+@db_api.api_context_manager.reader
+def _ensure_rc_cache(ctx):
+    """Ensures that a singleton resource class cache has been created in the
+    module's scope.
+
+    :param ctx: `nova.context.RequestContext` that may be used to grab a DB
+                connection.
+    """
+    global _RC_CACHE
+    if _RC_CACHE is not None:
+        return
+    _RC_CACHE = rc_cache.ResourceClassCache(ctx)
 
 
 def _get_current_inventory_resources(conn, rp):
@@ -64,8 +81,8 @@ def _delete_inventory_from_provider(conn, rp, to_delete):
          ).group_by(_ALLOC_TBL.c.resource_class_id)
     allocations = conn.execute(allocation_query).fetchall()
     if allocations:
-        resource_classes = ', '.join([fields.ResourceClass.from_index(
-            allocation.resource_class) for allocation in allocations])
+        resource_classes = ', '.join([_RC_CACHE.string_from_id(alloc[0])
+                                      for alloc in allocations])
         raise exception.InventoryInUse(resource_classes=resource_classes,
                                        resource_provider=rp.uuid)
 
@@ -85,15 +102,16 @@ def _add_inventory_to_provider(conn, rp, inv_list, to_add):
     :param to_add: set() containing resource class IDs to search inv_list for
                    adding to resource provider.
     """
-    for res_class in to_add:
-        inv_record = inv_list.find(res_class)
+    for rc_id in to_add:
+        rc_str = _RC_CACHE.string_from_id(rc_id)
+        inv_record = inv_list.find(rc_str)
         if inv_record.capacity <= 0:
             raise exception.InvalidInventoryCapacity(
-                resource_class=fields.ResourceClass.from_index(res_class),
+                resource_class=rc_str,
                 resource_provider=rp.uuid)
         ins_stmt = _INV_TBL.insert().values(
                 resource_provider_id=rp.id,
-                resource_class_id=res_class,
+                resource_class_id=rc_id,
                 total=inv_record.total,
                 reserved=inv_record.reserved,
                 min_unit=inv_record.min_unit,
@@ -115,24 +133,24 @@ def _update_inventory_for_provider(conn, rp, inv_list, to_update):
               capacity after this inventory update.
     """
     exceeded = []
-    for res_class in to_update:
-        inv_record = inv_list.find(res_class)
+    for rc_id in to_update:
+        rc_str = _RC_CACHE.string_from_id(rc_id)
+        inv_record = inv_list.find(rc_str)
         if inv_record.capacity <= 0:
             raise exception.InvalidInventoryCapacity(
-                resource_class=fields.ResourceClass.from_index(res_class),
+                resource_class=rc_str,
                 resource_provider=rp.uuid)
         allocation_query = sa.select(
             [func.sum(_ALLOC_TBL.c.used).label('usage')]).\
             where(sa.and_(
                 _ALLOC_TBL.c.resource_provider_id == rp.id,
-                _ALLOC_TBL.c.resource_class_id == res_class))
+                _ALLOC_TBL.c.resource_class_id == rc_id))
         allocations = conn.execute(allocation_query).first()
         if allocations and allocations['usage'] > inv_record.capacity:
-            exceeded.append((rp.uuid,
-                             fields.ResourceClass.from_index(res_class)))
+            exceeded.append((rp.uuid, rc_str))
         upd_stmt = _INV_TBL.update().where(sa.and_(
                 _INV_TBL.c.resource_provider_id == rp.id,
-                _INV_TBL.c.resource_class_id == res_class)).values(
+                _INV_TBL.c.resource_class_id == rc_id)).values(
                         total=inv_record.total,
                         reserved=inv_record.reserved,
                         min_unit=inv_record.min_unit,
@@ -142,8 +160,7 @@ def _update_inventory_for_provider(conn, rp, inv_list, to_update):
         res = conn.execute(upd_stmt)
         if not res.rowcount:
             raise exception.NotFound(
-                'No inventory of class %s found for update'
-                % fields.ResourceClass.from_index(res_class))
+                'No inventory of class %s found for update' % rc_str)
     return exceeded
 
 
@@ -175,38 +192,47 @@ def _increment_provider_generation(conn, rp):
 @db_api.api_context_manager.writer
 def _add_inventory(context, rp, inventory):
     """Add one Inventory that wasn't already on the provider."""
-    resource_class_id = fields.ResourceClass.index(inventory.resource_class)
+    _ensure_rc_cache(context)
+    rc_id = _RC_CACHE.id_from_string(inventory.resource_class)
+    if rc_id is None:
+        raise exception.NotFound("No such resource class '%s'" %
+                                 inventory.resource_class)
     inv_list = InventoryList(objects=[inventory])
     conn = context.session.connection()
     with conn.begin():
         _add_inventory_to_provider(
-            conn, rp, inv_list, set([resource_class_id]))
+            conn, rp, inv_list, set([rc_id]))
         rp.generation = _increment_provider_generation(conn, rp)
 
 
 @db_api.api_context_manager.writer
 def _update_inventory(context, rp, inventory):
     """Update an inventory already on the provider."""
-    resource_class_id = fields.ResourceClass.index(inventory.resource_class)
+    _ensure_rc_cache(context)
+    rc_id = _RC_CACHE.id_from_string(inventory.resource_class)
+    if rc_id is None:
+        raise exception.NotFound("No such resource class '%s'" %
+                                 inventory.resource_class)
     inv_list = InventoryList(objects=[inventory])
     conn = context.session.connection()
     with conn.begin():
         exceeded = _update_inventory_for_provider(
-            conn, rp, inv_list, set([resource_class_id]))
+            conn, rp, inv_list, set([rc_id]))
         rp.generation = _increment_provider_generation(conn, rp)
     return exceeded
 
 
 @db_api.api_context_manager.writer
-def _delete_inventory(context, rp, resource_class_id):
-    """Delete up to one Inventory of the given resource_class id."""
-
+def _delete_inventory(context, rp, resource_class):
+    """Delete up to one Inventory of the given resource_class string."""
+    _ensure_rc_cache(context)
     conn = context.session.connection()
+    rc_id = _RC_CACHE.id_from_string(resource_class)
     with conn.begin():
-        if not _delete_inventory_from_provider(conn, rp, [resource_class_id]):
+        if not _delete_inventory_from_provider(conn, rp, [rc_id]):
             raise exception.NotFound(
                 'No inventory of class %s found for delete'
-                % fields.ResourceClass.from_index(resource_class_id))
+                % resource_class)
         rp.generation = _increment_provider_generation(conn, rp)
 
 
@@ -226,11 +252,11 @@ def _set_inventory(context, rp, inv_list):
             in between the time when this object was originally read
             and the call to set the inventory.
     """
-
+    _ensure_rc_cache(context)
     conn = context.session.connection()
 
     existing_resources = _get_current_inventory_resources(conn, rp)
-    these_resources = set([fields.ResourceClass.index(r.resource_class)
+    these_resources = set([_RC_CACHE.id_from_string(r.resource_class)
                            for r in inv_list.objects])
 
     # Determine which resources we should be adding, deleting and/or
@@ -323,8 +349,7 @@ class ResourceProvider(base.NovaObject):
     @base.remotable
     def delete_inventory(self, resource_class):
         """Delete Inventory of provided resource_class."""
-        resource_class_id = fields.ResourceClass.index(resource_class)
-        _delete_inventory(self._context, self, resource_class_id)
+        _delete_inventory(self._context, self, resource_class)
         self.obj_reset_changes()
 
     @base.remotable
@@ -449,25 +474,24 @@ class _HasAResourceProvider(base.NovaObject):
                 action='create',
                 reason='resource_provider required')
         try:
-            resource_class = updates.pop('resource_class')
+            rc_str = updates.pop('resource_class')
         except KeyError:
             raise exception.ObjectActionError(
                 action='create',
                 reason='resource_class required')
-        updates['resource_class_id'] = fields.ResourceClass.index(
-            resource_class)
+        updates['resource_class_id'] = _RC_CACHE.id_from_string(rc_str)
         return updates
 
     @staticmethod
     def _from_db_object(context, target, source):
+        _ensure_rc_cache(context)
         for field in target.fields:
             if field not in ('resource_provider', 'resource_class'):
                 setattr(target, field, source[field])
 
         if 'resource_class' not in target:
-            target.resource_class = (
-                target.fields['resource_class'].from_index(
-                    source['resource_class_id']))
+            rc_str = _RC_CACHE.string_from_id(source['resource_class_id'])
+            target.resource_class = rc_str
         if ('resource_provider' not in target and
             'resource_provider' in source):
             target.resource_provider = ResourceProvider()
@@ -500,7 +524,8 @@ def _update_inventory_in_db(context, id_, updates):
 @base.NovaObjectRegistry.register
 class Inventory(_HasAResourceProvider):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Changed resource_class to allow custom strings
+    VERSION = '1.1'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -514,6 +539,13 @@ class Inventory(_HasAResourceProvider):
         'allocation_ratio': fields.NonNegativeFloatField(default=1.0),
     }
 
+    def obj_make_compatible(self, primitive, target_version):
+        super(Inventory, self).obj_make_compatible(primitive, target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1) and 'resource_class' in primitive:
+            rc = primitive['resource_class']
+            rc_cache.raise_if_custom_resource_class_pre_v1_1(rc)
+
     @property
     def capacity(self):
         """Inventory capacity, adjusted by allocation_ratio."""
@@ -524,6 +556,7 @@ class Inventory(_HasAResourceProvider):
         if 'id' in self:
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
+        _ensure_rc_cache(self._context)
         updates = self._make_db(self.obj_get_changes())
         db_inventory = self._create_in_db(self._context, updates)
         self._from_db_object(self._context, self, db_inventory)
@@ -533,6 +566,7 @@ class Inventory(_HasAResourceProvider):
         if 'id' not in self:
             raise exception.ObjectActionError(action='save',
                                               reason='not created')
+        _ensure_rc_cache(self._context)
         updates = self.obj_get_changes()
         updates.pop('id', None)
         self._update_in_db(self._context, self.id, updates)
@@ -564,15 +598,11 @@ class InventoryList(base.ObjectListBase, base.NovaObject):
                           looks up the resource class identifier from the
                           string.
         """
-        if isinstance(res_class, six.string_types):
-            try:
-                res_class = fields.ResourceClass.index(res_class)
-            except ValueError:
-                raise exception.NotFound("No such resource class '%s'" %
-                                         res_class)
+        if not isinstance(res_class, six.string_types):
+            raise ValueError
 
         for inv_rec in self.objects:
-            if fields.ResourceClass.index(inv_rec.resource_class) == res_class:
+            if inv_rec.resource_class == res_class:
                 return inv_rec
 
     @staticmethod
@@ -594,7 +624,8 @@ class InventoryList(base.ObjectListBase, base.NovaObject):
 @base.NovaObjectRegistry.register
 class Allocation(_HasAResourceProvider):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Changed resource_class to allow custom strings
+    VERSION = '1.1'
 
     fields = {
         'id': fields.IntegerField(),
@@ -603,6 +634,13 @@ class Allocation(_HasAResourceProvider):
         'resource_class': fields.ResourceClassField(),
         'used': fields.IntegerField(),
     }
+
+    def obj_make_compatible(self, primitive, target_version):
+        super(Allocation, self).obj_make_compatible(primitive, target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1) and 'resource_class' in primitive:
+            rc = primitive['resource_class']
+            rc_cache.raise_if_custom_resource_class_pre_v1_1(rc)
 
     @staticmethod
     @db_api.api_context_manager.writer
@@ -628,6 +666,7 @@ class Allocation(_HasAResourceProvider):
         if 'id' in self:
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
+        _ensure_rc_cache(self._context)
         updates = self._make_db(self.obj_get_changes())
         db_allocation = self._create_in_db(self._context, updates)
         self._from_db_object(self._context, self, db_allocation)
@@ -689,7 +728,7 @@ def _check_capacity_exceeded(conn, allocs):
     #
     # We then take the results of the above and determine if any of the
     # inventory will have its capacity exceeded.
-    res_classes = set([fields.ResourceClass.index(a.resource_class)
+    rc_ids = set([_RC_CACHE.id_from_string(a.resource_class)
                        for a in allocs])
     provider_uuids = set([a.resource_provider.uuid for a in allocs])
 
@@ -697,14 +736,14 @@ def _check_capacity_exceeded(conn, allocs):
                        _ALLOC_TBL.c.consumer_id,
                        _ALLOC_TBL.c.resource_class_id,
                        sql.func.sum(_ALLOC_TBL.c.used).label('used')])
-    usage = usage.where(_ALLOC_TBL.c.resource_class_id.in_(res_classes))
+    usage = usage.where(_ALLOC_TBL.c.resource_class_id.in_(rc_ids))
     usage = usage.group_by(_ALLOC_TBL.c.resource_provider_id,
                            _ALLOC_TBL.c.resource_class_id)
     usage = sa.alias(usage, name='usage')
 
     inv_join = sql.join(_RP_TBL, _INV_TBL,
             sql.and_(_RP_TBL.c.id == _INV_TBL.c.resource_provider_id,
-                     _INV_TBL.c.resource_class_id.in_(res_classes)))
+                     _INV_TBL.c.resource_class_id.in_(rc_ids)))
     primary_join = sql.outerjoin(inv_join, usage,
         sql.and_(
             _INV_TBL.c.resource_provider_id == usage.c.resource_provider_id,
@@ -724,7 +763,7 @@ def _check_capacity_exceeded(conn, allocs):
     sel = sa.select(cols_in_output).select_from(primary_join)
     sel = sel.where(
             sa.and_(_RP_TBL.c.uuid.in_(provider_uuids),
-                    _INV_TBL.c.resource_class_id.in_(res_classes)))
+                    _INV_TBL.c.resource_class_id.in_(rc_ids)))
     records = conn.execute(sel)
     # Create a map keyed by (rp_uuid, res_class) for the records in the DB
     usage_map = {}
@@ -738,17 +777,17 @@ def _check_capacity_exceeded(conn, allocs):
     # Ensure that all providers have existing inventory
     missing_provs = provider_uuids - provs_with_inv
     if missing_provs:
-        class_str = ', '.join([fields.ResourceClass.from_index(res_class)
-                               for res_class in res_classes])
+        class_str = ', '.join([_RC_CACHE.string_from_id(rc_id)
+                               for rc_id in rc_ids])
         provider_str = ', '.join(missing_provs)
         raise exception.InvalidInventory(resource_class=class_str,
                 resource_provider=provider_str)
 
     res_providers = {}
     for alloc in allocs:
-        res_class = fields.ResourceClass.index(alloc.resource_class)
+        rc_id = _RC_CACHE.id_from_string(alloc.resource_class)
         rp_uuid = alloc.resource_provider.uuid
-        key = (rp_uuid, res_class)
+        key = (rp_uuid, rc_id)
         usage = usage_map[key]
         amount_needed = alloc.used
         allocation_ratio = usage['allocation_ratio']
@@ -759,13 +798,13 @@ def _check_capacity_exceeded(conn, allocs):
             LOG.warning(
                 _LW("Over capacity for %(rc)s on resource provider %(rp)s. "
                     "Needed: %(needed)s, Used: %(used)s, Capacity: %(cap)s"),
-                {'rc': fields.ResourceClass.from_index(res_class),
+                {'rc': alloc.resource_class,
                  'rp': rp_uuid,
                  'needed': amount_needed,
                  'used': used,
                  'cap': capacity})
             raise exception.InvalidAllocationCapacityExceeded(
-                resource_class=fields.ResourceClass.from_index(res_class),
+                resource_class=alloc.resource_class,
                 resource_provider=rp_uuid)
         if rp_uuid not in res_providers:
             rp = ResourceProvider(id=usage['resource_provider_id'],
@@ -815,7 +854,16 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
         We must check that there is capacity for each allocation.
         If there is not we roll back the entire set.
         """
+        _ensure_rc_cache(context)
         conn = context.session.connection()
+
+        # Short-circuit out if there are any allocations with string
+        # resource class names that don't exist.
+        for alloc in allocs:
+            if _RC_CACHE.id_from_string(alloc.resource_class) is None:
+                raise exception.NotFound("No such resource class '%s'" %
+                                         alloc.resource_class)
+
         # Before writing any allocation records, we check that the submitted
         # allocations do not cause any inventory capacity to be exceeded for
         # any resource provider and resource class involved in the allocation
@@ -832,10 +880,10 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
             # Now add the allocations that were passed in.
             for alloc in allocs:
                 rp = alloc.resource_provider
-                res_class = fields.ResourceClass.index(alloc.resource_class)
+                rc_id = _RC_CACHE.id_from_string(alloc.resource_class)
                 ins_stmt = _ALLOC_TBL.insert().values(
                         resource_provider_id=rp.id,
-                        resource_class_id=res_class,
+                        resource_class_id=rc_id,
                         consumer_id=alloc.consumer_id,
                         used=alloc.used)
                 conn.execute(ins_stmt)
@@ -881,7 +929,8 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
 @base.NovaObjectRegistry.register
 class Usage(base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Changed resource_class to allow custom strings
+    VERSION = '1.1'
 
     fields = {
         'resource_class': fields.ResourceClassField(read_only=True),
@@ -895,9 +944,8 @@ class Usage(base.NovaObject):
                 setattr(target, field, source[field])
 
         if 'resource_class' not in target:
-            target.resource_class = (
-                target.fields['resource_class'].from_index(
-                    source['resource_class_id']))
+            rc_str = _RC_CACHE.string_from_id(source['resource_class_id'])
+            target.resource_class = rc_str
 
         target._context = context
         target.obj_reset_changes()

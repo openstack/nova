@@ -255,7 +255,7 @@ class OSType(BaseNovaEnum):
         return super(OSType, self).coerce(obj, attr, value)
 
 
-class ResourceClass(BaseNovaEnum):
+class ResourceClass(StringField):
     """Classes of resources provided to consumers."""
 
     VCPU = 'VCPU'
@@ -274,15 +274,11 @@ class ResourceClass(BaseNovaEnum):
     ALL = (VCPU, MEMORY_MB, DISK_GB, PCI_DEVICE, SRIOV_NET_VF, NUMA_SOCKET,
            NUMA_CORE, NUMA_THREAD, NUMA_MEMORY_MB, IPV4_ADDRESS)
 
-    @classmethod
-    def index(cls, value):
-        """Return an index into the Enum given a value."""
-        return cls.ALL.index(value)
-
-    @classmethod
-    def from_index(cls, index):
-        """Return the Enum value at a given index."""
-        return cls.ALL[index]
+    # This is the set of standard resource classes that existed before
+    # we opened up for custom resource classes in version 1.1 of various
+    # objects in nova/objects/resource_provider.py
+    V1_0 = (VCPU, MEMORY_MB, DISK_GB, PCI_DEVICE, SRIOV_NET_VF, NUMA_SOCKET,
+            NUMA_CORE, NUMA_THREAD, NUMA_MEMORY_MB, IPV4_ADDRESS)
 
 
 class RNGModel(BaseNovaEnum):
@@ -851,16 +847,8 @@ class OSTypeField(BaseEnumField):
     AUTO_TYPE = OSType()
 
 
-class ResourceClassField(BaseEnumField):
+class ResourceClassField(AutoTypedField):
     AUTO_TYPE = ResourceClass()
-
-    def index(self, value):
-        """Return an index into the Enum given a value."""
-        return self._type.index(value)
-
-    def from_index(self, index):
-        """Return the Enum value at a given index."""
-        return self._type.from_index(index)
 
 
 class RNGModelField(BaseEnumField):

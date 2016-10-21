@@ -163,7 +163,7 @@ tests:
       total: 2048
   status: 400
   response_strings:
-      - Bad inventory NO_CLASS_14 for resource provider $ENVIRON['RP_UUID']
+      - No such resource class 'NO_CLASS_14'
 
 - name: post inventory duplicated resource class
   desc: DISK_GB was already created above
