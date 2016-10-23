@@ -341,12 +341,15 @@ class RbdTestCase(test.NoDBTestCase):
     def test_cleanup_volumes(self, mock_client, mock_rados, mock_rbd):
         instance = objects.Instance(id=1, uuid=uuids.instance,
                                     task_state=None)
+        # this is duplicated from nova/virt/libvirt/driver.py
+        filter_fn = lambda disk: disk.startswith(instance.uuid)
 
         rbd = mock_rbd.RBD.return_value
         rbd.list.return_value = ['%s_test' % uuids.instance, '111_test']
 
         client = mock_client.return_value
-        self.driver.cleanup_volumes(instance)
+        self.driver.cleanup_volumes(filter_fn)
+
         rbd.remove.assert_called_once_with(client.ioctx,
                                            '%s_test' % uuids.instance)
         client.__enter__.assert_called_once_with()
@@ -359,6 +362,8 @@ class RbdTestCase(test.NoDBTestCase):
                                 mock_client, mock_rados, mock_rbd):
         instance = objects.Instance(id=1, uuid=uuids.instance,
                                     task_state=None)
+        # this is duplicated from nova/virt/libvirt/driver.py
+        filter_fn = lambda disk: disk.startswith(instance.uuid)
 
         setattr(mock_rbd, exception_name, test.TestingException)
         rbd = mock_rbd.RBD.return_value
@@ -367,7 +372,7 @@ class RbdTestCase(test.NoDBTestCase):
 
         client = mock_client.return_value
         with mock.patch('eventlet.greenthread.sleep'):
-            self.driver.cleanup_volumes(instance)
+            self.driver.cleanup_volumes(filter_fn)
         rbd.remove.assert_any_call(client.ioctx, '%s_test' % uuids.instance)
         # NOTE(danms): 10 retries + 1 final attempt to propagate = 11
         self.assertEqual(11, len(rbd.remove.call_args_list))
@@ -390,6 +395,8 @@ class RbdTestCase(test.NoDBTestCase):
                                             mock_rados, mock_rbd):
         instance = objects.Instance(id=1, uuid=uuids.instance,
                                     task_state=None)
+        # this is duplicated from nova/virt/libvirt/driver.py
+        filter_fn = lambda disk: disk.startswith(instance.uuid)
 
         setattr(mock_rbd, 'ImageHasSnapshots', test.TestingException)
         rbd = mock_rbd.RBD.return_value
@@ -400,7 +407,7 @@ class RbdTestCase(test.NoDBTestCase):
         proxy.list_snaps.return_value = [
             {'name': libvirt_utils.RESIZE_SNAPSHOT_NAME}]
         client = mock_client.return_value
-        self.driver.cleanup_volumes(instance)
+        self.driver.cleanup_volumes(filter_fn)
 
         remove_call = mock.call(client.ioctx, '%s_test' % uuids.instance)
         rbd.remove.assert_has_calls([remove_call, remove_call])
@@ -416,13 +423,16 @@ class RbdTestCase(test.NoDBTestCase):
                                        mock_rbd):
         instance = objects.Instance(id=1, uuid=uuids.instance,
                                     task_state=task_states.RESIZE_REVERTING)
+        # this is duplicated from nova/virt/libvirt/driver.py
+        filter_fn = lambda disk: (disk.startswith(instance.uuid) and
+                                  disk.endswith('disk.local'))
 
         rbd = mock_rbd.RBD.return_value
         rbd.list.return_value = ['%s_test' % uuids.instance, '111_test',
                                  '%s_test_disk.local' % uuids.instance]
 
         client = mock_client.return_value
-        self.driver.cleanup_volumes(instance)
+        self.driver.cleanup_volumes(filter_fn)
         rbd.remove.assert_called_once_with(
             client.ioctx,
             '%s_test_disk.local' % uuids.instance)
