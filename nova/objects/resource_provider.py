@@ -937,6 +937,13 @@ class Usage(base.NovaObject):
         'usage': fields.NonNegativeIntegerField(),
     }
 
+    def obj_make_compatible(self, primitive, target_version):
+        super(Usage, self).obj_make_compatible(primitive, target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1) and 'resource_class' in primitive:
+            rc = primitive['resource_class']
+            rc_cache.raise_if_custom_resource_class_pre_v1_1(rc)
+
     @staticmethod
     def _from_db_object(context, target, source):
         for field in target.fields:
