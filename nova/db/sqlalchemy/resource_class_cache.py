@@ -15,6 +15,7 @@ import sqlalchemy as sa
 
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models as models
+from nova import exception
 from nova.objects import fields
 
 _RC_TBL = models.ResourceClass.__table__
@@ -78,6 +79,8 @@ class ResourceClassCache(object):
         :returns integer identifier for the resource class, or None, if no such
                  resource class was found in the list of standard resource
                  classes or the resource_classes database table.
+        :raises `exception.ResourceClassNotFound` if rc_str cannot be found in
+                either the standard classes or the DB.
         """
         if rc_str in self.id_cache:
             return self.id_cache[rc_str]
@@ -88,7 +91,9 @@ class ResourceClassCache(object):
         else:
             # Otherwise, check the database table
             _refresh_from_db(self.ctx, self)
-            return self.id_cache.get(rc_str)
+            if rc_str in self.id_cache:
+                return self.id_cache[rc_str]
+            raise exception.ResourceClassNotFound(resource_class=rc_str)
 
     def string_from_id(self, rc_id):
         """The reverse of the id_from_string() method. Given a supplied numeric
@@ -102,6 +107,8 @@ class ResourceClassCache(object):
         :returns string identifier for the resource class, or None, if no such
                  resource class was found in the list of standard resource
                  classes or the resource_classes database table.
+        :raises `exception.ResourceClassNotFound` if rc_id cannot be found in
+                either the standard classes or the DB.
         """
         if rc_id in self.str_cache:
             return self.str_cache[rc_id]
@@ -112,4 +119,6 @@ class ResourceClassCache(object):
         except IndexError:
             # Otherwise, check the database table
             _refresh_from_db(self.ctx, self)
-            return self.str_cache.get(rc_id)
+            if rc_id in self.str_cache:
+                return self.str_cache[rc_id]
+            raise exception.ResourceClassNotFound(resource_class=rc_id)

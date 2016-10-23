@@ -159,8 +159,8 @@ def _update_inventory_for_provider(conn, rp, inv_list, to_update):
                         allocation_ratio=inv_record.allocation_ratio)
         res = conn.execute(upd_stmt)
         if not res.rowcount:
-            raise exception.NotFound(
-                'No inventory of class %s found for update' % rc_str)
+            raise exception.InventoryWithResourceClassNotFound(
+                    resource_class=rc_str)
     return exceeded
 
 
@@ -191,12 +191,13 @@ def _increment_provider_generation(conn, rp):
 
 @db_api.api_context_manager.writer
 def _add_inventory(context, rp, inventory):
-    """Add one Inventory that wasn't already on the provider."""
+    """Add one Inventory that wasn't already on the provider.
+
+    :raises `exception.ResourceClassNotFound` if inventory.resource_class
+            cannot be found in either the standard classes or the DB.
+    """
     _ensure_rc_cache(context)
     rc_id = _RC_CACHE.id_from_string(inventory.resource_class)
-    if rc_id is None:
-        raise exception.NotFound("No such resource class '%s'" %
-                                 inventory.resource_class)
     inv_list = InventoryList(objects=[inventory])
     conn = context.session.connection()
     with conn.begin():
@@ -207,12 +208,13 @@ def _add_inventory(context, rp, inventory):
 
 @db_api.api_context_manager.writer
 def _update_inventory(context, rp, inventory):
-    """Update an inventory already on the provider."""
+    """Update an inventory already on the provider.
+
+    :raises `exception.ResourceClassNotFound` if inventory.resource_class
+            cannot be found in either the standard classes or the DB.
+    """
     _ensure_rc_cache(context)
     rc_id = _RC_CACHE.id_from_string(inventory.resource_class)
-    if rc_id is None:
-        raise exception.NotFound("No such resource class '%s'" %
-                                 inventory.resource_class)
     inv_list = InventoryList(objects=[inventory])
     conn = context.session.connection()
     with conn.begin():
@@ -224,7 +226,11 @@ def _update_inventory(context, rp, inventory):
 
 @db_api.api_context_manager.writer
 def _delete_inventory(context, rp, resource_class):
-    """Delete up to one Inventory of the given resource_class string."""
+    """Delete up to one Inventory of the given resource_class string.
+
+    :raises `exception.ResourceClassNotFound` if resource_class
+            cannot be found in either the standard classes or the DB.
+    """
     _ensure_rc_cache(context)
     conn = context.session.connection()
     rc_id = _RC_CACHE.id_from_string(resource_class)
@@ -251,6 +257,9 @@ def _set_inventory(context, rp, inv_list):
             the same resource provider's view of its inventory or allocations
             in between the time when this object was originally read
             and the call to set the inventory.
+    :raises `exception.ResourceClassNotFound` if any resource class in any
+            inventory in inv_list cannot be found in either the standard
+            classes or the DB.
     """
     _ensure_rc_cache(context)
     conn = context.session.connection()
@@ -853,16 +862,19 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
 
         We must check that there is capacity for each allocation.
         If there is not we roll back the entire set.
+
+        :raises `exception.ResourceClassNotFound` if any resource class in any
+                allocation in allocs cannot be found in either the standard
+                classes or the DB.
         """
         _ensure_rc_cache(context)
         conn = context.session.connection()
 
         # Short-circuit out if there are any allocations with string
-        # resource class names that don't exist.
+        # resource class names that don't exist this will raise a
+        # ResourceClassNotFound exception.
         for alloc in allocs:
-            if _RC_CACHE.id_from_string(alloc.resource_class) is None:
-                raise exception.NotFound("No such resource class '%s'" %
-                                         alloc.resource_class)
+            _RC_CACHE.id_from_string(alloc.resource_class)
 
         # Before writing any allocation records, we check that the submitted
         # allocations do not cause any inventory capacity to be exceeded for

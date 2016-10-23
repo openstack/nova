@@ -200,6 +200,32 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
             self.context, resource_provider.uuid))
         self.assertEqual(33, reloaded_inventories[0].total)
 
+    def test_set_inventory_unknown_resource_class(self):
+        """Test attempting to set inventory to an unknown resource class raises
+        an exception.
+        """
+        rp = objects.ResourceProvider(
+            context=self.context,
+            uuid=uuidsentinel.rp_uuid,
+            name='compute-host',
+        )
+        rp.create()
+
+        inv = objects.Inventory(
+            resource_provider=rp,
+            resource_class='UNKNOWN',
+            total=1024,
+            reserved=15,
+            min_unit=10,
+            max_unit=100,
+            step_size=10,
+            allocation_ratio=1.0,
+        )
+
+        inv_list = objects.InventoryList(objects=[inv])
+        self.assertRaises(exception.ResourceClassNotFound,
+                          rp.set_inventory, inv_list)
+
     @mock.patch('nova.objects.resource_provider.LOG')
     def test_set_inventory_over_capacity(self, mock_log):
         rp = objects.ResourceProvider(context=self.context,
@@ -419,7 +445,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         disk_inv.obj_set_defaults()
         error = self.assertRaises(exception.NotFound, rp.update_inventory,
                                   disk_inv)
-        self.assertIn('No inventory of class DISK_GB found for update',
+        self.assertIn('No inventory of class DISK_GB found',
                       str(error))
 
     @mock.patch('nova.objects.resource_provider.LOG')

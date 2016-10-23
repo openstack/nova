@@ -107,6 +107,17 @@ tests:
   response_strings:
       - resource provider generation conflict
 
+- name: modify inventory no such resource class in inventory
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/inventories/MEMORY_MB
+  request_headers:
+      content-type: application/json
+  data:
+      resource_provider_generation: 2
+      total: 2048
+  status: 400
+  response_strings:
+      - No inventory record with resource class
+
 - name: modify inventory invalid data
   desc: This should 400 because reserved is greater than total
   PUT: $LAST_URL
@@ -163,7 +174,7 @@ tests:
       total: 2048
   status: 400
   response_strings:
-      - No such resource class 'NO_CLASS_14'
+      - No such resource class NO_CLASS_14
 
 - name: post inventory duplicated resource class
   desc: DISK_GB was already created above
@@ -301,6 +312,19 @@ tests:
   status: 409
   response_strings:
       - resource provider generation conflict
+
+- name: put all inventory unknown resource class
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_provider_generation: 6
+      inventories:
+        HOUSE:
+          total: 253
+  status: 400
+  response_strings:
+      - Unknown resource class in inventory
 
 # NOTE(cdent): The generation is 6 now, based on the activity at
 # the start of this file.
