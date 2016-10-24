@@ -14,9 +14,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0rc2.dev2\n"
+"Project-Id-Version: nova 14.0.2.dev16\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-09-20 00:38+0000\n"
+"POT-Creation-Date: 2016-10-23 09:20+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -883,10 +883,6 @@ msgid ""
 msgstr ""
 "Невозможно смонтировать диск конфигурации vfat. %(operation)s не выполнено. "
 "Ошибка: %(error)s"
-
-#, python-format
-msgid "Could not read %s. Re-running with sudo"
-msgstr "Невозможно прочитать %s. Повторное выполнение с помощью sudo"
 
 #, python-format
 msgid "Could not upload image %(image_id)s"
@@ -2975,9 +2971,6 @@ msgstr ""
 msgid "Physical network is missing for network %(network_uuid)s"
 msgstr "Отсутствует физическая сеть для сети %(network_uuid)s"
 
-msgid "Please re-run nova-manage as root."
-msgstr "Выполните nova-manage снова как root."
-
 msgid "Please specify either fixed_range or uuid"
 msgstr "Укажите fixed_range или uuid"
 
@@ -4732,11 +4725,6 @@ msgstr "начальный адрес"
 
 msgid "state"
 msgstr "состояние"
-
-msgid "sudo failed, continuing as if nothing happened"
-msgstr ""
-"не удалось выполнить sudo, выполнение продолжается, как будто ничего не "
-"произошло"
 
 msgid "token not provided"
 msgstr "маркер не указан"

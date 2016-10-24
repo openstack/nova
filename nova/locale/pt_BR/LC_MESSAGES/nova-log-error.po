@@ -6,9 +6,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0rc2.dev2\n"
+"Project-Id-Version: nova 14.0.2.dev16\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-09-20 00:38+0000\n"
+"POT-Creation-Date: 2016-10-23 09:21+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -789,10 +789,6 @@ msgstr "Falha em Migrar Envio"
 #, python-format
 msgid "Migration %s is not found during confirmation"
 msgstr "Migração %s não localizada durante a confirmação"
-
-#, python-format
-msgid "Migration for instance %(uuid)s refers to another host's instance!"
-msgstr "A migração da instância %(uuid)s refere-se à outra instância do host!"
 
 #, python-format
 msgid ""
