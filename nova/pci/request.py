@@ -21,9 +21,10 @@
         |   "product_id": "0443",
         |   "vendor_id": "8086",
         |   "device_type": "type-PCI",
+        |   "numa_policy": "legacy"
         |   }'
 
-    Aliases with the same name and the same device_type are ORed::
+    Aliases with the same name, device_type and numa_policy are ORed::
 
         | [pci]
         | alias = '{
@@ -35,10 +36,7 @@
 
     These two aliases define a device request meaning: vendor_id is "8086" and
     product_id is "0442" or "0443".
-
     """
-
-import copy
 
 import jsonschema
 from oslo_serialization import jsonutils
@@ -59,13 +57,8 @@ DEVICE_TYPE_FOR_VNIC_TYPE = {
     network_model.VNIC_TYPE_DIRECT_PHYSICAL: obj_fields.PciDeviceType.SRIOV_PF
 }
 
-
 CONF = nova.conf.CONF
 
-
-_ALIAS_DEV_TYPE = [obj_fields.PciDeviceType.STANDARD,
-                   obj_fields.PciDeviceType.SRIOV_PF,
-                   obj_fields.PciDeviceType.SRIOV_VF]
 _ALIAS_CAP_TYPE = ['pci']
 _ALIAS_SCHEMA = {
     "type": "object",
@@ -76,6 +69,8 @@ _ALIAS_SCHEMA = {
             "minLength": 1,
             "maxLength": 256,
         },
+        # TODO(stephenfin): This isn't used anywhere outside of tests and
+        # should probably be removed.
         "capability_type": {
             "type": "string",
             "enum": _ALIAS_CAP_TYPE,
@@ -90,7 +85,11 @@ _ALIAS_SCHEMA = {
         },
         "device_type": {
             "type": "string",
-            "enum": _ALIAS_DEV_TYPE,
+            "enum": list(obj_fields.PciDeviceType.ALL),
+        },
+        "numa_policy": {
+            "type": "string",
+            "enum": list(obj_fields.PCINUMAAffinityPolicy.ALL),
         },
     },
     "required": ["name"],
@@ -98,92 +97,124 @@ _ALIAS_SCHEMA = {
 
 
 def _get_alias_from_config():
-    """Parse and validate PCI aliases from the nova config."""
+    """Parse and validate PCI aliases from the nova config.
+
+    :returns: A dictionary where the keys are device names and the values are
+        tuples of form ``(specs, numa_policy)``. ``specs`` is a list of PCI
+        device specs, while ``numa_policy`` describes the required NUMA
+        affinity of the device(s).
+    :raises: exception.PciInvalidAlias if two aliases with the same name have
+        different device types or different NUMA policies.
+    """
     jaliases = CONF.pci.alias
     aliases = {}  # map alias name to alias spec list
     try:
         for jsonspecs in jaliases:
             spec = jsonutils.loads(jsonspecs)
             jsonschema.validate(spec, _ALIAS_SCHEMA)
-            # It should keep consistent behaviour in configuration
-            # and extra specs to call strip() function.
-            name = spec.pop("name").strip()
+
+            name = spec.pop('name').strip()
+            numa_policy = spec.pop('numa_policy', None)
+            if not numa_policy:
+                numa_policy = obj_fields.PCINUMAAffinityPolicy.LEGACY
+
             dev_type = spec.pop('device_type', None)
             if dev_type:
                 spec['dev_type'] = dev_type
-            if name not in aliases:
-                aliases[name] = [spec]
-            else:
-                if aliases[name][0]["dev_type"] == spec["dev_type"]:
-                    aliases[name].append(spec)
-                else:
-                    reason = _("Device type mismatch for alias '%s'") % name
-                    raise exception.PciInvalidAlias(reason=reason)
 
+            if name not in aliases:
+                aliases[name] = (numa_policy, [spec])
+                continue
+
+            if aliases[name][0] != numa_policy:
+                reason = _("NUMA policy mismatch for alias '%s'") % name
+                raise exception.PciInvalidAlias(reason=reason)
+
+            if aliases[name][1][0]['dev_type'] != spec['dev_type']:
+                reason = _("Device type mismatch for alias '%s'") % name
+                raise exception.PciInvalidAlias(reason=reason)
+
+            aliases[name][1].append(spec)
     except exception.PciInvalidAlias:
         raise
-    except Exception as e:
-        raise exception.PciInvalidAlias(reason=six.text_type(e))
+    except jsonschema.exceptions.ValidationError as exc:
+        raise exception.PciInvalidAlias(reason=exc.message)
+    except Exception as exc:
+        raise exception.PciInvalidAlias(reason=six.text_type(exc))
 
     return aliases
 
 
 def _translate_alias_to_requests(alias_spec):
     """Generate complete pci requests from pci aliases in extra_spec."""
-
     pci_aliases = _get_alias_from_config()
 
-    pci_requests = []  # list of a specs dict
+    pci_requests = []
     for name, count in [spec.split(':') for spec in alias_spec.split(',')]:
         name = name.strip()
         if name not in pci_aliases:
             raise exception.PciRequestAliasNotDefined(alias=name)
-        else:
-            request = objects.InstancePCIRequest(
-                count=int(count),
-                spec=copy.deepcopy(pci_aliases[name]),
-                alias_name=name)
-            pci_requests.append(request)
+
+        count = int(count)
+        numa_policy, spec = pci_aliases[name]
+
+        pci_requests.append(objects.InstancePCIRequest(
+            count=count,
+            spec=spec,
+            alias_name=name,
+            numa_policy=numa_policy))
     return pci_requests
 
 
 def get_pci_requests_from_flavor(flavor):
-    """Get flavor's pci request.
+    """Validate and return PCI requests.
 
-    The pci_passthrough:alias scope in flavor extra_specs
-    describes the flavor's pci requests, the key is
-    'pci_passthrough:alias' and the value has format
-    'alias_name_x:count, alias_name_y:count, ... '. The alias_name is
-    defined in 'pci.alias' configurations.
+    The ``pci_passthrough:alias`` extra spec describes the flavor's PCI
+    requests. The extra spec's value is a comma-separated list of format
+    ``alias_name_x:count, alias_name_y:count, ... ``, where ``alias_name`` is
+    defined in ``pci.alias`` configurations.
 
-    The flavor's requirement is translated into a pci requests list.
-    Each entry in the list is a dict-ish object with three keys/attributes.
-    The 'specs' gives the pci device properties requirement, the 'count' gives
-    the number of devices, and the optional 'alias_name' is the corresponding
-    alias definition name.
+    The flavor's requirement is translated into a PCI requests list. Each
+    entry in the list is an instance of nova.objects.InstancePCIRequests with
+    four keys/attributes.
 
-    Example:
-    Assume alias configuration is::
+    - 'spec' states the PCI device properties requirement
+    - 'count' states the number of devices
+    - 'alias_name' (optional) is the corresponding alias definition name
+    - 'numa_policy' (optional) states the required NUMA affinity of the devices
 
-        |   {'vendor_id':'8086',
-        |    'device_id':'1502',
-        |    'name':'alias_1'}
+    For example, assume alias configuration is::
 
-    The flavor extra specs includes: 'pci_passthrough:alias': 'alias_1:2'.
+        {
+            'vendor_id':'8086',
+            'device_id':'1502',
+            'name':'alias_1'
+        }
 
-    The returned pci_requests are::
+    While flavor extra specs includes::
 
-        | pci_requests = [{'count':2,
-        |                'specs': [{'vendor_id':'8086',
-        |                           'device_id':'1502'}],
-        |                'alias_name': 'alias_1'}]
+        'pci_passthrough:alias': 'alias_1:2'
 
-    :param flavor: the flavor to be checked
-    :returns: a list of pci requests
+    The returned ``pci_requests`` are::
+
+        [{
+            'count':2,
+            'specs': [{'vendor_id':'8086', 'device_id':'1502'}],
+            'alias_name': 'alias_1'
+        }]
+
+    :param flavor: The flavor to be checked
+    :returns: A list of PCI requests
+    :rtype: nova.objects.InstancePCIRequests
+    :raises: exception.PciRequestAliasNotDefined if an invalid PCI alias is
+        provided
+    :raises: exception.PciInvalidAlias if the configuration contains invalid
+        aliases.
     """
     pci_requests = []
     if ('extra_specs' in flavor and
             'pci_passthrough:alias' in flavor['extra_specs']):
         pci_requests = _translate_alias_to_requests(
             flavor['extra_specs']['pci_passthrough:alias'])
+
     return objects.InstancePCIRequests(requests=pci_requests)

@@ -28,28 +28,40 @@ pci_opts = [
         help="""
 An alias for a PCI passthrough device requirement.
 
-This allows users to specify the alias in the extra_spec for a flavor, without
+This allows users to specify the alias in the extra specs for a flavor, without
 needing to repeat all the PCI property requirements.
 
 Possible Values:
 
-* A list of JSON values which describe the aliases. For example:
+* A list of JSON values which describe the aliases. For example::
 
     alias = {
       "name": "QuickAssist",
       "product_id": "0443",
       "vendor_id": "8086",
-      "device_type": "type-PCI"
+      "device_type": "type-PCI",
+      "numa_policy": "required"
     }
 
-  defines an alias for the Intel QuickAssist card. (multi valued). Valid key
-  values are :
+  This defines an alias for the Intel QuickAssist card. (multi valued). Valid
+  key values are :
 
-  * "name": Name of the PCI alias.
-  * "product_id": Product ID of the device in hexadecimal.
-  * "vendor_id": Vendor ID of the device in hexadecimal.
-  * "device_type": Type of PCI device. Valid values are: "type-PCI",
-    "type-PF" and "type-VF".
+  ``name``
+    Name of the PCI alias.
+
+  ``product_id``
+    Product ID of the device in hexadecimal.
+
+  ``vendor_id``
+    Vendor ID of the device in hexadecimal.
+
+  ``device_type``
+    Type of PCI device. Valid values are: ``type-PCI``, ``type-PF`` and
+    ``type-VF``.
+
+  ``numa_policy``
+    Required NUMA affinity of device. Valid values are: ``legacy``,
+    ``preferred`` and ``required``.
 """),
     cfg.MultiStrOpt('passthrough_whitelist',
         default=[],

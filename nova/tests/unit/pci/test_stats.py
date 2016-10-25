@@ -65,6 +65,17 @@ pci_requests_multiple = [objects.InstancePCIRequest(count=1,
 
 
 class PciDeviceStatsTestCase(test.NoDBTestCase):
+
+    @staticmethod
+    def _get_fake_requests(vendor_ids=None, numa_policy=None):
+        if not vendor_ids:
+            vendor_ids = ['v1', 'v2']
+
+        specs = [{'vendor_id': vendor_id} for vendor_id in vendor_ids]
+
+        return [objects.InstancePCIRequest(count=1, spec=[spec],
+                numa_policy=numa_policy) for spec in specs]
+
     def _create_fake_devs(self):
         self.fake_dev_1 = objects.PciDevice.create(None, fake_pci_1)
         self.fake_dev_2 = objects.PciDevice.create(None, fake_pci_2)
@@ -74,6 +85,15 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         for dev in [self.fake_dev_1, self.fake_dev_2,
                     self.fake_dev_3, self.fake_dev_4]:
             self.pci_stats.add_device(dev)
+
+    def _add_fake_devs_with_numa(self):
+        fake_pci = dict(fake_pci_1, vendor_id='v4', product_id='pr4')
+        devs = [dict(fake_pci, product_id='pr0', numa_node=0, ),
+                dict(fake_pci, product_id='pr1', numa_node=1),
+                dict(fake_pci, product_id='pr_none', numa_node=None)]
+
+        for dev in devs:
+            self.pci_stats.add_device(objects.PciDevice.create(None, dev))
 
     def setUp(self):
         super(PciDeviceStatsTestCase, self).setUp()
@@ -129,6 +149,17 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         self.assertEqual(set([d['vendor_id'] for d in new_stats]),
                          set(['v1', 'v2', 'v3']))
 
+    def test_apply_requests(self):
+        self.pci_stats.apply_requests(pci_requests)
+        self.assertEqual(len(self.pci_stats.pools), 2)
+        self.assertEqual(self.pci_stats.pools[0]['vendor_id'], 'v1')
+        self.assertEqual(self.pci_stats.pools[0]['count'], 1)
+
+    def test_apply_requests_failed(self):
+        self.assertRaises(exception.PciDeviceRequestFailed,
+            self.pci_stats.apply_requests,
+            pci_requests_multiple)
+
     def test_support_requests(self):
         self.assertTrue(self.pci_stats.support_requests(pci_requests))
         self.assertEqual(len(self.pci_stats.pools), 3)
@@ -142,16 +173,44 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         self.assertEqual(set([d['count'] for d in self.pci_stats]),
                          set([1, 2]))
 
-    def test_apply_requests(self):
-        self.pci_stats.apply_requests(pci_requests)
-        self.assertEqual(len(self.pci_stats.pools), 2)
-        self.assertEqual(self.pci_stats.pools[0]['vendor_id'], 'v1')
-        self.assertEqual(self.pci_stats.pools[0]['count'], 1)
+    def test_support_requests_numa(self):
+        cells = [objects.InstanceNUMACell(id=0, cpuset=set(), memory=0),
+                 objects.InstanceNUMACell(id=1, cpuset=set(), memory=0)]
+        self.assertTrue(self.pci_stats.support_requests(pci_requests, cells))
 
-    def test_apply_requests_failed(self):
-        self.assertRaises(exception.PciDeviceRequestFailed,
-            self.pci_stats.apply_requests,
-            pci_requests_multiple)
+    def test_support_requests_numa_failed(self):
+        cells = [objects.InstanceNUMACell(id=0, cpuset=set(), memory=0)]
+        self.assertFalse(self.pci_stats.support_requests(pci_requests, cells))
+
+    def test_support_requests_no_numa_info(self):
+        cells = [objects.InstanceNUMACell(id=0, cpuset=set(), memory=0)]
+        pci_requests = self._get_fake_requests(vendor_ids=['v3'])
+        self.assertTrue(self.pci_stats.support_requests(pci_requests, cells))
+
+        # 'legacy' is the default numa_policy so the result must be same
+        pci_requests = self._get_fake_requests(vendor_ids=['v3'],
+            numa_policy = fields.PCINUMAAffinityPolicy.LEGACY)
+        self.assertTrue(self.pci_stats.support_requests(pci_requests, cells))
+
+    def test_support_requests_numa_pci_numa_policy_preferred(self):
+        # numa node 0 has 2 devices with vendor_id 'v1'
+        # numa node 1 has 1 device with vendor_id 'v2'
+        # we request two devices with vendor_id 'v1' and 'v2'.
+        # pci_numa_policy is 'preferred' so we can ignore numa affinity
+        cells = [objects.InstanceNUMACell(id=0, cpuset=set(), memory=0)]
+        pci_requests = self._get_fake_requests(
+            numa_policy=fields.PCINUMAAffinityPolicy.PREFERRED)
+
+        self.assertTrue(self.pci_stats.support_requests(pci_requests, cells))
+
+    def test_support_requests_no_numa_info_pci_numa_policy_required(self):
+        # pci device with vendor_id 'v3' has numa_node=None.
+        # pci_numa_policy is 'required' so we can't use this device
+        cells = [objects.InstanceNUMACell(id=0, cpuset=set(), memory=0)]
+        pci_requests = self._get_fake_requests(vendor_ids=['v3'],
+            numa_policy=fields.PCINUMAAffinityPolicy.REQUIRED)
+
+        self.assertFalse(self.pci_stats.support_requests(pci_requests, cells))
 
     def test_consume_requests(self):
         devs = self.pci_stats.consume_requests(pci_requests)
@@ -166,21 +225,6 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
     def test_consume_requests_failed(self):
         self.assertIsNone(self.pci_stats.consume_requests(
                           pci_requests_multiple))
-
-    def test_support_requests_numa(self):
-        cells = [objects.InstanceNUMACell(id=0, cpuset=set(), memory=0),
-                 objects.InstanceNUMACell(id=1, cpuset=set(), memory=0)]
-        self.assertTrue(self.pci_stats.support_requests(pci_requests, cells))
-
-    def test_support_requests_numa_failed(self):
-        cells = [objects.InstanceNUMACell(id=0, cpuset=set(), memory=0)]
-        self.assertFalse(self.pci_stats.support_requests(pci_requests, cells))
-
-    def test_support_requests_no_numa_info(self):
-        cells = [objects.InstanceNUMACell(id=0, cpuset=set(), memory=0)]
-        pci_request = [objects.InstancePCIRequest(count=1,
-                    spec=[{'vendor_id': 'v3'}])]
-        self.assertTrue(self.pci_stats.support_requests(pci_request, cells))
 
     def test_consume_requests_numa(self):
         cells = [objects.InstanceNUMACell(id=0, cpuset=set(), memory=0),
@@ -202,6 +246,115 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         self.assertEqual(1, len(devs))
         self.assertEqual(set(['v3']),
                          set([dev.vendor_id for dev in devs]))
+
+    def _test_consume_requests_numa_policy(self, cell_ids, policy,
+            expected, vendor_id='v4'):
+        """Base test for 'consume_requests' function.
+
+        Create three devices with vendor_id of 'v4': 'pr0' in NUMA node 0,
+        'pr1' in NUMA node 1, 'pr_none' without NUMA affinity info. Attempt to
+        consume a PCI request with a single device with ``vendor_id`` using the
+        provided ``cell_ids`` and ``policy``. Compare result against
+        ``expected``.
+        """
+        self._add_fake_devs_with_numa()
+        cells = [objects.InstanceNUMACell(id=id, cpuset=set(), memory=0)
+                 for id in cell_ids]
+
+        pci_requests = self._get_fake_requests(vendor_ids=[vendor_id],
+            numa_policy=policy)
+        devs = self.pci_stats.consume_requests(pci_requests, cells)
+
+        if expected is None:
+            self.assertIsNone(devs)
+        else:
+            self.assertEqual(set(expected),
+                             set([dev.product_id for dev in devs]))
+
+    def test_consume_requests_numa_policy_required(self):
+        """Ensure REQUIRED policy will ensure NUMA affinity.
+
+        Policy is 'required' which means we must use a device with strict NUMA
+        affinity. Request a device from NUMA node 0, which contains such a
+        device, and ensure it's used.
+        """
+        self._test_consume_requests_numa_policy(
+            [0], fields.PCINUMAAffinityPolicy.REQUIRED, ['pr0'])
+
+    def test_consume_requests_numa_policy_required_fail(self):
+        """Ensure REQUIRED policy will *only* provide NUMA affinity.
+
+        Policy is 'required' which means we must use a device with strict NUMA
+        affinity. Request a device from NUMA node 999, which does not contain
+        any suitable devices, and ensure nothing is returned.
+        """
+        self._test_consume_requests_numa_policy(
+            [999], fields.PCINUMAAffinityPolicy.REQUIRED, None)
+
+    def test_consume_requests_numa_policy_legacy(self):
+        """Ensure LEGACY policy will ensure NUMA affinity if possible.
+
+        Policy is 'legacy' which means we must use a device with strict NUMA
+        affinity or no provided NUMA affinity. Request a device from NUMA node
+        0, which contains contains such a device, and ensure it's used.
+        """
+        self._test_consume_requests_numa_policy(
+            [0], fields.PCINUMAAffinityPolicy.LEGACY, ['pr0'])
+
+    def test_consume_requests_numa_policy_legacy_fallback(self):
+        """Ensure LEGACY policy will fallback to no NUMA affinity.
+
+        Policy is 'legacy' which means we must use a device with strict NUMA
+        affinity or no provided NUMA affinity. Request a device from NUMA node
+        999, which contains no such device, and ensure we fallback to the
+        device without any NUMA affinity.
+        """
+        self._test_consume_requests_numa_policy(
+            [999], fields.PCINUMAAffinityPolicy.LEGACY, ['pr_none'])
+
+    def test_consume_requests_numa_policy_legacy_fail(self):
+        """Ensure REQUIRED policy will *not* provide NUMA non-affinity.
+
+        Policy is 'legacy' which means we must use a device with strict NUMA
+        affinity or no provided NUMA affinity. Request a device with
+        ``vendor_id`` of ``v2``, which can only be found in NUMA node 1, from
+        NUMA node 0, and ensure nothing is returned.
+        """
+        self._test_consume_requests_numa_policy(
+            [0], fields.PCINUMAAffinityPolicy.LEGACY, None, vendor_id='v2')
+
+    def test_consume_requests_numa_pci_numa_policy_preferred(self):
+        """Ensure PREFERRED policy will ensure NUMA affinity if possible.
+
+        Policy is 'preferred' which means we must use a device with any level
+        of NUMA affinity. Request a device from NUMA node 0, which contains
+        contains an affined device, and ensure it's used.
+        """
+        self._test_consume_requests_numa_policy(
+            [0], fields.PCINUMAAffinityPolicy.PREFERRED, ['pr0'])
+
+    def test_consume_requests_numa_policy_preferred_fallback_a(self):
+        """Ensure PREFERRED policy will fallback to no NUMA affinity.
+
+        Policy is 'preferred' which means we must use a device with any level
+        of NUMA affinity. Request a device from NUMA node 999, which contains
+        no such device, and ensure we fallback to the device without any NUMA
+        affinity.
+        """
+        self._test_consume_requests_numa_policy(
+            [999], fields.PCINUMAAffinityPolicy.PREFERRED, ['pr_none'])
+
+    def test_consume_requests_numa_pci_numa_policy_fallback_b(self):
+        """Ensure PREFERRED policy will fallback to different NUMA affinity.
+
+        Policy is 'preferred' which means we must use a device with any level
+        of NUMA affinity. Request a device with ``vendor_id`` of ``v2``, which
+        can only be found in NUMA node 1, from NUMA node 0, and ensure we
+        fallback to this device.
+        """
+        self._test_consume_requests_numa_policy(
+            [0], fields.PCINUMAAffinityPolicy.PREFERRED, ['p2'],
+            vendor_id='v2')
 
     @mock.patch(
         'nova.pci.whitelist.Whitelist._parse_white_list_from_config')
@@ -289,7 +442,7 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
         self._create_pci_devices()
         self._assertPools()
 
-    def test_consume_reqeusts(self):
+    def test_consume_requests(self):
         self._create_pci_devices()
         pci_requests = [objects.InstancePCIRequest(count=1,
                             spec=[{'physical_network': 'physnet1'}]),

@@ -1,0 +1,17 @@
+---
+features:
+  - |
+    Added support for PCI device NUMA affinity policies. These allow you to
+    configure how strict your NUMA affinity should be on a per-device basis or,
+    more specifically, per device alias. These are configured as part of the
+    ``[pci] aliases`` configuration option.
+
+    There are three policies supported:
+
+    - ``required`` (must-have)
+    - ``legacy`` (must-have-if-available) (default)
+    - ``preferred`` (nice-to-have)
+
+    In all cases, strict NUMA affinity is provided if possible. The key
+    difference between the policies is how much NUMA affinity one is willing to
+    forsake before failing to schedule.
