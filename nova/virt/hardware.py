@@ -947,7 +947,7 @@ def _numa_get_pagesize_constraints(flavor, image_meta):
     :param flavor: a Flavor object to read extra specs from
     :param image_meta: nova.objects.ImageMeta object instance
 
-    :raises: MemoryPagesSizeInvalid if flavor extra spec or image
+    :raises: MemoryPageSizeInvalid if flavor extra spec or image
              metadata provides an invalid hugepage value
     :raises: MemoryPageSizeForbidden if flavor extra spec request
              conflicts with image metadata request
@@ -1220,7 +1220,7 @@ def numa_get_constraints(flavor, image_meta):
              nodes is less than 1 or not an integer
     :raises: exception.ImageNUMATopologyForbidden if an attempt is made
              to override flavor settings with image properties
-    :raises: exception.MemoryPagesSizeInvalid if flavor extra spec or
+    :raises: exception.MemoryPageSizeInvalid if flavor extra spec or
              image metadata provides an invalid hugepage value
     :raises: exception.MemoryPageSizeForbidden if flavor extra spec
              request conflicts with image metadata request
