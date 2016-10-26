@@ -240,7 +240,7 @@ class BuildRequest(API_BASE):
     id = Column(Integer, primary_key=True)
     instance_uuid = Column(String(36))
     project_id = Column(String(255), nullable=False)
-    instance = Column(Text)
+    instance = Column(MediumText())
     block_device_mappings = Column(MediumText())
     # TODO(alaski): Drop these from the db in Ocata
     # columns_to_drop = ['request_spec_id', 'user_id', 'display_name',

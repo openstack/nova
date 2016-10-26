@@ -462,6 +462,24 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
             build_requests.c.id == 2020).execute().first()
         self.assertEqual('fake_BDM', fake_build_req.block_device_mappings)
 
+    def _pre_upgrade_021(self, engine):
+        build_requests = db_utils.get_table(engine, 'build_requests')
+        fake_build_req = {'id': 2021,
+                          'project_id': 'fake_proj_id',
+                          'instance': '{"uuid": "foo", "name": "bar"}'}
+        build_requests.insert().execute(fake_build_req)
+
+    def _check_021(self, engine, data):
+        build_requests = db_utils.get_table(engine, 'build_requests')
+        if engine.name == 'mysql':
+            self.assertIsInstance(build_requests.c.block_device_mappings.type,
+                                  sqlalchemy.dialects.mysql.MEDIUMTEXT)
+
+        fake_build_req = build_requests.select(
+            build_requests.c.id == 2021).execute().first()
+        self.assertEqual('{"uuid": "foo", "name": "bar"}',
+                         fake_build_req.instance)
+
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
                                       test_base.DbTestCase,
