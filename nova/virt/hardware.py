@@ -1215,6 +1215,10 @@ def numa_get_constraints(flavor, image_meta):
              requested but dedicated CPU policy is not also requested
     :raises: exception.RealtimeMaskNotFoundOrInvalid if realtime is
              requested but no mask provided
+    :raises: exception.CPUThreadPolicyConfigurationInvalid if a CPU thread
+             policy conflicts with CPU allocation policy
+    :raises: exception.ImageCPUThreadPolicyForbidden if a CPU thread policy
+             specified in a flavor conflicts with one defined in image metadata
     :returns: objects.InstanceNUMATopology, or None
     """
     flavor_nodes, image_nodes = _get_flavor_image_meta(
