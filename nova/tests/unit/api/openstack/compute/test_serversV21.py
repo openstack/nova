@@ -3310,6 +3310,61 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create,
                           self.req, body=self.body)
 
+    @mock.patch('nova.virt.hardware.numa_get_constraints',
+                side_effect=exception.CPUThreadPolicyConfigurationInvalid())
+    def test_create_instance_raise_cpu_thread_policy_configuration_invalid(
+            self, mock_numa):
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
+                          self.req, body=self.body)
+
+    @mock.patch('nova.virt.hardware.numa_get_constraints',
+                side_effect=exception.ImageCPUPinningForbidden())
+    def test_create_instance_raise_image_cpu_pinning_forbidden(
+            self, mock_numa):
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
+                          self.req, body=self.body)
+
+    @mock.patch('nova.virt.hardware.numa_get_constraints',
+                side_effect=exception.ImageCPUThreadPolicyForbidden())
+    def test_create_instance_raise_image_cpu_thread_policy_forbidden(
+            self, mock_numa):
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
+                          self.req, body=self.body)
+
+    @mock.patch('nova.virt.hardware.numa_get_constraints',
+                side_effect=exception.MemoryPageSizeInvalid(pagesize='-1'))
+    def test_create_instance_raise_memory_page_size_invalid(self, mock_numa):
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
+                          self.req, body=self.body)
+
+    @mock.patch('nova.virt.hardware.numa_get_constraints',
+                side_effect=exception.MemoryPageSizeForbidden(pagesize='1',
+                                                              against='2'))
+    def test_create_instance_raise_memory_page_size_forbidden(self, mock_numa):
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
+                          self.req, body=self.body)
+
+    @mock.patch('nova.virt.hardware.numa_get_constraints',
+                side_effect=exception.RealtimeConfigurationInvalid())
+    def test_create_instance_raise_realtime_configuration_invalid(
+            self, mock_numa):
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
+                          self.req, body=self.body)
+
+    @mock.patch('nova.virt.hardware.numa_get_constraints',
+                side_effect=exception.RealtimeMaskNotFoundOrInvalid())
+    def test_create_instance_raise_realtime_mask_not_found_or_invalid(
+            self, mock_numa):
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
+                          self.req, body=self.body)
+
     @mock.patch.object(compute_api.API, 'create')
     def test_create_instance_invalid_personality(self, mock_create):
         codec = 'utf8'
