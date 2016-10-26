@@ -4,18 +4,18 @@
 #
 # Translators:
 # jaekwon.park <jaekwon.park@rockplace.co.kr>, 2014
-# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
-# SeYeon Lee <sy_lee@kr.ibm.com>, 2016. #zanata
+# Jongwon Lee <tothebinaryworld@gmail.com>, 2016. #zanata
+# Sungjin Kang <gang.sungjin@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev12\n"
+"Project-Id-Version: nova 13.1.3.dev12\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-19 04:50+0000\n"
+"POT-Creation-Date: 2016-10-18 10:31+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-03-22 09:56+0000\n"
-"Last-Translator: SeYeon Lee <sy_lee@kr.ibm.com>\n"
+"PO-Revision-Date: 2016-10-22 06:07+0000\n"
+"Last-Translator: Jongwon Lee <tothebinaryworld@gmail.com>\n"
 "Language: ko-KR\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
@@ -927,6 +927,10 @@ msgstr "%(uuid)s 인스턴스의 %(event)s 이벤트에서 Neutron이 실패를 
 msgid "Neutron error creating port on network %s"
 msgstr "%s 네트워크에서 포트를 생성하는 중 Neutron 오류 발생"
 
+msgid "No APIs were started. Check the enabled_apis config option."
+msgstr ""
+"어떤 API도 시작 되지 않았습니다. nabled_apis  구성 옵션을 확인해 보세요."
+
 #, python-format
 msgid "No compute node record for host %s"
 msgstr "%s 호스트의 컴퓨트 노드 레코드가 없음"
@@ -980,9 +984,6 @@ msgstr "Pool-set_name_label 실패: %s"
 #, python-format
 msgid "Pre live migration failed at %s"
 msgstr "사전 라이브 마이그레이션이 %s에서 실패함"
-
-msgid "Read/Write data failed"
-msgstr "데이터 읽기/쓰기 실패"
 
 #, python-format
 msgid "Requested VM Generation %s is not supported on this OS."
@@ -1046,9 +1047,6 @@ msgstr "%(method)s에 대한 호출이 오류를 리턴함: %(e)s."
 msgid "The call to %(method)s returned an error: %(e)s. args=%(args)r"
 msgstr "%(method)s 호출이 오류를 리턴했음: %(e)s. args=%(args)r"
 
-msgid "Transfer data failed"
-msgstr "데이터 전송 실패"
-
 #, python-format
 msgid "Unable to access floating IP %s"
 msgstr "Floating IP %s에 액세스할 수 없음"
@@ -1063,6 +1061,14 @@ msgstr "복구 디스크에 액세스할 수 없음"
 #, python-format
 msgid "Unable to attach volume to instance %s"
 msgstr "%s 인스턴스에 볼륨을 첨부할 수 없음"
+
+#, python-format
+msgid ""
+"Unable to call for a driver detach of volume %(vol_id)s due to the instance "
+"being registered to the remote host %(inst_host)s."
+msgstr ""
+"원격 호스트 %(inst_host)s에 등록되는 인스턴스 때문에 볼륨 %(vol_id)s에 대한 "
+"장치 분리가 호출 될 수 없습니다."
 
 #, python-format
 msgid "Unable to clear device ID for port '%s'"
@@ -1093,10 +1099,6 @@ msgstr "VBD에서 SR을 찾을 수 없음"
 
 msgid "Unable to find SR from VDI"
 msgstr "VDI에서 SR을 찾을 수 없음"
-
-#, python-format
-msgid "Unable to find a service record to update for %(binary)s on %(host)s"
-msgstr "%(host)s에서 %(binary)s의 업데이트를 위한 서비스 레코드를 찾을 수 없음"
 
 #, python-format
 msgid "Unable to find address %r"

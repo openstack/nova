@@ -3,17 +3,19 @@
 # This file is distributed under the same license as the nova project.
 #
 # Translators:
+# Ian Y. Choi <ianyrchoi@gmail.com>, 2016. #zanata
+# Jongwon Lee <tothebinaryworld@gmail.com>, 2016. #zanata
 # Sungjin Kang <gang.sungjin@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev12\n"
+"Project-Id-Version: nova 13.1.3.dev12\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-19 04:49+0000\n"
+"POT-Creation-Date: 2016-10-18 10:31+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-04-08 05:42+0000\n"
-"Last-Translator: SeYeon Lee <sy_lee@kr.ibm.com>\n"
+"PO-Revision-Date: 2016-10-25 11:38+0000\n"
+"Last-Translator: Ian Y. Choi <ianyrchoi@gmail.com>\n"
 "Language: ko-KR\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
@@ -74,6 +76,12 @@ msgstr "%s이(가) 이미 마운트되었음"
 #, python-format
 msgid "%s swap image was used by instance but no back files existing!"
 msgstr "인스턴스에서 %s 스왑 이미지가 사용되었지만 지원 파일이 없습니다!"
+
+#, python-format
+msgid "%s. ``enabled_apis`` includes bad values. Fix to remove this warning."
+msgstr ""
+"%s. ``enabled_apis``가 옳지 않은  값을 포함하고 있습니다.  이 경고가 발생하"
+"지 않도록 수정하세요."
 
 msgid ""
 "Adding the VIR_MIGRATE_NON_SHARED_INC flag to the block_migration_flag "
@@ -454,6 +462,10 @@ msgid "Failed to abort migration %s"
 msgstr "%s 마이그레이션을 중단하는 데 실패"
 
 #, python-format
+msgid "Failed to archive %(table)s: %(error)s"
+msgstr "저장하는데 실패함 %(table)s: %(error)s"
+
+#, python-format
 msgid "Failed to close augeas %s"
 msgstr "Augeas %s을(를) 닫지 못했음"
 
@@ -522,6 +534,14 @@ msgstr "%(ext_name)s:%(exc)s 확장을 로드하는 데 실패"
 
 msgid "Failed to power off instance"
 msgstr "인스턴스 전원 끄기 실패"
+
+#, python-format
+msgid ""
+"Failed to remove deploy parameters from node %(node)s when unprovisioning "
+"the instance %(instance)s: %(reason)s"
+msgstr ""
+"인스턴스 %(instance)s 해제 시 노드 %(node)s 로부터의 디플로이 매개변수 삭제"
+"에 실패함: %(reason)s"
 
 msgid "Failed to resume instance"
 msgstr "인스턴스를 재개하지 못했음"
@@ -620,6 +640,14 @@ msgstr ""
 "호스트 %(hostname)s에 예상 데이터베이스보다 디스크 공간이 많음(%(physical)s "
 "GB > %(database)s GB)"
 
+#, python-format
+msgid ""
+"Host '%(host)s' has a metadata key '%(key)s' that is not present in the "
+"image metadata."
+msgstr ""
+" 호스트 '%(host)s'가   이미지 메타데이터에 존재하지 않은 메타데이터 키 "
+"'%(key)s'를 갖고 있습니다."
+
 msgid ""
 "Host field should not be set on the instance until resources have been "
 "claimed."
@@ -671,6 +699,10 @@ msgstr ""
 "%(err)s"
 
 #, python-format
+msgid "Ignoring EndpointNotFound for volume %(volume_id)s: %(exc)s"
+msgstr "볼륨 %(volume_id)s에 대한 EndpointNotFound 오류를 무시함: %(exc)s"
+
+#, python-format
 msgid "Ignoring Volume Error on vol %(vol_id)s during delete %(exc)s"
 msgstr "%(exc)s 삭제 중에 %(vol_id)s 볼륨에서 발생한 볼륨 오류 무시"
 
@@ -718,6 +750,14 @@ msgstr "제공된 장치 이름 무시: %(suggested_dev)s"
 #, python-format
 msgid "Ignoring the invalid elements of the option %(name)s: %(options)s"
 msgstr "%(name)s: %(options)s 옵션의 올바르지 않은 요소 무시"
+
+#, python-format
+msgid "Ignoring unknown cinder exception for volume %(volume_id)s: %(exc)s"
+msgstr "볼륨 %(volume_id)s에 대한 알려지지 않은 cinder 예외를 무시함: %(exc)s"
+
+#, python-format
+msgid "Ignoring unknown exception for volume %(volume_id)s: %(exc)s"
+msgstr "볼륨 %(volume_id)s에 대한 알려지지 않은 예외를 무시함:   %(exc)s"
 
 #, python-format
 msgid "Ignoring unknown libvirt live migration flag '%(flag)s'"
@@ -1763,6 +1803,14 @@ msgstr "도메인 id: %(uuid)s에서 vcpu 수를 가져올 수 없습니다. 예
 #, python-format
 msgid "cpu_arch not defined for node '%s'"
 msgstr "'%s' 노드의 cpu_arch가 정의되지 않음"
+
+#, python-format
+msgid ""
+"cryptsetup status %(dev_name) exited abnormally (status %(exit_code)s): "
+"%(err)s"
+msgstr ""
+"cryptsetup 상태가 비정상적으로 종료 되었습니다 %(dev_name) exited abnormally "
+"((status %(exit_code)s)): %(err)s"
 
 msgid "datastore_regex is ignored when PBM is enabled"
 msgstr "PBM을 사용하면  datastore_regex가 무시됨"
