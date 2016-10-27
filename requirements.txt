@@ -35,7 +35,7 @@ setuptools!=24.0.0,>=16.0 # PSF/ZPL
 websockify>=0.8.0 # LGPLv3
 oslo.cache>=1.5.0 # Apache-2.0
 oslo.concurrency>=3.8.0 # Apache-2.0
-oslo.config>=3.14.0 # Apache-2.0
+oslo.config!=3.18.0,>=3.14.0 # Apache-2.0
 oslo.context>=2.9.0 # Apache-2.0
 oslo.log>=3.11.0 # Apache-2.0
 oslo.reports>=0.6.0 # Apache-2.0
