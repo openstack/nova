@@ -12,9 +12,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
+"Project-Id-Version: nova 14.0.0.0rc2.dev504\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-25 06:15+0000\n"
+"POT-Creation-Date: 2016-10-26 19:52+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -163,10 +163,6 @@ msgstr ""
 
 msgid "Environment variable 'NETWORK_ID' must be set."
 msgstr "La variable de entorno 'NETWORK_ID' debe ser establecida."
-
-#, python-format
-msgid "Error defining a domain with XML: %s"
-msgstr "Error definiendo el dominio con XML: %s"
 
 #, python-format
 msgid "Error defining a secret with XML: %s"
@@ -386,10 +382,6 @@ msgid "Failed to deallocate networks"
 msgstr "Fallo al desasociar redes"
 
 #, python-format
-msgid "Failed to decrypt %(image_location)s to %(image_path)s"
-msgstr "No se ha podido descifrar %(image_location)s en %(image_path)s"
-
-#, python-format
 msgid "Failed to destroy instance: %s"
 msgstr "No se ha podido destruir instancia: %s"
 
@@ -400,10 +392,6 @@ msgstr "Error al separar %(device_name)s. Excepción: %(exc)s"
 #, python-format
 msgid "Failed to detach volume %(volume_id)s from %(mp)s"
 msgstr "No se ha podido desconectar el volumen %(volume_id)s de %(mp)s"
-
-#, python-format
-msgid "Failed to download %(image_location)s to %(image_path)s"
-msgstr "No se ha podido descargar %(image_location)s en %(image_path)s"
 
 msgid "Failed to fetch glance image"
 msgstr "No se ha podido captar la imagen glance"
@@ -545,10 +533,6 @@ msgstr "Error al desmontar el sistema de archivos de contenedor"
 msgid "Failed to unpause instance"
 msgstr "Fallo al reanudar la instancia"
 
-#, python-format
-msgid "Failed to untar %(image_location)s to %(image_path)s"
-msgstr "No se ha podido ejecutar untar %(image_location)s en %(image_path)s"
-
 msgid "Failed to update usages bulk deallocating floating IP"
 msgstr "Fallo al actualizar uso de desasignación masiva de IP fotante"
 
@@ -569,10 +553,6 @@ msgstr ""
 
 msgid "Failed to update usages deallocating server group"
 msgstr "Error al actualizar los usos desasignando el grupo de servidor"
-
-#, python-format
-msgid "Failed to upload %(image_location)s to %(image_path)s"
-msgstr "No se ha podido subir %(image_location)s a %(image_path)s "
 
 msgid "Failed to write configuration file"
 msgstr "No se ha podido grabar archivo de configuración"
@@ -749,9 +729,6 @@ msgstr ""
 msgid "Periodic task failed to offload instance."
 msgstr "Tarea periódica falló al descargar instancia."
 
-msgid "Plugin config_file get_val failed"
-msgstr "Ha fallado desconexión config_file get_val "
-
 #, python-format
 msgid "Pool-Join failed: %s"
 msgstr "Fallo en la integración al conjunto: %s"
@@ -767,9 +744,6 @@ msgstr "Fallo al establecer set_name_label en conjunto: %s"
 #, python-format
 msgid "Pre live migration failed at %s"
 msgstr "Previo a migración en vivo falló en %s"
-
-msgid "Read/Write data failed"
-msgstr "Fallo en la Lectura/Escritura de datos"
 
 #, python-format
 msgid "Requested VM Generation %s, but provided VHD instead of VHDX."
@@ -829,9 +803,6 @@ msgstr "La llamada a %(method)s ha devuelto un error: %(e)s."
 #, python-format
 msgid "The call to %(method)s returned an error: %(e)s. args=%(args)r"
 msgstr "La llamada a %(method)s ha devuelto un error: %(e)s. args=%(args)r"
-
-msgid "Transfer data failed"
-msgstr "Ha fallado la transferencia de datos"
 
 #, python-format
 msgid "Unable to access floating IP %s"

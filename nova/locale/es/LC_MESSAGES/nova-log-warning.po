@@ -9,9 +9,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
+"Project-Id-Version: nova 14.0.0.0rc2.dev504\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-25 06:14+0000\n"
+"POT-Creation-Date: 2016-10-26 19:51+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -754,15 +754,6 @@ msgstr ""
 msgid "Not deleting key %s"
 msgstr "Sin eliminar la clave %s"
 
-msgid ""
-"Old property name \"hw_watchdog_action\" is now deprecated and will be "
-"removed in the next release. Use updated property name \"hw:watchdog_action"
-"\" instead"
-msgstr ""
-"Ahora se prohíbe el uso del nombre de propiedad antiguo \"hw_watchdog_action"
-"\" y será eliminado en la siguiente versión. Utilizar en cambio nombre de "
-"propiedad actualizado \"hw:watchdog_action\" "
-
 msgid "Paused instance shutdown by itself. Calling the stop API."
 msgstr ""
 "La instancia pausada se ha apagado a si misma. Llamando la API de detención."
@@ -885,16 +876,6 @@ msgstr ""
 msgid "Root disk file creation failed - %s"
 msgstr "Fallo al crear el archivo del disco raíz - %s"
 
-#, python-format
-msgid ""
-"Running Nova with a VMware vCenter version less than %(version)s is "
-"deprecated. The required minimum version of vCenter will be raised to "
-"%(version)s in the 13.0.0 release."
-msgstr ""
-"Se desaprueba la ejecución de Nova con una versión VMware vCenter inferior a "
-"%(version)s. La versión mínima requerida de vCenter será aumentada a "
-"%(version)s en el lanzamiento 13.0.0."
-
 msgid ""
 "Running libvirt-lxc without user namespaces is dangerous. Containers spawned "
 "by Nova will be run as the host's root user. It is highly suggested that "
@@ -975,13 +956,6 @@ msgid ""
 msgstr ""
 "Tratando como 0 el valor negativo de configuración (%(retries)s) para "
 "'block_device_retries' ."
-
-#, python-format
-msgid ""
-"Treating negative config value (%(retries)s) for 'glance.num_retries' as 0."
-msgstr ""
-"Tratando como 0 el valor negativo de configuración (%(retries)s) para "
-"'glance.num_retries' ."
 
 #, python-format
 msgid ""

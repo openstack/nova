@@ -8,16 +8,17 @@
 # Sungjin Kang <potopro@gmail.com>, 2013
 # Sungjin Kang <potopro@gmail.com>, 2013
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
+# Jongwon Lee <tothebinaryworld@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
+"Project-Id-Version: nova 14.0.0.0rc2.dev504\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-25 06:14+0000\n"
+"POT-Creation-Date: 2016-10-26 19:51+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-03-22 06:36+0000\n"
-"Last-Translator: SeYeon Lee <sy_lee@kr.ibm.com>\n"
+"PO-Revision-Date: 2016-10-23 03:27+0000\n"
+"Last-Translator: Jongwon Lee <tothebinaryworld@gmail.com>\n"
 "Language: ko-KR\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
@@ -79,10 +80,6 @@ msgstr "%(field)s은(는) 업데이트의 일부여서는 안 됩니다. "
 #, python-format
 msgid "%(fieldname)s missing field type"
 msgstr "%(fieldname)s에 필드 유형이 누락됨"
-
-#, python-format
-msgid "%(host)s:%(port)s: Target closed"
-msgstr "%(host)s:%(port)s: 대상 처리완료됨"
 
 #, python-format
 msgid "%(key)s is not a valid quota key. Valid options are: %(options)s."
@@ -334,6 +331,9 @@ msgstr "기존 값을 겹쳐쓰려 했습니다."
 msgid "Attribute not supported: %(attr)s"
 msgstr "지원하지 않는 속성입니다: %(attr)s"
 
+msgid "Bad Request - Invalid Parameters"
+msgstr "잘못 된 요청 - 유효하지 않은 매개변수"
+
 #, python-format
 msgid "Bad mac for to_global_ipv6: %s"
 msgstr "to_global_ipv6에 대한 잘못된 MAC: %s"
@@ -576,10 +576,6 @@ msgstr "VDI를 읽기/쓰기할 SR을 찾을 수 없습니다. "
 
 msgid "Cannot find image for rebuild"
 msgstr "다시 빌드할 이미지를 찾을 수 없음"
-
-#, python-format
-msgid "Cannot load scheduler driver from configuration %(conf)s."
-msgstr "%(conf)s 구성에서 스케줄러 드라이버를 로드할 수 없습니다."
 
 msgid "Cannot mount Scality SOFS, check syslog for errors"
 msgstr "스케일 SOFS를 마운트할 수 없음. syslog에서 오류 확인"
@@ -840,10 +836,6 @@ msgid ""
 msgstr ""
 "vfat 구성 드라이브를 마운트할 수 없습니다. %(operation)s에 실패했습니다. 오"
 "류: %(error)s"
-
-#, python-format
-msgid "Could not read %s. Re-running with sudo"
-msgstr "%s을(를) 읽을 수 없음. sudo로 다시 실행합니다. "
 
 #, python-format
 msgid "Could not upload image %(image_id)s"
@@ -1132,18 +1124,6 @@ msgid "Failed to create vif %s"
 msgstr "vif %s을(를) 생성하는 데 실패"
 
 #, python-format
-msgid "Failed to decrypt image file %(image_file)s: %(err)s"
-msgstr "%(image_file)s 이미지 파일을 복호화하지 못했음: %(err)s"
-
-#, python-format
-msgid "Failed to decrypt initialization vector: %s"
-msgstr "초기화 벡터를 복호화하지 못했음: %s"
-
-#, python-format
-msgid "Failed to decrypt private key: %s"
-msgstr "개인 키를 복호화하지 못했음: %s"
-
-#, python-format
 msgid "Failed to decrypt text: %(reason)s"
 msgstr "텍스트를 복호화하지 못했습니다: %(reason)s"
 
@@ -1251,6 +1231,10 @@ msgstr "인스턴스 종료 실패: %(reason)s"
 #, python-format
 msgid "Failed to unplug vif %s"
 msgstr "vif %s의 플러그를 해제하는 데 실패"
+
+#, python-format
+msgid "Failed to unplug virtual interface: %(reason)s"
+msgstr "가상 인터페이스 해제 실패: %(reason)s"
 
 msgid "Failure prepping block device."
 msgstr "블록 디바이스 준비 실패"
@@ -1442,6 +1426,9 @@ msgstr "%(host)s 호스트의 Floating IP를 찾을 수 없습니다."
 msgid "Floating IP pool not found."
 msgstr "Floating IP 풀을 찾을 수 없습니다."
 
+msgid "Forbidden"
+msgstr "허용 되지 않은"
+
 msgid ""
 "Forbidden to exceed flavor value of number of serial ports passed in image "
 "meta."
@@ -1470,14 +1457,6 @@ msgstr "name_label %s에 대한 고유하지 않은 네트워크 발견"
 #, python-format
 msgid "Free %(type)s %(free).02f %(unit)s < requested %(requested)d %(unit)s"
 msgstr "여유 %(type)s %(free).02f %(unit)s < 요청된 %(requested)d %(unit)s"
-
-#, python-format
-msgid "Glance image %(image_id)s is in unknown state - %(state)s"
-msgstr "글랜스 이미지 %(image_id)s이(가) 알 수 없는 상태에 있음 - %(state)s"
-
-#, python-format
-msgid "Glance image %s is in killed state"
-msgstr "글랜스 이미지 %s이(가) 강제 종료 상태에 있음"
 
 #, python-format
 msgid "Group not valid. Reason: %(reason)s"
@@ -1571,12 +1550,6 @@ msgstr "이미지 디스크 크기가 요청된 디스크 크기보다 큼"
 
 msgid "Image is not raw format"
 msgstr "이미지가 원시 형식이 아님"
-
-msgid "Image metadata key cannot be blank"
-msgstr "이미지 메타데이터 키는 공백일 수 없음"
-
-msgid "Image metadata key too long"
-msgstr "이미지 메타데이터 키가 너무 김"
 
 msgid "Image metadata limit exceeded"
 msgstr "이미지 메타데이터 한계 초과"
@@ -1966,9 +1939,6 @@ msgstr "올바르지 않은 이미지 형식 '%(format)s'"
 #, python-format
 msgid "Invalid image href %(image_href)s."
 msgstr "올바르지 않은 이미지 href %(image_href)s."
-
-msgid "Invalid image metadata"
-msgstr "올바르지 않은 이미지 메타데이터"
 
 #, python-format
 msgid "Invalid inclusion expression %r"
@@ -2897,9 +2867,6 @@ msgstr ""
 #, python-format
 msgid "Physical network is missing for network %(network_uuid)s"
 msgstr "%(network_uuid)s 네트워크의 실제 네트워크가 누락됨"
-
-msgid "Please re-run nova-manage as root."
-msgstr "루트로 nova-manage를 다시 실행하십시오."
 
 msgid "Please specify either fixed_range or uuid"
 msgstr "고정 범위 또는 UUID를 지정하십시오. "
@@ -4045,9 +4012,6 @@ msgstr "인식되지 않는 read_deleted 값 '%s'"
 msgid "Unrecognized value '%s' for CONF.running_deleted_instance_action"
 msgstr "CONF.running_deleted_instance_action에 대한 인식되지 않는 값 '%s'"
 
-msgid "Unsafe filenames in image"
-msgstr "이미지에 안전하지 않은 파일 이름"
-
 #, python-format
 msgid "Unshelve attempted but the image %s cannot be found."
 msgstr "언쉘브를 시도했으나 %s 이미지를 찾을 수 없습니다."
@@ -4282,30 +4246,6 @@ msgstr "rbd 이미지를 사용하려면 images_rbd_pool 플래그를 지정해�
 msgid "You should specify images_volume_group flag to use LVM images."
 msgstr "LVM 이미지를 사용하려면 images_volume_group 플래그를 지정해야 합니다."
 
-msgid ""
-"Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag or "
-"your destination node does not support retrieving listen addresses.  In "
-"order for live migration to work properly you must either disable serial "
-"console or upgrade your libvirt version."
-msgstr ""
-"libvirt 버전이 VIR_DOMAIN_XML_MIGRATABLE 플래그를 지원하지 않거나 대상 노드"
-"가 청취 주소 검색을 지원하지 않습니다. 라이브 마이그레이션이제대로 작동하려"
-"면 직렬 콘솔을 사용 안함으로 설정하거나 libvirt 버전을 업그레이드해야 합니"
-"다. "
-
-msgid ""
-"Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag or "
-"your destination node does not support retrieving listen addresses.  In "
-"order for live migration to work properly, you must configure the graphics "
-"(VNC and/or SPICE) listen addresses to be either the catch-all address "
-"(0.0.0.0 or ::) or the local address (127.0.0.1 or ::1)."
-msgstr ""
-"사용하는 libvirt 버전에서 VIR_DOMAIN_XML_MIGRATABLE 플래그를 지원하지 않거나 "
-"사용하는 대상 노드에서 청취 주소 검색을 지원하지 않습니다. 실시간 마이그레이"
-"션이 제대로 작동하려면 그래픽(VNC 및/또는 SPICE) 청취 주소를 catch-all 주소"
-"(0.0.0.0 또는 ::) 또는 로컬 주소(127.0.0.1 또는 ::1)가 되도록 구성해야 합니"
-"다."
-
 msgid "Zero fixed IPs could be found."
 msgstr "0개의 Fixed IP를 찾을 수 있습니다. "
 
@@ -4406,17 +4346,8 @@ msgstr "ID"
 msgid "id cannot contain leading and/or trailing whitespace(s)"
 msgstr "id에는 선행 및/또는 후행 공백이 포함될 수 없음"
 
-msgid "image"
-msgstr "이미지"
-
 msgid "image already mounted"
 msgstr "이미지가 이미 마운트되었음"
-
-msgid "index"
-msgstr "인덱스"
-
-msgid "instance"
-msgstr "인스턴스"
 
 #, python-format
 msgid "instance %s is not running"
@@ -4448,17 +4379,11 @@ msgstr "올바르지 않은 %(property)s %(attr)s"
 msgid "is_public must be a boolean"
 msgstr "is_public은 부울이어야 함"
 
-msgid "kernel"
-msgstr "커널"
-
 msgid "keymgr.fixed_key not defined"
 msgstr "keymgr.fixed_key가 정의되지 않음"
 
 msgid "l3driver call to add floating IP failed"
 msgstr "Floating IP를 추가하기 위한 l3driver 호출에 실패"
-
-msgid "launched"
-msgstr "시작됨"
 
 msgid "ldap not installed"
 msgstr "ldap가 설치되지 않음"
@@ -4470,9 +4395,6 @@ msgstr "libguestfs가 설치되었지만 사용할 수 없음(%s)"
 #, python-format
 msgid "libguestfs is not installed (%s)"
 msgstr "libguestfs가 설치되지 않음(%s)"
-
-msgid "libvirt error while requesting blockjob info."
-msgstr "블록 작업 정보를 요청하는 중에 libvirt 오류 발생."
 
 #, python-format
 msgid "marker [%s] not found"
@@ -4515,9 +4437,6 @@ msgstr "%s 볼륨에 사용 가능한 상위 스냅샷이 없음"
 #, python-format
 msgid "no write permission on storage pool %s"
 msgstr "스토리지 풀 %s에 쓰기 권한이 없음"
-
-msgid "node"
-msgstr "노드"
 
 #, python-format
 msgid "not able to execute ssh command: %s"
@@ -4576,9 +4495,6 @@ msgstr "qemu-img가 %(path)s에서 실행하는 데 실패 : %(exp)s"
 msgid "qemu-nbd error: %s"
 msgstr "qemu-nbd 오류: %s"
 
-msgid "ramdisk"
-msgstr "램디스크"
-
 msgid "rbd python libraries not found"
 msgstr "rbd python 라이브러리를 찾을 수 없음"
 
@@ -4615,26 +4531,14 @@ msgstr "create_info에 snapshot_id가 필요함"
 msgid "start address"
 msgstr "시작 주소"
 
-msgid "state"
-msgstr "상태"
-
-msgid "sudo failed, continuing as if nothing happened"
-msgstr "sudo에 실패, 무시하고 계속합니다. "
-
 msgid "token not provided"
 msgstr "토큰이 제공되지 않음"
 
 msgid "too many body keys"
 msgstr "본문 키가 너무 많음"
 
-msgid "type"
-msgstr "type"
-
 msgid "unpause not supported for vmwareapi"
 msgstr "vmwareapi에 대한 일시정지 해제는 지원되지 않음"
-
-msgid "user"
-msgstr "user"
 
 msgid "uuid"
 msgstr "uuid"

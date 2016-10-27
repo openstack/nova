@@ -13,13 +13,13 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
+"Project-Id-Version: nova 14.0.0.0rc2.dev504\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-25 06:14+0000\n"
+"POT-Creation-Date: 2016-10-26 19:51+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-06-03 01:34+0000\n"
+"PO-Revision-Date: 2016-09-26 12:51+0000\n"
 "Last-Translator: Andreas Jaeger <jaegerandi@gmail.com>\n"
 "Language: de\n"
 "Language-Team: German\n"
@@ -83,10 +83,6 @@ msgstr "%(field)s sollte nicht Teil der Aktualisierung sein."
 #, python-format
 msgid "%(fieldname)s missing field type"
 msgstr "%(fieldname)s fehlendes Feld Typ"
-
-#, python-format
-msgid "%(host)s:%(port)s: Target closed"
-msgstr "%(host)s:%(port)s: Ziel geschlossen"
 
 #, python-format
 msgid "%(key)s is not a valid quota key. Valid options are: %(options)s."
@@ -349,6 +345,9 @@ msgstr "Versuchte Überschreibung eines vorhandenen Wertes."
 msgid "Attribute not supported: %(attr)s"
 msgstr "Attribut nicht unterstützt: %(attr)s"
 
+msgid "Bad Request - Invalid Parameters"
+msgstr "Fehlerhafte Anfrage - Ungültige Parameter"
+
 #, python-format
 msgid "Bad mac for to_global_ipv6: %s"
 msgstr "Falsche MAC-Adresse für 'to_global_ipv6': %s"
@@ -501,6 +500,33 @@ msgstr "CPU-Nummer %(cpuset)s ist keinem Knoten zugeordnet"
 msgid "CPU pinning is not supported by the host: %(reason)s"
 msgstr "CPU pinning wird nicht unterstützt vom Host: %(reason)s"
 
+#, python-format
+msgid "CPU set to pin %(requested)s must be a subset of free CPU set %(free)s"
+msgstr ""
+"CPU Set zu pin %(requested)s muss eine Teilmenge freier CPU Sets %(free)s "
+"sein"
+
+#, python-format
+msgid ""
+"CPU set to pin %(requested)s must be a subset of known CPU set %(cpuset)s"
+msgstr ""
+"CPU Set zu pin %(requested)s muss eine Teilmenge bekannter CPU Sets "
+"%(cpuset)s sein"
+
+#, python-format
+msgid ""
+"CPU set to unpin %(requested)s must be a subset of known CPU set %(cpuset)s"
+msgstr ""
+"CPU Set zu unpin %(requested)s muss eine Teilmenge bekannter CPU Sets "
+"%(cpuset)s sein"
+
+#, python-format
+msgid ""
+"CPU set to unpin %(requested)s must be a subset of pinned CPU set %(pinned)s"
+msgstr ""
+"CPU Set zu unpin %(requested)s muss eine Teilmenge der bereits gepinnten CPU "
+"Sets %(pinned)s sein"
+
 msgid "Can not add access to a public flavor."
 msgstr "Kann keinen Zugriff auf eine öffentliche Version herstellen. "
 
@@ -611,12 +637,6 @@ msgstr "SR zum Lesen/Schreiben von VDI kann nicht gefunden werden."
 
 msgid "Cannot find image for rebuild"
 msgstr "Image für Wiederherstellung kann nicht gefunden werden"
-
-#, python-format
-msgid "Cannot load scheduler driver from configuration %(conf)s."
-msgstr ""
-"Der Schedulertreiber kann nicht aus der Konfiguration %(conf)s geladen "
-"werden."
 
 msgid "Cannot mount Scality SOFS, check syslog for errors"
 msgstr "Scality-SoFS kann nicht angehängt werden. Syslog auf Fehler überprüfen"
@@ -898,10 +918,6 @@ msgstr ""
 "fehlgeschlagen. Fehler: %(error)s"
 
 #, python-format
-msgid "Could not read %s. Re-running with sudo"
-msgstr "%s konnte nicht gelesen werden. Wiederholte Ausführung mit sudo"
-
-#, python-format
 msgid "Could not upload image %(image_id)s"
 msgstr "Abbild %(image_id)s konnte nicht hochgeladen werden"
 
@@ -955,6 +971,10 @@ msgstr "Vorhandenen VLAN mit ID %(vlan)d gefunden"
 #, python-format
 msgid "Device '%(device)s' not found."
 msgstr "Das Gerät '%(device)s' wurde nicht gefunden."
+
+#, python-format
+msgid "Device detach failed for %(device)s: %(reason)s"
+msgstr "Abhängen des Geräts fehlgeschlagen für %(device)s: %(reason)s"
 
 #, python-format
 msgid ""
@@ -1197,18 +1217,6 @@ msgid "Failed to create vif %s"
 msgstr "Vif %s konnte nicht erstellt werden."
 
 #, python-format
-msgid "Failed to decrypt image file %(image_file)s: %(err)s"
-msgstr "Fehler beim Entschlüsseln von Imagedatei %(image_file)s: %(err)s"
-
-#, python-format
-msgid "Failed to decrypt initialization vector: %s"
-msgstr "Fehler beim Entschlüsseln von Initialisierungsvektor: %s"
-
-#, python-format
-msgid "Failed to decrypt private key: %s"
-msgstr "Fehler beim Entschlüsseln von privatem Schlüssel: %s"
-
-#, python-format
 msgid "Failed to decrypt text: %(reason)s"
 msgstr "Fehler beim Entschlüsseln des Textes %(reason)s"
 
@@ -1327,6 +1335,10 @@ msgstr "Instanz konnte nicht beendet werden: %(reason)s"
 #, python-format
 msgid "Failed to unplug vif %s"
 msgstr "Vif %s konnte nicht entfernt werden."
+
+#, python-format
+msgid "Failed to unplug virtual interface: %(reason)s"
+msgstr "Virtuelle Schnittstelle konnte nicht entfernt werden: %(reason)s"
 
 msgid "Failure prepping block device."
 msgstr "Fehler beim Vorbereiten des Block-Gerätes."
@@ -1521,6 +1533,9 @@ msgstr "Floating IP für Host %(host)s nicht gefunden."
 msgid "Floating IP pool not found."
 msgstr "Pool mit Floating IPs nicht gefunden."
 
+msgid "Forbidden"
+msgstr "Verboten"
+
 msgid ""
 "Forbidden to exceed flavor value of number of serial ports passed in image "
 "meta."
@@ -1551,14 +1566,6 @@ msgstr "Nicht eindeutiges Netz für name_label %s gefunden"
 msgid "Free %(type)s %(free).02f %(unit)s < requested %(requested)d %(unit)s"
 msgstr ""
 "Frei %(type)s %(free).02f %(unit)s < angefordert %(requested)d %(unit)s"
-
-#, python-format
-msgid "Glance image %(image_id)s is in unknown state - %(state)s"
-msgstr "Glance-Image '%(image_id)s' ist in unbekanntem Status - %(state)s"
-
-#, python-format
-msgid "Glance image %s is in killed state"
-msgstr "Glance-Image '%s' ist im Status 'killed'"
 
 #, python-format
 msgid "Group not valid. Reason: %(reason)s"
@@ -1654,12 +1661,6 @@ msgstr ""
 
 msgid "Image is not raw format"
 msgstr "Abbild ist kein Rohformat"
-
-msgid "Image metadata key cannot be blank"
-msgstr "Imagemetadatenschlüssel muss angegeben werden"
-
-msgid "Image metadata key too long"
-msgstr "Imagemetadatenschlüssel zu lang"
 
 msgid "Image metadata limit exceeded"
 msgstr "Grenzwert für Imagemetadaten überschritten"
@@ -2016,6 +2017,9 @@ msgstr "Ungültiger Konsolentyp %(console_type)s"
 msgid "Invalid content type %(content_type)s."
 msgstr "Ungültiger Inhaltstyp %(content_type)s."
 
+msgid "Invalid data supplied to HashRing.get_hosts."
+msgstr "Ungültige Daten für HashRing.get_hosts angegeben."
+
 #, python-format
 msgid "Invalid datetime string: %(reason)s"
 msgstr "Falsche Datumszeit-Zeichenkette: %(reason)s"
@@ -2051,6 +2055,9 @@ msgstr "Ungültige feste IP-Adresse %s in der Anforderung"
 msgid "Invalid floating IP %s in request"
 msgstr "Ungültige dynamische IP-Adresse %s in Anforderung"
 
+msgid "Invalid hosts supplied when building HashRing."
+msgstr "Ungültige Hosts beim Erstellen von HashRing angegeben."
+
 #, python-format
 msgid "Invalid id: %(instance_id)s (expecting \"i-...\")"
 msgstr "Ungültige Kennung: %(instance_id)s (\"i-...\" wird erwartet)"
@@ -2066,9 +2073,6 @@ msgstr "Ungültiges Abbild-Format '%(format)s'"
 #, python-format
 msgid "Invalid image href %(image_href)s."
 msgstr "Ungültiger Abbild-Hyperlink %(image_href)s."
-
-msgid "Invalid image metadata"
-msgstr "Ungültige Abbildmetadaten"
 
 #, python-format
 msgid "Invalid image metadata. Error: %s"
@@ -2179,6 +2183,9 @@ msgstr "Ungültige Startzeit. Die Startzeit darf nicht nach der Endzeit liegen."
 msgid "Invalid state of instance files on shared storage"
 msgstr "Ungültiger Status der Instanzdateien im gemeinsam genutzten Speicher"
 
+msgid "Invalid status value"
+msgstr "Ungültiger Status Wert"
+
 msgid "Invalid target_lun"
 msgstr "Ungültige target_lun"
 
@@ -2244,6 +2251,15 @@ msgid ""
 msgstr ""
 "Ironic-Knoten %(id)s konnte nicht überprüft werden. (Implementieren: "
 "%(deploy)s, Netzstrom: '%(power)s')"
+
+#, python-format
+msgid ""
+"Ironic node: %(id)s virtual to physical interface count  mismatch (Vif "
+"count: %(vif_count)d, Pif count: %(pif_count)d)"
+msgstr ""
+"Ironic-Knoten: %(id)s - Abweichung der Anzahl für virtuelle und physische "
+"Schnittstelle (Anzahl für virtuelle Schnittstelle: %(vif_count)d, Anzahl für "
+"physische Schnittstelle: %(pif_count)d)"
 
 msgid "Is the appropriate service running?"
 msgstr "Ist der entsprechende Dienst aktiv?"
@@ -2343,6 +2359,10 @@ msgid ""
 msgstr ""
 "Die Livemigration mit API v2.25 ist erst verfügbar, wenn das Mitaka-Upgrade "
 "vollständig abgeschlossen ist."
+
+#, python-format
+msgid "Malformed JSON: %(error)s"
+msgstr "Fehlerhaftes JSON: %(error)s"
 
 #, python-format
 msgid "Malformed message body: %(reason)s"
@@ -3029,9 +3049,6 @@ msgstr ""
 #, python-format
 msgid "Physical network is missing for network %(network_uuid)s"
 msgstr "Physisches Netz für Netz %(network_uuid)s fehlt"
-
-msgid "Please re-run nova-manage as root."
-msgstr "Führen Sie 'nova-manage' erneut als Root aus."
 
 msgid "Please specify either fixed_range or uuid"
 msgstr "Geben Sie entweder fixed_range oder uuid an"
@@ -4201,6 +4218,10 @@ msgid "Unknown argument: port"
 msgstr "Unbekanntes Argument: Port"
 
 #, python-format
+msgid "Unknown auth type: %s"
+msgstr "Unbekannter Authentifizierungstyp: %s"
+
+#, python-format
 msgid "Unknown chain: %r"
 msgstr "Unbekannte Kette: %r"
 
@@ -4245,9 +4266,6 @@ msgstr "Nicht erkannter read_deleted-Wert '%s'"
 #, python-format
 msgid "Unrecognized value '%s' for CONF.running_deleted_instance_action"
 msgstr "Nicht erkannter Wert '%s' für 'CONF.running_deleted_instance_action'"
-
-msgid "Unsafe filenames in image"
-msgstr "Unsichere Dateinamen im Abbild"
 
 #, python-format
 msgid "Unshelve attempted but the image %s cannot be found."
@@ -4339,6 +4357,10 @@ msgstr ""
 #, python-format
 msgid "Value must be >= 0 for field %s"
 msgstr "Wert muß >= 0 sein für Feld %s"
+
+#, python-format
+msgid "Value must match %s"
+msgstr "Wert muss %s entsprechen"
 
 msgid "Value required for 'scality_sofs_config'"
 msgstr "Wert für 'scality_sofs_config' erforderlich"
@@ -4437,6 +4459,12 @@ msgstr ""
 "unterstützt keine angepassten Blockgrößen"
 
 #, python-format
+msgid "Volume sets discard option, qemu %(qemu)s or later is required."
+msgstr ""
+"Datenträger setzt Option zum Verwerfen, qemu ab Version %(qemu)s ist "
+"erforderlich."
+
+#, python-format
 msgid "WARNING: fixed IP %s allocated to missing instance"
 msgstr "WARNUNG: Feste IP-Adresse %s ist einer fehlenden Instanz zugeordnet"
 
@@ -4504,30 +4532,6 @@ msgid "You should specify images_volume_group flag to use LVM images."
 msgstr ""
 "Sie sollten das Flag 'images_volume_group' angeben, um LVM-Images zu "
 "verwenden"
-
-msgid ""
-"Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag or "
-"your destination node does not support retrieving listen addresses.  In "
-"order for live migration to work properly you must either disable serial "
-"console or upgrade your libvirt version."
-msgstr ""
-"Ihre libvirt Version unterstützt kein  VIR_DOMAIN_XML_MIGRATABLE Flag oder "
-"Ihr Zielknoten unterstützt kein Abrufen der Abhöradressen.  Für eine "
-"funktionierende Live Migration müssen SIe die serielle Konsole deaktivieren "
-"oder Ihre libvirt Version aktualisieren."
-
-msgid ""
-"Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag or "
-"your destination node does not support retrieving listen addresses.  In "
-"order for live migration to work properly, you must configure the graphics "
-"(VNC and/or SPICE) listen addresses to be either the catch-all address "
-"(0.0.0.0 or ::) or the local address (127.0.0.1 or ::1)."
-msgstr ""
-"Ihre libvirt-Version unterstützt das Flag VIR_DOMAIN_XML_MIGRATABLE nicht "
-"oder Ihr Zielknoten unterstützt das Abrufen von Empfangsadressen nicht.  "
-"Damit die Livemigration ordnungsgemäß funktioniert, müssen Sie die Grafik-"
-"Empfangsadressen (VNC und/oder SPICE) entweder als umfassende Adresse "
-"(0.0.0.0 or ::) oder als die lokale Adresse (127.0.0.1 or ::1) konfigurieren."
 
 msgid "Zero fixed IPs could be found."
 msgstr "Es konnten keine festen IP-Adressen gefunden werden."
@@ -4631,17 +4635,8 @@ msgstr "Kennung"
 msgid "id cannot contain leading and/or trailing whitespace(s)"
 msgstr "ID darf keine führenden und/oder abschließenden Leerzeichen enthalten"
 
-msgid "image"
-msgstr "Abbild"
-
 msgid "image already mounted"
 msgstr "Abbild bereits eingehängt"
-
-msgid "index"
-msgstr "Index"
-
-msgid "instance"
-msgstr "Instanz"
 
 #, python-format
 msgid "instance %s is not running"
@@ -4675,17 +4670,11 @@ msgstr "%(property)s %(attr)s ungültig"
 msgid "is_public must be a boolean"
 msgstr "'is_public' muss ein boolescher Wert sein"
 
-msgid "kernel"
-msgstr "Kernel"
-
 msgid "keymgr.fixed_key not defined"
 msgstr "keymgr.fixed_key nicht bestimmt"
 
 msgid "l3driver call to add floating IP failed"
 msgstr "'l3driver'-Aufruf zum Hinzufügen einer Floating IP ist fehlgeschlagen."
-
-msgid "launched"
-msgstr "gestartet"
 
 msgid "ldap not installed"
 msgstr "ldap nicht installiert"
@@ -4697,9 +4686,6 @@ msgstr "libguestfs installiert, aber nicht benutzbar (%s)"
 #, python-format
 msgid "libguestfs is not installed (%s)"
 msgstr "libguestfs ist nicht installiert (%s)"
-
-msgid "libvirt error while requesting blockjob info."
-msgstr "libvirt-Fehler beim Anfordern der blockjob-Informationen."
 
 #, python-format
 msgid "marker [%s] not found"
@@ -4743,9 +4729,6 @@ msgstr "Kein verwendbares übergeordnetes Abbild für Datenträger %s"
 #, python-format
 msgid "no write permission on storage pool %s"
 msgstr "Keine Schreibberechtigung für Speicherpool %s"
-
-msgid "node"
-msgstr "Knoten"
 
 #, python-format
 msgid "not able to execute ssh command: %s"
@@ -4809,9 +4792,6 @@ msgstr "qemu-img konnte nicht ausgeführt werden für %(path)s : %(exp)s"
 msgid "qemu-nbd error: %s"
 msgstr "qemu-nbd-Fehler: %s"
 
-msgid "ramdisk"
-msgstr "RAM-Platte"
-
 msgid "rbd python libraries not found"
 msgstr "rbd Python-Bibliotheken nicht gefunden"
 
@@ -4850,26 +4830,14 @@ msgstr "snapshot_id in create_info erforderlich"
 msgid "start address"
 msgstr "Startadresse"
 
-msgid "state"
-msgstr "Zustand"
-
-msgid "sudo failed, continuing as if nothing happened"
-msgstr "sudo fehlgeschlagen, Vorgang wird fortgesetzt"
-
 msgid "token not provided"
 msgstr "Token nicht angegeben"
 
 msgid "too many body keys"
 msgstr "zu viele Textschlüssel"
 
-msgid "type"
-msgstr "Typ"
-
 msgid "unpause not supported for vmwareapi"
 msgstr "'unpause' nicht unterstützt für 'vmwareapi'"
-
-msgid "user"
-msgstr "Benutzer"
 
 msgid "uuid"
 msgstr "UUID"

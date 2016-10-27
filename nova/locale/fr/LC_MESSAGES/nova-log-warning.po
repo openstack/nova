@@ -9,9 +9,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
+"Project-Id-Version: nova 14.0.0.0rc2.dev504\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-25 06:14+0000\n"
+"POT-Creation-Date: 2016-10-26 19:51+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -551,15 +551,6 @@ msgstr "Aucun réseau ou adresse IP fixes ne peuvent être alloués"
 msgid "No valid host found for rebuild"
 msgstr "Hôte valide non trouvée pour la regénération."
 
-msgid ""
-"Old property name \"hw_watchdog_action\" is now deprecated and will be "
-"removed in the next release. Use updated property name \"hw:watchdog_action"
-"\" instead"
-msgstr ""
-"L'ancien nom de propriété \"hw_watchdog_action\" est maintenant obsolète et "
-"sera retiré dans la prochaine version. Utiliser à la place le nom de "
-"propriété mis à jour \"hw:watchdog_action\""
-
 msgid "Paused instance shutdown by itself. Calling the stop API."
 msgstr ""
 "L'instance en pause s'est fermé automatiquement. Appel de l'API d’arrêt "
@@ -650,16 +641,6 @@ msgstr ""
 "%(service_down_time)s, report_interval: %(report_interval)s>. Modification "
 "de service_down_time pour: %(new_service_down_time)s"
 
-#, python-format
-msgid ""
-"Running Nova with a VMware vCenter version less than %(version)s is "
-"deprecated. The required minimum version of vCenter will be raised to "
-"%(version)s in the 13.0.0 release."
-msgstr ""
-"L'execution de Nova avec une version du VMware vCenter inferieure a "
-"%(version)s est déprécié. Le minimum requis de vCenter sera augmenté à "
-"%(version)s dans la version 13.0.0 de Nova"
-
 msgid ""
 "Running libvirt-lxc without user namespaces is dangerous. Containers spawned "
 "by Nova will be run as the host's root user. It is highly suggested that "
@@ -726,13 +707,6 @@ msgid ""
 msgstr ""
 "Traitement de la valeur de configuration négative (%(retries)s) pour "
 "'block_device_retries' à 0."
-
-#, python-format
-msgid ""
-"Treating negative config value (%(retries)s) for 'glance.num_retries' as 0."
-msgstr ""
-"La valeur négative (%(retries)s) de la configuration 'glance.num_retries' "
-"traitée comme 0."
 
 #, python-format
 msgid ""

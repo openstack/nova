@@ -6,9 +6,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
+"Project-Id-Version: nova 14.0.0.0rc2.dev504\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-25 06:14+0000\n"
+"POT-Creation-Date: 2016-10-26 19:51+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -206,14 +206,6 @@ msgid ""
 msgstr ""
 "오류 코드가  %(error_code)s인 Libvirt 오류 %(error)s(으)로 인해 온라인 CPU를 "
 "검색할 수 없음"
-
-#, python-format
-msgid ""
-"DEPRECATED: scheduler_driver uses classloader to load %(path)s. This legacy "
-"loading style will be removed in the N release."
-msgstr ""
-"더 이상 사용되지 않음: scheduler_driver에서 클래스 로더를 사용하여 %(path)s을"
-"(를) 로드합니다. 이 레거시 로드 스타일은 N 릴리스에서 제거됩니다."
 
 #, python-format
 msgid ""
@@ -978,15 +970,6 @@ msgstr "리소스가 청구될 때까지 인스턴스에 노드 필드가 설정
 msgid "Not deleting key %s"
 msgstr "%s 키를 삭제하지 않음"
 
-msgid ""
-"Old property name \"hw_watchdog_action\" is now deprecated and will be "
-"removed in the next release. Use updated property name \"hw:watchdog_action"
-"\" instead"
-msgstr ""
-"이전 특성 이름 \"hw_watchdog_action\"이 더 이상 사용되지 않으므로, 다음 릴리"
-"스에서 제거됩니다. 대신 업데이트된 특성 이름 \"hw:watchdog_action\"을 사용합"
-"니다."
-
 msgid "Paused instance shutdown by itself. Calling the stop API."
 msgstr "인스턴스 자체 종료가 일시중단되었습니다. API 중지를 호출합니다."
 
@@ -1107,16 +1090,6 @@ msgstr ""
 #, python-format
 msgid "Root disk file creation failed - %s"
 msgstr "루트 디스크 파일 생성 실패 - %s"
-
-#, python-format
-msgid ""
-"Running Nova with a VMware vCenter version less than %(version)s is "
-"deprecated. The required minimum version of vCenter will be raised to "
-"%(version)s in the 13.0.0 release."
-msgstr ""
-"%(version)s 이전의 VMware vCenter 버전으로 Nova를 실행하는 기능은 더 이상 사"
-"용되지 않습니다. vCenter에 필요한 최소 버전은 다음 릴리스에서 %(version)s(으)"
-"로 증가됩니다."
 
 #, python-format
 msgid ""
@@ -1259,12 +1232,6 @@ msgid ""
 "Treating negative config value (%(retries)s) for 'block_device_retries' as 0."
 msgstr ""
 "'block_device_retries'의 음의 구성 값 (%(retries)s)은(는) 0으로 처리합니다."
-
-#, python-format
-msgid ""
-"Treating negative config value (%(retries)s) for 'glance.num_retries' as 0."
-msgstr ""
-" 'glance.num_retries'의 음의 구성 값 (%(retries)s)은(는) 0으로 처리합니다."
 
 #, python-format
 msgid ""
@@ -1481,20 +1448,6 @@ msgid ""
 msgstr ""
 "NUMA 지원이 중단된 것으로 알려진 libvirt 버전 %s(으)로 실행 중입니다. NUMA 지"
 "원이 필요한 경우 이 호스트에서 libvirt를 패치하거나 업데이트하십시오."
-
-msgid ""
-"Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag, "
-"and the graphics (VNC and/or SPICE) listen addresses on the destination node "
-"do not match the addresses on the source node. Since the source node has "
-"listen addresses set to either the catch-all address (0.0.0.0 or ::) or the "
-"local address (127.0.0.1 or ::1), the live migration will succeed, but the "
-"VM will continue to listen on the current addresses."
-msgstr ""
-"libvirt 버전에서 VIR_DOMAIN_XML_MIGRATABLE 플래그를 지원하지 않으며, 대상 노"
-"드에서 그래픽(VNC 및/또는 SPICE) 청취 주소가 소스 코드의 주소와 일치하지 않습"
-"니다. 소스 노드의 청취 주소가 catch-all 주소(0.0.0.0 or ::)또는 로컬 주소"
-"(127.0.0.1 or ::1)로 설정되었으므로, 라이브 마이그레이션에 성공하지만, VM이 "
-"현재 주소에서만 계속 청취합니다."
 
 #, python-format
 msgid "_migrate_disk_resizing_up failed to rollback: %s"

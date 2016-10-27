@@ -7,9 +7,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
+"Project-Id-Version: nova 14.0.0.0rc2.dev504\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-25 06:14+0000\n"
+"POT-Creation-Date: 2016-10-26 19:51+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -881,15 +881,6 @@ msgstr ""
 msgid "Not deleting key %s"
 msgstr "Klíč %s nebude smazán"
 
-msgid ""
-"Old property name \"hw_watchdog_action\" is now deprecated and will be "
-"removed in the next release. Use updated property name \"hw:watchdog_action"
-"\" instead"
-msgstr ""
-"Název vlastnosti \"hw_watchdog_action\" je nyní zastaralý a bude odstraněn v "
-"další verzi. Místo toho používejte aktualizovaný název vlastnosti \"hw:"
-"watchdog_action\""
-
 msgid "Paused instance shutdown by itself. Calling the stop API."
 msgstr "Pozastavená instance se sama vypnula. Voláno zastavení API."
 
@@ -1012,16 +1003,6 @@ msgstr ""
 #, python-format
 msgid "Root disk file creation failed - %s"
 msgstr "Vytvoření souboru kořenového disku selhalo - %s"
-
-#, python-format
-msgid ""
-"Running Nova with a VMware vCenter version less than %(version)s is "
-"deprecated. The required minimum version of vCenter will be raised to "
-"%(version)s in the 13.0.0 release."
-msgstr ""
-"Spouštět Nova pomocí VMware vCenter s verzí starší než %(version)s je "
-"zastaralé. Požadovaná minimální verze vCenter bude ve verzi 13.0.0 zvýšena "
-"na %(version)s."
 
 msgid ""
 "Running libvirt-lxc without user namespaces is dangerous. Containers spawned "
@@ -1148,13 +1129,6 @@ msgid ""
 "Treating negative config value (%(retries)s) for 'block_device_retries' as 0."
 msgstr ""
 "Záporná hodnota nastavení (%(retries)s) v 'block_device_retries' je "
-"vyhodnocena jako 0."
-
-#, python-format
-msgid ""
-"Treating negative config value (%(retries)s) for 'glance.num_retries' as 0."
-msgstr ""
-"Záporná hodnota nastavení (%(retries)s) v 'glance.num_retries' je "
 "vyhodnocena jako 0."
 
 #, python-format
@@ -1376,21 +1350,6 @@ msgstr ""
 "Máte libvirt verze %s, o niž se ví, že má poškozenou podporu NUMA. Pokud "
 "potřebujete podporu NUMA zvažte opravu, nebo aktualizaci libvirt na tomto "
 "hostiteli. "
-
-msgid ""
-"Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag, "
-"and the graphics (VNC and/or SPICE) listen addresses on the destination node "
-"do not match the addresses on the source node. Since the source node has "
-"listen addresses set to either the catch-all address (0.0.0.0 or ::) or the "
-"local address (127.0.0.1 or ::1), the live migration will succeed, but the "
-"VM will continue to listen on the current addresses."
-msgstr ""
-"Vaše verze libvirt nepodporuje příznak VIR_DOMAIN_XML_MIGRATABLE a adresy "
-"pro odposlech grafiky (VNC a(nebo SPICE) na cílovém uzlu neodpovídají "
-"adresám na zdrojovém uzlu. Protože zdrojový uzel má adresu pro "
-"odposlouchávání nastavenu buď na vše zachytávající adresu (0.0.0.0 nebo ::), "
-"nebo na místní adresu (127.0.0.1 či ::1), přesun za provozu bude úspěšně "
-"proveden, ale VM bude stále odposlouchávat na současných adresách."
 
 #, python-format
 msgid "_migrate_disk_resizing_up failed to rollback: %s"
