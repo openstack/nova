@@ -269,6 +269,20 @@ class VolumeEncryptionNotSupported(Invalid):
                 "volume %(volume_id)s")
 
 
+class TaggedAttachmentNotSupported(Invalid):
+    msg_fmt = _("Tagged device attachment is not yet available.")
+
+
+class VolumeTaggedAttachNotSupported(TaggedAttachmentNotSupported):
+    msg_fmt = _("Tagged volume attachment is not supported for this server "
+                "instance.")
+
+
+class VolumeTaggedAttachToShelvedNotSupported(TaggedAttachmentNotSupported):
+    msg_fmt = _("Tagged volume attachment is not supported for "
+                "shelved-offloaded instances.")
+
+
 class InvalidKeypair(Invalid):
     msg_fmt = _("Keypair data is invalid: %(reason)s")
 

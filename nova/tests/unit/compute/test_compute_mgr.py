@@ -379,6 +379,32 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                              supports_device_tagging=True):
             self.compute._check_device_tagging(net_req_list, bdms)
 
+    @mock.patch.object(objects.BlockDeviceMapping, 'create')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid',
+                       return_value=objects.BlockDeviceMappingList())
+    def test_reserve_block_device_name_with_tag(self, mock_get, mock_create):
+        instance = fake_instance.fake_instance_obj(self.context)
+        with test.nested(
+                mock.patch.object(self.compute,
+                                  '_get_device_name_for_instance',
+                                  return_value='/dev/vda'),
+                mock.patch.dict(self.compute.driver.capabilities,
+                                supports_tagged_attach_volume=True)):
+            bdm = self.compute.reserve_block_device_name(
+                    self.context, instance, None, None, None, None, tag='foo')
+            self.assertEqual('foo', bdm.tag)
+
+    @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+    def test_reserve_block_device_name_raises(self, _):
+        with mock.patch.dict(self.compute.driver.capabilities,
+                             supports_tagged_attach_volume=False):
+            self.assertRaises(exception.VolumeTaggedAttachNotSupported,
+                              self.compute.reserve_block_device_name,
+                              self.context,
+                              fake_instance.fake_instance_obj(self.context),
+                              'fake_device', 'fake_volume_id', 'fake_disk_bus',
+                              'fake_device_type', tag='foo')
+
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(time, 'sleep')
     def test_allocate_network_succeeds_after_retries(

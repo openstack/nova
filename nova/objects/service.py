@@ -32,7 +32,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 18
+SERVICE_VERSION = 19
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -104,6 +104,8 @@ SERVICE_VERSION_HISTORY = (
     {'compute_rpc': '4.13'},
     # Version 18: Compute RPC version 4.14
     {'compute_rpc': '4.14'},
+    # Version 19: Compute RPC version 4.15
+    {'compute_rpc': '4.15'},
 )
 
 
