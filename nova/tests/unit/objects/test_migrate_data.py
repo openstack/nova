@@ -352,3 +352,62 @@ class TestHyperVLiveMigrateData(test_objects._LocalTest,
 class TestRemoteHyperVLiveMigrateData(test_objects._RemoteTest,
                                       _TestHyperVLiveMigrateData):
     pass
+
+
+class _TestPowerVMLiveMigrateData(object):
+    @staticmethod
+    def _mk_obj():
+        return migrate_data.PowerVMLiveMigrateData(
+            host_mig_data=dict(one=2),
+            dest_ip='1.2.3.4',
+            dest_user_id='a_user',
+            dest_sys_name='a_sys',
+            public_key='a_key',
+            dest_proc_compat='POWER7',
+            vol_data=dict(three=4),
+            vea_vlan_mappings=dict(five=6))
+
+    @staticmethod
+    def _mk_leg():
+        return {
+            'host_mig_data': {'one': '2'},
+            'dest_ip': '1.2.3.4',
+            'dest_user_id': 'a_user',
+            'dest_sys_name': 'a_sys',
+            'public_key': 'a_key',
+            'dest_proc_compat': 'POWER7',
+            'vol_data': {'three': '4'},
+            'vea_vlan_mappings': {'five': '6'},
+        }
+
+    def test_migrate_data(self):
+        obj = self._mk_obj()
+        self.assertEqual('a_key', obj.public_key)
+        obj.public_key = 'key2'
+        self.assertEqual('key2', obj.public_key)
+
+    def test_obj_make_compatible(self):
+        obj = self._mk_obj()
+        primitive = obj.obj_to_primitive(target_version='1.0')
+        self.assertNotIn('vea_vlan_mappings', primitive)
+
+    def test_to_legacy_dict(self):
+        self.assertEqual(self._mk_leg(), self._mk_obj().to_legacy_dict())
+
+    def test_from_legacy_dict(self):
+        obj = self._mk_obj()
+        leg = self._mk_leg()
+        obj2 = migrate_data.PowerVMLiveMigrateData()
+        obj2.from_legacy_dict(leg)
+        for field in leg:
+            self.assertEqual(getattr(obj, field), getattr(obj2, field))
+
+
+class TestPowerVMLiveMigrateData(test_objects._LocalTest,
+                                 _TestPowerVMLiveMigrateData):
+    pass
+
+
+class TestRemotePowerVMLiveMigrateData(test_objects._RemoteTest,
+                                      _TestPowerVMLiveMigrateData):
+    pass

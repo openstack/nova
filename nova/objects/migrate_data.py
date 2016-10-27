@@ -292,3 +292,42 @@ class HyperVLiveMigrateData(LiveMigrateData):
         super(HyperVLiveMigrateData, self).from_legacy_dict(legacy)
         if 'is_shared_instance_path' in legacy:
             self.is_shared_instance_path = legacy['is_shared_instance_path']
+
+
+@obj_base.NovaObjectRegistry.register
+class PowerVMLiveMigrateData(LiveMigrateData):
+    # Version 1.0: Initial version
+    # Version 1.1: Added the Virtual Ethernet Adapter VLAN mappings.
+    VERSION = '1.1'
+
+    fields = {
+        'host_mig_data': fields.DictOfNullableStringsField(),
+        'dest_ip': fields.StringField(),
+        'dest_user_id': fields.StringField(),
+        'dest_sys_name': fields.StringField(),
+        'public_key': fields.StringField(),
+        'dest_proc_compat': fields.StringField(),
+        'vol_data': fields.DictOfNullableStringsField(),
+        'vea_vlan_mappings': fields.DictOfNullableStringsField(),
+    }
+
+    def obj_make_compatible(self, primitive, target_version):
+        super(PowerVMLiveMigrateData, self).obj_make_compatible(
+            primitive, target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1):
+            if 'vea_vlan_mappings' in primitive:
+                del primitive['vea_vlan_mappings']
+
+    def to_legacy_dict(self, pre_migration_result=False):
+        legacy = super(PowerVMLiveMigrateData, self).to_legacy_dict()
+        for field in self.fields:
+            if self.obj_attr_is_set(field):
+                legacy[field] = getattr(self, field)
+        return legacy
+
+    def from_legacy_dict(self, legacy):
+        super(PowerVMLiveMigrateData, self).from_legacy_dict(legacy)
+        for field in self.fields:
+            if field in legacy:
+                setattr(self, field, legacy[field])
