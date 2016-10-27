@@ -19,7 +19,6 @@ from oslo_policy import policy as oslo_policy
 import webob
 
 from nova.api.openstack.compute import shelve as shelve_v21
-from nova.compute import api as compute_api
 from nova import exception
 from nova import policy
 from nova import test
@@ -39,8 +38,8 @@ class ShelvePolicyTestV21(test.NoDBTestCase):
     def test_shelve_locked_server(self, get_instance_mock):
         get_instance_mock.return_value = (
             fake_instance.fake_instance_obj(self.req.environ['nova.context']))
-        self.stubs.Set(compute_api.API, 'shelve',
-                       fakes.fake_actions_to_locked_server)
+        self.stub_out('nova.compute.api.API.shelve',
+                      fakes.fake_actions_to_locked_server)
         self.assertRaises(webob.exc.HTTPConflict, self.controller._shelve,
                           self.req, str(uuid.uuid4()), {})
 
@@ -48,8 +47,8 @@ class ShelvePolicyTestV21(test.NoDBTestCase):
     def test_unshelve_locked_server(self, get_instance_mock):
         get_instance_mock.return_value = (
             fake_instance.fake_instance_obj(self.req.environ['nova.context']))
-        self.stubs.Set(compute_api.API, 'unshelve',
-                       fakes.fake_actions_to_locked_server)
+        self.stub_out('nova.compute.api.API.unshelve',
+                      fakes.fake_actions_to_locked_server)
         self.assertRaises(webob.exc.HTTPConflict, self.controller._unshelve,
                           self.req, str(uuid.uuid4()), {})
 
@@ -57,8 +56,8 @@ class ShelvePolicyTestV21(test.NoDBTestCase):
     def test_shelve_offload_locked_server(self, get_instance_mock):
         get_instance_mock.return_value = (
             fake_instance.fake_instance_obj(self.req.environ['nova.context']))
-        self.stubs.Set(compute_api.API, 'shelve_offload',
-                       fakes.fake_actions_to_locked_server)
+        self.stub_out('nova.compute.api.API.shelve_offload',
+                      fakes.fake_actions_to_locked_server)
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller._shelve_offload,
                           self.req, str(uuid.uuid4()), {})
