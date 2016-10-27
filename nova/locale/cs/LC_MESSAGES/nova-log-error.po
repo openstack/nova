@@ -7,9 +7,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
+"Project-Id-Version: nova 14.0.0.0rc2.dev504\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-25 06:15+0000\n"
+"POT-Creation-Date: 2016-10-26 19:52+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -197,10 +197,6 @@ msgid ""
 msgstr ""
 "Chyba při kontaktování serveru glance '%(server)s' pro '%(method)s', "
 "%(extra)s."
-
-#, python-format
-msgid "Error defining a domain with XML: %s"
-msgstr "Chyba při určování domény pomocí XML: %s"
 
 #, python-format
 msgid "Error defining a secret with XML: %s"
@@ -422,10 +418,6 @@ msgid "Failed to deallocate networks"
 msgstr "Nelze zrušit přidělení sítí"
 
 #, python-format
-msgid "Failed to decrypt %(image_location)s to %(image_path)s"
-msgstr "Nelze dešifrovat %(image_location)s do %(image_path)s"
-
-#, python-format
 msgid "Failed to destroy instance: %s"
 msgstr "Nelze zničit instanci: %s"
 
@@ -436,10 +428,6 @@ msgstr "Nelze odpojit %(device_name)s. Výjimka: %(exc)s"
 #, python-format
 msgid "Failed to detach volume %(volume_id)s from %(mp)s"
 msgstr "Nelze odpojit svazek %(volume_id)s z %(mp)s"
-
-#, python-format
-msgid "Failed to download %(image_location)s to %(image_path)s"
-msgstr "Nelze stáhnout %(image_location)s do %(image_path)s"
 
 #, python-format
 msgid ""
@@ -602,10 +590,6 @@ msgstr "Nelze odpojit souborový systém kontejneru"
 msgid "Failed to unpause instance"
 msgstr "Nelze zrušit pozastavení iínstance"
 
-#, python-format
-msgid "Failed to untar %(image_location)s to %(image_path)s"
-msgstr "Nelze rozbalit %(image_location)s do %(image_path)s"
-
 msgid "Failed to update usages bulk deallocating floating IP"
 msgstr ""
 "Nelze aktualizovat využití při hromadném rušení přidělení plovoucích IP"
@@ -624,10 +608,6 @@ msgstr "Nelze aktualizovat využití při rušení přidělení bezpečnostní s
 
 msgid "Failed to update usages deallocating server group"
 msgstr "Nelze aktualizovat využití při rušení přidělení skupiny serveru"
-
-#, python-format
-msgid "Failed to upload %(image_location)s to %(image_path)s"
-msgstr "Nelze nahrát %(image_location)s do %(image_path)s"
 
 msgid "Failed to write configuration file"
 msgstr "Nelze zapsat soubor s nastavením"
@@ -812,9 +792,6 @@ msgstr ""
 msgid "Periodic task failed to offload instance."
 msgstr "Pravidelný úkol nemohl převést zátěž instance."
 
-msgid "Plugin config_file get_val failed"
-msgstr "Získání hodnoty z konfiguračního souboru zásuvného modulu selhalo"
-
 #, python-format
 msgid "Pool-Join failed: %s"
 msgstr "Připojení zásoby selhalo: %s"
@@ -830,9 +807,6 @@ msgstr "Nastavení štítku názvu zásoby selhalo: %s"
 #, python-format
 msgid "Pre live migration failed at %s"
 msgstr "Příprava přesunu za provozu selhala v %s"
-
-msgid "Read/Write data failed"
-msgstr "Zápis/Čtení dat selhalo"
 
 #, python-format
 msgid "Requested VM Generation %s is not supported on this OS."
@@ -894,9 +868,6 @@ msgstr "Volání %(method)s vrátilo chybu: %(e)s."
 #, python-format
 msgid "The call to %(method)s returned an error: %(e)s. args=%(args)r"
 msgstr "Volání %(method)s vrátilo chybu: %(e)s. argumenty=%(args)r"
-
-msgid "Transfer data failed"
-msgstr "Přenos dat selhal"
 
 #, python-format
 msgid "Unable to access floating IP %s"

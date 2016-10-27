@@ -25,9 +25,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
+"Project-Id-Version: nova 14.0.0.0rc2.dev504\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-25 06:14+0000\n"
+"POT-Creation-Date: 2016-10-26 19:51+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -95,10 +95,6 @@ msgstr "%(field)s ne devrait pas faire partie des mises à jour."
 #, python-format
 msgid "%(fieldname)s missing field type"
 msgstr "Type de champ maquant pour %(fieldname)s"
-
-#, python-format
-msgid "%(host)s:%(port)s: Target closed"
-msgstr "%(host)s:%(port)s: cible fermé"
 
 #, python-format
 msgid "%(key)s is not a valid quota key. Valid options are: %(options)s."
@@ -624,12 +620,6 @@ msgstr "Impossible de trouver le SR pour lire/écrire le VDI."
 msgid "Cannot find image for rebuild"
 msgstr "Image introuvable pour la régénération"
 
-#, python-format
-msgid "Cannot load scheduler driver from configuration %(conf)s."
-msgstr ""
-"Impossible de charger le pilote scheduler driver à partir de la "
-"configuration %(conf)s."
-
 msgid "Cannot mount Scality SOFS, check syslog for errors"
 msgstr ""
 "Impossible de monter Scality SOFS, consultez le fichier syslog pour voir les "
@@ -908,10 +898,6 @@ msgid ""
 msgstr ""
 "Impossible d'installer l'unité de configuration vfat. %(operation)s a "
 "échoué. Erreur : %(error)s"
-
-#, python-format
-msgid "Could not read %s. Re-running with sudo"
-msgstr "Impossible de lire %s. Réessayer avec sudo"
 
 #, python-format
 msgid "Could not upload image %(image_id)s"
@@ -1209,18 +1195,6 @@ msgstr "Impossible de connecter la carte réseau avec %(instance_uuid)s"
 #, python-format
 msgid "Failed to create vif %s"
 msgstr "Échec de création du vif %s"
-
-#, python-format
-msgid "Failed to decrypt image file %(image_file)s: %(err)s"
-msgstr "Impossible de déchiffrer le fichier image %(image_file)s: %(err)s"
-
-#, python-format
-msgid "Failed to decrypt initialization vector: %s"
-msgstr "Impossible de déchiffrer le vecteur d'initialisation : %s"
-
-#, python-format
-msgid "Failed to decrypt private key: %s"
-msgstr "Impossible de déchiffrer la clef privée : %s"
 
 #, python-format
 msgid "Failed to decrypt text: %(reason)s"
@@ -1566,14 +1540,6 @@ msgstr ""
 "%(unit)s"
 
 #, python-format
-msgid "Glance image %(image_id)s is in unknown state - %(state)s"
-msgstr "Image Glance %(image_id)s dans un état inconnu - %(state)s"
-
-#, python-format
-msgid "Glance image %s is in killed state"
-msgstr "Image Glance %s à l'état arrêté"
-
-#, python-format
 msgid "Group not valid. Reason: %(reason)s"
 msgstr "Groupe non valide. Cause : %(reason)s"
 
@@ -1673,12 +1639,6 @@ msgstr ""
 
 msgid "Image is not raw format"
 msgstr "L'image n'est pas au format raw"
-
-msgid "Image metadata key cannot be blank"
-msgstr "La clé de métadonnées d'image ne peut pas être à blanc"
-
-msgid "Image metadata key too long"
-msgstr "Clé de métadonnées d'image trop longue"
 
 msgid "Image metadata limit exceeded"
 msgstr "Limite de métadonnées d'image dépassée"
@@ -2080,9 +2040,6 @@ msgstr "Format d'image invalide '%(format)s'"
 #, python-format
 msgid "Invalid image href %(image_href)s."
 msgstr "L'image href %(image_href)s est invalide."
-
-msgid "Invalid image metadata"
-msgstr "Métadonnées d'image non valides"
 
 #, python-format
 msgid "Invalid inclusion expression %r"
@@ -3042,9 +2999,6 @@ msgstr ""
 #, python-format
 msgid "Physical network is missing for network %(network_uuid)s"
 msgstr "Réseau physique manquant pour le réseau %(network_uuid)s"
-
-msgid "Please re-run nova-manage as root."
-msgstr "Relancez nova-manage avec un compte root."
 
 msgid "Please specify either fixed_range or uuid"
 msgstr "Veuillez spécifier fixed_range ou uuid"
@@ -4240,9 +4194,6 @@ msgstr "Valeur read_deleted non reconnue '%s'"
 msgid "Unrecognized value '%s' for CONF.running_deleted_instance_action"
 msgstr "Valeur non reconnue '%s' pour CONF.running_deleted_instance_action"
 
-msgid "Unsafe filenames in image"
-msgstr "Noms de fichier non sécurisés dans l'image"
-
 #, python-format
 msgid "Unshelve attempted but the image %s cannot be found."
 msgstr "Extraction tentée mais l'image %s est introuvable."
@@ -4495,32 +4446,6 @@ msgstr ""
 "Vous devez spécifier l'indicateur images_volume_group pour utiliser les "
 "images LVM."
 
-msgid ""
-"Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag or "
-"your destination node does not support retrieving listen addresses.  In "
-"order for live migration to work properly you must either disable serial "
-"console or upgrade your libvirt version."
-msgstr ""
-"Votre version libvirt ne prend pas en charge l'indicateur "
-"VIR_DOMAIN_XML_MIGRATABLE ou votre noeud de destination ne prend pas en "
-"charge l'extraction d'adresses en mode écoute. Pour que la live active "
-"fonctionne correctement, vous devez désactiver la console série ou mettre à "
-"niveau votre version libvirt."
-
-msgid ""
-"Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag or "
-"your destination node does not support retrieving listen addresses.  In "
-"order for live migration to work properly, you must configure the graphics "
-"(VNC and/or SPICE) listen addresses to be either the catch-all address "
-"(0.0.0.0 or ::) or the local address (127.0.0.1 or ::1)."
-msgstr ""
-"Votre version de libvirt ne prend pas en charge l'indicateur de "
-"VIR_DOMAIN_XML_MIGRATABLE ou votre noeud de destination ne prend pas en "
-"charge l'extraction des adresses en mode écoute.  Pour que la migration à "
-"chaud fonctionne correctement, vous devez configurer les adresses d'écoute "
-"des graphiques (VNC et/ou SPICE) en tant qu'adresse fourre-tout (0.0.0.0 "
-"ou ::) ou qu'adresse locale (127.0.0.1 ou ::1)."
-
 msgid "Zero fixed IPs could be found."
 msgstr "Aucunes IPs fixes trouvées."
 
@@ -4624,17 +4549,8 @@ msgid "id cannot contain leading and/or trailing whitespace(s)"
 msgstr ""
 "L'identificateur ne peut pas commencer et/ou se terminer par des espaces"
 
-msgid "image"
-msgstr "image"
-
 msgid "image already mounted"
 msgstr "image déjà montée"
-
-msgid "index"
-msgstr "index"
-
-msgid "instance"
-msgstr "instance"
 
 #, python-format
 msgid "instance %s is not running"
@@ -4668,17 +4584,11 @@ msgstr "%(property)s %(attr)s non valide"
 msgid "is_public must be a boolean"
 msgstr "is_public doit être booléen."
 
-msgid "kernel"
-msgstr "noyau"
-
 msgid "keymgr.fixed_key not defined"
 msgstr "keymgr.fixed_key n'est pas défini"
 
 msgid "l3driver call to add floating IP failed"
 msgstr "Échec de l'ajout d'une adresse IP flottant par l'appel l3driver"
-
-msgid "launched"
-msgstr "lancé"
 
 msgid "ldap not installed"
 msgstr "ldap n'est pas installé"
@@ -4690,9 +4600,6 @@ msgstr "libguestfs est installé mais n'est pas utilisable (%s)"
 #, python-format
 msgid "libguestfs is not installed (%s)"
 msgstr "libguestfs n'est pas installé (%s)"
-
-msgid "libvirt error while requesting blockjob info."
-msgstr "Erreur de libvirt lors de la demande des informations de blockjob."
 
 #, python-format
 msgid "marker [%s] not found"
@@ -4735,9 +4642,6 @@ msgstr "aucun instantané parent utilisable pour le volume %s"
 #, python-format
 msgid "no write permission on storage pool %s"
 msgstr "aucun droit en écriture sur le pool de stockage %s"
-
-msgid "node"
-msgstr "noeud"
 
 #, python-format
 msgid "not able to execute ssh command: %s"
@@ -4803,9 +4707,6 @@ msgstr "Echec d'exécution de qemu-img sur %(path)s  : %(exp)s"
 msgid "qemu-nbd error: %s"
 msgstr "erreur qemu-nbd : %s"
 
-msgid "ramdisk"
-msgstr "ramdisk"
-
 msgid "rbd python libraries not found"
 msgstr "Librairies python rbd non trouvé"
 
@@ -4845,26 +4746,14 @@ msgstr "snapshot_id requis dans create_info"
 msgid "start address"
 msgstr "adresse de départ"
 
-msgid "state"
-msgstr "état"
-
-msgid "sudo failed, continuing as if nothing happened"
-msgstr "échec sudo, poursuite comme si de rien n'était"
-
 msgid "token not provided"
 msgstr "Jeton non fourni"
 
 msgid "too many body keys"
 msgstr "trop de clés de corps"
 
-msgid "type"
-msgstr "type"
-
 msgid "unpause not supported for vmwareapi"
 msgstr "annulation de la mise en pause non prise en charge pour vmwareapi"
-
-msgid "user"
-msgstr "utilisateur"
 
 msgid "uuid"
 msgstr "uuid"

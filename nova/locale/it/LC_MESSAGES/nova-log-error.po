@@ -7,9 +7,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
+"Project-Id-Version: nova 14.0.0.0rc2.dev504\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-25 06:15+0000\n"
+"POT-Creation-Date: 2016-10-26 19:52+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -115,10 +115,6 @@ msgstr ""
 
 msgid "Environment variable 'NETWORK_ID' must be set."
 msgstr "La variabile d'ambiente 'NETWORK_ID' deve essere impostata."
-
-#, python-format
-msgid "Error defining a domain with XML: %s"
-msgstr "Errore nella definizione di un dominio tramite XML: %s"
 
 #, python-format
 msgid "Error deleting conntrack entries for %s"
@@ -308,20 +304,12 @@ msgid "Failed to deallocate networks"
 msgstr "Impossibile deallocare le reti"
 
 #, python-format
-msgid "Failed to decrypt %(image_location)s to %(image_path)s"
-msgstr "Impossibile decodificare %(image_location)s in %(image_path)s"
-
-#, python-format
 msgid "Failed to destroy instance: %s"
 msgstr "Distruzione istanza non riuscita: %s"
 
 #, python-format
 msgid "Failed to detach volume %(volume_id)s from %(mp)s"
 msgstr "Impossibile scollegare il volume %(volume_id)s da %(mp)s"
-
-#, python-format
-msgid "Failed to download %(image_location)s to %(image_path)s"
-msgstr "Impossibile scaricare %(image_location)s in %(image_path)s"
 
 msgid "Failed to fetch glance image"
 msgstr "Impossibile recuperare l'immagine glance"
@@ -449,11 +437,6 @@ msgid "Failed to swap volume %(old_volume_id)s for %(new_volume_id)s"
 msgstr ""
 "Impossibile fare lo swap del volume %(old_volume_id)s per %(new_volume_id)s"
 
-#, python-format
-msgid "Failed to untar %(image_location)s to %(image_path)s"
-msgstr ""
-"Impossibile l'estrazione di file tar %(image_location)s in %(image_path)s"
-
 msgid "Failed to update usages bulk deallocating floating IP"
 msgstr "Impossibile aggiornare gli utilizzi di bulk disallocando l'IP mobile"
 
@@ -471,10 +454,6 @@ msgstr "Impossibile aggiornare utilizzi deallocazione gruppo di sicurezza"
 
 msgid "Failed to update usages deallocating server group"
 msgstr "Impossibile aggiornare gli usi deallocando il gruppo di server."
-
-#, python-format
-msgid "Failed to upload %(image_location)s to %(image_path)s"
-msgstr "Impossibile caricare %(image_location)s in %(image_path)s"
 
 msgid "Failed to write configuration file"
 msgstr "Impossibile scrivere il file di configurazione"

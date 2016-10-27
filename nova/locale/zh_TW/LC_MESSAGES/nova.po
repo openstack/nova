@@ -10,9 +10,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
+"Project-Id-Version: nova 14.0.0.0rc2.dev504\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-25 06:14+0000\n"
+"POT-Creation-Date: 2016-10-26 19:51+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -78,10 +78,6 @@ msgstr "%(field)s 不應是更新的一部分。"
 #, python-format
 msgid "%(fieldname)s missing field type"
 msgstr "%(fieldname)s 遺漏欄位類型"
-
-#, python-format
-msgid "%(host)s:%(port)s: Target closed"
-msgstr "%(host)s:%(port)s：目標已關閉"
 
 #, python-format
 msgid "%(key)s is not a valid quota key. Valid options are: %(options)s."
@@ -546,10 +542,6 @@ msgstr "找不到「儲存體儲存庫 (SR)」來讀寫 VDI。"
 msgid "Cannot find image for rebuild"
 msgstr "找不到要重建的映像檔"
 
-#, python-format
-msgid "Cannot load scheduler driver from configuration %(conf)s."
-msgstr "無法從配置 %(conf)s 載入排程器驅動程式。"
-
 msgid "Cannot mount Scality SOFS, check syslog for errors"
 msgstr "無法裝載 Scality SOFS，請檢查系統日誌以找出錯誤"
 
@@ -796,10 +788,6 @@ msgstr "無法從 %(path)s 載入 paste 應用程式 '%(name)s'"
 msgid ""
 "Could not mount vfat config drive. %(operation)s failed. Error: %(error)s"
 msgstr "無法裝載 vfat 配置磁碟機。%(operation)s 失敗。錯誤：%(error)s"
-
-#, python-format
-msgid "Could not read %s. Re-running with sudo"
-msgstr "無法讀取 %s。正在使用 sudo 來重新執行"
 
 #, python-format
 msgid "Could not upload image %(image_id)s"
@@ -1075,18 +1063,6 @@ msgstr "無法將網路配接卡裝置連接至 %(instance_uuid)s"
 #, python-format
 msgid "Failed to create vif %s"
 msgstr "無法建立 VIF %s"
-
-#, python-format
-msgid "Failed to decrypt image file %(image_file)s: %(err)s"
-msgstr "無法解密映像檔 %(image_file)s：%(err)s"
-
-#, python-format
-msgid "Failed to decrypt initialization vector: %s"
-msgstr "無法解密起始設定向量：%s"
-
-#, python-format
-msgid "Failed to decrypt private key: %s"
-msgstr "無法解密私密金鑰：%s"
 
 #, python-format
 msgid "Failed to decrypt text: %(reason)s"
@@ -1398,14 +1374,6 @@ msgid "Free %(type)s %(free).02f %(unit)s < requested %(requested)d %(unit)s"
 msgstr "可用 %(type)s %(free).02f %(unit)s < 所要求的 %(requested)d %(unit)s"
 
 #, python-format
-msgid "Glance image %(image_id)s is in unknown state - %(state)s"
-msgstr "Glance 映像檔 %(image_id)s 處於不明狀態 - %(state)s"
-
-#, python-format
-msgid "Glance image %s is in killed state"
-msgstr "Glance 映像檔 %s 處於已結束狀態"
-
-#, python-format
 msgid "Group not valid. Reason: %(reason)s"
 msgstr "群組無效。原因：%(reason)s"
 
@@ -1495,12 +1463,6 @@ msgstr "映像檔磁碟大小大於所要求的磁碟大小"
 
 msgid "Image is not raw format"
 msgstr "映像檔不是原始格式"
-
-msgid "Image metadata key cannot be blank"
-msgstr "映像檔 meta 資料索引鍵不能空白"
-
-msgid "Image metadata key too long"
-msgstr "映像檔 meta 資料索引鍵太長"
 
 msgid "Image metadata limit exceeded"
 msgstr "已超出映像檔 meta 資料限制"
@@ -1877,9 +1839,6 @@ msgstr "映像檔格式 '%(format)s' 無效"
 #, python-format
 msgid "Invalid image href %(image_href)s."
 msgstr "無效的映像檔 href %(image_href)s。"
-
-msgid "Invalid image metadata"
-msgstr "無效的映像檔 meta 資料"
 
 #, python-format
 msgid "Invalid inclusion expression %r"
@@ -2776,9 +2735,6 @@ msgstr ""
 #, python-format
 msgid "Physical network is missing for network %(network_uuid)s"
 msgstr "遺漏了用於網路 %(network_uuid)s 的實體網路"
-
-msgid "Please re-run nova-manage as root."
-msgstr "請以 root 使用者身分重新執行 nova-manage。"
 
 msgid "Please specify either fixed_range or uuid"
 msgstr "請指定 fixed_range 或 UUID"
@@ -3878,9 +3834,6 @@ msgstr "無法辨識 read_deleted 值 '%s'"
 msgid "Unrecognized value '%s' for CONF.running_deleted_instance_action"
 msgstr "無法辨識 CONF.running_deleted_instance_action 的值 '%s'"
 
-msgid "Unsafe filenames in image"
-msgstr "映像檔中的檔名不安全"
-
 #, python-format
 msgid "Unshelve attempted but the image %s cannot be found."
 msgstr "已嘗試解除擱置，但卻找不到映像檔 %s。"
@@ -4105,27 +4058,6 @@ msgstr "應該指定 images_rbd_pool 旗標以使用 rbd 映像檔。"
 msgid "You should specify images_volume_group flag to use LVM images."
 msgstr "應該指定 images_volume_group 旗標以使用 LVM 映像檔。"
 
-msgid ""
-"Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag or "
-"your destination node does not support retrieving listen addresses.  In "
-"order for live migration to work properly you must either disable serial "
-"console or upgrade your libvirt version."
-msgstr ""
-"您的 Libvirt 版本不支援 VIR_DOMAIN_XML_MIGRATABLE 旗標，或者您的目的地節點不"
-"支援擷取接聽位址。如果要讓即時移轉正常工作，您必須停用序列主控台，或者升級 "
-"libvirt 版本。"
-
-msgid ""
-"Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag or "
-"your destination node does not support retrieving listen addresses.  In "
-"order for live migration to work properly, you must configure the graphics "
-"(VNC and/or SPICE) listen addresses to be either the catch-all address "
-"(0.0.0.0 or ::) or the local address (127.0.0.1 or ::1)."
-msgstr ""
-"您的 Libvirt 版本不支援 VIR_DOMAIN_XML_MIGRATABLE 旗標，或者，您的目的地節點"
-"不支援擷取接聽位址。如果讓即時移轉正常運作，您必須將圖形（VNC 及/或 SPICE）接"
-"聽位址配置成捕捉所有位址（0.0.0.0 或 ::）或者本端位址（127.0.0.1 或 ::1）。"
-
 msgid "Zero fixed IPs could be found."
 msgstr "可以找到 0 個固定 IP。"
 
@@ -4226,17 +4158,8 @@ msgstr "ID"
 msgid "id cannot contain leading and/or trailing whitespace(s)"
 msgstr "ID 不能包含前導及/或尾端空格"
 
-msgid "image"
-msgstr "映像檔"
-
 msgid "image already mounted"
 msgstr "已裝載映像檔"
-
-msgid "index"
-msgstr "索引"
-
-msgid "instance"
-msgstr "執行個體"
 
 #, python-format
 msgid "instance %s is not running"
@@ -4268,17 +4191,11 @@ msgstr "無效的 %(property)s %(attr)s"
 msgid "is_public must be a boolean"
 msgstr "is_public 必須是布林值"
 
-msgid "kernel"
-msgstr "核心"
-
 msgid "keymgr.fixed_key not defined"
 msgstr "未定義 keymgr.fixed_key"
 
 msgid "l3driver call to add floating IP failed"
 msgstr "l3driver 呼叫以新增浮動 IP 失敗"
-
-msgid "launched"
-msgstr "已啟動"
 
 msgid "ldap not installed"
 msgstr "未安裝 LDAP"
@@ -4290,9 +4207,6 @@ msgstr "libguestfs 已安裝，但卻無法使用 (%s)"
 #, python-format
 msgid "libguestfs is not installed (%s)"
 msgstr "未安裝 libguestfs (%s)"
-
-msgid "libvirt error while requesting blockjob info."
-msgstr "要求 blockjob 資訊時發生 libVirt 錯誤。"
 
 #, python-format
 msgid "marker [%s] not found"
@@ -4335,9 +4249,6 @@ msgstr "磁區 %s 沒有可使用的母項 Snapshot"
 #, python-format
 msgid "no write permission on storage pool %s"
 msgstr "對儲存區 %s 沒有寫入權"
-
-msgid "node"
-msgstr "節點"
 
 #, python-format
 msgid "not able to execute ssh command: %s"
@@ -4394,9 +4305,6 @@ msgstr "qemu-img 無法在 %(path)s 上執行：%(exp)s"
 msgid "qemu-nbd error: %s"
 msgstr "qemu-nbd 錯誤：%s"
 
-msgid "ramdisk"
-msgstr "Ramdisk"
-
 msgid "rbd python libraries not found"
 msgstr "找不到 rbd Python 程式庫"
 
@@ -4429,26 +4337,14 @@ msgstr "create_info 中需要 snapshot_id"
 msgid "start address"
 msgstr "起始位址"
 
-msgid "state"
-msgstr "狀態"
-
-msgid "sudo failed, continuing as if nothing happened"
-msgstr "sudo 失敗，正在繼續作業，就好像什麼都沒發生過"
-
 msgid "token not provided"
 msgstr "未提供記號"
 
 msgid "too many body keys"
 msgstr "主體金鑰太多"
 
-msgid "type"
-msgstr "類型"
-
 msgid "unpause not supported for vmwareapi"
 msgstr "vmwareapi 不支援取消暫停"
-
-msgid "user"
-msgstr "使用者"
 
 msgid "uuid"
 msgstr "UUID"

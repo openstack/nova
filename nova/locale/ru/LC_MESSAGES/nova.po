@@ -14,9 +14,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
+"Project-Id-Version: nova 14.0.0.0rc2.dev504\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-25 06:14+0000\n"
+"POT-Creation-Date: 2016-10-26 19:51+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -86,10 +86,6 @@ msgstr "%(field)s не должно входить в состав обновл�
 #, python-format
 msgid "%(fieldname)s missing field type"
 msgstr "Отсутствует тип поля %(fieldname)s"
-
-#, python-format
-msgid "%(host)s:%(port)s: Target closed"
-msgstr "%(host)s:%(port)s: Целевой порт закрыт"
 
 #, python-format
 msgid "%(key)s is not a valid quota key. Valid options are: %(options)s."
@@ -606,10 +602,6 @@ msgstr "Невозможно найти SR для чтения/записи VDI.
 msgid "Cannot find image for rebuild"
 msgstr "Невозможно найти образ для перекомпоновки"
 
-#, python-format
-msgid "Cannot load scheduler driver from configuration %(conf)s."
-msgstr "Не удается загрузить драйвер планировщика из конфигурации %(conf)s."
-
 msgid "Cannot mount Scality SOFS, check syslog for errors"
 msgstr ""
 "Не удалось смонтировать Scality SOFS. Проверьте системный протокол на "
@@ -883,10 +875,6 @@ msgid ""
 msgstr ""
 "Невозможно смонтировать диск конфигурации vfat. %(operation)s не выполнено. "
 "Ошибка: %(error)s"
-
-#, python-format
-msgid "Could not read %s. Re-running with sudo"
-msgstr "Невозможно прочитать %s. Повторное выполнение с помощью sudo"
 
 #, python-format
 msgid "Could not upload image %(image_id)s"
@@ -1184,18 +1172,6 @@ msgstr "Не удалось подключить устройство сетев
 #, python-format
 msgid "Failed to create vif %s"
 msgstr "Не удалось создать vif %s"
-
-#, python-format
-msgid "Failed to decrypt image file %(image_file)s: %(err)s"
-msgstr "Ошибка дешифрирования файла образа %(image_file)s: %(err)s"
-
-#, python-format
-msgid "Failed to decrypt initialization vector: %s"
-msgstr "Ошибка дешифрирования вектора инициализации: %s"
-
-#, python-format
-msgid "Failed to decrypt private key: %s"
-msgstr "Ошибка дешифрирования личного ключа: %s"
 
 #, python-format
 msgid "Failed to decrypt text: %(reason)s"
@@ -1540,15 +1516,6 @@ msgstr ""
 "%(unit)s"
 
 #, python-format
-msgid "Glance image %(image_id)s is in unknown state - %(state)s"
-msgstr ""
-"Образ Glance %(image_id)s находится в неизвестном состоянии - %(state)s"
-
-#, python-format
-msgid "Glance image %s is in killed state"
-msgstr "Образ Glance %s находится в удаленном состоянии"
-
-#, python-format
 msgid "Group not valid. Reason: %(reason)s"
 msgstr "Неверная группа. Причина: %(reason)s"
 
@@ -1641,12 +1608,6 @@ msgstr "Размер диска образа превышает запрашив
 
 msgid "Image is not raw format"
 msgstr "Образ не в формате raw"
-
-msgid "Image metadata key cannot be blank"
-msgstr "Ключ метаданных образа не может быть пустым"
-
-msgid "Image metadata key too long"
-msgstr "Ключ метаданных образа слишком длинен"
 
 msgid "Image metadata limit exceeded"
 msgstr "Ограничение метаданных образа превышено"
@@ -2045,9 +2006,6 @@ msgstr "Недопустимый формат образа '%(format)s'"
 #, python-format
 msgid "Invalid image href %(image_href)s."
 msgstr "Недопустимый образ href %(image_href)s."
-
-msgid "Invalid image metadata"
-msgstr "Неверные метаданные образа"
 
 #, python-format
 msgid "Invalid inclusion expression %r"
@@ -2983,9 +2941,6 @@ msgstr ""
 #, python-format
 msgid "Physical network is missing for network %(network_uuid)s"
 msgstr "Отсутствует физическая сеть для сети %(network_uuid)s"
-
-msgid "Please re-run nova-manage as root."
-msgstr "Выполните nova-manage снова как root."
 
 msgid "Please specify either fixed_range or uuid"
 msgstr "Укажите fixed_range или uuid"
@@ -4153,9 +4108,6 @@ msgstr "Нераспознанное значение read_deleted '%s'"
 msgid "Unrecognized value '%s' for CONF.running_deleted_instance_action"
 msgstr "Нераспознанное значение '%s' для CONF.running_deleted_instance_action"
 
-msgid "Unsafe filenames in image"
-msgstr "В образе небезопасные имена файлов"
-
 #, python-format
 msgid "Unshelve attempted but the image %s cannot be found."
 msgstr ""
@@ -4396,29 +4348,6 @@ msgid "You should specify images_volume_group flag to use LVM images."
 msgstr ""
 "Необходимо указать флаг images_volume_group для использования образов LVM."
 
-msgid ""
-"Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag or "
-"your destination node does not support retrieving listen addresses.  In "
-"order for live migration to work properly you must either disable serial "
-"console or upgrade your libvirt version."
-msgstr ""
-"Ваша версия libvirt не поддерживает флаг VIR_DOMAIN_XML_MIGRATABLE или ваш "
-"целевой узел не поддерживает извлечения прослушивающих адресов.  Для "
-"правильного выполнения оперативной миграции необходимо отключить "
-"последовательную консоль или обновить версию libvirt."
-
-msgid ""
-"Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag or "
-"your destination node does not support retrieving listen addresses.  In "
-"order for live migration to work properly, you must configure the graphics "
-"(VNC and/or SPICE) listen addresses to be either the catch-all address "
-"(0.0.0.0 or ::) or the local address (127.0.0.1 or ::1)."
-msgstr ""
-"Версия libvirt не поддерживает флаг VIR_DOMAIN_XML_MIGRATABLE, или целевой "
-"узел не поддерживает извлечение адресов получения запросов.  Для правильной "
-"работы оперативного переноса необходимо настроить адреса для графики (VNC "
-"или SPICE) как любые (0.0.0.0 или ::) или локальные (127.0.0.1 или ::1)."
-
 msgid "Zero fixed IPs could be found."
 msgstr "Не найдено ни одного фиксированного IP."
 
@@ -4520,17 +4449,8 @@ msgstr "ID"
 msgid "id cannot contain leading and/or trailing whitespace(s)"
 msgstr "ИД не может содержать пробелы в начале и/или в конце"
 
-msgid "image"
-msgstr "образ"
-
 msgid "image already mounted"
 msgstr "образ уже присоединён"
-
-msgid "index"
-msgstr "индекс"
-
-msgid "instance"
-msgstr "инстанс"
 
 #, python-format
 msgid "instance %s is not running"
@@ -4563,17 +4483,11 @@ msgstr "недопустимый %(property)s %(attr)s"
 msgid "is_public must be a boolean"
 msgstr "is_public должен быть boolean"
 
-msgid "kernel"
-msgstr "ядро"
-
 msgid "keymgr.fixed_key not defined"
 msgstr "keymgr.fixed_key не определен"
 
 msgid "l3driver call to add floating IP failed"
 msgstr "Не удалось выполнить вызов l3driver для добавления нефиксированного IP"
-
-msgid "launched"
-msgstr "запущен"
 
 msgid "ldap not installed"
 msgstr "ldap не установлен"
@@ -4585,9 +4499,6 @@ msgstr "libguestfs установлена, но ее невозможно исп
 #, python-format
 msgid "libguestfs is not installed (%s)"
 msgstr "Не установлена libguestfs (%s)"
-
-msgid "libvirt error while requesting blockjob info."
-msgstr "Ошибка libvirt при запросе информации о blockjob."
 
 #, python-format
 msgid "marker [%s] not found"
@@ -4631,9 +4542,6 @@ msgstr "не найдена пригодная родительская моме
 #, python-format
 msgid "no write permission on storage pool %s"
 msgstr "нет прав записи в пул памяти %s"
-
-msgid "node"
-msgstr "узел"
 
 #, python-format
 msgid "not able to execute ssh command: %s"
@@ -4697,9 +4605,6 @@ msgstr "qemu-img не выполнен в %(path)s : %(exp)s"
 msgid "qemu-nbd error: %s"
 msgstr "ошибка qemu-nbd: %s"
 
-msgid "ramdisk"
-msgstr "RAM диск"
-
 msgid "rbd python libraries not found"
 msgstr "Не найдены библиотеки rbd и python"
 
@@ -4739,28 +4644,14 @@ msgstr "snapshot_id обязателен в create_info"
 msgid "start address"
 msgstr "начальный адрес"
 
-msgid "state"
-msgstr "состояние"
-
-msgid "sudo failed, continuing as if nothing happened"
-msgstr ""
-"не удалось выполнить sudo, выполнение продолжается, как будто ничего не "
-"произошло"
-
 msgid "token not provided"
 msgstr "маркер не указан"
 
 msgid "too many body keys"
 msgstr "слишком много ключей тела"
 
-msgid "type"
-msgstr "тип"
-
 msgid "unpause not supported for vmwareapi"
 msgstr "отмена остановки не поддерживается для vmwareapi"
-
-msgid "user"
-msgstr "пользователь"
 
 msgid "uuid"
 msgstr "uuid"

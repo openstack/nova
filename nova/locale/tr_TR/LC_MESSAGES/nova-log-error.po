@@ -6,9 +6,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
+"Project-Id-Version: nova 14.0.0.0rc2.dev504\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-25 06:15+0000\n"
+"POT-Creation-Date: 2016-10-26 19:52+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -148,10 +148,6 @@ msgstr ""
 
 msgid "Environment variable 'NETWORK_ID' must be set."
 msgstr "Çevresel değişken 'NETWORK_ID' ayarlanmış olmalı."
-
-#, python-format
-msgid "Error defining a domain with XML: %s"
-msgstr "XML ile bir alanın tanımlanmasında hata: %s"
 
 #, python-format
 msgid "Error defining a secret with XML: %s"
@@ -367,10 +363,6 @@ msgid "Failed to deallocate networks"
 msgstr "Ağ ilişikleri kesilemedi"
 
 #, python-format
-msgid "Failed to decrypt %(image_location)s to %(image_path)s"
-msgstr "%(image_path)s için %(image_location)s çözümü başarısız"
-
-#, python-format
 msgid "Failed to destroy instance: %s"
 msgstr "Sunucu silme başarısız: %s"
 
@@ -381,10 +373,6 @@ msgstr "%(device_name)s ayrılamadı: İstisna: %(exc)s"
 #, python-format
 msgid "Failed to detach volume %(volume_id)s from %(mp)s"
 msgstr "%(volume_id)s mantıksal sürücüsünün %(mp)s den ayrılması başarısız"
-
-#, python-format
-msgid "Failed to download %(image_location)s to %(image_path)s"
-msgstr "%(image_path)si için %(image_location)s indirme işlemi başarısız"
 
 msgid "Failed to fetch glance image"
 msgstr "Glance imajı getirilirken hata"
@@ -518,10 +506,6 @@ msgstr "Kap dosya sistemi ayırma başarısız"
 msgid "Failed to unpause instance"
 msgstr "Sunucu sürdürme başarısız"
 
-#, python-format
-msgid "Failed to untar %(image_location)s to %(image_path)s"
-msgstr "%(image_path)s için %(image_location)s çıkarma işlemi başarısız"
-
 msgid "Failed to update usages bulk deallocating floating IP"
 msgstr "Kullanımlar güncellenemedi değişken IP toptan bırakılıyor"
 
@@ -539,10 +523,6 @@ msgstr "Kullanımların güncellenmesi başarısız güvenlik grubu bırakılıy
 
 msgid "Failed to update usages deallocating server group"
 msgstr "Kullanımların güncellenmesi başarısız sunucu grubu bırakılıyor."
-
-#, python-format
-msgid "Failed to upload %(image_location)s to %(image_path)s"
-msgstr "%(image_path)s için %(image_location)s yükleme işlemi başarısız"
 
 msgid "Failed to write configuration file"
 msgstr "Yapılandırma dosyası yazma başarısız"
@@ -706,9 +686,6 @@ msgstr "Dönemsel sync_power_state görevi bir sunucuyu işlerken hata aldı."
 msgid "Periodic task failed to offload instance."
 msgstr "Dönemsel görev sunucu yükünü almada başarısız."
 
-msgid "Plugin config_file get_val failed"
-msgstr "Eklenti config_file get_val başarısız"
-
 #, python-format
 msgid "Pool-Join failed: %s"
 msgstr "Havuz-Katılma başarısız: %s"
@@ -724,9 +701,6 @@ msgstr "Havuz-set_name_label başarısız: %s"
 #, python-format
 msgid "Pre live migration failed at %s"
 msgstr "Canlı öncesi göç %s de başarısız"
-
-msgid "Read/Write data failed"
-msgstr "Veri okuma/yazma başarısız"
 
 #, python-format
 msgid "Requested VM Generation %s, but provided VHD instead of VHDX."
@@ -781,9 +755,6 @@ msgstr "%(method)s çağrısı hata döndürdü: %(e)s."
 #, python-format
 msgid "The call to %(method)s returned an error: %(e)s. args=%(args)r"
 msgstr "%(method)s çağrısı bir hata döndürdü: %(e)s. args=%(args)r"
-
-msgid "Transfer data failed"
-msgstr "Veri aktarımı başarısız"
 
 #, python-format
 msgid "Unable to access floating IP %s"

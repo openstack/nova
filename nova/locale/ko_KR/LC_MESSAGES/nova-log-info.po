@@ -4,16 +4,17 @@
 #
 # Translators:
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
+# Jongwon Lee <tothebinaryworld@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b2.dev117\n"
+"Project-Id-Version: nova 14.0.0.0rc2.dev504\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-06-08 04:30+0000\n"
+"POT-Creation-Date: 2016-10-26 19:51+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-03-24 04:30+0000\n"
-"Last-Translator: SeYeon Lee <sy_lee@kr.ibm.com>\n"
+"PO-Revision-Date: 2016-10-25 05:30+0000\n"
+"Last-Translator: Jongwon Lee <tothebinaryworld@gmail.com>\n"
 "Language: ko-KR\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
@@ -206,8 +207,10 @@ msgid "Creating config drive at %(path)s"
 msgstr "%(path)s에 구성 드라이브 작성 중"
 
 #, python-format
-msgid "Creating event %(name)s:%(tag)s for instance %(instance_uuid)s"
-msgstr "%(instance_uuid)s 인스턴스의 %(name)s:%(tag)s 이벤트 생성"
+msgid ""
+"Creating event %(name)s:%(tag)s for instance %(instance_uuid)s on %(host)s"
+msgstr ""
+"이벤트 생성  %(name)s: %(host)s에 대한 인스턴스 %(instance_uuid)s의 %(tag)s"
 
 msgid "Creating image"
 msgstr "이미지 작성 중"
@@ -404,6 +407,10 @@ msgid "Finishing migration network for instance %s"
 msgstr "%s 인스턴스의 마이그레이션 네트워크 완료"
 
 #, python-format
+msgid "Fixed IP %(ip)s translates to instance UUID %(uuid)s"
+msgstr "고정 된 IP 주소 %(ip)s는 UUID %(uuid)s로 해석 됩니다."
+
+#, python-format
 msgid "Fixing previous mount %s which was not unmounted correctly."
 msgstr "올바르게 마운트 해제되지 않은 이전 마운트 %s을(를) 수정합니다."
 
@@ -490,16 +497,18 @@ msgstr ""
 "%(mac)s의 Fixed IP %(address)s을(를) 해제하는 요청을 무시합니다."
 
 #, python-format
+msgid "Image %s deleted because instance deleted before snapshot started."
+msgstr ""
+"이미지 %s는 스냅샷이 시작 되기 전에 인스턴스가 삭제되었기 때문에 제거 되었습"
+"니다. "
+
+#, python-format
 msgid "Image %s is no longer used by this node. Pending deletion!"
 msgstr "이 노드에서 %s 이미지를 더 이상 사용하지 않습니다. 삭제 보류 중!"
 
 #, python-format
 msgid "Image %s is no longer used. Deleting!"
 msgstr "%s 이미지가 더 이상 사용되지 않습니다. 삭제!"
-
-#, python-format
-msgid "Image %s was deleted underneath us"
-msgstr "us에서 %s 이미지가 삭제됨"
 
 #, python-format
 msgid ""
@@ -533,6 +542,13 @@ msgstr ""
 
 msgid "Instance already shutdown."
 msgstr "인스턴스가 이미 시스템 종료되었습니다."
+
+#, python-format
+msgid ""
+"Instance deleted and does not have host field, its vm_state is %(state)s."
+msgstr ""
+"인스턴스가 삭제 되었고  호스트 필드를 갖고 있지 않습니다. 해당 vm_state은 "
+"%(state)s입니다."
 
 msgid "Instance destroyed successfully."
 msgstr "인스턴스가 영구 삭제되었습니다. "
@@ -710,6 +726,14 @@ msgid "No hosts matched due to not matching 'force_hosts' value of '%s'"
 msgstr "'force_hosts' 값 '%s'이(가) 일치하지 않으므로 호스트가 일치하지 않음"
 
 #, python-format
+msgid ""
+"No hosts matched due to not matching requested destination (%(host)s, "
+"%(node)s)"
+msgstr ""
+"요청 된 목적지 (%(host)s, %(node)s)에 부합하지 않기 때무에 호스트가 일치하지 "
+"않습니다."
+
+#, python-format
 msgid "No nodes matched due to not matching 'force_nodes' value of '%s'"
 msgstr "'force_nodes' 값 '%s'이(가) 일치하지 않으므로 노드가 일치하지 않음"
 
@@ -832,6 +856,22 @@ msgstr ""
 "%(begin_time)s에서 %(end_time)s. %(number_instances)s 인스턴스까지 %(host)s "
 "호스트에 대한 인스턴스 사용 감사를 실행하는 중입니다. "
 
+#, python-format
+msgid ""
+"Security group %(name)s added %(protocol)s ingress (%(from_port)s:"
+"%(to_port)s)"
+msgstr ""
+"보안 그룹 %(name)s가 %(protocol)s 진입 (%(from_port)s:%(to_port)s)을 추가 했"
+"습니다."
+
+#, python-format
+msgid ""
+"Security group %(name)s removed %(protocol)s ingress (%(from_port)s:"
+"%(to_port)s)"
+msgstr ""
+"보안 그룹 %(name)s가 %(protocol)s 진입 (%(from_port)s:%(to_port)s)를 제거했습"
+"니다."
+
 msgid ""
 "Service started deleting the instance during the previous run, but did not "
 "finish. Restarting the deletion now."
@@ -941,6 +981,10 @@ msgstr "선점된 작업: %s"
 msgid "Terminating instance"
 msgstr "인스턴스 종료"
 
+#, python-format
+msgid "The ID %(id)s is unknown."
+msgstr "ID %(id)s는 알려지지 않았습니다."
+
 msgid "The imported VM was unregistered"
 msgstr "가져온 VM의 등록이 해제됨"
 
@@ -1033,6 +1077,10 @@ msgstr "%s 마이그레이션에서 업데이트 중"
 #, python-format
 msgid "Updating instance to original state: '%s'"
 msgstr "인스턴스를 원래 상태로 업데이트: '%s'"
+
+#, python-format
+msgid "Updating port %(port)s with attributes %(attributes)s"
+msgstr "속성 %(attributes)s의 갱신 진행 중인 포트 %(port)s"
 
 #, python-format
 msgid ""
@@ -1189,6 +1237,10 @@ msgstr ""
 #, python-format
 msgid "re-assign floating IP %(address)s from instance %(instance_id)s"
 msgstr "%(instance_id)s에서 부동 IP %(address)s 재지정"
+
+msgid "set_admin_password is not supported by this driver or guest instance."
+msgstr ""
+"set_admin_password는 이 드라이버 또는 게스트 인스턴스를 지원하지 않습니다."
 
 #, python-format
 msgid "tap-ctl check: %s"
