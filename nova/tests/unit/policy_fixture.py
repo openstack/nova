@@ -54,9 +54,10 @@ class RealPolicyFixture(fixtures.Fixture):
         nova.policy.init()
         self.addCleanup(nova.policy.reset)
 
-    def set_rules(self, rules):
+    def set_rules(self, rules, overwrite=True):
         policy = nova.policy._ENFORCER
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
+        policy.set_rules(oslo_policy.Rules.from_dict(rules),
+                         overwrite=overwrite)
 
     def add_missing_default_rules(self, rules):
         """Adds default rules and their values to the given rules dict.

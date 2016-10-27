@@ -1,0 +1,10 @@
+---
+features:
+  - |
+     The same policy rule (os_compute_api:os-server-groups)
+     was being used for all actions (show, index, delete, create)
+     for server_groups REST APIs. It was thus impossible to provide
+     different RBAC for specific actions based on roles. To address
+     this changes are made to have separate policy rules for each
+     action. The original rule (os_compute_api:os-server-groups) is
+     left unchanged for backward compatibility.

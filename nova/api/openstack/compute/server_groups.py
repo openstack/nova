@@ -36,9 +36,9 @@ LOG = logging.getLogger(__name__)
 ALIAS = "os-server-groups"
 
 
-def _authorize_context(req):
+def _authorize_context(req, action):
     context = req.environ['nova.context']
-    context.can(sg_policies.BASE_POLICY_NAME)
+    context.can(sg_policies.POLICY_ROOT % action)
     return context
 
 
@@ -75,7 +75,7 @@ class ServerGroupController(wsgi.Controller):
     @extensions.expected_errors(404)
     def show(self, req, id):
         """Return data about the given server group."""
-        context = _authorize_context(req)
+        context = _authorize_context(req, 'show')
         try:
             sg = objects.InstanceGroup.get_by_uuid(context, id)
         except nova.exception.InstanceGroupNotFound as e:
@@ -86,7 +86,7 @@ class ServerGroupController(wsgi.Controller):
     @extensions.expected_errors(404)
     def delete(self, req, id):
         """Delete an server group."""
-        context = _authorize_context(req)
+        context = _authorize_context(req, 'delete')
         try:
             sg = objects.InstanceGroup.get_by_uuid(context, id)
         except nova.exception.InstanceGroupNotFound as e:
@@ -117,7 +117,7 @@ class ServerGroupController(wsgi.Controller):
     @extensions.expected_errors(())
     def index(self, req):
         """Returns a list of server groups."""
-        context = _authorize_context(req)
+        context = _authorize_context(req, 'index')
         project_id = context.project_id
         if 'all_projects' in req.GET and context.is_admin:
             sgs = objects.InstanceGroupList.get_all(context)
@@ -135,7 +135,7 @@ class ServerGroupController(wsgi.Controller):
     @validation.schema(schema.create_v215, "2.15")
     def create(self, req, body):
         """Creates a new server group."""
-        context = _authorize_context(req)
+        context = _authorize_context(req, 'create')
 
         quotas = objects.Quotas(context=context)
         try:
