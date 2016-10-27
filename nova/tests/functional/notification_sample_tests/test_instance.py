@@ -72,6 +72,7 @@ class TestInstanceNotificationSample(
             self._test_shelve_offload_server,
             self._test_unshelve_server,
             self._test_resize_server,
+            self._test_snapshot_server,
         ]
 
         for action in actions:
@@ -510,6 +511,25 @@ class TestInstanceNotificationSample(
         post = {'revertResize': None}
         self.api.post_server_action(server['id'], post)
         self._wait_for_state_change(self.api, server, 'ACTIVE')
+
+    def _test_snapshot_server(self, server):
+        post = {'createImage': {'name': 'test-snap'}}
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_notification('instance.snapshot.end')
+
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-snapshot-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+                    actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-snapshot-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
     def _test_restore_server(self, server):
         self.flags(reclaim_instance_interval=30)
