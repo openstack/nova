@@ -972,6 +972,22 @@ class ResourceTracker(object):
 
         for migration in filtered.values():
             instance = instances[migration.instance_uuid]
+            # Skip migration (and mark it as error) if it doesn't match the
+            # instance migration id.
+            # This can happen if we have a stale migration record.
+            # We want to proceed if instance.migration_context is None
+            if (instance.migration_context is not None and
+                    instance.migration_context.migration_id != migration.id):
+                LOG.info("Current instance migration %(im)s doesn't match "
+                             "migration %(m)s, marking migration as error. "
+                             "This can occur if a previous migration for this "
+                             "instance did not complete.",
+                    {'im': instance.migration_context.migration_id,
+                     'm': migration.id})
+                migration.status = "error"
+                migration.save()
+                continue
+
             try:
                 self._update_usage_from_migration(context, instance, migration,
                                                   nodename)

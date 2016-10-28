@@ -868,6 +868,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         get_inst_mock.return_value = instance
         get_cn_mock.return_value = _COMPUTE_NODE_FIXTURES[0]
         instance.migration_context = _MIGRATION_CONTEXT_FIXTURES[inst_uuid]
+        instance.migration_context.migration_id = migr_obj.id
 
         update_mock = self._update_available_resources()
 
@@ -2314,6 +2315,7 @@ class TestUpdateUsageFromMigrations(BaseTestCase):
                               instance_uuid=uuids.instance,
                               created_at=ts0,
                               updated_at=ts1,
+                              id=1,
                               instance=instance),
             objects.Migration(source_compute=_HOSTNAME,
                               source_node=_NODENAME,
@@ -2322,10 +2324,13 @@ class TestUpdateUsageFromMigrations(BaseTestCase):
                               instance_uuid=uuids.instance,
                               created_at=ts0,
                               updated_at=ts2,
+                              id=2,
                               instance=instance)
         ]
         mig1, mig2 = migrations
         mig_list = objects.MigrationList(objects=migrations)
+        instance.migration_context = objects.MigrationContext(
+            migration_id=mig2.id)
         self.rt._update_usage_from_migrations(mock.sentinel.ctx, mig_list,
                                               _NODENAME)
         upd_mock.assert_called_once_with(mock.sentinel.ctx, instance, mig2,
@@ -2333,10 +2338,42 @@ class TestUpdateUsageFromMigrations(BaseTestCase):
 
         upd_mock.reset_mock()
         mig2.updated_at = None
+        instance.migration_context.migration_id = mig1.id
         self.rt._update_usage_from_migrations(mock.sentinel.ctx, mig_list,
                 _NODENAME)
         upd_mock.assert_called_once_with(mock.sentinel.ctx, instance, mig1,
                 _NODENAME)
+
+    @mock.patch('nova.objects.migration.Migration.save')
+    @mock.patch.object(resource_tracker.ResourceTracker,
+                       '_update_usage_from_migration')
+    def test_ignore_stale_migration(self, upd_mock, save_mock):
+        # In _update_usage_from_migrations() we want to only look at
+        # migrations where the migration id matches the migration ID that is
+        # stored in the instance migration context.  The problem scenario is
+        # that the instance is migrating on host B, but we run the resource
+        # audit on host A and there is a stale migration in the DB for the
+        # same instance involving host A.
+        self._setup_rt()
+        # Create an instance which is migrating with a migration id of 2
+        migration_context = objects.MigrationContext(migration_id=2)
+        instance = objects.Instance(vm_state=vm_states.RESIZED,
+                                    task_state=None,
+                                    migration_context=migration_context)
+        # Create a stale migration object with id of 1
+        mig1 = objects.Migration(source_compute=_HOSTNAME,
+                              source_node=_NODENAME,
+                              dest_compute=_HOSTNAME,
+                              dest_node=_NODENAME,
+                              instance_uuid=uuids.instance,
+                              updated_at=timeutils.utcnow(),
+                              id=1,
+                              instance=instance)
+        mig_list = objects.MigrationList(objects=[mig1])
+        self.rt._update_usage_from_migrations(mock.sentinel.ctx, mig_list,
+                                              _NODENAME)
+        self.assertFalse(upd_mock.called)
+        self.assertEqual(mig1.status, "error")
 
 
 class TestUpdateUsageFromInstance(BaseTestCase):
