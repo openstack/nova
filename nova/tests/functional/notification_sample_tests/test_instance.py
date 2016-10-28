@@ -63,6 +63,7 @@ class TestInstanceNotificationSample(
             self._test_power_on_server,
             self._test_restore_server,
             self._test_suspend_server,
+            self._test_resume_server,
             self._test_pause_server,
             self._test_shelve_server,
             self._test_shelve_offload_server,
@@ -339,9 +340,26 @@ class TestInstanceNotificationSample(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
+    def _test_resume_server(self, server):
         post = {'resume': None}
         self.api.post_server_action(server['id'], post)
         self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-resume-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-resume-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
+        self.flags(reclaim_instance_interval=0)
 
     def _test_pause_server(self, server):
         self.api.post_server_action(server['id'], {'pause': {}})
