@@ -20,6 +20,7 @@ import traceback
 import fixtures
 import mock
 import netaddr
+import os_vif
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
@@ -250,6 +251,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         # here; we test it in test_imagebackend.py
         self.stubs.Set(imagebackend.Image, 'resolve_driver_format',
                        imagebackend.Image._get_driver_format)
+        os_vif.initialize()
 
     def _get_running_instance(self, obj=True):
         instance_ref = test_utils.get_test_instance(obj=obj)
