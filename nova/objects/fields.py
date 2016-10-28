@@ -738,6 +738,9 @@ class AddressBase(FieldType):
         else:
             raise ValueError(_('Value must match %s') % obj.PATTERN)
 
+    def get_schema(self):
+        return {'type': ['string'], 'pattern': self.PATTERN}
+
 
 class PCIAddress(AddressBase):
     PATTERN = '[a-f0-9]{4}:[a-f0-9]{2}:[a-f0-9]{2}.[a-f0-9]'

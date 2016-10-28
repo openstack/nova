@@ -60,6 +60,14 @@ class FakeEnumAlt(fields.Enum):
                                           **kwargs)
 
 
+class FakeAddress(fields.AddressBase):
+    PATTERN = '[a-z]+[0-9]+'
+
+
+class FakeAddressField(fields.AutoTypedField):
+    AUTO_TYPE = FakeAddress()
+
+
 class FakeEnumField(fields.BaseEnumField):
     AUTO_TYPE = FakeEnum()
 
@@ -621,3 +629,11 @@ class TestSecureBoot(TestField):
 
     def test_stringify_invalid(self):
         self.assertRaises(ValueError, self.field.stringify, 'enabled')
+
+
+class TestSchemaGeneration(test.NoDBTestCase):
+    def test_address_base_get_schema(self):
+        field = FakeAddressField()
+        expected = {'type': ['string'], 'pattern': '[a-z]+[0-9]+',
+                    'readonly': False}
+        self.assertEqual(expected, field.get_schema())
