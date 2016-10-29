@@ -35,6 +35,7 @@ import fixtures
 from lxml import etree
 import mock
 from mox3 import mox
+from os_brick import encryptors
 from os_brick import exception as brick_exception
 from os_brick.initiator import connector
 import os_vif
@@ -6423,7 +6424,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_get_domain.assert_called_once_with(instance)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
-    @mock.patch('nova.volume.encryptors.get_volume_encryptor')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
     @mock.patch('nova.virt.libvirt.host.Host.get_guest')
     def test_detach_volume_order_with_encryptors(self, mock_get_guest,
             mock_get_encryptor, mock_disconnect_volume):
@@ -6432,7 +6433,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_guest.get_power_state.return_value = power_state.RUNNING
         mock_get_guest.return_value = mock_guest
         mock_encryptor = mock.MagicMock(
-                spec=nova.volume.encryptors.nop.NoOpEncryptor)
+                spec=encryptors.nop.NoOpEncryptor)
         mock_get_encryptor.return_value = mock_encryptor
 
         mock_order = mock.Mock()
@@ -14591,7 +14592,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                     block_device_info=None, destroy_disks=True)
             self.assertTrue(guest.poweroff.called)
 
-    @mock.patch('nova.volume.encryptors.get_encryption_metadata')
+    @mock.patch('os_brick.encryptors.get_encryption_metadata')
     @mock.patch('nova.virt.libvirt.blockinfo.get_info_from_bdm')
     def test_create_with_bdm(self, get_info_from_bdm, get_encryption_metadata):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)

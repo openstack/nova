@@ -13,6 +13,7 @@
 #    under the License.
 
 import mock
+from os_brick import encryptors
 from oslo_serialization import jsonutils
 
 from nova import block_device
@@ -28,7 +29,6 @@ from nova.tests import uuidsentinel as uuids
 from nova.virt import block_device as driver_block_device
 from nova.virt import driver
 from nova.volume import cinder
-from nova.volume import encryptors
 
 
 class TestDriverBlockDevice(test.NoDBTestCase):

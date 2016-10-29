@@ -44,6 +44,7 @@ import eventlet
 from eventlet import greenthread
 from eventlet import tpool
 from lxml import etree
+from os_brick import encryptors
 from os_brick import exception as brick_exception
 from os_brick.initiator import connector
 from oslo_concurrency import processutils
@@ -74,6 +75,7 @@ from nova.i18n import _LE
 from nova.i18n import _LI
 from nova.i18n import _LW
 from nova import image
+from nova import keymgr
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import fields
@@ -109,7 +111,6 @@ from nova.virt.libvirt import vif as libvirt_vif
 from nova.virt.libvirt.volume import remotefs
 from nova.virt import netutils
 from nova.volume import cinder
-from nova.volume import encryptors
 
 libvirt = None
 
@@ -1164,9 +1165,12 @@ class LibvirtDriver(driver.ComputeDriver):
         return vol_driver.get_config(connection_info, disk_info)
 
     def _get_volume_encryptor(self, connection_info, encryption):
-        encryptor = encryptors.get_volume_encryptor(connection_info,
-                                                    **encryption)
-        return encryptor
+        root_helper = utils.get_root_helper()
+        key_manager = keymgr.API(CONF)
+        return encryptors.get_volume_encryptor(root_helper=root_helper,
+                                               keymgr=key_manager,
+                                               connection_info=connection_info,
+                                               **encryption)
 
     def _check_discard_for_attach_volume(self, conf, instance):
         """Perform some checks for volumes configured for discard support.

@@ -15,6 +15,7 @@
 import functools
 import itertools
 
+from os_brick import encryptors
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
@@ -26,7 +27,6 @@ from nova import exception
 from nova.i18n import _LE
 from nova.i18n import _LI
 from nova.i18n import _LW
-from nova.volume import encryptors
 
 CONF = nova.conf.CONF
 

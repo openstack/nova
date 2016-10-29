@@ -225,14 +225,6 @@ privsep-rootwrap: RegExpFilter, privsep-helper, root, privsep-helper, --config-f
 # nova/storage/linuxscsi.py: sg_scan device
 sg_scan: CommandFilter, sg_scan, root
 
-# nova/volume/encryptors/cryptsetup.py:
-# nova/volume/encryptors/luks.py:
-ln: RegExpFilter, ln, root, ln, --symbolic, --force, /dev/mapper/crypt-.+, .+
-
-# nova/volume/encryptors.py:
-# nova/virt/libvirt/dmcrypt.py:
-cryptsetup: CommandFilter, cryptsetup, root
-
 # nova/virt/xenapi/vm_utils.py:
 xenstore-read: CommandFilter, xenstore-read, root
 
