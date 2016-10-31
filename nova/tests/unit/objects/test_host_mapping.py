@@ -13,9 +13,8 @@
 import mock
 
 from nova import objects
-from nova import test
-
 from nova.objects import host_mapping
+from nova import test
 from nova.tests.unit.objects import test_cell_mapping
 from nova.tests.unit.objects import test_objects
 

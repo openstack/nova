@@ -14,10 +14,11 @@
 #    under the License.
 
 import collections
-import fixtures
 import functools
-import mock
 import os
+
+import fixtures
+import mock
 import six
 
 from nova.virt.libvirt import config

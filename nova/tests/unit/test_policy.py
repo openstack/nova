@@ -15,9 +15,9 @@
 
 """Test of Policy Engine For Nova."""
 
-import mock
 import os.path
 
+import mock
 from oslo_policy import policy as oslo_policy
 from oslo_serialization import jsonutils
 import requests_mock

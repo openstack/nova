@@ -12,9 +12,10 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import time
+
 import fixtures
 import mock
-import time
 
 import nova.conf
 from nova import test

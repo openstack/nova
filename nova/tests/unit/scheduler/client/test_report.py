@@ -10,9 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
-
 from keystoneauth1 import exceptions as ks_exc
+import mock
 
 import nova.conf
 from nova import context

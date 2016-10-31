@@ -13,12 +13,12 @@
 #    under the License.
 
 import importlib
-import mock
 import uuid
 
 from migrate import exceptions as versioning_exceptions
 from migrate import UniqueConstraint
 from migrate.versioning import api as versioning_api
+import mock
 from oslo_db.sqlalchemy import utils as db_utils
 import sqlalchemy
 
