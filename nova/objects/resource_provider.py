@@ -1070,6 +1070,20 @@ class ResourceClass(base.NovaObject):
         target.obj_reset_changes()
         return target
 
+    @classmethod
+    def get_by_name(cls, context, name):
+        """Return a ResourceClass object with the given string name.
+
+        :param name: String name of the resource class to find
+
+        :raises: ResourceClassNotFound if no such resource class was found
+        """
+        _ensure_rc_cache(context)
+        rc_id = _RC_CACHE.id_from_string(name)
+        obj = cls(context, id=rc_id, name=name)
+        obj.obj_reset_changes()
+        return obj
+
     @staticmethod
     @db_api.api_context_manager.reader
     def _get_next_id(context):
