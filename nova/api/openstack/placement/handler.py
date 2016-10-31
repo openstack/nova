@@ -31,6 +31,7 @@ from oslo_log import log as logging
 from nova.api.openstack.placement.handlers import aggregate
 from nova.api.openstack.placement.handlers import allocation
 from nova.api.openstack.placement.handlers import inventory
+from nova.api.openstack.placement.handlers import resource_class
 from nova.api.openstack.placement.handlers import resource_provider
 from nova.api.openstack.placement.handlers import root
 from nova.api.openstack.placement.handlers import usage
@@ -57,6 +58,15 @@ ROUTE_DECLARATIONS = {
     # a legit key in a dictionary and matches as desired in Routes.
     '': {
         'GET': root.home,
+    },
+    '/resource_classes': {
+        'GET': resource_class.list_resource_classes,
+        'POST': resource_class.create_resource_class
+    },
+    '/resource_classes/{name}': {
+        'GET': resource_class.get_resource_class,
+        'PUT': resource_class.update_resource_class,
+        'DELETE': resource_class.delete_resource_class,
     },
     '/resource_providers': {
         'GET': resource_provider.list_resource_providers,

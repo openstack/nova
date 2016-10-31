@@ -135,6 +135,16 @@ def require_content(content_type):
     return decorator
 
 
+def resource_class_url(environ, resource_class):
+    """Produce the URL for a resource class.
+
+    If SCRIPT_NAME is present, it is the mount point of the placement
+    WSGI app.
+    """
+    prefix = environ.get('SCRIPT_NAME', '')
+    return '%s/resource_classes/%s' % (prefix, resource_class.name)
+
+
 def resource_provider_url(environ, resource_provider):
     """Produce the URL for a resource provider.
 

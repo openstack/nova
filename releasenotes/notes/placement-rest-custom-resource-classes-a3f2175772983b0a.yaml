@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    A new administrator-only resource endpoint was added to the OpenStack
+    Placement REST API for managing custom resource classes. Custom resource
+    classes are specific to a deployment and represent types of quantitative
+    resources that are not interoperable between OpenStack clouds. See the
+    `Placement REST API Version History`_ documentation for usage details.
+
+    .. _Placement REST API Version History: http://docs.openstack.org/developer/nova/placement.html#id3
