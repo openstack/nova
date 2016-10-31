@@ -364,6 +364,10 @@ class TestOpenStackClient(object):
         return self.api_post('/servers/%s/metadata' % server_id,
                              post_body).body['metadata']
 
+    def delete_server_metadata(self, server_id, key):
+        return self.api_delete('/servers/%s/metadata/%s' %
+                               (server_id, key))
+
     def get_server_groups(self, all_projects=None):
         if all_projects:
             return self.api_get(

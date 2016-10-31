@@ -346,6 +346,47 @@ class ServersTest(ServersTestBase):
         # Cleanup
         self._delete_server(created_server_id)
 
+    def test_server_metadata_actions_negative_invalid_state(self):
+        # Create server with metadata
+        server = self._build_minimal_create_server_request()
+
+        metadata = {'key_1': 'value_1'}
+
+        server['metadata'] = metadata
+
+        post = {'server': server}
+        created_server = self.api.post_server(post)
+
+        found_server = self._wait_for_state_change(created_server, 'BUILD')
+        self.assertEqual('ACTIVE', found_server['status'])
+        self.assertEqual(metadata, found_server.get('metadata'))
+        server_id = found_server['id']
+
+        # Change status from ACTIVE to SHELVED for negative test
+        self.flags(shelved_offload_time = -1)
+        self.api.post_server_action(server_id, {'shelve': {}})
+        found_server = self._wait_for_state_change(found_server, 'ACTIVE')
+        self.assertEqual('SHELVED', found_server['status'])
+
+        metadata = {'key_2': 'value_2'}
+
+        # Update Metadata item in SHELVED (not ACTIVE, etc.)
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self.api.post_server_metadata,
+                               server_id, metadata)
+        self.assertEqual(409, ex.response.status_code)
+        self.assertEqual('SHELVED', found_server['status'])
+
+        # Delete Metadata item in SHELVED (not ACTIVE, etc.)
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self.api.delete_server_metadata,
+                               server_id, 'key_1')
+        self.assertEqual(409, ex.response.status_code)
+        self.assertEqual('SHELVED', found_server['status'])
+
+        # Cleanup
+        self._delete_server(server_id)
+
     def test_create_and_rebuild_server(self):
         # Rebuild a server with metadata.
 
