@@ -1,0 +1,10 @@
+---
+prelude: >
+    A new database schema migration is included in this release to fix
+    `bug 1635446 <https://bugs.launchpad.net/nova/+bug/1635446>`_.
+fixes:
+  - |
+    Contains database schema migration
+    ``021_build_requests_instance_mediumtext`` which increases the size of the
+    ``build_requests.instance`` column on MySQL backends. This is needed to
+    create new instances which have very large ``user_data`` fields.
