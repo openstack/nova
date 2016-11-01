@@ -241,7 +241,9 @@ class _SchemaValidator(object):
     validator = None
     validator_org = jsonschema.Draft4Validator
 
-    def __init__(self, schema, relax_additional_properties=False):
+    def __init__(self, schema, relax_additional_properties=False,
+                 is_body=True):
+        self.is_body = is_body
         validators = {
             'minimum': self._validate_minimum,
             'maximum': self._validate_maximum,
@@ -262,13 +264,21 @@ class _SchemaValidator(object):
             if isinstance(ex.cause, exception.InvalidName):
                 detail = ex.cause.format_message()
             elif len(ex.path) > 0:
+                if self.is_body:
+                    # NOTE: For whole OpenStack message consistency, this error
+                    #       message has been written as the similar format of
+                    #       WSME.
+                    detail = _("Invalid input for field/attribute %(path)s. "
+                               "Value: %(value)s. %(message)s")
+                else:
+                    detail = _("Invalid input for query parameters %(path)s. "
+                               "Value: %(value)s. %(message)s")
                 # NOTE: For whole OpenStack message consistency, this error
                 #       message has been written as the similar format of WSME.
-                detail = _("Invalid input for field/attribute %(path)s."
-                           " Value: %(value)s. %(message)s") % {
-                               'path': ex.path.pop(), 'value': ex.instance,
-                               'message': ex.message
-                           }
+                detail = detail % {
+                    'path': ex.path.pop(), 'value': ex.instance,
+                    'message': ex.message
+                }
             else:
                 detail = ex.message
             raise exception.ValidationError(detail=detail)
