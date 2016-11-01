@@ -20,6 +20,7 @@
 networking and storage of VMs, and compute hosts on which they run)."""
 
 import base64
+import collections
 import copy
 import functools
 import re
@@ -3883,27 +3884,39 @@ class API(base.Base):
         # but doesn't know where they go. We need to collate lists
         # by the host the affected instance is on and dispatch them
         # according to host
-        instances_by_host = {}
-        events_by_host = {}
-        hosts_by_instance = {}
+        instances_by_host = collections.defaultdict(list)
+        events_by_host = collections.defaultdict(list)
+        hosts_by_instance = collections.defaultdict(list)
         for instance in instances:
-            instances_on_host = instances_by_host.get(instance.host, [])
-            instances_on_host.append(instance)
-            instances_by_host[instance.host] = instances_on_host
-            hosts_by_instance[instance.uuid] = instance.host
+            for host in self._get_relevant_hosts(context, instance):
+                instances_by_host[host].append(instance)
+                hosts_by_instance[instance.uuid].append(host)
 
         for event in events:
-            host = hosts_by_instance[event.instance_uuid]
-            events_on_host = events_by_host.get(host, [])
-            events_on_host.append(event)
-            events_by_host[host] = events_on_host
+            for host in hosts_by_instance[event.instance_uuid]:
+                events_by_host[host].append(event)
 
         for host in instances_by_host:
             # TODO(salv-orlando): Handle exceptions raised by the rpc api layer
             # in order to ensure that a failure in processing events on a host
             # will not prevent processing events on other hosts
             self.compute_rpcapi.external_instance_event(
-                context, instances_by_host[host], events_by_host[host])
+                context, instances_by_host[host], events_by_host[host],
+                host=host)
+
+    def _get_relevant_hosts(self, context, instance):
+        hosts = set()
+        hosts.add(instance.host)
+        if instance.migration_context is not None:
+            migration_id = instance.migration_context.migration_id
+            migration = objects.Migration.get_by_id(context, migration_id)
+            hosts.add(migration.dest_compute)
+            hosts.add(migration.source_compute)
+            LOG.debug('Instance %(instance)s is migrating, '
+                      'copying events to all relevant hosts: '
+                      '%(hosts)s', {'instance': instance.uuid,
+                                    'hosts': hosts})
+        return hosts
 
     def get_instance_host_status(self, instance):
         if instance.host:
