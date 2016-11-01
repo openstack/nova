@@ -18,8 +18,7 @@ from oslo_config import types
 from nova.conf import paths
 
 ALL_OPTS = [
-    cfg.StrOpt(
-        'vcpu_pin_set',
+    cfg.StrOpt('vcpu_pin_set',
         help="""
 Defines which physical CPUs (pCPUs) can be used by instance
 virtual CPUs (vCPUs).
@@ -33,9 +32,7 @@ Possible values:
 
     vcpu_pin_set = "4-12,^8,15"
 """),
-
-    cfg.StrOpt(
-        'compute_driver',
+    cfg.StrOpt('compute_driver',
         help="""
 Defines which driver to use for controlling virtualization.
 
@@ -48,9 +45,7 @@ Possible values:
 * ``vmwareapi.VMwareVCDriver``
 * ``hyperv.HyperVDriver``
 """),
-
-    cfg.StrOpt(
-        'default_ephemeral_format',
+    cfg.StrOpt('default_ephemeral_format',
         help="""
 The default format an ephemeral_volume will be formatted with on creation.
 
@@ -62,27 +57,25 @@ Possible values:
 * ``xfs``
 * ``ntfs`` (only for Windows guests)
 """),
-
-    cfg.StrOpt(
-        'preallocate_images',
+    # TODO(sfinucan): This should be a BooleanOpt
+    cfg.StrOpt('preallocate_images',
         default='none',
         choices=('none', 'space'),
         help="""
-The image preallocation mode to use. Image preallocation allows
-storage for instance images to be allocated up front when the instance is
-initially provisioned. This ensures immediate feedback is given if enough
-space isn't available. In addition, it should significantly improve
-performance on writes to new blocks and may even improve I/O performance to
-prewritten blocks due to reduced fragmentation.
+The image preallocation mode to use.
+
+Image preallocation allows storage for instance images to be allocated up front
+when the instance is initially provisioned. This ensures immediate feedback is
+given if enough space isn't available. In addition, it should significantly
+improve performance on writes to new blocks and may even improve I/O
+performance to prewritten blocks due to reduced fragmentation.
 
 Possible values:
 
 * "none"  => no storage provisioning is done up front
 * "space" => storage is fully allocated at instance start
 """),
-
-    cfg.BoolOpt(
-        'use_cow_images',
+    cfg.BoolOpt('use_cow_images',
         default=True,
         help="""
 Enable use of copy-on-write (cow) images.
@@ -90,9 +83,7 @@ Enable use of copy-on-write (cow) images.
 QEMU/KVM allow the use of qcow2 as backing files. By disabling this,
 backing files will not be used.
 """),
-
-    cfg.BoolOpt(
-        'vif_plugging_is_fatal',
+    cfg.BoolOpt('vif_plugging_is_fatal',
         default=True,
         help="""
 Determine if instance should boot or fail on VIF plugging timeout.
@@ -113,9 +104,7 @@ Possible values:
 * True: Instances should fail after VIF plugging timeout
 * False: Instances should continue booting after VIF plugging timeout
 """),
-
-    cfg.IntOpt(
-        'vif_plugging_timeout',
+    cfg.IntOpt('vif_plugging_timeout',
         default=300,
         min=0,
         help="""
@@ -124,15 +113,13 @@ Timeout for Neutron VIF plugging event message arrival.
 Number of seconds to wait for Neutron vif plugging events to
 arrive before continuing or failing (see 'vif_plugging_is_fatal').
 
-Interdependencies to other options:
+Related options:
 
 * vif_plugging_is_fatal - If ``vif_plugging_timeout`` is set to zero and
   ``vif_plugging_is_fatal`` is False, events should not be expected to
   arrive at all.
 """),
-
-    cfg.StrOpt(
-        'firewall_driver',
+    cfg.StrOpt('firewall_driver',
         help="""
 Firewall driver to use with ``nova-network`` service.
 
@@ -150,14 +137,12 @@ Possible values:
 * nova.virt.libvirt.firewall.IptablesFirewallDriver
 * [...]
 
-Interdependencies to other options:
+Related options:
 
 * ``use_neutron``: This must be set to ``False`` to enable ``nova-network``
   networking
 """),
-
-    cfg.BoolOpt(
-        'allow_same_net_traffic',
+    cfg.BoolOpt('allow_same_net_traffic',
         default=True,
         help="""
 Determine whether to allow network traffic from same network.
@@ -178,7 +163,7 @@ Possible values:
 * False: Network traffic should not be allowed pass between instances unless
   it is unblocked in a security group
 
-Interdependencies to other options:
+Related options:
 
 * ``use_neutron``: This must be set to ``False`` to enable ``nova-network``
   networking
@@ -186,9 +171,7 @@ Interdependencies to other options:
   ``nova.virt.libvirt.firewall.IptablesFirewallDriver`` to ensure the
   libvirt firewall driver is enabled.
 """),
-
-    cfg.BoolOpt(
-        'force_raw_images',
+    cfg.BoolOpt('force_raw_images',
         default=True,
         help="""
 Force conversion of backing images to raw format.
@@ -198,16 +181,13 @@ Possible values:
 * True: Backing image files will be converted to raw image format
 * False: Backing image files will not be converted
 
-Interdependencies to other options:
+Related options:
 
 * ``compute_driver``: Only the libvirt driver uses this option.
 """),
-
-    cfg.StrOpt(
-        'injected_network_template',
+    cfg.StrOpt('injected_network_template',
         default=paths.basedir_def('nova/virt/interfaces.template'),
         help='Template file for injected network'),
-
 # NOTE(yamahata): ListOpt won't work because the command may include a comma.
 # For example:
 #
@@ -216,62 +196,55 @@ Interdependencies to other options:
 #
 # list arguments are comma separated and there is no way to escape such
 # commas.
-    cfg.MultiStrOpt(
-        'virt_mkfs',
+    cfg.MultiStrOpt('virt_mkfs',
         default=[],
         help="""
-Name of the mkfs commands for ephemeral device. The format is
-<os_type>=<mkfs command>
-"""),
+Name of the mkfs commands for ephemeral device.
 
-    cfg.BoolOpt(
-        'resize_fs_using_block_device',
+The format is <os_type>=<mkfs command>
+"""),
+    cfg.BoolOpt('resize_fs_using_block_device',
         default=False,
         help="""
+Enable resizing of filesystems via a block device.
+
 If enabled, attempt to resize the filesystem by accessing the image over a
 block device. This is done by the host and may not be necessary if the image
 contains a recent version of cloud-init. Possible mechanisms require the nbd
 driver (for qcow and raw), or loop (for raw).
 """),
-
-    cfg.IntOpt(
-        'timeout_nbd',
+    cfg.IntOpt('timeout_nbd',
         default=10,
         min=0,
         help='Amount of time, in seconds, to wait for NBD device start up.'),
-
-    cfg.IntOpt(
-        'image_cache_manager_interval',
+    cfg.IntOpt('image_cache_manager_interval',
         default=2400,
         min=-1,
         help="""
 Number of seconds to wait between runs of the image cache manager.
-Set to -1 to disable. Setting this to 0 will run at the default rate.
-"""),
 
-    cfg.StrOpt(
-        'image_cache_subdirectory_name',
+Possible values:
+* 0: run at the default rate.
+* -1: disable
+* Any other value
+"""),
+    cfg.StrOpt('image_cache_subdirectory_name',
         default='_base',
         help="""
-Where cached images are stored under $instances_path. This is NOT the full
-path - just a folder name. For per-compute-host cached images, set to
-_base_$my_ip
-"""),
+Location of cached images.
 
-    cfg.BoolOpt(
-        'remove_unused_base_images',
+This is NOT the full path - just a folder name relative to '$instances_path'.
+For per-compute-host cached images, set to '_base_$my_ip'
+"""),
+    cfg.BoolOpt('remove_unused_base_images',
         default=True,
         help='Should unused base images be removed?'),
-
-    cfg.IntOpt(
-        'remove_unused_original_minimum_age_seconds',
+    cfg.IntOpt('remove_unused_original_minimum_age_seconds',
         default=(24 * 3600),
         help="""
-Unused unresized base images younger than this will not be removed
+Unused unresized base images younger than this will not be removed.
 """),
-
-    cfg.StrOpt(
-        'pointer_model',
+    cfg.StrOpt('pointer_model',
         default='usbtablet',
         choices=[None, 'ps2mouse', 'usbtablet'],
         help="""
@@ -290,18 +263,16 @@ Possible values:
 * ps2mouse: Uses relative movement. Mouse connected by PS2
 * usbtablet: Uses absolute movement. Tablet connect by USB
 
-Interdependencies to other options:
+Related options:
 
 * usbtablet must be configured with VNC enabled or SPICE enabled and SPICE
   agent disabled. When used with libvirt the instance mode should be
   configured as HVM.
  """),
-
-    cfg.MultiOpt(
-        "reserved_huge_pages",
+    cfg.MultiOpt('reserved_huge_pages',
         item_type=types.Dict(),
         help="""
-Reserves a number of huge/large memory pages per NUMA host cells
+Number of huge/large memory pages to reserver per NUMA host cell.
 
 Possible values:
 
