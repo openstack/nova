@@ -353,7 +353,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self.vif_driver = libvirt_vif.LibvirtGenericVIFDriver()
 
         self.volume_drivers = driver.driver_dict_from_config(
-            self._get_volume_drivers(), self)
+            self._get_volume_drivers(), self._host)
 
         self._disk_cachemode = None
         self.image_cache_manager = imagecache.ImageCacheManager()

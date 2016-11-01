@@ -24,9 +24,9 @@ CONF = nova.conf.CONF
 
 class LibvirtAOEVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
     """Driver to attach AoE volumes to libvirt."""
-    def __init__(self, connection):
+    def __init__(self, host):
         super(LibvirtAOEVolumeDriver,
-              self).__init__(connection, is_block_dev=True)
+              self).__init__(host, is_block_dev=True)
 
         # Call the factory here so we can support
         # more than x86 architectures.

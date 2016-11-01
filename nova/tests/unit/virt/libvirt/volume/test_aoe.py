@@ -21,6 +21,6 @@ class LibvirtAOEVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
 
     @mock.patch('os.path.exists', return_value=True)
     def test_libvirt_aoe_driver(self, exists):
-        libvirt_driver = aoe.LibvirtAOEVolumeDriver(self.fake_conn)
+        libvirt_driver = aoe.LibvirtAOEVolumeDriver(self.fake_host)
         self.assertIsInstance(libvirt_driver.connector,
                               connector.AoEConnector)

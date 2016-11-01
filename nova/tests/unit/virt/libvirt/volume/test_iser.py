@@ -18,5 +18,5 @@ class LibvirtISERVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
     """Tests the libvirt iSER volume driver."""
 
     def test_get_transport(self):
-        driver = iser.LibvirtISERVolumeDriver(self.fake_conn)
+        driver = iser.LibvirtISERVolumeDriver(self.fake_host)
         self.assertEqual('iser', driver._get_transport())

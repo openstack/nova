@@ -32,7 +32,7 @@ class LibvirtSMBFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
     def test_libvirt_smbfs_driver(self, mock_is_mounted):
         mock_is_mounted.return_value = False
 
-        libvirt_driver = smbfs.LibvirtSMBFSVolumeDriver(self.fake_conn)
+        libvirt_driver = smbfs.LibvirtSMBFSVolumeDriver(self.fake_host)
         export_string = '//192.168.1.1/volumes'
         export_mnt_base = os.path.join(self.mnt_base,
                                        utils.get_hash_str(export_string))
@@ -50,7 +50,7 @@ class LibvirtSMBFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         self.assertEqual(expected_commands, self.executes)
 
     def test_libvirt_smbfs_driver_already_mounted(self):
-        libvirt_driver = smbfs.LibvirtSMBFSVolumeDriver(self.fake_conn)
+        libvirt_driver = smbfs.LibvirtSMBFSVolumeDriver(self.fake_host)
         export_string = '//192.168.1.1/volumes'
         export_mnt_base = os.path.join(self.mnt_base,
                                        utils.get_hash_str(export_string))
@@ -67,7 +67,7 @@ class LibvirtSMBFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         self.assertEqual(expected_commands, self.executes)
 
     def test_libvirt_smbfs_driver_get_config(self):
-        libvirt_driver = smbfs.LibvirtSMBFSVolumeDriver(self.fake_conn)
+        libvirt_driver = smbfs.LibvirtSMBFSVolumeDriver(self.fake_host)
         export_string = '//192.168.1.1/volumes'
         export_mnt_base = os.path.join(self.mnt_base,
                                        utils.get_hash_str(export_string))
@@ -84,7 +84,7 @@ class LibvirtSMBFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
     def test_libvirt_smbfs_driver_with_opts(self, mock_is_mounted):
         mock_is_mounted.return_value = False
 
-        libvirt_driver = smbfs.LibvirtSMBFSVolumeDriver(self.fake_conn)
+        libvirt_driver = smbfs.LibvirtSMBFSVolumeDriver(self.fake_host)
         export_string = '//192.168.1.1/volumes'
         options = '-o user=guest,uid=107,gid=105'
         export_mnt_base = os.path.join(self.mnt_base,

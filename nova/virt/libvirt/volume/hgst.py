@@ -25,9 +25,9 @@ CONF = nova.conf.CONF
 
 class LibvirtHGSTVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
     """Driver to attach HGST volumes to libvirt."""
-    def __init__(self, connection):
+    def __init__(self, host):
         super(LibvirtHGSTVolumeDriver,
-              self).__init__(connection, is_block_dev=True)
+              self).__init__(host, is_block_dev=True)
         self.connector = connector.InitiatorConnector.factory(
             'HGST', utils.get_root_helper(),
             device_scan_attempts=CONF.libvirt.num_iscsi_scan_tries)

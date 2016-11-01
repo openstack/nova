@@ -25,9 +25,9 @@ LOG = logging.getLogger(__name__)
 class LibvirtFibreChannelVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
     """Driver to attach Fibre Channel Network volumes to libvirt."""
 
-    def __init__(self, connection):
+    def __init__(self, host):
         super(LibvirtFibreChannelVolumeDriver,
-              self).__init__(connection, is_block_dev=False)
+              self).__init__(host, is_block_dev=False)
 
         # Call the factory here so we can support
         # more than x86 architectures.

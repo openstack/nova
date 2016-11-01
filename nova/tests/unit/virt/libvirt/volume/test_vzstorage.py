@@ -31,7 +31,7 @@ class LibvirtVZStorageTestCase(test_volume.LibvirtVolumeBaseTestCase):
                    group='libvirt')
 
     def test_libvirt_vzstorage_driver(self):
-        libvirt_driver = vzstorage.LibvirtVZStorageVolumeDriver(self.fake_conn)
+        libvirt_driver = vzstorage.LibvirtVZStorageVolumeDriver(self.fake_host)
         self.assertIsInstance(libvirt_driver.connector,
                               connector.RemoteFsConnector)
 
@@ -47,11 +47,11 @@ class LibvirtVZStorageTestCase(test_volume.LibvirtVolumeBaseTestCase):
             self.flags(vzstorage_mount_opts=opts, group='libvirt')
             self.assertRaises(exception.NovaException,
                               vzstorage.LibvirtVZStorageVolumeDriver,
-                              self.fake_conn)
+                              self.fake_host)
 
     def test_libvirt_vzstorage_driver_share_fmt_neg(self):
 
-        drv = vzstorage.LibvirtVZStorageVolumeDriver(self.fake_conn)
+        drv = vzstorage.LibvirtVZStorageVolumeDriver(self.fake_host)
 
         wrong_export_string = 'mds1, mds2:/testcluster:passwd12111'
         connection_info = {'data': {'export': wrong_export_string,
@@ -69,7 +69,7 @@ class LibvirtVZStorageTestCase(test_volume.LibvirtVolumeBaseTestCase):
         def brick_conn_vol(data):
             return {'path': 'vstorage://testcluster'}
 
-        drv = vzstorage.LibvirtVZStorageVolumeDriver(self.fake_conn)
+        drv = vzstorage.LibvirtVZStorageVolumeDriver(self.fake_host)
         drv.connector.connect_volume = brick_conn_vol
 
         export_string = 'testcluster'
@@ -85,7 +85,7 @@ class LibvirtVZStorageTestCase(test_volume.LibvirtVolumeBaseTestCase):
                           connection_info['data']['options'])
 
     def test_libvirt_vzstorage_driver_disconnect(self):
-        drv = vzstorage.LibvirtVZStorageVolumeDriver(self.fake_conn)
+        drv = vzstorage.LibvirtVZStorageVolumeDriver(self.fake_host)
         drv.connector.disconnect_volume = mock.MagicMock()
         conn = {'data': self.disk_info}
         drv.disconnect_volume(conn, self.disk_info)
@@ -93,7 +93,7 @@ class LibvirtVZStorageTestCase(test_volume.LibvirtVolumeBaseTestCase):
             self.disk_info, None)
 
     def test_libvirt_vzstorage_driver_get_config(self):
-        libvirt_driver = vzstorage.LibvirtVZStorageVolumeDriver(self.fake_conn)
+        libvirt_driver = vzstorage.LibvirtVZStorageVolumeDriver(self.fake_host)
         export_string = 'vzstorage'
         export_mnt_base = os.path.join(self.mnt_base,
                                        utils.get_hash_str(export_string))

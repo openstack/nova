@@ -201,7 +201,7 @@ class LibvirtQuobyteVolumeDriverTestCase(
         mnt_base = '/mnt'
         self.flags(quobyte_mount_point_base=mnt_base, group='libvirt')
 
-        libvirt_driver = quobyte.LibvirtQuobyteVolumeDriver(self.fake_conn)
+        libvirt_driver = quobyte.LibvirtQuobyteVolumeDriver(self.fake_host)
         export_string = 'quobyte://192.168.1.1/volume-00001'
         quobyte_volume = '192.168.1.1/volume-00001'
         export_mnt_base = os.path.join(mnt_base,
@@ -231,7 +231,7 @@ class LibvirtQuobyteVolumeDriverTestCase(
         mnt_base = '/mnt'
         self.flags(quobyte_mount_point_base=mnt_base, group='libvirt')
 
-        libvirt_driver = quobyte.LibvirtQuobyteVolumeDriver(self.fake_conn)
+        libvirt_driver = quobyte.LibvirtQuobyteVolumeDriver(self.fake_host)
         export_string = 'quobyte://192.168.1.1/volume-00001'
         quobyte_volume = '192.168.1.1/volume-00001'
         export_mnt_base = os.path.join(mnt_base,
@@ -260,7 +260,7 @@ class LibvirtQuobyteVolumeDriverTestCase(
         mnt_base = '/mnt'
         self.flags(quobyte_mount_point_base=mnt_base, group='libvirt')
 
-        libvirt_driver = quobyte.LibvirtQuobyteVolumeDriver(self.fake_conn)
+        libvirt_driver = quobyte.LibvirtQuobyteVolumeDriver(self.fake_host)
         export_string = 'quobyte://192.168.1.1/volume-00001'
         quobyte_volume = '192.168.1.1/volume-00001'
         export_mnt_base = os.path.join(mnt_base,
@@ -297,7 +297,7 @@ class LibvirtQuobyteVolumeDriverTestCase(
                                           ):
         mnt_base = '/mnt'
         self.flags(quobyte_mount_point_base=mnt_base, group='libvirt')
-        libvirt_driver = quobyte.LibvirtQuobyteVolumeDriver(self.fake_conn)
+        libvirt_driver = quobyte.LibvirtQuobyteVolumeDriver(self.fake_host)
         export_string = 'quobyte://192.168.1.1/volume-00001'
         name = 'volume-00001'
         image_format = 'qcow2'
@@ -328,7 +328,7 @@ class LibvirtQuobyteVolumeDriverTestCase(
         mnt_base = '/mnt'
         self.flags(quobyte_mount_point_base=mnt_base, group='libvirt')
 
-        libvirt_driver = quobyte.LibvirtQuobyteVolumeDriver(self.fake_conn)
+        libvirt_driver = quobyte.LibvirtQuobyteVolumeDriver(self.fake_host)
         export_string = 'quobyte://192.168.1.1/volume-00001'
 
         connection_info = {'data': {'export': export_string,
@@ -350,7 +350,7 @@ class LibvirtQuobyteVolumeDriverTestCase(
         mnt_base = '/mnt'
         self.flags(quobyte_mount_point_base=mnt_base, group='libvirt')
 
-        libvirt_driver = quobyte.LibvirtQuobyteVolumeDriver(self.fake_conn)
+        libvirt_driver = quobyte.LibvirtQuobyteVolumeDriver(self.fake_host)
         export_string = 'quobyte://192.168.1.1/volume-00001'
         self.assertEqual("192.168.1.1/volume-00001",
                          libvirt_driver._normalize_export(export_string))
@@ -359,7 +359,7 @@ class LibvirtQuobyteVolumeDriverTestCase(
         mnt_base = '/mnt'
         self.flags(quobyte_mount_point_base=mnt_base, group='libvirt')
 
-        libvirt_driver = quobyte.LibvirtQuobyteVolumeDriver(self.fake_conn)
+        libvirt_driver = quobyte.LibvirtQuobyteVolumeDriver(self.fake_host)
         export_string = '192.168.1.1/volume-00001'
         self.assertEqual("192.168.1.1/volume-00001",
                          libvirt_driver._normalize_export(export_string))

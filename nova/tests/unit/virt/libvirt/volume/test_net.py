@@ -45,7 +45,7 @@ class LibvirtNetVolumeDriverTestCase(
         }
 
     def test_libvirt_sheepdog_driver(self):
-        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_conn)
+        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_host)
         connection_info = self.sheepdog_connection(self.vol)
         conf = libvirt_driver.get_config(connection_info, self.disk_info)
         tree = conf.format_dom()
@@ -71,7 +71,7 @@ class LibvirtNetVolumeDriverTestCase(
         }
 
     def test_libvirt_rbd_driver(self):
-        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_conn)
+        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_host)
         connection_info = self.rbd_connection(self.vol)
         conf = libvirt_driver.get_config(connection_info, self.disk_info)
         tree = conf.format_dom()
@@ -82,7 +82,7 @@ class LibvirtNetVolumeDriverTestCase(
         libvirt_driver.disconnect_volume(connection_info, "vde")
 
     def test_libvirt_rbd_driver_hosts(self):
-        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_conn)
+        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_host)
         connection_info = self.rbd_connection(self.vol)
         hosts = ['example.com', '1.2.3.4', '::1']
         ports = [None, '6790', '6791']
@@ -98,7 +98,7 @@ class LibvirtNetVolumeDriverTestCase(
         libvirt_driver.disconnect_volume(connection_info, "vde")
 
     def test_libvirt_rbd_driver_auth_enabled(self):
-        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_conn)
+        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_host)
         connection_info = self.rbd_connection(self.vol)
         secret_type = 'ceph'
         connection_info['data']['auth_enabled'] = True
@@ -115,7 +115,7 @@ class LibvirtNetVolumeDriverTestCase(
         libvirt_driver.disconnect_volume(connection_info, "vde")
 
     def test_libvirt_rbd_driver_auth_enabled_flags_override(self):
-        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_conn)
+        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_host)
         connection_info = self.rbd_connection(self.vol)
         secret_type = 'ceph'
         connection_info['data']['auth_enabled'] = True
@@ -138,7 +138,7 @@ class LibvirtNetVolumeDriverTestCase(
         libvirt_driver.disconnect_volume(connection_info, "vde")
 
     def test_libvirt_rbd_driver_auth_disabled(self):
-        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_conn)
+        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_host)
         connection_info = self.rbd_connection(self.vol)
         secret_type = 'ceph'
         connection_info['data']['auth_enabled'] = False
@@ -153,7 +153,7 @@ class LibvirtNetVolumeDriverTestCase(
         libvirt_driver.disconnect_volume(connection_info, "vde")
 
     def test_libvirt_rbd_driver_auth_disabled_flags_override(self):
-        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_conn)
+        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_host)
         connection_info = self.rbd_connection(self.vol)
         secret_type = 'ceph'
         connection_info['data']['auth_enabled'] = False
@@ -184,7 +184,7 @@ class LibvirtNetVolumeDriverTestCase(
                                       mock_find):
         mock_find.return_value = test_volume.FakeSecret()
         mock_create.return_value = test_volume.FakeSecret()
-        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_conn)
+        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_host)
         connection_info = self.iscsi_connection(self.vol, self.location,
                                                 self.iqn, auth=True)
         secret_type = 'iscsi'

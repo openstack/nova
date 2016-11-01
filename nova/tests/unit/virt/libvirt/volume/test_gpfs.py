@@ -18,7 +18,7 @@ from nova.virt.libvirt.volume import gpfs
 class LibvirtGPFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
 
     def test_libvirt_gpfs_driver_get_config(self):
-        libvirt_driver = gpfs.LibvirtGPFSVolumeDriver(self.fake_conn)
+        libvirt_driver = gpfs.LibvirtGPFSVolumeDriver(self.fake_host)
         connection_info = {
             'driver_volume_type': 'gpfs',
             'data': {

@@ -29,7 +29,7 @@ class LibvirtGlusterfsVolumeDriverTestCase(
         mnt_base = '/mnt'
         self.flags(glusterfs_mount_point_base=mnt_base, group='libvirt')
 
-        libvirt_driver = glusterfs.LibvirtGlusterfsVolumeDriver(self.fake_conn)
+        libvirt_driver = glusterfs.LibvirtGlusterfsVolumeDriver(self.fake_host)
         export_string = '192.168.1.1:/volume-00001'
         export_mnt_base = os.path.join(mnt_base,
                 utils.get_hash_str(export_string))
@@ -53,7 +53,7 @@ class LibvirtGlusterfsVolumeDriverTestCase(
         mnt_base = '/mnt'
         self.flags(glusterfs_mount_point_base=mnt_base, group='libvirt')
 
-        libvirt_driver = glusterfs.LibvirtGlusterfsVolumeDriver(self.fake_conn)
+        libvirt_driver = glusterfs.LibvirtGlusterfsVolumeDriver(self.fake_host)
         export_string = '192.168.1.1:/volume-00001'
         export_mnt_base = os.path.join(mnt_base,
                                        utils.get_hash_str(export_string))
@@ -82,7 +82,7 @@ class LibvirtGlusterfsVolumeDriverTestCase(
         mnt_base = '/mnt'
         self.flags(glusterfs_mount_point_base=mnt_base, group='libvirt')
 
-        libvirt_driver = glusterfs.LibvirtGlusterfsVolumeDriver(self.fake_conn)
+        libvirt_driver = glusterfs.LibvirtGlusterfsVolumeDriver(self.fake_host)
         export_string = '192.168.1.1:/volume-00001'
         export_mnt_base = os.path.join(mnt_base,
                 utils.get_hash_str(export_string))
@@ -106,7 +106,7 @@ class LibvirtGlusterfsVolumeDriverTestCase(
         export_string = '192.168.1.1:/volume-00001'
         connection_info = {'data': {'export': export_string,
                                     'name': self.name}}
-        libvirt_driver = glusterfs.LibvirtGlusterfsVolumeDriver(self.fake_conn)
+        libvirt_driver = glusterfs.LibvirtGlusterfsVolumeDriver(self.fake_host)
         mock_utils_exe.side_effect = processutils.ProcessExecutionError(
             None, None, None, 'umount', 'umount: target is busy.')
         libvirt_driver.disconnect_volume(connection_info, "vde")
@@ -117,7 +117,7 @@ class LibvirtGlusterfsVolumeDriverTestCase(
         mnt_base = '/mnt'
         self.flags(glusterfs_mount_point_base=mnt_base, group='libvirt')
 
-        libvirt_driver = glusterfs.LibvirtGlusterfsVolumeDriver(self.fake_conn)
+        libvirt_driver = glusterfs.LibvirtGlusterfsVolumeDriver(self.fake_host)
         export_string = '192.168.1.1:/volume-00001'
         options = '-o backupvolfile-server=192.168.1.2'
         export_mnt_base = os.path.join(mnt_base,
@@ -142,7 +142,7 @@ class LibvirtGlusterfsVolumeDriverTestCase(
     @mock.patch.object(libvirt_utils, 'is_mounted', return_value=False)
     def test_libvirt_glusterfs_libgfapi(self, mock_is_mounted):
         self.flags(qemu_allowed_storage_drivers=['gluster'], group='libvirt')
-        libvirt_driver = glusterfs.LibvirtGlusterfsVolumeDriver(self.fake_conn)
+        libvirt_driver = glusterfs.LibvirtGlusterfsVolumeDriver(self.fake_host)
         export_string = '192.168.1.1:/volume-00001'
         name = 'volume-00001'
 
