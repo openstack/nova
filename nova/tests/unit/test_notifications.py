@@ -56,8 +56,9 @@ class NotificationsTestCase(test.TestCase):
         self.addCleanup(fake_notifier.reset)
 
         self.flags(network_manager='nova.network.manager.FlatManager',
-                   notify_on_state_change="vm_and_task_state",
                    host='testhost')
+        self.flags(notify_on_state_change="vm_and_task_state",
+                   group='notifications')
 
         self.flags(api_servers=['http://localhost:9292'], group='glance')
 
@@ -91,12 +92,12 @@ class NotificationsTestCase(test.TestCase):
         return inst
 
     def test_send_api_fault_disabled(self):
-        self.flags(notify_api_faults=False)
+        self.flags(notify_on_api_faults=False, group='notifications')
         notifications.send_api_fault("http://example.com/foo", 500, None)
         self.assertEqual(0, len(fake_notifier.NOTIFICATIONS))
 
     def test_send_api_fault(self):
-        self.flags(notify_api_faults=True)
+        self.flags(notify_on_api_faults=True, group='notifications')
         exception = None
         try:
             # Get a real exception with a call stack.
@@ -115,7 +116,7 @@ class NotificationsTestCase(test.TestCase):
         self.assertIsNotNone(n.payload['exception'])
 
     def test_send_api_fault_fresh_context(self):
-        self.flags(notify_api_faults=True)
+        self.flags(notify_on_api_faults=True, group='notifications')
         exception = None
         try:
             # Get a real exception with a call stack.
@@ -136,7 +137,7 @@ class NotificationsTestCase(test.TestCase):
         self.assertEqual(ctxt, n.context)
 
     def test_send_api_fault_fake_context(self):
-        self.flags(notify_api_faults=True)
+        self.flags(notify_on_api_faults=True, group='notifications')
         exception = None
         try:
             # Get a real exception with a call stack.
@@ -159,7 +160,7 @@ class NotificationsTestCase(test.TestCase):
         self.assertEqual(ctxt, n.context)
 
     def test_send_api_fault_admin_context(self):
-        self.flags(notify_api_faults=True)
+        self.flags(notify_on_api_faults=True, group='notifications')
         exception = None
         try:
             # Get a real exception with a call stack.
@@ -184,7 +185,7 @@ class NotificationsTestCase(test.TestCase):
     def test_notif_disabled(self):
 
         # test config disable of the notifications
-        self.flags(notify_on_state_change=None)
+        self.flags(notify_on_state_change=None, group='notifications')
 
         old = copy.copy(self.instance)
         self.instance.vm_state = vm_states.ACTIVE
@@ -205,7 +206,7 @@ class NotificationsTestCase(test.TestCase):
     def test_task_notif(self):
 
         # test config disable of just the task state notifications
-        self.flags(notify_on_state_change="vm_state")
+        self.flags(notify_on_state_change="vm_state", group='notifications')
 
         # we should not get a notification on task stgate chagne now
         old = copy.copy(self.instance)
@@ -224,7 +225,8 @@ class NotificationsTestCase(test.TestCase):
         self.assertEqual(0, len(fake_notifier.VERSIONED_NOTIFICATIONS))
 
         # ok now enable task state notifications and re-try
-        self.flags(notify_on_state_change="vm_and_task_state")
+        self.flags(notify_on_state_change="vm_and_task_state",
+                   group='notifications')
 
         notifications.send_update(self.context, old, self.instance)
         self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
@@ -375,7 +377,8 @@ class NotificationsTestCase(test.TestCase):
 
     @mock.patch.object(objects.BandwidthUsageList, 'get_by_uuids')
     def test_task_update_with_states(self, mock_bandwidth_list):
-        self.flags(notify_on_state_change="vm_and_task_state")
+        self.flags(notify_on_state_change="vm_and_task_state",
+                   group='notifications')
         mock_bandwidth_list.return_value = [self.get_fake_bandwidth()]
         fake_net_info = fake_network.fake_get_instance_nw_info(self, 1, 1)
         self.instance.info_cache.network_info = fake_net_info

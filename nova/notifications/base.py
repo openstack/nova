@@ -69,10 +69,10 @@ def notify_decorator(name, fn):
                 common_context.get_current() or
                 nova.context.RequestContext())
 
-        notifier = rpc.get_notifier('api',
-                                    publisher_id=(CONF.default_publisher_id
-                                                  or CONF.host))
-        method = getattr(notifier, CONF.default_notification_level.lower(),
+        notifier = rpc.get_notifier('api', publisher_id=(
+            CONF.notifications.default_publisher_id or CONF.host))
+        method = getattr(notifier,
+                         CONF.notifications.default_level.lower(),
                          notifier.info)
         method(ctxt, name, body)
 
@@ -83,7 +83,7 @@ def notify_decorator(name, fn):
 def send_api_fault(url, status, exception):
     """Send an api.fault notification."""
 
-    if not CONF.notify_api_faults:
+    if not CONF.notifications.notify_on_api_faults:
         return
 
     payload = {'url': url, 'exception': six.text_type(exception),
@@ -101,7 +101,7 @@ def send_update(context, old_instance, new_instance, service="compute",
     in that instance
     """
 
-    if not CONF.notify_on_state_change:
+    if not CONF.notifications.notify_on_state_change:
         # skip all this if updates are disabled
         return
 
@@ -117,7 +117,7 @@ def send_update(context, old_instance, new_instance, service="compute",
     if old_vm_state != new_vm_state:
         # yes, the vm state is changing:
         update_with_state_change = True
-    elif (CONF.notify_on_state_change == "vm_and_task_state" and
+    elif (CONF.notifications.notify_on_state_change == "vm_and_task_state" and
           old_task_state != new_task_state):
         # yes, the task state is changing:
         update_with_state_change = True
@@ -153,7 +153,7 @@ def send_update_with_states(context, instance, old_vm_state, new_vm_state,
     are any, in the instance
     """
 
-    if not CONF.notify_on_state_change:
+    if not CONF.notifications.notify_on_state_change:
         # skip all this if updates are disabled
         return
 
@@ -168,8 +168,8 @@ def send_update_with_states(context, instance, old_vm_state, new_vm_state,
         if old_vm_state != new_vm_state:
             # yes, the vm state is changing:
             fire_update = True
-        elif (CONF.notify_on_state_change == "vm_and_task_state" and
-              old_task_state != new_task_state):
+        elif (CONF.notifications.notify_on_state_change == "vm_and_task_state"
+              and old_task_state != new_task_state):
             # yes, the task state is changing:
             fire_update = True
 

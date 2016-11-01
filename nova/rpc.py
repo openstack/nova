@@ -75,12 +75,12 @@ def init(conf):
     NOTIFICATION_TRANSPORT = messaging.get_notification_transport(
         conf, allowed_remote_exmods=exmods, aliases=TRANSPORT_ALIASES)
     serializer = RequestContextSerializer(JsonPayloadSerializer())
-    if conf.notification_format == 'unversioned':
+    if conf.notifications.notification_format == 'unversioned':
         LEGACY_NOTIFIER = messaging.Notifier(NOTIFICATION_TRANSPORT,
                                              serializer=serializer)
         NOTIFIER = messaging.Notifier(NOTIFICATION_TRANSPORT,
                                       serializer=serializer, driver='noop')
-    elif conf.notification_format == 'both':
+    elif conf.notifications.notification_format == 'both':
         LEGACY_NOTIFIER = messaging.Notifier(NOTIFICATION_TRANSPORT,
                                              serializer=serializer)
         NOTIFIER = messaging.Notifier(NOTIFICATION_TRANSPORT,

@@ -147,7 +147,8 @@ class TestInstanceNotificationSample(
         # for notification samples that expect instance.info_cache.network_info
         # to be set.
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
-        self.flags(notify_on_state_change='vm_and_task_state')
+        self.flags(notify_on_state_change='vm_and_task_state',
+                   group='notifications')
 
         server = self._boot_a_server(
             extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
