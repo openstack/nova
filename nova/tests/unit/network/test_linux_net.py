@@ -1418,3 +1418,74 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.assertRaises(processutils.ProcessExecutionError,
                           linux_net.LinuxBridgeInterfaceDriver.remove_bridge,
                           'fake-bridge')
+
+    @mock.patch('nova.utils.execute')
+    def test_create_tap_dev(self, mock_execute):
+        linux_net.create_tap_dev('tap42')
+
+        mock_execute.assert_has_calls([
+            mock.call('ip', 'tuntap', 'add', 'tap42', 'mode', 'tap',
+                      run_as_root=True, check_exit_code=[0, 2, 254]),
+            mock.call('ip', 'link', 'set', 'tap42', 'up',
+                      run_as_root=True, check_exit_code=[0, 2, 254])
+        ])
+
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('nova.utils.execute')
+    def test_create_tap_skipped_when_exists(self, mock_execute, mock_exists):
+        linux_net.create_tap_dev('tap42')
+
+        mock_exists.assert_called_once_with('/sys/class/net/tap42')
+        mock_execute.assert_not_called()
+
+    @mock.patch('nova.utils.execute')
+    def test_create_tap_dev_mac(self, mock_execute):
+        linux_net.create_tap_dev('tap42', '00:11:22:33:44:55')
+
+        mock_execute.assert_has_calls([
+            mock.call('ip', 'tuntap', 'add', 'tap42', 'mode', 'tap',
+                      run_as_root=True, check_exit_code=[0, 2, 254]),
+            mock.call('ip', 'link', 'set', 'tap42',
+                      'address', '00:11:22:33:44:55',
+                      run_as_root=True, check_exit_code=[0, 2, 254]),
+            mock.call('ip', 'link', 'set', 'tap42', 'up',
+                      run_as_root=True, check_exit_code=[0, 2, 254])
+        ])
+
+    @mock.patch('nova.utils.execute')
+    def test_create_tap_dev_fallback_to_tunctl(self, mock_execute):
+        # ip failed, fall back to tunctl
+        mock_execute.side_effect = [processutils.ProcessExecutionError, 0, 0]
+
+        linux_net.create_tap_dev('tap42')
+
+        mock_execute.assert_has_calls([
+            mock.call('ip', 'tuntap', 'add', 'tap42', 'mode', 'tap',
+                      run_as_root=True, check_exit_code=[0, 2, 254]),
+            mock.call('tunctl', '-b', '-t', 'tap42',
+                      run_as_root=True),
+            mock.call('ip', 'link', 'set', 'tap42', 'up',
+                      run_as_root=True, check_exit_code=[0, 2, 254])
+        ])
+
+    @mock.patch('nova.utils.execute')
+    def test_create_tap_dev_multiqueue(self, mock_execute):
+        linux_net.create_tap_dev('tap42', multiqueue=True)
+
+        mock_execute.assert_has_calls([
+            mock.call('ip', 'tuntap', 'add', 'tap42', 'mode', 'tap',
+                      'multi_queue',
+                      run_as_root=True, check_exit_code=[0, 2, 254]),
+            mock.call('ip', 'link', 'set', 'tap42', 'up',
+                      run_as_root=True, check_exit_code=[0, 2, 254])
+        ])
+
+    @mock.patch('nova.utils.execute')
+    def test_create_tap_dev_multiqueue_tunctl_raises(self, mock_execute):
+        # if creation of a tap by the means of ip command fails,
+        # create_tap_dev() will try to do that by the means of tunctl
+        mock_execute.side_effect = processutils.ProcessExecutionError
+        # but tunctl can't create multiqueue taps, so the failure is expected
+        self.assertRaises(processutils.ProcessExecutionError,
+                          linux_net.create_tap_dev,
+                          'tap42', multiqueue=True)
