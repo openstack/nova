@@ -365,3 +365,103 @@ class TestOcataCheck(test.TestCase):
         group = db_api.instance_group_create(self.context, self.ig_values)
         db_api.instance_group_delete(self.context, group['uuid'])
         self.migration.upgrade(self.engine)
+
+
+class TestNewtonCellsCheck(test.NoDBTestCase):
+    USES_DB_SELF = True
+
+    def setUp(self):
+        super(TestNewtonCellsCheck, self).setUp()
+        self.useFixture(nova_fixtures.DatabaseAtVersion(28, 'api'))
+        self.context = context.get_admin_context()
+        self.migration = importlib.import_module(
+            'nova.db.sqlalchemy.api_migrations.migrate_repo.versions.'
+            '030_require_cell_setup')
+        self.engine = db_api.get_api_engine()
+
+    @mock.patch('nova.objects.Flavor._ensure_migrated')
+    def _flavor_me(self, _):
+        flavor = objects.Flavor(context=self.context,
+                                name='foo', memory_mb=123,
+                                vcpus=1, root_gb=1,
+                                flavorid='m1.foo')
+        flavor.create()
+
+    def test_upgrade_with_no_cell_mappings(self):
+        self._flavor_me()
+        self.assertRaisesRegex(exception.ValidationError,
+                               'Cell mappings',
+                               self.migration.upgrade, self.engine)
+
+    def test_upgrade_with_only_cell0(self):
+        self._flavor_me()
+        cell0 = objects.CellMapping(context=self.context,
+                                    uuid=objects.CellMapping.CELL0_UUID,
+                                    name='cell0',
+                                    transport_url='fake',
+                                    database_connection='fake')
+        cell0.create()
+        self.assertRaisesRegex(exception.ValidationError,
+                               'Cell mappings',
+                               self.migration.upgrade, self.engine)
+
+    def test_upgrade_without_cell0(self):
+        self._flavor_me()
+        cell1 = objects.CellMapping(context=self.context,
+                                    uuid=uuidsentinel.cell1,
+                                    name='cell1',
+                                    transport_url='fake',
+                                    database_connection='fake')
+        cell1.create()
+        cell2 = objects.CellMapping(context=self.context,
+                                    uuid=uuidsentinel.cell2,
+                                    name='cell2',
+                                    transport_url='fake',
+                                    database_connection='fake')
+        cell2.create()
+        self.assertRaisesRegex(exception.ValidationError,
+                               'Cell0',
+                               self.migration.upgrade, self.engine)
+
+    def test_upgrade_with_no_host_mappings(self):
+        self._flavor_me()
+        cell0 = objects.CellMapping(context=self.context,
+                                    uuid=objects.CellMapping.CELL0_UUID,
+                                    name='cell0',
+                                    transport_url='fake',
+                                    database_connection='fake')
+        cell0.create()
+        cell1 = objects.CellMapping(context=self.context,
+                                    uuid=uuidsentinel.cell1,
+                                    name='cell1',
+                                    transport_url='fake',
+                                    database_connection='fake')
+        cell1.create()
+
+        self.assertRaisesRegex(exception.ValidationError,
+                               'host mappings',
+                               self.migration.upgrade, self.engine)
+
+    def test_upgrade_with_required_mappings(self):
+        self._flavor_me()
+        cell0 = objects.CellMapping(context=self.context,
+                                    uuid=objects.CellMapping.CELL0_UUID,
+                                    name='cell0',
+                                    transport_url='fake',
+                                    database_connection='fake')
+        cell0.create()
+        cell1 = objects.CellMapping(context=self.context,
+                                    uuid=uuidsentinel.cell1,
+                                    name='cell1',
+                                    transport_url='fake',
+                                    database_connection='fake')
+        cell1.create()
+        hostmapping = objects.HostMapping(context=self.context,
+                                          cell_mapping=cell1,
+                                          host='foo')
+        hostmapping.create()
+
+        self.migration.upgrade(self.engine)
+
+    def test_upgrade_new_deploy(self):
+        self.migration.upgrade(self.engine)
