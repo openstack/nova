@@ -15,6 +15,8 @@ from oslo_serialization import jsonutils
 import webob
 
 from nova.api.openstack.placement import util
+from nova import exception
+from nova.i18n import _
 from nova import objects
 
 
@@ -43,8 +45,15 @@ def list_usages(req):
     # get_all_by_resource_provider_uuid can return an empty list.
     # It is also needed for the generation, used in the outgoing
     # representation.
-    resource_provider = objects.ResourceProvider.get_by_uuid(
-        context, uuid)
+    try:
+        resource_provider = objects.ResourceProvider.get_by_uuid(
+            context, uuid)
+    except exception.NotFound as exc:
+        raise webob.exc.HTTPNotFound(
+            _("No resource provider with uuid %(uuid)s found: %(error)s") %
+             {'uuid': uuid, 'error': exc},
+             json_formatter=util.json_error_formatter)
+
     usage = objects.UsageList.get_all_by_resource_provider_uuid(
         context, uuid)
 
