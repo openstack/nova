@@ -3661,8 +3661,6 @@ class API(base.Base):
         # NOTE(sbauza): Force is a boolean by the new related API version
         if force is False and host_name:
             nodes = objects.ComputeNodeList.get_all_by_host(context, host_name)
-            if not nodes:
-                raise exception.ComputeHostNotFound(host=host_name)
             # NOTE(sbauza): Unset the host to make sure we call the scheduler
             host_name = None
             # FIXME(sbauza): Since only Ironic driver uses more than one
@@ -3808,8 +3806,6 @@ class API(base.Base):
         # NOTE(sbauza): Force is a boolean by the new related API version
         if force is False and host:
             nodes = objects.ComputeNodeList.get_all_by_host(context, host)
-            if not nodes:
-                raise exception.ComputeHostNotFound(host=host)
             # NOTE(sbauza): Unset the host to make sure we call the scheduler
             host = None
             # FIXME(sbauza): Since only Ironic driver uses more than one
