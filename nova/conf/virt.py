@@ -187,7 +187,30 @@ Related options:
 """),
     cfg.StrOpt('injected_network_template',
         default=paths.basedir_def('nova/virt/interfaces.template'),
-        help='Template file for injected network'),
+        help="""Path to '/etc/network/interfaces' template.
+
+The path to a template file for the '/etc/network/interfaces'-style file, which
+will be populated by nova and subsequently used by cloudinit. This provides a
+method to configure network connectivity in environments without a DHCP server.
+
+The template will be rendered using Jinja2 template engine, and receive a
+top-level key called ``interfaces``. This key will contain a list of
+dictionaries, one for each interface.
+
+Refer to the cloudinit documentaion for more information:
+
+  https://cloudinit.readthedocs.io/en/latest/topics/datasources.html
+
+Possible values:
+
+* A path to a Jinja2-formatted template for a Debian '/etc/network/interfaces'
+  file. This applies even if using a non Debian-derived guest.
+
+Related options:
+
+* ``flat_inject``: This must be set to ``True`` to ensure nova embeds network
+  configuration information in the metadata provided through the config drive.
+"""),
 # NOTE(yamahata): ListOpt won't work because the command may include a comma.
 # For example:
 #
