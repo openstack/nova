@@ -121,7 +121,7 @@ def check_instance_state(vm_state=None, task_state=(None,),
         task_state = set(task_state)
 
     def outer(f):
-        @functools.wraps(f)
+        @six.wraps(f)
         def inner(self, context, instance, *args, **kw):
             if vm_state is not None and instance.vm_state not in vm_state:
                 raise exception.InstanceInvalidState(
@@ -149,7 +149,7 @@ def check_instance_state(vm_state=None, task_state=(None,),
 
 
 def check_instance_host(function):
-    @functools.wraps(function)
+    @six.wraps(function)
     def wrapped(self, context, instance, *args, **kwargs):
         if not instance.host:
             raise exception.InstanceNotReady(instance_id=instance.uuid)
@@ -158,7 +158,7 @@ def check_instance_host(function):
 
 
 def check_instance_lock(function):
-    @functools.wraps(function)
+    @six.wraps(function)
     def inner(self, context, instance, *args, **kwargs):
         if instance.locked and not context.is_admin:
             raise exception.InstanceIsLocked(instance_uuid=instance.uuid)
@@ -167,10 +167,10 @@ def check_instance_lock(function):
 
 
 def check_instance_cell(fn):
+    @six.wraps(fn)
     def _wrapped(self, context, instance, *args, **kwargs):
         self._validate_cell(instance)
         return fn(self, context, instance, *args, **kwargs)
-    _wrapped.__name__ = fn.__name__
     return _wrapped
 
 
