@@ -3158,7 +3158,14 @@ OS-EXT-SRV-ATTR:instance_name:
   type: string
 OS-EXT-STS:power_state:
   description: |
-    The power state of the instance.
+    The power state of the instance. This is an enum value that is mapped as::
+
+      0: NOSTATE
+      1: RUNNING
+      3: PAUSED
+      4: SHUTDOWN
+      6: CRASHED
+      7: SUSPENDED
   in: body
   required: true
   type: integer
