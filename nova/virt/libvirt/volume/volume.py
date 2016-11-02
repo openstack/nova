@@ -37,15 +37,15 @@ SHOULD_LOG_DISCARD_WARNING = True
 
 class LibvirtBaseVolumeDriver(object):
     """Base class for volume drivers."""
-    def __init__(self, connection, is_block_dev):
-        self.connection = connection
+    def __init__(self, host, is_block_dev):
+        self.host = host
         self.is_block_dev = is_block_dev
 
     def get_config(self, connection_info, disk_info):
         """Returns xml for libvirt."""
         conf = vconfig.LibvirtConfigGuestDisk()
         conf.driver_name = libvirt_utils.pick_disk_driver_name(
-            self.connection._host.get_version(),
+            self.host.get_version(),
             self.is_block_dev
         )
 
@@ -95,7 +95,7 @@ class LibvirtBaseVolumeDriver(object):
         # Configure usage of discard
         if data.get('discard', False) is True:
             min_qemu = nova.virt.libvirt.driver.MIN_QEMU_DISCARD_VERSION
-            if self.connection._host.has_min_version(
+            if self.host.has_min_version(
                     hv_ver=min_qemu,
                     hv_type=host.HV_DRIVER_QEMU):
                 conf.driver_discard = 'unmap'
@@ -125,9 +125,9 @@ class LibvirtBaseVolumeDriver(object):
 
 class LibvirtVolumeDriver(LibvirtBaseVolumeDriver):
     """Class for volumes backed by local file."""
-    def __init__(self, connection):
+    def __init__(self, host):
         super(LibvirtVolumeDriver,
-              self).__init__(connection, is_block_dev=True)
+              self).__init__(host, is_block_dev=True)
 
     def get_config(self, connection_info, disk_info):
         """Returns xml for libvirt."""
@@ -140,9 +140,9 @@ class LibvirtVolumeDriver(LibvirtBaseVolumeDriver):
 
 class LibvirtFakeVolumeDriver(LibvirtBaseVolumeDriver):
     """Driver to attach fake volumes to libvirt."""
-    def __init__(self, connection):
+    def __init__(self, host):
         super(LibvirtFakeVolumeDriver,
-              self).__init__(connection, is_block_dev=True)
+              self).__init__(host, is_block_dev=True)
 
     def get_config(self, connection_info, disk_info):
         """Returns xml for libvirt."""

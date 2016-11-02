@@ -47,12 +47,12 @@ Setting up iSCSI targets: unused
         self.assertEqual(targets, out)
 
     def test_libvirt_iscsi_driver(self, transport=None):
-        libvirt_driver = iscsi.LibvirtISCSIVolumeDriver(self.fake_conn)
+        libvirt_driver = iscsi.LibvirtISCSIVolumeDriver(self.fake_host)
         self.assertIsInstance(libvirt_driver.connector,
                               connector.ISCSIConnector)
 
     def test_libvirt_iscsi_driver_get_config(self):
-        libvirt_driver = iscsi.LibvirtISCSIVolumeDriver(self.fake_conn)
+        libvirt_driver = iscsi.LibvirtISCSIVolumeDriver(self.fake_host)
 
         device_path = '/dev/fake-dev'
         connection_info = {'data': {'device_path': device_path}}
@@ -71,7 +71,7 @@ Setting up iSCSI targets: unused
         device_path = '/dev/fake-dev'
         connection_info = {'data': {'device_path': device_path}}
 
-        libvirt_driver = iscsi.LibvirtISCSIVolumeDriver(self.fake_conn)
+        libvirt_driver = iscsi.LibvirtISCSIVolumeDriver(self.fake_host)
         libvirt_driver.connector.disconnect_volume = mock.MagicMock(
             side_effect=os_brick_exception.VolumeDeviceNotFound(
                 device=device_path))

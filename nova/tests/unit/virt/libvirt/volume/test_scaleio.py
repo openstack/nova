@@ -26,7 +26,7 @@ class LibvirtScaleIOVolumeDriverTestCase(
 
     def test_libvirt_scaleio_driver(self):
         libvirt_driver = scaleio.LibvirtScaleIOVolumeDriver(
-            self.fake_conn)
+            self.fake_host)
         self.assertIsInstance(libvirt_driver.connector,
                               connector.ScaleIOConnector)
 
@@ -34,7 +34,7 @@ class LibvirtScaleIOVolumeDriverTestCase(
         def brick_conn_vol(data):
             return {'path': '/dev/vol01'}
 
-        sio = scaleio.LibvirtScaleIOVolumeDriver(self.fake_conn)
+        sio = scaleio.LibvirtScaleIOVolumeDriver(self.fake_host)
         sio.connector.connect_volume = brick_conn_vol
         disk_info = {'path': '/dev/vol01', 'name': 'vol01'}
         conn = {'data': disk_info}
@@ -43,7 +43,7 @@ class LibvirtScaleIOVolumeDriverTestCase(
                          conn['data']['device_path'])
 
     def test_libvirt_scaleio_driver_get_config(self):
-        sio = scaleio.LibvirtScaleIOVolumeDriver(self.fake_conn)
+        sio = scaleio.LibvirtScaleIOVolumeDriver(self.fake_host)
         disk_info = {'path': '/dev/vol01', 'name': 'vol01', 'type': 'raw',
                      'dev': 'vda1', 'bus': 'pci0', 'device_path': '/dev/vol01'}
         conn = {'data': disk_info}
@@ -52,7 +52,7 @@ class LibvirtScaleIOVolumeDriverTestCase(
         self.assertEqual('/dev/vol01', conf.source_path)
 
     def test_libvirt_scaleio_driver_disconnect(self):
-        sio = scaleio.LibvirtScaleIOVolumeDriver(self.fake_conn)
+        sio = scaleio.LibvirtScaleIOVolumeDriver(self.fake_host)
         sio.connector.disconnect_volume = mock.MagicMock()
         disk_info = {'path': '/dev/vol01', 'name': 'vol01', 'type': 'raw',
                     'dev': 'vda1', 'bus': 'pci0', 'device_path': '/dev/vol01'}

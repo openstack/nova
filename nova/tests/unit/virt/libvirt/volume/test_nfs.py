@@ -31,7 +31,7 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
 
     @mock.patch.object(libvirt_utils, 'is_mounted', return_value=False)
     def test_libvirt_nfs_driver(self, mock_is_mounted):
-        libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_conn)
+        libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_host)
 
         export_string = '192.168.1.1:/nfs/share1'
         export_mnt_base = os.path.join(self.mnt_base,
@@ -60,7 +60,7 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         export_string = '192.168.1.1:/nfs/share1'
         connection_info = {'data': {'export': export_string,
                                     'name': self.name}}
-        libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_conn)
+        libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_host)
         mock_utils_exe.side_effect = processutils.ProcessExecutionError(
             None, None, None, 'umount', 'umount: device is busy.')
         libvirt_driver.disconnect_volume(connection_info, "vde")
@@ -79,7 +79,7 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         self.assertTrue(mock_LOG_exception.called)
 
     def test_libvirt_nfs_driver_get_config(self):
-        libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_conn)
+        libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_host)
         export_string = '192.168.1.1:/nfs/share1'
         export_mnt_base = os.path.join(self.mnt_base,
                                        utils.get_hash_str(export_string))
@@ -95,7 +95,7 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         self.assertEqual('native', tree.find('./driver').get('io'))
 
     def test_libvirt_nfs_driver_already_mounted(self):
-        libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_conn)
+        libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_host)
 
         export_string = '192.168.1.1:/nfs/share1'
         export_mnt_base = os.path.join(self.mnt_base,
@@ -114,7 +114,7 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
 
     @mock.patch.object(libvirt_utils, 'is_mounted', return_value=False)
     def test_libvirt_nfs_driver_with_opts(self, mock_is_mounted):
-        libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_conn)
+        libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_host)
         export_string = '192.168.1.1:/nfs/share1'
         options = '-o intr,nfsvers=3'
         export_mnt_base = os.path.join(self.mnt_base,

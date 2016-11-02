@@ -25,12 +25,12 @@ class LibvirtDISCOVolumeDriverTestCase(
 
     def test_libvirt_disco_driver(self):
         libvirt_driver = disco.LibvirtDISCOVolumeDriver(
-            self.fake_conn)
+            self.fake_host)
         self.assertIsInstance(libvirt_driver.connector,
                               connector.DISCOConnector)
 
     def test_libvirt_disco_driver_connect(self):
-        dcon = disco.LibvirtDISCOVolumeDriver(self.fake_conn)
+        dcon = disco.LibvirtDISCOVolumeDriver(self.fake_host)
         conf = {'server_ip': '127.0.0.1', 'server_port': 9898}
         disk_info = {'disco_id': '1234567',
                      'name': 'aDiscoVolume',
@@ -44,7 +44,7 @@ class LibvirtDISCOVolumeDriverTestCase(
                              conn['data']['device_path'])
 
     def test_libvirt_disco_driver_get_config(self):
-        dcon = disco.LibvirtDISCOVolumeDriver(self.fake_conn)
+        dcon = disco.LibvirtDISCOVolumeDriver(self.fake_host)
 
         disk_info = {'path': '/dev/dms1234567', 'name': 'aDiscoVolume',
                      'type': 'raw', 'dev': 'vda1', 'bus': 'pci0',
@@ -56,7 +56,7 @@ class LibvirtDISCOVolumeDriverTestCase(
         self.assertEqual('disco', conf.source_protocol)
 
     def test_libvirt_disco_driver_disconnect(self):
-        dcon = disco.LibvirtDISCOVolumeDriver(self.fake_conn)
+        dcon = disco.LibvirtDISCOVolumeDriver(self.fake_host)
         dcon.connector.disconnect_volume = mock.MagicMock()
         disk_info = {'path': '/dev/dms1234567', 'name': 'aDiscoVolume',
                      'type': 'raw', 'dev': 'vda1', 'bus': 'pci0',

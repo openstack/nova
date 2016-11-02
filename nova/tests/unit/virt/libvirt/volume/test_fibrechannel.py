@@ -25,13 +25,13 @@ class LibvirtFibreChannelVolumeDriverTestCase(
 
     def test_libvirt_fibrechan_driver(self):
         libvirt_driver = fibrechannel.LibvirtFibreChannelVolumeDriver(
-                                                                self.fake_conn)
+                                                                self.fake_host)
         self.assertIsInstance(libvirt_driver.connector,
                               connector.FibreChannelConnector)
 
     def _test_libvirt_fibrechan_driver_s390(self):
         libvirt_driver = fibrechannel.LibvirtFibreChannelVolumeDriver(
-                                                                self.fake_conn)
+                                                                self.fake_host)
         self.assertIsInstance(libvirt_driver.connector,
                               connector.FibreChannelConnectorS390X)
 
@@ -45,7 +45,7 @@ class LibvirtFibreChannelVolumeDriverTestCase(
 
     def test_libvirt_fibrechan_driver_get_config(self):
         libvirt_driver = fibrechannel.LibvirtFibreChannelVolumeDriver(
-                                                                self.fake_conn)
+                                                                self.fake_host)
 
         device_path = '/dev/fake-dev'
         connection_info = {'data': {'device_path': device_path}}

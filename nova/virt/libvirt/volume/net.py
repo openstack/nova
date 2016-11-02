@@ -22,19 +22,19 @@ CONF = nova.conf.CONF
 
 class LibvirtNetVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
     """Driver to attach Network volumes to libvirt."""
-    def __init__(self, connection):
+    def __init__(self, host):
         super(LibvirtNetVolumeDriver,
-              self).__init__(connection, is_block_dev=False)
+              self).__init__(host, is_block_dev=False)
 
     def _get_secret_uuid(self, conf, password=None):
         # TODO(mriedem): Add delegation methods to connection (LibvirtDriver)
         # to call through for these secret CRUD operations so the volume driver
         # doesn't need to know the internal attributes of the connection
         # object.
-        secret = self.connection._host.find_secret(conf.source_protocol,
+        secret = self.host.find_secret(conf.source_protocol,
                                                    conf.source_name)
         if secret is None:
-            secret = self.connection._host.create_secret(conf.source_protocol,
+            secret = self.host.create_secret(conf.source_protocol,
                                                          conf.source_name,
                                                          password)
         return secret.UUIDString()
@@ -48,7 +48,7 @@ class LibvirtNetVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
             usage_type = 'iscsi'
             usage_name = ("%(target_iqn)s/%(target_lun)s" %
                           netdisk_properties)
-            self.connection._host.delete_secret(usage_type, usage_name)
+            self.host.delete_secret(usage_type, usage_name)
 
     def get_config(self, connection_info, disk_info):
         """Returns xml for libvirt."""

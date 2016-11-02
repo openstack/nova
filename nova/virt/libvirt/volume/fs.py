@@ -26,9 +26,9 @@ class LibvirtBaseFileSystemVolumeDriver(
     libvirt_volume.LibvirtBaseVolumeDriver):
     """The base class for file system type volume drivers"""
 
-    def __init__(self, connection):
+    def __init__(self, host):
         super(LibvirtBaseFileSystemVolumeDriver,
-              self).__init__(connection, is_block_dev=False)
+              self).__init__(host, is_block_dev=False)
 
     @abc.abstractmethod
     def _get_mount_point_base(self):

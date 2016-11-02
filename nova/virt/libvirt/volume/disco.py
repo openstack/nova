@@ -31,9 +31,9 @@ class LibvirtDISCOVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
     Uses the DISCO connector from the os-brick projects.
     """
 
-    def __init__(self, connection):
+    def __init__(self, host):
         """Init DISCO connector for LibVirt."""
-        super(LibvirtDISCOVolumeDriver, self).__init__(connection,
+        super(LibvirtDISCOVolumeDriver, self).__init__(host,
                                                        is_block_dev=False)
         self.connector = connector.InitiatorConnector.factory(
             'DISCO', utils.get_root_helper(),

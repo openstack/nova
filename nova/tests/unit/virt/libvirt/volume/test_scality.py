@@ -31,7 +31,7 @@ class LibvirtScalityVolumeDriverTestCase(
                    scality_sofs_mount_point=self.scality_sofs_mount_point,
                    group='libvirt')
 
-        self.drv = scality.LibvirtScalityVolumeDriver(self.fake_conn)
+        self.drv = scality.LibvirtScalityVolumeDriver(self.fake_host)
 
     @mock.patch('six.moves.urllib.request.urlopen')
     def test_connect_volume(self, mock_urlopen):
