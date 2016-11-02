@@ -531,6 +531,111 @@ class ResourceProviderListTestCase(ResourceProviderBaseCase):
         self.assertEqual(1, len(resource_providers))
         self.assertEqual('rp_name_2', resource_providers[0].name)
 
+    def test_get_all_by_filters_with_resources(self):
+        for rp_i in ['1', '2']:
+            uuid = getattr(uuidsentinel, 'rp_uuid_' + rp_i)
+            name = 'rp_name_' + rp_i
+            rp = objects.ResourceProvider(self.context, name=name, uuid=uuid)
+            rp.create()
+            inv = objects.Inventory(
+                resource_provider=rp,
+                resource_class=fields.ResourceClass.VCPU,
+                min_unit=1,
+                max_unit=2,
+                total=2,
+                allocation_ratio=1.0)
+            inv.obj_set_defaults()
+
+            inv2 = objects.Inventory(
+                resource_provider=rp,
+                resource_class=fields.ResourceClass.DISK_GB,
+                total=1024, reserved=2,
+                min_unit=1,
+                max_unit=1024,
+                allocation_ratio=1.0)
+            inv2.obj_set_defaults()
+
+            # Write that specific inventory for testing min/max units and steps
+            inv3 = objects.Inventory(
+                resource_provider=rp,
+                resource_class=fields.ResourceClass.MEMORY_MB,
+                total=1024, reserved=2,
+                min_unit=2,
+                max_unit=4,
+                step_size=2,
+                allocation_ratio=1.0)
+            inv3.obj_set_defaults()
+
+            inv_list = objects.InventoryList(objects=[inv, inv2, inv3])
+            rp.set_inventory(inv_list)
+
+            # Create the VCPU allocation only for the first RP
+            if rp_i != '1':
+                continue
+            allocation_1 = objects.Allocation(
+                resource_provider=rp,
+                consumer_id=uuidsentinel.consumer,
+                resource_class=fields.ResourceClass.VCPU,
+                used=1)
+            allocation_list = objects.AllocationList(
+                self.context, objects=[allocation_1])
+            allocation_list.create_all()
+
+        # Both RPs should accept that request given the only current allocation
+        # for the first RP is leaving one VCPU
+        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+            self.context, {'resources': {fields.ResourceClass.VCPU: 1}})
+        self.assertEqual(2, len(resource_providers))
+        # Now, when asking for 2 VCPUs, only the second RP should accept that
+        # given the current allocation for the first RP
+        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+            self.context, {'resources': {fields.ResourceClass.VCPU: 2}})
+        self.assertEqual(1, len(resource_providers))
+        # Adding a second resource request should be okay for the 2nd RP
+        # given it has enough disk but we also need to make sure that the
+        # first RP is not acceptable because of the VCPU request
+        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+            self.context, {'resources': {fields.ResourceClass.VCPU: 2,
+                                         fields.ResourceClass.DISK_GB: 1022}})
+        self.assertEqual(1, len(resource_providers))
+        # Now, we are asking for both disk and VCPU resources that all the RPs
+        # can't accept (as the 2nd RP is having a reserved size)
+        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+            self.context, {'resources': {fields.ResourceClass.VCPU: 2,
+                                         fields.ResourceClass.DISK_GB: 1024}})
+        self.assertEqual(0, len(resource_providers))
+
+        # We also want to verify that asking for a specific RP can also be
+        # checking the resource usage.
+        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+            self.context, {'name': 'rp_name_1',
+                           'resources': {fields.ResourceClass.VCPU: 1}})
+        self.assertEqual(1, len(resource_providers))
+
+        # Let's verify that the min and max units are checked too
+        # Case 1: amount is in between min and max and modulo step_size
+        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+            self.context, {'resources': {fields.ResourceClass.MEMORY_MB: 2}})
+        self.assertEqual(2, len(resource_providers))
+        # Case 2: amount is less than min_unit
+        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+            self.context, {'resources': {fields.ResourceClass.MEMORY_MB: 1}})
+        self.assertEqual(0, len(resource_providers))
+        # Case 3: amount is more than min_unit
+        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+            self.context, {'resources': {fields.ResourceClass.MEMORY_MB: 5}})
+        self.assertEqual(0, len(resource_providers))
+        # Case 4: amount is not modulo step_size
+        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+            self.context, {'resources': {fields.ResourceClass.MEMORY_MB: 3}})
+        self.assertEqual(0, len(resource_providers))
+
+    def test_get_all_by_filters_with_resources_not_existing(self):
+        self.assertRaises(
+            exception.ResourceClassNotFound,
+            objects.ResourceProviderList.get_all_by_filters,
+            self.context, {'resources': {'FOOBAR': 3}})
+
 
 class TestResourceProviderAggregates(test.NoDBTestCase):
 

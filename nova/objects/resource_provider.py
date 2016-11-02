@@ -10,6 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
 from oslo_db import exception as db_exc
 from oslo_log import log as logging
 from oslo_utils import versionutils
@@ -540,18 +542,135 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
     @staticmethod
     @db_api.api_context_manager.reader
     def _get_all_by_filters_from_db(context, filters):
+        # Eg. filters can be:
+        #  filters = {
+        #      'name': <name>,
+        #      'uuid': <uuid>,
+        #      'resources': {
+        #          'VCPU': 1,
+        #          'MEMORY_MB': 1024
+        #      }
+        #  }
         if not filters:
             filters = {}
+        else:
+            # Since we modify the filters, copy them so that we don't modify
+            # them in the calling program.
+            filters = copy.deepcopy(filters)
+        name = filters.pop('name', None)
+        uuid = filters.pop('uuid', None)
+        can_host = filters.pop('can_host', 0)
+
+        resources = filters.pop('resources', {})
+        # NOTE(sbauza): We want to key the dict by the resource class IDs
+        # and we want to make sure those class names aren't incorrect.
+        resources = {_RC_CACHE.id_from_string(r_name): amount
+                     for r_name, amount in six.iteritems(resources)}
         query = context.session.query(models.ResourceProvider)
-        for attr in ResourceProviderList.allowed_filters:
-            if attr in filters:
-                query = query.filter(
-                    getattr(models.ResourceProvider, attr) == filters[attr])
-        query = query.filter_by(can_host=filters.get('can_host', 0))
+        if name:
+            query = query.filter(models.ResourceProvider.name == name)
+        if uuid:
+            query = query.filter(models.ResourceProvider.uuid == uuid)
+        query = query.filter(models.ResourceProvider.can_host == can_host)
+
+        if not resources:
+            # Returns quickly the list in case we don't need to check the
+            # resource usage
+            return query.all()
+
+        # NOTE(sbauza): In case we want to look at the resource criteria, then
+        # the SQL generated from this case looks something like:
+        # SELECT
+        #   rp.*
+        # FROM resource_providers AS rp
+        # JOIN inventories AS inv
+        # ON rp.id = inv.resource_provider_id
+        # LEFT JOIN (
+        #    SELECT resource_provider_id, resource_class_id, SUM(used) AS used
+        #    FROM allocations
+        #    WHERE resource_class_id IN ($RESOURCE_CLASSES)
+        #    GROUP BY resource_provider_id, resource_class_id
+        # ) AS usage
+        #     ON inv.resource_provider_id = usage.resource_provider_id
+        #     AND inv.resource_class_id = usage.resource_class_id
+        # AND (inv.resource_class_id = $X AND (used + $AMOUNT_X <= (
+        #        total + reserved) * inv.allocation_ratio) AND
+        #        inv.min_unit <= $AMOUNT_X AND inv.max_unit >= $AMOUNT_X AND
+        #        $AMOUNT_X % inv.step_size == 0)
+        #      OR (inv.resource_class_id = $Y AND (used + $AMOUNT_Y <= (
+        #        total + reserved) * inv.allocation_ratio) AND
+        #        inv.min_unit <= $AMOUNT_Y AND inv.max_unit >= $AMOUNT_Y AND
+        #        $AMOUNT_Y % inv.step_size == 0)
+        #      OR (inv.resource_class_id = $Z AND (used + $AMOUNT_Z <= (
+        #        total + reserved) * inv.allocation_ratio) AND
+        #        inv.min_unit <= $AMOUNT_Z AND inv.max_unit >= $AMOUNT_Z AND
+        #        $AMOUNT_Z % inv.step_size == 0))
+        # GROUP BY rp.uuid
+        # HAVING
+        #  COUNT(DISTINCT(inv.resource_class_id)) == len($RESOURCE_CLASSES)
+        #
+        # with a possible additional WHERE clause for the name and uuid that
+        # comes from the above filters
+
+        # First JOIN between inventories and RPs is here
+        join_clause = _RP_TBL.c.id == _INV_TBL.c.resource_provider_id
+        query = query.join(_INV_TBL, join_clause)
+
+        # Now, below is the LEFT JOIN for getting the allocations usage
+        usage = sa.select([_ALLOC_TBL.c.resource_provider_id,
+                           _ALLOC_TBL.c.consumer_id,
+                           _ALLOC_TBL.c.resource_class_id,
+                           sql.func.sum(_ALLOC_TBL.c.used).label('used')])
+        usage = usage.where(_ALLOC_TBL.c.resource_class_id.in_(
+            resources.keys()))
+        usage = usage.group_by(_ALLOC_TBL.c.resource_provider_id,
+                               _ALLOC_TBL.c.resource_class_id)
+        usage = sa.alias(usage, name='usage')
+        query = query.outerjoin(
+            usage,
+            sa.and_(
+                usage.c.resource_provider_id == (
+                    _INV_TBL.c.resource_provider_id),
+                usage.c.resource_class_id == _INV_TBL.c.resource_class_id))
+
+        # And finally, we verify for each resource class if the requested
+        # amount isn't more than the left space (considering the allocation
+        # ratio, the reserved space and the min and max amount possible sizes)
+        where_clauses = [
+            sa.and_(
+                _INV_TBL.c.resource_class_id == r_idx,
+                (func.coalesce(usage.c.used, 0) + amount <= (
+                    _INV_TBL.c.total - _INV_TBL.c.reserved
+                ) * _INV_TBL.c.allocation_ratio),
+                _INV_TBL.c.min_unit <= amount,
+                _INV_TBL.c.max_unit >= amount,
+                amount % _INV_TBL.c.step_size == 0
+            )
+            for (r_idx, amount) in six.iteritems(resources)]
+        query = query.filter(sa.or_(*where_clauses))
+        query = query.group_by(_RP_TBL.c.uuid)
+        # NOTE(sbauza): Only RPs having all the asked resources can be provided
+        query = query.having(sql.func.count(
+            sa.distinct(_INV_TBL.c.resource_class_id)) == len(resources))
+
         return query.all()
 
     @base.remotable_classmethod
     def get_all_by_filters(cls, context, filters=None):
+        """Returns a list of `ResourceProvider` objects that have sufficient
+        resources in their inventories to satisfy the amounts specified in the
+        `filters` parameter.
+
+        If no resource providers can be found, the function will return an
+        empty list.
+
+        :param context: `nova.context.RequestContext` that may be used to grab
+                        a DB connection.
+        :param filters: Can be `name`, `uuid` or `resources` where `resources`
+                        is a dict of amounts keyed by resource classes
+        :type filters: dict
+        """
+        _ensure_rc_cache(context)
         resource_providers = cls._get_all_by_filters_from_db(context, filters)
         return base.obj_make_list(context, cls(context),
                                   objects.ResourceProvider, resource_providers)
