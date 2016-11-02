@@ -13,7 +13,6 @@
 #    under the License.
 
 import mock
-from oslo_db import exception as db_exception
 import oslo_messaging as messaging
 from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
@@ -95,30 +94,8 @@ class DBServiceGroupTestCase(test.NoDBTestCase):
         fn(service)  # fail if exception not caught
         self.assertTrue(service.model_disconnected)
 
-    def test_report_state_remote_error_handling(self):
-        # test error handling using remote conductor
-        self.flags(use_local=False, group='conductor')
-        self._test_report_state_error(messaging.RemoteError)
-
-    def test_report_state_remote_error_handling_timeout(self):
-        # test error handling using remote conductor
-        self.flags(use_local=False, group='conductor')
+    def test_report_state_error_handling_timeout(self):
         self._test_report_state_error(messaging.MessagingTimeout)
 
-    def test_report_state_remote_unexpected_error(self):
-        # unexpected errors must be handled, but disconnected flag not touched
-        self.flags(use_local=False, group='conductor')
-        self._test_report_state_error(RuntimeError)
-
-    def test_report_state_local_error_handling(self):
-        # if using local conductor, the db driver must handle DB errors
-        self.flags(use_local=True, group='conductor')
-
-        # mock an oslo.db DBError as it's an exception base class for
-        # oslo.db DB errors (eg DBConnectionError)
-        self._test_report_state_error(db_exception.DBError)
-
-    def test_report_state_local_unexpected_error(self):
-        # unexpected errors must be handled, but disconnected flag not touched
-        self.flags(use_local=True, group='conductor')
+    def test_report_state_unexpected_error(self):
         self._test_report_state_error(RuntimeError)

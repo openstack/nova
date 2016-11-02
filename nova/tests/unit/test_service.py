@@ -98,7 +98,6 @@ class ServiceTestCase(test.NoDBTestCase):
         self.host = 'foo'
         self.binary = 'nova-fake'
         self.topic = 'fake'
-        self.flags(use_local=True, group='conductor')
 
     def test_create(self):
 

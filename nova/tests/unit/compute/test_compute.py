@@ -150,7 +150,6 @@ class BaseTestCase(test.TestCase):
         super(BaseTestCase, self).setUp()
         self.flags(network_manager='nova.network.manager.FlatManager')
         fake.set_nodes([NODENAME])
-        self.flags(use_local=True, group='conductor')
 
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
@@ -330,13 +329,6 @@ class BaseTestCase(test.TestCase):
                   'user_id': self.user_id,
                   'project_id': self.project_id}
         return db.security_group_create(self.context, values)
-
-    def _stub_migrate_server(self):
-        def _fake_migrate_server(*args, **kwargs):
-            pass
-
-        self.stub_out('nova.conductor.manager.ComputeTaskManager'
-                      '.migrate_server', _fake_migrate_server)
 
     def _init_aggregate_with_host(self, aggr, aggr_name, zone, host):
         if not aggr:
@@ -10987,8 +10979,8 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
         self.stub_out('nova.compute.flavors.get_flavor_by_flavor_id',
                        fake_get_flavor_by_flavor_id)
 
-        self._stub_migrate_server()
-        self.compute_api.resize(self.context, instance, '4')
+        with mock.patch('nova.conductor.api.ComputeTaskAPI.resize_instance'):
+            self.compute_api.resize(self.context, instance, '4')
 
     def test_cannot_resize_to_disabled_instance_type(self):
         instance = self._create_fake_instance_obj()

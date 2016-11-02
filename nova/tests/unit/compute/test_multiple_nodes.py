@@ -66,9 +66,6 @@ class MultiNodeComputeTestCase(BaseTestCase):
         super(MultiNodeComputeTestCase, self).setUp()
         self.flags(compute_driver='fake.FakeDriver')
         self.compute = importutils.import_object(CONF.compute_manager)
-        self.flags(use_local=True, group='conductor')
-        self.conductor = self.start_service('conductor',
-                                            manager=CONF.conductor.manager)
 
         def fake_get_compute_nodes_in_db(context, use_slave=False):
             fake_compute_nodes = [{'local_gb': 259,

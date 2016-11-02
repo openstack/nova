@@ -42,7 +42,6 @@ from nova.api.metadata import vendordata
 from nova.api.metadata import vendordata_dynamic
 from nova import block_device
 from nova.compute import flavors
-from nova.conductor import api as conductor_api
 from nova import context
 from nova import exception
 from nova.network import api as network_api
@@ -252,7 +251,6 @@ class MetadataTestCase(test.TestCase):
         super(MetadataTestCase, self).setUp()
         self.context = context.RequestContext('fake', 'fake')
         self.instance = fake_inst_obj(self.context)
-        self.flags(use_local=True, group='conductor')
         self.keypair = fake_keypair_obj(self.instance.key_name,
                                         self.instance.key_data)
         fake_network.stub_out_nw_api_get_instance_nw_info(self)
@@ -350,8 +348,6 @@ class MetadataTestCase(test.TestCase):
                     'ephemeral0': '/dev/sdb',
                     'swap': '/dev/sdc',
                     'ebs0': '/dev/sdh'}
-
-        conductor_api.LocalAPI()
 
         self.assertEqual(base._format_instance_mapping(self.context,
                          instance_ref0), block_device._DEFAULT_MAPPINGS)
@@ -581,7 +577,6 @@ class OpenStackMetadataTestCase(test.TestCase):
         super(OpenStackMetadataTestCase, self).setUp()
         self.context = context.RequestContext('fake', 'fake')
         self.instance = fake_inst_obj(self.context)
-        self.flags(use_local=True, group='conductor')
         fake_network.stub_out_nw_api_get_instance_nw_info(self)
 
     def test_empty_device_metadata(self):
@@ -1005,7 +1000,6 @@ class MetadataHandlerTestCase(test.TestCase):
         fake_network.stub_out_nw_api_get_instance_nw_info(self)
         self.context = context.RequestContext('fake', 'fake')
         self.instance = fake_inst_obj(self.context)
-        self.flags(use_local=True, group='conductor')
         self.mdinst = fake_InstanceMetadata(self, self.instance,
             address=None, sgroups=None)
 
@@ -1527,10 +1521,8 @@ class MetadataPasswordTestCase(test.TestCase):
         fake_network.stub_out_nw_api_get_instance_nw_info(self)
         self.context = context.RequestContext('fake', 'fake')
         self.instance = fake_inst_obj(self.context)
-        self.flags(use_local=True, group='conductor')
         self.mdinst = fake_InstanceMetadata(self, self.instance,
             address=None, sgroups=None)
-        self.flags(use_local=True, group='conductor')
 
     def test_get_password(self):
         request = webob.Request.blank('')
