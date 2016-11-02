@@ -960,7 +960,8 @@ def _numa_fit_instance_cell_with_pinning(host_cell, instance_cell,
     return numa_cell
 
 
-def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None):
+def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None,
+                            cpuset_reserved=0):
     """Ensure an instance cell can fit onto a host cell
 
     Ensure an instance cell can fit onto a host cell and, if so, return
@@ -970,6 +971,7 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None):
     :param host_cell: host cell to fit the instance cell onto
     :param instance_cell: instance cell we want to fit
     :param limit_cell: an objects.NUMATopologyLimit or None
+    :param cpuset_reserved: An int to indicate the number of CPUs overhead
 
     :returns: objects.InstanceNUMACell with the id set to that of the
               host, or None
@@ -985,17 +987,19 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None):
                    'actual': host_cell.memory})
         return
 
-    if len(instance_cell.cpuset) > len(host_cell.cpuset):
+    if len(instance_cell.cpuset) + cpuset_reserved > len(host_cell.cpuset):
         LOG.debug('Not enough host cell CPUs to fit instance cell. Required: '
-                  '%(required)d, actual: %(actual)d',
+                  '%(required)d + %(cpuset_reserved)d as overhead, '
+                  'actual: %(actual)d',
                   {'required': len(instance_cell.cpuset),
-                   'actual': len(host_cell.cpuset)})
+                   'actual': len(host_cell.cpuset),
+                   'cpuset_reserved': cpuset_reserved})
         return
 
     if instance_cell.cpu_pinning_requested:
         LOG.debug('Pinning has been requested')
         new_instance_cell = _numa_fit_instance_cell_with_pinning(
-            host_cell, instance_cell)
+            host_cell, instance_cell, cpuset_reserved)
         if not new_instance_cell:
             return
         new_instance_cell.pagesize = instance_cell.pagesize
@@ -1482,8 +1486,17 @@ def numa_fit_instance_to_host(
         for host_cell, instance_cell in zip(
                 host_cell_perm, instance_topology.cells):
             try:
+                cpuset_reserved = 0
+                if (instance_topology.emulator_threads_isolated
+                    and len(cells) == 0):
+                    # For the case of isolate emulator threads, to
+                    # make predictable where that CPU overhead is
+                    # located we always configure it to be on host
+                    # NUMA node associated to the guest NUMA node
+                    # 0.
+                    cpuset_reserved = 1
                 got_cell = _numa_fit_instance_cell(
-                    host_cell, instance_cell, limits)
+                    host_cell, instance_cell, limits, cpuset_reserved)
             except exception.MemoryPageSizeNotSupported:
                 # This exception will been raised if instance cell's
                 # custom pagesize is not supported with host cell in
