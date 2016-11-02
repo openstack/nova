@@ -10851,6 +10851,42 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         drvr._create_swap('/dev/something', 1)
 
+    def test_ensure_console_log_for_instance_pass(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        with test.nested(
+                mock.patch.object(drvr, '_get_console_log_path'),
+                mock.patch.object(fake_libvirt_utils, 'file_open')
+            ) as (mock_path, mock_open):
+            drvr._ensure_console_log_for_instance(mock.ANY)
+            mock_path.assert_called_once()
+            mock_open.assert_called_once()
+
+    def test_ensure_console_log_for_instance_pass_w_permissions(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        with test.nested(
+                mock.patch.object(drvr, '_get_console_log_path'),
+                mock.patch.object(fake_libvirt_utils, 'file_open',
+                                  side_effect=IOError(errno.EPERM, 'exc'))
+            ) as (mock_path, mock_open):
+            drvr._ensure_console_log_for_instance(mock.ANY)
+            mock_path.assert_called_once()
+            mock_open.assert_called_once()
+
+    def test_ensure_console_log_for_instance_fail(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        with test.nested(
+                mock.patch.object(drvr, '_get_console_log_path'),
+                mock.patch.object(fake_libvirt_utils, 'file_open',
+                                  side_effect=IOError(errno.EREMOTE, 'exc'))
+            ) as (mock_path, mock_open):
+            self.assertRaises(
+                IOError,
+                drvr._ensure_console_log_for_instance,
+                mock.ANY)
+
     def test_get_console_output_file(self):
         fake_libvirt_utils.files['console.log'] = '01234567890'
 

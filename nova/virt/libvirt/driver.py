@@ -2867,7 +2867,14 @@ class LibvirtDriver(driver.ComputeDriver):
         console_file = self._get_console_log_path(instance)
         LOG.debug('Ensure instance console log exists: %s', console_file,
                   instance=instance)
-        libvirt_utils.file_open(console_file, 'a').close()
+        try:
+            libvirt_utils.file_open(console_file, 'a').close()
+        # NOTE(sfinucan): We can safely ignore permission issues here and
+        # assume that it is libvirt that has taken ownership of this file.
+        except IOError as ex:
+            if ex.errno != errno.EPERM:
+                raise
+            LOG.debug('Console file already exists: %s.', console_file)
 
     @staticmethod
     def _get_disk_config_path(instance, suffix=''):
