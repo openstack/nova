@@ -5131,8 +5131,7 @@ class LibvirtDriver(driver.ComputeDriver):
         for guest in self._host.list_guests():
             try:
                 vcpus = guest.get_vcpus_info()
-                if vcpus is not None:
-                    total += len(list(vcpus))
+                total += len(list(vcpus))
             except libvirt.libvirtError as e:
                 LOG.warning(
                     _LW("couldn't obtain the vcpu count from domain id:"

@@ -257,10 +257,9 @@ class Guest(object):
         :returns: guest.VCPUInfo
         """
         vcpus = self._domain.vcpus()
-        if vcpus is not None:
-            for vcpu in vcpus[0]:
-                yield VCPUInfo(
-                    id=vcpu[0], cpu=vcpu[3], state=vcpu[1], time=vcpu[2])
+        for vcpu in vcpus[0]:
+            yield VCPUInfo(
+                id=vcpu[0], cpu=vcpu[3], state=vcpu[1], time=vcpu[2])
 
     def delete_configuration(self):
         """Undefines a domain from hypervisor."""

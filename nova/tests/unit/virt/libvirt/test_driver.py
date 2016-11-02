@@ -13421,32 +13421,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(5, drvr._get_vcpu_used())
         mock_list.assert_called_with(only_guests=True, only_running=True)
 
-    @mock.patch.object(host.Host, "list_instance_domains")
-    def test_failing_vcpu_count_none(self, mock_list):
-        """Domain will return zero if the current number of vcpus used
-        is None. This is in case of VM state starting up or shutting
-        down. None type returned is counted as zero.
-        """
-
-        class DiagFakeDomain(object):
-            def __init__(self):
-                pass
-
-            def vcpus(self):
-                return None
-
-            def ID(self):
-                return 1
-
-            def name(self):
-                return "instance000001"
-
-        mock_list.return_value = [DiagFakeDomain()]
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.assertEqual(0, drvr._get_vcpu_used())
-        mock_list.assert_called_with(only_guests=True, only_running=True)
-
     def test_get_instance_capabilities(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
