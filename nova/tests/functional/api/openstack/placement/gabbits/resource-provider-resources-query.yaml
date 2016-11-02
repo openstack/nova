@@ -1,0 +1,136 @@
+
+fixtures:
+    - AllocationFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        content-type: application/json
+        OpenStack-API-Version: placement latest
+
+tests:
+
+- name: what is at resource providers
+  GET: /resource_providers
+  response_json_paths:
+      $.resource_providers.`len`: 1
+      $.resource_providers[0].uuid: $ENVIRON['RP_UUID']
+      $.resource_providers[0].name: $ENVIRON['RP_NAME']
+      $.resource_providers[0].links[?rel = "self"].href: /resource_providers/$ENVIRON['RP_UUID']
+      $.resource_providers[0].links[?rel = "inventories"].href: /resource_providers/$ENVIRON['RP_UUID']/inventories
+      $.resource_providers[0].links[?rel = "aggregates"].href: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+      $.resource_providers[0].links[?rel = "usages"].href: /resource_providers/$ENVIRON['RP_UUID']/usages
+
+- name: post new resource provider
+  POST: /resource_providers
+  data:
+      name: $ENVIRON['ALT_RP_NAME']
+      uuid: $ENVIRON['ALT_RP_UUID']
+  status: 201
+  response_headers:
+      location: //resource_providers/[a-f0-9-]+/
+  response_forbidden_headers:
+      - content-type
+
+- name: now 2 providers listed
+  GET: /resource_providers
+  response_json_paths:
+      $.resource_providers.`len`: 2
+
+- name: list resource providers providing resources filter before API 1.4
+  GET: /resource_providers?resources=VCPU:1
+  request_headers:
+      OpenStack-API-Version: placement 1.3
+  status: 400
+  response_strings:
+      - 'Invalid query string parameters'
+
+- name: list resource providers providing a badly-formatted resources filter
+  GET: /resource_providers?resources=VCPU
+  status: 400
+  response_strings:
+      - 'Badly formed resources parameter. Expected resources query string parameter in form:'
+      - 'Got: VCPU.'
+
+- name: list resource providers providing a resources filter with non-integer amount
+  GET: /resource_providers?resources=VCPU:fred
+  status: 400
+  response_strings:
+      - 'Requested resource VCPU expected positive integer amount.'
+      - 'Got: fred.'
+
+- name: list resource providers providing a resources filter with negative amount
+  GET: /resource_providers?resources=VCPU:-2
+  status: 400
+  response_strings:
+      - 'Requested resource VCPU requires amount >= 1.'
+      - 'Got: -2.'
+
+- name: list resource providers providing a resource class not existing
+  GET: /resource_providers?resources=MYMISSINGCLASS:1
+  status: 400
+  response_strings:
+      - 'Invalid resource class in resources parameter'
+
+- name: list resource providers providing a bad trailing comma
+  GET: /resource_providers?resources=DISK_GB:500,
+  status: 400
+  response_strings:
+      - 'Badly formed resources parameter. Expected resources query string parameter in form:'
+      # NOTE(mriedem): The value is empty because splitting on the trailing
+      # comma results in an empty string.
+      - 'Got: .'
+
+- name: list resource providers providing disk resources
+  GET: /resource_providers?resources=DISK_GB:500
+  response_json_paths:
+      $.resource_providers.`len`: 1
+      $.resource_providers[0].uuid: $ENVIRON['RP_UUID']
+
+- name: list resource providers providing disk and vcpu resources
+  GET: /resource_providers?resources=DISK_GB:500,VCPU:2
+  response_json_paths:
+      $.resource_providers.`len`: 1
+      $.resource_providers[0].uuid: $ENVIRON['RP_UUID']
+
+- name: list resource providers providing resources (no match - less than min_unit)
+  GET: /resource_providers?resources=DISK_GB:1
+  response_json_paths:
+      $.resource_providers.`len`: 0
+
+- name: list resource providers providing resources (no match - more than max_unit)
+  GET: /resource_providers?resources=DISK_GB:610
+  response_json_paths:
+      $.resource_providers.`len`: 0
+
+- name: list resource providers providing resources (no match - not enough inventory)
+  GET: /resource_providers?resources=DISK_GB:102400
+  response_json_paths:
+      $.resource_providers.`len`: 0
+
+- name: list resource providers providing resources (no match - bad step size)
+  GET: /resource_providers?resources=DISK_GB:11
+  response_json_paths:
+      $.resource_providers.`len`: 0
+
+- name: list resource providers providing resources (no match - no inventory of resource)
+  GET: /resource_providers?resources=MEMORY_MB:10240
+  response_json_paths:
+      $.resource_providers.`len`: 0
+
+- name: list resource providers providing resources (no match - not enough VCPU)
+  GET: /resource_providers?resources=DISK_GB:500,VCPU:4
+  response_json_paths:
+      $.resource_providers.`len`: 0
+
+- name: associate an aggregate with rp1
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+  data:
+      - 83a3d69d-8920-48e2-8914-cadfd8fa2f91
+  status: 200
+
+- name: get by aggregates with resources
+  GET: '/resource_providers?member_of=in:83a3d69d-8920-48e2-8914-cadfd8fa2f91&resources=VCPU:2'
+  response_json_paths:
+      $.resource_providers.`len`: 1
+      $.resource_providers[0].uuid: $ENVIRON['RP_UUID']

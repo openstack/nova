@@ -539,10 +539,6 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
         'objects': fields.ListOfObjectsField('ResourceProvider'),
     }
 
-    allowed_filters = (
-        'name', 'uuid', 'member_of'
-    )
-
     @staticmethod
     @db_api.api_context_manager.reader
     def _get_all_by_filters_from_db(context, filters):

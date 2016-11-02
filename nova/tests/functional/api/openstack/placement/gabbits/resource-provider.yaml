@@ -129,13 +129,13 @@ tests:
   GET: /resource_providers?uuid=spameggs
   status: 400
   response_strings:
-      - 'Invalid uuid value: spameggs'
+      - 'Invalid query string parameters'
 
 - name: list resource providers providing an invalid filter
   GET: /resource_providers?spam=eggs
   status: 400
   response_strings:
-      - 'Invalid filters: spam'
+      - 'Invalid query string parameters'
 
 - name: list one resource provider filtering by uuid
   GET: /resource_providers?uuid=$ENVIRON['RP_UUID']

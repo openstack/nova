@@ -91,9 +91,12 @@ class AllocationFixture(APIFixture):
         rp = objects.ResourceProvider(
             self.context, name=rp_name, uuid=rp_uuid)
         rp.create()
+
+        # Create some DISK_GB inventory and allocations.
         inventory = objects.Inventory(
             self.context, resource_provider=rp,
-            resource_class='DISK_GB', total=2048)
+            resource_class='DISK_GB', total=2048,
+            step_size=10, min_unit=10, max_unit=600)
         inventory.obj_set_defaults()
         rp.add_inventory(inventory)
         allocation = objects.Allocation(
@@ -108,3 +111,28 @@ class AllocationFixture(APIFixture):
             consumer_id=uuidutils.generate_uuid(),
             used=512)
         allocation.create()
+
+        # Create some VCPU inventory and allocations.
+        inventory = objects.Inventory(
+            self.context, resource_provider=rp,
+            resource_class='VCPU', total=8,
+            max_unit=4)
+        inventory.obj_set_defaults()
+        rp.add_inventory(inventory)
+        allocation = objects.Allocation(
+            self.context, resource_provider=rp,
+            resource_class='VCPU',
+            consumer_id=uuidutils.generate_uuid(),
+            used=2)
+        allocation.create()
+        allocation = objects.Allocation(
+            self.context, resource_provider=rp,
+            resource_class='VCPU',
+            consumer_id=uuidutils.generate_uuid(),
+            used=4)
+        allocation.create()
+
+        # The ALT_RP_XXX variables are for a resource provider that has
+        # not been created in the Allocation fixture
+        os.environ['ALT_RP_UUID'] = uuidutils.generate_uuid()
+        os.environ['ALT_RP_NAME'] = uuidutils.generate_uuid()

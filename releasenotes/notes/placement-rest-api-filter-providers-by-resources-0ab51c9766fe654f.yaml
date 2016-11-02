@@ -1,0 +1,19 @@
+---
+features:
+  - |
+    A new Placement API microversion 1.4 is added. Users may now query the
+    Placement REST API for resource providers that have the ability to meet a
+    set of requested resource amounts. The `GET /resource_providers` API call
+    can have a "resources" query string parameter supplied that indicates the
+    requested amounts of various resources that a provider must have the
+    capacity to serve. The "resources" query string parameter takes the form:
+
+    ``?resources=$RESOURCE_CLASS_NAME:$AMOUNT,$RESOURCE_CLASS_NAME:$AMOUNT``
+
+    For instance, if the user wishes to see resource providers that can service
+    a request for 2 vCPUs, 1024 MB of RAM and 50 GB of disk space, the user can
+    issue a request of::
+
+    ``GET /resource_providers?resources=VCPU:2,MEMORY_MB:1024,DISK_GB:50``
+
+    The placement API is only available to admin users.

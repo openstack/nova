@@ -52,3 +52,32 @@ Version 1.3 adds support for listing resource providers that are members of
 any of the list of aggregates provided using a ``member_of`` query parameter:
 
 * /resource_providers?member_of=in:{agg1_uuid},{agg2_uuid},{agg3_uuid}
+
+1.4 -- Filter resource providers having requested resource capacity
+-------------------------------------------------------------------
+
+The 1.4 version adds support for querying resource providers that have the
+ability to serve a requested set of resources. A new "resources" query string
+parameter is now accepted to the `GET /resource_providers` API call. This
+parameter indicates the requested amounts of various resources that a provider
+must have the capacity to serve. The "resources" query string parameter takes
+the form:
+
+``?resources=$RESOURCE_CLASS_NAME:$AMOUNT,$RESOURCE_CLASS_NAME:$AMOUNT``
+
+For instance, if the user wishes to see resource providers that can service a
+request for 2 vCPUs, 1024 MB of RAM and 50 GB of disk space, the user can issue
+a request to:
+
+`GET /resource_providers?resources=VCPU:2,MEMORY_MB:1024,DISK_GB:50`
+
+If the resource class does not exist, then it will return a HTTP 400.
+
+.. note:: The resources filtering is also based on the `min_unit`, `max_unit`
+    and `step_size` of the inventory record. For example, if the `max_unit` is
+    512 for the DISK_GB inventory for a particular resource provider and a
+    GET request is made for `DISK_GB:1024`, that resource provider will not be
+    returned. The `min_unit` is the minimum amount of resource that can be
+    requested for a given inventory and resource provider. The `step_size` is
+    the increment of resource that can be requested for a given resource on a
+    given provider.

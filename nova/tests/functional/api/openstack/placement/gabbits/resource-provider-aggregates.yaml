@@ -90,11 +90,11 @@ tests:
   request_headers:
       openstack-api-version: placement 1.1
   status: 400
-  response_json_paths:
-      $.errors[0].detail: '/Invalid filters: member_of/'
+  response_strings:
+      - 'Invalid query string parameters'
 
 - name: error on bogus query parameter
   GET: '/resource_providers?assoc_with_aggregate=in:83a3d69d-8920-48e2-8914-cadfd8fa2f91,99652f11-9f77-46b9-80b7-4b1989be9f8c'
   status: 400
-  response_json_paths:
-      $.errors[0].detail: '/Invalid filters: assoc_with_aggregate/'
+  response_strings:
+      - 'Invalid query string parameters'
