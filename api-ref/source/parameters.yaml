@@ -2711,13 +2711,14 @@ keypair_type:
   description: |
     The type of the keypair. Allowed values are ``ssh`` or ``x509``
   min_version: 2.2
+# NOTE(mriedem): This is the user_id description for the keypair create/show
+# response which has always been returned.
 keypair_userid:
   in: body
   required: true
   type: string
   description: |
     The user_id for a keypair.
-  min_version: 2.10
 keypair_userid_in:
   in: body
   required: false
