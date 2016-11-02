@@ -1,0 +1,25 @@
+# Confirm that things work as intended when CORS is not configured.
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: user
+
+tests:
+- name: options request not allowed
+  OPTIONS: /
+  request_headers:
+      origin: http://valid.example.com
+      access-control-request-method: GET
+  status: 405
+
+- name: get request no cors headers
+  GET: /
+  request_headers:
+      origin: http://valid.example.com
+      access-control-request-method: GET
+  status: 200
+  response_forbidden_headers:
+      - access-control-allow-origin

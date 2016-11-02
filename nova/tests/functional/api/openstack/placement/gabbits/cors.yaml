@@ -1,0 +1,47 @@
+# Confirm that CORS is present. No complex configuration is done so
+# this just tests the basics. Borrowed, in spirit, from
+# nova.tests.functional.test_middleware.
+
+fixtures:
+    - CORSFixture
+
+defaults:
+    request_headers:
+        x-auth-token: user
+
+tests:
+- name: valid options request
+  OPTIONS: /
+  request_headers:
+      origin: http://valid.example.com
+      access-control-request-method: GET
+  status: 200
+  response_headers:
+      access-control-allow-origin: http://valid.example.com
+
+- name: invalid options request
+  OPTIONS: /
+  request_headers:
+      origin: http://invalid.example.com
+      access-control-request-method: GET
+  status: 200
+  response_forbidden_headers:
+      - access-control-allow-origin
+
+- name: valid get request
+  GET: /
+  request_headers:
+      origin: http://valid.example.com
+      access-control-request-method: GET
+  status: 200
+  response_headers:
+      access-control-allow-origin: http://valid.example.com
+
+- name: invalid get request
+  GET: /
+  request_headers:
+      origin: http://invalid.example.com
+      access-control-request-method: GET
+  status: 200
+  response_forbidden_headers:
+      - access-control-allow-origin

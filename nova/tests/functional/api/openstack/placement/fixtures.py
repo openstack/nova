@@ -13,6 +13,7 @@
 import os
 
 from gabbi import fixture
+from oslo_middleware import cors
 from oslo_utils import uuidutils
 
 from nova.api.openstack.placement import deploy
@@ -55,7 +56,16 @@ class APIFixture(fixture.GabbiFixture):
                                group='api_database')
         self.conf.set_override('connection', "sqlite://",
                                group='placement_database')
-        config.parse_args([], default_config_files=None, configure_db=False,
+
+        # Register CORS opts, but do not set config. This has the
+        # effect of exercising the "don't use cors" path in
+        # deploy.py. Without setting some config the group will not
+        # be present.
+        self.conf.register_opts(cors.CORS_OPTS, 'cors')
+
+        # Make sure default_config_files is an empty list, not None.
+        # If None /etc/nova/nova.conf is read and confuses results.
+        config.parse_args([], default_config_files=[], configure_db=False,
                           init_rpc=False)
 
         # NOTE(cdent): api and main database are not used but we still need
@@ -136,3 +146,15 @@ class AllocationFixture(APIFixture):
         # not been created in the Allocation fixture
         os.environ['ALT_RP_UUID'] = uuidutils.generate_uuid()
         os.environ['ALT_RP_NAME'] = uuidutils.generate_uuid()
+
+
+class CORSFixture(APIFixture):
+    """An APIFixture that turns on CORS."""
+
+    def start_fixture(self):
+        super(CORSFixture, self).start_fixture()
+        # NOTE(cdent): If we remove this override, then the cors
+        # group ends up not existing in the conf, so when deploy.py
+        # wants to load the CORS middleware, it will not.
+        self.conf.set_override('allowed_origin', 'http://valid.example.com',
+                               group='cors')

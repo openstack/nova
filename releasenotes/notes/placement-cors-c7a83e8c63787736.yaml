@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    The placement API service can now be configured to support
+    `CORS <http://docs.openstack.org/developer/oslo.middleware/cors.html>`_.
+    If a `cors` configuration group is present in the service's configuration
+    file (currently `nova.conf`), with `allowed_origin` configured, the values
+    within will be used to configure the middleware. If `cors.allowed_origin`
+    is not set, the middleware will not be used.
