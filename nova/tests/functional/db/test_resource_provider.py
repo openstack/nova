@@ -669,6 +669,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         If this fails, we get a KeyError at create_all()
         """
 
+        max_unit = 10
         consumer_uuid = uuidsentinel.consumer
         consumer_uuid2 = uuidsentinel.consumer2
 
@@ -687,12 +688,13 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
 
         inv = objects.Inventory(resource_provider=rp1,
                                 resource_class=rp1_class,
-                                total=1024)
+                                total=1024, max_unit=max_unit)
         inv.obj_set_defaults()
 
         inv2 = objects.Inventory(resource_provider=rp1,
-                                resource_class=rp2_class,
-                                total=255, reserved=2)
+                                 resource_class=rp2_class,
+                                 total=255, reserved=2,
+                                 max_unit=max_unit)
         inv2.obj_set_defaults()
         inv_list = objects.InventoryList(objects=[inv, inv2])
         rp1.set_inventory(inv_list)
@@ -728,6 +730,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         allocation_list.create_all()
 
     def test_allocation_list_create(self):
+        max_unit = 10
         consumer_uuid = uuidsentinel.consumer
 
         # Create two resource providers
@@ -789,7 +792,21 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         inv_list = objects.InventoryList(objects=[inv])
         rp2.set_inventory(inv_list)
 
-        # Now the allocations will work.
+        # Now the allocations will still fail because max_unit 1
+        self.assertRaises(exception.InvalidAllocationConstraintsViolated,
+                          allocation_list.create_all)
+        inv1 = objects.Inventory(resource_provider=rp1,
+                                resource_class=rp1_class,
+                                total=1024, max_unit=max_unit)
+        inv1.obj_set_defaults()
+        rp1.set_inventory(objects.InventoryList(objects=[inv1]))
+        inv2 = objects.Inventory(resource_provider=rp2,
+                                resource_class=rp2_class,
+                                total=255, reserved=2, max_unit=max_unit)
+        inv2.obj_set_defaults()
+        rp2.set_inventory(objects.InventoryList(objects=[inv2]))
+
+        # Now we can finally allocate.
         allocation_list.create_all()
 
         # Check that those allocations changed usage on each
@@ -832,6 +849,75 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
             self.context, rp2_uuid)
         self.assertEqual(0, rp1_usage[0].usage)
         self.assertEqual(0, rp2_usage[0].usage)
+
+    def _make_rp_and_inventory(self, **kwargs):
+        # Create one resource provider and set some inventory
+        rp_name = uuidsentinel.rp_name
+        rp_uuid = uuidsentinel.rp_uuid
+        rp = objects.ResourceProvider(
+            self.context, name=rp_name, uuid=rp_uuid)
+        rp.create()
+        inv = objects.Inventory(resource_provider=rp,
+                                total=1024, allocation_ratio=1,
+                                reserved=0, **kwargs)
+        inv.obj_set_defaults()
+        rp.set_inventory(objects.InventoryList(objects=[inv]))
+        return rp
+
+    def _validate_usage(self, rp, usage):
+        rp_usage = objects.UsageList.get_all_by_resource_provider_uuid(
+            self.context, rp.uuid)
+        self.assertEqual(usage, rp_usage[0].usage)
+
+    def _check_create_allocations(self, inventory_kwargs,
+                                  bad_used, good_used):
+        consumer_uuid = uuidsentinel.consumer
+        rp_class = fields.ResourceClass.DISK_GB
+        rp = self._make_rp_and_inventory(resource_class=rp_class,
+                                         **inventory_kwargs)
+
+        # allocation, bad step_size
+        allocation = objects.Allocation(resource_provider=rp,
+                                        consumer_id=consumer_uuid,
+                                        resource_class=rp_class,
+                                        used=bad_used)
+        allocation_list = objects.AllocationList(self.context,
+                                                 objects=[allocation])
+        self.assertRaises(exception.InvalidAllocationConstraintsViolated,
+                          allocation_list.create_all)
+
+        # correct for step size
+        allocation.used = good_used
+        allocation_list = objects.AllocationList(self.context,
+                                                 objects=[allocation])
+        allocation_list.create_all()
+
+        # check usage
+        self._validate_usage(rp, allocation.used)
+
+    def test_create_all_step_size(self):
+        bad_used = 4
+        good_used = 5
+        inventory_kwargs = {'max_unit': 9999, 'step_size': 5}
+
+        self._check_create_allocations(inventory_kwargs,
+                                       bad_used, good_used)
+
+    def test_create_all_min_unit(self):
+        bad_used = 4
+        good_used = 5
+        inventory_kwargs = {'max_unit': 9999, 'min_unit': 5}
+
+        self._check_create_allocations(inventory_kwargs,
+                                       bad_used, good_used)
+
+    def test_create_all_max_unit(self):
+        bad_used = 5
+        good_used = 3
+        inventory_kwargs = {'max_unit': 3}
+
+        self._check_create_allocations(inventory_kwargs,
+                                       bad_used, good_used)
 
 
 class UsageListTestCase(ResourceProviderBaseCase):
