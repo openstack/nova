@@ -2140,6 +2140,12 @@ class InvalidAllocationCapacityExceeded(InvalidInventory):
                 "amount would exceed the capacity.")
 
 
+class InvalidAllocationConstraintsViolated(InvalidInventory):
+    msg_fmt = _("Unable to create allocation for '%(resource_class)s' on "
+                "resource provider '%(resource_provider)s'. The requested "
+                "amount would violate inventory constraints.")
+
+
 class UnsupportedPointerModelRequested(Invalid):
     msg_fmt = _("Pointer model '%(model)s' requested is not supported by "
                 "host.")
