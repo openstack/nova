@@ -14,24 +14,7 @@
 
 
 from nova.conductor import api as conductor_api
-import nova.conf
-
-CONF = nova.conf.CONF
 
 
-def API(*args, **kwargs):
-    use_local = kwargs.pop('use_local', False)
-    if CONF.conductor.use_local or use_local:
-        api = conductor_api.LocalAPI
-    else:
-        api = conductor_api.API
-    return api(*args, **kwargs)
-
-
-def ComputeTaskAPI(*args, **kwargs):
-    use_local = kwargs.pop('use_local', False)
-    if CONF.conductor.use_local or use_local:
-        api = conductor_api.LocalComputeTaskAPI
-    else:
-        api = conductor_api.ComputeTaskAPI
-    return api(*args, **kwargs)
+API = conductor_api.API
+ComputeTaskAPI = conductor_api.ComputeTaskAPI

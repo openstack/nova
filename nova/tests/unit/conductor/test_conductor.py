@@ -28,7 +28,6 @@ from nova.compute import flavors
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import vm_states
-from nova import conductor
 from nova.conductor import api as conductor_api
 from nova.conductor import manager as conductor_manager
 from nova.conductor import rpcapi as conductor_rpcapi
@@ -279,53 +278,6 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
         self.assertEqual(timeouts.count(10), 10)
         self.assertIn(None, timeouts)
 
-    @mock.patch('oslo_versionedobjects.base.obj_tree_get_versions')
-    def test_object_backport_redirect(self, mock_ovo):
-        mock_ovo.return_value = mock.sentinel.obj_versions
-        mock_objinst = mock.Mock()
-
-        with mock.patch.object(self.conductor,
-                               'object_backport_versions') as mock_call:
-            self.conductor.object_backport(mock.sentinel.ctxt,
-                                           mock_objinst,
-                                           mock.sentinel.target_version)
-            mock_call.assert_called_once_with(mock.sentinel.ctxt,
-                                              mock_objinst,
-                                              mock.sentinel.obj_versions)
-
-
-class ConductorLocalAPITestCase(ConductorAPITestCase):
-    """Conductor LocalAPI Tests."""
-    def setUp(self):
-        super(ConductorLocalAPITestCase, self).setUp()
-        self.conductor = conductor_api.LocalAPI()
-        self.conductor_manager = self.conductor._manager._target
-
-    def test_wait_until_ready(self):
-        # Override test in ConductorAPITestCase
-        pass
-
-
-class ConductorImportTest(test.NoDBTestCase):
-    def test_import_conductor_local(self):
-        self.flags(use_local=True, group='conductor')
-        self.assertIsInstance(conductor.API(), conductor_api.LocalAPI)
-        self.assertIsInstance(conductor.ComputeTaskAPI(),
-                              conductor_api.LocalComputeTaskAPI)
-
-    def test_import_conductor_rpc(self):
-        self.flags(use_local=False, group='conductor')
-        self.assertIsInstance(conductor.API(), conductor_api.API)
-        self.assertIsInstance(conductor.ComputeTaskAPI(),
-                              conductor_api.ComputeTaskAPI)
-
-    def test_import_conductor_override_to_local(self):
-        self.flags(use_local=False, group='conductor')
-        self.assertIsInstance(conductor.API(use_local=True),
-                              conductor_api.LocalAPI)
-        self.assertIsInstance(conductor.ComputeTaskAPI(use_local=True),
-                              conductor_api.LocalComputeTaskAPI)
-
 
 class _BaseTaskTestCase(object):
     def setUp(self):
@@ -395,8 +347,7 @@ class _BaseTaskTestCase(object):
 
         scheduler_hint = {'filter_properties': {}}
 
-        if isinstance(self.conductor, (conductor_api.ComputeTaskAPI,
-                                       conductor_api.LocalComputeTaskAPI)):
+        if isinstance(self.conductor, conductor_api.ComputeTaskAPI):
             # The API method is actually 'resize_instance'.  It gets
             # converted into 'migrate_server' when doing RPC.
             self.conductor.resize_instance(
@@ -2111,59 +2062,3 @@ class ConductorTaskAPITestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 self.context, inst_obj, {'host': 'destination'}, True, False,
                 None, 'block_migration', 'disk_over_commit', None,
                 request_spec=None)
-
-
-class ConductorLocalComputeTaskAPITestCase(ConductorTaskAPITestCase):
-    """Conductor LocalComputeTaskAPI Tests."""
-    def setUp(self):
-        super(ConductorLocalComputeTaskAPITestCase, self).setUp()
-        self.conductor = conductor_api.LocalComputeTaskAPI()
-        self.conductor_manager = self.conductor._manager._target
-
-    @mock.patch('nova.objects.Migration')
-    def test_live_migrate(self, migobj):
-        inst = fake_instance.fake_db_instance()
-        inst_obj = objects.Instance._from_db_object(
-            self.context, objects.Instance(), inst, [])
-
-        migration = migobj()
-        task = mock.MagicMock()
-        with mock.patch.object(self.conductor_manager,
-                               '_build_live_migrate_task',
-                               return_value=task) as mock_build_task:
-            self.conductor.live_migrate_instance(self.context, inst_obj,
-                'destination', 'block_migration', 'disk_over_commit',
-                async=False)
-            mock_build_task.assert_called_once_with(self.context, inst_obj,
-                                                    'destination',
-                                                    'block_migration',
-                                                    'disk_over_commit',
-                                                    migration, None)
-            task.execute.assert_called_once()
-        self.assertEqual('accepted', migration.status)
-        self.assertEqual('destination', migration.dest_compute)
-        self.assertEqual(inst_obj.host, migration.source_compute)
-
-    @mock.patch('nova.objects.Migration')
-    def test_live_migrate_async(self, migobj):
-        inst = fake_instance.fake_db_instance()
-        inst_obj = objects.Instance._from_db_object(
-            self.context, objects.Instance(), inst, [])
-
-        migration = migobj()
-        task = mock.MagicMock()
-        with mock.patch.object(self.conductor_manager,
-                               '_build_live_migrate_task',
-                               return_value=task) as mock_build_task:
-            self.conductor.live_migrate_instance(self.context, inst_obj,
-                'destination', 'block_migration', 'disk_over_commit',
-                async=True)
-            mock_build_task.assert_called_once_with(self.context, inst_obj,
-                                                    'destination',
-                                                    'block_migration',
-                                                    'disk_over_commit',
-                                                    migration, None)
-            task.execute.assert_called_once()
-        self.assertEqual('accepted', migration.status)
-        self.assertEqual('destination', migration.dest_compute)
-        self.assertEqual(inst_obj.host, migration.source_compute)

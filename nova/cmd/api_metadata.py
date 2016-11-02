@@ -42,9 +42,7 @@ def main():
 
     gmr.TextGuruMeditation.setup_autorun(version)
 
-    if not CONF.conductor.use_local:
-        objects_base.NovaObject.indirection_api = \
-            conductor_rpcapi.ConductorAPI()
+    objects_base.NovaObject.indirection_api = conductor_rpcapi.ConductorAPI()
 
     should_use_ssl = 'metadata' in CONF.enabled_ssl_apis
     server = service.WSGIService('metadata', use_ssl=should_use_ssl)

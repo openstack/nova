@@ -44,18 +44,12 @@ def main():
 
     gmr.TextGuruMeditation.setup_autorun(version)
 
-    if not CONF.conductor.use_local:
-        cmd_common.block_db_access('nova-network')
-        objects_base.NovaObject.indirection_api = \
-            conductor_rpcapi.ConductorAPI()
-    else:
-        LOG.warning(_LW('Conductor local mode is deprecated and will '
-                        'be removed in a subsequent release'))
+    cmd_common.block_db_access('nova-network')
+    objects_base.NovaObject.indirection_api = conductor_rpcapi.ConductorAPI()
 
     LOG.warning(_LW('Nova network is deprecated and will be removed '
                     'in the future'))
     server = service.Service.create(binary='nova-network',
-                                    topic=CONF.network_topic,
-                                    db_allowed=CONF.conductor.use_local)
+                                    topic=CONF.network_topic)
     service.serve(server)
     service.wait()

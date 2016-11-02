@@ -33,7 +33,7 @@ from nova.conductor import rpcapi as conductor_rpcapi
 import nova.conf
 from nova import config
 from nova import context
-from nova.i18n import _LE, _LW
+from nova.i18n import _LE
 from nova.network import rpcapi as network_rpcapi
 from nova import objects
 from nova.objects import base as objects_base
@@ -117,13 +117,8 @@ def main():
 
     objects.register_all()
 
-    if not CONF.conductor.use_local:
-        cmd_common.block_db_access('nova-dhcpbridge')
-        objects_base.NovaObject.indirection_api = \
-            conductor_rpcapi.ConductorAPI()
-    else:
-        LOG.warning(_LW('Conductor local mode is deprecated and will '
-                        'be removed in a subsequent release'))
+    cmd_common.block_db_access('nova-dhcpbridge')
+    objects_base.NovaObject.indirection_api = conductor_rpcapi.ConductorAPI()
 
     if CONF.action.name in ['add', 'del']:
         LOG.debug("Called '%(action)s' for mac '%(mac)s' with IP '%(ip)s'",

@@ -26,18 +26,6 @@ and finally, how many worker processes will be used.
 )
 
 ALL_OPTS = [
-    cfg.BoolOpt(
-        'use_local',
-        default=False,
-        deprecated_for_removal=True,
-        deprecated_since='13.0.0',
-        help="""
-Perform nova-conductor operations locally. This legacy mode was
-introduced to bridge a gap during the transition to the conductor service.
-It no longer represents a reasonable alternative for deployers.
-
-Removal may be as early as 14.0.
-"""),
     cfg.StrOpt(
         'topic',
         default='conductor',

@@ -80,8 +80,7 @@ class Service(service.Service):
 
     def __init__(self, host, binary, topic, manager, report_interval=None,
                  periodic_enable=None, periodic_fuzzy_delay=None,
-                 periodic_interval_max=None, db_allowed=True,
-                 *args, **kwargs):
+                 periodic_interval_max=None, *args, **kwargs):
         super(Service, self).__init__()
         self.host = host
         self.binary = binary
@@ -97,8 +96,9 @@ class Service(service.Service):
         self.periodic_interval_max = periodic_interval_max
         self.saved_args, self.saved_kwargs = args, kwargs
         self.backdoor_port = None
-        self.conductor_api = conductor.API(use_local=db_allowed)
-        self.conductor_api.wait_until_ready(context.get_admin_context())
+        if objects_base.NovaObject.indirection_api:
+            conductor_api = conductor.API()
+            conductor_api.wait_until_ready(context.get_admin_context())
 
     def __repr__(self):
         return "<%(cls_name)s: host=%(host)s, binary=%(binary)s, " \
@@ -177,8 +177,7 @@ class Service(service.Service):
     @classmethod
     def create(cls, host=None, binary=None, topic=None, manager=None,
                report_interval=None, periodic_enable=None,
-               periodic_fuzzy_delay=None, periodic_interval_max=None,
-               db_allowed=True):
+               periodic_fuzzy_delay=None, periodic_interval_max=None):
         """Instantiates class and passes back application object.
 
         :param host: defaults to CONF.host
@@ -214,8 +213,7 @@ class Service(service.Service):
                           report_interval=report_interval,
                           periodic_enable=periodic_enable,
                           periodic_fuzzy_delay=periodic_fuzzy_delay,
-                          periodic_interval_max=periodic_interval_max,
-                          db_allowed=db_allowed)
+                          periodic_interval_max=periodic_interval_max)
 
         return service_obj
 
