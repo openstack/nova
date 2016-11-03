@@ -937,6 +937,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         instance.uuid = '46a4308b-e75a-4f90-a34a-650c86ca18b2'
         instance.project_id = 'b168ea26fa0c49c1a84e1566d9565fa5'
         instance.display_name = 'instance1'
+        instance.image_meta = objects.ImageMeta.from_dict({'properties': {}})
         with mock.patch.object(utils, 'execute') as execute:
             d.plug(instance, self.vif_vrouter)
             execute.assert_has_calls([
@@ -957,6 +958,36 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                     '--port_type=NovaVMPort '
                     '--tx_vlan_id=-1 '
                     '--rx_vlan_id=-1', run_as_root=True)])
+
+    @mock.patch('nova.network.linux_net.create_tap_dev')
+    def test_plug_vrouter_with_details_multiqueue(self, mock_create_tap_dev):
+        d = vif.LibvirtGenericVIFDriver()
+        instance = mock.Mock()
+        instance.name = 'instance-name'
+        instance.uuid = '46a4308b-e75a-4f90-a34a-650c86ca18b2'
+        instance.project_id = 'b168ea26fa0c49c1a84e1566d9565fa5'
+        instance.display_name = 'instance1'
+        instance.image_meta = objects.ImageMeta.from_dict({
+            'properties': {'hw_vif_multiqueue_enabled': True}})
+        instance.flavor.vcpus = 2
+        with mock.patch.object(utils, 'execute') as execute:
+            d.plug(instance, self.vif_vrouter)
+            mock_create_tap_dev.assert_called_once_with('tap-xxx-yyy-zzz',
+                                                        multiqueue=True)
+            execute.assert_called_once_with(
+                'vrouter-port-control',
+                '--oper=add --uuid=vif-xxx-yyy-zzz '
+                '--instance_uuid=46a4308b-e75a-4f90-a34a-650c86ca18b2 '
+                '--vn_uuid=network-id-xxx-yyy-zzz '
+                '--vm_project_uuid=b168ea26fa0c49c1a84e1566d9565fa5 '
+                '--ip_address=0.0.0.0 '
+                '--ipv6_address=None '
+                '--vm_name=instance1 '
+                '--mac=ca:fe:de:ad:be:ef '
+                '--tap_name=tap-xxx-yyy-zzz '
+                '--port_type=NovaVMPort '
+                '--tx_vlan_id=-1 '
+                '--rx_vlan_id=-1', run_as_root=True)
 
     def test_ivs_ethernet_driver(self):
         d = vif.LibvirtGenericVIFDriver()
