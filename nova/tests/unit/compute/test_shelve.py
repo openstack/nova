@@ -211,7 +211,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
     def test_shelve_offload_forced_shutdown(self):
         self._shelve_offload(clean_shutdown=False)
 
-    def test_unshelve(self):
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    def test_unshelve(self, mock_notify):
         instance = self._create_fake_instance_obj()
         instance.task_state = task_states.UNSHELVING
         instance.save()
@@ -295,6 +296,13 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 self.context, instance, image=image,
                 filter_properties=filter_properties,
                 node=node)
+
+            mock_notify.assert_has_calls([
+                mock.call(self.context, instance, 'fake-mini',
+                          action='unshelve', phase='start'),
+                mock.call(self.context, instance, 'fake-mini',
+                          action='unshelve', phase='end')])
+
         self.assertNotIn('shelved_at', instance.system_metadata)
         self.assertNotIn('shelved_image_id', instance.system_metadata)
         self.assertNotIn('shelved_host', instance.system_metadata)
@@ -309,7 +317,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.assertFalse(instance.auto_disk_config)
 
     @mock.patch('nova.utils.get_image_from_system_metadata')
-    def test_unshelve_volume_backed(self, mock_image_meta):
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    def test_unshelve_volume_backed(self, mock_notify, mock_image_meta):
         instance = self._create_fake_instance_obj()
         node = test_compute.NODENAME
         limits = {}

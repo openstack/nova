@@ -67,6 +67,7 @@ class TestInstanceNotificationSample(
             self._test_pause_server,
             self._test_shelve_server,
             self._test_shelve_offload_server,
+            self._test_unshelve_server,
             self._test_resize_server,
         ]
 
@@ -320,6 +321,31 @@ class TestInstanceNotificationSample(
 
         self.api.post_server_action(server['id'], {'unshelve': None})
         self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+    def _test_unshelve_server(self, server):
+        # setting the shelved_offload_time to 0 should set the
+        # instance status to 'SHELVED_OFFLOADED'
+        self.flags(shelved_offload_time = 0)
+        self.api.post_server_action(server['id'], {'shelve': {}})
+        self._wait_for_state_change(self.api, server,
+                                    expected_status='SHELVED_OFFLOADED')
+
+        post = {'unshelve': None}
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        self.assertEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-unshelve-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[4])
+        self._verify_notification(
+            'instance-unshelve-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[5])
 
     def _test_suspend_server(self, server):
         post = {'suspend': {}}
