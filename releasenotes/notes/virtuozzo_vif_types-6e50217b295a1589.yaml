@@ -1,0 +1,5 @@
+---
+features:
+  - A list of valid vif models is extended for
+    Virtuozzo hypervisor (virt_type=parallels) with
+    VIRTIO, RTL8139 and E1000 models.
