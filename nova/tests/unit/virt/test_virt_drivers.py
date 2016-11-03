@@ -104,6 +104,10 @@ class _FakeDriverBackendTestCase(object):
             'nova.virt.libvirt.driver.connector',
             fake_os_brick_connector))
 
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.libvirt.host.Host._conn_event_thread',
+            lambda *args: None))
+
         self.flags(rescue_image_id="2",
                    rescue_kernel_id="3",
                    rescue_ramdisk_id=None,
