@@ -106,25 +106,36 @@ class PciAddress(object):
             self._check_physical_function()
 
     def match(self, pci_addr, pci_phys_addr):
-        # Assume this is called given pci_add and pci_phys_addr from libvirt,
-        # no attempt is made to verify pci_addr is a VF of pci_phys_addr
-        if self.is_physical_function:
-            if not pci_phys_addr:
-                return False
+        """Match a device to this PciAddress.  Assume this is called given
+        pci_addr and pci_phys_addr reported by libvirt, no attempt is made to
+        verify if pci_addr is a VF of pci_phys_addr.
+
+        :param pci_addr: PCI address of the device to match.
+        :param pci_phys_addr: PCI address of the parent of the device to match
+                              (or None if the device is not a VF).
+        """
+
+        # Try to match on the parent PCI address if the PciDeviceSpec is a
+        # PF (sriov is available) and the device to match is a VF.  This
+        # makes possible to specify the PCI address of a PF in the
+        # pci_passthrough_whitelist to match any of it's VFs PCI devices.
+        if self.is_physical_function and pci_phys_addr:
             domain, bus, slot, func = (
                 utils.get_pci_address_fields(pci_phys_addr))
-            return (self.domain == domain and self.bus == bus and
-                    self.slot == slot and self.func == func)
-        else:
-            domain, bus, slot, func = (
-                utils.get_pci_address_fields(pci_addr))
-            conditions = [
-                self.domain in (ANY, domain),
-                self.bus in (ANY, bus),
-                self.slot in (ANY, slot),
-                self.func in (ANY, func)
-            ]
-            return all(conditions)
+            if (self.domain == domain and self.bus == bus and
+                    self.slot == slot and self.func == func):
+                return True
+
+        # Try to match on the device PCI address only.
+        domain, bus, slot, func = (
+            utils.get_pci_address_fields(pci_addr))
+        conditions = [
+            self.domain in (ANY, domain),
+            self.bus in (ANY, bus),
+            self.slot in (ANY, slot),
+            self.func in (ANY, func)
+        ]
+        return all(conditions)
 
 
 class PciDeviceSpec(object):
