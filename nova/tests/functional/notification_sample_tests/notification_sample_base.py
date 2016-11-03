@@ -12,10 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
 import os
 import time
 
+import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
 from oslo_utils import fixture as utils_fixture

@@ -10,14 +10,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
 import os
+
+import mock
+from os_brick.initiator import connector
 
 from nova import exception
 from nova.tests.unit.virt.libvirt.volume import test_volume
 from nova import utils
 from nova.virt.libvirt.volume import vzstorage
-from os_brick.initiator import connector
 
 
 class LibvirtVZStorageTestCase(test_volume.LibvirtVolumeBaseTestCase):

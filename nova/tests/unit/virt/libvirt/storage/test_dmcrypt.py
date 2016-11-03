@@ -14,7 +14,6 @@
 #    under the License.
 
 import mock
-
 from oslo_concurrency import processutils
 
 from nova import test

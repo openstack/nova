@@ -13,12 +13,12 @@
 
 """Stubouts, mocks and fixtures for the test suite."""
 
-import mock
 import pickle
 import random
 import sys
 
 import fixtures
+import mock
 from oslo_serialization import jsonutils
 import six
 
