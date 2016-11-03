@@ -1,10 +1,3 @@
-# needs:fix_opt_description
-# needs:check_deprecation_status
-# needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
-
-
 # Copyright 2016 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -22,79 +15,147 @@
 
 from oslo_config import cfg
 
-GROUP_NAME = 'spice'
-spice_opt_group = cfg.OptGroup(GROUP_NAME)
-
-
-enabled_opt = cfg.BoolOpt('enabled',
-        default=False,
+spice_opt_group = cfg.OptGroup('spice',
+        title="SPICE console features",
         help="""
-Enable spice related features.
+SPICE console feature allows you to connect to a guest virtual machine.
+SPICE is a replacement for fairly limited VNC protocol.
+
+Following requirements must be met in order to use SPICE:
+
+* Virtualization driver must be libvirt
+* spice.enabled set to True
+* vnc.enabled set to False
+* update html5proxy_base_url
+* update server_proxyclient_address
 """)
 
-
-agent_enabled_opt = cfg.BoolOpt('agent_enabled',
-        default=True,
-        help="""
-Enable the spice guest agent support.
-""")
-
-
-html5proxy_base_url_opt = cfg.StrOpt('html5proxy_base_url',
-        default='http://127.0.0.1:6082/spice_auto.html',
-        help="""
-Location of spice HTML5 console proxy, in the form
-"http://127.0.0.1:6082/spice_auto.html"
-""")
-
-
-html5proxy_host_opt = cfg.StrOpt('html5proxy_host',
+CLI_OPTS = [
+    cfg.StrOpt('html5proxy_host',
         default='0.0.0.0',
         help="""
-Host on which to listen for incoming requests
-""")
+IP address or a hostname on which the ``nova-spicehtml5proxy`` service
+listens for incoming requests.
 
+Related options:
 
-html5proxy_port_opt = cfg.PortOpt('html5proxy_port',
+* This option depends on the ``html5proxy_base_url`` option.
+  The ``nova-spicehtml5proxy`` service must be listening on a host that is
+  accessible from the HTML5 client.
+"""),
+    cfg.PortOpt('html5proxy_port',
         default=6082,
         help="""
-Port on which to listen for incoming requests
+Port on which the ``nova-spicehtml5proxy`` service listens for incoming
+requests.
+
+Related options:
+
+* This option depends on the ``html5proxy_base_url`` option.
+  The ``nova-spicehtml5proxy`` service must be listening on a port that is
+  accessible from the HTML5 client.
 """)
+]
 
+ALL_OPTS = [
+    cfg.BoolOpt('enabled',
+        default=False,
+        help="""
+Enable SPICE related features.
 
-server_listen_opt = cfg.StrOpt('server_listen',
+Related options:
+
+* VNC must be explicitly disabled to get access to the SPICE console. Set the
+  enabled option to False in the [vnc] section to disable the VNC console.
+"""),
+    cfg.BoolOpt('agent_enabled',
+        default=True,
+        help="""
+Enable the SPICE guest agent support on the instances.
+
+The Spice agent works with the Spice protocol to offer a better guest console
+experience. However, the Spice console can still be used without the Spice
+Agent. With the Spice agent installed the following features are enabled:
+
+* Copy & Paste of text and images between the guest and client machine
+* Automatic adjustment of resolution when the client screen changes - e.g.
+  if you make the Spice console full screen the guest resolution will adjust to
+  match it rather than letterboxing.
+* Better mouse integration - The mouse can be captured and released without
+  needing to click inside the console or press keys to release it. The
+  performance of mouse movement is also improved.
+"""),
+    cfg.URIOpt('html5proxy_base_url',
+        default='http://127.0.0.1:6082/spice_auto.html',
+        help="""
+Location of the SPICE HTML5 console proxy.
+
+End user would use this URL to connect to the `nova-spicehtml5proxy``
+service. This service will forward request to the console of an instance.
+
+In order to use SPICE console, the service ``nova-spicehtml5proxy`` should be
+running. This service is typically launched on the controller node.
+
+Possible values:
+
+* Must be a valid URL of the form:  ``http://host:port/spice_auto.html``
+  where host is the node running ``nova-spicehtml5proxy`` and the port is
+  typically 6082. Consider not using default value as it is not well defined
+  for any real deployment.
+
+Related options:
+
+* This option depends on ``html5proxy_host`` and ``html5proxy_port`` options.
+  The access URL returned by the compute node must have the host
+  and port where the ``nova-spicehtml5proxy`` service is listening.
+"""),
+    cfg.StrOpt('server_listen',
         default='127.0.0.1',
         help="""
-IP address on which instance spice server should listen
-""")
+The  address where the SPICE server running on the instances should listen.
 
+Typically, the ``nova-spicehtml5proxy`` proxy client runs on the controller
+node and connects over the private network to this address on the compute
+node(s).
 
-server_proxyclient_address_opt = cfg.StrOpt('server_proxyclient_address',
+Possible values:
+
+* IP address to listen on.
+"""),
+    cfg.StrOpt('server_proxyclient_address',
         default='127.0.0.1',
         help="""
-The address to which proxy clients (like nova-spicehtml5proxy) should connect
-""")
+The address used by ``nova-spicehtml5proxy`` client to connect to instance
+console.
 
+Typically, the ``nova-spicehtml5proxy`` proxy client runs on the
+controller node and connects over the private network to this address on the
+compute node(s).
 
-keymap_opt = cfg.StrOpt('keymap',
+Possible values:
+
+* Any valid IP address on the compute node.
+
+Related options:
+
+* This option depends on the ``server_listen`` option.
+  The proxy client must be able to access the address specified in
+  ``server_listen`` using the value of this option.
+"""),
+    cfg.StrOpt('keymap',
         default='en-us',
         help="""
-Keymap for spice
+A keyboard layout which is supported by the underlying hypervisor on this
+node.
+
+Possible values:
+* This is usually an 'IETF language tag' (default is 'en-us'). If you
+  use QEMU as hypervisor, you should find the list of supported keyboard
+  layouts at /usr/share/qemu/keymaps.
 """)
+]
 
-
-ALL_OPTS = [html5proxy_base_url_opt,
-            server_listen_opt,
-            server_proxyclient_address_opt,
-            enabled_opt,
-            agent_enabled_opt,
-            keymap_opt,
-            html5proxy_host_opt,
-            html5proxy_port_opt]
-
-
-CLI_OPTS = [html5proxy_host_opt,
-            html5proxy_port_opt]
+ALL_OPTS.extend(CLI_OPTS)
 
 
 def register_opts(conf):
