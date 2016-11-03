@@ -145,7 +145,7 @@ class Guest(object):
         """Stops a running guest."""
         self._domain.destroy()
 
-    def _sync_guest_time(self):
+    def sync_guest_time(self):
         """Try to set VM time to the current value.  This is typically useful
         when clock wasn't running on the VM for some time (e.g. during
         suspension or migration), especially if the time delay exceeds NTP
@@ -190,9 +190,8 @@ class Guest(object):
         self._domain.injectNMI()
 
     def resume(self):
-        """Resumes a suspended guest."""
+        """Resumes a paused guest."""
         self._domain.resume()
-        self._sync_guest_time()
 
     def enable_hairpin(self):
         """Enables hairpin mode for this guest."""

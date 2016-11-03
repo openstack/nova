@@ -11630,9 +11630,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               return_value='fake_pci_devs'),
             mock.patch.object(utils, 'get_image_from_system_metadata'),
             mock.patch.object(blockinfo, 'get_disk_info'),
+            mock.patch.object(guest, 'sync_guest_time'),
+            mock.patch.object(drvr, '_wait_for_running',
+                              side_effect=loopingcall.LoopingCallDone()),
         ) as (_get_existing_domain_xml, _create_domain_and_network,
               _attach_pci_devices, get_instance_pci_devs, get_image_metadata,
-              get_disk_info):
+              get_disk_info, mock_sync_time, mock_wait):
             get_image_metadata.return_value = {'bar': 234}
 
             disk_info = {'foo': 123}
@@ -11647,6 +11650,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                         instance, network_info, disk_info,
                                         block_device_info=block_device_info,
                                         vifs_already_plugged=True)])
+            self.assertTrue(mock_sync_time.called)
             _attach_pci_devices.assert_has_calls([mock.call(guest,
                                                  'fake_pci_devs')])
 
@@ -15616,6 +15620,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             self.fake_create_domain_called = True
             self.assertEqual(powered_on, power_on)
             self.assertTrue(vifs_already_plugged)
+            return libvirt_guest.Guest('fake_dom')
 
         def fake_enable_hairpin():
             pass
@@ -15691,10 +15696,16 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             resize_instance, self.fake_disk_resize_called)
 
     def test_finish_migration_resize(self):
-        self._test_finish_migration(True, resize_instance=True)
+        with mock.patch('nova.virt.libvirt.guest.Guest.sync_guest_time'
+            ) as mock_guest_time:
+            self._test_finish_migration(True, resize_instance=True)
+            self.assertTrue(mock_guest_time.called)
 
     def test_finish_migration_power_on(self):
-        self._test_finish_migration(True)
+        with mock.patch('nova.virt.libvirt.guest.Guest.sync_guest_time'
+            ) as mock_guest_time:
+            self._test_finish_migration(True)
+            self.assertTrue(mock_guest_time.called)
 
     def test_finish_migration_power_off(self):
         self._test_finish_migration(False)
