@@ -261,10 +261,27 @@ class PciDevTracker(object):
                          is allocated to
         """
         for pci_dev in self.pci_devs:
-            # find the matching pci device in the pci resource tracker
-            # pci device. Once found one free it.
+            # Find the matching pci device in the pci resource tracker.
+            # Once found, free it.
             if dev.id == pci_dev.id and dev.instance_uuid == instance['uuid']:
+                self._remove_device_from_pci_mapping(
+                    instance['uuid'], pci_dev, self.allocations)
+                self._remove_device_from_pci_mapping(
+                    instance['uuid'], pci_dev, self.claims)
                 self._free_device(pci_dev)
+                break
+
+    def _remove_device_from_pci_mapping(
+            self, instance_uuid, pci_device, pci_mapping):
+        """Remove a PCI device from allocations or claims.
+
+        If there are no more PCI devices, pop the uuid.
+        """
+        pci_devices = pci_mapping.get(instance_uuid, [])
+        if pci_device in pci_devices:
+            pci_devices.remove(pci_device)
+            if len(pci_devices) == 0:
+                pci_mapping.pop(instance_uuid, None)
 
     def _free_device(self, dev, instance=None):
         freed_devs = dev.free(instance)
