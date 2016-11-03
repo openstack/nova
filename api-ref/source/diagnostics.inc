@@ -38,7 +38,9 @@ only, and not relied upon by programmatic tools.
 
 **Example Server diagnostics**
 
-Below is an example of diagnostics for a libvirt based server instance.
+Below is an example of diagnostics for a libvirt based instance. The unit of the return
+value is hypervisor specific, but in this case the unit of vnet1_rx* and
+vnet1_tx* is octets.
 
 .. literalinclude:: ../../doc/api_samples/os-server-diagnostics/server-diagnostics-get-resp.json
    :language: javascript
