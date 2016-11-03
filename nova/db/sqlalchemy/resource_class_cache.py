@@ -44,7 +44,7 @@ def _refresh_from_db(ctx, cache):
 
     :param cache: ResourceClassCache object to refresh.
     """
-    with ctx.session.connection() as conn:
+    with db_api.api_context_manager.reader.connection.using(ctx) as conn:
         sel = sa.select([_RC_TBL.c.id, _RC_TBL.c.name])
         res = conn.execute(sel).fetchall()
         cache.id_cache = {r[1]: r[0] for r in res}
