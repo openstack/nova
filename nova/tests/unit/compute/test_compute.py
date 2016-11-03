@@ -2043,7 +2043,8 @@ class ComputeTestCase(BaseTestCase):
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(instance['vm_state'], vm_states.ERROR)
 
-    def test_stop(self):
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    def test_stop(self, mock_notify):
         # Ensure instance can be stopped.
         instance = self._create_fake_instance_obj()
         self.compute.build_and_run_instance(self.context, instance, {}, {},
@@ -2057,6 +2058,11 @@ class ComputeTestCase(BaseTestCase):
                                                 expected_attrs=extra)
         self.compute.stop_instance(self.context, instance=inst_obj,
                                    clean_shutdown=True)
+        mock_notify.assert_has_calls([
+            mock.call(self.context, inst_obj, 'fake-mini', action='power_off',
+                      phase='start'),
+            mock.call(self.context, inst_obj, 'fake-mini', action='power_off',
+                      phase='end')])
         self.compute.terminate_instance(self.context, instance, [], [])
 
     @mock.patch('nova.compute.utils.notify_about_instance_action')
