@@ -57,6 +57,7 @@ def is_vif_model_valid_for_virt(virt_type, vif_model):
                  network_model.VIF_MODEL_PCNET,
                  network_model.VIF_MODEL_RTL8139,
                  network_model.VIF_MODEL_E1000,
+                 network_model.VIF_MODEL_LAN9118,
                  network_model.VIF_MODEL_SPAPR_VLAN],
         'kvm': [network_model.VIF_MODEL_VIRTIO,
                 network_model.VIF_MODEL_NE2K_PCI,
