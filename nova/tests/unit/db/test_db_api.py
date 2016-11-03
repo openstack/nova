@@ -2008,6 +2008,23 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 columns_to_join=['instances',
                                  'rules']), security_group2)
 
+    def test_security_group_destroy_with_instance(self):
+        security_group1 = self._create_security_group({})
+
+        instance = db.instance_create(self.ctxt, {})
+        db.instance_add_security_group(self.ctxt, instance.uuid,
+                                       security_group1.id)
+
+        self.assertEqual(
+            1,
+            len(db.security_group_get_by_instance(self.ctxt, instance.uuid)))
+
+        db.security_group_destroy(self.ctxt, security_group1['id'])
+
+        self.assertEqual(
+            0,
+            len(db.security_group_get_by_instance(self.ctxt, instance.uuid)))
+
     def test_security_group_get(self):
         security_group1 = self._create_security_group({})
         self._create_security_group({'name': 'fake_sec_group2'})

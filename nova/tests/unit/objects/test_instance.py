@@ -1837,6 +1837,28 @@ class _TestInstanceListObject(object):
         self.assertTrue(instances[0].obj_attr_is_set('system_metadata'))
         self.assertEqual({'foo': 'bar'}, instances[0].system_metadata)
 
+    def test_get_by_security_group_after_destroy(self):
+        db_sg = db.security_group_create(
+            self.context,
+            {'name': 'foo',
+             'description': 'test group',
+             'user_id': self.context.user_id,
+             'project_id': self.context.project_id})
+        self.assertFalse(db.security_group_in_use(self.context, db_sg.id))
+        inst = objects.Instance(
+            context=self.context,
+            user_id=self.context.user_id,
+            project_id=self.context.project_id)
+        inst.create()
+
+        db.instance_add_security_group(self.context,
+                                       inst.uuid,
+                                       db_sg.id)
+
+        self.assertTrue(db.security_group_in_use(self.context, db_sg.id))
+        inst.destroy()
+        self.assertFalse(db.security_group_in_use(self.context, db_sg.id))
+
     def test_get_by_grantee_security_group_ids(self):
         fake_instances = [
             fake_instance.fake_db_instance(id=1),
