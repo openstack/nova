@@ -1157,6 +1157,33 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         'nova.compute.manager.ComputeManager._get_instance_block_device_info')
     @mock.patch('nova.virt.driver.ComputeDriver.destroy')
     @mock.patch('nova.virt.fake.FakeDriver.get_volume_connector')
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    @mock.patch(
+        'nova.compute.manager.ComputeManager._notify_about_instance_usage')
+    def test_shutdown_instance_versioned_notifications(self,
+            mock_notify_unversioned, mock_notify, mock_connector,
+            mock_destroy, mock_blk_device_info, mock_nw_info, mock_elevated):
+        mock_elevated.return_value = self.context
+        instance = fake_instance.fake_instance_obj(
+                self.context,
+                uuid=uuids.instance,
+                vm_state=vm_states.ERROR,
+                task_state=task_states.DELETING)
+        bdms = [mock.Mock(id=1, is_volume=True)]
+        self.compute._shutdown_instance(self.context, instance, bdms,
+                        notify=True, try_deallocate_networks=False)
+        mock_notify.assert_has_calls([
+            mock.call(self.context, instance, 'fake-mini',
+                      action='shutdown', phase='start'),
+            mock.call(self.context, instance, 'fake-mini',
+                      action='shutdown', phase='end')])
+
+    @mock.patch('nova.context.RequestContext.elevated')
+    @mock.patch('nova.compute.utils.get_nw_info_for_instance')
+    @mock.patch(
+        'nova.compute.manager.ComputeManager._get_instance_block_device_info')
+    @mock.patch('nova.virt.driver.ComputeDriver.destroy')
+    @mock.patch('nova.virt.fake.FakeDriver.get_volume_connector')
     def _test_shutdown_instance_exception(self, exc, mock_connector,
             mock_destroy, mock_blk_device_info, mock_nw_info, mock_elevated):
         mock_connector.side_effect = exc

@@ -2175,6 +2175,9 @@ class ComputeManager(manager.Manager):
         if notify:
             self._notify_about_instance_usage(context, instance,
                                               "shutdown.start")
+            compute_utils.notify_about_instance_action(context, instance,
+                    self.host, action=fields.NotificationAction.SHUTDOWN,
+                    phase=fields.NotificationPhase.START)
 
         network_info = compute_utils.get_nw_info_for_instance(instance)
 
@@ -2250,6 +2253,9 @@ class ComputeManager(manager.Manager):
         if notify:
             self._notify_about_instance_usage(context, instance,
                                               "shutdown.end")
+            compute_utils.notify_about_instance_action(context, instance,
+                    self.host, action=fields.NotificationAction.SHUTDOWN,
+                    phase=fields.NotificationPhase.END)
 
     def _cleanup_volumes(self, context, instance_uuid, bdms, raise_exc=True):
         exc_info = None
