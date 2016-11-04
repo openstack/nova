@@ -10,14 +10,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_log import log as logging
+
 import nova.conf
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LW
 from nova import utils
 from nova.virt.libvirt.volume import volume as libvirt_volume
 
 
 CONF = nova.conf.CONF
+LOG = logging.getLogger(__name__)
 
 
 class LibvirtNetVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
@@ -51,19 +54,30 @@ class LibvirtNetVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
             self.host.delete_secret(usage_type, usage_name)
 
     def _set_auth_config_rbd(self, conf, netdisk_properties):
+        # The rbd volume driver in cinder sets auth_enabled if the rbd_user is
+        # set in cinder. The rbd auth values from the cinder connection take
+        # precedence over any local nova config values in case the cinder ceph
+        # backend is configured differently than the nova rbd ephemeral storage
+        # configuration.
         auth_enabled = netdisk_properties.get('auth_enabled')
-        if CONF.libvirt.rbd_secret_uuid:
-            conf.auth_secret_uuid = CONF.libvirt.rbd_secret_uuid
-            auth_enabled = True  # Force authentication locally
-            if CONF.libvirt.rbd_user:
-                conf.auth_username = CONF.libvirt.rbd_user
         if auth_enabled:
-            conf.auth_username = (conf.auth_username or
-                                  netdisk_properties['auth_username'])
-            conf.auth_secret_type = (conf.auth_secret_type or
-                                     netdisk_properties['secret_type'])
-            conf.auth_secret_uuid = (conf.auth_secret_uuid or
-                                     netdisk_properties['secret_uuid'])
+            conf.auth_username = netdisk_properties['auth_username']
+            conf.auth_secret_uuid = netdisk_properties['secret_uuid']
+            # secret_type is always hard-coded to 'ceph' in cinder
+            conf.auth_secret_type = netdisk_properties['secret_type']
+        elif CONF.libvirt.rbd_secret_uuid:
+            # Anyone relying on falling back to nova config is probably having
+            # this work accidentally and we'll remove that support in the
+            # 16.0.0 Pike release.
+            LOG.warning(_LW('Falling back to Nova configuration values for '
+                            'RBD authentication. Cinder should be configured '
+                            'for auth with Ceph volumes. This fallback will '
+                            'be dropped in the Nova 16.0.0 Pike release.'))
+            # use the nova config values
+            conf.auth_username = CONF.libvirt.rbd_user
+            conf.auth_secret_uuid = CONF.libvirt.rbd_secret_uuid
+            # secret_type is always hard-coded to 'ceph' in cinder
+            conf.auth_secret_type = netdisk_properties['secret_type']
 
     def _set_auth_config_iscsi(self, conf, netdisk_properties):
         if netdisk_properties.get('auth_method') == 'CHAP':

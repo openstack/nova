@@ -1,0 +1,11 @@
+---
+upgrade:
+  - |
+    When making connections to Ceph-backed volumes via the Libvirt driver, the
+    auth values (rbd_user, rbd_secret_uuid) are now pulled from the backing
+    cinder.conf rather than nova.conf. The nova.conf values are only used if
+    set and the cinder.conf values are not set, but this fallback support is
+    considered accidental and will be removed in the Nova 16.0.0 Pike release.
+    See the Ceph documentation for `configuring Cinder`_ for RBD auth.
+
+    .. _configuring Cinder: http://docs.ceph.com/docs/master/rbd/rbd-openstack/#configuring-cinder

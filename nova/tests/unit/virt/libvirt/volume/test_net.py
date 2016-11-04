@@ -59,7 +59,7 @@ class LibvirtNetVolumeDriverTestCase(
             'driver_volume_type': 'rbd',
             'data': {
                 'name': '%s/%s' % ('rbd', volume['name']),
-                'auth_enabled': CONF.libvirt.rbd_secret_uuid is not None,
+                'auth_enabled': CONF.libvirt.rbd_user is not None,
                 'auth_username': CONF.libvirt.rbd_user,
                 'secret_type': 'ceph',
                 'secret_uuid': CONF.libvirt.rbd_secret_uuid,
@@ -114,7 +114,9 @@ class LibvirtNetVolumeDriverTestCase(
         self.assertEqual(self.uuid, tree.find('./auth/secret').get('uuid'))
         libvirt_driver.disconnect_volume(connection_info, "vde")
 
-    def test_libvirt_rbd_driver_auth_enabled_flags_override(self):
+    def test_libvirt_rbd_driver_auth_enabled_flags(self):
+        # The values from the cinder connection_info take precedence over
+        # nova.conf values.
         libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_host)
         connection_info = self.rbd_connection(self.vol)
         secret_type = 'ceph'
@@ -132,9 +134,9 @@ class LibvirtNetVolumeDriverTestCase(
         conf = libvirt_driver.get_config(connection_info, self.disk_info)
         tree = conf.format_dom()
         self._assertNetworkAndProtocolEquals(tree)
-        self.assertEqual(flags_user, tree.find('./auth').get('username'))
+        self.assertEqual(self.user, tree.find('./auth').get('username'))
         self.assertEqual(secret_type, tree.find('./auth/secret').get('type'))
-        self.assertEqual(flags_uuid, tree.find('./auth/secret').get('uuid'))
+        self.assertEqual(self.uuid, tree.find('./auth/secret').get('uuid'))
         libvirt_driver.disconnect_volume(connection_info, "vde")
 
     def test_libvirt_rbd_driver_auth_disabled(self):
