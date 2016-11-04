@@ -234,6 +234,19 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             self._orig_metadata = (dict(self.metadata) if
                                    'metadata' in self else {})
 
+    def obj_clone(self):
+        """Create a copy of this instance object."""
+        nobj = super(Instance, self).obj_clone()
+        # Since the base object only does a deep copy of the defined fields,
+        # need to make sure to also copy the additional tracking metadata
+        # attributes so they don't show as changed and cause the metadata
+        # to always be updated even when stale information.
+        if hasattr(self, '_orig_metadata'):
+            nobj._orig_metadata = dict(self._orig_metadata)
+        if hasattr(self, '_orig_system_metadata'):
+            nobj._orig_system_metadata = dict(self._orig_system_metadata)
+        return nobj
+
     def obj_reset_changes(self, fields=None, recursive=False):
         super(Instance, self).obj_reset_changes(fields,
                                                 recursive=recursive)
