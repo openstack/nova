@@ -467,6 +467,15 @@ class NetworkInfo(list):
             network_info = jsonutils.loads(network_info)
         return cls([VIF.hydrate(vif) for vif in network_info])
 
+    def wait(self, do_raise=True):
+        """Wait for asynchronous call to finish."""
+        # There is no asynchronous call for this class, so this is a no-op
+        # here, but subclasses may override to provide asynchronous
+        # capabilities. Must be defined here in the parent class so that code
+        # which works with both parent and subclass types can reference this
+        # method.
+        pass
+
     def json(self):
         return jsonutils.dumps(self)
 
@@ -529,7 +538,7 @@ class NetworkInfoAsyncWrapper(NetworkInfo):
         return self._sync_wrapper(fn, *args, **kwargs)
 
     def wait(self, do_raise=True):
-        """Wait for async call to finish."""
+        """Wait for asynchronous call to finish."""
         if self._gt is not None:
             try:
                 # NOTE(comstud): This looks funky, but this object is
