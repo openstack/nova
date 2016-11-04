@@ -806,10 +806,11 @@ addFixedIp:
   type: string
 addFloatingIp:
   description: |
-    The action.
+    The action. Contains required floating IP ``address`` and optional
+    ``fixed_address``.
   in: body
   required: true
-  type: string
+  type: object
 address:
   description: |
     The floating IP address.

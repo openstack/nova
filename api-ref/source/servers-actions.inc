@@ -67,11 +67,10 @@ Request
   - address: address
   - fixed_address: fixed_address
 
-.. TODO(gmann) Need to create the sample file for this action.
-   **Example Add (Associate) Floating Ip (addFloatingIp Action): JSON request**
+**Example Add (Associate) Floating Ip (addFloatingIp Action): JSON request**
 
-   .. literalinclude:: ../../doc/api_samples/os-floating-ips/floating-ips-create-resp.json
-      :language: javascript
+.. literalinclude:: ../../doc/api_samples/servers/server-action-addfloatingip.json
+  :language: javascript
 
 Response
 --------
