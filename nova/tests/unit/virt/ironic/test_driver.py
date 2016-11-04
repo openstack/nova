@@ -1954,7 +1954,8 @@ class NodeCacheTestCase(test.NoDBTestCase):
 class IronicDriverConsoleTestCase(test.NoDBTestCase):
     @mock.patch.object(cw, 'IronicClientWrapper',
                        lambda *_: FAKE_CLIENT_WRAPPER)
-    def setUp(self):
+    @mock.patch.object(objects.ServiceList, 'get_all_computes_by_hv_type')
+    def setUp(self, mock_services):
         super(IronicDriverConsoleTestCase, self).setUp()
 
         self.driver = ironic_driver.IronicDriver(fake.FakeVirtAPI())
