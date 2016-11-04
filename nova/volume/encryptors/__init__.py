@@ -19,10 +19,26 @@ from oslo_utils import importutils
 from oslo_utils import strutils
 
 from nova.i18n import _LE, _LW
-from nova.volume.encryptors import nop
 
 
 LOG = logging.getLogger(__name__)
+
+LUKS = "luks"
+PLAIN = "plain"
+
+FORMAT_TO_FRONTEND_ENCRYPTOR_MAP = {
+    LUKS: 'nova.volume.encryptors.luks.LuksEncryptor',
+    PLAIN: 'nova.volume.encryptors.cryptsetup.CryptsetupEncryptor'
+}
+
+LEGACY_PROVIDER_CLASS_TO_FORMAT_MAP = {
+    "nova.volume.encryptors.luks.LuksEncryptor": LUKS,
+    "nova.volume.encryptors.cryptsetup.CryptsetupEncryptor": PLAIN,
+    "nova.volume.encryptors.nop.NoopEncryptor": None,
+    "LuksEncryptor": LUKS,
+    "CryptsetupEncryptor": PLAIN,
+    "NoOpEncryptor": None,
+}
 
 
 def get_volume_encryptor(connection_info, **kwargs):
@@ -31,18 +47,28 @@ def get_volume_encryptor(connection_info, **kwargs):
     :param: the connection information used to attach the volume
     :returns VolumeEncryptor: the VolumeEncryptor for the volume
     """
-    encryptor = nop.NoOpEncryptor(connection_info, **kwargs)
-
     location = kwargs.get('control_location', None)
     if location and location.lower() == 'front-end':  # case insensitive
         provider = kwargs.get('provider')
 
-        if provider == 'LuksEncryptor':
-            provider = 'nova.volume.encryptors.luks.' + provider
-        elif provider == 'CryptsetupEncryptor':
-            provider = 'nova.volume.encryptors.cryptsetup.' + provider
-        elif provider == 'NoOpEncryptor':
-            provider = 'nova.volume.encryptors.nop.' + provider
+        # TODO(lyarwood): Remove the following in 16.0.0 Pike and raise an
+        # ERROR if provider is not a key in SUPPORTED_ENCRYPTION_PROVIDERS.
+        # Until then continue to allow both the class name and path to be used.
+        if provider in LEGACY_PROVIDER_CLASS_TO_FORMAT_MAP:
+            LOG.warning(_LW("Use of the in tree encryptor class %(provider)s"
+                            " by directly referencing the implementation class"
+                            " will be blocked in the 16.0.0 Pike release of "
+                            "Nova."), {'provider': provider})
+            provider = LEGACY_PROVIDER_CLASS_TO_FORMAT_MAP[provider]
+
+        if provider in FORMAT_TO_FRONTEND_ENCRYPTOR_MAP:
+            provider = FORMAT_TO_FRONTEND_ENCRYPTOR_MAP[provider]
+        elif provider is None:
+            provider = "nova.volume.encryptors.nop.NoOpEncryptor"
+        else:
+            LOG.warning(_LW("Use of the out of tree encryptor class "
+                            "%(provider)s will be blocked with the 16.0.0 "
+                            "Pike release of Nova."), {'provider': provider})
         try:
             encryptor = importutils.import_object(provider, connection_info,
                                                   **kwargs)
