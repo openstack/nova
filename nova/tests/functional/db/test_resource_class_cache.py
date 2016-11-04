@@ -13,6 +13,7 @@
 import mock
 
 from nova.db.sqlalchemy import resource_class_cache as rc_cache
+from nova import exception
 from nova import test
 from nova.tests import fixtures
 
@@ -49,9 +50,12 @@ class TestResourceClassCache(test.TestCase):
         """
         cache = rc_cache.ResourceClassCache(self.context)
 
-        # Haven't added anything to the DB yet, so should return None
-        self.assertIsNone(cache.string_from_id(1001))
-        self.assertIsNone(cache.id_from_string("IRON_NFV"))
+        # Haven't added anything to the DB yet, so should raise
+        # ResourceClassNotFound
+        self.assertRaises(exception.ResourceClassNotFound,
+                          cache.string_from_id, 1001)
+        self.assertRaises(exception.ResourceClassNotFound,
+                          cache.id_from_string, "IRON_NFV")
 
         # Now add to the database and verify appropriate results...
         with self.context.session.connection() as conn:
@@ -69,3 +73,13 @@ class TestResourceClassCache(test.TestCase):
             self.assertEqual('IRON_NFV', cache.string_from_id(1001))
             self.assertEqual(1001, cache.id_from_string('IRON_NFV'))
             self.assertFalse(sel_mock.called)
+
+    def test_rc_cache_miss(self):
+        """Test that we raise ResourceClassNotFound if an unknown resource
+        class ID or string is searched for.
+        """
+        cache = rc_cache.ResourceClassCache(self.context)
+        self.assertRaises(exception.ResourceClassNotFound,
+                          cache.string_from_id, 99999999)
+        self.assertRaises(exception.ResourceClassNotFound,
+                          cache.id_from_string, 'UNKNOWN')

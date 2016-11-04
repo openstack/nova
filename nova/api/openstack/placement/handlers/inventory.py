@@ -340,6 +340,19 @@ def set_inventories(req):
 
     try:
         resource_provider.set_inventory(inventories)
+    except exception.ResourceClassNotFound as exc:
+        raise webob.exc.HTTPBadRequest(
+            _('Unknown resource class in inventory for resource provider '
+              '%(rp_uuid)s: %(error)s') % {'rp_uuid': resource_provider.uuid,
+                                           'error': exc},
+            json_formatter=util.json_error_formatter)
+    except exception.InventoryWithResourceClassNotFound as exc:
+        raise webob.exc.HTTPConflict(
+            _('Race condition detected when setting inventory. No inventory '
+              'record with resource class for resource provider '
+              '%(rp_uuid)s: %(error)s') % {'rp_uuid': resource_provider.uuid,
+                                           'error': exc},
+            json_formatter=util.json_error_formatter)
     except (exception.ConcurrentUpdateDetected,
             exception.InventoryInUse,
             db_exc.DBDuplicateEntry) as exc:
@@ -391,6 +404,12 @@ def update_inventory(req):
             db_exc.DBDuplicateEntry) as exc:
         raise webob.exc.HTTPConflict(
             _('update conflict: %(error)s') % {'error': exc},
+            json_formatter=util.json_error_formatter)
+    except exception.InventoryWithResourceClassNotFound as exc:
+        raise webob.exc.HTTPBadRequest(
+            _('No inventory record with resource class for resource provider '
+              '%(rp_uuid)s: %(error)s') % {'rp_uuid': resource_provider.uuid,
+                                           'error': exc},
             json_formatter=util.json_error_formatter)
     except exception.InvalidInventoryCapacity as exc:
         raise webob.exc.HTTPBadRequest(

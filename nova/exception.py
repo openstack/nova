@@ -2114,8 +2114,16 @@ class ConcurrentUpdateDetected(NovaException):
                 "Please retry your update")
 
 
+class ResourceClassNotFound(NotFound):
+    msg_fmt = _("No such resource class %(resource_class)s.")
+
+
 class ResourceProviderInUse(NovaException):
     msg_fmt = _("Resource provider has allocations.")
+
+
+class InventoryWithResourceClassNotFound(NotFound):
+    msg_fmt = _("No inventory of class %(resource_class)s found.")
 
 
 class InvalidInventory(Invalid):
