@@ -4747,6 +4747,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(self.instance, 'save')
         @mock.patch.object(self.compute, '_set_instance_info')
         @mock.patch.object(db, 'instance_fault_create')
+        @mock.patch.object(db, 'instance_extra_update_by_uuid')
         @mock.patch.object(objects.BlockDeviceMappingList,
                            'get_by_instance_uuid')
         @mock.patch.object(compute_utils, 'EventReporter')
@@ -4754,6 +4755,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         def do_test(notify_about_instance_usage,
                     event_reporter,
                     get_by_instance_uuid,
+                    extra_update,
                     fault_create,
                     set_instance_info,
                     instance_save,
@@ -4795,11 +4797,15 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(self.compute.network_api, 'setup_networks_on_host')
         @mock.patch.object(self.compute.network_api, 'migrate_instance_start')
         @mock.patch.object(compute_utils, 'notify_usage_exists')
+        @mock.patch.object(compute_utils, 'EventReporter')
+        @mock.patch.object(db, 'instance_extra_update_by_uuid')
         @mock.patch.object(self.migration, 'save')
         @mock.patch.object(objects.BlockDeviceMappingList,
                            'get_by_instance_uuid')
         def do_revert_resize(mock_get_by_instance_uuid,
                              mock_migration_save,
+                             mock_extra_update,
+                             mock_event,
                              mock_notify_usage_exists,
                              mock_migrate_instance_start,
                              mock_setup_networks_on_host,
@@ -4826,12 +4832,23 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(self.compute, "_set_instance_info")
         @mock.patch.object(self.instance, 'save')
         @mock.patch.object(self.migration, 'save')
+        @mock.patch.object(compute_utils, 'EventReporter')
+        @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+        @mock.patch.object(db, 'instance_fault_create')
+        @mock.patch.object(db, 'instance_extra_update_by_uuid')
         @mock.patch.object(self.compute.network_api, 'setup_networks_on_host')
         @mock.patch.object(self.compute.network_api, 'migrate_instance_finish')
         @mock.patch.object(self.compute.network_api, 'get_instance_nw_info')
-        def do_finish_revert_resize(mock_get_instance_nw_info,
+        @mock.patch.object(objects.BlockDeviceMappingList,
+                           'get_by_instance_uuid')
+        def do_finish_revert_resize(mock_get_by_instance_uuid,
+                                    mock_get_instance_nw_info,
                                     mock_instance_finish,
                                     mock_setup_network,
+                                    mock_extra_update,
+                                    mock_fault_create,
+                                    mock_fault_from_exc,
+                                    mock_event,
                                     mock_mig_save,
                                     mock_inst_save,
                                     mock_set,
