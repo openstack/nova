@@ -4378,11 +4378,12 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 system_metadata={},
                 expected_attrs=['system_metadata'])
 
-        self.compute._build_networks_for_instance(self.context, instance,
-                self.requested_networks, self.security_groups)
+        nw_info_obj = self.compute._build_networks_for_instance(self.context,
+                instance, self.requested_networks, self.security_groups)
 
         mock_allocate.assert_called_once_with(self.context, instance,
                 self.requested_networks, None, self.security_groups, None)
+        self.assertTrue(hasattr(nw_info_obj, 'wait'), "wait must be there")
 
     @mock.patch.object(manager.ComputeManager, '_allocate_network')
     @mock.patch.object(network_api.API, 'get_instance_nw_info')
@@ -4391,11 +4392,12 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 system_metadata=dict(network_allocated='False'),
                 expected_attrs=['system_metadata'])
 
-        self.compute._build_networks_for_instance(self.context, instance,
-                self.requested_networks, self.security_groups)
+        nw_info_obj = self.compute._build_networks_for_instance(self.context,
+                instance, self.requested_networks, self.security_groups)
 
         mock_allocate.assert_called_once_with(self.context, instance,
                 self.requested_networks, None, self.security_groups, None)
+        self.assertTrue(hasattr(nw_info_obj, 'wait'), "wait must be there")
 
     @mock.patch.object(network_api.API, 'setup_instance_network_on_host')
     @mock.patch.object(manager.ComputeManager, '_allocate_network')
@@ -4409,8 +4411,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         def fake_network_info():
             return network_model.NetworkInfo([{'address': '123.123.123.123'}])
 
-        mock_get.return_value = network_model.NetworkInfoAsyncWrapper(
-                                                            fake_network_info)
+        # this should be a NetworkInfo, not NetworkInfoAsyncWrapper, to match
+        # what get_instance_nw_info really returns
+        mock_get.return_value = fake_network_info()
 
         self.compute._build_networks_for_instance(self.context, instance,
                 self.requested_networks, self.security_groups)
