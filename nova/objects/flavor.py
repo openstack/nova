@@ -203,7 +203,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
              base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Added save_projects(), save_extra_specs(), removed
-    #              remoteable from save()
+    #              remotable from save()
     VERSION = '1.1'
 
     fields = {
