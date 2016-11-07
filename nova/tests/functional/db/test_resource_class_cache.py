@@ -14,6 +14,7 @@ import mock
 
 from nova.db.sqlalchemy import resource_class_cache as rc_cache
 from nova import exception
+from nova.objects import fields
 from nova import test
 from nova.tests import fixtures
 
@@ -42,6 +43,14 @@ class TestResourceClassCache(test.TestCase):
         self.assertEqual(1, cache.id_from_string('MEMORY_MB'))
 
         self.assertFalse(sel_mock.called)
+
+    def test_get_standards(self):
+        cache = rc_cache.ResourceClassCache(self.context)
+        standards = cache.get_standards()
+        self.assertEqual(len(standards), len(fields.ResourceClass.STANDARD))
+        names = (rc['name'] for rc in standards)
+        for name in fields.ResourceClass.STANDARD:
+            self.assertIn(name, names)
 
     def test_rc_cache_custom(self):
         """Test that non-standard, custom resource classes hit the database and

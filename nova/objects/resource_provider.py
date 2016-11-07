@@ -30,6 +30,7 @@ from nova.objects import fields
 _ALLOC_TBL = models.Allocation.__table__
 _INV_TBL = models.Inventory.__table__
 _RP_TBL = models.ResourceProvider.__table__
+_RC_TBL = models.ResourceClass.__table__
 _RC_CACHE = None
 
 LOG = logging.getLogger(__name__)
@@ -1007,3 +1008,51 @@ class UsageList(base.ObjectListBase, base.NovaObject):
     def __repr__(self):
         strings = [repr(x) for x in self.objects]
         return "UsageList[" + ", ".join(strings) + "]"
+
+
+@base.NovaObjectRegistry.register
+class ResourceClass(base.NovaObject):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'id': fields.IntegerField(read_only=True),
+        'name': fields.ResourceClassField(read_only=True),
+    }
+
+    @staticmethod
+    def _from_db_object(context, target, source):
+        for field in target.fields:
+            setattr(target, field, source[field])
+
+        target._context = context
+        target.obj_reset_changes()
+        return target
+
+
+@base.NovaObjectRegistry.register
+class ResourceClassList(base.ObjectListBase, base.NovaObject):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'objects': fields.ListOfObjectsField('ResourceClass'),
+    }
+
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_all(context):
+        _ensure_rc_cache(context)
+        standards = _RC_CACHE.get_standards()
+        customs = list(context.session.query(models.ResourceClass).all())
+        return standards + customs
+
+    @base.remotable_classmethod
+    def get_all(cls, context):
+        resource_classes = cls._get_all(context)
+        return base.obj_make_list(context, cls(context),
+                                  objects.ResourceClass, resource_classes)
+
+    def __repr__(self):
+        strings = [repr(x) for x in self.objects]
+        return "ResourceClassList[" + ", ".join(strings) + "]"
