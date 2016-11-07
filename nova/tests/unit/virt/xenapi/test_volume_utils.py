@@ -81,11 +81,8 @@ class ISCSIParametersTestCase(stubs.XenAPITestBaseNoDB):
         self.assertIsNone(volume_utils._get_target_host(None))
 
     def test_target_port(self):
-        self.assertEqual(volume_utils._get_target_port('host:port'),
-                         'port')
-
-        self.assertEqual(volume_utils._get_target_port('host'),
-                         '3260')
+        self.assertEqual(volume_utils._get_target_port('host:port'), 'port')
+        self.assertEqual(volume_utils._get_target_port('host'), 3260)
 
 
 class IntroduceTestCase(stubs.XenAPITestBaseNoDB):
