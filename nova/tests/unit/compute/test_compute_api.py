@@ -3758,6 +3758,32 @@ class _ComputeAPIUnitTestMixIn(object):
 
         do_test()
 
+    def test_provision_instances_creates_reqspec_with_secgroups(self):
+        @mock.patch.object(self.compute_api, '_check_num_instances_quota')
+        @mock.patch.object(self.compute_api, 'security_group_api')
+        @mock.patch.object(compute_api, 'objects')
+        @mock.patch.object(self.compute_api, '_create_block_device_mapping',
+                           new=mock.MagicMock())
+        @mock.patch.object(self.compute_api,
+                           'create_db_entry_for_new_instance',
+                           new=mock.MagicMock())
+        @mock.patch.object(self.compute_api,
+                           '_bdm_validate_set_size_and_instance',
+                           new=mock.MagicMock())
+        def test(mock_objects, mock_secgroup, mock_cniq):
+            ctxt = context.RequestContext('fake-user', 'fake-project')
+            mock_cniq.return_value = (1, mock.MagicMock())
+            self.compute_api._provision_instances(ctxt, None, None, None,
+                                                  mock.MagicMock(), None, None,
+                                                  [], None, None, None, None,
+                                                  None)
+            secgroups = mock_secgroup.populate_security_groups.return_value
+            mock_objects.RequestSpec.from_components.assert_called_once_with(
+                mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY,
+                mock.ANY, mock.ANY, mock.ANY,
+                security_groups=secgroups)
+        test()
+
     def _test_rescue(self, vm_state=vm_states.ACTIVE, rescue_password=None,
                      rescue_image=None, clean_shutdown=True):
         instance = self._create_instance_obj(params={'vm_state': vm_state})

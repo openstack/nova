@@ -26,7 +26,8 @@ from nova.objects import instance as obj_instance
 from nova.scheduler import utils as scheduler_utils
 from nova.virt import hardware
 
-REQUEST_SPEC_OPTIONAL_ATTRS = ['requested_destination']
+REQUEST_SPEC_OPTIONAL_ATTRS = ['requested_destination',
+                               'security_groups']
 
 
 @base.NovaObjectRegistry.register
@@ -39,7 +40,8 @@ class RequestSpec(base.NovaObject):
     # Version 1.5: Added get_by_instance_uuid(), create(), save()
     # Version 1.6: Added requested_destination
     # Version 1.7: Added destroy()
-    VERSION = '1.7'
+    # Version 1.8: Added security_groups
+    VERSION = '1.8'
 
     fields = {
         'id': fields.IntegerField(),
@@ -66,11 +68,15 @@ class RequestSpec(base.NovaObject):
         # just provide to the RequestSpec object a free-form dictionary
         'scheduler_hints': fields.DictOfListOfStringsField(nullable=True),
         'instance_uuid': fields.UUIDField(),
+        'security_groups': fields.ObjectField('SecurityGroupList'),
     }
 
     def obj_make_compatible(self, primitive, target_version):
         super(RequestSpec, self).obj_make_compatible(primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 8):
+            if 'security_groups' in primitive:
+                del primitive['security_groups']
         if target_version < (1, 6):
             if 'requested_destination' in primitive:
                 del primitive['requested_destination']
@@ -80,6 +86,10 @@ class RequestSpec(base.NovaObject):
             raise exception.ObjectActionError(
                 action='obj_load_attr',
                 reason='attribute %s not lazy-loadable' % attrname)
+
+        if attrname == 'security_groups':
+            self.security_groups = objects.SecurityGroupList(objects=[])
+            return
 
         # NOTE(sbauza): In case the primitive was not providing that field
         # because of a previous RequestSpec version, we want to default
@@ -360,7 +370,7 @@ class RequestSpec(base.NovaObject):
     @classmethod
     def from_components(cls, context, instance_uuid, image, flavor,
             numa_topology, pci_requests, filter_properties, instance_group,
-            availability_zone):
+            availability_zone, security_groups=None):
         """Returns a new RequestSpec object hydrated by various components.
 
         This helper is useful in creating the RequestSpec from the various
@@ -377,6 +387,8 @@ class RequestSpec(base.NovaObject):
         :param filter_properties: a dict of properties for scheduling
         :param instance_group: None or an instance group NovaObject
         :param availability_zone: an availability_zone string
+        :param security_groups: A SecurityGroupList object. If None, don't
+                                set security_groups on the resulting object.
         """
         spec_obj = cls(context)
         spec_obj.num_instances = 1
@@ -396,6 +408,8 @@ class RequestSpec(base.NovaObject):
         spec_obj._from_limits(filter_properties.get('limits', {}))
         spec_obj._from_hints(filter_properties.get('scheduler_hints', {}))
         spec_obj.availability_zone = availability_zone
+        if security_groups is not None:
+            spec_obj.security_groups = security_groups
 
         # NOTE(sbauza): Default the other fields that are not part of the
         # original contract
