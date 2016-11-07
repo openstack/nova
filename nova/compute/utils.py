@@ -32,6 +32,7 @@ from nova import exception
 from nova.i18n import _LW
 from nova.network import model as network_model
 from nova import notifications
+from nova.notifications.objects import aggregate as aggregate_notification
 from nova.notifications.objects import base as notification_base
 from nova.notifications.objects import exception as notification_exception
 from nova.notifications.objects import instance as instance_notification
@@ -449,6 +450,20 @@ def notify_about_aggregate_update(context, event_suffix, aggregate_payload):
                                 host=aggregate_identifier)
 
     notifier.info(context, 'aggregate.%s' % event_suffix, aggregate_payload)
+
+
+def notify_about_aggregate_action(context, aggregate, action, phase):
+    payload = aggregate_notification.AggregatePayload(aggregate)
+    notification = aggregate_notification.AggregateNotification(
+        priority=fields.NotificationPriority.INFO,
+        publisher=notification_base.NotificationPublisher(
+            context=context, host=CONF.host, binary='nova-api'),
+        event_type=notification_base.EventType(
+            object='aggregate',
+            action=action,
+            phase=phase),
+        payload=payload)
+    notification.emit(context)
 
 
 def notify_about_host_update(context, event_suffix, host_payload):

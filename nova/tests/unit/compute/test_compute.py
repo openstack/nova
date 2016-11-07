@@ -10573,10 +10573,18 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.stub_out('oslo_messaging.rpc.client.call', fake_rpc_method)
         self.stub_out('oslo_messaging.rpc.client.cast', fake_rpc_method)
 
-    def test_aggregate_no_zone(self):
+    @mock.patch('nova.compute.utils.notify_about_aggregate_action')
+    def test_aggregate_no_zone(self, mock_notify):
         # Ensure we can create an aggregate without an availability  zone
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          None)
+
+        mock_notify.assert_has_calls([
+            mock.call(context=self.context, aggregate=aggr,
+                      action='create', phase='start'),
+            mock.call(context=self.context, aggregate=aggr,
+                      action='create', phase='end')])
+
         self.api.delete_aggregate(self.context, aggr.id)
         self.assertRaises(exception.AggregateNotFound,
                           self.api.delete_aggregate, self.context, aggr.id)

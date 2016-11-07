@@ -360,11 +360,18 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
             payload['meta_data'] = payload.pop('metadata')
         if 'uuid' not in updates:
             updates['uuid'] = uuidutils.generate_uuid()
+            self.uuid = updates['uuid']
             LOG.debug('Generated uuid %(uuid)s for aggregate',
                       dict(uuid=updates['uuid']))
         compute_utils.notify_about_aggregate_update(self._context,
                                                     "create.start",
                                                     payload)
+        compute_utils.notify_about_aggregate_action(
+            context=self._context,
+            aggregate=self,
+            action=fields.NotificationAction.CREATE,
+            phase=fields.NotificationPhase.START)
+
         metadata = updates.pop('metadata', None)
         db_aggregate = _aggregate_create_in_db(self._context, updates,
                                                metadata=metadata)
@@ -373,6 +380,11 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
         compute_utils.notify_about_aggregate_update(self._context,
                                                     "create.end",
                                                     payload)
+        compute_utils.notify_about_aggregate_action(
+            context=self._context,
+            aggregate=self,
+            action=fields.NotificationAction.CREATE,
+            phase=fields.NotificationPhase.END)
 
     @base.remotable
     def save(self):
