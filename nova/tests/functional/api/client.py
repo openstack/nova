@@ -391,3 +391,6 @@ class TestOpenStackClient(object):
 
     def post_aggregate(self, aggregate):
         return self.api_post('/os-aggregates', aggregate).body['aggregate']
+
+    def delete_aggregate(self, aggregate_id):
+        self.api_delete('/os-aggregates/%s' % aggregate_id)

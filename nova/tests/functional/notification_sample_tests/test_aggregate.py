@@ -38,3 +38,19 @@ class TestAggregateNotificationSample(
                 'uuid': self.ANY,
                 'id': aggregate['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
+        self.admin_api.delete_aggregate(aggregate['id'])
+
+        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'aggregate-delete-start',
+            replacements={
+                'uuid': self.ANY,
+                'id': aggregate['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+        self._verify_notification(
+            'aggregate-delete-end',
+            replacements={
+                'uuid': self.ANY,
+                'id': aggregate['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])

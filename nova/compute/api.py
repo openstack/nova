@@ -4275,6 +4275,13 @@ class AggregateAPI(base.Base):
                                                     "delete.start",
                                                     aggregate_payload)
         aggregate = objects.Aggregate.get_by_id(context, aggregate_id)
+
+        compute_utils.notify_about_aggregate_action(
+            context=context,
+            aggregate=aggregate,
+            action=fields_obj.NotificationAction.DELETE,
+            phase=fields_obj.NotificationPhase.START)
+
         if len(aggregate.hosts) > 0:
             msg = _("Host aggregate is not empty")
             raise exception.InvalidAggregateActionDelete(
@@ -4284,6 +4291,11 @@ class AggregateAPI(base.Base):
         compute_utils.notify_about_aggregate_update(context,
                                                     "delete.end",
                                                     aggregate_payload)
+        compute_utils.notify_about_aggregate_action(
+            context=context,
+            aggregate=aggregate,
+            action=fields_obj.NotificationAction.DELETE,
+            phase=fields_obj.NotificationPhase.END)
 
     def is_safe_to_update_az(self, context, metadata, aggregate,
                              hosts=None,
