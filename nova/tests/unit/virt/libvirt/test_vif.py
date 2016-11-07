@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import copy
 import os
 
 import fixtures
@@ -1616,59 +1615,3 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                 <filterref
                  filter="nova-instance-instance-00000001-22522562e2aa"/>
             </interface>""", cfg.to_xml())
-
-    @mock.patch('nova.network.linux_net._set_device_mtu')
-    @mock.patch("nova.network.os_vif_util.nova_to_osvif_instance")
-    @mock.patch("nova.network.os_vif_util.nova_to_osvif_vif")
-    @mock.patch.object(os_vif, "plug")
-    def test_plug_ovs_vif_no_mtu(self, mock_plug,
-                              mock_convert_vif, mock_convert_inst,
-                              mock_set_mtu):
-        mock_convert_vif.return_value = self.os_vif_bridge
-        mock_convert_inst.return_value = self.os_vif_inst_info
-
-        d = vif.LibvirtGenericVIFDriver()
-        # Hack the network mtu in the vif_bridge object - make sure to copy it
-        # so we don't change state on a global object during a test run.
-        vif_bridge = copy.deepcopy(self.vif_bridge)
-        vif_bridge['network']._set_meta({'mtu': None})
-        d.plug(self.instance, vif_bridge)
-
-        self.assertFalse(mock_set_mtu.called)
-
-    @mock.patch('nova.network.linux_net._set_device_mtu')
-    @mock.patch("nova.network.os_vif_util.nova_to_osvif_instance")
-    @mock.patch("nova.network.os_vif_util.nova_to_osvif_vif")
-    @mock.patch.object(os_vif, "plug")
-    def test_plug_ovs_vif_mtu(self, mock_plug,
-                              mock_convert_vif, mock_convert_inst,
-                              mock_set_mtu):
-        # Hack port profile to say ovs, just like ovn
-        os_vif_bridge = copy.deepcopy(self.os_vif_bridge)
-        os_vif_bridge.port_profile = self.os_vif_ovs_prof
-        mock_convert_vif.return_value = os_vif_bridge
-        mock_convert_inst.return_value = self.os_vif_inst_info
-
-        d = vif.LibvirtGenericVIFDriver()
-        d.plug(self.instance, self.vif_bridge)
-
-        self.assertEqual(3, mock_set_mtu.call_count)
-        mock_set_mtu.assert_any_call("br0", 9000)
-        mock_set_mtu.assert_any_call("qvbdc065497-3c", 9000)
-        mock_set_mtu.assert_any_call("qvodc065497-3c", 9000)
-
-    @mock.patch('nova.network.linux_net._set_device_mtu')
-    @mock.patch("nova.network.os_vif_util.nova_to_osvif_instance")
-    @mock.patch("nova.network.os_vif_util.nova_to_osvif_vif")
-    @mock.patch.object(os_vif, "plug")
-    def test_plug_ovs_vif_no_mtu_venv(self, mock_plug,
-                              mock_convert_vif, mock_convert_inst,
-                              mock_set_mtu):
-        mock_convert_vif.return_value = self.os_vif_ovs
-        mock_convert_inst.return_value = self.os_vif_inst_info
-
-        d = vif.LibvirtGenericVIFDriver()
-        d.plug(self.instance, self.vif_ovs)
-
-        self.assertEqual(1, mock_set_mtu.call_count)
-        mock_set_mtu.assert_any_call("br0", 1000)
