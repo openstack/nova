@@ -33,6 +33,7 @@ from nova.pci import utils as pci_utils
 from nova import test
 from nova.tests.unit import matchers
 from nova.tests.unit.virt import fakelibosinfo
+from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova import utils
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import host
@@ -435,6 +436,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(LibvirtVifTestCase, self).setUp()
+        self.useFixture(fakelibvirt.FakeLibvirtFixture())
         self.flags(allow_same_net_traffic=True)
         # os_vif.initialize is typically done in nova-compute startup
         os_vif.initialize()

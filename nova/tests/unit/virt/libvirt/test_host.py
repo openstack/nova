@@ -32,9 +32,6 @@ from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
 
-host.libvirt = fakelibvirt
-libvirt_guest.libvirt = fakelibvirt
-
 
 class FakeVirtDomain(object):
 

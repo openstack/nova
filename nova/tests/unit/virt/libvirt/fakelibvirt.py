@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import sys
 import time
 import uuid
 
@@ -1486,5 +1487,11 @@ class FakeLibvirtFixture(fixtures.Fixture):
 
     def setUp(self):
         super(FakeLibvirtFixture, self).setUp()
+
+        # Some modules load the libvirt library in a strange way
+        for module in ('driver', 'host', 'guest', 'firewall', 'migration'):
+            i = 'nova.virt.libvirt.{module}.libvirt'.format(module=module)
+            # NOTE(mdbooth): The strange incantation below means 'this module'
+            self.useFixture(fixtures.MonkeyPatch(i, sys.modules[__name__]))
 
         disable_event_thread(self)
