@@ -65,6 +65,7 @@ from nova.virt import driver as virt_driver
 from nova.virt import event as virtevent
 from nova.virt import fake as fake_driver
 from nova.virt import hardware
+from nova.volume import cinder
 
 
 CONF = nova.conf.CONF
@@ -1782,26 +1783,40 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         do_test()
 
+    @mock.patch.object(virt_driver.ComputeDriver, 'get_volume_connector',
+                       return_value={})
+    @mock.patch.object(manager.ComputeManager, '_instance_update',
+                       return_value={})
+    @mock.patch.object(db, 'instance_fault_create')
+    @mock.patch.object(db, 'block_device_mapping_update')
+    @mock.patch.object(db,
+                       'block_device_mapping_get_by_instance_and_volume_id')
+    @mock.patch.object(cinder.API, 'migrate_volume_completion')
+    @mock.patch.object(cinder.API, 'terminate_connection')
+    @mock.patch.object(cinder.API, 'unreserve_volume')
+    @mock.patch.object(cinder.API, 'get')
+    @mock.patch.object(cinder.API, 'roll_detaching')
     @mock.patch.object(compute_utils, 'notify_about_volume_swap')
-    def test_swap_volume_volume_api_usage(self, mock_notify):
+    def _test_swap_volume(self, mock_notify, mock_roll_detaching,
+                          mock_cinder_get, mock_unreserve_volume,
+                          mock_terminate_connection,
+                          mock_migrate_volume_completion,
+                          mock_bdm_get, mock_bdm_update,
+                          mock_instance_fault_create,
+                          mock_instance_update,
+                          mock_get_volume_connector,
+                          expected_exception=None):
         # This test ensures that volume_id arguments are passed to volume_api
         # and that volume states are OK
         volumes = {}
-        old_volume_id = uuids.fake
-        volumes[old_volume_id] = {'id': old_volume_id,
+        volumes[uuids.old_volume] = {'id': uuids.old_volume,
                                   'display_name': 'old_volume',
                                   'status': 'detaching',
                                   'size': 1}
-        new_volume_id = uuids.fake_2
-        volumes[new_volume_id] = {'id': new_volume_id,
+        volumes[uuids.new_volume] = {'id': uuids.new_volume,
                                   'display_name': 'new_volume',
                                   'status': 'available',
                                   'size': 2}
-
-        def fake_vol_api_roll_detaching(cls, context, volume_id):
-            self.assertTrue(uuidutils.is_uuid_like(volume_id))
-            if volumes[volume_id]['status'] == 'detaching':
-                volumes[volume_id]['status'] = 'in-use'
 
         fake_bdm = fake_block_device.FakeDbBlockDeviceDict(
                    {'device_name': '/dev/vdb', 'source_type': 'volume',
@@ -1809,135 +1824,117 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                     'instance_uuid': uuids.instance,
                     'connection_info': '{"foo": "bar"}'})
 
-        def fake_vol_api_func(cls, context, volume, *args):
+        def fake_vol_api_roll_detaching(context, volume_id):
+            self.assertTrue(uuidutils.is_uuid_like(volume_id))
+            if volumes[volume_id]['status'] == 'detaching':
+                volumes[volume_id]['status'] = 'in-use'
+
+        def fake_vol_api_func(context, volume, *args):
             self.assertTrue(uuidutils.is_uuid_like(volume))
             return {}
 
-        def fake_vol_get(cls, context, volume_id):
+        def fake_vol_get(context, volume_id):
             self.assertTrue(uuidutils.is_uuid_like(volume_id))
             return volumes[volume_id]
 
-        def fake_vol_unreserve(cls, context, volume_id):
+        def fake_vol_unreserve(context, volume_id):
             self.assertTrue(uuidutils.is_uuid_like(volume_id))
             if volumes[volume_id]['status'] == 'attaching':
                 volumes[volume_id]['status'] = 'available'
 
-        def fake_vol_migrate_volume_completion(cls, context, old_volume_id,
+        def fake_vol_migrate_volume_completion(context, old_volume_id,
                                                new_volume_id, error=False):
             self.assertTrue(uuidutils.is_uuid_like(old_volume_id))
             self.assertTrue(uuidutils.is_uuid_like(new_volume_id))
             volumes[old_volume_id]['status'] = 'in-use'
             return {'save_volume_id': new_volume_id}
 
-        def fake_func_exc(*args, **kwargs):
-            raise AttributeError  # Random exception
-
-        def fake_swap_volume(cls, old_connection_info, new_connection_info,
-                             instance, mountpoint, resize_to):
-            self.assertEqual(resize_to, 2)
-
         def fake_block_device_mapping_update(ctxt, id, updates, legacy):
             self.assertEqual(2, updates['volume_size'])
             return fake_bdm
 
-        self.stub_out('nova.volume.cinder.API.roll_detaching',
-                       fake_vol_api_roll_detaching)
-        self.stub_out('nova.volume.cinder.API.get', fake_vol_get)
-        self.stub_out('nova.volume.cinder.API.initialize_connection',
-                       fake_vol_api_func)
-        self.stub_out('nova.volume.cinder.API.unreserve_volume',
-                       fake_vol_unreserve)
-        self.stub_out('nova.volume.cinder.API.terminate_connection',
-                       fake_vol_api_func)
-        self.stub_out('nova.db.'
-                      'block_device_mapping_get_by_instance_and_volume_id',
-                      lambda x, y, z, v: fake_bdm)
-        self.stub_out('nova.virt.driver.ComputeDriver.get_volume_connector',
-                       lambda x: {})
-        self.stub_out('nova.virt.driver.ComputeDriver.swap_volume',
-                       fake_swap_volume)
-        self.stub_out('nova.volume.cinder.API.migrate_volume_completion',
-                      fake_vol_migrate_volume_completion)
-        self.stub_out('nova.db.block_device_mapping_update',
-                      fake_block_device_mapping_update)
-        self.stub_out('nova.db.instance_fault_create',
-                      lambda x, y:
-                           test_instance_fault.fake_faults['fake-uuid'][0])
-        self.stub_out('nova.compute.manager.ComputeManager.'
-                      '_instance_update', lambda c, u, **k: {})
+        mock_roll_detaching.side_effect = fake_vol_api_roll_detaching
+        mock_terminate_connection.side_effect = fake_vol_api_func
+        mock_cinder_get.side_effect = fake_vol_get
+        mock_migrate_volume_completion.side_effect = (
+            fake_vol_migrate_volume_completion)
+        mock_unreserve_volume.side_effect = fake_vol_unreserve
+        mock_bdm_get.return_value = fake_bdm
+        mock_bdm_update.side_effect = fake_block_device_mapping_update
+        mock_instance_fault_create.return_value = (
+            test_instance_fault.fake_faults['fake-uuid'][0])
 
-        # Good path
         instance1 = fake_instance.fake_instance_obj(
             self.context, **{'uuid': uuids.instance})
-        self.compute.swap_volume(self.context, old_volume_id, new_volume_id,
-                                 instance1)
-        self.assertEqual(volumes[old_volume_id]['status'], 'in-use')
-        self.assertEqual(2, mock_notify.call_count)
-        mock_notify.assert_any_call(test.MatchType(context.RequestContext),
-                                    instance1, self.compute.host,
-                                    fields.NotificationAction.VOLUME_SWAP,
-                                    fields.NotificationPhase.START,
-                                    old_volume_id, new_volume_id)
-        mock_notify.assert_any_call(test.MatchType(context.RequestContext),
-                                    instance1, self.compute.host,
-                                    fields.NotificationAction.VOLUME_SWAP,
-                                    fields.NotificationPhase.END,
-                                    old_volume_id, new_volume_id)
 
-        # Error paths
-        mock_notify.reset_mock()
-        volumes[old_volume_id]['status'] = 'detaching'
-        volumes[new_volume_id]['status'] = 'attaching'
-        self.stub_out('nova.virt.fake.FakeDriver.swap_volume',
-                      fake_func_exc)
-        instance2 = fake_instance.fake_instance_obj(
-            self.context, **{'uuid': uuids.instance})
-        self.assertRaises(AttributeError, self.compute.swap_volume,
-                          self.context, old_volume_id, new_volume_id,
-                          instance2)
-        self.assertEqual(volumes[old_volume_id]['status'], 'in-use')
-        self.assertEqual(volumes[new_volume_id]['status'], 'available')
-        self.assertEqual(2, mock_notify.call_count)
-        mock_notify.assert_any_call(
-            test.MatchType(context.RequestContext), instance2,
-            self.compute.host,
-            fields.NotificationAction.VOLUME_SWAP,
-            fields.NotificationPhase.START,
-            old_volume_id, new_volume_id)
-        mock_notify.assert_any_call(
-            test.MatchType(context.RequestContext), instance2,
-            self.compute.host,
-            fields.NotificationAction.VOLUME_SWAP,
-            fields.NotificationPhase.ERROR,
-            old_volume_id, new_volume_id,
-            test.MatchType(AttributeError))
+        if expected_exception:
+            volumes[uuids.old_volume]['status'] = 'detaching'
+            volumes[uuids.new_volume]['status'] = 'attaching'
+            self.assertRaises(expected_exception, self.compute.swap_volume,
+                              self.context, uuids.old_volume, uuids.new_volume,
+                              instance1)
+            self.assertEqual('in-use', volumes[uuids.old_volume]['status'])
+            self.assertEqual('available', volumes[uuids.new_volume]['status'])
+            self.assertEqual(2, mock_notify.call_count)
+            mock_notify.assert_any_call(
+                test.MatchType(context.RequestContext), instance1,
+                self.compute.host,
+                fields.NotificationAction.VOLUME_SWAP,
+                fields.NotificationPhase.START,
+                uuids.old_volume, uuids.new_volume)
+            mock_notify.assert_any_call(
+                test.MatchType(context.RequestContext), instance1,
+                self.compute.host,
+                fields.NotificationAction.VOLUME_SWAP,
+                fields.NotificationPhase.ERROR,
+                uuids.old_volume, uuids.new_volume,
+                test.MatchType(expected_exception))
+        else:
+            self.compute.swap_volume(self.context, uuids.old_volume,
+                                     uuids.new_volume, instance1)
+            self.assertEqual(volumes[uuids.old_volume]['status'], 'in-use')
+            self.assertEqual(2, mock_notify.call_count)
+            mock_notify.assert_any_call(test.MatchType(context.RequestContext),
+                                        instance1, self.compute.host,
+                                        fields.NotificationAction.VOLUME_SWAP,
+                                        fields.NotificationPhase.START,
+                                        uuids.old_volume, uuids.new_volume)
+            mock_notify.assert_any_call(test.MatchType(context.RequestContext),
+                                        instance1, self.compute.host,
+                                        fields.NotificationAction.VOLUME_SWAP,
+                                        fields.NotificationPhase.END,
+                                        uuids.old_volume, uuids.new_volume)
 
-        mock_notify.reset_mock()
-        volumes[old_volume_id]['status'] = 'detaching'
-        volumes[new_volume_id]['status'] = 'attaching'
-        self.stub_out('nova.volume.cinder.API.initialize_connection',
-                       fake_func_exc)
-        instance3 = fake_instance.fake_instance_obj(
-            self.context, **{'uuid': uuids.instance})
-        self.assertRaises(AttributeError, self.compute.swap_volume,
-                          self.context, old_volume_id, new_volume_id,
-                          instance3)
-        self.assertEqual(volumes[old_volume_id]['status'], 'in-use')
-        self.assertEqual(volumes[new_volume_id]['status'], 'available')
-        self.assertEqual(2, mock_notify.call_count)
-        mock_notify.assert_any_call(
-            test.MatchType(context.RequestContext), instance3,
-            self.compute.host,
-            fields.NotificationAction.VOLUME_SWAP,
-            fields.NotificationPhase.START,
-            old_volume_id, new_volume_id)
-        mock_notify.assert_any_call(
-            test.MatchType(context.RequestContext), instance3,
-            self.compute.host,
-            fields.NotificationAction.VOLUME_SWAP,
-            fields.NotificationPhase.ERROR,
-            old_volume_id, new_volume_id,
-            test.MatchType(AttributeError))
+    def _assert_volume_api(self, context, volume, *args):
+        self.assertTrue(uuidutils.is_uuid_like(volume))
+        return {}
+
+    def _assert_swap_volume(self, old_connection_info, new_connection_info,
+                            instance, mountpoint, resize_to):
+        self.assertEqual(2, resize_to)
+
+    @mock.patch.object(cinder.API, 'initialize_connection')
+    @mock.patch.object(fake_driver.FakeDriver, 'swap_volume')
+    def test_swap_volume_volume_api_usage(self, mock_swap_volume,
+                                          mock_initialize_connection):
+        mock_initialize_connection.side_effect = self._assert_volume_api
+        mock_swap_volume.side_effect = self._assert_swap_volume
+        self._test_swap_volume()
+
+    @mock.patch.object(cinder.API, 'initialize_connection')
+    @mock.patch.object(fake_driver.FakeDriver, 'swap_volume',
+                       side_effect=test.TestingException())
+    def test_swap_volume_with_compute_driver_exception(
+        self, mock_swap_volume, mock_initialize_connection):
+        mock_initialize_connection.side_effect = self._assert_volume_api
+        self._test_swap_volume(expected_exception=test.TestingException)
+
+    @mock.patch.object(cinder.API, 'initialize_connection',
+                       side_effect=test.TestingException())
+    @mock.patch.object(fake_driver.FakeDriver, 'swap_volume')
+    def test_swap_volume_with_initialize_connection_exception(
+        self, mock_swap_volume, mock_initialize_connection):
+        self._test_swap_volume(expected_exception=test.TestingException)
 
     @mock.patch('nova.compute.utils.notify_about_volume_swap')
     @mock.patch('nova.db.block_device_mapping_get_by_instance_and_volume_id')
