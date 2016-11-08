@@ -1042,18 +1042,22 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_parse_live_migration_flags_default(self):
         self._do_test_parse_migration_flags(
             lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE))
 
     def test_parse_live_migration_flags(self):
         self._do_test_parse_migration_flags(
             lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE))
 
     def test_parse_block_migration_flags_default(self):
         self._do_test_parse_migration_flags(
             bm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
                          libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC))
@@ -1061,6 +1065,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_parse_block_migration_flags(self):
         self._do_test_parse_migration_flags(
             bm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
                          libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC))
@@ -1069,8 +1074,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(virt_type='xen', group='libvirt')
         self._do_test_parse_migration_flags(
             lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE),
             bm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
                          libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC))
 
@@ -1080,10 +1087,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_TUNNELLED),
             bm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC |
                          libvirt_driver.libvirt.VIR_MIGRATE_TUNNELLED))
 
@@ -1093,10 +1102,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_TUNNELLED),
             bm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC |
                          libvirt_driver.libvirt.VIR_MIGRATE_TUNNELLED))
 
@@ -1105,10 +1116,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(live_migration_permit_post_copy=True, group='libvirt')
         self._do_test_parse_migration_flags(
             lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
                          libvirt_driver.libvirt.VIR_MIGRATE_POSTCOPY),
             bm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
                          libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC |
@@ -1119,10 +1132,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(live_migration_permit_auto_converge=True, group='libvirt')
         self._do_test_parse_migration_flags(
             lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
                          libvirt_driver.libvirt.VIR_MIGRATE_AUTO_CONVERGE),
             bm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
                          libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC |
@@ -1135,10 +1150,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(live_migration_permit_post_copy=True, group='libvirt')
         self._do_test_parse_migration_flags(
             lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
                          libvirt_driver.libvirt.VIR_MIGRATE_POSTCOPY),
             bm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
                          libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC |
@@ -1159,10 +1176,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self._do_test_parse_migration_flags(
             lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
                          libvirt_driver.libvirt.VIR_MIGRATE_AUTO_CONVERGE),
             bm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
                          libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC |
@@ -1174,9 +1193,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self._do_test_parse_migration_flags(
             lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE),
             bm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
                          libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC))
@@ -1186,9 +1207,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(live_migration_permit_auto_converge=True, group='libvirt')
         self._do_test_parse_migration_flags(
             lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE),
             bm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
                          libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC))
@@ -1196,9 +1219,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_live_migration_permit_postcopy_false(self):
         self._do_test_parse_migration_flags(
             lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE),
             bm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
                          libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC))
@@ -1206,9 +1231,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_live_migration_permit_autoconverge_false(self):
         self._do_test_parse_migration_flags(
             lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE),
             bm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
                          libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
                          libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC))
@@ -8034,7 +8061,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           True, migrate_data, guest, disk_paths)
         mock_migrateToURI3.assert_called_once_with(
             drvr._live_migration_uri('dest'),
-            params=params, flags=151)
+            params=params, flags=159)
 
     def test_live_migration_raises_exception(self):
         # Confirms recover method is called when exceptions are raised.
