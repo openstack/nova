@@ -19,47 +19,6 @@ from nova import test
 from nova.virt import driver
 
 
-class FakeDriver(object):
-    def __init__(self, *args, **kwargs):
-        self.args = args
-        self.kwargs = kwargs
-
-
-class FakeDriver2(FakeDriver):
-    pass
-
-
-class ToDriverRegistryTestCase(test.NoDBTestCase):
-
-    def assertDriverInstance(self, inst, class_, *args, **kwargs):
-        self.assertEqual(class_, inst.__class__)
-        self.assertEqual(args, inst.args)
-        self.assertEqual(kwargs, inst.kwargs)
-
-    def test_driver_dict_from_config(self):
-        drvs = driver.driver_dict_from_config(
-            [
-                'key1=nova.tests.unit.virt.test_driver.FakeDriver',
-                'key2=nova.tests.unit.virt.test_driver.FakeDriver2',
-            ], 'arg1', 'arg2', param1='value1', param2='value2'
-        )
-
-        self.assertEqual(
-            sorted(['key1', 'key2']),
-            sorted(drvs.keys())
-        )
-
-        self.assertDriverInstance(
-            drvs['key1'],
-            FakeDriver, 'arg1', 'arg2', param1='value1',
-            param2='value2')
-
-        self.assertDriverInstance(
-            drvs['key2'],
-            FakeDriver2, 'arg1', 'arg2', param1='value1',
-            param2='value2')
-
-
 class DriverMethodTestCase(test.NoDBTestCase):
 
     def setUp(self):
