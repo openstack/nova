@@ -17,6 +17,7 @@ import mock
 from nova import exception
 from nova import objects
 from nova.objects import fields
+from nova.objects import resource_provider
 from nova.tests.unit.objects import test_objects
 from nova.tests import uuidsentinel as uuids
 
@@ -57,6 +58,12 @@ _ALLOCATION_DB = {
     'consumer_id': uuids.fake_instance,
     'used': 8,
 }
+
+
+def _fake_ensure_cache(ctxt):
+    cache = resource_provider._RC_CACHE = mock.MagicMock()
+    cache.string_from_id.return_value = _RESOURCE_CLASS_NAME
+    cache.id_from_string.return_value = _RESOURCE_CLASS_ID
 
 
 class _TestResourceProviderNoDB(object):
@@ -142,9 +149,11 @@ class TestResourceProvider(test_objects._LocalTest):
 
 
 class _TestInventoryNoDB(object):
+    @mock.patch('nova.objects.resource_provider._ensure_rc_cache',
+            side_effect=_fake_ensure_cache)
     @mock.patch('nova.objects.Inventory._create_in_db',
                 return_value=_INVENTORY_DB)
-    def test_create(self, mock_db_create):
+    def test_create(self, mock_db_create, mock_ensure_cache):
         rp = objects.ResourceProvider(id=_RESOURCE_PROVIDER_ID,
                                       uuid=_RESOURCE_PROVIDER_UUID)
         obj = objects.Inventory(context=self.context,
@@ -162,9 +171,11 @@ class _TestInventoryNoDB(object):
         expected.pop('id')
         mock_db_create.assert_called_once_with(self.context, expected)
 
+    @mock.patch('nova.objects.resource_provider._ensure_rc_cache',
+            side_effect=_fake_ensure_cache)
     @mock.patch('nova.objects.Inventory._update_in_db',
                 return_value=_INVENTORY_DB)
-    def test_save(self, mock_db_save):
+    def test_save(self, mock_db_save, mock_ensure_cache):
         obj = objects.Inventory(context=self.context,
                                 id=_INVENTORY_ID,
                                 reserved=4)
@@ -173,8 +184,10 @@ class _TestInventoryNoDB(object):
                                              _INVENTORY_ID,
                                              {'reserved': 4})
 
+    @mock.patch('nova.objects.resource_provider._ensure_rc_cache',
+            side_effect=_fake_ensure_cache)
     @mock.patch('nova.objects.InventoryList._get_all_by_resource_provider')
-    def test_get_all_by_resource_provider(self, mock_get):
+    def test_get_all_by_resource_provider(self, mock_get, mock_ensure_cache):
         expected = [dict(_INVENTORY_DB,
                          resource_provider=dict(_RESOURCE_PROVIDER_DB)),
                     dict(_INVENTORY_DB,
@@ -461,9 +474,11 @@ class TestInventory(test_objects._LocalTest):
 
 
 class _TestAllocationNoDB(object):
+    @mock.patch('nova.objects.resource_provider._ensure_rc_cache',
+            side_effect=_fake_ensure_cache)
     @mock.patch('nova.objects.Allocation._create_in_db',
                 return_value=_ALLOCATION_DB)
-    def test_create(self, mock_db_create):
+    def test_create(self, mock_db_create, mock_ensure_cache):
         rp = objects.ResourceProvider(id=_RESOURCE_PROVIDER_ID,
                                       uuid=uuids.resource_provider)
         obj = objects.Allocation(context=self.context,
@@ -519,9 +534,12 @@ class TestRemoteAllocationNoDB(test_objects._RemoteTest,
 
 class _TestAllocationListNoDB(object):
 
+    @mock.patch('nova.objects.resource_provider._ensure_rc_cache',
+            side_effect=_fake_ensure_cache)
     @mock.patch('nova.objects.AllocationList._get_allocations_from_db',
                 return_value=[_ALLOCATION_DB])
-    def test_get_allocations(self, mock_get_allocations_from_db):
+    def test_get_allocations(self, mock_get_allocations_from_db,
+            mock_ensure_cache):
         rp = objects.ResourceProvider(id=_RESOURCE_PROVIDER_ID,
                                       uuid=uuids.resource_provider)
         allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
