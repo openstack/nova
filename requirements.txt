@@ -2,7 +2,7 @@
 # of appearance. Changing the order has an impact on the overall integration
 # process, which may cause wedges in the gate later.
 
-pbr>=1.6 # Apache-2.0
+pbr>=1.8 # Apache-2.0
 SQLAlchemy<1.1.0,>=1.0.10 # MIT
 decorator>=3.4.0 # BSD
 eventlet!=0.18.3,>=0.18.2 # MIT
@@ -41,7 +41,7 @@ oslo.log>=3.11.0 # Apache-2.0
 oslo.reports>=0.6.0 # Apache-2.0
 oslo.serialization>=1.10.0 # Apache-2.0
 oslo.utils>=3.18.0 # Apache-2.0
-oslo.db!=4.13.1,!=4.13.2,>=4.10.0 # Apache-2.0
+oslo.db!=4.13.1,!=4.13.2,>=4.11.0 # Apache-2.0
 oslo.rootwrap>=5.0.0 # Apache-2.0
 oslo.messaging>=5.2.0 # Apache-2.0
 oslo.policy>=1.15.0 # Apache-2.0
@@ -52,8 +52,8 @@ rfc3986>=0.2.2 # Apache-2.0
 oslo.middleware>=3.0.0 # Apache-2.0
 psutil<2.0.0,>=1.1.1 # BSD
 oslo.versionedobjects>=1.13.0 # Apache-2.0
-os-brick>=1.6.1 # Apache-2.0
+os-brick>=1.8.0 # Apache-2.0
 os-vif>=1.3.0 # Apache-2.0
-os-win>=0.2.3 # Apache-2.0
+os-win>=1.1.0 # Apache-2.0
 castellan>=0.4.0 # Apache-2.0
 microversion-parse>=0.1.2 # Apache-2.0
