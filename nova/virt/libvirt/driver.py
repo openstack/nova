@@ -169,6 +169,17 @@ libvirt_volume_drivers = [
 ]
 
 
+def driver_dict_from_config(named_driver_config, *args, **kwargs):
+    driver_registry = dict()
+
+    for driver_str in named_driver_config:
+        driver_type, _sep, driver = driver_str.partition('=')
+        driver_class = importutils.import_class(driver)
+        driver_registry[driver_type] = driver_class(*args, **kwargs)
+
+    return driver_registry
+
+
 def patch_tpool_proxy():
     """eventlet.tpool.Proxy doesn't work with old-style class in __str__()
     or __repr__() calls. See bug #962840 for details.
@@ -352,7 +363,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self.vif_driver = libvirt_vif.LibvirtGenericVIFDriver()
 
-        self.volume_drivers = driver.driver_dict_from_config(
+        self.volume_drivers = driver_dict_from_config(
             self._get_volume_drivers(), self._host)
 
         self._disk_cachemode = None
