@@ -2705,7 +2705,7 @@ class ServersControllerCreateTest(test.TestCase):
                   'security_groups': [{'name': '  sg  '}]}
 
         def fake_create(*args, **kwargs):
-            self.assertEqual(['  sg  '], kwargs['security_group'])
+            self.assertEqual(['  sg  '], kwargs['security_groups'])
             return (objects.InstanceList(objects=[fakes.stub_instance_obj(
                 self.req.environ['nova.context'])]), None)
 

@@ -103,7 +103,7 @@ class CloudPipe(object):
                                        display_name=instance_name,
                                        user_data=user_data,
                                        key_name=key_name,
-                                       security_group=[group_name])
+                                       security_groups=[group_name])
 
     def setup_security_group(self, context):
         group_name = '%s%s' % (context.project_id,

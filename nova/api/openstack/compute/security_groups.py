@@ -527,10 +527,10 @@ class SecurityGroups(extensions.V21APIExtensionBase):
     def server_create(self, server_dict, create_kwargs, body_deprecated_param):
         security_groups = server_dict.get(ATTRIBUTE_NAME)
         if security_groups is not None:
-            create_kwargs['security_group'] = [
+            create_kwargs['security_groups'] = [
                 sg['name'] for sg in security_groups if sg.get('name')]
-            create_kwargs['security_group'] = list(
-                set(create_kwargs['security_group']))
+            create_kwargs['security_groups'] = list(
+                set(create_kwargs['security_groups']))
 
     def get_server_create_schema(self, version):
         if version == '2.0':

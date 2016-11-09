@@ -7743,7 +7743,7 @@ class ComputeAPITestCase(BaseTestCase):
                 self.context,
                 instance_type=flavors.get_default_flavor(),
                 image_href=uuids.image_href_id,
-                security_group=['testgroup'])
+                security_groups=['testgroup'])
 
         groups_for_instance = db.security_group_get_by_instance(
                          self.context, ref[0]['uuid'])
@@ -7763,7 +7763,7 @@ class ComputeAPITestCase(BaseTestCase):
                           self.context,
                           instance_type=instance_type,
                           image_href=None,
-                          security_group=['this_is_a_fake_sec_group'])
+                          security_groups=['this_is_a_fake_sec_group'])
         self.assertEqual(pre_build_len,
                          len(db.instance_get_all(self.context)))
 
@@ -7902,7 +7902,7 @@ class ComputeAPITestCase(BaseTestCase):
                 self.context,
                 instance_type=flavors.get_default_flavor(),
                 image_href=uuids.image_href_id,
-                security_group=['testgroup'])
+                security_groups=['testgroup'])
 
         db.instance_destroy(self.context, ref[0]['uuid'])
         group = db.security_group_get(self.context, group['id'],
@@ -7917,7 +7917,7 @@ class ComputeAPITestCase(BaseTestCase):
                 self.context,
                 instance_type=flavors.get_default_flavor(),
                 image_href=uuids.image_href_id,
-                security_group=['testgroup'])
+                security_groups=['testgroup'])
 
         db.security_group_destroy(self.context, group['id'])
         admin_deleted_context = context.get_admin_context(
