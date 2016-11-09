@@ -241,7 +241,8 @@ class _ComputeAPIUnitTestMixIn(object):
             mock.patch.object(self.compute_api, '_check_auto_disk_config'),
             mock.patch.object(self.compute_api,
                               '_validate_and_build_base_options',
-                              return_value=({}, max_net_count, None))
+                              return_value=({}, max_net_count, None,
+                                            ['default']))
         ) as (
             get_image,
             check_auto_disk_config,
@@ -4727,6 +4728,43 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
     def test_resize_same_flavor_fails(self):
         self.assertRaises(exception.CannotResizeToSameFlavor,
                           self._test_resize, same_flavor=True)
+
+    def test_validate_and_build_base_options_translate_neutron_secgroup(self):
+        """Tests that _check_requested_secgroups will return a uuid for a
+        requested Neutron security group and that will be returned from
+        _validate_and_build_base_options
+        """
+        instance_type = objects.Flavor(**test_flavor.fake_api_flavor)
+        boot_meta = metadata = {}
+        kernel_id = ramdisk_id = key_name = key_data = user_data = \
+            access_ip_v4 = access_ip_v6 = config_drive = \
+                auto_disk_config = reservation_id = None
+        # This tests that 'default' is unchanged, but 'fake-security-group'
+        # will be translated to a uuid for Neutron.
+        requested_secgroups = ['default', 'fake-security-group']
+        # This will short-circuit _check_requested_networks
+        requested_networks = objects.NetworkRequestList(objects=[
+            objects.NetworkRequest(network_id='none')])
+        max_count = 1
+        with mock.patch.object(
+                self.compute_api.security_group_api, 'get',
+                return_value={'id': uuids.secgroup_uuid}) as scget:
+            base_options, max_network_count, key_pair, security_groups = (
+                self.compute_api._validate_and_build_base_options(
+                    self.context, instance_type, boot_meta, uuids.image_href,
+                    mock.sentinel.image_id, kernel_id, ramdisk_id,
+                    'fake-display-name', 'fake-description', key_name,
+                    key_data, requested_secgroups, 'fake-az', user_data,
+                    metadata, access_ip_v4, access_ip_v6, requested_networks,
+                    config_drive, auto_disk_config, reservation_id, max_count
+                )
+            )
+        # Assert the neutron security group API get method was called once
+        # and only for the non-default security group name.
+        scget.assert_called_once_with(self.context, 'fake-security-group')
+        # Assert we translated the non-default secgroup name to uuid.
+        self.assertItemsEqual(['default', uuids.secgroup_uuid],
+                              security_groups)
 
 
 class ComputeAPIAPICellUnitTestCase(_ComputeAPIUnitTestMixIn,

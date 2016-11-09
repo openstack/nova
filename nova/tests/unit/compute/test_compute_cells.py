@@ -490,7 +490,7 @@ class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
                              _validate, _get_image, _check_bdm,
                              _provision, _record_action_start):
         _get_image.return_value = (None, 'fake-image')
-        _validate.return_value = ({}, 1, None)
+        _validate.return_value = ({}, 1, None, ['default'])
         _check_bdm.return_value = objects.BlockDeviceMappingList()
         _provision.return_value = 'instances'
 
