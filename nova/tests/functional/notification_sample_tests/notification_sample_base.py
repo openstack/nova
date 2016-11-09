@@ -152,9 +152,8 @@ class NotificationSampleTestBase(test.TestCase,
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             flavor_id=flavor_id)
 
-        extra_params['return_reservation_id'] = True
-
         if extra_params:
+            extra_params['return_reservation_id'] = True
             server.update(extra_params)
 
         post = {'server': server}
