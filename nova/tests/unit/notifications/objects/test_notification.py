@@ -261,7 +261,7 @@ notification_object_data = {
     'AggregatePayload': '1.0-2550af604410af7b4ad5d46fb29ba45b',
     'AuditPeriodPayload': '1.0-2b429dd307b8374636703b843fa3f9cb',
     'BandwidthPayload': '1.0-ee2616a7690ab78406842a2b68e34130',
-    'EventType': '1.4-da0f0fbcda143ca96c2ac1b93937c22c',
+    'EventType': '1.5-ffa6d332f4462c45a2a363356a14165f',
     'ExceptionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'ExceptionPayload': '1.0-27db46ee34cd97e39f2643ed92ad0cc5',
     'FlavorPayload': '1.0-89b17e778291bba22025b5956e072b66',
