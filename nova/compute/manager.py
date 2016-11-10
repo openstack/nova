@@ -6782,7 +6782,7 @@ class ComputeManager(manager.Manager):
                    'soft_deleted': False,
                    'host': CONF.host,
                    'cleaned': False}
-        attrs = ['info_cache', 'security_groups', 'system_metadata']
+        attrs = ['system_metadata']
         with utils.temporary_mutation(context, read_deleted='yes'):
             instances = objects.InstanceList.get_by_filters(
                 context, filters, expected_attrs=attrs, use_slave=True)
