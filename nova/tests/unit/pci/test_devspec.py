@@ -403,6 +403,13 @@ class PciDevSpecTestCase(test.NoDBTestCase):
         self.assertRaises(exception.PciDeviceInvalidDeviceName,
                           devspec.PciDeviceSpec, pci_info)
 
+    def test_blank_devname(self):
+        pci_info = {"devname": "", "physical_network": "hr_net"}
+        pci = devspec.PciDeviceSpec(pci_info)
+        for field in ['domain', 'bus', 'slot', 'func']:
+            self.assertEqual('*', getattr(
+                pci.address.pci_address_spec, field))
+
     @mock.patch('nova.pci.utils.get_function_by_ifname',
         return_value = ("0000:0a:00.0", True))
     def test_by_name(self, mock_get_function_by_ifname):
