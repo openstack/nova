@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_utils import uuidutils
 from oslo_utils import versionutils
 
 from nova import db
@@ -123,7 +124,7 @@ class SecurityGroupList(base.ObjectListBase, base.NovaObject):
 
 
 def make_secgroup_list(security_groups):
-    """A helper to make security group objects from a list of names.
+    """A helper to make security group objects from a list of names or uuids.
 
     Note that this does not make them save-able or have the rest of the
     attributes they would normally have, but provides a quick way to fill,
@@ -131,8 +132,14 @@ def make_secgroup_list(security_groups):
     """
     secgroups = objects.SecurityGroupList()
     secgroups.objects = []
-    for name in security_groups:
+    for sg in security_groups:
         secgroup = objects.SecurityGroup()
-        secgroup.name = name
+        if uuidutils.is_uuid_like(sg):
+            # This is a neutron security group uuid so store in the uuid field.
+            secgroup.uuid = sg
+        else:
+            # This is either a nova-network security group name, or it's the
+            # special 'default' security group in the case of neutron.
+            secgroup.name = sg
         secgroups.objects.append(secgroup)
     return secgroups

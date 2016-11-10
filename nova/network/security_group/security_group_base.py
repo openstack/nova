@@ -21,6 +21,7 @@ from six.moves import urllib
 
 from nova import exception
 from nova.i18n import _
+from nova.objects import security_group as security_group_obj
 from nova import utils
 
 
@@ -167,10 +168,16 @@ class SecurityGroupBase(object):
         pass
 
     def populate_security_groups(self, security_groups):
-        """Called when populating the database for an instances
-        security groups.
+        """Build and return a SecurityGroupList.
+
+        :param security_groups: list of requested security group names or uuids
+        :type security_groups: list
+        :returns: nova.objects.security_group.SecurityGroupList
         """
-        raise NotImplementedError()
+        if not security_groups:
+            # Make sure it's an empty SecurityGroupList and not None
+            return security_group_obj.SecurityGroupList()
+        return security_group_obj.make_secgroup_list(security_groups)
 
     def create_security_group(self, context, name, description):
         raise NotImplementedError()

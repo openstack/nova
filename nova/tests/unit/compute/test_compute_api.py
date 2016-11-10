@@ -43,6 +43,7 @@ from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import fields as fields_obj
 from nova.objects import quotas as quotas_obj
+from nova.objects import security_group as secgroup_obj
 from nova import quota
 from nova import test
 from nova.tests import fixtures
@@ -4717,6 +4718,23 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertRaises(exception.InstanceNotFound,
                           self.compute_api.update_instance,
                           self.context, instance, updates)
+
+    def test_populate_instance_for_create_neutron_secgroups(self):
+        """Tests that a list of security groups passed in do not actually get
+        stored on with the instance when using neutron.
+        """
+        self.flags(use_neutron=True)
+        flavor = self._create_flavor()
+        params = {'display_name': 'fake-instance'}
+        instance = self._create_instance_obj(params, flavor)
+        security_groups = objects.SecurityGroupList()
+        security_groups.objects = [
+            secgroup_obj.SecurityGroup(uuid=uuids.secgroup_id)
+        ]
+        instance = self.compute_api._populate_instance_for_create(
+            self.context, instance, {}, 0, security_groups, flavor, 1,
+            False)
+        self.assertEqual(0, len(instance.security_groups))
 
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):

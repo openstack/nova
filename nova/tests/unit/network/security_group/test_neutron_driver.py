@@ -410,6 +410,8 @@ class TestNeutronDriverWithoutMock(test.NoDBTestCase):
 
     def test_populate_security_groups(self):
         sg_api = neutron_driver.SecurityGroupAPI()
-        r = sg_api.populate_security_groups('ignore')
+        r = sg_api.populate_security_groups(['default', uuids.secgroup_uuid])
         self.assertIsInstance(r, objects.SecurityGroupList)
-        self.assertEqual(0, len(r))
+        self.assertEqual(2, len(r))
+        self.assertEqual('default', r[0].name)
+        self.assertEqual(uuids.secgroup_uuid, r[1].uuid)

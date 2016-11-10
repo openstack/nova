@@ -73,7 +73,6 @@ from nova.objects import block_device as block_device_obj
 from nova.objects import fields as fields_obj
 from nova.objects import keypair as keypair_obj
 from nova.objects import quotas as quotas_obj
-from nova.objects import security_group as security_group_obj
 from nova.pci import request as pci_request
 import nova.policy
 from nova import rpc
@@ -1447,7 +1446,13 @@ class API(base.Base):
 
         instance.system_metadata.update(system_meta)
 
-        instance.security_groups = security_groups
+        if CONF.use_neutron:
+            # For Neutron we don't actually store anything in the database, we
+            # proxy the security groups on the instance from the ports
+            # attached to the instance.
+            instance.security_groups = objects.SecurityGroupList()
+        else:
+            instance.security_groups = security_groups
 
         self._populate_instance_names(instance, num_instances)
         instance.shutdown_terminate = shutdown_terminate
@@ -4800,9 +4805,3 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
             return self.db.security_group_get_by_instance(context,
                                                           instance.uuid)
         return [{'name': group.name} for group in instance.security_groups]
-
-    def populate_security_groups(self, security_groups):
-        if not security_groups:
-            # Make sure it's an empty SecurityGroupList and not None
-            return objects.SecurityGroupList()
-        return security_group_obj.make_secgroup_list(security_groups)
