@@ -130,7 +130,7 @@ Request
 
 
   - server_id: server_id
-  - id: console_id
+  - console_id: console_id
 
 Response
 --------
