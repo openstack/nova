@@ -443,6 +443,10 @@ class TestOpenStackClient(object):
     def delete_keypair(self, keypair_name):
         self.api_delete('/os-keypairs/%s' % keypair_name)
 
+    def post_aggregate_action(self, aggregate_id, body):
+        return self.api_post(
+            '/os-aggregates/%s/action' % aggregate_id, body).body['aggregate']
+
     def get_active_migrations(self, server_id):
         return self.api_get('/servers/%s/migrations' %
                             server_id).body['migrations']
