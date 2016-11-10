@@ -3583,13 +3583,16 @@ class ComputeManager(manager.Manager):
             instance.node = migration.source_node
             instance.save()
 
-            migration.dest_compute = migration.source_compute
-            with migration.obj_as_admin():
-                migration.save()
-
             self.network_api.setup_networks_on_host(context, instance,
                                                     migration.source_compute)
             migration_p = obj_base.obj_to_primitive(migration)
+            # NOTE(hanrong): we need to change migration_p['dest_compute'] to
+            # source host temporarily. "network_api.migrate_instance_finish"
+            # will setup the network for the instance on the destination host.
+            # For revert resize, the instance will back to the source host, the
+            # setup of the network for instance should be on the source host.
+            # So set the migration_p['dest_compute'] to source host at here.
+            migration_p['dest_compute'] = migration.source_compute
             self.network_api.migrate_instance_finish(context,
                                                      instance,
                                                      migration_p)
