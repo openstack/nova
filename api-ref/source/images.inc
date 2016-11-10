@@ -156,7 +156,7 @@ Response
 
 **Example Show Image Details: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/images/images-details-get-resp.json
+.. literalinclude:: ../../doc/api_samples/images/image-get-resp.json
    :language: javascript
 
 Delete Image
