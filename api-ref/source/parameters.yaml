@@ -1409,9 +1409,9 @@ data:
 delete_on_termination:
   description: |
     To delete the boot volume when the server is destroyed, specify ``true``.
-    Otherwise, specify ``false``.
+    Otherwise, specify ``false``. Default: ``false``
   in: body
-  required: true
+  required: false
   type: string
 deleted:
   description: |
