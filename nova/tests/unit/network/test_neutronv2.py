@@ -4507,6 +4507,20 @@ class TestNeutronv2WithMock(test.TestCase):
             uuids.port_id, {'port': {'device_id': '', 'device_owner': ''}})
         self.assertTrue(mock_log.called)
 
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_create_pci_requests_for_sriov_ports_no_allocate(self, getclient):
+        """Tests that create_pci_requests_for_sriov_ports is a noop if
+        networks are specifically requested to not be allocated.
+        """
+        requested_networks = objects.NetworkRequestList(objects=[
+            objects.NetworkRequest(network_id=net_req_obj.NETWORK_ID_NONE)
+        ])
+        pci_requests = objects.InstancePCIRequests()
+        api = neutronapi.API()
+        api.create_pci_requests_for_sriov_ports(
+            self.context, pci_requests, requested_networks)
+        self.assertFalse(getclient.called)
+
 
 class TestNeutronv2ModuleMethods(test.NoDBTestCase):
 

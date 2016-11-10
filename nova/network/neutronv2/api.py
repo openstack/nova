@@ -1423,7 +1423,7 @@ class API(base_api.NetworkAPI):
         Create a PCI request object for each SR-IOV port, and add it to the
         pci_requests object that contains a list of PCI request object.
         """
-        if not requested_networks:
+        if not requested_networks or requested_networks.no_allocate:
             return
 
         neutron = get_client(context, admin=True)
