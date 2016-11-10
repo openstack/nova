@@ -1188,7 +1188,7 @@ object_data = {
     'SchedulerLimits': '1.0-249c4bd8e62a9b327b7026b7f19cc641',
     'SchedulerRetries': '1.1-3c9c8b16143ebbb6ad7030e999d14cc0',
     'SCSIDeviceBus': '1.0-61c1e89a00901069ab1cf2991681533b',
-    'SecurityGroup': '1.1-0e1b9ba42fe85c13c1437f8b74bdb976',
+    'SecurityGroup': '1.2-86d67d8d3ab0c971e1dc86e02f9524a8',
     'SecurityGroupList': '1.0-dc8bbea01ba09a2edb6e5233eae85cbc',
     'SecurityGroupRule': '1.1-ae1da17b79970012e8536f88cb3c6b29',
     'SecurityGroupRuleList': '1.2-0005c47fcd0fb78dd6d7fd32a1409f5b',
