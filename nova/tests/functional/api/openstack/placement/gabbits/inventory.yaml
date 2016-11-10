@@ -39,6 +39,17 @@ tests:
   response_strings:
       - Unable to create inventory for resource provider
 
+- name: post an invalid inventory
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: DISK_GB
+      total: -1
+  status: 400
+  response_strings:
+      - Bad inventory DISK_GB for resource provider $ENVIRON['RP_UUID']
+
 - name: post an inventory
   POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
   request_headers:
