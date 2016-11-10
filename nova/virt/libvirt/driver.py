@@ -2667,21 +2667,10 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = guest.get_xml_desc()
         tree = etree.fromstring(xml)
 
-        console_types = {}
-
-        # NOTE(comstud): We want to try 'file' types first, then try 'pty'
-        # types.  We can't use Python 2.7 syntax of:
-        # tree.find("./devices/console[@type='file']/source")
-        # because we need to support 2.6.
-        console_nodes = tree.findall('./devices/console')
-        for console_node in console_nodes:
-            console_type = console_node.get('type')
-            console_types.setdefault(console_type, [])
-            console_types[console_type].append(console_node)
-
         # If the guest has a console logging to a file prefer to use that
-        if console_types.get('file'):
-            for file_console in console_types.get('file'):
+        file_consoles = tree.findall("./devices/console[@type='file']")
+        if file_consoles:
+            for file_console in file_consoles:
                 source_node = file_console.find('./source')
                 if source_node is None:
                     continue
@@ -2707,8 +2696,9 @@ class LibvirtDriver(driver.ComputeDriver):
                     return log_data
 
         # Try 'pty' types
-        if console_types.get('pty'):
-            for pty_console in console_types.get('pty'):
+        pty_consoles = tree.findall("./devices/console[@type='pty']")
+        if pty_consoles:
+            for pty_console in pty_consoles:
                 source_node = pty_console.find('./source')
                 if source_node is None:
                     continue
