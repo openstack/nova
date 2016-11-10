@@ -10820,7 +10820,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
             self.assertEqual('', output)
 
-    def test_get_console_output_pty(self):
+    @mock.patch('os.path.exists', return_value=True)
+    def test_get_console_output_pty(self, mocked_path_exists):
         fake_libvirt_utils.files['pty'] = '01234567890'
 
         with utils.tempdir() as tmpdir:
@@ -10893,6 +10894,66 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(exception.ConsoleNotAvailable,
                           drvr.get_console_output, self.context, instance)
+
+    @mock.patch('nova.virt.libvirt.host.Host.get_domain')
+    @mock.patch.object(libvirt_guest.Guest, "get_xml_desc")
+    def test_get_console_output_logrotate(self, mock_get_xml, get_domain):
+        fake_libvirt_utils.files['console.log'] = 'uvwxyz'
+        fake_libvirt_utils.files['console.log.0'] = 'klmnopqrst'
+        fake_libvirt_utils.files['console.log.1'] = 'abcdefghij'
+
+        def mock_path_exists(path):
+            return os.path.basename(path) in fake_libvirt_utils.files
+
+        xml = """
+        <domain type='kvm'>
+            <devices>
+                <disk type='file'>
+                    <source file='filename'/>
+                </disk>
+                <console type='file'>
+                    <source path='console.log'/>
+                    <target port='0'/>
+                </console>
+            </devices>
+        </domain>
+        """
+        mock_get_xml.return_value = xml
+        get_domain.return_value = mock.MagicMock()
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance = objects.Instance(**self.test_instance)
+
+        def _get_logd_output(bytes_to_read):
+            with utils.tempdir() as tmp_dir:
+                self.flags(instances_path=tmp_dir)
+                log_data = ""
+                try:
+                    prev_max = libvirt_driver.MAX_CONSOLE_BYTES
+                    libvirt_driver.MAX_CONSOLE_BYTES = bytes_to_read
+                    with mock.patch('os.path.exists',
+                                    side_effect=mock_path_exists):
+                        log_data = drvr.get_console_output(self.context,
+                                                           instance)
+                finally:
+                    libvirt_driver.MAX_CONSOLE_BYTES = prev_max
+                return log_data
+
+        # span across only 1 file (with remaining bytes)
+        self.assertEqual('wxyz', _get_logd_output(4))
+        # span across only 1 file (exact bytes)
+        self.assertEqual('uvwxyz', _get_logd_output(6))
+        # span across 2 files (with remaining bytes)
+        self.assertEqual('opqrstuvwxyz', _get_logd_output(12))
+        # span across all files (exact bytes)
+        self.assertEqual('abcdefghijklmnopqrstuvwxyz', _get_logd_output(26))
+        # span across all files with more bytes than available
+        self.assertEqual('abcdefghijklmnopqrstuvwxyz', _get_logd_output(30))
+        # files are not available
+        fake_libvirt_utils.files = {}
+        self.assertEqual('', _get_logd_output(30))
+        # reset the file for other tests
+        fake_libvirt_utils.files['console.log'] = '01234567890'
 
     def test_get_host_ip_addr(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)

@@ -2661,17 +2661,26 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return fpath
 
-    def _get_console_output_file(self, instance, path):
-        libvirt_utils.chown(path, os.getuid())
-
-        with libvirt_utils.file_open(path, 'rb') as fp:
-            log_data, remaining = utils.last_bytes(fp,
-                                                   MAX_CONSOLE_BYTES)
+    def _get_console_output_file(self, instance, console_log):
+        bytes_to_read = MAX_CONSOLE_BYTES
+        log_data = ""  # The last N read bytes
+        i = 0  # in case there is a log rotation (like "virtlogd")
+        path = console_log
+        while bytes_to_read > 0 and os.path.exists(path):
+            libvirt_utils.chown(path, os.getuid())
+            with libvirt_utils.file_open(path, 'rb') as fp:
+                read_log_data, remaining = utils.last_bytes(fp, bytes_to_read)
+                # We need the log file content in chronological order,
+                # that's why we *prepend* the log data.
+                log_data = read_log_data + log_data
+                bytes_to_read -= len(read_log_data)
+                path = console_log + "." + str(i)
+                i += 1
             if remaining > 0:
                 LOG.info(_LI('Truncated console log returned, '
                              '%d bytes ignored'), remaining,
                          instance=instance)
-            return log_data
+        return log_data
 
     def get_console_output(self, context, instance):
         guest = self._host.get_guest(instance)
