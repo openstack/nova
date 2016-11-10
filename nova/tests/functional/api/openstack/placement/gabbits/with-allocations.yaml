@@ -23,3 +23,9 @@ tests:
   response_json_paths:
       $.resource_provider_generation: 1
       $.usages.DISK_GB: 1024
+
+- name: fail to delete resource provider
+  DELETE: /resource_providers/$ENVIRON['RP_UUID']
+  status: 409
+  response_strings:
+      - "Unable to delete resource provider $ENVIRON['RP_UUID']: Resource provider has allocations."
