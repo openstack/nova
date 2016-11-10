@@ -2661,6 +2661,18 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return fpath
 
+    def _get_console_output_file(self, instance, path):
+        libvirt_utils.chown(path, os.getuid())
+
+        with libvirt_utils.file_open(path, 'rb') as fp:
+            log_data, remaining = utils.last_bytes(fp,
+                                                   MAX_CONSOLE_BYTES)
+            if remaining > 0:
+                LOG.info(_LI('Truncated console log returned, '
+                             '%d bytes ignored'), remaining,
+                         instance=instance)
+            return log_data
+
     def get_console_output(self, context, instance):
         guest = self._host.get_guest(instance)
 
@@ -2684,16 +2696,7 @@ class LibvirtDriver(driver.ComputeDriver):
                              instance=instance)
                     return ""
 
-                libvirt_utils.chown(path, os.getuid())
-
-                with libvirt_utils.file_open(path, 'rb') as fp:
-                    log_data, remaining = utils.last_bytes(fp,
-                                                           MAX_CONSOLE_BYTES)
-                    if remaining > 0:
-                        LOG.info(_LI('Truncated console log returned, '
-                                     '%d bytes ignored'), remaining,
-                                 instance=instance)
-                    return log_data
+                return self._get_console_output_file(instance, path)
 
         # Try 'pty' types
         pty_consoles = tree.findall("./devices/console[@type='pty']")
@@ -2717,15 +2720,15 @@ class LibvirtDriver(driver.ComputeDriver):
             libvirt_utils.chown(console_log, os.getuid())
 
         data = self._flush_libvirt_console(pty)
+        # NOTE(markus_z): The virt_types kvm and qemu are the only ones
+        # which create a dedicated file device for the console logging.
+        # Other virt_types like xen, lxc, uml, parallels depend on the
+        # flush of that pty device into the "console.log" file to ensure
+        # that a series of "get_console_output" calls return the complete
+        # content even after rebooting a guest.
         fpath = self._append_to_file(data, console_log)
 
-        with libvirt_utils.file_open(fpath, 'rb') as fp:
-            log_data, remaining = utils.last_bytes(fp, MAX_CONSOLE_BYTES)
-            if remaining > 0:
-                LOG.info(_LI('Truncated console log returned, '
-                             '%d bytes ignored'),
-                         remaining, instance=instance)
-            return log_data
+        return self._get_console_output_file(instance, fpath)
 
     def get_host_ip_addr(self):
         ips = compute_utils.get_machine_ips()
