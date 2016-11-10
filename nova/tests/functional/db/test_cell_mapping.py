@@ -81,6 +81,8 @@ class CellMappingTestCase(test.NoDBTestCase):
 
 
 class CellMappingListTestCase(test.NoDBTestCase):
+    USES_DB_SELF = True
+
     def setUp(self):
         super(CellMappingListTestCase, self).setUp()
         self.useFixture(fixtures.Database(database='api'))
