@@ -48,6 +48,8 @@ class AggregatePayload(base.NotificationPayloadBase):
 @base.notification_sample('aggregate-delete-end.json')
 @base.notification_sample('aggregate-add_host-start.json')
 @base.notification_sample('aggregate-add_host-end.json')
+@base.notification_sample('aggregate-remove_host-start.json')
+@base.notification_sample('aggregate-remove_host-end.json')
 @nova_base.NovaObjectRegistry.register_notification
 class AggregateNotification(base.NotificationBase):
     # Version 1.0: Initial version

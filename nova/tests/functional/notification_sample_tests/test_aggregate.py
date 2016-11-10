@@ -53,7 +53,7 @@ class TestAggregateNotificationSample(
                 'id': aggregate['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
 
-    def test_aggregate_add_host(self):
+    def test_aggregate_add_remove_host(self):
         aggregate_req = {
             "aggregate": {
                 "name": "my-aggregate",
@@ -82,3 +82,26 @@ class TestAggregateNotificationSample(
                 'uuid': aggregate['uuid'],
                 'id': aggregate['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
+        remove_host_req = {
+            "remove_host": {
+                "host": "compute"
+            }
+        }
+        self.admin_api.post_aggregate_action(aggregate['id'], remove_host_req)
+
+        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'aggregate-remove_host-start',
+            replacements={
+                'uuid': aggregate['uuid'],
+                'id': aggregate['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+        self._verify_notification(
+            'aggregate-remove_host-end',
+            replacements={
+                'uuid': aggregate['uuid'],
+                'id': aggregate['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
+
+        self.admin_api.delete_aggregate(aggregate['id'])

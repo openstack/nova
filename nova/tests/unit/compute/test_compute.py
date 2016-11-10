@@ -11407,9 +11407,10 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                           self.api.add_host_to_aggregate,
                           self.context, aggr.id, 'invalid_host')
 
+    @mock.patch('nova.compute.utils.notify_about_aggregate_action')
     @mock.patch.object(availability_zones,
                        'update_host_availability_zone_cache')
-    def test_remove_host_from_aggregate_active(self, mock_az):
+    def test_remove_host_from_aggregate_active(self, mock_az, mock_notify):
         # Ensure we can remove a host from an aggregate.
         values = _create_service_entries(self.context)
         fake_zone = values[0][0]
@@ -11428,6 +11429,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                        fake_remove_aggregate_host)
 
         fake_notifier.NOTIFICATIONS = []
+        mock_notify.reset_mock()
         expected = self.api.remove_host_from_aggregate(self.context,
                                                        aggr.id,
                                                        host_to_remove)
@@ -11440,6 +11442,12 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                          'aggregate.removehost.end')
         self.assertEqual(len(aggr.hosts) - 1, len(expected.hosts))
         mock_az.assert_called_with(self.context, host_to_remove)
+
+        mock_notify.assert_has_calls([
+            mock.call(context=self.context, aggregate=expected,
+                      action='remove_host', phase='start'),
+            mock.call(context=self.context, aggregate=expected,
+                      action='remove_host', phase='end')])
 
     def test_remove_host_from_aggregate_raise_not_found(self):
         # Ensure HostMappingNotFound is raised when removing invalid host.
@@ -11573,10 +11581,11 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
                                              host_param='fakehost',
                                              host='fakehost')
 
+    @mock.patch('nova.compute.utils.notify_about_aggregate_action')
     @mock.patch('nova.compute.rpcapi.ComputeAPI.remove_aggregate_host')
     @mock.patch.object(scheduler_client.SchedulerClient, 'update_aggregates')
     def test_remove_host_from_aggregate(self, update_aggregates,
-                                        mock_remove_agg):
+                                        mock_remove_agg, mock_notify):
         self.api._update_az_cache_for_host = mock.Mock()
         agg = objects.Aggregate(name='fake', metadata={})
         agg.delete_host = mock.Mock()
@@ -11589,6 +11598,11 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
         mock_remove_agg.assert_called_once_with(self.context, aggregate=agg,
                                                 host_param='fakehost',
                                                 host='fakehost')
+        mock_notify.assert_has_calls([
+            mock.call(context=self.context, aggregate=agg,
+                      action='remove_host', phase='start'),
+            mock.call(context=self.context, aggregate=agg,
+                      action='remove_host', phase='end')])
 
 
 class ComputeAggrTestCase(BaseTestCase):

@@ -4813,6 +4813,13 @@ class AggregateAPI(base.Base):
         nova_context.set_target_cell(context, mapping.cell_mapping)
         objects.Service.get_by_compute_host(context, host_name)
         aggregate = objects.Aggregate.get_by_id(context, aggregate_id)
+
+        compute_utils.notify_about_aggregate_action(
+            context=context,
+            aggregate=aggregate,
+            action=fields_obj.NotificationAction.REMOVE_HOST,
+            phase=fields_obj.NotificationPhase.START)
+
         aggregate.delete_host(host_name)
         self.scheduler_client.update_aggregates(context, [aggregate])
         self._update_az_cache_for_host(context, host_name, aggregate.metadata)
@@ -4821,6 +4828,11 @@ class AggregateAPI(base.Base):
         compute_utils.notify_about_aggregate_update(context,
                                                     "removehost.end",
                                                     aggregate_payload)
+        compute_utils.notify_about_aggregate_action(
+            context=context,
+            aggregate=aggregate,
+            action=fields_obj.NotificationAction.REMOVE_HOST,
+            phase=fields_obj.NotificationPhase.END)
         return aggregate
 
 
