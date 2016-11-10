@@ -36,7 +36,6 @@ Response
   - public_key: keypair_public_key
   - fingerprint: keypair_fingerprint
   - type: keypair_type
-  - user_id: keypair_userid
   - keypairs_links: keypair_links
 
 **Example List Keypairs: JSON response**
