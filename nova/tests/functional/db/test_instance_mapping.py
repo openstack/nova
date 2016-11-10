@@ -125,6 +125,8 @@ class InstanceMappingTestCase(test.NoDBTestCase):
 
 
 class InstanceMappingListTestCase(test.NoDBTestCase):
+    USES_DB_SELF = True
+
     def setUp(self):
         super(InstanceMappingListTestCase, self).setUp()
         self.useFixture(fixtures.Database(database='api'))
