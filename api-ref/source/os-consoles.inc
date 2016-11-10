@@ -102,7 +102,7 @@ Response
   - id: console_id_in_body
   - instance_name: instance_name
   - password: console_password
-  - port: port
+  - port: port_number
 
 |
 
