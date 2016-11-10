@@ -29,9 +29,6 @@ from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
 
 
-host.libvirt = fakelibvirt
-libvirt_guest.libvirt = fakelibvirt
-
 if sys.version_info > (3,):
     long = int
 

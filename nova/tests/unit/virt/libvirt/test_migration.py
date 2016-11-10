@@ -29,10 +29,6 @@ from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
 from nova.virt.libvirt import migration
 
-libvirt_guest.libvirt = fakelibvirt
-host.libvirt = fakelibvirt
-migration.libvirt = fakelibvirt
-
 
 class UtilityMigrationTestCase(test.NoDBTestCase):
 
@@ -260,6 +256,8 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
 class MigrationMonitorTestCase(test.NoDBTestCase):
     def setUp(self):
         super(MigrationMonitorTestCase, self).setUp()
+
+        self.useFixture(fakelibvirt.FakeLibvirtFixture())
 
         flavor = objects.Flavor(memory_mb=2048,
                                 swap=0,

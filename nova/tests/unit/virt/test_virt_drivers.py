@@ -91,33 +91,18 @@ class _FakeDriverBackendTestCase(object):
         import nova.tests.unit.virt.libvirt.fake_os_brick_connector as \
             fake_os_brick_connector
 
-        sys.modules['libvirt'] = fakelibvirt
-        import nova.virt.libvirt.driver
-        import nova.virt.libvirt.firewall
-        import nova.virt.libvirt.host
-
         self.useFixture(fake_imagebackend.ImageBackendFixture())
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.driver.libvirt',
-            fakelibvirt))
+        self.useFixture(fakelibvirt.FakeLibvirtFixture())
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.driver.libvirt_utils',
             fake_libvirt_utils))
         self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.host.libvirt',
-            fakelibvirt))
-        self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.imagebackend.libvirt_utils',
             fake_libvirt_utils))
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.firewall.libvirt',
-            fakelibvirt))
 
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.driver.connector',
             fake_os_brick_connector))
-
-        fakelibvirt.disable_event_thread(self)
 
         self.flags(rescue_image_id="2",
                    rescue_kernel_id="3",
@@ -158,6 +143,8 @@ class _FakeDriverBackendTestCase(object):
                                 persistent=persistent,
                                 live=live)
             return fake_wait
+
+        import nova.virt.libvirt.driver
 
         self.stubs.Set(nova.virt.libvirt.driver.LibvirtDriver,
                        '_get_instance_disk_info',

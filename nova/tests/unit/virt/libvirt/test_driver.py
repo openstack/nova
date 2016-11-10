@@ -110,11 +110,6 @@ from nova.virt.libvirt.storage import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt.volume import volume as volume_drivers
 
-libvirt_driver.libvirt = fakelibvirt
-host.libvirt = fakelibvirt
-libvirt_guest.libvirt = fakelibvirt
-libvirt_migrate.libvirt = fakelibvirt
-
 
 CONF = nova.conf.CONF
 
@@ -15002,6 +14997,10 @@ class HostStateTestCase(test.NoDBTestCase):
         def _get_host_numa_topology(self):
             return HostStateTestCase.numa_topology
 
+    def setUp(self):
+        super(HostStateTestCase, self).setUp()
+        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+
     @mock.patch.object(fakelibvirt, "openAuth")
     def test_update_status(self, mock_open):
         mock_open.return_value = fakelibvirt.Connection("qemu:///system")
@@ -15041,6 +15040,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     """Test for nova.virt.libvirt.libvirt_driver.LibvirtDriver."""
     def setUp(self):
         super(LibvirtDriverTestCase, self).setUp()
+        self.useFixture(fakelibvirt.FakeLibvirtFixture())
         os_vif.initialize()
 
         self.drvr = libvirt_driver.LibvirtDriver(
@@ -17009,6 +17009,7 @@ class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(LibvirtVolumeUsageTestCase, self).setUp()
+        self.useFixture(fakelibvirt.FakeLibvirtFixture())
         self.drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.c = context.get_admin_context()
 
@@ -17056,6 +17057,7 @@ class LibvirtNonblockingTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(LibvirtNonblockingTestCase, self).setUp()
+        self.useFixture(fakelibvirt.FakeLibvirtFixture())
         self.flags(connection_uri="test:///default",
                    group='libvirt')
 
@@ -17101,6 +17103,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
     def setUp(self):
         super(LibvirtVolumeSnapshotTestCase, self).setUp()
 
+        self.useFixture(fakelibvirt.FakeLibvirtFixture())
         self.drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.c = context.get_admin_context()
 
@@ -18091,6 +18094,7 @@ class _BaseSnapshotTests(test.NoDBTestCase):
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.imagebackend.libvirt_utils',
             fake_libvirt_utils))
+        self.useFixture(fakelibvirt.FakeLibvirtFixture())
 
         self.image_service = nova.tests.unit.image.fake.stub_out_image_service(
                 self)
