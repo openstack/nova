@@ -25,6 +25,11 @@ from docutils import nodes
 
 from nova.notifications.objects import base as notification
 from nova.objects import base
+# Make sure that all the notification classes are defined so the
+# registration mechanism can pick them up later.
+from nova.notifications.objects import exception
+from nova.notifications.objects import instance
+from nova.notifications.objects import service
 
 
 class VersionedNotificationDirective(Directive):
