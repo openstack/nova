@@ -27,6 +27,7 @@ import mock
 from oslo_concurrency import lockutils
 from oslo_config import cfg
 from oslo_db.sqlalchemy import enginefacade
+import oslo_messaging as messaging
 from oslo_messaging import conffixture as messaging_conffixture
 import six
 
@@ -495,6 +496,27 @@ class RPCFixture(fixtures.Fixture):
         super(RPCFixture, self).__init__()
         self.exmods = []
         self.exmods.extend(exmods)
+        self._buses = {}
+
+    def _fake_create_transport(self, url):
+        # FIXME(danms): Right now, collapse all connections
+        # to a single bus. This is how our tests expect things
+        # to work. When the tests are fixed, this fixture can
+        # support simulating multiple independent buses, and this
+        # hack should be removed.
+        url = None
+
+        # NOTE(danms): This will be called with a non-None url by
+        # cells-aware code that is requesting to contact something on
+        # one of the many transports we're multplexing here.
+        if url not in self._buses:
+            exmods = rpc.get_allowed_exmods()
+            self._buses[url] = messaging.get_transport(
+                CONF,
+                url=url,
+                allowed_remote_exmods=exmods,
+                aliases=rpc.TRANSPORT_ALIASES)
+        return self._buses[url]
 
     def setUp(self):
         super(RPCFixture, self).setUp()
@@ -504,7 +526,15 @@ class RPCFixture(fixtures.Fixture):
         self.messaging_conf = messaging_conffixture.ConfFixture(CONF)
         self.messaging_conf.transport_driver = 'fake'
         self.useFixture(self.messaging_conf)
-        rpc.init(CONF)
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.rpc.create_transport', self._fake_create_transport))
+        # NOTE(danms): Execute the init with get_transport_url() as None,
+        # instead of the parsed TransportURL(None) so that we can cache
+        # it as it will be called later if the default is requested by
+        # one of our mq-switching methods.
+        with mock.patch('nova.rpc.get_transport_url') as mock_gtu:
+            mock_gtu.return_value = None
+            rpc.init(CONF)
 
 
 class WarningsFixture(fixtures.Fixture):

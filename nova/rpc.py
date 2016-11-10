@@ -71,9 +71,7 @@ TRANSPORT_ALIASES = {
 def init(conf):
     global TRANSPORT, NOTIFICATION_TRANSPORT, LEGACY_NOTIFIER, NOTIFIER
     exmods = get_allowed_exmods()
-    TRANSPORT = messaging.get_transport(conf,
-                                        allowed_remote_exmods=exmods,
-                                        aliases=TRANSPORT_ALIASES)
+    TRANSPORT = create_transport(get_transport_url())
     NOTIFICATION_TRANSPORT = messaging.get_notification_transport(
         conf, allowed_remote_exmods=exmods, aliases=TRANSPORT_ALIASES)
     serializer = RequestContextSerializer(JsonPayloadSerializer())

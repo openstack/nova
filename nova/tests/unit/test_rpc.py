@@ -56,38 +56,35 @@ class TestRPC(testtools.TestCase):
 
     @mock.patch.object(rpc, 'get_allowed_exmods')
     @mock.patch.object(rpc, 'RequestContextSerializer')
-    @mock.patch.object(messaging, 'get_transport')
     @mock.patch.object(messaging, 'get_notification_transport')
     @mock.patch.object(messaging, 'Notifier')
-    def test_init_unversioned(self, mock_notif, mock_noti_trans, mock_trans,
+    def test_init_unversioned(self, mock_notif, mock_noti_trans,
                               mock_ser, mock_exmods):
         # The expected call to get the legacy notifier will require no new
         # kwargs, and we expect the new notifier will need the noop driver
         expected = [{}, {'driver': 'noop'}]
-        self._test_init(mock_notif, mock_noti_trans, mock_trans, mock_ser,
+        self._test_init(mock_notif, mock_noti_trans, mock_ser,
                         mock_exmods, 'unversioned', expected)
 
     @mock.patch.object(rpc, 'get_allowed_exmods')
     @mock.patch.object(rpc, 'RequestContextSerializer')
-    @mock.patch.object(messaging, 'get_transport')
     @mock.patch.object(messaging, 'get_notification_transport')
     @mock.patch.object(messaging, 'Notifier')
-    def test_init_both(self, mock_notif, mock_noti_trans, mock_trans,
+    def test_init_both(self, mock_notif, mock_noti_trans,
                        mock_ser, mock_exmods):
         expected = [{}, {'topics': ['versioned_notifications']}]
-        self._test_init(mock_notif, mock_noti_trans, mock_trans, mock_ser,
+        self._test_init(mock_notif, mock_noti_trans, mock_ser,
                         mock_exmods, 'both', expected)
 
     @mock.patch.object(rpc, 'get_allowed_exmods')
     @mock.patch.object(rpc, 'RequestContextSerializer')
-    @mock.patch.object(messaging, 'get_transport')
     @mock.patch.object(messaging, 'get_notification_transport')
     @mock.patch.object(messaging, 'Notifier')
-    def test_init_versioned(self, mock_notif, mock_noti_trans, mock_trans,
+    def test_init_versioned(self, mock_notif, mock_noti_trans,
                             mock_ser, mock_exmods):
         expected = [{'driver': 'noop'},
                     {'topics': ['versioned_notifications']}]
-        self._test_init(mock_notif, mock_noti_trans, mock_trans, mock_ser,
+        self._test_init(mock_notif, mock_noti_trans, mock_ser,
                         mock_exmods, 'versioned', expected)
 
     def test_cleanup_transport_null(self):
@@ -266,7 +263,7 @@ class TestRPC(testtools.TestCase):
                                                allowed_remote_exmods=exmods,
                                                aliases=rpc.TRANSPORT_ALIASES)
 
-    def _test_init(self, mock_notif, mock_noti_trans, mock_trans, mock_ser,
+    def _test_init(self, mock_notif, mock_noti_trans, mock_ser,
                    mock_exmods, notif_format, expected_driver_topic_kwargs):
         legacy_notifier = mock.Mock()
         notifier = mock.Mock()
@@ -275,19 +272,24 @@ class TestRPC(testtools.TestCase):
         serializer = mock.Mock()
         conf = mock.Mock()
 
+        conf.transport_url = None
         conf.notification_format = notif_format
         mock_exmods.return_value = ['foo']
-        mock_trans.return_value = transport
         mock_noti_trans.return_value = notif_transport
         mock_ser.return_value = serializer
         mock_notif.side_effect = [legacy_notifier, notifier]
 
-        rpc.init(conf)
+        @mock.patch.object(rpc, 'CONF', new=conf)
+        @mock.patch.object(rpc, 'create_transport')
+        @mock.patch.object(rpc, 'get_transport_url')
+        def _test(get_url, create_transport):
+            create_transport.return_value = transport
+            rpc.init(conf)
+            create_transport.assert_called_once_with(get_url.return_value)
 
-        mock_exmods.assert_called_once_with()
-        mock_trans.assert_called_once_with(conf,
-                                           allowed_remote_exmods=['foo'],
-                                           aliases=rpc.TRANSPORT_ALIASES)
+        _test()
+
+        self.assertTrue(mock_exmods.called)
         self.assertIsNotNone(rpc.TRANSPORT)
         self.assertIsNotNone(rpc.LEGACY_NOTIFIER)
         self.assertIsNotNone(rpc.NOTIFIER)
