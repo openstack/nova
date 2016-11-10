@@ -221,11 +221,10 @@ class DatabasePoisonFixture(fixtures.Fixture):
             self._poison_configure))
 
     def _poison_configure(self, *a, **k):
-        warnings.warn('This test uses methods that set internal oslo_db '
-                      'state, but it does not claim to use the database. '
-                      'This will conflict with the setup of tests that '
-                      'do use the database and cause failures later.')
-        return mock.MagicMock()
+        raise Exception('This test uses methods that set internal oslo_db '
+                        'state, but it does not claim to use the database. '
+                        'This will conflict with the setup of tests that '
+                        'do use the database and cause failures later.')
 
 
 class Database(fixtures.Fixture):
