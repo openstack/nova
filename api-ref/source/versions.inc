@@ -16,6 +16,12 @@ For more detail about Microversion, please reference:
 `Microversions
 <http://developer.openstack.org/api-guide/compute/microversions.html>`_
 
+.. note:: The maximum microversion supported by each release varies.
+  Please reference:
+  `API Microversion History
+  <http://docs.openstack.org/developer/nova/api_microversion_history.html>`__
+  for API microversion history details.
+
 The Version APIs work differently from other APIs as they *do not*
 require authentication.
 
