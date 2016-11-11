@@ -77,8 +77,7 @@ class LiveMigrationOps(object):
             with excutils.save_and_reraise_exception():
                 LOG.debug("Calling live migration recover_method "
                           "for instance: %s", instance_name)
-                recover_method(context, instance_ref, dest, block_migration,
-                               migrate_data)
+                recover_method(context, instance_ref, dest, migrate_data)
 
         LOG.debug("Calling live migration post_method for instance: %s",
                   instance_name)

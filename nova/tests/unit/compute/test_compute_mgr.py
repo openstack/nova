@@ -4978,7 +4978,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             mock_lmcf.return_value = False, False
             compute._rollback_live_migration(self.context,
                                              mock.MagicMock(),
-                                             'foo', False, {})
+                                             'foo', {})
             self.assertIsInstance(mock_lmcf.call_args_list[0][0][0],
                                   migrate_data_obj.LiveMigrateData)
 

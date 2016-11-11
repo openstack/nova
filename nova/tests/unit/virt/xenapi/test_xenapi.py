@@ -3649,8 +3649,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         self.stubs.Set(self.conn._vmops._session, "call_xenapi",
                        fake_call_xenapi)
 
-        def recover_method(context, instance, destination_hostname,
-                        block_migration):
+        def recover_method(context, instance, destination_hostname):
             recover_method.called = True
         migrate_data = objects.XenapiLiveMigrateData(
             destination_sr_ref="foo",
@@ -3718,8 +3717,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
 
         self._add_default_live_migrate_stubs(self.conn)
 
-        def recover_method(context, instance, destination_hostname,
-                           block_migration):
+        def recover_method(context, instance, destination_hostname):
             recover_method.called = True
         # pass block_migration = True and migrate data
         migrate_data = objects.XenapiLiveMigrateData(

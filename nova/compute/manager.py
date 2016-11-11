@@ -5300,7 +5300,7 @@ class ComputeManager(manager.Manager):
                               dest, instance=instance)
                 self._set_migration_status(migration, 'error')
                 self._rollback_live_migration(context, instance, dest,
-                                              block_migration, migrate_data)
+                                              migrate_data)
 
         self._set_migration_status(migration, 'running')
 
@@ -5634,7 +5634,7 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     @wrap_instance_fault
     def _rollback_live_migration(self, context, instance,
-                                 dest, block_migration, migrate_data=None,
+                                 dest, migrate_data=None,
                                  migration_status='error'):
         """Recovers Instance/volume state from migrating -> running.
 
@@ -5643,7 +5643,6 @@ class ComputeManager(manager.Manager):
         :param dest:
             This method is called from live migration src host.
             This param specifies destination host.
-        :param block_migration: if true, prepare for block migration
         :param migrate_data:
             if not none, contains implementation specific data.
         :param migration_status:

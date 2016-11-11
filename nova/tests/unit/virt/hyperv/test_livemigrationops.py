@@ -74,7 +74,6 @@ class LiveMigrationOpsTestCase(test_base.HyperVBaseTestCase):
                               migrate_data)
             mock_recover.assert_called_once_with(self.context, mock_instance,
                                                  fake_dest,
-                                                 mock.sentinel.block_migr,
                                                  migrate_data)
         else:
             self._livemigrops.live_migration(context=self.context,

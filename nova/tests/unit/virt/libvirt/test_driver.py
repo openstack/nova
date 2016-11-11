@@ -8496,11 +8496,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                              'Post method called when success not expected')
             if expected_mig_status:
                 fake_recover_method.assert_called_once_with(
-                    self.context, instance, dest, False, migrate_data,
+                    self.context, instance, dest, migrate_data,
                     migration_status=expected_mig_status)
             else:
                 fake_recover_method.assert_called_once_with(
-                    self.context, instance, dest, False, migrate_data)
+                    self.context, instance, dest, migrate_data)
         self.assertNotIn(instance.uuid, drvr.active_migrations)
 
     def test_live_migration_monitor_success(self):
