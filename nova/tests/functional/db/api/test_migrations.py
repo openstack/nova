@@ -571,6 +571,10 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         self.assertEqual('{"uuid": "foo", "name": "bar"}',
                          fake_build_req.instance)
 
+    def _check_029(self, engine, data):
+        for column in ['created_at', 'updated_at', 'id', 'uuid']:
+            self.assertColumnExists(engine, 'placement_aggregates', column)
+
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
                                       test_base.DbTestCase,
