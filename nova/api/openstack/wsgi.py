@@ -41,11 +41,6 @@ _SUPPORTED_CONTENT_TYPES = (
     'application/vnd.openstack.compute+json',
 )
 
-_MEDIA_TYPE_MAP = {
-    'application/vnd.openstack.compute+json': 'json',
-    'application/json': 'json',
-}
-
 # These are typically automatically created by routes as either defaults
 # collection or member methods.
 _ROUTES_METHODS = [
@@ -79,10 +74,6 @@ ENV_LEGACY_V2 = 'openstack.legacy_v2'
 
 def get_supported_content_types():
     return _SUPPORTED_CONTENT_TYPES
-
-
-def get_media_map():
-    return dict(_MEDIA_TYPE_MAP.items())
 
 
 # NOTE(rlrossit): This function allows a get on both a dict-like and an
