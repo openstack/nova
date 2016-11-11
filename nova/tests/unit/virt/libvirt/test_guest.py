@@ -142,7 +142,7 @@ class GuestTestCase(test.NoDBTestCase):
     @mock.patch('time.time', return_value=1234567890.125)
     def test_time_sync_no_errors(self, time_mock):
         self.domain.setTime.side_effect = fakelibvirt.libvirtError('error')
-        self.guest.resume()
+        self.guest.sync_guest_time()
         self.domain.setTime.assert_called_once_with(time={
                                                     'nseconds': 125000000,
                                                     'seconds': 1234567890})
