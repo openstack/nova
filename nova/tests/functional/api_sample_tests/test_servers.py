@@ -14,6 +14,7 @@
 #    under the License.
 
 import base64
+import time
 
 from nova.api.openstack import api_version_request as avr
 from nova.tests.functional.api_sample_tests import api_sample_base
@@ -280,6 +281,54 @@ class ServersActionsJsonTest(ServersSampleBase):
         self._test_server_action(uuid, 'createImage',
                                  'server-action-create-image',
                                  {'name': 'foo-image'})
+
+    def _wait_for_active_server(self, uuid):
+        """Wait 10 seconds for the server to be ACTIVE, else fail.
+
+        :param uuid: The server id.
+        :returns: The ACTIVE server.
+        """
+        server = self._do_get('servers/%s' % uuid,
+                              return_json_body=True)['server']
+        count = 0
+        while server['status'] != 'ACTIVE' and count < 10:
+            time.sleep(1)
+            server = self._do_get('servers/%s' % uuid,
+                                  return_json_body=True)['server']
+            count += 1
+        if server['status'] != 'ACTIVE':
+            self.fail('Timed out waiting for server %s to be ACTIVE.' % uuid)
+        return server
+
+    def test_server_add_floating_ip(self):
+        uuid = self._post_server()
+        # Get the server details so we can find a fixed IP to use in the
+        # addFloatingIp request.
+        server = self._wait_for_active_server(uuid)
+        addresses = server['addresses']
+        # Find a fixed IP.
+        fixed_address = None
+        for network, ips in addresses.items():
+            for ip in ips:
+                if ip['OS-EXT-IPS:type'] == 'fixed':
+                    fixed_address = ip['addr']
+                    break
+            if fixed_address:
+                break
+        if fixed_address is None:
+            self.fail('Failed to find a fixed IP for server %s in addresses: '
+                      '%s' % (uuid, addresses))
+        subs = {
+            "address": "10.10.10.10",
+            "fixed_address": fixed_address
+        }
+        # This is gross, but we need to stub out the associate_floating_ip
+        # call in the FloatingIPActionController since we don't have a real
+        # networking service backing this up, just the fake nova-network stubs.
+        self.stub_out('nova.network.api.API.associate_floating_ip',
+                      lambda *a, **k: None)
+        self._test_server_action(uuid, 'addFloatingIp',
+                                 'server-action-addfloatingip', subs)
 
 
 class ServersActionsJson219Test(ServersSampleBase):

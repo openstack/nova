@@ -479,9 +479,13 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         return self._get_response(url, 'OPTIONS', strip_version=strip_version,
                                   headers=headers)
 
-    def _do_get(self, url, strip_version=False, headers=None):
-        return self._get_response(url, 'GET', strip_version=strip_version,
-                                  headers=headers)
+    def _do_get(self, url, strip_version=False, headers=None,
+                return_json_body=False):
+        response = self._get_response(url, 'GET', strip_version=strip_version,
+                                      headers=headers)
+        if return_json_body and hasattr(response, 'content'):
+            return jsonutils.loads(response.content)
+        return response
 
     def _do_post(self, url, name, subs, method='POST', headers=None):
         self.subs = subs
