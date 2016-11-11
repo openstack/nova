@@ -13,6 +13,7 @@
 
 """Unit tests for compute API."""
 
+import contextlib
 import datetime
 
 import iso8601
@@ -4498,14 +4499,21 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch.object(objects.BuildRequestList, 'get_by_filters',
                        return_value=objects.BuildRequestList(objects=[]))
     @mock.patch.object(objects.CellMapping, 'get_by_uuid')
-    def test_get_all_includes_cell0(self, mock_cell_mapping_get,
+    @mock.patch.object(objects.CellMappingList, 'get_all')
+    def test_get_all_includes_cell0(self, mock_cm_get_all,
+                                    mock_cell_mapping_get,
                                     mock_buildreq_get, mock_target_cell):
 
         cell0_instances = self._list_of_instances(2)
         cell_instances = self._list_of_instances(2)
 
-        cell_mapping = objects.CellMapping()
+        cell_mapping = objects.CellMapping(uuid=objects.CellMapping.CELL0_UUID,
+                                           name='0')
         mock_cell_mapping_get.return_value = cell_mapping
+        mock_cm_get_all.return_value = [
+            cell_mapping,
+            objects.CellMapping(uuid=uuids.cell1, name='1'),
+        ]
 
         with mock.patch.object(self.compute_api,
                                '_get_instances_by_filters') as mock_inst_get:
@@ -4521,13 +4529,13 @@ class _ComputeAPIUnitTestMixIn(object):
                 limit=10, marker='fake-marker', sort_keys=['baz'],
                 sort_dirs=['desc'])
 
-            mock_target_cell.assert_called_once_with(self.context,
-                                                     cell_mapping)
+            for cm in mock_cm_get_all.return_value:
+                mock_target_cell.assert_any_call(self.context, cm)
             inst_get_calls = [mock.call(self.context, {'foo': 'bar'},
                                         limit=10, marker='fake-marker',
                                         expected_attrs=None, sort_keys=['baz'],
                                         sort_dirs=['desc']),
-                              mock.call(self.context, {'foo': 'bar'},
+                              mock.call(mock.ANY, {'foo': 'bar'},
                                         limit=8, marker='fake-marker',
                                         expected_attrs=None, sort_keys=['baz'],
                                         sort_dirs=['desc'])
@@ -4540,7 +4548,9 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch.object(context, 'target_cell')
     @mock.patch.object(objects.BuildRequestList, 'get_by_filters')
     @mock.patch.object(objects.CellMapping, 'get_by_uuid')
-    def test_get_all_includes_build_request_cell0(self, mock_cell_mapping_get,
+    @mock.patch.object(objects.CellMappingList, 'get_all')
+    def test_get_all_includes_build_request_cell0(self, mock_cm_get_all,
+                                    mock_cell_mapping_get,
                                     mock_buildreq_get, mock_target_cell):
 
         build_req_instances = self._list_of_instances(2)
@@ -4552,8 +4562,13 @@ class _ComputeAPIUnitTestMixIn(object):
         cell0_instances = self._list_of_instances(2)
         cell_instances = self._list_of_instances(2)
 
-        cell_mapping = objects.CellMapping()
+        cell_mapping = objects.CellMapping(uuid=objects.CellMapping.CELL0_UUID,
+                                           name='0')
         mock_cell_mapping_get.return_value = cell_mapping
+        mock_cm_get_all.return_value = [
+            cell_mapping,
+            objects.CellMapping(uuid=uuids.cell1, name='1'),
+        ]
 
         with mock.patch.object(self.compute_api,
                                '_get_instances_by_filters') as mock_inst_get:
@@ -4569,13 +4584,13 @@ class _ComputeAPIUnitTestMixIn(object):
                 limit=10, marker='fake-marker', sort_keys=['baz'],
                 sort_dirs=['desc'])
 
-            mock_target_cell.assert_called_once_with(self.context,
-                                                     cell_mapping)
+            for cm in mock_cm_get_all.return_value:
+                mock_target_cell.assert_any_call(self.context, cm)
             inst_get_calls = [mock.call(self.context, {'foo': 'bar'},
                                         limit=8, marker='fake-marker',
                                         expected_attrs=None, sort_keys=['baz'],
                                         sort_dirs=['desc']),
-                              mock.call(self.context, {'foo': 'bar'},
+                              mock.call(mock.ANY, {'foo': 'bar'},
                                         limit=6, marker='fake-marker',
                                         expected_attrs=None, sort_keys=['baz'],
                                         sort_dirs=['desc'])
@@ -4591,7 +4606,9 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch.object(objects.BuildRequestList, 'get_by_filters',
                        return_value=objects.BuildRequestList(objects=[]))
     @mock.patch.object(objects.CellMapping, 'get_by_uuid')
-    def test_get_all_cell0_marker_not_found(self, mock_cell_mapping_get,
+    @mock.patch.object(objects.CellMappingList, 'get_all')
+    def test_get_all_cell0_marker_not_found(self, mock_cm_get_all,
+                                            mock_cell_mapping_get,
                                             mock_buildreq_get,
                                             mock_target_cell):
         """Tests that we handle a MarkerNotFound raised from the cell0 database
@@ -4600,8 +4617,13 @@ class _ComputeAPIUnitTestMixIn(object):
 
         cell_instances = self._list_of_instances(2)
 
-        cell_mapping = objects.CellMapping()
+        cell_mapping = objects.CellMapping(uuid=objects.CellMapping.CELL0_UUID,
+                                           name='0')
         mock_cell_mapping_get.return_value = cell_mapping
+        mock_cm_get_all.return_value = [
+            cell_mapping,
+            objects.CellMapping(uuid=uuids.cell1, name='1'),
+        ]
         marker = uuids.marker
 
         with mock.patch.object(self.compute_api,
@@ -4618,13 +4640,13 @@ class _ComputeAPIUnitTestMixIn(object):
                 limit=10, marker=marker, sort_keys=['baz'],
                 sort_dirs=['desc'])
 
-            mock_target_cell.assert_called_once_with(self.context,
-                                                     cell_mapping)
+            for cm in mock_cm_get_all.return_value:
+                mock_target_cell.assert_any_call(self.context, cm)
             inst_get_calls = [mock.call(self.context, {'foo': 'bar'},
                                         limit=10, marker=marker,
                                         expected_attrs=None, sort_keys=['baz'],
                                         sort_dirs=['desc']),
-                              mock.call(self.context, {'foo': 'bar'},
+                              mock.call(mock.ANY, {'foo': 'bar'},
                                         limit=10, marker=marker,
                                         expected_attrs=None, sort_keys=['baz'],
                                         sort_dirs=['desc'])
@@ -4633,6 +4655,102 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_inst_get.assert_has_calls(inst_get_calls)
             for i, instance in enumerate(cell_instances):
                 self.assertEqual(instance, instances[i])
+
+    @mock.patch('nova.objects.CellMappingList.get_all')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.context.target_cell')
+    def test_get_all_instances_all_cells(self, mock_target,
+                                         mock_get_inst, mock_get_cm):
+
+        @contextlib.contextmanager
+        def fake_target(ctx, cell):
+            yield getattr(mock.sentinel, 'cell-context-%s' % cell.uuid)
+
+        mock_target.side_effect = fake_target
+
+        mock_get_cm.return_value = [
+            mock.MagicMock(uuid=uuids.cell1),
+            mock.MagicMock(uuid=objects.CellMapping.CELL0_UUID),
+            mock.MagicMock(uuid=uuids.cell2),
+        ]
+        mock_get_inst.side_effect = [
+            [objects.Instance(uuid=uuids.cell1inst1),
+             objects.Instance(uuid=uuids.cell1inst2)],
+            [objects.Instance(uuid=uuids.cell2inst1),
+             objects.Instance(uuid=uuids.cell2inst2)],
+        ]
+        expa = ['metadata', 'system_metadata', 'info_cache', 'security_groups']
+        insts = self.compute_api._get_instances_by_filters_all_cells(
+            self.context, {})
+        self.assertEqual(4, len(insts))
+        ctx1 = getattr(mock.sentinel, 'cell-context-%s' % uuids.cell1)
+        ctx2 = getattr(mock.sentinel, 'cell-context-%s' % uuids.cell2)
+        mock_get_inst.assert_has_calls(
+            [mock.call(ctx1, filters={}, limit=None,
+                       marker=None, expected_attrs=expa,
+                       sort_keys=None, sort_dirs=None),
+             mock.call(ctx2, filters={}, limit=None,
+                       marker=None, expected_attrs=expa,
+                       sort_keys=None, sort_dirs=None)])
+        mock_get_cm.assert_called_once_with(self.context)
+
+    @mock.patch('nova.objects.CellMappingList.get_all')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.context.target_cell')
+    def test_get_all_instances_all_cells_marker_cell2(self, mock_target,
+                                                      mock_get_inst,
+                                                      mock_get_cm):
+
+        @contextlib.contextmanager
+        def fake_target(ctx, cell):
+            yield getattr(mock.sentinel, 'cell-context-%s' % cell.uuid)
+
+        mock_target.side_effect = fake_target
+
+        mock_get_cm.return_value = [
+            mock.MagicMock(uuid=uuids.cell1),
+            mock.MagicMock(uuid=objects.CellMapping.CELL0_UUID),
+            mock.MagicMock(uuid=uuids.cell2),
+            mock.MagicMock(uuid=uuids.cell3),
+        ]
+        mock_get_inst.side_effect = [
+            exception.MarkerNotFound(marker=uuids.marker),
+            [objects.Instance(uuid=uuids.cell2inst1),
+             objects.Instance(uuid=uuids.cell2inst2)],
+            [objects.Instance(uuid=uuids.cell3inst1),
+             objects.Instance(uuid=uuids.cell3inst2)],
+        ]
+        expa = ['metadata', 'system_metadata', 'info_cache', 'security_groups']
+        insts = self.compute_api._get_instances_by_filters_all_cells(
+            self.context, {}, marker=uuids.marker)
+        self.assertEqual(4, len(insts))
+        ctx1 = getattr(mock.sentinel, 'cell-context-%s' % uuids.cell1)
+        ctx2 = getattr(mock.sentinel, 'cell-context-%s' % uuids.cell2)
+        ctx3 = getattr(mock.sentinel, 'cell-context-%s' % uuids.cell3)
+        mock_get_inst.assert_has_calls(
+            [mock.call(ctx1, filters={}, limit=None,
+                       marker=uuids.marker, expected_attrs=expa,
+                       sort_keys=None, sort_dirs=None),
+             mock.call(ctx2, filters={}, limit=None,
+                       marker=uuids.marker, expected_attrs=expa,
+                       sort_keys=None, sort_dirs=None),
+             mock.call(ctx3, filters={}, limit=None,
+                       marker=None, expected_attrs=expa,
+                       sort_keys=None, sort_dirs=None)])
+        mock_get_cm.assert_called_once_with(self.context)
+
+    @mock.patch('nova.objects.CellMappingList.get_all')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    def test_get_all_instances_honors_cache(self, mock_get_inst,
+                                            mock_get_cm):
+        mock_get_cm.return_value = [
+            objects.CellMapping(uuid=objects.CellMapping.CELL0_UUID)]
+
+        self.compute_api._get_instances_by_filters_all_cells(self.context, {})
+        self.compute_api._get_instances_by_filters_all_cells(self.context, {})
+
+        # We should only call this once to prime the cache
+        mock_get_cm.assert_called_once_with(self.context)
 
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')

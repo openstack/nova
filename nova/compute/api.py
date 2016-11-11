@@ -107,6 +107,11 @@ AGGREGATE_ACTION_UPDATE_META = 'UpdateMeta'
 AGGREGATE_ACTION_DELETE = 'Delete'
 AGGREGATE_ACTION_ADD = 'Add'
 
+# FIXME(danms): Keep a global cache of the cells we find the
+# first time we look. This needs to be refreshed on a timer or
+# trigger.
+CELLS = []
+
 
 def check_instance_state(vm_state=None, task_state=(None,),
                          must_have_launched=True):
@@ -2424,10 +2429,12 @@ class API(base.Base):
         # instance lists should be proxied to project Searchlight, or a similar
         # alternative.
         if limit is None or limit > 0:
-            cell_instances = self._get_instances_by_filters(context, filters,
+            cell_instances = self._get_instances_by_filters_all_cells(
+                    context, filters,
                     limit=limit, marker=marker, expected_attrs=expected_attrs,
                     sort_keys=sort_keys, sort_dirs=sort_dirs)
         else:
+            LOG.debug('Limit excludes any results from real cells')
             cell_instances = objects.InstanceList(objects=[])
 
         def _get_unique_filter_method():
@@ -2442,6 +2449,8 @@ class API(base.Base):
             return _filter
 
         filter_method = _get_unique_filter_method()
+        # Only subtract from limit if it is not None
+        limit = (limit - len(cell_instances)) if limit else limit
         # TODO(alaski): Clean up the objects concatenation when List objects
         # support it natively.
         instances = objects.InstanceList(
@@ -2480,6 +2489,55 @@ class API(base.Base):
                 if limit and len(result_objs) == limit:
                     break
         return objects.InstanceList(objects=result_objs)
+
+    def _get_instances_by_filters_all_cells(self, context, *args, **kwargs):
+        """This is just a wrapper that iterates (non-zero) cells."""
+
+        global CELLS
+        if not CELLS:
+            CELLS = objects.CellMappingList.get_all(context)
+            LOG.debug('Found %(count)i cells: %(cells)s',
+                      count=len(CELLS),
+                      cells=CELLS)
+
+        if not CELLS:
+            LOG.error(_LE('No cells are configured, unable to list instances'))
+
+        limit = kwargs.pop('limit', None)
+
+        instances = []
+        for cell in CELLS:
+            if cell.uuid == objects.CellMapping.CELL0_UUID:
+                LOG.debug('Skipping already-collected cell0 list')
+                continue
+            LOG.debug('Listing %s instances in cell %s',
+                      limit or 'all', cell.name)
+            with nova_context.target_cell(context, cell) as ccontext:
+                try:
+                    cell_insts = self._get_instances_by_filters(ccontext,
+                                                                *args,
+                                                                limit=limit,
+                                                                **kwargs)
+                except exception.MarkerNotFound:
+                    # NOTE(danms): We need to keep looking through the
+                    # later cells to find the marker
+                    continue
+                instances.extend(cell_insts)
+                # NOTE(danms): We must have found a marker if we had one,
+                # so make sure we don't require a marker in the next cell
+                kwargs['marker'] = None
+                if limit:
+                    limit -= len(cell_insts)
+                    if limit <= 0:
+                        break
+
+        marker = kwargs.get('marker')
+        if marker is not None and len(instances) == 0:
+            # NOTE(danms): If we did not find the marker in any cell,
+            # mimic the db_api behavior here.
+            raise exception.MarkerNotFound(marker=marker)
+
+        return objects.InstanceList(objects=instances)
 
     def _get_instances_by_filters(self, context, filters,
                                   limit=None, marker=None, expected_attrs=None,

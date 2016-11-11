@@ -230,6 +230,10 @@ class TestCase(testtools.TestCase):
             objects_base.NovaObjectRegistry._registry._obj_classes)
         self.addCleanup(self._restore_obj_registry)
 
+        # NOTE(danms): Reset the cached list of cells
+        from nova.compute import api
+        api.CELLS = []
+
         self.cell_mappings = {}
         self.host_mappings = {}
         # NOTE(danms): If the test claims to want to set up the database
