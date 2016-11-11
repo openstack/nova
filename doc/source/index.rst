@@ -149,6 +149,7 @@ Open Development.
    addmethod.openstackapi
    conductor
    notifications
+   placement
 
 Architecture Evolution Plans
 -----------------------------
