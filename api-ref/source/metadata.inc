@@ -29,7 +29,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
 
 Response
 --------
@@ -65,7 +65,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - metadata: metadata_object
 
 **Example Update Metadata Items:**
@@ -107,7 +107,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - metadata: metadata_object
 
 **Example Create Or Replace Metadata Items:**
@@ -146,7 +146,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - key: key
 
 Response
@@ -183,7 +183,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - key: key
 
 **Example Create Or Update Metadata Item:**
@@ -222,7 +222,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - key: key
 
 Response
