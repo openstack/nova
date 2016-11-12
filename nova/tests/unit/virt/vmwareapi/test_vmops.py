@@ -127,7 +127,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             'id': None,
             'address': 'DE:AD:BE:EF:00:00',
             'network': network,
-            'type': None,
+            'type': network_model.VIF_TYPE_OVS,
             'devname': None,
             'ovs_interfaceid': None,
             'rxtx_cap': 3
