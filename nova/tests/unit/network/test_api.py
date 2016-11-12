@@ -53,6 +53,7 @@ fake_info_cache = {
 class ApiTestCase(test.TestCase):
     def setUp(self):
         super(ApiTestCase, self).setUp()
+        self.flags(use_neutron=False)
         self.network_api = network.API()
         self.context = context.RequestContext('fake-user',
                                               fakes.FAKE_PROJECT_ID)
