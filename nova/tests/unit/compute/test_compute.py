@@ -5562,7 +5562,8 @@ class ComputeTestCase(BaseTestCase,
         self._test_resize_with_pci(
             self.compute.revert_resize, '0000:0b:00.1')
 
-    def _test_finish_revert_resize(self, power_on,
+    @mock.patch.object(nova.compute.utils, 'notify_about_instance_action')
+    def _test_finish_revert_resize(self, mock_notify, power_on,
                                    remove_old_vm_state=False,
                                    numa_topology=None):
         """Convenience method that does most of the work for the
@@ -5689,6 +5690,11 @@ class ComputeTestCase(BaseTestCase,
         self.compute.finish_revert_resize(self.context,
                 migration=migration,
                 instance=instance, reservations=[])
+        mock_notify.assert_has_calls([
+            mock.call(self.context, instance, 'fake-mini',
+                      action='resize_revert', phase='start'),
+            mock.call(self.context, instance, 'fake-mini',
+                      action='resize_revert', phase='end')])
 
         self.assertIsNone(instance.task_state)
 
