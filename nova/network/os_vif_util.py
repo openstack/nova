@@ -207,6 +207,8 @@ def _nova_to_osvif_network(network):
     if network['label'] is not None:
         netobj.label = network['label']
 
+    if network.get_meta("mtu") is not None:
+        netobj.mtu = network.get_meta("mtu")
     if network.get_meta("multi_host") is not None:
         netobj.multi_host = network.get_meta("multi_host")
     if network.get_meta("should_create_bridge") is not None:
