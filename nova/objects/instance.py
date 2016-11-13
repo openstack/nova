@@ -830,8 +830,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         self.fault = objects.InstanceFault.get_latest_for_instance(
             self._context, self.uuid)
 
-    def _load_numa_topology(self, db_topology=None):
-        if db_topology is not None:
+    def _load_numa_topology(self, db_topology=_NO_DATA_SENTINEL):
+        if db_topology is None:
+            self.numa_topology = None
+        elif db_topology is not _NO_DATA_SENTINEL:
             self.numa_topology = \
                 objects.InstanceNUMATopology.obj_from_db_obj(self.uuid,
                                                              db_topology)
@@ -843,9 +845,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             except exception.NumaTopologyNotFound:
                 self.numa_topology = None
 
-    def _load_pci_requests(self, db_requests=None):
-        # FIXME: also do this if none!
-        if db_requests is not None:
+    def _load_pci_requests(self, db_requests=_NO_DATA_SENTINEL):
+        if db_requests is not _NO_DATA_SENTINEL:
             self.pci_requests = objects.InstancePCIRequests.obj_from_db(
                 self._context, self.uuid, db_requests)
         else:
@@ -853,8 +854,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 objects.InstancePCIRequests.get_by_instance_uuid(
                     self._context, self.uuid)
 
-    def _load_device_metadata(self, db_dev_meta=None):
-        if db_dev_meta is not None:
+    def _load_device_metadata(self, db_dev_meta=_NO_DATA_SENTINEL):
+        if db_dev_meta is None:
+            self.device_metadata = None
+        elif db_dev_meta is not _NO_DATA_SENTINEL:
             self.device_metadata = \
                 objects.InstanceDeviceMetadata.obj_from_db(
                 self._context, db_dev_meta)
@@ -881,8 +884,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         instance.system_metadata.update(self.get('system_metadata', {}))
         self.system_metadata = instance.system_metadata
 
-    def _load_vcpu_model(self, db_vcpu_model=None):
+    def _load_vcpu_model(self, db_vcpu_model=_NO_DATA_SENTINEL):
         if db_vcpu_model is None:
+            self.vcpu_model = None
+        elif db_vcpu_model is _NO_DATA_SENTINEL:
             self.vcpu_model = objects.VirtCPUModel.get_by_instance_uuid(
                 self._context, self.uuid)
         else:
