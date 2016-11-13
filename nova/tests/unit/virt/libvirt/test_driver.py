@@ -3883,8 +3883,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch('os.path.getsize', return_value=0)  # size doesn't matter
     @mock.patch('nova.virt.libvirt.storage.lvm.get_volume_size',
                 return_value='fake-size')
-    def test_detach_encrypted_volumes(self, mock_getsize,
-                                      mock_get_volume_size):
+    def test_detach_encrypted_volumes(self, mock_get_volume_size,
+                                      mock_getsize):
         """Test that unencrypted volumes are not disconnected with dmcrypt."""
         instance = objects.Instance(**self.test_instance)
         xml = """
