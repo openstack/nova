@@ -191,9 +191,11 @@ class _ComputeAPIUnitTestMixIn(object):
             objects=[objects.NetworkRequest(address=address,
                                             port_id=port)])
 
-        self.compute_api.create(self.context, instance_type, 'image_id',
-                                requested_networks=requested_networks,
-                                max_count=None)
+        with mock.patch.object(self.compute_api.network_api,
+                               'create_pci_requests_for_sriov_ports'):
+            self.compute_api.create(self.context, instance_type, 'image_id',
+                                    requested_networks=requested_networks,
+                                    max_count=None)
 
     def test_create_quota_exceeded_messages(self):
         image_href = "image_href"
@@ -227,9 +229,12 @@ class _ComputeAPIUnitTestMixIn(object):
 
         for min_count, message in [(20, '20-40'), (40, '40')]:
             try:
-                self.compute_api.create(self.context, instance_type,
-                                        "image_href", min_count=min_count,
-                                        max_count=40)
+                with mock.patch.object(self.compute_api.network_api,
+                                       'validate_networks',
+                                       return_value=40):
+                    self.compute_api.create(self.context, instance_type,
+                                            "image_href", min_count=min_count,
+                                            max_count=40)
             except exception.TooManyInstances as e:
                 self.assertEqual(message, e.kwargs['req'])
             else:
