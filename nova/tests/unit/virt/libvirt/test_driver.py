@@ -13841,6 +13841,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         """Tests that the xml is logged when enabling hairpin mode for the
         domain fails.
         """
+        # Guest.enable_hairpin is only called for nova-network.
+        self.flags(use_neutron=False)
         fake_xml = "<test>this is a test</test>"
         fake_domain = FakeVirtDomain(fake_xml)
 
