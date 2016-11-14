@@ -88,6 +88,31 @@ class DeferredDeleteExtensionTestV21(test.NoDBTestCase):
                             req, 'fake_uuid', '')
         self.assertIn('Instance fake_uuid is locked', ex.explanation)
 
+    @mock.patch.object(compute_api.API, 'get')
+    @mock.patch.object(compute_api.API, 'force_delete',
+                side_effect=exception.InstanceNotFound(
+                    instance_id='fake_uuid'))
+    def test_force_delete_instance_notfound(self, mock_force_delete, mock_get):
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/fake_uuid/action')
+        ex = self.assertRaises(webob.exc.HTTPNotFound,
+                            self.extension._force_delete,
+                            req, 'fake_uuid', '')
+        self.assertIn('Instance fake_uuid could not be found',
+                      ex.explanation)
+
+    @mock.patch.object(compute_api.API, 'get')
+    @mock.patch.object(compute_api.API, 'force_delete',
+                side_effect=exception.InstanceUnknownCell(
+                    instance_uuid='fake_uuid'))
+    def test_force_delete_instance_cellunknown(self, mock_force_delete,
+                                               mock_get):
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/fake_uuid/action')
+        ex = self.assertRaises(webob.exc.HTTPNotFound,
+                            self.extension._force_delete,
+                            req, 'fake_uuid', '')
+        self.assertIn('Cell is not known for instance fake_uuid',
+                      ex.explanation)
+
     def test_restore(self):
         self.mox.StubOutWithMock(compute_api.API, 'get')
         self.mox.StubOutWithMock(compute_api.API, 'restore')
