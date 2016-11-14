@@ -115,10 +115,11 @@ class ResourceTracker(object):
                   be used to revert the resource usage if an error occurs
                   during the instance build.
         """
+        nodename = self.nodename
         if self.disabled:
             # compute_driver doesn't support resource tracking, just
             # set the 'host' and node fields and continue the build:
-            self._set_instance_host_and_node(instance)
+            self._set_instance_host_and_node(instance, nodename)
             return claims.NopClaim()
 
         # sanity checks:
@@ -152,7 +153,7 @@ class ResourceTracker(object):
         # so that the resource audit knows about any cpus we've pinned.
         instance_numa_topology = claim.claimed_numa_topology
         instance.numa_topology = instance_numa_topology
-        self._set_instance_host_and_node(instance)
+        self._set_instance_host_and_node(instance, nodename)
 
         if self.pci_tracker:
             # NOTE(jaypipes): ComputeNode.pci_device_pools is set below
@@ -174,7 +175,8 @@ class ResourceTracker(object):
                       migration=None):
         """Create a claim for a rebuild operation."""
         instance_type = instance.flavor
-        return self._move_claim(context, instance, instance_type,
+        nodename = self.nodename
+        return self._move_claim(context, instance, instance_type, nodename,
                                 move_type='evacuation', limits=limits,
                                 image_meta=image_meta, migration=migration)
 
@@ -182,11 +184,13 @@ class ResourceTracker(object):
     def resize_claim(self, context, instance, instance_type,
                      image_meta=None, limits=None):
         """Create a claim for a resize or cold-migration move."""
-        return self._move_claim(context, instance, instance_type,
+        nodename = self.nodename
+        return self._move_claim(context, instance, instance_type, nodename,
                                 image_meta=image_meta, limits=limits)
 
-    def _move_claim(self, context, instance, new_instance_type, move_type=None,
-                    image_meta=None, limits=None, migration=None):
+    def _move_claim(self, context, instance, new_instance_type, nodename,
+                    move_type=None, image_meta=None, limits=None,
+                    migration=None):
         """Indicate that resources are needed for a move to this host.
 
         Move can be either a migrate/resize, live-migrate or an
@@ -195,6 +199,7 @@ class ResourceTracker(object):
         :param context: security context
         :param instance: instance object to reserve resources for
         :param new_instance_type: new instance_type being resized to
+        :param nodename: The Ironic nodename selected by the scheduler
         :param image_meta: instance image metadata
         :param move_type: move type - can be one of 'migration', 'resize',
                          'live-migration', 'evacuate'
@@ -208,10 +213,11 @@ class ResourceTracker(object):
         """
         image_meta = image_meta or {}
         if migration:
-            self._claim_existing_migration(migration)
+            self._claim_existing_migration(migration, nodename)
         else:
             migration = self._create_migration(context, instance,
-                                               new_instance_type, move_type)
+                                               new_instance_type,
+                                               nodename, move_type)
 
         if self.disabled:
             # compute_driver doesn't support resource tracking, just
@@ -281,14 +287,14 @@ class ResourceTracker(object):
         return claim
 
     def _create_migration(self, context, instance, new_instance_type,
-                          move_type=None):
+                          nodename, move_type=None):
         """Create a migration record for the upcoming resize.  This should
         be done while the COMPUTE_RESOURCES_SEMAPHORE is held so the resource
         claim will not be lost if the audit process starts.
         """
         migration = objects.Migration(context=context.elevated())
         migration.dest_compute = self.host
-        migration.dest_node = self.nodename
+        migration.dest_node = nodename
         migration.dest_host = self.driver.get_host_ip_addr()
         migration.old_instance_type_id = instance.flavor.id
         migration.new_instance_type_id = new_instance_type.id
@@ -304,7 +310,7 @@ class ResourceTracker(object):
         migration.create()
         return migration
 
-    def _claim_existing_migration(self, migration):
+    def _claim_existing_migration(self, migration, nodename):
         """Make an existing migration record count for resource tracking.
 
         If a migration record was created already before the request made
@@ -313,19 +319,19 @@ class ResourceTracker(object):
         COMPUTE_RESOURCES_SEMAPHORE is held.
         """
         migration.dest_compute = self.host
-        migration.dest_node = self.nodename
+        migration.dest_node = nodename
         migration.dest_host = self.driver.get_host_ip_addr()
         migration.status = 'pre-migrating'
         migration.save()
 
-    def _set_instance_host_and_node(self, instance):
+    def _set_instance_host_and_node(self, instance, nodename):
         """Tag the instance as belonging to this host.  This should be done
         while the COMPUTE_RESOURCES_SEMAPHORE is held so the resource claim
         will not be lost if the audit process starts.
         """
         instance.host = self.host
         instance.launched_on = self.host
-        instance.node = self.nodename
+        instance.node = nodename
         instance.save()
 
     def _unset_instance_host_and_node(self, instance):
