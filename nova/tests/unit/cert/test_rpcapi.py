@@ -32,7 +32,6 @@ class CertRpcAPITestCase(test.NoDBTestCase):
 
         rpcapi = cert_rpcapi.CertAPI()
         self.assertIsNotNone(rpcapi.client)
-        self.assertEqual(CONF.cert_topic, rpcapi.client.target.topic)
 
         orig_prepare = rpcapi.client.prepare
 

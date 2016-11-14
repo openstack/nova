@@ -44,6 +44,6 @@ def main():
 
     gmr.TextGuruMeditation.setup_autorun(version)
 
-    server = service.Service.create(binary='nova-cert', topic=CONF.cert_topic)
+    server = service.Service.create(binary='nova-cert')
     service.serve(server)
     service.wait()
