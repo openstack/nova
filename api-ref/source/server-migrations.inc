@@ -12,6 +12,18 @@ List Migrations
 
 .. rest_method:: GET /servers/{server_id}/migrations
 
+Lists in-progress live migrations for a given server.
+
+.. note:: Microversion 2.23 or greater is required for this API.
+
+Policy defaults enable only users with the administrative role to perform
+this operation. Cloud providers can change these permissions through the
+``policy.json`` file.
+
+Normal response codes: 200
+
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
+
 Request
 -------
 
