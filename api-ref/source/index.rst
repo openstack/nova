@@ -47,6 +47,7 @@ refer to `API guide <http://developer.openstack.org/api-guide/compute/index.html
 .. include:: os-hypervisors.inc
 .. include:: os-instance-usage-audit-log.inc
 .. include:: os-migrations.inc
+.. include:: server-migrations.inc
 .. include:: os-quota-sets.inc
 .. include:: os-server-groups.inc
 .. include:: os-server-tags.inc
