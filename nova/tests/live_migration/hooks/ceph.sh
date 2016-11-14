@@ -1,38 +1,30 @@
 #!/bin/bash
 
-CEPH_REPLICAS=2
+function prepare_ceph {
+    git clone git://git.openstack.org/openstack/devstack-plugin-ceph /tmp/devstack-plugin-ceph
 
-function setup_ceph_cluster {
-    install_ceph_full
-    configure_ceph_local
+    source /tmp/devstack-plugin-ceph/devstack/lib/ceph
+    install_ceph
+    configure_ceph
+    #install ceph-common package on compute nodes
+    $ANSIBLE subnodes --sudo -f 5 -i "$WORKSPACE/inventory" -m raw -a "executable=/bin/bash
+    source $BASE/new/devstack/functions
+    source $BASE/new/devstack/functions-common
+    git clone git://git.openstack.org/openstack/devstack-plugin-ceph /tmp/devstack-plugin-ceph
+    source /tmp/devstack-plugin-ceph/devstack/lib/ceph
+    install_ceph_remote
+    "
 
-    echo "copy ceph.conf and admin keyring to compute only nodes"
-    ls -la /etc/ceph
-    sudo cp /etc/ceph/ceph.conf /tmp/ceph.conf
-    sudo chown ${STACK_USER}:${STACK_USER} /tmp/ceph.conf
-    $ANSIBLE subnodes --sudo -f 5 -i "$WORKSPACE/inventory" -m copy -a "src=/tmp/ceph.conf dest=/etc/ceph/ceph.conf owner=root group=root"
-    sudo rm -f /tmp/ceph.conf
+    #copy ceph admin keyring to compute nodes
     sudo cp /etc/ceph/ceph.client.admin.keyring /tmp/ceph.client.admin.keyring
     sudo chown ${STACK_USER}:${STACK_USER} /tmp/ceph.client.admin.keyring
     sudo chmod 644 /tmp/ceph.client.admin.keyring
-    ls -la /tmp
-    $ANSIBLE subnodes --sudo -f 5 -i "$WORKSPACE/inventory" -m copy -a "src=/tmp/ceph.client.admin.keyring dest=/etc/ceph/ceph.client.admin.keyring owner=root group=root"
+    $ANSIBLE subnodes --sudo -f 5 -i "$WORKSPACE/inventory" -m copy -a "src=/tmp/ceph.client.admin.keyring dest=/etc/ceph/ceph.client.admin.keyring owner=ceph group=ceph"
     sudo rm -f /tmp/ceph.client.admin.keyring
-    echo "check result of copying files"
-    $ANSIBLE subnodes --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "ls -la /etc/ceph"
+    #copy ceph.conf to compute nodes
+    $ANSIBLE subnodes --sudo -f 5 -i "$WORKSPACE/inventory" -m copy -a "src=/etc/ceph/ceph.conf dest=/etc/ceph/ceph.conf owner=root group=root"
 
-
-    echo "start ceph-mon"
-    sudo initctl emit ceph-mon id=$(hostname)
-    echo "start ceph-osd"
-    sudo start ceph-osd id=${OSD_ID}
-    echo "check ceph-osd before second node addition"
-    wait_for_ceph_up
-
-    configure_ceph_remote
-
-    echo "check ceph-osd tree"
-    wait_for_ceph_up
+    start_ceph
 }
 
 function install_ceph_full {

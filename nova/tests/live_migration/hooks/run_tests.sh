@@ -29,6 +29,10 @@ echo '1. test with all local storage (use default for volumes)'
 echo 'NOTE: test_volume_backed_live_migration is skipped due to https://bugs.launchpad.net/nova/+bug/1524898'
 run_tempest "block migration test" "^.*test_live_migration(?!.*(test_volume_backed_live_migration))"
 
+#all tests bellow this line use shared storage, need to update tempest.conf
+echo 'disabling block_migration in tempest'
+$ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m ini_file -a "dest=$BASE/new/tempest/etc/tempest.conf section=compute-feature-enabled option=block_migration_for_live_migration value=False"
+
 echo '2. NFS testing is skipped due to setup failures with Ubuntu 16.04'
 #echo '2. test with NFS for root + ephemeral disks'
 
@@ -38,19 +42,13 @@ echo '2. NFS testing is skipped due to setup failures with Ubuntu 16.04'
 #run_tempest  "NFS shared storage test" "live_migration"
 #nfs_teardown
 
-echo '3. Ceph testing is skipped due to setup failures with Ubuntu 16.04'
-#echo '3. test with Ceph for root + ephemeral disks'
-
-#source $BASE/new/devstack/lib/ceph
-
-#reset output
-#set -xe
-
-#setup_ceph_cluster
-#configure_and_start_glance
-#configure_and_start_nova
-#run_tempest "Ceph nova&glance test" "live_migration"
-
+echo '3. test with Ceph for root + ephemeral disks'
+prepare_ceph
+GLANCE_API_CONF=${GLANCE_API_CONF:-/etc/glance/glance-api.conf}
+configure_and_start_glance
+configure_and_start_nova
+run_tempest "Ceph nova&glance test" "^.*test_live_migration(?!.*(test_volume_backed_live_migration))"
+set +e
 #echo '4. test with Ceph for volumes and root + ephemeral disk'
 
 #configure_and_start_cinder
