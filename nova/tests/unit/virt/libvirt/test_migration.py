@@ -73,6 +73,12 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
         addr = migration.serial_listen_addr(data)
         self.assertIsNone(addr)
 
+    def test_serial_listen_addr_None(self):
+        data = objects.LibvirtLiveMigrateData()
+        data.serial_listen_addr = None
+        addr = migration.serial_listen_addr(data)
+        self.assertIsNone(addr)
+
     @mock.patch('lxml.etree.tostring')
     @mock.patch.object(migration, '_update_perf_events_xml')
     @mock.patch.object(migration, '_update_graphics_xml')

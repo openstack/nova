@@ -5461,7 +5461,10 @@ class LibvirtDriver(driver.ComputeDriver):
         data.image_type = CONF.libvirt.images_type
         data.graphics_listen_addr_vnc = CONF.vnc.vncserver_listen
         data.graphics_listen_addr_spice = CONF.spice.server_listen
-        data.serial_listen_addr = CONF.serial_console.proxyclient_address
+        if CONF.serial_console.enabled:
+            data.serial_listen_addr = CONF.serial_console.proxyclient_address
+        else:
+            data.serial_listen_addr = None
         # Notes(eliqiao): block_migration and disk_over_commit are not
         # nullable, so just don't set them if they are None
         if block_migration is not None:
