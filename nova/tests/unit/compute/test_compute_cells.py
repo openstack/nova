@@ -108,6 +108,7 @@ def deploy_stubs(stubs, api, original_instance=None):
 
 class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
     def setUp(self):
+        self.flags(use_neutron=False)
         super(CellsComputeAPITestCase, self).setUp()
         global ORIG_COMPUTE_API
         ORIG_COMPUTE_API = self.compute_api
