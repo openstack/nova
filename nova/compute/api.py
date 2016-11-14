@@ -409,14 +409,37 @@ class API(base.Base):
     def _check_requested_secgroups(self, context, secgroups):
         """Check if the security group requested exists and belongs to
         the project.
+
+        :param context: The nova request context.
+        :type context: nova.context.RequestContext
+        :param secgroups: list of requested security group names, or uuids in
+            the case of Neutron.
+        :type secgroups: list
+        :returns: list of requested security group names unmodified if using
+            nova-network. If using Neutron, the list returned is all uuids.
+            Note that 'default' is a special case and will be unmodified if
+            it's requested.
         """
+        security_groups = []
         for secgroup in secgroups:
             # NOTE(sdague): default is handled special
             if secgroup == "default":
+                security_groups.append(secgroup)
                 continue
-            if not self.security_group_api.get(context, secgroup):
+            secgroup_dict = self.security_group_api.get(context, secgroup)
+            if not secgroup_dict:
                 raise exception.SecurityGroupNotFoundForProject(
                     project_id=context.project_id, security_group_id=secgroup)
+
+            # Check to see if it's a nova-network or neutron type.
+            if isinstance(secgroup_dict['id'], int):
+                # This is nova-network so just return the requested name.
+                security_groups.append(secgroup)
+            else:
+                # The id for neutron is a uuid, so we return the id (uuid).
+                security_groups.append(secgroup_dict['id'])
+
+        return security_groups
 
     def _check_requested_networks(self, context, requested_networks,
                                   max_count):
@@ -814,7 +837,10 @@ class API(base.Base):
             except base64.binascii.Error:
                 raise exception.InstanceUserDataMalformed()
 
-        self._check_requested_secgroups(context, security_groups)
+        # When using Neutron, _check_requested_secgroups will translate and
+        # return any requested security group names to uuids.
+        security_groups = (
+            self._check_requested_secgroups(context, security_groups))
 
         # Note:  max_count is the number of instances requested by the user,
         # max_network_count is the maximum number of instances taking into
@@ -900,7 +926,7 @@ class API(base.Base):
 
         # return the validated options and maximum number of instances allowed
         # by the network quotas
-        return base_options, max_network_count, key_pair
+        return base_options, max_network_count, key_pair, security_groups
 
     def _provision_instances(self, context, instance_type, min_count,
             max_count, base_options, boot_meta, security_groups,
@@ -1120,7 +1146,7 @@ class API(base.Base):
         self._check_auto_disk_config(image=boot_meta,
                                      auto_disk_config=auto_disk_config)
 
-        base_options, max_net_count, key_pair = \
+        base_options, max_net_count, key_pair, security_groups = \
                 self._validate_and_build_base_options(
                     context, instance_type, boot_meta, image_href, image_id,
                     kernel_id, ramdisk_id, display_name, display_description,
