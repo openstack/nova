@@ -21,6 +21,7 @@ from nova.compute import vm_states
 import nova.conf
 from nova import db
 from nova import objects
+from nova import test
 from nova.tests.unit.compute import test_compute
 from nova.tests.unit.image import fake as fake_image
 from nova.tests import uuidsentinel as uuids
@@ -43,8 +44,6 @@ def _fake_resources():
 
 
 class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
-    @mock.patch.object(nova.network.api.API,
-                        'cleanup_instance_network_on_host')
     @mock.patch.object(nova.virt.fake.SmallFakeDriver, 'power_off')
     @mock.patch.object(nova.virt.fake.SmallFakeDriver, 'snapshot')
     @mock.patch.object(nova.compute.manager.ComputeManager, '_get_power_state')
@@ -53,7 +52,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     def _shelve_instance(self, shelved_offload_time, mock_notify,
                          mock_notify_instance_usage, mock_get_power_state,
-                         mock_snapshot, mock_power_off, mock_cleanup,
+                         mock_snapshot, mock_power_off,
                          clean_shutdown=True):
         mock_get_power_state.return_value = 123
 
@@ -103,7 +102,12 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             else:
                 self.fail('Unexpected save!')
 
-        with mock.patch.object(instance, 'save') as mock_save:
+        with test.nested(
+                mock.patch.object(instance, 'save'),
+                mock.patch.object(self.compute.network_api,
+                                  'cleanup_instance_network_on_host')) as (
+            mock_save, mock_cleanup
+        ):
             mock_save.side_effect = check_save
             self.compute.shelve_instance(self.context, instance,
                                          image_id=image_id,

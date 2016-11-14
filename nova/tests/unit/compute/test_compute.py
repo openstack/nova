@@ -238,8 +238,13 @@ class BaseTestCase(test.TestCase):
         def fake_get_nw_info(cls, ctxt, instance, *args, **kwargs):
             return network_model.NetworkInfo()
 
-        self.stub_out('nova.network.api.API.get_instance_nw_info',
-                       fake_get_nw_info)
+        if CONF.use_neutron:
+            self.stub_out(
+                'nova.network.neutronv2.api.API.get_instance_nw_info',
+                fake_get_nw_info)
+        else:
+            self.stub_out('nova.network.api.API.get_instance_nw_info',
+                           fake_get_nw_info)
 
         def fake_allocate_for_instance(cls, ctxt, instance, *args, **kwargs):
             self.assertFalse(ctxt.is_admin)
