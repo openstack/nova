@@ -39,6 +39,7 @@ from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LW
+from nova import service_auth
 
 
 CONF = nova.conf.CONF
@@ -65,7 +66,7 @@ def cinderclient(context):
     url = None
     endpoint_override = None
 
-    auth = context.get_auth_plugin()
+    auth = service_auth.get_auth_plugin(context)
     service_type, service_name, interface = CONF.cinder.catalog_info.split(':')
 
     service_parameters = {'service_type': service_type,
