@@ -1459,7 +1459,7 @@ class ComputeTestCase(BaseTestCase):
     def test_create_instance_unlimited_memory(self):
         # Default of memory limit=None is unlimited.
         self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
-        self.rt.update_available_resource(self.context.elevated())
+        self.rt.update_available_resource(self.context.elevated(), NODENAME)
         params = {"flavor": {"memory_mb": 999999999999}}
         filter_properties = {'limits': {'memory_mb': None}}
         instance = self._create_fake_instance_obj(params)
@@ -1470,7 +1470,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_create_instance_unlimited_disk(self):
         self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
-        self.rt.update_available_resource(self.context.elevated())
+        self.rt.update_available_resource(self.context.elevated(), NODENAME)
         params = {"root_gb": 999999999999,
                   "ephemeral_gb": 99999999999}
         filter_properties = {'limits': {'disk_gb': None}}
@@ -1480,7 +1480,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_create_multiple_instances_then_starve(self):
         self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
-        self.rt.update_available_resource(self.context.elevated())
+        self.rt.update_available_resource(self.context.elevated(), NODENAME)
         limits = {'memory_mb': 4096, 'disk_gb': 1000}
         params = {"flavor": {"memory_mb": 1024, "root_gb": 128,
                              "ephemeral_gb": 128}}
@@ -1526,7 +1526,7 @@ class ComputeTestCase(BaseTestCase):
         # Test passing of oversubscribed ram policy from the scheduler.
 
         self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
-        self.rt.update_available_resource(self.context.elevated())
+        self.rt.update_available_resource(self.context.elevated(), NODENAME)
 
         # get total memory as reported by virt driver:
         resources = self.compute.driver.get_available_resource(NODENAME)
@@ -1553,7 +1553,7 @@ class ComputeTestCase(BaseTestCase):
         with insufficient memory.
         """
         self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
-        self.rt.update_available_resource(self.context.elevated())
+        self.rt.update_available_resource(self.context.elevated(), NODENAME)
 
         # get total memory as reported by virt driver:
         resources = self.compute.driver.get_available_resource(NODENAME)
@@ -1577,7 +1577,7 @@ class ComputeTestCase(BaseTestCase):
         # Test passing of oversubscribed cpu policy from the scheduler.
 
         self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
-        self.rt.update_available_resource(self.context.elevated())
+        self.rt.update_available_resource(self.context.elevated(), NODENAME)
         limits = {'vcpu': 3}
         filter_properties = {'limits': limits}
 
@@ -1606,8 +1606,7 @@ class ComputeTestCase(BaseTestCase):
 
         # delete the instance:
         instance['vm_state'] = vm_states.DELETED
-        self.rt.update_usage(self.context,
-                instance=instance)
+        self.rt.update_usage(self.context, instance, NODENAME)
 
         self.assertEqual(2, self.rt.compute_node.vcpus_used)
 
@@ -1625,7 +1624,7 @@ class ComputeTestCase(BaseTestCase):
         # Test passing of oversubscribed disk policy from the scheduler.
 
         self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
-        self.rt.update_available_resource(self.context.elevated())
+        self.rt.update_available_resource(self.context.elevated(), NODENAME)
 
         # get total memory as reported by virt driver:
         resources = self.compute.driver.get_available_resource(NODENAME)
@@ -1651,7 +1650,7 @@ class ComputeTestCase(BaseTestCase):
         with insufficient disk.
         """
         self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
-        self.rt.update_available_resource(self.context.elevated())
+        self.rt.update_available_resource(self.context.elevated(), NODENAME)
 
         # get total memory as reported by virt driver:
         resources = self.compute.driver.get_available_resource(NODENAME)
@@ -7036,7 +7035,7 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance_obj()
         instance.vcpus = 1
 
-        rt.instance_claim(admin_context, instance)
+        rt.instance_claim(admin_context, instance, NODENAME)
         self.assertEqual(1, rt.compute_node.vcpus_used)
 
         self.compute.terminate_instance(admin_context, instance, [], [])
@@ -7059,7 +7058,7 @@ class ComputeTestCase(BaseTestCase):
 
         self.assertEqual(0, rt.compute_node.vcpus_used)
 
-        rt.instance_claim(admin_context, instance)
+        rt.instance_claim(admin_context, instance, NODENAME)
         self.compute._init_instance(admin_context, instance)
         self.assertEqual(1, rt.compute_node.vcpus_used)
 
