@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_utils import versionutils
+
 from nova import db
 from nova import objects
 from nova.objects import base
@@ -22,7 +24,8 @@ from nova.objects import fields
 class SecurityGroup(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: String attributes updated to support unicode
-    VERSION = '1.1'
+    # Version 1.2: Added uuid field for Neutron security groups.
+    VERSION = '1.2'
 
     fields = {
         'id': fields.IntegerField(),
@@ -30,13 +33,21 @@ class SecurityGroup(base.NovaPersistentObject, base.NovaObject):
         'description': fields.StringField(),
         'user_id': fields.StringField(),
         'project_id': fields.StringField(),
+        # The uuid field is only used for Neutron security groups and is not
+        # persisted to the Nova database.
+        'uuid': fields.UUIDField()
         }
+
+    def obj_make_compatible(self, primitive, target_version):
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 2) and 'uuid' in primitive:
+            del primitive['uuid']
 
     @staticmethod
     def _from_db_object(context, secgroup, db_secgroup):
-        # NOTE(danms): These are identical right now
         for field in secgroup.fields:
-            setattr(secgroup, field, db_secgroup[field])
+            if field is not 'uuid':
+                setattr(secgroup, field, db_secgroup[field])
         secgroup._context = context
         secgroup.obj_reset_changes()
         return secgroup
@@ -60,6 +71,11 @@ class SecurityGroup(base.NovaPersistentObject, base.NovaObject):
     @base.remotable
     def save(self):
         updates = self.obj_get_changes()
+        # We don't store uuid in the Nova database so remove it if someone
+        # mistakenly tried to save a neutron security group object. We only
+        # need the uuid in the object for obj_to_primitive() calls where this
+        # object is serialized and stored in the RequestSpec object.
+        updates.pop('uuid', None)
         if updates:
             db_secgroup = db.security_group_update(self._context, self.id,
                                                    updates)

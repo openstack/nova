@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
 from nova import db
 from nova.objects import instance
 from nova.objects import security_group
@@ -103,6 +105,23 @@ class _TestSecurityGroupObject(object):
         ovo_fixture.compare_obj(self, secgroup,
                                 self._fix_deleted(updated_secgroup))
         self.assertEqual(secgroup.obj_what_changed(), set())
+
+    @mock.patch.object(db, 'security_group_update')
+    def test_with_uuid(self, mock_db_update):
+        """Tests that we can set a uuid but not save it and it's removed when
+        backporting to an older version of the object.
+        """
+        # Test set/get.
+        secgroup = security_group.SecurityGroup(
+            self.context, uuid=uuids.neutron_id)
+        self.assertEqual(uuids.neutron_id, secgroup.uuid)
+        # Test backport.
+        primitive = secgroup.obj_to_primitive(target_version='1.1')
+        self.assertNotIn('uuid', primitive)
+        # Make sure the uuid is still set before we save().
+        self.assertIn('uuid', secgroup)
+        secgroup.save()
+        self.assertFalse(mock_db_update.called)
 
 
 class TestSecurityGroupObject(test_objects._LocalTest,
