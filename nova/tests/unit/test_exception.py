@@ -188,7 +188,6 @@ class NovaExceptionTestCase(test.NoDBTestCase):
             def __unicode__(self):
                 return u"print the whole trace"
 
-        self.flags(fatal_exception_format_errors=False)
         exc = FakeNovaException_Remote(lame_arg='lame')
         self.assertEqual("some message %(somearg)s", exc.format_message())
 
@@ -219,7 +218,6 @@ class ExceptionTestCase(test.NoDBTestCase):
 
     def test_exceptions_raise(self):
         # NOTE(dprince): disable format errors since we are not passing kwargs
-        self.flags(fatal_exception_format_errors=False)
         for name in dir(exception):
             exc = getattr(exception, name)
             if isinstance(exc, type):

@@ -1,0 +1,5 @@
+---
+upgrade:
+  - |
+    ``fatal_exception_format_errors`` configuration option has been removed,
+    as it was only used for internal testing.
