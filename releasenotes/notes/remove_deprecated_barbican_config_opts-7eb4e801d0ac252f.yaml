@@ -1,0 +1,10 @@
+---
+upgrade:
+  - |
+    Configuration options related to the Barbican were deprecated and now
+    completly removed from ``barbican`` group. These options are available in
+    the Castellan library. Following are the affected options:
+
+    - ``barbican.catalog_info``
+    - ``barbican.endpoint_template``
+    - ``barbican.os_region_name``
