@@ -71,7 +71,7 @@ Possible values:
 * Any string that represents zero or more versions, separated by spaces.
 """),
     cfg.ListOpt('vendordata_providers',
-        default=[],
+        default=['StaticJSON'],
         deprecated_group="DEFAULT",
         help="""
 A list of vendordata providers.
@@ -351,22 +351,6 @@ so if your hypervisor does not support password injection, set this to False.
 """)
 ]
 
-deprecated_opts = [
-    cfg.StrOpt("vendordata_driver",
-        default="nova.api.metadata.vendordata_json.JsonFileVendorData",
-        deprecated_for_removal=True,
-        deprecated_since="13.0.0",
-        help="""
-When returning instance metadata, this is the class that is used
-for getting vendor metadata when that class isn't specified in the individual
-request. The value should be the full dot-separated path to the class to use.
-
-Possible values:
-
-* Any valid dot-separated class path that can be imported.
-"""),
-]
-
 API_OPTS = (auth_opts +
             metadata_opts +
             file_opts +
@@ -381,9 +365,7 @@ API_OPTS = (auth_opts +
 def register_opts(conf):
     conf.register_group(api_group)
     conf.register_opts(API_OPTS, group=api_group)
-    conf.register_opts(deprecated_opts)
 
 
 def list_opts():
-    return {api_group: API_OPTS,
-            'DEFAULT': deprecated_opts}
+    return {api_group: API_OPTS}

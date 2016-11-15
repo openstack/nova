@@ -41,7 +41,6 @@ import webob
 from nova.api.metadata import base
 from nova.api.metadata import handler
 from nova.api.metadata import password
-from nova.api.metadata import vendordata
 from nova.api.metadata import vendordata_dynamic
 from nova import block_device
 from nova.compute import flavors
@@ -114,8 +113,7 @@ def fake_keypair_obj(name, data):
 
 def fake_InstanceMetadata(testcase, inst_data, address=None,
                           sgroups=None, content=None, extra_md=None,
-                          vd_driver=None, network_info=None,
-                          network_metadata=None):
+                          network_info=None, network_metadata=None):
     content = content or []
     extra_md = extra_md or {}
     if sgroups is None:
@@ -124,8 +122,7 @@ def fake_InstanceMetadata(testcase, inst_data, address=None,
     fakes.stub_out_secgroup_api(testcase, security_groups=sgroups)
     return base.InstanceMetadata(inst_data, address=address,
         content=content, extra_md=extra_md,
-        vd_driver=vd_driver, network_info=network_info,
-        network_metadata=network_metadata)
+        network_info=network_info, network_metadata=network_metadata)
 
 
 def fake_request(testcase, mdinst, relpath, address="127.0.0.1",
@@ -856,36 +853,6 @@ class OpenStackMetadataTestCase(test.TestCase):
         # assert that we never created a ksa session for dynamic vendordata if
         # we didn't make a request
         self.assertIsNone(mdinst.vendordata_providers['DynamicJSON'].session)
-
-    def test_vendor_data_response(self):
-        inst = self.instance.obj_clone()
-
-        mydata = {'mykey1': 'value1', 'mykey2': 'value2'}
-
-        class myVdriver(vendordata.VendorDataDriver):
-            def __init__(self, *args, **kwargs):
-                super(myVdriver, self).__init__(*args, **kwargs)
-                data = mydata.copy()
-                uuid = kwargs['instance']['uuid']
-                data.update({'inst_uuid': uuid})
-                self.data = data
-
-            def get(self):
-                return self.data
-
-        mdinst = fake_InstanceMetadata(self, inst, vd_driver=myVdriver)
-
-        # verify that 2013-10-17 has the vendor_data.json file
-        vdpath = "/openstack/2013-10-17/vendor_data.json"
-        vd = jsonutils.loads(mdinst.lookup(vdpath))
-
-        # the instance should be passed through, and our class copies the
-        # uuid through to 'inst_uuid'.
-        self.assertEqual(vd['inst_uuid'], inst['uuid'])
-
-        # check the other expected values
-        for k, v in mydata.items():
-            self.assertEqual(vd[k], v)
 
     def _test_vendordata2_response_inner(self, request_mock, response_code,
                                          include_rest_result=True):
