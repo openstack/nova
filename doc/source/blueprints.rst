@@ -37,6 +37,11 @@ Guidelines for when a feature doesn't need a spec.
 
   * API changes always require a design discussion.
 
+When a blueprint does not require a spec it still needs to be
+approved before the code which implements the blueprint is merged.
+Specless blueprints are discussed and potentially approved during
+the `Open Discussion` portion of the weekly `nova IRC meeting`_. See
+`trivial specifications`_ for more details.
 
 Project Priorities
 ===================
@@ -63,3 +68,6 @@ Project Priorities
   * The blueprint approval team, to help find the right balance of blueprints
   * Contributors looking for something to work on
   * People looking for what they can expect in the next release
+
+.. _nova IRC meeting: http://eavesdrop.openstack.org/#Nova_Team_Meeting
+.. _trivial specifications: https://specs.openstack.org/openstack/nova-specs/readme.html#trivial-specifications
