@@ -36,6 +36,7 @@ from nova.api.openstack.placement.handlers import usage
 from nova.api.openstack.placement import util
 from nova import exception
 from nova.i18n import _, _LE
+from nova.api.openstack.placement import policy
 
 LOG = logging.getLogger(__name__)
 
@@ -155,12 +156,8 @@ class PlacementHandler(object):
             context = environ['placement.context']
             # TODO(cdent): Using is_admin everywhere (except /) is
             # insufficiently flexible for future use case but is
-            # convenient for initial exploration. We will need to
-            # determine how to manage authorization/policy and
-            # implement that, probably per handler. Also this is
-            # just the wrong way to do things, but policy not
-            # integrated yet.
-            if 'admin' not in context.to_policy_values()['roles']:
+            # convenient for initial exploration.
+            if not policy.placement_authorize(context, 'placement'):
                 raise webob.exc.HTTPForbidden(
                     _('admin required'),
                     json_formatter=util.json_error_formatter)
