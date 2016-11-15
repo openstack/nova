@@ -1,0 +1,84 @@
+{
+    "priority": "ERROR",
+    "payload": {
+        "nova_object.name": "InstanceActionPayload",
+        "nova_object.data": {
+            "state": "active",
+            "availability_zone": null,
+            "kernel_id": "",
+            "host_name": "some-server",
+            "progress": 0,
+            "task_state": "rebuilding",
+            "deleted_at": null,
+            "architecture": null,
+            "ramdisk_id": "",
+            "locked": false,
+            "created_at": "2012-10-29T13:42:11Z",
+            "host": "compute",
+            "display_name": "some-server",
+            "os_type": null,
+            "metadata": {},
+            "ip_addresses": [
+                {
+                    "nova_object.name": "IpPayload",
+                    "nova_object.data": {
+                        "device_name": "tapce531f90-19",
+                        "port_uuid": "ce531f90-199f-48c0-816c-13e38010b442",
+                        "address": "192.168.1.3",
+                        "version": 4,
+                        "meta": {},
+                        "label": "private-network",
+                        "mac": "fa:16:3e:4c:2c:30"
+                    },
+                    "nova_object.version": "1.0",
+                    "nova_object.namespace": "nova"
+                }
+            ],
+            "power_state": "running",
+            "display_description": "some-server",
+            "uuid": "5fafd989-4043-44b4-8acc-907e847f4b70",
+            "flavor": {
+                "nova_object.name": "FlavorPayload",
+                "nova_object.data": {
+                    "disabled": false,
+                    "ephemeral_gb": 0,
+                    "extra_specs": {"hw:watchdog_action": "disabled"},
+                    "flavorid": "a22d5517-147c-4147-a0d1-e698df5cd4e3",
+                    "is_public": true,
+                    "memory_mb": 512,
+                    "name": "test_flavor",
+                    "projects": null,
+                    "root_gb": 1,
+                    "rxtx_factor": 1.0,
+                    "swap": 0,
+                    "vcpu_weight": 0,
+                    "vcpus": 1
+                },
+                "nova_object.version": "1.3",
+                "nova_object.namespace": "nova"
+            },
+            "reservation_id": "r-pfiic52h",
+            "terminated_at": null,
+            "tenant_id": "6f70656e737461636b20342065766572",
+            "node": "fake-mini",
+            "launched_at": "2012-10-29T13:42:11Z",
+            "user_id": "fake",
+            "image_uuid": "a2459075-d96c-40d5-893e-577ff92e721c",
+            "fault": {
+                "nova_object.name": "ExceptionPayload",
+                "nova_object.data": {
+                    "module_name": "nova.tests.functional.notification_sample_tests.test_instance",
+                    "exception_message": "Insufficient compute resources: fake-resource.",
+                    "function_name": "_compute_resources_unavailable",
+                    "exception": "ComputeResourcesUnavailable"
+                },
+                "nova_object.version": "1.0",
+                "nova_object.namespace": "nova"
+            }
+        },
+        "nova_object.version": "1.1",
+        "nova_object.namespace": "nova"
+    },
+    "publisher_id": "nova-compute:compute",
+    "event_type": "instance.rebuild.error"
+}

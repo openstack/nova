@@ -3038,20 +3038,25 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         do_test()
 
-    def _test_rebuild_ex(self, instance, ex):
-        # Test that we do not raise on certain exceptions
-        with test.nested(
-            mock.patch.object(self.compute, '_get_compute_info'),
-            mock.patch.object(self.compute, '_do_rebuild_instance_with_claim',
-                              side_effect=ex),
-            mock.patch.object(self.compute, '_set_migration_status'),
-            mock.patch.object(self.compute, '_notify_about_instance_usage')
-        ) as (mock_get, mock_rebuild, mock_set, mock_notify):
-            self.compute.rebuild_instance(self.context, instance, None, None,
-                                          None, None, None, None, None)
-            mock_set.assert_called_once_with(None, 'failed')
-            mock_notify.assert_called_once_with(mock.ANY, instance,
-                                                'rebuild.error', fault=ex)
+    @mock.patch.object(manager.ComputeManager, '_set_migration_status')
+    @mock.patch.object(manager.ComputeManager,
+                       '_do_rebuild_instance_with_claim')
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
+    def _test_rebuild_ex(self, instance, exc, mock_notify_about_instance_usage,
+                         mock_notify, mock_rebuild, mock_set):
+
+        mock_rebuild.side_effect = exc
+
+        self.compute.rebuild_instance(self.context, instance, None, None, None,
+                                      None, None, None, None)
+        mock_set.assert_called_once_with(None, 'failed')
+        mock_notify_about_instance_usage.assert_called_once_with(
+            mock.ANY, instance, 'rebuild.error', fault=mock_rebuild.side_effect
+        )
+        mock_notify.assert_called_once_with(
+            mock.ANY, instance, 'fake-mini', action='rebuild', phase='error',
+            exception=exc)
 
     def test_rebuild_deleting(self):
         instance = fake_instance.fake_instance_obj(self.context)
