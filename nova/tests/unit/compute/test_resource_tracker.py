@@ -170,8 +170,8 @@ _NUMA_HOST_TOPOLOGIES = {
 _INSTANCE_FIXTURES = [
     objects.Instance(
         id=1,
-        host=None,  # prevent RT trying to lazy-load this
-        node=None,
+        host=_HOSTNAME,
+        node=_NODENAME,
         uuid='c17741a5-6f3d-44a8-ade8-773dc8c29124',
         memory_mb=_INSTANCE_TYPE_FIXTURES[1]['memory_mb'],
         vcpus=_INSTANCE_TYPE_FIXTURES[1]['vcpus'],
@@ -192,8 +192,8 @@ _INSTANCE_FIXTURES = [
     ),
     objects.Instance(
         id=2,
-        host=None,
-        node=None,
+        host=_HOSTNAME,
+        node=_NODENAME,
         uuid='33805b54-dea6-47b8-acb2-22aeb1b57919',
         memory_mb=_INSTANCE_TYPE_FIXTURES[2]['memory_mb'],
         vcpus=_INSTANCE_TYPE_FIXTURES[2]['vcpus'],
@@ -439,7 +439,9 @@ class BaseTestCase(test.NoDBTestCase):
     def setUp(self):
         super(BaseTestCase, self).setUp()
         self.rt = None
-        self.flags(my_ip='1.1.1.1')
+        self.flags(my_ip='1.1.1.1',
+                   reserved_host_disk_mb=0,
+                   reserved_host_memory_mb=0)
 
     def _setup_rt(self, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES,
                   estimate_overhead=overhead_zero):
@@ -470,8 +472,6 @@ class TestUpdateAvailableResources(BaseTestCase):
     def test_no_instances_no_migrations_no_reserved(self, get_mock, migr_mock,
                                                     get_cn_mock, pci_mock,
                                                     instance_pci_mock):
-        self.flags(reserved_host_disk_mb=0,
-                   reserved_host_memory_mb=0)
         self._setup_rt()
 
         get_mock.return_value = []
@@ -496,22 +496,11 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
-            # host is added in update_available_resources()
-            # before calling _update()
-            'host': _HOSTNAME,
-            'host_ip': '1.1.1.1',
-            'numa_topology': None,
-            'metrics': '[]',
-            'cpu_info': '',
-            'hypervisor_hostname': _NODENAME,
             'free_disk_gb': 6,
-            'hypervisor_version': 0,
             'local_gb': 6,
             'free_ram_mb': 512,
             'memory_mb_used': 0,
-            'pci_device_pools': objects.PciDevicePoolList(),
             'vcpus_used': 0,
-            'hypervisor_type': 'fake',
             'local_gb_used': 0,
             'memory_mb': 512,
             'current_workload': 0,
@@ -547,22 +536,11 @@ class TestUpdateAvailableResources(BaseTestCase):
                                             _NODENAME)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
-            # host is added in update_available_resources()
-            # before calling _update()
-            'host': _HOSTNAME,
-            'host_ip': '1.1.1.1',
-            'numa_topology': None,
-            'metrics': '[]',
-            'cpu_info': '',
-            'hypervisor_hostname': _NODENAME,
             'free_disk_gb': 5,  # 6GB avail - 1 GB reserved
-            'hypervisor_version': 0,
             'local_gb': 6,
             'free_ram_mb': 0,  # 512MB avail - 512MB reserved
             'memory_mb_used': 512,  # 0MB used + 512MB reserved
-            'pci_device_pools': objects.PciDevicePoolList(),
             'vcpus_used': 0,
-            'hypervisor_type': 'fake',
             'local_gb_used': 1,  # 0GB used + 1 GB reserved
             'memory_mb': 512,
             'current_workload': 0,
@@ -584,9 +562,6 @@ class TestUpdateAvailableResources(BaseTestCase):
     def test_some_instances_no_migrations(self, get_mock, migr_mock,
                                           get_cn_mock, pci_mock,
                                           instance_pci_mock):
-        self.flags(reserved_host_disk_mb=0,
-                   reserved_host_memory_mb=0)
-
         # Setup virt resources to match used resources to number
         # of defined instances on the hypervisor
         # Note that the usage numbers here correspond to only the first
@@ -609,22 +584,11 @@ class TestUpdateAvailableResources(BaseTestCase):
                                             _NODENAME)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
-            # host is added in update_available_resources()
-            # before calling _update()
-            'host': _HOSTNAME,
-            'host_ip': '1.1.1.1',
-            'numa_topology': None,
-            'metrics': '[]',
-            'cpu_info': '',
-            'hypervisor_hostname': _NODENAME,
             'free_disk_gb': 5,  # 6 - 1 used
-            'hypervisor_version': 0,
             'local_gb': 6,
             'free_ram_mb': 384,  # 512 - 128 used
             'memory_mb_used': 128,
-            'pci_device_pools': objects.PciDevicePoolList(),
             'vcpus_used': 1,
-            'hypervisor_type': 'fake',
             'local_gb_used': 1,
             'memory_mb': 512,
             'current_workload': 0,
@@ -646,9 +610,6 @@ class TestUpdateAvailableResources(BaseTestCase):
     def test_orphaned_instances_no_migrations(self, get_mock, migr_mock,
                                               get_cn_mock, pci_mock,
                                               instance_pci_mock):
-        self.flags(reserved_host_disk_mb=0,
-                   reserved_host_memory_mb=0)
-
         # Setup virt resources to match used resources to number
         # of defined instances on the hypervisor
         virt_resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
@@ -685,22 +646,11 @@ class TestUpdateAvailableResources(BaseTestCase):
                                             _NODENAME)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
-            # host is added in update_available_resources()
-            # before calling _update()
-            'host': _HOSTNAME,
-            'host_ip': '1.1.1.1',
-            'numa_topology': None,
-            'metrics': '[]',
-            'cpu_info': '',
-            'hypervisor_hostname': _NODENAME,
             'free_disk_gb': 6,
-            'hypervisor_version': 0,
             'local_gb': 6,
             'free_ram_mb': 448,  # 512 - 64 orphaned usage
             'memory_mb_used': 64,
-            'pci_device_pools': objects.PciDevicePoolList(),
             'vcpus_used': 0,
-            'hypervisor_type': 'fake',
             'local_gb_used': 0,
             'memory_mb': 512,
             'current_workload': 0,
@@ -734,8 +684,6 @@ class TestUpdateAvailableResources(BaseTestCase):
         # yet, so the resource tracker must continue to keep the resources
         # for the original instance type available on the source compute
         # node in case of a revert of the resize.
-        self.flags(reserved_host_disk_mb=0,
-                   reserved_host_memory_mb=0)
 
         # Setup virt resources to match used resources to number
         # of defined instances on the hypervisor
@@ -763,22 +711,11 @@ class TestUpdateAvailableResources(BaseTestCase):
                                             _NODENAME)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
-            # host is added in update_available_resources()
-            # before calling _update()
-            'host': _HOSTNAME,
-            'host_ip': '1.1.1.1',
-            'numa_topology': None,
-            'metrics': '[]',
-            'cpu_info': '',
-            'hypervisor_hostname': _NODENAME,
             'free_disk_gb': 5,
-            'hypervisor_version': 0,
             'local_gb': 6,
             'free_ram_mb': 384,  # 512 total - 128 for possible revert of orig
             'memory_mb_used': 128,  # 128 possible revert amount
-            'pci_device_pools': objects.PciDevicePoolList(),
             'vcpus_used': 1,
-            'hypervisor_type': 'fake',
             'local_gb_used': 1,
             'memory_mb': 512,
             'current_workload': 0,
@@ -810,8 +747,6 @@ class TestUpdateAvailableResources(BaseTestCase):
         # yet, so the resource tracker must reserve the resources
         # for the possibly-to-be-confirmed instance's instance type
         # node in case of a confirm of the resize.
-        self.flags(reserved_host_disk_mb=0,
-                   reserved_host_memory_mb=0)
 
         # Setup virt resources to match used resources to number
         # of defined instances on the hypervisor
@@ -836,22 +771,11 @@ class TestUpdateAvailableResources(BaseTestCase):
                                             _NODENAME)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
-            # host is added in update_available_resources()
-            # before calling _update()
-            'host': _HOSTNAME,
-            'host_ip': '1.1.1.1',
-            'numa_topology': None,
-            'metrics': '[]',
-            'cpu_info': '',
-            'hypervisor_hostname': _NODENAME,
             'free_disk_gb': 1,
-            'hypervisor_version': 0,
             'local_gb': 6,
             'free_ram_mb': 256,  # 512 total - 256 for possible confirm of new
             'memory_mb_used': 256,  # 256 possible confirmed amount
-            'pci_device_pools': objects.PciDevicePoolList(),
             'vcpus_used': 2,
-            'hypervisor_type': 'fake',
             'local_gb_used': 5,
             'memory_mb': 512,
             'current_workload': 0,
@@ -880,8 +804,6 @@ class TestUpdateAvailableResources(BaseTestCase):
         # tracker does not yet have any instances assigned to it. This is
         # the case when a migration to this compute host from another host
         # is in progress, but not finished yet.
-        self.flags(reserved_host_disk_mb=0,
-                   reserved_host_memory_mb=0)
 
         # Setup virt resources to match used resources to number
         # of defined instances on the hypervisor
@@ -906,22 +828,10 @@ class TestUpdateAvailableResources(BaseTestCase):
                                             _NODENAME)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
-            # host is added in update_available_resources()
-            # before calling _update()
-            'host': _HOSTNAME,
-            'host_ip': '1.1.1.1',
-            'numa_topology': None,
-            'metrics': '[]',
-            'cpu_info': '',
-            'hypervisor_hostname': _NODENAME,
             'free_disk_gb': 1,
-            'hypervisor_version': 0,
-            'local_gb': 6,
             'free_ram_mb': 256,  # 512 total - 256 for possible confirm of new
             'memory_mb_used': 256,  # 256 possible confirmed amount
-            'pci_device_pools': objects.PciDevicePoolList(),
             'vcpus_used': 2,
-            'hypervisor_type': 'fake',
             'local_gb_used': 5,
             'memory_mb': 512,
             'current_workload': 0,
@@ -956,8 +866,6 @@ class TestUpdateAvailableResources(BaseTestCase):
         # instance that is resizing to this same compute node. The tracking
         # of resource amounts takes into account both the old and new
         # resize instance types as taking up space on the node.
-        self.flags(reserved_host_disk_mb=0,
-                   reserved_host_memory_mb=0)
 
         # Setup virt resources to match used resources to number
         # of defined instances on the hypervisor
@@ -986,24 +894,13 @@ class TestUpdateAvailableResources(BaseTestCase):
                                             _NODENAME)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
-            # host is added in update_available_resources()
-            # before calling _update()
-            'host': _HOSTNAME,
-            'host_ip': '1.1.1.1',
-            'numa_topology': None,
-            'metrics': '[]',
-            'cpu_info': '',
-            'hypervisor_hostname': _NODENAME,
             # 6 total - 1G existing - 5G new flav - 1G old flav
             'free_disk_gb': -1,
-            'hypervisor_version': 0,
             'local_gb': 6,
             # 512 total - 128 existing - 256 new flav - 128 old flav
             'free_ram_mb': 0,
             'memory_mb_used': 512,  # 128 exist + 256 new flav + 128 old flav
-            'pci_device_pools': objects.PciDevicePoolList(),
             'vcpus_used': 4,
-            'hypervisor_type': 'fake',
             'local_gb_used': 7,  # 1G existing, 5G new flav + 1 old flav
             'memory_mb': 512,
             'current_workload': 1,  # One migrating instance...
