@@ -574,7 +574,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
 
     @staticmethod
     def _flavor_destroy(context, flavor_id=None, flavorid=None):
-        return _flavor_destroy(context, flavor_id=flavor_id, flavorid=flavorid)
+        _flavor_destroy(context, flavor_id=flavor_id, flavorid=flavorid)
 
     @base.remotable
     def destroy(self):
