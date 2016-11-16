@@ -168,8 +168,6 @@ def _build_cell_stub_infos(test_case):
 
 def init(test_case):
     global CELL_NAME_TO_STUB_INFO
-    test_case.flags(driver='nova.tests.unit.cells.fakes.FakeCellsDriver',
-            group='cells')
     CELL_NAME_TO_STUB_INFO = {}
     _build_cell_stub_infos(test_case)
 

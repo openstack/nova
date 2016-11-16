@@ -22,12 +22,12 @@ import time
 from oslo_log import log as logging
 import oslo_messaging
 from oslo_service import periodic_task
-from oslo_utils import importutils
 from oslo_utils import timeutils
 import six
 from six.moves import range
 
 from nova.cells import messaging
+from nova.cells import rpc_driver as cells_rpc_driver
 from nova.cells import state as cells_state
 from nova.cells import utils as cells_utils
 import nova.conf
@@ -81,9 +81,7 @@ class CellsManager(manager.Manager):
             cell_state_manager = cells_state.CellStateManager
         self.state_manager = cell_state_manager()
         self.msg_runner = messaging.MessageRunner(self.state_manager)
-        cells_driver_cls = importutils.import_class(
-                CONF.cells.driver)
-        self.driver = cells_driver_cls()
+        self.driver = cells_rpc_driver.CellsRPCDriver()
         self.instances_to_heal = iter([])
 
     def post_start_hook(self):
