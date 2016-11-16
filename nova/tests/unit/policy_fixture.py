@@ -100,15 +100,12 @@ class PolicyFixture(RealPolicyFixture):
 
 
 class RoleBasedPolicyFixture(RealPolicyFixture):
-    """Load a modified policy which allows all actions only be a single roll.
+    """Load a modified policy which allows all actions only by a single role.
 
     This fixture can be used for testing role based permissions as it
     provides a version of the policy which stomps over all previous
     declaration and makes every action only available to a single
     role.
-
-    NOTE(sdague): we could probably do this simpler by only loading a
-    single default rule.
 
     """
 
@@ -117,17 +114,12 @@ class RoleBasedPolicyFixture(RealPolicyFixture):
         self.role = role
 
     def _prepare_policy(self):
-        with open(CONF.oslo_policy.policy_file) as fp:
-            policy = fp.read()
-        policy = jsonutils.loads(policy)
-        self.add_missing_default_rules(policy)
-
-        # Convert all actions to require specified role
-        for action in policy:
-            policy[action] = 'role:%s' % self.role
+        # Convert all actions to require the specified role
+        policy = {}
+        for rule in policies.list_rules():
+            policy[rule.name] = 'role:%s' % self.role
 
         self.policy_dir = self.useFixture(fixtures.TempDir())
-        self.policy_file = os.path.join(self.policy_dir.path,
-                                            'policy.json')
+        self.policy_file = os.path.join(self.policy_dir.path, 'policy.json')
         with open(self.policy_file, 'w') as f:
             jsonutils.dump(policy, f)
