@@ -431,7 +431,9 @@ class ResourceProvider(base.NovaObject):
         result = context.session.query(models.ResourceProvider).filter_by(
             uuid=uuid).first()
         if not result:
-            raise exception.NotFound()
+            raise exception.NotFound(
+            'No resource provider with uuid %s found'
+            % uuid)
         return result
 
 

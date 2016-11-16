@@ -284,12 +284,23 @@ def delete_allocations(req):
 
     allocations = objects.AllocationList.get_all_by_consumer_id(
         context, consumer_uuid)
-    if not allocations:
+    if allocations:
+        try:
+            allocations.delete_all()
+        # NOTE(pumaranikar): Following NotFound exception added in the case
+        # when allocation is deleted from allocations list by some other
+        # activity. In that case, delete_all() will throw a NotFound exception.
+        except exception.NotFound as exc:
+            raise webob.exc.HTPPNotFound(
+                  _("Allocation for consumer with id %(id)s not found."
+                    "error: %(error)s") %
+                  {'id': consumer_uuid, 'error': exc},
+                  json_formatter=util.json_error_formatter)
+    else:
         raise webob.exc.HTTPNotFound(
             _("No allocations for consumer '%(consumer_uuid)s'") %
             {'consumer_uuid': consumer_uuid},
             json_formatter=util.json_error_formatter)
-    allocations.delete_all()
     LOG.debug("Successfully deleted allocations %s", allocations)
 
     req.response.status = 204
