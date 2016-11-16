@@ -562,8 +562,14 @@ def refresh_info_cache_for_instance(context, instance):
 
     :param instance: The instance object.
     """
-    if instance.info_cache is not None:
-        instance.info_cache.refresh()
+    if instance.info_cache is not None and not instance.deleted:
+        # Catch the exception in case the instance got deleted after the check
+        # instance.deleted was executed
+        try:
+            instance.info_cache.refresh()
+        except exception.InstanceInfoCacheNotFound:
+            LOG.debug("Can not refresh info_cache because instance "
+                      "was not found", instance=instance)
 
 
 def usage_volume_info(vol_usage):
