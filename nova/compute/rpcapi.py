@@ -697,7 +697,7 @@ class ComputeAPI(object):
         version = '4.0'
         cctxt = self.router.by_host(ctxt, host).prepare(
                 server=host, version=version)
-        cctxt.cast(ctxt, 'post_live_migration_at_destination',
+        return cctxt.call(ctxt, 'post_live_migration_at_destination',
             instance=instance, block_migration=block_migration)
 
     def pre_live_migration(self, ctxt, instance, block_migration, disk,

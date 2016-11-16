@@ -5874,6 +5874,57 @@ class ComputeTestCase(BaseTestCase):
             self.assertEqual('completed', migration_obj.status)
             mig_save.assert_called_once_with()
 
+    def test_post_live_migration_exc_on_dest_works_correctly(self):
+        """Confirm that post_live_migration() completes successfully
+        even after post_live_migration_at_destination() raises an exception.
+        """
+        dest = 'desthost'
+        srchost = self.compute.host
+
+        # creating testdata
+        c = context.get_admin_context()
+        instance = self._create_fake_instance_obj({
+                                        'host': srchost,
+                                        'state_description': 'migrating',
+                                        'state': power_state.PAUSED},
+                                                  context=c)
+
+        instance.update({'task_state': task_states.MIGRATING,
+                        'power_state': power_state.PAUSED})
+        instance.save()
+
+        migration_obj = objects.Migration()
+        migrate_data = migrate_data_obj.LiveMigrateData(
+            migration=migration_obj)
+
+        # creating mocks
+        with test.nested(
+            mock.patch.object(self.compute.driver, 'post_live_migration'),
+            mock.patch.object(self.compute.driver, 'unfilter_instance'),
+            mock.patch.object(self.compute.network_api,
+                              'migrate_instance_start'),
+            mock.patch.object(self.compute.compute_rpcapi,
+                              'post_live_migration_at_destination',
+                              side_effect=Exception),
+            mock.patch.object(self.compute.driver,
+                              'post_live_migration_at_source'),
+            mock.patch.object(self.compute.network_api,
+                              'setup_networks_on_host'),
+            mock.patch.object(self.compute.instance_events,
+                              'clear_events_for_instance'),
+            mock.patch.object(self.compute, 'update_available_resource'),
+            mock.patch.object(migration_obj, 'save'),
+        ) as (
+            post_live_migration, unfilter_instance,
+            migrate_instance_start, post_live_migration_at_destination,
+            post_live_migration_at_source, setup_networks_on_host,
+            clear_events, update_available_resource, mig_save
+        ):
+            self.compute._post_live_migration(c, instance, dest,
+                                              migrate_data=migrate_data)
+            update_available_resource.assert_has_calls([mock.call(c)])
+            self.assertEqual('completed', migration_obj.status)
+
     def test_post_live_migration_terminate_volume_connections(self):
         c = context.get_admin_context()
         instance = self._create_fake_instance_obj({
