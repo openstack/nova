@@ -265,28 +265,28 @@ tests:
   request_headers:
       content-type: application/json
   data:
-      # TODO(cdent): This format is going to go out of date because
-      # of other changes
       resource_provider_generation: 0
       inventories:
         VCPU:
           total: 32
+          max_unit: 32
         DISK_GB:
           total: 10
+          max_unit: 10
 
 - name: set inventory on rp2
   PUT: /resource_providers/fcfa516a-abbe-45d1-8152-d5225d82e596/inventories
   request_headers:
       content-type: application/json
   data:
-      # TODO(cdent): This format is going to go out of date because
-      # of other changes
       resource_provider_generation: 0
       inventories:
         VCPU:
           total: 16
+          max_unit: 16
         DISK_GB:
           total: 20
+          max_unit: 20
   status: 200
 
 - name: put allocations on both those providers one
