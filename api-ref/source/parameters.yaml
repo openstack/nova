@@ -181,6 +181,12 @@ keypair_name_path:
   in: path
   required: true
   type: string
+migration_id_path:
+  description: |
+    The ID of the server migration.
+  in: path
+  required: true
+  type: integer
 network_id:
   description: |
     The UUID of the network.
@@ -2011,6 +2017,13 @@ force_live_migrate:
   required: false
   type: boolean
   min_version: 2.30
+force_migration_complete:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+  min_version: 2.22
 force_snapshot:
   description: |
     Indicates whether to create a snapshot, even if the volume is attached.
@@ -2941,6 +2954,96 @@ migrate:
   in: body
   required: true
   type: string
+migrate_dest_compute:
+  description: |
+    The target compute for a migration.
+  in: body
+  required: true
+  type: string
+migrate_dest_host:
+  description: |
+    The target host for a migration.
+  in: body
+  required: true
+  type: string
+migrate_dest_node:
+  description: |
+    The target node for a migration.
+  in: body
+  required: true
+  type: string
+migrate_disk_processed_bytes:
+  description: |
+    The amount of disk, in bytes, that has been processed during the migration.
+  in: body
+  required: true
+  type: integer
+migrate_disk_remaining_bytes:
+  description: |
+    The amount of disk, in bytes, that still needs to be migrated.
+  in: body
+  required: true
+  type: integer
+migrate_disk_total_bytes:
+  description: |
+    The total amount of disk, in bytes, that needs to be migrated.
+  in: body
+  required: true
+  type: integer
+migrate_memory_processed_bytes:
+  description: |
+    The amount of memory, in bytes, that has been processed during the migration.
+  in: body
+  required: true
+  type: integer
+migrate_memory_remaining_bytes:
+  description: |
+    The amount of memory, in bytes, that still needs to be migrated.
+  in: body
+  required: true
+  type: integer
+migrate_memory_total_bytes:
+  description: |
+    The total amount of memory, in bytes, that needs to be migrated.
+  in: body
+  required: true
+  type: integer
+migrate_source_compute:
+  description: |
+    The source compute for a migration.
+  in: body
+  required: true
+  type: string
+migrate_source_node:
+  description: |
+    The source node for a migration.
+  in: body
+  required: true
+  type: string
+migrate_status:
+  description: |
+    The current status of the migration.
+  in: body
+  required: true
+  type: string
+migration:
+  description: |
+    The server migration object.
+  in: body
+  required: true
+  type: object
+migration_id:
+  description: |
+    The ID of the server migration.
+  in: body
+  required: true
+  type: integer
+migrations:
+  description: |
+    The list of server migration objects.
+  in: body
+  required: true
+  type: array
 minDisk_body:
   description: |
     The minimum amount of disk space an image requires to boot, in GiB. For example, ``100``.
