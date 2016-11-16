@@ -19,6 +19,7 @@ import contextlib
 import copy
 import datetime
 import errno
+import functools
 import glob
 import os
 import random
@@ -10546,7 +10547,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         return gotFiles, imported_files
 
-    def test_create_image_with_swap(self):
+    def test_create_image_with_flavor_swap(self):
         def enable_swap(instance_ref):
             # Turn on some swap to exercise that codepath in _create_image
             instance_ref['system_metadata']['instance_type_swap'] = 500
@@ -10576,6 +10577,52 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             test_create_configdrive=True)
         self.assertTrue(imported_files[0][0].endswith('/disk.config'))
         self.assertEqual('disk.config', imported_files[0][1])
+
+    def test_create_image_with_swap(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance_ref = self.test_instance
+        instance_ref['image_ref'] = ''
+        instance = objects.Instance(**instance_ref)
+        # Also check that bdm specified swap takes precedence over flavor
+        # specified swap
+        instance.flavor.swap = 200
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        bdi = {'swap': {'swap_size': 100,
+                        'device_name': '/dev/vdb'},
+               'block_device_mapping': [{'boot_index': 0}]}
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance, image_meta,
+                                            block_device_info=bdi)
+        backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
+
+        drvr._create_image(self.context, instance, disk_info['mapping'],
+                           block_device_info=bdi)
+
+        backend.disks['disk.swap'].cache.assert_called_once_with(
+            fetch_func=drvr._create_swap, context=self.context,
+            filename='swap_100', size=100 * units.Mi, swap_mb=100)
+
+    def test_create_image_with_legacy_swap_resizing(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance_ref = self.test_instance
+        instance_ref['image_ref'] = ''
+        instance = objects.Instance(**instance_ref)
+        instance.flavor.swap = 200
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        bdi = {'swap': {'swap_size': 100,
+                        'device_name': '/dev/vdb'},
+               'block_device_mapping': [{'boot_index': 0}]}
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance, image_meta,
+                                            block_device_info=bdi)
+        backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
+
+        drvr._create_image(self.context, instance, disk_info['mapping'],
+                           block_device_info=bdi, ignore_bdi_for_swap=True)
+
+        backend.disks['disk.swap'].cache.assert_called_once_with(
+            fetch_func=drvr._create_swap, context=self.context,
+            filename='swap_200', size=200 * units.Mi, swap_mb=200)
 
     @mock.patch.object(nova.virt.libvirt.imagebackend.Image, 'cache',
                        side_effect=exception.ImageNotFound(image_id='fake-id'))
@@ -10619,6 +10666,37 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                               dest='fake-target',
                                               host='fake-source-host',
                                               receive=True)
+
+    @mock.patch('nova.virt.disk.api.get_file_extension_for_os_type')
+    def test_create_image_with_ephemerals(self, mock_get_ext):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance_ref = self.test_instance
+        instance_ref['image_ref'] = ''
+        instance = objects.Instance(**instance_ref)
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        bdi = {'ephemerals': [{'size': 100}],
+               'block_device_mapping': [{'boot_index': 0}]}
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance, image_meta,
+                                            block_device_info=bdi)
+        mock_get_ext.return_value = mock.sentinel.file_ext
+        backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
+
+        drvr._create_image(self.context, instance, disk_info['mapping'],
+                           block_device_info=bdi)
+
+        backend.disks['disk.eph0'].cache.assert_called_once_with(
+            fetch_func=mock.ANY, context=self.context,
+            filename=('ephemeral_100_%s' % mock.sentinel.file_ext),
+            size=100 * units.Gi, ephemeral_size=100, specified_fs=None)
+        fetch_func = (backend.disks['disk.eph0'].cache.
+                      mock_calls[0][2]['fetch_func'])
+        self.assertIsInstance(fetch_func, functools.partial)
+        self.assertEqual(drvr._create_ephemeral, fetch_func.func)
+        self.assertEqual(
+            dict(fs_label='ephemeral0', os_type=instance.os_type,
+                 is_block_dev=mock.sentinel.is_block_dev),
+            fetch_func.keywords)
 
     @mock.patch.object(nova.virt.libvirt.imagebackend.Image, 'cache')
     def test_create_image_resize_snap_backend(self, mock_cache):
@@ -15672,6 +15750,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.fake_create_domain_called = False
         self.fake_disk_resize_called = False
         create_image_called = [False]
+        bdi = {'block_device_mapping': []}
 
         def fake_to_xml(context, instance, network_info, disk_info,
                         image_meta=None, rescue=None,
@@ -15685,8 +15764,11 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                               disk_mapping, suffix='',
                               disk_images=None, network_info=None,
                               block_device_info=None, inject_files=True,
-                              fallback_from_host=None):
+                              fallback_from_host=None,
+                              ignore_bdi_for_swap=False):
+            self.assertTrue(ignore_bdi_for_swap)
             self.assertFalse(inject_files)
+            self.assertEqual(bdi, block_device_info)
             create_image_called[0] = True
 
         def fake_create_domain_and_network(
@@ -15754,7 +15836,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             self.drvr.finish_migration(
                           context.get_admin_context(), migration, instance,
                           disk_info, [], image_meta,
-                          resize_instance, None, power_on)
+                          resize_instance, bdi, power_on)
 
             mock_ensure_console_log.assert_called_once_with(instance)
 
