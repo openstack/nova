@@ -13,19 +13,19 @@ All associated data and resources are kept but anything still in memory is not r
 
 Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
 
-Preconditions
+**Preconditions**
 
 The server status must be ``ACTIVE``, ``SHUTOFF``, ``PAUSED``, or ``SUSPENDED``.
 
 If the server is locked, you must have administrator privileges to shelve the server.
 
-Asynchronous Postconditions
+**Asynchronous Postconditions**
 
 After you successfully shelve a server, its status changes to ``SHELVED`` and the image status is ``ACTIVE``. The server instance data appears on the compute node that the Compute service manages.
 
 If you boot the server from volumes or set the ``shelved_offload_time`` option to 0, the Compute service automatically deletes the instance on compute nodes and changes the server status to ``SHELVED_OFFLOADED``.
 
-Troubleshooting
+**Troubleshooting**
 
 If the server status does not change to ``SHELVED`` or ``SHELVED_OFFLOADED``, the shelve operation failed. Ensure that you meet the preconditions and run the request again. If the request fails again, investigate whether another operation is running that causes a race condition.
 
@@ -38,13 +38,12 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - shelve: shelve
 
 |
 
-**Example Shelve server (shelve Action):**
+**Example Shelve server (shelve Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-shelve/os-shelve.json
    :language: javascript
@@ -53,7 +52,7 @@ Request
 Response
 --------
 
-No body is returned on successful request.
+If successful, this method does not return content in the response body.
 
 
 Shelf-Offload (Remove) Server (shelveOffload Action)
@@ -69,17 +68,17 @@ Data and resource associations are deleted. If an instance is no longer needed, 
 
 Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
 
-Preconditions
+**Preconditions**
 
 The server status must be ``SHELVED``.
 
 If the server is locked, you must have administrator privileges to shelve-offload the server.
 
-Asynchronous Postconditions
+**Asynchronous Postconditions**
 
 After you successfully shelve-offload a server, its status changes to ``SHELVED_OFFLOADED``. The server instance data appears on the compute node.
 
-Troubleshooting
+**Troubleshooting**
 
 If the server status does not change to ``SHELVED_OFFLOADED``, the shelve-offload operation failed. Ensure that you meet the preconditions and run the request again. If the request fails again, investigate whether another operation is running that causes a race condition.
 
@@ -91,7 +90,6 @@ Request
 -------
 
 .. rest_parameters:: parameters.yaml
-
 
   - server_id: server_id_path
   - shelveOffload: shelveOffload
@@ -107,7 +105,7 @@ Request
 Response
 --------
 
-No body is returned on successful request.
+If successful, this method does not return content in the response body.
 
 
 Unshelve (Restore) Shelved Server (unshelve Action)
@@ -121,19 +119,19 @@ Specify the ``unshelve`` action in the request body.
 
 Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
 
-Preconditions
+**Preconditions**
 
 The server status must be ``SHELVED`` or ``SHELVED_OFFLOADED``.
 
 If the server is locked, you must have administrator privileges to unshelve the server.
 
-Asynchronous Postconditions
+**Asynchronous Postconditions**
 
 After you successfully shelve a server, its status changes to ``ACTIVE``. The server appears on the compute node.
 
 The shelved image is deleted from the list of images returned by an API call.
 
-Troubleshooting
+**Troubleshooting**
 
 If the server status does not change to ``ACTIVE``, the unshelve operation failed. Ensure that you meet the preconditions and run the request again. If the request fails again, investigate whether another operation is running that causes a race condition.
 
@@ -146,13 +144,12 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - unshelve: unshelve
 
 |
 
-**Example Unshelve server (unshelve Action):**
+**Example Unshelve server (unshelve Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-shelve/os-unshelve.json
    :language: javascript
@@ -161,4 +158,4 @@ Request
 Response
 --------
 
-No body is returned on successful request.
+If successful, this method does not return content in the response body.

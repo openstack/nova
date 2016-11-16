@@ -45,7 +45,7 @@ If an instance is connected to multiple networks, you can associate a
 floating IP address with a specific fixed IP address by using the
 optional ``fixed_address`` parameter.
 
-Preconditions
+**Preconditions**
 
 The server must exist.
 
@@ -61,13 +61,12 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - addFloatingIp: addFloatingIp
   - address: address
   - fixed_address: fixed_address
 
-**Example Add (Associate) Floating Ip (addFloatingIp Action): JSON request**
+**Example Add (Associate) Floating Ip (addFloatingIp Action)**
 
 .. literalinclude:: ../../doc/api_samples/servers/server-action-addfloatingip.json
   :language: javascript
@@ -75,7 +74,8 @@ Request
 Response
 --------
 
-There is no body content for the response of a successful POST operation.
+If successful, this method does not return content in the response body.
+
 
 Add Security Group To A Server (addSecurityGroup Action)
 ========================================================
@@ -96,12 +96,11 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - addSecurityGroup: addSecurityGroup
   - name: name
 
-**Example Add Security Group To A Server (addSecurityGroup Action): JSON request**
+**Example Add Security Group To A Server (addSecurityGroup Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-security-groups/security-group-add-post-req.json
    :language: javascript
@@ -109,7 +108,8 @@ Request
 Response
 --------
 
-There is no body content for the response of a successful POST operation.
+If successful, this method does not return content in the response body.
+
 
 Change Administrative Password (changePassword Action)
 ======================================================
@@ -138,7 +138,7 @@ Request
   - server_id: server_id_path
   - changePassword: changePassword
 
-**Example Change Administrative Password (changePassword Action): JSON request**
+**Example Change Administrative Password (changePassword Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-admin-password/admin-password-change-password.json
    :language: javascript
@@ -146,7 +146,8 @@ Request
 Response
 --------
 
-There is no body content for the response of a successful POST operation.
+If successful, this method does not return content in the response body.
+
 
 Confirm Resized Server (confirmResize Action)
 =============================================
@@ -163,7 +164,7 @@ confirming resize operation shows a status of ``ACTIVE`` or ``SHUTOFF``
 and a migration_status of ``confirmed``. You can also see the resized
 server in the compute node that OpenStack Compute manages.
 
-Preconditions
+**Preconditions**
 
 You can only confirm the resized server where the status is
 ``VERIFY_RESIZED``, the vm_status is ``RESIZED``, and the
@@ -172,7 +173,7 @@ migration_status is ``finished`` or ``confirming``.
 If the server is locked, you must have administrator privileges
 to confirm the server.
 
-Troubleshooting
+**Troubleshooting**
 
 If the server status remains ``RESIZED``, the request failed. Ensure you
 meet the preconditions and run the request again. If the request fails
@@ -188,11 +189,10 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - confirmResize: confirmResize
 
-**Example Confirm Resized Server (confirmResize Action): JSON request**
+**Example Confirm Resized Server (confirmResize Action)**
 
 .. literalinclude:: ../../doc/api_samples/servers/server-action-confirm-resize.json
    :language: javascript
@@ -200,7 +200,8 @@ Request
 Response
 --------
 
-There is no body content for the response of a successful POST operation.
+If successful, this method does not return content in the response body.
+
 
 Create Image (createImage Action)
 =================================
@@ -218,7 +219,7 @@ If the operation succeeds, the created image has a status of ``active`` and
 the server status returns to the original status. You can also see the new
 image in the image back end that OpenStack Image service manages.
 
-Preconditions
+**Preconditions**
 
 The server must exist.
 
@@ -227,7 +228,7 @@ You can only create a new image from the server when its status is ``ACTIVE``,
 
 The connection to the Image service is valid.
 
-Troubleshooting
+**Troubleshooting**
 
 If the image status remains uploading or shows another error status,
 the request failed. Ensure you meet the preconditions and run the request
@@ -258,7 +259,7 @@ Request
   - server_id: server_id_path
   - createImage: createImage
 
-**Example Create Image (createImage Action): JSON request**
+**Example Create Image (createImage Action)**
 
 .. literalinclude:: ../../doc/api_samples/servers/server-action-create-image.json
    :language: javascript
@@ -266,7 +267,8 @@ Request
 Response
 --------
 
-There is no body content for the response of a successful POST operation.
+If successful, this method does not return content in the response body.
+
 
 Lock Server (lock Action)
 =========================
@@ -294,7 +296,7 @@ Request
   - server_id: server_id_path
   - lock: lock
 
-**Example Lock Server (lock Action): JSON request**
+**Example Lock Server (lock Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-lock-server/lock-server.json
    :language: javascript
@@ -302,7 +304,8 @@ Request
 Response
 --------
 
-There is no body content for the response of a successful POST operation.
+If successful, this method does not return content in the response body.
+
 
 Pause Server (pause Action)
 ===========================
@@ -327,11 +330,10 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - pause: pause
 
-**Example Pause Server (pause Action): JSON request**
+**Example Pause Server (pause Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-pause-server/pause-server.json
    :language: javascript
@@ -339,7 +341,8 @@ Request
 Response
 --------
 
-There is no body content for the response of a successful POST operation.
+If successful, this method does not return content in the response body.
+
 
 Reboot Server (reboot Action)
 =============================
@@ -360,11 +363,10 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - reboot: reboot
 
-**Example Reboot Server (reboot Action): JSON request**
+**Example Reboot Server (reboot Action)**
 
 .. literalinclude:: ../../doc/api_samples/servers/server-action-reboot.json
    :language: javascript
@@ -372,7 +374,8 @@ Request
 Response
 --------
 
-There is no body content for the response of a successful POST operation.
+If successful, this method does not return content in the response body.
+
 
 Rebuild Server (rebuild Action)
 ===============================
@@ -396,7 +399,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - rebuild: rebuild
   - imageRef: imageRef
@@ -406,7 +408,7 @@ Request
   - personality: personality
   - preserve_ephemeral: preserve_ephemeral
 
-**Example Rebuild Server (rebuild Action): JSON request**
+**Example Rebuild Server (rebuild Action)**
 
 Preserving the ephemeral disk
 
@@ -416,7 +418,7 @@ Preserving the ephemeral disk
 Response
 --------
 
-**Example Rebuild Server (rebuild Action): JSON response**
+**Example Rebuild Server (rebuild Action)**
 
 .. literalinclude:: ../../doc/api_samples/servers/server-action-rebuild-resp.json
    :language: javascript
@@ -445,13 +447,12 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - removeFloatingIp: removeFloatingIp
   - address: address
 
 .. TODO(sdague) build example for this
-   **Example Remove (Disassociate) Floating Ip (removeFloatingIp Action): JSON request**
+   **Example Remove (Disassociate) Floating Ip (removeFloatingIp Action)**
 
    .. literalinclude:: ../../doc/api_samples/servers-action/removeFloatingIp-req.json
                        :language: javascript
@@ -459,7 +460,8 @@ Request
 Response
 --------
 
-There is no body content for the response of a successful POST operation.
+If successful, this method does not return content in the response body.
+
 
 Remove Security Group From A Server (removeSecurityGroup Action)
 ================================================================
@@ -480,12 +482,11 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - removeSecurityGroup: removeSecurityGroup
   - name: name
 
-**Example Remove Security Group From A Server (removeSecurityGroup Action): JSON request**
+**Example Remove Security Group From A Server (removeSecurityGroup Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-security-groups/security-group-remove-post-req.json
    :language: javascript
@@ -493,7 +494,8 @@ Request
 Response
 --------
 
-There is no body content for the response of a successful POST operation.
+If successful, this method does not return content in the response body.
+
 
 Rescue Server (rescue Action)
 =============================
@@ -508,7 +510,7 @@ If you specify the ``rescue_image_ref`` extended attribute,
 the image is used to rescue the instance. If you omit an image
 reference, the base image reference is used by default.
 
-Asynchronous Postconditions
+**Asynchronous Postconditions**
 
 After you successfully rescue a server and make a ``GET
 /servers/​{server_id}​`` request, its status changes to ``RESCUE``.
@@ -523,13 +525,12 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - rescue: rescue
   - adminPass: adminPass_rescue
   - rescue_image_ref: rescue_image_ref
 
-**Example Rescue server: JSON request**
+**Example Rescue server**
 
 .. literalinclude:: ../../doc/api_samples/os-rescue/server-rescue-req.json
    :language: javascript
@@ -541,7 +542,7 @@ Response
 
   - adminPass: adminPass
 
-**Example Extended rescue server: JSON response**
+**Example Extended rescue server**
 
 .. literalinclude:: ../../doc/api_samples/os-rescue/server-rescue.json
    :language: javascript
@@ -561,7 +562,7 @@ A successfully resized server shows a ``VERIFY_RESIZE`` status,
 the Compute service automatically confirms the resize operation after
 the set interval in seconds.
 
-Preconditions
+**Preconditions**
 
 You can only resize a server when its status is ``ACTIVE`` or ``SHUTOFF``.
 
@@ -578,11 +579,10 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - resize: resize
 
-**Example Resize Server (Resize Action): JSON request**
+**Example Resize Server (Resize Action)**
 
 .. literalinclude:: ../../doc/api_samples/servers/server-action-resize.json
    :language: javascript
@@ -590,7 +590,8 @@ Request
 Response
 --------
 
-There is no body content for the response of a successful POST operation.
+If successful, this method does not return content in the response body.
+
 
 Resume Suspended Server (resume Action)
 =======================================
@@ -615,11 +616,10 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - resume: resume
 
-**Example Resume Suspended Server (Resume Action): JSON request**
+**Example Resume Suspended Server (Resume Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-suspend-server/server-resume.json
    :language: javascript
@@ -627,7 +627,8 @@ Request
 Response
 --------
 
-There is no body content for the response of a successful POST operation.
+If successful, this method does not return content in the response body.
+
 
 Revert Resized Server (revertResize Action)
 ===========================================
@@ -638,7 +639,7 @@ Cancels and reverts a pending resize action for a server.
 
 Specify the ``revertResize`` action in the request body.
 
-Preconditions
+**Preconditions**
 
 You can only revert the resized server where the status is
 ``VERIFY_RESIZE`` and the OS-EXT-STS:vm_state is ``resized``.
@@ -646,7 +647,7 @@ You can only revert the resized server where the status is
 If the server is locked, you must have administrator privileges to revert
 the resizing.
 
-Asynchronous Postconditions
+**Asynchronous Postconditions**
 
 After you make this request, you typically must keep polling the server status
 to determine whether the request succeeded. A reverting resize operation shows
@@ -654,7 +655,7 @@ a status of ``REVERT_RESIZE`` and a task_state of ``resize_reverting``. If
 successful, the status will return to ``ACTIVE`` or ``SHUTOFF``. You can also
 see the reverted server in the compute node that OpenStack Compute manages.
 
-Troubleshooting
+**Troubleshooting**
 
 If the server status remains ``VERIFY_RESIZE``, the request failed. Ensure you
 meet the preconditions and run the request again. If the request fails again,
@@ -672,11 +673,10 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - revertResize: revertResize
 
-**Example Revert Resized Server (revertResize Action): JSON request**
+**Example Revert Resized Server (revertResize Action)**
 
 .. literalinclude:: ../../doc/api_samples/servers/server-action-revert-resize.json
    :language: javascript
@@ -684,7 +684,8 @@ Request
 Response
 --------
 
-There is no body content for the response of a successful POST operation.
+If successful, this method does not return content in the response body.
+
 
 Start Server (os-start Action)
 ==============================
@@ -695,19 +696,19 @@ Starts a stopped server and changes its status to ``ACTIVE``.
 
 Specify the ``os-start`` action in the request body.
 
-Preconditions
+**Preconditions**
 
 The server status must be ``SHUTOFF``.
 
 If the server is locked, you must have administrator privileges
 to start the server.
 
-Asynchronous Postconditions
+**Asynchronous Postconditions**
 
 After you successfully start a server, its status changes to ``ACTIVE``.
 The server appears on the compute node that the Compute service manages.
 
-Troubleshooting
+**Troubleshooting**
 
 If the server status does not change to ``ACTIVE``, the start operation failed.
 Ensure that you meet the preconditions and run the request again.
@@ -724,11 +725,10 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - os-start: os-start
 
-**Example Start server: JSON request**
+**Example Start server**
 
 .. literalinclude:: ../../doc/api_samples/servers/server-action-start.json
    :language: javascript
@@ -736,7 +736,8 @@ Request
 Response
 --------
 
-There is no body content for the response of a successful POST operation.
+If successful, this method does not return content in the response body.
+
 
 Stop Server (os-stop Action)
 ============================
@@ -747,14 +748,14 @@ Stops a running server and changes its status to ``SHUTOFF``.
 
 Specify the ``os-stop`` action in the request body.
 
-Preconditions
+**Preconditions**
 
 The server status must be ``ACTIVE`` or ``ERROR``.
 
 If the server is locked, you must have administrator privileges
 to stop the server.
 
-Asynchronous Postconditions
+**Asynchronous Postconditions**
 
 After you successfully stop a server, its status changes to ``SHUTOFF``.
 The server instance data appears only on the compute node that
@@ -770,11 +771,10 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - os-stop: os-stop
 
-**Example Stop server: JSON request**
+**Example Stop server**
 
 .. literalinclude:: ../../doc/api_samples/servers/server-action-stop.json
    :language: javascript
@@ -782,7 +782,8 @@ Request
 Response
 --------
 
-There is no body content for the response of a successful POST operation.
+If successful, this method does not return content in the response body.
+
 
 Suspend Server (suspend Action)
 ===============================
@@ -807,11 +808,10 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - suspend: suspend
 
-**Example Suspend Server (suspend Action): JSON request**
+**Example Suspend Server (suspend Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-suspend-server/server-suspend.json
    :language: javascript
@@ -819,7 +819,8 @@ Request
 Response
 --------
 
-There is no body content for the response of a successful POST operation.
+If successful, this method does not return content in the response body.
+
 
 Unlock Server (unlock Action)
 =============================
@@ -843,11 +844,10 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - unlock: unlock
 
-**Example Unlock Server (unlock Action): JSON request**
+**Example Unlock Server (unlock Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-lock-server/unlock-server.json
    :language: javascript
@@ -855,7 +855,8 @@ Request
 Response
 --------
 
-There is no body content for the response of a successful POST operation.
+If successful, this method does not return content in the response body.
+
 
 Unpause Server (unpause Action)
 ===============================
@@ -884,7 +885,7 @@ Request
   - server_id: server_id_path
   - unpause: unpause
 
-**Example Unpause Server (unpause Action): JSON request**
+**Example Unpause Server (unpause Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-pause-server/unpause-server.json
    :language: javascript
@@ -892,7 +893,8 @@ Request
 Response
 --------
 
-There is no body content for the response of a successful POST operation.
+If successful, this method does not return content in the response body.
+
 
 Unrescue Server (unrescue Action)
 =================================
@@ -903,13 +905,13 @@ Unrescues a server. Changes status to ``ACTIVE``.
 
 Specify the ``unrescue`` action in the request body.
 
-Preconditions
+**Preconditions**
 
 The server must exist.
 
 You can only unrescue a server when its status is ``RESCUE``.
 
-Asynchronous Postconditions
+**Asynchronous Postconditions**
 
 After you successfully unrescue a server and make a
 ``GET /servers/​{server_id}​``
@@ -925,11 +927,10 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - unrescue: unrescue
 
-**Example Unrescue server: JSON request**
+**Example Unrescue server**
 
 .. literalinclude:: ../../doc/api_samples/os-rescue/server-unrescue-req.json
    :language: javascript
@@ -937,4 +938,4 @@ Request
 Response
 --------
 
-There is no body content for the response of a successful POST operation.
+If successful, this method does not return content in the response body.

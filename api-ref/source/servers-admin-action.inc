@@ -36,15 +36,14 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
-  - server_id: server_id
+  - server_id: server_id_path
   - createBackup: createBackup
   - name: backup_name
   - backup_type: backup_type
   - rotation: backup_rotation
   - metadata: metadata
 
-**Example Create Server Back Up (Createbackup Action): JSON request**
+**Example Create Server Back Up (Createbackup Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-create-backup/create-backup-req.json
    :language: javascript
@@ -52,8 +51,9 @@ Request
 Response
 --------
 
-On success a header 'Location' : <image location URL> and no body
-will be returned.
+If successful, the header 'Location' : <image location URL>
+will be returned. No response body is returned.
+
 
 Inject Network Information (injectNetworkInfo Action)
 =====================================================
@@ -81,11 +81,10 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
-  - server_id: server_id
+  - server_id: server_id_path
   - injectNetworkInfo: injectNetworkInfo
 
-**Example Inject Network Information (injectNetworkInfo Action): JSON request**
+**Example Inject Network Information (injectNetworkInfo Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-admin-actions/admin-actions-inject-network-info.json
    :language: javascript
@@ -93,7 +92,8 @@ Request
 Response
 --------
 
-On success no body is returned.
+If successful, this method does not return content in the response body.
+
 
 Migrate Server (migrate Action)
 ===============================
@@ -118,11 +118,10 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
-  - server_id: server_id
+  - server_id: server_id_path
   - migrate: migrate
 
-**Example Migrate Server (migrate Action): JSON request**
+**Example Migrate Server (migrate Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-migrate-server/migrate-server.json
    :language: javascript
@@ -130,7 +129,8 @@ Request
 Response
 --------
 
-On success no body is returned.
+If successful, this method does not return content in the response body.
+
 
 Live-Migrate Server (os-migrateLive Action)
 ===========================================
@@ -170,15 +170,14 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
-  - server_id: server_id
+  - server_id: server_id_path
   - host: host_migration
   - block_migration: block_migration
   - block_migration: block_migration_2_25
   - disk_over_commit: disk_over_commit
   - force: force_live_migrate
 
-**Example Live-Migrate Server (os-migrateLive Action): JSON request**
+**Example Live-Migrate Server (os-migrateLive Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-migrate-server/v2.30/live-migrate-server.json
    :language: javascript
@@ -186,7 +185,8 @@ Request
 Response
 --------
 
-On success no body is returned.
+If successful, this method does not return content in the response body.
+
 
 Reset Networking On A Server (resetNetwork Action)
 ==================================================
@@ -216,11 +216,10 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
-  - server_id: server_id
+  - server_id: server_id_path
   - resetNetwork: resetNetwork
 
-**Example Reset Networking On A Server (resetNetwork Action): JSON request**
+**Example Reset Networking On A Server (resetNetwork Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-admin-actions/admin-actions-reset-network.json
    :language: javascript
@@ -228,7 +227,8 @@ Request
 Response
 --------
 
-On success no body is returned.
+If successful, this method does not return content in the response body.
+
 
 Reset Server State (os-resetState Action)
 =========================================
@@ -252,12 +252,11 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
-  - server_id: server_id
+  - server_id: server_id_path
   - os-resetState: os-resetState
   - os-resetState.state: os-resetState_state
 
-**Example Reset Server State (os-resetState Action): JSON request**
+**Example Reset Server State (os-resetState Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-admin-actions/admin-actions-reset-server-state.json
    :language: javascript
@@ -265,4 +264,4 @@ Request
 Response
 --------
 
-On success no body is returned.
+If successful, this method does not return content in the response body.

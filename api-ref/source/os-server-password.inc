@@ -35,8 +35,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
-  - server_id: server_id
+  - server_id: server_id_path
 
 Response
 --------
@@ -45,7 +44,7 @@ Response
 
   - password: password
 
-**Example Show Server Password: JSON response**
+**Example Show Server Password**
 
 .. literalinclude:: ../../doc/api_samples/os-server-password/get-password-resp.json
    :language: javascript
@@ -73,10 +72,9 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
-  - server_id: server_id
+  - server_id: server_id_path
 
 Response
 --------
 
-There is no body content for the response of a successful DELETE action.
+If successful, this method does not return content in the response body.

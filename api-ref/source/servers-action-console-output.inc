@@ -1,15 +1,16 @@
 .. -*- rst -*-
 
-Show Console Output (Os-Getconsoleoutput Action)
+Show Console Output (os-getConsoleOutput Action)
 ================================================
 
 .. rest_method:: POST /servers/{server_id}/action
 
 Shows console output for a server instance.
 
-This returns the text of the console since boot in a REST
-response. The console content may be large, you can limit it with the
-optional ``length`` parameter.
+This API returns the text of the console since boot.
+The content returned may be large. Limit the lines of console
+text, beginning at the tail of the content, by setting
+the optional ``length`` parameter in the request body.
 
 Normal response codes: 200
 
@@ -21,14 +22,14 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - os-getConsoleOutput: os-getConsoleOutput
   - length: length
 
-**Example Get console output**
+**Example Show Console Output (os-getConsoleOutput Action)**
 
-This requests the last 50 lines of the server in question.
+This example requests the last 50 lines of console content
+from the specified server.
 
 .. literalinclude:: ../../doc/api_samples/os-console-output/console-output-post-req.json
    :language: javascript
@@ -40,7 +41,7 @@ Response
 
    - output: console_output
 
-**Example Get console output: JSON response**
+**Example Show Console Output (os-getConsoleOutput Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-console-output/console-output-post-resp.json
    :language: javascript

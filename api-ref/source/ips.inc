@@ -27,7 +27,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - server_id: server_id
+  - server_id: server_id_path
 
 Response
 --------
@@ -39,7 +39,7 @@ Response
   - addr: ip_address
   - version: version_ip
 
-**Example List Ips: JSON response**
+**Example List Ips**
 
 .. literalinclude:: ../../doc/api_samples/server-ips/server-ips-resp.json
    :language: javascript
@@ -64,7 +64,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - server_id: server_id
+  - server_id: server_id_path
   - network_label: network_label
 
 Response
@@ -76,8 +76,7 @@ Response
   - addr: ip_address
   - version: version_ip
 
-**Example Show Ip Details: JSON response**
+**Example Show Ip Details**
 
 .. literalinclude:: ../../doc/api_samples/server-ips/server-ips-network-resp.json
    :language: javascript
-

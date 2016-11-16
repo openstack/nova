@@ -26,8 +26,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
-  - server_id: server_id
+  - server_id: server_id_path
 
 Response
 --------

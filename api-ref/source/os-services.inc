@@ -221,8 +221,8 @@ Delete Compute Service
 
 .. rest_method:: DELETE /os-services/{service_id}
 
-Deletes a Compute service. If it's a nova-compute service, then corresponding host will
-removed from all the host aggregates as well.
+Deletes a Compute service. If it's a nova-compute service, then the
+corresponding host will be removed from all the host aggregates as well.
 
 Normal response codes: 204
 
@@ -233,10 +233,9 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - service_id: service_id_path
 
 Response
 --------
 
-There is no body content for the response of a successful DELETE query
+If successful, this method does not return content in the response body.

@@ -38,7 +38,7 @@ Response
 
   - metadata: metadata_object
 
-**Example List All Metadata:**
+**Example List All Metadata**
 
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-resp.json
    :language: javascript
@@ -68,7 +68,7 @@ Request
   - server_id: server_id_path
   - metadata: metadata_object
 
-**Example Update Metadata Items:**
+**Example Update Metadata Items**
 
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-req.json
    :language: javascript
@@ -80,7 +80,7 @@ Response
 
   - metadata: metadata_object
 
-**Example Update Metadata Items:**
+**Example Update Metadata Items**
 
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-resp.json
    :language: javascript
@@ -110,7 +110,7 @@ Request
   - server_id: server_id_path
   - metadata: metadata_object
 
-**Example Create Or Replace Metadata Items:**
+**Example Create Or Replace Metadata Items**
 
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-req.json
    :language: javascript
@@ -122,7 +122,7 @@ Response
 
   - metadata: metadata_object
 
-**Example Create Or Replace Metadata Items:**
+**Example Create Or Replace Metadata Items**
 
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-resp.json
    :language: javascript
@@ -156,7 +156,7 @@ Response
 
   - meta: metadata_object
 
-**Example Show Metadata Item Details:**
+**Example Show Metadata Item Details**
 
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-resp.json
    :language: javascript
@@ -186,7 +186,7 @@ Request
   - server_id: server_id_path
   - key: key
 
-**Example Create Or Update Metadata Item:**
+**Example Create Or Update Metadata Item**
 
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-req.json
    :language: javascript
@@ -198,7 +198,7 @@ Response
 
   - meta: metadata_object
 
-**Example Create Or Update Metadata Item:**
+**Example Create Or Update Metadata Item**
 
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-resp.json
    :language: javascript
@@ -228,4 +228,4 @@ Request
 Response
 --------
 
-There is no body content for the response of a successful DELETE action.
+If successful, this method does not return content in the response body.
