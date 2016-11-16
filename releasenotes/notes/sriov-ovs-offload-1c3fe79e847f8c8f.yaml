@@ -1,0 +1,13 @@
+---
+features:
+  - |
+    Adds support to OVS vif type with direct port (SR-IOV).
+    In order to use this OVS acceleration mode, ``openvswitch`` 2.8.0
+    and 'Linux Kernel' 4.8 are required. This feature allows control of
+    an SR-IOV virtual function (VF) via OpenFlow control plane and gain
+    improved performance of 'Open vSwitch'. Please note that in Pike
+    release we can't differentiate between SR-IOV hardware and OVS offloaded
+    on the same host. This limitation should be resolved when the
+    enable-sriov-nic-features will be completed.
+    Until then operators can use host aggregates to ensure that they can
+    schedule instances on specific hosts based on hardware.
