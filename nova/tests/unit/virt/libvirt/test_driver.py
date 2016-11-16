@@ -6233,6 +6233,40 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         mock_get_domain.assert_called_once_with(instance)
 
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
+    @mock.patch('nova.volume.encryptors.get_volume_encryptor')
+    @mock.patch('nova.virt.libvirt.host.Host.get_guest')
+    def test_detach_volume_order_with_encryptors(self, mock_get_guest,
+            mock_get_encryptor, mock_disconnect_volume):
+
+        mock_guest = mock.MagicMock(spec=libvirt_guest.Guest)
+        mock_guest.get_power_state.return_value = power_state.RUNNING
+        mock_get_guest.return_value = mock_guest
+        mock_encryptor = mock.MagicMock(
+                spec=nova.volume.encryptors.nop.NoOpEncryptor)
+        mock_get_encryptor.return_value = mock_encryptor
+
+        mock_order = mock.Mock()
+        mock_order.attach_mock(mock_disconnect_volume, 'disconnect_volume')
+        mock_order.attach_mock(mock_guest.detach_device_with_retry(),
+                'detach_volume')
+        mock_order.attach_mock(mock_encryptor.detach_volume,
+                'detach_encryptor')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        connection_info = {"driver_volume_type": "fake",
+                           "data": {"device_path": "/fake",
+                                    "access_mode": "rw"}}
+        encryption = {"provider": "NoOpEncryptor"}
+        drvr.detach_volume(connection_info, instance, '/dev/vdc',
+                encryption=encryption)
+
+        mock_order.assert_has_calls([
+            mock.call.detach_volume(),
+            mock.call.detach_encryptor(**encryption),
+            mock.call.disconnect_volume(connection_info, 'vdc')])
+
     def test_multi_nic(self):
         network_info = _fake_network_info(self, 2)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
