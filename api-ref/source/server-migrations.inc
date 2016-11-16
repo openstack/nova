@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:example_verification
 .. needs:body_verification
 
 =========================================
@@ -45,6 +44,9 @@ Response
 
 **Example List Migrations**
 
+.. literalinclude:: ../../doc/api_samples/server-migrations/v2.23/migrations-index.json
+   :language: javascript
+
 Show Migration Details
 ======================
 
@@ -83,6 +85,9 @@ Response
 
 **Example Show Migration Details**
 
+.. literalinclude:: ../../doc/api_samples/server-migrations/v2.23/migrations-get.json
+   :language: javascript
+
 Force Migration Complete Action (force_complete Action)
 =======================================================
 
@@ -96,6 +101,11 @@ Request
   - server_id: server_id_path
   - migration_id: migration_id_path
   - force_complete: force_migration_complete
+
+**Example Force Migration Complete (force_complete Action)**
+
+.. literalinclude:: ../../doc/api_samples/server-migrations/force_complete.json
+   :language: javascript
 
 Response
 --------
