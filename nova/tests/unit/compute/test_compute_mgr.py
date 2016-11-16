@@ -172,80 +172,62 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             cn.hypervisor_hostname = hyp_hostname
             return cn
 
-    def _make_rt(self, node):
-            n = mock.Mock(spec_set=['update_available_resource',
-                                    'nodename'])
-            n.nodename = node
-            return n
-
     @mock.patch.object(manager.ComputeManager, '_get_resource_tracker')
-    @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
-    @mock.patch.object(manager.ComputeManager, '_get_compute_nodes_in_db')
-    def test_update_available_resource_for_node(
-        self, get_db_nodes, get_avail_nodes, get_rt):
-        db_nodes = []
+    def test_update_available_resource_for_node(self, get_rt):
+        rt = mock.Mock(spec_set=['update_available_resource'])
+        get_rt.return_value = rt
 
-        db_nodes = [self._make_compute_node('node%s' % i, i)
-                    for i in range(1, 5)]
-        avail_nodes = set(['node2', 'node3', 'node4', 'node5'])
-        avail_nodes_l = list(avail_nodes)
-        rts = [self._make_rt(node) for node in avail_nodes_l]
-        # Make the 2nd and 3rd ones raise
-        exc = exception.ComputeHostNotFound(host=uuids.fake_host)
-        rts[1].update_available_resource.side_effect = exc
-        exc = test.TestingException()
-        rts[2].update_available_resource.side_effect = exc
-        get_db_nodes.return_value = db_nodes
-        get_avail_nodes.return_value = avail_nodes
-        get_rt.side_effect = rts
+        self.compute.update_available_resource_for_node(
+            self.context,
+            mock.sentinel.node,
+        )
+        rt.update_available_resource.assert_called_once_with(
+            self.context,
+            mock.sentinel.node,
+        )
 
-        self.compute.update_available_resource_for_node(self.context,
-                                                        avail_nodes_l[0])
-        self.assertEqual(self.compute._resource_tracker_dict[avail_nodes_l[0]],
-                         rts[0])
-
-        # Update ComputeHostNotFound
-        self.compute.update_available_resource_for_node(self.context,
-                                                        avail_nodes_l[1])
-        self.assertNotIn(self.compute._resource_tracker_dict, avail_nodes_l[1])
-
-        # Update TestException
-        self.compute.update_available_resource_for_node(self.context,
-                                                        avail_nodes_l[2])
-        self.assertEqual(self.compute._resource_tracker_dict[
-            avail_nodes_l[2]], rts[2])
-
+    @mock.patch('nova.compute.manager.LOG')
     @mock.patch.object(manager.ComputeManager, '_get_resource_tracker')
+    def test_update_available_resource_for_node_fail_no_host(self, get_rt,
+            log_mock):
+        rt = mock.Mock(spec_set=['update_available_resource'])
+        exc = exception.ComputeHostNotFound(host=mock.sentinel.host)
+        rt.update_available_resource.side_effect = exc
+        get_rt.return_value = rt
+        # Fake out the RT on the compute manager object so we can assert it's
+        # nulled out after the ComputeHostNotFound exception is raised.
+        self.compute._resource_tracker = rt
+
+        self.compute.update_available_resource_for_node(
+            self.context,
+            mock.sentinel.node,
+        )
+        rt.update_available_resource.assert_called_once_with(
+            self.context,
+            mock.sentinel.node,
+        )
+        self.assertTrue(log_mock.info.called)
+        self.assertIsNone(self.compute._resource_tracker)
+
+    @mock.patch.object(manager.ComputeManager,
+                       'update_available_resource_for_node')
     @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
     @mock.patch.object(manager.ComputeManager, '_get_compute_nodes_in_db')
     def test_update_available_resource(self, get_db_nodes, get_avail_nodes,
-                                       get_rt):
+                                       update_mock):
         db_nodes = [self._make_compute_node('node%s' % i, i)
                     for i in range(1, 5)]
         avail_nodes = set(['node2', 'node3', 'node4', 'node5'])
         avail_nodes_l = list(avail_nodes)
-        rts = [self._make_rt(node) for node in avail_nodes_l]
-        # Make the 2nd and 3rd ones raise
-        exc = exception.ComputeHostNotFound(host='fake')
-        rts[1].update_available_resource.side_effect = exc
-        exc = test.TestingException()
-        rts[2].update_available_resource.side_effect = exc
 
-        expected_rt_dict = {avail_nodes_l[0]: rts[0],
-                            avail_nodes_l[2]: rts[2],
-                            avail_nodes_l[3]: rts[3]}
         get_db_nodes.return_value = db_nodes
         get_avail_nodes.return_value = avail_nodes
-        get_rt.side_effect = rts
         self.compute.update_available_resource(self.context)
         get_db_nodes.assert_called_once_with(self.context, use_slave=True)
-        self.assertEqual(sorted([mock.call(node) for node in avail_nodes]),
-                         sorted(get_rt.call_args_list))
-        for rt, node in zip(rts, avail_nodes_l):
-            rt.update_available_resource.assert_called_once_with(self.context,
-                                                                 node)
-        self.assertEqual(expected_rt_dict,
-                         self.compute._resource_tracker_dict)
+        update_mock.has_calls(
+            [mock.call(self.context, node) for node in avail_nodes_l]
+        )
+
         # First node in set should have been removed from DB
         for db_node in db_nodes:
             if db_node.hypervisor_hostname == 'node1':
@@ -3379,8 +3361,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
         # override tracker with a version that doesn't need the database:
         fake_rt = fake_resource_tracker.FakeResourceTracker(self.compute.host,
-                    self.compute.driver, self.node)
-        self.compute._resource_tracker_dict[self.node] = fake_rt
+                    self.compute.driver)
+        self.compute._resource_tracker = fake_rt
 
     def _do_build_instance_update(self, mock_save, reschedule_update=False):
         mock_save.return_value = self.instance
@@ -4159,7 +4141,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
         self._instance_action_events(mock_start, mock_finish)
         self._assert_build_instance_update(mock_save, reschedule_update=True)
-        mock_get_resource.assert_called_once_with(self.node)
+        mock_get_resource.assert_called_once_with()
         mock_notify.assert_has_calls([
             mock.call(self.context, self.instance, 'create.start',
                 extra_usage_info= {'image_name': self.image.get('name')}),
@@ -4823,7 +4805,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         do_test()
 
     def test_finish_revert_resize_migration_context(self):
-        fake_rt = resource_tracker.ResourceTracker(None, None, None)
+        fake_rt = resource_tracker.ResourceTracker(None, None)
         fake_rt.tracked_migrations[self.instance['uuid']] = (
             self.migration, None)
 

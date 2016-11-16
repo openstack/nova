@@ -56,13 +56,17 @@ class ComputeManagerTestCase(test.TestCase):
                                     project_id='fake')
         instance.create()
 
+        # Amongst others, mock the resource tracker, otherwise it will
+        # not have been sufficiently initialized and will raise a KeyError
+        # on the self.compute_nodes dict after the TestingException.
         @mock.patch.object(self.conductor.manager.compute_task_mgr,
                            '_cleanup_allocated_networks')
         @mock.patch.object(self.compute.manager.network_api,
                            'cleanup_instance_network_on_host')
         @mock.patch('nova.compute.utils.notify_about_instance_usage')
+        @mock.patch.object(self.compute.manager, '_get_resource_tracker')
         @mock.patch.object(self.compute.manager.driver, 'spawn')
-        def _test(mock_spawn, mock_notify, mock_cinoh, mock_can):
+        def _test(mock_spawn, mock_grt, mock_notify, mock_cinoh, mock_can):
             mock_spawn.side_effect = test.TestingException('Preserve this')
             # Simulate that we're on the last retry attempt
             filter_properties = {'retry': {'num_attempts': 3}}

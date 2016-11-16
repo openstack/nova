@@ -250,7 +250,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         def fake_claim(context, instance, node, limits):
             instance.host = self.compute.host
             requests = objects.InstancePCIRequests(requests=[])
-            return claims.Claim(context, instance,
+            return claims.Claim(context, instance, test_compute.NODENAME,
                                 self.rt, _fake_resources(),
                                 requests)
 
@@ -365,8 +365,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.compute.network_api.setup_instance_network_on_host(
                 self.context, instance, self.compute.host)
         self.rt.instance_claim(self.context, instance, node, limits).AndReturn(
-                claims.Claim(self.context, instance, self.rt,
-                             _fake_resources(),
+                claims.Claim(self.context, instance, test_compute.NODENAME,
+                             self.rt, _fake_resources(),
                              objects.InstancePCIRequests(requests=[])))
         self.compute.driver.spawn(self.context, instance,
                 mox.IsA(objects.ImageMeta),

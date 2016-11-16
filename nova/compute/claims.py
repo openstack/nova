@@ -74,11 +74,12 @@ class Claim(NopClaim):
     correct decisions with respect to host selection.
     """
 
-    def __init__(self, context, instance, tracker, resources, pci_requests,
-                 overhead=None, limits=None):
+    def __init__(self, context, instance, nodename, tracker, resources,
+                 pci_requests, overhead=None, limits=None):
         super(Claim, self).__init__()
         # Stash a copy of the instance at the current point of time
         self.instance = instance.obj_clone()
+        self.nodename = nodename
         self._numa_topology_loaded = False
         self.tracker = tracker
         self._pci_requests = pci_requests
@@ -122,7 +123,7 @@ class Claim(NopClaim):
         """
         LOG.debug("Aborting claim: %s", self, instance=self.instance)
         self.tracker.abort_instance_claim(self.context, self.instance,
-                                          self.instance.node)
+                                          self.nodename)
 
     def _claim_test(self, resources, limits=None):
         """Test if this claim can be satisfied given available resources and
@@ -260,14 +261,14 @@ class MoveClaim(Claim):
 
     Move can be either a migrate/resize, live-migrate or an evacuate operation.
     """
-    def __init__(self, context, instance, instance_type, image_meta, tracker,
-                 resources, pci_requests, overhead=None, limits=None):
+    def __init__(self, context, instance, nodename, instance_type, image_meta,
+                 tracker, resources, pci_requests, overhead=None, limits=None):
         self.context = context
         self.instance_type = instance_type
         if isinstance(image_meta, dict):
             image_meta = objects.ImageMeta.from_dict(image_meta)
         self.image_meta = image_meta
-        super(MoveClaim, self).__init__(context, instance, tracker,
+        super(MoveClaim, self).__init__(context, instance, nodename, tracker,
                                         resources, pci_requests,
                                         overhead=overhead, limits=limits)
         self.migration = None
@@ -298,6 +299,6 @@ class MoveClaim(Claim):
         LOG.debug("Aborting claim: %s", self, instance=self.instance)
         self.tracker.drop_move_claim(
             self.context,
-            self.instance, self.instance.node,
+            self.instance, self.nodename,
             instance_type=self.instance_type)
         self.instance.drop_migration_context()
