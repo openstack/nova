@@ -227,7 +227,7 @@ tests:
       $.allocations..resources.DISK_GB: 20
       $.allocations..resources.VCPU: 4
 
-- name: check allocations by diferent consumer id
+- name: check allocations by different consumer id
   GET: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
   response_json_paths:
       # TODO(cdent): Can't currently do substitution on the left hand
