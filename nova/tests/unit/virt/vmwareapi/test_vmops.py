@@ -2527,8 +2527,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                     self._network_values)
         extra_specs = vm_util.ExtraSpecs()
         mock_extra_specs.return_value = extra_specs
-        self._vmops.attach_interface(self._instance, self._image_meta,
-                                     self._network_values)
+        self._vmops.attach_interface(self._context, self._instance,
+                                     self._image_meta, self._network_values)
         mock_get_vm_ref.assert_called_once_with(self._session, self._instance)
         mock_get_attach_port_index(self._session, 'fake-ref')
         mock_get_network_attach_config_spec.assert_called_once_with(
@@ -2556,7 +2556,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
         with mock.patch.object(self._session, '_call_method',
                                return_value='hardware-devices'):
-            self._vmops.detach_interface(self._instance, self._network_values)
+            self._vmops.detach_interface(self._context, self._instance,
+                                         self._network_values)
         mock_get_vm_ref.assert_called_once_with(self._session, self._instance)
         mock_get_detach_port_index(self._session, 'fake-ref')
         mock_get_network_detach_config_spec.assert_called_once_with(
@@ -2632,7 +2633,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                     shares_share=40)
         extra_specs = vm_util.ExtraSpecs(vif_limits=vif_limits)
         mock_extra_specs.return_value = extra_specs
-        self._vmops.attach_interface(self._instance, self._image_meta,
+        self._vmops.attach_interface(self._context, self._instance,
+                                     self._image_meta,
                                      self._network_values)
         mock_get_vm_ref.assert_called_once_with(self._session, self._instance)
         mock_get_attach_port_index(self._session, 'fake-ref')

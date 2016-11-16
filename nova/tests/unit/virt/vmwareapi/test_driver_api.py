@@ -2178,7 +2178,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertEqual(num_iface_ids, num_found)
 
     def _attach_interface(self, vif):
-        self.conn.attach_interface(self.instance, self.image, vif)
+        self.conn.attach_interface(self.context, self.instance, self.image,
+                                   vif)
         self._validate_interfaces(vif['id'], 1, 2)
 
     def test_attach_interface(self):
@@ -2194,14 +2195,14 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                side_effect=Exception):
             self.assertRaises(exception.InterfaceAttachFailed,
                               self.conn.attach_interface,
-                              self.instance, self.image, vif)
+                              self.context, self.instance, self.image, vif)
 
     @mock.patch.object(vif, 'get_network_device',
                        return_value='fake_device')
     def _detach_interface(self, vif, mock_get_device):
         self._create_vm()
         self._attach_interface(vif)
-        self.conn.detach_interface(self.instance, vif)
+        self.conn.detach_interface(self.context, self.instance, vif)
         self._validate_interfaces('free', 1, 2)
 
     def test_detach_interface(self):
@@ -2211,7 +2212,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_detach_interface_and_attach(self):
         vif = self._create_vif()
         self._detach_interface(vif)
-        self.conn.attach_interface(self.instance, self.image, vif)
+        self.conn.attach_interface(self.context, self.instance, self.image,
+                                   vif)
         self._validate_interfaces(vif['id'], 1, 2)
 
     def test_detach_interface_no_device(self):
@@ -2219,7 +2221,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         vif = self._create_vif()
         self._attach_interface(vif)
         self.assertRaises(exception.NotFound, self.conn.detach_interface,
-                          self.instance, vif)
+                          self.context, self.instance, vif)
 
     def test_detach_interface_no_vif_match(self):
         self._create_vm()
@@ -2227,7 +2229,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._attach_interface(vif)
         vif['id'] = 'bad-id'
         self.assertRaises(exception.NotFound, self.conn.detach_interface,
-                          self.instance, vif)
+                          self.context, self.instance, vif)
 
     @mock.patch.object(vif, 'get_network_device',
                        return_value='fake_device')
@@ -2240,7 +2242,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                side_effect=Exception):
             self.assertRaises(exception.InterfaceDetachFailed,
                               self.conn.detach_interface,
-                              self.instance, vif)
+                              self.context, self.instance, vif)
 
     def test_resize_to_smaller_disk(self):
         self._create_vm(instance_type='m1.large')

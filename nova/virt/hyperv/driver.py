@@ -344,10 +344,10 @@ class HyperVDriver(driver.ComputeDriver):
     def manage_image_cache(self, context, all_instances):
         self._imagecache.update(context, all_instances)
 
-    def attach_interface(self, instance, image_meta, vif):
+    def attach_interface(self, context, instance, image_meta, vif):
         return self._vmops.attach_interface(instance, vif)
 
-    def detach_interface(self, instance, vif):
+    def detach_interface(self, context, instance, vif):
         return self._vmops.detach_interface(instance, vif)
 
     def rescue(self, context, instance, network_info, image_meta,

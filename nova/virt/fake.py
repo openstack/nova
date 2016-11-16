@@ -304,13 +304,13 @@ class FakeDriver(driver.ComputeDriver):
             self._mounts[instance_name] = {}
         self._mounts[instance_name][mountpoint] = new_connection_info
 
-    def attach_interface(self, instance, image_meta, vif):
+    def attach_interface(self, context, instance, image_meta, vif):
         if vif['id'] in self._interfaces:
             raise exception.InterfaceAttachFailed(
                     instance_uuid=instance.uuid)
         self._interfaces[vif['id']] = vif
 
-    def detach_interface(self, instance, vif):
+    def detach_interface(self, context, instance, vif):
         try:
             del self._interfaces[vif['id']]
         except KeyError:

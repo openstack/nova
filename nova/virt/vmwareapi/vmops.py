@@ -1743,7 +1743,7 @@ class VMwareVMOps(object):
         except exception.InstanceNotFound:
             return False
 
-    def attach_interface(self, instance, image_meta, vif):
+    def attach_interface(self, context, instance, image_meta, vif):
         """Attach an interface to the instance."""
         vif_model = image_meta.properties.get('hw_vif_model',
                                               constants.DEFAULT_VIF_MODEL)
@@ -1773,13 +1773,12 @@ class VMwareVMOps(object):
                 raise exception.InterfaceAttachFailed(
                         instance_uuid=instance.uuid)
 
-            context = nova_context.get_admin_context()
             self._network_api.update_instance_vnic_index(
                 context, instance, vif, port_index)
 
         LOG.debug("Reconfigured VM to attach interface", instance=instance)
 
-    def detach_interface(self, instance, vif):
+    def detach_interface(self, context, instance, vif):
         """Detach an interface from the instance."""
         vm_ref = vm_util.get_vm_ref(self._session, instance)
         # Ensure that there is not a race with the port index management
@@ -1805,7 +1804,6 @@ class VMwareVMOps(object):
                         "VM") % vif['address']
                 raise exception.NotFound(msg)
 
-            context = nova_context.get_admin_context()
             self._network_api.update_instance_vnic_index(
                 context, instance, vif, None)
 

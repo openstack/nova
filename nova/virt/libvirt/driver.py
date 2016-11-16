@@ -1327,7 +1327,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._disconnect_volume(connection_info, disk_dev)
 
-    def attach_interface(self, instance, image_meta, vif):
+    def attach_interface(self, context, instance, image_meta, vif):
         guest = self._host.get_guest(instance)
 
         self.vif_driver.plug(instance, vif)
@@ -1347,7 +1347,7 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.InterfaceAttachFailed(
                     instance_uuid=instance.uuid)
 
-    def detach_interface(self, instance, vif):
+    def detach_interface(self, context, instance, vif):
         guest = self._host.get_guest(instance)
         cfg = self.vif_driver.get_config(instance, vif,
                                          instance.image_meta,
