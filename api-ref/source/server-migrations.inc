@@ -117,6 +117,44 @@ Force Migration Complete Action (force_complete Action)
 
 .. rest_method:: POST /servers/{server_id}/migrations/{migration_id}/action
 
+Force an in-progress live migration for a given server to complete.
+
+Specify the ``force_complete`` action in the request body.
+
+.. note:: Microversion 2.22 or greater is required for this API.
+
+.. note:: Not all compute back ends support forcefully completing an
+    in-progress live migration.
+
+Policy defaults enable only users with the administrative role to perform
+this operation. Cloud providers can change these permissions through the
+``policy.json`` file.
+
+**Preconditions**
+
+The server OS-EXT-STS:vm_state value must be ``active`` and the server
+OS-EXT-STS:task_state value must be ``migrating``.
+
+If the server is locked, you must have administrator privileges to force the
+completion of the server migration.
+
+The migration status must be ``running``.
+
+**Asynchronous Postconditions**
+
+After you make this request, you typically must keep polling the server status
+to determine whether the request succeeded.
+
+**Troubleshooting**
+
+If the server status remains ``ACTIVE`` for an inordinate amount of time, the
+request may have failed. Ensure you meet the preconditions and run the request
+again. If the request fails again, investigate the compute back end.
+
+Normal response codes: 202
+
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404), conflict(409)
+
 Request
 -------
 
