@@ -6721,7 +6721,7 @@ class ComputeManager(manager.Manager):
                                  instance,
                                  nw_info=network_info)
                 try:
-                    self.driver.detach_interface(instance, vif)
+                    self.driver.detach_interface(context, instance, vif)
                 except exception.NovaException as ex:
                     LOG.warning(_LW("Detach interface failed, "
                                     "port_id=%(port_id)s, reason: %(msg)s"),
