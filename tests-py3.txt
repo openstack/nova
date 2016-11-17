@@ -7,9 +7,6 @@ nova.tests.unit.api.openstack.compute.test_extended_server_attributes.ExtendedSe
 nova.tests.unit.api.openstack.compute.test_floating_ip_dns.FloatingIPDNSDomainPolicyEnforcementV21
 nova.tests.unit.api.openstack.compute.test_floating_ip_dns.FloatingIPDNSEntryPolicyEnforcementV21
 nova.tests.unit.api.openstack.compute.test_hide_server_addresses.HideServerAddressesTestV21
-nova.tests.unit.api.openstack.compute.test_keypairs.KeypairsTestV21
-nova.tests.unit.api.openstack.compute.test_keypairs.KeypairsTestV210
-nova.tests.unit.api.openstack.compute.test_keypairs.KeypairsTestV22
 nova.tests.unit.api.openstack.compute.test_limits.WsgiLimiterProxyTest
 nova.tests.unit.api.openstack.compute.test_neutron_security_groups.TestNeutronSecurityGroupRulesV21
 nova.tests.unit.api.openstack.compute.test_neutron_security_groups.TestNeutronSecurityGroupsOutputTest
