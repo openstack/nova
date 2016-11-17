@@ -14,6 +14,7 @@
 import mock
 from oslo_db import exception as db_exc
 
+import nova
 from nova import context
 from nova import exception
 from nova import objects
@@ -1134,6 +1135,42 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
         )
         rc.create()
         self.assertEqual(min_id + 1, rc.id)
+
+    @mock.patch.object(nova.objects.ResourceClass, "_get_next_id")
+    def test_create_duplicate_id_retry(self, mock_get):
+        # This order of ID generation will create rc1 with an ID of 42, try to
+        # create rc2 with the same ID, and then return 43 in the retry loop.
+        mock_get.side_effect = (42, 42, 43)
+        rc1 = objects.ResourceClass(
+            self.context,
+            name='CUSTOM_IRON_NFV',
+        )
+        rc1.create()
+        rc2 = objects.ResourceClass(
+            self.context,
+            name='CUSTOM_TWO',
+        )
+        rc2.create()
+        self.assertEqual(rc1.id, 42)
+        self.assertEqual(rc2.id, 43)
+
+    @mock.patch.object(nova.objects.ResourceClass, "_get_next_id")
+    def test_create_duplicate_id_retry_failing(self, mock_get):
+        """negative case for test_create_duplicate_id_retry"""
+        # This order of ID generation will create rc1 with an ID of 44, try to
+        # create rc2 with the same ID, and then return 45 in the retry loop.
+        mock_get.side_effect = (44, 44, 44, 44)
+        rc1 = objects.ResourceClass(
+            self.context,
+            name='CUSTOM_IRON_NFV',
+        )
+        rc1.create()
+        rc2 = objects.ResourceClass(
+            self.context,
+            name='CUSTOM_TWO',
+        )
+        rc2.RESOURCE_CREATE_RETRY_COUNT = 3
+        self.assertRaises(exception.ResourceClassExists, rc2.create)
 
     def test_create_duplicate_custom(self):
         rc = objects.ResourceClass(

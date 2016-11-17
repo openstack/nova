@@ -1142,6 +1142,12 @@ class ResourceClass(base.NovaObject):
     or equal to this number.
     """
 
+    # Retry count for handling possible race condition in creating resource
+    # class. We don't ever want to hit this, as it is simply a race when
+    # creating these classes, but this is just a stopgap to prevent a potential
+    # infinite loop.
+    RESOURCE_CREATE_RETRY_COUNT = 100
+
     fields = {
         'id': fields.IntegerField(read_only=True),
         'name': fields.ResourceClassField(nullable=False),
@@ -1199,10 +1205,32 @@ class ResourceClass(base.NovaObject):
                 reason='name must start with ' + self.CUSTOM_NAMESPACE)
 
         updates = self.obj_get_changes()
-        try:
-            rc = self._create_in_db(self._context, updates)
-            self._from_db_object(self._context, self, rc)
-        except db_exc.DBDuplicateEntry:
+        # There is the possibility of a race when adding resource classes, as
+        # the ID is generated locally. This loop catches that exception, and
+        # retries until either it succeeds, or a different exception is
+        # encountered.
+        retries = self.RESOURCE_CREATE_RETRY_COUNT
+        while retries:
+            retries -= 1
+            try:
+                rc = self._create_in_db(self._context, updates)
+                self._from_db_object(self._context, self, rc)
+                break
+            except db_exc.DBDuplicateEntry as e:
+                if 'id' in e.columns:
+                    # Race condition for ID creation; try again
+                    continue
+                # The duplication is on the other unique column, 'name'. So do
+                # not retry; raise the exception immediately.
+                raise exception.ResourceClassExists(resource_class=self.name)
+        else:
+            # We have no idea how common it will be in practice for the retry
+            # limit to be exceeded. We set it high in the hope that we never
+            # hit this point, but added this log message so we know that this
+            # specific situation occurred.
+            LOG.warning(_LW("Exceeded retry limit on ID generation while "
+                            "creating ResourceClass %(name)s"),
+                        {'name': self.name})
             raise exception.ResourceClassExists(resource_class=self.name)
 
     @staticmethod
