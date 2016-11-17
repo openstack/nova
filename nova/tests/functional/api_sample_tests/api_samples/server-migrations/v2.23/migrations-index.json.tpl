@@ -12,10 +12,10 @@
             "status": "running",
             "memory_total_bytes": 123456,
             "memory_processed_bytes": 12345,
-            "memory_remaining_bytes": 120000,
+            "memory_remaining_bytes": 111111,
             "disk_total_bytes": 234567,
             "disk_processed_bytes": 23456,
-            "disk_remaining_bytes": 230000,
+            "disk_remaining_bytes": 211111,
             "updated_at": "2016-01-29T13:42:02.000000"
         }
     ]

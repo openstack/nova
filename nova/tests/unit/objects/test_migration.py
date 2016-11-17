@@ -48,10 +48,10 @@ def fake_db_migration(**updates):
         'hidden': False,
         'memory_total': 123456,
         'memory_processed': 12345,
-        'memory_remaining': 120000,
+        'memory_remaining': 111111,
         'disk_total': 234567,
         'disk_processed': 23456,
-        'disk_remaining': 230000,
+        'disk_remaining': 211111,
     }
 
     if updates:
