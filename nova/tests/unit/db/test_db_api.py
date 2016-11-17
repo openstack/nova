@@ -2577,50 +2577,6 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                                 {'display_name': u'test♥'})
         self._assertEqualListsOfInstances(result, [i1, i3])
 
-    def test_instance_get_all_by_filters_tags(self):
-        instance = self.create_instance_with_args(
-            metadata={'foo': 'bar'})
-        self.create_instance_with_args()
-        # For format 'tag-'
-        result = db.instance_get_all_by_filters(
-            self.ctxt, {'filter': [
-                {'name': 'tag-key', 'value': 'foo'},
-                {'name': 'tag-value', 'value': 'bar'},
-            ]})
-        self._assertEqualListsOfInstances([instance], result)
-        # For format 'tag:'
-        result = db.instance_get_all_by_filters(
-            self.ctxt, {'filter': [
-                {'name': 'tag:foo', 'value': 'bar'},
-            ]})
-        self._assertEqualListsOfInstances([instance], result)
-        # For non-existent tag
-        result = db.instance_get_all_by_filters(
-            self.ctxt, {'filter': [
-                {'name': 'tag:foo', 'value': 'barred'},
-            ]})
-        self.assertEqual([], result)
-
-        # Confirm with deleted tags
-        db.instance_metadata_delete(self.ctxt, instance['uuid'], 'foo')
-        # For format 'tag-'
-        result = db.instance_get_all_by_filters(
-            self.ctxt, {'filter': [
-                {'name': 'tag-key', 'value': 'foo'},
-            ]})
-        self.assertEqual([], result)
-        result = db.instance_get_all_by_filters(
-            self.ctxt, {'filter': [
-                {'name': 'tag-value', 'value': 'bar'}
-            ]})
-        self.assertEqual([], result)
-        # For format 'tag:'
-        result = db.instance_get_all_by_filters(
-            self.ctxt, {'filter': [
-                {'name': 'tag:foo', 'value': 'bar'},
-            ]})
-        self.assertEqual([], result)
-
     def test_instance_get_by_uuid(self):
         inst = self.create_instance_with_args()
         result = db.instance_get_by_uuid(self.ctxt, inst['uuid'])
