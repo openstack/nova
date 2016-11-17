@@ -416,3 +416,8 @@ tag = {
     "type": "string",
     "pattern": "^[^,/]*$"
 }
+
+pagination_parameters = {
+    'limit': multi_params(non_negative_integer),
+    'marker': multi_params({'type': 'string'})
+}

@@ -561,6 +561,16 @@ class KeypairsTestV210(KeypairsTestV22):
                           self.controller.create,
                           req, body=body)
 
+    def test_keypair_list_other_user_invalid_in_old_microversion(self):
+        req = fakes.HTTPRequest.blank(self.base_url +
+                                      '/os-keypairs?user_id=foo',
+                                      version="2.9",
+                                      use_admin_context=True)
+        with mock.patch.object(self.controller.api, 'get_key_pairs') as mock_g:
+            self.controller.index(req)
+            userid = mock_g.call_args_list[0][0][1]
+            self.assertEqual('fake_user', userid)
+
 
 class KeypairsTestV235(test.TestCase):
     base_url = '/v2/fake'
@@ -600,3 +610,26 @@ class KeypairsTestV235(test.TestCase):
             version=self.wsgi_api_version, use_admin_context=True)
 
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.index, req)
+
+    def test_keypair_list_limit_and_marker_invalid_limit(self):
+        req = fakes.HTTPRequest.blank(
+            self.base_url + '/os-keypairs?limit=abc&marker=fake_marker',
+            version=self.wsgi_api_version, use_admin_context=True)
+
+        self.assertRaises(exception.ValidationError, self.controller.index,
+                          req)
+
+    @mock.patch("nova.db.key_pair_get_all_by_user")
+    def test_keypair_list_limit_and_marker_invalid_in_old_microversion(
+            self, mock_kp_get):
+        mock_kp_get.side_effect = db_key_pair_get_all_by_user
+
+        req = fakes.HTTPRequest.blank(
+            self.base_url + '/os-keypairs?limit=3&marker=fake_marker',
+            version="2.30", use_admin_context=True)
+
+        self.controller.index(req)
+
+        mock_kp_get.assert_called_once_with(
+            req.environ['nova.context'], 'fake_user',
+            limit=None, marker=None)
