@@ -17,6 +17,7 @@
 """
 Management class for basic VM operations.
 """
+import contextlib
 import functools
 import os
 import time
@@ -98,7 +99,8 @@ class VMOps(object):
     _MAX_CONSOLE_LOG_FILE_SIZE = units.Mi / 2
     _ROOT_DISK_CTRL_ADDR = 0
 
-    def __init__(self):
+    def __init__(self, virtapi=None):
+        self._virtapi = virtapi
         self._vmutils = utilsfactory.get_vmutils()
         self._metricsutils = utilsfactory.get_metricsutils()
         self._vhdutils = utilsfactory.get_vhdutils()
@@ -291,8 +293,11 @@ class VMOps(object):
         self._create_ephemerals(instance, block_device_info['ephemerals'])
 
         try:
-            self.create_instance(instance, network_info, root_device,
-                                 block_device_info, vm_gen, image_meta)
+            with self.wait_vif_plug_events(instance, network_info):
+                # waiting will occur after the instance is created.
+                self.create_instance(instance, network_info, root_device,
+                                     block_device_info, vm_gen, image_meta)
+
             self._save_device_metadata(context, instance, block_device_info)
 
             if configdrive.required_by(instance):
@@ -308,6 +313,41 @@ class VMOps(object):
         except Exception:
             with excutils.save_and_reraise_exception():
                 self.destroy(instance)
+
+    @contextlib.contextmanager
+    def wait_vif_plug_events(self, instance, network_info):
+        timeout = CONF.vif_plugging_timeout
+        events = self._get_neutron_events(network_info)
+
+        try:
+            with self._virtapi.wait_for_instance_event(
+                    instance, events, deadline=timeout,
+                    error_callback=self._neutron_failed_callback):
+                yield
+        except etimeout.Timeout:
+            # We never heard from Neutron
+            LOG.warning(_LW('Timeout waiting for vif plugging callback for '
+                            'instance.'), instance=instance)
+            if CONF.vif_plugging_is_fatal:
+                raise exception.VirtualInterfaceCreateException()
+
+    def _neutron_failed_callback(self, event_name, instance):
+        LOG.error(_LE('Neutron Reported failure on event %s'),
+                  event_name, instance=instance)
+        if CONF.vif_plugging_is_fatal:
+            raise exception.VirtualInterfaceCreateException()
+
+    def _get_neutron_events(self, network_info):
+        # NOTE(danms): We need to collect any VIFs that are currently
+        # down that we expect a down->up event for. Anything that is
+        # already up will not undergo that transition, and for
+        # anything that might be stale (cache-wise) assume it's
+        # already up so we don't block on it.
+        if utils.is_neutron() and CONF.vif_plugging_timeout:
+            return [('network-vif-plugged', vif['id'])
+                    for vif in network_info if vif.get('active') is False]
+        else:
+            return []
 
     def create_instance(self, instance, network_info, root_device,
                         block_device_info, vm_gen, image_meta):

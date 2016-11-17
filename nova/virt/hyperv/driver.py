@@ -110,7 +110,7 @@ class HyperVDriver(driver.ComputeDriver):
 
         self._hostops = hostops.HostOps()
         self._volumeops = volumeops.VolumeOps()
-        self._vmops = vmops.VMOps()
+        self._vmops = vmops.VMOps(virtapi)
         self._snapshotops = snapshotops.SnapshotOps()
         self._livemigrationops = livemigrationops.LiveMigrationOps()
         self._migrationops = migrationops.MigrationOps()
