@@ -25,7 +25,7 @@ from nova.cmd import common as cmd_common
 from nova.conductor import rpcapi as conductor_rpcapi
 import nova.conf
 from nova import config
-from nova.i18n import _LE, _LW
+from nova.i18n import _LW
 from nova import objects
 from nova.objects import base as objects_base
 from nova import service
@@ -39,12 +39,6 @@ LOG = logging.getLogger('nova.network')
 def main():
     config.parse_args(sys.argv)
     logging.setup(CONF, "nova")
-
-    if not CONF.cells.enable:
-        LOG.error(_LE('Nova network is deprecated and not supported '
-                      'except as required for CellsV1 deployments.'))
-        return 1
-
     utils.monkey_patch()
     objects.register_all()
 
