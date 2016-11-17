@@ -39,6 +39,12 @@ LOG = logging.getLogger('nova.network')
 def main():
     config.parse_args(sys.argv)
     logging.setup(CONF, "nova")
+
+    if not CONF.cells.enable:
+        # TODO(mriedem): Make this a fatal error after the ocata-2 milestone.
+        LOG.warning(_LW('Nova network is deprecated and not supported '
+                        'except as required for CellsV1 deployments.'))
+
     utils.monkey_patch()
     objects.register_all()
 
