@@ -647,7 +647,7 @@ NFS client behaves when accessing files on this mount point.
 
 Possible values:
 
-* Any string representing mount options seperated by commas.
+* Any string representing mount options separated by commas.
 * Example string: vers=3,lookupcache=pos
 """),
 ]
