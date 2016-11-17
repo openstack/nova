@@ -281,8 +281,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
                     "stats",
                     "numa_topology", "resource_class"]
         wantkeys.sort()
-        gotkeys = result.keys()
-        gotkeys.sort()
+        gotkeys = sorted(result.keys())
         self.assertEqual(wantkeys, gotkeys)
 
         if has_inst_info:
