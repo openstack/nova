@@ -51,6 +51,7 @@ class ComputeMainTest(test.NoDBTestCase):
                               db.api.instance_get, 1, 2)
 
     def test_network_main_blocks_db(self):
+        self.flags(enable=True, group='cells')
         with restore_db():
             self._call_main(network)
             self.assertRaises(exception.DBNotAllowed,
