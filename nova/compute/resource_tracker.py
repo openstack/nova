@@ -505,9 +505,9 @@ class ResourceTracker(object):
         declared a need for resources, but not necessarily retrieved them from
         the hypervisor layer yet.
         """
-        LOG.info(_LI("Auditing locally available compute resources for "
-                     "node %(node)s"),
-                 {'node': self.nodename})
+        LOG.debug("Auditing locally available compute resources for "
+                  "node %(node)s",
+                  {'node': self.nodename})
         resources = self.driver.get_available_resource(self.nodename)
         resources['host_ip'] = CONF.my_ip
 
@@ -591,8 +591,8 @@ class ResourceTracker(object):
 
         # update the compute_node
         self._update(context)
-        LOG.info(_LI('Compute_service record updated for %(host)s:%(node)s'),
-                     {'host': self.host, 'node': self.nodename})
+        LOG.debug('Compute_service record updated for %(host)s:%(node)s',
+                  {'host': self.host, 'node': self.nodename})
 
     def _get_compute_node(self, context):
         """Returns compute node for the host and nodename."""
@@ -649,10 +649,10 @@ class ResourceTracker(object):
         if vcpus:
             tcpu = vcpus
             ucpu = self.compute_node.vcpus_used
-            LOG.info(_LI("Total usable vcpus: %(tcpu)s, "
-                        "total allocated vcpus: %(ucpu)s"),
-                        {'tcpu': vcpus,
-                         'ucpu': ucpu})
+            LOG.debug("Total usable vcpus: %(tcpu)s, "
+                      "total allocated vcpus: %(ucpu)s",
+                      {'tcpu': vcpus,
+                       'ucpu': ucpu})
         else:
             tcpu = 0
             ucpu = 0
