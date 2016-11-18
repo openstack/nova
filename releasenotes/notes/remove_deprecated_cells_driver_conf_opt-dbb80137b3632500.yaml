@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    ``driver`` configuration option has been removed from ``cells``
+    group. There is only one possible driver for cells (CellsRPCDriver), which
+    makes this option redundant.

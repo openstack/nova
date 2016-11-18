@@ -243,19 +243,6 @@ Possible values:
 ]
 
 cell_manager_opts = [
-    cfg.StrOpt('driver',
-        default='nova.cells.rpc_driver.CellsRPCDriver',
-        deprecated_for_removal=True,
-        deprecated_since="14.0.0",
-        deprecated_reason='The only available driver '
-                          'is the RPC driver.',
-        help="""Cells communication driver
-
-Driver for cell<->cell communication via RPC. This is used to
-setup the RPC consumers as well as to send a message to another cell.
-'nova.cells.rpc_driver.CellsRPCDriver' starts up 2 separate servers
-for handling inter-cell communication via RPC.
-"""),
     # TODO(sfinucan): Add min parameter
     cfg.IntOpt('instance_updated_at_threshold',
         default=3600,
