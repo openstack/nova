@@ -1077,21 +1077,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
                          libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC))
 
-    def test_live_migration_tunnelled_none(self):
-        self.flags(live_migration_tunnelled=None, group='libvirt')
-        self._do_test_parse_migration_flags(
-            lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
-                         libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
-                         libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
-                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
-                         libvirt_driver.libvirt.VIR_MIGRATE_TUNNELLED),
-            bm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
-                         libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
-                         libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
-                         libvirt_driver.libvirt.VIR_MIGRATE_PERSIST_DEST |
-                         libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC |
-                         libvirt_driver.libvirt.VIR_MIGRATE_TUNNELLED))
-
     def test_live_migration_tunnelled_true(self):
         self.flags(live_migration_tunnelled=True, group='libvirt')
         self._do_test_parse_migration_flags(

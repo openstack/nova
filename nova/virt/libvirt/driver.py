@@ -575,8 +575,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return (live_migration_flags, block_migration_flags)
 
     def _handle_live_migration_tunnelled(self, migration_flags):
-        if (CONF.libvirt.live_migration_tunnelled is None or
-                CONF.libvirt.live_migration_tunnelled):
+        if CONF.libvirt.live_migration_tunnelled:
             migration_flags |= libvirt.VIR_MIGRATE_TUNNELLED
         return migration_flags
 
