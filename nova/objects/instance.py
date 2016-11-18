@@ -1354,7 +1354,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         return [inst['uuid'] for inst in db_instances]
 
 
-@db_api.main_context_manager.writer
+@db_api.pick_context_manager_writer
 def _migrate_instance_keypairs(ctxt, count):
     db_extras = ctxt.session.query(models.InstanceExtra).\
         options(joinedload('instance')).\

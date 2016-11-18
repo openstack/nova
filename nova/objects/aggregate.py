@@ -328,7 +328,7 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
         return cls._from_db_object(context, cls(), db_aggregate)
 
     @staticmethod
-    @db_api.main_context_manager.reader
+    @db_api.pick_context_manager_reader
     def _ensure_migrated(context):
         result = context.session.query(main_models.Aggregate).\
                  filter_by(deleted=0).count()
@@ -561,7 +561,7 @@ class AggregateList(base.ObjectListBase, base.NovaObject):
                                   all_aggregates)
 
 
-@db_api.main_context_manager.reader
+@db_api.pick_context_manager_reader
 def _get_main_db_aggregate_ids(context, limit):
     from nova.db.sqlalchemy import models
     return [x[0] for x in context.session.query(models.Aggregate.id).

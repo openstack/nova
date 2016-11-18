@@ -512,7 +512,7 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
                                   api_db_groups + main_db_groups)
 
 
-@db_api.main_context_manager.reader
+@db_api.pick_context_manager_reader
 def _get_main_instance_groups(context, limit):
     return context.session.query(main_models.InstanceGroup).\
         options(joinedload('_policies')).\

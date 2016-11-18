@@ -135,7 +135,7 @@ def get_engine(use_slave=False, context=None):
     :param use_slave: Whether to use the slave connection
     :param context: The request context that can contain a context manager
     """
-    ctxt_mgr = _context_manager_from_context(context) or main_context_manager
+    ctxt_mgr = get_context_manager(context)
     return ctxt_mgr.get_legacy_facade().get_engine(use_slave=use_slave)
 
 
@@ -218,9 +218,9 @@ def select_db_reader_mode(f):
         use_slave = keyed_args.get('use_slave', False)
 
         if use_slave:
-            reader_mode = main_context_manager.async
+            reader_mode = get_context_manager(context).async
         else:
-            reader_mode = main_context_manager.reader
+            reader_mode = get_context_manager(context).reader
 
         with reader_mode.using(context):
             return f(*args, **kwargs)
@@ -824,7 +824,7 @@ def compute_node_statistics(context):
 ###################
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def certificate_create(context, values):
     certificate_ref = models.Certificate()
     for (key, value) in values.items():
@@ -833,21 +833,21 @@ def certificate_create(context, values):
     return certificate_ref
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def certificate_get_all_by_project(context, project_id):
     return model_query(context, models.Certificate, read_deleted="no").\
                    filter_by(project_id=project_id).\
                    all()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def certificate_get_all_by_user(context, user_id):
     return model_query(context, models.Certificate, read_deleted="no").\
                    filter_by(user_id=user_id).\
                    all()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def certificate_get_all_by_user_and_project(context, user_id, project_id):
     return model_query(context, models.Certificate, read_deleted="no").\
                    filter_by(user_id=user_id).\
@@ -859,7 +859,7 @@ def certificate_get_all_by_user_and_project(context, user_id, project_id):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def floating_ip_get(context, id):
     try:
         result = model_query(context, models.FloatingIp, project_only=True).\
@@ -876,7 +876,7 @@ def floating_ip_get(context, id):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def floating_ip_get_pools(context):
     pools = []
     for result in model_query(context, models.FloatingIp,
@@ -888,7 +888,7 @@ def floating_ip_get_pools(context):
 @require_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True,
                            retry_on_request=True)
-@main_context_manager.writer
+@pick_context_manager_writer
 def floating_ip_allocate_address(context, project_id, pool,
                                  auto_assigned=False):
     nova.context.authorize_project_context(context, project_id)
@@ -920,7 +920,7 @@ def floating_ip_allocate_address(context, project_id, pool,
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def floating_ip_bulk_create(context, ips, want_result=True):
     try:
         tab = models.FloatingIp().__table__
@@ -952,7 +952,7 @@ def _ip_range_splitter(ips, block_size=256):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def floating_ip_bulk_destroy(context, ips):
     project_id_to_quota_count = collections.defaultdict(int)
     for ip_block in _ip_range_splitter(ips):
@@ -986,7 +986,7 @@ def floating_ip_bulk_destroy(context, ips):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def floating_ip_create(context, values):
     floating_ip_ref = models.FloatingIp()
     floating_ip_ref.update(values)
@@ -1008,7 +1008,7 @@ def _floating_ip_count_by_project(context, project_id):
 
 @require_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
-@main_context_manager.writer
+@pick_context_manager_writer
 def floating_ip_fixed_ip_associate(context, floating_address,
                                    fixed_address, host):
     fixed_ip_ref = model_query(context, models.FixedIp).\
@@ -1034,7 +1034,7 @@ def floating_ip_fixed_ip_associate(context, floating_address,
 
 @require_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
-@main_context_manager.writer
+@pick_context_manager_writer
 def floating_ip_deallocate(context, address):
     return model_query(context, models.FloatingIp).\
         filter_by(address=address).\
@@ -1047,7 +1047,7 @@ def floating_ip_deallocate(context, address):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def floating_ip_destroy(context, address):
     model_query(context, models.FloatingIp).\
             filter_by(address=address).\
@@ -1055,7 +1055,7 @@ def floating_ip_destroy(context, address):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def floating_ip_disassociate(context, address):
     floating_ip_ref = model_query(context,
                                   models.FloatingIp).\
@@ -1078,7 +1078,7 @@ def _floating_ip_get_all(context):
     return model_query(context, models.FloatingIp, read_deleted="no")
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def floating_ip_get_all(context):
     floating_ip_refs = _floating_ip_get_all(context).\
                        options(joinedload('fixed_ip')).\
@@ -1088,7 +1088,7 @@ def floating_ip_get_all(context):
     return floating_ip_refs
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def floating_ip_get_all_by_host(context, host):
     floating_ip_refs = _floating_ip_get_all(context).\
                        filter_by(host=host).\
@@ -1100,7 +1100,7 @@ def floating_ip_get_all_by_host(context, host):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def floating_ip_get_all_by_project(context, project_id):
     nova.context.authorize_project_context(context, project_id)
     # TODO(tr3buchet): why do we not want auto_assigned floating IPs here?
@@ -1112,7 +1112,7 @@ def floating_ip_get_all_by_project(context, project_id):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def floating_ip_get_by_address(context, address):
     return _floating_ip_get_by_address(context, address)
 
@@ -1144,7 +1144,7 @@ def _floating_ip_get_by_address(context, address):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def floating_ip_get_by_fixed_address(context, fixed_address):
     return model_query(context, models.FloatingIp).\
                        outerjoin(models.FixedIp,
@@ -1155,7 +1155,7 @@ def floating_ip_get_by_fixed_address(context, fixed_address):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def floating_ip_get_by_fixed_ip_id(context, fixed_ip_id):
     return model_query(context, models.FloatingIp).\
                 filter_by(fixed_ip_id=fixed_ip_id).\
@@ -1163,7 +1163,7 @@ def floating_ip_get_by_fixed_ip_id(context, fixed_ip_id):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def floating_ip_update(context, address, values):
     float_ip_ref = _floating_ip_get_by_address(context, address)
     float_ip_ref.update(values)
@@ -1178,7 +1178,7 @@ def floating_ip_update(context, address, values):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def dnsdomain_get(context, fqdomain):
     return model_query(context, models.DNSDomain, read_deleted="no").\
                filter_by(domain=fqdomain).\
@@ -1198,7 +1198,7 @@ def _dnsdomain_get_or_create(context, fqdomain):
     return domain_ref
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def dnsdomain_register_for_zone(context, fqdomain, zone):
     domain_ref = _dnsdomain_get_or_create(context, fqdomain)
     domain_ref.scope = 'private'
@@ -1206,7 +1206,7 @@ def dnsdomain_register_for_zone(context, fqdomain, zone):
     context.session.add(domain_ref)
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def dnsdomain_register_for_project(context, fqdomain, project):
     domain_ref = _dnsdomain_get_or_create(context, fqdomain)
     domain_ref.scope = 'public'
@@ -1214,14 +1214,14 @@ def dnsdomain_register_for_project(context, fqdomain, project):
     context.session.add(domain_ref)
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def dnsdomain_unregister(context, fqdomain):
     model_query(context, models.DNSDomain).\
                  filter_by(domain=fqdomain).\
                  delete()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def dnsdomain_get_all(context):
     return model_query(context, models.DNSDomain, read_deleted="no").all()
 
@@ -1231,7 +1231,7 @@ def dnsdomain_get_all(context):
 
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True,
                            retry_on_request=True)
-@main_context_manager.writer
+@pick_context_manager_writer
 def fixed_ip_associate(context, address, instance_uuid, network_id=None,
                        reserved=False, virtual_interface_id=None):
     """Keyword arguments:
@@ -1281,7 +1281,7 @@ def fixed_ip_associate(context, address, instance_uuid, network_id=None,
 
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True,
                            retry_on_request=True)
-@main_context_manager.writer
+@pick_context_manager_writer
 def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
                             host=None, virtual_interface_id=None):
     """allocate a fixed ip out of a fixed ip network pool.
@@ -1338,7 +1338,7 @@ def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def fixed_ip_create(context, values):
     fixed_ip_ref = models.FixedIp()
     fixed_ip_ref.update(values)
@@ -1350,7 +1350,7 @@ def fixed_ip_create(context, values):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def fixed_ip_bulk_create(context, ips):
     try:
         tab = models.FixedIp.__table__
@@ -1360,14 +1360,14 @@ def fixed_ip_bulk_create(context, ips):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def fixed_ip_disassociate(context, address):
     _fixed_ip_get_by_address(context, address).update(
         {'instance_uuid': None,
          'virtual_interface_id': None})
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def fixed_ip_disassociate_all_by_timeout(context, host, time):
     # NOTE(vish): only update fixed ips that "belong" to this
     #             host; i.e. the network host or the instance
@@ -1399,7 +1399,7 @@ def fixed_ip_disassociate_all_by_timeout(context, host, time):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def fixed_ip_get(context, id, get_network=False):
     query = model_query(context, models.FixedIp).filter_by(id=id)
     if get_network:
@@ -1419,7 +1419,7 @@ def fixed_ip_get(context, id, get_network=False):
     return result
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def fixed_ip_get_all(context):
     result = model_query(context, models.FixedIp, read_deleted="yes").all()
     if not result:
@@ -1429,7 +1429,7 @@ def fixed_ip_get_all(context):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def fixed_ip_get_by_address(context, address, columns_to_join=None):
     return _fixed_ip_get_by_address(context, address,
                                     columns_to_join=columns_to_join)
@@ -1464,7 +1464,7 @@ def _fixed_ip_get_by_address(context, address, columns_to_join=None):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def fixed_ip_get_by_floating_address(context, floating_address):
     return model_query(context, models.FixedIp).\
                        join(models.FloatingIp,
@@ -1476,7 +1476,7 @@ def fixed_ip_get_by_floating_address(context, floating_address):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def fixed_ip_get_by_instance(context, instance_uuid):
     if not uuidutils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(uuid=instance_uuid)
@@ -1500,7 +1500,7 @@ def fixed_ip_get_by_instance(context, instance_uuid):
     return result
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def fixed_ip_get_by_host(context, host):
     instance_uuids = _instance_get_all_uuids_by_host(context, host)
     if not instance_uuids:
@@ -1512,7 +1512,7 @@ def fixed_ip_get_by_host(context, host):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def fixed_ip_get_by_network_host(context, network_id, host):
     result = model_query(context, models.FixedIp, read_deleted="no").\
                  filter_by(network_id=network_id).\
@@ -1526,7 +1526,7 @@ def fixed_ip_get_by_network_host(context, network_id, host):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def fixed_ips_by_virtual_interface(context, vif_id):
     result = model_query(context, models.FixedIp, read_deleted="no").\
                  filter_by(virtual_interface_id=vif_id).\
@@ -1538,7 +1538,7 @@ def fixed_ips_by_virtual_interface(context, vif_id):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def fixed_ip_update(context, address, values):
     _fixed_ip_get_by_address(context, address).update(values)
 
@@ -2579,7 +2579,7 @@ def instance_get_all_by_grantee_security_groups(context, group_ids):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def instance_floating_address_get_all(context, instance_uuid):
     if not uuidutils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(uuid=instance_uuid)
@@ -2863,7 +2863,7 @@ def instance_info_cache_update(context, instance_uuid, values):
         needs_create = True
 
     try:
-        with main_context_manager.writer.savepoint.using(context):
+        with get_context_manager(context).writer.savepoint.using(context):
             if needs_create:
                 info_cache.save(context.session)
             else:
@@ -2931,7 +2931,7 @@ def instance_extra_get_by_instance_uuid(context, instance_uuid,
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def key_pair_create(context, values):
     try:
         key_pair_ref = models.KeyPair()
@@ -2943,7 +2943,7 @@ def key_pair_create(context, values):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def key_pair_destroy(context, user_id, name):
     result = model_query(context, models.KeyPair).\
                          filter_by(user_id=user_id).\
@@ -2954,7 +2954,7 @@ def key_pair_destroy(context, user_id, name):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def key_pair_get(context, user_id, name):
     result = model_query(context, models.KeyPair).\
                      filter_by(user_id=user_id).\
@@ -2968,7 +2968,7 @@ def key_pair_get(context, user_id, name):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def key_pair_get_all_by_user(context, user_id, limit=None, marker=None):
     marker_row = None
     if marker is not None:
@@ -2987,7 +2987,7 @@ def key_pair_get_all_by_user(context, user_id, limit=None, marker=None):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def key_pair_count_by_user(context, user_id):
     return model_query(context, models.KeyPair, read_deleted="no").\
                    filter_by(user_id=user_id).\
@@ -2996,7 +2996,7 @@ def key_pair_count_by_user(context, user_id):
 
 ###################
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def network_associate(context, project_id, network_id=None, force=False):
     """Associate a project with a network.
 
@@ -3047,14 +3047,14 @@ def _network_ips_query(context, network_id):
                    filter_by(network_id=network_id)
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def network_count_reserved_ips(context, network_id):
     return _network_ips_query(context, network_id).\
                     filter_by(reserved=True).\
                     count()
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def network_create_safe(context, values):
     network_ref = models.Network()
     network_ref['uuid'] = uuidutils.generate_uuid()
@@ -3067,7 +3067,7 @@ def network_create_safe(context, values):
         raise exception.DuplicateVlan(vlan=values['vlan'])
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def network_delete_safe(context, network_id):
     result = model_query(context, models.FixedIp, read_deleted="no").\
                      filter_by(network_id=network_id).\
@@ -3084,7 +3084,7 @@ def network_delete_safe(context, network_id):
     context.session.delete(network_ref)
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def network_disassociate(context, network_id, disassociate_host,
                          disassociate_project):
     net_update = {}
@@ -3107,13 +3107,13 @@ def _network_get(context, network_id, project_only='allow_none'):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def network_get(context, network_id, project_only='allow_none'):
     return _network_get(context, network_id, project_only=project_only)
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def network_get_all(context, project_only):
     result = model_query(context, models.Network, read_deleted="no",
                          project_only=project_only).all()
@@ -3125,7 +3125,7 @@ def network_get_all(context, project_only):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def network_get_all_by_uuids(context, network_uuids, project_only):
     result = model_query(context, models.Network, read_deleted="no",
                          project_only=project_only).\
@@ -3192,7 +3192,7 @@ def _get_associated_fixed_ips_query(context, network_id, host=None):
     return query
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def network_get_associated_fixed_ips(context, network_id, host=None):
     # FIXME(sirp): since this returns fixed_ips, this would be better named
     # fixed_ip_get_all_by_network.
@@ -3218,7 +3218,7 @@ def network_get_associated_fixed_ips(context, network_id, host=None):
     return data
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def network_in_use_on_host(context, network_id, host):
     query = _get_associated_fixed_ips_query(context, network_id, host)
     return query.count() > 0
@@ -3228,7 +3228,7 @@ def _network_get_query(context):
     return model_query(context, models.Network, read_deleted="no")
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def network_get_by_uuid(context, uuid):
     result = _network_get_query(context).filter_by(uuid=uuid).first()
 
@@ -3238,7 +3238,7 @@ def network_get_by_uuid(context, uuid):
     return result
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def network_get_by_cidr(context, cidr):
     result = _network_get_query(context).\
                 filter(or_(models.Network.cidr == cidr,
@@ -3251,7 +3251,7 @@ def network_get_by_cidr(context, cidr):
     return result
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def network_get_all_by_host(context, host):
     fixed_host_filter = or_(models.FixedIp.host == host,
             and_(models.FixedIp.instance_uuid != null(),
@@ -3272,7 +3272,7 @@ def network_get_all_by_host(context, host):
 
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True,
                            retry_on_request=True)
-@main_context_manager.writer
+@pick_context_manager_writer
 def network_set_host(context, network_id, host_id):
     network_ref = _network_get_query(context).\
         filter_by(id=network_id).\
@@ -3297,7 +3297,7 @@ def network_set_host(context, network_id, host_id):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def network_update(context, network_id, values):
     network_ref = _network_get(context, network_id)
     network_ref.update(values)
@@ -3312,7 +3312,7 @@ def network_update(context, network_id, values):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def quota_get(context, project_id, resource, user_id=None):
     model = models.ProjectUserQuota if user_id else models.Quota
     query = model_query(context, model).\
@@ -3333,7 +3333,7 @@ def quota_get(context, project_id, resource, user_id=None):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def quota_get_all_by_project_and_user(context, project_id, user_id):
     user_quotas = model_query(context, models.ProjectUserQuota,
                               (models.ProjectUserQuota.resource,
@@ -3350,7 +3350,7 @@ def quota_get_all_by_project_and_user(context, project_id, user_id):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def quota_get_all_by_project(context, project_id):
     rows = model_query(context, models.Quota, read_deleted="no").\
                    filter_by(project_id=project_id).\
@@ -3364,7 +3364,7 @@ def quota_get_all_by_project(context, project_id):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def quota_get_all(context, project_id):
     result = model_query(context, models.ProjectUserQuota).\
                    filter_by(project_id=project_id).\
@@ -3377,7 +3377,7 @@ def quota_get_per_project_resources():
     return PER_PROJECT_QUOTAS
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def quota_create(context, project_id, resource, limit, user_id=None):
     per_user = user_id and resource not in PER_PROJECT_QUOTAS
     quota_ref = models.ProjectUserQuota() if per_user else models.Quota()
@@ -3393,7 +3393,7 @@ def quota_create(context, project_id, resource, limit, user_id=None):
     return quota_ref
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def quota_update(context, project_id, resource, limit, user_id=None):
     per_user = user_id and resource not in PER_PROJECT_QUOTAS
     model = models.ProjectUserQuota if per_user else models.Quota
@@ -3416,7 +3416,7 @@ def quota_update(context, project_id, resource, limit, user_id=None):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def quota_class_get(context, class_name, resource):
     result = model_query(context, models.QuotaClass, read_deleted="no").\
                      filter_by(class_name=class_name).\
@@ -3429,7 +3429,7 @@ def quota_class_get(context, class_name, resource):
     return result
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def quota_class_get_default(context):
     rows = model_query(context, models.QuotaClass, read_deleted="no").\
                    filter_by(class_name=_DEFAULT_QUOTA_NAME).\
@@ -3443,7 +3443,7 @@ def quota_class_get_default(context):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def quota_class_get_all_by_name(context, class_name):
     rows = model_query(context, models.QuotaClass, read_deleted="no").\
                    filter_by(class_name=class_name).\
@@ -3456,7 +3456,7 @@ def quota_class_get_all_by_name(context, class_name):
     return result
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def quota_class_create(context, class_name, resource, limit):
     quota_class_ref = models.QuotaClass()
     quota_class_ref.class_name = class_name
@@ -3466,7 +3466,7 @@ def quota_class_create(context, class_name, resource, limit):
     return quota_class_ref
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def quota_class_update(context, class_name, resource, limit):
     result = model_query(context, models.QuotaClass, read_deleted="no").\
                      filter_by(class_name=class_name).\
@@ -3481,7 +3481,7 @@ def quota_class_update(context, class_name, resource, limit):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def quota_usage_get(context, project_id, resource, user_id=None):
     query = model_query(context, models.QuotaUsage, read_deleted="no").\
                      filter_by(project_id=project_id).\
@@ -3522,13 +3522,13 @@ def _quota_usage_get_all(context, project_id, user_id=None):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def quota_usage_get_all_by_project_and_user(context, project_id, user_id):
     return _quota_usage_get_all(context, project_id, user_id=user_id)
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def quota_usage_get_all_by_project(context, project_id):
     return _quota_usage_get_all(context, project_id)
 
@@ -3550,7 +3550,7 @@ def _quota_usage_create(project_id, user_id, resource, in_use,
     return quota_usage_ref
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def quota_usage_update(context, project_id, user_id, resource, **kwargs):
     updates = {}
 
@@ -3786,7 +3786,7 @@ def _calculate_overquota(project_quotas, user_quotas, deltas,
 
 @require_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
-@main_context_manager.writer
+@pick_context_manager_writer
 def quota_usage_refresh(context, resources, keys, until_refresh, max_age,
                         project_id=None, user_id=None):
     if project_id is None:
@@ -3806,7 +3806,7 @@ def quota_usage_refresh(context, resources, keys, until_refresh, max_age,
 
 @require_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
-@main_context_manager.writer
+@pick_context_manager_writer
 def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
                   expire, until_refresh, max_age, project_id=None,
                   user_id=None):
@@ -3928,7 +3928,7 @@ def _quota_reservations_query(context, reservations):
 
 @require_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
-@main_context_manager.writer
+@pick_context_manager_writer
 def reservation_commit(context, reservations, project_id=None, user_id=None):
     _project_usages, user_usages = _get_project_user_quota_usages(
             context, project_id, user_id)
@@ -3943,7 +3943,7 @@ def reservation_commit(context, reservations, project_id=None, user_id=None):
 
 @require_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
-@main_context_manager.writer
+@pick_context_manager_writer
 def reservation_rollback(context, reservations, project_id=None, user_id=None):
     _project_usages, user_usages = _get_project_user_quota_usages(
             context, project_id, user_id)
@@ -3955,7 +3955,7 @@ def reservation_rollback(context, reservations, project_id=None, user_id=None):
     reservation_query.soft_delete(synchronize_session=False)
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def quota_destroy_all_by_project_and_user(context, project_id, user_id):
     model_query(context, models.ProjectUserQuota, read_deleted="no").\
         filter_by(project_id=project_id).\
@@ -3973,7 +3973,7 @@ def quota_destroy_all_by_project_and_user(context, project_id, user_id):
         soft_delete(synchronize_session=False)
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def quota_destroy_all_by_project(context, project_id):
     model_query(context, models.Quota, read_deleted="no").\
         filter_by(project_id=project_id).\
@@ -3993,7 +3993,7 @@ def quota_destroy_all_by_project(context, project_id):
 
 
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
-@main_context_manager.writer
+@pick_context_manager_writer
 def reservation_expire(context):
     current_time = timeutils.utcnow()
     reservation_query = model_query(
@@ -4020,7 +4020,7 @@ def _ec2_snapshot_get_query(context):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def ec2_volume_create(context, volume_uuid, id=None):
     """Create ec2 compatible volume by provided uuid."""
     ec2_volume_ref = models.VolumeIdMapping()
@@ -4034,7 +4034,7 @@ def ec2_volume_create(context, volume_uuid, id=None):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def ec2_volume_get_by_uuid(context, volume_uuid):
     result = _ec2_volume_get_query(context).\
                     filter_by(uuid=volume_uuid).\
@@ -4047,7 +4047,7 @@ def ec2_volume_get_by_uuid(context, volume_uuid):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def ec2_volume_get_by_id(context, volume_id):
     result = _ec2_volume_get_query(context).\
                     filter_by(id=volume_id).\
@@ -4060,7 +4060,7 @@ def ec2_volume_get_by_id(context, volume_id):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def ec2_snapshot_create(context, snapshot_uuid, id=None):
     """Create ec2 compatible snapshot by provided uuid."""
     ec2_snapshot_ref = models.SnapshotIdMapping()
@@ -4074,7 +4074,7 @@ def ec2_snapshot_create(context, snapshot_uuid, id=None):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def ec2_snapshot_get_by_ec2_id(context, ec2_id):
     result = _ec2_snapshot_get_query(context).\
                     filter_by(id=ec2_id).\
@@ -4087,7 +4087,7 @@ def ec2_snapshot_get_by_ec2_id(context, ec2_id):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def ec2_snapshot_get_by_uuid(context, snapshot_uuid):
     result = _ec2_snapshot_get_query(context).\
                     filter_by(uuid=snapshot_uuid).\
@@ -4263,7 +4263,7 @@ def block_device_mapping_destroy_by_instance_and_device(context, instance_uuid,
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def security_group_create(context, values):
     security_group_ref = models.SecurityGroup()
     # FIXME(devcamcar): Unless I do this, rules fails with lazy load exception
@@ -4271,7 +4271,7 @@ def security_group_create(context, values):
     security_group_ref.rules
     security_group_ref.update(values)
     try:
-        with main_context_manager.writer.savepoint.using(context):
+        with get_context_manager(context).writer.savepoint.using(context):
             security_group_ref.save(context.session)
     except db_exc.DBDuplicateEntry:
         raise exception.SecurityGroupExists(
@@ -4310,13 +4310,13 @@ def _security_group_get_by_names(context, group_names):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def security_group_get_all(context):
     return _security_group_get_query(context).all()
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def security_group_get(context, security_group_id, columns_to_join=None):
     join_rules = columns_to_join and 'rules' in columns_to_join
     if join_rules:
@@ -4340,7 +4340,7 @@ def security_group_get(context, security_group_id, columns_to_join=None):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def security_group_get_by_name(context, project_id, group_name,
                                columns_to_join=None):
     query = _security_group_get_query(context,
@@ -4363,7 +4363,7 @@ def security_group_get_by_name(context, project_id, group_name,
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def security_group_get_by_project(context, project_id):
     return _security_group_get_query(context, read_deleted="no").\
                         filter_by(project_id=project_id).\
@@ -4371,7 +4371,7 @@ def security_group_get_by_project(context, project_id):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def security_group_get_by_instance(context, instance_uuid):
     return _security_group_get_query(context, read_deleted="no").\
                    join(models.SecurityGroup.instances).\
@@ -4380,7 +4380,7 @@ def security_group_get_by_instance(context, instance_uuid):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def security_group_in_use(context, group_id):
     # Are there any instances that haven't been deleted
     # that include this group?
@@ -4401,7 +4401,7 @@ def security_group_in_use(context, group_id):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def security_group_update(context, security_group_id, values,
                           columns_to_join=None):
     query = model_query(context, models.SecurityGroup).filter_by(
@@ -4435,7 +4435,7 @@ def security_group_ensure_default(context):
         # this one is not aborted in case a concurrent one succeeds first
         # and the unique constraint for security group names is violated
         # by a concurrent INSERT
-        with main_context_manager.writer.independent.using(context):
+        with get_context_manager(context).writer.independent.using(context):
             return _security_group_ensure_default(context)
     except exception.SecurityGroupExists:
         # NOTE(rpodolyaka): a concurrent transaction has succeeded first,
@@ -4444,7 +4444,7 @@ def security_group_ensure_default(context):
                                           'default')
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def _security_group_ensure_default(context):
     try:
         default_group = _security_group_get_by_names(context, ['default'])[0]
@@ -4484,7 +4484,7 @@ def _security_group_ensure_default(context):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def security_group_destroy(context, security_group_id):
     model_query(context, models.SecurityGroup).\
             filter_by(id=security_group_id).\
@@ -4523,7 +4523,7 @@ def _security_group_rule_get_query(context):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def security_group_rule_get(context, security_group_rule_id):
     result = (_security_group_rule_get_query(context).
                          filter_by(id=security_group_rule_id).
@@ -4537,7 +4537,7 @@ def security_group_rule_get(context, security_group_rule_id):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def security_group_rule_get_by_security_group(context, security_group_id,
                                               columns_to_join=None):
     if columns_to_join is None:
@@ -4551,7 +4551,7 @@ def security_group_rule_get_by_security_group(context, security_group_id,
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def security_group_rule_get_by_instance(context, instance_uuid):
     return (_security_group_rule_get_query(context).
             join('parent_group', 'instances').
@@ -4561,13 +4561,13 @@ def security_group_rule_get_by_instance(context, instance_uuid):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def security_group_rule_create(context, values):
     return _security_group_rule_create(context, values)
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def security_group_rule_destroy(context, security_group_rule_id):
     count = (_security_group_rule_get_query(context).
                     filter_by(id=security_group_rule_id).
@@ -4578,7 +4578,7 @@ def security_group_rule_destroy(context, security_group_rule_id):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def security_group_rule_count_by_group(context, security_group_id):
     return (model_query(context, models.SecurityGroupIngressRule,
                    read_deleted="no").
@@ -4594,7 +4594,7 @@ def _security_group_rule_get_default_query(context):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def security_group_default_rule_get(context, security_group_rule_default_id):
     result = _security_group_rule_get_default_query(context).\
                         filter_by(id=security_group_rule_default_id).\
@@ -4607,7 +4607,7 @@ def security_group_default_rule_get(context, security_group_rule_default_id):
     return result
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def security_group_default_rule_destroy(context,
                                         security_group_rule_default_id):
     count = _security_group_rule_get_default_query(context).\
@@ -4618,7 +4618,7 @@ def security_group_default_rule_destroy(context,
                                     rule_id=security_group_rule_default_id)
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def security_group_default_rule_create(context, values):
     security_group_default_rule_ref = models.SecurityGroupIngressDefaultRule()
     security_group_default_rule_ref.update(values)
@@ -4627,7 +4627,7 @@ def security_group_default_rule_create(context, values):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def security_group_default_rule_list(context):
     return _security_group_rule_get_default_query(context).all()
 
@@ -4635,7 +4635,7 @@ def security_group_default_rule_list(context):
 ###################
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def provider_fw_rule_create(context, rule):
     fw_rule_ref = models.ProviderFirewallRule()
     fw_rule_ref.update(rule)
@@ -4643,12 +4643,12 @@ def provider_fw_rule_create(context, rule):
     return fw_rule_ref
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def provider_fw_rule_get_all(context):
     return model_query(context, models.ProviderFirewallRule).all()
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def provider_fw_rule_destroy(context, rule_id):
     context.session.query(models.ProviderFirewallRule).\
         filter_by(id=rule_id).\
@@ -4659,7 +4659,7 @@ def provider_fw_rule_destroy(context, rule_id):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def project_get_networks(context, project_id, associate=True):
     # NOTE(tr3buchet): as before this function will associate
     # a project with a network if it doesn't have one and
@@ -4922,7 +4922,7 @@ def console_get(context, console_id, instance_uuid=None):
 ##################
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def flavor_create(context, values, projects=None):
     """Create a new instance type. In order to pass in extra specs,
     the values dict should contain a 'extra_specs' key/value pair:
@@ -4996,7 +4996,7 @@ def _flavor_get_query(context, read_deleted=None):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def flavor_get_all(context, inactive=False, filters=None,
                    sort_key='flavorid', sort_dir='asc', limit=None,
                    marker=None):
@@ -5069,7 +5069,7 @@ def _flavor_get_id_from_flavor(context, flavor_id):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def flavor_get(context, id):
     """Returns a dict describing specific flavor."""
     result = _flavor_get_query(context).\
@@ -5081,7 +5081,7 @@ def flavor_get(context, id):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def flavor_get_by_name(context, name):
     """Returns a dict describing specific flavor."""
     result = _flavor_get_query(context).\
@@ -5093,7 +5093,7 @@ def flavor_get_by_name(context, name):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def flavor_get_by_flavor_id(context, flavor_id, read_deleted):
     """Returns a dict describing specific flavor_id."""
     result = _flavor_get_query(context, read_deleted=read_deleted).\
@@ -5106,7 +5106,7 @@ def flavor_get_by_flavor_id(context, flavor_id, read_deleted):
     return _dict_with_extra_specs(result)
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def flavor_destroy(context, flavor_id):
     """Marks specific flavor as deleted."""
     ref = model_query(context, models.InstanceTypes, read_deleted="no").\
@@ -5128,7 +5128,7 @@ def _flavor_access_query(context):
     return model_query(context, models.InstanceTypeProjects, read_deleted="no")
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def flavor_access_get_by_flavor_id(context, flavor_id):
     """Get flavor access list by flavor id."""
     instance_type_id_subq = _flavor_get_id_from_flavor_query(context,
@@ -5139,7 +5139,7 @@ def flavor_access_get_by_flavor_id(context, flavor_id):
     return access_refs
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def flavor_access_add(context, flavor_id, project_id):
     """Add given tenant to the flavor access list."""
     instance_type_id = _flavor_get_id_from_flavor(context, flavor_id)
@@ -5155,7 +5155,7 @@ def flavor_access_add(context, flavor_id, project_id):
     return access_ref
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def flavor_access_remove(context, flavor_id, project_id):
     """Remove given tenant from the flavor access list."""
     instance_type_id = _flavor_get_id_from_flavor(context, flavor_id)
@@ -5179,14 +5179,14 @@ def _flavor_extra_specs_get_query(context, flavor_id):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def flavor_extra_specs_get(context, flavor_id):
     rows = _flavor_extra_specs_get_query(context, flavor_id).all()
     return {row['key']: row['value'] for row in rows}
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def flavor_extra_specs_delete(context, flavor_id, key):
     result = _flavor_extra_specs_get_query(context, flavor_id).\
                      filter(models.InstanceTypeExtraSpecs.key == key).\
@@ -5198,7 +5198,7 @@ def flavor_extra_specs_delete(context, flavor_id, key):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def flavor_extra_specs_update_or_create(context, flavor_id, specs,
                                                max_retries=10):
     for attempt in range(max_retries):
@@ -5215,14 +5215,16 @@ def flavor_extra_specs_update_or_create(context, flavor_id, specs,
             for spec_ref in spec_refs:
                 key = spec_ref["key"]
                 existing_keys.add(key)
-                with main_context_manager.writer.savepoint.using(context):
+                with get_context_manager(context).writer.savepoint.using(
+                        context):
                     spec_ref.update({"value": specs[key]})
 
             for key, value in specs.items():
                 if key in existing_keys:
                     continue
                 spec_ref = models.InstanceTypeExtraSpecs()
-                with main_context_manager.writer.savepoint.using(context):
+                with get_context_manager(context).writer.savepoint.using(
+                        context):
                     spec_ref.update({"key": key, "value": value,
                                      "instance_type_id": instance_type_id})
                     context.session.add(spec_ref)
@@ -5239,7 +5241,7 @@ def flavor_extra_specs_update_or_create(context, flavor_id, specs,
 ####################
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def cell_create(context, values):
     cell = models.Cell()
     cell.update(values)
@@ -5254,7 +5256,7 @@ def _cell_get_by_name_query(context, cell_name):
     return model_query(context, models.Cell).filter_by(name=cell_name)
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def cell_update(context, cell_name, values):
     cell_query = _cell_get_by_name_query(context, cell_name)
     if not cell_query.update(values):
@@ -5263,12 +5265,12 @@ def cell_update(context, cell_name, values):
     return cell
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def cell_delete(context, cell_name):
     return _cell_get_by_name_query(context, cell_name).soft_delete()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def cell_get(context, cell_name):
     result = _cell_get_by_name_query(context, cell_name).first()
     if not result:
@@ -5276,7 +5278,7 @@ def cell_get(context, cell_name):
     return result
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def cell_get_all(context):
     return model_query(context, models.Cell, read_deleted="no").all()
 
@@ -5396,7 +5398,7 @@ def instance_system_metadata_update(context, instance_uuid, metadata, delete):
 ####################
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def agent_build_create(context, values):
     agent_build_ref = models.AgentBuild()
     agent_build_ref.update(values)
@@ -5408,7 +5410,7 @@ def agent_build_create(context, values):
     return agent_build_ref
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def agent_build_get_by_triple(context, hypervisor, os, architecture):
     return model_query(context, models.AgentBuild, read_deleted="no").\
                    filter_by(hypervisor=hypervisor).\
@@ -5417,7 +5419,7 @@ def agent_build_get_by_triple(context, hypervisor, os, architecture):
                    first()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def agent_build_get_all(context, hypervisor=None):
     if hypervisor:
         return model_query(context, models.AgentBuild, read_deleted="no").\
@@ -5428,7 +5430,7 @@ def agent_build_get_all(context, hypervisor=None):
                    all()
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def agent_build_destroy(context, agent_build_id):
     rows_affected = model_query(context, models.AgentBuild).filter_by(
                                         id=agent_build_id).soft_delete()
@@ -5436,7 +5438,7 @@ def agent_build_destroy(context, agent_build_id):
         raise exception.AgentBuildNotFound(id=agent_build_id)
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def agent_build_update(context, agent_build_id, values):
     rows_affected = model_query(context, models.AgentBuild).\
                    filter_by(id=agent_build_id).\
@@ -5644,7 +5646,7 @@ def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
 ####################
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def s3_image_get(context, image_id):
     """Find local s3 image represented by the provided id."""
     result = model_query(context, models.S3Image, read_deleted="yes").\
@@ -5657,7 +5659,7 @@ def s3_image_get(context, image_id):
     return result
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def s3_image_get_by_uuid(context, image_uuid):
     """Find local s3 image represented by the provided uuid."""
     result = model_query(context, models.S3Image, read_deleted="yes").\
@@ -5670,7 +5672,7 @@ def s3_image_get_by_uuid(context, image_uuid):
     return result
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def s3_image_create(context, image_uuid):
     """Create local s3 image represented by provided uuid."""
     try:
@@ -5701,7 +5703,7 @@ def _aggregate_get_query(context, model_class, id_field=None, id=None,
     return query
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def aggregate_create(context, values, metadata=None):
     query = _aggregate_get_query(context,
                                  models.Aggregate,
@@ -5730,7 +5732,7 @@ def aggregate_create(context, values, metadata=None):
     return aggregate
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def aggregate_get(context, aggregate_id):
     query = _aggregate_get_query(context,
                                  models.Aggregate,
@@ -5744,7 +5746,7 @@ def aggregate_get(context, aggregate_id):
     return aggregate
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def aggregate_get_by_uuid(context, uuid):
     query = _aggregate_get_query(context,
                                  models.Aggregate,
@@ -5758,7 +5760,7 @@ def aggregate_get_by_uuid(context, uuid):
     return aggregate
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def aggregate_get_by_host(context, host, key=None):
     """Return rows that match host (mandatory) and metadata key (optional).
 
@@ -5777,7 +5779,7 @@ def aggregate_get_by_host(context, host, key=None):
     return query.all()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def aggregate_metadata_get_by_host(context, host, key=None):
     query = model_query(context, models.Aggregate)
     query = query.join("_hosts")
@@ -5796,7 +5798,7 @@ def aggregate_metadata_get_by_host(context, host, key=None):
     return dict(metadata)
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def aggregate_get_by_metadata_key(context, key):
     """Return rows that match metadata key.
 
@@ -5810,7 +5812,7 @@ def aggregate_get_by_metadata_key(context, key):
     return query.all()
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def aggregate_update(context, aggregate_id, values):
     if "name" in values:
         aggregate_by_name = (_aggregate_get_query(context,
@@ -5850,7 +5852,7 @@ def aggregate_update(context, aggregate_id, values):
         raise exception.AggregateNotFound(aggregate_id=aggregate_id)
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def aggregate_delete(context, aggregate_id):
     count = _aggregate_get_query(context,
                                  models.Aggregate,
@@ -5866,7 +5868,7 @@ def aggregate_delete(context, aggregate_id):
                 soft_delete()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def aggregate_get_all(context):
     return _aggregate_get_query(context, models.Aggregate).all()
 
@@ -5879,7 +5881,7 @@ def _aggregate_metadata_get_query(context, aggregate_id, read_deleted="yes"):
 
 
 @require_aggregate_exists
-@main_context_manager.reader
+@pick_context_manager_reader
 def aggregate_metadata_get(context, aggregate_id):
     rows = model_query(context,
                        models.AggregateMetadata).\
@@ -5889,7 +5891,7 @@ def aggregate_metadata_get(context, aggregate_id):
 
 
 @require_aggregate_exists
-@main_context_manager.writer
+@pick_context_manager_writer
 def aggregate_metadata_delete(context, aggregate_id, key):
     count = _aggregate_get_query(context,
                                  models.AggregateMetadata,
@@ -5903,7 +5905,7 @@ def aggregate_metadata_delete(context, aggregate_id, key):
 
 
 @require_aggregate_exists
-@main_context_manager.writer
+@pick_context_manager_writer
 def aggregate_metadata_add(context, aggregate_id, metadata, set_delete=False,
                            max_retries=10):
     all_keys = metadata.keys()
@@ -5950,7 +5952,7 @@ def aggregate_metadata_add(context, aggregate_id, metadata, set_delete=False,
 
 
 @require_aggregate_exists
-@main_context_manager.reader
+@pick_context_manager_reader
 def aggregate_host_get_all(context, aggregate_id):
     rows = model_query(context,
                        models.AggregateHost).\
@@ -5960,7 +5962,7 @@ def aggregate_host_get_all(context, aggregate_id):
 
 
 @require_aggregate_exists
-@main_context_manager.writer
+@pick_context_manager_writer
 def aggregate_host_delete(context, aggregate_id, host):
     count = _aggregate_get_query(context,
                                  models.AggregateHost,
@@ -5974,7 +5976,7 @@ def aggregate_host_delete(context, aggregate_id, host):
 
 
 @require_aggregate_exists
-@main_context_manager.writer
+@pick_context_manager_writer
 def aggregate_host_add(context, aggregate_id, host):
     host_ref = models.AggregateHost()
     host_ref.update({"host": host, "aggregate_id": aggregate_id})
@@ -6472,7 +6474,7 @@ def archive_deleted_rows(max_rows=None):
     return table_to_rows_archived
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def aggregate_uuids_online_data_migration(context, max_count):
     from nova.objects import aggregate
 
@@ -6508,7 +6510,7 @@ def _instance_group_get_query(context, model_class, id_field=None, id=None,
     return query
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def instance_group_create(context, values, policies=None, members=None):
     """Create a new group."""
     uuid = values.get('uuid', None)
@@ -6538,7 +6540,7 @@ def instance_group_create(context, values, policies=None, members=None):
     return instance_group_get(context, uuid)
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def instance_group_get(context, group_uuid):
     """Get a specific group by uuid."""
     group = _instance_group_get_query(context,
@@ -6551,7 +6553,7 @@ def instance_group_get(context, group_uuid):
     return group
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def instance_group_get_by_instance(context, instance_uuid):
     group_member = model_query(context, models.InstanceGroupMember).\
                                filter_by(instance_id=instance_uuid).\
@@ -6567,7 +6569,7 @@ def instance_group_get_by_instance(context, instance_uuid):
     return group
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def instance_group_update(context, group_uuid, values):
     """Update the attributes of a group.
 
@@ -6601,7 +6603,7 @@ def instance_group_update(context, group_uuid, values):
         values['members'] = members
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def instance_group_delete(context, group_uuid):
     """Delete a group."""
     group_id = _instance_group_id(context, group_uuid)
@@ -6620,13 +6622,13 @@ def instance_group_delete(context, group_uuid):
         model_query(context, model).filter_by(group_id=group_id).soft_delete()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def instance_group_get_all(context):
     """Get all groups."""
     return _instance_group_get_query(context, models.InstanceGroup).all()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def instance_group_get_all_by_project_id(context, project_id):
     """Get all groups."""
     return _instance_group_get_query(context, models.InstanceGroup).\
@@ -6688,7 +6690,7 @@ def _instance_group_members_add(context, id, members, set_delete=False):
     return members
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def instance_group_members_add(context, group_uuid, members,
                                set_delete=False):
     id = _instance_group_id(context, group_uuid)
@@ -6696,7 +6698,7 @@ def instance_group_members_add(context, group_uuid, members,
                                        set_delete=set_delete)
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def instance_group_member_delete(context, group_uuid, instance_id):
     id = _instance_group_id(context, group_uuid)
     count = _instance_group_model_get_query(context,
@@ -6709,7 +6711,7 @@ def instance_group_member_delete(context, group_uuid, instance_id):
                                                     instance_id=instance_id)
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def instance_group_members_get(context, group_uuid):
     id = _instance_group_id(context, group_uuid)
     instances = model_query(context,
@@ -6894,7 +6896,7 @@ def instance_tag_delete_all(context, instance_uuid):
         resource_id=instance_uuid).delete()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def instance_tag_exists(context, instance_uuid, tag):
     _check_instance_exists_in_project(context, instance_uuid)
     q = context.session.query(models.Tag).filter_by(

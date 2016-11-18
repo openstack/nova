@@ -187,7 +187,7 @@ def _flavor_destroy(context, flavor_id=None, flavorid=None):
     context.session.delete(result)
 
 
-@db_api.main_context_manager.reader
+@db_api.pick_context_manager_reader
 def _ensure_migrated(context):
     result = context.session.query(main_models.InstanceTypes).\
              filter_by(deleted=0).count()
@@ -682,7 +682,7 @@ class FlavorList(base.ObjectListBase, base.NovaObject):
                                   expected_attrs=['extra_specs'])
 
 
-@db_api.main_context_manager.reader
+@db_api.pick_context_manager_reader
 def _get_main_db_flavor_ids(context, limit):
     # NOTE(danms): We don't need this imported at runtime, so
     # keep it separate here
@@ -692,7 +692,7 @@ def _get_main_db_flavor_ids(context, limit):
             limit(limit)]
 
 
-@db_api.main_context_manager.writer
+@db_api.pick_context_manager_writer
 def _destroy_flavor_hard(context, name):
     # NOTE(danms): We don't need this imported at runtime, so
     # keep it separate here
