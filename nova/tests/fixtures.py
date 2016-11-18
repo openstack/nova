@@ -221,6 +221,26 @@ class DatabasePoisonFixture(fixtures.Fixture):
             self._poison_configure))
 
     def _poison_configure(self, *a, **k):
+        # If you encounter this error, you might be tempted to just not
+        # inherit from NoDBTestCase. Bug #1568414 fixed a few hundred of these
+        # errors, and not once was that the correct solution. Instead,
+        # consider some of the following tips (when applicable):
+        #
+        # - mock at the object layer rather than the db layer, for example:
+        #       nova.objects.instance.Instance.get
+        #            vs.
+        #       nova.db.instance_get
+        #
+        # - mock at the api layer rather than the object layer, for example:
+        #       nova.api.openstack.common.get_instance
+        #           vs.
+        #       nova.objects.instance.Instance.get
+        #
+        # - mock code that requires the database but is otherwise tangential
+        #   to the code you're testing (for example: EventReporterStub)
+        #
+        # - peruse some of the other database poison warning fixes here:
+        #   https://review.openstack.org/#/q/topic:bug/1568414
         raise Exception('This test uses methods that set internal oslo_db '
                         'state, but it does not claim to use the database. '
                         'This will conflict with the setup of tests that '
