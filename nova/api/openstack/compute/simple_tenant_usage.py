@@ -119,13 +119,17 @@ class SimpleTenantUsageController(wsgi.Controller):
 
             info['instance_id'] = instance.uuid
             info['name'] = instance.display_name
-
-            info['memory_mb'] = instance.flavor.memory_mb
-            info['local_gb'] = (instance.flavor.root_gb +
-                                instance.flavor.ephemeral_gb)
-            info['vcpus'] = instance.flavor.vcpus
-
             info['tenant_id'] = instance.project_id
+
+            try:
+                info['memory_mb'] = instance.flavor.memory_mb
+                info['local_gb'] = (instance.flavor.root_gb +
+                                    instance.flavor.ephemeral_gb)
+                info['vcpus'] = instance.flavor.vcpus
+            except exception.InstanceNotFound:
+                # This is rare case, instance disappear during analysis
+                # As it's just info collection, we can try next one
+                continue
 
             # NOTE(mriedem): We need to normalize the start/end times back
             # to timezone-naive so the response doesn't change after the
