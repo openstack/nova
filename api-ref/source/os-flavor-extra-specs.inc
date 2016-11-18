@@ -48,6 +48,11 @@ Create Extra Specs For A Flavor
 
 Creates extra specs for a flavor, by ID.
 
+.. note:: Please reference:
+  `Compute Flavors
+  <http://docs.openstack.org/admin-guide/compute-flavors.html#extra-specs>`__
+  for available built-in extra specs under ``Extra Specs`` section.
+
 Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
