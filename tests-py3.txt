@@ -2,10 +2,6 @@ nova.tests.unit.api.openstack.compute.test_disk_config.DiskConfigTestCaseV21
 nova.tests.unit.api.openstack.compute.test_extended_availability_zone.ExtendedAvailabilityZoneTestV21
 nova.tests.unit.api.openstack.compute.test_extended_ips.ExtendedIpsTestV21
 nova.tests.unit.api.openstack.compute.test_extended_ips_mac.ExtendedIpsMacTestV21
-nova.tests.unit.api.openstack.compute.test_extended_server_attributes.ExtendedServerAttributesTestV21
-nova.tests.unit.api.openstack.compute.test_extended_server_attributes.ExtendedServerAttributesTestV23
-nova.tests.unit.api.openstack.compute.test_floating_ip_dns.FloatingIPDNSDomainPolicyEnforcementV21
-nova.tests.unit.api.openstack.compute.test_floating_ip_dns.FloatingIPDNSEntryPolicyEnforcementV21
 nova.tests.unit.api.openstack.compute.test_hide_server_addresses.HideServerAddressesTestV21
 nova.tests.unit.api.openstack.compute.test_keypairs.KeypairsTestV21
 nova.tests.unit.api.openstack.compute.test_keypairs.KeypairsTestV210
@@ -26,8 +22,6 @@ nova.tests.unit.api.openstack.compute.test_serversV21.ServersControllerTestV29
 nova.tests.unit.api.openstack.compute.test_simple_tenant_usage.SimpleTenantUsageTestV21
 nova.tests.unit.api.openstack.compute.test_urlmap.UrlmapTest
 nova.tests.unit.api.openstack.compute.test_user_data.ServersControllerCreateTest
-nova.tests.unit.api.openstack.compute.test_versions.VersionsTestV21
-nova.tests.unit.api.openstack.compute.test_versions.VersionsTestV21WithV2CompatibleWrapper
 nova.tests.unit.api.openstack.compute.test_volumes.BootFromVolumeTest
 nova.tests.unit.api.test_compute_req_id.RequestIdTest
 nova.tests.unit.compute.test_compute.ComputeAPITestCase.test_create_with_base64_user_data
