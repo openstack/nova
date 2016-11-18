@@ -140,10 +140,8 @@ cloud are partitioned into groups. Cells are configured as a tree.
 The top-level cell's cell_type must be set to ``api``. All other
 cells are defined as a ``compute cell`` by default.
 
-Related options:
+Related option:
 
-* compute_api_class: This option must be set to cells api driver
-  for the top-level cell (nova.compute.cells_api.ComputeCellsAPI)
 * quota_driver: Disable quota checking for the child cells.
   (nova.quota.NoopQuotaDriver)
 """),
