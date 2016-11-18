@@ -18,11 +18,6 @@ nova.tests.unit.api.openstack.compute.test_security_group_default_rules.TestSecu
 nova.tests.unit.api.openstack.compute.test_security_group_default_rules.TestSecurityGroupDefaultRulesV21
 nova.tests.unit.api.openstack.compute.test_security_groups.SecurityGroupsOutputTestV21
 nova.tests.unit.api.openstack.compute.test_security_groups.TestSecurityGroupRulesV21
-nova.tests.unit.api.openstack.compute.test_serversV21.ServersControllerCreateTest
-nova.tests.unit.api.openstack.compute.test_serversV21.ServersControllerRebuildInstanceTest
-nova.tests.unit.api.openstack.compute.test_serversV21.ServersControllerRebuildTestV219
-nova.tests.unit.api.openstack.compute.test_serversV21.ServersControllerTest
-nova.tests.unit.api.openstack.compute.test_serversV21.ServersControllerTestV29
 nova.tests.unit.api.openstack.compute.test_simple_tenant_usage.SimpleTenantUsageTestV21
 nova.tests.unit.api.openstack.compute.test_urlmap.UrlmapTest
 nova.tests.unit.api.openstack.compute.test_user_data.ServersControllerCreateTest
