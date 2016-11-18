@@ -198,6 +198,7 @@ class Instance(BASE, NovaBase, models.SoftDeleteMixin):
     __tablename__ = 'instances'
     __table_args__ = (
         Index('uuid', 'uuid', unique=True),
+        Index('instances_project_id_idx', 'project_id'),
         Index('instances_project_id_deleted_idx',
               'project_id', 'deleted'),
         Index('instances_reservation_id_idx',
@@ -214,6 +215,8 @@ class Instance(BASE, NovaBase, models.SoftDeleteMixin):
               'host', 'deleted', 'cleaned'),
         Index('instances_deleted_created_at_idx',
               'deleted', 'created_at'),
+        Index('instances_updated_at_project_id_idx',
+              'updated_at', 'project_id'),
         schema.UniqueConstraint('uuid', name='uniq_instances0uuid'),
     )
     injected_files = []
