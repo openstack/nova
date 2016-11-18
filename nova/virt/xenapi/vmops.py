@@ -1776,8 +1776,8 @@ class VMOps(object):
     def get_instance_diagnostics(self, instance):
         """Return data about VM diagnostics using the common API."""
         vm_ref = self._get_vm_opaque_ref(instance)
-        vm_rec = self._session.VM.get_record(vm_ref)
-        return vm_utils.compile_instance_diagnostics(instance, vm_rec)
+        return vm_utils.compile_instance_diagnostics(self._session, instance,
+                                                     vm_ref)
 
     def _get_vif_device_map(self, vm_rec):
         vif_map = {}

@@ -420,25 +420,50 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
         self.assertThat(actual, matchers.DictMatches(expected))
 
     def test_get_instance_diagnostics(self):
-        def fake_get_rrd(host, vm_uuid):
-            path = os.path.dirname(os.path.realpath(__file__))
-            with open(os.path.join(path, 'vm_rrd.xml')) as f:
-                return re.sub(r'\s', '', f.read())
-        self.stubs.Set(vm_utils, '_get_rrd', fake_get_rrd)
-
         expected = fake_diagnostics.fake_diagnostics_obj(
             config_drive=False,
             state='running',
             driver='xenapi',
-            cpu_details=[{}, {}, {}, {}],  # 4 CPUs with 'None' values
-            nic_details=[{}],              # 1 NIC with 'None' values
-            disk_details=[{}],             # 1 disk with 'None' values
-            memory_details={'maximum': 8192})
+            cpu_details=[{'id': 0, 'utilisation': 11},
+                         {'id': 1, 'utilisation': 22},
+                         {'id': 2, 'utilisation': 33},
+                         {'id': 3, 'utilisation': 44}],
+            nic_details=[{'mac_address': 'DE:AD:BE:EF:00:01',
+                          'rx_rate': 50,
+                          'tx_rate': 100}],
+            disk_details=[{'read_bytes': 50, 'write_bytes': 100}],
+            memory_details={'maximum': 8192, 'used': 3072})
 
         instance = self._create_instance(obj=True)
         actual = self.conn.get_instance_diagnostics(instance)
 
         self.assertDiagnosticsEqual(expected, actual)
+
+    def _test_get_instance_diagnostics_failure(self, **kwargs):
+        instance = self._create_instance(obj=True)
+
+        with mock.patch.object(xenapi_fake.SessionBase, 'VM_query_data_source',
+                               **kwargs):
+            actual = self.conn.get_instance_diagnostics(instance)
+
+        expected = fake_diagnostics.fake_diagnostics_obj(
+                config_drive=False,
+                state='running',
+                driver='xenapi',
+                cpu_details=[{'id': 0}, {'id': 1}, {'id': 2}, {'id': 3}],
+                nic_details=[{'mac_address': 'DE:AD:BE:EF:00:01'}],
+                disk_details=[{}],
+                memory_details={'maximum': None, 'used': None})
+
+        self.assertDiagnosticsEqual(expected, actual)
+
+    def test_get_instance_diagnostics_xenapi_exception(self):
+        self._test_get_instance_diagnostics_failure(
+                side_effect=XenAPI.Failure(''))
+
+    def test_get_instance_diagnostics_nan_value(self):
+        self._test_get_instance_diagnostics_failure(
+                return_value=float('NaN'))
 
     def test_get_vnc_console(self):
         instance = self._create_instance(obj=True)
