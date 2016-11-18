@@ -1503,6 +1503,9 @@ class API(base.Base):
         # In case we couldn't find any suitable base_image
         system_meta.setdefault('image_base_image_ref', instance.image_ref)
 
+        system_meta['owner_user_name'] = context.user_name
+        system_meta['owner_project_name'] = context.project_name
+
         instance.system_metadata.update(system_meta)
 
         if CONF.use_neutron:
