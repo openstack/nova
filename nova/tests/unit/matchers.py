@@ -547,6 +547,12 @@ class EncodedByUTF8(object):
                 except UnicodeDecodeError:
                     return testtools.matchers.Mismatch(
                         "%s is not encoded in UTF-8." % obj)
+        elif isinstance(obj, six.text_type):
+            try:
+                obj.encode("utf-8", "strict")
+            except UnicodeDecodeError:
+                return testtools.matchers.Mismatch(
+                        "%s cannot be encoded in UTF-8." % obj)
         else:
             reason = ("Type of '%(obj)s' is '%(obj_type)s', "
                       "should be '%(correct_type)s'."

@@ -70,7 +70,7 @@ def _translate_volume_summary_view(context, vol):
         #                   'mountpoint': '/dev/sda/
         #                    }
         #                }
-        attachment = vol['attachments'].items()[0]
+        attachment = list(vol['attachments'].items())[0]
         d['attachments'] = [_translate_attachment_detail_view(vol['id'],
             attachment[0],
             attachment[1].get('mountpoint'))]

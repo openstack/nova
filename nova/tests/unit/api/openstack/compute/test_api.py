@@ -14,6 +14,7 @@
 #    under the License.
 
 from oslo_serialization import jsonutils
+from oslo_utils import encodeutils
 import six
 import webob.dec
 import webob.exc
@@ -69,7 +70,8 @@ class APITest(test.NoDBTestCase):
         # Consider changing `api.openstack.wsgi.Resource._process_stack`
         # to encode header values in ASCII rather than UTF-8.
         # https://tools.ietf.org/html/rfc7230#section-3.2.4
-        self.assertEqual(res.headers.get('Content-Type').decode(), ctype)
+        content_type = res.headers.get('Content-Type')
+        self.assertEqual(ctype, encodeutils.safe_decode(content_type))
 
         jsonutils.loads(res.body)
 
