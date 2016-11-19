@@ -9871,8 +9871,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         os.path.getsize('/test/disk').AndReturn((10737418240))
         os.path.getsize('/test/disk.local').AndReturn((3328599655))
 
-        ret = ("image: /test/disk\n"
-               "file format: raw\n"
+        ret = ("image: /test/disk.local\n"
+               "file format: qcow2\n"
                "virtual size: 20G (21474836480 bytes)\n"
                "disk size: 3.1G\n"
                "cluster_size: 2097152\n"
@@ -9980,8 +9980,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         os.path.getsize('/test/disk').AndReturn((10737418240))
         os.path.getsize('/test/disk.local').AndReturn((3328599655))
 
-        ret = ("image: /test/disk\n"
-               "file format: raw\n"
+        ret = ("image: /test/disk.local\n"
+               "file format: qcow2\n"
                "virtual size: 20G (21474836480 bytes)\n"
                "disk size: 3.1G\n"
                "cluster_size: 2097152\n"
