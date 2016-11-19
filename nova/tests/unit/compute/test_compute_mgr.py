@@ -2175,7 +2175,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                    self.context,
                                                    inst_obj,
                                                    nw_info=[vif1])
-            detach_interface.assert_called_once_with(inst_obj, vif2)
+            detach_interface.assert_called_once_with(self.context,
+                                                     inst_obj, vif2)
         do_test()
 
     def test_external_instance_event(self):
@@ -2254,7 +2255,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                    self.context,
                                                    instances[1],
                                                    nw_info=[vif1])
-            detach_interface.assert_called_once_with(instances[1], vif2)
+            detach_interface.assert_called_once_with(self.context,
+                                                     instances[1], vif2)
             _process_instance_event.assert_called_once_with(instances[2],
                                                             events[2])
         do_test()
