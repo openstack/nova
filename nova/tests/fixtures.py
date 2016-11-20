@@ -970,6 +970,15 @@ class NeutronFixture(fixtures.Fixture):
             'create_pci_requests_for_sriov_ports',
             lambda *args, **kwargs: None)
         self.test.stub_out(
+            'nova.network.neutronv2.api.API.setup_networks_on_host',
+            lambda *args, **kwargs: None)
+        self.test.stub_out(
+            'nova.network.neutronv2.api.API.migrate_instance_start',
+            lambda *args, **kwargs: None)
+        self.test.stub_out(
+            'nova.network.neutronv2.api.API.migrate_instance_finish',
+            lambda *args, **kwargs: None)
+        self.test.stub_out(
             'nova.network.security_group.neutron_driver.SecurityGroupAPI.'
             'get_instances_security_groups_bindings',
             lambda *args, **kwargs: {})
