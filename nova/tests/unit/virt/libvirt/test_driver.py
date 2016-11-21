@@ -7951,8 +7951,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 drvr._live_migration_uri('dest'), miguri=None,
                 dxml=target_xml, flags=mock.ANY, bandwidth=bandwidth)
 
-    def test_live_migration_uses_migrateToURI_without_dest_listen_addrs(self):
+    def test_live_migration_fails_without_serial_console_address(self):
         self.compute = importutils.import_object(CONF.compute_manager)
+        self.flags(enabled=True, group='serial_console')
+        self.flags(proxyclient_address='', group='serial_console')
         instance_dict = dict(self.test_instance)
         instance_dict.update({'host': 'fake',
                               'power_state': power_state.RUNNING,
@@ -7962,14 +7964,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         # Preparing mocks
-        vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
-        guest = libvirt_guest.Guest(vdmock)
-        self.mox.StubOutWithMock(vdmock, "migrateToURI")
-        _bandwidth = CONF.libvirt.live_migration_bandwidth
-        vdmock.migrateToURI(drvr._live_migration_uri('dest'),
-                            flags=mox.IgnoreArg(),
-                            bandwidth=_bandwidth).AndRaise(
-                                fakelibvirt.libvirtError("ERR"))
+        dom = fakelibvirt.virDomain
+        guest = libvirt_guest.Guest(dom)
 
         # start test
         migrate_data = objects.LibvirtLiveMigrateData(
@@ -7977,8 +7973,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             target_connect_addr=None,
             bdms=[],
             block_migration=False)
-        self.mox.ReplayAll()
-        self.assertRaises(fakelibvirt.libvirtError,
+        self.assertRaises(exception.MigrationError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
                           False, migrate_data, guest, [])
@@ -17132,20 +17127,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                return_value=mock_guest):
             self.assertRaises(fakelibvirt.libvirtError,
                               self.drvr.trigger_crash_dump, instance)
-
-    def test_valid_graphic_addresses_for_migration(self):
-        LOCALS = ("127.0.0.1", "::1", "::", "0000::", "::0001", "0.0.0.0")
-        for addr in LOCALS:
-            self.assertTrue(
-                libvirt_driver.LibvirtDriver._check_ip_address_local(
-                    addr, "Address is not local/catch all"))
-
-    def test_invalid_graphic_addresses_for_migration(self):
-        NONLOCALS = ("::2", "192.0.4.1", "bogus")
-        for addr in NONLOCALS:
-            self.assertFalse(
-                libvirt_driver.LibvirtDriver._check_ip_address_local(
-                    addr, "Address is not local/catch all"))
 
 
 class LibvirtVolumeUsageTestCase(test.NoDBTestCase):

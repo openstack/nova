@@ -646,7 +646,8 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         fake_context = context.RequestContext('fake', 'fake')
         migration = objects.Migration(context=fake_context, id=1)
         migrate_data = objects.LibvirtLiveMigrateData(
-            migration=migration, bdms=[], block_migration=False)
+            migration=migration, bdms=[], block_migration=False,
+            serial_listen_addr='127.0.0.1')
         self.connection.live_migration(self.ctxt, instance_ref, 'otherhost',
                                        lambda *a: None, lambda *a: None,
                                        migrate_data=migrate_data)

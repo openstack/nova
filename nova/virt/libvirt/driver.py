@@ -33,7 +33,6 @@ import functools
 import glob
 import itertools
 import mmap
-import netaddr
 import operator
 import os
 import shutil
@@ -5844,66 +5843,6 @@ class LibvirtDriver(driver.ComputeDriver):
                       e, instance=instance)
             raise
 
-    @staticmethod
-    def _check_ip_address_local(addr, error_msg=None):
-        LOCAL_ADDRS = ('0.0.0.0', '127.0.0.1', '::', '::1')
-        try:
-            val = netaddr.IPAddress(addr).format()
-        except (netaddr.AddrFormatError, ValueError):
-            LOG.warning(_LW('Invalid Address - %(addr)s: '
-                       '%(errmsg)s'),
-                         {'addr': addr, 'errmsg': error_msg})
-            val = addr
-        return val in LOCAL_ADDRS
-
-    def _check_graphics_addresses_can_live_migrate(self, listen_addrs):
-        error_msg = _LW("CONF.vnc.vncserver_listen network "
-                        "address is not correctly formatted.")
-        local_vnc = self._check_ip_address_local(
-            CONF.vnc.vncserver_listen, error_msg)
-
-        error_msg = _LW("CONF.spice.server_listen network "
-                        "address is not correctly formatted.")
-        local_spice = self._check_ip_address_local(
-            CONF.spice.server_listen, error_msg)
-
-        if ((CONF.vnc.enabled and not local_vnc) or
-            (CONF.spice.enabled and not local_spice)):
-
-            msg = _('Your destination node does not support'
-                    ' retrieving listen addresses.  In order'
-                    ' for live migration to work properly, you'
-                    ' must configure the graphics (VNC and/or'
-                    ' SPICE) listen addresses to be either'
-                    ' the catch-all address (0.0.0.0 or ::) or'
-                    ' the local address (127.0.0.1 or ::1).')
-            raise exception.MigrationError(reason=msg)
-
-        if listen_addrs:
-            error_msg = _LW("VNC listen address network "
-                            "address is not correctly formatted.")
-            dest_local_vnc = self._check_ip_address_local(
-                listen_addrs.get('vnc'), error_msg)
-
-            error_msg = _LW("SPICE listen address network "
-                            "address is not correctly formatted.")
-            dest_local_spice = self._check_ip_address_local(
-                listen_addrs.get('spice'), error_msg)
-
-            if ((CONF.vnc.enabled and not dest_local_vnc) or
-                (CONF.spice.enabled and not dest_local_spice)):
-
-                LOG.warning(_LW('The graphics (VNC and/or SPICE) listen'
-                             ' addresses on the destination node do not'
-                             ' match the addresses on the source node.'
-                             ' Since the source node has listen'
-                             ' addresses set to either the catch-all'
-                             ' address (0.0.0.0 or ::) or the local'
-                             ' address (127.0.0.1 or ::1), the live'
-                             ' migration will succeed, but the VM will'
-                             ' continue to listen on the current'
-                             ' addresses.'))
-
     def _verify_serial_console_is_disabled(self):
         if CONF.serial_console.enabled:
 
@@ -5938,16 +5877,14 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 migration_flags = self._live_migration_flags
 
-            listen_addrs = libvirt_migrate.graphics_listen_addrs(
+            serial_listen_addr = libvirt_migrate.serial_listen_addr(
                 migrate_data)
-
-            if not listen_addrs:
-                # In this context want to ensure we do not have to migrate
-                # graphic or serial consoles since we can't update guest's
-                # domain XML to make it handle destination host.
-                # TODO(alexs-h): These checks could be moved to the
-                # check_can_live_migrate_destination/source phase
-                self._check_graphics_addresses_can_live_migrate(listen_addrs)
+            if not serial_listen_addr:
+                # In this context we want to ensure that serial console is
+                # disabled on source node. This is because nova couldn't
+                # retrieve serial listen address from destination node, so we
+                # consider that destination node might have serial console
+                # disabled as well.
                 self._verify_serial_console_is_disabled()
 
             # NOTE(aplanas) migrate_uri will have a value only in the
@@ -5961,14 +5898,12 @@ class LibvirtDriver(driver.ComputeDriver):
                     libvirt.VIR_MIGRATE_TUNNELLED == 0):
                     migrate_uri = self._migrate_uri(dest)
 
-            new_xml_str = None
             params = None
-            if listen_addrs or migrate_data.bdms:
-                new_xml_str = libvirt_migrate.get_updated_guest_xml(
-                    # TODO(sahid): It's not a really well idea to pass
-                    # the method _get_volume_config and we should to find
-                    # a way to avoid this in future.
-                    guest, migrate_data, self._get_volume_config)
+            new_xml_str = libvirt_migrate.get_updated_guest_xml(
+                # TODO(sahid): It's not a really good idea to pass
+                # the method _get_volume_config and we should to find
+                # a way to avoid this in future.
+                guest, migrate_data, self._get_volume_config)
             if self._host.has_min_version(
                     MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION):
                 params = {
