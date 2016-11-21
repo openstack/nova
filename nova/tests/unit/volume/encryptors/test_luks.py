@@ -163,7 +163,7 @@ class LuksEncryptorTestCase(test_cryptsetup.CryptsetupEncryptorTestCase):
 
         mock_execute.assert_has_calls([
             mock.call('cryptsetup', 'luksClose', self.dev_name,
-                      attempts=3, run_as_root=True, check_exit_code=True),
+                      attempts=3, run_as_root=True, check_exit_code=[0, 4]),
         ])
         self.assertEqual(1, mock_execute.call_count)
 
@@ -173,7 +173,7 @@ class LuksEncryptorTestCase(test_cryptsetup.CryptsetupEncryptorTestCase):
 
         mock_execute.assert_has_calls([
             mock.call('cryptsetup', 'luksClose', self.dev_name,
-                      attempts=3, run_as_root=True, check_exit_code=True),
+                      attempts=3, run_as_root=True, check_exit_code=[0, 4]),
         ])
         self.assertEqual(1, mock_execute.call_count)
 
@@ -217,7 +217,7 @@ class LuksEncryptorTestCase(test_cryptsetup.CryptsetupEncryptorTestCase):
                       self.dev_name, process_input=fake_key_mangled,
                       run_as_root=True, check_exit_code=True),
             mock.call('cryptsetup', 'luksClose', self.dev_name,
-                      run_as_root=True, check_exit_code=True, attempts=3),
+                      run_as_root=True, check_exit_code=[0, 4], attempts=3),
             mock.call('cryptsetup', 'luksAddKey', self.dev_path,
                       process_input=''.join([fake_key_mangled,
                                              '\n', fake_key,
@@ -227,7 +227,7 @@ class LuksEncryptorTestCase(test_cryptsetup.CryptsetupEncryptorTestCase):
                       self.dev_name, process_input=fake_key,
                       run_as_root=True, check_exit_code=True),
             mock.call('cryptsetup', 'luksClose', self.dev_name,
-                      run_as_root=True, check_exit_code=True, attempts=3),
+                      run_as_root=True, check_exit_code=[0, 4], attempts=3),
             mock.call('cryptsetup', 'luksRemoveKey', self.dev_path,
                       process_input=fake_key_mangled, run_as_root=True,
                       check_exit_code=True),
