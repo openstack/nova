@@ -1245,6 +1245,32 @@ class ResourceClass(base.NovaObject):
         if not res:
             raise exception.NotFound()
 
+    def save(self):
+        if 'id' not in self:
+            raise exception.ObjectActionError(action='save',
+                                              reason='ID attribute not found')
+        updates = self.obj_get_changes()
+        # Never update any standard resource class, since the standard resource
+        # classes don't even exist in the database table anyway.
+        _ensure_rc_cache(self._context)
+        standards = _RC_CACHE.get_standards()
+        if self.id in (rc['id'] for rc in standards):
+            raise exception.ResourceClassCannotUpdateStandard(
+                    resource_class=self.name)
+        self._save(self._context, self.id, self.name, updates)
+        _RC_CACHE.clear()
+
+    @staticmethod
+    @db_api.api_context_manager.writer
+    def _save(context, id, name, updates):
+        db_rc = context.session.query(models.ResourceClass).filter_by(
+            id=id).first()
+        db_rc.update(updates)
+        try:
+            db_rc.save(context.session)
+        except db_exc.DBDuplicateEntry:
+            raise exception.ResourceClassExists(resource_class=name)
+
 
 @base.NovaObjectRegistry.register
 class ResourceClassList(base.ObjectListBase, base.NovaObject):

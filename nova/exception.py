@@ -2138,6 +2138,10 @@ class ResourceClassCannotDeleteStandard(Invalid):
     msg_fmt = _("Cannot delete standard resource class %(resource_class)s.")
 
 
+class ResourceClassCannotUpdateStandard(Invalid):
+    msg_fmt = _("Cannot update standard resource class %(resource_class)s.")
+
+
 class InvalidInventory(Invalid):
     msg_fmt = _("Inventory for '%(resource_class)s' on "
                 "resource provider '%(resource_provider)s' invalid.")

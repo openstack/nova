@@ -1222,3 +1222,38 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
         rc_list = objects.ResourceClassList.get_all(self.context)
         rc_ids = (r.id for r in rc_list)
         self.assertNotIn(rc.id, rc_ids)
+
+    def test_save_fail_no_id(self):
+        rc = objects.ResourceClass(
+            self.context,
+            name='CUSTOM_IRON_NFV',
+        )
+        self.assertRaises(exception.ObjectActionError, rc.save)
+
+    def test_save_fail_standard(self):
+        rc = objects.ResourceClass.get_by_name(
+            self.context,
+            'VCPU',
+        )
+        self.assertRaises(exception.ResourceClassCannotUpdateStandard,
+                          rc.save)
+
+    def test_save(self):
+        rc = objects.ResourceClass(
+            self.context,
+            name='CUSTOM_IRON_NFV',
+        )
+        rc.create()
+
+        rc = objects.ResourceClass.get_by_name(
+            self.context,
+            'CUSTOM_IRON_NFV',
+        )
+        rc.name = 'CUSTOM_IRON_SILVER'
+        rc.save()
+
+        # Verify rc cache was purged of the old entry
+        self.assertRaises(exception.NotFound,
+                          objects.ResourceClass.get_by_name,
+                          self.context,
+                          'CUSTOM_IRON_NFV')
