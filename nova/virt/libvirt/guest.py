@@ -315,7 +315,15 @@ class Guest(object):
             doc = etree.fromstring(self._domain.XMLDesc(0))
         except Exception:
             return None
+
+        # FIXME(lyarwood): Workaround for the device being either a target dev
+        # when called via swap_volume or source file when called via
+        # live_snapshot. This should be removed once both are refactored to use
+        # only the target dev of the device.
         node = doc.find("./devices/disk/target[@dev='%s'].." % device)
+        if node is None:
+            node = doc.find("./devices/disk/source[@file='%s'].." % device)
+
         if node is not None:
             conf = vconfig.LibvirtConfigGuestDisk()
             conf.parse_dom(node)
@@ -787,7 +795,14 @@ class BlockDevice(object):
         # The earliest tag which contains this commit is v2.3.0-rc1, so we
         # should be able to remove this workaround when MIN_LIBVIRT_VERSION
         # reaches 2.3.0, or we move to handling job events instead.
-        return status.end != 0 and status.cur == status.end
+        # NOTE(lyarwood): Use the mirror element to determine if we can pivot
+        # to the new disk once blockjobinfo reports progress as complete.
+        if status.end != 0 and status.cur == status.end:
+            disk = self._guest.get_disk(self._disk)
+            if disk and disk.mirror:
+                return disk.mirror.ready == 'yes'
+
+        return False
 
 
 class VCPUInfo(object):

@@ -716,6 +716,7 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self.backing_store = None
         self.device_addr = None
         self.boot_order = None
+        self.mirror = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestDisk, self).format_dom()
@@ -875,6 +876,10 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
                 self.device_addr = obj
             elif c.tag == 'boot':
                 self.boot_order = c.get('order')
+            elif c.tag == 'mirror':
+                m = LibvirtConfigGuestDiskMirror()
+                m.parse_dom(c)
+                self.mirror = m
 
 
 class LibvirtConfigGuestDiskBackingStore(LibvirtConfigObject):
@@ -1078,6 +1083,16 @@ class LibvirtConfigGuestFilesys(LibvirtConfigGuestDevice):
         dev.append(etree.Element("target", dir=self.target_dir))
 
         return dev
+
+
+class LibvirtConfigGuestDiskMirror(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestDiskMirror, self).__init__(**kwargs)
+        self.ready = None
+
+    def parse_dom(self, xmldoc):
+        self.ready = xmldoc.get('ready')
 
 
 class LibvirtConfigGuestIDMap(LibvirtConfigObject):
