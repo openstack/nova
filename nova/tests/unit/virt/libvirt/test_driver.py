@@ -20,7 +20,6 @@ import copy
 import datetime
 import ddt
 import errno
-import functools
 import glob
 import os
 import random
@@ -9362,12 +9361,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                              'ephemeral_foo')
             ]
 
-            m_args, m_kwargs = create_ephemeral_mock.call_args_list[0]
-            self.assertEqual(ephemeral_backing, m_kwargs['target'])
-            self.assertEqual(len(fetch_image_mock.call_args_list), 1)
+            create_ephemeral_mock.assert_called_once_with(
+                ephemeral_size=1, fs_label='ephemeral_foo',
+                os_type='linux', target=ephemeral_backing)
 
-            m_args, m_kwargs = fetch_image_mock.call_args_list[0]
-            self.assertEqual(root_backing, m_kwargs['target'])
+            fetch_image_mock.assert_called_once_with(
+                context=self.context, image_id=instance.image_ref,
+                target=root_backing)
 
             verify_base_size_mock.assert_has_calls([
                 mock.call(root_backing, instance.flavor.root_gb * units.Gi),
@@ -10589,10 +10589,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr._create_image(self.context, instance, disk_info['mapping'],
                            block_device_info=bdi, **create_image_kwargs)
 
+        backend.mock_create_swap.assert_called_once_with(
+            target='swap_%i' % expected, swap_mb=expected,
+            context=self.context)
         backend.disks['disk.swap'].cache.assert_called_once_with(
-            fetch_func=drvr._create_swap, context=self.context,
-            filename='swap_%i' % expected, size=expected * units.Mi,
-            swap_mb=expected)
+            fetch_func=mock.ANY, filename='swap_%i' % expected,
+            size=expected * units.Mi, context=self.context, swap_mb=expected)
 
     @mock.patch.object(nova.virt.libvirt.imagebackend.Image, 'cache',
                        side_effect=exception.ImageNotFound(image_id='fake-id'))
@@ -10655,18 +10657,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr._create_image(self.context, instance, disk_info['mapping'],
                            block_device_info=bdi)
 
+        filename = 'ephemeral_100_%s' % mock.sentinel.file_ext
+        backend.mock_create_ephemeral.assert_called_once_with(
+            target=filename, ephemeral_size=100, fs_label='ephemeral0',
+            is_block_dev=mock.sentinel.is_block_dev, os_type='linux',
+            specified_fs=None, context=self.context)
         backend.disks['disk.eph0'].cache.assert_called_once_with(
             fetch_func=mock.ANY, context=self.context,
-            filename=('ephemeral_100_%s' % mock.sentinel.file_ext),
-            size=100 * units.Gi, ephemeral_size=100, specified_fs=None)
-        fetch_func = (backend.disks['disk.eph0'].cache.
-                      mock_calls[0][2]['fetch_func'])
-        self.assertIsInstance(fetch_func, functools.partial)
-        self.assertEqual(drvr._create_ephemeral, fetch_func.func)
-        self.assertEqual(
-            dict(fs_label='ephemeral0', os_type=instance.os_type,
-                 is_block_dev=mock.sentinel.is_block_dev),
-            fetch_func.keywords)
+            filename=filename, size=100 * units.Gi, ephemeral_size=mock.ANY,
+            specified_fs=None)
 
     @mock.patch.object(nova.virt.libvirt.imagebackend.Image, 'cache')
     def test_create_image_resize_snap_backend(self, mock_cache):
@@ -16171,12 +16170,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.assertFalse(func(instance, disk_mapping))
 
     @mock.patch('nova.virt.libvirt.driver.imagebackend')
-    @mock.patch(
-        'nova.virt.libvirt.driver.LibvirtDriver._try_fetch_image_cache')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._inject_data')
     @mock.patch('nova.virt.libvirt.driver.imagecache')
     def test_data_not_injects_with_configdrive(self, mock_image, mock_inject,
-                                               mock_fetch, mock_backend):
+                                               mock_backend):
         self.flags(inject_partition=-1, group='libvirt')
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
