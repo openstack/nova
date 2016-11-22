@@ -29,7 +29,7 @@ base_create = {
                 # allowed as the empty string also So keeping the same
                 # behavior and allow empty string in case of boot from
                 # volume only. Python code make sure empty string is
-                # not alowed for other cases.
+                # not allowed for other cases.
                 'imageRef': parameter_types.image_id_or_empty_string,
                 'flavorRef': parameter_types.flavor_ref,
                 'adminPass': parameter_types.admin_password,
