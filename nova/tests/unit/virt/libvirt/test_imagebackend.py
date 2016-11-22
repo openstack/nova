@@ -204,8 +204,6 @@ class FlatTestCase(_ImageTestCase, test.NoDBTestCase):
     def setUp(self):
         self.image_class = imagebackend.Flat
         super(FlatTestCase, self).setUp()
-        self.stubs.Set(imagebackend.Flat, 'correct_format',
-                       lambda _: None)
 
     def prepare_mocks(self):
         fn = self.mox.CreateMockAnything()
@@ -215,63 +213,66 @@ class FlatTestCase(_ImageTestCase, test.NoDBTestCase):
         self.mox.StubOutWithMock(imagebackend.disk, 'extend')
         return fn
 
-    def test_cache(self):
-        self.mox.StubOutWithMock(os.path, 'exists')
-        os.path.exists(self.TEMPLATE_DIR).AndReturn(False)
-        os.path.exists(self.PATH).AndReturn(False)
-        os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
-        fn = self.mox.CreateMockAnything()
+    @mock.patch.object(imagebackend.fileutils, 'ensure_tree')
+    @mock.patch.object(os.path, 'exists')
+    def test_cache(self, mock_exists, mock_ensure):
+        self.stub_out('nova.virt.libvirt.imagebackend.Flat.correct_format',
+                       lambda _: None)
+        mock_exists.side_effect = [False, False, False]
+        exist_calls = [mock.call(self.TEMPLATE_DIR),
+                       mock.call(self.PATH), mock.call(self.TEMPLATE_PATH)]
+        fn = mock.MagicMock()
         fn(target=self.TEMPLATE_PATH)
-        self.mox.StubOutWithMock(imagebackend.fileutils, 'ensure_tree')
-        imagebackend.fileutils.ensure_tree(self.TEMPLATE_DIR)
-        self.mox.ReplayAll()
-
         image = self.image_class(self.INSTANCE, self.NAME)
         self.mock_create_image(image)
+
         image.cache(fn, self.TEMPLATE)
 
-        self.mox.VerifyAll()
+        mock_ensure.assert_called_once_with(self.TEMPLATE_DIR)
+        mock_exists.assert_has_calls(exist_calls)
 
-    def test_cache_image_exists(self):
-        self.mox.StubOutWithMock(os.path, 'exists')
-        os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
-        os.path.exists(self.PATH).AndReturn(True)
-        os.path.exists(self.TEMPLATE_PATH).AndReturn(True)
-        self.mox.ReplayAll()
-
+    @mock.patch.object(os.path, 'exists')
+    def test_cache_image_exists(self, mock_exists):
+        self.stub_out('nova.virt.libvirt.imagebackend.Flat.correct_format',
+                      lambda _: None)
+        mock_exists.side_effect = [True, True, True]
+        exist_calls = [mock.call(self.TEMPLATE_DIR),
+                       mock.call(self.PATH), mock.call(self.TEMPLATE_PATH)]
         image = self.image_class(self.INSTANCE, self.NAME)
+
         image.cache(None, self.TEMPLATE)
 
-        self.mox.VerifyAll()
+        mock_exists.assert_has_calls(exist_calls)
 
-    def test_cache_base_dir_exists(self):
-        self.mox.StubOutWithMock(os.path, 'exists')
-        os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
-        os.path.exists(self.PATH).AndReturn(False)
-        os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
-        fn = self.mox.CreateMockAnything()
+    @mock.patch.object(os.path, 'exists')
+    def test_cache_base_dir_exists(self, mock_exists):
+        self.stub_out('nova.virt.libvirt.imagebackend.Flat.correct_format',
+                      lambda _: None)
+        mock_exists.side_effect = [True, False, False]
+        exist_calls = [mock.call(self.TEMPLATE_DIR),
+                       mock.call(self.PATH), mock.call(self.TEMPLATE_PATH)]
+        fn = mock.MagicMock()
         fn(target=self.TEMPLATE_PATH)
-        self.mox.StubOutWithMock(imagebackend.fileutils, 'ensure_tree')
-        self.mox.ReplayAll()
-
         image = self.image_class(self.INSTANCE, self.NAME)
         self.mock_create_image(image)
+
         image.cache(fn, self.TEMPLATE)
 
-        self.mox.VerifyAll()
+        mock_exists.assert_has_calls(exist_calls)
 
-    def test_cache_template_exists(self):
-        self.mox.StubOutWithMock(os.path, 'exists')
-        os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
-        os.path.exists(self.PATH).AndReturn(False)
-        os.path.exists(self.TEMPLATE_PATH).AndReturn(True)
-        self.mox.ReplayAll()
-
+    @mock.patch.object(os.path, 'exists')
+    def test_cache_template_exists(self, mock_exists):
+        self.stub_out('nova.virt.libvirt.imagebackend.Flat.correct_format',
+                      lambda _: None)
+        mock_exists.side_effect = [True, False, True]
+        exist_calls = [mock.call(self.TEMPLATE_DIR),
+                       mock.call(self.PATH), mock.call(self.TEMPLATE_PATH)]
         image = self.image_class(self.INSTANCE, self.NAME)
         self.mock_create_image(image)
+
         image.cache(None, self.TEMPLATE)
 
-        self.mox.VerifyAll()
+        mock_exists.assert_has_calls(exist_calls)
 
     @mock.patch('os.path.exists')
     def test_cache_generating_resize(self, mock_path_exists):
@@ -375,24 +376,21 @@ class FlatTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.mox.VerifyAll()
 
-    def test_correct_format(self):
-        self.stubs.UnsetAll()
-
-        self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(imagebackend.images, 'qemu_img_info')
-
-        os.path.exists(self.PATH).AndReturn(True)
-        os.path.exists(self.DISK_INFO_PATH).AndReturn(False)
-        info = self.mox.CreateMockAnything()
+    @mock.patch.object(os.path, 'exists')
+    @mock.patch.object(imagebackend.images, 'qemu_img_info')
+    def test_correct_format(self, mock_qemu, mock_exist):
+        mock_exist.side_effect = [True, False, True]
+        info = mock.MagicMock()
         info.file_format = 'foo'
-        imagebackend.images.qemu_img_info(self.PATH).AndReturn(info)
-        os.path.exists(CONF.instances_path).AndReturn(True)
-        self.mox.ReplayAll()
+        mock_qemu.return_value = info
 
         image = self.image_class(self.INSTANCE, self.NAME, path=self.PATH)
-        self.assertEqual(image.driver_format, 'foo')
 
-        self.mox.VerifyAll()
+        self.assertEqual(image.driver_format, 'foo')
+        mock_qemu.assert_called_once_with(self.PATH)
+        mock_exist.assert_has_calls([mock.call(self.PATH),
+                                     mock.call(self.DISK_INFO_PATH),
+                                     mock.call(CONF.instances_path)])
 
     @mock.patch.object(images, 'qemu_img_info',
                        side_effect=exception.InvalidDiskInfo(
