@@ -952,7 +952,8 @@ class API(base.Base):
                         instance_uuid, boot_meta, instance_type,
                         base_options['numa_topology'],
                         base_options['pci_requests'], filter_properties,
-                        instance_group, base_options['availability_zone'])
+                        instance_group, base_options['availability_zone'],
+                        security_groups=security_groups)
                 req_spec.create()
 
                 # Create an instance object, but do not store in db yet.
