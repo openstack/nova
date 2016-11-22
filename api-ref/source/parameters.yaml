@@ -1912,6 +1912,23 @@ floating_ip_bulk_object:
   in: body
   required: true
   type: object
+floating_ip_id_value:
+  description: |
+    The floating IP id value.
+
+    .. note::
+
+      For nova-network, the value will be of type integer, whereas for
+      neutron, the value will be of type string.
+  in: body
+  required: true
+  type: string
+floating_ip_obj:
+  description: |
+    A floating IP address object.
+  in: body
+  required: true
+  type: object
 floating_ip_pool_name:
   description: |
     The name of the floating ip pool.
