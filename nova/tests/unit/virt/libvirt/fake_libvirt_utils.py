@@ -12,14 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import io
 import os
-
-from six.moves import StringIO
 
 from nova.virt.libvirt import utils as libvirt_utils
 
 
-files = {'console.log': True}
+files = {'console.log': b''}
 disk_sizes = {}
 disk_backing_files = {}
 disk_type = "qcow2"
@@ -88,15 +87,15 @@ def update_mtime(path):
 
 
 def extract_snapshot(disk_path, source_fmt, out_path, dest_fmt):
-    files[out_path] = ''
+    files[out_path] = b''
 
 
 class File(object):
     def __init__(self, path, mode=None):
         if path in files:
-            self.fp = StringIO(files[path])
+            self.fp = io.BytesIO(files[path])
         else:
-            self.fp = StringIO(files[os.path.split(path)[-1]])
+            self.fp = io.BytesIO(files[os.path.split(path)[-1]])
 
     def __enter__(self):
         return self.fp

@@ -6262,7 +6262,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
                 mock_get_domain.assert_called_with(instance)
                 mock_dom.detachDeviceFlags.assert_called_with(
-                    """<disk type="file" device="disk">
+                    b"""<disk type="file" device="disk">
   <source file="/path/to/fake-volume"/>
   <target bus="virtio" dev="vdc"/>
 </disk>
@@ -9325,7 +9325,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
              u'virt_disk_size': 25165824}]
 
         with test.nested(
-                mock.patch.object(imagebackend.Image, 'get_disk_size'),
+                mock.patch.object(imagebackend.Image, 'get_disk_size',
+                                  return_value=0),
                 mock.patch.object(os.path, 'exists', return_value=True)
         ):
             conn._create_images_and_backing(self.context, instance,
@@ -9352,6 +9353,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock.patch.object(imagebackend.Image, 'get_disk_size')
         ) as (fetch_image_mock, create_ephemeral_mock, verify_base_size_mock,
               disk_size_mock):
+            disk_size_mock.return_value = 0
             drvr._create_images_and_backing(self.context, instance,
                                             CONF.instances_path, disk_info)
             self.assertEqual(len(create_ephemeral_mock.call_args_list), 1)
@@ -10769,7 +10771,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock.patch.object(drvr, 'get_info'),
             mock.patch.object(drvr, '_create_domain_and_network'),
             mock.patch.object(imagebackend.Image, 'verify_base_size'),
-            mock.patch.object(imagebackend.Image, 'get_disk_size')):
+            mock.patch.object(imagebackend.Image, 'get_disk_size')
+        ) as (execute_mock, get_info_mock,
+              create_mock, verify_base_size_mock, disk_size_mock):
+            disk_size_mock.return_value = 0
             self.assertRaises(exception.InvalidBDMFormat, drvr._create_image,
                               context, instance, disk_info['mapping'],
                               block_device_info=block_device_info)
@@ -10824,7 +10829,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr._create_swap('/dev/something', 1)
 
     def test_get_console_output_file(self):
-        fake_libvirt_utils.files['console.log'] = '01234567890'
+        fake_libvirt_utils.files['console.log'] = b'01234567890'
 
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
@@ -10865,7 +10870,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             finally:
                 libvirt_driver.MAX_CONSOLE_BYTES = prev_max
 
-            self.assertEqual('67890', output)
+            self.assertEqual(b'67890', output)
 
     def test_get_console_output_file_missing(self):
         with utils.tempdir() as tmpdir:
@@ -10906,7 +10911,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     @mock.patch('os.path.exists', return_value=True)
     def test_get_console_output_pty(self, mocked_path_exists):
-        fake_libvirt_utils.files['pty'] = '01234567890'
+        fake_libvirt_utils.files['pty'] = b'01234567890'
 
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
@@ -10954,7 +10959,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             finally:
                 libvirt_driver.MAX_CONSOLE_BYTES = prev_max
 
-            self.assertEqual('67890', output)
+            self.assertEqual(b'67890', output)
 
     @mock.patch('nova.virt.libvirt.host.Host.get_domain')
     @mock.patch.object(libvirt_guest.Guest, "get_xml_desc")
@@ -10982,9 +10987,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.host.Host.get_domain')
     @mock.patch.object(libvirt_guest.Guest, "get_xml_desc")
     def test_get_console_output_logrotate(self, mock_get_xml, get_domain):
-        fake_libvirt_utils.files['console.log'] = 'uvwxyz'
-        fake_libvirt_utils.files['console.log.0'] = 'klmnopqrst'
-        fake_libvirt_utils.files['console.log.1'] = 'abcdefghij'
+        fake_libvirt_utils.files['console.log'] = b'uvwxyz'
+        fake_libvirt_utils.files['console.log.0'] = b'klmnopqrst'
+        fake_libvirt_utils.files['console.log.1'] = b'abcdefghij'
 
         def mock_path_exists(path):
             return os.path.basename(path) in fake_libvirt_utils.files
@@ -11024,20 +11029,20 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 return log_data
 
         # span across only 1 file (with remaining bytes)
-        self.assertEqual('wxyz', _get_logd_output(4))
+        self.assertEqual(b'wxyz', _get_logd_output(4))
         # span across only 1 file (exact bytes)
-        self.assertEqual('uvwxyz', _get_logd_output(6))
+        self.assertEqual(b'uvwxyz', _get_logd_output(6))
         # span across 2 files (with remaining bytes)
-        self.assertEqual('opqrstuvwxyz', _get_logd_output(12))
+        self.assertEqual(b'opqrstuvwxyz', _get_logd_output(12))
         # span across all files (exact bytes)
-        self.assertEqual('abcdefghijklmnopqrstuvwxyz', _get_logd_output(26))
+        self.assertEqual(b'abcdefghijklmnopqrstuvwxyz', _get_logd_output(26))
         # span across all files with more bytes than available
-        self.assertEqual('abcdefghijklmnopqrstuvwxyz', _get_logd_output(30))
+        self.assertEqual(b'abcdefghijklmnopqrstuvwxyz', _get_logd_output(30))
         # files are not available
         fake_libvirt_utils.files = {}
         self.assertEqual('', _get_logd_output(30))
         # reset the file for other tests
-        fake_libvirt_utils.files['console.log'] = '01234567890'
+        fake_libvirt_utils.files['console.log'] = b'01234567890'
 
     def test_get_host_ip_addr(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -13573,6 +13578,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr.get_host_ip_addr().AndReturn('foo')
         self.mox.ReplayAll()
         self.assertTrue(drvr._is_storage_shared_with('foo', '/path'))
+        self.mox.UnsetStubs()
 
     def test_store_pid_remove_pid(self):
         instance = objects.Instance(**self.test_instance)
@@ -16586,16 +16592,16 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         # We expect the generated domain to contain disk.rescue and
         # disk, in that order
-        expected_domain_disk_paths = map(
-            lambda name: disks[name].path, ('disk.rescue', 'disk'))
+        expected_domain_disk_paths = [disks[name].path for name in
+                                      ('disk.rescue', 'disk')]
         domain_disk_paths = doc.xpath('devices/disk/source/@file')
         self.assertEqual(expected_domain_disk_paths, domain_disk_paths)
 
         # The generated domain xml should contain the rescue kernel
         # and ramdisk
-        expected_kernel_ramdisk_paths = map(
-            lambda disk: os.path.join(CONF.instances_path, disk.path),
-            kernel_ramdisk)
+        expected_kernel_ramdisk_paths = [os.path.join(CONF.instances_path,
+                                                      disk.path) for disk
+                                         in kernel_ramdisk]
         kernel_ramdisk_paths = \
             doc.xpath('os/*[self::initrd|self::kernel]/text()')
         self.assertEqual(expected_kernel_ramdisk_paths,
@@ -16630,17 +16636,18 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         # We expect the generated domain to contain disk.rescue, disk, and
         # disk.config.rescue in that order
-        expected_domain_disk_paths = map(
-            lambda name: disks[name].path, ('disk.rescue', 'disk',
-                                            'disk.config.rescue'))
+        expected_domain_disk_paths = [disks[name].path for name
+                                      in ('disk.rescue', 'disk',
+                                          'disk.config.rescue')]
         domain_disk_paths = doc.xpath('devices/disk/source/@file')
         self.assertEqual(expected_domain_disk_paths, domain_disk_paths)
 
         # The generated domain xml should contain the rescue kernel
         # and ramdisk
-        expected_kernel_ramdisk_paths = map(
-            lambda disk: os.path.join(CONF.instances_path, disk.path),
-            kernel_ramdisk)
+        expected_kernel_ramdisk_paths = [os.path.join(CONF.instances_path,
+                                                      disk.path)
+                                         for disk in kernel_ramdisk]
+
         kernel_ramdisk_paths = \
             doc.xpath('os/*[self::initrd|self::kernel]/text()')
         self.assertEqual(expected_kernel_ramdisk_paths,
@@ -16973,13 +16980,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
               </domain>
               """
 
-        diska_xml = """<disk type="file" device="disk">
+        diska_xml = b"""<disk type="file" device="disk">
   <source file="disk1_file"/>
   <target bus="virtio" dev="vda"/>
   <serial>0e38683e-f0af-418f-a3f1-6b67ea0f919d</serial>
 </disk>"""
 
-        diskb_xml = """<disk type="block" device="disk">
+        diskb_xml = b"""<disk type="block" device="disk">
   <source dev="/path/to/dev/1"/>
   <target bus="virtio" dev="vdb"/>
 </disk>"""
@@ -17476,14 +17483,14 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         domain.XMLDesc(flags=0).AndReturn(self.dom_xml)
 
         snap_xml_src = (
-           '<domainsnapshot>\n'
-           '  <disks>\n'
-           '    <disk name="disk1_file" snapshot="external" type="file">\n'
-           '      <source file="new-file"/>\n'
-           '    </disk>\n'
-           '    <disk name="vdb" snapshot="no"/>\n'
-           '  </disks>\n'
-           '</domainsnapshot>\n')
+           b'<domainsnapshot>\n'
+           b'  <disks>\n'
+           b'    <disk name="disk1_file" snapshot="external" type="file">\n'
+           b'      <source file="new-file"/>\n'
+           b'    </disk>\n'
+           b'    <disk name="vdb" snapshot="no"/>\n'
+           b'  </disks>\n'
+           b'</domainsnapshot>\n')
 
         # Older versions of libvirt may be missing these.
         fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_REUSE_EXT = 32
@@ -17546,14 +17553,14 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         domain.XMLDesc(flags=0).AndReturn(self.dom_xml)
 
         snap_xml_src = (
-           '<domainsnapshot>\n'
-           '  <disks>\n'
-           '    <disk name="disk1_file" snapshot="external" type="file">\n'
-           '      <source file="new-file"/>\n'
-           '    </disk>\n'
-           '    <disk name="vdb" snapshot="no"/>\n'
-           '  </disks>\n'
-           '</domainsnapshot>\n')
+           b'<domainsnapshot>\n'
+           b'  <disks>\n'
+           b'    <disk name="disk1_file" snapshot="external" type="file">\n'
+           b'      <source file="new-file"/>\n'
+           b'    </disk>\n'
+           b'    <disk name="vdb" snapshot="no"/>\n'
+           b'  </disks>\n'
+           b'</domainsnapshot>\n')
 
         # Older versions of libvirt may be missing these.
         fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_REUSE_EXT = 32
@@ -18288,7 +18295,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
 def _fake_convert_image(source, dest, in_format, out_format,
                                run_as_root=True):
-    libvirt_driver.libvirt_utils.files[dest] = ''
+    libvirt_driver.libvirt_utils.files[dest] = b''
 
 
 class _BaseSnapshotTests(test.NoDBTestCase):

@@ -38,9 +38,6 @@ nova.tests.unit.test_matchers.TestDictMatches.test__str__
 nova.tests.unit.test_wsgi.TestWSGIServerWithSSL
 nova.tests.unit.virt.disk.mount.test_nbd.NbdTestCase
 nova.tests.unit.virt.libvirt.storage.test_rbd.RbdTestCase
-nova.tests.unit.virt.libvirt.test_driver.LibvirtConnTestCase
-nova.tests.unit.virt.libvirt.test_driver.LibvirtDriverTestCase
-nova.tests.unit.virt.libvirt.test_driver.LibvirtVolumeSnapshotTestCase
 nova.tests.unit.virt.libvirt.test_firewall.IptablesFirewallTestCase
 nova.tests.unit.virt.libvirt.test_imagebackend.EncryptedLvmTestCase
 nova.tests.unit.virt.libvirt.test_imagebackend.LvmTestCase
