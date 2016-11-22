@@ -1589,7 +1589,7 @@ def numa_usage_from_instances(host, instances, free=False):
             pinned_cpus=hostcell.pinned_cpus, siblings=hostcell.siblings)
 
         for instance in instances:
-            for instancecell in instance.cells:
+            for cellid, instancecell in enumerate(instance.cells):
                 if instancecell.id == hostcell.id:
                     memory_usage = (
                             memory_usage + sign * instancecell.memory)
@@ -1600,11 +1600,22 @@ def numa_usage_from_instances(host, instances, free=False):
                         cpu_usage_diff *= max(map(len, hostcell.siblings))
                     cpu_usage += sign * cpu_usage_diff
 
+                    if (cellid == 0
+                        and instance.emulator_threads_isolated):
+                        # The emulator threads policy when defined
+                        # with 'isolate' makes the instance to consume
+                        # an additional pCPU as overhead. That pCPU is
+                        # mapped on the host NUMA node related to the
+                        # guest NUMA node 0.
+                        cpu_usage += sign * len(instancecell.cpuset_reserved)
+
                     if instancecell.pagesize and instancecell.pagesize > 0:
                         newcell.mempages = _numa_pagesize_usage_from_cell(
                             hostcell, instancecell, sign)
                     if instance.cpu_pinning_requested:
                         pinned_cpus = set(instancecell.cpu_pinning.values())
+                        if instancecell.cpuset_reserved:
+                            pinned_cpus |= instancecell.cpuset_reserved
                         if free:
                             if (instancecell.cpu_thread_policy ==
                                     fields.CPUThreadAllocationPolicy.ISOLATE):
