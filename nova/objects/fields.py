@@ -39,8 +39,10 @@ ElementTypeError = fields.ElementTypeError
 BooleanField = fields.BooleanField
 UnspecifiedDefault = fields.UnspecifiedDefault
 IntegerField = fields.IntegerField
+NonNegativeIntegerField = fields.NonNegativeIntegerField
 UUIDField = fields.UUIDField
 FloatField = fields.FloatField
+NonNegativeFloatField = fields.NonNegativeFloatField
 StringField = fields.StringField
 SensitiveStringField = fields.SensitiveStringField
 EnumField = fields.EnumField
@@ -61,6 +63,7 @@ DictOfListOfStringsField = fields.DictOfListOfStringsField
 IPAddressField = fields.IPAddressField
 IPV4AddressField = fields.IPV4AddressField
 IPV6AddressField = fields.IPV6AddressField
+IPV4AndV6AddressField = fields.IPV4AndV6AddressField
 IPNetworkField = fields.IPNetworkField
 IPV4NetworkField = fields.IPV4NetworkField
 IPV6NetworkField = fields.IPV6NetworkField
@@ -673,17 +676,6 @@ class InstancePowerState(Enum):
         return cls.ALL[index]
 
 
-class IPV4AndV6Address(IPAddress):
-    @staticmethod
-    def coerce(obj, attr, value):
-        result = IPAddress.coerce(obj, attr, value)
-        if result.version != 4 and result.version != 6:
-            raise ValueError(_('Network "%(val)s" is not valid '
-                               'in field %(attr)s') %
-                             {'val': value, 'attr': attr})
-        return result
-
-
 class NetworkModel(FieldType):
     @staticmethod
     def coerce(obj, attr, value):
@@ -707,24 +699,6 @@ class NetworkModel(FieldType):
     def stringify(self, value):
         return 'NetworkModel(%s)' % (
             ','.join([str(vif['id']) for vif in value]))
-
-
-class NonNegativeFloat(FieldType):
-    @staticmethod
-    def coerce(obj, attr, value):
-        v = float(value)
-        if v < 0:
-            raise ValueError(_('Value must be >= 0 for field %s') % attr)
-        return v
-
-
-class NonNegativeInteger(FieldType):
-    @staticmethod
-    def coerce(obj, attr, value):
-        v = int(value)
-        if v < 0:
-            raise ValueError(_('Value must be >= 0 for field %s') % attr)
-        return v
 
 
 class AddressBase(FieldType):
@@ -924,17 +898,5 @@ class InstancePowerStateField(BaseEnumField):
     AUTO_TYPE = InstancePowerState()
 
 
-class IPV4AndV6AddressField(AutoTypedField):
-    AUTO_TYPE = IPV4AndV6Address()
-
-
 class ListOfIntegersField(AutoTypedField):
     AUTO_TYPE = List(fields.Integer())
-
-
-class NonNegativeFloatField(AutoTypedField):
-    AUTO_TYPE = NonNegativeFloat()
-
-
-class NonNegativeIntegerField(AutoTypedField):
-    AUTO_TYPE = NonNegativeInteger()
