@@ -692,9 +692,13 @@ class Resource(wsgi.Application):
 
         if hasattr(response, 'headers'):
             for hdr, val in list(response.headers.items()):
-                # Headers must be utf-8 strings
-                response.headers[hdr] = encodeutils.safe_decode(
-                        utils.utf8(val))
+                if six.PY2:
+                    # In Py2.X Headers must be byte strings
+                    response.headers[hdr] = utils.utf8(val)
+                else:
+                    # In Py3.X Headers must be utf-8 strings
+                    response.headers[hdr] = encodeutils.safe_decode(
+                            utils.utf8(val))
 
             if not request.api_version_request.is_null():
                 response.headers[API_VERSION_REQUEST_HEADER] = \
