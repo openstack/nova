@@ -3978,6 +3978,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 numa_memnodes = [vconfig.LibvirtConfigGuestNUMATuneMemNode()
                                  for _ in guest_cpu_numa_config.cells]
 
+                emulator_threads_isolated = (
+                    instance_numa_topology.emulator_threads_isolated)
+
                 vcpus_rt = set([])
                 wants_realtime = hardware.is_realtime_enabled(flavor)
                 if wants_realtime:
@@ -3994,6 +3997,8 @@ class LibvirtDriver(driver.ComputeDriver):
                         CONF.libvirt.realtime_scheduler_priority)
                     guest_cpu_tune.vcpusched.append(vcpusched)
 
+                # TODO(sahid): Defining domain topology should be
+                # refactored.
                 for host_cell in topology.cells:
                     for guest_node_id, guest_config_cell in enumerate(
                             guest_cpu_numa_config.cells):
@@ -4022,7 +4027,10 @@ class LibvirtDriver(driver.ComputeDriver):
                                     pin_cpuset.cpuset = set([pcpu])
                                 else:
                                     pin_cpuset.cpuset = host_cell.cpuset
-                                if not wants_realtime or cpu not in vcpus_rt:
+                                if emulator_threads_isolated:
+                                    emupcpus.extend(
+                                        object_numa_cell.cpuset_reserved)
+                                elif not wants_realtime or cpu not in vcpus_rt:
                                     # - If realtime IS NOT enabled, the
                                     #   emulator threads are allowed to float
                                     #   across all the pCPUs associated with
