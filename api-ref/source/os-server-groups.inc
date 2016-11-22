@@ -25,6 +25,8 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - all_projects: all_projects
+  - limit: limit_simple
+  - offset: offset_simple
 
 Response
 --------
