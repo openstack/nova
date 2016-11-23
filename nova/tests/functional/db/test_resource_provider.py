@@ -1003,8 +1003,8 @@ class ResourceClassListTestCase(ResourceProviderBaseCase):
         the custom classes.
         """
         customs = [
-            ('IRON_NFV', 10001),
-            ('IRON_ENTERPRISE', 10002),
+            ('CUSTOM_IRON_NFV', 10001),
+            ('CUSTOM_IRON_ENTERPRISE', 10002),
         ]
         with self.api_db.get_engine().connect() as conn:
             for custom in customs:
@@ -1015,3 +1015,48 @@ class ResourceClassListTestCase(ResourceProviderBaseCase):
         rcs = objects.ResourceClassList.get_all(self.context)
         expected_count = len(fields.ResourceClass.STANDARD) + len(customs)
         self.assertEqual(expected_count, len(rcs))
+
+    def test_create_fail_not_using_namespace(self):
+        rc = objects.ResourceClass(
+            context=self.context,
+            name='IRON_NFV',
+        )
+        exc = self.assertRaises(exception.ObjectActionError, rc.create)
+        self.assertIn('name must start with', str(exc))
+
+    def test_create_duplicate_standard(self):
+        rc = objects.ResourceClass(
+            context=self.context,
+            name=fields.ResourceClass.VCPU,
+        )
+        self.assertRaises(exception.ResourceClassExists, rc.create)
+
+    def test_create(self):
+        rc = objects.ResourceClass(
+            self.context,
+            name='CUSTOM_IRON_NFV',
+        )
+        rc.create()
+        min_id = objects.ResourceClass.MIN_CUSTOM_RESOURCE_CLASS_ID
+        self.assertEqual(min_id, rc.id)
+
+        rc = objects.ResourceClass(
+            self.context,
+            name='CUSTOM_IRON_ENTERPRISE',
+        )
+        rc.create()
+        self.assertEqual(min_id + 1, rc.id)
+
+    def test_create_duplicate_custom(self):
+        rc = objects.ResourceClass(
+            self.context,
+            name='CUSTOM_IRON_NFV',
+        )
+        rc.create()
+        self.assertEqual(objects.ResourceClass.MIN_CUSTOM_RESOURCE_CLASS_ID,
+                         rc.id)
+        rc = objects.ResourceClass(
+            self.context,
+            name='CUSTOM_IRON_NFV',
+        )
+        self.assertRaises(exception.ResourceClassExists, rc.create)
