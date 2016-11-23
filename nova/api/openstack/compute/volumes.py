@@ -302,6 +302,7 @@ class VolumeAttachmentController(wsgi.Controller):
             instance.uuid,
             assigned_mountpoint)}
 
+    # TODO(mriedem): This API should return a 202 instead of a 200 response.
     @extensions.expected_errors((400, 404, 409))
     @validation.schema(volumes_schema.create_volume_attachment)
     def create(self, req, server_id, body):
