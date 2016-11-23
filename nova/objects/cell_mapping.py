@@ -104,6 +104,9 @@ class CellMapping(base.NovaTimestampObject, base.NovaObject):
     def destroy(self):
         self._destroy_in_db(self._context, self.uuid)
 
+    def is_cell0(self):
+        return self.obj_attr_is_set('uuid') and self.uuid == self.CELL0_UUID
+
 
 @base.NovaObjectRegistry.register
 class CellMappingList(base.ObjectListBase, base.NovaObject):
