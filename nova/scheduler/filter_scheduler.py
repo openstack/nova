@@ -112,7 +112,7 @@ class FilterScheduler(driver.Scheduler):
 
             LOG.debug("Weighed %(hosts)s", {'hosts': weighed_hosts})
 
-            host_subset_size = max(1, CONF.filter_scheduler.host_subset_size)
+            host_subset_size = CONF.filter_scheduler.host_subset_size
             if host_subset_size < len(weighed_hosts):
                 weighed_hosts = weighed_hosts[0:host_subset_size]
             chosen_host = random.choice(weighed_hosts)

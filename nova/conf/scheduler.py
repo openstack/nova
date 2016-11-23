@@ -99,7 +99,8 @@ be sure to test this with your selected scheduler.
 Possible values:
 
 * An integer, where the integer corresponds to periodic task interval in
-  seconds. A negative value disables periodic tasks.
+  seconds. 0 uses the default interval (60 seconds). A negative value disables
+  periodic tasks.
 
 Related options:
 
@@ -129,9 +130,9 @@ filter_scheduler_group = cfg.OptGroup(name="filter_scheduler",
                            title="Filter scheduler options")
 
 filter_scheduler_opts = [
-    # TODO(sfinucan): Add 'min' paramter
     cfg.IntOpt("host_subset_size",
         default=1,
+        min=1,
         deprecated_name="scheduler_host_subset_size",
         deprecated_group="DEFAULT",
         help="""
