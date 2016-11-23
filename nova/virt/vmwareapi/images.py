@@ -24,6 +24,7 @@ from lxml import etree
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_service import loopingcall
+from oslo_utils import encodeutils
 from oslo_utils import strutils
 from oslo_utils import units
 from oslo_vmware import rw_handles
@@ -368,7 +369,7 @@ def fetch_image_stream_optimized(context, instance, session, vm_name,
 def get_vmdk_name_from_ovf(xmlstr):
     """Parse the OVA descriptor to extract the vmdk name."""
 
-    ovf = etree.fromstring(xmlstr)
+    ovf = etree.fromstring(encodeutils.safe_encode(xmlstr))
     nsovf = "{%s}" % ovf.nsmap["ovf"]
 
     disk = ovf.find("./%sDiskSection/%sDisk" % (nsovf, nsovf))
