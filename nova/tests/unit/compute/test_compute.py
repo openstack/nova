@@ -7957,38 +7957,6 @@ class ComputeAPITestCase(BaseTestCase):
                 scheduler_hints={'group':
                                      '5b674f73-c8cf-40ef-9965-3b6fe4b304b1'})
 
-    def test_destroy_instance_disassociates_security_groups(self):
-        # Make sure destroying disassociates security groups.
-        group = self._create_group()
-
-        (ref, resv_id) = self.compute_api.create(
-                self.context,
-                instance_type=flavors.get_default_flavor(),
-                image_href=uuids.image_href_id,
-                security_groups=['testgroup'])
-
-        db.instance_destroy(self.context, ref[0]['uuid'])
-        group = db.security_group_get(self.context, group['id'],
-                                      columns_to_join=['instances'])
-        self.assertEqual(0, len(group['instances']))
-
-    def test_destroy_security_group_disassociates_instances(self):
-        # Make sure destroying security groups disassociates instances.
-        group = self._create_group()
-
-        (ref, resv_id) = self.compute_api.create(
-                self.context,
-                instance_type=flavors.get_default_flavor(),
-                image_href=uuids.image_href_id,
-                security_groups=['testgroup'])
-
-        db.security_group_destroy(self.context, group['id'])
-        admin_deleted_context = context.get_admin_context(
-                read_deleted="only")
-        group = db.security_group_get(admin_deleted_context, group['id'],
-                                      columns_to_join=['instances'])
-        self.assertEqual(0, len(group['instances']))
-
     def _test_rebuild(self, vm_state):
         instance = self._create_fake_instance_obj()
         instance_uuid = instance['uuid']
