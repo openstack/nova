@@ -1016,6 +1016,39 @@ class ResourceClassListTestCase(ResourceProviderBaseCase):
         expected_count = len(fields.ResourceClass.STANDARD) + len(customs)
         self.assertEqual(expected_count, len(rcs))
 
+
+class ResourceClassTestCase(ResourceProviderBaseCase):
+
+    def test_get_by_name(self):
+        rc = objects.ResourceClass.get_by_name(
+            self.context,
+            fields.ResourceClass.VCPU
+        )
+        vcpu_id = fields.ResourceClass.STANDARD.index(
+            fields.ResourceClass.VCPU
+        )
+        self.assertEqual(vcpu_id, rc.id)
+        self.assertEqual(fields.ResourceClass.VCPU, rc.name)
+
+    def test_get_by_name_not_found(self):
+        self.assertRaises(exception.ResourceClassNotFound,
+                          objects.ResourceClass.get_by_name,
+                          self.context,
+                          'CUSTOM_NO_EXISTS')
+
+    def test_get_by_name_custom(self):
+        rc = objects.ResourceClass(
+            self.context,
+            name='CUSTOM_IRON_NFV',
+        )
+        rc.create()
+        get_rc = objects.ResourceClass.get_by_name(
+            self.context,
+            'CUSTOM_IRON_NFV',
+        )
+        self.assertEqual(rc.id, get_rc.id)
+        self.assertEqual(rc.name, get_rc.name)
+
     def test_create_fail_not_using_namespace(self):
         rc = objects.ResourceClass(
             context=self.context,
