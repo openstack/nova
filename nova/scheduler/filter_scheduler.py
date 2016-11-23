@@ -29,7 +29,6 @@ from nova import exception
 from nova.i18n import _
 from nova import rpc
 from nova.scheduler import driver
-from nova.scheduler import scheduler_options
 
 
 CONF = nova.conf.CONF
@@ -40,7 +39,6 @@ class FilterScheduler(driver.Scheduler):
     """Scheduler that can be used for filtering and weighing."""
     def __init__(self, *args, **kwargs):
         super(FilterScheduler, self).__init__(*args, **kwargs)
-        self.options = scheduler_options.SchedulerOptions()
         self.notifier = rpc.get_notifier('scheduler')
 
     def select_destinations(self, context, spec_obj):
@@ -81,17 +79,11 @@ class FilterScheduler(driver.Scheduler):
             dict(request_spec=spec_obj.to_legacy_request_spec_dict()))
         return dests
 
-    def _get_configuration_options(self):
-        """Fetch options dictionary. Broken out for testing."""
-        return self.options.get_configuration()
-
     def _schedule(self, context, spec_obj):
         """Returns a list of hosts that meet the required specs,
         ordered by their fitness.
         """
         elevated = context.elevated()
-
-        config_options = self._get_configuration_options()
 
         # Find our local list of acceptable hosts by repeatedly
         # filtering and weighing our options. Each time we choose a
@@ -105,8 +97,6 @@ class FilterScheduler(driver.Scheduler):
 
         selected_hosts = []
         num_instances = spec_obj.num_instances
-        # NOTE(sbauza): Adding one field for any out-of-tree need
-        spec_obj.config_options = config_options
         for num in range(num_instances):
             # Filter local hosts based on requirements ...
             hosts = self.host_manager.get_filtered_hosts(hosts,

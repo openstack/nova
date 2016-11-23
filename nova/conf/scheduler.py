@@ -37,21 +37,7 @@ Possible values:
 
 * A valid AMQP topic name
 """),
-    # TODO(sfinucan): Deprecate this option
-    cfg.StrOpt("scheduler_json_config_location",
-        default="",
-        help="""
-The absolute path to the scheduler configuration JSON file, if any.
-
-This file location is monitored by the scheduler for changes and reloads it if
-needed. It is converted from JSON to a Python data structure, and passed into
-the filtering and weighing functions of the scheduler, which can use it for
-dynamic configuration.
-
-Possible values:
-
-* A valid file path, or an empty string
-""")]
+]
 
 scheduler_group = cfg.OptGroup(name="scheduler",
                                title="Scheduler configuration")

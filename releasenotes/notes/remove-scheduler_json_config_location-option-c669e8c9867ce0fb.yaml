@@ -1,0 +1,5 @@
+---
+upgrade:
+  - |
+    The ``scheduler_json_config_location`` configuration option has not been
+    used in recent releases and has been removed.
