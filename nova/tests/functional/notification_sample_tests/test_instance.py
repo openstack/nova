@@ -561,13 +561,20 @@ class TestInstanceNotificationSample(
                                  self.cinder.SWAP_ERR_NEW_VOL)
         self._wait_until_swap_volume_error()
 
-        # Five versioned notifications are generated.
+        # Five versioned notifications are generated. We only rely on the
+        # first four because _wait_until_swap_volume_error will return True
+        # after volume_api.unreserve is called on the cinder fixture, and that
+        # happens before the instance fault is handled in the compute manager
+        # which generates the 5th notification (compute.exception).
         # 0. instance-create-start
         # 1. instance-create-start
         # 2. instance-volume_swap-start
         # 3. instance-volume_swap-error
         # 4. compute.exception
-        self.assertEqual(5, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertTrue(len(fake_notifier.VERSIONED_NOTIFICATIONS) >= 4,
+                        'Unexpected number of versioned notifications. '
+                        'Expected at least 4, got: %s' %
+                        len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'instance-volume_swap-start',
             replacements={
