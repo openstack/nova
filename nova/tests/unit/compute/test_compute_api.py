@@ -2224,21 +2224,25 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.compute_api.get_instance_diagnostics,
                           self.context, instance)
 
-    def test_live_migrate_active_vm_state(self):
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
+    def test_live_migrate_active_vm_state(self, mock_nodelist):
         instance = self._create_instance_obj()
         self._live_migrate_instance(instance)
 
-    def test_live_migrate_paused_vm_state(self):
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
+    def test_live_migrate_paused_vm_state(self, mock_nodelist):
         paused_state = dict(vm_state=vm_states.PAUSED)
         instance = self._create_instance_obj(params=paused_state)
         self._live_migrate_instance(instance)
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch.object(objects.InstanceAction, 'action_start')
     @mock.patch.object(objects.Instance, 'save')
     def test_live_migrate_messaging_timeout(self, _save, _action, get_spec,
-                                            add_instance_fault_from_exc):
+                                            add_instance_fault_from_exc,
+                                            mock_nodelist):
         instance = self._create_instance_obj()
         if self.cell_type == 'api':
             api = self.compute_api.cells_rpcapi
@@ -2256,6 +2260,23 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context,
                 instance,
                 mock.ANY)
+
+    @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
+    @mock.patch.object(objects.InstanceAction, 'action_start')
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host',
+                       side_effect=exception.ComputeHostNotFound(
+                           host='fake_host'))
+    def test_live_migrate_computehost_notfound(self, mock_nodelist,
+                                               mock_action,
+                                               mock_get_spec):
+        instance = self._create_instance_obj()
+        self.assertRaises(exception.ComputeHostNotFound,
+                          self.compute_api.live_migrate,
+                          self.context, instance,
+                          host_name='fake_host',
+                          block_migration='auto',
+                          disk_over_commit=False)
+        self.assertIsNone(instance.task_state)
 
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'save')
