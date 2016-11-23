@@ -343,3 +343,18 @@ tests:
       $.allocations.['75d0f5f7-75d9-458c-b204-f90ac91604ec'].resources.VCPU: 4
       $.allocations.['1835b1c9-1c61-45af-9eb3-3e0e9f29487b'].resources.DISK_GB: 10
       $.allocations.['1835b1c9-1c61-45af-9eb3-3e0e9f29487b'].resources.VCPU: 8
+
+- name: put an allocation for a not existing resource provider
+  PUT: /allocations/75d0f5f7-75d9-458c-b204-f90ac91604ec
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: be8b9cba-e7db-4a12-a386-99b4242167fe
+            resources:
+                DISK_GB: 5
+                VCPU: 4
+  status: 400
+  response_strings:
+      - Allocation for resource provider 'be8b9cba-e7db-4a12-a386-99b4242167fe' that does not exist
