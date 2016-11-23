@@ -933,6 +933,14 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.assertColumnNotExists(engine, 'instances', 'scheduled_at')
         self.assertColumnNotExists(engine, 'shadow_instances', 'scheduled_at')
 
+    def _check_347(self, engine, data):
+        self.assertIndexMembers(engine, 'instances',
+                                'instances_project_id_idx',
+                                ['project_id'])
+        self.assertIndexMembers(engine, 'instances',
+                                'instances_updated_at_project_id_idx',
+                                ['updated_at', 'project_id'])
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,
