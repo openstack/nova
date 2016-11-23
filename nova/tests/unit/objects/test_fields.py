@@ -230,7 +230,7 @@ class TestInteger(TestField):
 class TestNonNegativeInteger(TestInteger):
     def setUp(self):
         super(TestNonNegativeInteger, self).setUp()
-        self.field = fields.Field(fields.NonNegativeInteger())
+        self.field = fields.NonNegativeIntegerField()
         self.coerce_bad_values.extend(['-2', '4.2'])
 
 
@@ -247,7 +247,7 @@ class TestFloat(TestField):
 class TestNonNegativeFloat(TestFloat):
     def setUp(self):
         super(TestNonNegativeFloat, self).setUp()
-        self.field = fields.Field(fields.NonNegativeFloat())
+        self.field = fields.NonNegativeFloatField()
         self.coerce_bad_values.extend(['-4.2'])
 
 
