@@ -25,7 +25,6 @@ Reference
 .. toctree::
    :maxdepth: 1
 
-   nova-all
    nova-api-metadata
    nova-api-os-compute
    nova-api

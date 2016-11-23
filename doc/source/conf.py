@@ -117,8 +117,6 @@ modindex_common_prefix = ['nova.']
 # List of tuples 'sourcefile', 'target', u'title', u'Authors name', 'manual'
 
 man_pages = [
-    ('man/nova-all', 'nova-all', u'Cloud controller fabric',
-     [u'OpenStack'], 1),
     ('man/nova-api-metadata', 'nova-api-metadata', u'Cloud controller fabric',
      [u'OpenStack'], 1),
     ('man/nova-api-os-compute', 'nova-api-os-compute',

@@ -1,0 +1,5 @@
+---
+upgrade:
+  - The nova-all binary to launch all services has been removed after
+    a deprecation period. It was only intended for testing purposes and not
+    production use. Please use the individual Nova binaries to launch services.
