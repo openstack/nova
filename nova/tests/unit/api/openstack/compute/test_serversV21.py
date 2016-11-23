@@ -3259,8 +3259,7 @@ class ServersControllerCreateTest(test.TestCase):
 
     @mock.patch.object(compute_api.API, 'create',
                        side_effect=exception.InvalidNUMANodesNumber(
-                           nodes='-1',
-                           details=''))
+                           nodes='-1'))
     def test_create_instance_raise_invalid_numa_nodes(self, mock_create):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create,
