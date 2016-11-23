@@ -532,6 +532,61 @@ class ResourceProviderListTestCase(ResourceProviderBaseCase):
         self.assertEqual('rp_name_2', resource_providers[0].name)
 
 
+class TestResourceProviderAggregates(test.NoDBTestCase):
+
+    USES_DB_SELF = True
+
+    def setUp(self):
+        super(TestResourceProviderAggregates, self).setUp()
+        self.useFixture(fixtures.Database(database='main'))
+        self.useFixture(fixtures.Database(database='api'))
+        self.context = context.RequestContext('fake-user', 'fake-project')
+
+    def test_set_and_get_new_aggregates(self):
+        rp = objects.ResourceProvider(
+            context=self.context,
+            uuid=uuidsentinel.rp_uuid,
+            name=uuidsentinel.rp_name
+        )
+        rp.create()
+
+        aggregate_uuids = [uuidsentinel.agg_a, uuidsentinel.agg_b]
+        rp.set_aggregates(aggregate_uuids)
+
+        read_aggregate_uuids = rp.get_aggregates()
+        self.assertItemsEqual(aggregate_uuids, read_aggregate_uuids)
+
+        # Since get_aggregates always does a new query this is
+        # mostly nonsense but is here for completeness.
+        read_rp = objects.ResourceProvider.get_by_uuid(
+            self.context, uuidsentinel.rp_uuid)
+        re_read_aggregate_uuids = read_rp.get_aggregates()
+        self.assertItemsEqual(aggregate_uuids, re_read_aggregate_uuids)
+
+    def test_set_aggregates_is_replace(self):
+        rp = objects.ResourceProvider(
+            context=self.context,
+            uuid=uuidsentinel.rp_uuid,
+            name=uuidsentinel.rp_name
+        )
+        rp.create()
+
+        start_aggregate_uuids = [uuidsentinel.agg_a, uuidsentinel.agg_b]
+        rp.set_aggregates(start_aggregate_uuids)
+        read_aggregate_uuids = rp.get_aggregates()
+        self.assertItemsEqual(start_aggregate_uuids, read_aggregate_uuids)
+
+        rp.set_aggregates([uuidsentinel.agg_a])
+        read_aggregate_uuids = rp.get_aggregates()
+        self.assertNotIn(uuidsentinel.agg_b, read_aggregate_uuids)
+        self.assertIn(uuidsentinel.agg_a, read_aggregate_uuids)
+
+        # Empty list means delete.
+        rp.set_aggregates([])
+        read_aggregate_uuids = rp.get_aggregates()
+        self.assertEqual([], read_aggregate_uuids)
+
+
 class TestAllocation(ResourceProviderBaseCase):
 
     def test_create_list_and_delete_allocation(self):

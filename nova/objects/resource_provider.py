@@ -32,6 +32,8 @@ _ALLOC_TBL = models.Allocation.__table__
 _INV_TBL = models.Inventory.__table__
 _RP_TBL = models.ResourceProvider.__table__
 _RC_TBL = models.ResourceClass.__table__
+_AGG_TBL = models.PlacementAggregate.__table__
+_RP_AGG_TBL = models.ResourceProviderAggregate.__table__
 _RC_CACHE = None
 
 LOG = logging.getLogger(__name__)
@@ -305,7 +307,8 @@ def _set_inventory(context, rp, inv_list):
 class ResourceProvider(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Add destroy()
-    VERSION = '1.1'
+    # Version 1.2: Add get_aggregates(), set_aggregates()
+    VERSION = '1.2'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -386,6 +389,18 @@ class ResourceProvider(base.NovaObject):
                         {'uuid': uuid, 'resource': rclass})
         self.obj_reset_changes()
 
+    def get_aggregates(self):
+        """Get the aggregate uuids associated with this resource provider."""
+        return self._get_aggregates(self._context, self.id)
+
+    def set_aggregates(self, aggregate_uuids):
+        """Set the aggregate uuids associated with this resource provider.
+
+        If an aggregate does not exist, one will be created using the
+        provided uuid.
+        """
+        self._set_aggregates(self._context, self.id, aggregate_uuids)
+
     @staticmethod
     @db_api.api_context_manager.writer
     def _create_in_db(context, updates):
@@ -436,6 +451,77 @@ class ResourceProvider(base.NovaObject):
             'No resource provider with uuid %s found'
             % uuid)
         return result
+
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_aggregates(context, rp_id):
+        conn = context.session.connection()
+        join_statement = sa.join(
+            _AGG_TBL, _RP_AGG_TBL, sa.and_(
+                _AGG_TBL.c.id == _RP_AGG_TBL.c.aggregate_id,
+                _RP_AGG_TBL.c.resource_provider_id == rp_id))
+        sel = sa.select([_AGG_TBL.c.uuid]).select_from(join_statement)
+        return [r[0] for r in conn.execute(sel).fetchall()]
+
+    @classmethod
+    @db_api.api_context_manager.writer
+    def _set_aggregates(cls, context, rp_id, provided_aggregates):
+        # When aggregate uuids are persisted no validation is done
+        # to ensure that they refer to something that has meaning
+        # elsewhere. It is assumed that code which makes use of the
+        # aggregates, later, will validate their fitness.
+        # TODO(cdent): At the moment we do not delete
+        # a PlacementAggregate that no longer has any associations
+        # with at least one resource provider. We may wish to do that
+        # to avoid bloat if it turns out we're creating a lot of noise.
+        # Not doing now to move things along.
+        provided_aggregates = set(provided_aggregates)
+        existing_aggregates = set(cls._get_aggregates(context, rp_id))
+        to_add = provided_aggregates - existing_aggregates
+        target_aggregates = list(provided_aggregates)
+
+        # Create any aggregates that do not yet exist in
+        # PlacementAggregates. This is different from
+        # the set in existing_aggregates; those are aggregates for
+        # which there are associations for the resource provider
+        # at rp_id. The following loop checks for the existence of any
+        # aggregate with the provided uuid. In this way we only
+        # create a new row in the PlacementAggregate table if the
+        # aggregate uuid has never been seen before. Code further
+        # below will update the associations.
+        for agg_uuid in to_add:
+            found_agg = context.session.query(models.PlacementAggregate.uuid).\
+                filter_by(uuid=agg_uuid).first()
+            if not found_agg:
+                new_aggregate = models.PlacementAggregate(uuid=agg_uuid)
+                try:
+                    context.session.add(new_aggregate)
+                    # Flush each aggregate to explicitly call the INSERT
+                    # statement that could result in an integrity error
+                    # if some other thread has added this agg_uuid. This
+                    # also makes sure that the new aggregates have
+                    # ids when the SELECT below happens.
+                    context.session.flush()
+                except db_exc.DBDuplicateEntry:
+                    # Something else has already added this agg_uuid
+                    pass
+
+        # Remove all aggregate associations so we can refresh them
+        # below. This means that all associations are added, but the
+        # aggregates themselves stay around.
+        context.session.query(models.ResourceProviderAggregate).filter_by(
+            resource_provider_id=rp_id).delete()
+
+        # Set resource_provider_id, aggregate_id pairs to
+        # ResourceProviderAggregate table.
+        if target_aggregates:
+            select_agg_id = sa.select([rp_id, models.PlacementAggregate.id]).\
+                where(models.PlacementAggregate.uuid.in_(target_aggregates))
+            insert_aggregates = models.ResourceProviderAggregate.__table__.\
+                insert().from_select(['resource_provider_id', 'aggregate_id'],
+                                     select_agg_id)
+            conn = context.session.connection()
+            conn.execute(insert_aggregates)
 
 
 @base.NovaObjectRegistry.register
