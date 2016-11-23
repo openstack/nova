@@ -211,6 +211,21 @@ class BuildRequest(base.NovaObject):
         db_req = self._save_in_db(self._context, self.id, updates)
         self._from_db_object(self._context, self, db_req)
 
+    def get_new_instance(self, context):
+        # NOTE(danms): This is a hack to make sure that the returned
+        # instance has all dirty fields. There are probably better
+        # ways to do this, but they kinda involve o.vo internals
+        # so this is okay for the moment.
+        instance = objects.Instance(context)
+        for field in self.instance.obj_fields:
+            # NOTE(danms): Don't copy the defaulted tags field
+            # as instance.create() won't handle it properly.
+            if field == 'tags':
+                continue
+            if self.instance.obj_attr_is_set(field):
+                setattr(instance, field, getattr(self.instance, field))
+        return instance
+
 
 @base.NovaObjectRegistry.register
 class BuildRequestList(base.ObjectListBase, base.NovaObject):

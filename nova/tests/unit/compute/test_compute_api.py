@@ -180,6 +180,7 @@ class _ComputeAPIUnitTestMixIn(object):
         # Make sure max_count is checked for None, as Python3 doesn't allow
         # comparison between NoneType and Integer, something that's allowed in
         # Python 2.
+        provision_instances.return_value = []
         get_image.return_value = (None, {})
         check_requested_networks.return_value = 1
 
@@ -3488,35 +3489,21 @@ class _ComputeAPIUnitTestMixIn(object):
         do_test()
 
     def test_provision_instances_creates_build_request(self):
+        @mock.patch.object(self.compute_api, 'volume_api')
         @mock.patch.object(self.compute_api, '_check_num_instances_quota')
-        @mock.patch.object(objects, 'Instance')
         @mock.patch.object(self.compute_api.security_group_api,
                 'ensure_default')
-        @mock.patch.object(self.compute_api,
-                           '_bdm_validate_set_size_and_instance')
-        @mock.patch.object(self.compute_api, '_create_block_device_mapping')
         @mock.patch.object(objects.RequestSpec, 'from_components')
-        @mock.patch.object(objects, 'BuildRequest')
+        @mock.patch.object(objects.BuildRequest, 'create')
         @mock.patch.object(objects.InstanceMapping, 'create')
         def do_test(_mock_inst_mapping_create, mock_build_req,
-                mock_req_spec_from_components, _mock_create_bdm,
-                mock_bdm_validate, _mock_ensure_default, mock_inst,
-                mock_check_num_inst_quota):
-            quota_mock = mock.MagicMock()
+                mock_req_spec_from_components, _mock_ensure_default,
+                mock_check_num_inst_quota, mock_volume):
 
             min_count = 1
             max_count = 2
+            quota_mock = mock.MagicMock()
             mock_check_num_inst_quota.return_value = (2, quota_mock)
-            req_spec_mock = mock.MagicMock()
-            mock_req_spec_from_components.return_value = req_spec_mock
-            inst_mocks = [mock.MagicMock() for i in range(max_count)]
-            for inst_mock in inst_mocks:
-                inst_mock.project_id = 'fake-project'
-            mock_inst.side_effect = inst_mocks
-            bdm_mocks = [mock.MagicMock() for i in range(max_count)]
-            mock_bdm_validate.side_effect = bdm_mocks
-            build_req_mocks = [mock.MagicMock() for i in range(max_count)]
-            mock_build_req.side_effect = build_req_mocks
 
             ctxt = context.RequestContext('fake-user', 'fake-project')
             flavor = self._create_flavor()
@@ -3542,7 +3529,7 @@ class _ComputeAPIUnitTestMixIn(object):
                             'numa_topology': None,
                             'pci_requests': None}
             security_groups = {}
-            block_device_mapping = objects.BlockDeviceMappingList(
+            block_device_mappings = objects.BlockDeviceMappingList(
                 objects=[objects.BlockDeviceMapping(
                     **fake_block_device.FakeDbBlockDeviceDict(
                     {
@@ -3559,32 +3546,20 @@ class _ComputeAPIUnitTestMixIn(object):
             filter_properties = {'scheduler_hints': None,
                     'instance_type': flavor}
 
-            instances = self.compute_api._provision_instances(ctxt, flavor,
+            instances_to_build = self.compute_api._provision_instances(
+                    ctxt, flavor,
                     min_count, max_count, base_options, boot_meta,
-                    security_groups, block_device_mapping, shutdown_terminate,
+                    security_groups, block_device_mappings, shutdown_terminate,
                     instance_group, check_server_group_quota,
                     filter_properties, None)
-            for instance in instances:
-                self.assertTrue(uuidutils.is_uuid_like(instance.uuid))
 
-            for inst_mock in inst_mocks:
-                inst_mock.create.assert_called_once_with()
-
-            build_req_calls = [
-                    mock.call(ctxt,
-                              instance=instances[0],
-                              instance_uuid=instances[0].uuid,
-                              project_id=instances[0].project_id,
-                              block_device_mappings=bdm_mocks[0]),
-                    mock.call(ctxt,
-                              instance=instances[1],
-                              instance_uuid=instances[1].uuid,
-                              project_id=instances[1].project_id,
-                              block_device_mappings=bdm_mocks[1]),
-                    ]
-            mock_build_req.assert_has_calls(build_req_calls)
-            for build_req_mock in build_req_mocks:
-                build_req_mock.create.assert_called_once_with()
+            for rs, br, im in instances_to_build:
+                self.assertIsInstance(br.instance, objects.Instance)
+                self.assertTrue(uuidutils.is_uuid_like(br.instance.uuid))
+                self.assertEqual(base_options['project_id'],
+                                 br.instance.project_id)
+                self.assertEqual(1, br.block_device_mappings[0].id)
+                br.create.assert_called_with()
 
         do_test()
 
@@ -3599,7 +3574,8 @@ class _ComputeAPIUnitTestMixIn(object):
                 new=mock.MagicMock())
         @mock.patch.object(objects.RequestSpec, 'from_components',
                 mock.MagicMock())
-        @mock.patch.object(objects, 'BuildRequest', new=mock.MagicMock())
+        @mock.patch.object(objects.BuildRequest, 'create',
+                new=mock.MagicMock())
         @mock.patch('nova.objects.InstanceMapping')
         def do_test(mock_inst_mapping, mock_check_num_inst_quota):
             quota_mock = mock.MagicMock()
@@ -3650,15 +3626,18 @@ class _ComputeAPIUnitTestMixIn(object):
             filter_properties = {'scheduler_hints': None,
                     'instance_type': flavor}
 
-            instances = self.compute_api._provision_instances(ctxt, flavor,
+            instances_to_build = (
+                self.compute_api._provision_instances(ctxt, flavor,
                     min_count, max_count, base_options, boot_meta,
                     security_groups, block_device_mapping, shutdown_terminate,
                     instance_group, check_server_group_quota,
-                    filter_properties, None)
-            self.assertTrue(uuidutils.is_uuid_like(instances[0].uuid))
+                    filter_properties, None))
+            rs, br, im = instances_to_build[0]
+            self.assertTrue(uuidutils.is_uuid_like(br.instance.uuid))
+            self.assertEqual(br.instance_uuid, im.instance_uuid)
 
-            self.assertEqual(instances[0].uuid,
-                    inst_mapping_mock.instance_uuid)
+            self.assertEqual(br.instance.uuid,
+                             inst_mapping_mock.instance_uuid)
             self.assertIsNone(inst_mapping_mock.cell_mapping)
             self.assertEqual(ctxt.project_id, inst_mapping_mock.project_id)
         do_test()
@@ -3744,8 +3723,6 @@ class _ComputeAPIUnitTestMixIn(object):
                               check_server_group_quota, filter_properties,
                               None)
             # First instance, build_req, mapping is created and destroyed
-            self.assertTrue(inst_mocks[0].create.called)
-            self.assertTrue(inst_mocks[0].destroy.called)
             self.assertTrue(build_req_mocks[0].create.called)
             self.assertTrue(build_req_mocks[0].destroy.called)
             self.assertTrue(inst_map_mocks[0].create.called)

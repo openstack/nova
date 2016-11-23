@@ -492,7 +492,7 @@ class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
         _get_image.return_value = (None, 'fake-image')
         _validate.return_value = ({}, 1, None, ['default'])
         _check_bdm.return_value = objects.BlockDeviceMappingList()
-        _provision.return_value = 'instances'
+        _provision.return_value = []
 
         self.compute_api.create(self.context, 'fake-flavor', 'fake-image')
 

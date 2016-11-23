@@ -7748,6 +7748,7 @@ class ComputeAPITestCase(BaseTestCase):
                 id=0, cpuset=set([1, 2]), memory=512),
                    objects.InstanceNUMACell(
                 id=1, cpuset=set([3, 4]), memory=512)])
+        numa_topology.obj_reset_changes()
         numa_constraints_mock.return_value = numa_topology
 
         instances, resv_id = self.compute_api.create(self.context, inst_type,
