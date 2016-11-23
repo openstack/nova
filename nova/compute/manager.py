@@ -1930,10 +1930,18 @@ class ComputeManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
+                compute_utils.notify_about_instance_action(
+                    context, instance, self.host,
+                    action=fields.NotificationAction.CREATE,
+                    phase=fields.NotificationPhase.ERROR, exception=e)
         except exception.ComputeResourcesUnavailable as e:
             LOG.debug(e.format_message(), instance=instance)
             self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
+            compute_utils.notify_about_instance_action(
+                    context, instance, self.host,
+                    action=fields.NotificationAction.CREATE,
+                    phase=fields.NotificationPhase.ERROR, exception=e)
             raise exception.RescheduledException(
                     instance_uuid=instance.uuid, reason=e.format_message())
         except exception.BuildAbortException as e:
@@ -1941,12 +1949,20 @@ class ComputeManager(manager.Manager):
                 LOG.debug(e.format_message(), instance=instance)
                 self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
+                compute_utils.notify_about_instance_action(
+                    context, instance, self.host,
+                    action=fields.NotificationAction.CREATE,
+                    phase=fields.NotificationPhase.ERROR, exception=e)
         except (exception.FixedIpLimitExceeded,
                 exception.NoMoreNetworks, exception.NoMoreFixedIps) as e:
             LOG.warning(_LW('No more network or fixed IP to be allocated'),
                         instance=instance)
             self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
+            compute_utils.notify_about_instance_action(
+                    context, instance, self.host,
+                    action=fields.NotificationAction.CREATE,
+                    phase=fields.NotificationPhase.ERROR, exception=e)
             msg = _('Failed to allocate the network(s) with error %s, '
                     'not rescheduling.') % e.format_message()
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
@@ -1959,6 +1975,10 @@ class ComputeManager(manager.Manager):
                           instance=instance)
             self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
+            compute_utils.notify_about_instance_action(
+                    context, instance, self.host,
+                    action=fields.NotificationAction.CREATE,
+                    phase=fields.NotificationPhase.ERROR, exception=e)
             msg = _('Failed to allocate the network(s), not rescheduling.')
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=msg)
@@ -1971,11 +1991,19 @@ class ComputeManager(manager.Manager):
                 exception.SignatureVerificationError) as e:
             self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
+            compute_utils.notify_about_instance_action(
+                    context, instance, self.host,
+                    action=fields.NotificationAction.CREATE,
+                    phase=fields.NotificationPhase.ERROR, exception=e)
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=e.format_message())
         except Exception as e:
             self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
+            compute_utils.notify_about_instance_action(
+                    context, instance, self.host,
+                    action=fields.NotificationAction.CREATE,
+                    phase=fields.NotificationPhase.ERROR, exception=e)
             raise exception.RescheduledException(
                     instance_uuid=instance.uuid, reason=six.text_type(e))
 
@@ -2007,6 +2035,10 @@ class ComputeManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
+                compute_utils.notify_about_instance_action(
+                    context, instance, self.host,
+                    action=fields.NotificationAction.CREATE,
+                    phase=fields.NotificationPhase.ERROR, exception=e)
 
         self._update_scheduler_instance_info(context, instance)
         self._notify_about_instance_usage(context, instance, 'create.end',

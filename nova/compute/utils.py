@@ -339,28 +339,40 @@ def _get_instance_ips(instance):
     return ips
 
 
+def _get_fault_and_priority_from_exc(exception):
+    fault = None
+    priority = fields.NotificationPriority.INFO
+
+    if exception:
+        priority = fields.NotificationPriority.ERROR
+        fault = notification_exception.ExceptionPayload.from_exception(
+            exception)
+
+    return fault, priority
+
+
 def notify_about_instance_action(context, instance, host, action, phase=None,
-                                 binary='nova-compute'):
+                                 binary='nova-compute', exception=None):
     """Send versioned notification about the action made on the instance
     :param instance: the instance which the action performed on
     :param host: the host emitting the notification
     :param action: the name of the action
     :param phase: the phase of the action
     :param binary: the binary emitting the notification
+    :param exception: the thrown exception (used in error notifications)
     """
     ips = _get_instance_ips(instance)
 
     flavor = instance_notification.FlavorPayload(instance=instance)
-    # TODO(gibi): handle fault during the transformation of the first error
-    # notifications
+    fault, priority = _get_fault_and_priority_from_exc(exception)
     payload = instance_notification.InstanceActionPayload(
             instance=instance,
-            fault=None,
+            fault=fault,
             ip_addresses=ips,
             flavor=flavor)
     notification = instance_notification.InstanceActionNotification(
             context=context,
-            priority=fields.NotificationPriority.INFO,
+            priority=priority,
             publisher=notification_base.NotificationPublisher(
                     context=context, host=host, binary=binary),
             event_type=notification_base.EventType(
@@ -389,14 +401,7 @@ def notify_about_volume_swap(context, instance, host, action, phase,
 
     flavor = instance_notification.FlavorPayload(instance=instance)
 
-    if exception:
-        priority = fields.NotificationPriority.ERROR
-        fault = notification_exception.ExceptionPayload.from_exception(
-            exception)
-    else:
-        priority = fields.NotificationPriority.INFO
-        fault = None
-
+    fault, priority = _get_fault_and_priority_from_exc(exception)
     payload = instance_notification.InstanceActionVolumeSwapPayload(
         instance=instance,
         fault=fault,

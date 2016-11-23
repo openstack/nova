@@ -4045,10 +4045,12 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 mock.patch.object(self.compute,
                     '_shutdown_instance'),
                 mock.patch.object(self.compute,
-                    '_validate_instance_group_policy')
+                    '_validate_instance_group_policy'),
+                mock.patch('nova.compute.utils.notify_about_instance_action')
         ) as (spawn, save,
                 _build_networks_for_instance, _notify_about_instance_usage,
-                _shutdown_instance, _validate_instance_group_policy):
+                _shutdown_instance, _validate_instance_group_policy,
+                mock_notify):
 
             self.assertRaises(exception.BuildAbortException,
                     self.compute._build_and_run_instance, self.context,
@@ -4068,6 +4070,12 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     extra_usage_info={'image_name': self.image.get('name')}),
                 mock.call(self.context, self.instance, 'create.error',
                     fault=exc)])
+
+            mock_notify.assert_has_calls([
+                mock.call(self.context, self.instance, 'fake-mini',
+                          action='create', phase='start'),
+                mock.call(self.context, self.instance, 'fake-mini',
+                          action='create', phase='error', exception=exc)])
 
             save.assert_has_calls([
                 mock.call(),

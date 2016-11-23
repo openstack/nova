@@ -9,9 +9,11 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import mock
 import time
 
 from nova import context
+from nova import exception
 from nova.tests import fixtures
 from nova.tests.functional.notification_sample_tests \
     import notification_sample_base
@@ -99,6 +101,32 @@ class TestInstanceNotificationSample(
                     'reservation_id': server['reservation_id'],
                     'uuid': server['id']},
                 actual=fake_notifier.VERSIONED_NOTIFICATIONS[idx])
+
+    @mock.patch('nova.compute.manager.ComputeManager._build_resources')
+    def test_create_server_error(self, mock_build):
+        def _build_resources(*args, **kwargs):
+            raise exception.FlavorDiskTooSmall()
+
+        mock_build.side_effect = _build_resources
+
+        server = self._boot_a_server(
+            expected_status='ERROR',
+            extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
+
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+
+        self._verify_notification(
+            'instance-create-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-create-error',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
     def _verify_instance_update_steps(self, steps, notifications,
                                       initial=None):
