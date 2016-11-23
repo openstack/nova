@@ -1887,6 +1887,10 @@ class ComputeManager(manager.Manager):
         image_name = image.get('name')
         self._notify_about_instance_usage(context, instance, 'create.start',
                 extra_usage_info={'image_name': image_name})
+        compute_utils.notify_about_instance_action(
+            context, instance, self.host,
+            action=fields.NotificationAction.CREATE,
+            phase=fields.NotificationPhase.START)
 
         self._check_device_tagging(requested_networks, block_device_mapping)
 
@@ -2008,6 +2012,9 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(context, instance, 'create.end',
                 extra_usage_info={'message': _('Success')},
                 network_info=network_info)
+        compute_utils.notify_about_instance_action(context, instance,
+                self.host, action=fields.NotificationAction.CREATE,
+                phase=fields.NotificationPhase.END)
 
     @contextlib.contextmanager
     def _build_resources(self, context, instance, requested_networks,
