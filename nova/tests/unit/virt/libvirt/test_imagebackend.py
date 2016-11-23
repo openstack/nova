@@ -365,6 +365,7 @@ class FlatTestCase(_ImageTestCase, test.NoDBTestCase):
                        return_value=imageutils.QemuImgInfo())
     def test_create_image_extend(self, fake_qemu_img_info):
         fn = self.prepare_mocks()
+        fake_qemu_img_info.return_value.virtual_size = 1024
         fn(target=self.TEMPLATE_PATH, image_id=None)
         imagebackend.libvirt_utils.copy_image(self.TEMPLATE_PATH, self.PATH)
         image = imgmodel.LocalFileImage(self.PATH, imgmodel.FORMAT_RAW)
@@ -1487,7 +1488,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
             self.INSTANCE["uuid"] + "_fake.vm",
             "FakePool",
             "FakeUser",
-            "MTIzNDU2Cg==",
+            b"MTIzNDU2Cg==",
             ["server1:1899", "server2:1920"]),
                          model)
 
