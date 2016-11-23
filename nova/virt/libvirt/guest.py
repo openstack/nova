@@ -377,10 +377,18 @@ class Guest(object):
         def _do_wait_and_retry_detach():
             config = get_device_conf_func(device)
             if config is not None:
-                # Device is already detached from persistent domain
-                # and only transient domain needs update
-                self.detach_device(config, persistent=False, live=live)
-                # Raise error since the device still existed on the guest
+                try:
+                    # Device is already detached from persistent domain
+                    # and only transient domain needs update
+                    self.detach_device(config, persistent=False, live=live)
+                except libvirt.libvirtError as ex:
+                    with excutils.save_and_reraise_exception():
+                        errcode = ex.get_error_code()
+                        if errcode == libvirt.VIR_ERR_OPERATION_FAILED:
+                            errmsg = ex.get_error_message()
+                            if 'not found' in errmsg:
+                                raise exception.DeviceNotFound(device=device)
+
                 reason = _("Unable to detach from guest transient domain.")
                 raise exception.DeviceDetachFailed(device=device,
                                                    reason=reason)

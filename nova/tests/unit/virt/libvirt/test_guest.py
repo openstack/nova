@@ -276,6 +276,26 @@ class GuestTestCase(test.NoDBTestCase):
             exception.DeviceNotFound, self.guest.detach_device_with_retry,
             get_config, "/dev/vdb", persistent=True, live=True)
 
+    @mock.patch.object(libvirt_guest.Guest, "detach_device")
+    def test_detach_device_with_retry_operation_failed(self, mock_detach):
+        conf = mock.Mock(spec=vconfig.LibvirtConfigGuestDevice)
+        conf.to_xml.return_value = "</xml>"
+        get_config = mock.Mock(return_value=conf)
+        fake_device = "vdb"
+        fake_exc = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError,
+            msg="invalid argument: no target device vdb",
+            error_code=fakelibvirt.VIR_ERR_OPERATION_FAILED,
+            error_message="disk vdb not found",
+            error_domain=fakelibvirt.VIR_FROM_DOMAIN)
+        mock_detach.side_effect = [None, fake_exc]
+        retry_detach = self.guest.detach_device_with_retry(
+            get_config, fake_device, persistent=True, live=True,
+            inc_sleep_time=.01, max_retry_count=3)
+        # Some time later, we can do the wait/retry to ensure detach
+        self.domain.detachDeviceFlags.reset_mock()
+        self.assertRaises(exception.DeviceNotFound, retry_detach)
+
     def test_get_xml_desc(self):
         self.guest.get_xml_desc()
         self.domain.XMLDesc.assert_called_once_with(flags=0)
