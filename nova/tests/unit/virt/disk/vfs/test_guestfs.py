@@ -320,6 +320,7 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         m = mock.MagicMock()
         m.launch.side_effect = Exception
         vfs = vfsimpl.VFSGuestFS(self.qcowfile)
+        mock_access.return_value = False
         with mock.patch('eventlet.tpool.Proxy', return_value=m):
             self.assertRaises(exception.LibguestfsCannotReadKernel,
                                     vfs.inspect_capabilities)

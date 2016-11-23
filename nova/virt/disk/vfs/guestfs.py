@@ -80,8 +80,11 @@ class VFSGuestFS(vfs.VFS):
             g.add_drive("/dev/null")  # sic
             g.launch()
         except Exception as e:
-            if os.access("/boot/vmlinuz-%s" % os.uname()[2], os.R_OK):
-                raise exception.LibguestfsCannotReadKernel()
+            kernel_file = "/boot/vmlinuz-%s" % os.uname()[2]
+            if not os.access(kernel_file, os.R_OK):
+                raise exception.LibguestfsCannotReadKernel(
+                    _("Please change permissions on %s to 0x644")
+                    % kernel_file)
             raise exception.NovaException(
                 _("libguestfs installed but not usable (%s)") % e)
 
