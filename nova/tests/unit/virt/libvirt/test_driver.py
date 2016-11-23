@@ -6865,6 +6865,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(vncserver_listen='192.0.2.12', group='vnc')
         self.flags(server_listen='198.51.100.34', group='spice')
         self.flags(proxyclient_address='203.0.113.56', group='serial_console')
+        self.flags(enabled=True, group='serial_console')
         mock_cpu.return_value = 1
 
         instance_ref = objects.Instance(**self.test_instance)
@@ -6880,6 +6881,24 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                          str(result.graphics_listen_addr_spice))
         self.assertEqual('203.0.113.56',
                          str(result.serial_listen_addr))
+
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_create_shared_storage_test_file',
+                       return_value='fake')
+    @mock.patch.object(fakelibvirt.Connection, 'compareCPU',
+                       return_value=1)
+    def test_check_can_live_migrate_dest_ensure_serial_adds_not_set(
+            self, mock_cpu, mock_test_file, mock_svc):
+        self.flags(proxyclient_address='127.0.0.1', group='serial_console')
+        self.flags(enabled=False, group='serial_console')
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        compute_info = {'cpu_info': 'asdf', 'disk_available_least': 1}
+        result = drvr.check_can_live_migrate_destination(
+            self.context, instance_ref, compute_info, compute_info)
+        self.assertIsNone(result.serial_listen_addr)
 
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_create_shared_storage_test_file',
