@@ -28,6 +28,8 @@ import time
 from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
 from oslo_log import log as logging
+from oslo_utils import encodeutils
+import six
 
 import nova.conf
 from nova.i18n import _LE
@@ -68,7 +70,10 @@ def get_info_filename(base_path):
 def is_valid_info_file(path):
     """Test if a given path matches the pattern for info files."""
 
-    digest_size = hashlib.sha1().digestsize * 2
+    if six.PY2:
+        digest_size = hashlib.sha1().digestsize * 2
+    else:
+        digest_size = hashlib.sha1().digest_size * 2
     regexp = (CONF.libvirt.image_info_filename_pattern
               % {'image': ('([0-9a-f]{%(digest_size)d}|'
                            '[0-9a-f]{%(digest_size)d}_sm|'
@@ -122,7 +127,10 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         self.unexplained_images, self.originals, and self.back_swap_images.
         """
 
-        digest_size = hashlib.sha1().digestsize * 2
+        if six.PY2:
+            digest_size = hashlib.sha1().digestsize * 2
+        else:
+            digest_size = hashlib.sha1().digest_size * 2
         for ent in os.listdir(base_dir):
             path = os.path.join(base_dir, ent)
             if is_valid_info_file(path):
@@ -382,7 +390,8 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         LOG.debug('Verify base images')
         # Determine what images are on disk because they're in use
         for img in self.used_images:
-            fingerprint = hashlib.sha1(img).hexdigest()
+            fingerprint = hashlib.sha1(
+                    encodeutils.safe_encode(img)).hexdigest()
             LOG.debug('Image id %(id)s yields fingerprint %(fingerprint)s',
                       {'id': img,
                        'fingerprint': fingerprint})
