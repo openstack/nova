@@ -1,9 +1,3 @@
-nova.tests.unit.api.openstack.compute.test_neutron_security_groups.TestNeutronSecurityGroupRulesV21
-nova.tests.unit.api.openstack.compute.test_neutron_security_groups.TestNeutronSecurityGroupsOutputTest
-nova.tests.unit.api.openstack.compute.test_security_group_default_rules.TestSecurityGroupDefaultRulesNeutronV21
-nova.tests.unit.api.openstack.compute.test_security_group_default_rules.TestSecurityGroupDefaultRulesV21
-nova.tests.unit.api.openstack.compute.test_security_groups.SecurityGroupsOutputTestV21
-nova.tests.unit.api.openstack.compute.test_security_groups.TestSecurityGroupRulesV21
 nova.tests.unit.api.openstack.compute.test_user_data.ServersControllerCreateTest
 nova.tests.unit.test_wsgi.TestWSGIServerWithSSL
 nova.tests.unit.virt.libvirt.test_firewall.IptablesFirewallTestCase
