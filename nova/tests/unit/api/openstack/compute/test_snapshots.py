@@ -32,16 +32,17 @@ class SnapshotApiTestV21(test.NoDBTestCase):
     def setUp(self):
         super(SnapshotApiTestV21, self).setUp()
         fakes.stub_out_networking(self)
-        self.stubs.Set(cinder.API, "create_snapshot",
-                       fakes.stub_snapshot_create)
-        self.stubs.Set(cinder.API, "create_snapshot_force",
-                       fakes.stub_snapshot_create)
-        self.stubs.Set(cinder.API, "delete_snapshot",
-                       fakes.stub_snapshot_delete)
-        self.stubs.Set(cinder.API, "get_snapshot", fakes.stub_snapshot_get)
-        self.stubs.Set(cinder.API, "get_all_snapshots",
-                       fakes.stub_snapshot_get_all)
-        self.stubs.Set(cinder.API, "get", fakes.stub_volume_get)
+        self.stub_out("nova.volume.cinder.API.create_snapshot",
+                      fakes.stub_snapshot_create)
+        self.stub_out("nova.volume.cinder.API.create_snapshot_force",
+                      fakes.stub_snapshot_create)
+        self.stub_out("nova.volume.cinder.API.delete_snapshot",
+                      fakes.stub_snapshot_delete)
+        self.stub_out("nova.volume.cinder.API.get_snapshot",
+                      fakes.stub_snapshot_get)
+        self.stub_out("nova.volume.cinder.API.get_all_snapshots",
+                      fakes.stub_snapshot_get_all)
+        self.stub_out("nova.volume.cinder.API.get", fakes.stub_volume_get)
         self.req = fakes.HTTPRequest.blank('')
 
     def _test_snapshot_create(self, force):
