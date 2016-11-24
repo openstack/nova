@@ -111,13 +111,13 @@ class _TestPciDeviceObject(object):
         self.inst.uuid = uuids.instance
         self.inst.pci_devices = pci_device.PciDeviceList()
 
-    def _create_fake_pci_device(self, ctxt=None):
+    @mock.patch.object(db, 'pci_device_get_by_addr')
+    def _create_fake_pci_device(self, mock_get, ctxt=None):
         if not ctxt:
             ctxt = context.get_admin_context()
-        self.mox.StubOutWithMock(db, 'pci_device_get_by_addr')
-        db.pci_device_get_by_addr(ctxt, 1, 'a').AndReturn(fake_db_dev)
-        self.mox.ReplayAll()
+        mock_get.return_value = fake_db_dev
         self.pci_device = pci_device.PciDevice.get_by_dev_addr(ctxt, 1, 'a')
+        mock_get.assert_called_once_with(ctxt, 1, 'a')
 
     def test_create_pci_device(self):
         self.pci_device = pci_device.PciDevice.create(None, dev_dict)
@@ -159,23 +159,23 @@ class _TestPciDeviceObject(object):
         self.assertEqual(self.pci_device.obj_what_changed(),
                          set(['vendor_id', 'product_id', 'parent_addr']))
 
-    def test_get_by_dev_addr(self):
+    @mock.patch.object(db, 'pci_device_get_by_addr')
+    def test_get_by_dev_addr(self, mock_get):
         ctxt = context.get_admin_context()
-        self.mox.StubOutWithMock(db, 'pci_device_get_by_addr')
-        db.pci_device_get_by_addr(ctxt, 1, 'a').AndReturn(fake_db_dev)
-        self.mox.ReplayAll()
+        mock_get.return_value = fake_db_dev
         self.pci_device = pci_device.PciDevice.get_by_dev_addr(ctxt, 1, 'a')
         self.assertEqual(self.pci_device.product_id, 'p')
         self.assertEqual(self.pci_device.obj_what_changed(), set())
+        mock_get.assert_called_once_with(ctxt, 1, 'a')
 
-    def test_get_by_dev_id(self):
+    @mock.patch.object(db, 'pci_device_get_by_id')
+    def test_get_by_dev_id(self, mock_get):
         ctxt = context.get_admin_context()
-        self.mox.StubOutWithMock(db, 'pci_device_get_by_id')
-        db.pci_device_get_by_id(ctxt, 1).AndReturn(fake_db_dev)
-        self.mox.ReplayAll()
+        mock_get.return_value = fake_db_dev
         self.pci_device = pci_device.PciDevice.get_by_dev_id(ctxt, 1)
         self.assertEqual(self.pci_device.product_id, 'p')
         self.assertEqual(self.pci_device.obj_what_changed(), set())
+        mock_get.assert_called_once_with(ctxt, 1)
 
     def test_from_db_obj_pre_1_5_format(self):
         ctxt = context.get_admin_context()
@@ -197,7 +197,8 @@ class _TestPciDeviceObject(object):
             self.assertIsNone(dev.parent_addr)
             self.assertEqual({}, dev.extra_info)
 
-    def test_save(self):
+    @mock.patch.object(db, 'pci_device_update')
+    def test_save(self, mock_update):
         ctxt = context.get_admin_context()
         self._create_fake_pci_device(ctxt=ctxt)
         return_dev = dict(fake_db_dev, status=fields.PciDeviceStatus.AVAILABLE,
@@ -207,15 +208,13 @@ class _TestPciDeviceObject(object):
         expected_updates = dict(status=fields.PciDeviceStatus.ALLOCATED,
                                 extra_info='{}',
                                 instance_uuid=uuids.instance2)
-        self.mox.StubOutWithMock(db, 'pci_device_update')
-        db.pci_device_update(ctxt, 1, 'a',
-                             expected_updates).AndReturn(return_dev)
-        self.mox.ReplayAll()
+        mock_update.return_value = return_dev
         self.pci_device.save()
         self.assertEqual(self.pci_device.status,
                          fields.PciDeviceStatus.AVAILABLE)
         self.assertEqual(self.pci_device.instance_uuid,
                          uuids.instance3)
+        mock_update.assert_called_once_with(ctxt, 1, 'a', expected_updates)
 
     def test_save_no_extra_info(self):
         return_dev = dict(fake_db_dev, status=fields.PciDeviceStatus.AVAILABLE,
@@ -232,16 +231,15 @@ class _TestPciDeviceObject(object):
         self.pci_device.save()
         self.assertEqual(self.extra_info, '{}')
 
-    def test_save_removed(self):
+    @mock.patch.object(db, 'pci_device_destroy')
+    def test_save_removed(self, mock_destroy):
         ctxt = context.get_admin_context()
         self._create_fake_pci_device(ctxt=ctxt)
         self.pci_device.status = fields.PciDeviceStatus.REMOVED
-        self.mox.StubOutWithMock(db, 'pci_device_destroy')
-        db.pci_device_destroy(ctxt, 1, 'a')
-        self.mox.ReplayAll()
         self.pci_device.save()
         self.assertEqual(self.pci_device.status,
                          fields.PciDeviceStatus.DELETED)
+        mock_destroy.assert_called_once_with(ctxt, 1, 'a')
 
     def test_save_deleted(self):
         def _fake_destroy(ctxt, node_id, addr):
@@ -417,17 +415,18 @@ class _TestPciDeviceListObject(object):
         self.assertEqual(1, len(pci_device_list))
         self.assertIsInstance(pci_device_list[0], pci_device.PciDevice)
 
-    def test_get_by_compute_node(self):
+    @mock.patch.object(db, 'pci_device_get_all_by_node')
+    def test_get_by_compute_node(self, mock_get):
         ctxt = context.get_admin_context()
-        self.mox.StubOutWithMock(db, 'pci_device_get_all_by_node')
-        db.pci_device_get_all_by_node(ctxt, 1).AndReturn(fake_pci_devs)
-        self.mox.ReplayAll()
+        mock_get.return_value = fake_pci_devs
         devs = pci_device.PciDeviceList.get_by_compute_node(ctxt, 1)
         for i in range(len(fake_pci_devs)):
             self.assertIsInstance(devs[i], pci_device.PciDevice)
             self.assertEqual(fake_pci_devs[i]['vendor_id'], devs[i].vendor_id)
+        mock_get.assert_called_once_with(ctxt, 1)
 
-    def test_get_by_instance_uuid(self):
+    @mock.patch.object(db, 'pci_device_get_all_by_instance_uuid')
+    def test_get_by_instance_uuid(self, mock_get):
         ctxt = context.get_admin_context()
         fake_db_1 = dict(fake_db_dev, address='a1',
                          status=fields.PciDeviceStatus.ALLOCATED,
@@ -435,16 +434,14 @@ class _TestPciDeviceListObject(object):
         fake_db_2 = dict(fake_db_dev, address='a2',
                          status=fields.PciDeviceStatus.ALLOCATED,
                          instance_uuid='1')
-        self.mox.StubOutWithMock(db, 'pci_device_get_all_by_instance_uuid')
-        db.pci_device_get_all_by_instance_uuid(ctxt, '1').AndReturn(
-            [fake_db_1, fake_db_2])
-        self.mox.ReplayAll()
+        mock_get.return_value = [fake_db_1, fake_db_2]
         devs = pci_device.PciDeviceList.get_by_instance_uuid(ctxt, '1')
         self.assertEqual(len(devs), 2)
         for i in range(len(fake_pci_devs)):
             self.assertIsInstance(devs[i], pci_device.PciDevice)
         self.assertEqual(devs[0].vendor_id, 'v')
         self.assertEqual(devs[1].vendor_id, 'v')
+        mock_get.assert_called_once_with(ctxt, '1')
 
 
 class TestPciDeviceListObject(test_objects._LocalTest,
@@ -498,13 +495,13 @@ class _TestSRIOVPciDeviceObject(object):
         self.inst.uuid = uuids.instance
         self.inst.pci_devices = pci_device.PciDeviceList()
 
-    def _create_fake_pci_device(self, ctxt=None):
+    @mock.patch.object(db, 'pci_device_get_by_addr')
+    def _create_fake_pci_device(self, mock_get, ctxt=None):
         if not ctxt:
             ctxt = context.get_admin_context()
-        self.mox.StubOutWithMock(db, 'pci_device_get_by_addr')
-        db.pci_device_get_by_addr(ctxt, 1, 'a').AndReturn(fake_db_dev)
-        self.mox.ReplayAll()
+        mock_get.return_value = fake_db_dev
         self.pci_device = pci_device.PciDevice.get_by_dev_addr(ctxt, 1, 'a')
+        mock_get.assert_called_once_with(ctxt, 1, 'a')
 
     def _get_children_by_parent_address(self, addr):
         vf_devs = []
