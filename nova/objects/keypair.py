@@ -239,7 +239,7 @@ class KeyPairList(base.ObjectListBase, base.NovaObject):
                 db.key_pair_count_by_user(context, user_id))
 
 
-@db_api.main_context_manager.reader
+@db_api.pick_context_manager_reader
 def _count_unmigrated_instances(context):
     return context.session.query(main_models.InstanceExtra).\
         filter_by(keypairs=None).\
@@ -247,7 +247,7 @@ def _count_unmigrated_instances(context):
         count()
 
 
-@db_api.main_context_manager.reader
+@db_api.pick_context_manager_reader
 def _get_main_keypairs(context, limit):
     return context.session.query(main_models.KeyPair).\
         filter_by(deleted=0).\
