@@ -747,6 +747,8 @@ class ComputeVolumeTestCase(BaseTestCase):
         mock_get_bdms.assert_called_once_with(ctxt, use_slave=True)
         mock_update.assert_called_once_with(ctxt, [3, 4])
 
+    @mock.patch('nova.context.RequestContext.elevated')
+    @mock.patch('nova.compute.utils.notify_about_volume_attach_detach')
     @mock.patch.object(objects.BlockDeviceMapping,
                        'get_by_volume_and_instance')
     @mock.patch.object(fake.FakeDriver, 'block_stats')
@@ -754,7 +756,9 @@ class ComputeVolumeTestCase(BaseTestCase):
     @mock.patch.object(fake.FakeDriver, 'get_all_volume_usage')
     @mock.patch.object(fake.FakeDriver, 'instance_exists')
     def test_detach_volume_usage(self, mock_exists, mock_get_all,
-                                 mock_get_bdms, mock_stats, mock_get):
+                                 mock_get_bdms, mock_stats, mock_get,
+                                 mock_notify, mock_elevate):
+        mock_elevate.return_value = self.context
         # Test that detach volume update the volume usage cache table correctly
         instance = self._create_fake_instance_obj()
         bdm = objects.BlockDeviceMapping(context=self.context,
@@ -829,6 +833,12 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertEqual(30, volume_usage['tot_read_bytes'])
         self.assertEqual(1, volume_usage['tot_writes'])
         self.assertEqual(20, volume_usage['tot_write_bytes'])
+
+        mock_notify.assert_has_calls([
+            mock.call(self.context, instance, 'fake-mini',
+                      action='volume_attach', phase='start',
+                      volume_id=uuids.volume_id),
+            ])
 
         mock_get.assert_called_once_with(self.context, uuids.volume_id,
                                          instance.uuid)

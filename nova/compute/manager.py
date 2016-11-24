@@ -4811,6 +4811,11 @@ class ComputeManager(manager.Manager):
                   {'volume_id': bdm.volume_id,
                   'mountpoint': bdm['mount_device']},
                  instance=instance)
+        compute_utils.notify_about_volume_attach_detach(
+            context, instance, self.host,
+            action=fields.NotificationAction.VOLUME_ATTACH,
+            phase=fields.NotificationPhase.START,
+            volume_id=bdm.volume_id)
         try:
             bdm.attach(context, instance, self.volume_api, self.driver,
                        do_driver_attach=True)
@@ -4826,6 +4831,11 @@ class ComputeManager(manager.Manager):
         info = {'volume_id': bdm.volume_id}
         self._notify_about_instance_usage(
             context, instance, "volume.attach", extra_usage_info=info)
+        compute_utils.notify_about_volume_attach_detach(
+            context, instance, self.host,
+            action=fields.NotificationAction.VOLUME_ATTACH,
+            phase=fields.NotificationPhase.END,
+            volume_id=bdm.volume_id)
 
     def _notify_volume_usage_detach(self, context, instance, bdm):
         if CONF.volume_usage_poll_interval <= 0:
