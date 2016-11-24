@@ -472,23 +472,40 @@ class TestInstanceNotificationSample(
 
     def _test_resize_server(self, server):
         self.flags(allow_resize_to_same_host=True)
-        post = {'resize': {'flavorRef': '2'}}
+        other_flavor_body = {
+            'flavor': {
+                'name': 'other_flavor',
+                'ram': 256,
+                'vcpus': 1,
+                'disk': 1,
+                'id': 'd5a8bb54-365a-45ae-abdb-38d249df7845'
+            }
+        }
+        other_flavor_id = self.api.post_flavor(other_flavor_body)['id']
+
+        post = {
+            'resize': {
+                'flavorRef': other_flavor_id
+            }
+        }
         self.api.post_server_action(server['id'], post)
         self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
-        self._verify_notification(
+        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        # This list needs to be in order.
+        expected_notifications = [
             'instance-resize-start',
-            replacements={
-                'reservation_id': server['reservation_id'],
-                'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
-        self._verify_notification(
             'instance-resize-end',
-            replacements={
-                'reservation_id': server['reservation_id'],
-                'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            'instance-resize_finish-start',
+            'instance-resize_finish-end'
+        ]
+        for idx, notification in enumerate(expected_notifications):
+            self._verify_notification(
+                notification,
+                replacements={
+                    'reservation_id': server['reservation_id'],
+                    'uuid': server['id']},
+                actual=fake_notifier.VERSIONED_NOTIFICATIONS[idx])
 
         post = {'revertResize': None}
         self.api.post_server_action(server['id'], post)
