@@ -6345,12 +6345,18 @@ class ComputeTestCase(BaseTestCase,
 
         mock_bdms.return_value = []
 
+        @mock.patch('nova.compute.utils.notify_about_instance_action')
         @mock.patch.object(self.compute, '_live_migration_cleanup_flags')
         @mock.patch.object(self.compute, 'network_api')
-        def _test(mock_nw_api, mock_lmcf):
+        def _test(mock_nw_api, mock_lmcf, mock_notify):
             mock_lmcf.return_value = False, False
             self.compute._rollback_live_migration(c, instance, 'foo',
                                                   migrate_data=migrate_data)
+            mock_notify.assert_has_calls([
+                mock.call(c, instance, self.compute.host,
+                          action='live_migration_rollback', phase='start'),
+                mock.call(c, instance, self.compute.host,
+                          action='live_migration_rollback', phase='end')])
             mock_nw_api.setup_networks_on_host.assert_called_once_with(
                 c, instance, self.compute.host)
         _test()
@@ -6368,13 +6374,19 @@ class ComputeTestCase(BaseTestCase,
 
         mock_bdms.return_value = []
 
+        @mock.patch('nova.compute.utils.notify_about_instance_action')
         @mock.patch.object(self.compute, '_live_migration_cleanup_flags')
         @mock.patch.object(self.compute, 'network_api')
-        def _test(mock_nw_api, mock_lmcf):
+        def _test(mock_nw_api, mock_lmcf, mock_notify):
             mock_lmcf.return_value = False, False
             self.compute._rollback_live_migration(c, instance, 'foo',
                                                   migrate_data=migrate_data,
                                                   migration_status='fake')
+            mock_notify.assert_has_calls([
+                mock.call(c, instance, self.compute.host,
+                          action='live_migration_rollback', phase='start'),
+                mock.call(c, instance, self.compute.host,
+                          action='live_migration_rollback', phase='end')])
             mock_nw_api.setup_networks_on_host.assert_called_once_with(
                 c, instance, self.compute.host)
         _test()

@@ -5805,6 +5805,10 @@ class ComputeManager(manager.Manager):
 
         self._notify_about_instance_usage(context, instance,
                                           "live_migration._rollback.start")
+        compute_utils.notify_about_instance_action(context, instance,
+                self.host,
+                action=fields.NotificationAction.LIVE_MIGRATION_ROLLBACK,
+                phase=fields.NotificationPhase.START)
 
         do_cleanup, destroy_disks = self._live_migration_cleanup_flags(
                 migrate_data)
@@ -5816,6 +5820,10 @@ class ComputeManager(manager.Manager):
 
         self._notify_about_instance_usage(context, instance,
                                           "live_migration._rollback.end")
+        compute_utils.notify_about_instance_action(context, instance,
+                self.host,
+                action=fields.NotificationAction.LIVE_MIGRATION_ROLLBACK,
+                phase=fields.NotificationPhase.END)
 
         self._set_migration_status(migration, migration_status)
 
