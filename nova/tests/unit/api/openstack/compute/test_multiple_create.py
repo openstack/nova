@@ -26,7 +26,6 @@ from nova.compute import api as compute_api
 from nova.compute import flavors
 import nova.conf
 from nova import exception
-from nova.network import manager
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
@@ -124,8 +123,8 @@ class MultiCreateExtensionTestV21(test.TestCase):
         self.stub_out('nova.db.instance_update', instance_update)
         self.stub_out('nova.db.instance_update_and_get_original',
                       server_update)
-        self.stubs.Set(manager.VlanManager, 'allocate_fixed_ip',
-                       fake_method)
+        self.stub_out('nova.network.manager.VlanManager.allocate_fixed_ip',
+                      fake_method)
         self.req = fakes.HTTPRequest.blank('')
 
     def _test_create_extra(self, params, no_image=False,
@@ -164,7 +163,7 @@ class MultiCreateExtensionTestV21(test.TestCase):
             self._check_multiple_create_extension_disabled(**kwargs)
             return old_create(*args, **kwargs)
 
-        self.stubs.Set(compute_api.API, 'create', create)
+        self.stub_out('nova.compute.api.API.create', create)
         self._test_create_extra(
             params,
             override_controller=self.no_mult_create_controller)
@@ -185,7 +184,7 @@ class MultiCreateExtensionTestV21(test.TestCase):
             self.assertEqual(kwargs['max_count'], 3)
             return old_create(*args, **kwargs)
 
-        self.stubs.Set(compute_api.API, 'create', create)
+        self.stub_out('nova.compute.api.API.create', create)
         self._test_create_extra(params)
 
     def test_create_instance_with_multiple_create_enabled(self):
@@ -202,7 +201,7 @@ class MultiCreateExtensionTestV21(test.TestCase):
             self.assertEqual(kwargs['max_count'], 3)
             return old_create(*args, **kwargs)
 
-        self.stubs.Set(compute_api.API, 'create', create)
+        self.stub_out('nova.compute.api.API.create', create)
         self._test_create_extra(params)
 
     def test_create_instance_invalid_negative_min(self):
@@ -430,7 +429,7 @@ class MultiCreateExtensionTestV21(test.TestCase):
             self.assertEqual(len(kwargs['block_device_mapping']), 2)
             return old_create(*args, **kwargs)
 
-        self.stubs.Set(compute_api.API, 'create', create)
+        self.stub_out('nova.compute.api.API.create', create)
         exc = self.assertRaises(webob.exc.HTTPBadRequest,
                                 self._test_create_extra, params, no_image=True)
         self.assertEqual("Cannot attach one or more volumes to multiple "
@@ -454,7 +453,7 @@ class MultiCreateExtensionTestV21(test.TestCase):
                             'vol-xxxx')
             return old_create(*args, **kwargs)
 
-        self.stubs.Set(compute_api.API, 'create', create)
+        self.stub_out('nova.compute.api.API.create', create)
         exc = self.assertRaises(webob.exc.HTTPBadRequest,
                                 self._test_create_extra, params, no_image=True)
         self.assertEqual("Cannot attach one or more volumes to multiple "
