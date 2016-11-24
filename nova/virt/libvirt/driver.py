@@ -44,6 +44,7 @@ import eventlet
 from eventlet import greenthread
 from eventlet import tpool
 from lxml import etree
+from os_brick import exception as brick_exception
 from os_brick.initiator import connector
 from oslo_concurrency import processutils
 from oslo_log import log as logging
@@ -167,17 +168,6 @@ libvirt_volume_drivers = [
     'vzstorage='
         'nova.virt.libvirt.volume.vzstorage.LibvirtVZStorageVolumeDriver',
 ]
-
-
-def driver_dict_from_config(named_driver_config, *args, **kwargs):
-    driver_registry = dict()
-
-    for driver_str in named_driver_config:
-        driver_type, _sep, driver = driver_str.partition('=')
-        driver_class = importutils.import_class(driver)
-        driver_registry[driver_type] = driver_class(*args, **kwargs)
-
-    return driver_registry
 
 
 def patch_tpool_proxy():
@@ -363,8 +353,11 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self.vif_driver = libvirt_vif.LibvirtGenericVIFDriver()
 
-        self.volume_drivers = driver_dict_from_config(
-            self._get_volume_drivers(), self._host)
+        # TODO(mriedem): Long-term we should load up the volume drivers on
+        # demand as needed rather than doing this on startup, as there might
+        # be unsupported volume drivers in this list based on the underlying
+        # platform.
+        self.volume_drivers = self._get_volume_drivers()
 
         self._disk_cachemode = None
         self.image_cache_manager = imagecache.ImageCacheManager()
@@ -416,7 +409,18 @@ class LibvirtDriver(driver.ComputeDriver):
         self._reserved_hugepages = hardware.numa_get_reserved_huge_pages()
 
     def _get_volume_drivers(self):
-        return libvirt_volume_drivers
+        driver_registry = dict()
+
+        for driver_str in libvirt_volume_drivers:
+            driver_type, _sep, driver = driver_str.partition('=')
+            driver_class = importutils.import_class(driver)
+            try:
+                driver_registry[driver_type] = driver_class(self._host)
+            except brick_exception.InvalidConnectorProtocol:
+                LOG.debug('Unable to load volume driver %s. It is not '
+                          'supported on this host.', driver)
+
+        return driver_registry
 
     @property
     def disk_cachemode(self):

@@ -36,6 +36,7 @@ import fixtures
 from lxml import etree
 import mock
 from mox3 import mox
+from os_brick import exception as brick_exception
 from os_brick.initiator import connector
 import os_vif
 from oslo_concurrency import lockutils
@@ -576,32 +577,9 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         thr2.wait()
 
 
-class FakeVolumeDriver(object):
+class FakeInvalidVolumeDriver(object):
     def __init__(self, *args, **kwargs):
-        pass
-
-    def attach_volume(self, *args):
-        pass
-
-    def detach_volume(self, *args):
-        pass
-
-    def get_xml(self, *args):
-        return ""
-
-    def get_config(self, *args):
-        """Connect the volume to a fake device."""
-        conf = vconfig.LibvirtConfigGuestDisk()
-        conf.source_type = "network"
-        conf.source_protocol = "fake"
-        conf.source_name = "fake"
-        conf.target_dev = "fake"
-        conf.target_bus = "fake"
-        return conf
-
-    def connect_volume(self, *args):
-        """Connect the volume to a fake device."""
-        pass
+        raise brick_exception.InvalidConnectorProtocol('oops!')
 
 
 class FakeConfigGuestDisk(object):
@@ -760,16 +738,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 return FakeVirtDomain()
 
         # Creating mocks
-        volume_driver = ['iscsi=nova.tests.unit.virt.libvirt.test_driver'
-                         '.FakeVolumeDriver']
         fake = FakeLibvirtDriver()
         # Customizing above fake if necessary
         for key, val in kwargs.items():
             fake.__setattr__(key, val)
 
         self.stubs.Set(libvirt_driver.LibvirtDriver, '_conn', fake)
-        self.stubs.Set(libvirt_driver.LibvirtDriver, '_get_volume_drivers',
-            lambda x: volume_driver)
         self.stubs.Set(host.Host, 'get_connection', lambda x: fake)
 
     def fake_lookup(self, instance_name):
@@ -17147,6 +17121,33 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             self.assertRaises(fakelibvirt.libvirtError,
                               self.drvr.trigger_crash_dump, instance)
 
+    @mock.patch.object(libvirt_driver.LOG, 'debug')
+    def test_get_volume_driver_invalid_connector_exception(self, mock_debug):
+        """Tests that the driver doesn't fail to initialize if one of the
+        imported volume drivers raises InvalidConnectorProtocol from os-brick.
+        """
+        # make a copy of the normal list and add a volume driver that raises
+        # the handled os-brick exception when imported.
+        libvirt_volume_drivers_copy = copy.copy(
+            libvirt_driver.libvirt_volume_drivers)
+        libvirt_volume_drivers_copy.append(
+            'invalid=nova.tests.unit.virt.libvirt.test_driver.'
+            'FakeInvalidVolumeDriver'
+        )
+        with mock.patch.object(libvirt_driver, 'libvirt_volume_drivers',
+                               libvirt_volume_drivers_copy):
+            drvr = libvirt_driver.LibvirtDriver(
+                fake.FakeVirtAPI(), read_only=True
+            )
+        # make sure we didn't register the invalid volume driver
+        self.assertNotIn('invalid', drvr.volume_drivers)
+        # make sure we logged something
+        mock_debug.assert_called_with(
+            ('Unable to load volume driver %s. '
+             'It is not supported on this host.'),
+            'nova.tests.unit.virt.libvirt.test_driver.FakeInvalidVolumeDriver'
+        )
+
 
 class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
     """Test for LibvirtDriver.get_all_volume_usage."""
@@ -18518,44 +18519,3 @@ class LVMSnapshotTests(_BaseSnapshotTests):
     def test_qcow2(self):
         self.flags(snapshot_image_format='qcow2', group='libvirt')
         self._test_lvm_snapshot('qcow2')
-
-
-class FakeDriver(object):
-    def __init__(self, *args, **kwargs):
-        self.args = args
-        self.kwargs = kwargs
-
-
-class FakeDriver2(FakeDriver):
-    pass
-
-
-class ToDriverRegistryTestCase(test.NoDBTestCase):
-
-    def assertDriverInstance(self, inst, class_, *args, **kwargs):
-        self.assertEqual(class_, inst.__class__)
-        self.assertEqual(args, inst.args)
-        self.assertEqual(kwargs, inst.kwargs)
-
-    def test_driver_dict_from_config(self):
-        drvs = libvirt_driver.driver_dict_from_config(
-            [
-                'key1=nova.tests.unit.virt.libvirt.test_driver.FakeDriver',
-                'key2=nova.tests.unit.virt.libvirt.test_driver.FakeDriver2',
-            ], 'arg1', 'arg2', param1='value1', param2='value2'
-        )
-
-        self.assertEqual(
-            sorted(['key1', 'key2']),
-            sorted(drvs.keys())
-        )
-
-        self.assertDriverInstance(
-            drvs['key1'],
-            FakeDriver, 'arg1', 'arg2', param1='value1',
-            param2='value2')
-
-        self.assertDriverInstance(
-            drvs['key2'],
-            FakeDriver2, 'arg1', 'arg2', param1='value1',
-            param2='value2')
