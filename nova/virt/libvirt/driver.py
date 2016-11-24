@@ -4112,44 +4112,6 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.SerialPortNumberLimitExceeded(
                 allowed=ALLOWED_QEMU_SERIAL_PORTS, virt_type=virt_type)
 
-    def _create_serial_console_devices(self, guest, instance, flavor,
-                                       image_meta):
-        guest_arch = libvirt_utils.get_arch(image_meta)
-
-        if CONF.serial_console.enabled:
-            num_ports = hardware.get_number_of_serial_ports(
-                flavor, image_meta)
-
-            if guest_arch in (arch.S390, arch.S390X):
-                console_cls = vconfig.LibvirtConfigGuestConsole
-            else:
-                console_cls = vconfig.LibvirtConfigGuestSerial
-                self._check_number_of_serial_console(num_ports)
-
-            for port in six.moves.range(num_ports):
-                console = console_cls()
-                console.port = port
-                console.type = "tcp"
-                console.listen_host = (
-                    CONF.serial_console.proxyclient_address)
-                console.listen_port = (
-                    serial_console.acquire_port(
-                        console.listen_host))
-                guest.add_device(console)
-        else:
-            # The QEMU 'pty' driver throws away any data if no
-            # client app is connected. Thus we can't get away
-            # with a single type=pty console. Instead we have
-            # to configure two separate consoles.
-            if guest_arch in (arch.S390, arch.S390X):
-                consolelog = vconfig.LibvirtConfigGuestConsole()
-                consolelog.target_type = "sclplm"
-            else:
-                consolelog = vconfig.LibvirtConfigGuestSerial()
-            consolelog.type = "file"
-            consolelog.source_path = self._get_console_log_path(instance)
-            guest.add_device(consolelog)
-
     def _add_video_driver(self, guest, image_meta, flavor):
         VALID_VIDEO_DEVICES = ("vga", "cirrus", "vmvga", "xen", "qxl")
         video = vconfig.LibvirtConfigGuestVideo()
@@ -4372,12 +4334,45 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             guest.os_boot_dev = blockinfo.get_boot_order(disk_info)
 
-    def _create_consoles(self, virt_type, guest, instance, flavor, image_meta,
+    def _create_consoles(self, virt_type, guest, log_path, flavor, image_meta,
                          caps):
         if virt_type in ("qemu", "kvm"):
             # Create the serial console char devices
-            self._create_serial_console_devices(guest, instance, flavor,
-                                                image_meta)
+            guest_arch = libvirt_utils.get_arch(image_meta)
+
+            if CONF.serial_console.enabled:
+                num_ports = hardware.get_number_of_serial_ports(
+                    flavor, image_meta)
+
+                if guest_arch in (arch.S390, arch.S390X):
+                    console_cls = vconfig.LibvirtConfigGuestConsole
+                else:
+                    console_cls = vconfig.LibvirtConfigGuestSerial
+                    self._check_number_of_serial_console(num_ports)
+
+                for port in six.moves.range(num_ports):
+                    console = console_cls()
+                    console.port = port
+                    console.type = "tcp"
+                    console.listen_host = (
+                        CONF.serial_console.proxyclient_address)
+                    console.listen_port = (
+                        serial_console.acquire_port(
+                            console.listen_host))
+                    guest.add_device(console)
+            else:
+                # The QEMU 'pty' driver throws away any data if no
+                # client app is connected. Thus we can't get away
+                # with a single type=pty console. Instead we have
+                # to configure two separate consoles.
+                if guest_arch in (arch.S390, arch.S390X):
+                    consolelog = vconfig.LibvirtConfigGuestConsole()
+                    consolelog.target_type = "sclplm"
+                else:
+                    consolelog = vconfig.LibvirtConfigGuestSerial()
+                consolelog.type = "file"
+                consolelog.source_path = log_path
+                guest.add_device(consolelog)
             if caps.host.cpu.arch in (arch.S390, arch.S390X):
                 consolepty = vconfig.LibvirtConfigGuestConsole()
                 consolepty.target_type = "sclp"
@@ -4385,7 +4380,10 @@ class LibvirtDriver(driver.ComputeDriver):
                 consolepty = vconfig.LibvirtConfigGuestSerial()
         else:
             consolepty = vconfig.LibvirtConfigGuestConsole()
-        return consolepty
+
+        if virt_type != 'parallels':
+            consolepty.type = "pty"
+            guest.add_device(consolepty)
 
     def _cpu_config_to_vcpu_model(self, cpu_config, vcpu_model):
         """Update VirtCPUModel object according to libvirt CPU config.
@@ -4542,11 +4540,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 flavor, virt_type, self._host)
             guest.add_device(config)
 
-        consolepty = self._create_consoles(virt_type, guest, instance, flavor,
-                                           image_meta, caps)
-        if virt_type != 'parallels':
-            consolepty.type = "pty"
-            guest.add_device(consolepty)
+        log_path = self._get_console_log_path(instance)
+        self._create_consoles(virt_type, guest, log_path, flavor,
+                              image_meta, caps)
 
         pointer = self._get_guest_pointer_model(guest.os_type, image_meta)
         if pointer:

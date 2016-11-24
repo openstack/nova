@@ -3629,12 +3629,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                     arch.S390: vconfig.LibvirtConfigGuestConsole,
                     arch.S390X: vconfig.LibvirtConfigGuestConsole}
 
+        caps = drvr._host.get_capabilities()
+
         for guest_arch, device_type in expected.items():
             mock_get_arch.return_value = guest_arch
             guest = vconfig.LibvirtConfigGuest()
-            drvr._create_serial_console_devices(guest, instance=None,
-                                                flavor={}, image_meta={})
-            self.assertEqual(1, len(guest.devices))
+
+            drvr._create_consoles(virt_type="kvm", guest=guest, log_path="",
+                                  flavor={}, image_meta={}, caps=caps)
+            self.assertEqual(2, len(guest.devices))
             console_device = guest.devices[0]
             self.assertIsInstance(console_device, device_type)
             self.assertEqual("tcp", console_device.type)
@@ -3650,20 +3653,22 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         flavor = 'fake_flavor'
         image_meta = objects.ImageMeta()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        caps = drvr._host.get_capabilities()
         guest = vconfig.LibvirtConfigGuest()
+        log_path = ""
         self.assertRaises(exception.SerialPortNumberLimitExceeded,
-                          drvr._create_serial_console_devices,
-                          guest, None, flavor, image_meta)
+                          drvr._create_consoles,
+                          "kvm", guest, log_path, flavor, image_meta, caps)
         mock_get_arch.assert_called_with(image_meta)
         mock_get_port_number.assert_called_with(flavor,
                                                 image_meta)
 
-        drvr._create_serial_console_devices(guest, None, flavor, image_meta)
+        drvr._create_consoles("kvm", guest, log_path, flavor, image_meta, caps)
         mock_get_arch.assert_called_with(image_meta)
         mock_get_port_number.assert_called_with(flavor,
                                                 image_meta)
 
-        drvr._create_serial_console_devices(guest, None, flavor, image_meta)
+        drvr._create_consoles("kvm", guest, log_path, flavor, image_meta, caps)
         mock_get_arch.assert_called_with(image_meta)
         mock_get_port_number.assert_called_with(flavor,
                                                 image_meta)
