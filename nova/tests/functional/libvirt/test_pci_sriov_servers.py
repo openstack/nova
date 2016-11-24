@@ -161,7 +161,6 @@ class SRIOVServersTest(ServersTestBase):
         host_info = NumaHostInfo(cpu_nodes=2, cpu_sockets=1, cpu_cores=2,
                                  cpu_threads=2, kB_mem=15740000)
         pci_info = fakelibvirt.HostPciSRIOVDevicesInfo()
-        pci_info.create_pci_devices()
         fake_connection = self._get_connection(host_info, pci_info)
 
         # Create a flavor
@@ -185,7 +184,6 @@ class SRIOVServersTest(ServersTestBase):
         host_info = NumaHostInfo(cpu_nodes=2, cpu_sockets=1, cpu_cores=2,
                                  cpu_threads=2, kB_mem=15740000)
         pci_info = fakelibvirt.HostPciSRIOVDevicesInfo()
-        pci_info.create_pci_devices()
         fake_connection = self._get_connection(host_info, pci_info)
 
         # Create a flavor
@@ -208,8 +206,7 @@ class SRIOVServersTest(ServersTestBase):
 
         host_info = NumaHostInfo(cpu_nodes=2, cpu_sockets=1, cpu_cores=2,
                                  cpu_threads=2, kB_mem=15740000)
-        pci_info = fakelibvirt.HostPciSRIOVDevicesInfo()
-        pci_info.create_pci_devices(num_pfs=1, num_vfs=4)
+        pci_info = fakelibvirt.HostPciSRIOVDevicesInfo(num_pfs=1, num_vfs=4)
         fake_connection = self._get_connection(host_info, pci_info)
 
         # Create a flavor
@@ -239,8 +236,7 @@ class SRIOVServersTest(ServersTestBase):
 
         host_info = NumaHostInfo(cpu_nodes=2, cpu_sockets=1, cpu_cores=2,
                                  cpu_threads=2, kB_mem=15740000)
-        pci_info = fakelibvirt.HostPciSRIOVDevicesInfo()
-        pci_info.create_pci_devices(num_pfs=1, num_vfs=4)
+        pci_info = fakelibvirt.HostPciSRIOVDevicesInfo(num_pfs=1, num_vfs=4)
         fake_connection = self._get_connection(host_info, pci_info)
 
         # Create a flavor
@@ -273,8 +269,7 @@ class SRIOVServersTest(ServersTestBase):
 
         host_info = NumaHostInfo(cpu_nodes=2, cpu_sockets=1, cpu_cores=2,
                                  cpu_threads=2, kB_mem=15740000)
-        pci_info = fakelibvirt.HostPciSRIOVDevicesInfo()
-        pci_info.create_pci_devices(num_pfs=1, numa_node=1)
+        pci_info = fakelibvirt.HostPciSRIOVDevicesInfo(num_pfs=1, numa_node=1)
         fake_connection = self._get_connection(host_info, pci_info)
 
         # Create a flavor
@@ -303,8 +298,7 @@ class SRIOVServersTest(ServersTestBase):
 
         host_info = NumaHostInfo(cpu_nodes=2, cpu_sockets=1, cpu_cores=2,
                                  cpu_threads=2, kB_mem=15740000)
-        pci_info = fakelibvirt.HostPciSRIOVDevicesInfo()
-        pci_info.create_pci_devices(num_pfs=1, numa_node=0)
+        pci_info = fakelibvirt.HostPciSRIOVDevicesInfo(num_pfs=1, numa_node=0)
         fake_connection = self._get_connection(host_info, pci_info)
 
         # Create a flavor
