@@ -257,25 +257,25 @@ class TestNotificationBase(test.NoDBTestCase):
 
 
 notification_object_data = {
-    'AuditPeriodPayload': '1.0-28345f72ca9d805eeb61b2c2385805dd',
-    'BandwidthPayload': '1.0-49278639296f9939ff2c8947b2078a82',
+    'AuditPeriodPayload': '1.0-2b429dd307b8374636703b843fa3f9cb',
+    'BandwidthPayload': '1.0-ee2616a7690ab78406842a2b68e34130',
     'EventType': '1.4-da0f0fbcda143ca96c2ac1b93937c22c',
     'ExceptionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'ExceptionPayload': '1.0-4516ae282a55fe2fd5c754967ee6248b',
-    'FlavorPayload': '1.0-8ad962ab0bafc7270f474c7dda0b7c20',
+    'ExceptionPayload': '1.0-27db46ee34cd97e39f2643ed92ad0cc5',
+    'FlavorPayload': '1.0-89b17e778291bba22025b5956e072b66',
     'InstanceActionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceActionPayload': '1.0-d94994d6043bb87fde603976ce811cba',
+    'InstanceActionPayload': '1.0-3145ac549217f46e88173c437917ca7a',
     'InstanceActionVolumeSwapNotification':
     '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceActionVolumeSwapPayload': '1.0-1043222e12be67403cab471ea1989b76',
-    'InstancePayload': '1.0-4473793aa2a0a4083d328847f3ab638a',
-    'InstanceStateUpdatePayload': '1.0-a934d04e1b314318e42e8062647edd11',
+    'InstanceActionVolumeSwapPayload': '1.0-3915e3dcb1cd80d3006a5c662a31b999',
+    'InstancePayload': '1.0-0eb2a5dd53358f9f9b0ad030a987a591',
+    'InstanceStateUpdatePayload': '1.0-07e111c0fa0f6db0f79b0726d593e3da',
     'InstanceUpdateNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceUpdatePayload': '1.0-2e21e6950fbb04e701e54e8563a21dbc',
-    'IpPayload': '1.0-26b40117c41ed95a61ae104f0fcb5fdc',
+    'InstanceUpdatePayload': '1.0-868bf558327efffed4fb8b1e87515182',
+    'IpPayload': '1.0-8ecf567a99e516d4af094439a7632d34',
     'NotificationPublisher': '1.0-bbbc1402fb0e443a3eb227cc52b61545',
     'ServiceStatusNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'ServiceStatusPayload': '1.0-a5e7b4fd6cc5581be45b31ff1f3a3f7f',
+    'ServiceStatusPayload': '1.0-c43a812046139e875ff2dc5590cd8d02',
 }
 
 
@@ -288,7 +288,8 @@ class TestNotificationObjectVersions(test.NoDBTestCase):
         checker = fixture.ObjectVersionChecker(
             test_objects.get_nova_objects())
         notification_object_data.update(test_objects.object_data)
-        expected, actual = checker.test_hashes(notification_object_data)
+        expected, actual = checker.test_hashes(notification_object_data,
+                                               extra_data_func=get_extra_data)
         self.assertEqual(expected, actual,
                          'Some notification objects have changed; please make '
                          'sure the versions have been bumped, and then update '
