@@ -636,11 +636,15 @@ class BlockDevice(object):
         self._disk = disk
 
     def abort_job(self, async=False, pivot=False):
-        """Request to cancel any job currently running on the block.
+        """Request to cancel a live block device job
 
-        :param async: Request only, do not wait for completion
-        :param pivot: Pivot to new file when ending a copy or
-                      active commit job
+        :param async: Cancel the block device job (e.g. 'copy' or
+                      'commit'), and return as soon as possible, without
+                      waiting for job completion
+        :param pivot: Pivot to the destination image when ending a
+                      'copy' or "active commit" (meaning: merging the
+                      contents of current active disk into its backing
+                      file) job
         """
         flags = async and libvirt.VIR_DOMAIN_BLOCK_JOB_ABORT_ASYNC or 0
         flags |= pivot and libvirt.VIR_DOMAIN_BLOCK_JOB_ABORT_PIVOT or 0
@@ -670,10 +674,16 @@ class BlockDevice(object):
 
     def rebase(self, base, shallow=False, reuse_ext=False,
                copy=False, relative=False):
-        """Rebases block to new base
+        """Copy data from backing chain into a new disk
 
-        :param shallow: Limit copy to top of source backing chain
-        :param reuse_ext: Reuse existing external file of a copy
+        This copies data from backing file(s) into overlay(s), giving
+        control over several aspects like what part of a disk image
+        chain to be copied, whether to reuse an existing destination
+        file, etc.  And updates the backing file to the new disk
+
+        :param shallow: Limit copy to top of the source backing chain
+        :param reuse_ext: Reuse an existing external file that was
+                          pre-created
         :param copy: Start a copy job
         :param relative: Keep backing chain referenced using relative names
         """
@@ -685,10 +695,10 @@ class BlockDevice(object):
             self._disk, base, self.REBASE_DEFAULT_BANDWIDTH, flags=flags)
 
     def commit(self, base, top, relative=False):
-        """Commit on block device
+        """Merge data from overlays into backing file
 
-        For performance during live snapshot it will reduces the disk chain
-        to a single disk.
+        This live merges (or "commits") contents from backing files into
+        overlays, thus reducing the length of a disk image chain.
 
         :param relative: Keep backing chain referenced using relative names
         """
@@ -697,7 +707,7 @@ class BlockDevice(object):
             self._disk, base, top, self.COMMIT_DEFAULT_BANDWIDTH, flags=flags)
 
     def resize(self, size_kb):
-        """Resizes block device to Kib size."""
+        """Resize block device to KiB size"""
         self._guest._domain.blockResize(self._disk, size_kb)
 
     def is_job_complete(self):
