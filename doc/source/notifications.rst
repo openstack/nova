@@ -276,6 +276,31 @@ decorated with the `notification_sample` decorator. For example the
 `doc/sample_notifications/service-update.json` and the
 ServiceUpdateNotification class is decorated accordingly.
 
+What should be in the notification payload
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This is just a guideline. You should always consider the actual use case that
+requires the notification.
+
+* Always include the identifier (e.g. uuid) of the entity that can be used to
+  query the whole entity over the REST API so that the consumer can get more
+  information about the entity.
+* You should consider including those fields that are related to the event
+  you are sending the notification about. For example if a change of a field of
+  the entity triggers an update notification then you should include the field
+  to the payload.
+* An update notification should contain information about what part of the
+  entity is changed. Either by filling the nova_object.changes part of the
+  payload (note that it is not supported by the notification framework
+  currently) or sending both the old state and the new state of the entity in
+  the payload.
+* You should not include those parts of the entity that are unchanged or static
+  in relation to the event you are sending the notification about. So that
+  you can limit the size of the payload and avoid unnecessary repetition.
+* You should never include a nova internal object in the payload. Create a new
+  object and use the SCHEMA field to map the internal object to the
+  notification payload. This way the evolution of the internal object model
+  can be decoupled from the evolution of the notification payload.
+
 Existing versioned notifications
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
