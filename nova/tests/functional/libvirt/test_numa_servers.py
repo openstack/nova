@@ -34,17 +34,13 @@ LOG = logging.getLogger(__name__)
 
 
 class NumaHostInfo(fakelibvirt.HostInfo):
-    def __init__(self, **kwargs):
-        super(NumaHostInfo, self).__init__(**kwargs)
-        self.numa_mempages_list = []
-
     def get_numa_topology(self):
         if self.numa_topology:
             return self.numa_topology
 
-        topology = self._gen_numa_topology(self.cpu_nodes, self.cpu_sockets,
-                                           self.cpu_cores, self.cpu_threads,
-                                           self.kB_mem)
+        topology = fakelibvirt.NUMATopology(self.cpu_nodes, self.cpu_sockets,
+                                            self.cpu_cores, self.cpu_threads,
+                                            self.kB_mem)
         self.numa_topology = topology
 
         # update number of active cpus

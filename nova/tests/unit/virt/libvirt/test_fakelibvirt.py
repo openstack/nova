@@ -392,10 +392,9 @@ class FakeLibvirtTests(test.NoDBTestCase):
   </cells>
 </topology>
 """
-        host_topology = libvirt.HostInfo._gen_numa_topology(
-                                               cpu_nodes=2, cpu_sockets=1,
-                                               cpu_cores=2, cpu_threads=2,
-                                               kb_mem=15740000)
+        host_topology = libvirt.NUMATopology(
+            cpu_nodes=2, cpu_sockets=1, cpu_cores=2, cpu_threads=2,
+            kb_mem=15740000)
         self.assertEqual(host_topology.to_xml(),
                          topology)
 
