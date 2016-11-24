@@ -31,26 +31,6 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class NumaHostInfo(fakelibvirt.HostInfo):
-
-    def get_numa_topology(self):
-        if self.numa_topology:
-            return self.numa_topology
-
-        topology = fakelibvirt.NUMATopology(self.cpu_nodes, self.cpu_sockets,
-                                            self.cpu_cores, self.cpu_threads,
-                                            self.kB_mem)
-        self.numa_topology = topology
-
-        # update number of active cpus
-        cpu_count = len(topology.cells) * len(topology.cells[0].cpus)
-        self.cpus = cpu_count - len(self.disabled_cpus_list)
-        return topology
-
-    def set_custom_numa_toplogy(self, topology):
-        self.numa_topology = topology
-
-
 class SRIOVServersTest(ServersTestBase):
     vfs_alias_name = 'vfs'
     pfs_alias_name = 'pfs'
@@ -155,8 +135,9 @@ class SRIOVServersTest(ServersTestBase):
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
     def test_create_server_with_VF(self, img_mock):
 
-        host_info = NumaHostInfo(cpu_nodes=2, cpu_sockets=1, cpu_cores=2,
-                                 cpu_threads=2, kB_mem=15740000)
+        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
+                                             cpu_cores=2, cpu_threads=2,
+                                             kB_mem=15740000)
         pci_info = fakelibvirt.HostPciSRIOVDevicesInfo()
         fake_connection = self._get_connection(host_info, pci_info)
 
@@ -178,8 +159,9 @@ class SRIOVServersTest(ServersTestBase):
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
     def test_create_server_with_PF(self, img_mock):
 
-        host_info = NumaHostInfo(cpu_nodes=2, cpu_sockets=1, cpu_cores=2,
-                                 cpu_threads=2, kB_mem=15740000)
+        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
+                                             cpu_cores=2, cpu_threads=2,
+                                             kB_mem=15740000)
         pci_info = fakelibvirt.HostPciSRIOVDevicesInfo()
         fake_connection = self._get_connection(host_info, pci_info)
 
@@ -201,8 +183,9 @@ class SRIOVServersTest(ServersTestBase):
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
     def test_create_server_with_PF_no_VF(self, img_mock):
 
-        host_info = NumaHostInfo(cpu_nodes=2, cpu_sockets=1, cpu_cores=2,
-                                 cpu_threads=2, kB_mem=15740000)
+        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
+                                             cpu_cores=2, cpu_threads=2,
+                                             kB_mem=15740000)
         pci_info = fakelibvirt.HostPciSRIOVDevicesInfo(num_pfs=1, num_vfs=4)
         fake_connection = self._get_connection(host_info, pci_info)
 
@@ -231,8 +214,9 @@ class SRIOVServersTest(ServersTestBase):
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
     def test_create_server_with_VF_no_PF(self, img_mock):
 
-        host_info = NumaHostInfo(cpu_nodes=2, cpu_sockets=1, cpu_cores=2,
-                                 cpu_threads=2, kB_mem=15740000)
+        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
+                                             cpu_cores=2, cpu_threads=2,
+                                             kB_mem=15740000)
         pci_info = fakelibvirt.HostPciSRIOVDevicesInfo(num_pfs=1, num_vfs=4)
         fake_connection = self._get_connection(host_info, pci_info)
 
@@ -264,8 +248,9 @@ class SRIOVServersTest(ServersTestBase):
            assigned pci device.
         """
 
-        host_info = NumaHostInfo(cpu_nodes=2, cpu_sockets=1, cpu_cores=2,
-                                 cpu_threads=2, kB_mem=15740000)
+        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
+                                             cpu_cores=2, cpu_threads=2,
+                                             kB_mem=15740000)
         pci_info = fakelibvirt.HostPciSRIOVDevicesInfo(num_pfs=1, numa_node=1)
         fake_connection = self._get_connection(host_info, pci_info)
 
@@ -293,8 +278,9 @@ class SRIOVServersTest(ServersTestBase):
            memory resources from one NUMA node and a PCI device from another.
         """
 
-        host_info = NumaHostInfo(cpu_nodes=2, cpu_sockets=1, cpu_cores=2,
-                                 cpu_threads=2, kB_mem=15740000)
+        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
+                                             cpu_cores=2, cpu_threads=2,
+                                             kB_mem=15740000)
         pci_info = fakelibvirt.HostPciSRIOVDevicesInfo(num_pfs=1, numa_node=0)
         fake_connection = self._get_connection(host_info, pci_info)
 

@@ -329,8 +329,22 @@ class HostInfo(object):
         self.numa_topology = numa_topology
         self.disabled_cpus_list = cpu_disabled or []
 
-    def get_numa_topology(self):
-        return self.numa_topology
+
+class NUMAHostInfo(HostInfo):
+    """A NUMA-by-default variant of HostInfo."""
+
+    def __init__(self, **kwargs):
+        super(NUMAHostInfo, self).__init__(**kwargs)
+
+        if not self.numa_topology:
+            topology = NUMATopology(self.cpu_nodes, self.cpu_sockets,
+                                    self.cpu_cores, self.cpu_threads,
+                                    self.kB_mem)
+            self.numa_topology = topology
+
+            # update number of active cpus
+            cpu_count = len(topology.cells) * len(topology.cells[0].cpus)
+            self.cpus = cpu_count - len(self.disabled_cpus_list)
 
 
 class NUMATopology(vconfig.LibvirtConfigCapsNUMATopology):
@@ -1111,7 +1125,7 @@ class Connection(object):
 
     def getCapabilities(self):
         """Return spoofed capabilities."""
-        numa_topology = self.host_info.get_numa_topology()
+        numa_topology = self.host_info.numa_topology
         if isinstance(numa_topology, vconfig.LibvirtConfigCapsNUMATopology):
             numa_topology = numa_topology.to_xml()
 
