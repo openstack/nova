@@ -17,7 +17,6 @@
 #    under the License.
 """Tests for compute service."""
 
-import base64
 import datetime
 import operator
 import sys
@@ -30,6 +29,7 @@ import mock
 from neutronclient.common import exceptions as neutron_exceptions
 from oslo_log import log as logging
 import oslo_messaging as messaging
+from oslo_serialization import base64
 from oslo_serialization import jsonutils
 from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
@@ -2740,7 +2740,7 @@ class ComputeTestCase(BaseTestCase):
     def test_rebuild_with_injected_files(self):
         # Ensure instance can be rebuilt with injected files.
         injected_files = [
-            (b'/a/b/c', base64.b64encode(b'foobarbaz')),
+            (b'/a/b/c', base64.encode_as_bytes(b'foobarbaz')),
         ]
 
         self.decoded_files = [
@@ -7940,7 +7940,7 @@ class ComputeAPITestCase(BaseTestCase):
         # base64
         (refs, resv_id) = self.compute_api.create(
             self.context, inst_type, self.fake_image['id'],
-            user_data=base64.encodestring(b'1' * 48510))
+            user_data=base64.encode_as_text(b'1' * 48510))
 
     def test_populate_instance_for_create(self, num_instances=1):
         base_options = {'image_ref': self.fake_image['id'],
@@ -11705,8 +11705,8 @@ class ComputeInjectedFilesTestCase(BaseTestCase):
     def test_injected_success(self):
         # test with valid b64 encoded content.
         injected_files = [
-            ('/a/b/c', base64.b64encode(b'foobarbaz')),
-            ('/d/e/f', base64.b64encode(b'seespotrun')),
+            ('/a/b/c', base64.encode_as_bytes(b'foobarbaz')),
+            ('/d/e/f', base64.encode_as_bytes(b'seespotrun')),
         ]
 
         decoded_files = [
@@ -11718,7 +11718,7 @@ class ComputeInjectedFilesTestCase(BaseTestCase):
     def test_injected_invalid(self):
         # test with invalid b64 encoded content
         injected_files = [
-            ('/a/b/c', base64.b64encode(b'foobarbaz')),
+            ('/a/b/c', base64.encode_as_bytes(b'foobarbaz')),
             ('/d/e/f', 'seespotrun'),
         ]
 
