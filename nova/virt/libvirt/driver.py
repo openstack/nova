@@ -7388,7 +7388,7 @@ class LibvirtDriver(driver.ComputeDriver):
         LOG.debug("finish_revert_migration finished successfully.",
                   instance=instance)
 
-    def confirm_migration(self, migration, instance, network_info):
+    def confirm_migration(self, context, migration, instance, network_info):
         """Confirms a resize, destroying the source VM."""
         self._cleanup_resize(instance, network_info)
 

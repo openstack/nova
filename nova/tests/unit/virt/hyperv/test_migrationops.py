@@ -215,6 +215,7 @@ class MigrationOpsTestCase(test_base.HyperVBaseTestCase):
     def test_confirm_migration(self):
         mock_instance = fake_instance.fake_instance_obj(self.context)
         self._migrationops.confirm_migration(
+            context=self.context,
             migration=mock.sentinel.migration, instance=mock_instance,
             network_info=mock.sentinel.network_info)
         get_instance_migr_revert_dir = (

@@ -585,12 +585,11 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def confirm_migration(self, migration, instance, network_info):
+    def confirm_migration(self, context, migration, instance, network_info):
         """Confirms a resize/migration, destroying the source VM.
 
         :param instance: nova.objects.instance.Instance
         """
-        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def finish_revert_migration(self, context, instance, network_info,

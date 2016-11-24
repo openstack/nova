@@ -16089,8 +16089,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                              _fake_network_info(self, 1))
 
         self.mox.ReplayAll()
-        self.drvr.confirm_migration("migration_ref", ins_ref,
-                                            _fake_network_info(self, 1))
+        self.drvr.confirm_migration(self.context, "migration_ref", ins_ref,
+                                    _fake_network_info(self, 1))
 
     def test_cleanup_resize_same_host(self):
         CONF.set_override('policy_dirs', [], group='oslo_policy')

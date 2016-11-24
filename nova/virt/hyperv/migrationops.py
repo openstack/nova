@@ -134,7 +134,7 @@ class MigrationOps(object):
         # disk_info is not used
         return ""
 
-    def confirm_migration(self, migration, instance, network_info):
+    def confirm_migration(self, context, migration, instance, network_info):
         LOG.debug("confirm_migration called", instance=instance)
 
         self._pathutils.get_instance_migr_revert_dir(instance.name,
