@@ -242,6 +242,13 @@ class ImageCacheTestCase(test_base.HyperVBaseTestCase):
         self.imagecache._pathutils.get_age_of_file.assert_has_calls(calls)
         mock_get_backing_files.assert_called_once_with(mock.sentinel.image)
 
+    def test_remove_old_image(self):
+        fake_img_path = os.path.join(self.FAKE_BASE_DIR,
+                                     self.FAKE_IMAGE_REF)
+        self.imagecache._remove_old_image(fake_img_path)
+        self.imagecache._pathutils.remove.assert_called_once_with(
+            fake_img_path)
+
     @mock.patch.object(imagecache.ImageCache, '_age_and_verify_cached_images')
     @mock.patch.object(imagecache.ImageCache, '_list_base_images')
     @mock.patch.object(imagecache.ImageCache, '_list_running_instances')
