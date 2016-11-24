@@ -35,6 +35,7 @@ VERSIONED_METHODS = collections.defaultdict(list)
 # The Canonical Version List
 VERSIONS = [
     '1.0',
+    '1.1',  # initial support for aggregate.get_aggregates and set_aggregates
 ]
 
 
@@ -66,6 +67,13 @@ def parse_version_string(version_string):
     except (ValueError, TypeError) as exc:
         raise TypeError('invalid version string: %s; %s' % (
             version_string, exc))
+
+
+def raise_404_if_not_version(req, min_version, max_version=None):
+    """Utility to raise a 404 if the wanted microversion does not match."""
+    want_version = req.environ[MICROVERSION_ENVIRON]
+    if not want_version.matches(min_version, max_version):
+        raise webob.exc.HTTPNotFound
 
 
 class MicroversionMiddleware(object):

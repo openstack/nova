@@ -28,6 +28,7 @@ import webob
 
 from oslo_log import log as logging
 
+from nova.api.openstack.placement.handlers import aggregate
 from nova.api.openstack.placement.handlers import allocation
 from nova.api.openstack.placement.handlers import inventory
 from nova.api.openstack.placement.handlers import resource_provider
@@ -78,6 +79,10 @@ ROUTE_DECLARATIONS = {
     },
     '/resource_providers/{uuid}/usages': {
         'GET': usage.list_usages
+    },
+    '/resource_providers/{uuid}/aggregates': {
+        'GET': aggregate.get_aggregates,
+        'PUT': aggregate.set_aggregates
     },
     '/resource_providers/{uuid}/allocations': {
         'GET': allocation.list_for_resource_provider,
