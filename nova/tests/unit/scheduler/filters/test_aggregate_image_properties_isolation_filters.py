@@ -26,7 +26,7 @@ class TestAggImagePropsIsolationFilter(test.NoDBTestCase):
         self.filt_cls = aipi.AggregateImagePropertiesIsolation()
 
     def test_aggregate_image_properties_isolation_passes(self, agg_mock):
-        agg_mock.return_value = {'hw_vm_mode': 'hvm'}
+        agg_mock.return_value = {'hw_vm_mode': set(['hvm'])}
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx,
             image=objects.ImageMeta(properties=objects.ImageMetaProps(
@@ -35,7 +35,7 @@ class TestAggImagePropsIsolationFilter(test.NoDBTestCase):
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
     def test_aggregate_image_properties_isolation_passes_comma(self, agg_mock):
-        agg_mock.return_value = {'hw_vm_mode': 'hvm,xen'}
+        agg_mock.return_value = {'hw_vm_mode': set(['hvm', 'xen'])}
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx,
             image=objects.ImageMeta(properties=objects.ImageMetaProps(
@@ -43,9 +43,20 @@ class TestAggImagePropsIsolationFilter(test.NoDBTestCase):
         host = fakes.FakeHostState('host1', 'compute', {})
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
+    def test_aggregate_image_properties_isolation_props_bad_comma(self,
+            agg_mock):
+        agg_mock.return_value = {'os_distro': set(['windows', 'linux'])}
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx,
+            image=objects.ImageMeta(properties=objects.ImageMetaProps(
+                os_distro='windows,')))
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+
     def test_aggregate_image_properties_isolation_multi_props_passes(self,
             agg_mock):
-        agg_mock.return_value = {'hw_vm_mode': 'hvm', 'hw_cpu_cores': '2'}
+        agg_mock.return_value = {'hw_vm_mode': set(['hvm']),
+                                 'hw_cpu_cores': set(['2'])}
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx,
             image=objects.ImageMeta(properties=objects.ImageMetaProps(
@@ -55,7 +66,7 @@ class TestAggImagePropsIsolationFilter(test.NoDBTestCase):
 
     def test_aggregate_image_properties_isolation_props_with_meta_passes(self,
             agg_mock):
-        agg_mock.return_value = {'hw_vm_mode': 'hvm'}
+        agg_mock.return_value = {'hw_vm_mode': set(['hvm'])}
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx,
             image=objects.ImageMeta(properties=objects.ImageMetaProps()))
@@ -74,7 +85,7 @@ class TestAggImagePropsIsolationFilter(test.NoDBTestCase):
 
     def test_aggregate_image_properties_isolation_props_not_match_fails(self,
             agg_mock):
-        agg_mock.return_value = {'hw_vm_mode': 'hvm'}
+        agg_mock.return_value = {'hw_vm_mode': set(['hvm'])}
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx,
             image=objects.ImageMeta(properties=objects.ImageMetaProps(
@@ -84,7 +95,8 @@ class TestAggImagePropsIsolationFilter(test.NoDBTestCase):
 
     def test_aggregate_image_properties_isolation_props_not_match2_fails(self,
             agg_mock):
-        agg_mock.return_value = {'hw_vm_mode': 'hvm', 'hw_cpu_cores': '1'}
+        agg_mock.return_value = {'hw_vm_mode': set(['hvm']),
+                                 'hw_cpu_cores': set(['1'])}
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx,
             image=objects.ImageMeta(properties=objects.ImageMetaProps(
@@ -98,7 +110,8 @@ class TestAggImagePropsIsolationFilter(test.NoDBTestCase):
                    group='filter_scheduler')
         self.flags(aggregate_image_properties_isolation_separator='_',
                    group='filter_scheduler')
-        agg_mock.return_value = {'hw_vm_mode': 'hvm', 'img_owner_id': 'foo'}
+        agg_mock.return_value = {'hw_vm_mode': set(['hvm']),
+                                 'img_owner_id': set(['foo'])}
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx,
             image=objects.ImageMeta(properties=objects.ImageMetaProps(
@@ -108,7 +121,7 @@ class TestAggImagePropsIsolationFilter(test.NoDBTestCase):
 
     def test_aggregate_image_properties_iso_props_with_custom_meta(self,
             agg_mock):
-        agg_mock.return_value = {'os': 'linux'}
+        agg_mock.return_value = {'os': set(['linux'])}
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx,
             image=objects.ImageMeta(properties=objects.ImageMetaProps(
@@ -118,7 +131,7 @@ class TestAggImagePropsIsolationFilter(test.NoDBTestCase):
 
     def test_aggregate_image_properties_iso_props_with_matching_meta_pass(self,
             agg_mock):
-        agg_mock.return_value = {'os_type': 'linux'}
+        agg_mock.return_value = {'os_type': set(['linux'])}
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx,
             image=objects.ImageMeta(properties=objects.ImageMetaProps(
@@ -128,7 +141,7 @@ class TestAggImagePropsIsolationFilter(test.NoDBTestCase):
 
     def test_aggregate_image_properties_iso_props_with_matching_meta_fail(
             self, agg_mock):
-        agg_mock.return_value = {'os_type': 'windows'}
+        agg_mock.return_value = {'os_type': set(['windows'])}
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx,
             image=objects.ImageMeta(properties=objects.ImageMetaProps(
