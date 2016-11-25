@@ -14,7 +14,6 @@
 
 import copy
 
-from nova.api.openstack.compute.schemas import server_tags
 from nova.api.validation import parameter_types
 
 
@@ -76,7 +75,7 @@ base_create_v219['properties']['server'][
 base_create_v232 = copy.deepcopy(base_create_v219)
 base_create_v232['properties']['server'][
     'properties']['networks']['items'][
-    'properties']['tag'] = server_tags.tag
+    'properties']['tag'] = parameter_types.tag
 
 
 # 2.37 builds on 2.32 and makes the following changes:
