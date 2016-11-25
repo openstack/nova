@@ -12,6 +12,8 @@ tests:
 - name: fail to get usages for missing provider
   GET: /resource_providers/fae14fa3-4b43-498c-a33c-4a1d00edb577/usages
   status: 404
+  response_strings:
+      - No resource provider with uuid fae14fa3-4b43-498c-a33c-4a1d00edb577 found
 
 - name: create provider
   POST: /resource_providers

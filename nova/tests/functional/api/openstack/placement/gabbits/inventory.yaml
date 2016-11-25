@@ -9,6 +9,8 @@ tests:
 - name: inventories for missing provider
   GET: /resource_providers/7260669a-e3d4-4867-aaa7-683e2ab6958c/inventories
   status: 404
+  response_strings:
+      - No resource provider with uuid 7260669a-e3d4-4867-aaa7-683e2ab6958c found
 
 - name: post new resource provider
   POST: /resource_providers
@@ -263,14 +265,20 @@ tests:
 - name: delete inventory again
   DELETE: /resource_providers/$ENVIRON['RP_UUID']/inventories/IPV4_ADDRESS
   status: 404
+  response_strings:
+      - No inventory of class IPV4_ADDRESS found for delete
 
 - name: get missing inventory class
   GET: /resource_providers/$ENVIRON['RP_UUID']/inventories/IPV4_ADDRESS
   status: 404
+  response_strings:
+     - No inventory of class IPV4_ADDRESS for $ENVIRON['RP_UUID']
 
 - name: get invalid inventory class
   GET: /resource_providers/$ENVIRON['RP_UUID']/inventories/HOUSE
   status: 404
+  response_strings:
+     - No inventory of class HOUSE for $ENVIRON['RP_UUID']
 
 - name: create another resource provider
   POST: /resource_providers

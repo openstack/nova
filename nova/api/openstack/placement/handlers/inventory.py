@@ -253,6 +253,11 @@ def delete_inventory(req):
             _('Unable to delete inventory of class %(class)s: %(error)s') %
             {'class': resource_class, 'error': exc},
             json_formatter=util.json_error_formatter)
+    except exception.NotFound as exc:
+        raise webob.exc.HTTPNotFound(
+            _('No inventory of class %(class)s found for delete: %(error)s') %
+             {'class': resource_class, 'error': exc},
+             json_formatter=util.json_error_formatter)
 
     response = req.response
     response.status = 204
@@ -270,8 +275,15 @@ def get_inventories(req):
     """
     context = req.environ['placement.context']
     uuid = util.wsgi_path_item(req.environ, 'uuid')
-    resource_provider = objects.ResourceProvider.get_by_uuid(
-        context, uuid)
+    try:
+        resource_provider = objects.ResourceProvider.get_by_uuid(
+            context, uuid)
+    except exception.NotFound as exc:
+        raise webob.exc.HTTPNotFound(
+            _("No resource provider with uuid %(uuid)s found : %(error)s") %
+             {'uuid': uuid, 'error': exc},
+             json_formatter=util.json_error_formatter)
+
     inventories = objects.InventoryList.get_all_by_resource_provider_uuid(
         context, resource_provider.uuid)
 
