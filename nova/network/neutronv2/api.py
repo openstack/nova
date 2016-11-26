@@ -491,8 +491,8 @@ class API(base_api.NetworkAPI):
                 continue
             port_req_body = {'port': {'device_id': '', 'device_owner': ''}}
             if port_binding:
-                port_req_body['port']['binding:host_id'] = None
-                port_req_body['port']['binding:profile'] = {}
+                port_req_body['port'][BINDING_HOST_ID] = None
+                port_req_body['port'][BINDING_PROFILE] = {}
             if constants.DNS_INTEGRATION in self.extensions:
                 port_req_body['port']['dns_name'] = ''
             try:
@@ -1036,7 +1036,7 @@ class API(base_api.NetworkAPI):
             pci_dev = pci_manager.get_instance_pci_devs(
                 instance, pci_request_id).pop()
             profile = self._get_pci_device_profile(pci_dev)
-            port_req_body['port']['binding:profile'] = profile
+            port_req_body['port'][BINDING_PROFILE] = profile
 
     @staticmethod
     def _populate_pci_mac_address(instance, pci_request_id, port_req_body):
@@ -1086,7 +1086,7 @@ class API(base_api.NetworkAPI):
         has_port_binding_extension = (
             self._has_port_binding_extension(context, neutron=neutron))
         if has_port_binding_extension:
-            port_req_body['port']['binding:host_id'] = bind_host_id
+            port_req_body['port'][BINDING_HOST_ID] = bind_host_id
             self._populate_neutron_binding_profile(instance,
                                                    pci_request_id,
                                                    port_req_body)
@@ -2111,7 +2111,7 @@ class API(base_api.NetworkAPI):
             mtu=network_mtu
             )
         network['subnets'] = subnets
-        port_profile = port.get('binding:profile')
+        port_profile = port.get(BINDING_PROFILE)
         if port_profile:
             physical_network = port_profile.get('physical_network')
             if physical_network:
@@ -2210,7 +2210,7 @@ class API(base_api.NetworkAPI):
                     vnic_type=current_neutron_port.get('binding:vnic_type',
                         network_model.VNIC_TYPE_NORMAL),
                     type=current_neutron_port.get('binding:vif_type'),
-                    profile=current_neutron_port.get('binding:profile'),
+                    profile=current_neutron_port.get(BINDING_PROFILE),
                     details=current_neutron_port.get('binding:vif_details'),
                     ovs_interfaceid=ovs_interfaceid,
                     devname=devname,
