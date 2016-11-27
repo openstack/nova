@@ -98,6 +98,16 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
         super(SchedulerReportClientTestCase, self).setUp()
         self.context = context.get_admin_context()
         self.ks_sess_mock = mock.Mock()
+        self.compute_node = objects.ComputeNode(
+            uuid=uuids.compute_node,
+            hypervisor_hostname='foo',
+            vcpus=8,
+            cpu_allocation_ratio=16.0,
+            memory_mb=1024,
+            ram_allocation_ratio=1.5,
+            local_gb=10,
+            disk_allocation_ratio=1.0,
+        )
 
         with test.nested(
                 mock.patch('keystoneauth1.session.Session',
@@ -398,39 +408,16 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
                 '_ensure_resource_provider')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_update_inventory_attempt')
-    def test_update_resource_stats_rp_fail(self, mock_ui, mock_erp):
-        cn = mock.MagicMock()
+    @mock.patch('nova.objects.ComputeNode.save')
+    def test_update_resource_stats(self, mock_save, mock_ui, mock_erp):
+        cn = self.compute_node
         self.client.update_resource_stats(cn)
-        cn.save.assert_called_once_with()
+        mock_save.assert_called_once_with()
         mock_erp.assert_called_once_with(cn.uuid, cn.hypervisor_hostname)
         self.assertFalse(mock_ui.called)
 
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_ensure_resource_provider')
-    @mock.patch.object(objects.ComputeNode, 'save')
-    def test_update_resource_stats_saves(self, mock_save, mock_ensure):
-        cn = objects.ComputeNode(context=self.context,
-                                 uuid=uuids.compute_node,
-                                 hypervisor_hostname='host1')
-        self.client.update_resource_stats(cn)
-        mock_save.assert_called_once_with()
-        mock_ensure.assert_called_once_with(uuids.compute_node, 'host1')
-
 
 class TestInventory(SchedulerReportClientTestCase):
-
-    def setUp(self):
-        super(TestInventory, self).setUp()
-        self.compute_node = objects.ComputeNode(
-            uuid=uuids.compute_node,
-            hypervisor_hostname='foo',
-            vcpus=8,
-            cpu_allocation_ratio=16.0,
-            memory_mb=1024,
-            ram_allocation_ratio=1.5,
-            local_gb=10,
-            disk_allocation_ratio=1.0,
-        )
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get')
@@ -463,7 +450,10 @@ class TestInventory(SchedulerReportClientTestCase):
             }
         }
 
-        result = self.client._update_inventory_attempt(compute_node)
+        inv_data = report._compute_node_to_inventory_dict(compute_node)
+        result = self.client._update_inventory_attempt(
+            compute_node.uuid, inv_data
+        )
         self.assertTrue(result)
 
         exp_url = '/resource_providers/%s/inventories' % uuid
@@ -541,7 +531,10 @@ class TestInventory(SchedulerReportClientTestCase):
                 },
             }
         }
-        result = self.client._update_inventory_attempt(compute_node)
+        inv_data = report._compute_node_to_inventory_dict(compute_node)
+        result = self.client._update_inventory_attempt(
+            compute_node.uuid, inv_data
+        )
         self.assertTrue(result)
         exp_url = '/resource_providers/%s/inventories' % uuid
         mock_get.assert_called_once_with(exp_url)
@@ -569,13 +562,16 @@ class TestInventory(SchedulerReportClientTestCase):
         mock_get.return_value = {}
         mock_put.return_value.status_code = 409
 
-        result = self.client._update_inventory_attempt(compute_node)
+        inv_data = report._compute_node_to_inventory_dict(compute_node)
+        result = self.client._update_inventory_attempt(
+            compute_node.uuid, inv_data
+        )
         self.assertFalse(result)
 
         # Invalidated the cache
         self.assertNotIn(uuid, self.client._resource_providers)
         # Refreshed our resource provider
-        mock_ensure.assert_called_once_with(uuid, 'foo')
+        mock_ensure.assert_called_once_with(uuid)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_inventory')
@@ -593,7 +589,10 @@ class TestInventory(SchedulerReportClientTestCase):
         mock_get.return_value = {}
         mock_put.return_value.status_code = 234
 
-        result = self.client._update_inventory_attempt(compute_node)
+        inv_data = report._compute_node_to_inventory_dict(compute_node)
+        result = self.client._update_inventory_attempt(
+            compute_node.uuid, inv_data
+        )
         self.assertFalse(result)
 
         # No cache invalidation
@@ -619,7 +618,10 @@ class TestInventory(SchedulerReportClientTestCase):
             # Thanks py3
             mock_put.return_value.__bool__.return_value = False
 
-        result = self.client._update_inventory_attempt(compute_node)
+        inv_data = report._compute_node_to_inventory_dict(compute_node)
+        result = self.client._update_inventory_attempt(
+            compute_node.uuid, inv_data
+        )
         self.assertFalse(result)
 
         # No cache invalidation
@@ -639,7 +641,9 @@ class TestInventory(SchedulerReportClientTestCase):
         mock_update.side_effect = (False, True)
 
         self.client._resource_providers[cn.uuid] = True
-        result = self.client._update_inventory(cn)
+        result = self.client._update_inventory(
+            cn.uuid, mock.sentinel.inv_data
+        )
         self.assertTrue(result)
 
         # Only slept once
@@ -658,15 +662,20 @@ class TestInventory(SchedulerReportClientTestCase):
         mock_update.side_effect = (False, False, False)
 
         self.client._resource_providers[cn.uuid] = True
-        result = self.client._update_inventory(cn)
+        result = self.client._update_inventory(
+            cn.uuid, mock.sentinel.inv_data
+        )
         self.assertFalse(result)
 
         # Slept three times
         mock_sleep.assert_has_calls([mock.call(1), mock.call(1), mock.call(1)])
 
         # Three attempts to update
-        mock_update.assert_has_calls([mock.call(cn), mock.call(cn),
-                                      mock.call(cn)])
+        mock_update.assert_has_calls([
+            mock.call(cn.uuid, mock.sentinel.inv_data),
+            mock.call(cn.uuid, mock.sentinel.inv_data),
+            mock.call(cn.uuid, mock.sentinel.inv_data),
+        ])
 
         # Slept three times
         mock_sleep.assert_has_calls([mock.call(1), mock.call(1), mock.call(1)])

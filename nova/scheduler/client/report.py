@@ -264,29 +264,29 @@ class SchedulerReportClient(object):
         self._resource_providers[uuid] = rp
         return rp
 
-    def _get_inventory(self, compute_node):
-        url = '/resource_providers/%s/inventories' % compute_node.uuid
+    def _get_inventory(self, rp_uuid):
+        url = '/resource_providers/%s/inventories' % rp_uuid
         result = self.get(url)
         if not result:
             return {'inventories': {}}
         return result.json()
 
-    def _update_inventory_attempt(self, compute_node):
-        """Update the inventory for this compute node if needed.
+    def _update_inventory_attempt(self, rp_uuid, inv_data):
+        """Update the inventory for this resource provider if needed.
 
-        :param compute_node: The objects.ComputeNode for the operation
+        :param rp_uuid: The resource provider UUID for the operation
+        :param inv_data: The new inventory for the resource provider
         :returns: True if the inventory was updated (or did not need to be),
                   False otherwise.
         """
-        inv_data = _compute_node_to_inventory_dict(compute_node)
-        curr = self._get_inventory(compute_node)
+        curr = self._get_inventory(rp_uuid)
 
         # Update our generation immediately, if possible. Even if there
         # are no inventories we should always have a generation but let's
         # be careful.
         server_gen = curr.get('resource_provider_generation')
         if server_gen:
-            my_rp = self._resource_providers[compute_node.uuid]
+            my_rp = self._resource_providers[rp_uuid]
             if server_gen != my_rp.generation:
                 LOG.debug('Updating our resource provider generation '
                           'from %(old)i to %(new)i',
@@ -298,26 +298,28 @@ class SchedulerReportClient(object):
         if inv_data == curr.get('inventories', {}):
             return True
 
-        cur_rp_gen = self._resource_providers[compute_node.uuid].generation
+        cur_rp_gen = self._resource_providers[rp_uuid].generation
         payload = {
             'resource_provider_generation': cur_rp_gen,
             'inventories': inv_data,
         }
-        url = '/resource_providers/%s/inventories' % compute_node.uuid
+        url = '/resource_providers/%s/inventories' % rp_uuid
         result = self.put(url, payload)
         if result.status_code == 409:
             LOG.info(_LI('Inventory update conflict for %s'),
-                     compute_node.uuid)
+                     rp_uuid)
             # Invalidate our cache and re-fetch the resource provider
             # to be sure to get the latest generation.
-            del self._resource_providers[compute_node.uuid]
-            self._ensure_resource_provider(compute_node.uuid,
-                                           compute_node.hypervisor_hostname)
+            del self._resource_providers[rp_uuid]
+            # NOTE(jaypipes): We don't need to pass a name parameter to
+            # _ensure_resource_provider() because we know the resource provider
+            # record already exists. We're just reloading the record here.
+            self._ensure_resource_provider(rp_uuid)
             return False
         elif not result:
-            LOG.warning(_LW('Failed to update inventory for '
+            LOG.warning(_LW('Failed to update inventory for resource provider '
                             '%(uuid)s: %(status)i %(text)s'),
-                        {'uuid': compute_node.uuid,
+                        {'uuid': rp_uuid,
                          'status': result.status_code,
                          'text': result.text})
             return False
@@ -325,9 +327,9 @@ class SchedulerReportClient(object):
         if result.status_code != 200:
             LOG.info(
                 _LI('Received unexpected response code %(code)i while '
-                    'trying to update inventory for compute node %(uuid)s'
+                    'trying to update inventory for resource provider %(uuid)s'
                     ': %(text)s'),
-                {'uuid': compute_node.uuid,
+                {'uuid': rp_uuid,
                  'code': result.status_code,
                  'text': result.text})
             return False
@@ -336,15 +338,15 @@ class SchedulerReportClient(object):
         updated_inventories_result = result.json()
         new_gen = updated_inventories_result['resource_provider_generation']
 
-        self._resource_providers[compute_node.uuid].generation = new_gen
+        self._resource_providers[rp_uuid].generation = new_gen
         LOG.debug('Updated inventory for %s at generation %i',
-                  compute_node.uuid, new_gen)
+                  rp_uuid, new_gen)
         return True
 
     @safe_connect
-    def _update_inventory(self, compute_node):
+    def _update_inventory(self, rp_uuid, inv_data):
         for attempt in (1, 2, 3):
-            if compute_node.uuid not in self._resource_providers:
+            if rp_uuid not in self._resource_providers:
                 # NOTE(danms): Either we failed to fetch/create the RP
                 # on our first attempt, or a previous attempt had to
                 # invalidate the cache, and we were unable to refresh
@@ -352,7 +354,7 @@ class SchedulerReportClient(object):
                 LOG.warning(_LW(
                     'Unable to refresh my resource provider record'))
                 return False
-            if self._update_inventory_attempt(compute_node):
+            if self._update_inventory_attempt(rp_uuid, inv_data):
                 return True
             time.sleep(1)
         return False
@@ -365,26 +367,27 @@ class SchedulerReportClient(object):
         compute_node.save()
         self._ensure_resource_provider(compute_node.uuid,
                                        compute_node.hypervisor_hostname)
-        self._update_inventory(compute_node)
+        inv_data = _compute_node_to_inventory_dict(compute_node)
+        self._update_inventory(compute_node.uuid, inv_data)
 
-    def _get_allocations_for_instance(self, compute_node, instance):
+    def _get_allocations_for_instance(self, rp_uuid, instance):
         url = '/allocations/%s' % instance.uuid
         resp = self.get(url)
         if not resp:
             return {}
         else:
             # NOTE(cdent): This trims to just the allocations being
-            # used on this compute node. In the future when there
+            # used on this resource provider. In the future when there
             # are shared resources there might be other providers.
             return resp.json()['allocations'].get(
-                compute_node.uuid, {}).get('resources', {})
+                rp_uuid, {}).get('resources', {})
 
     @safe_connect
-    def _allocate_for_instance(self, compute_node, instance):
+    def _allocate_for_instance(self, rp_uuid, instance):
         url = '/allocations/%s' % instance.uuid
 
         my_allocations = _instance_to_allocations_dict(instance)
-        current_allocations = self._get_allocations_for_instance(compute_node,
+        current_allocations = self._get_allocations_for_instance(rp_uuid,
                                                                  instance)
         if current_allocations == my_allocations:
             allocstr = ','.join(['%s=%s' % (k, v)
@@ -397,7 +400,7 @@ class SchedulerReportClient(object):
             'allocations': [
                 {
                     'resource_provider': {
-                        'uuid': compute_node.uuid,
+                        'uuid': rp_uuid,
                     },
                     'resources': my_allocations,
                 },
@@ -435,13 +438,13 @@ class SchedulerReportClient(object):
 
     def update_instance_allocation(self, compute_node, instance, sign):
         if sign > 0:
-            self._allocate_for_instance(compute_node, instance)
+            self._allocate_for_instance(compute_node.uuid, instance)
         else:
             self._delete_allocation_for_instance(instance.uuid)
 
     @safe_connect
-    def _get_allocations(self, compute_node):
-        url = '/resource_providers/%s/allocations' % compute_node.uuid
+    def _get_allocations(self, rp_uuid):
+        url = '/resource_providers/%s/allocations' % rp_uuid
         resp = self.get(url)
         if not resp:
             return {}
@@ -449,7 +452,7 @@ class SchedulerReportClient(object):
             return resp.json()['allocations']
 
     def remove_deleted_instances(self, compute_node, instance_uuids):
-        allocations = self._get_allocations(compute_node)
+        allocations = self._get_allocations(compute_node.uuid)
         if allocations is None:
             allocations = {}
 
