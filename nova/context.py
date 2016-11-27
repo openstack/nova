@@ -323,12 +323,6 @@ def is_user_context(context):
     return True
 
 
-def require_admin_context(ctxt):
-    """Raise exception.AdminRequired() if context is not an admin context."""
-    if not ctxt.is_admin:
-        raise exception.AdminRequired()
-
-
 def require_context(ctxt):
     """Raise exception.Forbidden() if context is not a user or an
     admin context.
