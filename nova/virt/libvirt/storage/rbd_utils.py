@@ -121,11 +121,11 @@ class RADOSClient(object):
 class RBDDriver(object):
 
     def __init__(self, pool, ceph_conf, rbd_user):
-        self.pool = pool.encode('utf8')
+        self.pool = pool
         # NOTE(angdraug): rados.Rados fails to connect if ceph_conf is None:
         # https://github.com/ceph/ceph/pull/1787
-        self.ceph_conf = ceph_conf.encode('utf8') if ceph_conf else ''
-        self.rbd_user = rbd_user.encode('utf8') if rbd_user else None
+        self.ceph_conf = ceph_conf or ''
+        self.rbd_user = rbd_user or None
         if rbd is None:
             raise RuntimeError(_('rbd python libraries not found'))
 
@@ -135,7 +135,7 @@ class RBDDriver(object):
         try:
             client.connect()
             pool_to_open = pool or self.pool
-            ioctx = client.open_ioctx(pool_to_open.encode('utf-8'))
+            ioctx = client.open_ioctx(pool_to_open)
             return client, ioctx
         except rados.Error:
             # shutdown cannot raise an exception
