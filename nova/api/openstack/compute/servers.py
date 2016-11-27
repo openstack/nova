@@ -653,6 +653,7 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=msg)
         except (exception.ImageNotActive,
                 exception.ImageBadRequest,
+                exception.ImageNotAuthorized,
                 exception.FixedIpNotFoundForAddress,
                 exception.FlavorNotFound,
                 exception.FlavorDiskTooSmall,
