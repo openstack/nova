@@ -670,7 +670,6 @@ class ServersController(wsgi.Controller):
                 exception.PortRequiresFixedIP,
                 exception.NetworkRequiresSubnet,
                 exception.NetworkNotFound,
-                exception.NetworkDuplicated,
                 exception.InvalidBDM,
                 exception.InvalidBDMSnapshot,
                 exception.InvalidBDMVolume,
