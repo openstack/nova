@@ -70,10 +70,10 @@ server status is one of the following values:
    be deleted first, depending on the value in the
    *``shutdown_terminate``* database field on the Instance model.
 
--  ``SOFT_DELETED``: The server is marked as deleted while will keep in the
-   cloud for some time(configurable), during the period authorized user can
-   restore the server back to normal state. When the time expires, the
-   server will be deleted permanently.
+-  ``SOFT_DELETED``: The server is marked as deleted but will remain in the
+   cloud for some configurable amount of time. While soft-deleted, an
+   authorized user can restore the server back to normal state. When the time
+   expires, the server will be deleted permanently.
 
 -  ``SUSPENDED``: The server is suspended, either by request or
    necessity. This status appears for only the following hypervisors:
