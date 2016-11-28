@@ -22,10 +22,13 @@ from lxml import etree
 from oslo_log import log as logging
 
 from nova.compute import power_state
+import nova.conf
 from nova.i18n import _LI
 from nova.i18n import _LW
 
 LOG = logging.getLogger(__name__)
+
+CONF = nova.conf.CONF
 
 # TODO(berrange): hack to avoid a "import libvirt" in this file.
 # Remove this and similar hacks in guest.py, driver.py, host.py
@@ -490,3 +493,71 @@ def run_recover_tasks(host, guest, instance, on_migration_failure):
         else:
             LOG.warning(_LW("Unknown migration task '%(task)s'"),
                         {"task": task}, instance=instance)
+
+
+def downtime_steps(data_gb):
+    '''Calculate downtime value steps and time between increases.
+
+    :param data_gb: total GB of RAM and disk to transfer
+
+    This looks at the total downtime steps and upper bound
+    downtime value and uses an exponential backoff. So initially
+    max downtime is increased by small amounts, and as time goes
+    by it is increased by ever larger amounts
+
+    For example, with 10 steps, 30 second step delay, 3 GB
+    of RAM and 400ms target maximum downtime, the downtime will
+    be increased every 90 seconds in the following progression:
+
+    -   0 seconds -> set downtime to  37ms
+    -  90 seconds -> set downtime to  38ms
+    - 180 seconds -> set downtime to  39ms
+    - 270 seconds -> set downtime to  42ms
+    - 360 seconds -> set downtime to  46ms
+    - 450 seconds -> set downtime to  55ms
+    - 540 seconds -> set downtime to  70ms
+    - 630 seconds -> set downtime to  98ms
+    - 720 seconds -> set downtime to 148ms
+    - 810 seconds -> set downtime to 238ms
+    - 900 seconds -> set downtime to 400ms
+
+    This allows the guest a good chance to complete migration
+    with a small downtime value.
+    '''
+    downtime = CONF.libvirt.live_migration_downtime
+    steps = CONF.libvirt.live_migration_downtime_steps
+    delay = CONF.libvirt.live_migration_downtime_delay
+
+    downtime_min = nova.conf.libvirt.LIVE_MIGRATION_DOWNTIME_MIN
+    steps_min = nova.conf.libvirt.LIVE_MIGRATION_DOWNTIME_STEPS_MIN
+    delay_min = nova.conf.libvirt.LIVE_MIGRATION_DOWNTIME_DELAY_MIN
+
+    # TODO(hieulq): Need to move min/max value into the config option,
+    # currently oslo_config will raise ValueError instead of setting
+    # option value to its min/max.
+    if downtime < downtime_min:
+        LOG.warning(_LW("Config option live_migration_downtime's value "
+                        "is less than minimum value %dms, rounded up to "
+                        "the minimum value and will raise ValueError in "
+                        "the future release."), downtime_min)
+        downtime = downtime_min
+
+    if steps < steps_min:
+        LOG.warning(_LW("Config option live_migration_downtime_steps's "
+                        "value is less than minimum value %dms, rounded "
+                        "up to the minimum value and will raise "
+                        "ValueError in the future release."), steps_min)
+        steps = steps_min
+    if delay < delay_min:
+        LOG.warning(_LW("Config option live_migration_downtime_delay's "
+                        "value is less than minimum value %dms, rounded "
+                        "up to the minimum value and will raise "
+                        "ValueError in the future release."), delay_min)
+        delay = delay_min
+    delay = int(delay * data_gb)
+
+    offset = downtime / float(steps + 1)
+    base = (downtime - offset) ** (1 / float(steps))
+
+    for i in range(steps + 1):
+        yield (int(delay * i), int(offset + base ** i))

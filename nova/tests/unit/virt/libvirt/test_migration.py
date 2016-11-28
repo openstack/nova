@@ -728,3 +728,24 @@ class MigrationMonitorTestCase(test.NoDBTestCase):
                                     self.instance, tasks)
 
         self.assertFalse(mock_resume.called)
+
+    def test_live_migration_downtime_steps(self):
+        self.flags(live_migration_downtime=400, group='libvirt')
+        self.flags(live_migration_downtime_steps=10, group='libvirt')
+        self.flags(live_migration_downtime_delay=30, group='libvirt')
+
+        steps = migration.downtime_steps(3.0)
+
+        self.assertEqual([
+            (0, 37),
+            (90, 38),
+            (180, 39),
+            (270, 42),
+            (360, 46),
+            (450, 55),
+            (540, 70),
+            (630, 98),
+            (720, 148),
+            (810, 238),
+            (900, 400),
+        ], list(steps))

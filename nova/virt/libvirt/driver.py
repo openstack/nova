@@ -6129,74 +6129,6 @@ class LibvirtDriver(driver.ComputeDriver):
         LOG.debug("Migration operation thread has finished",
                   instance=instance)
 
-    @staticmethod
-    def _migration_downtime_steps(data_gb):
-        '''Calculate downtime value steps and time between increases.
-
-        :param data_gb: total GB of RAM and disk to transfer
-
-        This looks at the total downtime steps and upper bound
-        downtime value and uses an exponential backoff. So initially
-        max downtime is increased by small amounts, and as time goes
-        by it is increased by ever larger amounts
-
-        For example, with 10 steps, 30 second step delay, 3 GB
-        of RAM and 400ms target maximum downtime, the downtime will
-        be increased every 90 seconds in the following progression:
-
-        -   0 seconds -> set downtime to  37ms
-        -  90 seconds -> set downtime to  38ms
-        - 180 seconds -> set downtime to  39ms
-        - 270 seconds -> set downtime to  42ms
-        - 360 seconds -> set downtime to  46ms
-        - 450 seconds -> set downtime to  55ms
-        - 540 seconds -> set downtime to  70ms
-        - 630 seconds -> set downtime to  98ms
-        - 720 seconds -> set downtime to 148ms
-        - 810 seconds -> set downtime to 238ms
-        - 900 seconds -> set downtime to 400ms
-
-        This allows the guest a good chance to complete migration
-        with a small downtime value.
-        '''
-        downtime = CONF.libvirt.live_migration_downtime
-        steps = CONF.libvirt.live_migration_downtime_steps
-        delay = CONF.libvirt.live_migration_downtime_delay
-
-        downtime_min = nova.conf.libvirt.LIVE_MIGRATION_DOWNTIME_MIN
-        steps_min = nova.conf.libvirt.LIVE_MIGRATION_DOWNTIME_STEPS_MIN
-        delay_min = nova.conf.libvirt.LIVE_MIGRATION_DOWNTIME_DELAY_MIN
-
-        # TODO(hieulq): Need to move min/max value into the config option,
-        # currently oslo_config will raise ValueError instead of setting
-        # option value to its min/max.
-        if downtime < downtime_min:
-            LOG.warning(_LW("Config option live_migration_downtime's value "
-                            "is less than minimum value %dms, rounded up to "
-                            "the minimum value and will raise ValueError in "
-                            "the future release."), downtime_min)
-            downtime = downtime_min
-
-        if steps < steps_min:
-            LOG.warning(_LW("Config option live_migration_downtime_steps's "
-                            "value is less than minimum value %dms, rounded "
-                            "up to the minimum value and will raise "
-                            "ValueError in the future release."), steps_min)
-            steps = steps_min
-        if delay < delay_min:
-            LOG.warning(_LW("Config option live_migration_downtime_delay's "
-                            "value is less than minimum value %dms, rounded "
-                            "up to the minimum value and will raise "
-                            "ValueError in the future release."), delay_min)
-            delay = delay_min
-        delay = int(delay * data_gb)
-
-        offset = downtime / float(steps + 1)
-        base = (downtime - offset) ** (1 / float(steps))
-
-        for i in range(steps + 1):
-            yield (int(delay * i), int(offset + base ** i))
-
     def _live_migration_copy_disk_paths(self, context, instance, guest):
         '''Get list of disks to copy during migration
 
@@ -6291,7 +6223,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                 disk_paths):
         on_migration_failure = deque()
         data_gb = self._live_migration_data_gb(instance, disk_paths)
-        downtime_steps = list(self._migration_downtime_steps(data_gb))
+        downtime_steps = list(libvirt_migrate.downtime_steps(data_gb))
         migration = migrate_data.migration
         curdowntime = None
 
