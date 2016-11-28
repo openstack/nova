@@ -1,0 +1,7 @@
+---
+features:
+  - When using libvirt driver, vrouter VIFs (OpenContrail) now supports
+    multiqueue mode, which allows to scale network performance across number
+    of vCPUs. To use this feature one needs to create instance with more than
+    1 vCPU from an image with ``hw_vif_multiqueue_enabled`` property set to
+    ``true``.

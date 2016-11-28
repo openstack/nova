@@ -144,6 +144,10 @@ class LibvirtGenericVIFDriver(object):
         designer.set_vif_host_backend_hostdev_pci_config(conf, pci_slot)
         return conf
 
+    def _is_multiqueue_enabled(self, image_meta, flavor):
+        _, vhost_queues = self._get_virtio_mq_settings(image_meta, flavor)
+        return vhost_queues > 1
+
     def _get_virtio_mq_settings(self, image_meta, flavor):
         """A methods to set the number of virtio queues,
            if it has been requested in extra specs.
@@ -770,7 +774,9 @@ class LibvirtGenericVIFDriver(object):
                     instance.display_name, vif['address'],
                     vif['devname'], ptype, -1, -1))
         try:
-            linux_net.create_tap_dev(dev)
+            multiqueue = self._is_multiqueue_enabled(instance.image_meta,
+                                                     instance.flavor)
+            linux_net.create_tap_dev(dev, multiqueue=multiqueue)
             utils.execute('vrouter-port-control', cmd_args, run_as_root=True)
         except processutils.ProcessExecutionError:
             LOG.exception(_LE("Failed while plugging vif"), instance=instance)
