@@ -204,7 +204,7 @@ def is_disk_bus_valid_for_virt(virt_type, disk_bus):
         'xen': ['xen', 'ide'],
         'uml': ['uml'],
         'lxc': ['lxc'],
-        'parallels': ['ide', 'scsi', 'sata']
+        'parallels': ['ide', 'scsi']
         }
 
     if virt_type not in valid_bus:
@@ -269,7 +269,7 @@ def get_disk_bus_for_device_type(instance,
         if device_type == "cdrom":
             return "ide"
         elif device_type == "disk":
-            return "sata"
+            return "scsi"
     else:
         # If virt-type not in list then it is unsupported
         raise exception.UnsupportedVirtType(virt=virt_type)
@@ -296,8 +296,6 @@ def get_disk_bus_for_disk_dev(virt_type, disk_dev):
         # this picks the most likely mappings
         if virt_type == "xen":
             return "xen"
-        elif virt_type == "parallels":
-            return "sata"
         else:
             return "scsi"
     elif disk_dev.startswith('vd'):

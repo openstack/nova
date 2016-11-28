@@ -750,11 +750,15 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
                 self.assertEqual(res, bus)
 
         expected = (
-                ('scsi', None, 'disk', 'scsi'),
-                (None, 'scsi', 'cdrom', 'scsi'),
-                ('usb', None, 'disk', 'usb')
+                ('kvm', 'scsi', None, 'disk', 'scsi'),
+                ('kvm', None, 'scsi', 'cdrom', 'scsi'),
+                ('kvm', 'usb', None, 'disk', 'usb'),
+                ('parallels', 'scsi', None, 'disk', 'scsi'),
+                ('parallels', None, None, 'disk', 'scsi'),
+                ('parallels', None, 'ide', 'cdrom', 'ide'),
+                ('parallels', None, None, 'cdrom', 'ide')
                 )
-        for dbus, cbus, dev, res in expected:
+        for hv, dbus, cbus, dev, res in expected:
             props = {}
             if dbus is not None:
                 props['hw_disk_bus'] = dbus
@@ -763,7 +767,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
             image_meta = objects.ImageMeta.from_dict(
                 {'properties': props})
             bus = blockinfo.get_disk_bus_for_device_type(
-                instance, 'kvm', image_meta, device_type=dev)
+                instance, hv, image_meta, device_type=dev)
             self.assertEqual(res, bus)
 
         image_meta = objects.ImageMeta.from_dict(

@@ -253,8 +253,9 @@ MIN_LIBVIRT_UEFI_VERSION = (1, 2, 9)
 MIN_LIBVIRT_HYPERV_TIMER_VERSION = (1, 2, 2)
 MIN_QEMU_HYPERV_TIMER_VERSION = (2, 0, 0)
 
-# parallels driver support
-MIN_LIBVIRT_PARALLELS_VERSION = (1, 2, 12)
+# Virtuozzo driver support
+MIN_VIRTUOZZO_VERSION = (7, 0, 0)
+MIN_LIBVIRT_VIRTUOZZO_VERSION = (1, 2, 12)
 
 # Ability to set the user guest password with Qemu
 MIN_LIBVIRT_SET_ADMIN_PASSWD = (1, 2, 16)
@@ -510,12 +511,16 @@ class LibvirtDriver(driver.ComputeDriver):
                 _('Nova requires QEMU version %s or greater.') %
                 self._version_to_string(MIN_QEMU_VERSION))
 
-        if (CONF.libvirt.virt_type == 'parallels' and
-            not self._host.has_min_version(MIN_LIBVIRT_PARALLELS_VERSION)):
-            raise exception.NovaException(
-                _('Running Nova with parallels virt_type requires '
-                  'libvirt version %s') %
-                self._version_to_string(MIN_LIBVIRT_PARALLELS_VERSION))
+        if CONF.libvirt.virt_type == 'parallels':
+            if not self._host.has_min_version(hv_ver=MIN_VIRTUOZZO_VERSION):
+                raise exception.NovaException(
+                    _('Nova requires Virtuozzo version %s or greater.') %
+                    self._version_to_string(MIN_VIRTUOZZO_VERSION))
+            if not self._host.has_min_version(MIN_LIBVIRT_VIRTUOZZO_VERSION):
+                raise exception.NovaException(
+                    _('Running Nova with parallels virt_type requires '
+                      'libvirt version %s') %
+                    self._version_to_string(MIN_LIBVIRT_VIRTUOZZO_VERSION))
 
         # Give the cloud admin a heads up if we are intending to
         # change the MIN_LIBVIRT_VERSION in the next release.
