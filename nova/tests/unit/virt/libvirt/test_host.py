@@ -21,9 +21,9 @@ from eventlet import greenthread
 import mock
 import six
 
-from nova.compute import arch
 from nova import exception
 from nova import objects
+from nova.objects import fields as obj_fields
 from nova import test
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt import event
@@ -870,7 +870,7 @@ Active:          8381604 kB
                 mock.patch('sys.platform', 'linux2'),
                 ) as (mock_file, mock_conn, mock_platform):
             mock_conn().getInfo.return_value = [
-                arch.X86_64, 15814, 8, 1208, 1, 1, 4, 2]
+                obj_fields.Architecture.X86_64, 15814, 8, 1208, 1, 1, 4, 2]
 
             self.assertEqual(6866, self.host.get_memory_mb_used())
 
@@ -917,7 +917,7 @@ Active:          8381604 kB
                 libvirt_guest.Guest(DiagFakeDomain(1, 750)),
                 libvirt_guest.Guest(DiagFakeDomain(2, 1042))]
             mock_conn.getInfo.return_value = [
-                arch.X86_64, 15814, 8, 1208, 1, 1, 4, 2]
+                obj_fields.Architecture.X86_64, 15814, 8, 1208, 1, 1, 4, 2]
 
             self.assertEqual(8657, self.host.get_memory_mb_used())
             mock_list.assert_called_with(only_guests=False)

@@ -10,9 +10,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.compute import arch
 from nova.compute import cpumodel
 from nova import objects
+from nova.objects import fields as obj_fields
 from nova.tests.unit.objects import test_objects
 
 fake_cpu_model_feature = {
@@ -24,7 +24,7 @@ fake_cpu_model_feature_obj = objects.VirtCPUFeature(
     **fake_cpu_model_feature)
 
 fake_vcpumodel_dict = {
-    'arch': arch.I686,
+    'arch': obj_fields.Architecture.I686,
     'vendor': 'fake-vendor',
     'match': cpumodel.MATCH_EXACT,
     'topology': objects.VirtCPUTopology(sockets=1, cores=1, threads=1),

@@ -15,7 +15,7 @@ import platform
 import mock
 from os_brick.initiator import connector
 
-from nova.compute import arch
+from nova.objects import fields as obj_fields
 from nova.tests.unit.virt.libvirt.volume import test_volume
 from nova.virt.libvirt.volume import fibrechannel
 
@@ -35,11 +35,13 @@ class LibvirtFibreChannelVolumeDriverTestCase(
         self.assertIsInstance(libvirt_driver.connector,
                               connector.FibreChannelConnectorS390X)
 
-    @mock.patch.object(platform, 'machine', return_value=arch.S390)
+    @mock.patch.object(platform, 'machine',
+                       return_value=obj_fields.Architecture.S390)
     def test_libvirt_fibrechan_driver_s390(self, mock_machine):
         self._test_libvirt_fibrechan_driver_s390()
 
-    @mock.patch.object(platform, 'machine', return_value=arch.S390X)
+    @mock.patch.object(platform, 'machine',
+                       return_value=obj_fields.Architecture.S390X)
     def test_libvirt_fibrechan_driver_s390x(self, mock_machine):
         self._test_libvirt_fibrechan_driver_s390()
 

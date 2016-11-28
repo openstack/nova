@@ -22,9 +22,9 @@ import datetime
 from oslo_log import log as logging
 from oslo_utils import uuidutils
 
-from nova.compute import arch
 import nova.conf
 from nova import exception
+from nova.objects import fields as obj_fields
 from nova.tests import fixtures as nova_fixtures
 
 CONF = nova.conf.CONF
@@ -52,9 +52,10 @@ class _FakeImageService(object):
                  'container_format': 'raw',
                  'disk_format': 'raw',
                  'size': '25165824',
-                 'properties': {'kernel_id': CONF.null_kernel,
-                                'ramdisk_id': CONF.null_kernel,
-                                'architecture': arch.X86_64}}
+                 'properties': {
+                    'kernel_id': CONF.null_kernel,
+                    'ramdisk_id': CONF.null_kernel,
+                    'architecture': obj_fields.Architecture.X86_64}}
 
         image2 = {'id': 'a2459075-d96c-40d5-893e-577ff92e721c',
                  'name': 'fakeimage123456',
@@ -124,10 +125,11 @@ class _FakeImageService(object):
                  'container_format': 'ova',
                  'disk_format': 'vhd',
                  'size': '49163826',
-                 'properties': {'kernel_id': CONF.null_kernel,
-                                'ramdisk_id': CONF.null_kernel,
-                                'architecture': arch.X86_64,
-                                'auto_disk_config': 'False'}}
+                 'properties': {
+                    'kernel_id': CONF.null_kernel,
+                    'ramdisk_id': CONF.null_kernel,
+                    'architecture': obj_fields.Architecture.X86_64,
+                    'auto_disk_config': 'False'}}
 
         image7 = {'id': AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID,
                  'name': 'fakeimage7',
@@ -140,10 +142,11 @@ class _FakeImageService(object):
                  'container_format': 'ova',
                  'disk_format': 'vhd',
                  'size': '74185822',
-                 'properties': {'kernel_id': CONF.null_kernel,
-                                'ramdisk_id': CONF.null_kernel,
-                                'architecture': arch.X86_64,
-                                'auto_disk_config': 'True'}}
+                 'properties': {
+                    'kernel_id': CONF.null_kernel,
+                    'ramdisk_id': CONF.null_kernel,
+                    'architecture': obj_fields.Architecture.X86_64,
+                    'auto_disk_config': 'True'}}
 
         self.create(None, image1)
         self.create(None, image2)

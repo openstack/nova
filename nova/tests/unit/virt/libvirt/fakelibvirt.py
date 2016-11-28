@@ -20,7 +20,7 @@ import fixtures
 from lxml import etree
 import six
 
-from nova.compute import arch
+from nova.objects import fields as obj_fields
 from nova.virt.libvirt import config as vconfig
 
 # Allow passing None to the various connect methods
@@ -288,7 +288,7 @@ class HostPciSRIOVDevicesInfo(object):
 
 
 class HostInfo(object):
-    def __init__(self, arch=arch.X86_64, kB_mem=4096,
+    def __init__(self, arch=obj_fields.Architecture.X86_64, kB_mem=4096,
                  cpus=2, cpu_mhz=800, cpu_nodes=1,
                  cpu_sockets=1, cpu_cores=2,
                  cpu_threads=1, cpu_model="Penryn",
@@ -1342,8 +1342,8 @@ class Connection(object):
 
         arch_node = tree.find('./arch')
         if arch_node is not None:
-            if arch_node.text not in [arch.X86_64,
-                                      arch.I686]:
+            if arch_node.text not in [obj_fields.Architecture.X86_64,
+                                      obj_fields.Architecture.I686]:
                 return VIR_CPU_COMPARE_INCOMPATIBLE
 
         model_node = tree.find('./model')

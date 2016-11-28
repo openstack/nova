@@ -76,11 +76,11 @@ from oslo_config import cfg
 import six
 
 from nova import block_device
-from nova.compute import arch
 from nova.compute import vm_mode
 from nova import exception
 from nova.i18n import _
 from nova.objects import base as obj_base
+from nova.objects import fields as obj_fields
 from nova.virt import configdrive
 from nova.virt import driver
 from nova.virt.libvirt import utils as libvirt_utils
@@ -256,8 +256,14 @@ def get_disk_bus_for_device_type(instance,
     elif virt_type in ("qemu", "kvm"):
         if device_type == "cdrom":
             guestarch = libvirt_utils.get_arch(image_meta)
-            if guestarch in (arch.PPC, arch.PPC64, arch.PPCLE, arch.PPC64LE,
-                arch.S390, arch.S390X, arch.AARCH64):
+            if guestarch in (
+                    obj_fields.Architecture.PPC,
+                    obj_fields.Architecture.PPC64,
+                    obj_fields.Architecture.PPCLE,
+                    obj_fields.Architecture.PPC64LE,
+                    obj_fields.Architecture.S390,
+                    obj_fields.Architecture.S390X,
+                    obj_fields.Architecture.AARCH64):
                 return "scsi"
             else:
                 return "ide"

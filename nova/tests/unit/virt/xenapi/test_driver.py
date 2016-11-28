@@ -18,7 +18,7 @@ import math
 import mock
 from oslo_utils import units
 
-from nova.compute import arch
+from nova.objects import fields as obj_fields
 from nova.tests.unit.virt.xenapi import stubs
 from nova.virt import driver
 from nova.virt import fake
@@ -42,7 +42,7 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
                 'disk_used': 2 * units.Gi,
                 'disk_allocated': 4 * units.Gi,
                 'host_hostname': 'somename',
-                'supported_instances': arch.X86_64,
+                'supported_instances': obj_fields.Architecture.X86_64,
                 'host_cpu_info': {'cpu_count': 50},
                 'cpu_model': {
                     'vendor': 'GenuineIntel',
