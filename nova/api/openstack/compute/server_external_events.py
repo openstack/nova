@@ -69,7 +69,7 @@ class ServerExternalEventsController(wsgi.Controller):
                     # because we need it later on
                     instance = objects.Instance.get_by_uuid(
                         context, event.instance_uuid,
-                        expected_attrs='migration_context')
+                        expected_attrs=['migration_context'])
                     instances[event.instance_uuid] = instance
                 except exception.InstanceNotFound:
                     LOG.debug('Dropping event %(name)s:%(tag)s for unknown '
