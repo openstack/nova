@@ -12,6 +12,7 @@
 
 import mock
 from oslo_serialization import jsonutils
+from oslo_versionedobjects import base as o_vo_base
 
 from nova import exception
 from nova import objects
@@ -146,6 +147,17 @@ class _TestBuildRequestObject(object):
             self.assertIn(field, instance.obj_what_changed())
             self.assertEqual(getattr(build_request.instance, field),
                              getattr(instance, field))
+
+    def test_from_db_object_set_deleted(self):
+        # Assert that if we persisted an instance not yet having the deleted
+        # field being set, we still return a value for that field.
+        fake_req = fake_build_request.fake_db_req()
+        with mock.patch.object(o_vo_base.VersionedObject,
+                               'obj_set_defaults') as mock_obj_set_defaults:
+            build_request = objects.BuildRequest._from_db_object(
+                self.context, objects.BuildRequest(), fake_req)
+        mock_obj_set_defaults.assert_called_once_with('deleted')
+        self.assertFalse(build_request.instance.deleted)
 
 
 class TestBuildRequestObject(test_objects._LocalTest,
