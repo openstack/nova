@@ -101,11 +101,15 @@ class NetworkAPI(object):
         * 1.16 - Transfer instance in addition to instance_id in
                  setup_networks_on_host
 
-        ... Liberty supports message version 1.16.  So, any changes to
+        ... Mitaka supports message version 1.16.  So, any changes to
         existing methods in 1.x after that point should be done such that they
         can handle the version_cap being set to 1.16.
 
         * 1.17 - Add method release_dhcp()
+
+        ... Newton supports message version 1.17.  So, any changes to
+        existing methods in 1.x after that point should be done such that they
+        can handle the version_cap being set to 1.17.
     '''
 
     VERSION_ALIASES = {
@@ -116,6 +120,7 @@ class NetworkAPI(object):
         'kilo': '1.13',
         'liberty': '1.15',
         'mitaka': '1.16',
+        'newton': '1.17',
     }
 
     def __init__(self, topic=None):
