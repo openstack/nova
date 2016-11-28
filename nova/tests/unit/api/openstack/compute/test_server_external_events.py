@@ -19,6 +19,7 @@ from nova.api.openstack.compute import server_external_events \
                                                  as server_external_events_v21
 from nova import exception
 from nova import objects
+from nova.objects import instance as instance_obj
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 
@@ -38,6 +39,12 @@ MISSING_UUID = '00000000-0000-0000-0000-000000000005'
 
 @classmethod
 def fake_get_by_uuid(cls, context, uuid, **kwargs):
+    if 'expected_attrs' in kwargs:
+        expected_attrs_set = set(kwargs['expected_attrs'])
+        full_expected_attrs_set = set(instance_obj.INSTANCE_OPTIONAL_ATTRS)
+        assert expected_attrs_set.issubset(full_expected_attrs_set), \
+            ('%s is not a subset of %s' % (expected_attrs_set,
+                                           full_expected_attrs_set))
     try:
         return fake_instances[uuid]
     except KeyError:
