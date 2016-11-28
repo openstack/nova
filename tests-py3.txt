@@ -1,6 +1,4 @@
 nova.tests.unit.api.openstack.compute.test_disk_config.DiskConfigTestCaseV21
-nova.tests.unit.api.openstack.compute.test_extended_ips.ExtendedIpsTestV21
-nova.tests.unit.api.openstack.compute.test_extended_ips_mac.ExtendedIpsMacTestV21
 nova.tests.unit.api.openstack.compute.test_neutron_security_groups.TestNeutronSecurityGroupRulesV21
 nova.tests.unit.api.openstack.compute.test_neutron_security_groups.TestNeutronSecurityGroupsOutputTest
 nova.tests.unit.api.openstack.compute.test_security_group_default_rules.TestSecurityGroupDefaultRulesNeutronV21

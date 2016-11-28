@@ -134,7 +134,7 @@ class ExtendedIpsMacTestV21(test.TestCase):
             results.append({'address': ip.get('addr'),
                             'mac_address': ip.get('%smac_addr' % self.prefix)})
 
-        self.assertEqual(ALL_IPS, sorted(results))
+        self.assertJsonEqual(ALL_IPS, results)
 
     def test_show(self):
         url = '/v2/fake/servers/%s' % UUID3
