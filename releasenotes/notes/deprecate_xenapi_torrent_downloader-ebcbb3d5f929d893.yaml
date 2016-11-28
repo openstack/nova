@@ -1,0 +1,16 @@
+---
+deprecations:
+  - |
+    The XenServer driver provides support for downloading images via torrents.
+    This feature has not been tested, and it's not clear whether there's a
+    clear use case for such a feature. As a result, this feature is now
+    deprecated as are the following config options.
+
+    * ``torrent_base_url``
+    * ``torrent_seed_chance``
+    * ``torrent_seed_duration``
+    * ``torrent_max_last_accessed``
+    * ``torrent_listen_port_start``
+    * ``torrent_listen_port_end``
+    * ``torrent_download_stall_cutoff``
+    * ``torrent_max_seeder_processes_per_host``

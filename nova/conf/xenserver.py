@@ -159,6 +159,12 @@ session, which allows you to make concurrent XenAPI connections.
 
 xenapi_torrent_opts = [
     cfg.StrOpt('torrent_base_url',
+        deprecated_for_removal=True,
+        deprecated_since='15.0.0',
+        deprecated_reason="""
+The torrent feature has not been tested nor maintained, and as such is being
+removed.
+""",
         help="""
 Base URL for torrent files; must contain a slash character (see RFC 1808,
 step 6).
@@ -166,9 +172,21 @@ step 6).
     cfg.FloatOpt('torrent_seed_chance',
         default=1.0,
         min=0,
+        deprecated_for_removal=True,
+        deprecated_since='15.0.0',
+        deprecated_reason="""
+The torrent feature has not been tested nor maintained, and as such is being
+removed.
+""",
         help='Probability that peer will become a seeder (1.0 = 100%)'),
     cfg.IntOpt('torrent_seed_duration',
         default=3600,
+        deprecated_for_removal=True,
+        deprecated_since='15.0.0',
+        deprecated_reason="""
+The torrent feature has not been tested nor maintained, and as such is being
+removed.
+""",
         help="""
 Number of seconds after downloading an image via BitTorrent that it should
 be seeded for other peers.'
@@ -176,18 +194,42 @@ be seeded for other peers.'
     cfg.IntOpt('torrent_max_last_accessed',
         default=86400,
         min=0,
+        deprecated_for_removal=True,
+        deprecated_since='15.0.0',
+        deprecated_reason="""
+The torrent feature has not been tested nor maintained, and as such is being
+removed.
+""",
         help="""
 Cached torrent files not accessed within this number of seconds can be reaped.
 """),
     cfg.PortOpt('torrent_listen_port_start',
         default=6881,
+        deprecated_for_removal=True,
+        deprecated_since='15.0.0',
+        deprecated_reason="""
+The torrent feature has not been tested nor maintained, and as such is being
+removed.
+""",
         help='Beginning of port range to listen on'),
     cfg.PortOpt('torrent_listen_port_end',
         default=6891,
+        deprecated_for_removal=True,
+        deprecated_since='15.0.0',
+        deprecated_reason="""
+The torrent feature has not been tested nor maintained, and as such is being
+removed.
+""",
         help='End of port range to listen on'),
     cfg.IntOpt('torrent_download_stall_cutoff',
         default=600,
         min=0,
+        deprecated_for_removal=True,
+        deprecated_since='15.0.0',
+        deprecated_reason="""
+The torrent feature has not been tested nor maintained, and as such is being
+removed.
+""",
         help="""
 Number of seconds a download can remain at the same progress percentage w/o
 being considered a stall.
@@ -195,6 +237,12 @@ being considered a stall.
     cfg.IntOpt('torrent_max_seeder_processes_per_host',
         default=1,
         min=-1,
+        deprecated_for_removal=True,
+        deprecated_since='15.0.0',
+        deprecated_reason="""
+The torrent feature has not been tested nor maintained, and as such is being
+removed.
+""",
         help="""
 Maximum number of seeder processes to run concurrently within a given dom0
 (-1 = no limit).
