@@ -24,13 +24,14 @@ inventories and usages, along with different classes of resources. For example,
 a resource provider can be a compute node, a shared storage pool, or an IP
 allocation pool. The placement service tracks the inventory and usage of each
 provider. For example, an instance created on a compute node may be a consumer
-of resources such as RAM and CPU from a compute node resource provider, DISK
+of resources such as RAM and CPU from a compute node resource provider, disk
 from an external shared storage pool resource provider and IP addresses from
 an external IP pool resource provider.
 
 The types of resources consumed are tracked as **classes**. The service
-provides a set of standard resource classes but provides the ability to define
-custom resource classes as needed.
+provides a set of standard resource classes (for example `DISK_GB`,
+`MEMORY_MB`, and `VCPU`) and provides the ability to define custom resource
+classes as needed.
 
 References
 ~~~~~~~~~~
@@ -73,7 +74,7 @@ with Apache.
 
 .. note:: The placement API service is currently developed within Nova but
         it is designed to be as separate as possible from the existing code so
-        that it can be eventually split into a separate project.
+        that it can eventually be split into a separate project.
 
 **2. Synchronize the database**
 
@@ -95,8 +96,8 @@ The placement API is a separate service and thus should be registered under
 a **placement** service type in the service catalog as that is what the
 resource tracker in the nova-compute node will use to look up the endpoint.
 
-Devstack sets up the port used in the endpoint URL as 8778 which is
-intentionally different from the 8774 port used with the compute endpoint.
+Devstack sets up the placement service on the default HTTP port (80) with a
+``/placement`` prefix instead of using an independent port.
 
 **4. Configure and restart nova-compute services**
 
@@ -104,6 +105,10 @@ The 14.0.0 Newton nova-compute service code will begin reporting resource
 provider inventory and usage information as soon as the placement API
 service is in place and can respond to requests via the endpoint registered
 in the service catalog.
+
+``nova.conf`` on the compute nodes must be updated in the ``[placement]``
+group to contain credentials for making requests from nova-compute to the
+placement-api service.
 
 .. note:: After upgrading nova-compute code to Newton and restarting the
         service, the nova-compute service will attempt to make a connection
