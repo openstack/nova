@@ -6278,10 +6278,14 @@ class ComputeTestCase(BaseTestCase):
         admin_context = context.get_admin_context()
         deleted_at = (timeutils.utcnow() -
                       datetime.timedelta(hours=1, minutes=5))
-        instance1 = self._create_fake_instance_obj({"deleted_at": deleted_at,
-                                                    "deleted": True})
-        instance2 = self._create_fake_instance_obj({"deleted_at": deleted_at,
-                                                    "deleted": True})
+        instance1 = self._create_fake_instance_obj()
+        instance2 = self._create_fake_instance_obj()
+
+        timeutils.set_time_override(deleted_at)
+        instance1.destroy()
+        instance2.destroy()
+        timeutils.clear_time_override()
+
         self.flags(running_deleted_instance_timeout=3600,
                    running_deleted_instance_action=action)
 

@@ -479,6 +479,9 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
+        if self.obj_attr_is_set('deleted') and self.deleted:
+            raise exception.ObjectActionError(action='create',
+                                              reason='already deleted')
         updates = self.obj_get_changes()
         expected_attrs = [attr for attr in INSTANCE_DEFAULT_FIELDS
                           if attr in updates]

@@ -1058,6 +1058,13 @@ class _TestInstanceObject(object):
         inst2 = objects.Instance.get_by_uuid(self.context, inst1.uuid)
         self.assertEqual('foo-host', inst2.host)
 
+    def test_create_deleted(self):
+        inst1 = objects.Instance(context=self.context,
+                                 user_id=self.context.user_id,
+                                 project_id=self.context.project_id,
+                                 deleted=True)
+        self.assertRaises(exception.ObjectActionError, inst1.create)
+
     def test_create_with_extras(self):
         inst = objects.Instance(context=self.context,
             uuid=self.fake_instance['uuid'],

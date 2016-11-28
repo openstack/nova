@@ -3006,8 +3006,8 @@ class FloatingIPTestCase(test.TestCase):
                        lambda *args, **kwargs: None)
         instance = objects.Instance(context=self.context)
         instance.project_id = self.project_id
-        instance.deleted = True
         instance.create()
+        instance.destroy()
         network = db.network_create_safe(self.context.elevated(), {
                 'project_id': self.project_id,
                 'host': CONF.host,
