@@ -10,13 +10,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.compute import cpumodel
 from nova import objects
 from nova.objects import fields as obj_fields
 from nova.tests.unit.objects import test_objects
 
 fake_cpu_model_feature = {
-    'policy': cpumodel.POLICY_REQUIRE,
+    'policy': obj_fields.CPUFeaturePolicy.REQUIRE,
     'name': 'sse2',
 }
 
@@ -26,10 +25,10 @@ fake_cpu_model_feature_obj = objects.VirtCPUFeature(
 fake_vcpumodel_dict = {
     'arch': obj_fields.Architecture.I686,
     'vendor': 'fake-vendor',
-    'match': cpumodel.MATCH_EXACT,
+    'match': obj_fields.CPUMatch.EXACT,
     'topology': objects.VirtCPUTopology(sockets=1, cores=1, threads=1),
     'features': [fake_cpu_model_feature_obj],
-    'mode': cpumodel.MODE_HOST_MODEL,
+    'mode': obj_fields.CPUMode.HOST_MODEL,
     'model': 'fake-model',
 }
 fake_vcpumodel = objects.VirtCPUModel(**fake_vcpumodel_dict)
