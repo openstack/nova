@@ -483,6 +483,13 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             raise exception.ObjectActionError(action='create',
                                               reason='already deleted')
         updates = self.obj_get_changes()
+
+        # NOTE(danms): We know because of the check above that deleted
+        # is either unset or false. Since we need to avoid passing False
+        # down to the DB layer (which uses an integer), we can always
+        # default it to zero here.
+        updates['deleted'] = 0
+
         expected_attrs = [attr for attr in INSTANCE_DEFAULT_FIELDS
                           if attr in updates]
         if 'security_groups' in updates:
