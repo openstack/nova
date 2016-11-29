@@ -989,6 +989,7 @@ class _TestInstanceObject(object):
     @mock.patch.object(db, 'instance_create')
     def test_create_skip_scheduled_at(self, mock_create):
         vals = {'host': 'foo-host',
+                'deleted': 0,
                 'memory_mb': 128,
                 'system_metadata': {'foo': 'bar'},
                 'extra': {
@@ -1017,6 +1018,7 @@ class _TestInstanceObject(object):
     @mock.patch.object(db, 'instance_create')
     def test_create_stubbed(self, mock_create):
         vals = {'host': 'foo-host',
+                'deleted': 0,
                 'memory_mb': 128,
                 'system_metadata': {'foo': 'bar'},
                 'extra': {
@@ -1046,7 +1048,8 @@ class _TestInstanceObject(object):
 
         self.assertEqual(self.fake_instance['id'], inst.id)
         self.assertIsNotNone(inst.ec2_ids)
-        mock_create.assert_called_once_with(self.context, {'extra': extras})
+        mock_create.assert_called_once_with(self.context, {'deleted': 0,
+                                                           'extra': extras})
 
     def test_create_with_values(self):
         inst1 = objects.Instance(context=self.context,
@@ -1119,6 +1122,7 @@ class _TestInstanceObject(object):
 
         mock_create.assert_called_once_with(self.context,
                            {'host': 'foo-host',
+                            'deleted': 0,
                             'security_groups': ['foo', 'bar'],
                             'info_cache': {'network_info': '[]'},
                             'extra': {
