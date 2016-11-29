@@ -13,6 +13,7 @@
 import uuid
 
 import mock
+import six
 
 from nova import context
 from nova import exception
@@ -33,7 +34,7 @@ VCPU_ID = objects.fields.ResourceClass.STANDARD.index(
 
 _RESOURCE_PROVIDER_ID = 1
 _RESOURCE_PROVIDER_UUID = uuids.resource_provider
-_RESOURCE_PROVIDER_NAME = uuids.resource_name
+_RESOURCE_PROVIDER_NAME = six.text_type(uuids.resource_name)
 _RESOURCE_PROVIDER_DB = {
     'id': _RESOURCE_PROVIDER_ID,
     'uuid': _RESOURCE_PROVIDER_UUID,
