@@ -521,6 +521,15 @@ limit:
   in: query
   required: false
   type: integer
+limit_simple:
+  description: |
+    Used in conjunction with ``offset`` to return a slice of items. ``limit``
+    is the maximum number of items to return. If ``limit`` is not specified,
+    or exceeds the configurable ``osapi_max_limit``, then ``osapi_max_limit``
+    will be used instead.
+  in: query
+  required: false
+  type: integer
 marker:
   description: |
     The ID of the last-seen item. Use the ``limit`` parameter to make an initial limited
@@ -595,6 +604,13 @@ not_tags_query:
     match all tags in this list will be returned. Boolean expression in this
     case is 'NOT (t1 AND t2)'. Tags in query must be separated by comma.
   min_version: 2.26
+offset_simple:
+  description: |
+    Used in conjunction with ``limit`` to return a slice of items. ``offset``
+    is where to start in the list.
+  in: query
+  required: false
+  type: integer
 reservation_id_query:
   in: query
   required: false
