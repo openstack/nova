@@ -80,9 +80,13 @@ class BuildRequest(base.NovaObject):
             LOG.exception(_LE('Could not deserialize instance in '
                               'BuildRequest'))
             raise exception.BuildRequestNotFound(uuid=self.instance_uuid)
+        # NOTE(sbauza): The instance primitive should already have the deleted
+        # field being set, so when hydrating it back here, we should get the
+        # right value but in case we don't have it, let's suppose that the
+        # instance is not deleted, which is the default value for that field.
+        self.instance.obj_set_defaults('deleted')
         # NOTE(alaski): Set some fields on instance that are needed by the api,
         # not lazy-loadable, and don't change.
-        self.instance.deleted = 0
         self.instance.disable_terminate = False
         self.instance.terminated_at = None
         self.instance.host = None
