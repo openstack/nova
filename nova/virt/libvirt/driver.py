@@ -695,7 +695,13 @@ class LibvirtDriver(driver.ComputeDriver):
             # libvirt build the URI using the remote hostname and the
             # tcp schema.
             uri = 'tcp://%s' % dest
-        return uri
+        # Because dest might be of type unicode, here we might return value of
+        # type unicode as well which is not acceptable by libvirt python
+        # binding when Python 2.7 is in use, so let's convert it explicitly
+        # back to string. When Python 3.x is in use, libvirt python binding
+        # accepts unicode type so it is completely fine to do a no-op str(uri)
+        # conversion which will return value of type unicode.
+        return uri and str(uri)
 
     def instance_exists(self, instance):
         """Efficient override of base instance_exists method."""
