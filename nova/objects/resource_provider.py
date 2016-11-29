@@ -11,6 +11,9 @@
 #    under the License.
 
 import copy
+# NOTE(cdent): The resource provider objects are designed to never be
+# used over RPC. Remote manipulation is done with the placement HTTP
+# API. The 'remotable' decorators should not be used.
 
 from oslo_db import exception as db_exc
 from oslo_log import log as logging
@@ -310,7 +313,8 @@ class ResourceProvider(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Add destroy()
     # Version 1.2: Add get_aggregates(), set_aggregates()
-    VERSION = '1.2'
+    # Version 1.3: Turn off remotable
+    VERSION = '1.3'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -319,7 +323,6 @@ class ResourceProvider(base.NovaObject):
         'generation': fields.IntegerField(nullable=False),
     }
 
-    @base.remotable
     def create(self):
         if 'id' in self:
             raise exception.ObjectActionError(action='create',
@@ -334,11 +337,9 @@ class ResourceProvider(base.NovaObject):
         db_rp = self._create_in_db(self._context, updates)
         self._from_db_object(self._context, self, db_rp)
 
-    @base.remotable
     def destroy(self):
         self._delete(self._context, self.id)
 
-    @base.remotable
     def save(self):
         updates = self.obj_get_changes()
         if updates and updates.keys() != ['name']:
@@ -347,12 +348,11 @@ class ResourceProvider(base.NovaObject):
                 reason='Immutable fields changed')
         self._update_in_db(self._context, self.id, updates)
 
-    @base.remotable_classmethod
+    @classmethod
     def get_by_uuid(cls, context, uuid):
         db_resource_provider = cls._get_by_uuid_from_db(context, uuid)
         return cls._from_db_object(context, cls(), db_resource_provider)
 
-    @base.remotable
     def add_inventory(self, inventory):
         """Add one new Inventory to the resource provider.
 
@@ -362,13 +362,11 @@ class ResourceProvider(base.NovaObject):
         _add_inventory(self._context, self, inventory)
         self.obj_reset_changes()
 
-    @base.remotable
     def delete_inventory(self, resource_class):
         """Delete Inventory of provided resource_class."""
         _delete_inventory(self._context, self, resource_class)
         self.obj_reset_changes()
 
-    @base.remotable
     def set_inventory(self, inv_list):
         """Set all resource provider Inventory to be the provided list."""
         exceeded = _set_inventory(self._context, self, inv_list)
@@ -378,7 +376,6 @@ class ResourceProvider(base.NovaObject):
                         {'uuid': uuid, 'resource': rclass})
         self.obj_reset_changes()
 
-    @base.remotable
     def update_inventory(self, inventory):
         """Update one existing Inventory of the same resource class.
 
@@ -529,7 +526,8 @@ class ResourceProvider(base.NovaObject):
 @base.NovaObjectRegistry.register
 class ResourceProviderList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial Version
-    VERSION = '1.0'
+    # Version 1.1: Turn off remotable
+    VERSION = '1.1'
 
     fields = {
         'objects': fields.ListOfObjectsField('ResourceProvider'),
@@ -655,7 +653,7 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
 
         return query.all()
 
-    @base.remotable_classmethod
+    @classmethod
     def get_all_by_filters(cls, context, filters=None):
         """Returns a list of `ResourceProvider` objects that have sufficient
         resources in their inventories to satisfy the amounts specified in the
@@ -743,7 +741,8 @@ def _update_inventory_in_db(context, id_, updates):
 class Inventory(_HasAResourceProvider):
     # Version 1.0: Initial version
     # Version 1.1: Changed resource_class to allow custom strings
-    VERSION = '1.1'
+    # Version 1.2: Turn off remotable
+    VERSION = '1.2'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -769,7 +768,6 @@ class Inventory(_HasAResourceProvider):
         """Inventory capacity, adjusted by allocation_ratio."""
         return int((self.total - self.reserved) * self.allocation_ratio)
 
-    @base.remotable
     def create(self):
         if 'id' in self:
             raise exception.ObjectActionError(action='create',
@@ -779,7 +777,6 @@ class Inventory(_HasAResourceProvider):
         db_inventory = self._create_in_db(self._context, updates)
         self._from_db_object(self._context, self, db_inventory)
 
-    @base.remotable
     def save(self):
         if 'id' not in self:
             raise exception.ObjectActionError(action='save',
@@ -801,7 +798,8 @@ class Inventory(_HasAResourceProvider):
 @base.NovaObjectRegistry.register
 class InventoryList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial Version
-    VERSION = '1.0'
+    # Version 1.1: Turn off remotable
+    VERSION = '1.1'
 
     fields = {
         'objects': fields.ListOfObjectsField('Inventory'),
@@ -831,7 +829,7 @@ class InventoryList(base.ObjectListBase, base.NovaObject):
             options(contains_eager('resource_provider')).\
             filter(models.ResourceProvider.uuid == rp_uuid).all()
 
-    @base.remotable_classmethod
+    @classmethod
     def get_all_by_resource_provider_uuid(cls, context, rp_uuid):
         db_inventory_list = cls._get_all_by_resource_provider(context,
                                                               rp_uuid)
@@ -843,7 +841,8 @@ class InventoryList(base.ObjectListBase, base.NovaObject):
 class Allocation(_HasAResourceProvider):
     # Version 1.0: Initial version
     # Version 1.1: Changed resource_class to allow custom strings
-    VERSION = '1.1'
+    # Version 1.2: Turn off remotable
+    VERSION = '1.2'
 
     fields = {
         'id': fields.IntegerField(),
@@ -879,7 +878,6 @@ class Allocation(_HasAResourceProvider):
         if not result:
             raise exception.NotFound()
 
-    @base.remotable
     def create(self):
         if 'id' in self:
             raise exception.ObjectActionError(action='create',
@@ -889,7 +887,6 @@ class Allocation(_HasAResourceProvider):
         db_allocation = self._create_in_db(self._context, updates)
         self._from_db_object(self._context, self, db_allocation)
 
-    @base.remotable
     def destroy(self):
         self._destroy(self._context, self.id)
 
@@ -1066,7 +1063,8 @@ def _check_capacity_exceeded(conn, allocs):
 class AllocationList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial Version
     # Version 1.1: Add create_all() and delete_all()
-    VERSION = '1.1'
+    # Version 1.2: Turn off remotable
+    VERSION = '1.2'
 
     fields = {
         'objects': fields.ListOfObjectsField('Allocation'),
@@ -1147,28 +1145,26 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
             for rp in before_gens:
                 _increment_provider_generation(conn, rp)
 
-    @base.remotable_classmethod
+    @classmethod
     def get_all_by_resource_provider_uuid(cls, context, rp_uuid):
         db_allocation_list = cls._get_allocations_from_db(
             context, resource_provider_uuid=rp_uuid)
         return base.obj_make_list(
             context, cls(context), objects.Allocation, db_allocation_list)
 
-    @base.remotable_classmethod
+    @classmethod
     def get_all_by_consumer_id(cls, context, consumer_id):
         db_allocation_list = cls._get_allocations_from_db(
             context, consumer_id=consumer_id)
         return base.obj_make_list(
             context, cls(context), objects.Allocation, db_allocation_list)
 
-    @base.remotable
     def create_all(self):
         """Create the supplied allocations."""
         # TODO(jaypipes): Retry the allocation writes on
         # ConcurrentUpdateDetected
         self._set_allocations(self._context, self.objects)
 
-    @base.remotable
     def delete_all(self):
         self._delete_allocations(self._context, self.objects)
 
@@ -1213,7 +1209,8 @@ class Usage(base.NovaObject):
 @base.NovaObjectRegistry.register
 class UsageList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Turn off remotable
+    VERSION = '1.1'
 
     fields = {
         'objects': fields.ListOfObjectsField('Usage'),
@@ -1238,7 +1235,7 @@ class UsageList(base.ObjectListBase, base.NovaObject):
                   for item in query.all()]
         return result
 
-    @base.remotable_classmethod
+    @classmethod
     def get_all_by_resource_provider_uuid(cls, context, rp_uuid):
         usage_list = cls._get_all_by_resource_provider_uuid(context, rp_uuid)
         return base.obj_make_list(context, cls(context), Usage, usage_list)
@@ -1392,7 +1389,8 @@ class ResourceClass(base.NovaObject):
 @base.NovaObjectRegistry.register
 class ResourceClassList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Turn off remotable
+    VERSION = '1.1'
 
     fields = {
         'objects': fields.ListOfObjectsField('ResourceClass'),
@@ -1405,7 +1403,7 @@ class ResourceClassList(base.ObjectListBase, base.NovaObject):
         customs = list(context.session.query(models.ResourceClass).all())
         return _RC_CACHE.STANDARDS + customs
 
-    @base.remotable_classmethod
+    @classmethod
     def get_all(cls, context):
         resource_classes = cls._get_all(context)
         return base.obj_make_list(context, cls(context),
