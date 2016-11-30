@@ -875,8 +875,8 @@ There was a conflict when trying to complete your request.
                 'put')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
-    def test_update_inventory_conflicts(self, mock_ensure,
-                                        mock_put, mock_get):
+    def test_update_inventory_concurrent_update(self, mock_ensure,
+                                                mock_put, mock_get):
         # Ensure _update_inventory() returns a list of Inventories objects
         # after creating or updating the existing values
         uuid = uuids.compute_node
@@ -887,6 +887,7 @@ There was a conflict when trying to complete your request.
 
         mock_get.return_value = {}
         mock_put.return_value.status_code = 409
+        mock_put.return_value.text = 'Does not match inventory in use'
 
         inv_data = report._compute_node_to_inventory_dict(compute_node)
         result = self.client._update_inventory_attempt(
@@ -898,6 +899,37 @@ There was a conflict when trying to complete your request.
         self.assertNotIn(uuid, self.client._resource_providers)
         # Refreshed our resource provider
         mock_ensure.assert_called_once_with(uuid)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_inventory')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'put')
+    def test_update_inventory_inventory_in_use(self, mock_put, mock_get):
+        # Ensure _update_inventory() returns a list of Inventories objects
+        # after creating or updating the existing values
+        uuid = uuids.compute_node
+        compute_node = self.compute_node
+        rp = objects.ResourceProvider(uuid=uuid, name='foo', generation=42)
+        # Make sure the ResourceProvider exists for preventing to call the API
+        self.client._resource_providers[uuid] = rp
+
+        mock_get.return_value = {}
+        mock_put.return_value.status_code = 409
+        mock_put.return_value.text = (
+            "update conflict: Inventory for VCPU on "
+            "resource provider 123 in use"
+        )
+
+        inv_data = report._compute_node_to_inventory_dict(compute_node)
+        self.assertRaises(
+            exception.InventoryInUse,
+            self.client._update_inventory_attempt,
+            compute_node.uuid,
+            inv_data,
+        )
+
+        # Did NOT invalidate the cache
+        self.assertIn(uuid, self.client._resource_providers)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_inventory')

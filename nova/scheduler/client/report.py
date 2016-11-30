@@ -24,6 +24,7 @@ from oslo_log import log as logging
 
 from nova.compute import utils as compute_utils
 import nova.conf
+from nova import exception
 from nova.i18n import _LE, _LI, _LW
 from nova import objects
 from nova.objects import fields
@@ -409,6 +410,42 @@ class SchedulerReportClient(object):
         if result.status_code == 409:
             LOG.info(_LI('Inventory update conflict for %s'),
                      rp_uuid)
+            # NOTE(jaypipes): There may be cases when we try to set a
+            # provider's inventory that results in attempting to delete an
+            # inventory record for a resource class that has an active
+            # allocation. We need to catch this particular case and raise an
+            # exception here instead of returning False, since we should not
+            # re-try the operation in this case.
+            #
+            # A use case for where this can occur is the following:
+            #
+            # 1) Provider created for each Ironic baremetal node in Newton
+            # 2) Inventory records for baremetal node created for VCPU,
+            #    MEMORY_MB and DISK_GB
+            # 3) A Nova instance consumes the baremetal node and allocation
+            #    records are created for VCPU, MEMORY_MB and DISK_GB matching
+            #    the total amount of those resource on the baremetal node.
+            # 3) Upgrade to Ocata and now resource tracker wants to set the
+            #    provider's inventory to a single record of resource class
+            #    CUSTOM_IRON_SILVER (or whatever the Ironic node's
+            #    "resource_class" attribute is)
+            # 4) Scheduler report client sends the inventory list containing a
+            #    single CUSTOM_IRON_SILVER record and placement service
+            #    attempts to delete the inventory records for VCPU, MEMORY_MB
+            #    and DISK_GB. An exception is raised from the placement service
+            #    because allocation records exist for those resource classes,
+            #    and a 409 Conflict is returned to the compute node. We need to
+            #    trigger a delete of the old allocation records and then set
+            #    the new inventory, and then set the allocation record to the
+            #    new CUSTOM_IRON_SILVER record.
+            match = _RE_INV_IN_USE.search(result.text)
+            if match:
+                rc = match.group(1)
+                raise exception.InventoryInUse(
+                    resource_classes=rc,
+                    resource_provider=rp_uuid,
+                )
+
             # Invalidate our cache and re-fetch the resource provider
             # to be sure to get the latest generation.
             del self._resource_providers[rp_uuid]
@@ -524,6 +561,10 @@ class SchedulerReportClient(object):
         """Creates or updates stats for the supplied compute node.
 
         :param compute_node: updated nova.objects.ComputeNode to report
+        :raises `exception.InventoryInUse` if the compute node has had changes
+                to its inventory but there are still active allocations for
+                resource classes that would be deleted by an update to the
+                placement API.
         """
         compute_node.save()
         self._ensure_resource_provider(compute_node.uuid,

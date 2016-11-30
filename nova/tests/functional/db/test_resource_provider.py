@@ -232,6 +232,61 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         self.assertRaises(exception.ResourceClassNotFound,
                           rp.set_inventory, inv_list)
 
+    def test_set_inventory_fail_in_used(self):
+        """Test attempting to set inventory which would result in removing an
+        inventory record for a resource class that still has allocations
+        against it.
+        """
+        rp = objects.ResourceProvider(
+            context=self.context,
+            uuid=uuidsentinel.rp_uuid,
+            name='compute-host',
+        )
+        rp.create()
+
+        inv = objects.Inventory(
+            resource_provider=rp,
+            resource_class='VCPU',
+            total=12,
+            reserved=0,
+            min_unit=1,
+            max_unit=12,
+            step_size=1,
+            allocation_ratio=1.0,
+        )
+
+        inv_list = objects.InventoryList(objects=[inv])
+        rp.set_inventory(inv_list)
+
+        alloc = objects.Allocation(
+            resource_provider=rp,
+            resource_class='VCPU',
+            consumer_id=uuidsentinel.consumer,
+            used=1,
+        )
+
+        alloc_list = objects.AllocationList(
+            self.context,
+            objects=[alloc]
+        )
+        alloc_list.create_all()
+
+        inv = objects.Inventory(
+            resource_provider=rp,
+            resource_class='MEMORY_MB',
+            total=1024,
+            reserved=0,
+            min_unit=256,
+            max_unit=1024,
+            step_size=256,
+            allocation_ratio=1.0,
+        )
+
+        inv_list = objects.InventoryList(objects=[inv])
+        self.assertRaises(exception.InventoryInUse,
+                          rp.set_inventory,
+                          inv_list)
+
     @mock.patch('nova.objects.resource_provider.LOG')
     def test_set_inventory_over_capacity(self, mock_log):
         rp = objects.ResourceProvider(context=self.context,
