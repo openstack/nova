@@ -20,6 +20,7 @@ import hmac
 import os
 
 from oslo_log import log as logging
+from oslo_utils import encodeutils
 from oslo_utils import secretutils as secutils
 import six
 import webob.dec
@@ -93,7 +94,7 @@ class MetadataRequestHandler(wsgi.Application):
     def __call__(self, req):
         if os.path.normpath(req.path_info) == "/":
             resp = base.ec2_md_print(base.VERSIONS + ["latest"])
-            req.response.body = resp
+            req.response.body = encodeutils.to_utf8(resp)
             req.response.content_type = base.MIME_TYPE_TEXT_PLAIN
             return req.response
 
@@ -122,10 +123,7 @@ class MetadataRequestHandler(wsgi.Application):
             return data(req, meta_data)
 
         resp = base.ec2_md_print(data)
-        if isinstance(resp, six.text_type):
-            req.response.text = resp
-        else:
-            req.response.body = resp
+        req.response.body = encodeutils.to_utf8(resp)
 
         req.response.content_type = meta_data.get_mimetype()
         return req.response
@@ -264,8 +262,9 @@ class MetadataRequestHandler(wsgi.Application):
     def _validate_shared_secret(self, requestor_id, signature,
                                 requestor_address):
         expected_signature = hmac.new(
-            CONF.neutron.metadata_proxy_shared_secret,
-            requestor_id, hashlib.sha256).hexdigest()
+            encodeutils.to_utf8(CONF.neutron.metadata_proxy_shared_secret),
+            encodeutils.to_utf8(requestor_id),
+            hashlib.sha256).hexdigest()
 
         if not secutils.constant_time_compare(expected_signature, signature):
             if requestor_id:

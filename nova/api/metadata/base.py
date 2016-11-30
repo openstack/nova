@@ -16,11 +16,11 @@
 
 """Instance Metadata information."""
 
-import base64
 import os
 import posixpath
 
 from oslo_log import log as logging
+from oslo_serialization import base64
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
 from oslo_utils import timeutils
@@ -138,7 +138,7 @@ class InstanceMetadata(object):
         self.mappings = _format_instance_mapping(ctxt, instance)
 
         if instance.user_data is not None:
-            self.userdata_raw = base64.b64decode(instance.user_data)
+            self.userdata_raw = base64.decode_as_bytes(instance.user_data)
         else:
             self.userdata_raw = None
 
@@ -365,7 +365,7 @@ class InstanceMetadata(object):
         metadata['availability_zone'] = self.availability_zone
 
         if self._check_os_version(GRIZZLY, version):
-            metadata['random_seed'] = base64.b64encode(os.urandom(512))
+            metadata['random_seed'] = base64.encode_as_text(os.urandom(512))
 
         if self._check_os_version(LIBERTY, version):
             metadata['project_id'] = self.instance.project_id
@@ -694,6 +694,8 @@ def ec2_md_print(data):
         return output[:-1]
     elif isinstance(data, list):
         return '\n'.join(data)
+    elif isinstance(data, (bytes, six.text_type)):
+        return data
     else:
         return str(data)
 

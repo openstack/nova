@@ -16,9 +16,11 @@
 """Availability zone helper functions."""
 
 import collections
-import nova.conf
+
+import six
 
 from nova import cache_utils
+import nova.conf
 from nova import objects
 
 # NOTE(vish): azs don't change that often, so cache them for an hour to
@@ -49,7 +51,9 @@ def reset_cache():
 
 
 def _make_cache_key(host):
-    return "azcache-%s" % host.encode('utf-8')
+    if six.PY2:
+        host = host.encode('utf-8')
+    return "azcache-%s" % host
 
 
 def _build_metadata_by_host(aggregates, hosts=None):

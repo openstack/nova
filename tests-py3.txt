@@ -32,10 +32,6 @@ nova.tests.unit.network.test_manager.LdapDNSTestCase
 nova.tests.unit.test_bdm.BlockDeviceMappingEc2CloudTestCase
 nova.tests.unit.test_configdrive2.ConfigDriveTestCase
 nova.tests.unit.test_matchers.TestDictMatches.test__str__
-nova.tests.unit.test_metadata.MetadataHandlerTestCase
-nova.tests.unit.test_metadata.MetadataPasswordTestCase
-nova.tests.unit.test_metadata.MetadataTestCase
-nova.tests.unit.test_metadata.OpenStackMetadataTestCase
 nova.tests.unit.test_wsgi.TestWSGIServerWithSSL
 nova.tests.unit.virt.disk.mount.test_nbd.NbdTestCase
 nova.tests.unit.virt.ironic.test_driver.IronicDriverTestCase

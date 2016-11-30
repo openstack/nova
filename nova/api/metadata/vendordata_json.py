@@ -36,7 +36,7 @@ class JsonFileVendorData(vendordata.VendorDataDriver):
         logprefix = "vendordata_jsonfile_path[%s]:" % fpath
         if fpath:
             try:
-                with open(fpath, "r") as fp:
+                with open(fpath, "rb") as fp:
                     data = jsonutils.load(fp)
             except IOError as e:
                 if e.errno == errno.ENOENT:
