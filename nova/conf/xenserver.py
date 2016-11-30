@@ -1,10 +1,3 @@
-# needs:fix_opt_description
-# needs:check_deprecation_status
-# needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
-
-
 # Copyright 2016 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -35,9 +28,9 @@ compute_driver=xenapi.XenAPIDriver.
 
 xenapi_agent_opts = [
     cfg.IntOpt('agent_timeout',
-               default=30,
-               min=0,
-               help="""
+        default=30,
+        min=0,
+        help="""
 Number of seconds to wait for agent's reply to a request.
 
 Nova configures/performs certain administrative actions on a server with the
@@ -60,13 +53,15 @@ the instance fails to write the result in this time period, the operation is
 considered to have timed out.
 
 Related options:
-  * ``agent_version_timeout``
-  * ``agent_resetnetwork_timeout``
+
+* ``agent_version_timeout``
+* ``agent_resetnetwork_timeout``
+
 """),
     cfg.IntOpt('agent_version_timeout',
-               default=300,
-               min=0,
-               help="""
+        default=300,
+        min=0,
+        help="""
 Number of seconds to wait for agent't reply to version request.
 
 This indicates the amount of time xapi 'agent' plugin waits for the agent to
@@ -80,9 +75,9 @@ fails, the other configuration is skipped. So, this configuration option can
 also be interpreted as time in which agent is expected to be fully operational.
 """),
     cfg.IntOpt('agent_resetnetwork_timeout',
-               default=60,
-               min=0,
-               help="""
+        default=60,
+        min=0,
+        help="""
 Number of seconds to wait for agent's reply to resetnetwork
 request.
 
@@ -91,21 +86,23 @@ respond to the 'resetnetwork' request specifically. The generic timeout for
 agent communication ``agent_timeout`` is ignored in this case.
 """),
     cfg.StrOpt('agent_path',
-               default='usr/sbin/xe-update-networking',
-               help="""
+        default='usr/sbin/xe-update-networking',
+        help="""
 Path to locate guest agent on the server.
 
 Specifies the path in which the XenAPI guest agent should be located. If the
 agent is present, network configuration is not injected into the image.
 
 Related options:
-  For this option to have an effect:
-  * ``flat_injected`` should be set to ``True``
-  * ``compute_driver`` should be set to ``xenapi.XenAPIDriver``
+
+For this option to have an effect:
+* ``flat_injected`` should be set to ``True``
+* ``compute_driver`` should be set to ``xenapi.XenAPIDriver``
+
 """),
     cfg.BoolOpt('disable_agent',
-                default=False,
-                help="""
+        default=False,
+        help="""
 Disables the use of XenAPI agent.
 
 This configuration option suggests whether the use of agent should be enabled
@@ -114,11 +111,13 @@ an effect only when this is set to ``True``. Read description of config option
 ``use_agent_default`` for more information.
 
 Related options:
-  * ``use_agent_default``
+
+* ``use_agent_default``
+
 """),
     cfg.BoolOpt('use_agent_default',
-                default=False,
-                help="""
+        default=False,
+        help="""
 Whether or not to use the agent by default when its usage is enabled but not
 indicated by the image.
 
@@ -133,20 +132,22 @@ Note that if this configuration is set to ``True`` when the agent is not
 present, the boot times will increase significantly.
 
 Related options:
-  * ``disable_agent``
+
+* ``disable_agent``
+
 """),
 ]
 
 
 xenapi_session_opts = [
     cfg.IntOpt('login_timeout',
-               default=10,
-               min=0,
-               help='Timeout in seconds for XenAPI login.'),
+        default=10,
+        min=0,
+        help='Timeout in seconds for XenAPI login.'),
     cfg.IntOpt('connection_concurrent',
-               default=5,
-               min=1,
-               help="""
+        default=5,
+        min=1,
+        help="""
 Maximum number of concurrent XenAPI connections.
 
 In nova, multiple XenAPI requests can happen at a time.
@@ -158,42 +159,54 @@ session, which allows you to make concurrent XenAPI connections.
 
 xenapi_torrent_opts = [
     cfg.StrOpt('torrent_base_url',
-               help='Base URL for torrent files; must contain a slash'
-                    ' character (see RFC 1808, step 6)'),
+        help="""
+Base URL for torrent files; must contain a slash character (see RFC 1808,
+step 6).
+"""),
     cfg.FloatOpt('torrent_seed_chance',
-                 default=1.0,
-                 help='Probability that peer will become a seeder.'
-                      ' (1.0 = 100%)'),
+        default=1.0,
+        min=0,
+        help='Probability that peer will become a seeder (1.0 = 100%)'),
     cfg.IntOpt('torrent_seed_duration',
-               default=3600,
-               help='Number of seconds after downloading an image via'
-                    ' BitTorrent that it should be seeded for other peers.'),
+        default=3600,
+        help="""
+Number of seconds after downloading an image via BitTorrent that it should
+be seeded for other peers.'
+"""),
     cfg.IntOpt('torrent_max_last_accessed',
-               default=86400,
-               help='Cached torrent files not accessed within this number of'
-                    ' seconds can be reaped'),
+        default=86400,
+        min=0,
+        help="""
+Cached torrent files not accessed within this number of seconds can be reaped.
+"""),
     cfg.PortOpt('torrent_listen_port_start',
-                default=6881,
-                help='Beginning of port range to listen on'),
+        default=6881,
+        help='Beginning of port range to listen on'),
     cfg.PortOpt('torrent_listen_port_end',
-                default=6891,
-                help='End of port range to listen on'),
+        default=6891,
+        help='End of port range to listen on'),
     cfg.IntOpt('torrent_download_stall_cutoff',
-               default=600,
-               help='Number of seconds a download can remain at the same'
-                    ' progress percentage w/o being considered a stall'),
+        default=600,
+        min=0,
+        help="""
+Number of seconds a download can remain at the same progress percentage w/o
+being considered a stall.
+"""),
     cfg.IntOpt('torrent_max_seeder_processes_per_host',
-               default=1,
-               help='Maximum number of seeder processes to run concurrently'
-                    ' within a given dom0. (-1 = no limit)')
+        default=1,
+        min=-1,
+        help="""
+Maximum number of seeder processes to run concurrently within a given dom0
+(-1 = no limit).
+""")
 ]
 
 
 xenapi_vm_utils_opts = [
     cfg.StrOpt('cache_images',
-               default='all',
-               choices=('all', 'some', 'none'),
-               help="""
+        default='all',
+        choices=('all', 'some', 'none'),
+        help="""
 Cache glance images locally.
 
 The value for this option must be choosen from the choices listed
@@ -209,9 +222,9 @@ Possible values:
 * `none`: turns off caching entirely.
 """),
     cfg.IntOpt('image_compression_level',
-               min=1,
-               max=9,
-               help="""
+        min=1,
+        max=9,
+        help="""
 Compression level for images.
 
 By setting this option we can configure the gzip compression level.
@@ -227,23 +240,23 @@ Possible values:
 * Any values out of this range will default to None.
 """),
     cfg.StrOpt('default_os_type',
-               default='linux',
-               help='Default OS type used when uploading an image to glance'),
+        default='linux',
+        help='Default OS type used when uploading an image to glance'),
     cfg.IntOpt('block_device_creation_timeout',
-               default=10,
-               min=1,
-               help='Time in secs to wait for a block device to be created'),
+        default=10,
+        min=1,
+        help='Time in secs to wait for a block device to be created'),
     cfg.IntOpt('max_kernel_ramdisk_size',
-               default=16 * units.Mi,
-               help="""
+        default=16 * units.Mi,
+        help="""
 Maximum size in bytes of kernel or ramdisk images.
 
 Specifying the maximum size of kernel or ramdisk will avoid copying
 large files to dom0 and fill up /boot/guest.
 """),
     cfg.StrOpt('sr_matching_filter',
-               default='default-sr:true',
-               help="""
+        default='default-sr:true',
+        help="""
 Filter for finding the SR to be used to install guest instances on.
 
 Possible values:
@@ -256,23 +269,23 @@ Possible values:
   set this flag to: default-sr:true.
 """),
     cfg.BoolOpt('sparse_copy',
-                default=True,
-                help="""
+        default=True,
+        help="""
 Whether to use sparse_copy for copying data on a resize down.
 (False will use standard dd). This speeds up resizes down
 considerably since large runs of zeros won't have to be rsynced.
 """),
     cfg.IntOpt('num_vbd_unplug_retries',
-               default=10,
-               min=0,
-               help="""
+        default=10,
+        min=0,
+        help="""
 Maximum number of retries to unplug VBD.
 If set to 0, should try once, no retries.
 """),
     cfg.StrOpt('torrent_images',
-               default='none',
-               choices=('all', 'some', 'none'),
-               help="""
+        default='none',
+        choices=('all', 'some', 'none'),
+        help="""
 Whether or not to download images via Bit Torrent.
 
 The value for this option must be choosen from the choices listed
@@ -286,7 +299,7 @@ Possible values:
 * `none`: will turnoff downloading images via Bit Torrent.
 """),
     cfg.StrOpt('ipxe_network_name',
-               help="""
+        help="""
 Name of network to use for booting iPXE ISOs.
 
 An iPXE ISO is a specially crafted ISO which supports iPXE booting.
@@ -301,7 +314,7 @@ Related Options:
 * `ipxe_mkisofs_cmd`
 """),
     cfg.StrOpt('ipxe_boot_menu_url',
-               help="""
+        help="""
 URL to the iPXE boot menu.
 
 An iPXE ISO is a specially crafted ISO which supports iPXE booting.
@@ -316,8 +329,8 @@ Related Options:
 * `ipxe_mkisofs_cmd`
 """),
     cfg.StrOpt('ipxe_mkisofs_cmd',
-               default='mkisofs',
-               help="""
+        default='mkisofs',
+        help="""
 Name and optionally path of the tool used for ISO image creation.
 
 An iPXE ISO is a specially crafted ISO which supports iPXE booting.
@@ -337,7 +350,7 @@ Related Options:
 
 xenapi_opts = [
     cfg.StrOpt('connection_url',
-               help="""
+        help="""
 URL for connection to XenServer/Xen Cloud Platform. A special value
 of unix://local can be used to connect to the local unix socket.
 
@@ -348,15 +361,15 @@ Possible values:
 * This option must be set if you chose the XenServer driver.
 """),
     cfg.StrOpt('connection_username',
-               default='root',
-               help='Username for connection to XenServer/Xen Cloud Platform'),
+        default='root',
+        help='Username for connection to XenServer/Xen Cloud Platform'),
     cfg.StrOpt('connection_password',
-               secret=True,
-               help='Password for connection to XenServer/Xen Cloud Platform'),
+        secret=True,
+        help='Password for connection to XenServer/Xen Cloud Platform'),
     cfg.FloatOpt('vhd_coalesce_poll_interval',
-                 default=5.0,
-                 min=0,
-                 help="""
+        default=5.0,
+        min=0,
+        help="""
 The interval used for polling of coalescing vhds.
 
 This is the interval after which the task of coalesce VHD is
@@ -368,8 +381,8 @@ Related options:
 * `vhd_coalesce_max_attempts`
 """),
     cfg.BoolOpt('check_host',
-                default=True,
-                help="""
+        default=True,
+        help="""
 Ensure compute service is running on host XenAPI connects to.
 This option must be set to false if the 'independent_compute'
 option is set to true.
@@ -385,9 +398,9 @@ Related options:
 * `independent_compute`
 """),
     cfg.IntOpt('vhd_coalesce_max_attempts',
-               min=0,
-               default=20,
-               help="""
+        default=20,
+        min=0,
+        help="""
 Max number of times to poll for VHD to coalesce.
 
 This option determines the maximum number of attempts that can be
@@ -398,12 +411,10 @@ Related opitons:
 * `vhd_coalesce_poll_interval`
 """),
     cfg.StrOpt('sr_base_path',
-               default='/var/run/sr-mount',
-               help="""
-Base path to the storage repository on the XenServer host.
-"""),
+        default='/var/run/sr-mount',
+        help='Base path to the storage repository on the XenServer host.'),
     cfg.StrOpt('target_host',
-               help="""
+        help="""
 The iSCSI Target Host.
 
 This option represents the hostname or ip of the iSCSI Target.
@@ -416,8 +427,8 @@ Possible values:
 """),
     # TODO(aunnam): This should be PortOpt
     cfg.StrOpt('target_port',
-               default='3260',
-               help="""
+        default='3260',
+        help="""
 The iSCSI Target Port.
 
 This option represents the port of the iSCSI Target. If the
@@ -427,14 +438,14 @@ volume provider then the value from this option is taken.
     # NOTE(sirp): This is a work-around for a bug in Ubuntu Maverick,
     # when we pull support for it, we should remove this
     cfg.BoolOpt('remap_vbd_dev',
-                default=False,
-                help="""
+        default=False,
+        help="""
 Used to enable the remapping of VBD dev.
 (Works around an issue in Ubuntu Maverick)
 """),
     cfg.StrOpt('remap_vbd_dev_prefix',
-               default='sd',
-               help="""
+        default='sd',
+        help="""
 Specify prefix to remap VBD dev to (ex. /dev/xvdb -> /dev/sdb).
 
 Related options:
@@ -442,8 +453,8 @@ Related options:
 * If `remap_vbd_dev` is set to False this option has no impact.
 """),
     cfg.BoolOpt('independent_compute',
-                default=False,
-                help="""
+        default=False,
+        help="""
 Used to prevent attempts to attach VBDs locally, so Nova can
 be run in a VM on a different host.
 
@@ -460,22 +471,21 @@ Related options:
 
 xenapi_vmops_opts = [
     cfg.IntOpt('running_timeout',
-               default=60,
-               help='Number of seconds to wait for instance '
-                    'to go to running state'),
+        default=60,
+        help='Number of seconds to wait for instance to go to running state.'),
     cfg.StrOpt('vif_driver',
-               default='nova.virt.xenapi.vif.XenAPIBridgeDriver',
-               help='The XenAPI VIF driver using XenServer Network APIs.'),
+        default='nova.virt.xenapi.vif.XenAPIBridgeDriver',
+        help='The XenAPI VIF driver using XenServer Network APIs.'),
     cfg.StrOpt('image_upload_handler',
-                default='nova.virt.xenapi.image.glance.GlanceStore',
-               help='Dom0 plugin driver used to handle image uploads.'),
+        default='nova.virt.xenapi.image.glance.GlanceStore',
+        help='Dom0 plugin driver used to handle image uploads.'),
     ]
 
 xenapi_volume_utils_opts = [
     cfg.IntOpt('introduce_vdi_retry_wait',
-               default=20,
-               min=0,
-               help="""
+        default=20,
+        min=0,
+        help="""
 Number of seconds to wait for SR to settle if the VDI
 does not exist when first introduced.
 
@@ -488,8 +498,8 @@ before raising VDI not found exception.
 
 xenapi_ovs_integration_bridge_opts = [
     cfg.StrOpt('ovs_integration_bridge',
-               default='xapi1',
-               help="""
+        default='xapi1',
+        help="""
 The name of the integration Bridge that is used with xenapi
 when connecting with Open vSwitch.
 
@@ -497,18 +507,18 @@ Note: The value of this config option is dependent on the
 environment, therefore this configuration value must be set
 accordingly if you are using XenAPI.
 
-Possible options:
+Possible values:
 
-   * Any string that represents a bridge name(default is xapi1).
-""")
+* Any string that represents a bridge name(default is xapi1).
+"""),
 ]
 
 xenapi_pool_opts = [
     # TODO(macsz): This should be deprecated. Until providing solid reason,
     # leaving it as-it-is.
     cfg.BoolOpt('use_join_force',
-                default=True,
-                help="""
+        default=True,
+        help="""
 When adding new host to a pool, this will append a --force flag to the
 command, forcing hosts to join a pool, even if they have different CPUs.
 
