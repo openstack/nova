@@ -82,7 +82,7 @@ class AttestationService(object):
         # :returns: result data
         # :raises: IOError if the request fails
 
-        action_url = "https://%s:%s%s/%s" % (self.host, self.port,
+        action_url = "https://%s:%d%s/%s" % (self.host, self.port,
                                              self.api_url, action_url)
         try:
             res = requests.request(method, action_url, data=body,
