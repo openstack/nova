@@ -254,3 +254,23 @@ tests:
   status: 400
   response_strings:
       - "Failed validating 'format'"
+
+- name: try to create resource provider with name exceed max characters
+  POST: /resource_providers
+  request_headers:
+      content-type: application/json
+  data:
+      name: &name_exceeds_max_length_check This is a long text of 201 charactersssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss
+  status: 400
+  response_strings:
+      - "Failed validating 'maxLength'"
+
+- name: try to update resource provider with name exceed max characters
+  PUT: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      content-type: application/json
+  data:
+      name: *name_exceeds_max_length_check
+  status: 400
+  response_strings:
+      - "Failed validating 'maxLength'"

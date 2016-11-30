@@ -28,7 +28,8 @@ POST_RESOURCE_PROVIDER_SCHEMA = {
     "type": "object",
     "properties": {
         "name": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 200
         },
         "uuid": {
             "type": "string",
