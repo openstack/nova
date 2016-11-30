@@ -18,6 +18,7 @@ from oslo_serialization import jsonutils
 import webob
 
 from nova.api.openstack.placement import util
+from nova import db
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -30,22 +31,28 @@ BASE_INVENTORY_SCHEMA = {
             "type": "integer"
         },
         "total": {
-            "type": "integer"
+            "type": "integer",
+            "maximum": db.MAX_INT
         },
         "reserved": {
-            "type": "integer"
+            "type": "integer",
+            "maximum": db.MAX_INT
         },
         "min_unit": {
-            "type": "integer"
+            "type": "integer",
+            "maximum": db.MAX_INT
         },
         "max_unit": {
-            "type": "integer"
+            "type": "integer",
+            "maximum": db.MAX_INT
         },
         "step_size": {
-            "type": "integer"
+            "type": "integer",
+            "maximum": db.MAX_INT
         },
         "allocation_ratio": {
-            "type": "number"
+            "type": "number",
+            "maximum": db.SQL_SP_FLOAT_MAX
         },
     },
     "required": [

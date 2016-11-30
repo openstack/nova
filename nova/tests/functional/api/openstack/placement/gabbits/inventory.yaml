@@ -345,6 +345,131 @@ tests:
   response_strings:
       - Unknown resource class in inventory
 
+- name: post an inventory with total exceed max limit
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: DISK_GB
+      total: 2147483648
+      reserved: 512
+      min_unit: 10
+      max_unit: 1024
+      step_size: 10
+      allocation_ratio: 1.0
+  status: 400
+  response_strings:
+      - "Failed validating 'maximum'"
+
+- name: post an inventory with reserved exceed max limit
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: DISK_GB
+      total: 1024
+      reserved: 2147483648
+      min_unit: 10
+      max_unit: 1024
+      step_size: 10
+      allocation_ratio: 1.0
+  status: 400
+  response_strings:
+      - "Failed validating 'maximum'"
+
+- name: post an inventory with min_unit exceed max limit
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: DISK_GB
+      total: 1024
+      reserved: 512
+      min_unit: 2147483648
+      max_unit: 1024
+      step_size: 10
+      allocation_ratio: 1.0
+  status: 400
+  response_strings:
+      - "Failed validating 'maximum'"
+
+- name: post an inventory with max_unit exceed max limit
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: DISK_GB
+      total: 1024
+      reserved: 512
+      min_unit: 10
+      max_unit: 2147483648
+      step_size: 10
+      allocation_ratio: 1.0
+  status: 400
+  response_strings:
+      - "Failed validating 'maximum'"
+
+- name: post an inventory with step_size exceed max limit
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: DISK_GB
+      total: 1024
+      reserved: 512
+      min_unit: 10
+      max_unit: 1024
+      step_size: 2147483648
+      allocation_ratio: 1.0
+  status: 400
+  response_strings:
+      - "Failed validating 'maximum'"
+
+- name: post an inventory with allocation_ratio exceed max limit
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: DISK_GB
+      total: 1024
+      reserved: 512
+      min_unit: 10
+      max_unit: 1024
+      step_size: 10
+      allocation_ratio: 3.40282e+39
+  status: 400
+  response_strings:
+      - "Failed validating 'maximum'"
+
+- name: modify the inventory with total exceed max limit
+  PUT: $LAST_URL
+  request_headers:
+      content-type: application/json
+  data:
+      resource_provider_generation: 1
+      inventories:
+        DISK_GB:
+          total: 2147483648
+          reserved: 512
+  status: 400
+  response_strings:
+      - "Failed validating 'maximum'"
+
+- name: modify the inventory with allocation_ratio exceed max limit
+  PUT: $LAST_URL
+  request_headers:
+      content-type: application/json
+  data:
+      resource_provider_generation: 1
+      inventories:
+        DISK_GB:
+          total: 1024
+          reserved: 512
+          allocation_ratio: 3.40282e+39
+  status: 400
+  response_strings:
+      - "Failed validating 'maximum'"
+
 # NOTE(cdent): The generation is 6 now, based on the activity at
 # the start of this file.
 - name: put all inventory bad capacity
