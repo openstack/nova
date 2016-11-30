@@ -31,8 +31,6 @@ nova.tests.unit.test_configdrive2.ConfigDriveTestCase
 nova.tests.unit.test_matchers.TestDictMatches.test__str__
 nova.tests.unit.test_wsgi.TestWSGIServerWithSSL
 nova.tests.unit.virt.disk.mount.test_nbd.NbdTestCase
-nova.tests.unit.virt.ironic.test_driver.IronicDriverTestCase
-nova.tests.unit.virt.ironic.test_patcher.IronicDriverFieldsTestCase
 nova.tests.unit.virt.libvirt.storage.test_rbd.RbdTestCase
 nova.tests.unit.virt.libvirt.test_driver.LibvirtConnTestCase
 nova.tests.unit.virt.libvirt.test_driver.LibvirtDriverTestCase
