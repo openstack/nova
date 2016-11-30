@@ -425,9 +425,8 @@ Possible values:
 
 * Any string that represents hostname/ip of Target.
 """),
-    # TODO(aunnam): This should be PortOpt
-    cfg.StrOpt('target_port',
-        default='3260',
+    cfg.PortOpt('target_port',
+        default=3260,
         help="""
 The iSCSI Target Port.
 
