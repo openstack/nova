@@ -33,9 +33,10 @@ offset to given period by appending @ character followed by a number defining
 offset.
 
 Possible values:
-  *  period, example: ``hour``, ``day``, ``month` or ``year``
-  *  period with offset, example: ``month@15``
-     will result in monthly audits starting on 15th day of month.
+
+*  period, example: ``hour``, ``day``, ``month` or ``year``
+*  period with offset, example: ``month@15`` will result in monthly audits
+   starting on 15th day of month.
 '''),
     cfg.BoolOpt(
         'use_rootwrap_daemon',
@@ -67,8 +68,8 @@ Determine if monkey patching should be applied.
 
 Related options:
 
-  * ``monkey_patch_modules``: This must have values set for this option to have
-  any effect
+* ``monkey_patch_modules``: This must have values set for this option to
+  have any effect
 """),
     cfg.ListOpt(
         'monkey_patch_modules',
@@ -81,14 +82,14 @@ modules.
 
 Possible values:
 
-  * nova.compute.api:nova.notifications.notify_decorator
-  * nova.api.ec2.cloud:nova.notifications.notify_decorator
-  * [...]
+* nova.compute.api:nova.notifications.notify_decorator
+* nova.api.ec2.cloud:nova.notifications.notify_decorator
+* [...]
 
 Related options:
 
-  * ``monkey_patch``: This must be set to ``True`` for this option to
-    have any effect
+* ``monkey_patch``: This must be set to ``True`` for this option to
+  have any effect
 """),
 ]
 
