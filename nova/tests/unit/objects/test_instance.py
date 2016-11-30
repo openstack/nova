@@ -1250,6 +1250,15 @@ class _TestInstanceObject(object):
                              expected_attrs=['security_groups'])
         self.assertEqual([], inst.security_groups.objects)
 
+    @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
+                return_value=None)
+    def test_from_db_object_no_extra_db_calls(self, mock_get):
+        db_inst = fake_instance.fake_db_instance()
+        instance.Instance._from_db_object(
+            self.context, objects.Instance(), db_inst,
+            expected_attrs=instance._INSTANCE_EXTRA_FIELDS)
+        self.assertEqual(0, mock_get.call_count)
+
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
     def test_get_with_pci_requests(self, mock_get):
         mock_get.return_value = objects.InstancePCIRequests()
