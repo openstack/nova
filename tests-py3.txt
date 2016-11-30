@@ -1,4 +1,3 @@
-nova.tests.unit.api.openstack.compute.test_user_data.ServersControllerCreateTest
 nova.tests.unit.test_wsgi.TestWSGIServerWithSSL
 
 ##########################################################################
