@@ -326,7 +326,7 @@ class KeypairsTestV21(test.TestCase):
                                                'imageRef': FAKE_UUID}})
         res = req.get_response(self.app_server)
         self.assertEqual(400, res.status_code)
-        self.assertIn('keypair_name', res.body)
+        self.assertIn(b'keypair_name', res.body)
 
     @mock.patch.object(compute_api.API, 'create')
     def test_create_server_keypair_name_with_leading_trailing_compat_mode(
