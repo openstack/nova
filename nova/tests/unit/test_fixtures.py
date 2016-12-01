@@ -26,8 +26,10 @@ import testtools
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import conductor
+from nova import context
 from nova.db.sqlalchemy import api as session
 from nova import exception
+from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import service as service_obj
 from nova.tests import fixtures
@@ -453,3 +455,15 @@ class TestNoopConductorFixture(testtools.TestCase):
         self.useFixture(fixtures.NoopConductorFixture())
         conductor.API().wait_until_ready()
         self.assertFalse(mock_wait.called)
+
+
+class TestSingleCellSimpleFixture(testtools.TestCase):
+    def test_single_cell(self):
+        self.useFixture(fixtures.SingleCellSimple())
+        cml = objects.CellMappingList.get_all(None)
+        self.assertEqual(1, len(cml))
+
+    def test_target_cell(self):
+        self.useFixture(fixtures.SingleCellSimple())
+        with context.target_cell(mock.sentinel.context, None) as c:
+            self.assertIs(mock.sentinel.context, c)

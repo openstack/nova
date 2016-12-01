@@ -42,6 +42,7 @@ from nova.objects import service as service_obj
 from nova import rpc
 from nova import service
 from nova.tests.functional.api import client
+from nova.tests import uuidsentinel
 
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
 
@@ -248,6 +249,43 @@ class DatabasePoisonFixture(fixtures.Fixture):
                         'state, but it does not claim to use the database. '
                         'This will conflict with the setup of tests that '
                         'do use the database and cause failures later.')
+
+
+class SingleCellSimple(fixtures.Fixture):
+    """Setup the simplest cells environment possible
+
+    This should be used when you do not care about multiple cells,
+    or having a "real" environment for tests that should not care.
+    This will give you a single cell, and map any and all accesses
+    to that cell (even things that would go to cell0).
+
+    If you need to distinguish between cell0 and cellN, then you
+    should use the CellDatabases fixture.
+    """
+
+    def setUp(self):
+        super(SingleCellSimple, self).setUp()
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.objects.CellMappingList._get_all_from_db',
+            self._fake_cell_list))
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.context.target_cell',
+            self._fake_target_cell))
+
+    def _fake_cell_list(self, *args):
+        return [{'id': 1,
+                 'updated_at': None,
+                 'created_at': None,
+                 'uuid': uuidsentinel.cell1,
+                 'name': 'onlycell',
+                 'transport_url': 'fake://nowhere/',
+                 'database_connection': 'sqlite:///'}]
+
+    @contextmanager
+    def _fake_target_cell(self, context, target_cell):
+        # NOTE(danms): Just pass through the context without actually
+        # targetting anything.
+        yield context
 
 
 class CellDatabases(fixtures.Fixture):
