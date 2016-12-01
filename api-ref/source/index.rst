@@ -4,9 +4,9 @@
  Compute API
 =============
 
-This is a reference for the Openstack Compute API which is provided by Nova
-project. For getting more document about the basic concept of API, please
-refer to `API guide <http://developer.openstack.org/api-guide/compute/index.html>`_
+This is a reference for the Openstack Compute API which is provided by the Nova
+project. To learn more about the Openstack Compute API concepts, please refer to
+the `API guide <http://developer.openstack.org/api-guide/compute/index.html>`_.
 
 .. rest_expand_all::
 
@@ -41,7 +41,6 @@ refer to `API guide <http://developer.openstack.org/api-guide/compute/index.html
 .. include:: os-assisted-volume-snapshots.inc
 .. include:: os-availability-zone.inc
 .. include:: os-cells.inc
-.. include:: os-cloudpipe.inc
 .. include:: os-consoles.inc
 .. include:: os-hosts.inc
 .. include:: os-hypervisors.inc
@@ -54,6 +53,7 @@ refer to `API guide <http://developer.openstack.org/api-guide/compute/index.html
 .. include:: os-services.inc
 .. include:: os-simple-tenant-usage.inc
 .. include:: os-server-external-events.inc
+.. include:: os-cloudpipe.inc
 .. include:: extensions.inc
 .. include:: os-certificates.inc
 .. include:: os-networks.inc

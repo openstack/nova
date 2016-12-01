@@ -9,10 +9,10 @@ supports versioning. There are two kinds of versions in Nova.
 
 - ''major versions'', which have dedicated urls
 - ''microversions'', which can be requested through the use of the
-  ``X-OpenStack-Nova-API-Version`` header or since microversion 2.27
+  ``X-OpenStack-Nova-API-Version`` header, or since microversion 2.27
   the ``OpenStack-API-Version`` header may also be used.
 
-For more detail about Microversion, please reference:
+For more details about Microversions, please reference:
 `Microversions
 <http://developer.openstack.org/api-guide/compute/microversions.html>`_
 
