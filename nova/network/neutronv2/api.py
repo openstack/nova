@@ -1283,7 +1283,7 @@ class API(base_api.NetworkAPI):
         return network_model.NetworkInfo.hydrate(nw_info)
 
     def _gather_port_ids_and_networks(self, context, instance, networks=None,
-                                      port_ids=None):
+                                      port_ids=None, neutron=None):
         """Return an instance's complete list of port_ids and networks."""
 
         if ((networks is None and port_ids is not None) or
@@ -1302,7 +1302,7 @@ class API(base_api.NetworkAPI):
         if networks is None:
             networks = self._get_available_networks(context,
                                                     instance.project_id,
-                                                    net_ids)
+                                                    net_ids, neutron)
         # an interface was added/removed from instance.
         else:
 
@@ -2049,8 +2049,8 @@ class API(base_api.NetworkAPI):
             network_IPs.append(fixed)
         return network_IPs
 
-    def _nw_info_get_subnets(self, context, port, network_IPs):
-        subnets = self._get_subnets_from_port(context, port)
+    def _nw_info_get_subnets(self, context, port, network_IPs, client=None):
+        subnets = self._get_subnets_from_port(context, port, client)
         for subnet in subnets:
             subnet['ips'] = [fixed_ip for fixed_ip in network_IPs
                              if fixed_ip.is_in_subnet(subnet)]
@@ -2167,7 +2167,7 @@ class API(base_api.NetworkAPI):
         current_neutron_ports = data.get('ports', [])
         nw_info_refresh = networks is None and port_ids is None
         networks, port_ids = self._gather_port_ids_and_networks(
-                context, instance, networks, port_ids)
+                context, instance, networks, port_ids, client)
         nw_info = network_model.NetworkInfo()
 
         if preexisting_port_ids is None:
@@ -2192,7 +2192,7 @@ class API(base_api.NetworkAPI):
                                                     current_neutron_port)
                 subnets = self._nw_info_get_subnets(context,
                                                     current_neutron_port,
-                                                    network_IPs)
+                                                    network_IPs, client)
 
                 devname = "tap" + current_neutron_port['id']
                 devname = devname[:network_model.NIC_NAME_LEN]
@@ -2225,7 +2225,7 @@ class API(base_api.NetworkAPI):
 
         return nw_info
 
-    def _get_subnets_from_port(self, context, port):
+    def _get_subnets_from_port(self, context, port, client=None):
         """Return the subnets for a given port."""
 
         fixed_ips = port['fixed_ips']
@@ -2236,8 +2236,10 @@ class API(base_api.NetworkAPI):
         # related to the port. To avoid this, the method returns here.
         if not fixed_ips:
             return []
+        if not client:
+            client = get_client(context)
         search_opts = {'id': [ip['subnet_id'] for ip in fixed_ips]}
-        data = get_client(context).list_subnets(**search_opts)
+        data = client.list_subnets(**search_opts)
         ipam_subnets = data.get('subnets', [])
         subnets = []
 
@@ -2251,7 +2253,7 @@ class API(base_api.NetworkAPI):
             # attempt to populate DHCP server field
             search_opts = {'network_id': subnet['network_id'],
                            'device_owner': 'network:dhcp'}
-            data = get_client(context).list_ports(**search_opts)
+            data = client.list_ports(**search_opts)
             dhcp_ports = data.get('ports', [])
             for p in dhcp_ports:
                 for ip_pair in p['fixed_ips']:
