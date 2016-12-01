@@ -15,6 +15,7 @@
 
 import webob
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import create_backup
 from nova.api.openstack import extensions
@@ -57,7 +58,11 @@ class CreateBackupController(wsgi.Controller):
 
         props = {}
         metadata = entity.get('metadata', {})
-        common.check_img_metadata_properties_quota(context, metadata)
+        # Starting from microversion 2.39 we don't check quotas on createBackup
+        if api_version_request.is_supported(
+                req, max_version=
+                api_version_request.MAX_IMAGE_META_PROXY_API_VERSION):
+            common.check_img_metadata_properties_quota(context, metadata)
         props.update(metadata)
 
         instance = common.get_instance(self.compute_api, context, id)

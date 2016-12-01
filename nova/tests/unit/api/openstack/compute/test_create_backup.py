@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 import webob
 
 from nova.api.openstack import common
@@ -352,3 +353,34 @@ class CreateBackupPolicyEnforcementv21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
+
+
+class CreateBackupTestsV239(test.NoDBTestCase):
+
+    def setUp(self):
+        super(CreateBackupTestsV239, self).setUp()
+        self.controller = create_backup_v21.CreateBackupController()
+        self.req = fakes.HTTPRequest.blank('', version='2.39')
+
+    @mock.patch.object(common, 'check_img_metadata_properties_quota')
+    @mock.patch.object(common, 'get_instance')
+    def test_create_backup_no_quota_checks(self, mock_get_instance,
+                                                 mock_check_quotas):
+        # 'mock_get_instance' helps to skip the whole logic of the action,
+        # but to make the test
+        mock_get_instance.side_effect = webob.exc.HTTPNotFound
+        metadata = {'123': 'asdf'}
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': 1,
+                'metadata': metadata,
+            },
+        }
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller._create_backup, self.req,
+                          fakes.FAKE_UUID, body=body)
+        # starting from version 2.39 no quota checks on Nova side are performed
+        # for 'createBackup' action after removing 'image-metadata' proxy API
+        mock_check_quotas.assert_not_called()

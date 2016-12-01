@@ -26,6 +26,10 @@ Policy defaults enable only users with the administrative role or the
 owner of the server to perform this operation. Cloud providers can
 change these permissions through the ``policy.json`` file.
 
+.. note::
+    Starting from version 2.39 the image quota enforcement with Nova `metadata`
+    is removed and quota checks should be performed using Glance API directly.
+
 Normal response codes: 202
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),

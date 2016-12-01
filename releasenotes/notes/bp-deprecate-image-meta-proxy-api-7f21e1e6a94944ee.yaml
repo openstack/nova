@@ -1,0 +1,9 @@
+---
+deprecations:
+  - Implemented microversion v2.39 that deprecates `image-metadata` proxy API,
+    removes image metadata quota checks for 'createImage' and 'createBackup'
+    actions.
+
+    After this version Glance configuration option `image_property_quota`
+    should be used to control the quota of image metadatas. Also, removes the
+    `maxImageMeta` field from `os-limits` API response.

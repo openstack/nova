@@ -41,9 +41,10 @@ class ViewBuilder(object):
             "security_group_rules": ["maxSecurityGroupRules"],
     }
 
-    def build(self, absolute_limits, filter_result=False):
+    def build(self, absolute_limits, filter_result=False, max_image_meta=True):
         absolute_limits = self._build_absolute_limits(
-            absolute_limits, filter_result=filter_result)
+            absolute_limits, filter_result=filter_result,
+            max_image_meta=max_image_meta)
 
         output = {
             "limits": {
@@ -54,7 +55,8 @@ class ViewBuilder(object):
 
         return output
 
-    def _build_absolute_limits(self, absolute_limits, filter_result=False):
+    def _build_absolute_limits(self, absolute_limits, filter_result=False,
+                               max_image_meta=True):
         """Builder for absolute limits
 
         absolute_limits should be given as a dict of limits.
@@ -69,6 +71,8 @@ class ViewBuilder(object):
             if (name in self.limit_names and
                     value is not None and name not in filtered_limits):
                 for limit_name in self.limit_names[name]:
+                    if not max_image_meta and limit_name == "maxImageMeta":
+                        continue
                     limits[limit_name] = value
         return limits
 

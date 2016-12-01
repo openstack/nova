@@ -219,6 +219,10 @@ If the operation succeeds, the created image has a status of ``active`` and
 the server status returns to the original status. You can also see the new
 image in the image back end that OpenStack Image service manages.
 
+.. note::
+    Starting from version 2.39 the image quota enforcement with Nova `metadata`
+    is removed and quota checks should be performed using Glance API directly.
+
 **Preconditions**
 
 The server must exist.

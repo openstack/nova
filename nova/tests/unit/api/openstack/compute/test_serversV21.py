@@ -4832,3 +4832,31 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
                  "os_compute_api:servers:create:attach_volume": "@",
                  rule_name: "project:non_fake"}
         self._create_policy_check(rules, rule_name)
+
+
+class ServersActionsJsonTestV239(test.NoDBTestCase):
+
+    def setUp(self):
+        super(ServersActionsJsonTestV239, self).setUp()
+        ext_info = extension_info.LoadedExtensionInfo()
+        self.controller = servers.ServersController(extension_info=ext_info)
+        self.req = fakes.HTTPRequest.blank('', version='2.39')
+
+    @mock.patch.object(common, 'check_img_metadata_properties_quota')
+    @mock.patch.object(common, 'get_instance')
+    def test_server_create_image_no_quota_checks(self, mock_get_instance,
+                                                 mock_check_quotas):
+        # 'mock_get_instance' helps to skip the whole logic of the action,
+        # but to make the test
+        mock_get_instance.side_effect = webob.exc.HTTPNotFound
+        body = {
+            'createImage': {
+                'name': 'Snapshot 1',
+            },
+        }
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller._action_create_image, self.req,
+                          FAKE_UUID, body=body)
+        # starting from version 2.39 no quota checks on Nova side are performed
+        # for 'createImage' action after removing 'image-metadata' proxy API
+        mock_check_quotas.assert_not_called()

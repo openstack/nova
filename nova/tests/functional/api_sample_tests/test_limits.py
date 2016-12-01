@@ -48,3 +48,20 @@ class LimitsV236Test(api_sample_base.ApiSampleTestBaseV21):
         self.api.microversion = self.microversion
         response = self._do_get('limits')
         self._verify_response('limit-get-resp', {}, response, 200)
+
+
+class LimitsV239Test(api_sample_base.ApiSampleTestBaseV21):
+    """Test limits don't return 'maxImageMeta' field after 2.39.
+
+    We dropped the image-metadata proxy API in 2.39, which also means that we
+    shouldn't be returning 'maxImageMeta' field in 'os-limits' response.
+
+    """
+    sample_dir = "limits"
+    microversion = '2.39'
+    scenarios = [('v2_39', {'api_major_version': 'v2.1'})]
+
+    def test_limits_get(self):
+        self.api.microversion = self.microversion
+        response = self._do_get('limits')
+        self._verify_response('limit-get-resp', {}, response, 200)

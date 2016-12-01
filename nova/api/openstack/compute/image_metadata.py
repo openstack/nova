@@ -16,6 +16,8 @@
 import six
 from webob import exc
 
+from nova.api.openstack.api_version_request import \
+    MAX_IMAGE_META_PROXY_API_VERSION
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import image_metadata
 from nova.api.openstack import extensions
@@ -43,6 +45,7 @@ class ImageMetadataController(wsgi.Controller):
             msg = _("Image not found.")
             raise exc.HTTPNotFound(explanation=msg)
 
+    @wsgi.Controller.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
     @extensions.expected_errors((403, 404))
     def index(self, req, image_id):
         """Returns the list of metadata for a given instance."""
@@ -50,6 +53,7 @@ class ImageMetadataController(wsgi.Controller):
         metadata = self._get_image(context, image_id)['properties']
         return dict(metadata=metadata)
 
+    @wsgi.Controller.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
     @extensions.expected_errors((403, 404))
     def show(self, req, image_id, id):
         context = req.environ['nova.context']
@@ -59,6 +63,7 @@ class ImageMetadataController(wsgi.Controller):
         else:
             raise exc.HTTPNotFound()
 
+    @wsgi.Controller.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
     @extensions.expected_errors((400, 403, 404))
     @validation.schema(image_metadata.create)
     def create(self, req, image_id, body):
@@ -75,6 +80,7 @@ class ImageMetadataController(wsgi.Controller):
             raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(metadata=image['properties'])
 
+    @wsgi.Controller.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
     @extensions.expected_errors((400, 403, 404))
     @validation.schema(image_metadata.update)
     def update(self, req, image_id, id, body):
@@ -97,6 +103,7 @@ class ImageMetadataController(wsgi.Controller):
             raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(meta=meta)
 
+    @wsgi.Controller.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
     @extensions.expected_errors((400, 403, 404))
     @validation.schema(image_metadata.update_all)
     def update_all(self, req, image_id, body):
@@ -112,6 +119,7 @@ class ImageMetadataController(wsgi.Controller):
             raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(metadata=metadata)
 
+    @wsgi.Controller.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
     @extensions.expected_errors((403, 404))
     @wsgi.response(204)
     def delete(self, req, image_id, id):
