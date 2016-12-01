@@ -1,0 +1,6 @@
+---
+deprecations:
+  - Nova network was deprecated in Newton and is no longer
+    supported for regular deployments in Ocata. The network
+    service binary will now refuse to start, except in the special
+    case of CellsV1 where it is still required to function.
