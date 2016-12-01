@@ -434,6 +434,15 @@ def setup_rt(hostname, nodename, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES,
     return (rt, sched_client_mock, vd)
 
 
+def compute_update_usage(resources, flavor, sign=1):
+    resources.vcpus_used += sign * flavor.vcpus
+    resources.memory_mb_used += sign * flavor.memory_mb
+    resources.local_gb_used += sign * (flavor.root_gb + flavor.ephemeral_gb)
+    resources.free_ram_mb = resources.memory_mb - resources.memory_mb_used
+    resources.free_disk_gb = resources.local_gb - resources.local_gb_used
+    return resources
+
+
 class BaseTestCase(test.NoDBTestCase):
 
     def setUp(self):
@@ -1586,6 +1595,107 @@ class TestResize(BaseTestCase):
         self.assertEqual(1, self.rt.compute_node.local_gb_used)
         self.assertEqual(128, self.rt.compute_node.memory_mb_used)
         self.assertEqual(0, len(self.rt.tracked_migrations))
+
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
+                return_value=objects.InstancePCIRequests(requests=[]))
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
+                return_value=objects.InstancePCIRequests(requests=[]))
+    @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
+                return_value=objects.PciDeviceList())
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename',
+                return_value=_COMPUTE_NODE_FIXTURES[0])
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node',
+                return_value=[])
+    @mock.patch('nova.objects.InstanceList.get_by_host_and_node',
+                return_value=[])
+    def _test_instance_build_resize(self,
+                                    get_by_host_and_node_mock,
+                                    get_in_progress_by_host_and_node_mock,
+                                    get_by_host_and_nodename_mock,
+                                    pci_get_by_compute_node_mock,
+                                    pci_get_by_instance_mock,
+                                    pci_get_by_instance_uuid_mock,
+                                    revert=False):
+        self.flags(reserved_host_disk_mb=0,
+                   reserved_host_memory_mb=0)
+        virt_resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
+        self._setup_rt(virt_resources=virt_resources)
+
+        # not using mock.sentinel.ctx because resize_claim calls #elevated
+        ctx = mock.MagicMock()
+
+        # Init compute node
+        self.rt.update_available_resource(mock.sentinel.ctx, _NODENAME)
+        expected = self.rt.compute_node.obj_clone()
+
+        instance = _INSTANCE_FIXTURES[0].obj_clone()
+        old_flavor = instance.flavor
+        instance.new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+
+        # Build instance
+        with mock.patch.object(instance, 'save'):
+            self.rt.instance_claim(ctx, instance, None)
+
+        expected = compute_update_usage(expected, old_flavor, sign=1)
+        expected.running_vms = 1
+        self.assertTrue(obj_base.obj_equal_prims(expected,
+                                                 self.rt.compute_node,
+                                                 ignore=['stats']))
+
+        # This migration context is fine, it points to the first instance
+        # fixture and indicates a source-and-dest resize.
+        mig_context_obj = _MIGRATION_CONTEXT_FIXTURES[instance.uuid]
+        instance.migration_context = mig_context_obj
+
+        migration = objects.Migration(
+            id=3,
+            instance_uuid=instance.uuid,
+            source_compute=_HOSTNAME,
+            dest_compute=_HOSTNAME,
+            source_node=_NODENAME,
+            dest_node=_NODENAME,
+            old_instance_type_id=1,
+            new_instance_type_id=2,
+            migration_type='resize',
+            status='migrating'
+        )
+        new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+
+        # Resize instance
+        with test.nested(
+            mock.patch('nova.compute.resource_tracker.ResourceTracker'
+                       '._create_migration',
+                       return_value=migration),
+            mock.patch('nova.objects.MigrationContext',
+                       return_value=mig_context_obj),
+            mock.patch('nova.objects.Instance.save'),
+        ) as (create_mig_mock, ctxt_mock, inst_save_mock):
+            self.rt.resize_claim(ctx, instance, new_flavor, _NODENAME)
+
+        expected = compute_update_usage(expected, new_flavor, sign=1)
+        self.assertTrue(obj_base.obj_equal_prims(expected,
+                                                 self.rt.compute_node,
+                                                 ignore=['stats']))
+        # Confirm or revert resize
+        if revert:
+            flavor = new_flavor
+            prefix = 'new_'
+        else:
+            flavor = old_flavor
+            prefix = 'old_'
+
+        self.rt.drop_move_claim(ctx, instance, flavor, prefix=prefix)
+
+        expected = compute_update_usage(expected, flavor, sign=-1)
+        self.assertTrue(obj_base.obj_equal_prims(expected,
+                                                 self.rt.compute_node,
+                                                 ignore=['stats']))
+
+    def test_instance_build_resize_confirm(self):
+        self._test_instance_build_resize()
+
+    def test_instance_build_resize_revert(self):
+        self._test_instance_build_resize(revert=True)
 
     @mock.patch('nova.pci.stats.PciDeviceStats.support_requests',
                 return_value=True)

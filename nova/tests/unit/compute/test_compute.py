@@ -5221,6 +5221,9 @@ class ComputeTestCase(BaseTestCase):
 
         reservations = list('fake_res')
 
+        # Get initial memory usage
+        memory_mb_used = self.rt.compute_node.memory_mb_used
+
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
 
@@ -5229,6 +5232,10 @@ class ComputeTestCase(BaseTestCase):
         flavor = objects.Flavor.get_by_id(self.context,
                                           instance.instance_type_id)
         self.assertEqual(flavor.flavorid, '1')
+
+        # Memory usage should have increased by the claim
+        self.assertEqual(self.rt.compute_node.memory_mb_used,
+                         memory_mb_used + flavor.memory_mb)
 
         instance.vm_state = old_vm_state
         instance.power_state = p_state
@@ -5241,6 +5248,11 @@ class ComputeTestCase(BaseTestCase):
                 instance_type=new_instance_type_ref,
                 image={}, reservations=reservations, request_spec={},
                 filter_properties={}, node=None, clean_shutdown=True)
+
+        # Memory usage should increase after the resize as well
+        self.assertEqual(self.rt.compute_node.memory_mb_used,
+             memory_mb_used + flavor.memory_mb +
+             new_instance_type_ref.memory_mb)
 
         migration = objects.Migration.get_by_instance_and_status(
                 self.context.elevated(),
@@ -5266,6 +5278,11 @@ class ComputeTestCase(BaseTestCase):
                     migration=migration, reservations=[],
                     disk_info={}, image={}, instance=instance)
 
+        # Memory usage shouldn't had changed
+        self.assertEqual(self.rt.compute_node.memory_mb_used,
+             memory_mb_used + flavor.memory_mb +
+             new_instance_type_ref.memory_mb)
+
         # Prove that the instance size is now the new size
         flavor = objects.Flavor.get_by_id(self.context,
                                           instance.instance_type_id)
@@ -5280,6 +5297,11 @@ class ComputeTestCase(BaseTestCase):
         self.compute.confirm_resize(self.context, instance=instance,
                                     reservations=reservations,
                                     migration=migration)
+
+        # Resources from the migration (based on initial flavor) should
+        # be freed now
+        self.assertEqual(self.rt.compute_node.memory_mb_used,
+                         memory_mb_used + new_instance_type_ref.memory_mb)
 
         instance.refresh()
 
@@ -5426,8 +5448,7 @@ class ComputeTestCase(BaseTestCase):
         instance.save()
 
         self.rt.pci_tracker = mock.Mock()
-        self.rt.tracked_migrations[instance.uuid] = (migration,
-                                                     instance.flavor)
+        self.rt.tracked_migrations[instance.uuid] = migration
 
         with test.nested(
             mock.patch.object(self.compute.network_api,
@@ -5486,6 +5507,9 @@ class ComputeTestCase(BaseTestCase):
 
         reservations = list('fake_res')
 
+        # Get initial memory usage
+        memory_mb_used = self.rt.compute_node.memory_mb_used
+
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
 
@@ -5494,9 +5518,12 @@ class ComputeTestCase(BaseTestCase):
                                           instance.instance_type_id)
         self.assertEqual(flavor.flavorid, '1')
 
+        # Memory usage should have increased by the claim
+        self.assertEqual(self.rt.compute_node.memory_mb_used,
+                         memory_mb_used + flavor.memory_mb)
+
         old_vm_state = instance['vm_state']
 
-        instance.host = 'foo'
         instance.vm_state = old_vm_state
         instance.numa_topology = numa_topology
         instance.save()
@@ -5509,6 +5536,11 @@ class ComputeTestCase(BaseTestCase):
                 filter_properties={}, node=None,
                 clean_shutdown=True)
 
+        # Memory usage should increase after the resize as well
+        self.assertEqual(self.rt.compute_node.memory_mb_used,
+            memory_mb_used + flavor.memory_mb +
+            new_instance_type_ref.memory_mb)
+
         migration = objects.Migration.get_by_instance_and_status(
                 self.context.elevated(),
                 instance.uuid, 'pre-migrating')
@@ -5516,10 +5548,6 @@ class ComputeTestCase(BaseTestCase):
             self.context.elevated(), instance.uuid)
         self.assertIsInstance(migration_context.old_numa_topology,
                               numa_topology.__class__)
-        source_compute = migration.source_compute
-        migration.dest_compute = NODENAME2
-        migration.dest_node = NODENAME2
-        migration.save()
 
         # NOTE(mriedem): ensure prep_resize set old_vm_state in system_metadata
         sys_meta = instance.system_metadata
@@ -5536,6 +5564,11 @@ class ComputeTestCase(BaseTestCase):
                     migration=migration, reservations=[],
                     disk_info={}, image={}, instance=instance)
 
+        # Memory usage shouldn't had changed
+        self.assertEqual(self.rt.compute_node.memory_mb_used,
+            memory_mb_used + flavor.memory_mb +
+            new_instance_type_ref.memory_mb)
+
         # Prove that the instance size is now the new size
         instance_type_ref = flavors.get_flavor_by_flavor_id(3)
         self.assertEqual(instance_type_ref['flavorid'], '3')
@@ -5550,6 +5583,11 @@ class ComputeTestCase(BaseTestCase):
                 migration=migration, instance=instance,
                 reservations=reservations)
 
+        # Resources from the migration (based on initial flavor) should
+        # be freed now
+        self.assertEqual(self.rt.compute_node.memory_mb_used,
+                         memory_mb_used + flavor.memory_mb)
+
         instance.refresh()
         if remove_old_vm_state:
             # need to wipe out the old_vm_state from system_metadata
@@ -5560,12 +5598,6 @@ class ComputeTestCase(BaseTestCase):
             instance.system_metadata = sys_meta
             instance.save()
 
-        # NOTE(hanrong): Prove that we pass the right value to the
-        # "self.network_api.migrate_instance_finish".
-        def fake_migrate_instance_finish(cls, context, instance, migration):
-            self.assertEqual(source_compute, migration['dest_compute'])
-        self.stub_out('nova.network.api.API.migrate_instance_finish',
-                      fake_migrate_instance_finish)
         self.compute.finish_revert_resize(self.context,
                 migration=migration,
                 instance=instance, reservations=reservations)
@@ -5576,10 +5608,6 @@ class ComputeTestCase(BaseTestCase):
                                           instance['instance_type_id'])
         self.assertEqual(flavor.flavorid, '1')
         self.assertEqual(instance.host, migration.source_compute)
-        self.assertNotEqual(migration.dest_compute, migration.source_compute)
-        self.assertNotEqual(migration.dest_node, migration.source_node)
-        self.assertEqual(NODENAME2, migration.dest_compute)
-        self.assertEqual(NODENAME2, migration.dest_node)
         self.assertIsInstance(instance.numa_topology, numa_topology.__class__)
 
         if remove_old_vm_state:
@@ -5609,6 +5637,79 @@ class ComputeTestCase(BaseTestCase):
                 self.context))
         self._test_finish_revert_resize(power_on=True,
                                         numa_topology=numa_topology)
+
+    # NOTE(lbeliveau): Move unit test changes from b816e3 to a separate
+    # test.  It introduced a hacky way to force the migration dest_compute
+    # and makes it hard to keep _test_finish_revert_resize() generic
+    # and have the resources correctly tracked.
+    def test_finish_revert_resize_validate_source_compute(self):
+        def fake(*args, **kwargs):
+            pass
+
+        instance = self._create_fake_instance_obj()
+
+        self.stub_out('nova.virt.fake.FakeDriver.finish_migration', fake)
+        self.stub_out('nova.virt.fake.FakeDriver.finish_revert_migration',
+                      fake)
+
+        self._stub_out_resize_network_methods()
+
+        reservations = list('fake_res')
+
+        self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
+                                            block_device_mapping=[])
+
+        new_instance_type_ref = flavors.get_flavor_by_flavor_id(3)
+        self.compute.prep_resize(self.context,
+                instance=instance,
+                instance_type=new_instance_type_ref,
+                image={}, reservations=reservations, request_spec={},
+                filter_properties={}, node=None,
+                clean_shutdown=True)
+
+        migration = objects.Migration.get_by_instance_and_status(
+                self.context.elevated(),
+                instance.uuid, 'pre-migrating')
+        source_compute = migration.source_compute
+        migration.dest_compute = NODENAME2
+        migration.dest_node = NODENAME2
+        migration.save()
+
+        instance.task_state = task_states.RESIZE_PREP
+        instance.save()
+        self.compute.resize_instance(self.context, instance=instance,
+                                     migration=migration,
+                                     image={},
+                                     reservations=[],
+                                     instance_type=new_instance_type_ref,
+                                     clean_shutdown=True)
+        self.compute.finish_resize(self.context,
+                    migration=migration, reservations=[],
+                    disk_info={}, image={}, instance=instance)
+
+        instance.task_state = task_states.RESIZE_REVERTING
+        instance.save()
+
+        self.compute.revert_resize(self.context,
+                migration=migration, instance=instance,
+                reservations=reservations)
+
+        # NOTE(hanrong): Prove that we pass the right value to the
+        # "self.network_api.migrate_instance_finish".
+        def fake_migrate_instance_finish(cls, context, instance, migration):
+            self.assertEqual(source_compute, migration['dest_compute'])
+        self.stub_out('nova.network.api.API.migrate_instance_finish',
+                      fake_migrate_instance_finish)
+
+        self.compute.finish_revert_resize(self.context,
+                migration=migration,
+                instance=instance, reservations=reservations)
+
+        self.assertEqual(instance.host, migration.source_compute)
+        self.assertNotEqual(migration.dest_compute, migration.source_compute)
+        self.assertNotEqual(migration.dest_node, migration.source_node)
+        self.assertEqual(NODENAME2, migration.dest_compute)
+        self.assertEqual(NODENAME2, migration.dest_node)
 
     def test_get_by_flavor_id(self):
         flavor_type = flavors.get_flavor_by_flavor_id(1)
