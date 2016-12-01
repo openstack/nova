@@ -23,6 +23,7 @@ class InstancePayload(base.NotificationPayloadBase):
         'tenant_id': ('instance', 'project_id'),
         'reservation_id': ('instance', 'reservation_id'),
         'display_name': ('instance', 'display_name'),
+        'display_description': ('instance', 'display_description'),
         'host_name': ('instance', 'hostname'),
         'host': ('instance', 'host'),
         'node': ('instance', 'node'),
@@ -46,15 +47,18 @@ class InstancePayload(base.NotificationPayloadBase):
         'progress': ('instance', 'progress'),
 
         'metadata': ('instance', 'metadata'),
+        'locked': ('instance', 'locked'),
     }
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: add locked and display_description field
+    VERSION = '1.1'
     fields = {
         'uuid': fields.UUIDField(),
         'user_id': fields.StringField(nullable=True),
         'tenant_id': fields.StringField(nullable=True),
         'reservation_id': fields.StringField(nullable=True),
         'display_name': fields.StringField(nullable=True),
+        'display_description': fields.StringField(nullable=True),
         'host_name': fields.StringField(nullable=True),
         'host': fields.StringField(nullable=True),
         'node': fields.StringField(nullable=True),
@@ -81,6 +85,7 @@ class InstancePayload(base.NotificationPayloadBase):
         'ip_addresses': fields.ListOfObjectsField('IpPayload'),
 
         'metadata': fields.DictOfStringsField(),
+        'locked': fields.BooleanField(),
     }
 
     def __init__(self, instance, **kwargs):
@@ -92,7 +97,8 @@ class InstancePayload(base.NotificationPayloadBase):
 class InstanceActionPayload(InstancePayload):
     # No SCHEMA as all the additional fields are calculated
 
-    VERSION = '1.0'
+    # Version 1.1: locked and display_description added to InstancePayload
+    VERSION = '1.1'
     fields = {
         'fault': fields.ObjectField('ExceptionPayload', nullable=True),
     }
@@ -110,7 +116,8 @@ class InstanceActionPayload(InstancePayload):
 class InstanceActionVolumeSwapPayload(InstanceActionPayload):
     # No SCHEMA as all the additional fields are calculated
 
-    VERSION = '1.0'
+    # Version 1.1: locked and display_description added to InstancePayload
+    VERSION = '1.1'
     fields = {
         'old_volume_id': fields.UUIDField(),
         'new_volume_id': fields.UUIDField(),
@@ -130,7 +137,8 @@ class InstanceActionVolumeSwapPayload(InstanceActionPayload):
 @nova_base.NovaObjectRegistry.register_notification
 class InstanceUpdatePayload(InstancePayload):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: locked and display_description added to InstancePayload
+    VERSION = '1.1'
     fields = {
         'state_update': fields.ObjectField('InstanceStateUpdatePayload'),
         'audit_period': fields.ObjectField('AuditPeriodPayload'),

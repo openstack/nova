@@ -7,6 +7,7 @@
             "created_at": "2012-10-29T13:42:11Z",
             "deleted_at": null,
             "display_name": "some-server",
+            "display_description":"some-server",
             "fault": null,
             "flavor": {
                 "nova_object.data": {
@@ -40,6 +41,7 @@
             "kernel_id": "",
             "launched_at": "2012-10-29T13:42:11Z",
             "metadata": {},
+            "locked":false,
             "new_volume_id": "227cc671-f30b-4488-96fd-7d0bf13648d8",
             "node": "fake-mini",
             "old_volume_id": "a07f71dc-8151-4e7d-a0cc-cd24a3f11113",
@@ -57,7 +59,7 @@
         },
         "nova_object.name": "InstanceActionVolumeSwapPayload",
         "nova_object.namespace": "nova",
-        "nova_object.version": "1.0"
+        "nova_object.version": "1.1"
     },
     "priority": "INFO",
     "publisher_id": "nova-compute:compute"
