@@ -55,7 +55,7 @@ class TestAggregateInstanceExtraSpecsFilter(test.NoDBTestCase):
         assertion(self.filt_cls.host_passes(host, spec_obj))
 
     def test_aggregate_filter_passes_extra_specs_simple(self, agg_mock):
-        agg_mock.return_value = {'opt1': '1', 'opt2': '2'}
+        agg_mock.return_value = {'opt1': set(['1']), 'opt2': set(['2'])}
         especs = {
             # Un-scoped extra spec
             'opt1': '1',
@@ -67,7 +67,7 @@ class TestAggregateInstanceExtraSpecsFilter(test.NoDBTestCase):
         self._do_test_aggregate_filter_extra_specs(especs, passes=True)
 
     def test_aggregate_filter_passes_extra_specs_simple_comma(self, agg_mock):
-        agg_mock.return_value = {'opt1': '1,3', 'opt2': '2'}
+        agg_mock.return_value = {'opt1': set(['1', '3']), 'opt2': set(['2'])}
         especs = {
             # Un-scoped extra spec
             'opt1': '1',
@@ -79,7 +79,7 @@ class TestAggregateInstanceExtraSpecsFilter(test.NoDBTestCase):
         self._do_test_aggregate_filter_extra_specs(especs, passes=True)
 
     def test_aggregate_filter_passes_with_key_same_as_scope(self, agg_mock):
-        agg_mock.return_value = {'aggregate_instance_extra_specs': '1'}
+        agg_mock.return_value = {'aggregate_instance_extra_specs': set(['1'])}
         especs = {
             # Un-scoped extra spec, make sure we don't blow up if it
             # happens to match our scope.
@@ -88,7 +88,7 @@ class TestAggregateInstanceExtraSpecsFilter(test.NoDBTestCase):
         self._do_test_aggregate_filter_extra_specs(especs, passes=True)
 
     def test_aggregate_filter_fails_extra_specs_simple(self, agg_mock):
-        agg_mock.return_value = {'opt1': '1', 'opt2': '2'}
+        agg_mock.return_value = {'opt1': set(['1']), 'opt2': set(['2'])}
         especs = {
             'opt1': '1',
             'opt2': '222',
