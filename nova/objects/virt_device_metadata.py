@@ -13,6 +13,7 @@
 #    under the License.
 
 from oslo_serialization import jsonutils
+from oslo_utils import versionutils
 
 from nova import db
 from nova.objects import base
@@ -72,11 +73,19 @@ class DeviceMetadata(base.NovaObject):
 
 @base.NovaObjectRegistry.register
 class NetworkInterfaceMetadata(DeviceMetadata):
-    VERSION = '1.0'
+    # Version 1.0: Initial version
+    # Version 1.1: Add vlans field
+    VERSION = '1.1'
 
     fields = {
         'mac': fields.MACAddressField(),
+        'vlan': fields.IntegerField(),
     }
+
+    def obj_make_compatible(self, primitive, target_version):
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1) and 'vlan' in primitive:
+            del primitive['vlan']
 
 
 @base.NovaObjectRegistry.register

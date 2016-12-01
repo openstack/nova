@@ -1132,7 +1132,7 @@ object_data = {
     'NUMATopology': '1.2-c63fad38be73b6afd04715c9c1b29220',
     'NUMATopologyLimits': '1.0-9463e0edd40f64765ae518a539b9dfd2',
     'Network': '1.2-a977ab383aa462a479b2fae8211a5dde',
-    'NetworkInterfaceMetadata': '1.0-99a9574d086feb5ad45cd04a34855647',
+    'NetworkInterfaceMetadata': '1.1-3269ce11b30531eb1febfa5173b78b81',
     'NetworkList': '1.2-69eca910d8fa035dfecd8ba10877ee59',
     'NetworkRequest': '1.2-af1ff2d986999fbb79377712794d82aa',
     'NetworkRequestList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',

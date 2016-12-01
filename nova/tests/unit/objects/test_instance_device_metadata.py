@@ -19,7 +19,8 @@ from nova.tests.unit.objects import test_objects
 fake_net_interface_meta = objects.NetworkInterfaceMetadata(
                             mac='52:54:00:f6:35:8f',
                             tags=['mytag1'],
-                            bus=objects.PCIDeviceBus(address='0000:00:03.0'))
+                            bus=objects.PCIDeviceBus(address='0000:00:03.0'),
+                            vlan=1000)
 fake_pci_disk_meta = objects.DiskMetadata(
                             bus=objects.PCIDeviceBus(address='0000:00:09.0'),
                             tags=['nfvfunc3'])
@@ -58,6 +59,7 @@ class _TestInstanceDeviceMetadata(object):
             self.assertEqual(obj_meta.tags, ['mytag1'])
             self.assertTrue(obj_meta.bus, objects.PCIDeviceBus)
             self.assertEqual(obj_meta.bus.address, '0000:00:03.0')
+            self.assertEqual(obj_meta.vlan, 1000)
         elif isinstance(obj_meta, objects.DiskMetadata):
             self.assertTrue(obj_meta.bus, objects.PCIDeviceBus)
             self.assertEqual(obj_meta.bus.address, '0000:00:09.0')
@@ -79,6 +81,15 @@ class _TestInstanceDeviceMetadata(object):
         metadata = objects.InstanceDeviceMetadata.obj_from_db(None, db_meta)
         for obj_meta in metadata.devices:
             self._check_object(obj_meta)
+
+    def test_net_if_compatible_pre_1_1(self):
+        vif_obj = objects.NetworkInterfaceMetadata(mac='52:54:00:f6:35:8f')
+        vif_obj.tags = ['test']
+        vif_obj.vlan = 1000
+        primitive = vif_obj.obj_to_primitive()
+        self.assertIn('vlan', primitive['nova_object.data'])
+        vif_obj.obj_make_compatible(primitive['nova_object.data'], '1.0')
+        self.assertNotIn('vlan', primitive['nova_object.data'])
 
 
 class TestInstanceDeviceMetadata(test_objects._LocalTest,
