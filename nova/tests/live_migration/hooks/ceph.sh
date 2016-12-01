@@ -2,7 +2,7 @@
 
 function prepare_ceph {
     git clone git://git.openstack.org/openstack/devstack-plugin-ceph /tmp/devstack-plugin-ceph
-
+    source /tmp/devstack-plugin-ceph/devstack/settings
     source /tmp/devstack-plugin-ceph/devstack/lib/ceph
     install_ceph
     configure_ceph
