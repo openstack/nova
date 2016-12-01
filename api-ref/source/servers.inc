@@ -634,7 +634,7 @@ Request
   - server_id: server_id_path
   - accessIPv4: accessIPv4_in
   - accessIPv6: accessIPv6_in
-  - name: server_name
+  - name: server_name_optional
   - OS-DCF:diskConfig: OS-DCF:diskConfig
   - description: server_description
 
