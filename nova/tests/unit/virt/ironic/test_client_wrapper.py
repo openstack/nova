@@ -76,37 +76,6 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
                     'ironic_url': None}
         mock_ir_cli.assert_called_once_with(1, **expected)
 
-    @mock.patch.object(keystoneauth1.session, 'Session')
-    @mock.patch.object(keystoneauth1.identity, 'V2Password')
-    @mock.patch.object(ironic_client, 'get_client')
-    def test__get_session_legacy(self, mock_ir_cli, mock_plugin, mock_session):
-        """Create a keystoneauth1 Session with a v2Password auth plugin."""
-        mock_plugin.return_value = 'v2password'
-        ironicclient = client_wrapper.IronicClientWrapper()
-        # dummy call to have _get_client() called
-        ironicclient.call("node.list")
-        expected = {'auth': 'v2password',
-                    'timeout': CONF.ironic.timeout,
-                    'cert': CONF.ironic.certfile,
-                    'verify': True}
-        mock_session.assert_called_once_with(**expected)
-
-    @mock.patch.object(keystoneauth1.identity, 'V2Password')
-    @mock.patch.object(keystoneauth1.loading, 'load_auth_from_conf_options')
-    def test__get_auth_plugin_legacy(self, mock_loader, mock_v2password):
-        """The plugin loader fails to load an auth plugin from proper
-        parameters, returning None. Take the legacy path and load a v2Password
-        plugin from deprecated, legacy auth parameters.
-        """
-        ironicclient = client_wrapper.IronicClientWrapper()
-        mock_loader.return_value = None
-        ironicclient._get_auth_plugin()
-        auth = {'auth_url': CONF.ironic.admin_url,
-                'username': CONF.ironic.admin_username,
-                'password': CONF.ironic.admin_password,
-                'tenant_name': CONF.ironic.admin_tenant_name}
-        mock_v2password.assert_called_once_with(**auth)
-
     @mock.patch.object(client_wrapper.IronicClientWrapper, '_multi_getattr')
     @mock.patch.object(client_wrapper.IronicClientWrapper, '_get_client')
     def test_call_fail_exception(self, mock_get_client, mock_multi_getattr):

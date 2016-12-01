@@ -29,43 +29,13 @@ If using the Ironic driver following options must be set:
 * password
 * project_domain_id or project_domain_name
 * user_domain_id or user_domain_name
-
-Please note that if you are using Identity v2 API (deprecated),
-you don't need to provide domain information, since domains are
-a v3 concept.
 """)
 
-# FIXME(clenimar): The following deprecated auth options are kept for backwards
-# compatibility. Please remove them as soon as we drop its support:
-# `admin_username`, `admin_password`, `admin_url` and `admin_tenant_name`.
 ironic_options = [
     cfg.StrOpt(
         'api_endpoint',
         sample_default='http://ironic.example.org:6385/',
         help='URL override for the Ironic API endpoint.'),
-    cfg.StrOpt(
-        'admin_username',
-        deprecated_for_removal=True,
-        deprecated_since='14.0.0',
-        help='Ironic keystone admin name. '
-             'Use ``username`` instead.'),
-    cfg.StrOpt(
-        'admin_password',
-        secret=True,
-        deprecated_for_removal=True,
-        deprecated_since='14.0.0',
-        help='Ironic keystone admin password. '
-             'Use ``password`` instead.'),
-    cfg.StrOpt(
-        'admin_url',
-        deprecated_for_removal=True,
-        help='Keystone public API endpoint. '
-             'Use ``auth_url`` instead.'),
-    cfg.StrOpt(
-        'admin_tenant_name',
-        deprecated_for_removal=True,
-        help='Ironic keystone tenant name. '
-             'Use ``project_name`` instead.'),
     cfg.IntOpt(
         'api_max_retries',
         # TODO(raj_singh): Change this default to some sensible number
