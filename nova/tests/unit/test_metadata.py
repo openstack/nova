@@ -176,6 +176,11 @@ def fake_metadata_objects():
         mac='00:00:00:00:00:00',
         tags=['foo']
     )
+    nic_vlans_obj = metadata_obj.NetworkInterfaceMetadata(
+        bus=metadata_obj.PCIDeviceBus(address='0000:80:01.0'),
+        mac='e3:a0:d0:12:c5:10',
+        vlan=1000,
+    )
     ide_disk_obj = metadata_obj.DiskMetadata(
         bus=metadata_obj.IDEDeviceBus(address='0:0'),
         serial='disk-vol-2352423',
@@ -203,17 +208,24 @@ def fake_metadata_objects():
     mdlist = metadata_obj.InstanceDeviceMetadata(
         instance_uuid='b65cee2f-8c69-4aeb-be2f-f79742548fc2',
         devices=[nic_obj, ide_disk_obj, scsi_disk_obj, usb_disk_obj,
-                          fake_device_obj, device_with_fake_bus_obj])
+                 fake_device_obj, device_with_fake_bus_obj, nic_vlans_obj])
     return mdlist
 
 
-def fake_metadata_dicts():
+def fake_metadata_dicts(include_vlan=False):
     nic_meta = {
         'type': 'nic',
         'bus': 'pci',
         'address': '0000:00:01.0',
         'mac': '00:00:00:00:00:00',
         'tags': ['foo'],
+    }
+    vlan_nic_meta = {
+        'type': 'nic',
+        'bus': 'pci',
+        'address': '0000:80:01.0',
+        'mac': 'e3:a0:d0:12:c5:10',
+        'vlan': 1000,
     }
     ide_disk_meta = {
         'type': 'disk',
@@ -232,7 +244,10 @@ def fake_metadata_dicts():
     usb_disk_meta['bus'] = 'usb'
     usb_disk_meta['address'] = '05c8:021e'
 
-    return [nic_meta, ide_disk_meta, scsi_disk_meta, usb_disk_meta]
+    dicts = [nic_meta, ide_disk_meta, scsi_disk_meta, usb_disk_meta]
+    if include_vlan:
+        dicts += [vlan_nic_meta]
+    return dicts
 
 
 class MetadataTestCase(test.TestCase):
@@ -437,6 +452,11 @@ class MetadataTestCase(test.TestCase):
             'openstack/2016-10-06/vendor_data.json',
             'openstack/2016-10-06/network_data.json',
             'openstack/2016-10-06/vendor_data2.json',
+            'openstack/2017-02-22/meta_data.json',
+            'openstack/2017-02-22/user_data',
+            'openstack/2017-02-22/vendor_data.json',
+            'openstack/2017-02-22/network_data.json',
+            'openstack/2017-02-22/vendor_data2.json',
             'openstack/latest/meta_data.json',
             'openstack/latest/user_data',
             'openstack/latest/vendor_data.json',
@@ -524,8 +544,8 @@ class MetadataTestCase(test.TestCase):
         if md._check_os_version(base.LIBERTY, os_version):
             expected_metadata['project_id'] = instance.project_id
         if md._check_os_version(base.NEWTON_ONE, os_version):
-            expected_metadata['devices'] = fake_metadata_dicts()
-
+            expose_vlan = md._check_os_version(base.OCATA, os_version)
+            expected_metadata['devices'] = fake_metadata_dicts(expose_vlan)
         mock_cells_keypair.return_value = keypair
         md._metadata_as_json(os_version, 'non useless path parameter')
         if instance.key_name:
@@ -589,7 +609,7 @@ class OpenStackMetadataTestCase(test.TestCase):
         mdinst = fake_InstanceMetadata(self, inst)
         mdjson = mdinst.lookup("/openstack/latest/meta_data.json")
         mddict = jsonutils.loads(mdjson)
-        self.assertEqual(fake_metadata_dicts(), mddict['devices'])
+        self.assertEqual(fake_metadata_dicts(True), mddict['devices'])
 
     def test_top_level_listing(self):
         # request for /openstack/<version>/ should show metadata.json

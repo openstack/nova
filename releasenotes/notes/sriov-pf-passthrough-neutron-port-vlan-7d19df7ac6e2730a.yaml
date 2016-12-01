@@ -1,0 +1,13 @@
+---
+features:
+  - |
+    VLAN tags associated with instance network interfaces are now exposed via
+    the metadata API and instance config drives and can be consumed by the
+    instance. This is an extension of the device tagging mechanism added in
+    past releases. This is useful for instances utilizing SR-IOV physical
+    functions (PFs). The VLAN configuration for the guest's virtual interfaces
+    associated with these devices cannot be configured inside the guest OS from
+    the host, but nonetheless must be configured with the VLAN tags of the
+    device to ensure packet delivery. This feature makes this possible.
+
+    .. note:: VLAN tags are currently only supported via the Libvirt driver.

@@ -73,6 +73,7 @@ HAVANA = '2013-10-17'
 LIBERTY = '2015-10-15'
 NEWTON_ONE = '2016-06-30'
 NEWTON_TWO = '2016-10-06'
+OCATA = '2017-02-22'
 
 OPENSTACK_VERSIONS = [
     FOLSOM,
@@ -81,6 +82,7 @@ OPENSTACK_VERSIONS = [
     LIBERTY,
     NEWTON_ONE,
     NEWTON_TWO,
+    OCATA,
 ]
 
 VERSION = "version"
@@ -372,19 +374,19 @@ class InstanceMetadata(object):
             metadata['project_id'] = self.instance.project_id
 
         if self._check_os_version(NEWTON_ONE, version):
-            metadata['devices'] = self._get_device_metadata()
+            metadata['devices'] = self._get_device_metadata(version)
 
         self.set_mimetype(MIME_TYPE_APPLICATION_JSON)
         return jsonutils.dump_as_bytes(metadata)
 
-    def _get_device_metadata(self):
+    def _get_device_metadata(self, version):
         """Build a device metadata dict based on the metadata objects. This is
         done here in the metadata API as opposed to in the objects themselves
         because the metadata dict is part of the guest API and thus must be
         controlled.
         """
         device_metadata_list = []
-
+        vif_vlans_supported = self._check_os_version(OCATA, version)
         if self.instance.device_metadata is not None:
             for device in self.instance.device_metadata.devices:
                 device_metadata = {}
@@ -413,8 +415,19 @@ class InstanceMetadata(object):
                         address = device.bus.address
 
                 if isinstance(device, metadata_obj.NetworkInterfaceMetadata):
+                    vlan = None
+                    if vif_vlans_supported and 'vlan' in device:
+                        vlan = device.vlan
+
+                    # Skip devices without tags on versions that
+                    # don't support vlans
+                    if not (vlan or 'tags' in device):
+                        continue
+
                     device_metadata['type'] = 'nic'
                     device_metadata['mac'] = device.mac
+                    if vlan:
+                        device_metadata['vlan'] = vlan
                 elif isinstance(device, metadata_obj.DiskMetadata):
                     device_metadata['type'] = 'disk'
                     # serial and path are optional parameters
@@ -430,10 +443,10 @@ class InstanceMetadata(object):
 
                 device_metadata['bus'] = bus
                 device_metadata['address'] = address
-                device_metadata['tags'] = device.tags
+                if 'tags' in device:
+                    device_metadata['tags'] = device.tags
 
                 device_metadata_list.append(device_metadata)
-
         return device_metadata_list
 
     def _handle_content(self, path_tokens):
