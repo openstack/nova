@@ -50,8 +50,6 @@ Related Options:
 
 * report_interval (service_down_time should not be less than report_interval)
 """),
-    # TODO(macsz) deprecate periodic_enable. Setting to False causes nova to
-    #  fail
     cfg.BoolOpt('periodic_enable',
                default=True,
                help="""
@@ -59,6 +57,10 @@ Enable periodic tasks.
 
 If set to true, this option allows services to periodically run tasks
 on the manager.
+
+In case of running multiple schedulers or conductors you may want to run
+periodic tasks on only one host - in this case disable this option for all
+hosts but one.
 """),
     cfg.IntOpt('periodic_fuzzy_delay',
                default=60,
