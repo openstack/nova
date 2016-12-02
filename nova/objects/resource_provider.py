@@ -1215,6 +1215,36 @@ class ResourceClass(base.NovaObject):
         context.session.add(rc)
         return rc
 
+    def destroy(self):
+        if 'id' not in self:
+            raise exception.ObjectActionError(action='destroy',
+                                              reason='ID attribute not found')
+        # Never delete any standard resource class, since the standard resource
+        # classes don't even exist in the database table anyway.
+        _ensure_rc_cache(self._context)
+        standards = _RC_CACHE.get_standards()
+        if self.id in (rc['id'] for rc in standards):
+            raise exception.ResourceClassCannotDeleteStandard(
+                    resource_class=self.name)
+
+        self._destroy(self._context, self.id)
+        _RC_CACHE.clear()
+
+    @staticmethod
+    @db_api.api_context_manager.writer
+    def _destroy(context, _id):
+        # Don't delete the resource class if it is referred to in the
+        # inventories table.
+        num_inv = context.session.query(models.Inventory).filter(
+                models.Inventory.resource_class_id == _id).count()
+        if num_inv:
+            raise exception.ResourceClassInUse()
+
+        res = context.session.query(models.ResourceClass).filter(
+                models.ResourceClass.id == _id).delete()
+        if not res:
+            raise exception.NotFound()
+
 
 @base.NovaObjectRegistry.register
 class ResourceClassList(base.ObjectListBase, base.NovaObject):

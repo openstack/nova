@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_concurrency import lockutils
 import six
 import sqlalchemy as sa
 
@@ -19,6 +20,7 @@ from nova import exception
 from nova.objects import fields
 
 _RC_TBL = models.ResourceClass.__table__
+_LOCKNAME = 'rc_cache'
 
 
 def raise_if_custom_resource_class_pre_v1_1(rc):
@@ -65,6 +67,11 @@ class ResourceClassCache(object):
         self.id_cache = {}
         self.str_cache = {}
 
+    def clear(self):
+        with lockutils.lock(_LOCKNAME):
+            self.id_cache = {}
+            self.str_cache = {}
+
     def get_standards(self):
         """Return a list of {'id': <ID>, 'name': <NAME> for all standard
         resource classes.
@@ -89,13 +96,13 @@ class ResourceClassCache(object):
         :raises `exception.ResourceClassNotFound` if rc_str cannot be found in
                 either the standard classes or the DB.
         """
-        if rc_str in self.id_cache:
-            return self.id_cache[rc_str]
-
         # First check the standard resource classes
         if rc_str in fields.ResourceClass.STANDARD:
             return fields.ResourceClass.STANDARD.index(rc_str)
-        else:
+
+        with lockutils.lock(_LOCKNAME):
+            if rc_str in self.id_cache:
+                return self.id_cache[rc_str]
             # Otherwise, check the database table
             _refresh_from_db(self.ctx, self)
             if rc_str in self.id_cache:
@@ -117,13 +124,16 @@ class ResourceClassCache(object):
         :raises `exception.ResourceClassNotFound` if rc_id cannot be found in
                 either the standard classes or the DB.
         """
-        if rc_id in self.str_cache:
-            return self.str_cache[rc_id]
-
         # First check the fields.ResourceClass.STANDARD values
         try:
             return fields.ResourceClass.STANDARD[rc_id]
         except IndexError:
+            pass
+
+        with lockutils.lock(_LOCKNAME):
+            if rc_id in self.str_cache:
+                return self.str_cache[rc_id]
+
             # Otherwise, check the database table
             _refresh_from_db(self.ctx, self)
             if rc_id in self.str_cache:

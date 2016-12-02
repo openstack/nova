@@ -1148,3 +1148,77 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
             name='CUSTOM_IRON_NFV',
         )
         self.assertRaises(exception.ResourceClassExists, rc.create)
+
+    def test_destroy_fail_no_id(self):
+        rc = objects.ResourceClass(
+            self.context,
+            name='CUSTOM_IRON_NFV',
+        )
+        self.assertRaises(exception.ObjectActionError, rc.destroy)
+
+    def test_destroy_fail_standard(self):
+        rc = objects.ResourceClass.get_by_name(
+            self.context,
+            'VCPU',
+        )
+        self.assertRaises(exception.ResourceClassCannotDeleteStandard,
+                          rc.destroy)
+
+    def test_destroy(self):
+        rc = objects.ResourceClass(
+            self.context,
+            name='CUSTOM_IRON_NFV',
+        )
+        rc.create()
+        rc_list = objects.ResourceClassList.get_all(self.context)
+        rc_ids = (r.id for r in rc_list)
+        self.assertIn(rc.id, rc_ids)
+
+        rc = objects.ResourceClass.get_by_name(
+            self.context,
+            'CUSTOM_IRON_NFV',
+        )
+
+        rc.destroy()
+        rc_list = objects.ResourceClassList.get_all(self.context)
+        rc_ids = (r.id for r in rc_list)
+        self.assertNotIn(rc.id, rc_ids)
+
+        # Verify rc cache was purged of the old entry
+        self.assertRaises(exception.ResourceClassNotFound,
+                          objects.ResourceClass.get_by_name,
+                          self.context,
+                          'CUSTOM_IRON_NFV')
+
+    def test_destroy_fail_with_inventory(self):
+        """Test that we raise an exception when attempting to delete a resource
+        class that is referenced in an inventory record.
+        """
+        rc = objects.ResourceClass(
+            self.context,
+            name='CUSTOM_IRON_NFV',
+        )
+        rc.create()
+        rp = objects.ResourceProvider(
+            self.context,
+            name='my rp',
+            uuid=uuidsentinel.rp,
+        )
+        rp.create()
+        inv = objects.Inventory(
+            resource_provider=rp,
+            resource_class='CUSTOM_IRON_NFV',
+            total=1,
+        )
+        inv.obj_set_defaults()
+        inv_list = objects.InventoryList(objects=[inv])
+        rp.set_inventory(inv_list)
+
+        self.assertRaises(exception.ResourceClassInUse,
+                          rc.destroy)
+
+        rp.set_inventory(objects.InventoryList(objects=[]))
+        rc.destroy()
+        rc_list = objects.ResourceClassList.get_all(self.context)
+        rc_ids = (r.id for r in rc_list)
+        self.assertNotIn(rc.id, rc_ids)
