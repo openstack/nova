@@ -1,0 +1,7 @@
+---
+fixes:
+  - Prior to Newton, volumes encrypted by the CryptsetupEncryptor and
+    LuksEncryptor encryption providers used a mangled passphrase stripped of
+    leading zeros per hexadecimal. When opening encrypted volumes,
+    LuksEncryptor now attempts to replace these mangled passphrases if detected
+    while CryptsetupEncryptor simply uses the mangled passphrase.
