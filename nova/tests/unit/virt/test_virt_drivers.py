@@ -128,8 +128,8 @@ class _FakeDriverBackendTestCase(object):
         def fake_extend(image, size):
             pass
 
-        def fake_migrate(_self, destination, params=None, flags=0,
-                         domain_xml=None, bandwidth=0):
+        def fake_migrate(_self, destination, migrate_uri=None, params=None,
+                         flags=0, domain_xml=None, bandwidth=0):
             pass
 
         def fake_make_drive(_self, _path):
