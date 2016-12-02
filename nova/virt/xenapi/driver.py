@@ -25,6 +25,7 @@ A driver for XenServer or Xen Cloud Platform.
 
 import math
 
+from os_xenapi.client import session
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import units
@@ -36,7 +37,6 @@ import nova.conf
 from nova.i18n import _, _LE, _LW
 from nova import exception
 from nova.virt import driver
-from nova.virt.xenapi.client import session
 from nova.virt.xenapi import host
 from nova.virt.xenapi import pool
 from nova.virt.xenapi import vm_utils
@@ -79,7 +79,8 @@ class XenAPIDriver(driver.ComputeDriver):
                               'connection_password to use '
                               'compute_driver=xenapi.XenAPIDriver'))
 
-        self._session = session.XenAPISession(url, username, password)
+        self._session = session.XenAPISession(url, username, password,
+                                              originator="nova")
         self._volumeops = volumeops.VolumeOps(self._session)
         self._host_state = None
         self._host = host.Host(self._session, self.virtapi)

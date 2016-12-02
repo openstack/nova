@@ -18,11 +18,11 @@ import time
 import uuid
 
 import mock
+from os_xenapi.client import XenAPI
 
 from nova import exception
 from nova import test
 from nova.virt.xenapi import agent
-from nova.virt.xenapi import fake as xenapi_fake
 
 
 def _get_fake_instance(**kwargs):
@@ -369,7 +369,7 @@ class CallAgentTestCase(AgentTestCaseBase):
     def _call_agent_setup(self, session, mock_uuid,
                           returncode='0', success_codes=None,
                           exception=None):
-        session.XenAPI.Failure = xenapi_fake.Failure
+        session.XenAPI.Failure = XenAPI.Failure
         instance = {"uuid": "fake"}
 
         session.VM.get_domid.return_value = "42"
@@ -402,7 +402,7 @@ class CallAgentTestCase(AgentTestCaseBase):
         session = mock.Mock()
         self.assertRaises(exception.AgentTimeout, self._call_agent_setup,
                           session, mock_uuid,
-                          exception=xenapi_fake.Failure(["TIMEOUT:fake"]))
+                          exception=XenAPI.Failure(["TIMEOUT:fake"]))
         self._assert_agent_called(session, mock_uuid)
 
     def test_call_agent_fails_with_not_implemented(self, mock_uuid):
@@ -410,14 +410,14 @@ class CallAgentTestCase(AgentTestCaseBase):
         self.assertRaises(exception.AgentNotImplemented,
                           self._call_agent_setup,
                           session, mock_uuid,
-                          exception=xenapi_fake.Failure(["NOT IMPLEMENTED:"]))
+                          exception=XenAPI.Failure(["NOT IMPLEMENTED:"]))
         self._assert_agent_called(session, mock_uuid)
 
     def test_call_agent_fails_with_other_error(self, mock_uuid):
         session = mock.Mock()
         self.assertRaises(exception.AgentError, self._call_agent_setup,
                           session, mock_uuid,
-                          exception=xenapi_fake.Failure(["asdf"]))
+                          exception=XenAPI.Failure(["asdf"]))
         self._assert_agent_called(session, mock_uuid)
 
     def test_call_agent_fails_with_returned_error(self, mock_uuid):

@@ -14,12 +14,12 @@
 #    under the License.
 
 import mock
+from os_xenapi import client
 import six
 
 from nova import context
 from nova import test
 from nova.tests.unit.virt.xenapi import stubs
-from nova.virt.xenapi import client
 from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake
 from nova.virt.xenapi.image import bittorrent

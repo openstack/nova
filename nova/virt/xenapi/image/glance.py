@@ -16,6 +16,7 @@
 import functools
 import sys
 
+from os_xenapi.client import exception as xenapi_exception
 from oslo_log import log as logging
 import six
 
@@ -66,7 +67,7 @@ class GlanceStore(object):
         try:
             vdis = self._call_glance_plugin(context, instance, session,
                                             'download_vhd2', params)
-        except exception.PluginRetriesExceeded:
+        except xenapi_exception.PluginRetriesExceeded:
             raise exception.CouldNotFetchImage(image_id=image_id)
 
         return vdis
@@ -91,5 +92,5 @@ class GlanceStore(object):
         try:
             self._call_glance_plugin(context, instance, session,
                                      'upload_vhd2', params)
-        except exception.PluginRetriesExceeded:
+        except xenapi_exception.PluginRetriesExceeded:
             raise exception.CouldNotUploadImage(image_id=image_id)

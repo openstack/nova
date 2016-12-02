@@ -22,6 +22,7 @@ except ImportError:
 
 from eventlet import greenthread
 import mock
+from os_xenapi.client import session as xenapi_session
 
 from nova.compute import power_state
 from nova.compute import task_states
@@ -38,7 +39,6 @@ from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.virt import fake
 from nova.virt.xenapi import agent as xenapi_agent
-from nova.virt.xenapi.client import session as xenapi_session
 from nova.virt.xenapi import fake as xenapi_fake
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import vmops

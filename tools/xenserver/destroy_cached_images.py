@@ -28,6 +28,7 @@ eventlet.monkey_patch()
 import os
 import sys
 
+from os_xenapi.client import session
 from oslo_config import cfg
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
@@ -42,7 +43,6 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
 import nova.conf
 from nova import config
 from nova import utils
-from nova.virt.xenapi.client import session
 from nova.virt.xenapi import vm_utils
 
 destroy_opts = [
