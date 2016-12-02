@@ -438,6 +438,13 @@ volume provider then the value from this option is taken.
     # when we pull support for it, we should remove this
     cfg.BoolOpt('remap_vbd_dev',
         default=False,
+        deprecated_for_removal=True,
+        deprecated_since='15.0.0',
+        deprecated_reason="""
+This option provided a workaround for issues in Ubuntu Maverick, which
+was released in April 2010 and was dropped from support in April 2012.
+There's no reason to continue supporting this option.
+""",
         help="""
 Used to enable the remapping of VBD dev.
 (Works around an issue in Ubuntu Maverick)

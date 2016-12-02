@@ -1,0 +1,5 @@
+---
+deprecations:
+  - |
+    The ``remap_vbd_dev`` option is deprecated and will be removed in a future
+    release.
