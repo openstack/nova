@@ -1100,7 +1100,7 @@ class LibvirtDriver(driver.ComputeDriver):
             utils.execute('rm', '-rf', target, delay_on_retry=True,
                           attempts=5)
 
-        root_disk = self.image_backend.image(instance, 'disk')
+        root_disk = self.image_backend.by_name(instance, 'disk')
         # TODO(nic): Set ignore_errors=False in a future release.
         # It is set to True here to avoid any upgrade issues surrounding
         # instances being in pending resize state when the software is updated;
@@ -1478,7 +1478,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # For lxc instances we won't have it either from libvirt xml
         # (because we just gave libvirt the mounted filesystem), or the path,
         # so source_type is still going to be None. In this case,
-        # snapshot_backend is going to default to CONF.libvirt.images_type
+        # root_disk is going to default to CONF.libvirt.images_type
         # below, which is still safe.
 
         image_format = CONF.libvirt.snapshot_image_format or source_type
@@ -1530,9 +1530,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self._prepare_domain_for_snapshot(context, live_snapshot, state,
                                           instance)
 
-        snapshot_backend = self.image_backend.snapshot(instance,
-                disk_path,
-                image_type=source_type)
+        root_disk = self.image_backend.by_libvirt_path(
+            instance, disk_path, image_type=source_type)
 
         if live_snapshot:
             LOG.info(_LI("Beginning live snapshot process"),
@@ -1546,7 +1545,7 @@ class LibvirtDriver(driver.ComputeDriver):
         try:
             update_task_state(task_state=task_states.IMAGE_UPLOADING,
                               expected_state=task_states.IMAGE_PENDING_UPLOAD)
-            metadata['location'] = snapshot_backend.direct_snapshot(
+            metadata['location'] = root_disk.direct_snapshot(
                 context, snapshot_name, image_format, image_id,
                 instance.image_ref)
             self._snapshot_domain(context, live_snapshot, virt_dom, state,
@@ -1561,13 +1560,13 @@ class LibvirtDriver(driver.ComputeDriver):
             failed_snap = metadata.pop('location', None)
             if failed_snap:
                 failed_snap = {'url': str(failed_snap)}
-            snapshot_backend.cleanup_direct_snapshot(failed_snap,
-                                                     also_destroy_volume=True,
-                                                     ignore_errors=True)
+            root_disk.cleanup_direct_snapshot(failed_snap,
+                                                  also_destroy_volume=True,
+                                                  ignore_errors=True)
             update_task_state(task_state=task_states.IMAGE_PENDING_UPLOAD,
                               expected_state=task_states.IMAGE_UPLOADING)
 
-            # TODO(nic): possibly abstract this out to the snapshot_backend
+            # TODO(nic): possibly abstract this out to the root_disk
             if source_type == 'rbd' and live_snapshot:
                 # Standard snapshot uses qemu-img convert from RBD which is
                 # not safe to run with live_snapshot.
@@ -1588,8 +1587,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                             disk_path, out_path, source_format,
                                             image_format, instance.image_meta)
                     else:
-                        snapshot_backend.snapshot_extract(out_path,
-                                                          image_format)
+                        root_disk.snapshot_extract(out_path, image_format)
                 finally:
                     self._snapshot_domain(context, live_snapshot, virt_dom,
                                           state, instance)
@@ -1610,7 +1608,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 failed_snap = metadata.pop('location', None)
                 if failed_snap:
                     failed_snap = {'url': str(failed_snap)}
-                snapshot_backend.cleanup_direct_snapshot(
+                root_disk.cleanup_direct_snapshot(
                         failed_snap, also_destroy_volume=True,
                         ignore_errors=True)
 
@@ -3021,8 +3019,8 @@ class LibvirtDriver(driver.ComputeDriver):
             instance, disk_mapping)
 
         def image(fname, image_type=CONF.libvirt.images_type):
-            return self.image_backend.image(instance,
-                                            fname + suffix, image_type)
+            return self.image_backend.by_name(instance,
+                                              fname + suffix, image_type)
 
         def raw(fname):
             return image(fname, image_type='raw')
@@ -3155,8 +3153,8 @@ class LibvirtDriver(driver.ComputeDriver):
             if size == 0 or suffix == '.rescue':
                 size = None
 
-            backend = self.image_backend.image(instance, 'disk' + suffix,
-                                               CONF.libvirt.images_type)
+            backend = self.image_backend.by_name(instance, 'disk' + suffix,
+                                                 CONF.libvirt.images_type)
             if instance.task_state == task_states.RESIZE_FINISH:
                 backend.create_snap(libvirt_utils.RESIZE_SNAPSHOT_NAME)
             if backend.SUPPORTS_CLONE:
@@ -3192,7 +3190,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if configdrive.required_by(instance):
             LOG.info(_LI('Using config drive'), instance=instance)
 
-            config_drive_image = self.image_backend.image(
+            config_drive_image = self.image_backend.by_name(
                 instance, 'disk.config' + suffix,
                 self._get_disk_config_image_type())
 
@@ -3469,35 +3467,31 @@ class LibvirtDriver(driver.ComputeDriver):
                       {'qemu': MIN_QEMU_DISCARD_VERSION})
                 raise exception.Invalid(msg)
 
-        image = self.image_backend.image(instance,
-                                         name,
-                                         image_type)
+        disk = self.image_backend.by_name(instance, name, image_type)
         if (name == 'disk.config' and image_type == 'rbd' and
-                not image.exists()):
+                not disk.exists()):
             # This is likely an older config drive that has not been migrated
             # to rbd yet. Try to fall back on 'flat' image type.
             # TODO(melwitt): Add online migration of some sort so we can
             # remove this fall back once we know all config drives are in rbd.
             # NOTE(vladikr): make sure that the flat image exist, otherwise
             # the image will be created after the domain definition.
-            flat_image = self.image_backend.image(instance, name, 'flat')
-            if flat_image.exists():
-                image = flat_image
+            flat_disk = self.image_backend.by_name(instance, name, 'flat')
+            if flat_disk.exists():
+                disk = flat_disk
                 LOG.debug('Config drive not found in RBD, falling back to the '
                           'instance directory', instance=instance)
         disk_info = disk_mapping[name]
-        return image.libvirt_info(disk_info['bus'],
-                                  disk_info['dev'],
-                                  disk_info['type'],
-                                  self.disk_cachemode,
-                                  inst_type['extra_specs'],
-                                  self._host.get_version())
+        return disk.libvirt_info(disk_info['bus'],
+                                 disk_info['dev'],
+                                 disk_info['type'],
+                                 self.disk_cachemode,
+                                 inst_type['extra_specs'],
+                                 self._host.get_version())
 
     def _get_guest_fs_config(self, instance, name, image_type=None):
-        image = self.image_backend.image(instance,
-                                         name,
-                                         image_type)
-        return image.libvirt_fs_info("/", "ploop")
+        disk = self.image_backend.by_name(instance, name, image_type)
+        return disk.libvirt_fs_info("/", "ploop")
 
     def _get_guest_storage_config(self, instance, image_meta,
                                   disk_info,
@@ -4793,8 +4787,8 @@ class LibvirtDriver(driver.ComputeDriver):
             # disk is backed by a local block device.
             image_model = imgmodel.LocalBlockImage(disk_path)
         else:
-            image = self.image_backend.image(instance, 'disk')
-            image_model = image.get_model(self._conn)
+            root_disk = self.image_backend.by_name(instance, 'disk')
+            image_model = root_disk.get_model(self._conn)
 
         container_dir = os.path.join(inst_path, 'rootfs')
         fileutils.ensure_tree(container_dir)
@@ -6729,9 +6723,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 # Creating backing file follows same way as spawning instances.
                 cache_name = os.path.basename(info['backing_file'])
 
-                image = self.image_backend.image(instance,
-                                                 instance_disk,
-                                                 CONF.libvirt.images_type)
+                disk = self.image_backend.by_name(instance, instance_disk,
+                                                  CONF.libvirt.images_type)
                 if cache_name.startswith('ephemeral'):
                     # The argument 'size' is used by image.cache to
                     # validate disk size retrieved from cache against
@@ -6739,7 +6732,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     # and ephemeral_size is used by _create_ephemeral
                     # to build the image if the disk is not already
                     # cached.
-                    image.cache(
+                    disk.cache(
                         fetch_func=self._create_ephemeral,
                         fs_label=cache_name,
                         os_type=instance.os_type,
@@ -6749,12 +6742,12 @@ class LibvirtDriver(driver.ComputeDriver):
                 elif cache_name.startswith('swap'):
                     inst_type = instance.get_flavor()
                     swap_mb = inst_type.swap
-                    image.cache(fetch_func=self._create_swap,
+                    disk.cache(fetch_func=self._create_swap,
                                 filename="swap_%s" % swap_mb,
                                 size=swap_mb * units.Mi,
                                 swap_mb=swap_mb)
                 else:
-                    self._try_fetch_image_cache(image,
+                    self._try_fetch_image_cache(disk,
                                                 libvirt_utils.fetch_image,
                                                 context, cache_name,
                                                 instance.image_ref,
@@ -6762,7 +6755,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                                 info['virt_disk_size'],
                                                 fallback_from_host)
 
-        # if image has kernel and ramdisk, just download
+        # if disk has kernel and ramdisk, just download
         # following normal way.
         self._fetch_instance_kernel_ramdisk(
             context, instance, fallback_from_host=fallback_from_host)
@@ -7431,7 +7424,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self._cleanup_failed_migration(inst_base)
             utils.execute('mv', inst_base_resize, inst_base)
 
-        root_disk = self.image_backend.image(instance, 'disk')
+        root_disk = self.image_backend.by_name(instance, 'disk')
         # Once we rollback, the snapshot is no longer needed, so remove it
         # TODO(nic): Remove the try/except/finally in a future release
         # To avoid any upgrade issues surrounding instances being in pending

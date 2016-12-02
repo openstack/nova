@@ -503,8 +503,8 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         wait1 = eventlet.event.Event()
         done1 = eventlet.event.Event()
         sig1 = eventlet.event.Event()
-        thr1 = eventlet.spawn(backend.image(self._fake_instance(uuid),
-                                            'name').cache,
+        thr1 = eventlet.spawn(backend.by_name(self._fake_instance(uuid),
+                                              'name').cache,
                 _concurrency, 'fname', None,
                 signal=sig1, wait=wait1, done=done1)
         eventlet.sleep(0)
@@ -514,8 +514,8 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         wait2 = eventlet.event.Event()
         done2 = eventlet.event.Event()
         sig2 = eventlet.event.Event()
-        thr2 = eventlet.spawn(backend.image(self._fake_instance(uuid),
-                                            'name').cache,
+        thr2 = eventlet.spawn(backend.by_name(self._fake_instance(uuid),
+                                              'name').cache,
                 _concurrency, 'fname', None,
                 signal=sig2, wait=wait2, done=done2)
 
@@ -541,8 +541,8 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         wait1 = eventlet.event.Event()
         done1 = eventlet.event.Event()
         sig1 = eventlet.event.Event()
-        thr1 = eventlet.spawn(backend.image(self._fake_instance(uuid),
-                                            'name').cache,
+        thr1 = eventlet.spawn(backend.by_name(self._fake_instance(uuid),
+                                              'name').cache,
                 _concurrency, 'fname2', None,
                 signal=sig1, wait=wait1, done=done1)
         eventlet.sleep(0)
@@ -552,8 +552,8 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         wait2 = eventlet.event.Event()
         done2 = eventlet.event.Event()
         sig2 = eventlet.event.Event()
-        thr2 = eventlet.spawn(backend.image(self._fake_instance(uuid),
-                                            'name').cache,
+        thr2 = eventlet.spawn(backend.by_name(self._fake_instance(uuid),
+                                              'name').cache,
                 _concurrency, 'fname1', None,
                 signal=sig2, wait=wait2, done=done2)
         eventlet.sleep(0)
@@ -4533,7 +4533,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr.image_backend = mock_image_backend
         mock_image = mock.MagicMock()
         mock_image.path = '/tmp/test.img'
-        drvr.image_backend.image.return_value = mock_image
+        drvr.image_backend.by_name.return_value = mock_image
         mock_setup_container.return_value = '/dev/nbd0'
         mock_get_info.side_effect = exception.InstanceNotFound(
                                                    instance_id='foo')
@@ -13598,7 +13598,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr.image_backend = mock_image_backend
         mock_image = mock.MagicMock()
         mock_image.path = '/tmp/test.img'
-        drvr.image_backend.image.return_value = mock_image
+        drvr.image_backend.by_name.return_value = mock_image
         mock_setup_container.return_value = '/dev/nbd0'
         mock_get_info.return_value = hardware.InstanceInfo(
             state=power_state.RUNNING)
@@ -13618,8 +13618,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertFalse(mock_instance.called)
         mock_get_inst_path.assert_has_calls([mock.call(mock_instance)])
         mock_ensure_tree.assert_has_calls([mock.call('/tmp/rootfs')])
-        drvr.image_backend.image.assert_has_calls([mock.call(mock_instance,
-                                                             'disk')])
+        drvr.image_backend.by_name.assert_has_calls([mock.call(mock_instance,
+                                                    'disk')])
 
         setup_container_call = mock.call(
             mock_image.get_model(),
@@ -13660,7 +13660,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr.image_backend = mock_image_backend
         mock_image = mock.MagicMock()
         mock_image.path = '/tmp/test.img'
-        drvr.image_backend.image.return_value = mock_image
+        drvr.image_backend.by_name.return_value = mock_image
         mock_setup_container.return_value = '/dev/nbd0'
         mock_chown.side_effect = chown_side_effect
         mock_get_info.return_value = hardware.InstanceInfo(
@@ -13687,8 +13687,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_get_inst_path.assert_has_calls([mock.call(mock_instance)])
         mock_is_booted_from_volume.assert_called_once_with(mock_instance, {})
         mock_ensure_tree.assert_has_calls([mock.call('/tmp/rootfs')])
-        drvr.image_backend.image.assert_has_calls([mock.call(mock_instance,
-                                                             'disk')])
+        drvr.image_backend.by_name.assert_has_calls([mock.call(mock_instance,
+                                                    'disk')])
 
         setup_container_call = mock.call(
             mock_image.get_model(),
@@ -13716,7 +13716,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr.image_backend = mock_image_backend
         mock_image = mock.MagicMock()
         mock_image.path = '/tmp/test.img'
-        drvr.image_backend.image.return_value = mock_image
+        drvr.image_backend.by_name.return_value = mock_image
         mock_setup_container.return_value = '/dev/nbd0'
         mock_get_info.return_value = hardware.InstanceInfo(
             state=power_state.SHUTDOWN)
@@ -13736,8 +13736,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertFalse(mock_instance.called)
         mock_get_inst_path.assert_has_calls([mock.call(mock_instance)])
         mock_ensure_tree.assert_has_calls([mock.call('/tmp/rootfs')])
-        drvr.image_backend.image.assert_has_calls([mock.call(mock_instance,
-                                                             'disk')])
+        drvr.image_backend.by_name.assert_has_calls([mock.call(mock_instance,
+                                                    'disk')])
 
         setup_container_call = mock.call(
             mock_image.get_model(),
@@ -14961,8 +14961,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_rbd_image = mock.Mock()
         mock_flat_image = mock.Mock()
         mock_flat_image.libvirt_info.return_value = mock.sentinel.diskconfig
-        drvr.image_backend.image.side_effect = [mock_rbd_image,
-                                                mock_flat_image]
+        drvr.image_backend.by_name.side_effect = [mock_rbd_image,
+                                                  mock_flat_image]
         mock_rbd_image.exists.return_value = False
         instance = objects.Instance()
         disk_mapping = {'disk.config': {'bus': 'ide',
@@ -14974,10 +14974,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             instance, 'disk.config', disk_mapping, flavor,
             drvr._get_disk_config_image_type())
 
-        self.assertEqual(2, drvr.image_backend.image.call_count)
+        self.assertEqual(2, drvr.image_backend.by_name.call_count)
         call1 = mock.call(instance, 'disk.config', 'rbd')
         call2 = mock.call(instance, 'disk.config', 'flat')
-        drvr.image_backend.image.assert_has_calls([call1, call2])
+        drvr.image_backend.by_name.assert_has_calls([call1, call2])
         self.assertEqual(mock.sentinel.diskconfig, diskconfig)
 
     def _test_prepare_domain_for_snapshot(self, live_snapshot, state):
@@ -15965,7 +15965,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr.image_backend = mock.Mock()
-        drvr.image_backend.image.return_value = drvr.image_backend
+        drvr.image_backend.by_name.return_value = drvr.image_backend
         context = 'fake_context'
         ins_ref = self._create_instance()
 
@@ -16027,7 +16027,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     def test_finish_revert_migration_snap_backend(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr.image_backend = mock.Mock()
-        drvr.image_backend.image.return_value = drvr.image_backend
+        drvr.image_backend.by_name.return_value = drvr.image_backend
         ins_ref = self._create_instance()
 
         with test.nested(
@@ -16046,7 +16046,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     def test_finish_revert_migration_snap_backend_snapshot_not_found(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr.image_backend = mock.Mock()
-        drvr.image_backend.image.return_value = drvr.image_backend
+        drvr.image_backend.by_name.return_value = drvr.image_backend
         ins_ref = self._create_instance()
 
         with test.nested(
@@ -16066,7 +16066,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     def test_finish_revert_migration_snap_backend_image_does_not_exist(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr.image_backend = mock.Mock()
-        drvr.image_backend.image.return_value = drvr.image_backend
+        drvr.image_backend.by_name.return_value = drvr.image_backend
         drvr.image_backend.exists.return_value = False
         ins_ref = self._create_instance()
 
@@ -16104,7 +16104,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr.image_backend = mock.Mock()
-        drvr.image_backend.image.return_value = drvr.image_backend
+        drvr.image_backend.by_name.return_value = drvr.image_backend
 
         with test.nested(
                 mock.patch.object(os.path, 'exists'),
@@ -16127,7 +16127,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr.image_backend = mock.Mock()
-        drvr.image_backend.image.return_value = drvr.image_backend
+        drvr.image_backend.by_name.return_value = drvr.image_backend
 
         with test.nested(
                 mock.patch.object(os.path, 'exists'),
@@ -16154,7 +16154,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         ins_ref = self._create_instance({'host': CONF.host})
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr.image_backend = mock.Mock()
-        drvr.image_backend.image.return_value = drvr.image_backend
+        drvr.image_backend.by_name.return_value = drvr.image_backend
 
         with test.nested(
                 mock.patch.object(os.path, 'exists'),
@@ -16177,7 +16177,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         ins_ref = self._create_instance({'host': CONF.host})
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr.image_backend = mock.Mock()
-        drvr.image_backend.image.return_value = drvr.image_backend
+        drvr.image_backend.by_name.return_value = drvr.image_backend
         drvr.image_backend.exists.return_value = False
 
         with test.nested(
@@ -16275,10 +16275,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         image_backend = ImageBackend()
         image_backend.path = path
 
-        with mock.patch.object(
-                self.drvr.image_backend,
-                'image',
-                return_value=image_backend):
+        with mock.patch.object(self.drvr.image_backend, 'by_name',
+                               return_value=image_backend):
             self.flags(inject_partition=0, group='libvirt')
 
             self.drvr._inject_data(image_backend, **driver_params)

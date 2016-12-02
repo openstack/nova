@@ -1686,9 +1686,8 @@ class BackendTestCase(test.NoDBTestCase):
         self.INSTANCE['ephemeral_key_uuid'] = None
 
     def get_image(self, use_cow, image_type):
-        return imagebackend.Backend(use_cow).image(self.INSTANCE,
-                                                   self.NAME,
-                                                   image_type)
+        return imagebackend.Backend(use_cow).by_name(self.INSTANCE, self.NAME,
+                                                     image_type)
 
     def _test_image(self, image_type, image_not_cow, image_cow):
         image1 = self.get_image(False, image_type)
