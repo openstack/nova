@@ -1568,7 +1568,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         vif1.network_id = 123
         vif1.instance_uuid = '32dfcb37-5af1-552b-357c-be8c3aa38310'
         vif1.uuid = 'abec4b21-ef22-6c21-534b-ba3e3ab3a312'
-        vif1.tag = None
         vif2 = obj_vif.VirtualInterface(context=self.context)
         vif2.address = 'fa:16:3e:d1:28:e4'
         vif2.network_id = 123
@@ -1583,6 +1582,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         vif3.tag = 'mytag3'
         vifs = [vif, vif1, vif2, vif3]
 
+        network_info = _fake_network_info(self, 4)
+        network_info[0]['vnic_type'] = network_model.VNIC_TYPE_DIRECT_PHYSICAL
+        network_info[0]['address'] = "51:5a:2c:a4:5e:1b"
+        network_info[0]['details'] = dict(vlan=2145)
+        instance_ref.info_cache = objects.InstanceInfoCache(
+            network_info=network_info)
+
         with test.nested(
             mock.patch('nova.objects.VirtualInterfaceList'
                        '.get_by_instance_uuid', return_value=vifs),
@@ -1595,7 +1601,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             metadata_obj = drvr._build_device_metadata(self.context,
                                                        instance_ref)
             metadata = metadata_obj.devices
-            self.assertEqual(9, len(metadata))
+            self.assertEqual(10, len(metadata))
             self.assertIsInstance(metadata[0],
                                   objects.DiskMetadata)
             self.assertIsInstance(metadata[0].bus,
@@ -1633,12 +1639,18 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                   objects.PCIDeviceBus)
             self.assertEqual(['mytag1'], metadata[6].tags)
             self.assertEqual('0000:00:03.0', metadata[6].bus.address)
+
+            # Make sure that interface with vlan is exposed to the metadata
             self.assertIsInstance(metadata[7],
                                   objects.NetworkInterfaceMetadata)
-            self.assertEqual(['mytag2'], metadata[7].tags)
+            self.assertEqual('51:5a:2c:a4:5e:1b', metadata[7].mac)
+            self.assertEqual(2145, metadata[7].vlan)
             self.assertIsInstance(metadata[8],
                                   objects.NetworkInterfaceMetadata)
-            self.assertEqual(['mytag3'], metadata[8].tags)
+            self.assertEqual(['mytag2'], metadata[8].tags)
+            self.assertIsInstance(metadata[9],
+                                  objects.NetworkInterfaceMetadata)
+            self.assertEqual(['mytag3'], metadata[9].tags)
 
     @mock.patch.object(host.Host, 'get_connection')
     @mock.patch.object(nova.virt.libvirt.guest.Guest, 'get_xml_desc')

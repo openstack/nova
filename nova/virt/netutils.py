@@ -344,3 +344,13 @@ def _get_dns_services(subnet):
         return services
     return [{'type': 'dns', 'address': ip.get('address')}
             for ip in subnet['dns']]
+
+
+def get_cached_vifs_with_vlan(network_info):
+    """Generates a dict from a list of VIFs that has a vlan tag, with
+    MAC, VLAN as a key, value.
+    """
+    if network_info is None:
+        return {}
+    return {vif['address']: vif['details']['vlan'] for vif in network_info
+                            if vif.get('details', {}).get('vlan')}
