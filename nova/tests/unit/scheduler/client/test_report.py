@@ -92,6 +92,16 @@ class SafeConnectedTestCase(test.NoDBTestCase):
         self.assertTrue(req.called)
 
 
+class TestConstructor(test.NoDBTestCase):
+    @mock.patch('keystoneauth1.session.Session')
+    @mock.patch('keystoneauth1.loading.load_auth_from_conf_options')
+    def test_constructor(self, load_auth_mock, ks_sess_mock):
+        report.SchedulerReportClient()
+
+        load_auth_mock.assert_called_once_with(CONF, 'placement')
+        ks_sess_mock.assert_called_once_with(auth=load_auth_mock.return_value)
+
+
 class SchedulerReportClientTestCase(test.NoDBTestCase):
 
     def setUp(self):
@@ -116,14 +126,8 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
         ) as (_auth_mock, _sess_mock):
             self.client = report.SchedulerReportClient()
 
-    @mock.patch('keystoneauth1.session.Session')
-    @mock.patch('keystoneauth1.loading.load_auth_from_conf_options')
-    def test_constructor(self, load_auth_mock, ks_sess_mock):
-        report.SchedulerReportClient()
 
-        load_auth_mock.assert_called_once_with(CONF, 'placement')
-        ks_sess_mock.assert_called_once_with(auth=load_auth_mock.return_value)
-
+class TestProviderOperations(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_create_resource_provider')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -359,6 +363,8 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
         self.assertTrue(logging_mock.called)
         self.assertFalse(result)
 
+
+class TestComputeNodeToInventoryDict(test.NoDBTestCase):
     def test_compute_node_inventory(self):
         uuid = uuids.compute_node
         name = 'computehost'
@@ -404,6 +410,8 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
         }
         self.assertEqual(expected, result)
 
+
+class TestInventory(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -415,9 +423,6 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
         mock_save.assert_called_once_with()
         mock_erp.assert_called_once_with(cn.uuid, cn.hypervisor_hostname)
         self.assertFalse(mock_ui.called)
-
-
-class TestInventory(SchedulerReportClientTestCase):
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get')
