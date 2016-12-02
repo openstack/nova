@@ -15692,19 +15692,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.drvr._wait_for_running({'name': 'else',
                                                   'uuid': 'other_uuid'})
 
-    def test_disk_size_from_instance_disk_info(self):
-        flavor_data = {'root_gb': 10, 'ephemeral_gb': 20, 'swap_gb': 30}
-        inst = objects.Instance(flavor=objects.Flavor(**flavor_data))
-        self.assertEqual(10 * units.Gi,
-                         self.drvr._disk_size_from_instance(inst, 'disk'))
-
-        self.assertEqual(20 * units.Gi,
-                         self.drvr._disk_size_from_instance(inst,
-                                                            'disk.local'))
-
-        self.assertEqual(0,
-                         self.drvr._disk_size_from_instance(inst, 'disk.swap'))
-
     @mock.patch('nova.utils.execute')
     def test_disk_raw_to_qcow2(self, mock_execute):
         path = '/test/disk'
@@ -15726,40 +15713,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             mock.call('qemu-img', 'convert', '-f', 'qcow2',
                       '-O', 'raw', path, _path_raw),
             mock.call('mv', _path_raw, path)])
-
-    @mock.patch('nova.virt.disk.api.extend')
-    def test_disk_resize_raw(self, mock_extend):
-        image = imgmodel.LocalFileImage("/test/disk",
-                                        imgmodel.FORMAT_RAW)
-
-        self.drvr._disk_resize(image, 50)
-        mock_extend.assert_called_once_with(image, 50)
-
-    @mock.patch('nova.virt.disk.api.can_resize_image')
-    @mock.patch('nova.virt.disk.api.is_image_extendable')
-    @mock.patch('nova.virt.disk.api.extend')
-    def test_disk_resize_qcow2(
-            self, mock_extend, mock_can_resize, mock_is_image_extendable):
-
-        with test.nested(
-                mock.patch.object(
-                    self.drvr, '_disk_qcow2_to_raw'),
-                mock.patch.object(
-                    self.drvr, '_disk_raw_to_qcow2'))\
-        as (mock_disk_qcow2_to_raw, mock_disk_raw_to_qcow2):
-
-            mock_can_resize.return_value = True
-            mock_is_image_extendable.return_value = True
-
-            imageqcow2 = imgmodel.LocalFileImage("/test/disk",
-                                                 imgmodel.FORMAT_QCOW2)
-            imageraw = imgmodel.LocalFileImage("/test/disk",
-                                               imgmodel.FORMAT_RAW)
-            self.drvr._disk_resize(imageqcow2, 50)
-
-            mock_disk_qcow2_to_raw.assert_called_once_with(imageqcow2.path)
-            mock_extend.assert_called_once_with(imageraw, 50)
-            mock_disk_raw_to_qcow2.assert_called_once_with(imageqcow2.path)
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_inject_data')
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'get_info')
@@ -15812,11 +15765,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         mock_create_domain_and_network.return_value = \
             libvirt_guest.Guest('fake_dom')
 
-        with mock.patch.object(self.drvr, '_disk_resize') as mock_disk_resize:
-            self.drvr.finish_migration(
-                          context.get_admin_context(), migration, instance,
-                          disk_info, [], image_meta,
-                          resize_instance, bdi, power_on)
+        self.drvr.finish_migration(
+                      context.get_admin_context(), migration, instance,
+                      disk_info, [], image_meta,
+                      resize_instance, bdi, power_on)
 
         # Assert that we converted the root, ephemeral, and swap disks
         instance_path = libvirt_utils.get_instance_path(instance)
@@ -15826,21 +15778,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         # Implicitly assert that we did not convert the config disk
         self.assertEqual(len(convert_calls), mock_raw_to_qcow2.call_count)
-
-        if resize_instance:
-            # Assert that we're calling _disk_resize on all local disks
-            def local_file(name):
-                return imgmodel.LocalFileImage(backend.disks[name].path, 'raw')
-
-            resize_calls = [
-                mock.call(local_file('disk'),
-                          instance.flavor.root_gb * units.Gi),
-                mock.call(local_file('disk.local'),
-                          instance.flavor.ephemeral_gb * units.Gi),
-                mock.call(local_file('disk.swap'), 0),
-                mock.call(local_file('disk.config'), 0),
-            ]
-            mock_disk_resize.assert_has_calls(resize_calls, any_order=True)
 
         disks = backend.disks
 
