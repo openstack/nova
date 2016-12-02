@@ -7719,9 +7719,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         addresses = ('127.0.0.1', '127.0.0.1:4444',
-                     '0:0:0:0:0:0:0:1', '[0:0:0:0:0:0:0:1]:4444')
+                     '0:0:0:0:0:0:0:1', '[0:0:0:0:0:0:0:1]:4444',
+                     u'127.0.0.1', u'destination')
         for dest in addresses:
-            self.assertEqual('tcp://%s' % dest, drvr._migrate_uri(dest))
+            result = drvr._migrate_uri(dest)
+            self.assertEqual('tcp://%s' % dest, result)
+            self.assertIsInstance(result, str)
 
     def test_update_volume_xml_no_serial(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
