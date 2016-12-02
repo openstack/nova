@@ -1,0 +1,6 @@
+---
+upgrade:
+  - CORS headers have been added to the versions REST API, in order
+    to support versions discovery. If using 'oscomputeversions'
+    pipeline in '/etc/nova/api-paste.ini', it is required to update the
+    pipeline to include 'cors' filter.
