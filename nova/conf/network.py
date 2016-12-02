@@ -1,8 +1,4 @@
-# needs:fix_opt_description
 # needs:check_deprecation_status
-# needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
 
 
 # Copyright 2016 OpenStack Foundation
@@ -704,43 +700,89 @@ Related options:
 """),
 ]
 
-
 ldap_dns_opts = [
-    cfg.StrOpt('ldap_dns_url',
+    # TODO(siva_krishnan): Validate URL scheme once that feature is added
+    # in oslo_config
+    cfg.URIOpt('ldap_dns_url',
         default='ldap://ldap.example.com:389',
-        help='URL for LDAP server which will store DNS entries'),
+        help="""
+URL for LDAP server which will store DNS entries
+
+Possible values:
+
+* A valid LDAP URL representing the server
+"""),
     cfg.StrOpt('ldap_dns_user',
         default='uid=admin,ou=people,dc=example,dc=org',
-        help='User for LDAP DNS'),
+        help='Bind user for LDAP server'),
     cfg.StrOpt('ldap_dns_password',
         default='password',
-        help='Password for LDAP DNS',
-        secret=True),
+        secret=True,
+        help="Bind user's password for LDAP server"),
     cfg.StrOpt('ldap_dns_soa_hostmaster',
         default='hostmaster@example.org',
-        help='Hostmaster for LDAP DNS driver Statement of Authority'),
+        help="""
+Hostmaster for LDAP DNS driver Statement of Authority
+
+Possible values:
+
+* Any valid string representing LDAP DNS hostmaster.
+"""),
+    # TODO(sfinucan): This should be converted to a ListOpt. Perhaps when the
+    # option is moved to a group?
     cfg.MultiStrOpt('ldap_dns_servers',
         default=['dns.example.org'],
-        help='DNS Servers for LDAP DNS driver'),
+        help="""
+DNS Servers for LDAP DNS driver
+
+Possible values:
+
+* A valid URL representing a DNS server
+"""),
     cfg.StrOpt('ldap_dns_base_dn',
         default='ou=hosts,dc=example,dc=org',
-        help='Base DN for DNS entries in LDAP'),
+        help="""
+Base distinguished name for the LDAP search query
+
+This option helps to decide where to look up the host in LDAP.
+"""),
+    # TODO(sfinucan): Add a min parameter to this and the below options
     cfg.IntOpt('ldap_dns_soa_refresh',
         default=1800,
-        help='Refresh interval (in seconds) for LDAP DNS driver '
-             'Statement of Authority'),
+        help="""
+Refresh interval (in seconds) for LDAP DNS driver Start of Authority
+
+Time interval, a secondary/slave DNS server waits before requesting for
+primary DNS server's current SOA record. If the records are different,
+secondary DNS server will request a zone transfer from primary.
+
+NOTE: Lower values would cause more traffic.
+"""),
     cfg.IntOpt('ldap_dns_soa_retry',
         default=3600,
-        help='Retry interval (in seconds) for LDAP DNS driver '
-             'Statement of Authority'),
+        help="""
+Retry interval (in seconds) for LDAP DNS driver Start of Authority
+
+Time interval, a secondary/slave DNS server should wait, if an
+attempt to transfer zone failed during the previous refresh interval.
+"""),
     cfg.IntOpt('ldap_dns_soa_expiry',
         default=86400,
-        help='Expiry interval (in seconds) for LDAP DNS driver '
-             'Statement of Authority'),
+        help="""
+Expiry interval (in seconds) for LDAP DNS driver Start of Authority
+
+Time interval, a secondary/slave DNS server holds the information
+before it is no longer considered authoritative.
+"""),
     cfg.IntOpt('ldap_dns_soa_minimum',
         default=7200,
-        help='Minimum interval (in seconds) for LDAP DNS driver '
-             'Statement of Authority'),
+        help="""
+Minimum interval (in seconds) for LDAP DNS driver Start of Authority
+
+It is Minimum time-to-live applies for all resource records in the
+zone file. This value is supplied to other servers how long they
+should keep the data in cache.
+"""),
 ]
 
 driver_opts = [
@@ -771,11 +813,7 @@ ALL_DEFAULT_OPTS = (linux_net_opts + network_opts + ldap_dns_opts
 
 
 def register_opts(conf):
-    conf.register_opts(linux_net_opts)
-    conf.register_opts(network_opts)
-    conf.register_opts(ldap_dns_opts)
-    conf.register_opts(driver_opts)
-    conf.register_opts(rpcapi_opts)
+    conf.register_opts(ALL_DEFAULT_OPTS)
 
 
 def list_opts():
