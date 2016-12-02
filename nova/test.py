@@ -49,10 +49,12 @@ from nova import context
 from nova import db
 from nova.network import manager as network_manager
 from nova.network.security_group import openstack_driver
+from nova import objects
 from nova.objects import base as objects_base
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import conf_fixture
 from nova.tests.unit import policy_fixture
+from nova.tests import uuidsentinel as uuids
 from nova import utils
 
 
@@ -64,6 +66,8 @@ logging.setup(CONF, 'nova')
 cache.configure(CONF)
 
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
+CELL1_NAME = 'cell1'
+
 
 if six.PY2:
     nested = contextlib.nested
@@ -218,17 +222,6 @@ class TestCase(testtools.TestCase):
         self.useFixture(conf_fixture.ConfFixture(CONF))
         self.useFixture(nova_fixtures.RPCFixture('nova.test'))
 
-        if self.USES_DB:
-            self.useFixture(nova_fixtures.Database())
-            self.useFixture(nova_fixtures.Database(database='api'))
-            self.useFixture(nova_fixtures.DefaultFlavorsFixture())
-        elif not self.USES_DB_SELF:
-            self.useFixture(nova_fixtures.DatabasePoisonFixture())
-
-        # NOTE(blk-u): WarningsFixture must be after the Database fixture
-        # because sqlalchemy-migrate messes with the warnings filters.
-        self.useFixture(nova_fixtures.WarningsFixture())
-
         # NOTE(danms): Make sure to reset us back to non-remote objects
         # for each test to avoid interactions. Also, backup the object
         # registry.
@@ -236,6 +229,27 @@ class TestCase(testtools.TestCase):
         self._base_test_obj_backup = copy.copy(
             objects_base.NovaObjectRegistry._registry._obj_classes)
         self.addCleanup(self._restore_obj_registry)
+
+        self.cell_mappings = {}
+        self.host_mappings = {}
+        # NOTE(danms): If the test claims to want to set up the database
+        # itself, then it is responsible for all the mapping stuff too.
+        if self.USES_DB:
+            # NOTE(danms): Full database setup involves a cell0, cell1,
+            # and the relevant mappings.
+            self.useFixture(nova_fixtures.Database(database='api'))
+            self._setup_cells()
+            self.useFixture(nova_fixtures.DefaultFlavorsFixture())
+        elif not self.USES_DB_SELF:
+            # NOTE(danms): If not using the database, we mock out the
+            # mapping stuff and effectively collapse everything to a
+            # single cell.
+            self.useFixture(nova_fixtures.SingleCellSimple())
+            self.useFixture(nova_fixtures.DatabasePoisonFixture())
+
+        # NOTE(blk-u): WarningsFixture must be after the Database fixture
+        # because sqlalchemy-migrate messes with the warnings filters.
+        self.useFixture(nova_fixtures.WarningsFixture())
 
         self.useFixture(ovo_fixture.StableObjectJsonFixture())
 
@@ -256,6 +270,39 @@ class TestCase(testtools.TestCase):
         openstack_driver.DRIVER_CACHE = {}
 
         self.useFixture(nova_fixtures.ForbidNewLegacyNotificationFixture())
+
+    def _setup_cells(self):
+        """Setup a normal cellsv2 environment.
+
+        This sets up the CellDatabase fixture with two cells, one cell0
+        and one normal cell. CellMappings are created for both so that
+        cells-aware code can find those two databases.
+        """
+        celldbs = nova_fixtures.CellDatabases()
+        celldbs.add_cell_database(objects.CellMapping.CELL0_UUID)
+        celldbs.add_cell_database(uuids.cell1, default=True)
+        self.useFixture(celldbs)
+
+        ctxt = context.get_context()
+        fake_transport = 'fake://nowhere/'
+
+        c0 = objects.CellMapping(
+            context=ctxt,
+            uuid=objects.CellMapping.CELL0_UUID,
+            name='cell0',
+            transport_url=fake_transport,
+            database_connection=objects.CellMapping.CELL0_UUID)
+        c0.create()
+
+        c1 = objects.CellMapping(
+            context=ctxt,
+            uuid=uuids.cell1,
+            name=CELL1_NAME,
+            transport_url=fake_transport,
+            database_connection=uuids.cell1)
+        c1.create()
+
+        self.cell_mappings = {cm.name: cm for cm in (c0, c1)}
 
     def _restore_obj_registry(self):
         objects_base.NovaObjectRegistry._registry._obj_classes = \
@@ -295,6 +342,16 @@ class TestCase(testtools.TestCase):
     def start_service(self, name, host=None, **kwargs):
         svc = self.useFixture(
             nova_fixtures.ServiceFixture(name, host, **kwargs))
+
+        if name == 'compute':
+            ctxt = context.get_context()
+            cell = self.cell_mappings[kwargs.pop('cell', CELL1_NAME)]
+            hm = objects.HostMapping(context=ctxt,
+                                     host=svc.service.host,
+                                     cell_mapping=cell)
+            hm.create()
+            self.host_mappings[hm.host] = hm
+
         return svc.service
 
     def assertJsonEqual(self, expected, observed):

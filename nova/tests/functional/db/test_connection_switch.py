@@ -21,13 +21,16 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 
 
-class ConnectionSwitchTestCase(test.TestCase):
+class ConnectionSwitchTestCase(test.NoDBTestCase):
+    USES_DB_SELF = True
     test_filename = 'foo.db'
     fake_conn = 'sqlite:///' + test_filename
 
     def setUp(self):
         super(ConnectionSwitchTestCase, self).setUp()
         self.addCleanup(self.cleanup)
+        self.useFixture(nova_fixtures.Database(database='api'))
+        self.useFixture(nova_fixtures.Database(database='main'))
         # Use a file-based sqlite database so data will persist across new
         # connections
         # The 'main' database connection will stay open, so in-memory is fine

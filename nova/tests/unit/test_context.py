@@ -23,6 +23,9 @@ from nova import test
 
 
 class ContextTestCase(test.NoDBTestCase):
+    # NOTE(danms): Avoid any cells setup by claiming we will
+    # do things ourselves.
+    USES_DB_SELF = True
 
     def setUp(self):
         super(ContextTestCase, self).setUp()

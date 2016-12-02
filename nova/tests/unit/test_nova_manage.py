@@ -29,6 +29,7 @@ from nova.db.sqlalchemy import migration as sqla_migration
 from nova import exception
 from nova import objects
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit.db import fakes as db_fakes
 from nova.tests.unit.objects import test_network
 from nova.tests import uuidsentinel
@@ -848,9 +849,13 @@ class CellCommandsTestCase(test.NoDBTestCase):
         mock_db_cell_create.assert_called_once_with(ctxt, exp_values)
 
 
-class CellV2CommandsTestCase(test.TestCase):
+class CellV2CommandsTestCase(test.NoDBTestCase):
+    USES_DB_SELF = True
+
     def setUp(self):
         super(CellV2CommandsTestCase, self).setUp()
+        self.useFixture(nova_fixtures.Database())
+        self.useFixture(nova_fixtures.Database(database='api'))
         self.output = StringIO()
         self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
         self.commands = manage.CellV2Commands()
