@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    The ``console_token_ttl`` configuration option has been moved to the
+    ``consoleauth`` group and renamed ``token_ttl``. It should no longer be
+    included in the ``DEFAULT`` group.
