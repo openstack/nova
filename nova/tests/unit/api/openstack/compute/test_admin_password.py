@@ -139,7 +139,7 @@ class AdminPasswordTestV21(test.NoDBTestCase):
     def test_server_change_password_pass_disabled(self):
         # run with enable_instance_password disabled to verify adminPass
         # is missing from response. See lp bug 921814
-        self.flags(enable_instance_password=False)
+        self.flags(enable_instance_password=False, group='api')
         body = {'changePassword': {'adminPass': '1234pass'}}
         res = self._get_action()(self.fake_req, '1', body=body)
         self._check_status(202, res, self._get_action())

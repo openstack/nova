@@ -708,7 +708,7 @@ class ServersController(wsgi.Controller):
         req.cache_db_instances(instances)
         server = self._view_builder.create(req, instances[0])
 
-        if CONF.enable_instance_password:
+        if CONF.api.enable_instance_password:
             server['server']['adminPass'] = password
 
         robj = wsgi.ResponseObject(server)
@@ -1032,7 +1032,7 @@ class ServersController(wsgi.Controller):
 
         # Add on the admin_password attribute since the view doesn't do it
         # unless instance passwords are disabled
-        if CONF.enable_instance_password:
+        if CONF.api.enable_instance_password:
             view['server']['adminPass'] = password
 
         robj = wsgi.ResponseObject(view)

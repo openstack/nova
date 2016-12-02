@@ -1,0 +1,26 @@
+---
+upgrade:
+  - |
+    API configuration options have been moved to the 'api' group. They
+    should no longer be included in the 'DEFAULT' group. Options affected by
+    this change:
+
+    * ``auth_strategy``
+    * ``use_forwarded_for``
+    * ``config_drive_skip_versions``
+    * ``vendordata_providers``
+    * ``vendordata_dynamic_targets``
+    * ``vendordata_dynamic_ssl_certfile``
+    * ``vendordata_dynamic_connect_timeout``
+    * ``vendordata_dynamic_read_timeout``
+    * ``metadata_cache_expiration``
+    * ``vendordata_jsonfile_path``
+    * ``max_limit`` (was ``osapi_max_limit``)
+    * ``compute_link_prefix`` (was ``osapi_compute_link_prefix``)
+    * ``glance_link_prefix`` (was ``osapi_glance_link_prefix``)
+    * ``allow_instance_snapshots``
+    * ``hide_server_address_states`` (was ``osapi_hide_server_address_states``)
+    * ``fping_path``
+    * ``use_neutron_default_nets``
+    * ``neutron_default_tenant_id``
+    * ``enable_instance_password``

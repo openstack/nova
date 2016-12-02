@@ -65,11 +65,11 @@ class DynamicVendorData(vendordata.VendorDataDriver):
             # SSL verification
             verify = url.startswith('https://')
 
-            if verify and CONF.vendordata_dynamic_ssl_certfile:
-                verify = CONF.vendordata_dynamic_ssl_certfile
+            if verify and CONF.api.vendordata_dynamic_ssl_certfile:
+                verify = CONF.api.vendordata_dynamic_ssl_certfile
 
-            timeout = (CONF.vendordata_dynamic_connect_timeout,
-                       CONF.vendordata_dynamic_read_timeout)
+            timeout = (CONF.api.vendordata_dynamic_connect_timeout,
+                       CONF.api.vendordata_dynamic_read_timeout)
 
             res = requests.request('POST', url, data=jsonutils.dumps(body),
                                    headers=headers, verify=verify,
@@ -96,7 +96,7 @@ class DynamicVendorData(vendordata.VendorDataDriver):
     def get(self):
         j = {}
 
-        for target in CONF.vendordata_dynamic_targets:
+        for target in CONF.api.vendordata_dynamic_targets:
             # NOTE(mikal): a target is composed of the following:
             #    name@url
             # where name is the name to use in the metadata handed to

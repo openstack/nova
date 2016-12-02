@@ -143,10 +143,10 @@ class QuotaSetsController(wsgi.Controller):
 
         quota_set = body['quota_set']
 
-        # NOTE(alex_xu): The CONF.enable_network_quota was deprecated due to
-        # it is only used by nova-network, and nova-network will be deprecated
-        # also. So when CONF.enable_newtork_quota is removed, the networks
-        # quota will disappeare also.
+        # NOTE(alex_xu): The CONF.enable_network_quota was deprecated
+        # due to it is only used by nova-network, and nova-network will be
+        # deprecated also. So when CONF.enable_newtork_quota is removed,
+        # the networks quota will disappeare also.
         if not CONF.enable_network_quota and 'networks' in quota_set:
             raise webob.exc.HTTPBadRequest(
                 explanation=_('The networks quota is disabled'))

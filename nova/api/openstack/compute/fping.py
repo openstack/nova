@@ -43,13 +43,13 @@ class FpingController(wsgi.Controller):
         self.last_call = {}
 
     def check_fping(self):
-        if not os.access(CONF.fping_path, os.X_OK):
+        if not os.access(CONF.api.fping_path, os.X_OK):
             raise exc.HTTPServiceUnavailable(
                 explanation=_("fping utility is not found."))
 
     @staticmethod
     def fping(ips):
-        fping_ret = utils.execute(CONF.fping_path, *ips,
+        fping_ret = utils.execute(CONF.api.fping_path, *ips,
                                   check_exit_code=False)
         if not fping_ret:
             return set()

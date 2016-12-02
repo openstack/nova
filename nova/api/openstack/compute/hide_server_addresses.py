@@ -30,7 +30,7 @@ ALIAS = 'os-hide-server-addresses'
 class Controller(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(Controller, self).__init__(*args, **kwargs)
-        hidden_states = CONF.osapi_hide_server_address_states
+        hidden_states = CONF.api.hide_server_address_states
 
         # NOTE(jkoelker) _ is not considered uppercase ;)
         valid_vm_states = [getattr(vm_states, state)

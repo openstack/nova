@@ -24,9 +24,9 @@ class ServersSampleHideAddressesJsonTest(test_servers.ServersSampleJsonTest):
     sample_dir = 'os-hide-server-addresses'
 
     def setUp(self):
-        # We override osapi_hide_server_address_states in order
+        # We override hide_server_address_states in order
         # to have an example of in the json samples of the
         # addresses being hidden
-        CONF.set_override("osapi_hide_server_address_states",
-                          [vm_states.ACTIVE])
+        CONF.set_override("hide_server_address_states",
+                          [vm_states.ACTIVE], group='api')
         super(ServersSampleHideAddressesJsonTest, self).setUp()

@@ -50,7 +50,7 @@ DEFAULT_NETWORK = [
 NETWORKS_WITH_DEFAULT_NET = copy.deepcopy(NETWORKS)
 NETWORKS_WITH_DEFAULT_NET.extend(DEFAULT_NETWORK)
 
-DEFAULT_TENANT_ID = CONF.neutron_default_tenant_id
+DEFAULT_TENANT_ID = CONF.api.neutron_default_tenant_id
 
 
 def fake_network_api_get_all(context):
@@ -69,11 +69,12 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         self.controller = self.ctrlr()
         self.flags(enable_network_quota=True)
         self.req = fakes.HTTPRequest.blank('')
-        self.original_value = CONF.use_neutron_default_nets
+        self.original_value = CONF.api.use_neutron_default_nets
 
     def tearDown(self):
         super(TenantNetworksTestV21, self).tearDown()
-        CONF.set_override("use_neutron_default_nets", self.original_value)
+        CONF.set_override("use_neutron_default_nets", self.original_value,
+                          group='api')
 
     def _fake_network_api_create(self, context, **kwargs):
         self.assertEqual(context.project_id, kwargs['project_id'])
@@ -159,7 +160,7 @@ class TenantNetworksTestV21(test.NoDBTestCase):
 
     @mock.patch('nova.network.api.API.get_all')
     def _test_network_index(self, get_all_mock, default_net=True):
-        CONF.set_override("use_neutron_default_nets", default_net)
+        CONF.set_override("use_neutron_default_nets", default_net, group='api')
         get_all_mock.side_effect = fake_network_api_get_all
 
         expected = NETWORKS

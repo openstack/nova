@@ -847,7 +847,8 @@ class OpenStackMetadataTestCase(test.TestCase):
             self.flags(vendordata_providers=['StaticJSON', 'DynamicJSON'],
                        vendordata_jsonfile_path=jsonfile,
                        vendordata_dynamic_targets=[
-                           'web@http://fake.com/foobar']
+                           'web@http://fake.com/foobar'],
+                       group='api'
                        )
 
             inst = self.instance.obj_clone()
@@ -910,7 +911,8 @@ class OpenStackMetadataTestCase(test.TestCase):
             self.flags(vendordata_providers=['StaticJSON', 'DynamicJSON'],
                        vendordata_jsonfile_path=jsonfile,
                        vendordata_dynamic_targets=[
-                           'web@http://fake.com/foobar']
+                           'web@http://fake.com/foobar'],
+                       group='api'
                        )
 
             inst = self.instance.obj_clone()
@@ -1087,7 +1089,7 @@ class MetadataHandlerTestCase(test.TestCase):
                 raise Exception("Expected addr of %s, got %s" %
                                 (expected_addr, address))
 
-        self.flags(use_forwarded_for=True)
+        self.flags(use_forwarded_for=True, group='api')
         response = fake_request(self, self.mdinst,
                                 relpath="/2009-04-04/user-data",
                                 address="168.168.168.1",
@@ -1288,7 +1290,7 @@ class MetadataHandlerTestCase(test.TestCase):
     def test_metadata_handler_with_instance_id(self, get_by_uuid):
         # test twice to ensure that the cache works
         get_by_uuid.return_value = self.mdinst
-        self.flags(metadata_cache_expiration=15)
+        self.flags(metadata_cache_expiration=15, group='api')
         hnd = handler.MetadataRequestHandler()
         self._metadata_handler_with_instance_id(hnd)
         self._metadata_handler_with_instance_id(hnd)
@@ -1298,7 +1300,7 @@ class MetadataHandlerTestCase(test.TestCase):
     def test_metadata_handler_with_instance_id_no_cache(self, get_by_uuid):
         # test twice to ensure that disabling the cache works
         get_by_uuid.return_value = self.mdinst
-        self.flags(metadata_cache_expiration=0)
+        self.flags(metadata_cache_expiration=0, group='api')
         hnd = handler.MetadataRequestHandler()
         self._metadata_handler_with_instance_id(hnd)
         self._metadata_handler_with_instance_id(hnd)
@@ -1319,7 +1321,7 @@ class MetadataHandlerTestCase(test.TestCase):
     def test_metadata_handler_with_remote_address(self, get_by_uuid):
         # test twice to ensure that the cache works
         get_by_uuid.return_value = self.mdinst
-        self.flags(metadata_cache_expiration=15)
+        self.flags(metadata_cache_expiration=15, group='api')
         hnd = handler.MetadataRequestHandler()
         self._metadata_handler_with_remote_address(hnd)
         self._metadata_handler_with_remote_address(hnd)
@@ -1329,7 +1331,7 @@ class MetadataHandlerTestCase(test.TestCase):
     def test_metadata_handler_with_remote_address_no_cache(self, get_by_uuid):
         # test twice to ensure that disabling the cache works
         get_by_uuid.return_value = self.mdinst
-        self.flags(metadata_cache_expiration=0)
+        self.flags(metadata_cache_expiration=0, group='api')
         hnd = handler.MetadataRequestHandler()
         self._metadata_handler_with_remote_address(hnd)
         self._metadata_handler_with_remote_address(hnd)

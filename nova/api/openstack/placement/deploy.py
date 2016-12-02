@@ -34,7 +34,7 @@ objects.register_all()
 
 def deploy(conf, project_name):
     """Assemble the middleware pipeline leading to the placement app."""
-    if conf.auth_strategy == 'noauth2':
+    if conf.api.auth_strategy == 'noauth2':
         auth_middleware = auth.NoAuthMiddleware
     else:
         # Do not provide global conf to middleware here.

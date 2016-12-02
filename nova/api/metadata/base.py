@@ -483,8 +483,8 @@ class InstanceMetadata(object):
             # specified an old style driver here, then use that. This second
             # bit can be removed once old style vendordata is fully deprecated
             # and removed.
-            if (CONF.vendordata_providers and
-                'StaticJSON' in CONF.vendordata_providers):
+            if (CONF.api.vendordata_providers and
+                'StaticJSON' in CONF.api.vendordata_providers):
                 return jsonutils.dump_as_bytes(
                     self.vendordata_providers['StaticJSON'].get())
             else:
@@ -499,7 +499,7 @@ class InstanceMetadata(object):
             self.set_mimetype(MIME_TYPE_APPLICATION_JSON)
 
             j = {}
-            for provider in CONF.vendordata_providers:
+            for provider in CONF.api.vendordata_providers:
                 if provider == 'StaticJSON':
                     j['static'] = self.vendordata_providers['StaticJSON'].get()
                 else:
@@ -576,7 +576,7 @@ class InstanceMetadata(object):
         """Yields (path, value) tuples for metadata elements."""
         # EC2 style metadata
         for version in VERSIONS + ["latest"]:
-            if version in CONF.config_drive_skip_versions.split(' '):
+            if version in CONF.api.config_drive_skip_versions.split(' '):
                 continue
 
             data = self.get_ec2_metadata(version)

@@ -142,7 +142,7 @@ class TestPipeLineFactory(test.NoDBTestCase):
 
     def test_pipeline_factory_v21(self):
         fake_pipeline = 'test1 test2 test3'
-        CONF.set_override('auth_strategy', 'noauth2')
+        CONF.set_override('auth_strategy', 'noauth2', group='api')
         app = nova.api.auth.pipeline_factory_v21(
             TestPipeLineFactory.FakeLoader(), None, noauth2=fake_pipeline)
         self._test_pipeline(fake_pipeline, app)

@@ -60,14 +60,14 @@ class TenantNetworkController(wsgi.Controller):
 
     def _refresh_default_networks(self):
         self._default_networks = []
-        if CONF.use_neutron_default_nets:
+        if CONF.api.use_neutron_default_nets:
             try:
                 self._default_networks = self._get_default_networks()
             except Exception:
                 LOG.exception(_LE("Failed to get default networks"))
 
     def _get_default_networks(self):
-        project_id = CONF.neutron_default_tenant_id
+        project_id = CONF.api.neutron_default_tenant_id
         ctx = nova_context.RequestContext(user_id=None,
                                           project_id=project_id)
         networks = {}

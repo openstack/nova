@@ -341,7 +341,7 @@ class TestGetImageService(test.NoDBTestCase):
 class TestCreateGlanceClient(test.NoDBTestCase):
     @mock.patch('glanceclient.Client')
     def test_headers_passed_glanceclient(self, init_mock):
-        self.flags(auth_strategy='keystone')
+        self.flags(auth_strategy='keystone', group='api')
         auth_token = 'token'
         ctx = context.RequestContext('fake', 'fake', auth_token=auth_token)
 

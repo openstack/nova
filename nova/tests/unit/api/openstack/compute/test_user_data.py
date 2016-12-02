@@ -53,8 +53,8 @@ class ServersControllerCreateTest(test.TestCase):
         """Shared implementation for tests below that create instance."""
         super(ServersControllerCreateTest, self).setUp()
 
-        self.flags(verbose=True,
-                   enable_instance_password=True)
+        self.flags(verbose=True)
+        self.flags(enable_instance_password=True, group='api')
         self.instance_cache_num = 0
         self.instance_cache_by_id = {}
         self.instance_cache_by_uuid = {}

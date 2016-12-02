@@ -134,7 +134,7 @@ class LimiterTest(test.NoDBTestCase):
     def test_limiter_custom_max_limit(self):
         # Test a max_limit other than 1000.
         max_limit = 2000
-        self.flags(osapi_max_limit=max_limit)
+        self.flags(max_limit=max_limit, group='api')
         items = range(max_limit)
         req = webob.Request.blank('/?offset=1&limit=3')
         self.assertEqual(
@@ -494,7 +494,7 @@ class TestCollectionLinks(test.NoDBTestCase):
         req = mock.MagicMock()
         params = mock.PropertyMock(return_value=dict())
         type(req).params = params
-        self.flags(osapi_max_limit=1)
+        self.flags(max_limit=1, group='api')
 
         builder = common.ViewBuilder()
         results = builder._get_collection_links(req, items,
@@ -514,7 +514,7 @@ class TestCollectionLinks(test.NoDBTestCase):
         # Given limit is greater than default max, only return default max
         params = mock.PropertyMock(return_value=dict(limit=2))
         type(req).params = params
-        self.flags(osapi_max_limit=1)
+        self.flags(max_limit=1, group='api')
 
         builder = common.ViewBuilder()
         results = builder._get_collection_links(req, items,

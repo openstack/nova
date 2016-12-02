@@ -207,7 +207,7 @@ class RescueTestV21(test.NoDBTestCase):
         self.assertEqual(CONF.password_length, len(resp['adminPass']))
 
     def test_rescue_disable_password(self):
-        self.flags(enable_instance_password=False)
+        self.flags(enable_instance_password=False, group='api')
         body = dict(rescue=None)
         resp_json = self.controller._rescue(self.fake_req, UUID, body=body)
         self.assertNotIn('adminPass', resp_json)

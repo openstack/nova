@@ -91,7 +91,7 @@ class AccessIPsAPIValidationTestV21(test.TestCase):
 
     def test_create_server_with_access_ip_pass_disabled(self):
         # test with admin passwords disabled See lp bug 921814
-        self.flags(enable_instance_password=False)
+        self.flags(enable_instance_password=False, group='api')
         params = {v4_key: '192.168.0.10',
                   v6_key: '2001:db8::9abc'}
         res = self._test_create(params)
