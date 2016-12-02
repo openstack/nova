@@ -542,6 +542,8 @@ class Reservation(BASE, NovaBase, models.SoftDeleteMixin):
                          'QuotaUsage.deleted == 0)')
 
 
+# TODO(macsz) This class can be removed. It might need a DB migration to drop
+# this.
 class Snapshot(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a block storage device that can be attached to a VM."""
     __tablename__ = 'snapshots'

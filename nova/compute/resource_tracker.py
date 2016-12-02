@@ -22,10 +22,10 @@ import copy
 
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
-from oslo_utils import importutils
 
 from nova.compute import claims
 from nova.compute import monitors
+from nova.compute import stats
 from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
@@ -87,7 +87,7 @@ class ResourceTracker(object):
         self.pci_tracker = None
         self.nodename = nodename
         self.compute_node = None
-        self.stats = importutils.import_object(CONF.compute_stats_class)
+        self.stats = stats.Stats()
         self.tracked_instances = {}
         self.tracked_migrations = {}
         monitor_handler = monitors.MonitorHandler(self)
