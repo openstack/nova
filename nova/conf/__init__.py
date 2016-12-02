@@ -24,7 +24,6 @@ from nova.conf import availability_zone
 from nova.conf import base
 from nova.conf import cache
 from nova.conf import cells
-from nova.conf import cert
 from nova.conf import cinder
 from nova.conf import cloudpipe
 from nova.conf import compute
@@ -81,7 +80,6 @@ availability_zone.register_opts(CONF)
 base.register_opts(CONF)
 cache.register_opts(CONF)
 cells.register_opts(CONF)
-cert.register_opts(CONF)
 cinder.register_opts(CONF)
 cloudpipe.register_opts(CONF)
 compute.register_opts(CONF)

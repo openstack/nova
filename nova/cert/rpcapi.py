@@ -58,7 +58,7 @@ class CertAPI(object):
 
     def __init__(self):
         super(CertAPI, self).__init__()
-        target = messaging.Target(topic=CONF.cert_topic, version='2.0')
+        target = messaging.Target(topic='cert', version='2.0')
         version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.cert,
                                                CONF.upgrade_levels.cert)
         self.client = rpc.get_client(target, version_cap=version_cap)
