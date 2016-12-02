@@ -357,9 +357,6 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
              'id': FAKE_UUID_A,
              'volumeId': FAKE_UUID_A
             }}
-        self._set_up_controller()
-
-    def _set_up_controller(self):
         self.attachments = volumes_v21.VolumeAttachmentController()
 
     def test_show(self):
