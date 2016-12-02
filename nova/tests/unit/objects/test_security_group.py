@@ -123,6 +123,12 @@ class _TestSecurityGroupObject(object):
         secgroup.save()
         self.assertFalse(mock_db_update.called)
 
+    def test_identifier(self):
+        secgroup = security_group.SecurityGroup(name='foo')
+        self.assertEqual('foo', secgroup.identifier)
+        secgroup.uuid = uuids.secgroup
+        self.assertEqual(uuids.secgroup, secgroup.identifier)
+
 
 class TestSecurityGroupObject(test_objects._LocalTest,
                               _TestSecurityGroupObject):

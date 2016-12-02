@@ -88,6 +88,10 @@ class SecurityGroup(base.NovaPersistentObject, base.NovaObject):
         self._from_db_object(self._context, self,
                              db.security_group_get(self._context, self.id))
 
+    @property
+    def identifier(self):
+        return self.uuid if 'uuid' in self else self.name
+
 
 @base.NovaObjectRegistry.register
 class SecurityGroupList(base.ObjectListBase, base.NovaObject):
