@@ -359,62 +359,40 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
             }}
         self.attachments = volumes_v21.VolumeAttachmentController()
 
-    def test_show(self):
-        req = fakes.HTTPRequest.blank(
+        self.req = fakes.HTTPRequest.blank(
                   '/v2/servers/id/os-volume_attachments/uuid')
-        req.method = 'POST'
-        req.body = jsonutils.dump_as_bytes({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
+        self.req.body = jsonutils.dump_as_bytes({})
+        self.req.headers['content-type'] = 'application/json'
+        self.req.environ['nova.context'] = self.context
 
-        result = self.attachments.show(req, FAKE_UUID, FAKE_UUID_A)
+    def test_show(self):
+        result = self.attachments.show(self.req, FAKE_UUID, FAKE_UUID_A)
         self.assertEqual(self.expected_show, result)
 
     @mock.patch.object(compute_api.API, 'get',
         side_effect=exception.InstanceNotFound(instance_id=FAKE_UUID))
     def test_show_no_instance(self, mock_mr):
-        req = fakes.HTTPRequest.blank(
-                  '/v2/servers/id/os-volume_attachments/uuid')
-        req.method = 'POST'
-        req.body = jsonutils.dump_as_bytes({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
-
         self.assertRaises(exc.HTTPNotFound,
                           self.attachments.show,
-                          req,
+                          self.req,
                           FAKE_UUID,
                           FAKE_UUID_A)
 
     @mock.patch.object(objects.BlockDeviceMappingList,
                        'get_by_instance_uuid', return_value=None)
     def test_show_no_bdms(self, mock_mr):
-        req = fakes.HTTPRequest.blank(
-                  '/v2/servers/id/os-volume_attachments/uuid')
-        req.method = 'POST'
-        req.body = jsonutils.dump_as_bytes({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
-
         self.assertRaises(exc.HTTPNotFound,
                           self.attachments.show,
-                          req,
+                          self.req,
                           FAKE_UUID,
                           FAKE_UUID_A)
 
     def test_show_bdms_no_mountpoint(self):
         FAKE_UUID_NOTEXIST = '00000000-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 
-        req = fakes.HTTPRequest.blank(
-                  '/v2/servers/id/os-volume_attachments/uuid')
-        req.method = 'POST'
-        req.body = jsonutils.dump_as_bytes({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
-
         self.assertRaises(exc.HTTPNotFound,
                           self.attachments.show,
-                          req,
+                          self.req,
                           FAKE_UUID,
                           FAKE_UUID_NOTEXIST)
 
@@ -422,13 +400,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         self.stubs.Set(compute_api.API,
                        'detach_volume',
                        fake_detach_volume)
-        req = fakes.HTTPRequest.blank(
-                  '/v2/servers/id/os-volume_attachments/uuid')
-        req.method = 'DELETE'
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
-
-        result = self.attachments.delete(req, FAKE_UUID, FAKE_UUID_A)
+        result = self.attachments.delete(self.req, FAKE_UUID, FAKE_UUID_A)
         # NOTE: on v2.1, http status code is set as wsgi_code of API
         # method instead of status_int in a response object.
         if isinstance(self.attachments,
@@ -476,30 +448,20 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         self.stubs.Set(compute_api.API,
                        'detach_volume',
                        fake_detach_volume)
-        req = fakes.HTTPRequest.blank(
-                  '/v2/servers/id/os-volume_attachments/uuid')
-        req.method = 'DELETE'
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
 
         self.assertRaises(exc.HTTPNotFound,
                           self.attachments.delete,
-                          req,
+                          self.req,
                           FAKE_UUID,
                           FAKE_UUID_C)
 
     @mock.patch('nova.objects.BlockDeviceMapping.is_root',
                  new_callable=mock.PropertyMock)
     def test_detach_vol_root(self, mock_isroot):
-        req = fakes.HTTPRequest.blank(
-                  '/v2/servers/id/os-volume_attachments/uuid')
-        req.method = 'DELETE'
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
         mock_isroot.return_value = True
         self.assertRaises(exc.HTTPForbidden,
                           self.attachments.delete,
-                          req,
+                          self.req,
                           FAKE_UUID,
                           FAKE_UUID_A)
 
@@ -511,14 +473,8 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         self.stubs.Set(compute_api.API,
                        'detach_volume',
                        fake_detach_volume_from_locked_server)
-        req = fakes.HTTPRequest.blank(
-                  '/v2/servers/id/os-volume_attachments/uuid')
-        req.method = 'DELETE'
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
-
         self.assertRaises(webob.exc.HTTPConflict, self.attachments.delete,
-                          req, FAKE_UUID, FAKE_UUID_A)
+                          self.req, FAKE_UUID, FAKE_UUID_A)
 
     def test_attach_volume(self):
         self.stubs.Set(compute_api.API,
@@ -526,12 +482,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                        fake_attach_volume)
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
                                     'device': '/dev/fake'}}
-        req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
-        req.method = 'POST'
-        req.body = jsonutils.dump_as_bytes({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
-        result = self.attachments.create(req, FAKE_UUID, body=body)
+        result = self.attachments.create(self.req, FAKE_UUID, body=body)
         self.assertEqual('00000000-aaaa-aaaa-aaaa-000000000000',
                          result['volumeAttachment']['id'])
 
@@ -544,15 +495,9 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                                                **{'uuid': FAKE_UUID})
         inst.vm_state = vm_states.SHELVED
         mock_get_instance.return_value = inst
-        req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments',
-                                      version='2.19')
-        req.method = 'POST'
-        req.body = jsonutils.dump_as_bytes({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
         self.assertRaises(webob.exc.HTTPConflict,
                           self.attachments.create,
-                          req,
+                          self.req,
                           FAKE_UUID,
                           body=body)
 
@@ -585,12 +530,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
     def test_attach_volume_with_auto_device(self, mock_attach):
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
                                     'device': None}}
-        req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
-        req.method = 'POST'
-        req.body = jsonutils.dump_as_bytes({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
-        result = self.attachments.create(req, FAKE_UUID, body=body)
+        result = self.attachments.create(self.req, FAKE_UUID, body=body)
         self.assertEqual('00000000-aaaa-aaaa-aaaa-000000000000',
                          result['volumeAttachment']['id'])
         self.assertEqual('/dev/myfake', result['volumeAttachment']['device'])
@@ -605,14 +545,8 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                        fake_attach_volume_to_locked_server)
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
                                     'device': '/dev/fake'}}
-        req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
-        req.method = 'POST'
-        req.body = jsonutils.dump_as_bytes({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
-
         self.assertRaises(webob.exc.HTTPConflict, self.attachments.create,
-                          req, FAKE_UUID, body=body)
+                          self.req, FAKE_UUID, body=body)
 
     def test_attach_volume_bad_id(self):
         self.stubs.Set(compute_api.API,
@@ -625,15 +559,8 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                 'volumeId': 'TESTVOLUME',
             }
         }
-
-        req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
-        req.method = 'POST'
-        req.body = jsonutils.dump_as_bytes({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
-
         self.assertRaises(self.validation_error, self.attachments.create,
-                          req, FAKE_UUID, body=body)
+                          self.req, FAKE_UUID, body=body)
 
     @mock.patch.object(compute_api.API, 'attach_volume',
                        side_effect=exception.DevicePathInUse(path='/dev/sda'))
@@ -646,14 +573,8 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
             }
         }
 
-        req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
-        req.method = 'POST'
-        req.body = jsonutils.dump_as_bytes({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
-
         self.assertRaises(webob.exc.HTTPConflict, self.attachments.create,
-                          req, FAKE_UUID, body=body)
+                          self.req, FAKE_UUID, body=body)
 
     def test_attach_volume_without_volumeId(self):
         self.stubs.Set(compute_api.API,
@@ -666,28 +587,16 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
             }
         }
 
-        req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
-        req.method = 'POST'
-        req.body = jsonutils.dump_as_bytes({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
-
         self.assertRaises(self.validation_error, self.attachments.create,
-                          req, FAKE_UUID, body=body)
+                          self.req, FAKE_UUID, body=body)
 
     def test_attach_volume_with_extra_arg(self):
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
                                     'device': '/dev/fake',
                                     'extra': 'extra_arg'}}
 
-        req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
-        req.method = 'POST'
-        req.body = jsonutils.dump_as_bytes({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
-
         self.assertRaises(self.validation_error, self.attachments.create,
-                          req, FAKE_UUID, body=body)
+                          self.req, FAKE_UUID, body=body)
 
     @mock.patch.object(compute_api.API, 'attach_volume')
     def test_attach_volume_with_invalid_input(self, mock_attach):
@@ -713,14 +622,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                        'swap_volume',
                        fake_func)
         body = body or {'volumeAttachment': {'volumeId': FAKE_UUID_B}}
-
-        req = fakes.HTTPRequest.blank(
-                  '/v2/servers/id/os-volume_attachments/uuid')
-        req.method = 'PUT'
-        req.body = jsonutils.dump_as_bytes({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
-        return attachments.update(req, FAKE_UUID, uuid, body=body)
+        return attachments.update(self.req, FAKE_UUID, uuid, body=body)
 
     def test_swap_volume_for_locked_server(self):
 
