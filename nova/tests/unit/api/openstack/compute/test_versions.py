@@ -345,8 +345,7 @@ class VersionsViewBuilderTests(test.NoDBTestCase):
 
         self.assertEqual(expected, output)
 
-    def _test_view_builder_osapi_compute_link_prefix(self,
-                                                     href=None):
+    def _test_view_builder_compute_link_prefix(self, href=None):
         base_url = "http://example.org/v2.1/"
         if href is None:
             href = base_url
@@ -382,13 +381,13 @@ class VersionsViewBuilderTests(test.NoDBTestCase):
         output = builder.build_version(version_data)
         self.assertEqual(expected, output)
 
-    def test_view_builder_with_osapi_compute_link_prefix(self):
+    def test_view_builder_with_compute_link_prefix(self):
         self.flags(compute_link_prefix='http://zoo.com:42', group='api')
         href = "http://zoo.com:42/v2.1/"
-        self._test_view_builder_osapi_compute_link_prefix(href)
+        self._test_view_builder_compute_link_prefix(href)
 
-    def test_view_builder_without_osapi_compute_link_prefix(self):
-        self._test_view_builder_osapi_compute_link_prefix()
+    def test_view_builder_without_compute_link_prefix(self):
+        self._test_view_builder_compute_link_prefix()
 
     def test_generate_href(self):
         base_url = "http://example.org/app/"
