@@ -1151,6 +1151,15 @@ block_device_mapping_v2:
   in: body
   required: false
   type: object
+block_device_uuid:
+  description: |
+    This is the uuid of source resource. The uuid is point to different resource
+    based on the source_type. For example if source_type is ``image`` as the above
+    sample, the block device is created based on the specified image which is gotten
+    from the image service.
+  in: body
+  required: false
+  type: string
 block_migration:
   description: |
     Set to ``True`` to migrate local disks by using block migration. If the source
