@@ -52,6 +52,14 @@ _fake_alias3 = """{
                "device_type": "type-PF"
                }"""
 
+_fake_alias4 = """{
+               "name": " Cirrus Logic ",
+               "capability_type": "pci",
+               "product_id": "0ff2",
+               "vendor_id": "10de",
+               "device_type": "type-PCI"
+               }"""
+
 
 class AliasTestCase(test.NoDBTestCase):
     def test_good_alias(self):
@@ -203,6 +211,28 @@ class AliasTestCase(test.NoDBTestCase):
                                   "QuicAssist:3, IntelNIC: 1"}}
         requests = request.get_pci_requests_from_flavor(flavor)
         self.assertEqual(set([1, 3]),
+                         set([p.count for p in requests.requests]))
+        self._verify_result(expect_request, requests.requests)
+
+    def test_get_pci_requests_from_flavor_including_space(self):
+        self.flags(alias=[_fake_alias3, _fake_alias4], group='pci')
+        expect_request = [
+            {'count': 4,
+             'spec': [{'vendor_id': '10de', 'product_id': '0ff2',
+                       'dev_type': "type-PCI",
+                       'capability_type': 'pci'}],
+             'alias_name': 'Cirrus Logic'},
+
+            {'count': 3,
+             'spec': [{'vendor_id': '8086', 'product_id': '1111',
+                       'dev_type': "type-PF",
+                       'capability_type': 'pci'}],
+             'alias_name': 'IntelNIC'}, ]
+
+        flavor = {'extra_specs': {"pci_passthrough:alias":
+                                  " Cirrus Logic : 4, IntelNIC: 3"}}
+        requests = request.get_pci_requests_from_flavor(flavor)
+        self.assertEqual(set([3, 4]),
                          set([p.count for p in requests.requests]))
         self._verify_result(expect_request, requests.requests)
 
