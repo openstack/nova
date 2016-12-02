@@ -26,7 +26,6 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import units
 
-from nova.compute import vm_mode
 import nova.conf
 from nova.i18n import _
 from nova.objects import fields as obj_fields
@@ -159,10 +158,10 @@ class HostOps(object):
                'supported_instances': [
                    (obj_fields.Architecture.I686,
                     obj_fields.HVType.HYPERV,
-                    vm_mode.HVM),
+                    obj_fields.VMMode.HVM),
                    (obj_fields.Architecture.X86_64,
                     obj_fields.HVType.HYPERV,
-                    vm_mode.HVM)],
+                    obj_fields.VMMode.HVM)],
                'numa_topology': None,
                }
 

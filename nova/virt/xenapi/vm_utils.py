@@ -43,11 +43,11 @@ import six.moves.urllib.parse as urlparse
 from nova.api.metadata import base as instance_metadata
 from nova.compute import power_state
 from nova.compute import task_states
-from nova.compute import vm_mode
 import nova.conf
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova.network import model as network_model
+from nova.objects import fields as obj_fields
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import diagnostics
@@ -1608,23 +1608,24 @@ def determine_disk_image_type(image_meta):
 
 
 def determine_vm_mode(instance, disk_image_type):
-    current_mode = vm_mode.get_from_instance(instance)
-    if current_mode == vm_mode.XEN or current_mode == vm_mode.HVM:
+    current_mode = obj_fields.VMMode.get_from_instance(instance)
+    if (current_mode == obj_fields.VMMode.XEN or
+        current_mode == obj_fields.VMMode.HVM):
         return current_mode
 
     os_type = instance['os_type']
     if os_type == "linux":
-        return vm_mode.XEN
+        return obj_fields.VMMode.XEN
     if os_type == "windows":
-        return vm_mode.HVM
+        return obj_fields.VMMode.HVM
 
     # disk_image_type specific default for backwards compatibility
     if disk_image_type == ImageType.DISK_VHD or \
             disk_image_type == ImageType.DISK:
-        return vm_mode.XEN
+        return obj_fields.VMMode.XEN
 
     # most images run OK as HVM
-    return vm_mode.HVM
+    return obj_fields.VMMode.HVM
 
 
 def set_vm_name_label(session, vm_ref, name_label):

@@ -64,7 +64,6 @@ from nova import block_device
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
-from nova.compute import vm_mode
 import nova.conf
 from nova.console import serial as serial_console
 from nova.console import type as ctype
@@ -3508,7 +3507,8 @@ class LibvirtDriver(driver.ComputeDriver):
             fs.source_dir = os.path.join(
                 libvirt_utils.get_instance_path(instance), 'rootfs')
             devices.append(fs)
-        elif os_type == vm_mode.EXE and CONF.libvirt.virt_type == "parallels":
+        elif (os_type == fields.VMMode.EXE and
+              CONF.libvirt.virt_type == "parallels"):
             if rescue:
                 fsrescue = self._get_guest_fs_config(instance, "disk.rescue")
                 devices.append(fsrescue)
@@ -4012,13 +4012,13 @@ class LibvirtDriver(driver.ComputeDriver):
     def _get_guest_os_type(self, virt_type):
         """Returns the guest OS type based on virt type."""
         if virt_type == "lxc":
-            ret = vm_mode.EXE
+            ret = fields.VMMode.EXE
         elif virt_type == "uml":
-            ret = vm_mode.UML
+            ret = fields.VMMode.UML
         elif virt_type == "xen":
-            ret = vm_mode.XEN
+            ret = fields.VMMode.XEN
         else:
-            ret = vm_mode.HVM
+            ret = fields.VMMode.HVM
         return ret
 
     def _set_guest_for_rescue(self, rescue, guest, inst_path, virt_type,
@@ -4112,7 +4112,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest.features.append(vconfig.LibvirtConfigGuestFeaturePAE())
 
         if (virt_type not in ("lxc", "uml", "parallels", "xen") or
-                (virt_type == "xen" and guest.os_type == vm_mode.HVM)):
+                (virt_type == "xen" and guest.os_type == fields.VMMode.HVM)):
             guest.features.append(vconfig.LibvirtConfigGuestFeatureACPI())
             guest.features.append(vconfig.LibvirtConfigGuestFeatureAPIC())
 
@@ -4145,7 +4145,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # be overridden by the user with image_meta.properties, which
         # is carried out in the next if statement below this one.
         guestarch = libvirt_utils.get_arch(image_meta)
-        if guest.os_type == vm_mode.XEN:
+        if guest.os_type == fields.VMMode.XEN:
             video.type = 'xen'
         elif CONF.libvirt.virt_type == 'parallels':
             video.type = 'vga'
@@ -4312,7 +4312,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _configure_guest_by_virt_type(self, guest, virt_type, caps, instance,
                                       image_meta, flavor, root_device_name):
         if virt_type == "xen":
-            if guest.os_type == vm_mode.HVM:
+            if guest.os_type == fields.VMMode.HVM:
                 guest.os_loader = CONF.libvirt.xen_hvmloader_path
         elif virt_type in ("kvm", "qemu"):
             if caps.host.cpu.arch in (fields.Architecture.I686,
@@ -4347,7 +4347,7 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.os_kernel = "/usr/bin/linux"
             guest.os_root = root_device_name
         elif virt_type == "parallels":
-            if guest.os_type == vm_mode.EXE:
+            if guest.os_type == fields.VMMode.EXE:
                 guest.os_init_path = "/sbin/init"
 
     def _conf_non_lxc_uml(self, virt_type, guest, root_device_name, rescue,
@@ -4559,7 +4559,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # for nova.api.ec2.cloud.CloudController.get_metadata()
             instance.root_device_name = root_device_name
 
-        guest.os_type = (vm_mode.get_from_instance(instance) or
+        guest.os_type = (fields.VMMode.get_from_instance(instance) or
                 self._get_guest_os_type(virt_type))
         caps = self._host.get_capabilities()
 
@@ -4707,7 +4707,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _get_guest_usb_tablet(self, os_type):
         tablet = None
-        if os_type == vm_mode.HVM:
+        if os_type == fields.VMMode.HVM:
             tablet = vconfig.LibvirtConfigGuestInput()
             tablet.type = "tablet"
             tablet.bus = "usb"
@@ -5072,7 +5072,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 instance_cap = (
                     fields.Architecture.canonicalize(g.arch),
                     fields.HVType.canonicalize(dt),
-                    vm_mode.canonicalize(g.ostype))
+                    fields.VMMode.canonicalize(g.ostype))
                 instance_caps.append(instance_cap)
 
         return instance_caps
@@ -6862,7 +6862,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     doc.findall('.//devices/%s/target' % device_type))
 
         if (CONF.libvirt.virt_type == 'parallels' and
-            doc.find('os/type').text == vm_mode.EXE):
+            doc.find('os/type').text == fields.VMMode.EXE):
             node_type = 'filesystem'
         else:
             node_type = 'disk'

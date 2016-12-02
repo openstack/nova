@@ -22,7 +22,6 @@ from oslo_utils import units
 from oslo_utils import versionutils
 from oslo_vmware import exceptions as vexc
 
-from nova.compute import vm_mode
 import nova.conf
 from nova import context
 from nova import exception
@@ -99,10 +98,10 @@ class VCState(object):
         data["supported_instances"] = [
             (obj_fields.Architecture.I686,
              obj_fields.HVType.VMWARE,
-             vm_mode.HVM),
+             obj_fields.VMMode.HVM),
             (obj_fields.Architecture.X86_64,
              obj_fields.HVType.VMWARE,
-             vm_mode.HVM)]
+             obj_fields.VMMode.HVM)]
 
         self._stats = data
         if self._auto_service_disabled:

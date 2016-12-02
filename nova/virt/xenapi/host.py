@@ -25,7 +25,6 @@ from oslo_serialization import jsonutils
 import six
 
 from nova.compute import task_states
-from nova.compute import vm_mode
 from nova.compute import vm_states
 from nova import context
 from nova import exception
@@ -285,7 +284,7 @@ def to_supported_instances(host_capabilities):
             ostype, _version, guestarch = capability.split("-")
 
             guestarch = obj_fields.Architecture.canonicalize(guestarch)
-            ostype = vm_mode.canonicalize(ostype)
+            ostype = obj_fields.VMMode.canonicalize(ostype)
 
             result.append((guestarch, obj_fields.HVType.XEN, ostype))
         except ValueError:

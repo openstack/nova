@@ -23,7 +23,6 @@ from nova.compute.monitors import base as monitor_base
 from nova.compute import power_state
 from nova.compute import resource_tracker
 from nova.compute import task_states
-from nova.compute import vm_mode
 from nova.compute import vm_states
 from nova import context
 from nova import exception as exc
@@ -80,7 +79,7 @@ _COMPUTE_NODE_FIXTURES = [
             objects.HVSpec.from_list([
                 obj_fields.Architecture.I686,
                 obj_fields.HVType.KVM,
-                vm_mode.HVM])
+                obj_fields.VMMode.HVM])
         ],
         metrics=None,
         pci_device_pools=None,

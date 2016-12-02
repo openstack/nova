@@ -30,11 +30,11 @@ import six
 
 from nova.compute import flavors
 from nova.compute import power_state
-from nova.compute import vm_mode
 import nova.conf
 from nova import context
 from nova import exception
 from nova import objects
+from nova.objects import fields as obj_fields
 from nova import test
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
@@ -1613,37 +1613,37 @@ class DetermineVmModeTestCase(VMUtilsTestBase):
 
     def test_determine_vm_mode_returns_xen_mode(self):
         instance = self._fake_object({"vm_mode": "xen"})
-        self.assertEqual(vm_mode.XEN,
+        self.assertEqual(obj_fields.VMMode.XEN,
             vm_utils.determine_vm_mode(instance, None))
 
     def test_determine_vm_mode_returns_hvm_mode(self):
         instance = self._fake_object({"vm_mode": "hvm"})
-        self.assertEqual(vm_mode.HVM,
+        self.assertEqual(obj_fields.VMMode.HVM,
             vm_utils.determine_vm_mode(instance, None))
 
     def test_determine_vm_mode_returns_xen_for_linux(self):
         instance = self._fake_object({"vm_mode": None, "os_type": "linux"})
-        self.assertEqual(vm_mode.XEN,
+        self.assertEqual(obj_fields.VMMode.XEN,
             vm_utils.determine_vm_mode(instance, None))
 
     def test_determine_vm_mode_returns_hvm_for_windows(self):
         instance = self._fake_object({"vm_mode": None, "os_type": "windows"})
-        self.assertEqual(vm_mode.HVM,
+        self.assertEqual(obj_fields.VMMode.HVM,
             vm_utils.determine_vm_mode(instance, None))
 
     def test_determine_vm_mode_returns_hvm_by_default(self):
         instance = self._fake_object({"vm_mode": None, "os_type": None})
-        self.assertEqual(vm_mode.HVM,
+        self.assertEqual(obj_fields.VMMode.HVM,
             vm_utils.determine_vm_mode(instance, None))
 
     def test_determine_vm_mode_returns_xen_for_VHD(self):
         instance = self._fake_object({"vm_mode": None, "os_type": None})
-        self.assertEqual(vm_mode.XEN,
+        self.assertEqual(obj_fields.VMMode.XEN,
             vm_utils.determine_vm_mode(instance, vm_utils.ImageType.DISK_VHD))
 
     def test_determine_vm_mode_returns_xen_for_DISK(self):
         instance = self._fake_object({"vm_mode": None, "os_type": None})
-        self.assertEqual(vm_mode.XEN,
+        self.assertEqual(obj_fields.VMMode.XEN,
             vm_utils.determine_vm_mode(instance, vm_utils.ImageType.DISK))
 
 

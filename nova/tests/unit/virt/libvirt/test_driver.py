@@ -60,7 +60,6 @@ from nova.api.metadata import base as instance_metadata
 from nova.compute import manager
 from nova.compute import power_state
 from nova.compute import task_states
-from nova.compute import vm_mode
 from nova.compute import vm_states
 import nova.conf
 from nova import context
@@ -1862,7 +1861,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               vconfig.LibvirtConfigGuestFeatureAPIC)
         self.assertEqual(cfg.memory, 6 * units.Ki)
         self.assertEqual(cfg.vcpus, 28)
-        self.assertEqual(cfg.os_type, vm_mode.HVM)
+        self.assertEqual(cfg.os_type, fields.VMMode.HVM)
         self.assertEqual(cfg.os_boot_dev, ["hd"])
         self.assertIsNone(cfg.os_root)
         self.assertEqual(len(cfg.devices), 10)
@@ -1937,7 +1936,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(instance_ref["uuid"], cfg.uuid)
         self.assertEqual(instance_ref.flavor.memory_mb * units.Ki, cfg.memory)
         self.assertEqual(instance_ref.flavor.vcpus, cfg.vcpus)
-        self.assertEqual(vm_mode.EXE, cfg.os_type)
+        self.assertEqual(fields.VMMode.EXE, cfg.os_type)
         self.assertEqual("/sbin/init", cfg.os_init_path)
         self.assertEqual("console=tty0 console=ttyS0", cfg.os_cmdline)
         self.assertIsNone(cfg.os_root)
@@ -1962,7 +1961,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(instance_ref["uuid"], cfg.uuid)
         self.assertEqual(instance_ref.flavor.memory_mb * units.Ki, cfg.memory)
         self.assertEqual(instance_ref.vcpus, cfg.vcpus)
-        self.assertEqual(vm_mode.EXE, cfg.os_type)
+        self.assertEqual(fields.VMMode.EXE, cfg.os_type)
         self.assertEqual("/sbin/init", cfg.os_init_path)
         self.assertEqual("console=tty0 console=ttyS0", cfg.os_cmdline)
         self.assertIsNone(cfg.os_root)
@@ -3159,7 +3158,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               vconfig.LibvirtConfigGuestFeatureAPIC)
         self.assertEqual(cfg.memory, instance_ref.flavor.memory_mb * units.Ki)
         self.assertEqual(cfg.vcpus, instance_ref.flavor.vcpus)
-        self.assertEqual(cfg.os_type, vm_mode.HVM)
+        self.assertEqual(cfg.os_type, fields.VMMode.HVM)
         self.assertEqual(cfg.os_boot_dev, ["hd"])
         self.assertIsNone(cfg.os_root)
         self.assertEqual(len(cfg.devices), 10)
@@ -4085,7 +4084,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
-        instance_ref['vm_mode'] = vm_mode.HVM
+        instance_ref['vm_mode'] = fields.VMMode.HVM
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -4095,7 +4094,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         cfg = drvr._get_guest_config(instance_ref, [],
                                      image_meta, disk_info)
 
-        self.assertEqual(cfg.os_type, vm_mode.HVM)
+        self.assertEqual(cfg.os_type, fields.VMMode.HVM)
         self.assertEqual(cfg.os_loader, CONF.libvirt.xen_hvmloader_path)
         self.assertEqual(3, len(cfg.features))
         self.assertIsInstance(cfg.features[0],
@@ -4124,7 +4123,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         cfg = drvr._get_guest_config(instance_ref, [],
                                      image_meta, disk_info)
 
-        self.assertEqual(cfg.os_type, vm_mode.XEN)
+        self.assertEqual(cfg.os_type, fields.VMMode.XEN)
         self.assertEqual(1, len(cfg.features))
         self.assertIsInstance(cfg.features[0],
                               vconfig.LibvirtConfigGuestFeaturePAE)
@@ -4222,29 +4221,35 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_use_ps2_mouse(self):
         self.flags(pointer_model='ps2mouse')
 
-        tablet = self._test_get_guest_usb_tablet(True, True, vm_mode.HVM)
+        tablet = self._test_get_guest_usb_tablet(
+            True, True, fields.VMMode.HVM)
         self.assertIsNone(tablet)
 
     def test_get_guest_usb_tablet_wipe(self):
         self.flags(use_usb_tablet=True, group='libvirt')
 
-        tablet = self._test_get_guest_usb_tablet(True, True, vm_mode.HVM)
+        tablet = self._test_get_guest_usb_tablet(
+            True, True, fields.VMMode.HVM)
         self.assertIsNotNone(tablet)
 
-        tablet = self._test_get_guest_usb_tablet(True, False, vm_mode.HVM)
+        tablet = self._test_get_guest_usb_tablet(
+            True, False, fields.VMMode.HVM)
         self.assertIsNotNone(tablet)
 
-        tablet = self._test_get_guest_usb_tablet(False, True, vm_mode.HVM)
+        tablet = self._test_get_guest_usb_tablet(
+            False, True, fields.VMMode.HVM)
         self.assertIsNotNone(tablet)
 
-        tablet = self._test_get_guest_usb_tablet(False, False, vm_mode.HVM)
-        self.assertIsNone(tablet)
-
-        tablet = self._test_get_guest_usb_tablet(True, True, "foo")
+        tablet = self._test_get_guest_usb_tablet(
+            False, False, fields.VMMode.HVM)
         self.assertIsNone(tablet)
 
         tablet = self._test_get_guest_usb_tablet(
-            False, True, vm_mode.HVM, True)
+            True, True, "foo")
+        self.assertIsNone(tablet)
+
+        tablet = self._test_get_guest_usb_tablet(
+            False, True, fields.VMMode.HVM, True)
         self.assertIsNone(tablet)
 
     def test_get_guest_usb_tablet_image_meta(self):
@@ -4252,19 +4257,19 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         image_meta = {"properties": {"hw_pointer_model": "usbtablet"}}
 
         tablet = self._test_get_guest_usb_tablet(
-            True, True, vm_mode.HVM, image_meta=image_meta)
+            True, True, fields.VMMode.HVM, image_meta=image_meta)
         self.assertIsNotNone(tablet)
 
         tablet = self._test_get_guest_usb_tablet(
-            True, False, vm_mode.HVM, image_meta=image_meta)
+            True, False, fields.VMMode.HVM, image_meta=image_meta)
         self.assertIsNotNone(tablet)
 
         tablet = self._test_get_guest_usb_tablet(
-            False, True, vm_mode.HVM, image_meta=image_meta)
+            False, True, fields.VMMode.HVM, image_meta=image_meta)
         self.assertIsNotNone(tablet)
 
         tablet = self._test_get_guest_usb_tablet(
-            False, False, vm_mode.HVM, image_meta=image_meta)
+            False, False, fields.VMMode.HVM, image_meta=image_meta)
         self.assertIsNone(tablet)
 
         tablet = self._test_get_guest_usb_tablet(
@@ -4272,7 +4277,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertIsNone(tablet)
 
         tablet = self._test_get_guest_usb_tablet(
-            False, True, vm_mode.HVM, True, image_meta=image_meta)
+            False, True, fields.VMMode.HVM, True, image_meta=image_meta)
         self.assertIsNone(tablet)
 
     def test_get_guest_usb_tablet_image_meta_no_vnc(self):
@@ -4283,32 +4288,32 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertRaises(
             exception.UnsupportedPointerModelRequested,
             self._test_get_guest_usb_tablet,
-            False, False, vm_mode.HVM, True, image_meta=image_meta)
+            False, False, fields.VMMode.HVM, True, image_meta=image_meta)
 
     def test_get_guest_no_pointer_model_usb_tablet_set(self):
         self.flags(use_usb_tablet=True, group='libvirt')
         self.flags(pointer_model=None)
 
-        tablet = self._test_get_guest_usb_tablet(True, True, vm_mode.HVM)
+        tablet = self._test_get_guest_usb_tablet(True, True, fields.VMMode.HVM)
         self.assertIsNotNone(tablet)
 
     def test_get_guest_no_pointer_model_usb_tablet_not_set(self):
         self.flags(use_usb_tablet=False, group='libvirt')
         self.flags(pointer_model=None)
 
-        tablet = self._test_get_guest_usb_tablet(True, True, vm_mode.HVM)
+        tablet = self._test_get_guest_usb_tablet(True, True, fields.VMMode.HVM)
         self.assertIsNone(tablet)
 
     def test_get_guest_pointer_model_usb_tablet(self):
         self.flags(use_usb_tablet=False, group='libvirt')
         self.flags(pointer_model='usbtablet')
-        tablet = self._test_get_guest_usb_tablet(True, True, vm_mode.HVM)
+        tablet = self._test_get_guest_usb_tablet(True, True, fields.VMMode.HVM)
         self.assertIsNotNone(tablet)
 
     def test_get_guest_pointer_model_usb_tablet_image(self):
         image_meta = {"properties": {"hw_pointer_model": "usbtablet"}}
         tablet = self._test_get_guest_usb_tablet(
-            True, True, vm_mode.HVM, image_meta=image_meta)
+            True, True, fields.VMMode.HVM, image_meta=image_meta)
         self.assertIsNotNone(tablet)
 
     def test_get_guest_pointer_model_usb_tablet_image_no_HVM(self):
@@ -4318,7 +4323,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertRaises(
             exception.UnsupportedPointerModelRequested,
             self._test_get_guest_usb_tablet,
-            True, True, vm_mode.XEN, image_meta=image_meta)
+            True, True, fields.VMMode.XEN, image_meta=image_meta)
 
     def test_get_guest_config_with_watchdog_action_flavor(self):
         self.flags(virt_type='kvm', group='libvirt')
@@ -5774,13 +5779,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_xml_and_uri_no_ramdisk_no_kernel_xen_hvm(self):
         instance_data = dict(self.test_instance)
-        instance_data.update({'vm_mode': vm_mode.HVM})
+        instance_data.update({'vm_mode': fields.VMMode.HVM})
         self._check_xml_and_uri(instance_data, expect_kernel=False,
                                 expect_ramdisk=False, expect_xen_hvm=True)
 
     def test_xml_and_uri_no_ramdisk_no_kernel_xen_pv(self):
         instance_data = dict(self.test_instance)
-        instance_data.update({'vm_mode': vm_mode.XEN})
+        instance_data.update({'vm_mode': fields.VMMode.XEN})
         self._check_xml_and_uri(instance_data, expect_kernel=False,
                                 expect_ramdisk=False, expect_xen_hvm=False,
                                 xen_only=True)
@@ -6549,24 +6554,24 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_ref = objects.Instance(**instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
-        xen_vm_mode = vm_mode.XEN
+        xen_vm_mode = fields.VMMode.XEN
         if expect_xen_hvm:
-            xen_vm_mode = vm_mode.HVM
+            xen_vm_mode = fields.VMMode.HVM
 
         type_uri_map = {'qemu': ('qemu:///system',
                              [(lambda t: t.find('.').get('type'), 'qemu'),
                               (lambda t: t.find('./os/type').text,
-                               vm_mode.HVM),
+                               fields.VMMode.HVM),
                               (lambda t: t.find('./devices/emulator'), None)]),
                         'kvm': ('qemu:///system',
                              [(lambda t: t.find('.').get('type'), 'kvm'),
                               (lambda t: t.find('./os/type').text,
-                               vm_mode.HVM),
+                               fields.VMMode.HVM),
                               (lambda t: t.find('./devices/emulator'), None)]),
                         'uml': ('uml:///system',
                              [(lambda t: t.find('.').get('type'), 'uml'),
                               (lambda t: t.find('./os/type').text,
-                               vm_mode.UML)]),
+                               fields.VMMode.UML)]),
                         'xen': ('xen:///',
                              [(lambda t: t.find('.').get('type'), 'xen'),
                               (lambda t: t.find('./os/type').text,
@@ -12302,13 +12307,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             caps.host.cpu = cpu
 
             guest = vconfig.LibvirtConfigGuest()
-            guest.ostype = vm_mode.HVM
+            guest.ostype = fields.VMMode.HVM
             guest.arch = fields.Architecture.X86_64
             guest.domtype = ["kvm"]
             caps.guests.append(guest)
 
             guest = vconfig.LibvirtConfigGuest()
-            guest.ostype = vm_mode.HVM
+            guest.ostype = fields.VMMode.HVM
             guest.arch = fields.Architecture.I686
             guest.domtype = ["kvm"]
             caps.guests.append(guest)
@@ -14818,7 +14823,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(instance_ref["uuid"], cfg.uuid)
         self.assertEqual(instance_ref.flavor.memory_mb * units.Ki, cfg.memory)
         self.assertEqual(instance_ref.flavor.vcpus, cfg.vcpus)
-        self.assertEqual(vm_mode.HVM, cfg.os_type)
+        self.assertEqual(fields.VMMode.HVM, cfg.os_type)
         self.assertIsNone(cfg.os_root)
         self.assertEqual(6, len(cfg.devices))
         self.assertIsInstance(cfg.devices[0],
@@ -14845,7 +14850,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(virt_type='parallels', group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         ct_instance = self.test_instance.copy()
-        ct_instance["vm_mode"] = vm_mode.EXE
+        ct_instance["vm_mode"] = fields.VMMode.EXE
         instance_ref = objects.Instance(**ct_instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
@@ -14862,7 +14867,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(instance_ref["uuid"], cfg.uuid)
         self.assertEqual(instance_ref.flavor.memory_mb * units.Ki, cfg.memory)
         self.assertEqual(instance_ref.flavor.vcpus, cfg.vcpus)
-        self.assertEqual(vm_mode.EXE, cfg.os_type)
+        self.assertEqual(fields.VMMode.EXE, cfg.os_type)
         self.assertEqual("/sbin/init", cfg.os_init_path)
         self.assertIsNone(cfg.os_root)
         if rescue:
@@ -14947,8 +14952,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertTrue(disk_found)
 
     def test_get_guest_config_parallels_volume(self):
-        self._test_get_guest_config_parallels_volume(vm_mode.EXE, 4)
-        self._test_get_guest_config_parallels_volume(vm_mode.HVM, 6)
+        self._test_get_guest_config_parallels_volume(fields.VMMode.EXE, 4)
+        self._test_get_guest_config_parallels_volume(fields.VMMode.HVM, 6)
 
     def test_get_guest_disk_config_rbd_older_config_drive_fall_back(self):
         # New config drives are stored in rbd but existing instances have
@@ -15040,7 +15045,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.flags(virt_type='parallels', group='libvirt')
         instance = objects.Instance(**self.test_instance)
-        instance.vm_mode = vm_mode.EXE
+        instance.vm_mode = fields.VMMode.EXE
         fake_dom = FakeVirtDomain(fake_xml=dummyxml)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         mock_get_domain.return_value = fake_dom

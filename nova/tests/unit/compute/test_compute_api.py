@@ -31,7 +31,6 @@ from nova.compute import instance_actions
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
-from nova.compute import vm_mode
 from nova.compute import vm_states
 from nova import conductor
 from nova import context
@@ -3079,7 +3078,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 system_metadata=orig_system_metadata,
                 expected_attrs=['system_metadata'],
                 image_ref=orig_image_href,
-                vm_mode=vm_mode.HVM)
+                vm_mode=fields_obj.VMMode.HVM)
         flavor = instance.get_flavor()
 
         def get_image(context, image_href):
@@ -3109,7 +3108,7 @@ class _ComputeAPIUnitTestMixIn(object):
         _check_auto_disk_config.assert_called_once_with(image=new_image)
         _checks_for_create_and_rebuild.assert_called_once_with(self.context,
                 None, new_image, flavor, {}, [], None)
-        self.assertEqual(vm_mode.XEN, instance.vm_mode)
+        self.assertEqual(fields_obj.VMMode.XEN, instance.vm_mode)
 
     def _test_check_injected_file_quota_onset_file_limit_exceeded(self,
                                                                   side_effect):

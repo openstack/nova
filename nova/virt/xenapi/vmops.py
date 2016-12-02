@@ -39,7 +39,6 @@ from nova import block_device
 from nova import compute
 from nova.compute import power_state
 from nova.compute import task_states
-from nova.compute import vm_mode
 from nova.compute import vm_states
 import nova.conf
 from nova.console import type as ctype
@@ -47,6 +46,7 @@ from nova import context as nova_context
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova import objects
+from nova.objects import fields as obj_fields
 from nova.pci import manager as pci_manager
 from nova import utils
 from nova.virt import configdrive
@@ -703,7 +703,7 @@ class VMOps(object):
                 LOG.debug("vm_mode not found in rescue image properties."
                           "Setting vm_mode to %s", mode, instance=instance)
             else:
-                mode = vm_mode.canonicalize(rescue_vm_mode)
+                mode = obj_fields.VMMode.canonicalize(rescue_vm_mode)
 
         if instance.vm_mode != mode:
             # Update database with normalized (or determined) value
@@ -711,7 +711,7 @@ class VMOps(object):
             instance.save()
 
         device_id = vm_utils.get_vm_device_id(self._session, image_meta)
-        use_pv_kernel = (mode == vm_mode.XEN)
+        use_pv_kernel = (mode == obj_fields.VMMode.XEN)
         LOG.debug("Using PV kernel: %s", use_pv_kernel, instance=instance)
         vm_ref = vm_utils.create_vm(self._session, instance, name_label,
                                     kernel_file, ramdisk_file,
