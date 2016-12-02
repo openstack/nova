@@ -34,7 +34,6 @@ import six
 import testtools
 
 from nova.compute import api as compute_api
-from nova.compute import hv_type
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
@@ -2277,19 +2276,19 @@ class ToSupportedInstancesTestCase(test.NoDBTestCase):
 
     def test_return_value(self):
         self.assertEqual(
-            [(obj_fields.Architecture.X86_64, hv_type.XEN, 'xen')],
+            [(obj_fields.Architecture.X86_64, obj_fields.HVType.XEN, 'xen')],
             host.to_supported_instances([u'xen-3.0-x86_64']))
 
     def test_invalid_values_do_not_break(self):
         self.assertEqual(
-            [(obj_fields.Architecture.X86_64, hv_type.XEN, 'xen')],
+            [(obj_fields.Architecture.X86_64, obj_fields.HVType.XEN, 'xen')],
             host.to_supported_instances([u'xen-3.0-x86_64', 'spam']))
 
     def test_multiple_values(self):
         self.assertEqual(
             [
-                (obj_fields.Architecture.X86_64, hv_type.XEN, 'xen'),
-                (obj_fields.Architecture.I686, hv_type.XEN, 'hvm')
+                (obj_fields.Architecture.X86_64, obj_fields.HVType.XEN, 'xen'),
+                (obj_fields.Architecture.I686, obj_fields.HVType.XEN, 'hvm')
             ],
             host.to_supported_instances([u'xen-3.0-x86_64', 'hvm-3.0-x86_32'])
         )

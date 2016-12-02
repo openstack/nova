@@ -224,10 +224,47 @@ class TestArchitecture(TestField):
         self.assertEqual(fields.Architecture.I686,
                          fields.Architecture.canonicalize('x86_32p'))
 
-    def test_canonicalize_bogus(self):
+    def test_canonicalize_invalid(self):
         self.assertRaises(exception.InvalidArchitectureName,
                           fields.Architecture.canonicalize,
                           'x86_64wibble')
+
+
+class TestHVType(TestField):
+    def test_valid_string(self):
+        self.assertTrue(fields.HVType.is_valid('vmware'))
+
+    def test_valid_constant(self):
+        self.assertTrue(fields.HVType.is_valid(fields.HVType.QEMU))
+
+    def test_valid_docker(self):
+        self.assertTrue(fields.HVType.is_valid('docker'))
+
+    def test_valid_lxd(self):
+        self.assertTrue(fields.HVType.is_valid('lxd'))
+
+    def test_valid_vz(self):
+        self.assertTrue(fields.HVType.is_valid(
+            fields.HVType.VIRTUOZZO))
+
+    def test_valid_bogus(self):
+        self.assertFalse(fields.HVType.is_valid('acmehypervisor'))
+
+    def test_canonicalize_none(self):
+        self.assertIsNone(fields.HVType.canonicalize(None))
+
+    def test_canonicalize_case(self):
+        self.assertEqual(fields.HVType.QEMU,
+                         fields.HVType.canonicalize('QeMu'))
+
+    def test_canonicalize_xapi(self):
+        self.assertEqual(fields.HVType.XEN,
+                         fields.HVType.canonicalize('xapi'))
+
+    def test_canonicalize_invalid(self):
+        self.assertRaises(exception.InvalidHypervisorVirtType,
+                          fields.HVType.canonicalize,
+                          'wibble')
 
 
 class TestImageSignatureTypes(TestField):

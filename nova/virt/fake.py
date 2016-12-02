@@ -30,7 +30,6 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
 
-from nova.compute import hv_type
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
@@ -148,7 +147,9 @@ class FakeDriver(driver.ComputeDriver):
             'cpu_info': {},
             'disk_available_least': 0,
             'supported_instances': [(
-                obj_fields.Architecture.X86_64, hv_type.FAKE, vm_mode.HVM)],
+                obj_fields.Architecture.X86_64,
+                obj_fields.HVType.FAKE,
+                vm_mode.HVM)],
             'numa_topology': None,
           }
         self._mounts = {}

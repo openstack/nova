@@ -18,8 +18,6 @@ import re
 from oslo_versionedobjects import fields
 import six
 
-# TODO(berrange) Temporary import for HVType class
-from nova.compute import hv_type
 # TODO(berrange) Temporary import for VMMode class
 from nova.compute import vm_mode
 from nova import exception
@@ -332,17 +330,80 @@ class FirmwareType(BaseNovaEnum):
 
 
 class HVType(BaseNovaEnum):
-    # TODO(berrange): move all constants out of 'nova.compute.hv_type'
-    # into fields on this class
-    ALL = hv_type.ALL
+    """Represents virtualization types.
+
+    Provide the standard names for all known guest virtualization
+    types. This is not to be confused with the Nova hypervisor driver
+    types, since one driver may support multiple virtualization types
+    and one virtualization type (eg 'xen') may be supported by multiple
+    drivers ('XenAPI' or  'Libvirt-Xen').
+    """
+
+    BAREMETAL = 'baremetal'
+    BHYVE = 'bhyve'
+    DOCKER = 'docker'
+    FAKE = 'fake'
+    HYPERV = 'hyperv'
+    IRONIC = 'ironic'
+    KQEMU = 'kqemu'
+    KVM = 'kvm'
+    LXC = 'lxc'
+    LXD = 'lxd'
+    OPENVZ = 'openvz'
+    PARALLELS = 'parallels'
+    VIRTUOZZO = 'vz'
+    PHYP = 'phyp'
+    QEMU = 'qemu'
+    TEST = 'test'
+    UML = 'uml'
+    VBOX = 'vbox'
+    VMWARE = 'vmware'
+    XEN = 'xen'
+    ZVM = 'zvm'
+
+    ALL = (BAREMETAL, BHYVE, DOCKER, FAKE, HYPERV, IRONIC, KQEMU, KVM, LXC,
+           LXD, OPENVZ, PARALLELS, PHYP, QEMU, TEST, UML, VBOX, VIRTUOZZO,
+           VMWARE, XEN, ZVM)
 
     def coerce(self, obj, attr, value):
         try:
-            value = hv_type.canonicalize(value)
+            value = self.canonicalize(value)
         except exception.InvalidHypervisorVirtType:
             msg = _("Hypervisor virt type '%s' is not valid") % value
             raise ValueError(msg)
+
         return super(HVType, self).coerce(obj, attr, value)
+
+    @classmethod
+    def is_valid(cls, name):
+        """Check if a string is a valid hypervisor type
+
+        :param name: hypervisor type name to validate
+
+        :returns: True if @name is valid
+        """
+        return name in cls.ALL
+
+    @classmethod
+    def canonicalize(cls, name):
+        """Canonicalize the hypervisor type name
+
+        :param name: hypervisor type name to canonicalize
+
+        :returns: a canonical hypervisor type name
+        """
+        if name is None:
+            return None
+
+        newname = name.lower()
+
+        if newname == 'xapi':
+            newname = cls.XEN
+
+        if not cls.is_valid(newname):
+            raise exception.InvalidHypervisorVirtType(hv_type=name)
+
+        return newname
 
 
 class ImageSignatureHashType(BaseNovaEnum):

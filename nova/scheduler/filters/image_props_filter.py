@@ -19,7 +19,6 @@ from distutils import versionpredicate
 from oslo_log import log as logging
 from oslo_utils import versionutils
 
-from nova.compute import hv_type
 from nova.compute import vm_mode
 from nova.objects import fields
 from nova.scheduler import filters
@@ -48,7 +47,7 @@ class ImagePropertiesFilter(filters.BaseHostFilter):
         img_vm_mode = image_props.get('hw_vm_mode')
         checked_img_props = (
             fields.Architecture.canonicalize(img_arch),
-            hv_type.canonicalize(img_h_type),
+            fields.HVType.canonicalize(img_h_type),
             vm_mode.canonicalize(img_vm_mode)
         )
 
