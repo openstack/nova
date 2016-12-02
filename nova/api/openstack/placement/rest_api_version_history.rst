@@ -18,8 +18,8 @@ Nova 14.0.0 (Newton). This contains the following routes:
 * /resource_providers/usages
 * /allocations
 
-1.1
-___
+1.1 Resource provider aggregates
+--------------------------------
 
 The 1.1 version adds support for associating aggregates with
 resource providers with ``GET`` and ``PUT`` methods on one new
