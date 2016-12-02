@@ -520,6 +520,16 @@ class NotificationsTestCase(test.TestCase):
             self.assertEqual(payload["old_display_name"], old_display_name)
             self.assertEqual(payload["display_name"], new_display_name)
 
+    def test_send_versioned_tags_update(self):
+        objects.TagList.create(self.context,
+                               self.instance.uuid, ['tag1', 'tag2'])
+        notifications.send_update(self.context, self.instance, self.instance)
+        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+
+        self.assertEqual(['tag1', 'tag2'],
+                         fake_notifier.VERSIONED_NOTIFICATIONS[0]
+                         ['payload']['nova_object.data']['tags'])
+
     def test_send_no_state_change(self):
         called = [False]
 
