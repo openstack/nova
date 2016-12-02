@@ -19,6 +19,7 @@ from nova.api.openstack.compute.views import server_tags
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
+from nova.api.validation import parameter_types
 from nova import compute
 from nova.compute import vm_states
 from nova import exception
@@ -91,7 +92,7 @@ class ServerTagsController(wsgi.Controller):
         self._check_instance_in_valid_state(context, server_id, 'update tag')
 
         try:
-            jsonschema.validate(id, schema.tag)
+            jsonschema.validate(id, parameter_types.tag)
         except jsonschema.ValidationError as e:
             msg = (_("Tag '%(tag)s' is invalid. It must be a string without "
                      "characters '/' and ','. Validation error message: "
@@ -141,7 +142,7 @@ class ServerTagsController(wsgi.Controller):
         invalid_tags = []
         for tag in body['tags']:
             try:
-                jsonschema.validate(tag, schema.tag)
+                jsonschema.validate(tag, parameter_types.tag)
             except jsonschema.ValidationError:
                 invalid_tags.append(tag)
         if invalid_tags:

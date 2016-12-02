@@ -395,3 +395,8 @@ personality = {
         'additionalProperties': False,
     }
 }
+
+tag = {
+    "type": "string",
+    "pattern": "^[^,/]*$"
+}

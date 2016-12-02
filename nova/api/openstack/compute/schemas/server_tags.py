@@ -10,11 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-tag = {
-    "type": "string",
-    "pattern": "^[^,/]*$"
-}
-
 update_all = {
     "definitions": {
         "tag": {
