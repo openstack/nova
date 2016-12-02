@@ -57,6 +57,11 @@ def _refresh_from_db(ctx, cache):
 class ResourceClassCache(object):
     """A cache of integer and string lookup values for resource classes."""
 
+    # List of dict of all standard resource classes, where every list item
+    # have a form {'id': <ID>, 'name': <NAME>}
+    STANDARDS = [{'id': fields.ResourceClass.STANDARD.index(s), 'name': s}
+                 for s in fields.ResourceClass.STANDARD]
+
     def __init__(self, ctx):
         """Initialize the cache of resource class identifiers.
 
@@ -71,13 +76,6 @@ class ResourceClassCache(object):
         with lockutils.lock(_LOCKNAME):
             self.id_cache = {}
             self.str_cache = {}
-
-    def get_standards(self):
-        """Return a list of {'id': <ID>, 'name': <NAME> for all standard
-        resource classes.
-        """
-        return [{'id': fields.ResourceClass.STANDARD.index(s), 'name': s}
-                for s in fields.ResourceClass.STANDARD]
 
     def id_from_string(self, rc_str):
         """Given a string representation of a resource class -- e.g. "DISK_GB"

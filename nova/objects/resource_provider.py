@@ -1222,8 +1222,7 @@ class ResourceClass(base.NovaObject):
         # Never delete any standard resource class, since the standard resource
         # classes don't even exist in the database table anyway.
         _ensure_rc_cache(self._context)
-        standards = _RC_CACHE.get_standards()
-        if self.id in (rc['id'] for rc in standards):
+        if self.id in (rc['id'] for rc in _RC_CACHE.STANDARDS):
             raise exception.ResourceClassCannotDeleteStandard(
                     resource_class=self.name)
 
@@ -1253,8 +1252,7 @@ class ResourceClass(base.NovaObject):
         # Never update any standard resource class, since the standard resource
         # classes don't even exist in the database table anyway.
         _ensure_rc_cache(self._context)
-        standards = _RC_CACHE.get_standards()
-        if self.id in (rc['id'] for rc in standards):
+        if self.id in (rc['id'] for rc in _RC_CACHE.STANDARDS):
             raise exception.ResourceClassCannotUpdateStandard(
                     resource_class=self.name)
         self._save(self._context, self.id, self.name, updates)
@@ -1285,9 +1283,8 @@ class ResourceClassList(base.ObjectListBase, base.NovaObject):
     @db_api.api_context_manager.reader
     def _get_all(context):
         _ensure_rc_cache(context)
-        standards = _RC_CACHE.get_standards()
         customs = list(context.session.query(models.ResourceClass).all())
-        return standards + customs
+        return _RC_CACHE.STANDARDS + customs
 
     @base.remotable_classmethod
     def get_all(cls, context):

@@ -44,13 +44,18 @@ class TestResourceClassCache(test.TestCase):
 
         self.assertFalse(sel_mock.called)
 
-    def test_get_standards(self):
+    def test_standards(self):
         cache = rc_cache.ResourceClassCache(self.context)
-        standards = cache.get_standards()
+        standards = cache.STANDARDS
+
         self.assertEqual(len(standards), len(fields.ResourceClass.STANDARD))
         names = (rc['name'] for rc in standards)
         for name in fields.ResourceClass.STANDARD:
             self.assertIn(name, names)
+
+        cache = rc_cache.ResourceClassCache(self.context)
+        standards2 = cache.STANDARDS
+        self.assertEqual(id(standards), id(standards2))
 
     def test_rc_cache_custom(self):
         """Test that non-standard, custom resource classes hit the database and
