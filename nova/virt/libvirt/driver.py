@@ -7173,29 +7173,25 @@ class LibvirtDriver(driver.ComputeDriver):
             on_completion = lambda process: \
                 self.job_tracker.remove_job(instance, process.pid)
 
-            active_flavor = instance.get_flavor()
             for info in disk_info:
                 # assume inst_base == dirname(info['path'])
                 img_path = info['path']
                 fname = os.path.basename(img_path)
                 from_path = os.path.join(inst_base_resize, fname)
 
-                # To properly resize the swap partition, it must be
-                # re-created with the proper size.  This is acceptable
-                # because when an OS is shut down, the contents of the
-                # swap space are just garbage, the OS doesn't bother about
-                # what is in it.
-
                 # We will not copy over the swap disk here, and rely on
-                # finish_migration/_create_image to re-create it for us.
-                if not (fname == 'disk.swap' and
-                    active_flavor.get('swap', 0) != flavor.get('swap', 0)):
+                # finish_migration to re-create it for us. This is ok because
+                # the OS is shut down, and as recreating a swap disk is very
+                # cheap it is more efficient than copying either locally or
+                # over the network. This also means we don't have to resize it.
+                if fname == 'disk.swap':
+                    continue
 
-                    compression = info['type'] not in NO_COMPRESSION_TYPES
-                    libvirt_utils.copy_image(from_path, img_path, host=dest,
-                                             on_execute=on_execute,
-                                             on_completion=on_completion,
-                                             compression=compression)
+                compression = info['type'] not in NO_COMPRESSION_TYPES
+                libvirt_utils.copy_image(from_path, img_path, host=dest,
+                                         on_execute=on_execute,
+                                         on_completion=on_completion,
+                                         compression=compression)
 
             # Ensure disk.info is written to the new path to avoid disks being
             # reinspected and potentially changing format.
