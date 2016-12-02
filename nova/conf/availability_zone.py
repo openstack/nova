@@ -27,8 +27,8 @@ their own internal availability_zone.
 
 Possible values:
 
-    * Any string representing an availability zone name
-    * 'internal' is the default value
+* Any string representing an availability zone name
+* 'internal' is the default value
 
 """),
     cfg.StrOpt('default_availability_zone',
@@ -42,8 +42,8 @@ the default availability zone 'nova' is used.
 
 Possible values:
 
-    * Any string representing an availability zone name
-    * 'nova' is the default value
+* Any string representing an availability zone name
+* 'nova' is the default value
 
 """)
 ]
