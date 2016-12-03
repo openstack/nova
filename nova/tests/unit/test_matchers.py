@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 from collections import OrderedDict
+import pprint
 
 import testtools
 from testtools.tests.matchers import helpers
@@ -43,7 +44,7 @@ class TestDictMatches(testtools.TestCase, helpers.TestMatchersInterface):
         ]
 
     str_examples = [
-        ("DictMatches({0})".format(matches_dict),
+        ('DictMatches(%s)' % (pprint.pformat(matches_dict)),
          matches_matcher),
         ]
 
