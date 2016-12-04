@@ -15,6 +15,7 @@
 
 """The hypervisors admin extension."""
 
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 import webob.exc
 
@@ -29,6 +30,7 @@ from nova.i18n import _
 from nova.policies import hypervisors as hv_policies
 from nova import servicegroup
 
+LOG = logging.getLogger(__name__)
 
 ALIAS = "os-hypervisors"
 
@@ -108,12 +110,21 @@ class HypervisorsController(wsgi.Controller):
             msg = _('marker [%s] not found') % marker
             raise webob.exc.HTTPBadRequest(explanation=msg)
         req.cache_db_compute_nodes(compute_nodes)
-        hypervisors_list = [self._view_hypervisor(
-                            hyp,
-                            self.host_api.service_get_by_compute_host(
-                                context, hyp.host),
-                            False, req)
-                            for hyp in compute_nodes]
+        hypervisors_list = []
+        for hyp in compute_nodes:
+            try:
+                service = self.host_api.service_get_by_compute_host(
+                    context, hyp.host)
+                hypervisors_list.append(
+                    self._view_hypervisor(
+                        hyp, service, False, req))
+            except exception.ComputeHostNotFound:
+                # The compute service could be deleted which doesn't delete
+                # the compute node record, that has to be manually removed
+                # from the database so we just ignore it when listing nodes.
+                LOG.debug('Unable to find service for compute node %s. The '
+                          'service may be deleted and compute nodes need to '
+                          'be manually cleaned up.', hyp.host)
 
         hypervisors_dict = dict(hypervisors=hypervisors_list)
         if links:
@@ -145,10 +156,21 @@ class HypervisorsController(wsgi.Controller):
             msg = _('marker [%s] not found') % marker
             raise webob.exc.HTTPBadRequest(explanation=msg)
         req.cache_db_compute_nodes(compute_nodes)
-        hypervisors_list = [
-            self._view_hypervisor(
-            hyp, self.host_api.service_get_by_compute_host(context, hyp.host),
-            True, req) for hyp in compute_nodes]
+        hypervisors_list = []
+        for hyp in compute_nodes:
+            try:
+                service = self.host_api.service_get_by_compute_host(
+                    context, hyp.host)
+                hypervisors_list.append(
+                    self._view_hypervisor(
+                        hyp, service, True, req))
+            except exception.ComputeHostNotFound:
+                # The compute service could be deleted which doesn't delete
+                # the compute node record, that has to be manually removed
+                # from the database so we just ignore it when listing nodes.
+                LOG.debug('Unable to find service for compute node %s. The '
+                          'service may be deleted and compute nodes need to '
+                          'be manually cleaned up.', hyp.host)
         hypervisors_dict = dict(hypervisors=hypervisors_list)
         if links:
             hypervisors_links = self._view_builder.get_links(
