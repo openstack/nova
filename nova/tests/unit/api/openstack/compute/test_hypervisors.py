@@ -288,6 +288,41 @@ class HypervisorsTestV21(test.NoDBTestCase):
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.controller.index, req)
 
+    def test_index_compute_host_not_found(self):
+        """Tests that if a service is deleted but the compute node is not we
+        don't fail when listing hypervisors.
+        """
+
+        # two computes, a matching service only exists for the first one
+        compute_nodes = objects.ComputeNodeList(objects=[
+            objects.ComputeNode(**TEST_HYPERS[0]),
+            objects.ComputeNode(**TEST_HYPERS[1])
+        ])
+
+        def fake_service_get_by_compute_host(context, host):
+            if host == TEST_HYPERS[0]['host']:
+                return TEST_SERVICES[0]
+            raise exception.ComputeHostNotFound(host=host)
+
+        @mock.patch.object(self.controller.host_api, 'compute_node_get_all',
+                           return_value=compute_nodes)
+        @mock.patch.object(self.controller.host_api,
+                           'service_get_by_compute_host',
+                           fake_service_get_by_compute_host)
+        def _test(self, compute_node_get_all):
+            req = self._get_request(True)
+            result = self.controller.index(req)
+            self.assertTrue(1, len(result['hypervisors']))
+            expected = {
+                'id': compute_nodes[0].id,
+                'hypervisor_hostname': compute_nodes[0].hypervisor_hostname,
+                'state': 'up',
+                'status': 'enabled',
+            }
+            self.assertDictEqual(expected, result['hypervisors'][0])
+
+        _test(self)
+
     def test_detail(self):
         req = self._get_request(True)
         result = self.controller.detail(req)
@@ -298,6 +333,49 @@ class HypervisorsTestV21(test.NoDBTestCase):
         req = self._get_request(False)
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.controller.detail, req)
+
+    def test_detail_compute_host_not_found(self):
+        """Tests that if a service is deleted but the compute node is not we
+        don't fail when listing hypervisors.
+        """
+
+        # two computes, a matching service only exists for the first one
+        compute_nodes = objects.ComputeNodeList(objects=[
+            objects.ComputeNode(**TEST_HYPERS[0]),
+            objects.ComputeNode(**TEST_HYPERS[1])
+        ])
+
+        def fake_service_get_by_compute_host(context, host):
+            if host == TEST_HYPERS[0]['host']:
+                return TEST_SERVICES[0]
+            raise exception.ComputeHostNotFound(host=host)
+
+        @mock.patch.object(self.controller.host_api, 'compute_node_get_all',
+                           return_value=compute_nodes)
+        @mock.patch.object(self.controller.host_api,
+                           'service_get_by_compute_host',
+                           fake_service_get_by_compute_host)
+        def _test(self, compute_node_get_all):
+            req = self._get_request(True)
+            result = self.controller.detail(req)
+            self.assertTrue(1, len(result['hypervisors']))
+            expected = {
+                'id': compute_nodes[0].id,
+                'hypervisor_hostname': compute_nodes[0].hypervisor_hostname,
+                'state': 'up',
+                'status': 'enabled',
+            }
+            # we don't care about all of the details, just make sure we get
+            # the subset we care about and there are more keys than what index
+            # would return
+            hypervisor = result['hypervisors'][0]
+            self.assertTrue(
+                set(expected.keys()).issubset(set(hypervisor.keys())))
+            self.assertGreater(len(hypervisor.keys()), len(expected.keys()))
+            self.assertEqual(compute_nodes[0].hypervisor_hostname,
+                             hypervisor['hypervisor_hostname'])
+
+        _test(self)
 
     def test_show_noid(self):
         req = self._get_request(True)
