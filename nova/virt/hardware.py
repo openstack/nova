@@ -231,14 +231,11 @@ def _score_cpu_topology(topology, wanttopology):
     :returns: score in range 0 (worst) to 3 (best)
     """
     score = 0
-    if (wanttopology.sockets != -1 and
-        topology.sockets == wanttopology.sockets):
+    if wanttopology.sockets and topology.sockets == wanttopology.sockets:
         score = score + 1
-    if (wanttopology.cores != -1 and
-        topology.cores == wanttopology.cores):
+    if wanttopology.cores and topology.cores == wanttopology.cores:
         score = score + 1
-    if (wanttopology.threads != -1 and
-        topology.threads == wanttopology.threads):
+    if wanttopology.threads and topology.threads == wanttopology.threads:
         score = score + 1
     return score
 
@@ -278,110 +275,113 @@ def _get_cpu_topology_constraints(flavor, image_meta):
     :raises: exception.ImageVCPUTopologyRangeExceeded if the preferred
              counts set against the image exceed the maximum counts set
              against the image or flavor
+    :raises: ValueError if one of the provided flavor properties is a
+             non-integer
     :returns: A two-tuple of objects.VirtCPUTopology instances. The
               first element corresponds to the preferred topology,
               while the latter corresponds to the maximum topology,
               based on upper limits.
     """
-    # Obtain the absolute limits from the flavor
-    flvmaxsockets = int(flavor.extra_specs.get(
-        "hw:cpu_max_sockets", 65536))
-    flvmaxcores = int(flavor.extra_specs.get(
-        "hw:cpu_max_cores", 65536))
-    flvmaxthreads = int(flavor.extra_specs.get(
-        "hw:cpu_max_threads", 65536))
+    flavor_max_sockets, image_max_sockets = _get_flavor_image_meta(
+        'cpu_max_sockets', flavor, image_meta, 0)
+    flavor_max_cores, image_max_cores = _get_flavor_image_meta(
+        'cpu_max_cores', flavor, image_meta, 0)
+    flavor_max_threads, image_max_threads = _get_flavor_image_meta(
+        'cpu_max_threads', flavor, image_meta, 0)
+    # image metadata is already of the correct type
+    flavor_max_sockets = int(flavor_max_sockets)
+    flavor_max_cores = int(flavor_max_cores)
+    flavor_max_threads = int(flavor_max_threads)
 
     LOG.debug("Flavor limits %(sockets)d:%(cores)d:%(threads)d",
-              {"sockets": flvmaxsockets,
-               "cores": flvmaxcores,
-               "threads": flvmaxthreads})
-
-    # Get any customized limits from the image
-    props = image_meta.properties
-    maxsockets = props.get("hw_cpu_max_sockets", flvmaxsockets)
-    maxcores = props.get("hw_cpu_max_cores", flvmaxcores)
-    maxthreads = props.get("hw_cpu_max_threads", flvmaxthreads)
-
+              {"sockets": flavor_max_sockets,
+               "cores": flavor_max_cores,
+               "threads": flavor_max_threads})
     LOG.debug("Image limits %(sockets)d:%(cores)d:%(threads)d",
-              {"sockets": maxsockets,
-               "cores": maxcores,
-               "threads": maxthreads})
+              {"sockets": image_max_sockets,
+               "cores": image_max_cores,
+               "threads": image_max_threads})
 
     # Image limits are not permitted to exceed the flavor
     # limits. ie they can only lower what the flavor defines
-    if ((maxsockets > flvmaxsockets) or
-        (maxcores > flvmaxcores) or
-        (maxthreads > flvmaxthreads)):
+    if ((flavor_max_sockets and image_max_sockets > flavor_max_sockets) or
+            (flavor_max_cores and image_max_cores > flavor_max_cores) or
+            (flavor_max_threads and image_max_threads > flavor_max_threads)):
         raise exception.ImageVCPULimitsRangeExceeded(
-            sockets=maxsockets,
-            cores=maxcores,
-            threads=maxthreads,
-            maxsockets=flvmaxsockets,
-            maxcores=flvmaxcores,
-            maxthreads=flvmaxthreads)
+            image_sockets=image_max_sockets,
+            image_cores=image_max_cores,
+            image_threads=image_max_threads,
+            flavor_sockets=flavor_max_sockets,
+            flavor_cores=flavor_max_cores,
+            flavor_threads=flavor_max_threads)
 
-    # Get any default preferred topology from the flavor
-    flvsockets = int(flavor.extra_specs.get("hw:cpu_sockets", -1))
-    flvcores = int(flavor.extra_specs.get("hw:cpu_cores", -1))
-    flvthreads = int(flavor.extra_specs.get("hw:cpu_threads", -1))
+    max_sockets = image_max_sockets or flavor_max_sockets or 65536
+    max_cores = image_max_cores or flavor_max_cores or 65536
+    max_threads = image_max_threads or flavor_max_threads or 65536
+
+    flavor_sockets, image_sockets = _get_flavor_image_meta(
+        'cpu_sockets', flavor, image_meta, 0)
+    flavor_cores, image_cores = _get_flavor_image_meta(
+        'cpu_cores', flavor, image_meta, 0)
+    flavor_threads, image_threads = _get_flavor_image_meta(
+        'cpu_threads', flavor, image_meta, 0)
+    flavor_sockets = int(flavor_sockets)
+    flavor_cores = int(flavor_cores)
+    flavor_threads = int(flavor_threads)
 
     LOG.debug("Flavor pref %(sockets)d:%(cores)d:%(threads)d",
-              {"sockets": flvsockets,
-               "cores": flvcores,
-               "threads": flvthreads})
-
-    # If the image limits have reduced the flavor limits
-    # we might need to discard the preferred topology
-    # from the flavor
-    if ((flvsockets > maxsockets) or
-        (flvcores > maxcores) or
-        (flvthreads > maxthreads)):
-        flvsockets = flvcores = flvthreads = -1
-
-    # Finally see if the image has provided a preferred
-    # topology to use
-    sockets = props.get("hw_cpu_sockets", -1)
-    cores = props.get("hw_cpu_cores", -1)
-    threads = props.get("hw_cpu_threads", -1)
-
+              {"sockets": flavor_sockets,
+               "cores": flavor_cores,
+               "threads": flavor_threads})
     LOG.debug("Image pref %(sockets)d:%(cores)d:%(threads)d",
-              {"sockets": sockets,
-               "cores": cores,
-               "threads": threads})
+              {"sockets": image_sockets,
+               "cores": image_cores,
+               "threads": image_threads})
 
-    # Image topology is not permitted to exceed image/flavor
+    # If the image limits have reduced the flavor limits we might need
+    # to discard the preferred topology from the flavor
+    if ((flavor_sockets > max_sockets) or
+            (flavor_cores > max_cores) or
+            (flavor_threads > max_threads)):
+        flavor_sockets = flavor_cores = flavor_threads = 0
+
+    # However, image topology is not permitted to exceed image/flavor
     # limits
-    if ((sockets > maxsockets) or
-        (cores > maxcores) or
-        (threads > maxthreads)):
+    if ((image_sockets > max_sockets) or
+            (image_cores > max_cores) or
+            (image_threads > max_threads)):
         raise exception.ImageVCPUTopologyRangeExceeded(
-            sockets=sockets,
-            cores=cores,
-            threads=threads,
-            maxsockets=maxsockets,
-            maxcores=maxcores,
-            maxthreads=maxthreads)
+            image_sockets=image_sockets,
+            image_cores=image_cores,
+            image_threads=image_threads,
+            max_sockets=max_sockets,
+            max_cores=max_cores,
+            max_threads=max_threads)
 
-    # If no preferred topology was set against the image
-    # then use the preferred topology from the flavor
-    # We use 'and' not 'or', since if any value is set
-    # against the image this invalidates the entire set
-    # of values from the flavor
-    if sockets == -1 and cores == -1 and threads == -1:
-        sockets = flvsockets
-        cores = flvcores
-        threads = flvthreads
+    # If no preferred topology was set against the image then use the
+    # preferred topology from the flavor. We use 'not or' rather than
+    # 'not and', since if any value is set against the image this
+    # invalidates the entire set of values from the flavor
+    if not any((image_sockets, image_cores, image_threads)):
+        sockets = flavor_sockets
+        cores = flavor_cores
+        threads = flavor_threads
+    else:
+        sockets = image_sockets
+        cores = image_cores
+        threads = image_threads
 
-    LOG.debug("Chosen %(sockets)d:%(cores)d:%(threads)d limits "
-              "%(maxsockets)d:%(maxcores)d:%(maxthreads)d",
+    LOG.debug('Chose sockets=%(sockets)d, cores=%(cores)d, '
+              'threads=%(threads)d; limits were sockets=%(maxsockets)d, '
+              'cores=%(maxcores)d, threads=%(maxthreads)d',
               {"sockets": sockets, "cores": cores,
-               "threads": threads, "maxsockets": maxsockets,
-               "maxcores": maxcores, "maxthreads": maxthreads})
+               "threads": threads, "maxsockets": max_sockets,
+               "maxcores": max_cores, "maxthreads": max_threads})
 
     return (objects.VirtCPUTopology(sockets=sockets, cores=cores,
                                     threads=threads),
-            objects.VirtCPUTopology(sockets=maxsockets, cores=maxcores,
-                                    threads=maxthreads))
+            objects.VirtCPUTopology(sockets=max_sockets, cores=max_cores,
+                                    threads=max_threads))
 
 
 def _get_possible_cpu_topologies(vcpus, maxtopology,
@@ -569,7 +569,7 @@ def _get_desirable_cpu_topologies(flavor, image_meta, allow_threads=True,
                     topo.threads for topo in cell_topologies)
 
         if min_requested_threads:
-            if preferred.threads != -1:
+            if preferred.threads:
                 min_requested_threads = min(preferred.threads,
                                             min_requested_threads)
 
@@ -1038,13 +1038,13 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None,
     return instance_cell
 
 
-def _get_flavor_image_meta(key, flavor, image_meta):
+def _get_flavor_image_meta(key, flavor, image_meta, default=None):
     """Extract both flavor- and image-based variants of metadata."""
     flavor_key = ':'.join(['hw', key])
     image_key = '_'.join(['hw', key])
 
-    flavor_policy = flavor.get('extra_specs', {}).get(flavor_key)
-    image_policy = image_meta.properties.get(image_key)
+    flavor_policy = flavor.get('extra_specs', {}).get(flavor_key, default)
+    image_policy = image_meta.properties.get(image_key, default)
 
     return flavor_policy, image_policy
 

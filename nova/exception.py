@@ -1829,13 +1829,17 @@ class UnshelveException(NovaException):
 
 
 class ImageVCPULimitsRangeExceeded(Invalid):
-    msg_fmt = _("Image vCPU limits %(sockets)d:%(cores)d:%(threads)d "
-                "exceeds permitted %(maxsockets)d:%(maxcores)d:%(maxthreads)d")
+    msg_fmt = _('Image vCPU topology limits (sockets=%(image_sockets)d, '
+                'cores=%(image_cores)d, threads=%(image_threads)d) exceeds '
+                'the limits of the flavor (sockets=%(flavor_sockets)d, '
+                'cores=%(flavor_cores)d, threads=%(flavor_threads)d)')
 
 
 class ImageVCPUTopologyRangeExceeded(Invalid):
-    msg_fmt = _("Image vCPU topology %(sockets)d:%(cores)d:%(threads)d "
-                "exceeds permitted %(maxsockets)d:%(maxcores)d:%(maxthreads)d")
+    msg_fmt = _('Image vCPU topology (sockets=%(image_sockets)d, '
+                'cores=%(image_cores)d, threads=%(image_threads)d) exceeds '
+                'the limits of the flavor or image (sockets=%(max_sockets)d, '
+                'cores=%(max_cores)d, threads=%(max_threads)d)')
 
 
 class ImageVCPULimitsRangeImpossible(Invalid):
