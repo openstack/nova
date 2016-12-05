@@ -57,7 +57,7 @@ class ViewBuilder(common.ViewBuilder):
     def __init__(self):
         """Initialize view builder."""
         super(ViewBuilder, self).__init__()
-        self._address_builder = views_addresses.ViewBuilderV21()
+        self._address_builder = views_addresses.ViewBuilder()
         self._image_builder = views_images.ViewBuilder()
         self._flavor_builder = views_flavors.ViewBuilder()
 
