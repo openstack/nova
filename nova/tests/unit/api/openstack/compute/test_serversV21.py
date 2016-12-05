@@ -4049,6 +4049,29 @@ class ServersViewBuilderTest(test.TestCase):
         self.assertThat(output['server']['fault'],
                         matchers.DictMatches(expected_fault))
 
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
+    def test_build_server_detail_with_fault_no_instance_mapping(self,
+                                                                mock_im):
+        self.instance['vm_state'] = vm_states.ERROR
+
+        mock_im.side_effect = exception.InstanceMappingNotFound(uuid='foo')
+
+        self.request.context = context.RequestContext('fake', 'fake')
+        self.view_builder.show(self.request, self.instance)
+        mock_im.assert_called_once_with(mock.ANY, self.uuid)
+
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
+    def test_build_server_detail_with_fault_loaded(self, mock_im):
+        self.instance['vm_state'] = vm_states.ERROR
+        fault = fake_instance.fake_fault_obj(self.request.context,
+                                             self.uuid, code=500,
+                                             message="No valid host was found")
+        self.instance['fault'] = fault
+
+        self.request.context = context.RequestContext('fake', 'fake')
+        self.view_builder.show(self.request, self.instance)
+        self.assertFalse(mock_im.called)
+
     def test_build_server_detail_with_fault_no_details_not_admin(self):
         self.instance['vm_state'] = vm_states.ERROR
         self.instance['fault'] = fake_instance.fake_fault_obj(
