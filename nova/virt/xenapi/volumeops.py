@@ -39,12 +39,9 @@ class VolumeOps(object):
     def attach_volume(self, connection_info, instance_name, mountpoint,
                       hotplug=True):
         """Attach volume to VM instance."""
-        # TODO(johngarbutt) move this into _attach_volume_to_vm
-        dev_number = volume_utils.get_device_number(mountpoint)
-
         vm_ref = vm_utils.vm_ref_or_raise(self._session, instance_name)
         return self._attach_volume(connection_info, vm_ref,
-                                   instance_name, dev_number, hotplug)
+                                   instance_name, mountpoint, hotplug)
 
     def connect_volume(self, connection_info):
         """Attach volume to hypervisor, but not the VM."""
@@ -112,10 +109,12 @@ class VolumeOps(object):
 
         return vdi_ref
 
-    def _attach_volume_to_vm(self, vdi_ref, vm_ref, instance_name, dev_number,
+    def _attach_volume_to_vm(self, vdi_ref, vm_ref, instance_name, mountpoint,
                              hotplug):
         LOG.debug('Attach_volume vdi: %(vdi_ref)s vm: %(vm_ref)s',
                   {'vdi_ref': vdi_ref, 'vm_ref': vm_ref})
+
+        dev_number = volume_utils.get_device_number(mountpoint)
 
         # osvol is added to the vbd so we can spot which vbds are volumes
         vbd_ref = vm_utils.create_vbd(self._session, vm_ref, vdi_ref,

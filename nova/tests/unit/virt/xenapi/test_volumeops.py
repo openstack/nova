@@ -204,8 +204,8 @@ class AttachVolumeTestCase(VolumeOpsTestBase):
 
         self.ops.attach_volume({}, "instance_name", "/dev/xvda")
 
-        mock_attach.assert_called_once_with({}, "vm_ref", "instance_name", 0,
-                                            True)
+        mock_attach.assert_called_once_with({}, "vm_ref", "instance_name",
+                                            '/dev/xvda', True)
 
     @mock.patch.object(volumeops.VolumeOps, "_attach_volume")
     @mock.patch.object(vm_utils, "vm_ref_or_raise")
@@ -214,8 +214,8 @@ class AttachVolumeTestCase(VolumeOpsTestBase):
 
         self.ops.attach_volume({}, "instance_name", "/dev/xvda", False)
 
-        mock_attach.assert_called_once_with({}, "vm_ref", "instance_name", 0,
-                                            False)
+        mock_attach.assert_called_once_with({}, "vm_ref", "instance_name",
+                                            '/dev/xvda', False)
 
     @mock.patch.object(volumeops.VolumeOps, "_attach_volume")
     def test_attach_volume_default_hotplug_connect_volume(self, mock_attach):
@@ -386,7 +386,7 @@ class AttachVolumeTestCase(VolumeOpsTestBase):
         mock_shutdown.return_value = False
 
         with mock.patch.object(self.session.VBD, "plug") as mock_plug:
-            self.ops._attach_volume_to_vm("vdi", "vm", "name", 2, True)
+            self.ops._attach_volume_to_vm("vdi", "vm", "name", '/dev/2', True)
             mock_plug.assert_called_once_with("vbd", "vm")
 
         mock_vbd.assert_called_once_with(self.session, "vm", "vdi", 2,
@@ -400,7 +400,7 @@ class AttachVolumeTestCase(VolumeOpsTestBase):
         mock_shutdown.return_value = True
 
         with mock.patch.object(self.session.VBD, "plug") as mock_plug:
-            self.ops._attach_volume_to_vm("vdi", "vm", "name", 2, True)
+            self.ops._attach_volume_to_vm("vdi", "vm", "name", '/dev/2', True)
             self.assertFalse(mock_plug.called)
 
         mock_vbd.assert_called_once_with(self.session, "vm", "vdi", 2,
@@ -413,7 +413,7 @@ class AttachVolumeTestCase(VolumeOpsTestBase):
         mock_vbd.return_value = "vbd"
 
         with mock.patch.object(self.session.VBD, "plug") as mock_plug:
-            self.ops._attach_volume_to_vm("vdi", "vm", "name", 2, False)
+            self.ops._attach_volume_to_vm("vdi", "vm", "name", '/dev/2', False)
             self.assertFalse(mock_plug.called)
 
         mock_vbd.assert_called_once_with(self.session, "vm", "vdi", 2,
