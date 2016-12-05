@@ -32,15 +32,21 @@ class NoAuthReportClient(report.SchedulerReportClient):
 
     def __init__(self):
         self._resource_providers = {}
+        self._provider_aggregate_map = {}
         self._disabled = False
         # Supply our own session so the wsgi-intercept can intercept
         # the right thing. Another option would be to use the direct
         # urllib3 interceptor.
         request_session = requests.Session()
+        headers = {
+            'x-auth-token': 'admin',
+            'OpenStack-API-Version': 'placement latest',
+        }
         self._client = session.Session(
             auth=None,
             session=request_session,
-            additional_headers={'x-auth-token': 'admin'})
+            additional_headers=headers,
+        )
 
 
 class SchedulerReportClientTests(test.TestCase):
@@ -103,6 +109,12 @@ class SchedulerReportClientTests(test.TestCase):
             # So now we have a resource provider
             rp = self.client._get_resource_provider(self.compute_uuid)
             self.assertIsNotNone(rp)
+
+            # We should also have an empty list set of aggregate UUID
+            # associations
+            pam = self.client._provider_aggregate_map
+            self.assertIn(self.compute_uuid, pam)
+            self.assertEqual(set(), pam[self.compute_uuid])
 
             # TODO(cdent): change this to use the methods built in
             # to the report client to retrieve inventory?

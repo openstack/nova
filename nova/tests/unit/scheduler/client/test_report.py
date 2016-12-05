@@ -154,9 +154,11 @@ class TestProviderOperations(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_create_resource_provider')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_aggregates')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_resource_provider')
     def test_ensure_resource_provider_exists_in_cache(self, get_rp_mock,
-            create_rp_mock):
+            get_agg_mock, create_rp_mock):
         # Override the client object's cache to contain a resource provider
         # object for the compute host and check that
         # _ensure_resource_provider() doesn't call _get_resource_provider() or
@@ -166,14 +168,23 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         }
 
         self.client._ensure_resource_provider(uuids.compute_node)
+        get_agg_mock.assert_called_once_with(uuids.compute_node)
+        self.assertIn(uuids.compute_node, self.client._provider_aggregate_map)
+        self.assertEqual(
+            get_agg_mock.return_value,
+            self.client._provider_aggregate_map[uuids.compute_node]
+        )
         self.assertFalse(get_rp_mock.called)
         self.assertFalse(create_rp_mock.called)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_create_resource_provider')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_aggregates')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_resource_provider')
-    def test_ensure_resource_provider_get(self, get_rp_mock, create_rp_mock):
+    def test_ensure_resource_provider_get(self, get_rp_mock, get_agg_mock,
+            create_rp_mock):
         # No resource provider exists in the client's cache, so validate that
         # if we get the resource provider from the placement API that we don't
         # try to create the resource provider.
@@ -182,6 +193,12 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.client._ensure_resource_provider(uuids.compute_node)
 
         get_rp_mock.assert_called_once_with(uuids.compute_node)
+        get_agg_mock.assert_called_once_with(uuids.compute_node)
+        self.assertIn(uuids.compute_node, self.client._provider_aggregate_map)
+        self.assertEqual(
+            get_agg_mock.return_value,
+            self.client._provider_aggregate_map[uuids.compute_node]
+        )
         self.assertEqual({uuids.compute_node: mock.sentinel.rp},
                           self.client._resource_providers)
         self.assertFalse(create_rp_mock.called)
@@ -189,9 +206,11 @@ class TestProviderOperations(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_create_resource_provider')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_aggregates')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_resource_provider')
     def test_ensure_resource_provider_create_none(self, get_rp_mock,
-            create_rp_mock):
+            get_agg_mock, create_rp_mock):
         # No resource provider exists in the client's cache, and
         # _create_provider returns None, indicating there was an error with the
         # create call. Ensure we don't populate the resource provider cache
@@ -204,13 +223,17 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         get_rp_mock.assert_called_once_with(uuids.compute_node)
         create_rp_mock.assert_called_once_with(uuids.compute_node,
                                                uuids.compute_node)
+        self.assertFalse(get_agg_mock.called)
         self.assertEqual({}, self.client._resource_providers)
+        self.assertEqual({}, self.client._provider_aggregate_map)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_create_resource_provider')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_aggregates')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_resource_provider')
-    def test_ensure_resource_provider_create(self, get_rp_mock,
+    def test_ensure_resource_provider_create(self, get_rp_mock, get_agg_mock,
             create_rp_mock):
         # No resource provider exists in the client's cache and no resource
         # provider was returned from the placement API, so verify that in this
@@ -220,6 +243,12 @@ class TestProviderOperations(SchedulerReportClientTestCase):
 
         self.client._ensure_resource_provider(uuids.compute_node)
 
+        get_agg_mock.assert_called_once_with(uuids.compute_node)
+        self.assertIn(uuids.compute_node, self.client._provider_aggregate_map)
+        self.assertEqual(
+            get_agg_mock.return_value,
+            self.client._provider_aggregate_map[uuids.compute_node]
+        )
         get_rp_mock.assert_called_once_with(uuids.compute_node)
         create_rp_mock.assert_called_once_with(
                 uuids.compute_node,
@@ -385,6 +414,73 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         # _create_resource_provider() should return None
         self.assertTrue(logging_mock.called)
         self.assertFalse(result)
+
+
+class TestAggregates(SchedulerReportClientTestCase):
+    def test_get_provider_aggregates_found(self):
+        """Test that when the placement API returns a list of aggregate UUIDs,
+        that we cache that aggregate information in the appropriate map.
+        """
+        uuid = uuids.compute_node
+        resp_mock = mock.Mock(status_code=200)
+        json_data = {
+            'aggregates': [
+                uuids.agg1,
+                uuids.agg2,
+            ],
+        }
+        resp_mock.json.return_value = json_data
+        self.ks_sess_mock.get.return_value = resp_mock
+
+        result = self.client._get_provider_aggregates(uuid)
+
+        expected = set([
+            uuids.agg1,
+            uuids.agg2,
+        ])
+        expected_url = '/resource_providers/' + uuid + '/aggregates'
+        self.ks_sess_mock.get.assert_called_once_with(
+            expected_url, endpoint_filter=mock.ANY, raise_exc=False,
+            headers={'OpenStack-API-Version': 'placement 1.1'})
+        self.assertTrue(expected, result)
+
+    @mock.patch.object(report.LOG, 'warning')
+    def test_get_provider_aggregates_not_found(self, log_mock):
+        """Test that when the placement API returns a 404 when looking up a
+        provider's aggregates, that we simply return None and log a warning
+        (since _get_provider_aggregates() should be called after
+        _ensure_resource_provider()).
+        """
+        uuid = uuids.compute_node
+        resp_mock = mock.Mock(status_code=404)
+        self.ks_sess_mock.get.return_value = resp_mock
+
+        result = self.client._get_provider_aggregates(uuid)
+
+        expected_url = '/resource_providers/' + uuid + '/aggregates'
+        self.ks_sess_mock.get.assert_called_once_with(
+            expected_url, endpoint_filter=mock.ANY, raise_exc=False,
+            headers={'OpenStack-API-Version': 'placement 1.1'})
+        self.assertTrue(log_mock.called)
+        self.assertIsNone(result)
+
+    @mock.patch.object(report.LOG, 'error')
+    def test_get_provider_aggregates_bad_request(self, log_mock):
+        """Test that when the placement API returns a 400 when looking up a
+        provider's aggregates, that we simply return None and log an error.
+        """
+        uuid = uuids.compute_node
+        resp_mock = mock.Mock(status_code=400)
+        self.ks_sess_mock.get.return_value = resp_mock
+
+        result = self.client._get_provider_aggregates(uuid)
+
+        expected_url = '/resource_providers/' + uuid + '/aggregates'
+        self.ks_sess_mock.get.assert_called_once_with(
+            expected_url, endpoint_filter=mock.ANY, raise_exc=False,
+            headers={'OpenStack-API-Version': 'placement 1.1'})
+        self.assertTrue(log_mock.called)
+        self.assertIsNone(result)
 
 
 class TestComputeNodeToInventoryDict(test.NoDBTestCase):
