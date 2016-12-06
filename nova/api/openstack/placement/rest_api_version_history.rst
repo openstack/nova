@@ -26,3 +26,21 @@ resource providers with ``GET`` and ``PUT`` methods on one new
 route:
 
 * /resource_providers/{uuid}/aggregates
+
+1.2 Custom resource classes
+---------------------------
+
+Placement API version 1.2 adds basic operations allowing an admin to create,
+list and delete custom resource classes.
+
+The following new routes are added:
+
+* GET /resource_classes: return all resource classes
+* POST /resource_classes: create a new custom resource class
+* PUT /resource_classes/{name}: update name of custom resource class
+* DELETE /resource_classes/{name}: deletes a custom resource class
+* GET /resource_classes/{name}: get a single resource class
+
+Custom resource classes must begin with the prefix "CUSTOM\_" and contain only
+the letters A through Z, the numbers 0 through 9 and the underscore "\_"
+character.

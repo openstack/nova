@@ -264,6 +264,9 @@ class TestPlacementURLs(test.NoDBTestCase):
         self.resource_provider = objects.ResourceProvider(
             name=uuidsentinel.rp_name,
             uuid=uuidsentinel.rp_uuid)
+        self.resource_class = objects.ResourceClass(
+            name='CUSTOM_BAREMETAL_GOLD',
+            id=1000)
 
     def test_resource_provider_url(self):
         environ = {}
@@ -294,3 +297,17 @@ class TestPlacementURLs(test.NoDBTestCase):
                         % (uuidsentinel.rp_uuid, resource_class))
         self.assertEqual(expected_url, util.inventory_url(
             environ, self.resource_provider, resource_class))
+
+    def test_resource_class_url(self):
+        environ = {}
+        expected_url = '/resource_classes/CUSTOM_BAREMETAL_GOLD'
+        self.assertEqual(expected_url, util.resource_class_url(
+            environ, self.resource_class))
+
+    def test_resource_class_url_prefix(self):
+        # SCRIPT_NAME represents the mount point of a WSGI
+        # application when it is hosted at a path/prefix.
+        environ = {'SCRIPT_NAME': '/placement'}
+        expected_url = '/placement/resource_classes/CUSTOM_BAREMETAL_GOLD'
+        self.assertEqual(expected_url, util.resource_class_url(
+            environ, self.resource_class))

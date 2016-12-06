@@ -1,0 +1,197 @@
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        OpenStack-API-Version: placement latest
+
+tests:
+
+- name: test microversion masks entire resource-classes endpoint with 404
+  GET: /resource_classes
+  request_headers:
+    OpenStack-API-Version: placement 1.1
+    content-type: application/json
+  status: 404
+
+- name: test microversion mask when wrong content type
+  desc: we want to get a 404 before a 415
+  POST: /resource_classes
+  request_headers:
+    OpenStack-API-Version: placement 1.1
+    content-type: text/plain
+  data: data
+  status: 404
+
+- name: test wrong content type
+  desc: we want to get a 415 when bad content type
+  POST: /resource_classes
+  request_headers:
+    OpenStack-API-Version: placement 1.2
+    content-type: text/plain
+  data: data
+  status: 415
+
+- name: what is at resource classes
+  GET: /resource_classes
+  response_json_paths:
+  response_json_paths:
+      $.resource_classes.`len`: 10  #  Number of standard resource classes
+      $.resource_classes[0].name: VCPU
+
+- name: non admin forbidden
+  GET: /resource_classes
+  request_headers:
+      x-auth-token: user
+      accept: application/json
+  status: 403
+  response_json_paths:
+      $.errors[0].title: Forbidden
+
+- name: non admin forbidden non json
+  GET: /resource_classes
+  request_headers:
+      x-auth-token: user
+      accept: text/plain
+  status: 403
+  response_strings:
+      - admin required
+
+- name: post illegal characters in name
+  POST: /resource_classes
+  request_headers:
+    content-type: application/json
+  data:
+      name: CUSTOM_Illegal&@!Name?
+  status: 400
+  response_strings:
+      - JSON does not validate
+
+- name: post new resource class
+  POST: /resource_classes
+  request_headers:
+    content-type: application/json
+  data:
+      name: $ENVIRON['CUSTOM_RES_CLASS']
+  status: 201
+  response_headers:
+      location: //resource_classes/$ENVIRON['CUSTOM_RES_CLASS']/
+  response_forbidden_headers:
+      - content-type
+
+- name: try to create same again
+  POST: /resource_classes
+  request_headers:
+    content-type: application/json
+  data:
+      name: $ENVIRON['CUSTOM_RES_CLASS']
+  status: 409
+  response_strings:
+      - Conflicting resource class already exists
+
+- name: confirm the correct post
+  GET: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
+  request_headers:
+      content-type: application/json
+  response_json_paths:
+      $.name: $ENVIRON['CUSTOM_RES_CLASS']
+      $.links[?rel = "self"].href: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
+
+- name: get resource class works with no accept
+  GET: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
+  request_headers:
+    content-type: application/json
+  response_headers:
+      content-type: /application/json/
+  response_json_paths:
+      $.name: $ENVIRON['CUSTOM_RES_CLASS']
+
+- name: list resource classes after addition of custom res class
+  GET: /resource_classes
+  response_json_paths:
+      $.resource_classes.`len`: 11  # 10 standard plus 1 custom
+      $.resource_classes[10].name: $ENVIRON['CUSTOM_RES_CLASS']
+      $.resource_classes[10].links[?rel = "self"].href: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
+
+- name: update standard resource class
+  PUT: /resource_classes/VCPU
+  request_headers:
+    content-type: application/json
+  data:
+      name: VCPU_ALTERNATE
+  status: 400
+  response_strings:
+      - JSON does not validate
+
+- name: update custom resource class to standard resource class name
+  PUT: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
+  request_headers:
+    content-type: application/json
+  data:
+      name: VCPU
+  status: 400
+  response_strings:
+      - JSON does not validate
+
+- name: post another custom resource class
+  POST: /resource_classes
+  request_headers:
+    content-type: application/json
+  data:
+      name: CUSTOM_NFV_FOO
+  status: 201
+
+- name: update custom resource class to already existing custom resource class name
+  PUT: /resource_classes/CUSTOM_NFV_FOO
+  request_headers:
+    content-type: application/json
+  data:
+      name: $ENVIRON['CUSTOM_RES_CLASS']
+  status: 409
+  response_strings:
+      - Resource class already exists
+
+- name: update custom resource class
+  PUT: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
+  request_headers:
+    content-type: application/json
+  data:
+      name: CUSTOM_NFV_BAR
+  status: 200
+  response_json_paths:
+      $.name: CUSTOM_NFV_BAR
+      $.links[?rel = "self"].href: /resource_classes/CUSTOM_NFV_BAR
+
+- name: delete standard resource class
+  DELETE: /resource_classes/VCPU
+  status: 400
+  response_strings:
+      - Cannot delete standard resource class
+
+- name: delete custom resource class
+  DELETE: /resource_classes/CUSTOM_NFV_BAR
+  status: 204
+
+- name: 404 on deleted resource class
+  DELETE: $LAST_URL
+  status: 404
+
+- name: post malformed json as json
+  POST: /resource_classes
+  request_headers:
+      content-type: application/json
+  data: '{"foo": }'
+  status: 400
+  response_strings:
+      - 'Malformed JSON:'
+
+- name: post bad resource class name IRON_NFV
+  POST: /resource_classes
+  request_headers:
+      content-type: application/json
+  data:
+      name: IRON_NFV  # Doesn't start with CUSTOM_
+  status: 400
+  response_strings:
+      - JSON does not validate

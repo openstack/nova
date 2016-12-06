@@ -57,7 +57,7 @@ class TestMicroversionIntersection(test.NoDBTestCase):
     # if you add two different versions of method 'foobar' the
     # number only goes up by one if no other version foobar yet
     # exists. This operates as a simple sanity check.
-    TOTAL_VERSIONED_METHODS = 0
+    TOTAL_VERSIONED_METHODS = 5
 
     def test_methods_versioned(self):
         methods_data = microversion.VERSIONED_METHODS
