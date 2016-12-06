@@ -111,8 +111,6 @@ class FlavorActionController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.FlavorAccessExists as err:
             raise webob.exc.HTTPConflict(explanation=err.format_message())
-        except exception.AdminRequired as e:
-            raise webob.exc.HTTPForbidden(explanation=e.format_message())
         return _marshall_flavor_access(flavor)
 
     @extensions.expected_errors((400, 403, 404))
@@ -132,8 +130,6 @@ class FlavorActionController(wsgi.Controller):
         except (exception.FlavorAccessNotFound,
                 exception.FlavorNotFound) as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
-        except exception.AdminRequired as e:
-            raise webob.exc.HTTPForbidden(explanation=e.format_message())
         return _marshall_flavor_access(flavor)
 
 
