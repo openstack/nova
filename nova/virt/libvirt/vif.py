@@ -449,6 +449,14 @@ class LibvirtGenericVIFDriver(object):
         conf.target_dev = vif.vif_name
         self._set_config_VIFPortProfile(instance, vif, conf)
 
+    def _set_config_VIFVHostUser(self, instance, vif, conf, host=None):
+        designer.set_vif_host_backend_vhostuser_config(
+            conf, vif.mode, vif.path)
+        if not host.has_min_version(MIN_LIBVIRT_VHOSTUSER_MQ):
+            LOG.debug('Queues are not a vhostuser supported feature.')
+            conf.driver_name = None
+            conf.vhost_queues = None
+
     def _set_config_VIFPortProfileOpenVSwitch(self, profile, conf):
         conf.vporttype = "openvswitch"
         conf.add_vport_param("interfaceid",
@@ -715,29 +723,12 @@ class LibvirtGenericVIFDriver(object):
         except processutils.ProcessExecutionError:
             LOG.exception(_LE("Failed while plugging vif"), instance=instance)
 
-    def plug_vhostuser_ovs(self, instance, vif):
-        """Plug a VIF_TYPE_VHOSTUSER into an ovs bridge"""
-        iface_id = self.get_ovs_interfaceid(vif)
-        port_name = os.path.basename(
-            vif['details'][network_model.VIF_DETAILS_VHOSTUSER_SOCKET])
-        mtu = vif['network'].get_meta('mtu')
-        linux_net.create_ovs_vif_port(
-            self.get_bridge_name(vif),
-            port_name, iface_id, vif['address'],
-            instance.uuid, mtu,
-            interface_type=network_model.OVS_VHOSTUSER_INTERFACE_TYPE)
-
     def plug_vhostuser(self, instance, vif):
         fp_plug = vif['details'].get(
                                 network_model.VIF_DETAILS_VHOSTUSER_FP_PLUG,
                                 False)
-        ovs_plug = vif['details'].get(
-                                network_model.VIF_DETAILS_VHOSTUSER_OVS_PLUG,
-                                False)
         if fp_plug:
             self.plug_vhostuser_fp(instance, vif)
-        elif ovs_plug:
-            self.plug_vhostuser_ovs(instance, vif)
 
     def plug_vrouter(self, instance, vif):
         """Plug into Contrail's network port
@@ -969,24 +960,12 @@ class LibvirtGenericVIFDriver(object):
             LOG.exception(_LE("Failed while unplugging vif"),
                           instance=instance)
 
-    def unplug_vhostuser_ovs(self, instance, vif):
-        """Unplug a VIF_TYPE_VHOSTUSER into an ovs bridge"""
-        port_name = os.path.basename(
-            vif['details'][network_model.VIF_DETAILS_VHOSTUSER_SOCKET])
-        linux_net.delete_ovs_vif_port(self.get_bridge_name(vif),
-                                      port_name)
-
     def unplug_vhostuser(self, instance, vif):
         fp_plug = vif['details'].get(
                         network_model.VIF_DETAILS_VHOSTUSER_FP_PLUG,
                         False)
-        ovs_plug = vif['details'].get(
-                        network_model.VIF_DETAILS_VHOSTUSER_OVS_PLUG,
-                        False)
         if fp_plug:
             self.unplug_vhostuser_fp(instance, vif)
-        elif ovs_plug:
-            self.unplug_vhostuser_ovs(instance, vif)
 
     def unplug_vrouter(self, instance, vif):
         """Unplug Contrail's network port

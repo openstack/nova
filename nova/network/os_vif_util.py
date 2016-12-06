@@ -279,6 +279,29 @@ def _nova_to_osvif_vif_ovs(vif):
     return obj
 
 
+# VIF_TYPE_VHOST_USER = 'vhostuser'
+def _nova_to_osvif_vif_vhostuser(vif):
+    if vif['details'].get(model.VIF_DETAILS_VHOSTUSER_OVS_PLUG, False):
+        profile = objects.vif.VIFPortProfileOpenVSwitch(
+            interface_id=vif.get('ovs_interfaceid') or vif['id'])
+        obj = _get_vif_instance(vif, objects.vif.VIFVHostUser,
+                                port_profile=profile, plugin="ovs")
+        if vif["network"]["bridge"] is not None:
+            obj.bridge_name = vif["network"]["bridge"]
+        obj.mode = vif['details'].get(
+            model.VIF_DETAILS_VHOSTUSER_MODE, 'server')
+        path = vif['details'].get(
+            model.VIF_DETAILS_VHOSTUSER_SOCKET, None)
+        if path:
+            obj.path = path
+        else:
+            raise exception.VifDetailsMissingVhostuserSockPath(
+                vif_id=vif['id'])
+        return obj
+    else:
+        raise NotImplementedError()
+
+
 # VIF_TYPE_IVS = 'ivs'
 def _nova_to_osvif_vif_ivs(vif):
     raise NotImplementedError()
@@ -316,11 +339,6 @@ def _nova_to_osvif_vif_ib_hostdev(vif):
 
 # VIF_TYPE_MIDONET = 'midonet'
 def _nova_to_osvif_vif_midonet(vif):
-    raise NotImplementedError()
-
-
-# VIF_TYPE_VHOSTUSER = 'vhostuser'
-def _nova_to_osvif_vif_vhostuser(vif):
     raise NotImplementedError()
 
 
