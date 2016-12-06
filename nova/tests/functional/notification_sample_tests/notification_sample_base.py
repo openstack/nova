@@ -188,3 +188,10 @@ class NotificationSampleTestBase(test.TestCase,
         return [notification for notification
                     in fake_notifier.VERSIONED_NOTIFICATIONS
                     if notification['event_type'] == event_type]
+
+    def _wait_for_notification(self, event_type, timeout=1.0):
+        received = fake_notifier.wait_for_versioned_notification(
+            event_type, timeout)
+        self.assertTrue(
+            received,
+            'notification %s hasn\'t been received' % event_type)
