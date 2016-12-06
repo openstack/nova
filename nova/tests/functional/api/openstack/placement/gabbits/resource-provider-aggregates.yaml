@@ -1,0 +1,100 @@
+# Tests filtering resource providers by aggregates
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        content-type: application/json
+        accept: application/json
+        openstack-api-version: placement latest
+
+tests:
+
+- name: post new provider 1
+  POST: /resource_providers
+  data:
+      name: rp_1
+      uuid: 893337e9-1e55-49f0-bcfe-6a2f16fbf2f7
+  status: 201
+
+- name: post new provider 2
+  POST: /resource_providers
+  data:
+      name: rp_2
+      uuid: 5202c48f-c960-4eec-bde3-89c4f22a17b9
+  status: 201
+
+- name: get by aggregates no result
+  GET: '/resource_providers?member_of=in:83a3d69d-8920-48e2-8914-cadfd8fa2f91'
+  response_json_paths:
+      $.resource_providers: []
+
+- name: associate an aggregate with rp1
+  PUT: /resource_providers/893337e9-1e55-49f0-bcfe-6a2f16fbf2f7/aggregates
+  data:
+      - 83a3d69d-8920-48e2-8914-cadfd8fa2f91
+  status: 200
+
+- name: get by aggregates one result
+  GET: '/resource_providers?member_of=in:83a3d69d-8920-48e2-8914-cadfd8fa2f91'
+  response_json_paths:
+      $.resource_providers[0].uuid: 893337e9-1e55-49f0-bcfe-6a2f16fbf2f7
+
+- name: get by aggregates one result no in
+  GET: '/resource_providers?member_of=83a3d69d-8920-48e2-8914-cadfd8fa2f91'
+  response_json_paths:
+      $.resource_providers[0].uuid: 893337e9-1e55-49f0-bcfe-6a2f16fbf2f7
+
+- name: associate an aggregate with rp2
+  PUT: /resource_providers/5202c48f-c960-4eec-bde3-89c4f22a17b9/aggregates
+  data:
+      - 83a3d69d-8920-48e2-8914-cadfd8fa2f91
+  status: 200
+
+- name: get by aggregates two result
+  GET: '/resource_providers?member_of=in:83a3d69d-8920-48e2-8914-cadfd8fa2f91'
+  response_json_paths:
+      $.resource_providers.`len`: 2
+      $.resource_providers[0].uuid: /5202c48f-c960-4eec-bde3-89c4f22a17b9|893337e9-1e55-49f0-bcfe-6a2f16fbf2f7/
+      $.resource_providers[1].uuid: /5202c48f-c960-4eec-bde3-89c4f22a17b9|893337e9-1e55-49f0-bcfe-6a2f16fbf2f7/
+
+- name: associate another aggregate with rp2
+  PUT: /resource_providers/5202c48f-c960-4eec-bde3-89c4f22a17b9/aggregates
+  data:
+      - 99652f11-9f77-46b9-80b7-4b1989be9f8c
+  status: 200
+
+- name: get by both aggregates two
+  GET: '/resource_providers?member_of=in:83a3d69d-8920-48e2-8914-cadfd8fa2f91,99652f11-9f77-46b9-80b7-4b1989be9f8c'
+  response_json_paths:
+      $.resource_providers.`len`: 2
+      $.resource_providers[0].uuid: /5202c48f-c960-4eec-bde3-89c4f22a17b9|893337e9-1e55-49f0-bcfe-6a2f16fbf2f7/
+      $.resource_providers[1].uuid: /5202c48f-c960-4eec-bde3-89c4f22a17b9|893337e9-1e55-49f0-bcfe-6a2f16fbf2f7/
+
+- name: clear aggregates on rp1
+  PUT: /resource_providers/893337e9-1e55-49f0-bcfe-6a2f16fbf2f7/aggregates
+  data: []
+  status: 200
+
+- name: get by both aggregates one
+  desc: only one result because we disassociated aggregates in the PUT above
+  GET: '/resource_providers?member_of=in:83a3d69d-8920-48e2-8914-cadfd8fa2f91,99652f11-9f77-46b9-80b7-4b1989be9f8c'
+  response_json_paths:
+      $.resource_providers.`len`: 1
+      $.resource_providers[0].uuid: 5202c48f-c960-4eec-bde3-89c4f22a17b9
+
+- name: error on old microverison
+  GET: '/resource_providers?member_of=in:83a3d69d-8920-48e2-8914-cadfd8fa2f91,99652f11-9f77-46b9-80b7-4b1989be9f8c'
+  request_headers:
+      openstack-api-version: placement 1.1
+  status: 400
+  response_json_paths:
+      $.errors[0].detail: '/Invalid filters: member_of/'
+
+- name: error on bogus query parameter
+  GET: '/resource_providers?assoc_with_aggregate=in:83a3d69d-8920-48e2-8914-cadfd8fa2f91,99652f11-9f77-46b9-80b7-4b1989be9f8c'
+  status: 400
+  response_json_paths:
+      $.errors[0].detail: '/Invalid filters: assoc_with_aggregate/'

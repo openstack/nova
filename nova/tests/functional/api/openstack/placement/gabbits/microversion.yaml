@@ -37,13 +37,13 @@ tests:
   response_strings:
       - "Unacceptable version header: 0.5"
 
-- name: latest microversion is 1.2
+- name: latest microversion is 1.3
   GET: /
   request_headers:
       openstack-api-version: placement latest
   response_headers:
       vary: /OpenStack-API-Version/
-      openstack-api-version: placement 1.2
+      openstack-api-version: placement 1.3
 
 - name: other accept header bad version
   GET: /

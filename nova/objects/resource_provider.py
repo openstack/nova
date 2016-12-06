@@ -685,8 +685,10 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
 
         :param context: `nova.context.RequestContext` that may be used to grab
                         a DB connection.
-        :param filters: Can be `name`, `uuid` or `resources` where `resources`
-                        is a dict of amounts keyed by resource classes
+        :param filters: Can be `name`, `uuid`, `member_of` or `resources` where
+                        `member_of` is a list of aggregate uuids and
+                        `resources` is a dict of amounts keyed by resource
+                        classes.
         :type filters: dict
         """
         _ensure_rc_cache(context)

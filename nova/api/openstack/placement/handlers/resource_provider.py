@@ -18,6 +18,7 @@ from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 import webob
 
+from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement import util
 from nova import exception
 from nova.i18n import _
@@ -162,8 +163,11 @@ def list_resource_providers(req):
     a collection of resource providers.
     """
     context = req.environ['placement.context']
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
 
     allowed_filters = set(objects.ResourceProviderList.allowed_filters)
+    if not want_version.matches((1, 3)):
+        allowed_filters.remove('member_of')
     passed_filters = set(req.GET.keys())
     invalid_filters = passed_filters - allowed_filters
     if invalid_filters:
@@ -180,7 +184,18 @@ def list_resource_providers(req):
     filters = {}
     for attr in objects.ResourceProviderList.allowed_filters:
         if attr in req.GET:
-            filters[attr] = req.GET[attr]
+            value = req.GET[attr]
+            # special case member_of to always make its value a
+            # list, either by accepting the single value, or if it
+            # starts with 'in:' splitting on ','.
+            # NOTE(cdent): This will all change when we start using
+            # JSONSchema validation of query params.
+            if attr == 'member_of':
+                if value.startswith('in:'):
+                    value = value[3:].split(',')
+                else:
+                    value = [value]
+            filters[attr] = value
     resource_providers = objects.ResourceProviderList.get_all_by_filters(
         context, filters)
 
