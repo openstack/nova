@@ -3829,6 +3829,45 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual("tcp", cfg.devices[3].type)
         self.assertEqual("tcp", cfg.devices[4].type)
 
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
+    @mock.patch('nova.console.serial.acquire_port')
+    @mock.patch('nova.virt.hardware.get_number_of_serial_ports',
+                return_value=1)
+    @mock.patch.object(libvirt_driver.libvirt_utils, 'get_arch',)
+    def test_guest_config_char_device_logd(self, mock_get_arch,
+                                           mock_get_number_serial_ports,
+                                           mock_acquire_port,
+                                           mock_host_has_min_version):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        def _test_consoles(arch_to_mock, serial_enabled,
+                           expected_device_type, expected_device_cls):
+            guest_cfg = vconfig.LibvirtConfigGuest()
+            mock_get_arch.return_value = arch_to_mock
+            self.flags(enabled=serial_enabled, group='serial_console')
+            instance = objects.Instance(**self.test_instance)
+
+            drvr._create_consoles("qemu", guest_cfg, instance=instance,
+                                  flavor=None, image_meta=None)
+
+            self.assertEqual(1, len(guest_cfg.devices))
+            device = guest_cfg.devices[0]
+            self.assertEqual(expected_device_type, device.type)
+            self.assertIsInstance(device, expected_device_cls)
+            self.assertIsInstance(device.log,
+                                  vconfig.LibvirtConfigGuestCharDeviceLog)
+            self.assertEqual("off", device.log.append)
+            self.assertTrue(device.log.file.endswith("console.log"))
+
+        _test_consoles(fields.Architecture.X86_64, True,
+                       "tcp", vconfig.LibvirtConfigGuestSerial)
+        _test_consoles(fields.Architecture.X86_64, False,
+                       "pty", vconfig.LibvirtConfigGuestSerial)
+        _test_consoles(fields.Architecture.S390, True,
+                       "tcp", vconfig.LibvirtConfigGuestConsole)
+        _test_consoles(fields.Architecture.S390X, False,
+                       "pty", vconfig.LibvirtConfigGuestConsole)
+
     @mock.patch('nova.console.serial.acquire_port')
     def test_get_guest_config_serial_console_through_port_rng_exhausted(
             self, acquire_port):
