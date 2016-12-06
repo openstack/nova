@@ -22,8 +22,6 @@ SHOULD include dedicated exception logging.
 
 """
 
-import sys
-
 from oslo_log import log as logging
 import six
 import webob.exc
@@ -88,18 +86,13 @@ class NovaException(Exception):
                 message = self.msg_fmt % kwargs
 
             except Exception:
-                exc_info = sys.exc_info()
                 # kwargs doesn't match a variable in the message
                 # log the issue and the kwargs
                 LOG.exception(_LE('Exception in string format operation'))
                 for name, value in six.iteritems(kwargs):
                     LOG.error("%s: %s" % (name, value))  # noqa
 
-                if CONF.fatal_exception_format_errors:
-                    six.reraise(*exc_info)
-                else:
-                    # at least get the core message out if something happened
-                    message = self.msg_fmt
+                message = self.msg_fmt
 
         self.message = message
         super(NovaException, self).__init__(message)
