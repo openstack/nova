@@ -637,6 +637,48 @@ class ResourceProviderListTestCase(ResourceProviderBaseCase):
             objects.ResourceProviderList.get_all_by_filters,
             self.context, {'resources': {'FOOBAR': 3}})
 
+    def test_get_all_by_filters_aggregate(self):
+        for rp_i in [1, 2, 3, 4]:
+            uuid = getattr(uuidsentinel, 'rp_uuid_' + str(rp_i))
+            name = 'rp_name_' + str(rp_i)
+            rp = objects.ResourceProvider(self.context, name=name, uuid=uuid)
+            rp.create()
+            if rp_i % 2:
+                aggregate_uuids = [uuidsentinel.agg_a, uuidsentinel.agg_b]
+                rp.set_aggregates(aggregate_uuids)
+
+        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+            self.context, filters={'member_of': [uuidsentinel.agg_a]})
+
+        self.assertEqual(2, len(resource_providers))
+        names = [_rp.name for _rp in resource_providers]
+        self.assertIn('rp_name_1', names)
+        self.assertIn('rp_name_3', names)
+        self.assertNotIn('rp_name_2', names)
+        self.assertNotIn('rp_name_4', names)
+
+        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+            self.context, filters={'member_of':
+                                   [uuidsentinel.agg_a, uuidsentinel.agg_b]})
+        self.assertEqual(2, len(resource_providers))
+
+        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+            self.context, filters={'member_of':
+                                   [uuidsentinel.agg_a, uuidsentinel.agg_b],
+                                   'name': u'rp_name_1'})
+        self.assertEqual(1, len(resource_providers))
+
+        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+            self.context, filters={'member_of':
+                                   [uuidsentinel.agg_a, uuidsentinel.agg_b],
+                                   'name': u'barnabas'})
+        self.assertEqual(0, len(resource_providers))
+
+        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+            self.context, filters={'member_of':
+                                   [uuidsentinel.agg_1, uuidsentinel.agg_2]})
+        self.assertEqual(0, len(resource_providers))
+
 
 class TestResourceProviderAggregates(test.NoDBTestCase):
 
