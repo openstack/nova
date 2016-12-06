@@ -4362,73 +4362,89 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             guest.os_boot_dev = blockinfo.get_boot_order(disk_info)
 
-    def _create_consoles(self, virt_type, guest, instance, flavor, image_meta,
-                         caps):
-        log_path = self._get_console_log_path(instance)
-        if virt_type in ("qemu", "kvm"):
-            # Create the serial console char devices
-            guest_arch = libvirt_utils.get_arch(image_meta)
+    def _create_consoles(self, virt_type, guest_cfg, instance, flavor,
+                         image_meta):
+        if virt_type == 'parallels':
+            pass
+        elif virt_type not in ("qemu", "kvm"):
+            self._create_pty_device(guest_cfg,
+                                    vconfig.LibvirtConfigGuestConsole)
+        elif (virt_type in ("qemu", "kvm") and
+                  self._is_s390x_guest(image_meta)):
+            self._create_consoles_s390x(guest_cfg, instance,
+                                        flavor, image_meta)
+        elif virt_type in ("qemu", "kvm"):
+            self._create_consoles_qemu_kvm(guest_cfg, instance,
+                                        flavor, image_meta)
 
-            if CONF.serial_console.enabled:
-                try:
-                    # TODO(sahid): the guest param of this method should
-                    # be renamed as guest_cfg then guest_obj to guest.
-                    guest_obj = self._host.get_guest(instance)
-                    if list(self._get_serial_ports_from_guest(guest_obj)):
-                        # Serial port are already configured for instance that
-                        # means we are in a context of migration.
-                        return
-                except exception.InstanceNotFound:
-                    LOG.debug(
-                        "Instance does not exist yet on libvirt, we can "
-                        "safely pass on looking for already defined serial "
-                        "ports in its domain XML", instance=instance)
-                num_ports = hardware.get_number_of_serial_ports(
-                    flavor, image_meta)
+    def _is_s390x_guest(self, image_meta):
+        s390x_archs = (fields.Architecture.S390, fields.Architecture.S390X)
+        return libvirt_utils.get_arch(image_meta) in s390x_archs
 
-                if guest_arch in (fields.Architecture.S390,
-                                  fields.Architecture.S390X):
-                    console_cls = vconfig.LibvirtConfigGuestConsole
-                else:
-                    console_cls = vconfig.LibvirtConfigGuestSerial
-                    self._check_number_of_serial_console(num_ports)
-
-                for port in six.moves.range(num_ports):
-                    console = console_cls()
-                    console.port = port
-                    console.type = "tcp"
-                    console.listen_host = (
-                        CONF.serial_console.proxyclient_address)
-                    console.listen_port = (
-                        serial_console.acquire_port(
-                            console.listen_host))
-                    guest.add_device(console)
-            else:
-                # The QEMU 'pty' driver throws away any data if no
-                # client app is connected. Thus we can't get away
-                # with a single type=pty console. Instead we have
-                # to configure two separate consoles.
-                if guest_arch in (fields.Architecture.S390,
-                                  fields.Architecture.S390X):
-                    consolelog = vconfig.LibvirtConfigGuestConsole()
-                    consolelog.target_type = "sclplm"
-                else:
-                    consolelog = vconfig.LibvirtConfigGuestSerial()
-                consolelog.type = "file"
-                consolelog.source_path = log_path
-                guest.add_device(consolelog)
-            if caps.host.cpu.arch in (fields.Architecture.S390,
-                                      fields.Architecture.S390X):
-                consolepty = vconfig.LibvirtConfigGuestConsole()
-                consolepty.target_type = "sclp"
-            else:
-                consolepty = vconfig.LibvirtConfigGuestSerial()
+    def _create_consoles_qemu_kvm(self, guest_cfg, instance, flavor,
+                                  image_meta):
+        char_dev_cls = vconfig.LibvirtConfigGuestSerial
+        if CONF.serial_console.enabled:
+            if not self._serial_ports_already_defined(instance):
+                num_ports = hardware.get_number_of_serial_ports(flavor,
+                                                                image_meta)
+                self._check_number_of_serial_console(num_ports)
+                self._create_serial_consoles(guest_cfg, num_ports,
+                                             char_dev_cls)
         else:
-            consolepty = vconfig.LibvirtConfigGuestConsole()
+            self._create_file_device(guest_cfg, instance, char_dev_cls)
+        self._create_pty_device(guest_cfg, char_dev_cls)
 
-        if virt_type != 'parallels':
-            consolepty.type = "pty"
-            guest.add_device(consolepty)
+    def _create_consoles_s390x(self, guest_cfg, instance, flavor, image_meta):
+        char_dev_cls = vconfig.LibvirtConfigGuestConsole
+        if CONF.serial_console.enabled:
+            if not self._serial_ports_already_defined(instance):
+                num_ports = hardware.get_number_of_serial_ports(flavor,
+                                                                image_meta)
+                self._create_serial_consoles(guest_cfg, num_ports,
+                                             char_dev_cls)
+        else:
+            self._create_file_device(guest_cfg, instance, char_dev_cls,
+                                     "sclplm")
+        self._create_pty_device(guest_cfg, char_dev_cls, "sclp")
+
+    def _create_pty_device(self, guest_cfg, char_dev_cls, target_type=None):
+        consolepty = char_dev_cls()
+        consolepty.target_type = target_type
+        consolepty.type = "pty"
+        guest_cfg.add_device(consolepty)
+
+    def _create_file_device(self, guest_cfg, instance, char_dev_cls,
+                            target_type=None):
+        consolelog = char_dev_cls()
+        consolelog.target_type = target_type
+        consolelog.type = "file"
+        consolelog.source_path = self._get_console_log_path(instance)
+        guest_cfg.add_device(consolelog)
+
+    def _serial_ports_already_defined(self, instance):
+        try:
+            guest = self._host.get_guest(instance)
+            if list(self._get_serial_ports_from_guest(guest)):
+                # Serial port are already configured for instance that
+                # means we are in a context of migration.
+                return True
+        except exception.InstanceNotFound:
+            LOG.debug(
+                "Instance does not exist yet on libvirt, we can "
+                "safely pass on looking for already defined serial "
+                "ports in its domain XML", instance=instance)
+        return False
+
+    def _create_serial_consoles(self, guest_cfg, num_ports, char_dev_cls):
+        for port in six.moves.range(num_ports):
+            console = char_dev_cls()
+            console.port = port
+            console.type = "tcp"
+            console.listen_host = CONF.serial_console.proxyclient_address
+            listen_port = serial_console.acquire_port(console.listen_host)
+            console.listen_port = listen_port
+            guest_cfg.add_device(console)
 
     def _cpu_config_to_vcpu_model(self, cpu_config, vcpu_model):
         """Update VirtCPUModel object according to libvirt CPU config.
@@ -4585,8 +4601,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 flavor, virt_type, self._host)
             guest.add_device(config)
 
-        self._create_consoles(virt_type, guest, instance, flavor,
-                              image_meta, caps)
+        self._create_consoles(virt_type, guest, instance, flavor, image_meta)
 
         pointer = self._get_guest_pointer_model(guest.os_type, image_meta)
         if pointer:
