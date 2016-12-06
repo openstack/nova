@@ -171,8 +171,8 @@ PF_SLOT = '00'
 
 class FakePciDevice(object):
     pci_dev_template = """<device>
-  <name>pci_0000_81_%(slot)s_%(dev)d</name>
-  <path>/sys/devices/pci0000:80/0000:80:01.0/0000:81:%(slot)s.%(dev)d</path>
+  <name>pci_0000_81_%(slot)02x_%(dev)d</name>
+  <path>/sys/devices/pci0000:80/0000:80:01.0/0000:81:%(slot)02x.%(dev)d</path>
   <parent>pci_0000_80_01_0</parent>
   <driver>
     <name>%(driver)s</name>
@@ -180,7 +180,7 @@ class FakePciDevice(object):
   <capability type='pci'>
     <domain>0</domain>
     <bus>129</bus>
-    <slot>0</slot>
+    <slot>%(slot)d</slot>
     <function>%(dev)d</function>
     <product id='0x%(prod)d'>%(prod_name)s</product>
     <vendor id='0x8086'>Intel Corporation</vendor>
@@ -188,7 +188,7 @@ class FakePciDevice(object):
     %(functions)s
     </capability>
     <iommuGroup number='%(group_id)d'>
- <address domain='0x0000' bus='0x81' slot='0x%(slot)s' function='0x%(dev)d'/>
+ <address domain='0x0000' bus='0x81' slot='%(slot)#02x' function='0x%(dev)d'/>
     </iommuGroup>
     <numa node='%(numa_node)s'/>
     <pci-express>
@@ -216,17 +216,19 @@ class FakePciDevice(object):
             pf_caps = [addr_templ % {'dev': x, 'slot': VF_SLOT}
                                      for x in range(dev * vf_ratio,
                                                     (dev + 1) * vf_ratio)]
+            slot = int(str(PF_SLOT), 16)
             self.pci_dev = self.pci_dev_template % {'dev': dev,
                          'prod': product_id, 'group_id': group,
-                         'functions': '\n'.join(pf_caps), 'slot': 0,
+                         'functions': '\n'.join(pf_caps), 'slot': slot,
                          'cap_type': PF_CAP_TYPE, 'prod_name': PF_PROD_NAME,
                          'driver': PF_DRIVER_NAME, 'numa_node': numa_node}
         elif dev_type == 'VF':
             vf_caps = [addr_templ % {'dev': int(dev / vf_ratio),
                                      'slot': PF_SLOT}]
+            slot = int(str(VF_SLOT), 16)
             self.pci_dev = self.pci_dev_template % {'dev': dev,
                          'prod': product_id, 'group_id': group,
-                         'functions': '\n'.join(vf_caps), 'slot': VF_SLOT,
+                         'functions': '\n'.join(vf_caps), 'slot': slot,
                          'cap_type': VF_CAP_TYPE, 'prod_name': VF_PROD_NAME,
                          'driver': VF_DRIVER_NAME, 'numa_node': numa_node}
 
@@ -256,7 +258,7 @@ class HostPciSRIOVDevicesInfo(object):
         def _calc_numa_node(dev):
             return dev % total_numa_nodes if numa_node is None else numa_node
 
-        vf_ratio = num_vfs / num_pfs
+        vf_ratio = num_vfs // num_pfs
 
         # Generate PFs
         for dev in range(num_pfs):
