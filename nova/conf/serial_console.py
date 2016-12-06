@@ -120,7 +120,7 @@ def register_opts(conf):
 
 def register_cli_opts(conf):
     conf.register_group(serial_opt_group)
-    conf.register_cli_opt(CLI_OPTS, serial_opt_group)
+    conf.register_cli_opts(CLI_OPTS, serial_opt_group)
 
 
 def list_opts():
