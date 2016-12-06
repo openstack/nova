@@ -36,7 +36,7 @@ VERSIONED_METHODS = collections.defaultdict(list)
 VERSIONS = [
     '1.0',
     '1.1',  # initial support for aggregate.get_aggregates and set_aggregates
-    '1.2',  # Adds /resource-classes resource endpoint
+    '1.2',  # Adds /resource_classes resource endpoint
 ]
 
 
