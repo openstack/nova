@@ -501,24 +501,22 @@ def downtime_steps(data_gb):
     :param data_gb: total GB of RAM and disk to transfer
 
     This looks at the total downtime steps and upper bound
-    downtime value and uses an exponential backoff. So initially
-    max downtime is increased by small amounts, and as time goes
-    by it is increased by ever larger amounts
+    downtime value and uses a linear function.
 
     For example, with 10 steps, 30 second step delay, 3 GB
     of RAM and 400ms target maximum downtime, the downtime will
     be increased every 90 seconds in the following progression:
 
-    -   0 seconds -> set downtime to  37ms
-    -  90 seconds -> set downtime to  38ms
-    - 180 seconds -> set downtime to  39ms
-    - 270 seconds -> set downtime to  42ms
-    - 360 seconds -> set downtime to  46ms
-    - 450 seconds -> set downtime to  55ms
-    - 540 seconds -> set downtime to  70ms
-    - 630 seconds -> set downtime to  98ms
-    - 720 seconds -> set downtime to 148ms
-    - 810 seconds -> set downtime to 238ms
+    -   0 seconds -> set downtime to  40ms
+    -  90 seconds -> set downtime to  76ms
+    - 180 seconds -> set downtime to 112ms
+    - 270 seconds -> set downtime to 148ms
+    - 360 seconds -> set downtime to 184ms
+    - 450 seconds -> set downtime to 220ms
+    - 540 seconds -> set downtime to 256ms
+    - 630 seconds -> set downtime to 292ms
+    - 720 seconds -> set downtime to 328ms
+    - 810 seconds -> set downtime to 364ms
     - 900 seconds -> set downtime to 400ms
 
     This allows the guest a good chance to complete migration
@@ -556,8 +554,8 @@ def downtime_steps(data_gb):
         delay = delay_min
     delay = int(delay * data_gb)
 
-    offset = downtime / float(steps + 1)
-    base = (downtime - offset) ** (1 / float(steps))
+    base = downtime / steps
+    offset = (downtime - base) / steps
 
     for i in range(steps + 1):
-        yield (int(delay * i), int(offset + base ** i))
+        yield (int(delay * i), int(base + offset * i))
