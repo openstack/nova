@@ -433,7 +433,7 @@ class LibvirtGenericVIFDriver(object):
         designer.set_vif_bandwidth_config(conf, inst_type)
         return conf
 
-    def _set_config_VIFBridge(self, instance, vif, conf):
+    def _set_config_VIFBridge(self, instance, vif, conf, host=None):
         conf.net_type = "bridge"
         conf.source_dev = vif.bridge_name
         conf.target_dev = vif.vif_name
@@ -443,7 +443,7 @@ class LibvirtGenericVIFDriver(object):
             name = "nova-instance-" + instance.name + "-" + mac_id
             conf.filtername = name
 
-    def _set_config_VIFOpenVSwitch(self, instance, vif, conf):
+    def _set_config_VIFOpenVSwitch(self, instance, vif, conf, host=None):
         conf.net_type = "bridge"
         conf.source_dev = vif.bridge_name
         conf.target_dev = vif.vif_name
@@ -490,7 +490,7 @@ class LibvirtGenericVIFDriver(object):
             raise exception.NovaException(
                 _("Unsupported VIF type %(obj)s func %(func)s") %
                 {'obj': vif.obj_name(), 'func': viffunc})
-        func(instance, vif, conf)
+        func(instance, vif, conf, host)
 
         designer.set_vif_bandwidth_config(conf, inst_type)
 
