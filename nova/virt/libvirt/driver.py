@@ -2335,6 +2335,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self._undefine_domain(instance)
 
         # Convert the system metadata to image metadata
+        # NOTE(mdbooth): This is a workaround for stateless Nova compute
+        #                https://bugs.launchpad.net/nova/+bug/1349978
         instance_dir = libvirt_utils.get_instance_path(instance)
         fileutils.ensure_tree(instance_dir)
 
@@ -2352,6 +2354,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                   instance.image_meta,
                                   block_device_info=block_device_info)
 
+        # NOTE(mdbooth): context.auth_token will not be set when we call
+        #                _hard_reboot from resume_state_on_host_boot()
         if context.auth_token is not None:
             # NOTE (rmk): Re-populate any missing backing files.
             backing_disk_info = self._get_instance_disk_info(instance.name,
