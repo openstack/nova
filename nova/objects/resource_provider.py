@@ -419,6 +419,12 @@ class ResourceProvider(base.NovaObject):
         # Delete any inventory associated with the resource provider
         context.session.query(models.Inventory).\
             filter(models.Inventory.resource_provider_id == _id).delete()
+        # Delete any aggregate associations for the resource provider
+        # The name substitution on the next line is needed to satisfy pep8
+        RPA_model = models.ResourceProviderAggregate
+        context.session.query(RPA_model).\
+                filter(RPA_model.resource_provider_id == _id).delete()
+        # Now delete the RP records
         result = context.session.query(models.ResourceProvider).\
                  filter(models.ResourceProvider.id == _id).delete()
         if not result:
