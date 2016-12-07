@@ -1086,8 +1086,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
             logical_volumes = lvm.list_volumes(vg)
 
-            disk_names = filter(belongs_to_instance, logical_volumes)
-            disks = map(fullpath, disk_names)
+            disks = [fullpath(disk) for disk in logical_volumes
+                     if belongs_to_instance(disk)]
             return disks
         return []
 
@@ -2441,7 +2441,7 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.shutdown()
         retry_countdown = retry_interval
 
-        for sec in six.moves.range(timeout):
+        for sec in range(timeout):
 
             guest = self._host.get_guest(instance)
             state = guest.get_power_state(self._host)
@@ -2704,7 +2704,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _get_console_output_file(self, instance, console_log):
         bytes_to_read = MAX_CONSOLE_BYTES
-        log_data = ""  # The last N read bytes
+        log_data = b""  # The last N read bytes
         i = 0  # in case there is a log rotation (like "virtlogd")
         path = console_log
         while bytes_to_read > 0 and os.path.exists(path):
@@ -5101,7 +5101,7 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             info = libvirt_utils.get_fs_info(CONF.instances_path)
 
-        for (k, v) in six.iteritems(info):
+        for (k, v) in info.items():
             info[k] = v / units.Gi
 
         return info
@@ -7724,7 +7724,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # state is not None and the task state should be set to something
         # other than None by the time this method is invoked.
         target_del = target + '_del'
-        for i in six.moves.range(2):
+        for i in range(2):
             try:
                 utils.execute('mv', target, target_del)
                 break
