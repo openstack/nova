@@ -638,21 +638,21 @@ class ServersTestV219(ServersTestBase):
         with self.assertRaisesRegex(client.OpenStackApiException,
                                     ".*Unexpected status code.*") as cm:
             self._create_server(True, desc)
-        self.assertEqual(400, cm.exception.response.status_code)
+            self.assertEqual(400, cm.exception.response.status_code)
 
     def _update_assertRaisesRegex(self, server_id, desc):
         # Verifies that a 400 error is thrown on update server
         with self.assertRaisesRegex(client.OpenStackApiException,
                                     ".*Unexpected status code.*") as cm:
             self._update_server(server_id, True, desc)
-        self.assertEqual(400, cm.exception.response.status_code)
+            self.assertEqual(400, cm.exception.response.status_code)
 
     def _rebuild_assertRaisesRegex(self, server_id, desc):
         # Verifies that a 400 error is thrown on rebuild server
         with self.assertRaisesRegex(client.OpenStackApiException,
                                     ".*Unexpected status code.*") as cm:
             self._rebuild_server(server_id, True, desc)
-        self.assertEqual(400, cm.exception.response.status_code)
+            self.assertEqual(400, cm.exception.response.status_code)
 
     def test_create_server_with_description(self):
         self.api.microversion = '2.19'
