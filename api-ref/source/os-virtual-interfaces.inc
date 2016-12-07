@@ -6,6 +6,13 @@
 
 Lists virtual interfaces for a server instance.
 
+.. note::
+    This API is only implemented for the nova-network service and will result
+    in a 400 error response if the cloud is using the Neutron networking
+    service. Use the Neutron ``ports`` API to list ports for a given server by
+    filtering ports based on the port ``device_id`` which is the
+    ``{server_id}``.
+
 List Virtual Interfaces
 =======================
 
