@@ -153,6 +153,7 @@ Open Development.
    conductor
    notifications
    placement
+   placement_dev
 
 Architecture Evolution Plans
 -----------------------------
