@@ -36,10 +36,6 @@ nova.tests.unit.virt.xenapi.client.test_session.CallPluginTestCase
 nova.tests.unit.virt.xenapi.test_vm_utils.ResizeFunctionTestCase
 nova.tests.unit.virt.xenapi.test_vm_utils.ScanSrTestCase
 nova.tests.unit.virt.xenapi.test_vm_utils.UnplugVbdTestCase
-nova.tests.unit.virt.xenapi.test_xenapi.HypervisorPoolTestCase
-nova.tests.unit.virt.xenapi.test_xenapi.XenAPIDiffieHellmanTestCase
-nova.tests.unit.virt.xenapi.test_xenapi.XenAPIDom0IptablesFirewallTestCase
-nova.tests.unit.virt.xenapi.test_xenapi.XenAPIVMTestCase
 
 ##########################################################################
 # NOTE(dims): The following tests randomly fail in the gate. Please be

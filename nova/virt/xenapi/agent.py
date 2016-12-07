@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import base64
 import binascii
 from distutils import version
 import os
@@ -21,7 +20,9 @@ import sys
 import time
 
 from oslo_log import log as logging
+from oslo_serialization import base64
 from oslo_serialization import jsonutils
+from oslo_utils import encodeutils
 from oslo_utils import strutils
 from oslo_utils import uuidutils
 
@@ -250,7 +251,7 @@ class XenAPIBasedAgent(object):
             ctxt = context.get_admin_context()
             enc = crypto.ssh_encrypt_text(sshkey, new_pass)
             self.instance.system_metadata.update(
-                password.convert_password(ctxt, base64.b64encode(enc)))
+                password.convert_password(ctxt, base64.encode_as_text(enc)))
             self.instance.save()
 
     def set_admin_password(self, new_pass):
@@ -316,8 +317,8 @@ class XenAPIBasedAgent(object):
         LOG.debug('Injecting file path: %r', path, instance=self.instance)
 
         # Files/paths must be base64-encoded for transmission to agent
-        b64_path = base64.b64encode(path.encode('utf-8'))
-        b64_contents = base64.b64encode(contents.encode('utf-8'))
+        b64_path = base64.encode_as_bytes(path)
+        b64_contents = base64.encode_as_bytes(contents)
 
         args = {'b64_path': b64_path, 'b64_contents': b64_contents}
         return self._call_agent('inject_file', args)
@@ -422,7 +423,8 @@ class SimpleDH(object):
                'pass:%s' % self._shared, '-nosalt']
         if decrypt:
             cmd.append('-d')
-        out, err = utils.execute(*cmd, process_input=text)
+        out, err = utils.execute(*cmd,
+                                 process_input=encodeutils.safe_encode(text))
         if err:
             raise RuntimeError(_('OpenSSL error: %s') % err)
         return out
