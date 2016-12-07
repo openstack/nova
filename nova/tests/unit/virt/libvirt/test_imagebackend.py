@@ -732,6 +732,53 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.mox.VerifyAll()
 
+    @mock.patch('os.path.exists', autospec=True)
+    @mock.patch('nova.utils.synchronized', autospec=True)
+    @mock.patch.object(imagebackend, 'lvm', autospec=True)
+    def test_cache_ephemeral(self, mock_lvm, mock_synchronized, mock_exists):
+        # Ignores its arguments and returns the wrapped function unmodified
+        def fake_synchronized(*args, **kwargs):
+            def outer(fn):
+                def wrapper(*wargs, **wkwargs):
+                    fn(*wargs, **wkwargs)
+                return wrapper
+
+            return outer
+
+        mock_synchronized.side_effect = fake_synchronized
+
+        # Fake exists returns true for paths which have been added to the
+        # exists set
+        exists = set()
+
+        def fake_exists(path):
+            return path in exists
+
+        mock_exists.side_effect = fake_exists
+
+        # Fake create_volume causes exists to return true for the volume
+        def fake_create_volume(vg, lv, size, sparse=False):
+            exists.add(os.path.join('/dev', vg, lv))
+
+        mock_lvm.create_volume.side_effect = fake_create_volume
+
+        # Assert that when we call cache() for an ephemeral disk with the
+        # Lvm backend, we call fetch_func with a target of the Lvm disk
+        size_gb = 1
+        size = size_gb * units.Gi
+
+        fetch_func = mock.MagicMock()
+        image = self.image_class(self.INSTANCE, self.NAME)
+        image.cache(fetch_func, self.TEMPLATE,
+                    ephemeral_size=size_gb, size=size)
+
+        mock_lvm.create_volume.assert_called_once_with(self.VG, self.LV, size,
+                                                       sparse=False)
+        fetch_func.assert_called_once_with(target=self.PATH,
+                                           ephemeral_size=size_gb)
+
+        mock_synchronized.assert_called()
+
     def test_create_image(self):
         self._create_image(False)
 

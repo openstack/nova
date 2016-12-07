@@ -200,18 +200,27 @@ class Image(object):
         :filename: Name of the file in the image directory
         :size: Size of created image in bytes (optional)
         """
-        @utils.synchronized(filename, external=True, lock_path=self.lock_path)
-        def fetch_func_sync(target, *args, **kwargs):
-            # The image may have been fetched while a subsequent
-            # call was waiting to obtain the lock.
-            if not os.path.exists(target):
-                fetch_func(target=target, *args, **kwargs)
-
         base_dir = os.path.join(CONF.instances_path,
                                 CONF.image_cache_subdirectory_name)
         if not os.path.exists(base_dir):
             fileutils.ensure_tree(base_dir)
         base = os.path.join(base_dir, filename)
+
+        @utils.synchronized(filename, external=True, lock_path=self.lock_path)
+        def fetch_func_sync(target, *args, **kwargs):
+            # NOTE(mdbooth): This method is called as a callback by the
+            # create_image() method of a specific backend. It assumes that
+            # target will be in the image cache, which is why it holds a
+            # lock, and does not overwrite an existing file. However,
+            # this is not true for all backends. Specifically Lvm writes
+            # directly to the target rather than to the image cache,
+            # and additionally it creates the target in advance.
+            # This guard is only relevant in the context of the lock if the
+            # target is in the image cache. If it isn't, we should
+            # call fetch_func. The lock we're holding is also unnecessary in
+            # that case, but it will not result in incorrect behaviour.
+            if target != base or not os.path.exists(target):
+                fetch_func(target=target, *args, **kwargs)
 
         if not self.exists() or not os.path.exists(base):
             self.create_image(fetch_func_sync, base, size,
