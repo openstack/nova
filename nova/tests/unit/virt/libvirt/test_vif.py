@@ -633,8 +633,8 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         has_min_version.return_value = False
         d._set_config_VIFVHostUser(self.instance, self.os_vif_vhostuser,
                                    conf, hostimpl)
-        self.assertEqual(None, conf.vhost_queues)
-        self.assertEqual(None, conf.driver_name)
+        self.assertIsNone(conf.vhost_queues)
+        self.assertIsNone(conf.driver_name)
 
     def test_multiple_nics(self):
         conf = self._get_conf()
