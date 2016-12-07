@@ -136,8 +136,8 @@ as available, this option can be used to reserve disk space for that host.
 
 Possible values:
 
-  * Any positive integer representing amount of disk in MB to reserve
-    for the host.
+* Any positive integer representing amount of disk in MB to reserve
+  for the host.
 """),
     cfg.IntOpt('reserved_host_memory_mb',
         default=512,
@@ -151,8 +151,8 @@ memory for the host.
 
 Possible values:
 
-  * Any positive integer representing amount of memory in MB to reserve
-    for the host.
+* Any positive integer representing amount of memory in MB to reserve
+  for the host.
 """),
 ]
 
@@ -726,8 +726,8 @@ Related options:
 """),
 ]
 
-# TODO(johngarbutt) add a warning in code so we can eventually add min=1
 instance_cleaning_opts = [
+    # TODO(macsz): add min=1 flag in P development cycle
     cfg.IntOpt('maximum_instance_delete_attempts',
         default=5,
         help="""
