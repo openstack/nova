@@ -89,6 +89,8 @@ class SRIOVServersTest(ServersTestBase):
            fakelibvirt))
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
 
+        self.compute_started = False
+
     def _setup_compute_service(self):
         pass
 
@@ -111,7 +113,10 @@ class SRIOVServersTest(ServersTestBase):
 
     def _run_build_test(self, flavor_id, filter_mock, end_status='ACTIVE'):
 
-        self.compute = self.start_service('compute', host='test_compute0')
+        if not self.compute_started:
+            self.compute = self.start_service('compute', host='test_compute0')
+            self.compute_started = True
+
         fake_network.set_stub_network_methods(self)
 
         # Create server
