@@ -56,6 +56,7 @@ def main():
     LOG.warning(_LW('Nova network is deprecated and will be removed '
                     'in the future'))
     server = service.Service.create(binary='nova-network',
-                                    topic=CONF.network_topic)
+                                    topic=CONF.network_topic,
+                                    manager=CONF.network_manager)
     service.serve(server)
     service.wait()

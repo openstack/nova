@@ -67,7 +67,7 @@ class TestSerialConsoleLiveMigrate(test.TestCase):
         self.flags(use_usb_tablet=False, group="libvirt")
         self.flags(host="test_compute1")
 
-        self.start_service('conductor', manager=CONF.conductor.manager)
+        self.start_service('conductor')
         self.flags(driver='chance_scheduler', group='scheduler')
         self.start_service('scheduler')
         self.network = self.start_service('network')

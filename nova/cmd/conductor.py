@@ -40,8 +40,7 @@ def main():
     gmr.TextGuruMeditation.setup_autorun(version)
 
     server = service.Service.create(binary='nova-conductor',
-                                    topic=CONF.conductor.topic,
-                                    manager=CONF.conductor.manager)
+                                    topic=CONF.conductor.topic)
     workers = CONF.conductor.workers or processutils.get_worker_count()
     service.serve(server, workers=workers)
     service.wait()

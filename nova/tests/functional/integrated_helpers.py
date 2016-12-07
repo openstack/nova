@@ -94,8 +94,7 @@ class _IntegratedTestBase(test.TestCase):
         return self.start_service('scheduler')
 
     def _setup_services(self):
-        self.conductor = self.start_service('conductor',
-                                            manager=CONF.conductor.manager)
+        self.conductor = self.start_service('conductor')
         self.compute = self._setup_compute_service()
         self.consoleauth = self.start_service('consoleauth')
 

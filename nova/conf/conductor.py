@@ -39,16 +39,6 @@ by using this option.
         help="""
 Topic exchange name on which conductor nodes listen.
 """),
-    cfg.StrOpt(
-        'manager',
-        default='nova.conductor.manager.ConductorManager',
-        deprecated_for_removal=True,
-        deprecated_since='13.0.0',
-        help="""
-Full class name for the Manager for conductor.
-
-Removal in 14.0
-"""),
     cfg.IntOpt(
         'workers',
         help="""
