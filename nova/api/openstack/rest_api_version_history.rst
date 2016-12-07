@@ -415,3 +415,14 @@ user documentation.
   should not be accepted. From this version of the API admin as well as non
   admin user will get 400 HTTPBadRequest if invalid status is passed to nova
   list command.
+
+2.39
+----
+
+  Deprecates image-metadata proxy API that is just a proxy for Glance API
+  to operate the image metadata. Also removes the extra quota enforcement with
+  Nova `metadata` quota (quota checks for 'createImage' and 'createBackup'
+  actions in Nova were removed). After this version Glance configuration
+  option `image_property_quota` should be used to control the quota of
+  image metadatas. Also, removes the `maxImageMeta` field from `os-limits`
+  API response.

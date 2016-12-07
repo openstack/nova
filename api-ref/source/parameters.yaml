@@ -2370,6 +2370,15 @@ image_id_body:
   in: body
   required: true
   type: string
+image_metadata_items:
+  description: |
+    The number of allowed metadata items for each image. Starting from
+    version 2.39 this field is dropped from 'os-limits' response, because
+    'image-metadata' proxy API was deprecated.
+  in: body
+  required: true
+  type: integer
+  max_version: 2.38
 image_name:
   description: |
     The display name of an Image.

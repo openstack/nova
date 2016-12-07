@@ -24,7 +24,7 @@ Response
 
   - limits: limits
   - absolute: limits_absolutes
-  - maxImageMeta: metadata_items
+  - maxImageMeta: image_metadata_items
   - maxPersonality: injected_files
   - maxPersonalitySize: injected_file_content_bytes
   - maxSecurityGroupRules: security_group_rules

@@ -1053,7 +1053,11 @@ class ServersController(wsgi.Controller):
         image_name = common.normalize_name(entity["name"])
         metadata = entity.get('metadata', {})
 
-        common.check_img_metadata_properties_quota(context, metadata)
+        # Starting from microversion 2.39 we don't check quotas on createImage
+        if api_version_request.is_supported(
+                req, max_version=
+                api_version_request.MAX_IMAGE_META_PROXY_API_VERSION):
+            common.check_img_metadata_properties_quota(context, metadata)
 
         instance = self._get_server(context, req, id)
 

@@ -95,6 +95,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              UUID format.
     * 2.38 - Add a condition to return HTTPBadRequest if invalid status is
              provided for listing servers.
+    * 2.39 - Deprecates image-metadata proxy API
 """
 
 # The minimum and maximum versions of the API supported
@@ -103,13 +104,17 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.38"
+_MAX_API_VERSION = "2.39"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
-# All the proxy APIs which related network, images and baremetal
+# Almost all proxy APIs which related to network, images and baremetal
 # were deprecated from 2.36.
 MAX_PROXY_API_SUPPORT_VERSION = '2.35'
 MIN_WITHOUT_PROXY_API_SUPPORT_VERSION = '2.36'
+
+# Starting from microversion 2.39 also image-metadata proxy API is deprecated.
+MAX_IMAGE_META_PROXY_API_VERSION = '2.38'
+MIN_WITHOUT_IMAGE_META_PROXY_API_VERSION = '2.39'
 
 
 # NOTE(cyeoh): min and max versions declared as functions so we can

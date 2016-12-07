@@ -348,3 +348,28 @@ class ImageMetaDataTestV21(test.NoDBTestCase):
         self.assertRaises(webob.exc.HTTPForbidden,
                           self.controller.create, req, image_id,
                           body=body)
+
+
+class ImageMetadataControllerV239(test.NoDBTestCase):
+
+    def setUp(self):
+        super(ImageMetadataControllerV239, self).setUp()
+        self.controller = image_metadata_v21.ImageMetadataController()
+        self.req = fakes.HTTPRequest.blank('', version='2.39')
+
+    def test_not_found_for_all_image_metadata_api(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+                          self.controller.index, self.req)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+                          self.controller.show, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+                          self.controller.create, self.req,
+                          fakes.FAKE_UUID, {'metadata': {}})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+                          self.controller.update, self.req,
+                          fakes.FAKE_UUID, 'id', {'metadata': {}})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+                          self.controller.update_all, self.req,
+                          fakes.FAKE_UUID, {'metadata': {}})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+                          self.controller.delete, self.req, fakes.FAKE_UUID)

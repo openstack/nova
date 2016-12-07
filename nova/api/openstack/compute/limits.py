@@ -14,7 +14,11 @@
 #    under the License.
 
 from nova.api.openstack.api_version_request \
+    import MAX_IMAGE_META_PROXY_API_VERSION
+from nova.api.openstack.api_version_request \
     import MAX_PROXY_API_SUPPORT_VERSION
+from nova.api.openstack.api_version_request \
+    import MIN_WITHOUT_IMAGE_META_PROXY_API_VERSION
 from nova.api.openstack.api_version_request \
     import MIN_WITHOUT_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack.compute.views import limits as limits_views
@@ -36,12 +40,19 @@ class LimitsController(wsgi.Controller):
     def index(self, req):
         return self._index(req)
 
-    @wsgi.Controller.api_version(MIN_WITHOUT_PROXY_API_SUPPORT_VERSION)  # noqa
+    @wsgi.Controller.api_version(MIN_WITHOUT_PROXY_API_SUPPORT_VERSION,  # noqa
+                                 MAX_IMAGE_META_PROXY_API_VERSION)  # noqa
     @extensions.expected_errors(())
     def index(self, req):
         return self._index(req, filter_result=True)
 
-    def _index(self, req, filter_result=False):
+    @wsgi.Controller.api_version(  # noqa
+        MIN_WITHOUT_IMAGE_META_PROXY_API_VERSION)  # noqa
+    @extensions.expected_errors(())
+    def index(self, req):
+        return self._index(req, filter_result=True, max_image_meta=False)
+
+    def _index(self, req, filter_result=False, max_image_meta=True):
         """Return all global limit information."""
         context = req.environ['nova.context']
         context.can(limits_policies.BASE_POLICY_NAME)
@@ -51,7 +62,8 @@ class LimitsController(wsgi.Controller):
         abs_limits = {k: v['limit'] for k, v in quotas.items()}
 
         builder = self._get_view_builder(req)
-        return builder.build(abs_limits, filter_result=filter_result)
+        return builder.build(abs_limits, filter_result=filter_result,
+                             max_image_meta=max_image_meta)
 
     def _get_view_builder(self, req):
         return limits_views.ViewBuilderV21()

@@ -275,3 +275,36 @@ class LimitsControllerTestV236(BaseLimitTestSuite):
                 },
             }
             self.assertEqual(expected_response, response)
+
+
+class LimitsControllerTestV239(BaseLimitTestSuite):
+
+    def setUp(self):
+        super(LimitsControllerTestV239, self).setUp()
+        self.controller = limits_v21.LimitsController()
+        self.req = fakes.HTTPRequest.blank("/?tenant_id=faketenant",
+                                           version='2.39')
+
+    def test_index_filtered_no_max_image_meta(self):
+        absolute_limits = {
+            "metadata_items": 1,
+        }
+
+        def _get_project_quotas(context, project_id, usages=True):
+            return {k: dict(limit=v) for k, v in absolute_limits.items()}
+
+        with mock.patch('nova.quota.QUOTAS.get_project_quotas') as \
+                get_project_quotas:
+            get_project_quotas.side_effect = _get_project_quotas
+            response = self.controller.index(self.req)
+            # staring from version 2.39 there is no 'maxImageMeta' field
+            # in response after removing 'image-metadata' proxy API
+            expected_response = {
+                "limits": {
+                    "rate": [],
+                    "absolute": {
+                        "maxServerMeta": 1,
+                    },
+                },
+            }
+            self.assertEqual(expected_response, response)
