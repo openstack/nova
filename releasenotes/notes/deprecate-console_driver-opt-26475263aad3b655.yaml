@@ -1,0 +1,9 @@
+---
+deprecations:
+  - |
+    The ``console_driver`` config opt in the ``DEFAULT`` group has been
+    deprecated and will be removed in a future release. This option no longer
+    does anything. Previously this option had only two valid, in-tree values:
+    ``nova.console.xvp.XVPConsoleProxy`` and
+    ``nova.console.fake.FakeConsoleProxy``. The latter of these was only used
+    in tests and has since been replaced.

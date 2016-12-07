@@ -26,11 +26,18 @@ which allows to select the console proxy service to connect to.
 """)
 
 default_opts = [
-    # TODO(raj_singh): Deprecate this option
     cfg.StrOpt('console_driver',
         default='nova.console.xvp.XVPConsoleProxy',
+        deprecated_for_removal=True,
+        deprecated_since='15.0.0',
+        deprecated_reason="""
+This option no longer does anything. Previously this option had only two valid,
+in-tree values: nova.console.xvp.XVPConsoleProxy and
+nova.console.fake.FakeConsoleProxy. The latter of these was only used in tests
+and has since been replaced.
+""",
         help="""
-Nova-console proxy is used to set up multi-tenant VM console access.
+nova-console-proxy is used to set up multi-tenant VM console access.
 This option allows pluggable driver program for the console session
 and represents driver to use for the console proxy.
 
