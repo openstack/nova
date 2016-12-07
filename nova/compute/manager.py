@@ -6562,7 +6562,11 @@ class ComputeManager(manager.Manager):
         # Delete orphan compute node not reported by driver but still in db
         for cn in compute_nodes_in_db:
             if cn.hypervisor_hostname not in nodenames:
-                LOG.info(_LI("Deleting orphan compute node %s"), cn.id)
+                LOG.info(_LI("Deleting orphan compute node %(id)s "
+                             "hypervisor host is %(hh)s, "
+                             "nodes are %(nodes)s"),
+                             {'id': cn.id, 'hh': cn.hypervisor_hostname,
+                              'nodes': nodenames})
                 cn.destroy()
 
     def _get_compute_nodes_in_db(self, context, use_slave=False):
