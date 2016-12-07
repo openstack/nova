@@ -17,10 +17,10 @@
 
 from oslo_log import log as logging
 import oslo_messaging as messaging
-from oslo_utils import importutils
 
 from nova.compute import rpcapi as compute_rpcapi
 import nova.conf
+from nova.console import xvp
 from nova import exception
 from nova.i18n import _LI
 from nova import manager
@@ -41,10 +41,8 @@ class ConsoleProxyManager(manager.Manager):
 
     target = messaging.Target(version='2.0')
 
-    def __init__(self, console_driver=None, *args, **kwargs):
-        if not console_driver:
-            console_driver = CONF.console_driver
-        self.driver = importutils.import_object(console_driver)
+    def __init__(self, *args, **kwargs):
+        self.driver = xvp.XVPConsoleProxy()
         super(ConsoleProxyManager, self).__init__(service_name='console',
                                                   *args, **kwargs)
         self.driver.host = self.host

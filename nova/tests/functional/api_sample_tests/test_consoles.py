@@ -13,8 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import fixtures
+
 from nova.console import manager as console_manager  # noqa - only for cfg
 from nova.tests.functional.api_sample_tests import test_servers
+from nova.tests.unit import fake_xvp_console_proxy
 
 
 class ConsolesSamplesJsonTest(test_servers.ServersSampleBase):
@@ -24,7 +27,9 @@ class ConsolesSamplesJsonTest(test_servers.ServersSampleBase):
         super(ConsolesSamplesJsonTest, self).setUp()
         self.flags(console_public_hostname='fake')
         self.flags(console_host='fake')
-        self.flags(console_driver='nova.console.fake.FakeConsoleProxy')
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.console.manager.xvp.XVPConsoleProxy',
+            fake_xvp_console_proxy.FakeConsoleProxy))
         self.console = self.start_service('console', host='fake')
 
     def _create_consoles(self, server_uuid):
