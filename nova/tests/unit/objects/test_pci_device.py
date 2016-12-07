@@ -577,7 +577,7 @@ class _TestSRIOVPciDeviceObject(object):
 
         # check if parent device status has been changed to UNAVAILABLE
         parent = self._get_parent_by_address(devobj.parent_addr)
-        self.assertTrue(fields.PciDeviceStatus.UNAVAILABLE, parent.status)
+        self.assertEqual(fields.PciDeviceStatus.UNAVAILABLE, parent.status)
 
     def test_claim_PF_fail(self):
         self._create_fake_instance()
