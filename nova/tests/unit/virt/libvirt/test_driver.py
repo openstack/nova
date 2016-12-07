@@ -7135,10 +7135,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def _mock_can_live_migrate_source(self, block_migration=False,
                                       is_shared_block_storage=False,
                                       is_shared_instance_path=False,
-                                      is_booted_from_volume=False,
-                                      disk_available_mb=1024,
-                                      block_device_info=None,
-                                      block_device_text=None):
+                                      disk_available_mb=1024):
         instance = objects.Instance(**self.test_instance)
         dest_check_data = objects.LibvirtLiveMigrateData(
             filename='file',
@@ -7150,17 +7147,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.mox.StubOutWithMock(drvr, '_is_shared_block_storage')
         drvr._is_shared_block_storage(instance, dest_check_data,
-                block_device_info).AndReturn(is_shared_block_storage)
+                None).AndReturn(is_shared_block_storage)
         self.mox.StubOutWithMock(drvr, '_check_shared_storage_test_file')
         drvr._check_shared_storage_test_file('file', instance).AndReturn(
                 is_shared_instance_path)
-        self.mox.StubOutWithMock(drvr, "get_instance_disk_info")
-        drvr.get_instance_disk_info(instance,
-                                    block_device_info=block_device_info).\
-                                    AndReturn(block_device_text)
-        self.mox.StubOutWithMock(drvr, '_is_booted_from_volume')
-        drvr._is_booted_from_volume(instance, block_device_text).AndReturn(
-            is_booted_from_volume)
 
         return (instance, dest_check_data, drvr)
 
@@ -7178,21 +7168,25 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                                  dest_check_data)
         self.assertIsInstance(ret, objects.LibvirtLiveMigrateData)
         self.assertIn('is_shared_block_storage', ret)
+        self.assertFalse(ret.is_shared_block_storage)
         self.assertIn('is_shared_instance_path', ret)
+        self.assertFalse(ret.is_shared_instance_path)
 
     def test_check_can_live_migrate_source_shared_block_storage(self):
         instance, dest_check_data, drvr = self._mock_can_live_migrate_source(
                 is_shared_block_storage=True)
         self.mox.ReplayAll()
-        drvr.check_can_live_migrate_source(self.context, instance,
-                                           dest_check_data)
+        ret = drvr.check_can_live_migrate_source(self.context, instance,
+                                                 dest_check_data)
+        self.assertTrue(ret.is_shared_block_storage)
 
     def test_check_can_live_migrate_source_shared_instance_path(self):
         instance, dest_check_data, drvr = self._mock_can_live_migrate_source(
                 is_shared_instance_path=True)
         self.mox.ReplayAll()
-        drvr.check_can_live_migrate_source(self.context, instance,
-                                           dest_check_data)
+        ret = drvr.check_can_live_migrate_source(self.context, instance,
+                                                 dest_check_data)
+        self.assertTrue(ret.is_shared_instance_path)
 
     def test_check_can_live_migrate_source_non_shared_fails(self):
         instance, dest_check_data, drvr = self._mock_can_live_migrate_source()
@@ -7228,53 +7222,31 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           drvr.check_can_live_migrate_source,
                           self.context, instance, dest_check_data)
 
-    def test_check_can_live_migrate_source_with_dest_not_enough_disk(self):
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                'get_instance_disk_info')
+    def test_check_can_live_migrate_source_with_dest_not_enough_disk(
+            self, mock_get_bdi):
+        mock_get_bdi.return_value = '[{"virt_disk_size":2}]'
+
         instance, dest_check_data, drvr = self._mock_can_live_migrate_source(
                 block_migration=True,
                 disk_available_mb=0)
-
-        drvr.get_instance_disk_info(instance,
-                                    block_device_info=None).AndReturn(
-                                        '[{"virt_disk_size":2}]')
-
         self.mox.ReplayAll()
+
         self.assertRaises(exception.MigrationError,
                           drvr.check_can_live_migrate_source,
                           self.context, instance, dest_check_data)
-
-    def test_check_can_live_migrate_source_booted_from_volume(self):
-        instance, dest_check_data, drvr = self._mock_can_live_migrate_source(
-                is_booted_from_volume=True,
-                block_device_text='[]')
-        self.mox.ReplayAll()
-        drvr.check_can_live_migrate_source(self.context, instance,
-                                           dest_check_data)
-
-    def test_check_can_live_migrate_source_booted_from_volume_with_swap(self):
-        instance, dest_check_data, drvr = self._mock_can_live_migrate_source(
-                is_booted_from_volume=True,
-                block_device_text='[{"path":"disk.swap"}]')
-        self.mox.ReplayAll()
-        self.assertRaises(exception.InvalidSharedStorage,
-                          drvr.check_can_live_migrate_source,
-                          self.context, instance, dest_check_data)
+        mock_get_bdi.assert_called_once_with(instance, block_device_info=None)
 
     @mock.patch.object(host.Host, 'has_min_version', return_value=False)
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 '_assert_dest_node_has_enough_disk')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
-                '_has_local_disk')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
-                '_is_booted_from_volume')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
-                'get_instance_disk_info')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 '_is_shared_block_storage', return_value=False)
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 '_check_shared_storage_test_file', return_value=False)
     def test_check_can_live_migrate_source_block_migration_with_bdm_error(
-            self, mock_check, mock_shared_block, mock_get_bdi,
-            mock_booted_from_volume, mock_has_local, mock_enough,
+            self, mock_check, mock_shared_block, mock_enough,
             mock_min_version):
 
         bdi = {'block_device_mapping': ['bdm']}
@@ -7295,18 +7267,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 '_assert_dest_node_has_enough_disk')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
-                '_has_local_disk')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
-                '_is_booted_from_volume')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
-                'get_instance_disk_info')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 '_is_shared_block_storage', return_value=False)
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 '_check_shared_storage_test_file', return_value=False)
     def test_check_can_live_migrate_source_bm_with_bdm_tunnelled_error(
-            self, mock_check, mock_shared_block, mock_get_bdi,
-            mock_booted_from_volume, mock_has_local, mock_enough,
+            self, mock_check, mock_shared_block, mock_enough,
             mock_min_version):
 
         self.flags(live_migration_tunnelled=True,
@@ -7330,19 +7295,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 '_assert_dest_node_has_enough_disk')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
-                '_has_local_disk')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
-                '_is_booted_from_volume')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
-                'get_instance_disk_info')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 '_is_shared_block_storage')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 '_check_shared_storage_test_file')
     def _test_check_can_live_migrate_source_block_migration_none(
             self, block_migrate, is_shared_instance_path, is_share_block,
-            mock_check, mock_shared_block, mock_get_bdi,
-            mock_booted_from_volume, mock_has_local, mock_enough, mock_verson):
+            mock_check, mock_shared_block, mock_enough, mock_verson):
 
         mock_check.return_value = is_shared_instance_path
         mock_shared_block.return_value = is_share_block
@@ -7380,19 +7338,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 '_assert_dest_node_has_enough_disk')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
-                '_has_local_disk')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
-                '_is_booted_from_volume')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
-                'get_instance_disk_info')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 '_is_shared_block_storage')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 '_check_shared_storage_test_file')
     def test_check_can_live_migration_source_disk_over_commit_none(self,
-            mock_check, mock_shared_block, mock_get_bdi,
-            mock_booted_from_volume, mock_has_local,
-            mock_enough, mock_disk_check):
+            mock_check, mock_shared_block, mock_enough, mock_disk_check):
 
         mock_check.return_value = False
         mock_shared_block.return_value = False
