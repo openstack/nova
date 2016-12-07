@@ -578,7 +578,20 @@ class IronicDriver(virt_driver.ComputeDriver):
         self.node_cache_time = time.time()
 
     def get_available_nodes(self, refresh=False):
-        """Returns the UUIDs of all nodes in the Ironic inventory.
+        """Returns the UUIDs of Ironic nodes managed by this compute service.
+
+        We use consistent hashing to distribute Ironic nodes between all
+        available compute services. The subset of nodes managed by a given
+        compute service is determined by the following rules:
+
+        * any node with an instance managed by the compute service
+        * any node that is mapped to the compute service on the hash ring
+        * no nodes with instances managed by another compute service
+
+        The ring is rebalanced as nova-compute services are brought up and
+        down. Note that this rebalance does not happen at the same time for
+        all compute services, so a node may be managed by multiple compute
+        services for a small amount of time.
 
         :param refresh: Boolean value; If True run update first. Ignored by
                         this driver.
