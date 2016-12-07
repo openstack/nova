@@ -29,6 +29,7 @@ POST_RC_SCHEMA_V1_2 = {
         "name": {
             "type": "string",
             "pattern": "^CUSTOM\_[A-Z0-9_]+$",
+            "maxLength": 255,
         },
     },
     "required": [
