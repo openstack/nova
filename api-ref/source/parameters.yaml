@@ -2817,6 +2817,13 @@ lock:
   in: body
   required: true
   type: string
+locked:
+  description: |
+    True if the instance is locked otherwise False.
+  in: body
+  required: true
+  type: boolean
+  min_version: 2.9
 mac_addr:
   description: |
     The MAC address.
