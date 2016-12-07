@@ -26,10 +26,16 @@ class ViewBuilder(common.ViewBuilder):
 
     def basic(self, ip, extend_address=False):
         """Return a dictionary describing an IP address."""
-        return {
+        address = {
             "version": ip["version"],
             "addr": ip["address"],
         }
+        if extend_address:
+            address.update({
+                "OS-EXT-IPS:type": ip["type"],
+                "OS-EXT-IPS-MAC:mac_addr": ip['mac_address'],
+            })
+        return address
 
     def show(self, network, label, extend_address=False):
         """Returns a dictionary describing a network."""
@@ -43,19 +49,3 @@ class ViewBuilder(common.ViewBuilder):
             network_dict = self.show(network, label, extend_address)
             addresses[label] = network_dict[label]
         return dict(addresses=addresses)
-
-
-class ViewBuilderV21(ViewBuilder):
-    """Models server addresses as a dictionary."""
-    def basic(self, ip, extend_address=False):
-        """Return a dictionary describing an IP address."""
-        address = {
-            "version": ip["version"],
-            "addr": ip["address"],
-        }
-        if extend_address:
-            address.update({
-                "OS-EXT-IPS:type": ip["type"],
-                "OS-EXT-IPS-MAC:mac_addr": ip['mac_address'],
-            })
-        return address
