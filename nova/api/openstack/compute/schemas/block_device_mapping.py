@@ -33,8 +33,6 @@ block_device_mapping_new_item = {
         'pattern': '^[a-zA-Z0-9._-]*$',
     },
     'image_id': parameter_types.image_id,
-    # Defined as varchar(255) in column "destination_type" in table
-    # "block_device_mapping"
     'destination_type': {
         'type': 'string',
         'enum': fields.BlockDeviceDestinationType.ALL,
