@@ -10,8 +10,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
+
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
+import six
 
 from nova import context
 from nova import exception
@@ -102,6 +105,85 @@ class BuildRequestTestCase(test.NoDBTestCase):
         db_req.project_id = 'foobar'
         db_req.destroy()
         self.assertRaises(exception.BuildRequestNotFound, db_req.save)
+
+    def _get_mitaka_db_build_request_no_instance_uuid(self):
+        fake_info_cache = objects.InstanceInfoCache(network_model=[])
+        fake_secgroups = objects.SecurityGroupList()
+        # This is more or less taken straight from bug 1633734.
+        db_req = {
+            'created_at': datetime.datetime(2016, 8, 2, 20, 26, 20),
+            'updated_at': None,
+            'project_id': self.context.project_id,
+            'user_id': self.context.user_id,
+            'display_name': 'admin-auth',
+            'instance_metadata': None,
+            'progress': 0,
+            'vm_state': 'building',
+            'task_state': 'scheduling',
+            'image_ref': None,
+            'access_ip_v4': None,
+            'access_ip_v6': None,
+            'info_cache': jsonutils.dumps(fake_info_cache.obj_to_primitive()),
+            'security_groups':
+                jsonutils.dumps(fake_secgroups.obj_to_primitive()),
+            'config_drive': 1,
+            'key_name': 'Turbo_Fredriksson',
+            'locked_by': None,
+            'instance_uuid': None,
+            'instance': None,
+            'block_device_mappings': None,
+        }
+        return db_req
+
+    def test_load_from_broken_mitaka_build_request_with_no_instance(self):
+        db_req = self._get_mitaka_db_build_request_no_instance_uuid()
+        db_req = self.build_req_obj._create_in_db(self.context, db_req)
+        # This should fail because the build request in the database does not
+        # have instance_uuid set, and BuildRequest.instance_uuid is not
+        # nullable so trying to set build_request.instance_uuid = None is going
+        # to raise the ValueError.
+        ex = self.assertRaises(ValueError,
+                               build_request.BuildRequest._from_db_object,
+                               self.context, self.build_req_obj, db_req)
+        self.assertIn('instance_uuid', six.text_type(ex))
+
+    def test_delete_build_requests_with_no_instance_uuid(self):
+        """Tests the online data migration used to cleanup failed Mitaka-era
+        build requests that have no instance_uuid set.
+        """
+        # First let's create 2 of these busted build requests so we can test
+        # paging.
+        for x in range(2):
+            db_req = self._get_mitaka_db_build_request_no_instance_uuid()
+            self.build_req_obj._create_in_db(self.context, db_req)
+        # nova-manage uses an admin contet
+        ctxt = context.get_admin_context()
+
+        # Make sure we can get 0 back without deleting any.
+        total, deleted = (
+            build_request.delete_build_requests_with_no_instance_uuid(ctxt, 0))
+        self.assertEqual(0, total)
+        self.assertEqual(0, deleted)
+
+        # Delete only 1.
+        total, deleted = (
+            build_request.delete_build_requests_with_no_instance_uuid(ctxt, 1))
+        self.assertEqual(1, total)
+        self.assertEqual(1, deleted)
+
+        # Delete 50 (default in nova-manage online_data_migrations).
+        total, deleted = (
+            build_request.delete_build_requests_with_no_instance_uuid(
+                ctxt, 50))
+        self.assertEqual(1, total)
+        self.assertEqual(1, deleted)
+
+        # Do it again, nothing should come back.
+        total, deleted = (
+            build_request.delete_build_requests_with_no_instance_uuid(
+                ctxt, 50))
+        self.assertEqual(0, total)
+        self.assertEqual(0, deleted)
 
 
 class BuildRequestListTestCase(test.NoDBTestCase):

@@ -81,6 +81,7 @@ from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.objects import aggregate as aggregate_obj
+from nova.objects import build_request as build_request_obj
 from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
 from nova.objects import instance_group as instance_group_obj
@@ -793,6 +794,10 @@ class DbCommands(object):
         aggregate_obj.migrate_aggregates,
         aggregate_obj.migrate_aggregate_reset_autoincrement,
         instance_group_obj.migrate_instance_groups_to_api_db,
+        # Added in Ocata
+        # NOTE(mriedem): This online migration is going to be backported to
+        # Newton also since it's an upgrade issue when upgrading from Mitaka.
+        build_request_obj.delete_build_requests_with_no_instance_uuid,
     )
 
     def __init__(self):
