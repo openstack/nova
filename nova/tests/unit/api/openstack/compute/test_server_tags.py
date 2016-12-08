@@ -103,14 +103,15 @@ class ServerTagsTest(test.TestCase):
 
         req = self._get_request(
             '/v2/fake/servers/%s/tags' % UUID, 'PUT')
-        self.assertRaises(exc.HTTPBadRequest, self.controller.update_all,
+        self.assertRaises(exception.ValidationError,
+                          self.controller.update_all,
                           req, UUID, body=fake_tags)
 
     def test_update_all_forbidden_characters(self):
         self.stub_out('nova.api.openstack.common.get_instance', return_server)
         req = self._get_request('/v2/fake/servers/%s/tags' % UUID, 'PUT')
         for tag in ['tag,1', 'tag/1']:
-            self.assertRaises(exc.HTTPBadRequest,
+            self.assertRaises(exception.ValidationError,
                               self.controller.update_all,
                               req, UUID, body={'tags': [tag, 'tag2']})
 
@@ -124,7 +125,8 @@ class ServerTagsTest(test.TestCase):
         self.stub_out('nova.api.openstack.common.get_instance', return_server)
         req = self._get_request('/v2/fake/servers/%s/tags' % UUID, 'PUT')
         tag = "a" * (tag_obj.MAX_TAG_LENGTH + 1)
-        self.assertRaises(exc.HTTPBadRequest, self.controller.update_all,
+        self.assertRaises(exception.ValidationError,
+                          self.controller.update_all,
                           req, UUID, body={'tags': [tag]})
 
     def test_update_all_invalid_tag_list_type(self):

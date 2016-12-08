@@ -109,12 +109,6 @@ class ServerTagsController(wsgi.Controller):
                    % objects.instance.MAX_TAG_COUNT)
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        if len(id) > objects.tag.MAX_TAG_LENGTH:
-            msg = (_("Tag '%(tag)s' is too long. Maximum length of a tag "
-                     "is %(length)d") % {'tag': id,
-                                         'length': objects.tag.MAX_TAG_LENGTH})
-            raise webob.exc.HTTPBadRequest(explanation=msg)
-
         if id in _get_tags_names(tags):
             # NOTE(snikitin): server already has specified tag
             return webob.Response(status_int=204)
@@ -138,33 +132,6 @@ class ServerTagsController(wsgi.Controller):
         context = req.environ["nova.context"]
         context.can(st_policies.POLICY_ROOT % 'update_all')
         self._check_instance_in_valid_state(context, server_id, 'update tags')
-
-        invalid_tags = []
-        for tag in body['tags']:
-            try:
-                jsonschema.validate(tag, parameter_types.tag)
-            except jsonschema.ValidationError:
-                invalid_tags.append(tag)
-        if invalid_tags:
-            msg = (_("Tags '%s' are invalid. Each tag must be a string "
-                     "without characters '/' and ','.") % invalid_tags)
-            raise webob.exc.HTTPBadRequest(explanation=msg)
-
-        tag_count = len(body['tags'])
-        if tag_count > objects.instance.MAX_TAG_COUNT:
-            msg = (_("The number of tags exceeded the per-server limit "
-                     "%(max)d. The number of tags in request is %(count)d.")
-                   % {'max': objects.instance.MAX_TAG_COUNT,
-                      'count': tag_count})
-            raise webob.exc.HTTPBadRequest(explanation=msg)
-
-        long_tags = [
-            t for t in body['tags'] if len(t) > objects.tag.MAX_TAG_LENGTH]
-        if long_tags:
-            msg = (_("Tags %(tags)s are too long. Maximum length of a tag "
-                     "is %(length)d") % {'tags': long_tags,
-                                         'length': objects.tag.MAX_TAG_LENGTH})
-            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         try:
             tags = objects.TagList.create(context, server_id, body['tags'])
