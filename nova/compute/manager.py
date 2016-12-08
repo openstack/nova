@@ -236,6 +236,10 @@ def delete_image_on_error(function):
                           exc_info=True, instance=instance)
                 try:
                     self.image_api.delete(context, image_id)
+                except exception.ImageNotFound:
+                    # Since we're trying to cleanup an image, we don't care if
+                    # if it's already gone.
+                    pass
                 except Exception:
                     LOG.exception(_LE("Error while trying to clean up "
                                       "image %s"), image_id,
