@@ -20,6 +20,7 @@ import time
 
 import eventlet
 import fixtures
+import six
 
 from nova import test
 from nova.virt.disk.mount import nbd
@@ -38,7 +39,7 @@ def _fake_exists_no_users(path):
 
 
 def _fake_listdir_nbd_devices(path):
-    if path.startswith('/sys/block'):
+    if isinstance(path, six.string_types) and path.startswith('/sys/block'):
         return ['nbd0', 'nbd1']
     return ORIG_LISTDIR(path)
 
