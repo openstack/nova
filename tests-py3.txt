@@ -24,8 +24,6 @@ nova.tests.unit.virt.libvirt.test_imagebackend.EncryptedLvmTestCase
 nova.tests.unit.virt.libvirt.test_imagebackend.LvmTestCase
 nova.tests.unit.virt.libvirt.test_imagebackend.FlatTestCase
 nova.tests.unit.virt.libvirt.test_imagebackend.RbdTestCase
-nova.tests.unit.virt.libvirt.test_imagecache.ImageCacheManagerTestCase
-nova.tests.unit.virt.libvirt.test_imagecache.VerifyChecksumTestCase
 nova.tests.unit.virt.libvirt.test_vif.LibvirtVifTestCase
 nova.tests.unit.virt.test_virt_drivers.FakeConnectionTestCase
 nova.tests.unit.virt.test_virt_drivers.LibvirtConnTestCase
