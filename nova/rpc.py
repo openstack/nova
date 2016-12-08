@@ -30,6 +30,7 @@ import functools
 
 from oslo_log import log as logging
 import oslo_messaging as messaging
+from oslo_messaging.rpc import dispatcher
 from oslo_serialization import jsonutils
 from oslo_service import periodic_task
 from oslo_utils import importutils
@@ -205,12 +206,13 @@ def get_server(target, endpoints, serializer=None):
         serializer = ProfilerRequestContextSerializer(serializer)
     else:
         serializer = RequestContextSerializer(serializer)
-
+    access_policy = dispatcher.DefaultRPCAccessPolicy
     return messaging.get_rpc_server(TRANSPORT,
                                     target,
                                     endpoints,
                                     executor='eventlet',
-                                    serializer=serializer)
+                                    serializer=serializer,
+                                    access_policy=access_policy)
 
 
 def get_notifier(service, host=None, publisher_id=None):

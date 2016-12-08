@@ -17,6 +17,7 @@ import datetime
 import fixtures
 import mock
 import oslo_messaging as messaging
+from oslo_messaging.rpc import dispatcher
 from oslo_serialization import jsonutils
 from oslo_utils import fixture as utils_fixture
 import testtools
@@ -214,8 +215,10 @@ class TestRPC(testtools.TestCase):
         server = rpc.get_server(tgt, ends, serializer='foo')
 
         mock_ser.assert_called_once_with('foo')
+        access_policy = dispatcher.DefaultRPCAccessPolicy
         mock_get.assert_called_once_with(rpc.TRANSPORT, tgt, ends,
-                                         executor='eventlet', serializer=ser)
+                                         executor='eventlet', serializer=ser,
+                                         access_policy=access_policy)
         self.assertEqual('server', server)
 
     @mock.patch.object(rpc, 'profiler', mock.Mock())
@@ -250,8 +253,10 @@ class TestRPC(testtools.TestCase):
         server = rpc.get_server(tgt, ends, serializer='foo')
 
         mock_ser.assert_called_once_with('foo')
+        access_policy = dispatcher.DefaultRPCAccessPolicy
         mock_get.assert_called_once_with(rpc.TRANSPORT, tgt, ends,
-                                         executor='eventlet', serializer=ser)
+                                         executor='eventlet', serializer=ser,
+                                         access_policy=access_policy)
         self.assertEqual('server', server)
 
     def test_get_notifier(self):
