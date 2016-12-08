@@ -14,8 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import re
-
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import strutils
@@ -188,6 +186,8 @@ class ServersController(wsgi.Controller):
             LOG.debug("Did not find any server create schemas")
 
     @extensions.expected_errors((400, 403))
+    @validation.query_schema(schema_servers.query_params_v226, '2.26')
+    @validation.query_schema(schema_servers.query_params_v21, '2.1', '2.25')
     def index(self, req):
         """Returns a list of server names and ids for a given user."""
         context = req.environ['nova.context']
@@ -199,6 +199,8 @@ class ServersController(wsgi.Controller):
         return servers
 
     @extensions.expected_errors((400, 403))
+    @validation.query_schema(schema_servers.query_params_v226, '2.26')
+    @validation.query_schema(schema_servers.query_params_v21, '2.1', '2.25')
     def detail(self, req):
         """Returns a list of server details for a given user."""
         context = req.environ['nova.context']
@@ -218,6 +220,13 @@ class ServersController(wsgi.Controller):
         context = req.environ['nova.context']
         remove_invalid_options(context, search_opts,
                 self._get_server_search_options(req))
+
+        for search_opt in search_opts:
+            if (search_opt in
+                schema_servers.JOINED_TABLE_QUERY_PARAMS_SERVERS.keys() or
+                    search_opt.startswith('_')):
+                msg = _("Invalid filter field: %s.") % search_opt
+                raise exc.HTTPBadRequest(explanation=msg)
 
         # Verify search by 'status' contains a valid status.
         # Convert it to filter by vm_state or task_state for compute_api.
@@ -242,12 +251,8 @@ class ServersController(wsgi.Controller):
                 search_opts['task_state'] = task_state
 
         if 'changes-since' in search_opts:
-            try:
-                parsed = timeutils.parse_isotime(search_opts['changes-since'])
-            except ValueError:
-                msg = _('Invalid changes-since value')
-                raise exc.HTTPBadRequest(explanation=msg)
-            search_opts['changes-since'] = parsed
+            search_opts['changes-since'] = timeutils.parse_isotime(
+                search_opts['changes-since'])
 
         # By default, compute's get_all() will return deleted instances.
         # If an admin hasn't specified a 'deleted' search option, we need
@@ -272,14 +277,6 @@ class ServersController(wsgi.Controller):
             else:
                 msg = _("Only administrators may list deleted instances")
                 raise exc.HTTPForbidden(explanation=msg)
-
-        # Verify the value of the 'name' option is a correct regex.
-        if 'name' in search_opts:
-            try:
-                re.compile(search_opts['name'])
-            except re.error:
-                msg = _("The regex for server name is incorrect")
-                raise exc.HTTPBadRequest(explanation=msg)
 
         if api_version_request.is_supported(req, min_version='2.26'):
             for tag_filter in TAG_SEARCH_FILTERS:

@@ -579,7 +579,7 @@ class ServersControllerTest(ControllerTest):
 
     def test_get_servers_with_limit_bad_value(self):
         req = self.req('/fake/servers?limit=aaa')
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.controller.index, req)
 
     def test_get_server_details_empty(self):
@@ -594,7 +594,7 @@ class ServersControllerTest(ControllerTest):
 
     def test_get_server_details_with_bad_name(self):
         req = self.req('/fake/servers/detail?name=%2Binstance')
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.controller.index, req)
 
     def test_get_server_details_with_limit(self):
@@ -616,7 +616,7 @@ class ServersControllerTest(ControllerTest):
 
     def test_get_server_details_with_limit_bad_value(self):
         req = self.req('/fake/servers/detail?limit=aaa')
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.controller.detail, req)
 
     def test_get_server_details_with_limit_and_other_params(self):
@@ -635,7 +635,7 @@ class ServersControllerTest(ControllerTest):
         href_parts = urlparse.urlparse(servers_links[0]['href'])
         self.assertEqual('/v2/fake/servers/detail', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
-        expected = {'limit': ['3'], 'blah': ['2:t'],
+        expected = {'limit': ['3'],
                     'sort_key': ['id1'], 'sort_dir': ['asc'],
                     'marker': [fakes.get_fake_uuid(2)]}
         self.assertThat(params, matchers.DictMatches(expected))
@@ -647,7 +647,7 @@ class ServersControllerTest(ControllerTest):
 
     def test_get_servers_with_bad_limit(self):
         req = self.req('/fake/servers?limit=asdf')
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.controller.index, req)
 
     def test_get_servers_with_marker(self):
@@ -665,6 +665,16 @@ class ServersControllerTest(ControllerTest):
 
     def test_get_servers_with_bad_marker(self):
         req = self.req('/fake/servers?limit=2&marker=asdf')
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.index, req)
+
+    def test_get_servers_with_invalid_filter_param(self):
+        req = self.req('/fake/servers?info_cache=asdf',
+                       use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.index, req)
+        req = self.req('/fake/servers?__foo__=asdf',
+                       use_admin_context=True)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.index, req)
 
@@ -1067,7 +1077,8 @@ class ServersControllerTest(ControllerTest):
     def test_get_servers_allows_changes_since_bad_value(self):
         params = 'changes-since=asdf'
         req = self.req('/fake/servers?%s' % params)
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.index, req)
+        self.assertRaises(exception.ValidationError, self.controller.index,
+                          req)
 
     def test_get_servers_admin_filters_as_user(self):
         """Test getting servers by admin-only or unknown options when
@@ -1116,7 +1127,7 @@ class ServersControllerTest(ControllerTest):
             self.assertIn('vm_state', search_opts)
             # Allowed only by admins with admin API on
             self.assertIn('ip', search_opts)
-            self.assertIn('unknown_option', search_opts)
+            self.assertNotIn('unknown_option', search_opts)
             return objects.InstanceList(
                 objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
 
