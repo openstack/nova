@@ -16,6 +16,7 @@ import os
 
 import mock
 from oslo_concurrency import processutils
+import six
 
 from nova import exception
 from nova import test
@@ -53,6 +54,16 @@ class QemuTestCase(test.NoDBTestCase):
                           '/other/path/that/does/not/exist',
                           'qcow2',
                           'raw')
+
+    @mock.patch.object(utils, 'execute')
+    @mock.patch.object(os.path, 'exists', return_value=True)
+    def test_convert_image_with_prlimit_fail(self, path, mocked_execute):
+        mocked_execute.side_effect = \
+            processutils.ProcessExecutionError(exit_code=-9)
+        exc = self.assertRaises(exception.InvalidDiskInfo,
+                                images.qemu_img_info,
+                                '/fake/path')
+        self.assertIn('qemu-img aborted by prlimits', six.text_type(exc))
 
     @mock.patch.object(images, 'convert_image',
                        side_effect=exception.ImageUnacceptable)
