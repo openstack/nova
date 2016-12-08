@@ -934,6 +934,9 @@ class NetworkModel(FieldType):
         return 'NetworkModel(%s)' % (
             ','.join([str(vif['id']) for vif in value]))
 
+    def get_schema(self):
+        return {'type': ['string']}
+
 
 class AddressBase(FieldType):
     @staticmethod
