@@ -75,11 +75,13 @@ get_engine = sqlalchemy_api.get_engine
 
 
 def _reservation_get(context, uuid):
-    with sqlalchemy_api.main_context_manager.reader.using(context):
-        result = sqlalchemy_api.model_query(
+    @sqlalchemy_api.pick_context_manager_reader
+    def doit(context):
+        return sqlalchemy_api.model_query(
             context, models.Reservation, read_deleted="no").filter_by(
             uuid=uuid).first()
 
+    result = doit(context)
     if not result:
         raise exception.ReservationNotFound(uuid=uuid)
 
@@ -548,18 +550,21 @@ class UnsupportedDbRegexpTestCase(DbTestCase):
 
 class ModelQueryTestCase(DbTestCase):
     def test_model_query_invalid_arguments(self):
-        with sqlalchemy_api.main_context_manager.reader.using(self.context):
+        @sqlalchemy_api.pick_context_manager_reader
+        def test(context):
             # read_deleted shouldn't accept invalid values
             self.assertRaises(ValueError, sqlalchemy_api.model_query,
-                              self.context, models.Instance,
+                              context, models.Instance,
                               read_deleted=False)
             self.assertRaises(ValueError, sqlalchemy_api.model_query,
-                              self.context, models.Instance,
+                              context, models.Instance,
                               read_deleted="foo")
 
             # Check model is a valid model
             self.assertRaises(TypeError, sqlalchemy_api.model_query,
-                              self.context, "")
+                              context, "")
+
+        test(self.context)
 
     @mock.patch.object(sqlalchemyutils, 'model_query')
     def test_model_query_use_context_session(self, mock_model_query):
@@ -1148,9 +1153,14 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
         self.create_instance_with_args()
         self.create_instance_with_args()
         self.create_instance_with_args(host='host2')
-        with sqlalchemy_api.main_context_manager.reader.using(ctxt):
-            result = sqlalchemy_api._instance_get_all_uuids_by_host(
-                ctxt, 'host1')
+
+        @sqlalchemy_api.pick_context_manager_reader
+        def test(context):
+            return sqlalchemy_api._instance_get_all_uuids_by_host(
+                context, 'host1')
+
+        result = test(ctxt)
+
         self.assertEqual(2, len(result))
 
     def test_instance_get_all_uuids_by_host(self):
@@ -1158,9 +1168,14 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
         self.create_instance_with_args()
         self.create_instance_with_args()
         self.create_instance_with_args(host='host2')
-        with sqlalchemy_api.main_context_manager.reader.using(ctxt):
-            result = sqlalchemy_api._instance_get_all_uuids_by_host(
-                ctxt, 'host1')
+
+        @sqlalchemy_api.pick_context_manager_reader
+        def test(context):
+            return sqlalchemy_api._instance_get_all_uuids_by_host(
+                context, 'host1')
+
+        result = test(ctxt)
+
         self.assertEqual(2, len(result))
         self.assertEqual(six.text_type, type(result[0]))
 
@@ -2441,9 +2456,13 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_instance_metadata_get_multi(self):
         uuids = [self.create_instance_with_args()['uuid'] for i in range(3)]
-        with sqlalchemy_api.main_context_manager.reader.using(self.ctxt):
-            meta = sqlalchemy_api._instance_metadata_get_multi(
-                self.ctxt, uuids)
+
+        @sqlalchemy_api.pick_context_manager_reader
+        def test(context):
+            return sqlalchemy_api._instance_metadata_get_multi(
+                context, uuids)
+
+        meta = test(self.ctxt)
         for row in meta:
             self.assertIn(row['instance_uuid'], uuids)
 
@@ -2455,9 +2474,13 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_instance_system_system_metadata_get_multi(self):
         uuids = [self.create_instance_with_args()['uuid'] for i in range(3)]
-        with sqlalchemy_api.main_context_manager.reader.using(self.ctxt):
-            sys_meta = sqlalchemy_api._instance_system_metadata_get_multi(
-                self.ctxt, uuids)
+
+        @sqlalchemy_api.pick_context_manager_reader
+        def test(context):
+            return sqlalchemy_api._instance_system_metadata_get_multi(
+                context, uuids)
+
+        sys_meta = test(self.ctxt)
         for row in sys_meta:
             self.assertIn(row['instance_uuid'], uuids)
 
@@ -2946,10 +2969,11 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(meta, {'mk1': 'mv3'})
 
     def test_instance_update_and_get_original_no_conflict_on_session(self):
-        with sqlalchemy_api.main_context_manager.writer.using(self.ctxt):
+        @sqlalchemy_api.pick_context_manager_writer
+        def test(context):
             instance = self.create_instance_with_args()
             (old_ref, new_ref) = db.instance_update_and_get_original(
-                self.ctxt, instance['uuid'], {'metadata': {'mk1': 'mv3'}})
+                context, instance['uuid'], {'metadata': {'mk1': 'mv3'}})
 
             # test some regular persisted fields
             self.assertEqual(old_ref.uuid, new_ref.uuid)
@@ -2972,6 +2996,8 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
             # 4. the "old" object is detached from this Session.
             self.assertTrue(old_insp.detached)
+
+        test(self.ctxt)
 
     def test_instance_update_and_get_original_conflict_race(self):
         # Ensure that we retry if update_on_match fails for no discernable
@@ -3288,37 +3314,54 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_check_instance_exists(self):
         instance = self.create_instance_with_args()
-        with sqlalchemy_api.main_context_manager.reader.using(self.ctxt):
+
+        @sqlalchemy_api.pick_context_manager_reader
+        def test(context):
             self.assertIsNone(sqlalchemy_api._check_instance_exists_in_project(
-                self.ctxt, instance['uuid']))
+                context, instance['uuid']))
+
+        test(self.ctxt)
 
     def test_check_instance_exists_non_existing_instance(self):
-        with sqlalchemy_api.main_context_manager.reader.using(self.ctxt):
+        @sqlalchemy_api.pick_context_manager_reader
+        def test(ctxt):
             self.assertRaises(exception.InstanceNotFound,
                               sqlalchemy_api._check_instance_exists_in_project,
                               self.ctxt, '123')
+
+        test(self.ctxt)
 
     def test_check_instance_exists_from_different_tenant(self):
         context1 = context.RequestContext('user1', 'project1')
         context2 = context.RequestContext('user2', 'project2')
         instance = self.create_instance_with_args(context=context1)
-        with sqlalchemy_api.main_context_manager.reader.using(context1):
-            self.assertIsNone(sqlalchemy_api._check_instance_exists_in_project(
-            context1, instance['uuid']))
 
-        with sqlalchemy_api.main_context_manager.reader.using(context2):
+        @sqlalchemy_api.pick_context_manager_reader
+        def test1(context):
+            self.assertIsNone(sqlalchemy_api._check_instance_exists_in_project(
+            context, instance['uuid']))
+
+        test1(context1)
+
+        @sqlalchemy_api.pick_context_manager_reader
+        def test2(context):
             self.assertRaises(exception.InstanceNotFound,
                               sqlalchemy_api._check_instance_exists_in_project,
-                              context2, instance['uuid'])
+                              context, instance['uuid'])
+
+        test2(context2)
 
     def test_check_instance_exists_admin_context(self):
         some_context = context.RequestContext('some_user', 'some_project')
         instance = self.create_instance_with_args(context=some_context)
 
-        with sqlalchemy_api.main_context_manager.reader.using(self.ctxt):
+        @sqlalchemy_api.pick_context_manager_reader
+        def test(context):
             # Check that method works correctly with admin context
             self.assertIsNone(sqlalchemy_api._check_instance_exists_in_project(
-                self.ctxt, instance['uuid']))
+                context, instance['uuid']))
+
+        test(self.ctxt)
 
 
 class InstanceMetadataTestCase(test.TestCase):
@@ -3379,10 +3422,14 @@ class InstanceExtraTestCase(test.TestCase):
         self.assertEqual('changed', inst_extra.numa_topology)
 
     def test_instance_extra_update_by_uuid_and_create(self):
-        with sqlalchemy_api.main_context_manager.writer.using(self.ctxt):
-            sqlalchemy_api.model_query(self.ctxt, models.InstanceExtra).\
+        @sqlalchemy_api.pick_context_manager_writer
+        def test(context):
+            sqlalchemy_api.model_query(context, models.InstanceExtra).\
                     filter_by(instance_uuid=self.instance['uuid']).\
                     delete()
+
+        test(self.ctxt)
+
         inst_extra = db.instance_extra_get_by_instance_uuid(
             self.ctxt, self.instance['uuid'])
         self.assertIsNone(inst_extra)
@@ -7394,11 +7441,15 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_get_project_user_quota_usages_in_order(self):
         _quota_reserve(self.ctxt, 'p1', 'u1')
-        with sqlalchemy_api.main_context_manager.reader.using(self.ctxt):
+
+        @sqlalchemy_api.pick_context_manager_reader
+        def test(context):
             with mock.patch.object(query.Query, 'order_by') as order_mock:
                 sqlalchemy_api._get_project_user_quota_usages(
-                    self.ctxt, 'p1', 'u1')
-        self.assertTrue(order_mock.called)
+                    context, 'p1', 'u1')
+                self.assertTrue(order_mock.called)
+
+        test(self.ctxt)
 
     def test_quota_usage_update_nonexistent(self):
         self.assertRaises(exception.QuotaUsageNotFound, db.quota_usage_update,
