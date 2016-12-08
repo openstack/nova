@@ -37,9 +37,6 @@ from nova.tests.unit import utils
 from nova import wsgi
 
 test_service_opts = [
-    cfg.StrOpt("fake_manager",
-               default="nova.tests.unit.test_service.FakeManager",
-               help="Manager for testing"),
     cfg.StrOpt("test_service_listen",
                default='127.0.0.1',
                help="Host to bind test service to"),
