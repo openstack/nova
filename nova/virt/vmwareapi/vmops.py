@@ -1027,9 +1027,9 @@ class VMwareVMOps(object):
                                            "get_object_properties_dict",
                                            vm_ref,
                                            lst_properties)
-        pwr_state = props['runtime.powerState']
-        tools_status = props['summary.guest.toolsStatus']
-        tools_running_status = props['summary.guest.toolsRunningStatus']
+        pwr_state = props.get('runtime.powerState')
+        tools_status = props.get('summary.guest.toolsStatus')
+        tools_running_status = props.get('summary.guest.toolsRunningStatus')
 
         # Raise an exception if the VM is not powered On.
         if pwr_state not in ["poweredOn"]:
