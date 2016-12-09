@@ -701,3 +701,11 @@ Adds a ``description`` field to the flavor resource in the following APIs:
 * ``PUT /flavors/{flavor_id}``
 
 The embedded flavor description will not be included in server representations.
+
+2.56
+----
+
+  Updates the POST request body for the ``migrate`` action to include the
+  the optional ``host`` string field defaulted to ``null``. If ``host`` is
+  set the migrate action verifies the provided host with the nova scheduler
+  and uses it as the destination for the migration.

@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 from oslo_utils import uuidutils
 import six
 import webob
@@ -21,9 +22,11 @@ from nova.api.openstack import api_version_request
 from nova.api.openstack.compute import migrate_server as \
     migrate_server_v21
 from nova import exception
+from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
 from nova.tests.unit.api.openstack import fakes
+from nova.tests import uuidsentinel as uuids
 
 
 class MigrateServerTestsV21(admin_only_action_common.CommonTests):
@@ -34,6 +37,7 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
     disk_over_commit = False
     force = None
     async = False
+    host_name = None
 
     def setUp(self):
         super(MigrateServerTestsV21, self).setUp()
@@ -61,7 +65,8 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
         body_map = {'_migrate_live': self._get_migration_body(host='hostname')}
         args_map = {'_migrate_live': ((False, self.disk_over_commit,
                                        'hostname', self.force, self.async),
-                                      {})}
+                                      {}),
+                    '_migrate': ((), {'host_name': self.host_name})}
         self._test_actions(['_migrate', '_migrate_live'], body_map=body_map,
                            method_translations=method_translations,
                            args_map=args_map)
@@ -72,23 +77,27 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
         body_map = {'_migrate_live': self._get_migration_body(host=None)}
         args_map = {'_migrate_live': ((False, self.disk_over_commit, None,
                                        self.force, self.async),
-                                      {})}
+                                      {}),
+                    '_migrate': ((), {'host_name': None})}
         self._test_actions(['_migrate', '_migrate_live'], body_map=body_map,
                            method_translations=method_translations,
                            args_map=args_map)
 
     def test_migrate_with_non_existed_instance(self):
-        body_map = self._get_migration_body(host='hostname')
+        body_map = {'_migrate_live':
+                    self._get_migration_body(host='hostname')}
         self._test_actions_with_non_existed_instance(
             ['_migrate', '_migrate_live'], body_map=body_map)
 
     def test_migrate_raise_conflict_on_invalid_state(self):
         method_translations = {'_migrate': 'resize',
                                '_migrate_live': 'live_migrate'}
-        body_map = self._get_migration_body(host='hostname')
+        body_map = {'_migrate_live':
+                    self._get_migration_body(host='hostname')}
         args_map = {'_migrate_live': ((False, self.disk_over_commit,
                                        'hostname', self.force, self.async),
-                                      {})}
+                                      {}),
+                    '_migrate': ((), {'host_name': self.host_name})}
         exception_arg = {'_migrate': 'migrate',
                          '_migrate_live': 'os-migrateLive'}
         self._test_actions_raise_conflict_on_invalid_state(
@@ -104,7 +113,8 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
                     self._get_migration_body(host='hostname')}
         args_map = {'_migrate_live': ((False, self.disk_over_commit,
                                        'hostname', self.force, self.async),
-                                      {})}
+                                      {}),
+                    '_migrate': ((), {'host_name': self.host_name})}
         self._test_actions_with_locked_instance(
             ['_migrate', '_migrate_live'], body_map=body_map,
             args_map=args_map, method_translations=method_translations)
@@ -112,12 +122,14 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
     def _test_migrate_exception(self, exc_info, expected_result):
         self.mox.StubOutWithMock(self.compute_api, 'resize')
         instance = self._stub_instance_get()
-        self.compute_api.resize(self.context, instance).AndRaise(exc_info)
+        self.compute_api.resize(
+            self.context, instance,
+            host_name=self.host_name).AndRaise(exc_info)
 
         self.mox.ReplayAll()
         self.assertRaises(expected_result,
                           self.controller._migrate,
-                          self.req, instance['uuid'], {'migrate': None})
+                          self.req, instance['uuid'], body={'migrate': None})
 
     def test_migrate_too_many_instances(self):
         exc_info = exception.TooManyInstances(overs='', req='', used=0,
@@ -436,6 +448,100 @@ class MigrateServerTestsV234(MigrateServerTestsV230):
         self.assertRaises(webob.exc.HTTPInternalServerError,
                           self.controller._migrate_live,
                           self.req, instance.uuid, body=body)
+
+
+class MigrateServerTestsV256(MigrateServerTestsV234):
+    host_name = 'fake-host'
+    method_translations = {'_migrate': 'resize'}
+    body_map = {'_migrate': {'migrate': {'host': host_name}}}
+    args_map = {'_migrate': ((), {'host_name': host_name})}
+
+    def setUp(self):
+        super(MigrateServerTestsV256, self).setUp()
+        self.req.api_version_request = api_version_request.APIVersionRequest(
+            '2.56')
+
+    def _test_migrate_validation_error(self, body):
+        self.assertRaises(self.validation_error,
+                          self.controller._migrate,
+                          self.req, fakes.FAKE_UUID, body=body)
+
+    def _test_migrate_exception(self, exc_info, expected_result):
+        @mock.patch.object(self.compute_api, 'get')
+        @mock.patch.object(self.compute_api, 'resize', side_effect=exc_info)
+        def _test(mock_resize, mock_get):
+            instance = objects.Instance(uuid=uuids.instance)
+            self.assertRaises(expected_result,
+                              self.controller._migrate,
+                              self.req, instance['uuid'],
+                              body={'migrate': {'host': self.host_name}})
+        _test()
+
+    def test_migrate(self):
+        self._test_actions(['_migrate'], body_map=self.body_map,
+                           method_translations=self.method_translations,
+                           args_map=self.args_map)
+
+    def test_migrate_without_host(self):
+        # The request body is: '{"migrate": null}'
+        body_map = {'_migrate': {'migrate': None}}
+        args_map = {'_migrate': ((), {'host_name': None})}
+        self._test_actions(['_migrate'], body_map=body_map,
+                           method_translations=self.method_translations,
+                           args_map=args_map)
+
+    def test_migrate_none_hostname(self):
+        # The request body is: '{"migrate": {"host": null}}'
+        body_map = {'_migrate': {'migrate': {'host': None}}}
+        args_map = {'_migrate': ((), {'host_name': None})}
+        self._test_actions(['_migrate'], body_map=body_map,
+                           method_translations=self.method_translations,
+                           args_map=args_map)
+
+    def test_migrate_with_non_existed_instance(self):
+        self._test_actions_with_non_existed_instance(
+            ['_migrate'], body_map=self.body_map)
+
+    def test_migrate_raise_conflict_on_invalid_state(self):
+        exception_arg = {'_migrate': 'migrate'}
+        self._test_actions_raise_conflict_on_invalid_state(
+            ['_migrate'], body_map=self.body_map,
+            args_map=self.args_map,
+            method_translations=self.method_translations,
+            exception_args=exception_arg)
+
+    def test_actions_with_locked_instance(self):
+        self._test_actions_with_locked_instance(
+            ['_migrate'], body_map=self.body_map,
+            args_map=self.args_map,
+            method_translations=self.method_translations)
+
+    def test_migrate_without_migrate_object(self):
+        self._test_migrate_validation_error({})
+
+    def test_migrate_invalid_migrate_object(self):
+        self._test_migrate_validation_error({'migrate': 'fake-host'})
+
+    def test_migrate_with_additional_property(self):
+        self._test_migrate_validation_error(
+            {'migrate': {'host': self.host_name,
+                         'additional': 'foo'}})
+
+    def test_migrate_with_host_length_more_than_255(self):
+        self._test_migrate_validation_error(
+            {'migrate': {'host': 'a' * 256}})
+
+    def test_migrate_nonexistent_host(self):
+        exc_info = exception.ComputeHostNotFound(host='nonexistent_host')
+        self._test_migrate_exception(exc_info, webob.exc.HTTPBadRequest)
+
+    def test_migrate_no_request_spec(self):
+        exc_info = exception.CannotMigrateWithTargetHost()
+        self._test_migrate_exception(exc_info, webob.exc.HTTPConflict)
+
+    def test_migrate_to_same_host(self):
+        exc_info = exception.CannotMigrateToSameHost()
+        self._test_migrate_exception(exc_info, webob.exc.HTTPBadRequest)
 
 
 class MigrateServerPolicyEnforcementV21(test.NoDBTestCase):

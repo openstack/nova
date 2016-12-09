@@ -230,7 +230,7 @@ class CommonTests(CommonMixin, test.NoDBTestCase):
         body_map = body_map or {}
         for action in actions:
             self._test_non_existing_instance(action,
-                                             body_map=body_map)
+                                             body_map=body_map.get(action))
             # Re-mock this.
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
@@ -247,7 +247,7 @@ class CommonTests(CommonMixin, test.NoDBTestCase):
             self.mox.StubOutWithMock(self.compute_api,
                                      method or action.replace('_', ''))
             self._test_invalid_state(action, method=method,
-                                     body_map=body_map,
+                                     body_map=body_map.get(action),
                                      compute_api_args_map=args_map,
                                      exception_arg=exception_arg)
             # Re-mock this.

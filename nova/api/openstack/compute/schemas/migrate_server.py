@@ -20,6 +20,21 @@ from nova.api.validation import parameter_types
 host = copy.deepcopy(parameter_types.hostname)
 host['type'] = ['string', 'null']
 
+migrate_v2_56 = {
+    'type': 'object',
+    'properties': {
+        'migrate': {
+            'type': ['object', 'null'],
+            'properties': {
+                'host': host,
+            },
+            'additionalProperties': False,
+        },
+    },
+    'required': ['migrate'],
+    'additionalProperties': False,
+}
+
 migrate_live = {
     'type': 'object',
     'properties': {

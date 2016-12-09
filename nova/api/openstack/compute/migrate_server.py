@@ -40,24 +40,33 @@ class MigrateServerController(wsgi.Controller):
     @wsgi.response(202)
     @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.action('migrate')
+    @validation.schema(migrate_server.migrate_v2_56, "2.56")
     def _migrate(self, req, id, body):
         """Permit admins to migrate a server to a new host."""
         context = req.environ['nova.context']
         context.can(ms_policies.POLICY_ROOT % 'migrate')
 
+        host_name = None
+        if (api_version_request.is_supported(req, min_version='2.56') and
+            body['migrate'] is not None):
+            host_name = body['migrate'].get('host')
+
         instance = common.get_instance(self.compute_api, context, id)
         try:
-            self.compute_api.resize(req.environ['nova.context'], instance)
+            self.compute_api.resize(req.environ['nova.context'], instance,
+                                    host_name=host_name)
         except (exception.TooManyInstances, exception.QuotaError) as e:
             raise exc.HTTPForbidden(explanation=e.format_message())
-        except exception.InstanceIsLocked as e:
+        except (exception.InstanceIsLocked,
+                exception.CannotMigrateWithTargetHost) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'migrate', id)
         except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
-        except exception.NoValidHost as e:
+        except (exception.NoValidHost, exception.ComputeHostNotFound,
+                exception.CannotMigrateToSameHost) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
     @wsgi.response(202)

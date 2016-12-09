@@ -141,3 +141,42 @@ class MigrateServerSamplesJsonTestV230(MigrateServerSamplesJsonTest):
                                  {'hostname': hostname,
                                   'force': 'False'})
         self.assertEqual(400, response.status_code)
+
+
+class MigrateServerSamplesJsonTestV256(test_servers.ServersSampleBase):
+    sample_dir = "os-migrate-server"
+    microversion = '2.56'
+    scenarios = [('v2_56', {'api_major_version': 'v2.1'})]
+
+    def setUp(self):
+        """setUp Method for MigrateServer api samples extension
+
+        This method creates the server that will be used in each tests
+        """
+        super(MigrateServerSamplesJsonTestV256, self).setUp()
+        self.uuid = self._post_server()
+
+    @mock.patch('nova.conductor.manager.ComputeTaskManager._cold_migrate')
+    def test_post_migrate(self, mock_cold_migrate):
+        response = self._do_post('servers/%s/action' % self.uuid,
+                                 'migrate-server',
+                                 {'hostname': 'null'})
+        self.assertEqual(202, response.status_code)
+
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_host',
+                return_value=[objects.ComputeNode(
+                    host='target-host', hypervisor_hostname='target-node')])
+    @mock.patch('nova.conductor.manager.ComputeTaskManager._cold_migrate')
+    def test_post_migrate_with_host(self, mock_cold_migrate,
+                                    mock_get_all_by_host):
+        response = self._do_post('servers/%s/action' % self.uuid,
+                                 'migrate-server',
+                                 {'hostname': '"target-host"'})
+        self.assertEqual(202, response.status_code)
+
+    @mock.patch('nova.conductor.manager.ComputeTaskManager._cold_migrate')
+    def test_post_migrate_null(self, mock_cold_migrate):
+        # Check backward compatibility.
+        response = self._do_post('servers/%s/action' % self.uuid,
+                                 'migrate-server-null', {})
+        self.assertEqual(202, response.status_code)
