@@ -399,6 +399,6 @@ personality = {
 
 tag = {
     "type": "string",
-    "maxLength": tag.MAX_TAG_LENGTH,
+    "minLength": 1, "maxLength": tag.MAX_TAG_LENGTH,
     "pattern": "^[^,/]*$"
 }

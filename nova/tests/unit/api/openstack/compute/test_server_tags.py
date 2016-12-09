@@ -121,6 +121,12 @@ class ServerTagsTest(test.TestCase):
                           self.controller.update_all,
                           req, UUID, body={'tags': [1]})
 
+    def test_update_all_tags_with_one_tag_empty_string(self):
+        req = self._get_request('/v2/fake/servers/%s/tags' % UUID, 'PUT')
+        self.assertRaises(exception.ValidationError,
+                          self.controller.update_all,
+                          req, UUID, body={'tags': ['tag1', '']})
+
     def test_update_all_too_long_tag(self):
         self.stub_out('nova.api.openstack.common.get_instance', return_server)
         req = self._get_request('/v2/fake/servers/%s/tags' % UUID, 'PUT')

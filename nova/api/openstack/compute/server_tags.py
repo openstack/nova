@@ -94,9 +94,9 @@ class ServerTagsController(wsgi.Controller):
         try:
             jsonschema.validate(id, parameter_types.tag)
         except jsonschema.ValidationError as e:
-            msg = (_("Tag '%(tag)s' is invalid. It must be a string without "
-                     "characters '/' and ','. Validation error message: "
-                     "%(err)s") % {'tag': id, 'err': e.message})
+            msg = (_("Tag '%(tag)s' is invalid. It must be a non empty string "
+                     "without characters '/' and ','. Validation error "
+                     "message: %(err)s") % {'tag': id, 'err': e.message})
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         try:
