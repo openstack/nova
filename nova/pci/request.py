@@ -103,7 +103,9 @@ def _get_alias_from_config():
         for jsonspecs in jaliases:
             spec = jsonutils.loads(jsonspecs)
             jsonschema.validate(spec, _ALIAS_SCHEMA)
-            name = spec.pop("name")
+            # It should keep consistent behaviour in configuration
+            # and extra specs to call strip() function.
+            name = spec.pop("name").strip()
             dev_type = spec.pop('device_type', None)
             if dev_type:
                 spec['dev_type'] = dev_type
@@ -130,8 +132,8 @@ def _translate_alias_to_requests(alias_spec):
     pci_aliases = _get_alias_from_config()
 
     pci_requests = []  # list of a specs dict
-    alias_spec = alias_spec.replace(' ', '')
     for name, count in [spec.split(':') for spec in alias_spec.split(',')]:
+        name = name.strip()
         if name not in pci_aliases:
             raise exception.PciRequestAliasNotDefined(alias=name)
         else:
