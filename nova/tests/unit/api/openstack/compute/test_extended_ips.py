@@ -129,7 +129,7 @@ class ExtendedIpsTestV21(test.TestCase):
             results.append({'address': ip.get('addr'),
                             'type': ip.get('%stype' % self.prefix)})
 
-        self.assertEqual(ALL_IPS, sorted(results))
+        self.assertJsonEqual(ALL_IPS, results)
 
     def test_show(self):
         url = '/v2/fake/servers/%s' % UUID3
