@@ -14,7 +14,6 @@
 #    under the License.
 
 import copy
-import uuid as stdlib_uuid
 
 from oslo_serialization import jsonutils
 
@@ -23,6 +22,7 @@ from nova.api.openstack.compute import views
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import matchers
+from nova.tests import uuidsentinel as uuids
 from nova import wsgi
 
 
@@ -259,7 +259,7 @@ class VersionsTestV21WithV2CompatibleWrapper(test.NoDBTestCase):
         self.assertEqual("application/json", res.content_type)
 
     def test_multi_choice_server(self):
-        uuid = str(stdlib_uuid.uuid4())
+        uuid = uuids.fake
         req = fakes.HTTPRequest.blank('/servers/' + uuid, base_url='')
         req.accept = "application/json"
         res = req.get_response(self.wsgi_app)

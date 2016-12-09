@@ -16,7 +16,6 @@
 """Tests for the aggregates admin api."""
 
 import mock
-import uuid
 from webob import exc
 
 from nova.api.openstack.compute import aggregates as aggregates_v21
@@ -276,11 +275,12 @@ class AggregateTestCaseV21(test.NoDBTestCase):
 
     @mock.patch('nova.compute.api.AggregateAPI.create_aggregate')
     def test_create_with_none_availability_zone(self, mock_create_agg):
-        mock_create_agg.return_value = objects.Aggregate(self.context,
-                                                         name='test',
-                                                         uuid=uuid.uuid4(),
-                                                         hosts=[],
-                                                         metadata={})
+        mock_create_agg.return_value = objects.Aggregate(
+            self.context,
+            name='test',
+            uuid=uuidsentinel.aggregate,
+            hosts=[],
+            metadata={})
         body = {"aggregate": {"name": "test",
                               "availability_zone": None}}
         result = self.controller.create(self.req, body=body)
@@ -406,7 +406,7 @@ class AggregateTestCaseV21(test.NoDBTestCase):
 
     @mock.patch('nova.compute.api.AggregateAPI.update_aggregate')
     def test_update_with_none_availability_zone(self, mock_update_agg):
-        agg_id = uuid.uuid4()
+        agg_id = uuidsentinel.aggregate
         mock_update_agg.return_value = objects.Aggregate(self.context,
                                                          name='test',
                                                          uuid=agg_id,

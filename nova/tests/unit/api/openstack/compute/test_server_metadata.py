@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import uuid
-
 import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
@@ -32,6 +30,7 @@ from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
+from nova.tests import uuidsentinel as uuids
 
 
 CONF = cfg.CONF
@@ -132,7 +131,7 @@ class ServerMetaDataTestV21(test.TestCase):
 
     def _set_up_resources(self):
         self.controller = server_metadata_v21.ServerMetadataController()
-        self.uuid = str(uuid.uuid4())
+        self.uuid = uuids.fake
         self.url = '/fake/servers/%s/metadata' % self.uuid
 
     def _get_request(self, param_url=''):
@@ -685,7 +684,7 @@ class BadStateServerMetaDataTestV21(test.TestCase):
 
     def _set_up_resources(self):
         self.controller = server_metadata_v21.ServerMetadataController()
-        self.uuid = str(uuid.uuid4())
+        self.uuid = uuids.fake
         self.url = '/fake/servers/%s/metadata' % self.uuid
 
     def _get_request(self, param_url=''):

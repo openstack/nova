@@ -17,7 +17,6 @@
 import copy
 import datetime
 import math
-import uuid
 
 import iso8601
 import mock
@@ -211,7 +210,7 @@ class FakeNetworkAPI(object):
         new_id = max((net['id'] for net in self.networks))
         for index, subnet_v4 in enumerate(subnets_v4):
             new_id += 1
-            net = {'id': new_id, 'uuid': str(uuid.uuid4())}
+            net = {'id': new_id, 'uuid': uuids.fake}
 
             net['cidr'] = str(subnet_v4)
             net['netmask'] = str(subnet_v4.netmask)

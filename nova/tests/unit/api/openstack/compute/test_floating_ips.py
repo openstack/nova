@@ -14,8 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import uuid
-
 import mock
 import six
 import webob
@@ -33,6 +31,7 @@ from nova.objects import base as obj_base
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_network
+from nova.tests import uuidsentinel as uuids
 
 
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
@@ -92,7 +91,7 @@ def network_api_disassociate(self, context, instance, floating_address):
 def fake_instance_get(context, instance_id):
         return objects.Instance(**{
         "id": 1,
-        "uuid": uuid.uuid4(),
+        "uuid": uuids.fake,
         "name": 'fake',
         "user_id": 'fakeuser',
         "project_id": '123'})

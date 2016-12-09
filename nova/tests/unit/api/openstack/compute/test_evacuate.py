@@ -12,8 +12,6 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-import uuid
-
 import mock
 import testtools
 import webob
@@ -26,6 +24,7 @@ from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
+from nova.tests import uuidsentinel as uuids
 
 
 CONF = nova.conf.CONF
@@ -65,7 +64,7 @@ class EvacuateTestV21(test.NoDBTestCase):
         self.stub_out('nova.compute.api.API.get', fake_compute_api_get)
         self.stub_out('nova.compute.api.HostAPI.service_get_by_compute_host',
                       fake_service_get_by_compute_host)
-        self.UUID = uuid.uuid4()
+        self.UUID = uuids.fake
         for _method in self._methods:
             self.stub_out('nova.compute.api.API.%s' % _method,
                           fake_compute_api)

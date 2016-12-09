@@ -27,6 +27,7 @@ from oslo_serialization import base64
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 from oslo_utils import timeutils
+from oslo_utils import uuidutils
 import six
 from six.moves import range
 import six.moves.urllib.parse as urlparse
@@ -288,7 +289,7 @@ class ServersControllerTest(ControllerTest):
         project_ids and check that the host_id's are unique.
         """
         def return_instance_with_host(context, *args, **kwargs):
-            project_id = str(uuid.uuid4())
+            project_id = uuidutils.generate_uuid()
             return fakes.stub_instance_obj(context, id=1, uuid=FAKE_UUID,
                                            project_id=project_id,
                                            host='fake_host')
@@ -489,7 +490,7 @@ class ServersControllerTest(ControllerTest):
 
         self.stubs.Set(compute_api.API, 'get', fake_instance_get)
 
-        server_id = str(uuid.uuid4())
+        server_id = uuids.fake
         req = self.req('/fake/servers/%s/ips' % server_id)
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.ips_controller.index, req, server_id)
@@ -665,7 +666,7 @@ class ServersControllerTest(ControllerTest):
                           self.controller.index, req)
 
     def test_get_servers_with_bad_option(self):
-        server_uuid = str(uuid.uuid4())
+        server_uuid = uuids.fake
 
         def fake_get_all(compute_self, context, search_opts=None,
                          limit=None, marker=None,
@@ -683,7 +684,7 @@ class ServersControllerTest(ControllerTest):
         self.assertEqual(servers[0]['id'], server_uuid)
 
     def test_get_servers_allows_image(self):
-        server_uuid = str(uuid.uuid4())
+        server_uuid = uuids.fake
 
         def fake_get_all(compute_self, context, search_opts=None,
                          limit=None, marker=None,
@@ -826,7 +827,7 @@ class ServersControllerTest(ControllerTest):
                           self.controller.index, req)
 
     def test_get_servers_allows_flavor(self):
-        server_uuid = str(uuid.uuid4())
+        server_uuid = uuids.fake
 
         def fake_get_all(compute_self, context, search_opts=None,
                          limit=None, marker=None,
@@ -863,7 +864,7 @@ class ServersControllerTest(ControllerTest):
         self.assertThat(servers, testtools.matchers.HasLength(0))
 
     def test_get_servers_allows_status(self):
-        server_uuid = str(uuid.uuid4())
+        server_uuid = uuids.fake
 
         def fake_get_all(compute_self, context, search_opts=None,
                          limit=None, marker=None,
@@ -883,7 +884,7 @@ class ServersControllerTest(ControllerTest):
         self.assertEqual(servers[0]['id'], server_uuid)
 
     def test_get_servers_allows_task_status(self):
-        server_uuid = str(uuid.uuid4())
+        server_uuid = uuids.fake
         task_state = task_states.REBOOTING
 
         def fake_get_all(compute_self, context, search_opts=None,
@@ -909,7 +910,7 @@ class ServersControllerTest(ControllerTest):
 
     def test_get_servers_resize_status(self):
         # Test when resize status, it maps list of vm states.
-        server_uuid = str(uuid.uuid4())
+        server_uuid = uuids.fake
 
         def fake_get_all(compute_self, context, search_opts=None,
                          limit=None, marker=None,
@@ -943,7 +944,7 @@ class ServersControllerTest(ControllerTest):
                           self.controller.detail, req)
 
     def test_get_servers_deleted_status_as_admin(self):
-        server_uuid = str(uuid.uuid4())
+        server_uuid = uuids.fake
 
         def fake_get_all(compute_self, context, search_opts=None,
                          limit=None, marker=None,
@@ -965,7 +966,7 @@ class ServersControllerTest(ControllerTest):
 
     @mock.patch.object(compute_api.API, 'get_all')
     def test_get_servers_deleted_filter_str_to_bool(self, mock_get_all):
-        server_uuid = str(uuid.uuid4())
+        server_uuid = uuids.fake
 
         db_list = objects.InstanceList(
             objects=[fakes.stub_instance_obj(100, uuid=server_uuid,
@@ -987,7 +988,7 @@ class ServersControllerTest(ControllerTest):
 
     @mock.patch.object(compute_api.API, 'get_all')
     def test_get_servers_deleted_filter_invalid_str(self, mock_get_all):
-        server_uuid = str(uuid.uuid4())
+        server_uuid = uuids.fake
 
         db_list = objects.InstanceList(
             objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
@@ -1007,7 +1008,7 @@ class ServersControllerTest(ControllerTest):
                          mock_get_all.call_args[1]['search_opts'])
 
     def test_get_servers_allows_name(self):
-        server_uuid = str(uuid.uuid4())
+        server_uuid = uuids.fake
 
         def fake_get_all(compute_self, context, search_opts=None,
                          limit=None, marker=None,
@@ -1037,7 +1038,7 @@ class ServersControllerTest(ControllerTest):
         self.assertEqual(0, len(servers))
 
     def test_get_servers_allows_changes_since(self):
-        server_uuid = str(uuid.uuid4())
+        server_uuid = uuids.fake
 
         def fake_get_all(compute_self, context, search_opts=None,
                          limit=None, marker=None,
@@ -1070,7 +1071,7 @@ class ServersControllerTest(ControllerTest):
         context is not admin. Make sure the admin and unknown options
         are stripped before they get to compute_api.get_all()
         """
-        server_uuid = str(uuid.uuid4())
+        server_uuid = uuids.fake
 
         def fake_get_all(compute_self, context, search_opts=None,
                          limit=None, marker=None,
@@ -1100,7 +1101,7 @@ class ServersControllerTest(ControllerTest):
         """Test getting servers by admin-only or unknown options when
         context is admin. All options should be passed
         """
-        server_uuid = str(uuid.uuid4())
+        server_uuid = uuids.fake
 
         def fake_get_all(compute_self, context, search_opts=None,
                          limit=None, marker=None,
@@ -1129,7 +1130,7 @@ class ServersControllerTest(ControllerTest):
     def test_get_servers_allows_ip(self):
         """Test getting servers by ip."""
 
-        server_uuid = str(uuid.uuid4())
+        server_uuid = uuids.fake
 
         def fake_get_all(compute_self, context, search_opts=None,
                          limit=None, marker=None,
@@ -1152,7 +1153,7 @@ class ServersControllerTest(ControllerTest):
         """Test getting servers by ip6 with admin_api enabled and
         admin context
         """
-        server_uuid = str(uuid.uuid4())
+        server_uuid = uuids.fake
 
         def fake_get_all(compute_self, context, search_opts=None,
                          limit=None, marker=None,
@@ -1176,7 +1177,7 @@ class ServersControllerTest(ControllerTest):
         """Test getting servers by ip6 with new version requested
         and no admin context
         """
-        server_uuid = str(uuid.uuid4())
+        server_uuid = uuids.fake
 
         def fake_get_all(compute_self, context, search_opts=None,
                          limit=None, marker=None,
@@ -1468,7 +1469,7 @@ class ServersControllerTestV226(ControllerTest):
 
     @mock.patch.object(compute_api.API, 'get_all')
     def _test_get_servers_allows_tag_filters(self, filter_name, mock_get_all):
-        server_uuid = str(uuid.uuid4())
+        server_uuid = uuids.fake
         req = fakes.HTTPRequest.blank('/fake/servers?%s=t1,t2' % filter_name,
                                       version=self.wsgi_api_version)
         ctxt = req.environ['nova.context']

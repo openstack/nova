@@ -15,7 +15,6 @@
 #    under the License.
 
 import datetime
-import uuid as stdlib_uuid
 
 from oslo_policy import policy as oslo_policy
 from oslo_utils import timeutils
@@ -28,6 +27,7 @@ from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import matchers
+from nova.tests import uuidsentinel as uuids
 
 
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
@@ -54,7 +54,7 @@ class FakeInstanceDB(object):
         if id is None:
             id = self.max_id + 1
         if uuid is None:
-            uuid = str(stdlib_uuid.uuid4())
+            uuid = uuids.fake
         instance = stub_instance(id, uuid=uuid)
         self.instances_by_id[id] = instance
         self.ids_by_uuid[uuid] = id
@@ -129,7 +129,7 @@ class ConsolesControllerTestV21(test.NoDBTestCase):
                       self.instance_db.return_server_by_id)
         self.stub_out('nova.db.instance_get_by_uuid',
                       self.instance_db.return_server_by_uuid)
-        self.uuid = str(stdlib_uuid.uuid4())
+        self.uuid = uuids.fake
         self.url = '/v2/fake/servers/%s/consoles' % self.uuid
         self._set_up_controller()
 
