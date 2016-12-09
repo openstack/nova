@@ -488,3 +488,7 @@ class PciGetInstanceDevs(test.NoDBTestCase):
         self.load_attr_called = False
         manager.get_instance_pci_devs(objects.Instance())
         self.assertTrue(self.load_attr_called)
+
+    def test_get_devs_no_pci_devices(self):
+        inst = objects.Instance(pci_devices=None)
+        self.assertEqual([], manager.get_instance_pci_devs(inst))
