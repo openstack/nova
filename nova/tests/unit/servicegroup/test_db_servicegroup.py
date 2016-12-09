@@ -64,6 +64,13 @@ class DBServiceGroupTestCase(test.NoDBTestCase):
         result = self.servicegroup_api.service_is_up(service)
         self.assertFalse(result)
 
+        # "last_seen_up" is none before compute node reports its status,
+        # just use 'created_at' as last_heartbeat.
+        service.last_seen_up = None
+        service.created_at = timeutils.utcnow()
+        result = self.servicegroup_api.service_is_up(service)
+        self.assertTrue(result)
+
     def test_join(self):
         service = mock.MagicMock(report_interval=1)
 
