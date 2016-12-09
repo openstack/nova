@@ -33,6 +33,7 @@ from nova.objects import virtual_interface as vif_obj
 from nova.tests.unit.objects import test_fixed_ip
 from nova.tests.unit.objects import test_instance_info_cache
 from nova.tests.unit.objects import test_pci_device
+from nova.tests.unit import utils
 from nova.tests import uuidsentinel as uuids
 
 
@@ -418,7 +419,7 @@ def _get_fake_cache():
         return ip_dict
 
     info = [{'address': 'aa:bb:cc:dd:ee:ff',
-             'id': 1,
+             'id': utils.FAKE_NETWORK_UUID,
              'network': {'bridge': 'br0',
                          'id': 1,
                          'label': 'private',
