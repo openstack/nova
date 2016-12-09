@@ -10,8 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import uuid
-
 import mock
 from oslo_serialization import jsonutils
 
@@ -19,9 +17,10 @@ from nova import exception
 from nova import objects
 from nova.tests.unit.objects import test_instance_numa_topology
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel as uuids
 
 
-fake_instance_uuid = str(uuid.uuid4())
+fake_instance_uuid = uuids.fake
 
 fake_migration_context_obj = objects.MigrationContext()
 fake_migration_context_obj.instance_uuid = fake_instance_uuid

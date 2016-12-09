@@ -12,13 +12,12 @@
 
 """Implementation of a fake volume API."""
 
-import uuid
-
 from oslo_log import log as logging
 from oslo_utils import timeutils
 
 import nova.conf
 from nova import exception
+from nova.tests import uuidsentinel as uuids
 
 
 LOG = logging.getLogger(__name__)
@@ -38,7 +37,7 @@ class fake_volume(object):
         if snapshot is not None:
             snapshot_id = snapshot['id']
         if volume_id is None:
-            volume_id = str(uuid.uuid4())
+            volume_id = uuids.fake1
         self.vol = {
             'created_at': timeutils.utcnow(),
             'deleted_at': None,
@@ -84,7 +83,7 @@ class fake_snapshot(object):
 
     def __init__(self, volume_id, size, name, desc, id=None):
         if id is None:
-            id = str(uuid.uuid4())
+            id = uuids.fake2
         self.snap = {
             'created_at': timeutils.utcnow(),
             'deleted_at': None,
@@ -212,7 +211,7 @@ class API(object):
         volume['attach_time'] = timeutils.utcnow()
         volume['multiattach'] = True
         volume['attachments'] = {instance_uuid:
-                                 {'attachment_id': str(uuid.uuid4()),
+                                 {'attachment_id': uuids.fake3,
                                   'mountpoint': mountpoint}}
 
     def reset_fake_api(self, context):

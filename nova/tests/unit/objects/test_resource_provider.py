@@ -10,8 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import uuid
-
 import mock
 import six
 
@@ -325,8 +323,8 @@ class TestInventory(test_objects._LocalTest):
         # and should be moved.
         # Create 2 resource providers with DISK_GB resources. And
         # update total value for second one.
-        db_rp1, db_inv1 = self._make_inventory(str(uuid.uuid4()))
-        db_rp2, db_inv2 = self._make_inventory(str(uuid.uuid4()))
+        db_rp1, db_inv1 = self._make_inventory(uuids.fake_1)
+        db_rp2, db_inv2 = self._make_inventory(uuids.fake_2)
 
         objects.Inventory._update_in_db(self.context,
                                         db_inv2.id,

@@ -13,7 +13,6 @@
 #    under the License.
 
 import copy
-import uuid
 
 import mock
 from oslo_utils import timeutils
@@ -21,12 +20,13 @@ from oslo_utils import timeutils
 from nova import exception
 from nova import objects
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel as uuids
 
 _TS_NOW = timeutils.utcnow(with_timezone=True)
 # o.vo.fields.DateTimeField converts to tz-aware and
 # in process we lose microsecond resolution.
 _TS_NOW = _TS_NOW.replace(microsecond=0)
-_DB_UUID = str(uuid.uuid4())
+_DB_UUID = uuids.fake
 _INST_GROUP_DB = {
     'id': 1,
     'uuid': _DB_UUID,
@@ -275,10 +275,10 @@ class TestRemoteInstanceGroupObject(test_objects._RemoteTest,
 
 
 def _mock_db_list_get(*args):
-    instances = [(str(uuid.uuid4()), 'f1', 'p1'),
-                 (str(uuid.uuid4()), 'f2', 'p1'),
-                 (str(uuid.uuid4()), 'f3', 'p2'),
-                 (str(uuid.uuid4()), 'f4', 'p2')]
+    instances = [(uuids.f1, 'f1', 'p1'),
+                 (uuids.f2, 'f2', 'p1'),
+                 (uuids.f3, 'f3', 'p2'),
+                 (uuids.f4, 'f4', 'p2')]
     result = []
     for instance in instances:
         values = copy.deepcopy(_INST_GROUP_DB)

@@ -13,7 +13,6 @@
 #    under the License.
 
 import importlib
-import uuid
 
 from migrate import exceptions as versioning_exceptions
 from migrate import UniqueConstraint
@@ -200,7 +199,7 @@ class TestFlavorCheck(test.TestCase):
 
     def test_upgrade_clean(self):
         inst = objects.Instance(context=self.context,
-                                uuid=uuid.uuid4(),
+                                uuid=uuidsentinel.fake,
                                 user_id=self.context.user_id,
                                 project_id=self.context.project_id,
                                 system_metadata={'foo': 'bar'})
@@ -209,7 +208,7 @@ class TestFlavorCheck(test.TestCase):
 
     def test_upgrade_dirty(self):
         inst = objects.Instance(context=self.context,
-                                uuid=uuid.uuid4(),
+                                uuid=uuidsentinel.fake,
                                 user_id=self.context.user_id,
                                 project_id=self.context.project_id,
                                 system_metadata={'foo': 'bar',
@@ -220,7 +219,7 @@ class TestFlavorCheck(test.TestCase):
 
     def test_upgrade_flavor_deleted_instances(self):
         inst = objects.Instance(context=self.context,
-                                uuid=uuid.uuid4(),
+                                uuid=uuidsentinel.fake,
                                 user_id=self.context.user_id,
                                 project_id=self.context.project_id,
                                 system_metadata={'foo': 'bar',
