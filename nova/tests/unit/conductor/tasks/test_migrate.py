@@ -92,10 +92,21 @@ class MigrationTaskTestCase(test.NoDBTestCase):
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'prep_resize')
-    def test_execute(self, prep_resize_mock, sel_dest_mock, sig_mock, az_mock,
-                     gmv_mock, cm_mock, sm_mock, cn_mock, rc_mock):
+    def _test_execute(self, prep_resize_mock, sel_dest_mock, sig_mock, az_mock,
+                      gmv_mock, cm_mock, sm_mock, cn_mock, rc_mock,
+                      requested_destination=False):
         sel_dest_mock.return_value = self.hosts
         az_mock.return_value = 'myaz'
+
+        if requested_destination:
+            self.request_spec.requested_destination = objects.Destination(
+                host='target_host', node=None)
+            self.request_spec.retry = objects.SchedulerRetries.from_dict(
+                self.context, self.filter_properties['retry'])
+            self.filter_properties.pop('retry')
+            self.filter_properties['requested_destination'] = (
+                self.request_spec.requested_destination)
+
         task = self._generate_task()
         legacy_request_spec = self.request_spec.to_legacy_request_spec_dict()
         gmv_mock.return_value = 23
@@ -140,10 +151,19 @@ class MigrationTaskTestCase(test.NoDBTestCase):
 
         task._migration.create.assert_called_once_with()
 
+        if requested_destination:
+            self.assertIsNone(self.request_spec.retry)
+
+    def test_execute(self):
+        self._test_execute()
+
+    def test_execute_with_destination(self):
+        self._test_execute(requested_destination=True)
+
     def test_execute_resize(self):
         self.flavor = self.flavor.obj_clone()
         self.flavor.id = 3
-        self.test_execute()
+        self._test_execute()
 
     @mock.patch('nova.conductor.tasks.migrate.revert_allocation_for_migration')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient')

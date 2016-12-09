@@ -1634,12 +1634,19 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, fake_inst['uuid'], 'finished')
             mock_inst_save.assert_called_once_with(expected_task_state=[None])
 
-    def _test_resize(self, flavor_id_passed=True,
+    @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
+    def _test_resize(self, mock_get_all_by_host,
+                     mock_get_by_instance_uuid,
+                     flavor_id_passed=True,
                      same_host=False, allow_same_host=False,
                      project_id=None,
                      extra_kwargs=None,
                      same_flavor=False,
-                     clean_shutdown=True):
+                     clean_shutdown=True,
+                     host_name=None,
+                     request_spec=True,
+                     requested_destination=False):
         if extra_kwargs is None:
             extra_kwargs = {}
 
@@ -1658,9 +1665,12 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(quotas_obj.Quotas,
                                  'limit_check_project_and_user')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
-        self.mox.StubOutWithMock(objects.RequestSpec, 'get_by_instance_uuid')
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
                                  'resize_instance')
+
+        if host_name:
+            mock_get_all_by_host.return_value = [objects.ComputeNode(
+                host=host_name, hypervisor_hostname='hypervisor_host')]
 
         current_flavor = fake_inst.get_flavor()
         if flavor_id_passed:
@@ -1748,9 +1758,17 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.compute_api._record_action_start(self.context, fake_inst,
                                                       'migrate')
 
-            fake_spec = objects.RequestSpec()
-            objects.RequestSpec.get_by_instance_uuid(
-                self.context, fake_inst.uuid).AndReturn(fake_spec)
+            if request_spec:
+                fake_spec = objects.RequestSpec()
+                if requested_destination:
+                    cell1 = objects.CellMapping(uuid=uuids.cell1, name='cell1')
+                    fake_spec.requested_destination = objects.Destination(
+                        host='dummy_host', node='dummy_node', cell=cell1)
+                mock_get_by_instance_uuid.return_value = fake_spec
+            else:
+                mock_get_by_instance_uuid.side_effect = (
+                    exception.RequestSpecNotFound(instance_uuid=fake_inst.id))
+                fake_spec = None
 
             scheduler_hint = {'filter_properties': filter_properties}
 
@@ -1767,16 +1785,29 @@ class _ComputeAPIUnitTestMixIn(object):
             self.compute_api.resize(self.context, fake_inst,
                                     flavor_id='new-flavor-id',
                                     clean_shutdown=clean_shutdown,
+                                    host_name=host_name,
                                     **extra_kwargs)
         else:
             self.compute_api.resize(self.context, fake_inst,
                                     clean_shutdown=clean_shutdown,
+                                    host_name=host_name,
                                     **extra_kwargs)
 
-        if allow_same_host:
-            self.assertEqual([], fake_spec.ignore_hosts)
-        else:
-            self.assertEqual([fake_inst['host']], fake_spec.ignore_hosts)
+        if request_spec:
+            if allow_same_host:
+                self.assertEqual([], fake_spec.ignore_hosts)
+            else:
+                self.assertEqual([fake_inst['host']], fake_spec.ignore_hosts)
+
+            if host_name is None:
+                self.assertIsNone(fake_spec.requested_destination)
+            else:
+                self.assertIn('host', fake_spec.requested_destination)
+                self.assertEqual(host_name,
+                                 fake_spec.requested_destination.host)
+                self.assertIn('node', fake_spec.requested_destination)
+                self.assertEqual('hypervisor_host',
+                                 fake_spec.requested_destination.node)
 
     def _test_migrate(self, *args, **kwargs):
         self._test_resize(*args, flavor_id_passed=False, **kwargs)
@@ -1844,6 +1875,63 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def test_migrate_different_project_id(self):
         self._test_migrate(project_id='different')
+
+    def test_migrate_request_spec_not_found(self):
+        self._test_migrate(request_spec=False)
+
+    @mock.patch.object(objects.Migration, 'create')
+    @mock.patch.object(objects.InstanceAction, 'action_start')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host',
+                       return_value=[objects.ComputeNode(
+                           host='target_host',
+                           hypervisor_hostname='hypervisor_host')])
+    def test_migrate_request_spec_not_found_with_target_host(
+            self, mock_get_all_by_host, mock_get_by_instance_uuid, mock_save,
+            mock_action_start, mock_migration_create):
+        fake_inst = self._create_instance_obj()
+        mock_get_by_instance_uuid.side_effect = (
+            exception.RequestSpecNotFound(instance_uuid=fake_inst.uuid))
+        self.assertRaises(exception.CannotMigrateWithTargetHost,
+                          self.compute_api.resize, self.context,
+                          fake_inst, host_name='target_host')
+        mock_get_all_by_host.assert_called_once_with(
+            self.context, 'target_host', True)
+        mock_get_by_instance_uuid.assert_called_once_with(self.context,
+                                                          fake_inst.uuid)
+        mock_save.assert_called_once_with(expected_task_state=[None])
+        mock_action_start.assert_called_once_with(
+            self.context, fake_inst.uuid, instance_actions.MIGRATE,
+            want_result=False)
+        if self.cell_type == 'api':
+            mock_migration_create.assert_called_once_with()
+
+    def test_migrate_with_requested_destination(self):
+        # RequestSpec has requested_destination
+        self._test_migrate(requested_destination=True)
+
+    def test_migrate_with_host_name(self):
+        self._test_migrate(host_name='target_host')
+
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host',
+                       side_effect=exception.ComputeHostNotFound(
+                           host='nonexistent_host'))
+    def test_migrate_nonexistent_host(self, mock_get_all_by_host):
+        fake_inst = self._create_instance_obj()
+        self.assertRaises(exception.ComputeHostNotFound,
+                          self.compute_api.resize, self.context,
+                          fake_inst, host_name='nonexistent_host')
+
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host',
+                       return_value=[objects.ComputeNode(
+                           host='fake_host',
+                           hypervisor_hostname='hypervisor_host')])
+    def test_migrate_to_same_host(self, mock_get_all_by_host):
+        fake_inst = self._create_instance_obj()
+        self.assertRaises(exception.CannotMigrateToSameHost,
+                          self.compute_api.resize, self.context,
+                          fake_inst, host_name='fake_host')
 
     def test_resize_invalid_flavor_fails(self):
         self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')

@@ -3078,13 +3078,25 @@ class API(base.Base):
     @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
     def resize(self, context, instance, flavor_id=None, clean_shutdown=True,
-               **extra_instance_updates):
+               host_name=None, **extra_instance_updates):
         """Resize (ie, migrate) a running instance.
 
         If flavor_id is None, the process is considered a migration, keeping
         the original flavor_id. If flavor_id is not None, the instance should
         be migrated to a new host and resized to the new flavor_id.
+        host_name is always None in the resize case.
+        host_name can be set in the cold migration case only.
         """
+        if host_name is not None:
+            # Check whether host exists or not.
+            node = objects.ComputeNode.get_first_node_by_host_for_old_compat(
+                context, host_name, use_slave=True)
+
+            # Cannot migrate to the host where the instance exists
+            # because it is useless.
+            if host_name == instance.host:
+                raise exception.CannotMigrateToSameHost()
+
         self._check_auto_disk_config(instance, **extra_instance_updates)
 
         current_instance_type = instance.get_flavor()
@@ -3166,6 +3178,10 @@ class API(base.Base):
         except exception.RequestSpecNotFound:
             # Some old instances can still have no RequestSpec object attached
             # to them, we need to support the old way
+            if host_name is not None:
+                # If there is no request spec we cannot honor the request
+                # and we need to fail.
+                raise exception.CannotMigrateWithTargetHost()
             request_spec = None
 
         # TODO(melwitt): We're not rechecking for strict quota here to guard
@@ -3173,6 +3189,22 @@ class API(base.Base):
         # resource consumption for this operation is written to the database
         # by compute.
         scheduler_hint = {'filter_properties': filter_properties}
+
+        if request_spec:
+            if host_name is None:
+                # If 'host_name' is not specified,
+                # clear the 'requested_destination' field of the RequestSpec.
+                request_spec.requested_destination = None
+            else:
+                # Set the host and the node so that the scheduler will
+                # validate them.
+                # TODO(takashin): It will be added to check whether
+                # the specified host is within the same cell as
+                # the instance or not. If not, raise specific error message
+                # that is clear to the caller.
+                request_spec.requested_destination = objects.Destination(
+                    host=node.host, node=node.hypervisor_hostname)
+
         self.compute_task_api.resize_instance(context, instance,
                 extra_instance_updates, scheduler_hint=scheduler_hint,
                 flavor=new_instance_type,
