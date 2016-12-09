@@ -1656,8 +1656,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if not self._host.has_min_version(
                    MIN_LIBVIRT_SET_ADMIN_PASSWD):
                 raise exception.SetAdminPasswdNotSupported()
-            hw_qga = image_meta.properties.get('hw_qemu_guest_agent', '')
-            if not strutils.bool_from_string(hw_qga):
+            if not image_meta.properties.get('hw_qemu_guest_agent', False):
                 raise exception.QemuGuestAgentNotEnabled()
         else:
             raise exception.SetAdminPasswdNotSupported()
