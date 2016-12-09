@@ -32,6 +32,7 @@ doc/source/api/*
 doc/build/*
 api-guide/build/*
 api-ref/build/*
+placement-api-ref/build/*
 etc/nova/nova.conf.sample
 etc/nova/policy.yaml.sample
 etc/nova/policy.yaml.merged
