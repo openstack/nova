@@ -4501,6 +4501,53 @@ class _ComputeAPIUnitTestMixIn(object):
                                          cell_instances):
                 self.assertEqual(instance, instances[i])
 
+    @mock.patch.object(context, 'target_cell')
+    @mock.patch.object(objects.BuildRequestList, 'get_by_filters',
+                       return_value=objects.BuildRequestList(objects=[]))
+    @mock.patch.object(objects.CellMapping, 'get_by_uuid')
+    def test_get_all_cell0_marker_not_found(self, mock_cell_mapping_get,
+                                            mock_buildreq_get,
+                                            mock_target_cell):
+        """Tests that we handle a MarkerNotFound raised from the cell0 database
+        and continue looking for instances from the normal cell database.
+        """
+
+        cell_instances = self._list_of_instances(2)
+
+        cell_mapping = objects.CellMapping()
+        mock_cell_mapping_get.return_value = cell_mapping
+        marker = uuids.marker
+
+        with mock.patch.object(self.compute_api,
+                               '_get_instances_by_filters') as mock_inst_get:
+            # simulate calling _get_instances_by_filters twice, once for cell0
+            # which raises a MarkerNotFound and once from the cell DB which
+            # returns two instances
+            mock_inst_get.side_effect = [
+                exception.MarkerNotFound(marker=marker),
+                objects.InstanceList(self.context, objects=cell_instances)]
+
+            instances = self.compute_api.get_all(
+                self.context, search_opts={'foo': 'bar'},
+                limit=10, marker=marker, sort_keys=['baz'],
+                sort_dirs=['desc'])
+
+            mock_target_cell.assert_called_once_with(self.context,
+                                                     cell_mapping)
+            inst_get_calls = [mock.call(self.context, {'foo': 'bar'},
+                                        limit=10, marker=marker,
+                                        expected_attrs=None, sort_keys=['baz'],
+                                        sort_dirs=['desc']),
+                              mock.call(self.context, {'foo': 'bar'},
+                                        limit=10, marker=marker,
+                                        expected_attrs=None, sort_keys=['baz'],
+                                        sort_dirs=['desc'])
+                              ]
+            self.assertEqual(2, mock_inst_get.call_count)
+            mock_inst_get.assert_has_calls(inst_get_calls)
+            for i, instance in enumerate(cell_instances):
+                self.assertEqual(instance, instances[i])
+
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     def test_update_existing_instance_not_in_cell(self, mock_instmap_get,

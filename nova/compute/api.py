@@ -2323,10 +2323,14 @@ class API(base.Base):
             cell0_instances = objects.InstanceList(objects=[])
         else:
             with nova_context.target_cell(context, cell0_mapping):
-                cell0_instances = self._get_instances_by_filters(
-                    context, filters, limit=limit, marker=marker,
-                    expected_attrs=expected_attrs, sort_keys=sort_keys,
-                    sort_dirs=sort_dirs)
+                try:
+                    cell0_instances = self._get_instances_by_filters(
+                        context, filters, limit=limit, marker=marker,
+                        expected_attrs=expected_attrs, sort_keys=sort_keys,
+                        sort_dirs=sort_dirs)
+                except exception.MarkerNotFound:
+                    # We can ignore this since we need to look in the cell DB
+                    cell0_instances = objects.InstanceList(objects=[])
         # Only subtract from limit if it is not None
         limit = (limit - len(cell0_instances)) if limit else limit
 
