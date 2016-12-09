@@ -14,10 +14,10 @@
 #    under the License.
 
 import datetime
-import uuid
 
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
+from oslo_utils import uuidutils
 import routes
 import six
 from six.moves import range
@@ -302,7 +302,7 @@ def create_info_cache(nw_cache):
 
 def get_fake_uuid(token=0):
     if token not in FAKE_UUIDS:
-        FAKE_UUIDS[token] = str(uuid.uuid4())
+        FAKE_UUIDS[token] = uuidutils.generate_uuid()
     return FAKE_UUIDS[token]
 
 

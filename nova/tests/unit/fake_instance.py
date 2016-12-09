@@ -13,9 +13,9 @@
 #    under the License.
 
 import datetime
-import uuid
 
 from oslo_serialization import jsonutils
+from oslo_utils import uuidutils
 
 from nova import objects
 from nova.objects import fields
@@ -58,7 +58,7 @@ def fake_db_instance(**updates):
     db_instance = {
         'id': 1,
         'deleted': False,
-        'uuid': str(uuid.uuid4()),
+        'uuid': uuidutils.generate_uuid(),
         'user_id': 'fake-user',
         'project_id': 'fake-project',
         'host': 'fake-host',

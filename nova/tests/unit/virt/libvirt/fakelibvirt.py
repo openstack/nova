@@ -14,13 +14,13 @@
 
 import sys
 import time
-import uuid
 
 import fixtures
 from lxml import etree
 import six
 
 from nova.objects import fields as obj_fields
+from nova.tests import uuidsentinel as uuids
 from nova.virt.libvirt import config as vconfig
 
 # Allow passing None to the various connect methods
@@ -574,7 +574,7 @@ class Domain(object):
         if uuid_elem is not None:
             definition['uuid'] = uuid_elem.text
         else:
-            definition['uuid'] = str(uuid.uuid4())
+            definition['uuid'] = uuids.fake
 
         vcpu = tree.find('./vcpu')
         if vcpu is not None:

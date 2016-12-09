@@ -28,7 +28,6 @@ import shutil
 import signal
 import threading
 import time
-import uuid
 
 import eventlet
 from eventlet import greenthread
@@ -379,7 +378,7 @@ class FakeVirtDomain(object):
 
     def __init__(self, fake_xml=None, uuidstr=None, id=None, name=None):
         if uuidstr is None:
-            uuidstr = str(uuid.uuid4())
+            uuidstr = uuids.fake
         self.uuidstr = uuidstr
         self.id = id
         self.domname = name
@@ -501,7 +500,7 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
 
     def test_same_fname_concurrency(self):
         # Ensures that the same fname cache runs at a sequentially.
-        uuid = uuidutils.generate_uuid()
+        uuid = uuids.fake
 
         backend = imagebackend.Backend(False)
         wait1 = eventlet.event.Event()
@@ -539,7 +538,7 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
 
     def test_different_fname_concurrency(self):
         # Ensures that two different fname caches are concurrent.
-        uuid = uuidutils.generate_uuid()
+        uuid = uuids.fake
 
         backend = imagebackend.Backend(False)
         wait1 = eventlet.event.Event()
@@ -10328,7 +10327,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_ref['image_ref'] = ''
         instance_ref['root_device_name'] = '/dev/sda'
         instance_ref['ephemeral_gb'] = 0
-        instance_ref['uuid'] = uuidutils.generate_uuid()
+        instance_ref['uuid'] = uuids.fake
         inst_obj = objects.Instance(**instance_ref)
         image_meta = objects.ImageMeta.from_dict({})
 
@@ -12097,7 +12096,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         class DiagFakeDomain(object):
             def __init__(self, name):
                 self._name = name
-                self._uuid = str(uuid.uuid4())
+                self._uuid = uuids.fake
 
             def ID(self):
                 return 1
@@ -12166,7 +12165,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         class DiagFakeDomain(object):
             def __init__(self, name):
                 self._name = name
-                self._uuid = str(uuid.uuid4())
+                self._uuid = uuidutils.generate_uuid()
 
             def ID(self):
                 return 1
@@ -14730,7 +14729,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                                  mock_close,
                                                  mock_mkstemp,
                                                  mock_exists):
-        instance_uuid = str(uuid.uuid4())
+        instance_uuid = uuids.fake
         self.flags(images_type='raw', group='libvirt')
         self.flags(instances_path='/tmp')
         mock_mkstemp.return_value = (-1,
@@ -17369,7 +17368,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         # creating instance
         self.inst = {}
-        self.inst['uuid'] = uuidutils.generate_uuid()
+        self.inst['uuid'] = uuids.fake
         self.inst['id'] = '1'
 
         # create domain info

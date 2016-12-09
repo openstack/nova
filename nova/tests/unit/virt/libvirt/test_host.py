@@ -14,11 +14,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import uuid
-
 import eventlet
 from eventlet import greenthread
 import mock
+from oslo_utils import uuidutils
 import six
 
 from nova import exception
@@ -26,6 +25,7 @@ from nova import objects
 from nova.objects import fields as obj_fields
 from nova import test
 from nova.tests.unit.virt.libvirt import fakelibvirt
+from nova.tests import uuidsentinel as uuids
 from nova.virt import event
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import driver as libvirt_driver
@@ -43,7 +43,7 @@ class FakeVirtDomain(object):
     def __init__(self, id=-1, name=None):
         self._id = id
         self._name = name
-        self._uuid = str(uuid.uuid4())
+        self._uuid = uuidutils.generate_uuid()
 
     def name(self):
         return self._name
@@ -892,7 +892,7 @@ Active:          8381604 kB
                 return "instance000001"
 
             def UUIDString(self):
-                return str(uuid.uuid4())
+                return uuids.fake
 
         m = mock.mock_open(read_data="""
 MemTotal:       16194180 kB

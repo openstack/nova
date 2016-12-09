@@ -6708,14 +6708,15 @@ class ComputeTestCase(BaseTestCase):
         # these are the ones that are expired
         old_instances = []
         for x in range(4):
-            instance = {'uuid': str(uuid.uuid4()), 'created_at': created_at}
+            instance = {'uuid': uuidutils.generate_uuid(),
+                        'created_at': created_at}
             instance.update(filters)
             old_instances.append(fake_instance.fake_db_instance(**instance))
 
         # not expired
         instances = list(old_instances)  # copy the contents of old_instances
         new_instance = {
-            'uuid': str(uuid.uuid4()),
+            'uuid': uuids.fake,
             'created_at': timeutils.utcnow(),
         }
         sort_key = 'created_at'
@@ -7030,7 +7031,7 @@ class ComputeTestCase(BaseTestCase):
     def test_partial_deletion_raise_exception(self, mock_complete):
         admin_context = context.get_admin_context()
         instance = objects.Instance(admin_context)
-        instance.uuid = str(uuid.uuid4())
+        instance.uuid = uuids.fake
         instance.vm_state = vm_states.DELETED
         instance.deleted = False
         instance.host = self.compute.host
@@ -7909,7 +7910,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual([], instance.security_groups.objects)
 
     def test_default_hostname_generator(self):
-        fake_uuids = [str(uuid.uuid4()) for x in range(4)]
+        fake_uuids = [uuidutils.generate_uuid() for x in range(4)]
 
         orig_populate = self.compute_api._populate_instance_for_create
 
@@ -7938,7 +7939,7 @@ class ComputeAPITestCase(BaseTestCase):
                       self.fake_show)
 
         group = objects.InstanceGroup(self.context)
-        group.uuid = str(uuid.uuid4())
+        group.uuid = uuids.fake
         group.project_id = self.context.project_id
         group.user_id = self.context.user_id
         group.create()
@@ -9471,7 +9472,7 @@ class ComputeAPITestCase(BaseTestCase):
         # Tests that when deallocate_port_for_instance fails we log the failure
         # before exiting compute.detach_interface.
         nwinfo, port_id = self.test_attach_interface()
-        instance = objects.Instance(id=42, uuid=uuidutils.generate_uuid())
+        instance = objects.Instance(id=42, uuid=uuids.fake)
         instance.info_cache = objects.InstanceInfoCache.new(
             self.context, uuids.info_cache_instance)
         instance.info_cache.network_info = network_model.NetworkInfo.hydrate(
@@ -11699,7 +11700,7 @@ class CheckConfigDriveTestCase(test.NoDBTestCase):
 
     def test_config_drive_bogus_values_raise(self):
         self._assertInvalid('asd')
-        self._assertInvalid(uuidutils.generate_uuid())
+        self._assertInvalid(uuids.fake)
 
 
 class CheckRequestedImageTestCase(test.TestCase):
@@ -11794,12 +11795,12 @@ class CheckRequestedImageTestCase(test.TestCase):
         # disk.
         # We should allow a root volume created from an image whose min_disk is
         # larger than the flavor root disk.
-        image_uuid = str(uuid.uuid4())
+        image_uuid = uuids.fake
         image = dict(id=image_uuid, status='active',
                      size=self.instance_type.root_gb * units.Gi,
                      min_disk=self.instance_type.root_gb + 1)
 
-        volume_uuid = str(uuid.uuid4())
+        volume_uuid = uuids.fake_2
         root_bdm = block_device_obj.BlockDeviceMapping(
             source_type='volume', destination_type='volume',
             volume_id=volume_uuid, volume_size=self.instance_type.root_gb + 1)
@@ -11810,12 +11811,12 @@ class CheckRequestedImageTestCase(test.TestCase):
     def test_volume_blockdevicemapping_min_disk(self):
         # A bdm object volume smaller than the image's min_disk should not be
         # allowed
-        image_uuid = str(uuid.uuid4())
+        image_uuid = uuids.fake
         image = dict(id=image_uuid, status='active',
                      size=self.instance_type.root_gb * units.Gi,
                      min_disk=self.instance_type.root_gb + 1)
 
-        volume_uuid = str(uuid.uuid4())
+        volume_uuid = uuids.fake_2
         root_bdm = block_device_obj.BlockDeviceMapping(
             source_type='image', destination_type='volume',
             image_id=image_uuid, volume_id=volume_uuid,
@@ -11828,12 +11829,12 @@ class CheckRequestedImageTestCase(test.TestCase):
 
     def test_volume_blockdevicemapping_min_disk_no_size(self):
         # We should allow a root volume whose size is not given
-        image_uuid = str(uuid.uuid4())
+        image_uuid = uuids.fake
         image = dict(id=image_uuid, status='active',
                      size=self.instance_type.root_gb * units.Gi,
                      min_disk=self.instance_type.root_gb)
 
-        volume_uuid = str(uuid.uuid4())
+        volume_uuid = uuids.fake_2
         root_bdm = block_device_obj.BlockDeviceMapping(
             source_type='volume', destination_type='volume',
             volume_id=volume_uuid, volume_size=None)
@@ -11844,7 +11845,7 @@ class CheckRequestedImageTestCase(test.TestCase):
     def test_image_blockdevicemapping(self):
         # Test that we can succeed when passing bdms, and the root bdm isn't a
         # volume
-        image_uuid = str(uuid.uuid4())
+        image_uuid = uuids.fake
         image = dict(id=image_uuid, status='active',
                      size=self.instance_type.root_gb * units.Gi, min_disk=0)
 
@@ -11857,7 +11858,7 @@ class CheckRequestedImageTestCase(test.TestCase):
     def test_image_blockdevicemapping_too_big(self):
         # We should do a size check against flavor if we were passed bdms but
         # the root bdm isn't a volume
-        image_uuid = str(uuid.uuid4())
+        image_uuid = uuids.fake
         image = dict(id=image_uuid, status='active',
                      size=(self.instance_type.root_gb + 1) * units.Gi,
                      min_disk=0)
@@ -11873,7 +11874,7 @@ class CheckRequestedImageTestCase(test.TestCase):
     def test_image_blockdevicemapping_min_disk(self):
         # We should do a min_disk check against flavor if we were passed bdms
         # but the root bdm isn't a volume
-        image_uuid = str(uuid.uuid4())
+        image_uuid = uuids.fake
         image = dict(id=image_uuid, status='active',
                      size=0, min_disk=self.instance_type.root_gb + 1)
 

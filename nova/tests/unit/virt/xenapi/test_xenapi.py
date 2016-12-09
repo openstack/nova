@@ -21,7 +21,6 @@ import copy
 import functools
 import os
 import re
-import uuid
 
 import mock
 from mox3 import mox
@@ -30,6 +29,7 @@ from oslo_config import fixture as config_fixture
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
+from oslo_utils import uuidutils
 import six
 import testtools
 
@@ -1549,7 +1549,7 @@ iface eth0 inet6 static
     def _create_instance(self, spawn=True, obj=False, **attrs):
         """Creates and spawns a test instance."""
         instance_values = {
-            'uuid': str(uuid.uuid4()),
+            'uuid': uuidutils.generate_uuid(),
             'display_name': 'host-',
             'project_id': self.project_id,
             'user_id': self.user_id,
