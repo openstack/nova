@@ -856,6 +856,25 @@ def no_assert_true_false_is_not(logical_line):
                "Use assertIs(A, B) or assertIsNot(A, B) instead")
 
 
+def check_uuid4(logical_line):
+    """Generating UUID
+
+    Use oslo_utils.uuidutils or uuidsentinel(in case of test cases) to generate
+    UUID instead of uuid4().
+
+    N357
+    """
+
+    msg = ("N357: Use oslo_utils.uuidutils or uuidsentinel(in case of test "
+           "cases) to generate UUID instead of uuid4().")
+
+    if "uuid4()." in logical_line:
+        return
+
+    if "uuid4()" in logical_line:
+        yield (0, msg)
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -899,3 +918,4 @@ def factory(register):
     register(check_delayed_string_interpolation)
     register(no_assert_equal_true_false)
     register(no_assert_true_false_is_not)
+    register(check_uuid4)

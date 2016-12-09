@@ -67,6 +67,8 @@ Nova Specific Commandments
 - [N354] String interpolation should be delayed at logging calls.
 - [N355] Enforce use of assertTrue/assertFalse
 - [N356] Enforce use of assertIs/assertIsNot
+- [N357] Use oslo_utils.uuidutils or uuidsentinel(in case of test cases) to
+  generate UUID instead of uuid4().
 
 Creating Unit Tests
 -------------------
