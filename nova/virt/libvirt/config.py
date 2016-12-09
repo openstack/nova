@@ -2166,6 +2166,33 @@ class LibvirtConfigGuest(LibvirtConfigObject):
 
         return root
 
+    def _parse_os(self, xmldoc):
+        # smbios is skipped just because LibvirtConfigGuestSMBIOS
+        # does not implement parse_dom method
+        for c in xmldoc.getchildren():
+            if c.tag == 'type':
+                self.os_type = c.text
+                self.os_mach_type = c.get('machine')
+            elif c.tag == 'kernel':
+                self.os_kernel = c.text
+            elif c.tag == 'loader':
+                self.os_loader = c.text
+                if c.get('type') == 'pflash':
+                    self.os_loader_type = 'pflash'
+            elif c.tag == 'initrd':
+                self.os_initrd = c.text
+            elif c.tag == 'cmdline':
+                self.os_cmdline = c.text
+            elif c.tag == 'root':
+                self.os_root = c.text
+            elif c.tag == 'init':
+                self.os_init_path = c.text
+            elif c.tag == 'boot':
+                self.os_boot_dev.append(c.get('dev'))
+            elif c.tag == 'bootmenu':
+                if c.get('enable') == 'yes':
+                    self.os_bootmenu = True
+
     def parse_dom(self, xmldoc):
         # Note: This cover only for: LibvirtConfigGuestDisks
         #                            LibvirtConfigGuestHostdevPCI
@@ -2207,6 +2234,8 @@ class LibvirtConfigGuest(LibvirtConfigObject):
                 for p in c.getchildren():
                     if p.get('enabled') and p.get('enabled') == 'yes':
                         self.add_perf_event(p.get('name'))
+            elif c.tag == 'os':
+                self._parse_os(c)
 
     def add_device(self, dev):
         self.devices.append(dev)

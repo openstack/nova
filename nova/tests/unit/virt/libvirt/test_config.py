@@ -2280,6 +2280,65 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
 
         self.assertEqual(['cmt'], obj.perf_events)
 
+    def test_ConfigGuest_parse_os(self):
+        xmldoc = """
+          <domain type="kvm">
+            <os>
+              <type machine="fake_machine_type">hvm</type>
+              <kernel>/tmp/vmlinuz</kernel>
+              <loader>/usr/lib/xen/boot/hvmloader</loader>
+              <initrd>/tmp/ramdisk</initrd>
+              <cmdline>console=xvc0</cmdline>
+              <root>root=xvda</root>
+              <init>/sbin/init</init>
+              <boot dev="hd"/>
+              <boot dev="cdrom"/>
+              <boot dev="fd"/>
+              <bootmenu enable="yes"/>
+              <smbios mode="sysinfo"/>
+            </os>
+          </domain>
+        """
+        obj = config.LibvirtConfigGuest()
+        obj.parse_str(xmldoc)
+
+        self.assertEqual('hvm', obj.os_type)
+        self.assertEqual('fake_machine_type', obj.os_mach_type)
+        self.assertEqual('/tmp/vmlinuz', obj.os_kernel)
+        self.assertEqual('/usr/lib/xen/boot/hvmloader', obj.os_loader)
+        self.assertIsNone(obj.os_loader_type)
+        self.assertEqual('/tmp/ramdisk', obj.os_initrd)
+        self.assertEqual('console=xvc0', obj.os_cmdline)
+        self.assertEqual('root=xvda', obj.os_root)
+        self.assertEqual('/sbin/init', obj.os_init_path)
+        self.assertEqual(['hd', 'cdrom', 'fd'], obj.os_boot_dev)
+        self.assertTrue(obj.os_bootmenu)
+        self.assertIsNone(obj.os_smbios)
+
+        xmldoc = """
+          <domain>
+            <os>
+              <type>x86_64</type>
+              <loader readonly='yes' type='pflash'>/tmp/OVMF_CODE.fd</loader>
+            </os>
+          </domain>
+        """
+        obj = config.LibvirtConfigGuest()
+        obj.parse_str(xmldoc)
+
+        self.assertEqual('x86_64', obj.os_type)
+        self.assertIsNone(obj.os_mach_type)
+        self.assertIsNone(obj.os_kernel)
+        self.assertEqual('/tmp/OVMF_CODE.fd', obj.os_loader)
+        self.assertEqual('pflash', obj.os_loader_type)
+        self.assertIsNone(obj.os_initrd)
+        self.assertIsNone(obj.os_cmdline)
+        self.assertIsNone(obj.os_root)
+        self.assertIsNone(obj.os_init_path)
+        self.assertEqual([], obj.os_boot_dev)
+        self.assertFalse(obj.os_bootmenu)
+        self.assertIsNone(obj.os_smbios)
+
 
 class LibvirtConfigGuestSnapshotTest(LibvirtConfigBaseTest):
 
