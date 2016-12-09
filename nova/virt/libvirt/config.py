@@ -1084,6 +1084,26 @@ class LibvirtConfigGuestFilesys(LibvirtConfigGuestDevice):
 
         return dev
 
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigGuestFilesys, self).parse_dom(xmldoc)
+
+        self.source_type = xmldoc.get('type')
+
+        for c in xmldoc.getchildren():
+            if c.tag == 'driver':
+                if self.source_type == 'file':
+                    self.driver_type = c.get('type')
+                    self.driver_format = c.get('format')
+            elif c.tag == 'source':
+                if self.source_type == 'file':
+                    self.source_file = c.get('file')
+                elif self.source_type == 'block':
+                    self.source_dev = c.get('dev')
+                else:
+                    self.source_dir = c.get('dir')
+            elif c.tag == 'target':
+                self.target_dir = c.get('dir')
+
 
 class LibvirtConfigGuestDiskMirror(LibvirtConfigObject):
 
@@ -2196,6 +2216,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
     def parse_dom(self, xmldoc):
         self.virt_type = xmldoc.get('type')
         # Note: This cover only for: LibvirtConfigGuestDisks
+        #                            LibvirtConfigGuestFilesys
         #                            LibvirtConfigGuestHostdevPCI
         #                            LibvirtConfigGuestInterface
         #                            LibvirtConfigGuestUidMap
@@ -2206,6 +2227,10 @@ class LibvirtConfigGuest(LibvirtConfigObject):
                 for d in c.getchildren():
                     if d.tag == 'disk':
                         obj = LibvirtConfigGuestDisk()
+                        obj.parse_dom(d)
+                        self.devices.append(obj)
+                    elif d.tag == 'filesystem':
+                        obj = LibvirtConfigGuestFilesys()
                         obj.parse_dom(d)
                         self.devices.append(obj)
                     elif d.tag == 'hostdev' and d.get('type') == 'pci':
