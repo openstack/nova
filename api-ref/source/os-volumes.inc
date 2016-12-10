@@ -8,7 +8,7 @@
 
    These APIs are proxy calls to the Volume service. Nova has
    deprecated all the proxy APIs and users should use the native APIs
-   instead. These will fail with a 404 after microversion 2.35.
+   instead. These will fail with a 404 starting from microversion 2.36.
    See: `Relevant Volume APIs
    <http://developer.openstack.org/api-ref-blockstorage-v2.html#volumes-v2-volumes>`__.
 

@@ -16,7 +16,7 @@
              proxies, this is far from perfect compatibility. These
              APIs should be avoided in new applications in favor of
              using ``neutron`` directly. These will fail with a 404
-             after microversion 2.35.
+             starting from microversion 2.36.
              See: `Relevant Network APIs
              <http://developer.openstack.org/api-ref-networking-v2.html#networks>`__.
 
