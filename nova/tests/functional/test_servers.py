@@ -19,6 +19,7 @@ import zlib
 
 import mock
 from oslo_log import log as logging
+from oslo_serialization import base64
 from oslo_utils import timeutils
 
 from nova.compute import api as compute_api
@@ -475,14 +476,14 @@ class ServersTest(ServersTestBase):
         data = 'Hello, World!'
         personality.append({
             'path': '/helloworld.txt',
-            'contents': data.encode('base64'),
+            'contents': base64.encode_as_bytes(data),
         })
 
         # Inject a binary file
         data = zlib.compress('Hello, World!')
         personality.append({
             'path': '/helloworld.zip',
-            'contents': data.encode('base64'),
+            'contents': base64.encode_as_bytes(data),
         })
 
         # Create server
