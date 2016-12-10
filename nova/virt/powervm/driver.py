@@ -31,6 +31,7 @@ from nova import conf as cfg
 from nova.console import type as console_type
 from nova import exception as exc
 from nova import image
+from nova.virt import configdrive
 from nova.virt import driver
 from nova.virt.powervm.disk import ssp
 from nova.virt.powervm import host as pvm_host
@@ -187,7 +188,12 @@ class PowerVMDriver(driver.ComputeDriver):
         flow_spawn.add(tf_stg.AttachDisk(
             self.disk_dvr, instance, stg_ftsk=stg_ftsk))
 
-        # TODO(thorst, efried) Add the config drive
+        # If the config drive is needed, add those steps.  Should be done
+        # after all the other I/O.
+        if configdrive.required_by(instance):
+            flow_spawn.add(tf_stg.CreateAndConnectCfgDrive(
+                self.adapter, instance, injected_files, network_info,
+                stg_ftsk, admin_pass=admin_password))
 
         # Add the transaction manager flow at the end of the 'I/O
         # connection' tasks. This will run all the connections in parallel.
@@ -227,11 +233,25 @@ class PowerVMDriver(driver.ComputeDriver):
             flow.add(tf_vm.PowerOff(self.adapter, instance,
                                     force_immediate=destroy_disks))
             # TODO(thorst, efried) Add unplug vifs task
-            # TODO(thorst, efried) Add config drive tasks
+
+            # The FeedTask accumulates storage disconnection tasks to be run in
+            # parallel.
+            stg_ftsk = pvm_par.build_active_vio_feed_task(
+                self.adapter, xag=[pvm_const.XAG.VIO_SMAP])
+
+            # Add the disconnect/deletion of the vOpt to the transaction
+            # manager.
+            if configdrive.required_by(instance):
+                flow.add(tf_stg.DeleteVOpt(
+                    self.adapter, instance, stg_ftsk=stg_ftsk))
+
             # TODO(thorst, efried) Add volume disconnect tasks
 
             # Detach the disk storage adapters
             flow.add(tf_stg.DetachDisk(self.disk_dvr, instance))
+
+            # Accumulated storage disconnection tasks next
+            flow.add(stg_ftsk)
 
             # Delete the storage disks
             if destroy_disks:

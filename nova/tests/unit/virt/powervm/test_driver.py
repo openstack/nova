@@ -111,21 +111,26 @@ class TestPowerVMDriver(test.NoDBTestCase):
         mock_bhrfm.assert_called_once_with('sys')
         self.assertEqual('sys', self.drv.host_wrapper)
 
+    @mock.patch('nova.virt.powervm.media.ConfigDrivePowerVM')
+    @mock.patch('nova.virt.configdrive.required_by')
     @mock.patch('nova.virt.powervm.vm.create_lpar')
     @mock.patch('pypowervm.tasks.partition.build_active_vio_feed_task',
                 autospec=True)
     @mock.patch('pypowervm.tasks.storage.add_lpar_storage_scrub_tasks',
                 autospec=True)
-    def test_spawn_ops(self, mock_scrub, mock_bldftsk, mock_crt_lpar):
+    def test_spawn_ops(self, mock_scrub, mock_bldftsk, mock_crt_lpar,
+                       mock_cdrb, mock_cfg_drv):
         """Validates the 'typical' spawn flow of the spawn of an instance. """
-        self.drv.host_wrapper = 'sys'
+        mock_cdrb.return_value = True
+        self.drv.host_wrapper = mock.Mock(uuid='host_uuid')
         self.drv.disk_dvr = mock.create_autospec(ssp.SSPDiskAdapter,
                                                  instance=True)
         mock_ftsk = pvm_tx.FeedTask('fake', [mock.Mock(spec=pvm_vios.VIOS)])
         mock_bldftsk.return_value = mock_ftsk
-        self.drv.spawn(
-            'context', self.inst, 'img_meta', 'files', 'password', {})
-        mock_crt_lpar.assert_called_once_with(self.adp, 'sys', self.inst)
+        self.drv.spawn('context', self.inst, 'img_meta', 'files', 'password',
+                       'allocs', network_info='netinfo')
+        mock_crt_lpar.assert_called_once_with(
+            self.adp, self.drv.host_wrapper, self.inst)
         mock_bldftsk.assert_called_once_with(
             self.adp, xag={pvm_const.XAG.VIO_SMAP, pvm_const.XAG.VIO_FMAP})
         mock_scrub.assert_called_once_with(
@@ -135,23 +140,82 @@ class TestPowerVMDriver(test.NoDBTestCase):
         self.drv.disk_dvr.attach_disk.assert_called_once_with(
             self.inst, self.drv.disk_dvr.create_disk_from_image.return_value,
             mock_ftsk)
+        mock_cfg_drv.assert_called_once_with(self.adp)
+        mock_cfg_drv.return_value.create_cfg_drv_vopt.assert_called_once_with(
+            self.inst, 'files', 'netinfo', mock_ftsk, admin_pass='password')
         self.pwron.assert_called_once_with(self.adp, self.inst)
 
+        mock_cfg_drv.reset_mock()
+
+        # No config drive
+        mock_cdrb.return_value = False
+        self.drv.spawn('context', self.inst, 'img_meta', 'files', 'password',
+                       'allocs')
+        mock_cfg_drv.assert_not_called()
+
     @mock.patch('nova.virt.powervm.vm.delete_lpar')
-    def test_destroy(self, mock_dlt_lpar):
+    @mock.patch('nova.virt.powervm.media.ConfigDrivePowerVM')
+    @mock.patch('nova.virt.configdrive.required_by')
+    @mock.patch('pypowervm.tasks.partition.build_active_vio_feed_task',
+                autospec=True)
+    def test_destroy(self, mock_bldftsk, mock_cdrb, mock_cfgdrv,
+                     mock_dlt_lpar):
         """Validates PowerVM destroy."""
+        self.drv.host_wrapper = mock.Mock(uuid='host_uuid')
         self.drv.disk_dvr = mock.create_autospec(ssp.SSPDiskAdapter,
                                                  instance=True)
-        # Good path
+        mock_ftsk = pvm_tx.FeedTask('fake', [mock.Mock(spec=pvm_vios.VIOS)])
+        mock_bldftsk.return_value = mock_ftsk
+
+        # Good path, with config drive, destroy disks
+        mock_cdrb.return_value = True
         self.drv.destroy('context', self.inst, [], block_device_info={})
         self.pwroff.assert_called_once_with(
             self.adp, self.inst, force_immediate=True)
-        self.drv.disk_dvr.detach_disk.assert_called_once_with(self.inst)
+        mock_bldftsk.assert_called_once_with(
+            self.adp, xag=[pvm_const.XAG.VIO_SMAP])
+        mock_cdrb.assert_called_once_with(self.inst)
+        mock_cfgdrv.assert_called_once_with(self.adp)
+        mock_cfgdrv.return_value.dlt_vopt.assert_called_once_with(
+            self.inst, stg_ftsk=mock_bldftsk.return_value)
+        self.drv.disk_dvr.detach_disk.assert_called_once_with(
+            self.inst)
         self.drv.disk_dvr.delete_disks.assert_called_once_with(
             self.drv.disk_dvr.detach_disk.return_value)
         mock_dlt_lpar.assert_called_once_with(self.adp, self.inst)
 
         self.pwroff.reset_mock()
+        mock_bldftsk.reset_mock()
+        mock_cdrb.reset_mock()
+        mock_cfgdrv.reset_mock()
+        self.drv.disk_dvr.detach_disk.reset_mock()
+        self.drv.disk_dvr.delete_disks.reset_mock()
+        mock_dlt_lpar.reset_mock()
+
+        # No config drive, preserve disks
+        mock_cdrb.return_value = False
+        self.drv.destroy('context', self.inst, [], block_device_info={},
+                         destroy_disks=False)
+        mock_cfgdrv.return_value.dlt_vopt.assert_not_called()
+        self.drv.disk_dvr.delete_disks.assert_not_called()
+
+        # Non-forced power_off, since preserving disks
+        self.pwroff.assert_called_once_with(
+            self.adp, self.inst, force_immediate=False)
+        mock_bldftsk.assert_called_once_with(
+            self.adp, xag=[pvm_const.XAG.VIO_SMAP])
+        mock_cdrb.assert_called_once_with(self.inst)
+        mock_cfgdrv.assert_not_called()
+        mock_cfgdrv.return_value.dlt_vopt.assert_not_called()
+        self.drv.disk_dvr.detach_disk.assert_called_once_with(
+            self.inst)
+        self.drv.disk_dvr.delete_disks.assert_not_called()
+        mock_dlt_lpar.assert_called_once_with(self.adp, self.inst)
+
+        self.pwroff.reset_mock()
+        mock_bldftsk.reset_mock()
+        mock_cdrb.reset_mock()
+        mock_cfgdrv.reset_mock()
         self.drv.disk_dvr.detach_disk.reset_mock()
         self.drv.disk_dvr.delete_disks.reset_mock()
         mock_dlt_lpar.reset_mock()
@@ -175,6 +239,7 @@ class TestPowerVMDriver(test.NoDBTestCase):
         self.assertRaises(exception.InstanceTerminationFailure,
                           self.drv.destroy, 'context', self.inst, [],
                           block_device_info={})
+
         # Everything got called
         self.pwroff.assert_called_once_with(
             self.adp, self.inst, force_immediate=True)

@@ -17,6 +17,7 @@ from pypowervm import exceptions as pvm_exc
 from taskflow import task
 from taskflow.types import failure as task_fail
 
+from nova.virt.powervm import media
 
 LOG = logging.getLogger(__name__)
 
@@ -135,3 +136,72 @@ class DeleteDisk(task.Task):
 
     def execute(self, stor_adpt_mappings):
         self.disk_dvr.delete_disks(stor_adpt_mappings)
+
+
+class CreateAndConnectCfgDrive(task.Task):
+
+    """The task to create the configuration drive."""
+
+    def __init__(self, adapter, instance, injected_files,
+                 network_info, stg_ftsk, admin_pass=None):
+        """Create the Task that creates and connects the config drive.
+
+        Provides the 'cfg_drv_vscsi_map' which is an element to later map
+        the vscsi drive.
+
+        :param adapter: The adapter for the pypowervm API
+        :param instance: The nova instance
+        :param injected_files: A list of file paths that will be injected into
+                               the ISO.
+        :param network_info: The network_info from the nova spawn method.
+        :param stg_ftsk: FeedTask to defer storage connectivity operations.
+        :param admin_pass (Optional, Default None): Password to inject for the
+                                                    VM.
+        """
+        super(CreateAndConnectCfgDrive, self).__init__(instance, 'cfg_drive')
+        self.adapter = adapter
+        self.instance = instance
+        self.injected_files = injected_files
+        self.network_info = network_info
+        self.stg_ftsk = stg_ftsk
+        self.ad_pass = admin_pass
+        self.mb = None
+
+    def execute(self):
+        self.mb = media.ConfigDrivePowerVM(self.adapter)
+        self.mb.create_cfg_drv_vopt(self.instance, self.injected_files,
+                                    self.network_info, self.stg_ftsk,
+                                    admin_pass=self.ad_pass)
+
+    def revert(self, result, flow_failures):
+        # No media builder, nothing to do
+        if self.mb is None:
+            return
+
+        # Delete the virtual optical media. We don't care if it fails
+        try:
+            self.mb.dlt_vopt(self.instance, self.stg_ftsk)
+        except pvm_exc.Error:
+            LOG.exception('VOpt removal (as part of reversion) failed.',
+                instance=self.instance)
+
+
+class DeleteVOpt(task.Task):
+
+    """The task to delete the virtual optical."""
+
+    def __init__(self, adapter, instance, stg_ftsk=None):
+        """Creates the Task to delete the instance's virtual optical media.
+
+        :param adapter: The adapter for the pypowervm API
+        :param instance: The nova instance.
+        :param stg_ftsk: FeedTask to defer storage connectivity operations.
+        """
+        super(DeleteVOpt, self).__init__(instance, 'vopt_delete')
+        self.adapter = adapter
+        self.instance = instance
+        self.stg_ftsk = stg_ftsk
+
+    def execute(self):
+        media_builder = media.ConfigDrivePowerVM(self.adapter)
+        media_builder.dlt_vopt(self.instance, stg_ftsk=self.stg_ftsk)
