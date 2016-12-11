@@ -12,6 +12,9 @@ The content returned may be large. Limit the lines of console
 text, beginning at the tail of the content, by setting
 the optional ``length`` parameter in the request body.
 
+The server to get console log from should set
+``export LC_ALL=en_US.UTF-8`` in order to avoid incorrect unicode error.
+
 Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403),
