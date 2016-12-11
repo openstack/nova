@@ -12,7 +12,6 @@ nova.tests.unit.compute.test_compute_cells.CellsComputeAPITestCase.test_create_w
 nova.tests.unit.compute.test_compute_mgr.ComputeManagerUnitTestCase.test_run_pending_deletes
 nova.tests.unit.compute.test_host_api.ComputeHostAPICellsTestCase
 nova.tests.unit.network.test_manager.LdapDNSTestCase
-nova.tests.unit.test_bdm.BlockDeviceMappingEc2CloudTestCase
 nova.tests.unit.test_matchers.TestDictMatches.test__str__
 nova.tests.unit.test_wsgi.TestWSGIServerWithSSL
 nova.tests.unit.virt.libvirt.storage.test_rbd.RbdTestCase
