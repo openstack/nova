@@ -25,7 +25,6 @@ import sys
 
 from cinderclient import client as cinder_client
 from cinderclient import exceptions as cinder_exception
-from cinderclient.v1 import client as v1_client
 from keystoneauth1 import exceptions as keystone_exception
 from keystoneauth1 import loading as ks_loading
 from oslo_log import log as logging
@@ -47,7 +46,6 @@ CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 _SESSION = None
-_V1_ERROR_RAISED = False
 
 
 def reset_globals():
@@ -59,7 +57,6 @@ def reset_globals():
 
 def cinderclient(context):
     global _SESSION
-    global _V1_ERROR_RAISED
 
     if not _SESSION:
         _SESSION = ks_loading.load_session_from_conf_options(
@@ -87,13 +84,8 @@ def cinderclient(context):
     # values.
     version = cinder_client.get_volume_api_from_url(url)
 
-    if version == '1' and not _V1_ERROR_RAISED:
-        msg = _LW('Cinder V1 API is deprecated as of the Juno '
-                  'release, and Nova is still configured to use it. '
-                  'Enable the V2 API in Cinder and set '
-                  'cinder.catalog_info in nova.conf to use it.')
-        LOG.warning(msg)
-        _V1_ERROR_RAISED = True
+    if version == '1':
+        raise exception.UnsupportedCinderAPIVersion(version=version)
 
     return cinder_client.Client(version,
                                 session=_SESSION,
@@ -132,14 +124,8 @@ def _untranslate_volume_summary_view(context, vol):
         d['attach_status'] = 'attached'
     else:
         d['attach_status'] = 'detached'
-    # NOTE(dzyu) volume(cinder) v2 API uses 'name' instead of 'display_name',
-    # and use 'description' instead of 'display_description' for volume.
-    if hasattr(vol, 'display_name'):
-        d['display_name'] = vol.display_name
-        d['display_description'] = vol.display_description
-    else:
-        d['display_name'] = vol.name
-        d['display_description'] = vol.description
+    d['display_name'] = vol.name
+    d['display_description'] = vol.description
     # TODO(jdg): Information may be lost in this translation
     d['volume_type_id'] = vol.volume_type
     d['snapshot_id'] = vol.snapshot_id
@@ -163,15 +149,8 @@ def _untranslate_snapshot_summary_view(context, snapshot):
     d['progress'] = snapshot.progress
     d['size'] = snapshot.size
     d['created_at'] = snapshot.created_at
-
-    # NOTE(dzyu) volume(cinder) v2 API uses 'name' instead of 'display_name',
-    # 'description' instead of 'display_description' for snapshot.
-    if hasattr(snapshot, 'display_name'):
-        d['display_name'] = snapshot.display_name
-        d['display_description'] = snapshot.display_description
-    else:
-        d['display_name'] = snapshot.name
-        d['display_description'] = snapshot.description
+    d['display_name'] = snapshot.name
+    d['display_description'] = snapshot.description
 
     d['volume_id'] = snapshot.volume_id
     d['project_id'] = snapshot.project_id
@@ -438,14 +417,9 @@ class API(object):
                       project_id=context.project_id,
                       availability_zone=availability_zone,
                       metadata=metadata,
-                      imageRef=image_id)
-
-        if isinstance(client, v1_client.Client):
-            kwargs['display_name'] = name
-            kwargs['display_description'] = description
-        else:
-            kwargs['name'] = name
-            kwargs['description'] = description
+                      imageRef=image_id,
+                      name=name,
+                      description=description)
 
         item = client.volumes.create(size, **kwargs)
         return _untranslate_volume_summary_view(context, item)

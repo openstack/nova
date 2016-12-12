@@ -141,6 +141,10 @@ class CinderConnectionFailed(NovaException):
     msg_fmt = _("Connection to cinder host failed: %(reason)s")
 
 
+class UnsupportedCinderAPIVersion(NovaException):
+    msg_fmt = _('Nova does not support Cinder API version %(version)s')
+
+
 class Forbidden(NovaException):
     msg_fmt = _("Forbidden")
     code = 403

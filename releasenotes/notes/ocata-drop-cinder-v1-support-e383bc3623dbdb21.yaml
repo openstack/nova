@@ -1,0 +1,3 @@
+---
+upgrade:
+  - Nova no longer supports the deprecated Cinder v1 API.
