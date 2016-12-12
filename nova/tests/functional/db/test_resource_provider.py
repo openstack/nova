@@ -521,7 +521,7 @@ class ResourceProviderListTestCase(ResourceProviderBaseCase):
             self.context)
         self.assertEqual(2, len(resource_providers))
         resource_providers = objects.ResourceProviderList.get_all_by_filters(
-            self.context, filters={'name': 'rp_name_1'})
+            self.context, filters={'name': u'rp_name_1'})
         self.assertEqual(1, len(resource_providers))
         resource_providers = objects.ResourceProviderList.get_all_by_filters(
             self.context, filters={'can_host': 1})
@@ -608,7 +608,7 @@ class ResourceProviderListTestCase(ResourceProviderBaseCase):
         # We also want to verify that asking for a specific RP can also be
         # checking the resource usage.
         resource_providers = objects.ResourceProviderList.get_all_by_filters(
-            self.context, {'name': 'rp_name_1',
+            self.context, {'name': u'rp_name_1',
                            'resources': {fields.ResourceClass.VCPU: 1}})
         self.assertEqual(1, len(resource_providers))
 
