@@ -22,6 +22,7 @@ from nova import exception
 from nova.tests.unit.virt.xenapi import stubs
 from nova import version
 from nova.virt.xenapi.client import session
+from nova.virt.xenapi import fake as xenapi_fake
 
 
 class SessionTestCase(stubs.XenAPITestBaseNoDB):
@@ -204,6 +205,7 @@ class CallPluginTestCase(stubs.XenAPITestBaseNoDB):
             def __init__(self, **kwargs):
                 "Skip the superclass's dirty init"
                 self.XenAPI = mock.MagicMock()
+                self.XenAPI.Failure = xenapi_fake.Failure
 
         return FakeXapiSession()
 
