@@ -19,7 +19,10 @@ Stubouts for the test suite
 
 from oslo_vmware import exceptions as vexc
 
+import nova.conf
 from nova.tests.unit.virt.vmwareapi import fake
+
+CONF = nova.conf.CONF
 
 
 def fake_get_vim_object(arg):
@@ -75,3 +78,7 @@ def set_stubs(test):
                   fake_vim_prop)
     test.stub_out('nova.virt.vmwareapi.driver.VMwareAPISession._is_vim_object',
                   fake_is_vim_object)
+    if CONF.use_neutron:
+        test.stub_out(
+            'nova.network.neutronv2.api.API.update_instance_vnic_index',
+            lambda *args, **kwargs: None)

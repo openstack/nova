@@ -2158,7 +2158,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         vif_bridge_neutron = network_model.VIF(id='new-vif-xxx-yyy-zzz',
                                                address='ca:fe:de:ad:be:ef',
                                                network=network_neutron,
-                                               type=None,
+                                               type=network_model.VIF_TYPE_OVS,
                                                devname='tap-xxx-yyy-zzz',
                                                ovs_interfaceid='aaa-bbb-ccc')
         return vif_bridge_neutron
