@@ -36,7 +36,7 @@ def upgrade(migrate_engine):
     # Two mappings are required at a minimum, cell0 and your first cell
     if count < 2:
         msg = _('Cell mappings are not created, but required for Ocata. '
-                'Please run nova-manage db simple_cell_setup before '
+                'Please run nova-manage cell_v2 simple_cell_setup before '
                 'continuing.')
         raise exception.ValidationError(detail=msg)
 
@@ -44,14 +44,14 @@ def upgrade(migrate_engine):
         cell_mappings.c.uuid == objects.CellMapping.CELL0_UUID).scalar()
     if count != 1:
         msg = _('A mapping for Cell0 was not found, but is required for '
-                'Ocata. Please run nova-manage db simple_cell_setup before '
-                'continuing.')
+                'Ocata. Please run nova-manage cell_v2 simple_cell_setup '
+                'before continuing.')
         raise exception.ValidationError(detail=msg)
 
     host_mappings = Table('host_mappings', meta, autoload=True)
     count = select([func.count()]).select_from(host_mappings).scalar()
     if count == 0:
         msg = _('No host mappings were found, but are required for Ocata. '
-                'Please run nova-manage db simple_cell_setup before '
+                'Please run nova-manage cell_v2 simple_cell_setup before '
                 'continuing.')
         raise exception.ValidationError(detail=msg)
