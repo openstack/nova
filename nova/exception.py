@@ -1654,10 +1654,6 @@ class InstanceGroupMemberNotFound(NotFound):
                 "id %(instance_id)s.")
 
 
-class InstanceGroupPolicyNotFound(NotFound):
-    msg_fmt = _("Instance group %(group_uuid)s has no policy %(policy)s.")
-
-
 class InstanceGroupSaveException(NovaException):
     msg_fmt = _("%(field)s should not be part of the updates.")
 
