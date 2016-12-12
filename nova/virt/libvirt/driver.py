@@ -4800,6 +4800,15 @@ class LibvirtDriver(driver.ComputeDriver):
         return [('network-vif-plugged', vif['id'])
                 for vif in network_info if vif.get('active', True) is False]
 
+    def _cleanup_failed_start(self, context, instance, network_info,
+                              block_device_info, guest):
+        try:
+            if guest and guest.is_active():
+                guest.poweroff()
+        finally:
+            self.cleanup(context, instance, network_info=network_info,
+                         block_device_info=block_device_info)
+
     def _create_domain_and_network(self, context, xml, instance, network_info,
                                    disk_info, block_device_info=None,
                                    power_on=True, reboot=False,
@@ -4855,21 +4864,24 @@ class LibvirtDriver(driver.ComputeDriver):
             # Neutron reported failure and we didn't swallow it, so
             # bail here
             with excutils.save_and_reraise_exception():
-                if guest:
-                    guest.poweroff()
-                self.cleanup(context, instance, network_info=network_info,
-                             block_device_info=block_device_info)
+                self._cleanup_failed_start(context, instance, network_info,
+                                           block_device_info, guest)
         except eventlet.timeout.Timeout:
             # We never heard from Neutron
             LOG.warning(_LW('Timeout waiting for vif plugging callback for '
                          'instance %(uuid)s'), {'uuid': instance.uuid},
                      instance=instance)
             if CONF.vif_plugging_is_fatal:
-                if guest:
-                    guest.poweroff()
-                self.cleanup(context, instance, network_info=network_info,
-                             block_device_info=block_device_info)
+                self._cleanup_failed_start(context, instance, network_info,
+                                           block_device_info, guest)
                 raise exception.VirtualInterfaceCreateException()
+        except Exception:
+            # Any other error, be sure to clean up
+            LOG.error(_LE('Failed to start libvirt guest'),
+                      instance=instance)
+            with excutils.save_and_reraise_exception():
+                self._cleanup_failed_start(context, instance, network_info,
+                                           block_device_info, guest)
 
         # Resume only if domain has been paused
         if pause:

@@ -14166,6 +14166,60 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_create_with_network_events_non_neutron(self, is_neutron):
         self._test_create_with_network_events()
 
+    def test_create_with_other_error(self):
+        drvr = libvirt_driver.LibvirtDriver(mock.MagicMock(), False)
+
+        @mock.patch.object(drvr, 'plug_vifs')
+        @mock.patch.object(drvr, 'firewall_driver')
+        @mock.patch.object(drvr, '_create_domain')
+        @mock.patch.object(drvr, '_cleanup_failed_start')
+        def the_test(mock_cleanup, mock_create, mock_fw, mock_plug):
+            instance = objects.Instance(**self.test_instance)
+            mock_create.side_effect = test.TestingException
+            self.assertRaises(test.TestingException,
+                              drvr._create_domain_and_network,
+                              self.context, 'xml', instance, [], None)
+            mock_cleanup.assert_called_once_with(self.context, instance,
+                                                 [], None, None)
+
+        the_test()
+
+    def test_cleanup_failed_start_no_guest(self):
+        drvr = libvirt_driver.LibvirtDriver(mock.MagicMock(), False)
+        with mock.patch.object(drvr, 'cleanup') as mock_cleanup:
+            drvr._cleanup_failed_start(None, None, None, None, None)
+            self.assertTrue(mock_cleanup.called)
+
+    def test_cleanup_failed_start_inactive_guest(self):
+        drvr = libvirt_driver.LibvirtDriver(mock.MagicMock(), False)
+        guest = mock.MagicMock()
+        guest.is_active.return_value = False
+        with mock.patch.object(drvr, 'cleanup') as mock_cleanup:
+            drvr._cleanup_failed_start(None, None, None, None, guest)
+            self.assertTrue(mock_cleanup.called)
+            self.assertFalse(guest.poweroff.called)
+
+    def test_cleanup_failed_start_active_guest(self):
+        drvr = libvirt_driver.LibvirtDriver(mock.MagicMock(), False)
+        guest = mock.MagicMock()
+        guest.is_active.return_value = True
+        with mock.patch.object(drvr, 'cleanup') as mock_cleanup:
+            drvr._cleanup_failed_start(None, None, None, None, guest)
+            self.assertTrue(mock_cleanup.called)
+            self.assertTrue(guest.poweroff.called)
+
+    def test_cleanup_failed_start_failed_poweroff(self):
+        drvr = libvirt_driver.LibvirtDriver(mock.MagicMock(), False)
+        guest = mock.MagicMock()
+        guest.is_active.return_value = True
+        guest.poweroff.side_effect = test.TestingException
+        with mock.patch.object(drvr, 'cleanup') as mock_cleanup:
+            self.assertRaises(test.TestingException,
+                              drvr._cleanup_failed_start,
+                              None, None, None, None, guest)
+            self.assertTrue(mock_cleanup.called)
+            self.assertTrue(guest.poweroff.called)
+
     @mock.patch('nova.volume.encryptors.get_encryption_metadata')
     @mock.patch('nova.virt.libvirt.blockinfo.get_info_from_bdm')
     def test_create_with_bdm(self, get_info_from_bdm, get_encryption_metadata):
