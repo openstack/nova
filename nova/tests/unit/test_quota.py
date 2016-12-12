@@ -47,7 +47,8 @@ class QuotaIntegrationTestCase(test.TestCase):
                    network_manager='nova.network.manager.FlatDHCPManager')
 
         # Apparently needed by the RPC tests...
-        self.network = self.start_service('network')
+        self.network = self.start_service('network',
+                                          manager=CONF.network_manager)
 
         self.user_id = 'admin'
         self.project_id = 'admin'

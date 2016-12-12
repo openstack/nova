@@ -6,6 +6,7 @@ upgrade:
     options are removed.
 
     - ``metadata_manager``
+    - ``compute_manager``
     - ``console_manager``
     - ``consoleauth_manager``
     - ``cert_manager``

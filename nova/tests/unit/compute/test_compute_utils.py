@@ -22,10 +22,10 @@ import uuid
 
 import mock
 from oslo_serialization import jsonutils
-from oslo_utils import importutils
 import six
 
 from nova.compute import flavors
+from nova.compute import manager
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
@@ -400,7 +400,7 @@ class UsageInfoTestCase(test.TestCase):
 
         self.flags(compute_driver='fake.FakeDriver',
                    network_manager='nova.network.manager.FlatManager')
-        self.compute = importutils.import_object(CONF.compute_manager)
+        self.compute = manager.ComputeManager()
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)

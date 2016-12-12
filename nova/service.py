@@ -48,6 +48,7 @@ LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
 
 SERVICE_MANAGERS = {
+    'nova-compute': 'nova.compute.manager.ComputeManager',
     'nova-console': 'nova.console.manager.ConsoleProxyManager',
     'nova-consoleauth': 'nova.consoleauth.manager.ConsoleAuthManager',
     'nova-cert': 'nova.cert.manager.CertManager',
@@ -208,10 +209,6 @@ class Service(service.Service):
             topic = binary.rpartition('nova-')[2]
         if not manager:
             manager = SERVICE_MANAGERS.get(binary)
-            if manager is None:
-                manager_cls = ('%s_manager' %
-                               binary.rpartition('nova-')[2])
-                manager = CONF.get(manager_cls, None)
         if report_interval is None:
             report_interval = CONF.report_interval
         if periodic_enable is None:

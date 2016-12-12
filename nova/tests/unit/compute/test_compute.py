@@ -32,7 +32,6 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_utils import fixture as utils_fixture
-from oslo_utils import importutils
 from oslo_utils import timeutils
 from oslo_utils import units
 from oslo_utils import uuidutils
@@ -154,7 +153,7 @@ class BaseTestCase(test.TestCase):
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
 
-        self.compute = importutils.import_object(CONF.compute_manager)
+        self.compute = compute_manager.ComputeManager()
         # execute power syncing synchronously for testing:
         self.compute._sync_power_pool = eventlet_utils.SyncPool()
 
