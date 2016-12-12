@@ -21,6 +21,10 @@ import nova.test
 class NetworkAPIConfigTest(nova.test.NoDBTestCase):
     """Test the transition from legacy to use_neutron config options."""
 
+    def setUp(self):
+        super(NetworkAPIConfigTest, self).setUp()
+        self.flags(use_neutron=False)
+
     def test_default(self):
         netapi = nova.network.API()
         self.assertIsInstance(netapi, nova.network.api.API)

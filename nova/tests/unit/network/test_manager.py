@@ -2001,7 +2001,7 @@ class CommonNetworkTestCase(test.TestCase):
     def setUp(self):
         super(CommonNetworkTestCase, self).setUp()
         self.context = context.RequestContext('fake', 'fake')
-        self.flags(ipv6_backend='rfc2462')
+        self.flags(ipv6_backend='rfc2462', use_neutron=False)
         ipv6.reset_backend()
 
     def test_validate_instance_zone_for_dns_domain(self):
