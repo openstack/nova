@@ -2309,17 +2309,51 @@ def _tag_instance_filter(context, query, filters):
     return query
 
 
-def _get_regexp_op_for_connection(db_connection):
+def _db_connection_type(db_connection):
+    """Returns a lowercase symbol for the db type.
+
+    This is useful when we need to change what we are doing per DB
+    (like handling regexes). In a CellsV2 world it probably needs to
+    do something better than use the database configuration string.
+    """
+
     db_string = db_connection.split(':')[0].split('+')[0]
+    return db_string.lower()
+
+
+def _safe_regex_mysql(raw_string):
+    """Make regex safe to mysql.
+
+    Certain items like '|' are interpreted raw by mysql REGEX. If you
+    search for a single | then you trigger an error because it's
+    expecting content on either side.
+
+    For consistency sake we escape all '|'. This does mean we wouldn't
+    support something like foo|bar to match completely different
+    things, however, one can argue putting such complicated regex into
+    name search probably means you are doing this wrong.
+    """
+    return raw_string.replace('|', '\\|')
+
+
+def _get_regexp_ops(connection):
+    """Return safety filter and db opts for regex."""
     regexp_op_map = {
         'postgresql': '~',
         'mysql': 'REGEXP',
         'sqlite': 'REGEXP'
     }
-    return regexp_op_map.get(db_string, 'LIKE')
+    regex_safe_filters = {
+        'mysql': _safe_regex_mysql
+    }
+    db_type = _db_connection_type(connection)
+
+    return (regex_safe_filters.get(db_type, lambda x: x),
+            regexp_op_map.get(db_type, 'LIKE'))
 
 
 def _regex_instance_filter(query, filters):
+
     """Applies regular expression filtering to an Instance query.
 
     Returns the updated query.
@@ -2329,7 +2363,7 @@ def _regex_instance_filter(query, filters):
     """
 
     model = models.Instance
-    db_regexp_op = _get_regexp_op_for_connection(CONF.database.connection)
+    safe_regex_filter, db_regexp_op = _get_regexp_ops(CONF.database.connection)
     for filter_name in filters:
         try:
             column_attr = getattr(model, filter_name)
@@ -2345,6 +2379,7 @@ def _regex_instance_filter(query, filters):
             query = query.filter(column_attr.op(db_regexp_op)(
                                  u'%' + filter_val + u'%'))
         else:
+            filter_val = safe_regex_filter(filter_val)
             query = query.filter(column_attr.op(db_regexp_op)(
                                  filter_val))
     return query

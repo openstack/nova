@@ -297,8 +297,8 @@ def _create_aggregate_with_hosts(context=context.get_admin_context(),
     return result
 
 
-@mock.patch.object(sqlalchemy_api, '_get_regexp_op_for_connection',
-        return_value='LIKE')
+@mock.patch.object(sqlalchemy_api, '_get_regexp_ops',
+        return_value=(lambda x: x, 'LIKE'))
 class UnsupportedDbRegexpTestCase(DbTestCase):
 
     def test_instance_get_all_by_filters_paginate(self, mock_get_regexp):
@@ -1090,21 +1090,25 @@ class SqlAlchemyDbApiNoDbTestCase(test.NoDBTestCase):
         self.assertEqual(test1, expected_dict)
 
     def test_get_regexp_op_for_database_sqlite(self):
-        op = sqlalchemy_api._get_regexp_op_for_connection('sqlite:///')
+        filter, op = sqlalchemy_api._get_regexp_ops('sqlite:///')
+        self.assertEqual('|', filter('|'))
         self.assertEqual('REGEXP', op)
 
     def test_get_regexp_op_for_database_mysql(self):
-        op = sqlalchemy_api._get_regexp_op_for_connection(
-                'mysql+pymysql://root@localhost')
+        filter, op = sqlalchemy_api._get_regexp_ops(
+                    'mysql+pymysql://root@localhost')
+        self.assertEqual('\\|', filter('|'))
         self.assertEqual('REGEXP', op)
 
     def test_get_regexp_op_for_database_postgresql(self):
-        op = sqlalchemy_api._get_regexp_op_for_connection(
-                'postgresql://localhost')
+        filter, op = sqlalchemy_api._get_regexp_ops(
+                    'postgresql://localhost')
+        self.assertEqual('|', filter('|'))
         self.assertEqual('~', op)
 
     def test_get_regexp_op_for_database_unknown(self):
-        op = sqlalchemy_api._get_regexp_op_for_connection('notdb:///')
+        filter, op = sqlalchemy_api._get_regexp_ops('notdb:///')
+        self.assertEqual('|', filter('|'))
         self.assertEqual('LIKE', op)
 
     @mock.patch.object(sqlalchemy_api.main_context_manager._factory,
@@ -1144,6 +1148,22 @@ class SqlAlchemyDbApiNoDbTestCase(test.NoDBTestCase):
         sqlalchemy_api.instance_get_all_by_filters_sort(ctxt, {}, marker='foo')
         mock_get.assert_called_once_with(mock.sentinel.elevated, 'foo')
         ctxt.elevated.assert_called_once_with(read_deleted='yes')
+
+    def test_replace_sub_expression(self):
+        ret = sqlalchemy_api._safe_regex_mysql('|')
+        self.assertEqual('\\|', ret)
+
+        ret = sqlalchemy_api._safe_regex_mysql('||')
+        self.assertEqual('\\|\\|', ret)
+
+        ret = sqlalchemy_api._safe_regex_mysql('a||')
+        self.assertEqual('a\\|\\|', ret)
+
+        ret = sqlalchemy_api._safe_regex_mysql('|a|')
+        self.assertEqual('\\|a\\|', ret)
+
+        ret = sqlalchemy_api._safe_regex_mysql('||a')
+        self.assertEqual('\\|\\|a', ret)
 
 
 class SqlAlchemyDbApiTestCase(DbTestCase):
