@@ -1348,3 +1348,23 @@ class CellV2CommandsTestCase(test.TestCase):
         mock_cell_mapping_get_by_uuid.assert_not_called()
         mock_cell_mapping_get_all.assert_called_once_with(
             test.MatchType(context.RequestContext))
+
+    def test_validate_transport_url_in_conf(self):
+        from_conf = 'fake://user:pass@host:port/'
+        self.flags(transport_url=from_conf)
+        self.assertEqual(from_conf,
+                         self.commands._validate_transport_url(None))
+
+    def test_validate_transport_url_on_command_line(self):
+        from_cli = 'fake://user:pass@host:port/'
+        self.assertEqual(from_cli,
+                         self.commands._validate_transport_url(from_cli))
+
+    def test_validate_transport_url_missing(self):
+        self.assertIsNone(self.commands._validate_transport_url(None))
+
+    def test_validate_transport_url_favors_command_line(self):
+        self.flags(transport_url='fake://user:pass@host:port/')
+        from_cli = 'fake://otheruser:otherpass@otherhost:otherport'
+        self.assertEqual(from_cli,
+                         self.commands._validate_transport_url(from_cli))
