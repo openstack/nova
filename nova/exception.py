@@ -187,11 +187,6 @@ class InvalidBDMVolume(InvalidBDM):
                 "failed to get volume %(id)s.")
 
 
-class UnsupportedBDMVolumeAuthMethod(InvalidBDM):
-    msg_fmt = _("Block Device Mapping is Invalid: "
-                "%(auth_method)s is unsupported.")
-
-
 class InvalidBDMImage(InvalidBDM):
     msg_fmt = _("Block Device Mapping is Invalid: "
                 "failed to get image %(id)s.")
