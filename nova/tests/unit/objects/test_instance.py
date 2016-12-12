@@ -1834,7 +1834,8 @@ class _TestInstanceListObject(object):
             self.assertEqual(set(), inst.obj_what_changed())
 
         mock_fault_get.assert_called_once_with(self.context,
-                                               [x.uuid for x in insts])
+                                               [x.uuid for x in insts],
+                                               latest=True)
 
     @mock.patch('nova.objects.instance.Instance.obj_make_compatible')
     def test_get_by_security_group(self, mock_compat):

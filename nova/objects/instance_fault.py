@@ -96,11 +96,21 @@ class InstanceFaultList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              InstanceFault <= version 1.1
     # Version 1.1: InstanceFault version 1.2
-    VERSION = '1.1'
+    # Version 1.2: Added get_latest_by_instance_uuids() method
+    VERSION = '1.2'
 
     fields = {
         'objects': fields.ListOfObjectsField('InstanceFault'),
         }
+
+    @base.remotable_classmethod
+    def get_latest_by_instance_uuids(cls, context, instance_uuids):
+        db_faultdict = db.instance_fault_get_by_instance_uuids(context,
+                                                               instance_uuids,
+                                                               latest=True)
+        db_faultlist = itertools.chain(*db_faultdict.values())
+        return base.obj_make_list(context, cls(context), objects.InstanceFault,
+                                  db_faultlist)
 
     @base.remotable_classmethod
     def get_by_instance_uuids(cls, context, instance_uuids):

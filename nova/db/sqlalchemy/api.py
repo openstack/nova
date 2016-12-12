@@ -6036,24 +6036,63 @@ def instance_fault_create(context, values):
 
 
 @pick_context_manager_reader
-def instance_fault_get_by_instance_uuids(context, instance_uuids):
-    """Get all instance faults for the provided instance_uuids."""
+def instance_fault_get_by_instance_uuids(context, instance_uuids,
+                                         latest=False):
+    """Get all instance faults for the provided instance_uuids.
+
+    :param instance_uuids: List of UUIDs of instances to grab faults for
+    :param latest: Optional boolean indicating we should only return the latest
+                   fault for the instance
+    """
     if not instance_uuids:
         return {}
 
-    rows = model_query(context, models.InstanceFault, read_deleted='no').\
-                       filter(models.InstanceFault.instance_uuid.in_(
-                           instance_uuids)).\
-                       order_by(desc("created_at"), desc("id")).\
-                       all()
+    faults_tbl = models.InstanceFault.__table__
+    # NOTE(rpodolyaka): filtering by instance_uuids is performed in both
+    # code branches below for the sake of a better query plan. On change,
+    # make sure to update the other one as well.
+    query = model_query(context, models.InstanceFault,
+                        [faults_tbl],
+                        read_deleted='no')
+
+    if latest:
+        # NOTE(jaypipes): We join instance_faults to a derived table of the
+        # latest faults per instance UUID. The SQL produced below looks like
+        # this:
+        #
+        #  SELECT instance_faults.*
+        #  FROM instance_faults
+        #  JOIN (
+        #    SELECT instance_uuid, MAX(id) AS max_id
+        #    FROM instance_faults
+        #    WHERE instance_uuid IN ( ... )
+        #    AND deleted = 0
+        #    GROUP BY instance_uuid
+        #  ) AS latest_faults
+        #    ON instance_faults.id = latest_faults.max_id;
+        latest_faults = model_query(
+            context, models.InstanceFault,
+            [faults_tbl.c.instance_uuid,
+             sql.func.max(faults_tbl.c.id).label('max_id')],
+            read_deleted='no'
+        ).filter(
+            faults_tbl.c.instance_uuid.in_(instance_uuids)
+        ).group_by(
+            faults_tbl.c.instance_uuid
+        ).subquery(name="latest_faults")
+
+        query = query.join(latest_faults,
+                           faults_tbl.c.id == latest_faults.c.max_id)
+    else:
+        query = query.filter(models.InstanceFault.instance_uuid.in_(
+                                        instance_uuids)).order_by(desc("id"))
 
     output = {}
     for instance_uuid in instance_uuids:
         output[instance_uuid] = []
 
-    for row in rows:
-        data = dict(row)
-        output[row['instance_uuid']].append(data)
+    for row in query:
+        output[row.instance_uuid].append(row._asdict())
 
     return output
 

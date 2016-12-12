@@ -4187,6 +4187,33 @@ class InstanceFaultTestCase(test.TestCase, ModelsObjectComparatorMixin):
         for uuid in uuids:
             self._assertEqualListsOfObjects(expected[uuid], faults[uuid])
 
+    def test_instance_fault_get_latest_by_instance(self):
+        """Ensure we can retrieve only latest faults for instance."""
+        uuids = [uuidsentinel.uuid1, uuidsentinel.uuid2]
+        fault_codes = [404, 500]
+        expected = {}
+
+        # Create faults
+        for uuid in uuids:
+            db.instance_create(self.ctxt, {'uuid': uuid})
+
+            expected[uuid] = []
+            for code in fault_codes:
+                fault_values = self._create_fault_values(uuid, code)
+                fault = db.instance_fault_create(self.ctxt, fault_values)
+                expected[uuid].append(fault)
+
+        # We are only interested in the latest fault for each instance
+        for uuid in expected:
+            expected[uuid] = expected[uuid][-1:]
+
+        # Ensure faults are saved
+        faults = db.instance_fault_get_by_instance_uuids(self.ctxt, uuids,
+                                                         latest=True)
+        self.assertEqual(len(expected), len(faults))
+        for uuid in uuids:
+            self._assertEqualListsOfObjects(expected[uuid], faults[uuid])
+
     def test_instance_faults_get_by_instance_uuids_no_faults(self):
         uuid = uuidsentinel.uuid1
         # None should be returned when no faults exist.
