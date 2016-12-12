@@ -1229,11 +1229,17 @@ class CellV2Commands(object):
         try:
             cell0_mapping = self.map_cell0()
         except db_exc.DBDuplicateEntry:
-            print('Already setup, nothing to do.')
-            return 0
+            print(_('Cell0 is already setup'))
+            cell0_mapping = objects.CellMapping.get_by_uuid(
+                ctxt, objects.CellMapping.CELL0_UUID)
+
         # Run migrations so cell0 is usable
         with context.target_cell(ctxt, cell0_mapping):
-            migration.db_sync(None, context=ctxt)
+            try:
+                migration.db_sync(None, context=ctxt)
+            except db_exc.DBError as ex:
+                print(_('Unable to sync cell0 schema: %s') % ex)
+
         cell_uuid = self._map_cell_and_hosts(transport_url)
         if cell_uuid is None:
             # There are no compute hosts which means no cell_mapping was
