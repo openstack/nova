@@ -1,18 +1,19 @@
 .. -*- rst -*-
-.. needs:body_verification
 
 ========================================
  Usage reports (os-simple-tenant-usage)
 ========================================
 
-Reports usage statistics on compute and storage resources.
+Reports usage statistics of compute and storage resources periodically
+for an individual tenant or all tenants. The usage statistics will include
+all instances' CPU, memory and local disk during a specific period.
 
-List Tenant Usage For All Tenants
-=================================
+List Tenant Usage Statistics For All Tenants
+============================================
 
 .. rest_method:: GET /os-simple-tenant-usage
 
-Lists usage information for all tenants.
+Lists usage statistics for all tenants.
 
 Normal response codes: 200
 
@@ -69,12 +70,12 @@ The response is as follows:
 .. literalinclude:: ../../doc/api_samples/os-simple-tenant-usage/simple-tenant-usage-get-detail.json
    :language: javascript
 
-Show Usage Details For Tenant
-=============================
+Show Usage Statistics For Tenant
+================================
 
 .. rest_method:: GET /os-simple-tenant-usage/{tenant_id}
 
-Shows usage details for a tenant.
+Shows usage statistics for a tenant.
 
 Normal response codes: 200
 
