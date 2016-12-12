@@ -18,9 +18,9 @@ Nova team process
 =================
 
 Nova is always evolving its processes, but it's important to explain why we
-have them: so that we can all work to ensure the interactions we need to
-happen do happen. The process we have should always be there to make good
-communication between all members of our community easier.
+have them: so we can all work to ensure that the interactions we need to
+happen do happen. The process exists to make productive communication between
+all members of our community easier.
 
 OpenStack Wide Patterns
 =======================
@@ -29,56 +29,56 @@ Nova follows most of the generally adopted norms for OpenStack projects.
 You can get more details here:
 
 * http://docs.openstack.org/infra/manual/developers.html
-* http://git.openstack.org/cgit/openstack/project-team-guide
+* http://docs.openstack.org/project-team-guide/
 
 If you are new to Nova, please read this first: :ref:`getting_involved`.
 
 Dates overview
 ==============
 
-For Mitaka, please see:
-https://wiki.openstack.org/wiki/Nova/Mitaka_Release_Schedule
+For Ocata, please see:
+https://wiki.openstack.org/wiki/Nova/Ocata_Release_Schedule
 
-For Liberty, please see:
-https://wiki.openstack.org/wiki/Nova/Liberty_Release_Schedule
+.. note: Throughout this document any link which references the name of a
+         release cycle in the link can usually be changed to the name of the
+         current cycle to get up to date information.
 
 Feature Freeze
 ~~~~~~~~~~~~~~
 
-This effort is primarily to help the horizontal teams help prepare their
-items for release, while at the same time giving developers time to
+Feature freeze primarily provides a window of time to help the horizontal
+teams prepare their items for release, while giving developers time to
 focus on stabilising what is currently in master, and encouraging users
-and packages to perform tests (automated, and manual) on the release, to
+and packagers to perform tests (automated, and manual) on the release, to
 spot any major bugs.
 
-As such we have the following processes:
+The Nova release process is aligned with the `development cycle schedule
+<http://docs.openstack.org/project-team-guide/release-management.html#typical-development-cycle-schedule>`_
+used by many OpenStack projects, including the following steps.
 
--  https://wiki.openstack.org/wiki/FeatureProposalFreeze
+- Feature Proposal Freeze
 
    -  make sure all code is up for review
    -  so we can optimise for completed features, not lots of half
       completed features
 
--  https://wiki.openstack.org/wiki/FeatureFreeze
+- Feature Freeze
 
    -  make sure all feature code is merged
 
--  https://wiki.openstack.org/wiki/StringFreeze
+- String Freeze
 
    -  give translators time to translate all our strings
    -  Note: debug logs are no longer translated
 
--  https://wiki.openstack.org/wiki/DepFreeze
+- Dependency Freeze
 
-   -  time to co-ordinate the final list of deps, and give packagers
+   -  time to co-ordinate the final list of dependencies, and give packagers
       time to package them
    -  generally it is also quite destabilising to take upgrades (beyond
       bug fixes) this late
 
-We align with this in Nova and the dates for this release are stated
-above.
-
-As with all processes here, there are exceptions. But the exceptions at
+As with all processes here, there are exceptions. The exceptions at
 this stage need to be discussed with the horizontal teams that might be
 affected by changes beyond this point, and as such are discussed with
 one of the OpenStack release managers.
@@ -88,24 +88,22 @@ Spec and Blueprint Approval Freeze
 
 This is a (mostly) Nova specific process.
 
-Why do we have a Spec Freeze:
+Why we have a Spec Freeze:
 
--  specs take a long time to review, keeping it open distracts from code
-   reviews
--  keeping them "open" and being slow at reviewing the specs (or just
-   ignoring them) really annoys the spec submitters
+-  specs take a long time to review and reviewing specs throughout the cycle
+   distracts from code reviews
+-  keeping specs "open" and being slow at reviewing them (or just
+   ignoring them) annoys the spec submitters
 -  we generally have more code submitted that we can review, this time
-   bounding is a way to limit the number of submissions
+   bounding is a useful way to limit the number of submissions
 
-By the freeze date, we expect this to also be the complete list of
-approved blueprints for liberty:
-https://blueprints.launchpad.net/nova/liberty
+By the freeze date, we expect all blueprints that will be approved for the
+cycle to be listed on launchpad and all relevant specs to be merged. For Ocata
+blueprints can be found at https://blueprints.launchpad.net/nova/ocata and
+specs at 
+http://specs.openstack.org/openstack/nova-specs/specs/ocata/index.html
 
-The date listed above is when we expect all specifications for Liberty
-to be merged and displayed here:
-http://specs.openstack.org/openstack/nova-specs/specs/liberty/approved/
-
-New in Liberty, we will keep the backlog open for submission at all
+Starting with Liberty, we are keeping a backlog open for submission at all
 times. Note: the focus is on accepting and agreeing problem statements
 as being in scope, rather than queueing up work items for the next
 release. We are still working on a new lightweight process to get out of
@@ -113,16 +111,13 @@ the backlog and approved for a particular release. For more details on
 backlog specs, please see:
 http://specs.openstack.org/openstack/nova-specs/specs/backlog/index.html
 
-Also new in Liberty, we will allow people to submit Mitaka specs from
-liberty-2 (rather than liberty-3 as normal).
-
 There can be exceptions, usually it's an urgent feature request that
 comes up after the initial deadline. These will generally be discussed
 at the weekly Nova meeting, by adding the spec or blueprint to discuss
 in the appropriate place in the meeting agenda here (ideally make
 yourself available to discuss the blueprint, or alternatively make your
 case on the ML before the meeting):
-https://wiki.openstack.org/wiki/Meetings/Nova
+https://wiki.openstack.org/wiki/Meetings/Nova#Agenda_for_next_meeting
 
 Non-priority Feature Freeze
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -130,50 +125,43 @@ Non-priority Feature Freeze
 This is a Nova specific process.
 
 This only applies to low priority blueprints in this list:
-https://blueprints.launchpad.net/nova/liberty
+https://blueprints.launchpad.net/nova/ocata
 
 We currently have a very finite amount of review bandwidth. In order to
 make code review time for the agreed community wide priorities, we have
-to not do some other things. To this end, we are reserving liberty-3 for
-priority features and bug fixes. As such, we intend not to merge any
-non-priority things during liberty-3, so around liberty-2 is the
-"Feature Freeze" for blueprints that are not a priority for liberty.
+to not do some other things. In each cycle, milestones are used to bound
+when certain types of work will be active and reviewed and to avoid crushing
+the gate with too much code near the end of the cycle.
 
-For liberty, we are not aligning the Non-priority Feature Freeze with
-the tagging of liberty-2. That means the liberty-2 tag will not include
-some features that merge later in the week. This means, we only require
-the code to be approved before the end of July 30th, we don't require it
-to be merged by that date. This should help stop any gate issues
-disrupting our ability to merge all the code that we have managed to get
-reviewed in time. Ideally all code should be merged by the end of July
-31st, but the state of the gate will determine how possible that is.
+For example, in the Liberty cycle, we reserved the liberty-3 milestone for
+priority features and bug fixes and did not merge any non-priority things
+during liberty-3. This meant that liberty-2 was the "Feature Freeze" for
+blueprints that were not a priority for the Liberty cycle.
 
 You can see the list of priorities for each release:
 http://specs.openstack.org/openstack/nova-specs/#priorities
 
-For things that are very close to merging, it's possible it might get an
+For things that are very close to merging, it's possible to request an
 exception for one week after the freeze date, given the patches get
 enough +2s from the core team to get the code merged. But we expect this
 list to be zero, if everything goes to plan (no massive gate failures,
-etc). For details, process see:
+etc). For history of the process see:
 http://lists.openstack.org/pipermail/openstack-dev/2015-July/070920.html
 
 Exception process:
 
 -  Please add request in here:
-   https://etherpad.openstack.org/p/liberty-nova-non-priority-feature-freeze
+   https://etherpad.openstack.org/p/ocata-nova-non-priority-feature-freeze
    (ideally with core reviewers to sponsor your patch, normally the
    folks who have already viewed those patches)
--  make sure you make your request before the end of Wednesday 5th
-   August
--  nova-drivers will meet to decide what gets an exception (just like
-   they did last release:
+-  make sure you make your request before the end of the feature freeze
+   exception period
+-  nova-drivers will meet to decide what gets an exception (for some history
+   see:
    http://lists.openstack.org/pipermail/openstack-dev/2015-February/056208.html)
 -  an initial list of exceptions (probably just a PTL compiled list at
-   that point) will be available for discussion during the Nova meeting
-   on Thursday 6th August
--  the aim is to merge the code for all exceptions by the end of Monday
-   10th August
+   that point) will be available for discussion during the next Nova meeting
+-  the aim is to merge the code for all exceptions early in the following week
 
 Alternatives:
 
@@ -187,72 +175,12 @@ Alternatives:
 String Freeze
 ~~~~~~~~~~~~~
 
-NOTE: this is still a provisional idea
-
-There are general guidelines here:
-https://wiki.openstack.org/wiki/StringFreeze
-
-But below is an experiment for Nova during liberty, to trial a new
-process. There are four views onto this process.
-
-First, the user point of view:
-
--  Would like to see untranslated strings, rather than hiding
-   error/info/warn log messages as debug
-
-Second, the translators:
-
--  Translators will start translation without string freeze, just after
-   feature freeze.
--  Then we have a strict string freeze date (around RC1 date)
--  After at least 10 days to finish up the translations before the final
-   release
-
-Third, the docs team:
-
--  Config string updates often mean there is a DocImpact and docs need
-   updating
--  best to avoid those during feature freeze, where possible
-
-Fourth, the developer point of view:
-
--  Add any translated strings before Feature Freeze
--  Post Feature Freeze, allow string changes where an untranslated
-   string is better than no string
-
-   -  i.e. allow new log message strings, until the hard freeze
-
--  Post Feature Freeze, have a soft string freeze, try not to change
-   existing strings, where possible
-
-   -  Note: moving a string and re-using a existing string is fine, as
-      the tooling deals with that automatically
-
--  Post Hard String Freeze, there should be no extra strings to
-   translate
-
-   -  Assume any added strings will not be translated
-   -  Send email about the string freeze exception in this case only,
-      but there should be zero of these
-
-So, what has changed from https://wiki.openstack.org/wiki/StringFreeze,
-well:
-
--  no need to block new strings until much later in the cycle
-
-   -  should stop the need to rework bug fixes to remove useful log
-      messages
-
--  instead, just accept the idea of untranslated strings being better
-   than no strings in those cases
-
-So for Liberty, 21st September, so we will call 21st September the hard
-freeze date, as we expect RC1 to be cut sometime after 21st September.
-Note the date is fixed, it's not aligned with the cutting of RC1.
-
-This means we must cut another tarball (RC2 or higher) at some point
-after 5th October to include new translations, even if there are no more
-bug fixes, to give time before the final release on 13th-16th October.
+String Freeze provides an opportunity for translators to translate user-visible
+messages to a variety of languages. By not changing strings after the date of
+the string freeze, the job of the translators is made a bit easier. For more
+information on string and other OpenStack-wide release processes see `the
+release management docs
+<http://docs.openstack.org/project-team-guide/release-management.html>`_.
 
 How do I get my code merged?
 ============================
@@ -291,7 +219,7 @@ When do I need a blueprint vs a spec?
 
 For more details see:
 
--  http://docs.openstack.org/developer/nova/devref/kilo.blueprints.html#when-is-a-blueprint-needed
+-  http://docs.openstack.org/developer/nova/blueprints.html
 
 To understand this question, we need to understand why blueprints and
 specs are useful.
@@ -318,8 +246,6 @@ So you need your blueprint approved? Here is how:
 
    -  be sure your blueprint description has enough context for the
       review in that meeting.
-   -  As of Mitaka, this list is stored in an etherpad:
-      https://etherpad.openstack.org/p/mitaka-nova-spec-review-tracking
 
 -  if you need a spec, then please submit a nova-spec for review, see:
    http://docs.openstack.org/infra/manual/developers.html
@@ -358,7 +284,7 @@ patch:
    however tiny, requires a deprecation warning be issued for a cycle.
 -  Code must be maintainable, that is it must adhere to coding standards
    and be as readable as possible for an average OpenStack developer
-   (acknowledging this person is ill-defined).
+   (we acknowledge that this person is not easy to define).
 -  Patches must respect the direction of the project, for example they
    should not make approved specs substantially more difficult to
    implement.
@@ -431,8 +357,6 @@ It helps to apply correct tracking information.
    someone else find your fix.
 -  Make sure the bug has the correct priority and tag set:
    https://wiki.openstack.org/wiki/Nova/BugTriage#Step_2:_Triage_Tagged_Bugs
--  If it's a trivial fix (<100 lines as a rule of thumb), add it to:
-   https://etherpad.openstack.org/p/liberty-nova-priorities-tracking
 
 Features
 ^^^^^^^^
@@ -452,7 +376,7 @@ For blueprint and spec features, do everything for blueprint-only
 features and also:
 
 -  If it's a project or subteam priority, add it to:
-   https://etherpad.openstack.org/p/liberty-nova-priorities-tracking
+   https://etherpad.openstack.org/p/ocata-nova-priorities-tracking
 -  Ensure your spec is approved for the current release cycle.
 
 If your code is a project or subteam priority, the cores interested in
@@ -560,10 +484,10 @@ to resolve in the past (currently in no particular order). We must:
 -  ensure we get sufficient focus on the core of Nova so that we can
    maintain or improve the stability and flexibility of the overall
    codebase
--  support any API we release approximately for ever. We currently
-   release every commit, so we're motivate to get the API right first
+-  support any API we release approximately forever. We currently
+   release every commit, so we're motivated to get the API right the first
    time
--  avoid low priority blueprints slowing work on high priority work,
+-  avoid low priority blueprints that slow work on high priority work,
    without blocking those forever
 -  focus on a consistent experience for our users, rather than ease of
    development
@@ -675,7 +599,7 @@ they want to get landed. This is a key part of being an Open community.
 Why is there a Feature Freeze (and String Freeze) in Nova?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The main reason Nova has a feature freeze is that it gives people
+The main reason Nova has a feature freeze is that it allows people
 working on docs and translations to sync up with the latest code.
 Traditionally this happens at the same time across multiple projects, so
 the docs are synced between what used to be called the "integrated
@@ -729,9 +653,10 @@ Why do you still use Launchpad?
 We are actively looking for an alternative to Launchpad's bugs and
 blueprints.
 
-Originally the idea was to create Storyboard. However the development
-has stalled. A more likely front runner is this:
-http://phabricator.org/applications/projects/
+Originally the idea was to create Storyboard. However development
+stalled for a while so interest waned. The project has become more active
+recently so it may be worth looking again:
+https://storyboard.openstack.org/#!/page/about
 
 When should I submit my spec?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -769,7 +694,7 @@ Thirdly, is it in merge conflict with master or are any of the CI tests
 failing? Particularly any third-party CI tests that are relevant to the
 code you are changing. If you're fixing something that only occasionally
 failed before, maybe recheck a few times to prove the tests stay
-passing. Without green tests, reviews tend to move on and look at the
+passing. Without green tests, reviewers tend to move on and look at the
 other patches that have the tests passing.
 
 OK, so you have followed all the process (i.e. your patches are getting
@@ -851,13 +776,13 @@ Subteam recommendation as a +2
 
 There are groups of people with great knowledge of particular bits of
 the code base. It may be a good idea to give their recommendation of a
-merge. In addition, having the subteam focus review efforts on a subset
-of patches should help concentrate the nova-core reviews they get, and
-increase the velocity of getting code merged.
+merge greater strength. In addition, having the subteam focus review efforts
+on a subset of patches should help concentrate the nova-core reviews they
+get, and increase the velocity of getting code merged.
 
 The first part is for subgroups to show they can do a great job of
 recommending patches. This is starting in here:
-https://etherpad.openstack.org/p/liberty-nova-priorities-tracking
+https://etherpad.openstack.org/p/ocata-nova-priorities-tracking
 
 Ideally this would be done with gerrit user "tags" rather than an
 etherpad. There are some investigations by sdague in how feasible it
@@ -913,7 +838,7 @@ Runways
 ~~~~~~~
 
 Runways are a form of Kanban, where we look at optimising the flow
-through the system, by ensure we focus our efforts on reviewing a
+through the system, by ensuring we focus our efforts on reviewing a
 specific subset of patches.
 
 The idea goes something like this:
@@ -1004,5 +929,3 @@ Main benefits:
    are added
 -  allows a way to add experimental things into Nova, and track either
    their removal or maturation
-
-* https://wiki.openstack.org/wiki/Nova/Mitaka_Release_Schedule
