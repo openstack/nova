@@ -329,7 +329,8 @@ class SpawnTestCase(VMOpsTestBase):
 
     def _test_spawn(self, name_label_param=None, block_device_info_param=None,
                     rescue=False, include_root_vdi=True, throw_exception=None,
-                    attach_pci_dev=False, neutron_exception=False):
+                    attach_pci_dev=False, neutron_exception=False,
+                    network_info=None):
         self._stub_out_common()
 
         instance = {"name": "dummy", "uuid": "fake_uuid"}
@@ -341,7 +342,8 @@ class SpawnTestCase(VMOpsTestBase):
         session = self.vmops._session
         injected_files = "fake_files"
         admin_password = "password"
-        network_info = "net_info"
+        if network_info is None:
+            network_info = []
         steps = 10
         if rescue:
             steps += 1
@@ -498,14 +500,15 @@ class SpawnTestCase(VMOpsTestBase):
                           throw_exception=test.TestingException())
 
     def test_spawn_with_neutron(self):
+        self.flags(use_neutron=True)
         self.mox.StubOutWithMock(self.vmops, '_get_neutron_events')
         events = [('network-vif-plugged', 1)]
-        network_info = "net_info"
+        network_info = [{'id': 1, 'active': True}]
         self.vmops._get_neutron_events(network_info,
                                     True, True).AndReturn(events)
         self.mox.StubOutWithMock(self.vmops,
                                  '_neutron_failed_callback')
-        self._test_spawn()
+        self._test_spawn(network_info=network_info)
 
     def test_spawn_with_neutron_exception(self):
         self.mox.StubOutWithMock(self.vmops, '_get_neutron_events')
