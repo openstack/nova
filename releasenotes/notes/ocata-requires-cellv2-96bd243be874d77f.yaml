@@ -3,5 +3,5 @@ upgrade:
   - Ocata requires that your deployment have created the
     cell and host mappings in Newton. If you have not done
     this, Ocata's `db sync` command will fail. Small deployments
-    will want to run `nova-manage db simple_cell_setup`
+    will want to run `nova-manage cell_v2 simple_cell_setup`
     on Newton before upgrading.
