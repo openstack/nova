@@ -1495,6 +1495,8 @@ virConnect = Connection
 class FakeLibvirtFixture(fixtures.Fixture):
     """Performs global setup/stubbing for all libvirt tests.
     """
+    def __init__(self, stub_os_vif=True):
+        self.stub_os_vif = stub_os_vif
 
     def setUp(self):
         super(FakeLibvirtFixture, self).setUp()
@@ -1506,3 +1508,11 @@ class FakeLibvirtFixture(fixtures.Fixture):
             self.useFixture(fixtures.MonkeyPatch(i, sys.modules[__name__]))
 
         disable_event_thread(self)
+
+        if self.stub_os_vif:
+            # Make sure to never try and actually plug VIFs in os-vif unless
+            # we're explicitly testing that code and the test itself will
+            # handle the appropriate mocking.
+            self.useFixture(fixtures.MonkeyPatch(
+                'nova.virt.libvirt.vif.LibvirtGenericVIFDriver._plug_os_vif',
+                lambda *a, **kw: None))
