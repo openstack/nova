@@ -190,10 +190,11 @@ class ServersControllerTest(ControllerTest):
                                        version=self.wsgi_api_version)
 
     def test_requested_networks_prefix(self):
+        self.flags(use_neutron=True)
         uuid = 'br-00000000-0000-0000-0000-000000000000'
         requested_networks = [{'uuid': uuid}]
         res = self.controller._get_requested_networks(requested_networks)
-        self.assertIn((uuid, None), res.as_tuples())
+        self.assertIn((uuid, None, None, None), res.as_tuples())
 
     def test_requested_networks_neutronv2_enabled_with_port(self):
         self.flags(use_neutron=True)
@@ -217,8 +218,9 @@ class ServersControllerTest(ControllerTest):
         res = self.controller._get_requested_networks(requested_networks)
         self.assertEqual([(None, None, port, None)], res.as_tuples())
 
-    def test_requested_networks_with_duplicate_networks(self):
+    def test_requested_networks_with_duplicate_networks_nova_net(self):
         # duplicate networks are allowed only for nova neutron v2.0
+        self.flags(use_neutron=False)
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         requested_networks = [{'uuid': network}, {'uuid': network}]
         self.assertRaises(
@@ -249,6 +251,7 @@ class ServersControllerTest(ControllerTest):
             requested_networks)
 
     def test_requested_networks_neutronv2_disabled_with_port(self):
+        self.flags(use_neutron=False)
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'port': port}]
         self.assertRaises(
@@ -2731,7 +2734,8 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
         self._test_create_extra(params)
 
-    def test_create_instance_with_networks_disabled(self):
+    def test_create_instance_with_networks_disabled_nova_net(self):
+        self.flags(use_neutron=False)
         net_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         requested_networks = [{'uuid': net_uuid}]
         params = {'networks': requested_networks}
