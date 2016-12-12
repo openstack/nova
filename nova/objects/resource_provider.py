@@ -1345,18 +1345,18 @@ class ResourceClass(base.NovaObject):
             raise exception.ResourceClassCannotDeleteStandard(
                     resource_class=self.name)
 
-        self._destroy(self._context, self.id)
+        self._destroy(self._context, self.id, self.name)
         _RC_CACHE.clear()
 
     @staticmethod
     @db_api.api_context_manager.writer
-    def _destroy(context, _id):
+    def _destroy(context, _id, name):
         # Don't delete the resource class if it is referred to in the
         # inventories table.
         num_inv = context.session.query(models.Inventory).filter(
                 models.Inventory.resource_class_id == _id).count()
         if num_inv:
-            raise exception.ResourceClassInUse()
+            raise exception.ResourceClassInUse(resource_class=name)
 
         res = context.session.query(models.ResourceClass).filter(
                 models.ResourceClass.id == _id).delete()

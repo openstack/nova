@@ -2124,7 +2124,8 @@ class ResourceClassExists(NovaException):
 
 
 class ResourceClassInUse(Invalid):
-    msg_fmt = _("Cannot delete resource class. Class is in use in inventory.")
+    msg_fmt = _("Cannot delete resource class %(resource_class)s. "
+                "Class is in use in inventory.")
 
 
 class ResourceClassCannotDeleteStandard(Invalid):
