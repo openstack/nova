@@ -1043,12 +1043,12 @@ class Connection(object):
 
     def listAllDomains(self, flags):
         vms = []
-        for vm in self._vms:
+        for vm in self._vms.values():
             if flags & VIR_CONNECT_LIST_DOMAINS_ACTIVE:
-                if vm.state != VIR_DOMAIN_SHUTOFF:
+                if vm._state != VIR_DOMAIN_SHUTOFF:
                     vms.append(vm)
             if flags & VIR_CONNECT_LIST_DOMAINS_INACTIVE:
-                if vm.state == VIR_DOMAIN_SHUTOFF:
+                if vm._state == VIR_DOMAIN_SHUTOFF:
                     vms.append(vm)
         return vms
 
