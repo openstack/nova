@@ -33,7 +33,7 @@ Response
 
   - volumeAttachments: volumeAttachments
   - device: device_resp
-  - id: attachment_id_resp
+  - id: attachment_id_required
   - serverId: server_id
   - volumeId: volumeId_resp
 
@@ -78,7 +78,7 @@ Response
 
   - volumeAttachment: volumeAttachment
   - device: device_resp
-  - id: attachment_id_resp
+  - id: attachment_id_required
   - serverId: server_id
   - volumeId: volumeId_resp
 
@@ -113,7 +113,7 @@ Response
 
   - volumeAttachment: volumeAttachment
   - device: device_resp
-  - id: attachment_id_resp
+  - id: attachment_id_required
   - serverId: server_id
   - volumeId: volumeId_resp
 

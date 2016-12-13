@@ -991,6 +991,12 @@ attachment_device_resp:
   in: body
   required: false
   type: string
+attachment_id_required:
+  description: |
+    The UUID of the attachment.
+  in: body
+  required: true
+  type: string
 attachment_id_resp:
   description: |
     The UUID of the attachment.
