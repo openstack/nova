@@ -20,6 +20,7 @@ from nova.policies import base
 
 BASE_POLICY_NAME = 'os_compute_api:os-server-groups'
 POLICY_ROOT = 'os_compute_api:os-server-groups:%s'
+BASE_POLICY_RULE = 'rule:%s' % BASE_POLICY_NAME
 
 
 server_groups_policies = [
@@ -29,6 +30,18 @@ server_groups_policies = [
     policy.RuleDefault(
         name=BASE_POLICY_NAME,
         check_str=base.RULE_ADMIN_OR_OWNER),
+    policy.RuleDefault(
+        name=POLICY_ROOT % 'create',
+        check_str=BASE_POLICY_RULE),
+    policy.RuleDefault(
+        name=POLICY_ROOT % 'delete',
+        check_str=BASE_POLICY_RULE),
+    policy.RuleDefault(
+        name=POLICY_ROOT % 'index',
+        check_str=BASE_POLICY_RULE),
+    policy.RuleDefault(
+        name=POLICY_ROOT % 'show',
+        check_str=BASE_POLICY_RULE),
 ]
 
 

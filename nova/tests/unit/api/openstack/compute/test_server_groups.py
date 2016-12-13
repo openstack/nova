@@ -22,8 +22,10 @@ from nova import context
 import nova.db
 from nova import exception
 from nova import objects
+from nova.policies import server_groups as sg_policies
 from nova import test
 from nova.tests.unit.api.openstack import fakes
+from nova.tests.unit import policy_fixture
 from nova.tests import uuidsentinel
 
 
@@ -80,6 +82,9 @@ class ServerGroupTestV21(test.TestCase):
         super(ServerGroupTestV21, self).setUp()
         self._setup_controller()
         self.req = fakes.HTTPRequest.blank('')
+        self.admin_req = fakes.HTTPRequest.blank('', use_admin_context=True)
+        self.foo_req = fakes.HTTPRequest.blank('', project_id='foo')
+        self.policy = self.useFixture(policy_fixture.RealPolicyFixture())
 
     def _setup_controller(self):
         self.controller = sg_v21.ServerGroupController()
@@ -102,6 +107,36 @@ class ServerGroupTestV21(test.TestCase):
         policies = ['affinity', 'anti-affinity']
         for policy in policies:
             self._create_server_group_normal([policy])
+
+    def test_create_server_group_rbac_default(self):
+        sgroup = server_group_template()
+        sgroup['policies'] = ['affinity']
+
+        # test as admin
+        self.controller.create(self.admin_req, body={'server_group': sgroup})
+
+        # test as non-admin
+        self.controller.create(self.req, body={'server_group': sgroup})
+
+    def test_create_server_group_rbac_admin_only(self):
+        sgroup = server_group_template()
+        sgroup['policies'] = ['affinity']
+
+        # override policy to restrict to admin
+        rule_name = sg_policies.POLICY_ROOT % 'create'
+        rules = {rule_name: 'is_admin:True'}
+        self.policy.set_rules(rules, overwrite=False)
+
+        # check for success as admin
+        self.controller.create(self.admin_req, body={'server_group': sgroup})
+
+        # check for failure as non-admin
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller.create, self.req,
+                                body={'server_group': sgroup})
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
 
     def _create_instance(self, context):
         instance = objects.Instance(context=context,
@@ -182,12 +217,15 @@ class ServerGroupTestV21(test.TestCase):
 
         path = '/os-server-groups?all_projects=True'
 
-        req = fakes.HTTPRequest.blank(path, use_admin_context=True,
-                                      version=api_version)
-        res_dict = self.controller.index(req)
+        req = fakes.HTTPRequest.blank(path, version=api_version)
+        admin_req = fakes.HTTPRequest.blank(path, use_admin_context=True,
+                                            version=api_version)
+
+        # test as admin
+        res_dict = self.controller.index(admin_req)
         self.assertEqual(all, res_dict)
-        req = fakes.HTTPRequest.blank(path,
-                                      version=api_version)
+
+        # test as non-admin
         res_dict = self.controller.index(req)
         self.assertEqual(tenant_specific, res_dict)
 
@@ -235,9 +273,8 @@ class ServerGroupTestV21(test.TestCase):
         return_get_by_project = return_server_groups()
         mock_get_by_project.return_value = return_get_by_project
         path = '/os-server-groups'
-        self.req = fakes.HTTPRequest.blank(path,
-                                           version=api_version)
-        res_dict = self.controller.index(self.req)
+        req = fakes.HTTPRequest.blank(path, version=api_version)
+        res_dict = self.controller.index(req)
         self.assertEqual(expected, res_dict)
 
     def test_display_members(self):
@@ -268,6 +305,39 @@ class ServerGroupTestV21(test.TestCase):
         # check that only the active instance is displayed
         self.assertEqual(1, len(result_members))
         self.assertIn(instances[0].uuid, result_members)
+
+    def test_display_members_rbac_default(self):
+        ctx = context.RequestContext('fake_user', 'fake')
+        ig_uuid = self._create_groups_and_instances(ctx)[0]
+
+        # test as admin
+        self.controller.show(self.admin_req, ig_uuid)
+
+        # test as non-admin, same project
+        self.controller.show(self.req, ig_uuid)
+
+        # test as non-admin, different project
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.show, self.foo_req, ig_uuid)
+
+    def test_display_members_rbac_admin_only(self):
+        ctx = context.RequestContext('fake_user', 'fake')
+        ig_uuid = self._create_groups_and_instances(ctx)[0]
+
+        # override policy to restrict to admin
+        rule_name = sg_policies.POLICY_ROOT % 'show'
+        rules = {rule_name: 'is_admin:True'}
+        self.policy.set_rules(rules, overwrite=False)
+
+        # check for success as admin
+        self.controller.show(self.admin_req, ig_uuid)
+
+        # check for failure as non-admin
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller.show, self.req, ig_uuid)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
 
     def test_create_server_group_with_non_alphanumeric_in_name(self):
         # The fix for bug #1434335 expanded the allowable character set
@@ -384,6 +454,29 @@ class ServerGroupTestV21(test.TestCase):
     def test_list_server_group_all(self):
         self._test_list_server_group_all(api_version='2.1')
 
+    def test_list_server_groups_rbac_default(self):
+        # test as admin
+        self.controller.index(self.admin_req)
+
+        # test as non-admin
+        self.controller.index(self.req)
+
+    def test_list_server_groups_rbac_admin_only(self):
+        # override policy to restrict to admin
+        rule_name = sg_policies.POLICY_ROOT % 'index'
+        rules = {rule_name: 'is_admin:True'}
+        self.policy.set_rules(rules, overwrite=False)
+
+        # check for success as admin
+        self.controller.index(self.admin_req)
+
+        # check for failure as non-admin
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller.index, self.req)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
     def test_delete_server_group_by_id(self):
         sg = server_group_template(id=uuidsentinel.sg1_id)
 
@@ -415,6 +508,37 @@ class ServerGroupTestV21(test.TestCase):
     def test_delete_non_existing_server_group(self):
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
                           self.req, 'invalid')
+
+    def test_delete_server_group_rbac_default(self):
+        ctx = context.RequestContext('fake_user', 'fake')
+
+        # test as admin
+        ig_uuid = self._create_groups_and_instances(ctx)[0]
+        self.controller.delete(self.admin_req, ig_uuid)
+
+        # test as non-admin
+        ig_uuid = self._create_groups_and_instances(ctx)[0]
+        self.controller.delete(self.req, ig_uuid)
+
+    def test_delete_server_group_rbac_admin_only(self):
+        ctx = context.RequestContext('fake_user', 'fake')
+
+        # override policy to restrict to admin
+        rule_name = sg_policies.POLICY_ROOT % 'delete'
+        rules = {rule_name: 'is_admin:True'}
+        self.policy.set_rules(rules, overwrite=False)
+
+        # check for success as admin
+        ig_uuid = self._create_groups_and_instances(ctx)[0]
+        self.controller.delete(self.admin_req, ig_uuid)
+
+        # check for failure as non-admin
+        ig_uuid = self._create_groups_and_instances(ctx)[0]
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller.delete, self.req, ig_uuid)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
 
 
 class ServerGroupTestV213(ServerGroupTestV21):
