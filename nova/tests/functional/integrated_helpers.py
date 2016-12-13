@@ -79,19 +79,6 @@ class _IntegratedTestBase(test.TestCase):
         nova.tests.unit.image.fake.stub_out_image_service(self)
         self._setup_services()
 
-        self.api_fixture = self.useFixture(
-            nova_fixtures.OSAPIFixture(self.api_major_version))
-
-        # if the class needs to run as admin, make the api endpoint
-        # the admin, otherwise it's safer to run as non admin user.
-        if self.ADMIN_API:
-            self.api = self.api_fixture.admin_api
-        else:
-            self.api = self.api_fixture.api
-
-        if hasattr(self, 'microversion'):
-            self.api.microversion = self.microversion
-
         self.useFixture(cast_as_call.CastAsCall(self.stubs))
 
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
@@ -104,13 +91,31 @@ class _IntegratedTestBase(test.TestCase):
         return self.start_service('scheduler')
 
     def _setup_services(self):
+        # NOTE(danms): Set the global MQ connection to that of our first cell
+        # for any cells-ignorant code. Normally this is defaulted in the tests
+        # which will result in us not doing the right thing.
+        if 'cell1' in self.cell_mappings:
+            self.flags(transport_url=self.cell_mappings['cell1'].transport_url)
         self.conductor = self.start_service('conductor')
-        self.compute = self._setup_compute_service()
         self.consoleauth = self.start_service('consoleauth')
 
         self.network = self.start_service('network',
                                           manager=CONF.network_manager)
         self.scheduler = self._setup_scheduler_service()
+
+        self.compute = self._setup_compute_service()
+        self.api_fixture = self.useFixture(
+            nova_fixtures.OSAPIFixture(self.api_major_version))
+
+        # if the class needs to run as admin, make the api endpoint
+        # the admin, otherwise it's safer to run as non admin user.
+        if self.ADMIN_API:
+            self.api = self.api_fixture.admin_api
+        else:
+            self.api = self.api_fixture.api
+
+        if hasattr(self, 'microversion'):
+            self.api.microversion = self.microversion
 
     def get_unused_server_name(self):
         servers = self.api.get_servers()

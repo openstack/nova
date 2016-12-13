@@ -370,9 +370,13 @@ class TestUpgradeCheckCellsV2(test.NoDBTestCase):
         """Tests a successful cells v2 upgrade check."""
         # create the cell0 and first cell mappings
         self._setup_cells()
-        # create the host mapping indirectly - host mappings existing implies
-        # there is a compute node so that's not checked.
-        self.start_service('compute')
+        # Start a compute service and create a hostmapping for it
+        svc = self.start_service('compute')
+        cell = self.cell_mappings[test.CELL1_NAME]
+        hm = objects.HostMapping(context=context.get_admin_context(),
+                                 host=svc.host,
+                                 cell_mapping=cell)
+        hm.create()
 
         result = self.cmd._check_cellsv2()
         self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)

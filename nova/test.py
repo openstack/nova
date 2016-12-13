@@ -347,7 +347,7 @@ class TestCase(testtools.TestCase):
         svc = self.useFixture(
             nova_fixtures.ServiceFixture(name, host, **kwargs))
 
-        if name == 'compute':
+        if name == 'compute' and self.USES_DB:
             ctxt = context.get_context()
             cell = self.cell_mappings[kwargs.pop('cell', CELL1_NAME)]
             hm = objects.HostMapping(context=ctxt,
