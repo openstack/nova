@@ -19,7 +19,9 @@ from eventlet import greenthread
 import mock
 from oslo_utils import uuidutils
 import six
+import testtools
 
+from nova.compute import vm_states
 from nova import exception
 from nova import objects
 from nova.objects import fields as obj_fields
@@ -414,55 +416,43 @@ class HostTestCase(test.NoDBTestCase):
         self.assertTrue(self.host.has_version(None, hv_ver, hv_type))
 
     @mock.patch.object(fakelibvirt.virConnect, "lookupByName")
-    def test_get_domain_by_name(self, fake_lookup):
+    def test_get_domain(self, fake_lookup):
         dom = fakelibvirt.virDomain(self.host.get_connection(),
                                     "<domain id='7'/>")
-
+        instance = objects.Instance(id="124")
         fake_lookup.return_value = dom
 
-        self.assertEqual(dom, self.host._get_domain_by_name("wibble"))
-
-        fake_lookup.assert_called_once_with("wibble")
+        self.assertEqual(dom, self.host.get_domain(instance))
+        fake_lookup.assert_called_once_with("instance-0000007c")
 
     @mock.patch.object(fakelibvirt.virConnect, "lookupByName")
-    def test_get_domain_by_name_raises(self, fake_lookup):
+    def test_get_domain_raises(self, fake_lookup):
+        instance = objects.Instance(uuid=uuids.instance,
+                                    vm_state=vm_states.ACTIVE)
         fake_lookup.side_effect = fakelibvirt.make_libvirtError(
             fakelibvirt.libvirtError,
             'Domain not found: no domain with matching name',
             error_code=fakelibvirt.VIR_ERR_NO_DOMAIN,
             error_domain=fakelibvirt.VIR_FROM_QEMU)
 
-        self.assertRaises(exception.InstanceNotFound,
-                          self.host._get_domain_by_name,
-                          "wibble")
+        with testtools.ExpectedException(exception.InstanceNotFound):
+            self.host.get_domain(instance)
 
-        fake_lookup.assert_called_once_with("wibble")
+        fake_lookup.assert_called_once_with(uuids.instance)
 
-    @mock.patch.object(host.Host, "_get_domain_by_name")
-    def test_get_domain(self, fake_get_domain):
+    @mock.patch.object(fakelibvirt.virConnect, "lookupByName")
+    def test_get_guest(self, fake_lookup):
         dom = fakelibvirt.virDomain(self.host.get_connection(),
                                     "<domain id='7'/>")
 
-        fake_get_domain.return_value = dom
-        instance = objects.Instance(id="124")
-
-        self.assertEqual(dom, self.host.get_domain(instance))
-
-        fake_get_domain.assert_called_once_with("instance-0000007c")
-
-    @mock.patch.object(host.Host, "_get_domain_by_name")
-    def test_get_guest(self, fake_get_domain):
-        dom = fakelibvirt.virDomain(self.host.get_connection(),
-                                    "<domain id='7'/>")
-
-        fake_get_domain.return_value = dom
+        fake_lookup.return_value = dom
         instance = objects.Instance(id="124")
 
         guest = self.host.get_guest(instance)
         self.assertEqual(dom, guest._domain)
         self.assertIsInstance(guest, libvirt_guest.Guest)
 
-        fake_get_domain.assert_called_once_with("instance-0000007c")
+        fake_lookup.assert_called_once_with("instance-0000007c")
 
     @mock.patch.object(fakelibvirt.Connection, "listAllDomains")
     def test_list_instance_domains(self, mock_list_all):
