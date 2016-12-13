@@ -625,10 +625,39 @@ libvirt_lvm_opts = [
     cfg.StrOpt('volume_clear',
                default='zero',
                choices=('none', 'zero', 'shred'),
-               help='Method used to wipe old volumes.'),
+               help="""
+Method used to wipe ephemeral disks when they are deleted. Only takes effect
+if LVM is set as backing storage.
+
+Possible values:
+
+* none - do not wipe deleted volumes
+* zero - overwrite volumes with zeroes
+* shred - overwrite volume repeatedly
+
+Related options:
+
+* images_type - must be set to ``lvm``
+* volume_clear_size
+"""),
     cfg.IntOpt('volume_clear_size',
                default=0,
-               help='Size in MiB to wipe at start of old volumes. 0 => all'),
+               min=0,
+               help="""
+Size of area in MiB, counting from the beginning of the allocated volume,
+that will be cleared using method set in ``volume_clear`` option.
+
+Possible values:
+
+* 0 - clear whole volume
+* >0 - clear specified amount of MiB
+
+Related options:
+
+* images_type - must be set to ``lvm``
+* volume_clear - must be set and the value must be different than ``none``
+  for this option to have any impact
+"""),
 ]
 
 libvirt_utils_opts = [
