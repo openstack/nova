@@ -630,7 +630,7 @@ def _compute_node_select(context, filters=None, limit=None, marker=None):
 
 def _compute_node_fetchall(context, filters=None, limit=None, marker=None):
     select = _compute_node_select(context, filters, limit=limit, marker=marker)
-    engine = get_engine(context)
+    engine = get_engine(context=context)
     conn = engine.connect()
 
     results = conn.execute(select).fetchall()
@@ -748,7 +748,7 @@ def compute_node_delete(context, compute_id):
 @pick_context_manager_reader
 def compute_node_statistics(context):
     """Compute statistics over all compute nodes."""
-    engine = get_engine(context)
+    engine = get_engine(context=context)
     services_tbl = models.Service.__table__
 
     inner_sel = sa.alias(_compute_node_select(context), name='inner_sel')
