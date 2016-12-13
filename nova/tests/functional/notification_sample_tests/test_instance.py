@@ -142,6 +142,10 @@ class TestInstanceNotificationSample(
         return replacements
 
     def test_create_delete_server_with_instance_update(self):
+        # This makes server network creation synchronous which is necessary
+        # for notification samples that expect instance.info_cache.network_info
+        # to be set.
+        self.useFixture(fixtures.SpawnIsSynchronousFixture())
         self.flags(notify_on_state_change='vm_and_task_state')
 
         server = self._boot_a_server(
@@ -190,12 +194,6 @@ class TestInstanceNotificationSample(
             {'state_update.new_task_state': 'block_device_mapping',
              'state_update.old_task_state': 'networking',
              'task_state': 'block_device_mapping',
-            },
-
-            # block_device_mapping -> spawning
-            {'state_update.new_task_state': 'spawning',
-             'state_update.old_task_state': 'block_device_mapping',
-             'task_state': 'spawning',
              'ip_addresses': [{
                  "nova_object.name": "IpPayload",
                  "nova_object.namespace": "nova",
@@ -209,6 +207,12 @@ class TestInstanceNotificationSample(
                      "label": "private-network",
                      "device_name": "tapce531f90-19"
                  }}]
+            },
+
+            # block_device_mapping -> spawning
+            {'state_update.new_task_state': 'spawning',
+             'state_update.old_task_state': 'block_device_mapping',
+             'task_state': 'spawning',
              },
 
             # spawning -> active
