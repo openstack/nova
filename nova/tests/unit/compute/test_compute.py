@@ -8273,6 +8273,7 @@ class ComputeTestCase(BaseTestCase,
                     block_device_mapping=[])
         self.assertEqual('Preserve this', instance.fault.message)
 
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch('nova.objects.Instance.destroy')
     @mock.patch('nova.context.target_cell')
     @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
@@ -8280,8 +8281,8 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch('nova.compute.utils.notify_about_instance_usage')
     @mock.patch('nova.objects.BuildRequest.get_by_instance_uuid')
     def test_delete_while_booting_instance_not_in_cell_db_cellsv2(
-            self, br_get_by_instance, notify, minimum_server_version,
-            im_get_by_instance, target_cell, instance_destroy):
+            self, br_get_by_instance, legacy_notify, minimum_server_version,
+            im_get_by_instance, target_cell, instance_destroy, notify):
 
         minimum_server_version.return_value = 15
         im_get_by_instance.return_value = mock.Mock()
@@ -8297,15 +8298,17 @@ class ComputeTestCase(BaseTestCase,
 
         # the instance is updated during the delete so we only match by uuid
         test_utils.assert_instance_delete_notification_by_uuid(
-            notify, instance.uuid, self.compute_api.notifier, self.context)
+            legacy_notify, notify, instance.uuid, self.compute_api.notifier,
+            self.context)
 
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch('nova.objects.Instance.destroy')
     @mock.patch('nova.objects.Service.get_minimum_version')
     @mock.patch('nova.compute.utils.notify_about_instance_usage')
     @mock.patch('nova.objects.BuildRequest.get_by_instance_uuid')
     def test_delete_while_booting_instance_not_in_cell_db_cellsv1(
-            self, br_get_by_instance, notify, minimum_server_version,
-            instance_destroy):
+            self, br_get_by_instance, legacy_notify, minimum_server_version,
+            instance_destroy, notify):
 
         minimum_server_version.return_value = 14
 
@@ -8316,15 +8319,17 @@ class ComputeTestCase(BaseTestCase,
         self.compute_api._delete_instance(self.context, instance)
 
         test_utils.assert_instance_delete_notification_by_uuid(
-            notify, instance.uuid, self.compute_api.notifier, self.context)
+            legacy_notify, notify, instance.uuid, self.compute_api.notifier,
+            self.context)
 
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch('nova.objects.Instance.destroy')
     @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
     @mock.patch('nova.compute.utils.notify_about_instance_usage')
     @mock.patch('nova.objects.BuildRequest.get_by_instance_uuid')
     def test_delete_while_booting_instance_not_scheduled_cellv1(
-            self, br_get_by_instance, notify, im_get_by_instance,
-            instance_destroy):
+            self, br_get_by_instance, legacy_notify, im_get_by_instance,
+            instance_destroy, notify):
 
         instance = self._create_fake_instance_obj()
         instance.host = None
@@ -8340,16 +8345,20 @@ class ComputeTestCase(BaseTestCase,
         self.compute_api._delete_instance(self.context, instance)
 
         test_utils.assert_instance_delete_notification_by_uuid(
-            notify, instance.uuid, self.compute_api.notifier, self.context)
+            legacy_notify, notify, instance.uuid, self.compute_api.notifier,
+            self.context)
 
+        instance_destroy.assert_called_once_with()
+
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch('nova.objects.Instance.destroy')
     @mock.patch('nova.context.target_cell')
     @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
     @mock.patch('nova.compute.utils.notify_about_instance_usage')
     @mock.patch('nova.objects.BuildRequest.get_by_instance_uuid')
     def test_delete_while_booting_instance_not_scheduled_cellv2(
-            self, br_get_by_instance, notify, im_get_by_instance, target_cell,
-            instance_destroy):
+            self, br_get_by_instance, legacy_notify, im_get_by_instance,
+            target_cell, instance_destroy, notify):
 
         target_cell.return_value.__enter__.return_value = self.context
         instance = self._create_fake_instance_obj()
@@ -8367,7 +8376,8 @@ class ComputeTestCase(BaseTestCase,
 
         instance_destroy.assert_called_once_with()
         test_utils.assert_instance_delete_notification_by_uuid(
-            notify, instance.uuid, self.compute_api.notifier, self.context)
+            legacy_notify, notify, instance.uuid, self.compute_api.notifier,
+            self.context)
 
 
 @ddt.ddt

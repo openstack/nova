@@ -455,6 +455,25 @@ class TestInstanceNotificationSample(
                 'fault.traceback': self.ANY},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
+        fake_notifier.reset()
+
+        self.api.delete_server(server['id'])
+        self._wait_until_deleted(server)
+
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-delete-start_not_scheduled',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-delete-end_not_scheduled',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
     def test_instance_exists_usage_audit(self):
         # TODO(xavvior): Should create a functional test for the
         # "instance_usage_audit" periodic task. We didn't find usable
@@ -494,6 +513,36 @@ class TestInstanceNotificationSample(
                 'uuid': server['id']
             },
             actual=notifications[0])
+
+    def test_delete_server_while_compute_is_down(self):
+
+        server = self._boot_a_server(
+            expected_status='ACTIVE',
+            extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
+        self._attach_volume_to_server(server, self.cinder.SWAP_OLD_VOL)
+
+        service_id = self.api.get_service_id('nova-compute')
+        self.admin_api.put_service_force_down(service_id, True)
+        fake_notifier.reset()
+
+        self.api.delete_server(server['id'])
+        self._wait_until_deleted(server)
+
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-delete-start_compute_down',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-delete-end_compute_down',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
+        self.admin_api.put_service_force_down(service_id, False)
 
     def _verify_instance_update_steps(self, steps, notifications,
                                       initial=None):

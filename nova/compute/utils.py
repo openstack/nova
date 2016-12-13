@@ -1157,11 +1157,31 @@ class UnlimitedSemaphore(object):
 
 @contextlib.contextmanager
 def notify_about_instance_delete(notifier, context, instance,
-                                 delete_type='delete'):
+                                 delete_type='delete',
+                                 source=fields.NotificationSource.API):
     try:
         notify_about_instance_usage(notifier, context, instance,
                                     "%s.start" % delete_type)
+        # Note(gibi): soft_delete and force_delete types will be handled in a
+        # subsequent patch
+        if delete_type == 'delete':
+            notify_about_instance_action(
+                context,
+                instance,
+                host=CONF.host,
+                source=source,
+                action=fields.NotificationAction.DELETE,
+                phase=fields.NotificationPhase.START)
+
         yield
     finally:
         notify_about_instance_usage(notifier, context, instance,
                                     "%s.end" % delete_type)
+        if delete_type == 'delete':
+            notify_about_instance_action(
+                context,
+                instance,
+                host=CONF.host,
+                source=source,
+                action=fields.NotificationAction.DELETE,
+                phase=fields.NotificationPhase.END)

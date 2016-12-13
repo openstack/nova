@@ -1098,10 +1098,12 @@ class ComputeUtilsTestCase(test.NoDBTestCase):
             self.assertEqual([], addresses)
         mock_ifaddresses.assert_called_once_with(iface)
 
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch('nova.compute.utils.notify_about_instance_usage')
     @mock.patch('nova.objects.Instance.destroy')
     def test_notify_about_instance_delete(self, mock_instance_destroy,
-                                          mock_notify_usage):
+                                          mock_notify_usage,
+                                          mock_notify_action):
         instance = fake_instance.fake_instance_obj(
             self.context, expected_attrs=('system_metadata',))
         with compute_utils.notify_about_instance_delete(
@@ -1114,6 +1116,14 @@ class ComputeUtilsTestCase(test.NoDBTestCase):
                       'delete.end')
         ]
         mock_notify_usage.assert_has_calls(expected_notify_calls)
+        mock_notify_action.assert_has_calls([
+            mock.call(self.context, instance,
+                      host='fake-mini', source='nova-api',
+                      action='delete', phase='start'),
+            mock.call(self.context, instance,
+                      host='fake-mini', source='nova-api',
+                      action='delete', phase='end'),
+        ])
 
     def test_get_stashed_volume_connector_none(self):
         inst = fake_instance.fake_instance_obj(self.context)

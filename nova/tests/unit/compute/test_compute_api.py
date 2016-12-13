@@ -1006,6 +1006,8 @@ class _ComputeAPIUnitTestMixIn(object):
 
         return snapshot_id
 
+    @mock.patch.object(compute_utils,
+                       'notify_about_instance_action')
     @mock.patch.object(objects.Migration, 'get_by_instance_and_status')
     @mock.patch.object(image_api.API, 'delete')
     @mock.patch.object(objects.InstanceMapping, 'save')
@@ -1028,8 +1030,9 @@ class _ComputeAPIUnitTestMixIn(object):
     def _test_delete(self, delete_type, mock_save, mock_bdm_get, mock_elevated,
                      mock_get_cn, mock_up, mock_record, mock_inst_update,
                      mock_deallocate, mock_inst_meta, mock_inst_destroy,
-                     mock_notify, mock_del_token, mock_get_inst, mock_save_im,
-                     mock_image_delete, mock_mig_get, **attrs):
+                     mock_notify_legacy, mock_del_token, mock_get_inst,
+                     mock_save_im, mock_image_delete, mock_mig_get,
+                     mock_notify, **attrs):
         expected_save_calls = [mock.call()]
         expected_record_calls = []
         expected_elevated_calls = []
@@ -1154,13 +1157,13 @@ class _ComputeAPIUnitTestMixIn(object):
                     test.MatchType(objects.Service))
             if is_downed_host:
                 if 'soft' in delete_type:
-                    mock_notify.assert_has_calls([
+                    mock_notify_legacy.assert_has_calls([
                         mock.call(self.compute_api.notifier, self.context,
                                   inst, 'delete.start'),
                         mock.call(self.compute_api.notifier, self.context,
                                   inst, 'delete.end')])
                 else:
-                    mock_notify.assert_has_calls([
+                    mock_notify_legacy.assert_has_calls([
                         mock.call(self.compute_api.notifier, self.context,
                                   inst, '%s.start' % delete_type),
                         mock.call(self.compute_api.notifier, self.context,
@@ -1186,6 +1189,14 @@ class _ComputeAPIUnitTestMixIn(object):
         if is_shelved:
             mock_image_delete.assert_called_once_with(self.context,
                                                       snapshot_id)
+        if not cast and delete_type == 'delete':
+            mock_notify.assert_has_calls([
+                mock.call(self.context, inst, host='fake-mini',
+                          source='nova-api',
+                          action=delete_type, phase='start'),
+                mock.call(self.context, inst, host='fake-mini',
+                          source='nova-api',
+                          action=delete_type, phase='end')])
 
     def test_delete(self):
         self._test_delete('delete')
@@ -1325,6 +1336,7 @@ class _ComputeAPIUnitTestMixIn(object):
             self._test_delete('force_delete', vm_state=vm_state,
                               task_state=task_states.RESIZE_MIGRATING)
 
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
     @mock.patch.object(compute_utils, 'notify_about_instance_usage')
     @mock.patch.object(db, 'instance_destroy')
     @mock.patch.object(db, 'constraint')
@@ -1333,7 +1345,8 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
     def test_delete_fast_if_host_not_set(self, mock_br_get, mock_save,
                                          mock_bdm_get, mock_cons,
-                                         mock_inst_destroy, mock_notify):
+                                         mock_inst_destroy,
+                                         mock_notify_legacy, mock_notify):
         self.useFixture(nova_fixtures.AllServicesCurrent())
         inst = self._create_instance_obj()
         inst.host = ''
@@ -1382,11 +1395,17 @@ class _ComputeAPIUnitTestMixIn(object):
                 test.MatchType(objects.BlockDeviceMappingList),
                 delete_type='delete')
         else:
-            mock_notify.assert_has_calls([
+            mock_notify_legacy.assert_has_calls([
                 mock.call(self.compute_api.notifier, self.context,
                           inst, 'delete.start'),
                 mock.call(self.compute_api.notifier, self.context,
                           inst, 'delete.end')])
+            mock_notify.assert_has_calls([
+                mock.call(self.context, inst, host='fake-mini',
+                          source='nova-api', action='delete', phase='start'),
+                mock.call(self.context, inst, host='fake-mini',
+                          source='nova-api', action='delete', phase='end')])
+
             mock_cons.assert_called_once_with(host=mock.ANY)
             mock_inst_destroy.assert_called_once_with(
                 self.context, instance_uuid, constraint='constraint')
@@ -1395,6 +1414,7 @@ class _ComputeAPIUnitTestMixIn(object):
                         rservations=None, local=False):
         pass
 
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
     @mock.patch.object(objects.BlockDeviceMapping, 'destroy')
     @mock.patch.object(cinder.API, 'detach')
     @mock.patch.object(compute_utils, 'notify_about_instance_usage')
@@ -1403,7 +1423,7 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch.object(objects.Instance, 'destroy')
     def test_local_delete_with_deleted_volume(
             self, mock_inst_destroy, mock_elevated, mock_dealloc,
-            mock_notify, mock_detach, mock_bdm_destroy):
+            mock_notify_legacy, mock_detach, mock_bdm_destroy, mock_notify):
         bdms = [objects.BlockDeviceMapping(
                 **fake_block_device.FakeDbBlockDeviceDict(
                 {'id': 42, 'volume_id': 'volume_id',
@@ -1419,11 +1439,17 @@ class _ComputeAPIUnitTestMixIn(object):
                                        'delete',
                                        self._fake_do_delete)
 
-        mock_notify.assert_has_calls([
+        mock_notify_legacy.assert_has_calls([
             mock.call(self.compute_api.notifier, self.context,
                       inst, 'delete.start'),
             mock.call(self.compute_api.notifier, self.context,
                       inst, 'delete.end')])
+        mock_notify.assert_has_calls([
+            mock.call(self.context, inst, host='fake-mini', source='nova-api',
+                      action='delete', phase='start'),
+            mock.call(self.context, inst, host='fake-mini', source='nova-api',
+                      action='delete', phase='end')])
+
         mock_elevated.assert_has_calls([mock.call(), mock.call()])
         mock_detach.assert_called_once_with(mock.ANY, 'volume_id', inst.uuid)
         mock_bdm_destroy.assert_called_once_with()
@@ -6308,6 +6334,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             fields=['device_id'])
         self.assertEqual([], instances.objects)
 
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
     @mock.patch('nova.compute.api.API._delete_while_booting',
                 return_value=False)
     @mock.patch('nova.compute.api.API._lookup_instance')
@@ -6320,7 +6347,8 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
     def _test_delete_volume_backed_instance(
             self, vm_state, mock_instance_destroy, bdm_destroy,
             notify_about_instance_usage, mock_save, mock_elevated,
-            bdm_get_by_instance_uuid, mock_lookup, _mock_del_booting):
+            bdm_get_by_instance_uuid, mock_lookup, _mock_del_booting,
+            notify_about_instance_action):
         volume_id = uuidutils.generate_uuid()
         conn_info = {'connector': {'host': 'orig-host'}}
         bdms = [objects.BlockDeviceMapping(

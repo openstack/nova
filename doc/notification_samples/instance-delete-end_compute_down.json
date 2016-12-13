@@ -1,0 +1,15 @@
+{
+    "event_type":"instance.delete.end",
+    "payload":{
+        "$ref":"common_payloads/InstanceActionPayload.json#",
+        "nova_object.data":{
+            "block_devices":[],
+            "deleted_at":"2012-10-29T13:42:11Z",
+            "ip_addresses":[],
+            "state":"deleted",
+            "terminated_at":"2012-10-29T13:42:11Z"
+        }
+    },
+    "priority":"INFO",
+    "publisher_id":"nova-api:fake-mini"
+}

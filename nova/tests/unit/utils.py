@@ -299,21 +299,53 @@ class CustomMockCallMatcher(object):
 
 
 def assert_instance_delete_notification_by_uuid(
-        mock_notify, expected_instance_uuid, expected_notifier,
-        expected_context, expect_targeted_context=False):
+        mock_legacy_notify, mock_notify, expected_instance_uuid,
+        expected_notifier, expected_context, expect_targeted_context=False,
+        expected_source='nova-api', expected_host='fake-mini'):
 
     match_by_instance_uuid = CustomMockCallMatcher(
         lambda instance:
         instance.uuid == expected_instance_uuid)
 
+    assert_legacy_instance_delete_notification_by_uuid(
+        mock_legacy_notify, match_by_instance_uuid, expected_notifier,
+        expected_context, expect_targeted_context)
+    assert_versioned_instance_delete_notification_by_uuid(
+        mock_notify, match_by_instance_uuid,
+        expected_context, expected_source, expected_host=expected_host)
+
+
+def assert_versioned_instance_delete_notification_by_uuid(
+        mock_notify, instance_matcher,
+        expected_context, expected_source, expected_host):
+
+    mock_notify.assert_has_calls([
+        mock.call(expected_context,
+                  instance_matcher,
+                  host=expected_host,
+                  source=expected_source,
+                  action='delete',
+                  phase='start'),
+        mock.call(expected_context,
+                  instance_matcher,
+                  host=expected_host,
+                  source=expected_source,
+                  action='delete',
+                  phase='end')])
+
+
+def assert_legacy_instance_delete_notification_by_uuid(
+        mock_notify, instance_matcher, expected_notifier,
+        expected_context, expect_targeted_context):
+
     mock_notify.assert_has_calls([
         mock.call(expected_notifier,
                   expected_context,
-                  match_by_instance_uuid,
+                  instance_matcher,
                   'delete.start'),
         mock.call(expected_notifier,
                   expected_context,
-                  match_by_instance_uuid,
+                  instance_matcher,
                   'delete.end')])
 
     for call in mock_notify.call_args_list:
