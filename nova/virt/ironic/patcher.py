@@ -1,5 +1,3 @@
-# coding=utf-8
-#
 # Copyright 2014 Hewlett-Packard Development Company, L.P.
 # Copyright 2014 Red Hat, Inc.
 # All Rights Reserved.

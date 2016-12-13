@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # This is a hack of the builtin todo extension, to make the todo_list
 # more user friendly.
 
