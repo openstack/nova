@@ -4672,6 +4672,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if (CONF.spice.enabled and CONF.spice.agent_enabled and
                 virt_type not in ('lxc', 'uml', 'xen')):
             channel = vconfig.LibvirtConfigGuestChannel()
+            channel.type = 'spicevmc'
             channel.target_name = "com.redhat.spice.0"
             guest.add_device(channel)
 
