@@ -1762,6 +1762,10 @@ class PciConfigInvalidWhitelist(Invalid):
 
 # Cannot be templated, msg needs to be constructed when raised.
 class InternalError(NovaException):
+    """Generic hypervisor errors.
+
+    Consider subclassing this to provide more specific exceptions.
+    """
     msg_fmt = "%(err)s"
 
 

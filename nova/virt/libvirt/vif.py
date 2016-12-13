@@ -467,7 +467,7 @@ class LibvirtGenericVIFDriver(object):
         profilefunc = "_set_config_" + vif.port_profile.obj_name()
         func = getattr(self, profilefunc, None)
         if not func:
-            raise exception.NovaException(
+            raise exception.InternalError(
                 _("Unsupported VIF port profile type %(obj)s func %(func)s") %
                 {'obj': vif.port_profile.obj_name(), 'func': profilefunc})
 
@@ -495,7 +495,7 @@ class LibvirtGenericVIFDriver(object):
         viffunc = "_set_config_" + vif.obj_name()
         func = getattr(self, viffunc, None)
         if not func:
-            raise exception.NovaException(
+            raise exception.InternalError(
                 _("Unsupported VIF type %(obj)s func %(func)s") %
                 {'obj': vif.obj_name(), 'func': viffunc})
         func(instance, vif, conf, host)
@@ -514,7 +514,7 @@ class LibvirtGenericVIFDriver(object):
                    'vif': vif, 'virt_type': virt_type})
 
         if vif_type is None:
-            raise exception.NovaException(
+            raise exception.InternalError(
                 _("vif_type parameter must be present "
                   "for this vif_driver implementation"))
 
@@ -528,7 +528,7 @@ class LibvirtGenericVIFDriver(object):
         vif_slug = self._normalize_vif_type(vif_type)
         func = getattr(self, 'get_config_%s' % vif_slug, None)
         if not func:
-            raise exception.NovaException(
+            raise exception.InternalError(
                 _("Unexpected vif_type=%s") % vif_type)
         return func(instance, vif, image_meta,
                     inst_type, virt_type, host)
@@ -780,7 +780,7 @@ class LibvirtGenericVIFDriver(object):
         except osv_exception.ExceptionBase as ex:
             msg = (_("Failure running os_vif plugin plug method: %(ex)s")
                    % {'ex': ex})
-            raise exception.NovaException(msg)
+            raise exception.InternalError(msg)
 
     def plug(self, instance, vif):
         vif_type = vif['type']
@@ -989,7 +989,7 @@ class LibvirtGenericVIFDriver(object):
         except osv_exception.ExceptionBase as ex:
             msg = (_("Failure running os_vif plugin unplug method: %(ex)s")
                    % {'ex': ex})
-            raise exception.NovaException(msg)
+            raise exception.InternalError(msg)
 
     def unplug(self, instance, vif):
         vif_type = vif['type']
@@ -1000,9 +1000,9 @@ class LibvirtGenericVIFDriver(object):
                    'vif': vif})
 
         if vif_type is None:
-            raise exception.NovaException(
-                _("vif_type parameter must be present "
-                  "for this vif_driver implementation"))
+            msg = _("vif_type parameter must be present for this vif_driver "
+                    "implementation")
+            raise exception.InternalError(msg)
 
         # Try os-vif codepath first
         vif_obj = os_vif_util.nova_to_osvif_vif(vif)
@@ -1014,6 +1014,6 @@ class LibvirtGenericVIFDriver(object):
         vif_slug = self._normalize_vif_type(vif_type)
         func = getattr(self, 'unplug_%s' % vif_slug, None)
         if not func:
-            raise exception.NovaException(
-                _("Unexpected vif_type=%s") % vif_type)
+            msg = _("Unexpected vif_type=%s") % vif_type
+            raise exception.InternalError(msg)
         func(instance, vif)
