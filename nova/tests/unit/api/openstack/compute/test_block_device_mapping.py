@@ -247,6 +247,17 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self.assertRaises(exc.HTTPBadRequest, self._test_create,
                           params, no_image=True)
 
+    def test_create_instance_with_invalid_boot_index(self):
+        bdm = [{"source_type": "image", "delete_on_termination": True,
+                "boot_index": 'invalid',
+                "uuid": "2ff3a1d3-ed70-4c3f-94ac-941461153bc0",
+                "destination_type": "local"}]
+
+        params = {block_device_mapping.ATTRIBUTE_NAME: bdm,
+                  'imageRef': '2ff3a1d3-ed70-4c3f-94ac-941461153bc0'}
+        self.assertRaises(exception.ValidationError,
+                          self._test_create, params)
+
     def test_create_instance_with_device_name_not_string(self):
         self.bdm[0]['device_name'] = 123
         old_create = compute_api.API.create
