@@ -362,11 +362,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                              supports_device_tagging=True):
             self.compute._check_device_tagging(net_req_list, bdms)
 
-    @mock.patch.object(network_api.API, 'allocate_for_instance')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(time, 'sleep')
     def test_allocate_network_succeeds_after_retries(
-            self, mock_sleep, mock_save, mock_allocate_for_instance):
+            self, mock_sleep, mock_save):
         self.flags(network_allocate_retries=8)
 
         instance = fake_instance.fake_instance_obj(
@@ -380,17 +379,17 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         final_result = 'meow'
         dhcp_options = None
 
-        mock_allocate_for_instance.side_effect = [
-            test.TestingException()] * 7 + [final_result]
-
         expected_sleep_times = [1, 2, 4, 8, 16, 30, 30, 30]
 
-        res = self.compute._allocate_network_async(self.context, instance,
-                                                   req_networks,
-                                                   macs,
-                                                   sec_groups,
-                                                   is_vpn,
-                                                   dhcp_options)
+        with mock.patch.object(
+                self.compute.network_api, 'allocate_for_instance',
+                side_effect=[test.TestingException()] * 7 + [final_result]):
+            res = self.compute._allocate_network_async(self.context, instance,
+                                                       req_networks,
+                                                       macs,
+                                                       sec_groups,
+                                                       is_vpn,
+                                                       dhcp_options)
 
         mock_sleep.has_calls(expected_sleep_times)
         self.assertEqual(final_result, res)
@@ -399,11 +398,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertFalse(mock_save.called)
         self.assertEqual('True', instance.system_metadata['network_allocated'])
 
-    @mock.patch.object(network_api.API, 'allocate_for_instance')
-    def test_allocate_network_fails(self, mock_allocate):
+    def test_allocate_network_fails(self):
         self.flags(network_allocate_retries=0)
-
-        mock_allocate.side_effect = test.TestingException
 
         instance = {}
         is_vpn = 'fake-is-vpn'
@@ -413,10 +409,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         sec_groups = 'fake-sec-groups'
         dhcp_options = None
 
-        self.assertRaises(test.TestingException,
-                          self.compute._allocate_network_async,
-                          self.context, instance, req_networks, macs,
-                          sec_groups, is_vpn, dhcp_options)
+        with mock.patch.object(
+                self.compute.network_api, 'allocate_for_instance',
+                side_effect=test.TestingException) as mock_allocate:
+            self.assertRaises(test.TestingException,
+                              self.compute._allocate_network_async,
+                              self.context, instance, req_networks, macs,
+                              sec_groups, is_vpn, dhcp_options)
 
         mock_allocate.assert_called_once_with(
             self.context, instance, vpn=is_vpn,
@@ -425,11 +424,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             dhcp_options=dhcp_options,
             bind_host_id=instance.get('host'))
 
-    @mock.patch.object(network_api.API, 'allocate_for_instance')
     @mock.patch.object(manager.ComputeManager, '_instance_update')
     @mock.patch.object(time, 'sleep')
     def test_allocate_network_with_conf_value_is_one(
-            self, sleep, _instance_update, allocate_for_instance):
+            self, sleep, _instance_update):
         self.flags(network_allocate_retries=1)
 
         instance = fake_instance.fake_instance_obj(
@@ -442,14 +440,16 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         dhcp_options = None
         final_result = 'zhangtralon'
 
-        allocate_for_instance.side_effect = [test.TestingException(),
-                                             final_result]
-        res = self.compute._allocate_network_async(self.context, instance,
-                                                   req_networks,
-                                                   macs,
-                                                   sec_groups,
-                                                   is_vpn,
-                                                   dhcp_options)
+        with mock.patch.object(self.compute.network_api,
+                               'allocate_for_instance',
+                               side_effect = [test.TestingException(),
+                                              final_result]):
+            res = self.compute._allocate_network_async(self.context, instance,
+                                                       req_networks,
+                                                       macs,
+                                                       sec_groups,
+                                                       is_vpn,
+                                                       dhcp_options)
         self.assertEqual(final_result, res)
         self.assertEqual(1, sleep.call_count)
 
@@ -589,7 +589,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.compute.init_virt_events()
         self.assertFalse(mock_register.called)
 
-    @mock.patch.object(network_api.API, 'get_instance_nw_info')
     @mock.patch.object(manager.ComputeManager, '_get_instances_on_driver')
     @mock.patch.object(manager.ComputeManager, 'init_virt_events')
     @mock.patch.object(context, 'get_admin_context')
@@ -600,7 +599,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     @mock.patch('nova.objects.Migration.save')
     def test_init_host_with_evacuated_instance(self, mock_save, mock_mig_get,
             mock_init_host, mock_destroy, mock_host_get, mock_admin_ctxt,
-            mock_init_virt, mock_get_inst, mock_get_net):
+            mock_init_virt, mock_get_inst):
         our_host = self.compute.host
         not_our_host = 'not-' + our_host
 
@@ -613,10 +612,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         # simulate failed instance
         mock_get_inst.return_value = [deleted_instance]
-        mock_get_net.side_effect = exception.InstanceNotFound(
-            instance_id=deleted_instance['uuid'])
-
-        self.compute.init_host()
+        with mock.patch.object(
+                self.compute.network_api, 'get_instance_nw_info',
+                side_effect = exception.InstanceNotFound(
+                    instance_id=deleted_instance['uuid'])) as mock_get_net:
+            self.compute.init_host()
 
         mock_init_host.assert_called_once_with(host=our_host)
         mock_host_get.assert_called_once_with(self.context, our_host,
@@ -3529,7 +3529,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                        'event_finish_with_failure')
     @mock.patch.object(objects.InstanceActionEvent, 'event_start')
     @mock.patch.object(objects.Instance, 'save')
-    @mock.patch.object(network_api.API, 'cleanup_instance_network_on_host')
     @mock.patch.object(manager.ComputeManager,
                        '_nil_out_instance_obj_host_and_node')
     @mock.patch.object(manager.ComputeManager, '_set_instance_obj_error_state')
@@ -3537,21 +3536,24 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch.object(manager.ComputeManager, '_build_and_run_instance')
     @mock.patch('nova.hooks._HOOKS')
     def test_rescheduled_exception(self, mock_hooks, mock_build_run,
-                                   mock_build, mock_set, mock_nil, mock_clean,
+                                   mock_build, mock_set, mock_nil,
                                    mock_save, mock_start, mock_finish):
         self._do_build_instance_update(mock_save, reschedule_update=True)
         mock_build_run.side_effect = exception.RescheduledException(reason='',
                 instance_uuid=self.instance.uuid)
 
-        self.compute.build_and_run_instance(self.context, self.instance,
-                self.image, request_spec={},
-                filter_properties=self.filter_properties,
-                injected_files=self.injected_files,
-                admin_password=self.admin_pass,
-                requested_networks=self.requested_networks,
-                security_groups=self.security_groups,
-                block_device_mapping=self.block_device_mapping, node=self.node,
-                limits=self.limits)
+        with mock.patch.object(
+                self.compute.network_api,
+                'cleanup_instance_network_on_host') as mock_clean:
+            self.compute.build_and_run_instance(self.context, self.instance,
+                    self.image, request_spec={},
+                    filter_properties=self.filter_properties,
+                    injected_files=self.injected_files,
+                    admin_password=self.admin_pass,
+                    requested_networks=self.requested_networks,
+                    security_groups=self.security_groups,
+                    block_device_mapping=self.block_device_mapping,
+                    node=self.node, limits=self.limits)
 
         self._assert_build_instance_hook_called(mock_hooks,
                                                 build_results.RESCHEDULED)
@@ -3610,7 +3612,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
     @mock.patch.object(manager.ComputeManager, '_build_and_run_instance')
     @mock.patch.object(conductor_api.ComputeTaskAPI, 'build_instances')
-    @mock.patch.object(network_api.API, 'cleanup_instance_network_on_host')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(objects.InstanceActionEvent, 'event_start')
     @mock.patch.object(objects.InstanceActionEvent,
@@ -3618,7 +3619,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch.object(virt_driver.ComputeDriver, 'macs_for_instance')
     def test_rescheduled_exception_with_network_allocated(self,
             mock_macs_for_instance, mock_event_finish,
-            mock_event_start, mock_ins_save, mock_cleanup_network,
+            mock_event_start, mock_ins_save,
             mock_build_ins, mock_build_and_run):
         instance = fake_instance.fake_instance_obj(self.context,
                 vm_state=vm_states.ACTIVE,
@@ -3629,15 +3630,18 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_build_and_run.side_effect = exception.RescheduledException(
             reason='', instance_uuid=self.instance.uuid)
 
-        self.compute._do_build_and_run_instance(self.context, instance,
-            self.image, request_spec={},
-            filter_properties=self.filter_properties,
-            injected_files=self.injected_files,
-            admin_password=self.admin_pass,
-            requested_networks=self.requested_networks,
-            security_groups=self.security_groups,
-            block_device_mapping=self.block_device_mapping, node=self.node,
-            limits=self.limits)
+        with mock.patch.object(
+                self.compute.network_api,
+                'cleanup_instance_network_on_host') as mock_cleanup_network:
+            self.compute._do_build_and_run_instance(self.context, instance,
+                self.image, request_spec={},
+                filter_properties=self.filter_properties,
+                injected_files=self.injected_files,
+                admin_password=self.admin_pass,
+                requested_networks=self.requested_networks,
+                security_groups=self.security_groups,
+                block_device_mapping=self.block_device_mapping, node=self.node,
+                limits=self.limits)
 
         mock_build_and_run.assert_called_once_with(self.context,
             instance,
@@ -3756,7 +3760,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                        'event_finish_with_failure')
     @mock.patch.object(objects.InstanceActionEvent, 'event_start')
     @mock.patch.object(objects.Instance, 'save')
-    @mock.patch.object(network_api.API, 'cleanup_instance_network_on_host')
     @mock.patch.object(manager.ComputeManager, '_cleanup_allocated_networks')
     @mock.patch.object(manager.ComputeManager,
                        '_nil_out_instance_obj_host_and_node')
@@ -3767,22 +3770,25 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch('nova.hooks._HOOKS')
     def test_rescheduled_exception_do_not_deallocate_network(self, mock_hooks,
             mock_build_run, mock_build, mock_deallocate, mock_nil,
-            mock_clean_net, mock_clean_inst, mock_save, mock_start,
+            mock_clean_net, mock_save, mock_start,
             mock_finish):
         self._do_build_instance_update(mock_save, reschedule_update=True)
         mock_build_run.side_effect = exception.RescheduledException(reason='',
                 instance_uuid=self.instance.uuid)
         mock_deallocate.return_value = False
 
-        self.compute.build_and_run_instance(self.context, self.instance,
-                self.image, request_spec={},
-                filter_properties=self.filter_properties,
-                injected_files=self.injected_files,
-                admin_password=self.admin_pass,
-                requested_networks=self.requested_networks,
-                security_groups=self.security_groups,
-                block_device_mapping=self.block_device_mapping, node=self.node,
-                limits=self.limits)
+        with mock.patch.object(
+                self.compute.network_api,
+                'cleanup_instance_network_on_host') as mock_clean_inst:
+            self.compute.build_and_run_instance(self.context, self.instance,
+                    self.image, request_spec={},
+                    filter_properties=self.filter_properties,
+                    injected_files=self.injected_files,
+                    admin_password=self.admin_pass,
+                    requested_networks=self.requested_networks,
+                    security_groups=self.security_groups,
+                    block_device_mapping=self.block_device_mapping,
+                    node=self.node, limits=self.limits)
 
         self._assert_build_instance_hook_called(mock_hooks,
                                                 build_results.RESCHEDULED)
@@ -4123,26 +4129,28 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(manager.ComputeManager,
                        '_nil_out_instance_obj_host_and_node')
-    @mock.patch.object(network_api.API, 'cleanup_instance_network_on_host')
     @mock.patch.object(conductor_api.ComputeTaskAPI, 'build_instances')
     @mock.patch.object(manager.ComputeManager, '_get_resource_tracker')
     def test_reschedule_on_resources_unavailable(self, mock_get_resource,
-                mock_build, mock_clean, mock_nil, mock_save, mock_start,
+                mock_build, mock_nil, mock_save, mock_start,
                 mock_finish, mock_notify):
         reason = 'resource unavailable'
         exc = exception.ComputeResourcesUnavailable(reason=reason)
         mock_get_resource.side_effect = exc
         self._do_build_instance_update(mock_save, reschedule_update=True)
 
-        self.compute.build_and_run_instance(self.context, self.instance,
-                self.image, request_spec={},
-                filter_properties=self.filter_properties,
-                injected_files=self.injected_files,
-                admin_password=self.admin_pass,
-                requested_networks=self.requested_networks,
-                security_groups=self.security_groups,
-                block_device_mapping=self.block_device_mapping, node=self.node,
-                limits=self.limits)
+        with mock.patch.object(
+                self.compute.network_api,
+                'cleanup_instance_network_on_host') as mock_clean:
+            self.compute.build_and_run_instance(self.context, self.instance,
+                    self.image, request_spec={},
+                    filter_properties=self.filter_properties,
+                    injected_files=self.injected_files,
+                    admin_password=self.admin_pass,
+                    requested_networks=self.requested_networks,
+                    security_groups=self.security_groups,
+                    block_device_mapping=self.block_device_mapping,
+                    node=self.node, limits=self.limits)
 
         self._instance_action_events(mock_start, mock_finish)
         self._assert_build_instance_update(mock_save, reschedule_update=True)
@@ -4418,11 +4426,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.requested_networks, None, self.security_groups, None)
         self.assertTrue(hasattr(nw_info_obj, 'wait'), "wait must be there")
 
-    @mock.patch.object(network_api.API, 'setup_instance_network_on_host')
     @mock.patch.object(manager.ComputeManager, '_allocate_network')
-    @mock.patch.object(network_api.API, 'get_instance_nw_info')
-    def test_return_networks_if_found(self, mock_get, mock_allocate,
-                                      mock_setup):
+    def test_return_networks_if_found(self, mock_allocate):
         instance = fake_instance.fake_instance_obj(self.context,
                 system_metadata=dict(network_allocated='True'),
                 expected_attrs=['system_metadata'])
@@ -4430,12 +4435,20 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         def fake_network_info():
             return network_model.NetworkInfo([{'address': '123.123.123.123'}])
 
-        # this should be a NetworkInfo, not NetworkInfoAsyncWrapper, to match
-        # what get_instance_nw_info really returns
-        mock_get.return_value = fake_network_info()
-
-        self.compute._build_networks_for_instance(self.context, instance,
-                self.requested_networks, self.security_groups)
+        with test.nested(
+                mock.patch.object(
+                    self.compute.network_api,
+                    'setup_instance_network_on_host'),
+                mock.patch.object(
+                    self.compute.network_api,
+                    'get_instance_nw_info')) as (
+            mock_setup, mock_get
+        ):
+            # this should be a NetworkInfo, not NetworkInfoAsyncWrapper, to
+            # match what get_instance_nw_info really returns
+            mock_get.return_value = fake_network_info()
+            self.compute._build_networks_for_instance(self.context, instance,
+                    self.requested_networks, self.security_groups)
 
         mock_get.assert_called_once_with(self.context, instance)
         mock_setup.assert_called_once_with(self.context, instance,
