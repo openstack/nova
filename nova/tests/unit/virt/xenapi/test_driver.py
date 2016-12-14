@@ -72,19 +72,21 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
         driver = self._get_driver()
         driver._session.product_version = (6, 8, 2)
 
-        self.stubs.Set(driver.host_state, 'get_host_stats', self.host_stats)
+        with mock.patch.object(driver.host_state, 'get_host_stats',
+                               side_effect=self.host_stats) as mock_get:
 
-        resources = driver.get_available_resource(None)
-        self.assertEqual(6008002, resources['hypervisor_version'])
-        self.assertEqual(50, resources['vcpus'])
-        self.assertEqual(3, resources['memory_mb'])
-        self.assertEqual(5, resources['local_gb'])
-        self.assertEqual(10, resources['vcpus_used'])
-        self.assertEqual(3 - 2, resources['memory_mb_used'])
-        self.assertEqual(2, resources['local_gb_used'])
-        self.assertEqual('XenServer', resources['hypervisor_type'])
-        self.assertEqual('somename', resources['hypervisor_hostname'])
-        self.assertEqual(1, resources['disk_available_least'])
+            resources = driver.get_available_resource(None)
+            self.assertEqual(6008002, resources['hypervisor_version'])
+            self.assertEqual(50, resources['vcpus'])
+            self.assertEqual(3, resources['memory_mb'])
+            self.assertEqual(5, resources['local_gb'])
+            self.assertEqual(10, resources['vcpus_used'])
+            self.assertEqual(3 - 2, resources['memory_mb_used'])
+            self.assertEqual(2, resources['local_gb_used'])
+            self.assertEqual('XenServer', resources['hypervisor_type'])
+            self.assertEqual('somename', resources['hypervisor_hostname'])
+            self.assertEqual(1, resources['disk_available_least'])
+            mock_get.assert_called_once_with(refresh=True)
 
     def test_overhead(self):
         driver = self._get_driver()
@@ -102,11 +104,10 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
     def test_set_bootable(self):
         driver = self._get_driver()
 
-        self.mox.StubOutWithMock(driver._vmops, 'set_bootable')
-        driver._vmops.set_bootable('inst', True)
-        self.mox.ReplayAll()
-
-        driver.set_bootable('inst', True)
+        with mock.patch.object(driver._vmops,
+                               'set_bootable') as mock_set_bootable:
+            driver.set_bootable('inst', True)
+            mock_set_bootable.assert_called_once_with('inst', True)
 
     def test_post_interrupted_snapshot_cleanup(self):
         driver = self._get_driver()
@@ -126,13 +127,15 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
         driver = self._get_driver()
         self.flags(connection_url='http://%s' % ip,
                    connection_password='test_pass', group='xenserver')
-        self.stubs.Set(driver.host_state, 'get_host_stats', self.host_stats)
+        with mock.patch.object(driver.host_state, 'get_host_stats',
+                               side_effect=self.host_stats) as mock_get:
 
-        connector = driver.get_volume_connector({'uuid': 'fake'})
-        self.assertIn('ip', connector)
-        self.assertEqual(connector['ip'], ip)
-        self.assertIn('initiator', connector)
-        self.assertEqual(connector['initiator'], 'someiqn')
+            connector = driver.get_volume_connector({'uuid': 'fake'})
+            self.assertIn('ip', connector)
+            self.assertEqual(connector['ip'], ip)
+            self.assertIn('initiator', connector)
+            self.assertEqual(connector['initiator'], 'someiqn')
+            mock_get.assert_called_once_with(refresh=True)
 
     def test_get_block_storage_ip(self):
         my_ip = '123.123.123.123'
