@@ -15,7 +15,6 @@
 import os
 import time
 
-import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
 from oslo_utils import fixture as utils_fixture
@@ -52,12 +51,10 @@ class NotificationSampleTestBase(test.TestCase,
 
     ANY = object()
 
+    REQUIRES_LOCKING = True
+
     def setUp(self):
         super(NotificationSampleTestBase, self).setUp()
-        # Needs to mock this to avoid REQUIRES_LOCKING to be set to True
-        patcher = mock.patch('oslo_concurrency.lockutils.lock')
-        self.addCleanup(patcher.stop)
-        patcher.start()
 
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
                 api_version='v2.1'))
