@@ -572,6 +572,7 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
             plugin="ovs",
             port_profile=osv_objects.vif.VIFPortProfileOpenVSwitch(
                 interface_id="dc065497-3c8d-4f44-8fb4-e1d33c16a536"),
+            vif_name="vhudc065497-3c",
             path='/fake/socket',
             mode='client',
             has_traffic_filtering=True,
