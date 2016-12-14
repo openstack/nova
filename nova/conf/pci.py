@@ -82,7 +82,8 @@ Possible values:
   * "<tag>": Additional <tag> and <tag_value> used for matching PCI devices.
     Supported <tag>: "physical_network".
 
-  Valid examples are:
+  The address key supports traditional glob style and regular expression
+  syntax. Valid examples are:
 
     passthrough_whitelist = {"devname":"eth0",
                              "physical_network":"physnet"}
@@ -94,6 +95,14 @@ Possible values:
     passthrough_whitelist = {"vendor_id":"1137",
                              "product_id":"0071",
                              "address": "0000:0a:00.1",
+                             "physical_network":"physnet1"}
+    passthrough_whitelist = {"address":{"domain": ".*",
+                                        "bus": "02", "slot": "01",
+                                        "function": "[2-7]"},
+                             "physical_network":"physnet1"}
+    passthrough_whitelist = {"address":{"domain": ".*",
+                                        "bus": "02", "slot": "0[1-2]",
+                                        "function": ".*"},
                              "physical_network":"physnet1"}
 
   The following are invalid, as they specify mutually exclusive options:

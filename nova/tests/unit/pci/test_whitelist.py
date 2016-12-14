@@ -49,18 +49,35 @@ class WhitelistTestCase(test.NoDBTestCase):
         parsed = whitelist.Whitelist([wl1, wl2])
         self.assertEqual(2, len(parsed.specs))
 
+    def test_device_assignable_glob(self):
+        white_list = '{"address":"*:00:0a.*", "physical_network":"hr_net"}'
+        parsed = whitelist.Whitelist(
+            [white_list])
+        self.assertTrue(parsed.device_assignable(dev_dict))
+
+    def test_device_not_assignable_glob(self):
+        white_list = '{"address":"*:00:0b.*", "physical_network":"hr_net"}'
+        parsed = whitelist.Whitelist(
+            [white_list])
+        self.assertFalse(parsed.device_assignable(dev_dict))
+
+    def test_device_assignable_regex(self):
+        white_list = ('{"address":{"domain": ".*", "bus": ".*", '
+                      '"slot": "0a", "function": "[0-1]"}, '
+                      '"physical_network":"hr_net"}')
+        parsed = whitelist.Whitelist(
+            [white_list])
+        self.assertTrue(parsed.device_assignable(dev_dict))
+
+    def test_device_not_assignable_regex(self):
+        white_list = ('{"address":{"domain": ".*", "bus": ".*", '
+                      '"slot": "0a", "function": "[2-3]"}, '
+                      '"physical_network":"hr_net"}')
+        parsed = whitelist.Whitelist(
+            [white_list])
+        self.assertFalse(parsed.device_assignable(dev_dict))
+
     def test_device_assignable(self):
         white_list = '{"product_id":"0001", "vendor_id":"8086"}'
         parsed = whitelist.Whitelist([white_list])
         self.assertTrue(parsed.device_assignable(dev_dict))
-
-    def test_device_assignable_multiple(self):
-        white_list_1 = '{"product_id":"0001", "vendor_id":"8086"}'
-        white_list_2 = '{"product_id":"0002", "vendor_id":"8087"}'
-        parsed = whitelist.Whitelist(
-            [white_list_1, white_list_2])
-        self.assertTrue(parsed.device_assignable(dev_dict))
-        dev_dict1 = dev_dict.copy()
-        dev_dict1['vendor_id'] = '8087'
-        dev_dict1['product_id'] = '0002'
-        self.assertTrue(parsed.device_assignable(dev_dict1))
