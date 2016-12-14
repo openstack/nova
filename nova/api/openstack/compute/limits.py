@@ -61,12 +61,9 @@ class LimitsController(wsgi.Controller):
                                            usages=False)
         abs_limits = {k: v['limit'] for k, v in quotas.items()}
 
-        builder = self._get_view_builder(req)
+        builder = limits_views.ViewBuilder()
         return builder.build(abs_limits, filter_result=filter_result,
                              max_image_meta=max_image_meta)
-
-    def _get_view_builder(self, req):
-        return limits_views.ViewBuilderV21()
 
 
 class Limits(extensions.V21APIExtensionBase):
