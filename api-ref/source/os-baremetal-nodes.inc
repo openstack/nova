@@ -9,7 +9,7 @@
    These APIs are proxy calls to the Ironic service. They exist for
    legacy compatibility, but no new applications should use them.
    Nova has deprecated all the proxy APIs and users should use the native
-   APIs instead. These will fail with a 404 after microversion 2.35.
+   APIs instead. These will fail with a 404 starting from microversion 2.36.
    See: `Relevant Bare metal APIs
    <http://developer.openstack.org/api-ref/baremetal/index.html#nodes-nodes>`__.
 
