@@ -12,12 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import urllib
-
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 import requests
 import six
+from six.moves.urllib import parse
 
 
 LOG = logging.getLogger(__name__)
@@ -259,7 +258,7 @@ class TestOpenStackClient(object):
             for opt, val in six.iteritems(search_opts):
                 qparams[opt] = val
             if qparams:
-                query_string = "?%s" % urllib.urlencode(qparams)
+                query_string = "?%s" % parse.urlencode(qparams)
                 rel_url += query_string
         return self.api_get(rel_url).body['servers']
 
