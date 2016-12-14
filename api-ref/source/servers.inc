@@ -737,8 +737,8 @@ system.
 **Asynchronous postconditions**
 
 - With correct permissions, you can see the server status as
-  ``DELETED`` or ``SOFT_DELETED`` through API calls.
-- If hard delete, the port attached to the server is deleted.
+- The ports attached to the server, which Nova created during the server
+  create process or when attaching interfaces later, are deleted.
 - The server does not appear in the list servers response.
 - If hard delete, the server managed by OpenStack Compute is deleted
   on the compute node.
