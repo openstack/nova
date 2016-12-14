@@ -3232,8 +3232,8 @@ class ServersControllerCreateTest(test.TestCase):
 
         self.assertEqual(encodeutils.safe_decode(robj['Location']), selfhref)
 
-    @mock.patch('nova.db.quota_get_all_by_project')
-    @mock.patch('nova.db.quota_get_all_by_project_and_user')
+    @mock.patch('nova.objects.Quotas.get_all_by_project')
+    @mock.patch('nova.objects.Quotas.get_all_by_project_and_user')
     @mock.patch('nova.objects.Quotas.count_as_dict')
     def _do_test_create_instance_above_quota(self, resource, allowed,
                 quota, expected_msg, mock_count, mock_get_all_pu,

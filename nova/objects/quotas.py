@@ -14,7 +14,11 @@
 
 import collections
 
+from oslo_db import exception as db_exc
+
 from nova import db
+from nova.db.sqlalchemy import api as db_api
+from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova.objects import base
 from nova.objects import fields
@@ -70,6 +74,179 @@ class Quotas(base.NovaObject):
         self.project_id = None
         self.user_id = None
         self.obj_reset_changes()
+
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_from_db(context, project_id, resource, user_id=None):
+        model = api_models.ProjectUserQuota if user_id else api_models.Quota
+        query = context.session.query(model).\
+                        filter_by(project_id=project_id).\
+                        filter_by(resource=resource)
+        if user_id:
+            query = query.filter_by(user_id=user_id)
+        result = query.first()
+        if not result:
+            if user_id:
+                raise exception.ProjectUserQuotaNotFound(project_id=project_id,
+                                                         user_id=user_id)
+            else:
+                raise exception.ProjectQuotaNotFound(project_id=project_id)
+        return result
+
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_all_from_db(context, project_id):
+        return context.session.query(api_models.ProjectUserQuota).\
+                        filter_by(project_id=project_id).\
+                        all()
+
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_all_from_db_by_project(context, project_id):
+        # by_project refers to the returned dict that has a 'project_id' key
+        rows = context.session.query(api_models.Quota).\
+                        filter_by(project_id=project_id).\
+                        all()
+        result = {'project_id': project_id}
+        for row in rows:
+            result[row.resource] = row.hard_limit
+        return result
+
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_all_from_db_by_project_and_user(context, project_id, user_id):
+        # by_project_and_user refers to the returned dict that has
+        # 'project_id' and 'user_id' keys
+        columns = (api_models.ProjectUserQuota.resource,
+                   api_models.ProjectUserQuota.hard_limit)
+        user_quotas = context.session.query(*columns).\
+                        filter_by(project_id=project_id).\
+                        filter_by(user_id=user_id).\
+                        all()
+        result = {'project_id': project_id, 'user_id': user_id}
+        for user_quota in user_quotas:
+            result[user_quota.resource] = user_quota.hard_limit
+        return result
+
+    @staticmethod
+    @db_api.api_context_manager.writer
+    def _destroy_all_in_db_by_project(context, project_id):
+        per_project = context.session.query(api_models.Quota).\
+                            filter_by(project_id=project_id).\
+                            delete(synchronize_session=False)
+        per_user = context.session.query(api_models.ProjectUserQuota).\
+                            filter_by(project_id=project_id).\
+                            delete(synchronize_session=False)
+        if not per_project and not per_user:
+            raise exception.ProjectQuotaNotFound(project_id=project_id)
+
+    @staticmethod
+    @db_api.api_context_manager.writer
+    def _destroy_all_in_db_by_project_and_user(context, project_id, user_id):
+        result = context.session.query(api_models.ProjectUserQuota).\
+                        filter_by(project_id=project_id).\
+                        filter_by(user_id=user_id).\
+                        delete(synchronize_session=False)
+        if not result:
+            raise exception.ProjectUserQuotaNotFound(project_id=project_id,
+                                                     user_id=user_id)
+
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_class_from_db(context, class_name, resource):
+        result = context.session.query(api_models.QuotaClass).\
+                        filter_by(class_name=class_name).\
+                        filter_by(resource=resource).\
+                        first()
+        if not result:
+            raise exception.QuotaClassNotFound(class_name=class_name)
+        return result
+
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_all_class_from_db_by_name(context, class_name):
+        # by_name refers to the returned dict that has a 'class_name' key
+        rows = context.session.query(api_models.QuotaClass).\
+                        filter_by(class_name=class_name).\
+                        all()
+        result = {'class_name': class_name}
+        for row in rows:
+            result[row.resource] = row.hard_limit
+        return result
+
+    @staticmethod
+    @db_api.api_context_manager.writer
+    def _create_limit_in_db(context, project_id, resource, limit,
+                            user_id=None):
+        # TODO(melwitt): We won't have per project resources after nova-network
+        # is removed.
+        per_user = (user_id and
+                    resource not in db_api.quota_get_per_project_resources())
+        quota_ref = (api_models.ProjectUserQuota() if per_user
+                     else api_models.Quota())
+        if per_user:
+            quota_ref.user_id = user_id
+        quota_ref.project_id = project_id
+        quota_ref.resource = resource
+        quota_ref.hard_limit = limit
+        try:
+            quota_ref.save(context.session)
+        except db_exc.DBDuplicateEntry:
+            raise exception.QuotaExists(project_id=project_id,
+                                        resource=resource)
+        return quota_ref
+
+    @staticmethod
+    @db_api.api_context_manager.writer
+    def _update_limit_in_db(context, project_id, resource, limit,
+                            user_id=None):
+        # TODO(melwitt): We won't have per project resources after nova-network
+        # is removed.
+        per_user = (user_id and
+                    resource not in db_api.quota_get_per_project_resources())
+        model = api_models.ProjectUserQuota if per_user else api_models.Quota
+        query = context.session.query(model).\
+                        filter_by(project_id=project_id).\
+                        filter_by(resource=resource)
+        if per_user:
+            query = query.filter_by(user_id=user_id)
+
+        result = query.update({'hard_limit': limit})
+        if not result:
+            if per_user:
+                raise exception.ProjectUserQuotaNotFound(project_id=project_id,
+                                                         user_id=user_id)
+            else:
+                raise exception.ProjectQuotaNotFound(project_id=project_id)
+
+    @staticmethod
+    @db_api.api_context_manager.writer
+    def _create_class_in_db(context, class_name, resource, limit):
+        # NOTE(melwitt): There's no unique constraint on the QuotaClass model,
+        # so check for duplicate manually.
+        try:
+            Quotas._get_class_from_db(context, class_name, resource)
+        except exception.QuotaClassNotFound:
+            pass
+        else:
+            raise exception.QuotaClassExists(class_name=class_name,
+                                             resource=resource)
+        quota_class_ref = api_models.QuotaClass()
+        quota_class_ref.class_name = class_name
+        quota_class_ref.resource = resource
+        quota_class_ref.hard_limit = limit
+        quota_class_ref.save(context.session)
+        return quota_class_ref
+
+    @staticmethod
+    @db_api.api_context_manager.writer
+    def _update_class_in_db(context, class_name, resource, limit):
+        result = context.session.query(api_models.QuotaClass).\
+                        filter_by(class_name=class_name).\
+                        filter_by(resource=resource).\
+                        update({'hard_limit': limit})
+        if not result:
+            raise exception.QuotaClassNotFound(class_name=class_name)
 
     @classmethod
     def from_reservations(cls, context, reservations, instance=None):
@@ -207,17 +384,121 @@ class Quotas(base.NovaObject):
 
     @base.remotable_classmethod
     def create_limit(cls, context, project_id, resource, limit, user_id=None):
-        # NOTE(danms,comstud): Quotas likely needs an overhaul and currently
-        # doesn't map very well to objects. Since there is quite a bit of
-        # logic in the db api layer for this, just pass this through for now.
-        db.quota_create(context, project_id, resource, limit, user_id=user_id)
+        try:
+            db.quota_get(context, project_id, resource, user_id=user_id)
+        except exception.QuotaNotFound:
+            cls._create_limit_in_db(context, project_id, resource, limit,
+                                    user_id=user_id)
+        else:
+            raise exception.QuotaExists(project_id=project_id,
+                                        resource=resource)
 
     @base.remotable_classmethod
     def update_limit(cls, context, project_id, resource, limit, user_id=None):
-        # NOTE(danms,comstud): Quotas likely needs an overhaul and currently
-        # doesn't map very well to objects. Since there is quite a bit of
-        # logic in the db api layer for this, just pass this through for now.
-        db.quota_update(context, project_id, resource, limit, user_id=user_id)
+        try:
+            cls._update_limit_in_db(context, project_id, resource, limit,
+                                    user_id=user_id)
+        except exception.QuotaNotFound:
+            db.quota_update(context, project_id, resource, limit,
+                            user_id=user_id)
+
+    @classmethod
+    def create_class(cls, context, class_name, resource, limit):
+        try:
+            db.quota_class_get(context, class_name, resource)
+        except exception.QuotaClassNotFound:
+            cls._create_class_in_db(context, class_name, resource, limit)
+        else:
+            raise exception.QuotaClassExists(class_name=class_name,
+                                             resource=resource)
+
+    @classmethod
+    def update_class(cls, context, class_name, resource, limit):
+        try:
+            cls._update_class_in_db(context, class_name, resource, limit)
+        except exception.QuotaClassNotFound:
+            db.quota_class_update(context, class_name, resource, limit)
+
+    # NOTE(melwitt): The following methods are not remotable and return
+    # dict-like database model objects. We are using classmethods to provide
+    # a common interface for accessing the api/main databases.
+    @classmethod
+    def get(cls, context, project_id, resource, user_id=None):
+        try:
+            quota = cls._get_from_db(context, project_id, resource,
+                                     user_id=user_id)
+        except exception.QuotaNotFound:
+            quota = db.quota_get(context, project_id, resource,
+                                 user_id=user_id)
+        return quota
+
+    @classmethod
+    def get_all(cls, context, project_id):
+        api_db_quotas = cls._get_all_from_db(context, project_id)
+        main_db_quotas = db.quota_get_all(context, project_id)
+        return api_db_quotas + main_db_quotas
+
+    @classmethod
+    def get_all_by_project(cls, context, project_id):
+        api_db_quotas_dict = cls._get_all_from_db_by_project(context,
+                                                             project_id)
+        main_db_quotas_dict = db.quota_get_all_by_project(context, project_id)
+        for k, v in api_db_quotas_dict.items():
+            main_db_quotas_dict[k] = v
+        return main_db_quotas_dict
+
+    @classmethod
+    def get_all_by_project_and_user(cls, context, project_id, user_id):
+        api_db_quotas_dict = cls._get_all_from_db_by_project_and_user(
+                context, project_id, user_id)
+        main_db_quotas_dict = db.quota_get_all_by_project_and_user(
+                context, project_id, user_id)
+        for k, v in api_db_quotas_dict.items():
+            main_db_quotas_dict[k] = v
+        return main_db_quotas_dict
+
+    @classmethod
+    def destroy_all_by_project(cls, context, project_id):
+        try:
+            cls._destroy_all_in_db_by_project(context, project_id)
+        except exception.ProjectQuotaNotFound:
+            db.quota_destroy_all_by_project(context, project_id)
+
+    @classmethod
+    def destroy_all_by_project_and_user(cls, context, project_id, user_id):
+        try:
+            cls._destroy_all_in_db_by_project_and_user(context, project_id,
+                                                       user_id)
+        except exception.ProjectUserQuotaNotFound:
+            db.quota_destroy_all_by_project_and_user(context, project_id,
+                                                     user_id)
+
+    @classmethod
+    def get_class(cls, context, class_name, resource):
+        try:
+            qclass = cls._get_class_from_db(context, class_name, resource)
+        except exception.QuotaClassNotFound:
+            qclass = db.quota_class_get(context, class_name, resource)
+        return qclass
+
+    @classmethod
+    def get_default_class(cls, context):
+        try:
+            qclass = cls._get_all_class_from_db_by_name(
+                    context, db_api._DEFAULT_QUOTA_NAME)
+        except exception.QuotaClassNotFound:
+            qclass = db.quota_class_get_default(context)
+        return qclass
+
+    @classmethod
+    def get_all_class_by_name(cls, context, class_name):
+        api_db_quotas_dict = cls._get_all_class_from_db_by_name(context,
+                                                                class_name)
+        main_db_quotas_dict = db.quota_class_get_all_by_name(context,
+                                                             class_name)
+        for k, v in api_db_quotas_dict.items():
+            main_db_quotas_dict[k] = v
+        return main_db_quotas_dict
 
 
 @base.NovaObjectRegistry.register

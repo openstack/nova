@@ -21,8 +21,8 @@ from nova.api.openstack.compute.schemas import quota_classes
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
-from nova import db
 from nova import exception
+from nova import objects
 from nova.policies import quota_class_sets as qcs_policies
 from nova import quota
 from nova import utils
@@ -94,9 +94,9 @@ class QuotaClassSetsController(wsgi.Controller):
 
         for key, value in body['quota_class_set'].items():
             try:
-                db.quota_class_update(context, quota_class, key, value)
+                objects.Quotas.update_class(context, quota_class, key, value)
             except exception.QuotaClassNotFound:
-                db.quota_class_create(context, quota_class, key, value)
+                objects.Quotas.create_class(context, quota_class, key, value)
 
         values = QUOTAS.get_class_quotas(context, quota_class)
         return self._format_quota_set(None, values, req)
