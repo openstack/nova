@@ -19,6 +19,7 @@ from oslo_db import exception as db_exc
 from nova import db
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
+from nova.db.sqlalchemy import models as main_models
 from nova import exception
 from nova.objects import base
 from nova.objects import fields
@@ -515,3 +516,131 @@ class QuotasNoOp(Quotas):
 
     def check_deltas(cls, context, deltas, *count_args, **count_kwargs):
         pass
+
+
+@db_api.require_context
+@db_api.pick_context_manager_reader
+def _get_main_per_project_limits(context, limit):
+    return context.session.query(main_models.Quota).\
+        filter_by(deleted=0).\
+        limit(limit).\
+        all()
+
+
+@db_api.require_context
+@db_api.pick_context_manager_reader
+def _get_main_per_user_limits(context, limit):
+    return context.session.query(main_models.ProjectUserQuota).\
+        filter_by(deleted=0).\
+        limit(limit).\
+        all()
+
+
+@db_api.require_context
+@db_api.pick_context_manager_writer
+def _destroy_main_per_project_limits(context, project_id, resource):
+    context.session.query(main_models.Quota).\
+        filter_by(deleted=0).\
+        filter_by(project_id=project_id).\
+        filter_by(resource=resource).\
+        soft_delete(synchronize_session=False)
+
+
+@db_api.require_context
+@db_api.pick_context_manager_writer
+def _destroy_main_per_user_limits(context, project_id, resource, user_id):
+    context.session.query(main_models.ProjectUserQuota).\
+        filter_by(deleted=0).\
+        filter_by(project_id=project_id).\
+        filter_by(user_id=user_id).\
+        filter_by(resource=resource).\
+        soft_delete(synchronize_session=False)
+
+
+@db_api.api_context_manager.writer
+def _create_limits_in_api_db(context, db_limits, per_user=False):
+    for db_limit in db_limits:
+        user_id = db_limit.user_id if per_user else None
+        Quotas._create_limit_in_db(context, db_limit.project_id,
+                                   db_limit.resource, db_limit.hard_limit,
+                                   user_id=user_id)
+
+
+def migrate_quota_limits_to_api_db(context, count):
+    # Migrate per project limits
+    main_per_project_limits = _get_main_per_project_limits(context, count)
+    done = 0
+    try:
+        # Create all the limits in a single transaction.
+        _create_limits_in_api_db(context, main_per_project_limits)
+    except exception.QuotaExists:
+        # NOTE(melwitt): This can happen if the migration is interrupted after
+        # limits were created in the api db but before they were deleted from
+        # the main db, and the migration is re-run.
+        pass
+    # Delete the limits separately.
+    for db_limit in main_per_project_limits:
+        _destroy_main_per_project_limits(context, db_limit.project_id,
+                                         db_limit.resource)
+        done += 1
+    if done == count:
+        return len(main_per_project_limits), done
+    # Migrate per user limits
+    count -= done
+    main_per_user_limits = _get_main_per_user_limits(context, count)
+    try:
+        # Create all the limits in a single transaction.
+        _create_limits_in_api_db(context, main_per_user_limits, per_user=True)
+    except exception.QuotaExists:
+        # NOTE(melwitt): This can happen if the migration is interrupted after
+        # limits were created in the api db but before they were deleted from
+        # the main db, and the migration is re-run.
+        pass
+    # Delete the limits separately.
+    for db_limit in main_per_user_limits:
+        _destroy_main_per_user_limits(context, db_limit.project_id,
+                                      db_limit.resource, db_limit.user_id)
+        done += 1
+    return len(main_per_project_limits) + len(main_per_user_limits), done
+
+
+@db_api.require_context
+@db_api.pick_context_manager_reader
+def _get_main_quota_classes(context, limit):
+    return context.session.query(main_models.QuotaClass).\
+        filter_by(deleted=0).\
+        limit(limit).\
+        all()
+
+
+@db_api.pick_context_manager_writer
+def _destroy_main_quota_classes(context, db_classes):
+    for db_class in db_classes:
+        context.session.query(main_models.QuotaClass).\
+            filter_by(deleted=0).\
+            filter_by(id=db_class.id).\
+            soft_delete(synchronize_session=False)
+
+
+@db_api.api_context_manager.writer
+def _create_classes_in_api_db(context, db_classes):
+    for db_class in db_classes:
+        Quotas._create_class_in_db(context, db_class.class_name,
+                                   db_class.resource, db_class.hard_limit)
+
+
+def migrate_quota_classes_to_api_db(context, count):
+    main_quota_classes = _get_main_quota_classes(context, count)
+    done = 0
+    try:
+        # Create all the classes in a single transaction.
+        _create_classes_in_api_db(context, main_quota_classes)
+    except exception.QuotaClassExists:
+        # NOTE(melwitt): This can happen if the migration is interrupted after
+        # classes were created in the api db but before they were deleted from
+        # the main db, and the migration is re-run.
+        pass
+    # Delete the classes in a single transaction.
+    _destroy_main_quota_classes(context, main_quota_classes)
+    found = done = len(main_quota_classes)
+    return found, done
