@@ -160,6 +160,44 @@ class FloatingIpTestNeutronV21(test.NoDBTestCase):
         ex = exception.InvalidID(id=1)
         self._test_floatingip_delete_not_found(ex, webob.exc.HTTPBadRequest)
 
+    def _test_floatingip_delete_error_disassociate(self, raised_exc,
+                                                   expected_exc):
+        """Ensure that various exceptions are correctly transformed.
+
+        Handle the myriad exceptions that could be raised from the
+        'disassociate_and_release_floating_ip' call.
+        """
+        req = fakes.HTTPRequest.blank('')
+        with mock.patch.object(self.controller.network_api,
+                               'get_floating_ip',
+                               return_value={'address': 'foo'}), \
+             mock.patch.object(self.controller.network_api,
+                               'get_instance_id_by_floating_address',
+                               return_value=None), \
+             mock.patch.object(self.controller.network_api,
+                               'disassociate_and_release_floating_ip',
+                               side_effect=raised_exc):
+            self.assertRaises(expected_exc,
+                              self.controller.delete, req, 1)
+
+    def test_floatingip_delete_error_disassociate_1(self):
+        raised_exc = exception.Forbidden
+        expected_exc = webob.exc.HTTPForbidden
+        self._test_floatingip_delete_error_disassociate(raised_exc,
+                                                        expected_exc)
+
+    def test_floatingip_delete_error_disassociate_2(self):
+        raised_exc = exception.CannotDisassociateAutoAssignedFloatingIP
+        expected_exc = webob.exc.HTTPForbidden
+        self._test_floatingip_delete_error_disassociate(raised_exc,
+                                                        expected_exc)
+
+    def test_floatingip_delete_error_disassociate_3(self):
+        raised_exc = exception.FloatingIpNotFoundForAddress(address='1.1.1.1')
+        expected_exc = webob.exc.HTTPNotFound
+        self._test_floatingip_delete_error_disassociate(raised_exc,
+                                                        expected_exc)
+
 
 class FloatingIpTestV21(test.TestCase):
     floating_ip = "10.10.10.10"
