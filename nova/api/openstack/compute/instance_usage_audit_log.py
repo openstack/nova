@@ -56,30 +56,19 @@ class InstanceUsageAuditLogController(wsgi.Controller):
         except ValueError:
             msg = _("Invalid timestamp for date %s") % id
             raise webob.exc.HTTPBadRequest(explanation=msg)
-        task_log = self._get_audit_task_logs(context,
-                                                     before=before_date)
+        task_log = self._get_audit_task_logs(context, before=before_date)
         return {'instance_usage_audit_log': task_log}
 
-    def _get_audit_task_logs(self, context, begin=None, end=None,
-                             before=None):
+    def _get_audit_task_logs(self, context, before=None):
         """Returns a full log for all instance usage audit tasks on all
            computes.
 
-        :param begin: datetime beginning of audit period to get logs for,
-            Defaults to the beginning of the most recently completed
-            audit period prior to the 'before' date.
-        :param end: datetime ending of audit period to get logs for,
-            Defaults to the ending of the most recently completed
-            audit period prior to the 'before' date.
+        :param context: Nova request context.
         :param before: By default we look for the audit period most recently
             completed before this datetime. Has no effect if both begin and end
             are specified.
         """
-        defbegin, defend = utils.last_completed_audit_period(before=before)
-        if begin is None:
-            begin = defbegin
-        if end is None:
-            end = defend
+        begin, end = utils.last_completed_audit_period(before=before)
         task_logs = self.host_api.task_log_get_all(context,
                                                    "instance_usage_audit",
                                                    begin, end)
