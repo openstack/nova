@@ -41,43 +41,57 @@ class VolumeEncryptorTestCase(test.NoDBTestCase):
         }
         self.encryptor = self._create(self.connection_info)
 
+
+class VolumeEncryptorInitTestCase(VolumeEncryptorTestCase):
+
+    def setUp(self):
+        super(VolumeEncryptorInitTestCase, self).setUp()
+
+    def _test_get_encryptor(self, provider, expected_provider_class):
+        encryption = {'control_location': 'front-end',
+                      'provider': provider}
+        encryptor = encryptors.get_volume_encryptor(self.connection_info,
+                                                    **encryption)
+        self.assertIsInstance(encryptor, expected_provider_class)
+
     def test_get_encryptors(self):
-        encryption = {'control_location': 'front-end',
-                      'provider': 'LuksEncryptor'}
-        encryptor = encryptors.get_volume_encryptor(self.connection_info,
-                                                    **encryption)
-        self.assertIsInstance(encryptor,
-                              luks.LuksEncryptor,
-                              "encryptor is not an instance of LuksEncryptor")
 
-        encryption = {'control_location': 'front-end',
-                      'provider': 'CryptsetupEncryptor'}
-        encryptor = encryptors.get_volume_encryptor(self.connection_info,
-                                                    **encryption)
-        self.assertIsInstance(encryptor,
-                              cryptsetup.CryptsetupEncryptor,
-                              "encryptor is not an instance of"
-                              "CryptsetupEncryptor")
+        self._test_get_encryptor('luks',
+                                 luks.LuksEncryptor)
+        # TODO(lyarwood): Remove the following in 16.0.0 Pike
+        self._test_get_encryptor('LuksEncryptor',
+                                 luks.LuksEncryptor)
+        self._test_get_encryptor('nova.volume.encryptors.luks.LuksEncryptor',
+                                 luks.LuksEncryptor)
 
-        encryption = {'control_location': 'front-end',
-                      'provider': 'NoOpEncryptor'}
-        encryptor = encryptors.get_volume_encryptor(self.connection_info,
-                                                    **encryption)
-        self.assertIsInstance(encryptor,
-                              nop.NoOpEncryptor,
-                              "encryptor is not an instance of NoOpEncryptor")
+        self._test_get_encryptor('plain',
+                                 cryptsetup.CryptsetupEncryptor)
+        # TODO(lyarwood): Remove the following in 16.0.0 Pike
+        self._test_get_encryptor('CryptsetupEncryptor',
+                                 cryptsetup.CryptsetupEncryptor)
+        self._test_get_encryptor(
+            'nova.volume.encryptors.cryptsetup.CryptsetupEncryptor',
+             cryptsetup.CryptsetupEncryptor)
 
-    def test_get_error_encryptos(self):
+        self._test_get_encryptor(None,
+                                 nop.NoOpEncryptor)
+        # TODO(lyarwood): Remove the following in 16.0.0 Pike
+        self._test_get_encryptor('NoOpEncryptor',
+                                 nop.NoOpEncryptor)
+        self._test_get_encryptor('nova.volume.encryptors.nop.NoOpEncryptor',
+                                 nop.NoOpEncryptor)
+
+    def test_get_missing_encryptor_error(self):
         encryption = {'control_location': 'front-end',
                       'provider': 'ErrorEncryptor'}
         self.assertRaises(ValueError, encryptors.get_volume_encryptor,
                           self.connection_info, **encryption)
 
     @mock.patch('nova.volume.encryptors.LOG')
-    def test_error_log(self, log):
-        encryption = {'control_location': 'front-end',
-                      'provider': 'TestEncryptor'}
+    def test_get_missing_out_of_tree_encryptor_log(self, log):
         provider = 'TestEncryptor'
+        encryption = {'control_location': 'front-end',
+                      'provider': provider}
         try:
             encryptors.get_volume_encryptor(self.connection_info, **encryption)
         except Exception as e:
@@ -86,3 +100,29 @@ class VolumeEncryptorTestCase(test.NoDBTestCase):
                                               "%(exception)s",
                                               {'provider': provider,
                                                'exception': e})
+            log.warning.assert_called_once_with("Use of the out of tree "
+                                                "encryptor class %(provider)s "
+                                                "will be blocked with the "
+                                                "16.0.0 Pike release of Nova.",
+                                                {'provider': provider})
+
+    @mock.patch('nova.volume.encryptors.LOG')
+    def test_get_direct_encryptor_log(self, log):
+        encryption = {'control_location': 'front-end',
+                      'provider': 'LuksEncryptor'}
+        encryptors.get_volume_encryptor(self.connection_info, **encryption)
+
+        encryption = {'control_location': 'front-end',
+                      'provider': 'nova.volume.encryptors.luks.LuksEncryptor'}
+        encryptors.get_volume_encryptor(self.connection_info, **encryption)
+
+        log.warning.assert_has_calls([
+            mock.call("Use of the in tree encryptor class %(provider)s by "
+                      "directly referencing the implementation class will be "
+                      "blocked in the 16.0.0 Pike release of Nova.",
+                      {'provider': 'LuksEncryptor'}),
+            mock.call("Use of the in tree encryptor class %(provider)s by "
+                      "directly referencing the implementation class will be "
+                      "blocked in the 16.0.0 Pike release of Nova.",
+                      {'provider':
+                           'nova.volume.encryptors.luks.LuksEncryptor'})])
