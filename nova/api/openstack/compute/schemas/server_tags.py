@@ -10,20 +10,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.api.validation import parameter_types
+from nova.objects import instance
+
 update_all = {
-    "definitions": {
-        "tag": {
-            "type": "string"
-        }
-    },
     "title": "Server tags",
     "type": "object",
     "properties": {
         "tags": {
             "type": "array",
-            "items": {
-                "$ref": "#/definitions/tag"
-            }
+            "items": parameter_types.tag,
+            "maxItems": instance.MAX_TAG_COUNT
         }
     },
     'required': ['tags'],
