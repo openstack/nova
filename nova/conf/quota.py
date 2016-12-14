@@ -287,24 +287,21 @@ to help keep quota usage up-to-date and reduce the impact of out of sync usage
 issues. Note that quotas are not updated on a periodic task, they will update
 on a new reservation if max_age has passed since the last reservation.
 """),
-# TODO(pumaranikar): Add a new config to select between the db_driver and
-# the no_op driver using stevedore.
     cfg.StrOpt('driver',
-        default='nova.quota.DbQuotaDriver',
-        deprecated_for_removal=True,
-        deprecated_since='14.0.0',
-        deprecated_group='DEFAULT',
-        deprecated_name='quota_driver',
-        help="""
-The quota enforcer driver.
-
+               default='nova.quota.DbQuotaDriver',
+               choices=('nova.quota.DbQuotaDriver',
+                        'nova.quota.NoopQuotaDriver'),
+               help="""
 Provides abstraction for quota checks. Users can configure a specific
 driver to use for quota checks.
 
 Possible values:
 
-* nova.quota.DbQuotaDriver (default) or any string representing fully
-  qualified class name.
+* nova.quota.DbQuotaDriver: Stores quota limit information
+  in the database and relies on the quota_* configuration options for default
+  quota limit values. Counts quota usage on-demand.
+* nova.quota.NoopQuotaDriver: Ignores quota and treats all resources as
+  unlimited.
 """),
     cfg.BoolOpt('recheck_quota',
         default=True,

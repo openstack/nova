@@ -20,7 +20,6 @@ import copy
 
 from oslo_log import log as logging
 from oslo_utils import importutils
-import six
 
 import nova.conf
 from nova import context as nova_context
@@ -995,21 +994,18 @@ class CountableResource(AbsoluteResource):
 class QuotaEngine(object):
     """Represent the set of recognized quotas."""
 
-    def __init__(self, quota_driver_class=None):
+    def __init__(self, quota_driver=None):
         """Initialize a Quota object."""
         self._resources = {}
-        self._driver_cls = quota_driver_class
-        self.__driver = None
+        # NOTE(mriedem): quota_driver is ever only supplied in tests with a
+        # fake driver.
+        self.__driver = quota_driver
 
     @property
     def _driver(self):
         if self.__driver:
             return self.__driver
-        if not self._driver_cls:
-            self._driver_cls = CONF.quota.driver
-        if isinstance(self._driver_cls, six.string_types):
-            self._driver_cls = importutils.import_object(self._driver_cls)
-        self.__driver = self._driver_cls
+        self.__driver = importutils.import_object(CONF.quota.driver)
         return self.__driver
 
     def register_resource(self, resource):

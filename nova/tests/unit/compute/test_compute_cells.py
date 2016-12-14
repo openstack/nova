@@ -66,7 +66,7 @@ def stub_call_to_cells(context, instance, method, *args, **kwargs):
     # Use NoopQuotaDriver in child cells.
     saved_quotas = quota.QUOTAS
     quota.QUOTAS = quota.QuotaEngine(
-            quota_driver_class=quota.NoopQuotaDriver())
+            quota_driver=quota.NoopQuotaDriver())
     compute_api.QUOTAS = quota.QUOTAS
     try:
         return fn(context, instance, *args, **kwargs)
@@ -88,7 +88,7 @@ def stub_cast_to_cells(context, instance, method, *args, **kwargs):
     # Use NoopQuotaDriver in child cells.
     saved_quotas = quota.QUOTAS
     quota.QUOTAS = quota.QuotaEngine(
-            quota_driver_class=quota.NoopQuotaDriver())
+            quota_driver=quota.NoopQuotaDriver())
     compute_api.QUOTAS = quota.QUOTAS
     try:
         fn(context, instance, *args, **kwargs)

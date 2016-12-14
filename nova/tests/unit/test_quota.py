@@ -489,15 +489,8 @@ class QuotaEngineTestCase(test.TestCase):
         self.assertEqual(quota_obj._resources, {})
         self.assertIsInstance(quota_obj._driver, quota.DbQuotaDriver)
 
-    def test_init_override_string(self):
-        quota_obj = quota.QuotaEngine(
-            quota_driver_class='nova.tests.unit.test_quota.FakeDriver')
-
-        self.assertEqual(quota_obj._resources, {})
-        self.assertIsInstance(quota_obj._driver, FakeDriver)
-
     def test_init_override_obj(self):
-        quota_obj = quota.QuotaEngine(quota_driver_class=FakeDriver)
+        quota_obj = quota.QuotaEngine(quota_driver=FakeDriver)
 
         self.assertEqual(quota_obj._resources, {})
         self.assertEqual(quota_obj._driver, FakeDriver)
@@ -528,7 +521,7 @@ class QuotaEngineTestCase(test.TestCase):
         context = FakeContext('test_project', 'test_class')
         driver = FakeDriver(by_user=dict(
                 fake_user=dict(test_resource=42)))
-        quota_obj = quota.QuotaEngine(quota_driver_class=driver)
+        quota_obj = quota.QuotaEngine(quota_driver=driver)
         result = quota_obj.get_by_project_and_user(context, 'test_project',
                                        'fake_user', 'test_resource')
 
@@ -542,7 +535,7 @@ class QuotaEngineTestCase(test.TestCase):
         context = FakeContext('test_project', 'test_class')
         driver = FakeDriver(by_project=dict(
                 test_project=dict(test_resource=42)))
-        quota_obj = quota.QuotaEngine(quota_driver_class=driver)
+        quota_obj = quota.QuotaEngine(quota_driver=driver)
         result = quota_obj.get_by_project(context, 'test_project',
                                           'test_resource')
 
@@ -555,7 +548,7 @@ class QuotaEngineTestCase(test.TestCase):
         context = FakeContext('test_project', 'test_class')
         driver = FakeDriver(by_class=dict(
                 test_class=dict(test_resource=42)))
-        quota_obj = quota.QuotaEngine(quota_driver_class=driver)
+        quota_obj = quota.QuotaEngine(quota_driver=driver)
         result = quota_obj.get_by_class(context, 'test_class', 'test_resource')
 
         self.assertEqual(driver.called, [
@@ -564,7 +557,7 @@ class QuotaEngineTestCase(test.TestCase):
         self.assertEqual(result, 42)
 
     def _make_quota_obj(self, driver):
-        quota_obj = quota.QuotaEngine(quota_driver_class=driver)
+        quota_obj = quota.QuotaEngine(quota_driver=driver)
         resources = [
             quota.AbsoluteResource('test_resource4'),
             quota.AbsoluteResource('test_resource3'),
