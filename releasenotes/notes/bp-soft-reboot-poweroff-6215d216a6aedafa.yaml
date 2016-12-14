@@ -1,0 +1,5 @@
+---
+features:
+  - Adds soft power off support to Ironic virt driver. This feature requires
+    the Ironic service to support API version 1.27 or later. It also requires
+    python-ironicclient >= 1.10.0.

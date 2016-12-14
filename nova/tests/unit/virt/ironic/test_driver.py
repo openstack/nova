@@ -1376,20 +1376,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_validate_instance_and_node')
     @mock.patch.object(FAKE_CLIENT.node, 'set_power_state')
-    def test_power_off(self, mock_sp, fake_validate, mock_looping):
-        self._test_power_on_off(mock_sp, fake_validate, mock_looping,
-                                method_name='power_off')
-
-    @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
-    @mock.patch.object(ironic_driver.IronicDriver,
-                       '_validate_instance_and_node')
-    @mock.patch.object(FAKE_CLIENT.node, 'set_power_state')
     def test_power_on(self, mock_sp, fake_validate, mock_looping):
-        self._test_power_on_off(mock_sp, fake_validate, mock_looping,
-                                method_name='power_on')
-
-    def _test_power_on_off(self, mock_sp, fake_validate, mock_looping,
-                           method_name=None):
         node = ironic_utils.get_test_node()
         fake_validate.side_effect = [node, node]
 
@@ -1397,14 +1384,65 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_looping.return_value = fake_looping_call
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=self.instance_uuid)
-        # Call the method under test here
-        if method_name == 'power_on':
-            self.driver.power_on(self.ctx, instance,
-                                 utils.get_test_network_info())
-            mock_sp.assert_called_once_with(node.uuid, 'on')
-        elif method_name == 'power_off':
-            self.driver.power_off(instance)
-            mock_sp.assert_called_once_with(node.uuid, 'off')
+        self.driver.power_on(self.ctx, instance,
+                             utils.get_test_network_info())
+        mock_sp.assert_called_once_with(node.uuid, 'on')
+
+    @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
+    def _test_power_off(self, mock_looping, timeout=0):
+        fake_looping_call = FakeLoopingCall()
+        mock_looping.return_value = fake_looping_call
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   node=self.instance_uuid)
+        self.driver.power_off(instance, timeout)
+
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_validate_instance_and_node')
+    @mock.patch.object(FAKE_CLIENT.node, 'set_power_state')
+    def test_power_off(self, mock_sp, fake_validate):
+        node = ironic_utils.get_test_node()
+        fake_validate.side_effect = [node, node]
+
+        self._test_power_off()
+        mock_sp.assert_called_once_with(node.uuid, 'off')
+
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_validate_instance_and_node')
+    @mock.patch.object(FAKE_CLIENT.node, 'set_power_state')
+    def test_power_off_soft(self, mock_sp, fake_validate):
+        node = ironic_utils.get_test_node()
+        power_off_node = ironic_utils.get_test_node(
+            power_state=ironic_states.POWER_OFF)
+        fake_validate.side_effect = [node, power_off_node]
+
+        self._test_power_off(timeout=30)
+        mock_sp.assert_called_once_with(node.uuid, 'off', soft=True,
+                                        timeout=30)
+
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_validate_instance_and_node')
+    @mock.patch.object(FAKE_CLIENT.node, 'set_power_state')
+    def test_power_off_soft_exception(self, mock_sp, fake_validate):
+        node = ironic_utils.get_test_node()
+        fake_validate.side_effect = [node, node]
+        mock_sp.side_effect = [ironic_exception.BadRequest(), None]
+
+        self._test_power_off(timeout=30)
+        mock_sp.assert_has_calls([mock.call(node.uuid, 'off', soft=True,
+                                            timeout=30).
+                                  mock.call(node.uuid, 'off')])
+
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_validate_instance_and_node')
+    @mock.patch.object(FAKE_CLIENT.node, 'set_power_state')
+    def test_power_off_soft_not_stopped(self, mock_sp, fake_validate):
+        node = ironic_utils.get_test_node()
+        fake_validate.side_effect = [node, node]
+
+        self._test_power_off(timeout=30)
+        mock_sp.assert_has_calls([mock.call(node.uuid, 'off', soft=True,
+                                            timeout=30).
+                                  mock.call(node.uuid, 'off')])
 
     @mock.patch.object(FAKE_CLIENT.node, 'vif_attach')
     def test_plug_vifs_with_port(self, mock_vatt):
