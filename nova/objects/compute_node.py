@@ -13,7 +13,6 @@
 #    under the License.
 
 
-from oslo_db import exception as db_exc
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
@@ -22,7 +21,6 @@ from oslo_utils import versionutils
 import nova.conf
 from nova import db
 from nova import exception
-from nova.i18n import _LW
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -287,96 +285,6 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
             if pools is not None:
                 pools = jsonutils.dumps(pools.obj_to_primitive())
             updates['pci_stats'] = pools
-
-    def update_inventory(self):
-        """Update inventory records from legacy model values."""
-
-        inventory_list = \
-            objects.InventoryList.get_all_by_resource_provider_uuid(
-                self._context, self.uuid)
-        if not inventory_list:
-            return False
-
-        for inventory in inventory_list:
-            if inventory.resource_class == fields.ResourceClass.VCPU:
-                key = 'vcpus'
-            elif inventory.resource_class == fields.ResourceClass.MEMORY_MB:
-                key = 'memory_mb'
-            elif inventory.resource_class == fields.ResourceClass.DISK_GB:
-                key = 'local_gb'
-            else:
-                LOG.warning(_LW('Unknown inventory class %s for compute node'),
-                            inventory.resource_class)
-                continue
-
-            if key in self.obj_what_changed():
-                inventory.total = getattr(self, key)
-                inventory.save()
-
-        return True
-
-    def _ensure_resource_provider(self):
-        shortname = self.host.split('.')[0]
-        rp_name = 'compute-%s-%s' % (shortname, self.uuid)
-        rp = objects.ResourceProvider(
-            context=self._context, uuid=self.uuid,
-            name=rp_name)
-        try:
-            rp.create()
-        except db_exc.DBDuplicateEntry:
-            rp = objects.ResourceProvider.get_by_uuid(self._context, self.uuid)
-            if rp.name != rp_name:
-                rp.name = rp_name
-                rp.save()
-
-        return rp
-
-    def create_inventory(self):
-        """Create the initial inventory objects for this compute node.
-
-        This is only ever called once, either for the first time when a compute
-        is created, or after an upgrade where the required services have
-        reached the required version.
-        """
-        rp = self._ensure_resource_provider()
-
-        cpu = objects.Inventory(context=self._context,
-                                resource_provider=rp,
-                                resource_class=fields.ResourceClass.VCPU,
-                                total=self.vcpus,
-                                reserved=0,
-                                min_unit=1,
-                                max_unit=1,
-                                step_size=1,
-                                allocation_ratio=self.cpu_allocation_ratio)
-        cpu.create()
-
-        mem = objects.Inventory(context=self._context,
-                                resource_provider=rp,
-                                resource_class=fields.ResourceClass.MEMORY_MB,
-                                total=self.memory_mb,
-                                reserved=0,
-                                min_unit=1,
-                                max_unit=1,
-                                step_size=1,
-                                allocation_ratio=self.ram_allocation_ratio)
-        mem.create()
-
-        # FIXME(danms): Eventually we want to not write this record
-        # if the compute host is on shared storage. We'll need some
-        # indication from it to that effect, so for now we always
-        # write it so that we can make all the usual machinery depend
-        # on these records instead of the legacy columns.
-        disk = objects.Inventory(context=self._context,
-                                 resource_provider=rp,
-                                 resource_class=fields.ResourceClass.DISK_GB,
-                                 total=self.local_gb,
-                                 reserved=0,
-                                 min_unit=1,
-                                 max_unit=1,
-                                 step_size=1,
-                                 allocation_ratio=self.disk_allocation_ratio)
-        disk.create()
 
     @base.remotable
     def create(self):
