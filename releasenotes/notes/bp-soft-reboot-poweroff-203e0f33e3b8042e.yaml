@@ -1,0 +1,6 @@
+---
+features:
+  - Adds soft reboot support to Ironic virt driver. If hardware driver in
+    Ironic doesn't support soft reboot, hard reboot is tried. This feature
+    requires the Ironic service to support API version 1.27 or later. It also
+    requires python-ironicclient >= 1.10.0.
