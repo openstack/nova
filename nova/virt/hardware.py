@@ -1326,7 +1326,7 @@ def numa_fit_instance_to_host(
                   "fit instance on host.")
         return
     elif len(host_topology) < len(instance_topology):
-        LOG.debug("There are not enough free cores on the system to schedule "
+        LOG.debug("There are not enough NUMA nodes on the system to schedule "
                   "the instance correctly. Required: %(required)s, actual: "
                   "%(actual)s",
                   {'required': len(instance_topology),
