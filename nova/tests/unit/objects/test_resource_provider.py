@@ -67,7 +67,8 @@ def _fake_ensure_cache(ctxt):
     cache.id_from_string.return_value = _RESOURCE_CLASS_ID
 
 
-class _TestResourceProviderNoDB(object):
+class TestResourceProviderNoDB(test_objects._LocalTest):
+    USES_DB = False
 
     @mock.patch('nova.objects.ResourceProvider._get_by_uuid_from_db',
                 return_value=_RESOURCE_PROVIDER_DB)
@@ -102,16 +103,6 @@ class _TestResourceProviderNoDB(object):
         obj = objects.ResourceProvider(context=self.context)
         self.assertRaises(exception.ObjectActionError,
                           obj.create)
-
-
-class TestResourceProviderNoDB(test_objects._LocalTest,
-                               _TestResourceProviderNoDB):
-    USES_DB = False
-
-
-class TestRemoteResourceProviderNoDB(test_objects._RemoteTest,
-                                     _TestResourceProviderNoDB):
-    USES_DB = False
 
 
 class TestResourceProvider(test_objects._LocalTest):
@@ -149,7 +140,9 @@ class TestResourceProvider(test_objects._LocalTest):
                           self.context, uuids.missing)
 
 
-class _TestInventoryNoDB(object):
+class TestInventoryNoDB(test_objects._LocalTest):
+    USES_DB = False
+
     @mock.patch('nova.objects.resource_provider._ensure_rc_cache',
             side_effect=_fake_ensure_cache)
     @mock.patch('nova.objects.Inventory._create_in_db',
@@ -247,16 +240,6 @@ class _TestInventoryNoDB(object):
         self.assertEqual(1, inv.capacity)
         inv.allocation_ratio = 2.0
         self.assertEqual(2, inv.capacity)
-
-
-class TestInventoryNoDB(test_objects._LocalTest,
-                        _TestInventoryNoDB):
-    USES_DB = False
-
-
-class TestRemoteInventoryNoDB(test_objects._RemoteTest,
-                              _TestInventoryNoDB):
-    USES_DB = False
 
 
 class TestInventory(test_objects._LocalTest):
@@ -474,7 +457,9 @@ class TestInventory(test_objects._LocalTest):
                           target_version='1.0')
 
 
-class _TestAllocationNoDB(object):
+class TestAllocationNoDB(test_objects._LocalTest):
+    USES_DB = False
+
     @mock.patch('nova.objects.resource_provider._ensure_rc_cache',
             side_effect=_fake_ensure_cache)
     @mock.patch('nova.objects.Allocation._create_in_db',
@@ -523,17 +508,8 @@ class _TestAllocationNoDB(object):
                           target_version='1.0')
 
 
-class TestAllocationNoDB(test_objects._LocalTest,
-                         _TestAllocationNoDB):
+class TestAllocationListNoDB(test_objects._LocalTest):
     USES_DB = False
-
-
-class TestRemoteAllocationNoDB(test_objects._RemoteTest,
-                               _TestAllocationNoDB):
-    USES_DB = False
-
-
-class _TestAllocationListNoDB(object):
 
     @mock.patch('nova.objects.resource_provider._ensure_rc_cache',
             side_effect=_fake_ensure_cache)
@@ -550,16 +526,6 @@ class _TestAllocationListNoDB(object):
         mock_get_allocations_from_db.assert_called_once_with(
             self.context, resource_provider_uuid=uuids.resource_provider)
         self.assertEqual(_ALLOCATION_DB['used'], allocations[0].used)
-
-
-class TestAllocationListNoDB(test_objects._LocalTest,
-                         _TestAllocationListNoDB):
-    USES_DB = False
-
-
-class TestRemoteAllocationListNoDB(test_objects._RemoteTest,
-                               _TestAllocationListNoDB):
-    USES_DB = False
 
 
 class TestUsageNoDB(test_objects._LocalTest):
