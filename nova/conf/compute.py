@@ -428,14 +428,19 @@ Possible values:
 Interval for reclaiming deleted instances.
 
 A value greater than 0 will enable SOFT_DELETE of instances.
-This option decides whether the server to be deleted will still be in
+This option decides whether the server to be deleted will be put into
 the SOFT_DELETED state. If this value is greater than 0, the deleted
 server will not be deleted immediately, instead it will be put into
 a queue until it's too old (deleted time greater than the value of
 reclaim_instance_interval). The server can be recovered from the
-delete queue by using recover action. If the deleted server remains
+delete queue by using the restore action. If the deleted server remains
 longer than the value of reclaim_instance_interval, it will be
-deleted by compute service automatically.
+deleted by a periodic task in the compute service automatically.
+
+Note that this option is read from both the API and compute nodes, and
+must be set globally otherwise servers could be put into a soft deleted
+state in the API and never actually reclaimed (deleted) on the compute
+node.
 
 Possible values:
 
