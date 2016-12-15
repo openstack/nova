@@ -2513,7 +2513,8 @@ def process_sort_params(sort_keys, sort_dirs,
 @pick_context_manager_reader_allow_async
 def instance_get_active_by_window_joined(context, begin, end=None,
                                          project_id=None, host=None,
-                                         columns_to_join=None):
+                                         columns_to_join=None, limit=None,
+                                         marker=None):
     """Return instances and joins that were active during window."""
     query = context.session.query(models.Instance)
 
@@ -2538,6 +2539,16 @@ def instance_get_active_by_window_joined(context, begin, end=None,
         query = query.filter_by(project_id=project_id)
     if host:
         query = query.filter_by(host=host)
+
+    if marker is not None:
+        try:
+            marker = _instance_get_by_uuid(
+                context.elevated(read_deleted='yes'), marker)
+        except exception.InstanceNotFound:
+            raise exception.MarkerNotFound(marker=marker)
+
+    query = sqlalchemyutils.paginate_query(
+        query, models.Instance, limit, ['project_id', 'uuid'], marker=marker)
 
     return _instances_fill_metadata(context, query.all(), manual_joins)
 

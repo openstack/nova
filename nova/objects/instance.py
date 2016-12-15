@@ -1184,7 +1184,8 @@ def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
 class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 2.0: Initial Version
     # Version 2.1: Add get_uuids_by_host()
-    VERSION = '2.1'
+    # Version 2.2: Pagination for get_active_by_window_joined()
+    VERSION = '2.2'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
@@ -1269,16 +1270,16 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     @db.select_db_reader_mode
     def _db_instance_get_active_by_window_joined(
             context, begin, end, project_id, host, columns_to_join,
-            use_slave=False):
+            use_slave=False, limit=None, marker=None):
         return db.instance_get_active_by_window_joined(
             context, begin, end, project_id, host,
-            columns_to_join=columns_to_join)
+            columns_to_join=columns_to_join, limit=limit, marker=marker)
 
     @base.remotable_classmethod
     def _get_active_by_window_joined(cls, context, begin, end=None,
                                     project_id=None, host=None,
-                                    expected_attrs=None,
-                                    use_slave=False):
+                                    expected_attrs=None, use_slave=False,
+                                    limit=None, marker=None):
         # NOTE(mriedem): We need to convert the begin/end timestamp strings
         # to timezone-aware datetime objects for the DB API call.
         begin = timeutils.parse_isotime(begin)
@@ -1286,15 +1287,15 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         db_inst_list = cls._db_instance_get_active_by_window_joined(
             context, begin, end, project_id, host,
             columns_to_join=_expected_cols(expected_attrs),
-            use_slave=use_slave)
+            use_slave=use_slave, limit=limit, marker=marker)
         return _make_instance_list(context, cls(), db_inst_list,
                                    expected_attrs)
 
     @classmethod
     def get_active_by_window_joined(cls, context, begin, end=None,
                                     project_id=None, host=None,
-                                    expected_attrs=None,
-                                    use_slave=False):
+                                    expected_attrs=None, use_slave=False,
+                                    limit=None, marker=None):
         """Get instances and joins active during a certain time window.
 
         :param:context: nova request context
@@ -1305,6 +1306,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         :param:expected_attrs: list of related fields that can be joined
         in the database layer when querying for instances
         :param use_slave if True, ship this query off to a DB slave
+        :param limit: maximum number of instances to return per page
+        :param marker: last instance uuid from the previous page
         :returns: InstanceList
 
         """
@@ -1315,7 +1318,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         return cls._get_active_by_window_joined(context, begin, end,
                                                 project_id, host,
                                                 expected_attrs,
-                                                use_slave=use_slave)
+                                                use_slave=use_slave,
+                                                limit=limit, marker=marker)
 
     @base.remotable_classmethod
     def get_by_security_group_id(cls, context, security_group_id):

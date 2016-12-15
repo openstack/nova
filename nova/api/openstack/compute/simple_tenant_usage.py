@@ -21,13 +21,17 @@ import six
 import six.moves.urllib.parse as urlparse
 from webob import exc
 
+from nova.api.openstack import common
+from nova.api.openstack.compute.views import usages as usages_view
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.policies import simple_tenant_usage as stu_policies
 
+CONF = nova.conf.CONF
 ALIAS = "os-simple-tenant-usage"
 
 
@@ -39,6 +43,9 @@ def parse_strtime(dstr, fmt):
 
 
 class SimpleTenantUsageController(wsgi.Controller):
+
+    _view_builder_class = usages_view.ViewBuilder
+
     def _hours_for(self, instance, period_start, period_stop):
         launched_at = instance.launched_at
         terminated_at = instance.terminated_at
@@ -97,14 +104,16 @@ class SimpleTenantUsageController(wsgi.Controller):
 
         return flavor_ref
 
-    def _tenant_usages_for_period(self, context, period_start,
-                                  period_stop, tenant_id=None, detailed=True):
+    def _tenant_usages_for_period(self, context, period_start, period_stop,
+                                  tenant_id=None, detailed=True, limit=None,
+                                  marker=None):
 
         instances = objects.InstanceList.get_active_by_window_joined(
                         context, period_start, period_stop, tenant_id,
-                        expected_attrs=['flavor'])
+                        expected_attrs=['flavor'], limit=limit, marker=marker)
         rval = {}
         flavors = {}
+        all_server_usages = []
 
         for instance in instances:
             info = {}
@@ -170,10 +179,11 @@ class SimpleTenantUsageController(wsgi.Controller):
                                                  info['hours'])
 
             summary['total_hours'] += info['hours']
+            all_server_usages.append(info)
             if detailed:
                 summary['server_usages'].append(info)
 
-        return rval.values()
+        return list(rval.values()), all_server_usages
 
     def _parse_datetime(self, dtstr):
         if not dtstr:
@@ -216,9 +226,31 @@ class SimpleTenantUsageController(wsgi.Controller):
         detailed = env.get('detailed', ['0'])[0] == '1'
         return (period_start, period_stop, detailed)
 
+    @wsgi.Controller.api_version("2.40")
     @extensions.expected_errors(400)
     def index(self, req):
         """Retrieve tenant_usage for all tenants."""
+        return self._index(req, links=True)
+
+    @wsgi.Controller.api_version("2.1", "2.39")  # noqa
+    @extensions.expected_errors(400)
+    def index(self, req):
+        """Retrieve tenant_usage for all tenants."""
+        return self._index(req)
+
+    @wsgi.Controller.api_version("2.40")
+    @extensions.expected_errors(400)
+    def show(self, req, id):
+        """Retrieve tenant_usage for a specified tenant."""
+        return self._show(req, id, links=True)
+
+    @wsgi.Controller.api_version("2.1", "2.39")  # noqa
+    @extensions.expected_errors(400)
+    def show(self, req, id):
+        """Retrieve tenant_usage for a specified tenant."""
+        return self._show(req, id)
+
+    def _index(self, req, links=False):
         context = req.environ['nova.context']
 
         context.can(stu_policies.POLICY_ROOT % 'list')
@@ -232,15 +264,29 @@ class SimpleTenantUsageController(wsgi.Controller):
         now = timeutils.parse_isotime(timeutils.utcnow().isoformat())
         if period_stop > now:
             period_stop = now
-        usages = self._tenant_usages_for_period(context,
-                                                period_start,
-                                                period_stop,
-                                                detailed=detailed)
-        return {'tenant_usages': usages}
 
-    @extensions.expected_errors(400)
-    def show(self, req, id):
-        """Retrieve tenant_usage for a specified tenant."""
+        marker = None
+        limit = CONF.api.max_limit
+        if links:
+            limit, marker = common.get_limit_and_marker(req)
+
+        try:
+            usages, server_usages = self._tenant_usages_for_period(
+                context, period_start, period_stop, detailed=detailed,
+                limit=limit, marker=marker)
+        except exception.MarkerNotFound as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
+
+        tenant_usages = {'tenant_usages': usages}
+
+        if links:
+            usages_links = self._view_builder.get_links(req, server_usages)
+            if usages_links:
+                tenant_usages['tenant_usages_links'] = usages_links
+
+        return tenant_usages
+
+    def _show(self, req, id, links=False):
         tenant_id = id
         context = req.environ['nova.context']
 
@@ -256,16 +302,33 @@ class SimpleTenantUsageController(wsgi.Controller):
         now = timeutils.parse_isotime(timeutils.utcnow().isoformat())
         if period_stop > now:
             period_stop = now
-        usage = self._tenant_usages_for_period(context,
-                                               period_start,
-                                               period_stop,
-                                               tenant_id=tenant_id,
-                                               detailed=True)
+
+        marker = None
+        limit = CONF.api.max_limit
+        if links:
+            limit, marker = common.get_limit_and_marker(req)
+
+        try:
+            usage, server_usages = self._tenant_usages_for_period(
+                context, period_start, period_stop, tenant_id=tenant_id,
+                detailed=True, limit=limit, marker=marker)
+        except exception.MarkerNotFound as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
+
         if len(usage):
             usage = list(usage)[0]
         else:
             usage = {}
-        return {'tenant_usage': usage}
+
+        tenant_usage = {'tenant_usage': usage}
+
+        if links:
+            usages_links = self._view_builder.get_links(
+                req, server_usages, tenant_id=tenant_id)
+            if usages_links:
+                tenant_usage['tenant_usage_links'] = usages_links
+
+        return tenant_usage
 
 
 class SimpleTenantUsage(extensions.V21APIExtensionBase):

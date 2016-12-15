@@ -1,0 +1,17 @@
+---
+features:
+  - |
+    Added microversion v2.40 which introduces pagination support for usage
+    with the help of new optional parameters 'limit' and 'marker'. If 'limit'
+    isn't provided, it will default to the configurable max limit which is
+    currently 1000.
+
+    ::
+
+        /os-simple-tenant-usage?limit={limit}&marker={instance_uuid}
+        /os-simple-tenant-usage/{tenant}?limit={limit}&marker={instance_uuid}
+
+    Older microversions will not accept these new paging query parameters,
+    but they will start to silently limit by the max limit to encourage the
+    adoption of this new microversion, and circumvent the existing possibility
+    DoS-like usage requests on systems with thousands of instances.

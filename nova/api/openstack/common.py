@@ -401,7 +401,7 @@ class ViewBuilder(object):
 
     def _get_next_link(self, request, identifier, collection_name):
         """Return href string with proper limit and marker params."""
-        params = request.params.copy()
+        params = collections.OrderedDict(sorted(request.params.items()))
         params["marker"] = identifier
         prefix = self._update_compute_link_prefix(request.application_url)
         url = url_join(prefix,

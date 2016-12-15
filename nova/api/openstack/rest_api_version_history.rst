@@ -426,3 +426,22 @@ user documentation.
   option `image_property_quota` should be used to control the quota of
   image metadatas. Also, removes the `maxImageMeta` field from `os-limits`
   API response.
+
+2.40
+----
+
+  Optional parameters 'limit' and 'marker' were added to the GET
+  /os-simple-tenant-usage and GET os-simple-tenant-usage/{tenant_id}
+  requests. The aggregate usage data no longer reflects all instances for a
+  tenant, but rather just the paginated instances ordered by instance id ASC.
+  API consumers will need to stitch the aggregate data back up (add the totals)
+  if a tenant's instances span several pages.
+
+    GET /os-simple-tenant-usage?limit={limit}&marker={instance_uuid}
+    GET /os-simple-tenant-usage/{tenant_id}?limit={limit}&marker={instance_uuid}
+
+  Older versions of the `os-simple-tenant-usage` endpoints will not accept
+  these new paging query parameters, but they will start to silently limit by
+  `CONF.api.max_limit` to encourage the adoption of this new microversion,
+  and circumvent the existing possibility DoS-like usage requests on systems
+  with thousands of instances.

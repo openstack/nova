@@ -1,0 +1,19 @@
+{
+    "tenant_usages": [
+        {
+            "start": "2012-10-08T21:10:44.587336",
+            "stop": "2012-10-08T22:10:44.587336",
+            "tenant_id": "6f70656e737461636b20342065766572",
+            "total_hours": 1.0,
+            "total_local_gb_usage": 1.0,
+            "total_memory_mb_usage": 512.0,
+            "total_vcpus_usage": 1.0
+        }
+    ],
+    "tenant_usages_links": [
+        {
+            "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/os-simple-tenant-usage?end=2016-10-12+18%3A22%3A04.868106&limit=1&marker=1f1deceb-17b5-4c04-84c7-e0d4499c8fe0&start=2016-10-12+18%3A22%3A04.868106",
+            "rel": "next"
+        }
+    ]
+}

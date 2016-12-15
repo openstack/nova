@@ -5,7 +5,6 @@ nova.tests.unit.api.openstack.compute.test_security_group_default_rules.TestSecu
 nova.tests.unit.api.openstack.compute.test_security_group_default_rules.TestSecurityGroupDefaultRulesV21
 nova.tests.unit.api.openstack.compute.test_security_groups.SecurityGroupsOutputTestV21
 nova.tests.unit.api.openstack.compute.test_security_groups.TestSecurityGroupRulesV21
-nova.tests.unit.api.openstack.compute.test_simple_tenant_usage.SimpleTenantUsageTestV21
 nova.tests.unit.api.openstack.compute.test_user_data.ServersControllerCreateTest
 nova.tests.unit.compute.test_compute.ComputeAPITestCase.test_create_with_base64_user_data
 nova.tests.unit.compute.test_compute_cells.CellsComputeAPITestCase.test_create_with_base64_user_data

@@ -46,7 +46,7 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
                     avr.APIVersionRequest(min), avr.APIVersionRequest(max)):
                 return name
 
-    def _post_server(self, use_common_server_api_samples=True):
+    def _post_server(self, use_common_server_api_samples=True, name=None):
         # param use_common_server_api_samples: Boolean to set whether tests use
         # common sample files for server post request and response.
         # Default is True which means _get_sample_path method will fetch the
@@ -63,6 +63,7 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
             'user_data': self.user_data,
             'uuid': '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}'
                     '-[0-9a-f]{4}-[0-9a-f]{12}',
+            'name': 'new-server-test' if name is None else name,
         }
 
         orig_value = self.__class__._use_common_server_api_samples
