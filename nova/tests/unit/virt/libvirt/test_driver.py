@@ -16467,13 +16467,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.assertIsNone(disks['disk.rescue'].image_type)
 
         # We expect the generated domain to contain disk.rescue, disk, and
-        # config disk in that order
-        # NOTE(mdbooth): But it doesn't! Config disk is missing.
-        #                See https://bugs.launchpad.net/nova/+bug/1597669
-        #                For now we assert the broken behaviour as a
-        #                placeholder until the fix lands.
+        # disk.config.rescue in that order
         expected_domain_disk_paths = map(
-            lambda name: disks[name].path, ('disk.rescue', 'disk'))
+            lambda name: disks[name].path, ('disk.rescue', 'disk',
+                                            'disk.config.rescue'))
         domain_disk_paths = doc.xpath('devices/disk/source/@file')
         self.assertEqual(expected_domain_disk_paths, domain_disk_paths)
 
