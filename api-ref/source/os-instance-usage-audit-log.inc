@@ -4,14 +4,21 @@
  Server usage audit log (os-instance-usage-audit-log)
 ========================================================
 
-Administrator only. Audit server usage of a tenant.
+Audit server usage of the cloud. This API is dependent on the
+``instance_usage_audit`` configuration option being set on all compute hosts
+where usage auditing is required.
 
-List Server Usage Audits For An Tenant
-========================================
+Policy defaults enable only users with the administrative role to perform
+all os-instance-usage-audit-log related operations. Cloud providers can change
+these permissions through the ``policy.json`` file.
+
+List Server Usage Audits
+========================
 
 .. rest_method:: GET /os-instance_usage_audit_log
 
-Lists usage audits for all servers on the given tenant.
+Lists usage audits for all servers on all compute hosts where usage auditing
+is configured.
 
 Normal response codes: 200
 
@@ -40,7 +47,7 @@ Response
   - total_instances: total_instances
 
 
-**Example List Usage Audits For All Servers on tenant**
+**Example List Usage Audits For All Servers**
 
 .. literalinclude:: ../../doc/api_samples/os-instance-usage-audit-log/inst-usage-audit-log-index-get-resp.json
    :language: javascript
@@ -54,7 +61,7 @@ Lists usage audits that occurred before a specified time.
 
 Normal response codes: 200
 
-Error response codes: badRequest(400),unauthorized(401), forbidden(403)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403)
 
 Request
 -------
