@@ -1,0 +1,30 @@
+---
+deprecations:
+  - |
+    The following options, found in ``DEFAULT``, were only used for configuring
+    nova-network and are, like nova-network itself, now deprecated.
+
+    - ``flat_network_bridge``
+    - ``flat_network_dns``
+    - ``flat_interface``
+    - ``vlan_interface``
+    - ``vlan_start``
+    - ``num_networks``
+    - ``vpn_ip``
+    - ``vpn_start``
+    - ``network_size``
+    - ``fixed_range_v6``
+    - ``gateway``
+    - ``gateway_v6``
+    - ``cnt_vpn_clients``
+    - ``fixed_ip_disassociate_timeout``
+    - ``create_unique_mac_address_attempts``
+    - ``teardown_unused_network_gateway``
+    - ``l3_lib``
+    - ``network_driver``
+    - ``multi_host``
+    - ``force_dhcp_release``
+    - ``update_dns_entries``
+    - ``dns_update_periodic_interval``
+    - ``dhcp_domain``
+    - ``use_neutron``
