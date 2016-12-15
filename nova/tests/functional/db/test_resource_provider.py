@@ -692,6 +692,22 @@ class TestResourceProviderAggregates(test.NoDBTestCase):
         read_aggregate_uuids = rp.get_aggregates()
         self.assertEqual([], read_aggregate_uuids)
 
+    def test_delete_rp_clears_aggs(self):
+        rp = objects.ResourceProvider(
+            context=self.context,
+            uuid=uuidsentinel.rp_uuid,
+            name=uuidsentinel.rp_name
+        )
+        rp.create()
+        rp_id = rp.id
+        start_aggregate_uuids = [uuidsentinel.agg_a, uuidsentinel.agg_b]
+        rp.set_aggregates(start_aggregate_uuids)
+        aggs = objects.ResourceProvider._get_aggregates(self.context, rp_id)
+        self.assertEqual(2, len(aggs))
+        rp.destroy()
+        aggs = objects.ResourceProvider._get_aggregates(self.context, rp_id)
+        self.assertEqual(0, len(aggs))
+
 
 class TestAllocation(ResourceProviderBaseCase):
 
