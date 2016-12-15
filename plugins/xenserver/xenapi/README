@@ -1,8 +1,0 @@
-This directory contains files that are required for the XenAPI support.
-They should be installed in the XenServer / Xen Cloud Platform dom0.
-
-If you install them manually, you will need to ensure that the newly
-added files are executable. You can do this by running the following
-command (from dom0):
-
-chmod a+x /etc/xapi.d/plugins/*
