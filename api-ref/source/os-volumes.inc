@@ -26,6 +26,14 @@ Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403)
 
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - limit: limit_simple
+  - offset: offset_simple
+
 Response
 --------
 
@@ -125,6 +133,14 @@ Lists all volumes with details.
 Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - limit: limit_simple
+  - offset: offset_simple
 
 Response
 --------
@@ -237,6 +253,14 @@ Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403)
 
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - limit: limit_simple
+  - offset: offset_simple
+
 Response
 --------
 
@@ -314,6 +338,14 @@ Lists all snapshots with details.
 Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - limit: limit_simple
+  - offset: offset_simple
 
 Response
 --------

@@ -85,6 +85,14 @@ class ServerVirtualInterfaceTestV21(test.NoDBTestCase):
         res_dict = self.controller.index(req, 'fake_uuid')
         self.assertEqual(self.expected_response, res_dict)
 
+    def test_get_virtual_interfaces_list_offset_and_limit(self):
+        path = '/v2/fake/os-virtual-interfaces?offset=1&limit=1'
+        req = fakes.HTTPRequest.blank(path, version=self.wsgi_api_version)
+        res_dict = self.controller.index(req, 'fake_uuid')
+        name = 'virtual_interfaces'
+        limited_response = {name: [self.expected_response[name][1]]}
+        self.assertEqual(limited_response, res_dict)
+
     def test_vif_instance_not_found(self):
         self.mox.StubOutWithMock(compute_api.API, 'get')
         fake_context = context.RequestContext('fake', 'fake')

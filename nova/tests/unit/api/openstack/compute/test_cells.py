@@ -114,6 +114,16 @@ class CellsTestV21(BaseCellsTest):
             self.assertNotIn('capabilities', cell)
             self.assertNotIn('password', cell)
 
+    def test_index_offset_and_limit(self):
+        req = self._get_request('cells?offset=1&limit=1')
+        res_dict = self.controller.index(req)
+
+        self.assertEqual(len(res_dict['cells']), 1)
+        cell = res_dict['cells'][0]
+        self.assertEqual(cell['name'], self.fake_cells[1]['name'])
+        self.assertNotIn('capabilities', cell)
+        self.assertNotIn('password', cell)
+
     def test_detail(self):
         req = self._get_request("cells/detail")
         res_dict = self.controller.detail(req)
@@ -123,6 +133,16 @@ class CellsTestV21(BaseCellsTest):
             self.assertEqual(cell['name'], self.fake_cells[i]['name'])
             self.assertEqual(cell['capabilities'], self.fake_capabilities[i])
             self.assertNotIn('password', cell)
+
+    def test_detail_offset_and_limit(self):
+        req = self._get_request("cells/detail?offset=1&limit=1")
+        res_dict = self.controller.detail(req)
+
+        self.assertEqual(len(res_dict['cells']), 1)
+        cell = res_dict['cells'][0]
+        self.assertEqual(cell['name'], self.fake_cells[1]['name'])
+        self.assertEqual(cell['capabilities'], self.fake_capabilities[1])
+        self.assertNotIn('password', cell)
 
     def test_show_bogus_cell_raises(self):
         req = self._get_request("cells/bogus")

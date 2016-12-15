@@ -29,6 +29,8 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
+  - limit: limit_simple
+  - offset: offset_simple
 
 .. TODO(cdent): How do we indicate optionality of a URI parameter?
 
@@ -79,6 +81,14 @@ Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
 NotImplemented(501)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - limit: limit_simple
+  - offset: offset_simple
 
 Response
 --------
