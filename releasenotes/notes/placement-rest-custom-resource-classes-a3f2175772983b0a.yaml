@@ -7,4 +7,4 @@ features:
     resources that are not interoperable between OpenStack clouds. See the
     `Placement REST API Version History`_ documentation for usage details.
 
-    .. _Placement REST API Version History: http://docs.openstack.org/developer/nova/placement.html#id3
+    .. _Placement REST API Version History: http://docs.openstack.org/developer/nova/placement.html#id2

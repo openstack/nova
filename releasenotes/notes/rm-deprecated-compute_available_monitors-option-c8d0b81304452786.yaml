@@ -2,5 +2,5 @@
 upgrade:
   - |
     The deprecated config option ``compute_available_monitors`` has been removed
-    from the ``Default`` config section. Use setuptools entry points to list
+    from the ``DEFAULT`` config section. Use setuptools entry points to list
     available monitor plugins.

@@ -2,4 +2,4 @@
 upgrade:
   - |
     The ``scheduler_json_config_location`` configuration option has not been
-    used in recent releases and has been removed.
+    used since the 13.0.0 Mitaka release and has been removed.

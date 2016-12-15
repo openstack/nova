@@ -1,5 +1,4 @@
 ---
 upgrade:
   - |
-    ``cert_topic`` has been removed from the ``DEFAULT`` section. It was marked
-    as deprecated due to planned removal of nova-cert service.
+    The deprecated ``cert_topic`` configuration option has been removed.
