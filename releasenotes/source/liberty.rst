@@ -3,4 +3,4 @@
 ==============================
 
 .. release-notes::
-   :branch: liberty-eol
+   :branch: origin/stable/liberty
