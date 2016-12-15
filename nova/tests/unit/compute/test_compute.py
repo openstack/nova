@@ -3168,10 +3168,20 @@ class ComputeTestCase(BaseTestCase):
         instance.save()
         return instance
 
-    def test_snapshot(self):
+    @mock.patch.object(nova.compute.utils, 'notify_about_instance_action')
+    def test_snapshot(self, mock_notify_action):
         inst_obj = self._get_snapshotting_instance()
-        self.compute.snapshot_instance(self.context, image_id='fakesnap',
-                                       instance=inst_obj)
+        mock_context = mock.Mock()
+        with mock.patch.object(self.context, 'elevated',
+            return_value=mock_context) as mock_context_elevated:
+            self.compute.snapshot_instance(self.context, image_id='fakesnap',
+                                           instance=inst_obj)
+            mock_context_elevated.assert_called_once_with()
+            mock_notify_action.assert_has_calls([
+                mock.call(mock_context, inst_obj, 'fake-mini',
+                          action='snapshot', phase='start'),
+                mock.call(mock_context, inst_obj, 'fake-mini',
+                          action='snapshot', phase='end')])
 
     def test_snapshot_no_image(self):
         inst_obj = self._get_snapshotting_instance()
