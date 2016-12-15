@@ -3250,7 +3250,7 @@ class ServersControllerCreateTest(test.TestCase):
 
     @mock.patch.object(compute_api.API, 'create',
                        side_effect=exception.ImageNotAuthorized(
-                           project_id=FAKE_UUID))
+                           image_id=FAKE_UUID))
     def test_create_instance_with_image_not_authorized(self,
                                                        mock_create):
         self.assertRaises(webob.exc.HTTPBadRequest,
