@@ -3344,13 +3344,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         cfg = drvr._get_guest_config(instance_ref, [],
                                      image_meta, disk_info)
 
-        # The last device is selected for this. on x86 is the last ide
-        # device (hdd). Since power only support scsi, the last device
-        # is sdz
+        # Pick the first drive letter on the bus that is available
+        # as the config drive. Delete the last device hardcode as
+        # the config drive here.
 
-        expect = {"ppc": "sdz", "ppc64": "sdz",
-                    "ppc64le": "sdz", "aarch64": "sdz"}
-        disk = expect.get(blockinfo.libvirt_utils.get_arch({}), "hdd")
+        expect = {"ppc": "sda", "ppc64": "sda",
+                    "ppc64le": "sda", "aarch64": "sda"}
+        disk = expect.get(blockinfo.libvirt_utils.get_arch({}), "hda")
         self.assertIsInstance(cfg.devices[2],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertEqual(cfg.devices[2].target_dev, disk)
@@ -14851,7 +14851,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_rbd_image.exists.return_value = False
         instance = objects.Instance()
         disk_mapping = {'disk.config': {'bus': 'ide',
-                                        'dev': 'hdd',
+                                        'dev': 'hda',
                                         'type': 'file'}}
         flavor = objects.Flavor(extra_specs={})
 
