@@ -4,4 +4,9 @@ upgrade:
     cell and host mappings in Newton. If you have not done
     this, Ocata's `db sync` command will fail. Small deployments
     will want to run `nova-manage cell_v2 simple_cell_setup`
-    on Newton before upgrading.
+    on Newton before upgrading. Operators must create a new database for cell0
+    before running `cell_v2 simple_cell_setup`. The simple cell setup command
+    expects the name of the cell0 database to be `<API database name>_cell0` as
+    it will create a cell mapping for cell0 based on the API database
+    connection, sync the cell0 database, and associate existing hosts and
+    instances with the single cell.
