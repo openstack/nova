@@ -11,6 +11,7 @@
 #    under the License.
 
 from nova.notifications.objects import base
+from nova.notifications.objects import flavor as flavor_payload
 from nova.objects import base as nova_base
 from nova.objects import fields
 
@@ -90,6 +91,20 @@ class InstancePayload(base.NotificationPayloadBase):
 
     def __init__(self, instance, **kwargs):
         super(InstancePayload, self).__init__(**kwargs)
+
+        # Note(gibi): ugly but needed to avoid cyclic import
+        from nova.compute import utils
+
+        network_info = utils.get_nw_info_for_instance(instance)
+        ips = IpPayload.from_network_info(network_info)
+
+        flavor = flavor_payload.FlavorPayload(flavor=instance.flavor)
+
+        super(InstancePayload, self).__init__(
+            ip_addresses=ips,
+            flavor=flavor,
+            **kwargs)
+
         self.populate_schema(instance=instance)
 
 
@@ -103,12 +118,10 @@ class InstanceActionPayload(InstancePayload):
         'fault': fields.ObjectField('ExceptionPayload', nullable=True),
     }
 
-    def __init__(self, instance, fault, ip_addresses, flavor, **kwargs):
+    def __init__(self, instance, fault, **kwargs):
         super(InstanceActionPayload, self).__init__(
                 instance=instance,
                 fault=fault,
-                ip_addresses=ip_addresses,
-                flavor=flavor,
                 **kwargs)
 
 
@@ -123,13 +136,10 @@ class InstanceActionVolumeSwapPayload(InstanceActionPayload):
         'new_volume_id': fields.UUIDField(),
     }
 
-    def __init__(self, instance, fault, ip_addresses, flavor,
-                 old_volume_id, new_volume_id):
+    def __init__(self, instance, fault, old_volume_id, new_volume_id):
         super(InstanceActionVolumeSwapPayload, self).__init__(
                 instance=instance,
                 fault=fault,
-                ip_addresses=ip_addresses,
-                flavor=flavor,
                 old_volume_id=old_volume_id,
                 new_volume_id=new_volume_id)
 
@@ -146,12 +156,10 @@ class InstanceUpdatePayload(InstancePayload):
         'old_display_name': fields.StringField(nullable=True)
     }
 
-    def __init__(self, instance, flavor, ip_addresses, state_update,
-                 audit_period, bandwidth, old_display_name):
+    def __init__(self, instance, state_update, audit_period, bandwidth,
+                 old_display_name):
         super(InstanceUpdatePayload, self).__init__(
                 instance=instance,
-                flavor=flavor,
-                ip_addresses=ip_addresses,
                 state_update=state_update,
                 audit_period=audit_period,
                 bandwidth=bandwidth,
