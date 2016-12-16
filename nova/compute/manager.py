@@ -3044,6 +3044,12 @@ class ComputeManager(manager.Manager):
                             instance, error, exc_info)
                     self._notify_about_instance_usage(context, instance,
                             'reboot.error', fault=error)
+                    compute_utils.notify_about_instance_action(
+                        context, instance, self.host,
+                        action=fields.NotificationAction.REBOOT,
+                        phase=fields.NotificationPhase.ERROR,
+                        exception=error
+                    )
                     ctxt.reraise = False
                 else:
                     LOG.error(_LE('Cannot reboot instance: %s'), error,
