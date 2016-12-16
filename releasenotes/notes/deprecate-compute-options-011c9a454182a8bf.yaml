@@ -1,0 +1,7 @@
+---
+deprecations:
+  - |
+    The config options ``multi_instance_display_name_template`` and
+    ``null_kernel`` in the ``DEFAULT`` group are now deprecated and may be
+    removed as early as the 16.0.0 release. These options are deprecated to
+    keep API behaviour consistent across deployments.
