@@ -1663,7 +1663,7 @@ class TestResize(BaseTestCase):
             claim = self.rt.resize_claim(ctx, instance, new_flavor)
 
         create_mig_mock.assert_called_once_with(
-                ctx, instance, new_flavor,
+                ctx, instance, new_flavor, _NODENAME,
                 None  # move_type is None for resize...
         )
         self.assertIsInstance(claim, claims.MoveClaim)
@@ -2169,16 +2169,16 @@ class TestSetInstanceHostAndNode(BaseTestCase):
     @mock.patch('nova.objects.Instance.save')
     def test_set_instance_host_and_node(self, save_mock):
         inst = objects.Instance()
-        self.rt._set_instance_host_and_node(inst)
+        self.rt._set_instance_host_and_node(inst, _NODENAME)
         save_mock.assert_called_once_with()
         self.assertEqual(self.rt.host, inst.host)
-        self.assertEqual(self.rt.nodename, inst.node)
+        self.assertEqual(_NODENAME, inst.node)
         self.assertEqual(self.rt.host, inst.launched_on)
 
     @mock.patch('nova.objects.Instance.save')
     def test_unset_instance_host_and_node(self, save_mock):
         inst = objects.Instance()
-        self.rt._set_instance_host_and_node(inst)
+        self.rt._set_instance_host_and_node(inst, _NODENAME)
         self.rt._unset_instance_host_and_node(inst)
         self.assertEqual(2, save_mock.call_count)
         self.assertIsNone(inst.host)
