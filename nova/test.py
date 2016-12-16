@@ -30,6 +30,7 @@ import datetime
 import inspect
 import os
 import pprint
+import sys
 
 import fixtures
 import mock
@@ -48,6 +49,7 @@ import testtools
 
 from nova import context
 from nova import db
+from nova import exception
 from nova.network import manager as network_manager
 from nova.network.security_group import openstack_driver
 from nova import objects
@@ -166,6 +168,26 @@ def _patch_mock_to_raise_for_invalid_assert_calls():
 # NOTE(gibi): needs to be called only once at import time
 # to patch the mock lib
 _patch_mock_to_raise_for_invalid_assert_calls()
+
+
+class NovaExceptionReraiseFormatError(object):
+    real_log_exception = exception.NovaException._log_exception
+
+    @classmethod
+    def patch(cls):
+        exception.NovaException._log_exception = cls._wrap_log_exception
+
+    @staticmethod
+    def _wrap_log_exception(self):
+        exc_info = sys.exc_info()
+        NovaExceptionReraiseFormatError.real_log_exception(self)
+        six.reraise(*exc_info)
+
+
+# NOTE(melwitt) This needs to be done at import time in order to also catch
+# NovaException format errors that are in mock decorators. In these cases, the
+# errors will be raised during test listing, before tests actually run.
+NovaExceptionReraiseFormatError.patch()
 
 
 class TestCase(testtools.TestCase):

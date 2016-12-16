@@ -21,6 +21,7 @@ import oslo_messaging as messaging
 import six
 
 import nova.conf
+from nova import exception
 from nova import rpc
 from nova import test
 from nova.tests import fixtures
@@ -283,3 +284,20 @@ class ContainKeyValueTestCase(test.NoDBTestCase):
         # Raise KeyError
         self.assertNotEqual(matcher, {1: 2, '3': 4, 5: '6'})
         self.assertNotEqual(matcher, {'bar': 'foo'})
+
+
+class NovaExceptionReraiseFormatErrorTestCase(test.NoDBTestCase):
+    """Test that format errors are reraised in tests."""
+    def test_format_error_in_nova_exception(self):
+        class FakeImageException(exception.NovaException):
+            msg_fmt = 'Image %(image_id)s has wrong type %(type)s.'
+        # wrong kwarg
+        ex = self.assertRaises(KeyError, FakeImageException,
+                               bogus='wrongkwarg')
+        self.assertIn('image_id', six.text_type(ex))
+        # no kwarg
+        ex = self.assertRaises(KeyError, FakeImageException)
+        self.assertIn('image_id', six.text_type(ex))
+        # not enough kwargs
+        ex = self.assertRaises(KeyError, FakeImageException, image_id='image')
+        self.assertIn('type', six.text_type(ex))

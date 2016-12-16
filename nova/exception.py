@@ -86,16 +86,20 @@ class NovaException(Exception):
                 message = self.msg_fmt % kwargs
 
             except Exception:
-                # kwargs doesn't match a variable in the message
-                # log the issue and the kwargs
-                LOG.exception(_LE('Exception in string format operation'))
-                for name, value in kwargs.items():
-                    LOG.error("%s: %s" % (name, value))  # noqa
-
+                # NOTE(melwitt): This is done in a separate method so it can be
+                # monkey-patched during testing to make it a hard failure.
+                self._log_exception()
                 message = self.msg_fmt
 
         self.message = message
         super(NovaException, self).__init__(message)
+
+    def _log_exception(self):
+        # kwargs doesn't match a variable in the message
+        # log the issue and the kwargs
+        LOG.exception(_LE('Exception in string format operation'))
+        for name, value in self.kwargs.items():
+            LOG.error("%s: %s" % (name, value))  # noqa
 
     def format_message(self):
         # NOTE(mrodden): use the first argument to the python Exception object
