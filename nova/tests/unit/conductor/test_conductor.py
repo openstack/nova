@@ -33,6 +33,7 @@ from nova.conductor import manager as conductor_manager
 from nova.conductor import rpcapi as conductor_rpcapi
 from nova.conductor.tasks import live_migrate
 from nova.conductor.tasks import migrate
+from nova import conf
 from nova import context
 from nova import db
 from nova import exception as exc
@@ -48,12 +49,15 @@ from nova.tests import fixtures
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import cast_as_call
 from nova.tests.unit.compute import test_compute
+from nova.tests.unit import fake_build_request
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_notifier
 from nova.tests.unit import fake_request_spec
 from nova.tests.unit import fake_server_actions
 from nova.tests import uuidsentinel as uuids
 from nova import utils
+
+CONF = conf.CONF
 
 
 class FakeContext(context.RequestContext):
@@ -1393,6 +1397,217 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         super(ConductorTaskTestCase, self).setUp()
         self.conductor = conductor_manager.ComputeTaskManager()
         self.conductor_manager = self.conductor
+
+        params = {}
+        self.ctxt = params['context'] = context.RequestContext(
+            'fake-user', 'fake-project').elevated()
+        build_request = fake_build_request.fake_req_obj(self.ctxt)
+        del build_request.instance.id
+        build_request.create()
+        params['build_requests'] = objects.BuildRequestList(
+            objects=[build_request])
+        im = objects.InstanceMapping(
+            self.ctxt, instance_uuid=build_request.instance.uuid,
+            cell_mapping=None, project_id=self.ctxt.project_id)
+        im.create()
+        params['request_specs'] = [objects.RequestSpec(
+            instance_uuid=build_request.instance_uuid)]
+        params['image'] = {'fake_data': 'should_pass_silently'}
+        params['admin_password'] = 'admin_password',
+        params['injected_files'] = 'injected_files'
+        params['requested_networks'] = None
+        bdm = objects.BlockDeviceMapping(self.ctxt, **dict(
+            source_type='blank', destination_type='local',
+            guest_format='foo', device_type='disk', disk_bus='',
+            boot_index=1, device_name='xvda', delete_on_termination=False,
+            snapshot_id=None, volume_id=None, volume_size=0,
+            image_id='bar', no_device=False, connection_info=None,
+            tag=''))
+        params['block_device_mapping'] = objects.BlockDeviceMappingList(
+            objects=[bdm])
+        self.params = params
+
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
+    @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
+    def test_schedule_and_build_instances(self, select_destinations,
+                                          build_and_run_instance):
+        select_destinations.return_value = [{'host': 'fake-host',
+                                             'nodename': 'fake-nodename',
+                                             'limits': None}]
+        params = self.params
+
+        def _build_and_run_instance(ctxt, *args, **kwargs):
+            self.assertTrue(kwargs['instance'].id)
+            self.assertEqual(1, len(kwargs['block_device_mapping']))
+            # FIXME(danms): How to validate the db connection here?
+
+        self.start_service('compute', host='fake-host')
+        build_and_run_instance.side_effect = _build_and_run_instance
+        self.conductor.schedule_and_build_instances(**params)
+        self.assertTrue(build_and_run_instance.called)
+
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
+    @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
+    @mock.patch('nova.objects.HostMapping.get_by_host')
+    def test_schedule_and_build_multiple_instances(self,
+                                                   get_hostmapping,
+                                                   select_destinations,
+                                                   build_and_run_instance):
+        select_destinations.return_value = [{'host': 'fake-host',
+                                             'nodename': 'fake-nodename',
+                                             'limits': None},
+                                            {'host': 'fake-host',
+                                             'nodename': 'fake-nodename',
+                                             'limits': None},
+                                            {'host': 'fake-host2',
+                                             'nodename': 'fake-nodename2',
+                                             'limits': None}]
+
+        params = self.params
+
+        self.start_service('compute', host='fake-host')
+        self.start_service('compute', host='fake-host2')
+
+        # Because of the cache, this should only be called twice,
+        # once for the first and once for the third request.
+        get_hostmapping.side_effect = self.host_mappings.values()
+
+        build_request2 = fake_build_request.fake_req_obj(self.ctxt)
+        del build_request2.instance.id
+        build_request2.create()
+        params['build_requests'].objects.append(build_request2)
+        im2 = objects.InstanceMapping(
+            self.ctxt, instance_uuid=build_request2.instance.uuid,
+            cell_mapping=None, project_id=self.ctxt.project_id)
+        im2.create()
+
+        build_request3 = fake_build_request.fake_req_obj(self.ctxt)
+        del build_request3.instance.id
+        build_request3.create()
+        params['build_requests'].objects.append(build_request3)
+        im3 = objects.InstanceMapping(
+            self.ctxt, instance_uuid=build_request3.instance.uuid,
+            cell_mapping=None, project_id=self.ctxt.project_id)
+        im3.create()
+
+        def _build_and_run_instance(ctxt, *args, **kwargs):
+            self.assertTrue(kwargs['instance'].id)
+            self.assertEqual(1, len(kwargs['block_device_mapping']))
+            # FIXME(danms): How to validate the db connection here?
+
+        build_and_run_instance.side_effect = _build_and_run_instance
+        self.conductor.schedule_and_build_instances(**params)
+        self.assertTrue(build_and_run_instance.called)
+
+    @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
+    def test_schedule_and_build_scheduler_failure(self, select_destinations):
+        select_destinations.side_effect = Exception
+        self.start_service('compute', host='fake-host')
+        self.conductor.schedule_and_build_instances(**self.params)
+        with conductor_manager.try_target_cell(self.ctxt,
+                                               self.cell_mappings['cell0']):
+            instance = objects.Instance.get_by_uuid(
+                self.ctxt, self.params['build_requests'][0].instance_uuid)
+        self.assertEqual('error', instance.vm_state)
+        self.assertIsNone(None, instance.task_state)
+
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
+    @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
+    @mock.patch('nova.objects.BuildRequest.destroy')
+    @mock.patch('nova.conductor.manager.ComputeTaskManager._bury_in_cell0')
+    def test_schedule_and_build_delete_during_scheduling(self, bury,
+                                                         br_destroy,
+                                                         select_destinations,
+                                                         build_and_run):
+        br_destroy.side_effect = exc.BuildRequestNotFound(uuid='foo')
+        self.start_service('compute', host='fake-host')
+        select_destinations.return_value = [{'host': 'fake-host',
+                                             'nodename': 'nodesarestupid',
+                                             'limits': None}]
+        self.conductor.schedule_and_build_instances(**self.params)
+        self.assertFalse(build_and_run.called)
+        self.assertFalse(bury.called)
+        self.assertTrue(br_destroy.called)
+
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
+    @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
+    @mock.patch('nova.objects.BuildRequest.destroy')
+    @mock.patch('nova.conductor.manager.ComputeTaskManager._bury_in_cell0')
+    def test_schedule_and_build_unmapped_host_ends_up_in_cell0(self,
+                                                               bury,
+                                                               br_destroy,
+                                                               select_dest,
+                                                               build_and_run):
+        def _fake_bury(ctxt, request_spec, exc,
+                       build_requests=None, instances=None):
+            self.assertIn('not mapped to any cell', str(exc))
+            self.assertEqual(1, len(build_requests))
+            self.assertEqual(1, len(instances))
+            self.assertEqual(build_requests[0].instance_uuid,
+                             instances[0].uuid)
+
+        bury.side_effect = _fake_bury
+        select_dest.return_value = [{'host': 'missing-host',
+                                             'nodename': 'nodesarestupid',
+                                             'limits': None}]
+        self.conductor.schedule_and_build_instances(**self.params)
+        self.assertTrue(bury.called)
+        self.assertFalse(build_and_run.called)
+
+    @mock.patch('nova.objects.CellMapping.get_by_uuid')
+    def test_bury_in_cell0_no_cell0(self, mock_cm_get):
+        mock_cm_get.side_effect = exc.CellMappingNotFound(uuid='0')
+        # Without an iterable build_requests in the database, this
+        # wouldn't work if it continued past the cell0 lookup.
+        self.conductor._bury_in_cell0(self.ctxt, None, None,
+                                      build_requests=1)
+        self.assertTrue(mock_cm_get.called)
+
+    def test_bury_in_cell0(self):
+        bare_br = self.params['build_requests'][0]
+
+        inst_br = fake_build_request.fake_req_obj(self.ctxt)
+        del inst_br.instance.id
+        inst_br.create()
+        inst = inst_br.get_new_instance(self.ctxt)
+
+        deleted_br = fake_build_request.fake_req_obj(self.ctxt)
+        del deleted_br.instance.id
+        deleted_br.create()
+        deleted_inst = inst_br.get_new_instance(self.ctxt)
+        deleted_br.destroy()
+
+        fast_deleted_br = fake_build_request.fake_req_obj(self.ctxt)
+        del fast_deleted_br.instance.id
+        fast_deleted_br.create()
+        fast_deleted_br.destroy()
+
+        self.conductor._bury_in_cell0(self.ctxt,
+                                      self.params['request_specs'][0],
+                                      Exception('Foo'),
+                                      build_requests=[bare_br, inst_br,
+                                                      deleted_br,
+                                                      fast_deleted_br],
+                                      instances=[inst, deleted_inst])
+
+        with conductor_manager.try_target_cell(self.ctxt,
+                                               self.cell_mappings['cell0']):
+            self.ctxt.read_deleted = 'yes'
+            build_requests = objects.BuildRequestList.get_all(self.ctxt)
+            instances = objects.InstanceList.get_all(self.ctxt)
+
+        self.assertEqual(0, len(build_requests))
+        self.assertEqual(4, len(instances))
+        inst_states = {inst.uuid: (inst.deleted, inst.vm_state)
+                       for inst in instances}
+        expected = {
+            bare_br.instance_uuid: (False, vm_states.ERROR),
+            inst_br.instance_uuid: (False, vm_states.ERROR),
+            deleted_br.instance_uuid: (True, vm_states.ERROR),
+            fast_deleted_br.instance_uuid: (True, vm_states.ERROR),
+        }
+
+        self.assertEqual(expected, inst_states)
 
     def test_reset(self):
         with mock.patch('nova.compute.rpcapi.ComputeAPI') as mock_rpc:
