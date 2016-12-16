@@ -26,11 +26,15 @@ import traceback
 import enum
 from oslo_config import cfg
 import prettytable
+from sqlalchemy import func as sqlfunc
+from sqlalchemy import MetaData, Table, select
 
 from nova.cmd import common as cmd_common
 import nova.conf
 from nova import config
+from nova.db.sqlalchemy import api as db_session
 from nova.i18n import _
+from nova.objects import cell_mapping as cell_mapping_obj
 from nova import version
 
 CONF = nova.conf.CONF
@@ -85,9 +89,65 @@ class UpgradeCommands(object):
     schema migrations.
     """
 
+    def _count_compute_nodes(self):
+        """Returns the number of compute nodes in the cell database."""
+        meta = MetaData(bind=db_session.get_engine())
+        compute_nodes = Table('compute_nodes', meta, autoload=True)
+        return select([sqlfunc.count()]).select_from(compute_nodes).scalar()
+
     def _check_cellsv2(self):
-        # TODO(mriedem): perform the same checks as the 030_require_cell_setup
-        # API DB migration.
+        """Checks to see if cells v2 has been setup.
+
+        These are the same checks performed in the 030_require_cell_setup API
+        DB migration except we expect this to be run AFTER the
+        nova-manage cell_v2 simple_cell_setup command, which would create the
+        cell and host mappings and sync the cell0 database schema, so we don't
+        check for flavors at all because you could create those after doing
+        this on an initial install. This also has to be careful about checking
+        for compute nodes if there are no host mappings on a fresh install.
+        """
+        meta = MetaData()
+        meta.bind = db_session.get_api_engine()
+
+        cell_mappings = Table('cell_mappings', meta, autoload=True)
+        count = select([sqlfunc.count()]).select_from(cell_mappings).scalar()
+        # Two mappings are required at a minimum, cell0 and your first cell
+        if count < 2:
+            msg = _('There needs to be at least two cell mappings, one for '
+                    'cell0 and one for your first cell. Run command '
+                    '\'nova-manage cell_v2 simple_cell_setup\' and then '
+                    'retry.')
+            return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
+
+        count = select([sqlfunc.count()]).select_from(cell_mappings).where(
+            cell_mappings.c.uuid ==
+                cell_mapping_obj.CellMapping.CELL0_UUID).scalar()
+        if count != 1:
+            msg = _('No cell0 mapping found. Run command '
+                    '\'nova-manage cell_v2 simple_cell_setup\' and then '
+                    'retry.')
+            return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
+
+        host_mappings = Table('host_mappings', meta, autoload=True)
+        count = select([sqlfunc.count()]).select_from(host_mappings).scalar()
+        if count == 0:
+            # This may be a fresh install in which case there may not be any
+            # compute_nodes in the cell database if the nova-compute service
+            # hasn't started yet to create those records. So let's query the
+            # the cell database for compute_nodes records and if we find at
+            # least one it's a failure.
+            num_computes = self._count_compute_nodes()
+            if num_computes > 0:
+                msg = _('No host mappings found but there are compute nodes. '
+                        'Run command \'nova-manage cell_v2 '
+                        'simple_cell_setup\' and then retry.')
+                return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
+
+            msg = _('No host mappings or compute nodes were found. Remember '
+                    'to run command \'nova-manage cell_v2 discover_hosts\' '
+                    'when new compute hosts are deployed.')
+            return UpgradeCheckResult(UpgradeCheckCode.SUCCESS, msg)
+
         return UpgradeCheckResult(UpgradeCheckCode.SUCCESS)
 
     def _check_placement(self):

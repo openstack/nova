@@ -22,7 +22,13 @@ from six.moves import StringIO
 
 from nova.cmd import status
 import nova.conf
+from nova import context
+# NOTE(mriedem): We only use objects as a convenience to populate the database
+# in the tests, we don't use them in the actual CLI.
+from nova import objects
 from nova import test
+from nova.tests import fixtures as nova_fixtures
+from nova.tests import uuidsentinel as uuids
 
 CONF = nova.conf.CONF
 
@@ -177,3 +183,93 @@ class TestUpgradeCheckBasic(test.NoDBTestCase):
 +-----------------------------------------------------------------------+
 """
         self.assertEqual(expected, self.output.getvalue())
+
+
+class TestUpgradeCheckCellsV2(test.NoDBTestCase):
+    """Tests for the nova-status upgrade cells v2 specific check."""
+
+    # We'll setup the API DB fixture ourselves and slowly build up the
+    # contents until the check passes.
+    USES_DB_SELF = True
+
+    def setUp(self):
+        super(TestUpgradeCheckCellsV2, self).setUp()
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
+        self.useFixture(nova_fixtures.Database(database='api'))
+        self.cmd = status.UpgradeCommands()
+
+    def test_check_no_cell_mappings(self):
+        """The cells v2 check should fail because there are no cell mappings.
+        """
+        result = self.cmd._check_cellsv2()
+        self.assertEqual(status.UpgradeCheckCode.FAILURE, result.code)
+        self.assertIn('There needs to be at least two cell mappings',
+                      result.details)
+
+    def _create_cell_mapping(self, uuid):
+        cm = objects.CellMapping(
+            context=context.get_admin_context(),
+            uuid=uuid,
+            name=uuid,
+            transport_url='fake://%s/' % uuid,
+            database_connection=uuid)
+        cm.create()
+        return cm
+
+    def test_check_no_cell0_mapping(self):
+        """We'll create two cell mappings but not have cell0 mapped yet."""
+        for i in range(2):
+            uuid = getattr(uuids, str(i))
+            self._create_cell_mapping(uuid)
+
+        result = self.cmd._check_cellsv2()
+        self.assertEqual(status.UpgradeCheckCode.FAILURE, result.code)
+        self.assertIn('No cell0 mapping found', result.details)
+
+    def test_check_no_host_mappings_with_computes(self):
+        """Creates a cell0 and cell1 mapping but no host mappings and there are
+        compute nodes in the cell database.
+        """
+        self._setup_cells()
+        cn = objects.ComputeNode(
+            context=context.get_admin_context(),
+            host='fake-host',
+            vcpus=4,
+            memory_mb=8 * 1024,
+            local_gb=40,
+            vcpus_used=2,
+            memory_mb_used=2 * 1024,
+            local_gb_used=10,
+            hypervisor_type='fake',
+            hypervisor_version=1,
+            cpu_info='{"arch": "x86_64"}')
+        cn.create()
+
+        result = self.cmd._check_cellsv2()
+        self.assertEqual(status.UpgradeCheckCode.FAILURE, result.code)
+        self.assertIn('No host mappings found but there are compute nodes',
+                      result.details)
+
+    def test_check_no_host_mappings_no_computes(self):
+        """Creates the cell0 and cell1 mappings but no host mappings and no
+        compute nodes so it's assumed to be an initial install.
+        """
+        self._setup_cells()
+
+        result = self.cmd._check_cellsv2()
+        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
+        self.assertIn('No host mappings or compute nodes were found',
+                      result.details)
+
+    def test_check_success(self):
+        """Tests a successful cells v2 upgrade check."""
+        # create the cell0 and first cell mappings
+        self._setup_cells()
+        # create the host mapping indirectly - host mappings existing implies
+        # there is a compute node so that's not checked.
+        self.start_service('compute')
+
+        result = self.cmd._check_cellsv2()
+        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
+        self.assertIsNone(result.details)
