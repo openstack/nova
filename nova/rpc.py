@@ -292,6 +292,7 @@ class LegacyValidatingNotifier(object):
         'compute.instance.power_on.end',
         'compute.instance.power_on.start',
         'compute.instance.reboot.end',
+        'compute.instance.reboot.error',
         'compute.instance.reboot.start',
         'compute.instance.rebuild.end',
         'compute.instance.rebuild.error',
