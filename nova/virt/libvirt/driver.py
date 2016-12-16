@@ -1317,20 +1317,20 @@ class LibvirtDriver(driver.ComputeDriver):
             state = guest.get_power_state(self._host)
             live = state in (power_state.RUNNING, power_state.PAUSED)
 
+            # The volume must be detached from the VM before disconnecting it
+            # from its encryptor. Otherwise, the encryptor may report that the
+            # volume is still in use.
             wait_for_detach = guest.detach_device_with_retry(guest.get_disk,
                                                              disk_dev,
                                                              persistent=True,
                                                              live=live)
+            wait_for_detach()
 
             if encryption:
-                # The volume must be detached from the VM before
-                # disconnecting it from its encryptor. Otherwise, the
-                # encryptor may report that the volume is still in use.
                 encryptor = self._get_volume_encryptor(connection_info,
                                                        encryption)
                 encryptor.detach_volume(**encryption)
 
-            wait_for_detach()
         except exception.InstanceNotFound:
             # NOTE(zhaoqin): If the instance does not exist, _lookup_by_name()
             #                will throw InstanceNotFound exception. Need to
