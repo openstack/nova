@@ -20,6 +20,9 @@ import fixtures
 import mock
 from six.moves import StringIO
 
+from keystoneauth1 import exceptions as ks_exc
+from keystoneauth1 import loading as keystone
+
 from nova.cmd import status
 import nova.conf
 from nova import context
@@ -85,6 +88,105 @@ class TestNovaStatusMain(test.NoDBTestCase):
         self.assertIn('Error:', output)
         # assert the traceback is in the output
         self.assertIn('wut', output)
+
+
+class TestPlacementCheck(test.NoDBTestCase):
+    """Tests the nova-status placement checks.
+
+    These are done with mock as the ability to replicate all failure
+    domains otherwise is quite complicated. Using a devstack
+    environment you can validate each of these tests are matching
+    reality.
+    """
+
+    def setUp(self):
+        super(TestPlacementCheck, self).setUp()
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
+        self.cmd = status.UpgradeCommands()
+
+    @mock.patch.object(keystone, "load_auth_from_conf_options")
+    def test_no_auth(self, auth):
+        """Test failure when no credentials are specified.
+
+        Replicate in devstack: start devstack with or without
+        placement engine, remove the auth section from the [placement]
+        block in nova.conf.
+        """
+        auth.side_effect = ks_exc.MissingAuthPlugin()
+        res = self.cmd._check_placement()
+        self.assertEqual(status.UpgradeCheckCode.FAILURE, res.code)
+        self.assertIn('No credentials specified', res.details)
+
+    @mock.patch.object(status.UpgradeCommands, "_placement_get")
+    def test_invalid_auth(self, get):
+        """Test failure when wrong credentials are specified or service user
+        doesn't exist.
+
+        Replicate in devstack: start devstack with or without
+        placement engine, specify random credentials in auth section
+        from the [placement] block in nova.conf.
+
+        """
+        get.side_effect = ks_exc.Unauthorized()
+        res = self.cmd._check_placement()
+        self.assertEqual(status.UpgradeCheckCode.FAILURE, res.code)
+        self.assertIn('Placement service credentials do not work', res.details)
+
+    @mock.patch.object(status.UpgradeCommands, "_placement_get")
+    def test_invalid_endpoint(self, get):
+        """Test failure when no endpoint exists.
+
+        Replicate in devstack: start devstack without placement
+        engine, but create valid placement service user and specify it
+        in auth section of [placement] in nova.conf.
+        """
+        get.side_effect = ks_exc.EndpointNotFound()
+        res = self.cmd._check_placement()
+        self.assertEqual(status.UpgradeCheckCode.FAILURE, res.code)
+        self.assertIn('Placement API endpoint not found', res.details)
+
+    @mock.patch.object(status.UpgradeCommands, "_placement_get")
+    def test_down_endpoint(self, get):
+        """Test failure when endpoint is down.
+
+        Replicate in devstack: start devstack with placement
+        engine, disable placement engine apache config.
+        """
+        get.side_effect = ks_exc.NotFound()
+        res = self.cmd._check_placement()
+        self.assertEqual(status.UpgradeCheckCode.FAILURE, res.code)
+        self.assertIn('Placement API does not seem to be running', res.details)
+
+    @mock.patch.object(status.UpgradeCommands, "_placement_get")
+    def test_valid_version(self, get):
+        get.return_value = {
+            "versions": [
+                {
+                    "min_version": "1.0",
+                    "max_version": "1.0",
+                    "id": "v1.0"
+                }
+            ]
+        }
+        res = self.cmd._check_placement()
+        self.assertEqual(status.UpgradeCheckCode.SUCCESS, res.code)
+
+    @mock.patch.object(status.UpgradeCommands, "_placement_get")
+    def test_invalid_version(self, get):
+        get.return_value = {
+            "versions": [
+                {
+                    "min_version": "0.9",
+                    "max_version": "0.9",
+                    "id": "v1.0"
+                }
+            ]
+        }
+        res = self.cmd._check_placement()
+        self.assertEqual(status.UpgradeCheckCode.FAILURE, res.code)
+        self.assertIn('Placement API version 1.0 needed, you have 0.9',
+                      res.details)
 
 
 class TestUpgradeCheckBasic(test.NoDBTestCase):
