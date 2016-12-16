@@ -128,9 +128,52 @@ surprising or unexpected.
 Microversions
 =============
 
-.. TODO(cdent) fill in with how and why of microversions, maybe move some content
-               from placement.rst, but include references to the decorators and
-               other vailable methods.
+The placement API makes use of `microversions`_ to allow the release of
+new features on an opt in basis. See :doc:`placement` for an up to date
+history of the available microversions.
+
+The rules around `when a microversion is needed`_ are the same as for the
+compute API. When adding a new microversion there are a few bits of
+required housekeeping that must be done in the code:
+
+* Update the ``VERSIONS`` list in
+  `nova.api.openstack.placement.microversion` to indicate the new
+  microversion and give a very brief summary of the added feature.
+* Update `nova/api/openstack/placement/rest_api_version_history.rst`
+  to add a more detailed section describing the new microversion.
+* Add a `release note`_ announcing the new or changed feature and
+  the microversion.
+* If the ``version_handler`` decorator (see below) has been used,
+  increment ``TOTAL_VERSIONED_METHODS`` in
+  `nova/tests/unit/api/openstack/placement/test_microversion.py`.
+  This provides a confirmatory check just to make sure you're paying
+  attention and as a helpful reminder to do the other things in this
+  list.
+
+In the placement API, microversions only use the modern form of the
+version header::
+
+    OpenStack-API-Version: placement 1.2
+
+If a valid microversion is present in a request it will be placed,
+as a ``Version`` object, into the WSGI environment with the
+``placement.microversion`` key. Often, accessing this in handler
+code directly (to control branching) is the most explicit and
+granular way to have different behavior per microversion. A
+``Version`` instance can be treated as a tuple of two ints and
+compared as such or there is a ``matches`` method.
+
+In other cases there are some helper methods in the microversion
+package:
+
+* The ``raise_404_if_not_version`` utility will cause a 404 if the
+  requested microversion is not within a described version window.
+* The ``version_handler`` decorator makes it possible to have
+  multiple different handler methods of the same (fully-qualified by
+  package) name, each available for a different microversion window.
+  If a request wants a microversion that's not available, a 404
+  response is returned. There is a unit test in place which will
+  fail if there are version intersections.
 
 Adding a New Handler
 ====================
@@ -154,3 +197,6 @@ Futures
 .. _WebOb: http://docs.webob.org/en/latest/
 .. _Request: http://docs.webob.org/en/latest/reference.html#request
 .. _Response: http://docs.webob.org/en/latest/#response
+.. _microversions: http://specs.openstack.org/openstack/api-wg/guidelines/microversion_specification.html
+.. _when a microversion is needed: http://docs.openstack.org/developer/nova/api_microversion_dev.html#when-do-i-need-a-new-microversion
+.. _release note: http://docs.openstack.org/developer/reno/usage.html

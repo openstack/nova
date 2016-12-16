@@ -153,16 +153,10 @@ Microversions
 The placement API uses microversions for making incremental changes to the
 API which client requests must opt into.
 
-The rules around `when a microversion is needed`_ are the same as for the
-compute REST API.
-
-.. _when a microversion is needed: http://docs.openstack.org/developer/nova/api_microversion_dev.html#when-do-i-need-a-new-microversion
-
 It is especially important to keep in mind that nova-compute is a client of
 the placement REST API and based on how Nova supports rolling upgrades the
 nova-compute service could be Newton level code making requests to an Ocata
 placement API, and vice-versa, an Ocata compute service in a cells v2 cell
 could be making requests to a Newton placement API.
-
 
 .. include:: ../../nova/api/openstack/placement/rest_api_version_history.rst
