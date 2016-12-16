@@ -904,7 +904,24 @@ driver_opts = [
         deprecated_reason="""
 nova-network is deprecated, as are any related configuration options.
 """,
-        help='Driver to use for network creation'),
+        help="""
+Driver to use for network creation.
+
+Network driver initializes (creates bridges and so on) only when the
+first VM lands on a host node. All network managers configure the
+network using network drivers. The driver is not tied to any particular
+network manager.
+
+The default Linux driver implements vlans, bridges, and iptables rules
+using linux utilities.
+
+Note that this option is only used when using nova-network instead
+of Neutron in your deployment.
+
+Related options:
+
+* use_neutron
+""")
 ]
 
 rpcapi_opts = [
@@ -925,8 +942,26 @@ by using this option.
         deprecated_reason="""
 nova-network is deprecated, as are any related configuration options.
 """,
-        help='Default value for multi_host in networks. Also, if set, '
-             'some rpc network calls will be sent directly to host.'),
+        help="""
+Default value for multi_host in networks.
+
+nova-network service can operate in a multi-host or single-host mode.
+In multi-host mode each compute node runs a copy of nova-network and the
+instances on that compute node use the compute node as a gateway to the
+Internet. Where as in single-host mode, a central server runs the nova-network
+service. All compute nodes forward traffic from the instances to the
+cloud controller which then forwards traffic to the Internet.
+
+If this options is set to true, some rpc network calls will be sent directly
+to host.
+
+Note that this option is only used when using nova-network instead of
+Neutron in your deployment.
+
+Related options:
+
+* use_neutron
+""")
 ]
 
 ALL_DEFAULT_OPTS = (linux_net_opts + network_opts + ldap_dns_opts
