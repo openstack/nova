@@ -1410,3 +1410,24 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         from_cli = 'fake://otheruser:otherpass@otherhost:otherport'
         self.assertEqual(from_cli,
                          self.commands._validate_transport_url(from_cli))
+
+
+class TestNovaManageMain(test.NoDBTestCase):
+    """Tests the nova-manage:main() setup code."""
+
+    def setUp(self):
+        super(TestNovaManageMain, self).setUp()
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
+
+    @mock.patch.object(manage.config, 'parse_args')
+    @mock.patch.object(manage, 'CONF')
+    def test_error_traceback(self, mock_conf, mock_parse_args):
+        with mock.patch.object(manage.cmd_common, 'get_action_fn',
+                               side_effect=test.TestingException('oops')):
+            self.assertEqual(1, manage.main())
+            # assert the traceback is dumped to stdout
+            output = self.output.getvalue()
+            self.assertIn('An error has occurred', output)
+            self.assertIn('Traceback', output)
+            self.assertIn('oops', output)

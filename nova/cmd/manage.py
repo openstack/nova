@@ -57,6 +57,7 @@ from __future__ import print_function
 import functools
 import os
 import sys
+import traceback
 
 import decorator
 import netaddr
@@ -1583,6 +1584,6 @@ def main():
         ret = fn(*fn_args, **fn_kwargs)
         rpc.cleanup()
         return(ret)
-    except Exception as ex:
-        print(_("error: %s") % ex)
+    except Exception:
+        print(_("An error has occurred:\n%s") % traceback.format_exc())
         return(1)
