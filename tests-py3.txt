@@ -20,9 +20,6 @@ nova.tests.unit.virt.libvirt.test_imagebackend.LvmTestCase
 nova.tests.unit.virt.libvirt.test_imagebackend.FlatTestCase
 nova.tests.unit.virt.libvirt.test_imagebackend.RbdTestCase
 nova.tests.unit.virt.libvirt.test_vif.LibvirtVifTestCase
-nova.tests.unit.virt.vmwareapi.test_images.VMwareImagesTestCase
-nova.tests.unit.virt.vmwareapi.test_read_write_util.ReadWriteUtilTestCase
-nova.tests.unit.virt.vmwareapi.test_vmops.VMwareVMOpsTestCase.test_spawn_mask_block_device_info_password
 nova.tests.unit.virt.xenapi.test_vm_utils.ResizeFunctionTestCase
 nova.tests.unit.virt.xenapi.test_vm_utils.ScanSrTestCase
 nova.tests.unit.virt.xenapi.test_vm_utils.UnplugVbdTestCase

@@ -967,6 +967,12 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self.flags(flat_injected=False)
         self.flags(enabled=False, group='vnc')
 
+        mock_vi = mock.Mock()
+        mock_vi.root_gb = 1
+        mock_vi.ii.file_size = 2 * units.Gi
+        mock_vi.instance.flavor.root_gb = 1
+        mock_get_vm_config_info.return_value = mock_vi
+
         # Call spawn(). We don't care what it does as long as it generates
         # the log message, which we check below.
         with mock.patch.object(self._vmops, '_volumeops') as mock_vo:
