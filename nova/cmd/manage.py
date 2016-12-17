@@ -1503,7 +1503,7 @@ class CellV2Commands(object):
         if cell_uuid:
             cell_mappings = [objects.CellMapping.get_by_uuid(ctxt, cell_uuid)]
         else:
-            cell_mappings = objects.CellMappingList.get_all(context)
+            cell_mappings = objects.CellMappingList.get_all(ctxt)
 
         for cell_mapping in cell_mappings:
             # TODO(alaski): Factor this into helper method on CellMapping

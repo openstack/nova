@@ -1346,3 +1346,5 @@ class CellV2CommandsTestCase(test.TestCase):
         self.assertEqual(host_mapping_calls, mock_host_mapping.call_args_list)
 
         mock_cell_mapping_get_by_uuid.assert_not_called()
+        mock_cell_mapping_get_all.assert_called_once_with(
+            test.MatchType(context.RequestContext))
