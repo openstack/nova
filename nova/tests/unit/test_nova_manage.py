@@ -1268,7 +1268,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         for i in range(num):
             nodes.append(objects.ComputeNode(ctxt,
                                              uuid=uuidutils.generate_uuid(),
-                                             host='fake',
+                                             host='host%s' % i,
                                              vcpus=1,
                                              memory_mb=1,
                                              local_gb=1,
@@ -1281,117 +1281,111 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         return nodes
 
     @mock.patch.object(context, 'target_cell')
-    @mock.patch.object(objects, 'HostMapping')
-    @mock.patch.object(objects.ComputeNodeList, 'get_all')
     @mock.patch.object(objects.CellMappingList, 'get_all')
-    @mock.patch.object(objects.CellMapping, 'get_by_uuid')
-    def test_discover_hosts_single_cell(self, mock_cell_mapping_get_by_uuid,
-                                        mock_cell_mapping_get_all,
-                                        mock_compute_get_all,
-                                        mock_host_mapping, mock_target_cell):
-        host_mock = mock.MagicMock()
-        mock_host_mapping.return_value = host_mock
-        exc = exception.HostMappingNotFound(name='fake')
-        mock_host_mapping.get_by_host.side_effect = exc
-
+    def test_discover_hosts_single_cell(self, mock_cell_mapping_get_all,
+                                        mock_target_cell):
         ctxt = context.RequestContext()
 
         compute_nodes = self._return_compute_nodes(ctxt)
-        mock_compute_get_all.return_value = objects.ComputeNodeList(
-            objects=compute_nodes)
+        for compute_node in compute_nodes:
+            compute_node.create()
 
-        cell_mapping = objects.CellMapping(uuid=uuidutils.generate_uuid())
-        mock_cell_mapping_get_by_uuid.return_value = cell_mapping
+        cell_mapping = objects.CellMapping(context=ctxt,
+                                           uuid=uuidutils.generate_uuid(),
+                                           database_connection='fake:///db',
+                                           transport_url='fake:///mq')
+        cell_mapping.create()
 
         self.commands.discover_hosts(cell_uuid=cell_mapping.uuid)
 
+        # Check that the host mappings were created
+        for i, compute_node in enumerate(compute_nodes):
+            host_mapping = objects.HostMapping.get_by_host(ctxt,
+                                                           compute_node.host)
+            self.assertEqual('host%s' % i, host_mapping.host)
+
         mock_target_cell.assert_called_once_with(
-            test.MatchType(context.RequestContext), cell_mapping)
-        host_mock.create.assert_called_once()
-        mock_host_mapping.assert_called_once_with(
-            test.MatchType(context.RequestContext), host='fake',
-            cell_mapping=cell_mapping)
+            test.MatchType(context.RequestContext),
+            test.MatchObjPrims(cell_mapping))
         mock_cell_mapping_get_all.assert_not_called()
 
     @mock.patch.object(context, 'target_cell')
-    @mock.patch.object(objects, 'HostMapping')
-    @mock.patch.object(objects.ComputeNodeList, 'get_all')
     @mock.patch.object(objects.CellMappingList, 'get_all')
-    @mock.patch.object(objects.CellMapping, 'get_by_uuid')
     def test_discover_hosts_single_cell_no_new_hosts(
-            self, mock_cell_mapping_get_by_uuid, mock_cell_mapping_get_all,
-            mock_compute_get_all, mock_host_mapping, mock_target_cell):
-
-        host_mock = mock.MagicMock()
-        mock_host_mapping.return_value = host_mock
-
+            self, mock_cell_mapping_get_all, mock_target_cell):
         ctxt = context.RequestContext()
+
+        # Create some compute nodes and matching host mappings
+        cell_mapping = objects.CellMapping(context=ctxt,
+                                           uuid=uuidutils.generate_uuid(),
+                                           database_connection='fake:///db',
+                                           transport_url='fake:///mq')
+        cell_mapping.create()
 
         compute_nodes = self._return_compute_nodes(ctxt)
-        mock_compute_get_all.return_value = objects.ComputeNodeList(
-            objects=compute_nodes)
+        for compute_node in compute_nodes:
+            compute_node.create()
+            host_mapping = objects.HostMapping(context=ctxt,
+                                               host=compute_node.host,
+                                               cell_mapping=cell_mapping)
+            host_mapping.create()
 
-        cell_mapping = objects.CellMapping(uuid=uuidutils.generate_uuid())
-        mock_cell_mapping_get_by_uuid.return_value = cell_mapping
-
-        self.commands.discover_hosts(cell_uuid=cell_mapping.uuid)
+        with mock.patch('nova.objects.HostMapping.create') as mock_create:
+            self.commands.discover_hosts(cell_uuid=cell_mapping.uuid)
+            mock_create.assert_not_called()
 
         mock_target_cell.assert_called_once_with(
-            test.MatchType(context.RequestContext), cell_mapping)
-        mock_host_mapping.assert_not_called()
+            test.MatchType(context.RequestContext),
+            test.MatchObjPrims(cell_mapping))
         mock_cell_mapping_get_all.assert_not_called()
 
-    @mock.patch.object(context, 'target_cell')
-    @mock.patch.object(objects, 'HostMapping')
-    @mock.patch.object(objects.ComputeNodeList, 'get_all')
-    @mock.patch.object(objects.CellMappingList, 'get_all')
     @mock.patch.object(objects.CellMapping, 'get_by_uuid')
-    def test_discover_hosts_multiple_cells(self, mock_cell_mapping_get_by_uuid,
-                                           mock_cell_mapping_get_all,
-                                           mock_compute_get_all,
-                                           mock_host_mapping,
-                                           mock_target_cell):
-        host_mock = mock.MagicMock()
-        mock_host_mapping.return_value = host_mock
-        exc = exception.HostMappingNotFound(name='fake')
-        mock_host_mapping.get_by_host.side_effect = exc
+    def test_discover_hosts_multiple_cells(self,
+                                           mock_cell_mapping_get_by_uuid):
+        # Create in-memory databases for cell1 and cell2 to let target_cell
+        # run for real. We want one compute node in cell1's db and the other
+        # compute node in cell2's db.
+        cell_dbs = nova_fixtures.CellDatabases()
+        cell_dbs.add_cell_database('fake:///db1')
+        cell_dbs.add_cell_database('fake:///db2')
+        self.useFixture(cell_dbs)
 
         ctxt = context.RequestContext()
-
-        compute_nodes = self._return_compute_nodes(ctxt, num=2)
-        mock_compute_get_all.side_effect = (
-            objects.ComputeNodeList(objects=compute_nodes[1:]),
-            objects.ComputeNodeList(objects=compute_nodes[:1]))
 
         cell_mapping0 = objects.CellMapping(
-            uuid=objects.CellMapping.CELL0_UUID)
-        cell_mapping1 = objects.CellMapping(uuid=uuidutils.generate_uuid())
-        cell_mapping2 = objects.CellMapping(uuid=uuidutils.generate_uuid())
-        mock_cell_mapping_get_all.return_value = objects.CellMappingList(
-            objects=[cell_mapping0, cell_mapping1, cell_mapping2])
+            context=ctxt,
+            uuid=objects.CellMapping.CELL0_UUID,
+            database_connection='fake:///db0',
+            transport_url='none:///')
+        cell_mapping0.create()
+        cell_mapping1 = objects.CellMapping(context=ctxt,
+                                            uuid=uuidutils.generate_uuid(),
+                                            database_connection='fake:///db1',
+                                            transport_url='fake:///mq1')
+        cell_mapping1.create()
+        cell_mapping2 = objects.CellMapping(context=ctxt,
+                                            uuid=uuidutils.generate_uuid(),
+                                            database_connection='fake:///db2',
+                                            transport_url='fake:///mq2')
+        cell_mapping2.create()
+
+        compute_nodes = self._return_compute_nodes(ctxt, num=2)
+        # Create the first compute node in cell1's db
+        with context.target_cell(ctxt, cell_mapping1):
+            compute_nodes[0].create()
+        # Create the first compute node in cell2's db
+        with context.target_cell(ctxt, cell_mapping2):
+            compute_nodes[1].create()
 
         self.commands.discover_hosts()
 
-        self.assertEqual(2, mock_target_cell.call_count)
-        target_calls = [mock.call(test.MatchType(context.RequestContext),
-                                  cell_mapping1),
-                        mock.call(test.MatchType(context.RequestContext),
-                                  cell_mapping2)]
-        self.assertEqual(target_calls, mock_target_cell.call_args_list)
-
-        self.assertEqual(2, host_mock.create.call_count)
-        self.assertEqual(2, mock_host_mapping.call_count)
-        host_mapping_calls = [mock.call(test.MatchType(context.RequestContext),
-                                        host=compute_nodes[0].host,
-                                        cell_mapping=cell_mapping1),
-                              mock.call(test.MatchType(context.RequestContext),
-                                        host=compute_nodes[1].host,
-                                        cell_mapping=cell_mapping2)]
-        self.assertEqual(host_mapping_calls, mock_host_mapping.call_args_list)
+        # Check that the host mappings were created
+        for i, compute_node in enumerate(compute_nodes):
+            host_mapping = objects.HostMapping.get_by_host(ctxt,
+                                                           compute_node.host)
+            self.assertEqual('host%s' % i, host_mapping.host)
 
         mock_cell_mapping_get_by_uuid.assert_not_called()
-        mock_cell_mapping_get_all.assert_called_once_with(
-            test.MatchType(context.RequestContext))
 
     def test_validate_transport_url_in_conf(self):
         from_conf = 'fake://user:pass@host:port/'

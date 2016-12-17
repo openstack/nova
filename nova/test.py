@@ -521,6 +521,21 @@ class MatchType(object):
         return "<MatchType:" + str(self.wanttype) + ">"
 
 
+class MatchObjPrims(object):
+    """Matches objects with equal primitives."""
+    def __init__(self, want_obj):
+        self.want_obj = want_obj
+
+    def __eq__(self, other):
+        return objects_base.obj_equal_prims(other, self.want_obj)
+
+    def __ne__(self, other):
+        return not other == self.want_obj
+
+    def __repr__(self):
+        return '<MatchObjPrims:' + str(self.want_obj) + '>'
+
+
 class ContainKeyValue(object):
     """Checks whether a key/value pair is in a dict parameter.
 
