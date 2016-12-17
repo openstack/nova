@@ -1390,6 +1390,8 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertEqual(host_mapping_calls, mock_host_mapping.call_args_list)
 
         mock_cell_mapping_get_by_uuid.assert_not_called()
+        mock_cell_mapping_get_all.assert_called_once_with(
+            test.MatchType(context.RequestContext))
 
     def test_validate_transport_url_in_conf(self):
         from_conf = 'fake://user:pass@host:port/'
