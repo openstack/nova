@@ -678,7 +678,7 @@ scsi_controller_classes = {
     'ParaVirtualSCSIController': constants.ADAPTER_TYPE_PARAVIRTUAL,
     'VirtualLsiLogicController': constants.DEFAULT_ADAPTER_TYPE,
     'VirtualLsiLogicSASController': constants.ADAPTER_TYPE_LSILOGICSAS,
-    'VirtualBusLogicController': constants.ADAPTER_TYPE_PARAVIRTUAL,
+    'VirtualBusLogicController': constants.ADAPTER_TYPE_BUSLOGIC,
 }
 
 
