@@ -16,7 +16,6 @@
 from oslo_serialization import jsonutils
 
 from nova import availability_zones
-from nova import compute
 from nova.compute import vm_states
 from nova import exception
 from nova import objects
@@ -79,9 +78,9 @@ class ExtendedAvailabilityZoneTestV21(test.TestCase):
         super(ExtendedAvailabilityZoneTestV21, self).setUp()
         availability_zones.reset_cache()
         fakes.stub_out_nw_api(self)
-        self.stubs.Set(compute.api.API, 'get', fake_compute_get)
-        self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
-        self.stubs.Set(availability_zones, 'get_host_availability_zone',
+        self.stub_out('nova.compute.api.API.get', fake_compute_get)
+        self.stub_out('nova.compute.api.API.get_all', fake_compute_get_all)
+        self.stub_out('nova.availability_zones.get_host_availability_zone',
                        fake_get_host_availability_zone)
         return_server = fakes.fake_instance_get()
         self.stub_out('nova.db.instance_get_by_uuid', return_server)
@@ -104,9 +103,9 @@ class ExtendedAvailabilityZoneTestV21(test.TestCase):
                          az)
 
     def test_show_no_host_az(self):
-        self.stubs.Set(compute.api.API, 'get', fake_compute_get_az)
-        self.stubs.Set(availability_zones, 'get_host_availability_zone',
-                       fake_get_no_host_availability_zone)
+        self.stub_out('nova.compute.api.API.get', fake_compute_get_az)
+        self.stub_out('nova.availability_zones.get_host_availability_zone',
+                      fake_get_no_host_availability_zone)
 
         url = self.base_url + UUID3
         res = self._make_request(url)
@@ -115,7 +114,7 @@ class ExtendedAvailabilityZoneTestV21(test.TestCase):
         self.assertAvailabilityZone(self._get_server(res.body), '')
 
     def test_show_empty_host_az(self):
-        self.stubs.Set(compute.api.API, 'get', fake_compute_get_empty)
+        self.stub_out('nova.compute.api.API.get', fake_compute_get_empty)
 
         url = self.base_url + UUID3
         res = self._make_request(url)
@@ -143,7 +142,7 @@ class ExtendedAvailabilityZoneTestV21(test.TestCase):
         def fake_compute_get(*args, **kwargs):
             raise exception.InstanceNotFound(instance_id='fake')
 
-        self.stubs.Set(compute.api.API, 'get', fake_compute_get)
+        self.stub_out('nova.compute.api.API.get', fake_compute_get)
         url = self.base_url + '70f6db34-de8d-4fbd-aafb-4065bdfa6115'
         res = self._make_request(url)
 
