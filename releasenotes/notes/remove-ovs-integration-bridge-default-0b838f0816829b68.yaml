@@ -1,0 +1,9 @@
+---
+upgrade:
+  - >
+    XenServer users must now set the value of xenserver.ovs_integration_bridge before they
+    can use the system. Previously this had a default of "xapi1", which has now been
+    removed, because it is dependent on the environment. The xapi<n> are internal bridges
+    that are incrementally defined from zero and "xapi1" may not be the correct bridge.
+    Operators should set this config value to the integration bridge used between all
+    guests and the compute host in their environment.
