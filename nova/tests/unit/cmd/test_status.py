@@ -22,6 +22,7 @@ from six.moves import StringIO
 
 from keystoneauth1 import exceptions as ks_exc
 from keystoneauth1 import loading as keystone
+from oslo_utils import uuidutils
 
 from nova.cmd import status
 import nova.conf
@@ -29,6 +30,7 @@ from nova import context
 # NOTE(mriedem): We only use objects as a convenience to populate the database
 # in the tests, we don't use them in the actual CLI.
 from nova import objects
+from nova.objects import fields
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests import uuidsentinel as uuids
@@ -206,11 +208,11 @@ class TestUpgradeCheckBasic(test.NoDBTestCase):
         self.cmd = status.UpgradeCommands()
 
     def test_check_success(self):
-        fake_checks = {
-            'good': mock.Mock(return_value=status.UpgradeCheckResult(
+        fake_checks = (
+            ('good', mock.Mock(return_value=status.UpgradeCheckResult(
                 status.UpgradeCheckCode.SUCCESS
-            )),
-        }
+            ))),
+        )
         with mock.patch.object(self.cmd, '_upgrade_checks', fake_checks):
             self.assertEqual(status.UpgradeCheckCode.SUCCESS, self.cmd.check())
         expected = """\
@@ -225,14 +227,14 @@ class TestUpgradeCheckBasic(test.NoDBTestCase):
         self.assertEqual(expected, self.output.getvalue())
 
     def test_check_warning(self):
-        fake_checks = {
-            'good': mock.Mock(return_value=status.UpgradeCheckResult(
+        fake_checks = (
+            ('good', mock.Mock(return_value=status.UpgradeCheckResult(
                 status.UpgradeCheckCode.SUCCESS
-            )),
-            'warn': mock.Mock(return_value=status.UpgradeCheckResult(
+            ))),
+            ('warn', mock.Mock(return_value=status.UpgradeCheckResult(
                 status.UpgradeCheckCode.WARNING, 'there might be a problem'
-            )),
-        }
+            ))),
+        )
         with mock.patch.object(self.cmd, '_upgrade_checks', fake_checks):
             self.assertEqual(status.UpgradeCheckCode.WARNING, self.cmd.check())
         expected = """\
@@ -253,27 +255,22 @@ class TestUpgradeCheckBasic(test.NoDBTestCase):
     def test_check_failure(self):
         # make the error details over 60 characters so we test the wrapping
         error_details = 'go back to bed' + '!' * 60
-        fake_checks = {
-            'good': mock.Mock(return_value=status.UpgradeCheckResult(
+        fake_checks = (
+            ('good', mock.Mock(return_value=status.UpgradeCheckResult(
                 status.UpgradeCheckCode.SUCCESS
-            )),
-            'warn': mock.Mock(return_value=status.UpgradeCheckResult(
+            ))),
+            ('warn', mock.Mock(return_value=status.UpgradeCheckResult(
                 status.UpgradeCheckCode.WARNING, 'there might be a problem'
-            )),
-            'fail': mock.Mock(return_value=status.UpgradeCheckResult(
+            ))),
+            ('fail', mock.Mock(return_value=status.UpgradeCheckResult(
                 status.UpgradeCheckCode.FAILURE, error_details
-            )),
-        }
+            ))),
+        )
         with mock.patch.object(self.cmd, '_upgrade_checks', fake_checks):
             self.assertEqual(status.UpgradeCheckCode.FAILURE, self.cmd.check())
         expected = """\
 +-----------------------------------------------------------------------+
 | Upgrade Check Results                                                 |
-+-----------------------------------------------------------------------+
-| Check: fail                                                           |
-| Result: Failure                                                       |
-| Details: go back to bed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! |
-|   !!!!!!!!!!!!!!                                                      |
 +-----------------------------------------------------------------------+
 | Check: good                                                           |
 | Result: Success                                                       |
@@ -282,6 +279,11 @@ class TestUpgradeCheckBasic(test.NoDBTestCase):
 | Check: warn                                                           |
 | Result: Warning                                                       |
 | Details: there might be a problem                                     |
++-----------------------------------------------------------------------+
+| Check: fail                                                           |
+| Result: Failure                                                       |
+| Details: go back to bed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! |
+|   !!!!!!!!!!!!!!                                                      |
 +-----------------------------------------------------------------------+
 """
         self.assertEqual(expected, self.output.getvalue())
@@ -373,5 +375,215 @@ class TestUpgradeCheckCellsV2(test.NoDBTestCase):
         self.start_service('compute')
 
         result = self.cmd._check_cellsv2()
+        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
+        self.assertIsNone(result.details)
+
+
+# This is what the ResourceTracker sets up in the nova-compute service.
+FAKE_VCPU_INVENTORY = {
+    'resource_class': fields.ResourceClass.VCPU,
+    'total': 32,
+    'reserved': 4,
+    'min_unit': 1,
+    'max_unit': 1,
+    'step_size': 1,
+    'allocation_ratio': 1.0,
+}
+
+# This is the kind of thing that Neutron will setup externally for routed
+# networks.
+FAKE_IP_POOL_INVENTORY = {
+    'resource_class': fields.ResourceClass.IPV4_ADDRESS,
+    'total': 256,
+    'reserved': 10,
+    'min_unit': 1,
+    'max_unit': 1,
+    'step_size': 1,
+    'allocation_ratio': 1.0,
+}
+
+
+class TestUpgradeCheckResourceProviders(test.NoDBTestCase):
+    """Tests for the nova-status upgrade check on resource providers."""
+
+    # We'll setup the database ourselves because we need to use cells fixtures
+    # for multiple cell mappings.
+    USES_DB_SELF = True
+
+    def setUp(self):
+        super(TestUpgradeCheckResourceProviders, self).setUp()
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
+        # We always need the API DB to be setup.
+        self.useFixture(nova_fixtures.Database(database='api'))
+        self.cmd = status.UpgradeCommands()
+
+    def test_check_resource_providers_fresh_install_no_mappings(self):
+        """Tests the scenario where we don't have any cell mappings (no cells
+        v2 setup yet) and no compute nodes in the single main database.
+        """
+        # We don't have a cell mapping, just the regular old main database
+        # because let's assume they haven't run simple_cell_setup yet.
+        self.useFixture(nova_fixtures.Database())
+        result = self.cmd._check_resource_providers()
+        # this is assumed to be base install so it's OK but with details
+        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
+        self.assertIn('There are no compute resource providers in the '
+                      'Placement service nor are there compute nodes in the '
+                      'database',
+                      result.details)
+
+    def test_check_resource_providers_no_rps_no_computes_in_cell1(self):
+        """Tests the scenario where we have a cell mapping with no computes in
+        it and no resource providers (because of no computes).
+        """
+        # this will setup two cell mappings, one for cell0 and a single cell1
+        self._setup_cells()
+        # there are no compute nodes in the cell1 database so we have 0
+        # resource providers and 0 compute nodes, so it's assumed to be a fresh
+        # install and not a failure.
+        result = self.cmd._check_resource_providers()
+        # this is assumed to be base install so it's OK but with details
+        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
+        self.assertIn('There are no compute resource providers in the '
+                      'Placement service nor are there compute nodes in the '
+                      'database',
+                      result.details)
+
+    def test_check_resource_providers_no_rps_one_compute(self):
+        """Tests the scenario where we have compute nodes in the cell but no
+        resource providers yet - VCPU or otherwise. This is a failure because
+        the compute isn't reporting into placement.
+        """
+        self._setup_cells()
+        # create a compute node which will be in cell1 by default
+        cn = objects.ComputeNode(
+            context=context.get_admin_context(),
+            host='fake-host',
+            vcpus=4,
+            memory_mb=8 * 1024,
+            local_gb=40,
+            vcpus_used=2,
+            memory_mb_used=2 * 1024,
+            local_gb_used=10,
+            hypervisor_type='fake',
+            hypervisor_version=1,
+            cpu_info='{"arch": "x86_64"}')
+        cn.create()
+        result = self.cmd._check_resource_providers()
+        self.assertEqual(status.UpgradeCheckCode.FAILURE, result.code)
+        self.assertIn('There are no compute resource providers in the '
+                      'Placement service but there are 1 compute nodes in the '
+                      'deployment.', result.details)
+
+    def _create_resource_provider(self, inventory):
+        """Helper method to create a resource provider with inventory"""
+        ctxt = context.get_admin_context()
+        rp_uuid = uuidutils.generate_uuid()
+        rp = objects.ResourceProvider(
+            context=ctxt,
+            name=rp_uuid,
+            uuid=rp_uuid)
+        rp.create()
+        inventory = objects.Inventory(
+            context=ctxt,
+            resource_provider=rp,
+            **inventory)
+        inventory.create()
+        return rp
+
+    def test_check_resource_providers_no_compute_rps_one_compute(self):
+        """Tests the scenario where we have compute nodes in the cell but no
+        compute (VCPU) resource providers yet. This is a failure because the
+        compute isn't reporting into placement.
+        """
+        self._setup_cells()
+        # create a compute node which will be in cell1 by default
+        cn = objects.ComputeNode(
+            context=context.get_admin_context(),
+            host='fake-host',
+            vcpus=4,
+            memory_mb=8 * 1024,
+            local_gb=40,
+            vcpus_used=2,
+            memory_mb_used=2 * 1024,
+            local_gb_used=10,
+            hypervisor_type='fake',
+            hypervisor_version=1,
+            cpu_info='{"arch": "x86_64"}')
+        cn.create()
+
+        # create a single resource provider that represents an external shared
+        # IP allocation pool - this tests our filtering when counting resource
+        # providers
+        self._create_resource_provider(FAKE_IP_POOL_INVENTORY)
+
+        result = self.cmd._check_resource_providers()
+        self.assertEqual(status.UpgradeCheckCode.FAILURE, result.code)
+        self.assertIn('There are no compute resource providers in the '
+                      'Placement service but there are 1 compute nodes in the '
+                      'deployment.', result.details)
+
+    def test_check_resource_providers_fewer_rps_than_computes(self):
+        """Tests the scenario that we have fewer resource providers than
+        compute nodes which is a warning because we're underutilized.
+        """
+        # setup the cell0 and cell1 mappings
+        self._setup_cells()
+
+        # create two compute nodes (by default in cell1)
+        ctxt = context.get_admin_context()
+        for x in range(2):
+            cn = objects.ComputeNode(
+                context=ctxt,
+                host=getattr(uuids, str(x)),
+                vcpus=4,
+                memory_mb=8 * 1024,
+                local_gb=40,
+                vcpus_used=2,
+                memory_mb_used=2 * 1024,
+                local_gb_used=10,
+                hypervisor_type='fake',
+                hypervisor_version=1,
+                cpu_info='{"arch": "x86_64"}')
+            cn.create()
+
+        # create a single resource provider with some VCPU inventory
+        self._create_resource_provider(FAKE_VCPU_INVENTORY)
+
+        result = self.cmd._check_resource_providers()
+        self.assertEqual(status.UpgradeCheckCode.WARNING, result.code)
+        self.assertIn('There are 1 compute resource providers and 2 compute '
+                      'nodes in the deployment.', result.details)
+
+    def test_check_resource_providers_equal_rps_to_computes(self):
+        """This tests the happy path scenario where we have an equal number
+        of compute resource providers to compute nodes.
+        """
+        # setup the cell0 and cell1 mappings
+        self._setup_cells()
+
+        # create a single compute node
+        ctxt = context.get_admin_context()
+        cn = objects.ComputeNode(
+            context=ctxt,
+            host=uuids.host,
+            vcpus=4,
+            memory_mb=8 * 1024,
+            local_gb=40,
+            vcpus_used=2,
+            memory_mb_used=2 * 1024,
+            local_gb_used=10,
+            hypervisor_type='fake',
+            hypervisor_version=1,
+            cpu_info='{"arch": "x86_64"}')
+        cn.create()
+
+        # create a single resource provider with some VCPU inventory
+        self._create_resource_provider(FAKE_VCPU_INVENTORY)
+        # create an externally shared IP allocation pool resource provider
+        self._create_resource_provider(FAKE_IP_POOL_INVENTORY)
+
+        result = self.cmd._check_resource_providers()
         self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
         self.assertIsNone(result.details)
