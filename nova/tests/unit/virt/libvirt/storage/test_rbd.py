@@ -13,7 +13,6 @@
 
 from eventlet import tpool
 import mock
-import six
 
 from nova.compute import task_states
 from nova import exception
@@ -223,7 +222,7 @@ class RbdTestCase(test.NoDBTestCase):
 
         self.driver.clone(location, self.volume_name)
 
-        args = [client_stack[0].ioctx, six.b(image), six.b(snap),
+        args = [client_stack[0].ioctx, image, snap,
                 client_stack[1].ioctx, str(self.volume_name)]
         kwargs = {'features': client.features}
         rbd.clone.assert_called_once_with(*args, **kwargs)

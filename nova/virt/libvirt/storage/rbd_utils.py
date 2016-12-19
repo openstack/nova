@@ -66,10 +66,9 @@ class RBDVolumeProxy(object):
                  read_only=False):
         client, ioctx = driver._connect_to_rados(pool)
         try:
-            snap_name = snapshot.encode('utf8') if snapshot else None
-            self.volume = tpool.Proxy(rbd.Image(ioctx, name.encode('utf8'),
-                                      snapshot=snap_name,
-                                      read_only=read_only))
+            self.volume = tpool.Proxy(rbd.Image(ioctx, name,
+                                                snapshot=snapshot,
+                                                read_only=read_only))
         except rbd.ImageNotFound:
             with excutils.save_and_reraise_exception():
                 LOG.debug("rbd image %s does not exist", name)
@@ -236,8 +235,8 @@ class RBDDriver(object):
             with RADOSClient(self, dest_pool) as dest_client:
                 try:
                     RbdProxy().clone(src_client.ioctx,
-                                     image.encode('utf-8'),
-                                     snapshot.encode('utf-8'),
+                                     image,
+                                     snapshot,
                                      dest_client.ioctx,
                                      str(dest_name),
                                      features=src_client.features)
