@@ -1,0 +1,11 @@
+---
+upgrade:
+  - |
+    The ``ssl`` options were only used by Nova code that interacts with
+    Glance client. These options are now defined and read by Keystoneauth.
+    ``api_insecure`` option from glance group is renamed to ``insecure``. The
+    following ''ssl'' options are moved to ``glance`` group
+
+    - ``ca_file`` now called ``cafile``
+    - ``cert_file`` now called ``certfile``
+    - ``key_file`` now called ``keyfile``

@@ -22,6 +22,7 @@ from cursive import exception as cursive_exception
 import glanceclient.exc
 from glanceclient.v1 import images
 import glanceclient.v2.schemas as schemas
+from keystoneauth1 import loading as ks_loading
 import mock
 import six
 from six.moves import StringIO
@@ -340,52 +341,51 @@ class TestGetImageService(test.NoDBTestCase):
 
 
 class TestCreateGlanceClient(test.NoDBTestCase):
+
+    @mock.patch.object(context.RequestContext, 'get_auth_plugin')
+    @mock.patch.object(ks_loading, 'load_session_from_conf_options')
     @mock.patch('glanceclient.Client')
-    def test_headers_passed_glanceclient(self, init_mock):
-        self.flags(auth_strategy='keystone', group='api')
-        auth_token = 'token'
-        ctx = context.RequestContext('fake', 'fake', auth_token=auth_token)
+    def test_glanceclient_with_ks_session(self, mock_client, mock_load,
+                                          mock_get_auth):
+        session = "fake_session"
+        mock_load.return_value = session
+        auth = "fake_auth"
+        mock_get_auth.return_value = auth
+        ctx = context.RequestContext('fake', 'fake', global_request_id='reqid')
+        endpoint = "fake_endpoint"
+        mock_client.side_effect = ["a", "b"]
 
-        expected_endpoint = 'http://host4:9295'
-        expected_params = {
-            'identity_headers': {
-                'X-Auth-Token': 'token',
-                'X-User-Id': 'fake',
-                'X-Roles': '',
-                'X-Tenant-Id': 'fake',
-                'X-Identity-Status': 'Confirmed',
-            },
-            'global_request_id': mock.ANY
+        # Reset the cache, so we know its empty before we start
+        glance._SESSION = None
+
+        result1 = glance._glanceclient_from_endpoint(ctx, endpoint, 2)
+        result2 = glance._glanceclient_from_endpoint(ctx, endpoint, 2)
+
+        # Ensure that session is only loaded once.
+        mock_load.assert_called_once_with(glance.CONF, "glance")
+        self.assertEqual(session, glance._SESSION)
+        # Ensure new client created every time
+        client_call = mock.call(2, auth="fake_auth",
+                endpoint_override=endpoint, session=session,
+                                global_request_id='reqid')
+        mock_client.assert_has_calls([client_call, client_call])
+        self.assertEqual("a", result1)
+        self.assertEqual("b", result2)
+
+    def test_generate_identity_headers(self):
+        ctx = context.RequestContext('user', 'tenant',
+                auth_token='token', roles=["a", "b"])
+
+        result = glance.generate_identity_headers(ctx, 'test')
+
+        expected = {
+            'X-Auth-Token': 'token',
+            'X-User-Id': 'user',
+            'X-Tenant-Id': 'tenant',
+            'X-Roles': 'a,b',
+            'X-Identity-Status': 'test',
         }
-        glance._glanceclient_from_endpoint(ctx, expected_endpoint, 2)
-        init_mock.assert_called_once_with('2', expected_endpoint,
-                                          **expected_params)
-
-        # Test the version is properly passed to glanceclient.
-        init_mock.reset_mock()
-
-        expected_endpoint = 'http://host4:9295'
-        expected_params = {
-            'identity_headers': {
-                'X-Auth-Token': 'token',
-                'X-User-Id': 'fake',
-                'X-Roles': '',
-                'X-Tenant-Id': 'fake',
-                'X-Identity-Status': 'Confirmed',
-            },
-            'global_request_id': mock.ANY
-        }
-        glance._glanceclient_from_endpoint(ctx, expected_endpoint, 2)
-        init_mock.assert_called_once_with('2', expected_endpoint,
-                                          **expected_params)
-
-        # Test that the IPv6 bracketization adapts the endpoint properly.
-        init_mock.reset_mock()
-
-        expected_endpoint = 'http://[host4]:9295'
-        glance._glanceclient_from_endpoint(ctx, expected_endpoint, 2)
-        init_mock.assert_called_once_with('2', expected_endpoint,
-                                          **expected_params)
+        self.assertDictEqual(expected, result)
 
 
 class TestGlanceClientWrapperRetries(test.NoDBTestCase):
@@ -503,23 +503,6 @@ class TestGlanceClientWrapperRetries(test.NoDBTestCase):
         images_mock.get.side_effect = side_effect
         type(client_mock).images = mock.PropertyMock(return_value=images_mock)
         create_client_mock.return_value = client_mock
-
-
-class TestGlanceClientWrapper(test.NoDBTestCase):
-
-    @mock.patch('oslo_service.sslutils.is_enabled')
-    @mock.patch('glanceclient.Client')
-    def test_create_glance_client_with_ssl(self, client_mock,
-                                           ssl_enable_mock):
-        self.flags(ca_file='foo.cert', cert_file='bar.cert',
-                   key_file='wut.key', group='ssl')
-        ctxt = mock.MagicMock()
-        glance._glanceclient_from_endpoint(ctxt, 'https://host4:9295', 2)
-        client_mock.assert_called_once_with(
-            '2', 'https://host4:9295', global_request_id=mock.ANY,
-            insecure=False, ssl_compression=False,
-            cert_file='bar.cert', key_file='wut.key', cacert='foo.cert',
-            identity_headers=mock.ANY)
 
 
 class TestDownloadNoDirectUri(test.NoDBTestCase):
