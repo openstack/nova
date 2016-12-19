@@ -6859,6 +6859,14 @@ class ComputeManager(manager.Manager):
                 context, filters, expected_attrs=attrs, use_slave=True)
         LOG.debug('There are %d instances to clean', len(instances))
 
+        # TODO(raj_singh): Remove this if condition when min value is
+        # introduced to "maximum_instance_delete_attempts" cfg option.
+        if CONF.maximum_instance_delete_attempts < 1:
+            LOG.warning(_LW('Future versions of Nova will restrict the '
+                            '"maximum_instance_delete_attempts" config option '
+                            'to values >=1. Update your configuration file to '
+                            'mitigate future upgrade issues.'))
+
         for instance in instances:
             attempts = int(instance.system_metadata.get('clean_attempts', '0'))
             LOG.debug('Instance has had %(attempts)s of %(max)s '
