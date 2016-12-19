@@ -663,8 +663,17 @@ Related options:
 libvirt_utils_opts = [
     cfg.BoolOpt('snapshot_compression',
                 default=False,
-                help='Compress snapshot images when possible. This '
-                     'currently applies exclusively to qcow2 images'),
+                help="""
+Enable snapshot compression for ``qcow2`` images.
+
+Note: you can set ``snapshot_image_format`` to ``qcow2`` to force all
+snapshots to be in ``qcow2`` format, independently from their original image
+type.
+
+Related options:
+
+* snapshot_image_format
+"""),
 ]
 
 libvirt_vif_opts = [
