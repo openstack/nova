@@ -56,8 +56,9 @@ Response
   - server_usages.tenant_id: tenant_id_optional
   - server_usages.uptime: uptime_simple_tenant_usage_optional
   - server_usages.vcpus: vcpus_optional
+  - tenant_usages_links: usage_links
 
-**Example List Tenant Usage For All Tenants: JSON response**
+**Example List Tenant Usage For All Tenants (v2.40): JSON response**
 
 If the ``detailed`` query parameter is not specified or
 is set to other than 1 (e.g. ``detailed=0``), the response is as follows:
@@ -120,8 +121,9 @@ Response
   - total_local_gb_usage: total_local_gb_usage
   - total_memory_mb_usage: total_memory_mb_usage
   - total_vcpus_usage: total_vcpus_usage
+  - tenant_usage_links: usage_links
 
-**Example Show Usage Details For Tenant: JSON response**
+**Example Show Usage Details For Tenant (v2.40): JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-simple-tenant-usage/v2.40/simple-tenant-usage-get-specific.json
    :language: javascript
