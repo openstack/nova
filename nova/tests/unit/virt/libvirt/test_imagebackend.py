@@ -735,7 +735,9 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
     @mock.patch('os.path.exists', autospec=True)
     @mock.patch('nova.utils.synchronized', autospec=True)
     @mock.patch.object(imagebackend, 'lvm', autospec=True)
-    def test_cache_ephemeral(self, mock_lvm, mock_synchronized, mock_exists):
+    @mock.patch.object(imagebackend.fileutils, 'ensure_tree', autospec=True)
+    def test_cache_ephemeral(self, mock_ensure, mock_lvm, mock_synchronized,
+                             mock_exists):
         # Ignores its arguments and returns the wrapped function unmodified
         def fake_synchronized(*args, **kwargs):
             def outer(fn):
@@ -772,6 +774,7 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
         image.cache(fetch_func, self.TEMPLATE,
                     ephemeral_size=size_gb, size=size)
 
+        mock_ensure.assert_called_once_with(self.TEMPLATE_DIR)
         mock_lvm.create_volume.assert_called_once_with(self.VG, self.LV, size,
                                                        sparse=False)
         fetch_func.assert_called_once_with(target=self.PATH,
