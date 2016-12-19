@@ -75,7 +75,7 @@ The response is as follows:
 Show Usage Statistics For Tenant
 ================================
 
-.. rest_method:: GET /os-simple-tenant-usage/v2.40/{tenant_id}
+.. rest_method:: GET /os-simple-tenant-usage/{tenant_id}
 
 Shows usage statistics for a tenant.
 
