@@ -525,8 +525,8 @@ limit_simple:
   description: |
     Used in conjunction with ``offset`` to return a slice of items. ``limit``
     is the maximum number of items to return. If ``limit`` is not specified,
-    or exceeds the configurable ``osapi_max_limit``, then ``osapi_max_limit``
-    will be used instead.
+    or exceeds the configurable ``max_limit``, then ``max_limit`` will be
+    used instead.
   in: query
   required: false
   type: integer
