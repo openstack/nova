@@ -13,7 +13,6 @@ nova.tests.unit.compute.test_host_api.ComputeHostAPICellsTestCase
 nova.tests.unit.network.test_manager.LdapDNSTestCase
 nova.tests.unit.test_matchers.TestDictMatches.test__str__
 nova.tests.unit.test_wsgi.TestWSGIServerWithSSL
-nova.tests.unit.virt.libvirt.storage.test_rbd.RbdTestCase
 nova.tests.unit.virt.libvirt.test_firewall.IptablesFirewallTestCase
 nova.tests.unit.virt.libvirt.test_imagebackend.EncryptedLvmTestCase
 nova.tests.unit.virt.libvirt.test_imagebackend.LvmTestCase
