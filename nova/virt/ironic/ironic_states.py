@@ -132,6 +132,32 @@ INSPECTFAIL = 'inspect failed'
 """ Node inspection failed. """
 
 
+RESCUE = 'rescue'
+""" Node is in rescue mode.
+This is also used as a "verb" when changing the node's provision_state via the
+REST API"""
+
+RESCUEFAIL = 'rescue failed'
+""" Node rescue failed. """
+
+RESCUEWAIT = 'rescue wait'
+""" Node is waiting for rescue callback. """
+
+RESCUING = 'rescuing'
+""" Node is waiting to be rescued. """
+
+UNRESCUE = 'unrescue'
+""" Node is to be unrescued.
+This is not used as a state, but rather as a "verb" when changing the node's
+provision_state via the REST API.
+"""
+
+UNRESCUEFAIL = 'unrescue failed'
+""" Node unrescue failed. """
+
+UNRESCUING = "unrescuing"
+""" Node is unrescuing. """
+
 ##############
 # Power states
 ##############

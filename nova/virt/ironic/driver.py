@@ -74,7 +74,10 @@ _POWER_STATE_MAP = {
 
 _UNPROVISION_STATES = (ironic_states.ACTIVE, ironic_states.DEPLOYFAIL,
                        ironic_states.ERROR, ironic_states.DEPLOYWAIT,
-                       ironic_states.DEPLOYING)
+                       ironic_states.DEPLOYING, ironic_states.RESCUE,
+                       ironic_states.RESCUING, ironic_states.RESCUEWAIT,
+                       ironic_states.RESCUEFAIL, ironic_states.UNRESCUING,
+                       ironic_states.UNRESCUEFAIL)
 
 _NODE_FIELDS = ('uuid', 'power_state', 'target_power_state', 'provision_state',
                 'target_provision_state', 'last_error', 'maintenance',
@@ -1976,3 +1979,87 @@ class IronicDriver(virt_driver.ComputeDriver):
                     version.StrictVersion(max_version)):
                 raise exception.IronicAPIVersionNotAvailable(
                     version=max_version)
+
+    def rescue(self, context, instance, network_info, image_meta,
+               rescue_password):
+        """Rescue the specified instance.
+
+        :param nova.context.RequestContext context:
+            The context for the rescue.
+        :param nova.objects.instance.Instance instance:
+            The instance being rescued.
+        :param nova.network.model.NetworkInfo network_info:
+            Necessary network information for the rescue. Ignored by this
+            driver.
+        :param nova.objects.ImageMeta image_meta:
+            The metadata of the image of the instance. Ignored by this driver.
+        :param rescue_password: new root password to set for rescue.
+        :raise InstanceRescueFailure if rescue fails.
+        """
+        LOG.debug('Rescue called for instance', instance=instance)
+
+        node_uuid = instance.node
+
+        def _wait_for_rescue():
+            try:
+                node = self._validate_instance_and_node(instance)
+            except exception.InstanceNotFound as e:
+                raise exception.InstanceRescueFailure(reason=six.text_type(e))
+
+            if node.provision_state == ironic_states.RESCUE:
+                raise loopingcall.LoopingCallDone()
+
+            if node.provision_state == ironic_states.RESCUEFAIL:
+                raise exception.InstanceRescueFailure(
+                          reason=node.last_error)
+
+        try:
+            self._can_send_version(min_version='1.38')
+            self.ironicclient.call("node.set_provision_state",
+                                   node_uuid, ironic_states.RESCUE,
+                                   rescue_password=rescue_password)
+        except Exception as e:
+            raise exception.InstanceRescueFailure(reason=six.text_type(e))
+
+        timer = loopingcall.FixedIntervalLoopingCall(_wait_for_rescue)
+        timer.start(interval=CONF.ironic.api_retry_interval).wait()
+        LOG.info('Successfully rescued Ironic node %(node)s',
+                 {'node': node_uuid}, instance=instance)
+
+    def unrescue(self, instance, network_info):
+        """Unrescue the specified instance.
+
+        :param instance: nova.objects.instance.Instance
+        :param nova.network.model.NetworkInfo network_info:
+            Necessary network information for the unrescue. Ignored by this
+            driver.
+        """
+        LOG.debug('Unrescue called for instance', instance=instance)
+
+        node_uuid = instance.node
+
+        def _wait_for_unrescue():
+            try:
+                node = self._validate_instance_and_node(instance)
+            except exception.InstanceNotFound as e:
+                raise exception.InstanceUnRescueFailure(
+                          reason=six.text_type(e))
+
+            if node.provision_state == ironic_states.ACTIVE:
+                raise loopingcall.LoopingCallDone()
+
+            if node.provision_state == ironic_states.UNRESCUEFAIL:
+                raise exception.InstanceUnRescueFailure(
+                          reason=node.last_error)
+
+        try:
+            self._can_send_version(min_version='1.38')
+            self.ironicclient.call("node.set_provision_state",
+                                   node_uuid, ironic_states.UNRESCUE)
+        except Exception as e:
+            raise exception.InstanceUnRescueFailure(reason=six.text_type(e))
+
+        timer = loopingcall.FixedIntervalLoopingCall(_wait_for_unrescue)
+        timer.start(interval=CONF.ironic.api_retry_interval).wait()
+        LOG.info('Successfully unrescued Ironic node %(node)s',
+                 {'node': node_uuid}, instance=instance)

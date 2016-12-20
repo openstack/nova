@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    Supports instance rescue and unrescue with ironic virt driver. This feature
+    requires an ironic service supporting API version 1.38 or later, which is
+    present in ironic releases >= 10.1. It also requires python-ironicclient >=
+    2.3.0.

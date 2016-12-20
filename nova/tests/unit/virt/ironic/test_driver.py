@@ -2816,6 +2816,123 @@ class IronicDriverSyncTestCase(IronicDriverTestCase):
         self.driver._pike_flavor_migration([uuids.node1])
         mock_normalize.assert_not_called()
 
+    @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
+    @mock.patch.object(FAKE_CLIENT.node, 'set_provision_state')
+    def test_rescue(self, mock_sps, mock_looping):
+        node = ironic_utils.get_test_node()
+
+        fake_looping_call = FakeLoopingCall()
+        mock_looping.return_value = fake_looping_call
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   node=node.uuid)
+
+        self.driver.rescue(self.ctx, instance, None, None, 'xyz')
+        mock_sps.assert_called_once_with(node.uuid, 'rescue',
+                                         rescue_password='xyz')
+
+    @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
+    @mock.patch.object(FAKE_CLIENT.node, 'set_provision_state')
+    def test_rescue_provision_state_fail(self, mock_sps, mock_looping):
+        node = ironic_utils.get_test_node()
+
+        fake_looping_call = FakeLoopingCall()
+        mock_looping.return_value = fake_looping_call
+        mock_sps.side_effect = ironic_exception.BadRequest()
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   node=node.uuid)
+
+        self.assertRaises(exception.InstanceRescueFailure,
+                          self.driver.rescue,
+                          self.ctx, instance, None, None, 'xyz')
+
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_validate_instance_and_node')
+    @mock.patch.object(FAKE_CLIENT.node, 'set_provision_state')
+    def test_rescue_instance_not_found(self, mock_sps, fake_validate):
+        node = ironic_utils.get_test_node(driver='fake')
+
+        instance = fake_instance.fake_instance_obj(self.ctx, node=node.uuid)
+        fake_validate.side_effect = exception.InstanceNotFound(
+            instance_id='fake')
+
+        self.assertRaises(exception.InstanceRescueFailure,
+                          self.driver.rescue,
+                          self.ctx, instance, None, None, 'xyz')
+
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_validate_instance_and_node')
+    @mock.patch.object(FAKE_CLIENT.node, 'set_provision_state')
+    def test_rescue_rescue_fail(self, mock_sps, fake_validate):
+        node = ironic_utils.get_test_node(
+                   provision_state=ironic_states.RESCUEFAIL,
+                   last_error='rescue failed')
+
+        fake_validate.return_value = node
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   node=node.uuid)
+
+        self.assertRaises(exception.InstanceRescueFailure,
+                          self.driver.rescue,
+                          self.ctx, instance, None, None, 'xyz')
+
+    @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
+    @mock.patch.object(FAKE_CLIENT.node, 'set_provision_state')
+    def test_unrescue(self, mock_sps, mock_looping):
+        node = ironic_utils.get_test_node()
+
+        fake_looping_call = FakeLoopingCall()
+        mock_looping.return_value = fake_looping_call
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   node=node.uuid)
+
+        self.driver.unrescue(instance, None)
+        mock_sps.assert_called_once_with(node.uuid, 'unrescue')
+
+    @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
+    @mock.patch.object(FAKE_CLIENT.node, 'set_provision_state')
+    def test_unrescue_provision_state_fail(self, mock_sps, mock_looping):
+        node = ironic_utils.get_test_node()
+
+        fake_looping_call = FakeLoopingCall()
+        mock_looping.return_value = fake_looping_call
+        mock_sps.side_effect = ironic_exception.BadRequest()
+
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   node=node.uuid)
+        self.assertRaises(exception.InstanceUnRescueFailure,
+                          self.driver.unrescue,
+                          instance, None)
+
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_validate_instance_and_node')
+    @mock.patch.object(FAKE_CLIENT.node, 'set_provision_state')
+    def test_unrescue_instance_not_found(self, mock_sps, fake_validate):
+        node = ironic_utils.get_test_node(driver='fake')
+
+        instance = fake_instance.fake_instance_obj(self.ctx, node=node.uuid)
+        fake_validate.side_effect = exception.InstanceNotFound(
+            instance_id='fake')
+
+        self.assertRaises(exception.InstanceUnRescueFailure,
+                          self.driver.unrescue,
+                          instance, None)
+
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_validate_instance_and_node')
+    @mock.patch.object(FAKE_CLIENT.node, 'set_provision_state')
+    def test_unrescue_unrescue_fail(self, mock_sps, fake_validate):
+        node = ironic_utils.get_test_node(
+                   provision_state=ironic_states.UNRESCUEFAIL,
+                   last_error='unrescue failed')
+
+        fake_validate.return_value = node
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   node=node.uuid)
+
+        self.assertRaises(exception.InstanceUnRescueFailure,
+                          self.driver.unrescue,
+                          instance, None)
+
     def test__can_send_version(self):
         self.assertIsNone(
             self.driver._can_send_version(

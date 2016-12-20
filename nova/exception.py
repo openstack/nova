@@ -2297,5 +2297,13 @@ class CertificateValidationNotYetAvailable(NovaException):
     code = 409
 
 
+class InstanceRescueFailure(NovaException):
+    msg_fmt = _("Failed to move instance to rescue mode: %(reason)s")
+
+
+class InstanceUnRescueFailure(NovaException):
+    msg_fmt = _("Failed to unrescue instance: %(reason)s")
+
+
 class IronicAPIVersionNotAvailable(NovaException):
     msg_fmt = _('Ironic API version %(version)s is not available.')
