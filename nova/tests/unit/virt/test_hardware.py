@@ -2765,6 +2765,48 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         self.assertEqual(set([]), new_cell.cells[0].pinned_cpus)
         self.assertEqual(new_cell.cells[0].cpu_usage, 0)
 
+    def test_host_usage_from_instances_isolated_without_siblings(self):
+        host_pin = objects.NUMATopology(
+                cells=[objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
+                                        memory=4096, cpu_usage=0,
+                                        memory_usage=0,
+                                        siblings=[],
+                                        mempages=[], pinned_cpus=set([]))])
+        inst_pin = objects.InstanceNUMATopology(
+            cells=[objects.InstanceNUMACell(
+                cpuset=set([0, 1, 2]), memory=2048, id=0,
+                cpu_pinning={0: 0, 1: 1, 2: 2},
+                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE
+            )])
+
+        new_cell = hw.numa_usage_from_instances(host_pin, [inst_pin])
+        self.assertEqual(inst_pin.cells[0].cpuset,
+                         new_cell.cells[0].pinned_cpus)
+        self.assertEqual(new_cell.cells[0].cpu_usage, 3)
+
+    def test_host_usage_from_instances_isolated_without_siblings_free(self):
+        host_pin = objects.NUMATopology(
+                cells=[objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
+                                        memory=4096, cpu_usage=4,
+                                        memory_usage=0,
+                                        siblings=[],
+                                        mempages=[],
+                                        pinned_cpus=set([0, 1, 2, 3]))])
+        inst_pin = objects.InstanceNUMATopology(
+                cells=[objects.InstanceNUMACell(
+                    cpuset=set([0, 1, 3]), memory=2048, id=0,
+                    cpu_pinning={0: 0, 1: 1, 2: 2},
+                    cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                    cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE
+                )])
+
+        new_cell = hw.numa_usage_from_instances(host_pin,
+                                                [inst_pin],
+                                                free=True)
+        self.assertEqual(set([3]), new_cell.cells[0].pinned_cpus)
+        self.assertEqual(new_cell.cells[0].cpu_usage, 1)
+
 
 class CPURealtimeTestCase(test.NoDBTestCase):
     def test_success_flavor(self):
