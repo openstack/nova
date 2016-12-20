@@ -3439,6 +3439,7 @@ domain1 = "example.org"
 domain2 = "example.com"
 
 
+@testtools.skipIf(six.PY3, 'python-ldap is not compatible for Python 3.')
 class LdapDNSTestCase(test.NoDBTestCase):
     """Tests nova.network.ldapdns.LdapDNS."""
     def setUp(self):
