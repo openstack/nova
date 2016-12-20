@@ -175,6 +175,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - server_id: server_id_path
+  - os-migrateLive: os-migrateLive
   - host: host_migration
   - block_migration: block_migration
   - block_migration: block_migration_2_25
