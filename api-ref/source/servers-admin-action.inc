@@ -145,8 +145,8 @@ Live-migrates a server to a new host without rebooting.
 
 Specify the ``os-migrateLive`` action in the request body.
 
-Use the ``host`` parameter to specify the destination host. If you
-omit this parameter, the scheduler chooses a host. If a scheduled host
+Use the ``host`` parameter to specify the destination host. If
+this param is ``null``, the scheduler chooses a host. If a scheduled host
 is not suitable to do migration, the scheduler tries up to
 ``migrate_max_retries`` rescheduling attempts.
 

@@ -2149,7 +2149,7 @@ host_memory_mb:
   type: string
 host_migration:
   description: |
-    The host to which to migrate the server. If you omit this parameter, the scheduler
+    The host to which to migrate the server. If this parameter is ``None``, the scheduler
     chooses a host.
   in: body
   required: true
