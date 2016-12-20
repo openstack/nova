@@ -651,7 +651,8 @@ class ServersController(wsgi.Controller):
         except UnicodeDecodeError as error:
             msg = "UnicodeError: %s" % error
             raise exc.HTTPBadRequest(explanation=msg)
-        except (exception.ImageNotActive,
+        except (exception.CPUThreadPolicyConfigurationInvalid,
+                exception.ImageNotActive,
                 exception.ImageBadRequest,
                 exception.ImageNotAuthorized,
                 exception.FixedIpNotFoundForAddress,
@@ -683,6 +684,8 @@ class ServersController(wsgi.Controller):
                 exception.InvalidBDMFormat,
                 exception.InvalidBDMSwapSize,
                 exception.AutoDiskConfigDisabledByImage,
+                exception.ImageCPUPinningForbidden,
+                exception.ImageCPUThreadPolicyForbidden,
                 exception.ImageNUMATopologyIncomplete,
                 exception.ImageNUMATopologyForbidden,
                 exception.ImageNUMATopologyAsymmetric,
@@ -692,7 +695,11 @@ class ServersController(wsgi.Controller):
                 exception.ImageNUMATopologyMemoryOutOfRange,
                 exception.InvalidNUMANodesNumber,
                 exception.InstanceGroupNotFound,
+                exception.MemoryPageSizeInvalid,
+                exception.MemoryPageSizeForbidden,
                 exception.PciRequestAliasNotDefined,
+                exception.RealtimeConfigurationInvalid,
+                exception.RealtimeMaskNotFoundOrInvalid,
                 exception.SnapshotNotFound,
                 exception.UnableToAutoAllocateNetwork) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
