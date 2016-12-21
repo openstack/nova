@@ -718,6 +718,14 @@ Delete Server
 
 Deletes a server.
 
+By default, the instance is going to be (hard) deleted immediately from
+the system, but you can set ``reclaim_instance_interval`` > 0 to make
+the API soft delete the instance, so that the instance's vm won't be
+deleted until the ``reclaim_instance_interval`` has expired since the
+instance was soft deleted. The instance marked as ``SOFT_DELETED`` can
+be recovered via ``restore`` action before it's really deleted from the
+system.
+
 **Preconditions**
 
 - The server must exist.
@@ -729,11 +737,11 @@ Deletes a server.
 **Asynchronous postconditions**
 
 - With correct permissions, you can see the server status as
-  ``DELETED`` through API calls.
-- The port attached to the server is deleted.
+  ``DELETED`` or ``SOFT_DELETED`` through API calls.
+- If hard delete, the port attached to the server is deleted.
 - The server does not appear in the list servers response.
-- The server managed by OpenStack Compute is deleted on the compute
-  node.
+- If hard delete, the server managed by OpenStack Compute is deleted
+  on the compute node.
 
 **Troubleshooting**
 
