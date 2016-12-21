@@ -68,7 +68,7 @@ import oslo_messaging as messaging
 from oslo_utils import importutils
 from oslo_utils import uuidutils
 import prettytable
-import six
+
 import six.moves.urllib.parse as urlparse
 
 from nova.api.ec2 import ec2utils
@@ -263,7 +263,7 @@ class ProjectCommands(object):
             quota = QUOTAS.get_user_quotas(ctxt, project_id, user_id)
         else:
             quota = QUOTAS.get_project_quotas(ctxt, project_id)
-        for key, value in six.iteritems(quota):
+        for key, value in quota.items():
             if value['limit'] is None or value['limit'] < 0:
                 value['limit'] = 'unlimited'
             print(print_format % (key, value['limit'], value['in_use'],
@@ -455,7 +455,7 @@ class NetworkCommands(object):
         if not (cidr or cidr_v6):
             raise exception.NetworkNotCreated(req="cidr or cidr_v6")
 
-        kwargs = {k: v for k, v in six.iteritems(locals())
+        kwargs = {k: v for k, v in locals().items()
                   if v and k != "self"}
         if multi_host is not None:
             kwargs['multi_host'] = multi_host == 'T'
@@ -710,7 +710,7 @@ class DbCommands(object):
         """
         hits = migration.db_null_instance_uuid_scan(delete)
         records_found = False
-        for table_name, records in six.iteritems(hits):
+        for table_name, records in hits.items():
             # Don't print anything for 0 hits
             if records:
                 records_found = True
@@ -862,7 +862,7 @@ class AgentBuildCommands(object):
 
             buildlist.append(agent_build)
 
-        for key, buildlist in six.iteritems(by_hypervisor):
+        for key, buildlist in by_hypervisor.items():
             if hypervisor and key != hypervisor:
                 continue
 

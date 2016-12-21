@@ -1945,7 +1945,7 @@ class API(base_api.NetworkAPI):
             with excutils.save_and_reraise_exception():
                 LOG.exception(_LE('Unable to access floating IP for %s'),
                         ', '.join(['%s %s' % (k, v)
-                                   for k, v in six.iteritems(kwargs)]))
+                                   for k, v in kwargs.items()]))
 
     def _get_floating_ip_by_address(self, client, address):
         """Get floating IP from floating IP address."""

@@ -17,7 +17,7 @@
 """Volume drivers for libvirt."""
 
 from oslo_log import log as logging
-import six
+
 
 import nova.conf
 from nova import exception
@@ -72,7 +72,7 @@ class LibvirtBaseVolumeDriver(object):
                          'read_iops_sec', 'write_iops_sec']
             specs = data['qos_specs']
             if isinstance(specs, dict):
-                for k, v in six.iteritems(specs):
+                for k, v in specs.items():
                     if k in tune_opts:
                         new_key = 'disk_' + k
                         setattr(conf, new_key, v)

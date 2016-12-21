@@ -731,7 +731,7 @@ def check_doubled_words(physical_line, filename):
 
 
 def check_python3_no_iteritems(logical_line):
-    msg = ("N344: Use six.iteritems() instead of dict.iteritems().")
+    msg = ("N344: Use items() instead of dict.iteritems().")
 
     if re.search(r".*\.iteritems\(\)", logical_line):
         yield(0, msg)

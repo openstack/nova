@@ -14,7 +14,7 @@
 #    under the License.
 
 from oslo_log import log as logging
-import six
+
 
 import nova.conf
 from nova.i18n import _LW
@@ -44,7 +44,7 @@ class AggregateImagePropertiesIsolation(filters.BaseHostFilter):
         image_props = spec_obj.image.properties if spec_obj.image else {}
         metadata = utils.aggregate_metadata_get_by_host(host_state)
 
-        for key, options in six.iteritems(metadata):
+        for key, options in metadata.items():
             if (cfg_namespace and
                     not key.startswith(cfg_namespace + cfg_separator)):
                 continue

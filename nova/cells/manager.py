@@ -23,7 +23,7 @@ from oslo_log import log as logging
 import oslo_messaging
 from oslo_service import periodic_task
 from oslo_utils import timeutils
-import six
+
 from six.moves import range
 
 from nova.cells import messaging
@@ -386,7 +386,7 @@ class CellsManager(manager.Manager):
         totals = {}
         for response in responses:
             data = response.value_or_raise()
-            for key, val in six.iteritems(data):
+            for key, val in data.items():
                 totals.setdefault(key, 0)
                 totals[key] += val
         return totals

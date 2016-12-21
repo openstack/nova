@@ -287,7 +287,7 @@ class PciDeviceStats(object):
         # 'devices' shouldn't be part of stats
         pools = []
         for pool in self.pools:
-            tmp = {k: v for k, v in six.iteritems(pool) if k != 'devices'}
+            tmp = {k: v for k, v in pool.items() if k != 'devices'}
             pools.append(tmp)
         return iter(pools)
 

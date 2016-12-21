@@ -63,7 +63,7 @@ class CellState(object):
 
     def update_db_info(self, cell_db_info):
         """Update cell credentials from db."""
-        self.db_info = {k: v for k, v in six.iteritems(cell_db_info)
+        self.db_info = {k: v for k, v in cell_db_info.items()
                         if k != 'name'}
 
     def update_capabilities(self, cell_metadata):

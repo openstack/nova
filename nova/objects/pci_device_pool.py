@@ -63,7 +63,7 @@ class PciDevicePool(base.NovaObject):
     def to_dict(self):
         pci_pool = base.obj_to_primitive(self)
         tags = pci_pool.pop('tags', {})
-        for k, v in six.iteritems(tags):
+        for k, v in tags.items():
             pci_pool[k] = v
         return pci_pool
 

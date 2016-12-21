@@ -228,7 +228,7 @@ class NovaObjectSerializer(messaging.NoOpSerializer):
         iterable = values.__class__
         if issubclass(iterable, dict):
             return iterable(**{k: action_fn(context, v)
-                            for k, v in six.iteritems(values)})
+                            for k, v in values.items()})
         else:
             # NOTE(danms, gibi) A set can't have an unhashable value inside,
             # such as a dict. Convert the set to list, which is fine, since we
@@ -306,7 +306,7 @@ def serialize_args(fn):
     def wrapper(obj, *args, **kwargs):
         args = [utils.strtime(arg) if isinstance(arg, datetime.datetime)
                 else arg for arg in args]
-        for k, v in six.iteritems(kwargs):
+        for k, v in kwargs.items():
             if k == 'exc_val' and v:
                 kwargs[k] = six.text_type(v)
             elif k == 'exc_tb' and v and not isinstance(v, six.string_types):

@@ -168,7 +168,7 @@ class BuildRequest(base.NovaObject):
 
     def _get_update_primitives(self):
         updates = self.obj_get_changes()
-        for key, value in six.iteritems(updates):
+        for key, value in updates.items():
             if isinstance(self.fields[key], fields.ObjectField):
                 updates[key] = jsonutils.dumps(value.obj_to_primitive())
         return updates
