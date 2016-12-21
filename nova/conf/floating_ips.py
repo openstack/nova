@@ -36,14 +36,28 @@ Possible values:
 """),
     cfg.BoolOpt('auto_assign_floating_ip',
         default=False,
+        deprecated_for_removal=True,
+        deprecated_since='15.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 Autoassigning floating IP to VM
 
 When set to True, floating IP is auto allocated and associated
 to the VM upon creation.
+
+Related options:
+
+* use_neutron: this options only works with nova-network.
 """),
    cfg.StrOpt('floating_ip_dns_manager',
         default='nova.network.noop_dns_driver.NoopDNSDriver',
+        deprecated_for_removal=True,
+        deprecated_since='15.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 Full class name for the DNS Manager for floating IPs.
 
@@ -64,6 +78,11 @@ Related options:
 """),
     cfg.StrOpt('instance_dns_manager',
         default='nova.network.noop_dns_driver.NoopDNSDriver',
+        deprecated_for_removal=True,
+        deprecated_since='15.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 Full class name for the DNS Manager for instance IPs.
 
@@ -84,6 +103,11 @@ Related options:
 """),
     cfg.StrOpt('instance_dns_domain',
         default='',
+        deprecated_for_removal=True,
+        deprecated_since='15.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 If specified, Nova checks if the availability_zone of every instance matches
 what the database says the availability_zone should be for the specified

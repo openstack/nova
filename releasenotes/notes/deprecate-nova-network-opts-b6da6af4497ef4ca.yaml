@@ -28,3 +28,7 @@ deprecations:
     - ``dns_update_periodic_interval``
     - ``dhcp_domain``
     - ``use_neutron``
+    - ``auto_assign_floating_ip``
+    - ``floating_ip_dns_manager``
+    - ``instance_dns_manager``
+    - ``instance_dns_domain``
