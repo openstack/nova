@@ -277,7 +277,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
                {'device_name': 'foo2', 'volume_id': fakes.FAKE_UUID,
                 'delete_on_termination': True},
                {'device_name': 'foo3', 'volume_id': fakes.FAKE_UUID,
-                'delete_on_termination': 'invalid'},
+                'delete_on_termination': 'False'},
                {'device_name': 'foo4', 'volume_id': fakes.FAKE_UUID,
                 'delete_on_termination': False},
                {'device_name': 'foo5', 'volume_id': fakes.FAKE_UUID,
@@ -306,6 +306,16 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
         self.stubs.Set(compute_api.API, '_validate_bdm', _validate_bdm)
         self._test_create(params)
+
+    def test_create_instance_with_bdm_delete_on_termination_invalid_2nd(self):
+        bdm = [{'device_name': 'foo1', 'volume_id': fakes.FAKE_UUID,
+                'delete_on_termination': 'True'},
+               {'device_name': 'foo2', 'volume_id': fakes.FAKE_UUID,
+                'delete_on_termination': 'invalid'}]
+
+        params = {'block_device_mapping': bdm}
+        self.assertRaises(self.validation_error,
+                          self._test_create, params)
 
     def test_create_instance_decide_format_legacy(self):
         ext_info = extension_info.LoadedExtensionInfo()

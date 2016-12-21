@@ -44,6 +44,6 @@ legacy_block_device_mapping = {
 server_create = {
     'block_device_mapping': {
         'type': 'array',
-        'items': [legacy_block_device_mapping]
+        'items': legacy_block_device_mapping
     }
 }

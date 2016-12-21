@@ -150,6 +150,21 @@ class BlockDeviceMappingTestV21(test.TestCase):
         params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
         self._test_create(params, no_image=True)
 
+    def test_create_instance_with_invalid_bdm_in_2nd_dict(self):
+        bdm_1st = {"source_type": "image", "delete_on_termination": True,
+                   "boot_index": 0,
+                   "uuid": "2ff3a1d3-ed70-4c3f-94ac-941461153bc0",
+                   "destination_type": "local"}
+        bdm_2nd = {"source_type": "volume",
+                   "uuid": "99d92140-3d0c-4ea5-a49c-f94c38c607f0",
+                   "destination_type": "invalid"}
+        bdm = [bdm_1st, bdm_2nd]
+
+        params = {block_device_mapping.ATTRIBUTE_NAME: bdm,
+                  'imageRef': '2ff3a1d3-ed70-4c3f-94ac-941461153bc0'}
+        self.assertRaises(exception.ValidationError,
+                          self._test_create, params)
+
     def test_create_instance_with_device_name_not_string(self):
         self.bdm[0]['device_name'] = 123
         old_create = compute_api.API.create
@@ -382,6 +397,11 @@ class BlockDeviceMappingTestV2(BlockDeviceMappingTestV21):
         pass
 
     def test_create_instance_with_invalid_destination_type(self):
+        # Add a check whether the destination type is invalid
+        # in V2.1 API only. So this test is skipped in V2.0 API
+        pass
+
+    def test_create_instance_with_invalid_bdm_in_2nd_dict(self):
         # Add a check whether the destination type is invalid
         # in V2.1 API only. So this test is skipped in V2.0 API
         pass
