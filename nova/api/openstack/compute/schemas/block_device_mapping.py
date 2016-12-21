@@ -66,7 +66,7 @@ block_device_mapping['properties'].update(block_device_mapping_new_item)
 server_create = {
     'block_device_mapping_v2': {
         'type': 'array',
-        'items': [block_device_mapping]
+        'items': block_device_mapping
     }
 }
 
@@ -81,6 +81,6 @@ block_device_mapping_v232['properties'].update(
 server_create_v232 = {
     'block_device_mapping_v2': {
         'type': 'array',
-        'items': [block_device_mapping_v232]
+        'items': block_device_mapping_v232
     }
 }
