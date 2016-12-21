@@ -458,14 +458,15 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
 
         # Create Linux bridge qbrXXX
         linux_br_name = self._create_linux_bridge(vif_rec)
-        LOG.debug("create veth pair for interim bridge %(interim_bridge)s and "
-                  "linux bridge %(linux_bridge)s",
-                  {'interim_bridge': bridge_name,
-                   'linux_bridge': linux_br_name})
-        self._create_veth_pair(tap_name, patch_port1)
-        self._brctl_add_if(linux_br_name, tap_name)
-        # Add port to interim bridge
-        self._ovs_add_port(bridge_name, patch_port1)
+        if not self._device_exists(tap_name):
+            LOG.debug("create veth pair for interim bridge %(interim_bridge)s "
+                      "and linux bridge %(linux_bridge)s",
+                      {'interim_bridge': bridge_name,
+                       'linux_bridge': linux_br_name})
+            self._create_veth_pair(tap_name, patch_port1)
+            self._brctl_add_if(linux_br_name, tap_name)
+            # Add port to interim bridge
+            self._ovs_add_port(bridge_name, patch_port1)
 
     def get_vif_interim_net_name(self, vif):
         return ("net-" + vif['id'])[:network_model.NIC_NAME_LEN]

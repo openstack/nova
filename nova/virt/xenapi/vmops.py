@@ -588,15 +588,18 @@ class VMOps(object):
             # for neutron event regardless of whether or not it is
             # migrated to another host, if unplug VIFs locally, the
             # port status may not changed in neutron side and we
-            # cannot get the vif plug event from neturon
+            # cannot get the vif plug event from neutron
+            # rescue is True in rescued instance and the port in neutron side
+            # won't change, so we don't wait event from neutron
             timeout = CONF.vif_plugging_timeout
-            events = self._get_neutron_events(network_info,
-                                              power_on, first_boot)
+            events = self._get_neutron_events(network_info, power_on,
+                                              first_boot, rescue)
             try:
                 with self._virtapi.wait_for_instance_event(
                     instance, events, deadline=timeout,
                     error_callback=self._neutron_failed_callback):
-                    LOG.debug("wait for instance event:%s", events)
+                    LOG.debug("wait for instance event:%s", events,
+                              instance=instance)
                     setup_network_step(undo_mgr, vm_ref)
                     if rescue:
                         attach_orig_disks_step(undo_mgr, vm_ref)
@@ -632,11 +635,13 @@ class VMOps(object):
         if CONF.vif_plugging_is_fatal:
             raise exception.VirtualInterfaceCreateException()
 
-    def _get_neutron_events(self, network_info, power_on, first_boot):
+    def _get_neutron_events(self, network_info, power_on, first_boot, rescue):
         # Only get network-vif-plugged events with VIF's status is not active.
         # With VIF whose status is active, neutron may not notify such event.
+        # Don't get network-vif-plugged events from rescued VM or migrated VM
         timeout = CONF.vif_plugging_timeout
-        if (utils.is_neutron() and power_on and timeout and first_boot):
+        if (utils.is_neutron() and power_on and timeout and first_boot and
+                not rescue):
             return [('network-vif-plugged', vif['id'])
                 for vif in network_info if vif.get('active', True) is False]
         else:
