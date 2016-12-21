@@ -132,8 +132,8 @@ def task_and_vm_state_from_status(statuses):
     vm_states = set()
     task_states = set()
     lower_statuses = [status.lower() for status in statuses]
-    for state, task_map in six.iteritems(_STATE_MAP):
-        for task_state, mapped_state in six.iteritems(task_map):
+    for state, task_map in _STATE_MAP.items():
+        for task_state, mapped_state in task_map.items():
             status_string = mapped_state
             if status_string.lower() in lower_statuses:
                 vm_states.add(state)

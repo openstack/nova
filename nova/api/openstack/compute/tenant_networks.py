@@ -73,7 +73,7 @@ class TenantNetworkController(wsgi.Controller):
         networks = {}
         for n in self.network_api.get_all(ctx):
             networks[n['id']] = n['label']
-        return [{'id': k, 'label': v} for k, v in six.iteritems(networks)]
+        return [{'id': k, 'label': v} for k, v in networks.items()]
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(())

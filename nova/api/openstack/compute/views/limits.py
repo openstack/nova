@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import six
-
 
 # This is a list of limits which needs to filter out from the API response.
 # This is due to the deprecation of network related proxy APIs, the related
@@ -69,7 +67,7 @@ class ViewBuilder(object):
         if filter_result:
             filtered_limits = FILTERED_LIMITS
         limits = {}
-        for name, value in six.iteritems(absolute_limits):
+        for name, value in absolute_limits.items():
             if (name in self.limit_names and
                     value is not None and name not in filtered_limits):
                 for limit_name in self.limit_names[name]:
