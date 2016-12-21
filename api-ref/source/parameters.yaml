@@ -1179,7 +1179,7 @@ block_device_mapping_v2:
 block_device_uuid:
   description: |
     This is the uuid of source resource. The uuid is point to different resource
-    based on the source_type. For example if source_type is ``image`` as the above
+    based on the source_type. For example, if source_type is ``image`` as the above
     sample, the block device is created based on the specified image which is gotten
     from the image service.
   in: body
@@ -1831,8 +1831,8 @@ flavor_disk:
   description: |
     The size of the root disk that will be created in GiB. If 0 the
     root disk will be set to exactly the size of the image used to
-    deploy the instance. However in this case filter scheduler cannot
-    select the compute host based on the virtual image size. Therefore
+    deploy the instance. However, in this case filter scheduler cannot
+    select the compute host based on the virtual image size. Therefore,
     0 should only be used for volume booted instances or for testing
     purposes.
 flavor_ephem_disk:
@@ -1843,7 +1843,7 @@ flavor_ephem_disk:
     The size of the ephemeral disk that will be created, in
     GiB. Ephemeral disks may be written over on server state
     changes. So should only be used as a scratch space for
-    applications that are aware of it's limitations. Defaults to 0.
+    applications that are aware of its limitations. Defaults to 0.
 flavor_ephem_disk_in:
   in: body
   required: false
@@ -1852,7 +1852,7 @@ flavor_ephem_disk_in:
     The size of the ephemeral disk that will be created, in
     GiB. Ephemeral disks may be written over on server state
     changes. So should only be used as a scratch space for
-    applications that are aware of it's limitations. Defaults to 0.
+    applications that are aware of its limitations. Defaults to 0.
 flavor_extra_spec_key2:
   description: |
     The extra spec key of a flavor.  It appears in the os-extra-specs'
