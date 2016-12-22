@@ -140,3 +140,15 @@ class SchedulerReportClientTests(test.TestCase):
             usage_data = resp.json()['usages']
             vcpu_data = usage_data[res_class]
             self.assertEqual(0, vcpu_data)
+
+            # Trigger the reporting client deleting all inventory by setting
+            # the compute node's CPU, RAM and disk amounts to 0.
+            self.compute_node.vcpus = 0
+            self.compute_node.memory_mb = 0
+            self.compute_node.local_gb = 0
+            self.client.update_resource_stats(self.compute_node)
+
+            # Check there's no more inventory records
+            resp = self.client.get(inventory_url)
+            inventory_data = resp.json()['inventories']
+            self.assertEqual({}, inventory_data)
