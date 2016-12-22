@@ -846,3 +846,24 @@ class TestAllocations(SchedulerReportClientTestCase):
             mock.call('/allocations/%s' % inst1.uuid),
             mock.call('/allocations/%s' % inst2.uuid)]
         mock_delete.assert_has_calls(expected_calls, any_order=True)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'delete')
+    @mock.patch('nova.scheduler.client.report.LOG')
+    def test_delete_allocation_for_instance_ignore_404(self, mock_log,
+                                                       mock_delete):
+        """Tests that we don't log a warning on a 404 response when trying to
+        delete an allocation record.
+        """
+        mock_response = mock.MagicMock(status_code=404)
+        try:
+            mock_response.__nonzero__.return_value = False
+        except AttributeError:
+            # py3 uses __bool__
+            mock_response.__bool__.return_value = False
+        mock_delete.return_value = mock_response
+        self.client._delete_allocation_for_instance(uuids.rp_uuid)
+        # make sure we didn't screw up the logic or the mock
+        mock_log.info.assert_not_called()
+        # make sure warning wasn't called for the 404
+        mock_log.warning.assert_not_called()

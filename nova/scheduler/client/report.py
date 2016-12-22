@@ -429,12 +429,15 @@ class SchedulerReportClient(object):
             LOG.info(_LI('Deleted allocation for instance %s'),
                      uuid)
         else:
-            LOG.warning(
-                _LW('Unable to delete allocation for instance '
-                    '%(uuid)s: (%(code)i %(text)s)'),
-                {'uuid': uuid,
-                 'code': r.status_code,
-                 'text': r.text})
+            # Check for 404 since we don't need to log a warning if we tried to
+            # delete something which doesn't actually exist.
+            if r.status_code != 404:
+                LOG.warning(
+                    _LW('Unable to delete allocation for instance '
+                        '%(uuid)s: (%(code)i %(text)s)'),
+                    {'uuid': uuid,
+                     'code': r.status_code,
+                     'text': r.text})
 
     def update_instance_allocation(self, compute_node, instance, sign):
         if sign > 0:
