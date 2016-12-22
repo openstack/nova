@@ -928,6 +928,7 @@ There was a conflict when trying to complete your request.
         # Make sure we updated the generation from the inventory records
         self.assertEqual(43, rp.generation)
 
+    @mock.patch.object(report.LOG, 'info')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_inventory')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -935,7 +936,7 @@ There was a conflict when trying to complete your request.
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
     def test_update_inventory_concurrent_update(self, mock_ensure,
-                                                mock_put, mock_get):
+                                                mock_put, mock_get, mock_info):
         # Ensure _update_inventory() returns a list of Inventories objects
         # after creating or updating the existing values
         uuid = uuids.compute_node
@@ -947,6 +948,8 @@ There was a conflict when trying to complete your request.
         mock_get.return_value = {}
         mock_put.return_value.status_code = 409
         mock_put.return_value.text = 'Does not match inventory in use'
+        mock_put.return_value.headers = {'x-openstack-request-id':
+                                         uuids.request_id}
 
         inv_data = report._compute_node_to_inventory_dict(compute_node)
         result = self.client._update_inventory_attempt(
@@ -958,6 +961,9 @@ There was a conflict when trying to complete your request.
         self.assertNotIn(uuid, self.client._resource_providers)
         # Refreshed our resource provider
         mock_ensure.assert_called_once_with(uuid)
+        # Logged the request id in the log message
+        self.assertEqual(uuids.request_id,
+                         mock_info.call_args[0][1]['placement_req_id'])
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_inventory')
@@ -990,11 +996,13 @@ There was a conflict when trying to complete your request.
         # Did NOT invalidate the cache
         self.assertIn(uuid, self.client._resource_providers)
 
+    @mock.patch.object(report.LOG, 'info')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_inventory')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'put')
-    def test_update_inventory_unknown_response(self, mock_put, mock_get):
+    def test_update_inventory_unknown_response(self, mock_put, mock_get,
+                                               mock_info):
         # Ensure _update_inventory() returns a list of Inventories objects
         # after creating or updating the existing values
         uuid = uuids.compute_node
@@ -1005,6 +1013,8 @@ There was a conflict when trying to complete your request.
 
         mock_get.return_value = {}
         mock_put.return_value.status_code = 234
+        mock_put.return_value.headers = {'openstack-request-id':
+                                         uuids.request_id}
 
         inv_data = report._compute_node_to_inventory_dict(compute_node)
         result = self.client._update_inventory_attempt(
@@ -1014,12 +1024,18 @@ There was a conflict when trying to complete your request.
 
         # No cache invalidation
         self.assertIn(uuid, self.client._resource_providers)
+        # Logged the request id in the log messages
+        self.assertEqual(uuids.request_id,
+                         mock_info.call_args[0][1]['placement_req_id'])
 
+    @mock.patch.object(report.LOG, 'warning')
+    @mock.patch.object(report.LOG, 'debug')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_inventory')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'put')
-    def test_update_inventory_failed(self, mock_put, mock_get):
+    def test_update_inventory_failed(self, mock_put, mock_get,
+                                     mock_debug, mock_warn):
         # Ensure _update_inventory() returns a list of Inventories objects
         # after creating or updating the existing values
         uuid = uuids.compute_node
@@ -1034,6 +1050,8 @@ There was a conflict when trying to complete your request.
         except AttributeError:
             # Thanks py3
             mock_put.return_value.__bool__.return_value = False
+        mock_put.return_value.headers = {'openstack-request-id':
+                                         uuids.request_id}
 
         inv_data = report._compute_node_to_inventory_dict(compute_node)
         result = self.client._update_inventory_attempt(
@@ -1043,6 +1061,11 @@ There was a conflict when trying to complete your request.
 
         # No cache invalidation
         self.assertIn(uuid, self.client._resource_providers)
+        # Logged the request id in the log messages
+        self.assertEqual(uuids.request_id,
+                         mock_debug.call_args[0][1]['placement_req_id'])
+        self.assertEqual(uuids.request_id,
+                         mock_warn.call_args[0][1]['placement_req_id'])
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
