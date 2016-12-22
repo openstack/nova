@@ -109,7 +109,7 @@ class ImageBackendFixture(fixtures.Fixture):
 
         disk = mock.create_autospec(imagebackend.Image)
 
-        # NOTE(mdbooth): fake_cache and fake_import_file are for compatiblity
+        # NOTE(mdbooth): fake_cache and fake_import_file are for compatibility
         # with existing tests which test got_files and imported_files. They
         # should be removed when they have no remaining users.
         disk.cache.side_effect = self._fake_cache

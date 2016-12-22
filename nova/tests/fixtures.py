@@ -284,7 +284,7 @@ class SingleCellSimple(fixtures.Fixture):
     @contextmanager
     def _fake_target_cell(self, context, target_cell):
         # NOTE(danms): Just pass through the context without actually
-        # targetting anything.
+        # targeting anything.
         yield context
 
 
