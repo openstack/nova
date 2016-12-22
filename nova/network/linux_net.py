@@ -371,7 +371,7 @@ class IptablesManager(object):
                         all_lines[start:end], table, table_name)
                 table.dirty = False
             self.execute('%s-restore' % (cmd,), '-c', run_as_root=True,
-                         process_input='\n'.join(all_lines),
+                         process_input=six.b('\n'.join(all_lines)),
                          attempts=5)
         LOG.debug("IPTablesManager.apply completed with success")
 

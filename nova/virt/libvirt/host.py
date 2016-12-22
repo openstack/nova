@@ -714,8 +714,11 @@ class Host(object):
             if (hasattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES')
                 and self._caps.host.cpu.model is not None):
                 try:
+                    xml_str = self._caps.host.cpu.to_xml()
+                    if six.PY3:
+                        xml_str = xml_str.decode('utf-8')
                     features = self.get_connection().baselineCPU(
-                        [self._caps.host.cpu.to_xml()],
+                        [xml_str],
                         libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES)
                     if features:
                         cpu = vconfig.LibvirtConfigCPU()
