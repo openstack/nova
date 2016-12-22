@@ -41,7 +41,7 @@ Reference
    nova-novncproxy
    nova-rootwrap
    nova-scheduler
-   nova-spicehtml5proxy
-   nova-xvpvncproxy
    nova-serialproxy
-
+   nova-spicehtml5proxy
+   nova-status
+   nova-xvpvncproxy
