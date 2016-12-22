@@ -61,14 +61,16 @@ Upgrade
   service catalog.
 
   **Return Codes**
+    ::
 
-  0) All upgrade readiness checks passed successfully and there is nothing
-     to do.
-  1) At least one check encountered an issue and requires further
-     investigation. This is considered a warning but the upgrade may be OK.
-  2) There was an upgrade status check failure that needs to be
-     investigated. This should be considered something that stops an
-     upgrade.
+    0) All upgrade readiness checks passed successfully and there is nothing
+       to do.
+    1) At least one check encountered an issue and requires further
+       investigation. This is considered a warning but the upgrade may be OK.
+    2) There was an upgrade status check failure that needs to be
+       investigated. This should be considered something that stops an
+       upgrade.
+    255) An unexpected error occurred.
 
   **History of Checks**
 

@@ -205,5 +205,5 @@ def main():
         return(ret)
     except Exception:
         print(_('Error:\n%s') % traceback.format_exc())
-        # This is 10 so it's not confused with the upgrade check exit codes.
-        return 10
+        # This is 255 so it's not confused with the upgrade check exit codes.
+        return 255

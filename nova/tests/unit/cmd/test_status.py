@@ -74,7 +74,7 @@ class TestNovaStatusMain(test.NoDBTestCase):
         mock_fn = mock.Mock(side_effect=Exception('wut'))
         mock_get_action_fn.return_value = (mock_fn, [], {})
 
-        self._check_main(expected_return_value=10)
+        self._check_main(expected_return_value=255)
         output = self.output.getvalue()
         self.assertIn('Error:', output)
         # assert the traceback is in the output
