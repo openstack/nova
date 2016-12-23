@@ -31,7 +31,7 @@ Guidelines for when a feature doesn't need a spec.
 
   * If the feature touches code all over the place, it probably should have
     a design discussion.
-  * If the feature is big enough that it needs more then one commit, it
+  * If the feature is big enough that it needs more than one commit, it
     probably should have a design discussion.
 * Not an API change.
 
