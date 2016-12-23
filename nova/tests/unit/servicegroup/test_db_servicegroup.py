@@ -106,3 +106,14 @@ class DBServiceGroupTestCase(test.NoDBTestCase):
 
     def test_report_state_unexpected_error(self):
         self._test_report_state_error(RuntimeError)
+
+    def test_get_updated_time(self):
+        retval = "2016-11-02T22:40:31.000000"
+        service_ref = {
+            'host': 'fake-host',
+            'topic': 'compute',
+            'updated_at': retval
+        }
+
+        result = self.servicegroup_api.get_updated_time(service_ref)
+        self.assertEqual(retval, result)
