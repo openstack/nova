@@ -121,7 +121,8 @@ class Claim(NopClaim):
         been aborted.
         """
         LOG.debug("Aborting claim: %s", self, instance=self.instance)
-        self.tracker.abort_instance_claim(self.context, self.instance)
+        self.tracker.abort_instance_claim(self.context, self.instance,
+                                          self.instance.node)
 
     def _claim_test(self, resources, limits=None):
         """Test if this claim can be satisfied given available resources and
@@ -297,5 +298,6 @@ class MoveClaim(Claim):
         LOG.debug("Aborting claim: %s", self, instance=self.instance)
         self.tracker.drop_move_claim(
             self.context,
-            self.instance, instance_type=self.instance_type)
+            self.instance, self.instance.node,
+            instance_type=self.instance_type)
         self.instance.drop_migration_context()

@@ -567,7 +567,7 @@ class ComputeManager(manager.Manager):
         if (instance.host == self.host and
                 self.driver.node_is_available(instance.node)):
             rt = self._get_resource_tracker(instance.node)
-            rt.update_usage(context, instance)
+            rt.update_usage(context, instance, instance.node)
 
     def _instance_update(self, context, instance, **kwargs):
         """Update an instance in the database using kwargs as value."""
@@ -1900,7 +1900,7 @@ class ComputeManager(manager.Manager):
 
         try:
             rt = self._get_resource_tracker(node)
-            with rt.instance_claim(context, instance, limits):
+            with rt.instance_claim(context, instance, node, limits):
                 # NOTE(russellb) It's important that this validation be done
                 # *after* the resource tracker instance claim, as that is where
                 # the host is set on the instance.
@@ -2739,7 +2739,8 @@ class ComputeManager(manager.Manager):
         with self._error_out_instance_on_exception(context, instance):
             try:
                 claim_ctxt = rebuild_claim(
-                    context, instance, limits=limits, image_meta=image_meta,
+                    context, instance, scheduled_node,
+                    limits=limits, image_meta=image_meta,
                     migration=migration)
                 self._do_rebuild_instance_with_claim(
                     claim_ctxt, context, instance, orig_image_ref,
@@ -3505,8 +3506,8 @@ class ComputeManager(manager.Manager):
                 migration.save()
 
             rt = self._get_resource_tracker(migration.source_node)
-            rt.drop_move_claim(context, instance, old_instance_type,
-                               prefix='old_')
+            rt.drop_move_claim(context, instance, migration.source_node,
+                               old_instance_type, prefix='old_')
             instance.drop_migration_context()
 
             # NOTE(mriedem): The old_vm_state could be STOPPED but the user
@@ -3597,7 +3598,7 @@ class ComputeManager(manager.Manager):
             instance.save()
 
             rt = self._get_resource_tracker(instance.node)
-            rt.drop_move_claim(context, instance)
+            rt.drop_move_claim(context, instance, instance.node)
 
             self.compute_rpcapi.finish_revert_resize(context, instance,
                     migration, migration.source_compute,
@@ -3715,7 +3716,7 @@ class ComputeManager(manager.Manager):
 
         limits = filter_properties.get('limits', {})
         rt = self._get_resource_tracker(node)
-        with rt.resize_claim(context, instance, instance_type,
+        with rt.resize_claim(context, instance, instance_type, node,
                              image_meta=image, limits=limits) as claim:
             LOG.info(_LI('Migrating'), instance=instance)
             self.compute_rpcapi.resize_instance(
@@ -4451,7 +4452,7 @@ class ComputeManager(manager.Manager):
                                                         self.host)
         network_info = self.network_api.get_instance_nw_info(context, instance)
         try:
-            with rt.instance_claim(context, instance, limits):
+            with rt.instance_claim(context, instance, node, limits):
                 self.driver.spawn(context, instance, image_meta,
                                   injected_files=[],
                                   admin_password=None,
@@ -6533,7 +6534,7 @@ class ComputeManager(manager.Manager):
 
         rt = self._get_resource_tracker(nodename)
         try:
-            rt.update_available_resource(context)
+            rt.update_available_resource(context, nodename)
         except exception.ComputeHostNotFound:
             # NOTE(comstud): We can get to this case if a node was
             # marked 'deleted' in the DB and then re-added with a

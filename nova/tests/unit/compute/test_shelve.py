@@ -247,7 +247,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         def fake_delete(self2, ctxt, image_id):
             self.deleted_image_id = image_id
 
-        def fake_claim(context, instance, limits):
+        def fake_claim(context, instance, node, limits):
             instance.host = self.compute.host
             requests = objects.InstancePCIRequests(requests=[])
             return claims.Claim(context, instance,
@@ -364,7 +364,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 mox.IgnoreArg(), do_check_attach=False).AndReturn('fake_bdm')
         self.compute.network_api.setup_instance_network_on_host(
                 self.context, instance, self.compute.host)
-        self.rt.instance_claim(self.context, instance, limits).AndReturn(
+        self.rt.instance_claim(self.context, instance, node, limits).AndReturn(
                 claims.Claim(self.context, instance, self.rt,
                              _fake_resources(),
                              objects.InstancePCIRequests(requests=[])))

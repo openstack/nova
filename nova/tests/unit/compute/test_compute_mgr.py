@@ -241,8 +241,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         get_db_nodes.assert_called_once_with(self.context, use_slave=True)
         self.assertEqual(sorted([mock.call(node) for node in avail_nodes]),
                          sorted(get_rt.call_args_list))
-        for rt in rts:
-            rt.update_available_resource.assert_called_once_with(self.context)
+        for rt, node in zip(rts, avail_nodes_l):
+            rt.update_available_resource.assert_called_once_with(self.context,
+                                                                 node)
         self.assertEqual(expected_rt_dict,
                          self.compute._resource_tracker_dict)
         # First node in set should have been removed from DB
