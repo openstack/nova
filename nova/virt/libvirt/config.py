@@ -2194,6 +2194,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
                     self.os_bootmenu = True
 
     def parse_dom(self, xmldoc):
+        self.virt_type = xmldoc.get('type')
         # Note: This cover only for: LibvirtConfigGuestDisks
         #                            LibvirtConfigGuestHostdevPCI
         #                            LibvirtConfigGuestInterface

@@ -2235,6 +2235,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
                  """
         obj = config.LibvirtConfigGuest()
         obj.parse_str(xmldoc)
+        self.assertEqual('kvm', obj.virt_type)
         self.assertEqual(len(obj.devices), 1)
         self.assertIsInstance(obj.devices[0],
                               config.LibvirtConfigGuestHostdevPCI)
@@ -2302,6 +2303,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj = config.LibvirtConfigGuest()
         obj.parse_str(xmldoc)
 
+        self.assertEqual('kvm', obj.virt_type)
         self.assertEqual('hvm', obj.os_type)
         self.assertEqual('fake_machine_type', obj.os_mach_type)
         self.assertEqual('/tmp/vmlinuz', obj.os_kernel)
@@ -2326,6 +2328,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj = config.LibvirtConfigGuest()
         obj.parse_str(xmldoc)
 
+        self.assertIsNone(obj.virt_type)
         self.assertEqual('x86_64', obj.os_type)
         self.assertIsNone(obj.os_mach_type)
         self.assertIsNone(obj.os_kernel)
