@@ -308,6 +308,15 @@ class Guest(object):
         LOG.debug("attach device xml: %s", device_xml)
         self._domain.attachDeviceFlags(device_xml, flags=flags)
 
+    def get_config(self):
+        """Returns the config instance for a guest
+
+        :returns: LibvirtConfigGuest instance
+        """
+        config = vconfig.LibvirtConfigGuest()
+        config.parse_str(self._domain.XMLDesc(0))
+        return config
+
     def get_disk(self, device):
         """Returns the disk mounted at device
 
