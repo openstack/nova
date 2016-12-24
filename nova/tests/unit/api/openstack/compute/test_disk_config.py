@@ -17,6 +17,7 @@ import datetime
 
 import mock
 from oslo_serialization import jsonutils
+import six
 
 from nova.api.openstack import compute
 from nova.compute import api as compute_api
@@ -132,9 +133,14 @@ class DiskConfigTestCaseV21(test.TestCase):
         self.app = compute.APIRouterV21()
 
     def _get_expected_msg_for_invalid_disk_config(self):
-        return ('{{"badRequest": {{"message": "Invalid input for'
-                ' field/attribute {0}. Value: {1}. u\'{1}\' is'
-                ' not one of [\'AUTO\', \'MANUAL\']", "code": 400}}}}')
+        if six.PY3:
+            return ('{{"badRequest": {{"message": "Invalid input for'
+                    ' field/attribute {0}. Value: {1}. \'{1}\' is'
+                    ' not one of [\'AUTO\', \'MANUAL\']", "code": 400}}}}')
+        else:
+            return ('{{"badRequest": {{"message": "Invalid input for'
+                    ' field/attribute {0}. Value: {1}. u\'{1}\' is'
+                    ' not one of [\'AUTO\', \'MANUAL\']", "code": 400}}}}')
 
     def _setup_fake_image_service(self):
         self.image_service = nova.tests.unit.image.fake.stub_out_image_service(
@@ -360,8 +366,8 @@ class DiskConfigTestCaseV21(test.TestCase):
         expected_msg = self._get_expected_msg_for_invalid_disk_config()
         expected_msg = expected_msg.format(API_DISK_CONFIG, 'server_test')
 
-        self.assertEqual(jsonutils.loads(expected_msg),
-                         jsonutils.loads(res.body))
+        self.assertJsonEqual(jsonutils.loads(expected_msg),
+                             jsonutils.loads(res.body))
 
     @mock.patch('nova.api.openstack.common.get_instance')
     def _test_rebuild_server_disk_config(self, uuid, disk_config,
