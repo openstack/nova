@@ -28,6 +28,7 @@ import string
 
 from oslo_log import log as logging
 from oslo_messaging import exceptions as oslo_exceptions
+from oslo_serialization import base64 as base64utils
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
 from oslo_utils import strutils
@@ -832,7 +833,13 @@ class API(base.Base):
                     length=l, maxsize=MAX_USERDATA_SIZE)
 
             try:
-                base64.decodestring(user_data)
+                # TODO(gcb): Just use base64utils.decode_as_bytes(user_data)
+                # when https://review.openstack.org/#/c/410797/ is merged and
+                # ensure oslo.serialization >=2.15.0 in Nova requirements.txt.
+                if six.PY3:
+                    base64utils.decode_as_bytes(user_data)
+                else:
+                    base64.decodestring(user_data)
             except base64.binascii.Error:
                 raise exception.InstanceUserDataMalformed()
 
