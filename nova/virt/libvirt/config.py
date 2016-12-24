@@ -2186,6 +2186,20 @@ class LibvirtConfigGuest(LibvirtConfigObject):
 
         return root
 
+    def _parse_basic_props(self, xmldoc):
+        # memmbacking, memtune, numatune, metadata are skipped just because
+        # corresponding config types do not implement parse_dom method
+        if xmldoc.tag == 'uuid':
+            self.uuid = xmldoc.text
+        elif xmldoc.tag == 'name':
+            self.name = xmldoc.text
+        elif xmldoc.tag == 'memory':
+            self.memory = int(xmldoc.text)
+        elif xmldoc.tag == 'vcpu':
+            self.vcpus = int(xmldoc.text)
+            if xmldoc.get('cpuset') is not None:
+                self.cpuset = hardware.parse_cpu_spec(xmldoc.get('cpuset'))
+
     def _parse_os(self, xmldoc):
         # smbios is skipped just because LibvirtConfigGuestSMBIOS
         # does not implement parse_dom method
@@ -2262,6 +2276,8 @@ class LibvirtConfigGuest(LibvirtConfigObject):
                         self.add_perf_event(p.get('name'))
             elif c.tag == 'os':
                 self._parse_os(c)
+            else:
+                self._parse_basic_props(c)
 
     def add_device(self, dev):
         self.devices.append(dev)
