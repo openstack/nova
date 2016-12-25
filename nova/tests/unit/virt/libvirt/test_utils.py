@@ -826,3 +826,107 @@ sunrpc /var/lib/nfs/rpc_pipefs rpc_pipefs rw,relatime 0 0
             proc_umnt = mock.mock_open(read_data=proc_without_mnt)
             with mock.patch.object(six.moves.builtins, "open", proc_umnt):
                 self.assertFalse(libvirt_utils.is_mounted(mount_path, source))
+
+    def test_find_disk_file_device(self):
+        xml = """
+          <domain type='kvm'>
+            <os>
+              <type>linux</type>
+            </os>
+            <devices>
+              <disk type="file" device="disk">
+                <driver name="qemu" type="qcow2" cache="none" io="native"/>
+                <source file="/tmp/hello"/>
+                <target bus="ide" dev="/dev/hda"/>
+              </disk>
+            </devices>
+          </domain>
+        """
+        virt_dom = mock.Mock(XMLDesc=mock.Mock(return_value=xml))
+        disk_path, format = libvirt_utils.find_disk(virt_dom)
+        self.assertEqual('/tmp/hello', disk_path)
+        self.assertEqual('qcow2', format)
+
+    def test_find_disk_block_device(self):
+        xml = """
+          <domain type='kvm'>
+            <os>
+              <type>linux</type>
+            </os>
+            <devices>
+              <disk type="block" device="disk">
+                <driver name="qemu" type="raw"/>
+                <source dev="/dev/nova-vg/hello"/>
+                <target bus="ide" dev="/dev/hda"/>
+              </disk>
+            </devices>
+          </domain>
+        """
+        virt_dom = mock.Mock(XMLDesc=mock.Mock(return_value=xml))
+        disk_path, format = libvirt_utils.find_disk(virt_dom)
+        self.assertEqual('/dev/nova-vg/hello', disk_path)
+        self.assertEqual('raw', format)
+
+    def test_find_disk_rbd(self):
+        xml = """
+          <domain type='kvm'>
+            <os>
+              <type>linux</type>
+            </os>
+            <devices>
+              <disk type="network" device="disk">
+                <driver name="qemu" type="raw"/>
+                <source name="pool/image" protocol="rbd">
+                  <host name="1.2.3.4" port="456"/>
+                </source>
+                <target bus="virtio" dev="/dev/vda"/>
+              </disk>
+            </devices>
+          </domain>
+        """
+        self.flags(images_type='rbd', group='libvirt')
+        virt_dom = mock.Mock(XMLDesc=mock.Mock(return_value=xml))
+        disk_path, format = libvirt_utils.find_disk(virt_dom)
+        self.assertEqual('rbd:pool/image', disk_path)
+        self.assertEqual('raw', format)
+
+    def test_find_disk_lxc(self):
+        xml = """
+          <domain type='lxc'>
+            <os>
+              <type>exe</type>
+            </os>
+            <devices>
+              <filesystem type="mount">
+                <source dir="/myhome/rootfs"/>
+                <target dir="/"/>
+              </filesystem>
+            </devices>
+          </domain>
+        """
+        self.flags(virt_type='lxc', group='libvirt')
+        virt_dom = mock.Mock(XMLDesc=mock.Mock(return_value=xml))
+        disk_path, format = libvirt_utils.find_disk(virt_dom)
+        self.assertEqual('/myhome/disk', disk_path)
+        self.assertIsNone(format)
+
+    def test_find_disk_parallels(self):
+        xml = """
+          <domain type='parallels'>
+            <os>
+              <type>exe</type>
+            </os>
+            <devices>
+              <filesystem type='file'>"
+                <driver format='ploop' type='ploop'/>"
+                <source file='/test/disk'/>"
+                <target dir='/'/>
+              </filesystem>"
+            </devices>
+          </domain>
+        """
+        self.flags(virt_type='parallels', group='libvirt')
+        virt_dom = mock.Mock(XMLDesc=mock.Mock(return_value=xml))
+        disk_path, format = libvirt_utils.find_disk(virt_dom)
+        self.assertEqual('/test/disk', disk_path)
+        self.assertEqual('ploop', format)
