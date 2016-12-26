@@ -89,6 +89,9 @@ class _IntegratedTestBase(test.TestCase):
         else:
             self.api = self.api_fixture.api
 
+        if hasattr(self, 'microversion'):
+            self.api.microversion = self.microversion
+
         self.useFixture(cast_as_call.CastAsCall(self.stubs))
 
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)

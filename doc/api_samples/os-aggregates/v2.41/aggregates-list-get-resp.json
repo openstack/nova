@@ -1,0 +1,20 @@
+{
+    "aggregates": [
+        {
+            "availability_zone": "nova",
+            "created_at": "2016-12-27T23:47:32.911515",
+            "deleted": false,
+            "deleted_at": null,
+            "hosts": [
+                "compute"
+            ],
+            "id": 1,
+            "metadata": {
+                "availability_zone": "nova"
+            },
+            "name": "name",
+            "updated_at": null,
+            "uuid": "6ba28ba7-f29b-45cc-a30b-6e3a40c2fb14"
+        }
+    ]
+}

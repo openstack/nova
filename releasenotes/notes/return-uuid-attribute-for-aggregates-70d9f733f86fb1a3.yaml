@@ -1,0 +1,5 @@
+---
+features:
+  - A new 2.41 microversion was added to the Compute API. Users specifying this
+    microversion will now see the 'uuid' attribute of aggregates when calling
+    the `os-aggregates` REST API endpoint.
