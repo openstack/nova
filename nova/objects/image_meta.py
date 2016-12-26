@@ -100,7 +100,7 @@ class ImageMeta(base.NovaObject):
         # in ImageMeta initially by mistake. To keep compatibility with compute
         # nodes which are run with previous versions these fields are still
         # not nullable in ImageMeta, but the code below converts None to
-        # approppriate empty values.
+        # appropriate empty values.
         for fld in NULLABLE_STRING_FIELDS:
             if fld in image_meta and image_meta[fld] is None:
                 image_meta[fld] = ''

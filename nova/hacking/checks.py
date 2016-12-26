@@ -510,7 +510,7 @@ class _FindVariableReferences(ast.NodeVisitor):
             # variable 'foo' was used like:
             # mocked_thing.bar = foo
             # foo()
-            # self.assertRaises(excepion, foo)
+            # self.assertRaises(exception, foo)
             self._references.append(node.id)
         super(_FindVariableReferences, self).generic_visit(node)
 
