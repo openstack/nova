@@ -24,6 +24,9 @@ import traceback
 
 # enum comes from the enum34 package if python < 3.4, else it's stdlib
 import enum
+from keystoneauth1 import exceptions as ks_exc
+from keystoneauth1 import loading as keystone
+from keystoneauth1 import session
 from oslo_config import cfg
 import prettytable
 from sqlalchemy import func as sqlfunc
@@ -150,11 +153,60 @@ class UpgradeCommands(object):
 
         return UpgradeCheckResult(UpgradeCheckCode.SUCCESS)
 
+    def _placement_get(self, path):
+        """Do an HTTP get call against placement engine.
+
+        This is in a dedicated method to make it easier for unit
+        testing purposes.
+
+        """
+        ks_filter = {'service_type': 'placement',
+                     'region_name': CONF.placement.os_region_name}
+        auth = keystone.load_auth_from_conf_options(
+            CONF, 'placement')
+        client = session.Session(auth=auth)
+        return client.get(path, endpoint_filter=ks_filter).json()
+
     def _check_placement(self):
-        # TODO(mriedem): check to see that the placement API service is running
-        # and we can connect to it, and that the number of resource providers
-        # in the placement service is greater than or equal to the number of
-        # compute nodes in the database.
+        """Checks to see if the placement API is ready for scheduling.
+
+        Checks to see that the placement API service is registered in the
+        service catalog and that we can make requests against it. Also checks
+        that there are compute nodes registered with the placement service
+        as resource providers so that when the Ocata nova-scheduler code starts
+        handling requests it has somewhere to send those builds.
+        """
+        try:
+            versions = self._placement_get("/")
+            max_version = float(versions["versions"][0]["max_version"])
+            # The required version is a bit tricky but we know that we at least
+            # need 1.0 for Newton computes. This minimum might change in the
+            # future.
+            needs_version = 1.0
+            if max_version < needs_version:
+                msg = (_('Placement API version %(needed)s needed, '
+                         'you have %(current)s.') %
+                       {'needed': needs_version, 'current': max_version})
+                return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
+        except ks_exc.MissingAuthPlugin:
+            msg = _('No credentials specified for placement API in nova.conf.')
+            return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
+        except ks_exc.Unauthorized:
+            msg = _('Placement service credentials do not work.')
+            return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
+        except ks_exc.EndpointNotFound:
+            msg = _('Placement API endpoint not found.')
+            return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
+        except ks_exc.NotFound:
+            msg = _('Placement API does not seem to be running.')
+            return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
+
+        # TODO(mriedem): The placement service is running, fun! Now let's query
+        # the API DB to count the number of resource providers and compare that
+        # to the number of compute nodes (probably across all cells?). If there
+        # are no resource providers it's a clear fail. If there are fewer RPs
+        # than computes then it's a warning because you might be underutilized.
+
         return UpgradeCheckResult(UpgradeCheckCode.SUCCESS)
 
     # The format of the check functions is to return an UpgradeCheckResult
