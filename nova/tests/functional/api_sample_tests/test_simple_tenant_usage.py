@@ -13,10 +13,10 @@
 #    under the License.
 
 import datetime
-import urllib
 
 import mock
 from oslo_utils import timeutils
+from six.moves.urllib import parse
 
 from nova.tests.functional.api_sample_tests import test_servers
 import nova.tests.functional.api_samples_test_base as astb
@@ -49,7 +49,7 @@ class SimpleTenantUsageSampleJsonTest(test_servers.ServersSampleBase):
     def test_get_tenants_usage(self):
         # Get api sample to get all tenants usage request.
         response = self._do_get('os-simple-tenant-usage?%s' % (
-                                                urllib.urlencode(self.query)))
+                                                parse.urlencode(self.query)))
         self._verify_response('simple-tenant-usage-get', {}, response, 200)
 
     def test_get_tenants_usage_with_detail(self):
@@ -57,7 +57,7 @@ class SimpleTenantUsageSampleJsonTest(test_servers.ServersSampleBase):
         query = self.query.copy()
         query.update({'detailed': 1})
         response = self._do_get('os-simple-tenant-usage?%s' % (
-                                                urllib.urlencode(query)))
+                                                parse.urlencode(query)))
         self._verify_response('simple-tenant-usage-get-detail', {},
                               response, 200)
 
@@ -65,7 +65,7 @@ class SimpleTenantUsageSampleJsonTest(test_servers.ServersSampleBase):
         # Get api sample to get specific tenant usage request.
         tenant_id = astb.PROJECT_ID
         response = self._do_get('os-simple-tenant-usage/%s?%s' % (tenant_id,
-                                                urllib.urlencode(self.query)))
+                                                parse.urlencode(self.query)))
         self._verify_response('simple-tenant-usage-get-specific', {},
                               response, 200)
 
@@ -105,7 +105,7 @@ class SimpleTenantUsageV240Test(test_servers.ServersSampleBase):
 
     def test_get_tenants_usage(self):
         url = 'os-simple-tenant-usage?%s'
-        response = self._do_get(url % (urllib.urlencode(self.query)))
+        response = self._do_get(url % (parse.urlencode(self.query)))
         template_name = 'simple-tenant-usage-get'
         self._verify_response(template_name, {}, response, 200)
 
@@ -113,14 +113,14 @@ class SimpleTenantUsageV240Test(test_servers.ServersSampleBase):
         query = self.query.copy()
         query.update({'detailed': 1})
         url = 'os-simple-tenant-usage?%s'
-        response = self._do_get(url % (urllib.urlencode(query)))
+        response = self._do_get(url % (parse.urlencode(query)))
         template_name = 'simple-tenant-usage-get-detail'
         self._verify_response(template_name, {}, response, 200)
 
     def test_get_tenant_usage_details(self):
         tenant_id = astb.PROJECT_ID
         url = 'os-simple-tenant-usage/{tenant}?%s'.format(tenant=tenant_id)
-        response = self._do_get(url % (urllib.urlencode(self.query)))
+        response = self._do_get(url % (parse.urlencode(self.query)))
         template_name = 'simple-tenant-usage-get-specific'
         subs = {'tenant_id': self.api.project_id}
         self._verify_response(template_name, subs, response, 200)
