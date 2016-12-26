@@ -14179,6 +14179,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.mox.StubOutWithMock(drvr.firewall_driver,
                                      'setup_basic_filtering')
             drvr.firewall_driver.setup_basic_filtering(instance, network_info)
+            self.mox.StubOutWithMock(drvr, '_build_device_metadata')
+            drvr._build_device_metadata(self.context, instance).AndReturn(
+                    objects.InstanceDeviceMetadata())
+            self.mox.StubOutWithMock(objects.Instance, 'save')
+            objects.Instance.save()
 
         expected = drvr.vif_driver.get_config(instance, network_info[0],
                                               fake_image_meta,
@@ -16721,6 +16726,63 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self._test_inject_data(instance, injection_info, "/fail/path",
                                disk_params, called=False)
 
+    def test_attach_interface_build_metadata_fails(self):
+        instance = self._create_instance()
+        network_info = _fake_network_info(self, 1)
+        domain = FakeVirtDomain(fake_xml="""
+                <domain type='kvm'>
+                    <devices>
+                        <interface type='bridge'>
+                            <mac address='52:54:00:f6:35:8f'/>
+                            <model type='virtio'/>
+                            <source bridge='br0'/>
+                            <target dev='tap12345678'/>
+                            <address type='pci' domain='0x0000' bus='0x00'
+                             slot='0x03' function='0x0'/>
+                        </interface>
+                    </devices>
+                </domain>""")
+        fake_image_meta = objects.ImageMeta.from_dict(
+            {'id': instance.image_ref})
+        expected = self.drvr.vif_driver.get_config(
+            instance, network_info[0], fake_image_meta, instance.flavor,
+            CONF.libvirt.virt_type, self.drvr._host)
+        with test.nested(
+            mock.patch.object(host.Host, 'get_domain', return_value=domain),
+            mock.patch.object(self.drvr.firewall_driver,
+                              'setup_basic_filtering'),
+            mock.patch.object(domain, 'attachDeviceFlags'),
+            mock.patch.object(domain, 'info',
+                              return_value=[power_state.RUNNING, 1, 2, 3, 4]),
+            mock.patch.object(self.drvr.vif_driver, 'get_config',
+                              return_value=expected),
+            mock.patch.object(self.drvr, '_build_device_metadata',
+                              side_effect=exception.NovaException),
+            mock.patch.object(self.drvr, 'detach_interface'),
+        ) as (
+            mock_get_domain, mock_setup_basic_filtering,
+            mock_attach_device_flags, mock_info, mock_get_config,
+            mock_build_device_metadata, mock_detach_interface
+        ):
+            self.assertRaises(exception.InterfaceAttachFailed,
+                              self.drvr.attach_interface, self.context,
+                              instance, fake_image_meta, network_info[0])
+            mock_get_domain.assert_called_with(instance)
+            mock_info.assert_called_with()
+            mock_setup_basic_filtering.assert_called_with(
+                instance, [network_info[0]])
+            mock_get_config.assert_called_with(
+                instance, network_info[0], fake_image_meta, instance.flavor,
+                CONF.libvirt.virt_type, self.drvr._host)
+            mock_build_device_metadata.assert_called_with(self.context,
+                                                          instance)
+            mock_attach_device_flags.assert_called_with(
+                expected.to_xml(),
+                flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
+                       fakelibvirt.VIR_DOMAIN_AFFECT_LIVE))
+            mock_detach_interface.assert_called_with(self.context, instance,
+                                                     network_info[0])
+
     def _test_attach_interface(self, power_state, expected_flags):
         instance = self._create_instance()
         network_info = _fake_network_info(self, 1)
@@ -16761,6 +16823,11 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             mox.IsA(objects.Flavor),
             CONF.libvirt.virt_type,
             self.drvr._host).AndReturn(expected)
+        self.mox.StubOutWithMock(self.drvr, '_build_device_metadata')
+        self.drvr._build_device_metadata(self.context, instance).AndReturn(
+            objects.InstanceDeviceMetadata())
+        self.mox.StubOutWithMock(objects.Instance, 'save')
+        objects.Instance.save()
         domain.attachDeviceFlags(expected.to_xml(), flags=expected_flags)
 
         self.mox.ReplayAll()

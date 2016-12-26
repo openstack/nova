@@ -301,6 +301,7 @@ class LibvirtDriver(driver.ComputeDriver):
         "supports_migrate_to_same_host": False,
         "supports_attach_interface": True,
         "supports_device_tagging": True,
+        "supports_tagged_attach_interface": True,
     }
 
     def __init__(self, virtapi, read_only=False):
@@ -1404,6 +1405,30 @@ class LibvirtDriver(driver.ComputeDriver):
                      instance=instance, exc_info=True)
             self.vif_driver.unplug(instance, vif)
             raise exception.InterfaceAttachFailed(
+                    instance_uuid=instance.uuid)
+        try:
+            # NOTE(artom) If we're attaching with a device role tag, we need to
+            # rebuild device_metadata. If we're attaching without a role
+            # tag, we're rebuilding it here needlessly anyways. This isn't a
+            # massive deal, and it helps reduce code complexity by not having
+            # to indicate to the virt driver that the attach is tagged. The
+            # really important optimization of not calling the database unless
+            # device_metadata has actually changed is done for us by
+            # instance.save().
+            instance.device_metadata = self._build_device_metadata(
+                context, instance)
+            instance.save()
+        except Exception:
+            # NOTE(artom) If we fail here it means the interface attached
+            # successfully but building and/or saving the device metadata
+            # failed. Just unplugging the vif is therefore not enough cleanup,
+            # we need to detach the interface.
+            with excutils.save_and_reraise_exception(reraise=False):
+                LOG.error('Interface attached successfully but building '
+                          'and/or saving device metadata failed.',
+                          instance=instance, exc_info=True)
+                self.detach_interface(context, instance, vif)
+                raise exception.InterfaceAttachFailed(
                     instance_uuid=instance.uuid)
 
     def detach_interface(self, context, instance, vif):
