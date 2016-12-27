@@ -15,7 +15,6 @@
 
 from oslo_serialization import jsonutils
 
-from nova.image import glance
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 
@@ -75,10 +74,15 @@ class ImageSizeTestV21(test.NoDBTestCase):
 
     def setUp(self):
         super(ImageSizeTestV21, self).setUp()
-        self.stubs.Set(glance.GlanceImageService, 'show', fake_show)
-        self.stubs.Set(glance.GlanceImageService, 'detail', fake_detail)
-        self.stubs.Set(glance.GlanceImageServiceV2, 'show', fake_show)
-        self.stubs.Set(glance.GlanceImageServiceV2, 'detail', fake_detail)
+
+        self.stub_out('nova.image.glance.GlanceImageService.show',
+                      fake_show)
+        self.stub_out('nova.image.glance.GlanceImageService.detail',
+                      fake_detail)
+        self.stub_out('nova.image.glance.GlanceImageServiceV2.show',
+                      fake_show)
+        self.stub_out('nova.image.glance.GlanceImageServiceV2.detail',
+                      fake_detail)
 
         self.flags(api_servers=['http://localhost:9292'], group='glance')
 
@@ -98,13 +102,13 @@ class ImageSizeTestV21(test.NoDBTestCase):
         return jsonutils.loads(body).get('images')
 
     def assertImageSize(self, image, size):
-        self.assertEqual(image.get('%s:size' % self.prefix), size)
+        self.assertEqual(size, image.get('%s:size' % self.prefix))
 
     def test_show(self):
         url = '/v2/fake/images/1'
         res = self._make_request(url)
 
-        self.assertEqual(res.status_int, 200)
+        self.assertEqual(200, res.status_int)
         image = self._get_image(res.body)
         self.assertImageSize(image, 12345678)
 
@@ -112,7 +116,7 @@ class ImageSizeTestV21(test.NoDBTestCase):
         url = '/v2/fake/images/detail'
         res = self._make_request(url)
 
-        self.assertEqual(res.status_int, 200)
+        self.assertEqual(200, res.status_int)
         images = self._get_images(res.body)
         self.assertImageSize(images[0], 12345678)
         self.assertImageSize(images[1], 87654321)
