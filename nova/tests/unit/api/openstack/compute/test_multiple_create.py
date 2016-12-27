@@ -185,8 +185,8 @@ class MultiCreateExtensionTestV21(test.TestCase):
             'server': {
                 multiple_create_v21.MIN_ATTRIBUTE_NAME: '',
                 'name': 'server_test',
-                'image_ref': image_href,
-                'flavor_ref': flavor_ref,
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
             }
         }
         self.assertRaises(self.validation_error,
@@ -202,8 +202,8 @@ class MultiCreateExtensionTestV21(test.TestCase):
             'server': {
                 multiple_create_v21.MAX_ATTRIBUTE_NAME: '',
                 'name': 'server_test',
-                'image_ref': image_href,
-                'flavor_ref': flavor_ref,
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
             }
         }
         self.assertRaises(self.validation_error,

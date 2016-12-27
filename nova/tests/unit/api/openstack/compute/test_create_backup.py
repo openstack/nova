@@ -165,6 +165,18 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
                           self.controller._create_backup,
                           self.req, fakes.FAKE_UUID, body=body)
 
+    def test_create_backup_rotation_with_empty_string(self):
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': '',
+            },
+        }
+        self.assertRaises(self.validation_error,
+                          self.controller._create_backup,
+                          self.req, fakes.FAKE_UUID, body=body)
+
     def test_create_backup_no_backup_type(self):
         # Backup Type (daily or weekly) is required for backup requests.
         body = {

@@ -26,9 +26,10 @@ create = {
                 'ipam': parameter_types.boolean,
                 'cidr': parameter_types.cidr,
                 'cidr_v6': parameter_types.cidr,
-                'vlan_start': parameter_types.positive_integer,
-                'network_size': parameter_types.positive_integer,
-                'num_networks': parameter_types.positive_integer
+                'vlan_start': parameter_types.positive_integer_with_empty_str,
+                'network_size':
+                    parameter_types.positive_integer_with_empty_str,
+                'num_networks': parameter_types.positive_integer_with_empty_str
             },
             'required': ['label'],
             'oneOf': [
