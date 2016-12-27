@@ -52,9 +52,9 @@ class CellsUtilsTestCase(test.NoDBTestCase):
             instances = [fake_instance.fake_db_instance() for i in range(3)]
             return instances
 
-        self.stubs.Set(objects.InstanceList, 'get_by_filters',
+        self.stub_out('nova.objects.InstanceList.get_by_filters',
                 instance_get_all_by_filters)
-        self.stubs.Set(random, 'shuffle', random_shuffle)
+        self.stub_out('random.shuffle', random_shuffle)
 
         instances = cells_utils.get_instances_to_sync(fake_context)
         self.assertTrue(inspect.isgenerator(instances))

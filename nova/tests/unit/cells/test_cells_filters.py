@@ -152,13 +152,13 @@ class TestTargetCellFilter(_FilterTestClass):
     def test_target_cell_specified_not_me(self):
         info = {}
 
-        def _fake_build_instances(ctxt, cell, sched_kwargs):
+        def _fake_build_instances(self, ctxt, cell, sched_kwargs):
             info['ctxt'] = ctxt
             info['cell'] = cell
             info['sched_kwargs'] = sched_kwargs
 
-        self.stubs.Set(self.msg_runner, 'build_instances',
-                       _fake_build_instances)
+        self.stub_out('nova.cells.messaging.MessageRunner.build_instances',
+                      _fake_build_instances)
         cells = [1, 2, 3]
         target_cell = 'fake!cell!path'
         current_cell = 'not!the!same'
