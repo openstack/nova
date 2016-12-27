@@ -17,6 +17,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_utils import encodeutils
 from six.moves import urllib
 
 from nova import exception
@@ -30,7 +31,7 @@ class SecurityGroupBase(object):
     def parse_cidr(self, cidr):
         if cidr:
             try:
-                cidr = urllib.parse.unquote(cidr).decode()
+                cidr = encodeutils.safe_decode(urllib.parse.unquote(cidr))
             except Exception as e:
                 self.raise_invalid_cidr(cidr, e)
 
