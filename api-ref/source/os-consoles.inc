@@ -140,8 +140,9 @@ Show Console Connection Information
 Given the console authentication token for a server instance,
 shows the related connection information.
 
-This method used to be available just for the ``rdp-html5`` console type prior
-microversion 2.31. Now it's available for all console types.
+This method used to be available only for the ``rdp-html5`` console type before
+microversion 2.31. Starting from microversion 2.31 it's available for all
+console types.
 
 Normal response codes: 200
 
