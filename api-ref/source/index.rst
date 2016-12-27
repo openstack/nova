@@ -4,8 +4,8 @@
  Compute API
 =============
 
-This is a reference for the Openstack Compute API which is provided by the Nova
-project. To learn more about the Openstack Compute API concepts, please refer to
+This is a reference for the OpenStack Compute API which is provided by the Nova
+project. To learn more about the OpenStack Compute API concepts, please refer to
 the `API guide <http://developer.openstack.org/api-guide/compute/index.html>`_.
 
 .. rest_expand_all::
