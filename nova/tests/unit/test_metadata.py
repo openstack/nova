@@ -35,7 +35,6 @@ from oslo_config import cfg
 from oslo_serialization import base64
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
-import six
 import webob
 
 from nova.api.metadata import base
@@ -726,7 +725,7 @@ class OpenStackMetadataTestCase(test.TestCase):
         mdjson = mdinst.lookup("/openstack/2012-08-10/meta_data.json")
         mddict = jsonutils.loads(mdjson)
 
-        for key, val in six.iteritems(extra):
+        for key, val in extra.items():
             self.assertEqual(mddict[key], val)
 
     def test_password(self):

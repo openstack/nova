@@ -30,7 +30,6 @@ from oslo_config import cfg
 from oslo_db.sqlalchemy import enginefacade
 import oslo_messaging as messaging
 from oslo_messaging import conffixture as messaging_conffixture
-import six
 
 from nova.api.openstack.placement import deploy as placement_deploy
 from nova.compute import rpcapi as compute_rpcapi
@@ -657,7 +656,7 @@ class ConfPatcher(fixtures.Fixture):
 
     def setUp(self):
         super(ConfPatcher, self).setUp()
-        for k, v in six.iteritems(self.args):
+        for k, v in self.args.items():
             self.addCleanup(CONF.clear_override, k, self.group)
             CONF.set_override(k, v, self.group)
 

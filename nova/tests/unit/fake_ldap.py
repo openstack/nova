@@ -24,7 +24,6 @@ library to work with nova.
 import fnmatch
 
 from oslo_serialization import jsonutils
-import six
 from six.moves import range
 
 
@@ -313,11 +312,11 @@ class FakeLDAP(object):
             # get the attributes from the store
             attrs = store.hgetall(key)
             # turn the values from the store into lists
-            attrs = {k: _from_json(v) for k, v in six.iteritems(attrs)}
+            attrs = {k: _from_json(v) for k, v in attrs.items()}
             # filter the objects by query
             if not query or _match_query(query, attrs):
                 # filter the attributes by fields
-                attrs = {k: v for k, v in six.iteritems(attrs)
+                attrs = {k: v for k, v in attrs.items()
                          if not fields or k in fields}
                 objects.append((key[len(self.__prefix):], attrs))
         return objects

@@ -24,7 +24,6 @@ import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
-import six
 
 import nova
 from nova.compute import build_results
@@ -109,7 +108,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                          power_state.SUSPENDED,
         }
 
-        for transition, pwr_state in six.iteritems(event_map):
+        for transition, pwr_state in event_map.items():
             self._test_handle_lifecycle_event(transition=transition,
                                               event_pwr_state=pwr_state,
                                               current_pwr_state=pwr_state)

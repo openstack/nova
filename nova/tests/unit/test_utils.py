@@ -1054,7 +1054,7 @@ class GetSystemMetadataFromImageTestCase(test.NoDBTestCase):
         sys_meta = utils.get_system_metadata_from_image(image)
 
         # Verify that we inherit all the image properties
-        for key, expected in six.iteritems(image["properties"]):
+        for key, expected in image["properties"].items():
             sys_key = "%s%s" % (utils.SM_IMAGE_PROP_PREFIX, key)
             self.assertEqual(sys_meta[sys_key], expected)
 
@@ -1068,7 +1068,7 @@ class GetSystemMetadataFromImageTestCase(test.NoDBTestCase):
         sys_meta = utils.get_system_metadata_from_image(image)
 
         # Verify that we inherit all the image properties
-        for key, expected in six.iteritems(image["properties"]):
+        for key, expected in image["properties"].items():
             sys_key = "%s%s" % (utils.SM_IMAGE_PROP_PREFIX, key)
 
             if key in utils.SM_SKIP_KEYS:
@@ -1131,7 +1131,7 @@ class GetImageFromSystemMetadataTestCase(test.NoDBTestCase):
         # Verify that we inherit the rest of metadata as properties
         self.assertIn("properties", image)
 
-        for key, value in six.iteritems(image["properties"]):
+        for key in image["properties"]:
             sys_key = "%s%s" % (utils.SM_IMAGE_PROP_PREFIX, key)
             self.assertEqual(image["properties"][key], sys_meta[sys_key])
 

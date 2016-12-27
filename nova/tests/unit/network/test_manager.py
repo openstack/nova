@@ -1990,7 +1990,7 @@ class VlanNetworkTestCase(test.TestCase):
 
 class _TestDomainObject(object):
     def __init__(self, **kwargs):
-        for k, v in six.iteritems(kwargs):
+        for k, v in kwargs.items():
             self.__setattr__(k, v)
 
 

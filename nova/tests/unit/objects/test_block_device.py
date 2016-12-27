@@ -13,7 +13,6 @@
 #    under the License.
 
 import mock
-import six
 
 from nova.cells import rpcapi as cells_rpcapi
 from nova import context
@@ -289,7 +288,7 @@ class _TestBlockDeviceMappingObject(object):
                                'bdm_update_or_create_at_top'):
             bdm.create()
 
-        for k, v in six.iteritems(values):
+        for k, v in values.items():
             self.assertEqual(v, getattr(bdm, k))
 
     def test_create_fails(self):

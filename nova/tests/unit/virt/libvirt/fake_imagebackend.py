@@ -19,7 +19,6 @@ import os
 
 import fixtures
 import mock
-import six
 
 from nova.virt.libvirt import config
 from nova.virt.libvirt import driver
@@ -87,7 +86,7 @@ class ImageBackendFixture(fixtures.Fixture):
         """
 
         # A disk was created iff either cache() or import_file() was called.
-        return {name: disk for name, disk in six.iteritems(self.disks)
+        return {name: disk for name, disk in self.disks.items()
                 if any([disk.cache.called, disk.import_file.called])}
 
     def _mock_disk(self):
