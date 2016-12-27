@@ -13,7 +13,6 @@
 #    under the License.
 
 import mock
-from mox3 import mox
 
 from nova.compute import manager as compute_manager
 from nova import context
@@ -62,8 +61,6 @@ class FakeVirtAPITest(VirtAPIBaseTest):
             self.assertTrue(run)
             return
 
-        self.mox.StubOutWithMock(db, method)
-
         if method in ('aggregate_metadata_add', 'aggregate_metadata_delete',
                       'security_group_rule_get_by_security_group'):
             # NOTE(danms): FakeVirtAPI will convert the first argument to
@@ -74,17 +71,18 @@ class FakeVirtAPITest(VirtAPIBaseTest):
         else:
             e_args = args
 
-        getattr(db, method)(self.context, *e_args, **kwargs).AndReturn(
-                'it worked')
-        self.mox.ReplayAll()
-        result = getattr(self.virtapi, method)(self.context, *args, **kwargs)
-        self.assertEqual(result, 'it worked')
+        with mock.patch.object(db, method,
+                               return_value='it worked') as mock_call:
+            result = getattr(self.virtapi, method)(self.context, *args,
+                                                   **kwargs)
+            self.assertEqual('it worked', result)
+            mock_call.assert_called_once_with(self.context, *e_args, **kwargs)
 
 
 class FakeCompute(object):
     def __init__(self):
-        self.conductor_api = mox.MockAnything()
-        self.db = mox.MockAnything()
+        self.conductor_api = mock.MagicMock()
+        self.db = mock.MagicMock()
         self._events = []
         self.instance_events = mock.MagicMock()
         self.instance_events.prepare_for_instance_event.side_effect = \
@@ -113,12 +111,12 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
         self.virtapi = compute_manager.ComputeVirtAPI(self.compute)
 
     def assertExpected(self, method, *args, **kwargs):
-        self.mox.StubOutWithMock(self.compute.conductor_api, method)
-        getattr(self.compute.conductor_api, method)(
-            self.context, *args, **kwargs).AndReturn('it worked')
-        self.mox.ReplayAll()
-        result = getattr(self.virtapi, method)(self.context, *args, **kwargs)
-        self.assertEqual(result, 'it worked')
+        with mock.patch.object(self.compute.conductor_api,
+                               method, return_value='it worked') as mock_call:
+            result = getattr(self.virtapi, method)(self.context, *args,
+                                                   **kwargs)
+            self.assertEqual('it worked', result)
+            mock_call.assert_called_once_with(self.context, *args, **kwargs)
 
     def test_wait_for_instance_event(self):
         and_i_ran = ''
