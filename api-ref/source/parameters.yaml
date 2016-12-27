@@ -1395,7 +1395,7 @@ createBackup:
     The action.
   in: body
   required: true
-  type: string
+  type: object
 created:
   description: |
     The date and time when the resource was created. The date and time
@@ -3347,12 +3347,18 @@ os-getVNCConsole-type:
   in: body
   required: true
   type: string
+os-migrateLive:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: object
 os-resetState:
   description: |
     The action.
   in: body
   required: true
-  type: string
+  type: object
 os-resetState_state:
   description: |
     The state of the server to be set, ``active`` or ``error`` are valid.
