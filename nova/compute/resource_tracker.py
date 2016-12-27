@@ -359,18 +359,18 @@ class ResourceTracker(object):
                         instance_type=None, prefix='new_'):
         """Remove usage for an incoming/outgoing migration."""
         if instance['uuid'] in self.tracked_migrations:
-            migration, itype = self.tracked_migrations.pop(instance['uuid'])
+            migration = self.tracked_migrations.pop(instance['uuid'])
 
             if not instance_type:
                 ctxt = context.elevated()
                 instance_type = self._get_instance_type(ctxt, instance, prefix,
                                                         migration)
 
-            if instance_type is not None and instance_type.id == itype['id']:
+            if instance_type is not None:
                 numa_topology = self._get_migration_context_resource(
                     'numa_topology', instance, prefix=prefix)
                 usage = self._get_usage_dict(
-                        itype, numa_topology=numa_topology)
+                        instance_type, numa_topology=numa_topology)
                 if self.pci_tracker:
                     # free old/new allocated pci devices
                     pci_devices = self._get_migration_context_resource(
@@ -767,8 +767,8 @@ class ResourceTracker(object):
         numa_topology = None
         sign = 0
         if same_node:
-            # same node resize. record usage for whichever instance type the
-            # instance is *not* in:
+            # Same node resize. Record usage for the 'new_' resources.  This
+            # is executed on resize_claim().
             if (instance['instance_type_id'] ==
                     migration.old_instance_type_id):
                 itype = self._get_instance_type(context, instance, 'new_',
@@ -778,8 +778,16 @@ class ResourceTracker(object):
                 # Allocate pci device(s) for the instance.
                 sign = 1
             else:
-                # instance record already has new flavor, hold space for a
-                # possible revert to the old instance type:
+                # The instance is already set to the new flavor (this is done
+                # by the compute manager on finish_resize()), hold space for a
+                # possible revert to the 'old_' resources.
+                # NOTE(lbeliveau): When the periodic audit timer gets
+                # triggered, the compute usage gets reset.  The usage for an
+                # instance that is migrated to the new flavor but not yet
+                # confirmed/reverted will first get accounted for by
+                # _update_usage_from_instances().  This method will then be
+                # called, and we need to account for the '_old' resources
+                # (just in case).
                 itype = self._get_instance_type(context, instance, 'old_',
                         migration)
                 numa_topology = self._get_migration_context_resource(
@@ -814,7 +822,7 @@ class ResourceTracker(object):
             else:
                 obj = objects.PciDevicePoolList()
                 self.compute_node.pci_device_pools = obj
-            self.tracked_migrations[uuid] = (migration, itype)
+            self.tracked_migrations[uuid] = migration
 
     def _update_usage_from_migrations(self, context, migrations, nodename):
         filtered = {}
