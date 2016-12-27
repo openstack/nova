@@ -249,6 +249,32 @@ JOINED_TABLE_QUERY_PARAMS_SERVERS = {
     'pci_devices': common_param
 }
 
+# These fields are valid values for sort_keys before we start
+# using schema validation, but are considered to be bad values
+# and disabled to use. In order to avoid backward incompatibility,
+# they are ignored instead of return HTTP 400.
+SERVER_LIST_IGNORE_SORT_KEY = [
+    'architecture', 'cell_name', 'cleaned', 'default_ephemeral_device',
+    'default_swap_device', 'deleted', 'deleted_at', 'disable_terminate',
+    'ephemeral_gb', 'ephemeral_key_uuid', 'id', 'key_data', 'launched_on',
+    'locked', 'memory_mb', 'os_type', 'reservation_id', 'root_gb',
+    'shutdown_terminate', 'user_data', 'vcpus', 'vm_mode'
+]
+
+
+VALID_SORT_KEYS = {
+    "type": "string",
+    "enum": ['access_ip_v4', 'access_ip_v6', 'auto_disk_config',
+             'availability_zone', 'config_drive', 'created_at',
+             'display_description', 'display_name', 'host', 'hostname',
+             'image_ref', 'instance_type_id', 'kernel_id', 'key_name',
+             'launch_index', 'launched_at', 'locked_by', 'node', 'power_state',
+             'progress', 'project_id', 'ramdisk_id', 'root_device_name',
+             'task_state', 'terminated_at', 'updated_at', 'user_id', 'uuid',
+             'vm_state'] +
+            SERVER_LIST_IGNORE_SORT_KEY
+}
+
 query_params_v21 = {
     'type': 'object',
     'properties': {
@@ -294,7 +320,7 @@ query_params_v21 = {
         'accessIPv6': common_regex_param,
         'auto_disk_config': common_regex_param,
         'progress': common_regex_param,
-        'sort_key': common_param,
+        'sort_key': multi_params(VALID_SORT_KEYS),
         'sort_dir': common_param,
         'all_tenants': common_param,
         'deleted': common_param,

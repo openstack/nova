@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import strutils
@@ -325,6 +326,9 @@ class ServersController(wsgi.Controller):
 
         limit, marker = common.get_limit_and_marker(req)
         sort_keys, sort_dirs = common.get_sort_params(req.params)
+        sort_keys, sort_dirs = remove_invalid_sort_keys(
+            context, sort_keys, sort_dirs,
+            schema_servers.SERVER_LIST_IGNORE_SORT_KEY, ('host', 'node'))
 
         expected_attrs = ['pci_devices']
         if is_detail:
@@ -1203,6 +1207,29 @@ def remove_invalid_options(context, search_options, allowed_search_options):
                   ", ".join(unknown_options))
         for opt in unknown_options:
             search_options.pop(opt, None)
+
+
+def remove_invalid_sort_keys(context, sort_keys, sort_dirs,
+                             blacklist, admin_only_fields):
+    key_list = copy.deepcopy(sort_keys)
+    for key in key_list:
+        # NOTE(Kevin Zheng): We are intend to remove the sort_key
+        # in the blacklist and its' corresponding sort_dir, since
+        # the sort_key and sort_dir are not strict to be provide
+        # in pairs in the current implement, sort_dirs could be
+        # less than sort_keys, in order to avoid IndexError, we
+        # only pop sort_dir when number of sort_dirs is no less
+        # than the sort_key index.
+        if key in blacklist:
+            if len(sort_dirs) > sort_keys.index(key):
+                sort_dirs.pop(sort_keys.index(key))
+            sort_keys.pop(sort_keys.index(key))
+        elif key in admin_only_fields and not context.is_admin:
+            msg = _("Only administrators can sort servers "
+                    "by %s") % key
+            raise exc.HTTPForbidden(explanation=msg)
+
+    return sort_keys, sort_dirs
 
 
 class Servers(extensions.V21APIExtensionBase):
