@@ -26,6 +26,11 @@ create = {
             'properties': {
                 'name': parameter_types.name,
                 'policies': {
+                    # This allows only a single item and it must be one of the
+                    # enumerated values. So this is really just a single string
+                    # value, but for legacy reasons is an array. We could
+                    # probably change the type from array to string with a
+                    # microversion at some point but it's very low priority.
                     'type': 'array',
                     'items': [{'enum': ['anti-affinity', 'affinity']}],
                     'uniqueItems': True,
