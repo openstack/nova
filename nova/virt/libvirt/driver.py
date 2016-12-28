@@ -5638,7 +5638,7 @@ class LibvirtDriver(driver.ComputeDriver):
             dest_check_data = md_obj
 
         # Checking shared storage connectivity
-        # if block migration, instances_paths should not be on shared storage.
+        # if block migration, instances_path should not be on shared storage.
         source = CONF.host
 
         dest_check_data.is_shared_instance_path = (
