@@ -17,6 +17,8 @@
 
 import requests
 
+from keystoneauth1 import exceptions as ks_exceptions
+from keystoneauth1 import loading as ks_loading
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
@@ -27,15 +29,34 @@ from nova.i18n import _LW
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
+_SESSION = None
+_ADMIN_AUTH = None
 
-def generate_identity_headers(context, status='Confirmed'):
-    return {
-        'X-Auth-Token': getattr(context, 'auth_token', None),
-        'X-User-Id': getattr(context, 'user', None),
-        'X-Project-Id': getattr(context, 'tenant', None),
-        'X-Roles': ','.join(getattr(context, 'roles', [])),
-        'X-Identity-Status': status,
-    }
+
+def _load_ks_session(conf):
+    """Load session.
+
+    This is either an authenticated session or a requests session, depending on
+    what's configured.
+    """
+    global _ADMIN_AUTH
+    global _SESSION
+
+    if not _ADMIN_AUTH:
+        _ADMIN_AUTH = ks_loading.load_auth_from_conf_options(
+            conf, nova.conf.vendordata.vendordata_group.name)
+
+    if not _ADMIN_AUTH:
+        LOG.warning(_LW('Passing insecure dynamic vendordata requests '
+                        'because of missing or incorrect service account '
+                        'configuration.'))
+
+    if not _SESSION:
+        _SESSION = ks_loading.load_session_from_conf_options(
+            conf, nova.conf.vendordata.vendordata_group.name,
+            auth=_ADMIN_AUTH)
+
+    return _SESSION
 
 
 class DynamicVendorData(vendordata.VendorDataDriver):
@@ -46,6 +67,7 @@ class DynamicVendorData(vendordata.VendorDataDriver):
         # JSON plugin.
         self.context = context
         self.instance = instance
+        self.session = _load_ks_session(CONF)
 
     def _do_request(self, service_name, url):
         try:
@@ -59,9 +81,6 @@ class DynamicVendorData(vendordata.VendorDataDriver):
                        'Accept': 'application/json',
                        'User-Agent': 'openstack-nova-vendordata'}
 
-            if self.context:
-                headers.update(generate_identity_headers(self.context))
-
             # SSL verification
             verify = url.startswith('https://')
 
@@ -71,9 +90,9 @@ class DynamicVendorData(vendordata.VendorDataDriver):
             timeout = (CONF.api.vendordata_dynamic_connect_timeout,
                        CONF.api.vendordata_dynamic_read_timeout)
 
-            res = requests.request('POST', url, data=jsonutils.dumps(body),
-                                   headers=headers, verify=verify,
-                                   timeout=timeout)
+            res = self.session.request(url, 'POST', data=jsonutils.dumps(body),
+                                       verify=verify, headers=headers,
+                                       timeout=timeout)
             if res.status_code in (requests.codes.OK,
                                    requests.codes.CREATED,
                                    requests.codes.ACCEPTED):
@@ -83,8 +102,9 @@ class DynamicVendorData(vendordata.VendorDataDriver):
 
             return {}
 
-        except (TypeError, ValueError, requests.exceptions.RequestException,
-                requests.exceptions.SSLError) as e:
+        except (TypeError, ValueError,
+                ks_exceptions.connection.ConnectionError,
+                ks_exceptions.http.HttpError) as e:
             LOG.warning(_LW('Error from dynamic vendordata service '
                             '%(service_name)s at %(url)s: %(error)s'),
                         {'service_name': service_name,

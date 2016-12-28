@@ -1,0 +1,14 @@
+---
+fixes:
+  - |
+    The nova metadata service will now pass a nove service token to the
+    external vendordata server. These options can be configured using various
+    Keystone-related options available in the ``vendordata_dynamic_auth``
+    group. A new service token has been created for this purpose. Previously,
+    the requesting user's keystone token was passed through to the external
+    vendordata server if available, otherwise no token is passed. This resolves
+    issues with scenarios such as cloud-init's use of the metadata server on
+    first boot to determine configuration information.  Refer to the blueprints
+    at
+    http://specs.openstack.org/openstack/nova-specs/specs/ocata/approved/vendordata-reboot-ocata.html
+    for more information.

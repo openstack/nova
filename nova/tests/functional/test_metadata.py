@@ -38,7 +38,7 @@ class fake_result(object):
 real_request = requests.request
 
 
-def fake_request(method, url, **kwargs):
+def fake_request(obj, url, method, **kwargs):
     if url.startswith('http://127.0.0.1:123'):
         return fake_result({'a': 1, 'b': 'foo'})
     if url.startswith('http://127.0.0.1:124'):
@@ -114,8 +114,8 @@ class MetadataTest(test.TestCase):
             group='api'
             )
 
-        self.useFixture(fixtures.MonkeyPatch('requests.request',
-                                             fake_request))
+        self.useFixture(fixtures.MonkeyPatch(
+                'keystoneauth1.session.Session.request', fake_request))
 
         url = '%sopenstack/2016-10-06/vendor_data2.json' % self.md_url
         res = requests.request('GET', url, timeout=5)
@@ -138,8 +138,8 @@ class MetadataTest(test.TestCase):
             group='api'
             )
 
-        self.useFixture(fixtures.MonkeyPatch('requests.request',
-                                             fake_request))
+        self.useFixture(fixtures.MonkeyPatch(
+                'keystoneauth1.session.Session.request', fake_request))
 
         url = '%sopenstack/2016-10-06/vendor_data2.json' % self.md_url
         res = requests.request('GET', url, timeout=5)
@@ -165,8 +165,8 @@ class MetadataTest(test.TestCase):
             group='api'
             )
 
-        self.useFixture(fixtures.MonkeyPatch('requests.request',
-                                             fake_request))
+        self.useFixture(fixtures.MonkeyPatch(
+                'keystoneauth1.session.Session.request', fake_request))
 
         url = '%sopenstack/2016-10-06/vendor_data2.json' % self.md_url
         res = requests.request('GET', url, timeout=5)

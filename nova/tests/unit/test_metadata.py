@@ -28,6 +28,8 @@ try:
 except ImportError:
     import pickle
 
+from keystoneauth1 import exceptions as ks_exceptions
+from keystoneauth1 import session
 import mock
 from oslo_config import cfg
 from oslo_serialization import base64
@@ -866,22 +868,22 @@ class OpenStackMetadataTestCase(test.TestCase):
             else:
                 self.assertEqual({}, vd['web'])
 
-    @mock.patch.object(requests, 'request')
+    @mock.patch.object(session.Session, 'request')
     def test_vendor_data_response_vendordata2_ok(self, request_mock):
         self._test_vendordata2_response_inner(request_mock,
                                               requests.codes.OK)
 
-    @mock.patch.object(requests, 'request')
+    @mock.patch.object(session.Session, 'request')
     def test_vendor_data_response_vendordata2_created(self, request_mock):
         self._test_vendordata2_response_inner(request_mock,
                                               requests.codes.CREATED)
 
-    @mock.patch.object(requests, 'request')
+    @mock.patch.object(session.Session, 'request')
     def test_vendor_data_response_vendordata2_accepted(self, request_mock):
         self._test_vendordata2_response_inner(request_mock,
                                               requests.codes.ACCEPTED)
 
-    @mock.patch.object(requests, 'request')
+    @mock.patch.object(session.Session, 'request')
     def test_vendor_data_response_vendordata2_no_content(self, request_mock):
         self._test_vendordata2_response_inner(request_mock,
                                               requests.codes.NO_CONTENT,
@@ -918,34 +920,34 @@ class OpenStackMetadataTestCase(test.TestCase):
             self.assertTrue(log_mock.called)
 
     @mock.patch.object(vendordata_dynamic.LOG, 'warning')
-    @mock.patch.object(requests, 'request')
+    @mock.patch.object(session.Session, 'request')
     def test_vendor_data_response_vendordata2_type_error(self, request_mock,
                                                          log_mock):
         self._test_vendordata2_response_inner_exceptional(
                 request_mock, log_mock, TypeError)
 
     @mock.patch.object(vendordata_dynamic.LOG, 'warning')
-    @mock.patch.object(requests, 'request')
+    @mock.patch.object(session.Session, 'request')
     def test_vendor_data_response_vendordata2_value_error(self, request_mock,
                                                           log_mock):
         self._test_vendordata2_response_inner_exceptional(
                 request_mock, log_mock, ValueError)
 
     @mock.patch.object(vendordata_dynamic.LOG, 'warning')
-    @mock.patch.object(requests, 'request')
+    @mock.patch.object(session.Session, 'request')
     def test_vendor_data_response_vendordata2_request_error(self,
                                                             request_mock,
                                                             log_mock):
         self._test_vendordata2_response_inner_exceptional(
-                request_mock, log_mock, requests.exceptions.RequestException)
+                request_mock, log_mock, ks_exceptions.BadRequest)
 
     @mock.patch.object(vendordata_dynamic.LOG, 'warning')
-    @mock.patch.object(requests, 'request')
+    @mock.patch.object(session.Session, 'request')
     def test_vendor_data_response_vendordata2_ssl_error(self,
                                                         request_mock,
                                                         log_mock):
         self._test_vendordata2_response_inner_exceptional(
-                request_mock, log_mock, requests.exceptions.SSLError)
+                request_mock, log_mock, ks_exceptions.SSLError)
 
     def test_network_data_presence(self):
         inst = self.instance.obj_clone()
