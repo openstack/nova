@@ -71,6 +71,10 @@ class ServerVirtualInterfaceTestV21(test.NoDBTestCase):
 
     def setUp(self):
         super(ServerVirtualInterfaceTestV21, self).setUp()
+        # These APIs aren't implemented by the neutronv2 API code in Nova so
+        # the tests need to specifically run against nova-network unless
+        # otherwise setup to run with Neutron and expect failure.
+        self.flags(use_neutron=False)
         self.stubs.Set(compute.api.API, "get",
                        compute_api_get)
         self.stubs.Set(network.api.API, "get_vifs_by_instance",
