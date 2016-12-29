@@ -55,6 +55,8 @@ class TestNeutronSecurityGroupsTestCase(test.TestCase):
 class TestNeutronSecurityGroupsV21(
         test_security_groups.TestSecurityGroupsV21,
         TestNeutronSecurityGroupsTestCase):
+    # Used to override set config in the base test in test_security_groups.
+    use_neutron = True
 
     def _create_sg_template(self, **kwargs):
         sg = test_security_groups.security_group_request_template(**kwargs)
@@ -479,7 +481,8 @@ class TestNeutronSecurityGroupRulesV21(
         _TestNeutronSecurityGroupRulesBase,
         test_security_groups.TestSecurityGroupRulesV21,
         TestNeutronSecurityGroupRulesTestCase):
-    pass
+    # Used to override set config in the base test in test_security_groups.
+    use_neutron = True
 
 
 class TestNeutronSecurityGroupsOutputTest(TestNeutronSecurityGroupsTestCase):

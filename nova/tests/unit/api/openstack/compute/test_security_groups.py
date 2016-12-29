@@ -132,10 +132,14 @@ class TestSecurityGroupsV21(test.TestCase):
     secgrp_ctl_cls = secgroups_v21.SecurityGroupController
     server_secgrp_ctl_cls = secgroups_v21.ServerSecurityGroupController
     secgrp_act_ctl_cls = secgroups_v21.SecurityGroupActionController
+    # This class is subclassed by Neutron security group API tests so we need
+    # to be able to override this before creating the controller object.
+    use_neutron = False
 
     def setUp(self):
         super(TestSecurityGroupsV21, self).setUp()
-
+        # Neutron security groups are tested in test_neutron_security_groups.py
+        self.flags(use_neutron=self.use_neutron)
         self.controller = self.secgrp_ctl_cls()
         self.server_controller = self.server_secgrp_ctl_cls()
         self.manager = self.secgrp_act_ctl_cls()
@@ -782,10 +786,14 @@ class TestSecurityGroupsV21(test.TestCase):
 
 class TestSecurityGroupRulesV21(test.TestCase):
     secgrp_ctl_cls = secgroups_v21.SecurityGroupRulesController
+    # This class is subclassed by Neutron security group API tests so we need
+    # to be able to override this before creating the controller object.
+    use_neutron = False
 
     def setUp(self):
         super(TestSecurityGroupRulesV21, self).setUp()
-
+        # Neutron security groups are tested in test_neutron_security_groups.py
+        self.flags(use_neutron=self.use_neutron)
         self.controller = self.secgrp_ctl_cls()
         if self.controller.security_group_api.id_is_uuid:
             id1 = '11111111-1111-1111-1111-111111111111'
@@ -1309,6 +1317,8 @@ class SecurityGroupsOutputTestV21(test.TestCase):
 
     def setUp(self):
         super(SecurityGroupsOutputTestV21, self).setUp()
+        # Neutron security groups are tested in test_neutron_security_groups.py
+        self.flags(use_neutron=False)
         fakes.stub_out_nw_api(self)
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
