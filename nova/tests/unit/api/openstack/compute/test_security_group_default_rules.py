@@ -86,6 +86,7 @@ class TestSecurityGroupDefaultRulesV21(test.TestCase):
 
     def setUp(self):
         super(TestSecurityGroupDefaultRulesV21, self).setUp()
+        self.flags(use_neutron=False)
         self.controller = self.controller_cls()
         self.req = fakes.HTTPRequest.blank(
             '/v2/fake/os-security-group-default-rules')
