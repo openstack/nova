@@ -481,7 +481,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='4.15')
+    target = messaging.Target(version='4.16')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to an instance during power off.  The overall
@@ -5151,15 +5151,19 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     @wrap_instance_fault
     def attach_interface(self, context, instance, network_id, port_id,
-                         requested_ip):
+                         requested_ip, tag=None):
         """Use hotplug to add an network adapter to an instance."""
         if not self.driver.capabilities['supports_attach_interface']:
             raise exception.AttachInterfaceNotSupported(
                 instance_uuid=instance.uuid)
+        if (tag and not
+            self.driver.capabilities.get('supports_tagged_attach_interface',
+                                         False)):
+            raise exception.NetworkInterfaceTaggedAttachNotSupported()
         bind_host_id = self.driver.network_binding_host_id(context, instance)
         network_info = self.network_api.allocate_port_for_instance(
             context, instance, port_id, network_id, requested_ip,
-            bind_host_id=bind_host_id)
+            bind_host_id=bind_host_id, tag=tag)
         if len(network_info) != 1:
             LOG.error('allocate_port_for_instance returned %(ports)s '
                       'ports', {'ports': len(network_info)})

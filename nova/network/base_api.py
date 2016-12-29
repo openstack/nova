@@ -210,7 +210,7 @@ class NetworkAPI(base.Base):
 
     def allocate_port_for_instance(self, context, instance, port_id,
                                    network_id=None, requested_ip=None,
-                                   bind_host_id=None):
+                                   bind_host_id=None, tag=None):
         """Allocate port for instance."""
         raise NotImplementedError()
 

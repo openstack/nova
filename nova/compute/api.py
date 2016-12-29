@@ -3922,11 +3922,11 @@ class API(base.Base):
                                     vm_states.STOPPED],
                           task_state=[None])
     def attach_interface(self, context, instance, network_id, port_id,
-                         requested_ip):
+                         requested_ip, tag=None):
         """Use hotplug to add an network adapter to an instance."""
         return self.compute_rpcapi.attach_interface(context,
             instance=instance, network_id=network_id, port_id=port_id,
-            requested_ip=requested_ip)
+            requested_ip=requested_ip, tag=tag)
 
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,

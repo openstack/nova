@@ -325,6 +325,7 @@ class ComputeAPI(object):
                  the version because this method was unused before. The version
                  was bumped to signal the availability of the corrected RPC API
         * 4.15 - Add tag argument to reserve_block_device_name()
+        * 4.16 - Add tag argument to attach_interface()
     '''
 
     VERSION_ALIASES = {
@@ -420,13 +421,26 @@ class ComputeAPI(object):
                    instance=instance, network_id=network_id)
 
     def attach_interface(self, ctxt, instance, network_id, port_id,
-                         requested_ip):
-        version = '4.0'
-        cctxt = self.router.client(ctxt).prepare(
-                server=_compute_host(None, instance), version=version)
-        return cctxt.call(ctxt, 'attach_interface',
-                          instance=instance, network_id=network_id,
-                          port_id=port_id, requested_ip=requested_ip)
+                         requested_ip, tag=None):
+        kw = {'instance': instance, 'network_id': network_id,
+              'port_id': port_id, 'requested_ip': requested_ip,
+              'tag': tag}
+        version = '4.16'
+
+        client = self.router.client(ctxt)
+        if not client.can_send_version(version):
+            if tag:
+                # NOTE(artom) Attach attempted with a device role tag, but
+                # we're pinned to less than 4.16 - ie, not all nodes have
+                # received the Pike code yet.
+                raise exception.TaggedAttachmentNotSupported()
+            else:
+                version = '4.0'
+                kw.pop('tag')
+
+        cctxt = client.prepare(server=_compute_host(None, instance),
+                               version=version)
+        return cctxt.call(ctxt, 'attach_interface', **kw)
 
     def attach_volume(self, ctxt, instance, bdm):
         version = '4.0'
