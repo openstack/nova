@@ -45,6 +45,11 @@ Create Project Network
 
 .. rest_method:: POST /os-tenant-networks
 
+.. note::
+    This API is only implemented for the nova-network service and will result
+    in a 503 error response if the cloud is using the Neutron networking
+    service. Use the Neutron ``networks`` API to create a new network.
+
 Creates a project network.
 
 Policy defaults enable only users with the administrative role to
@@ -103,6 +108,11 @@ Delete Project Network
 ======================
 
 .. rest_method:: DELETE /os-tenant-networks/{network_id}
+
+.. note::
+    This API is only implemented for the nova-network service and will result
+    in a 500 error response if the cloud is using the Neutron networking
+    service. Use the Neutron ``networks`` API to delete an existing network.
 
 Deletes a project network.
 
