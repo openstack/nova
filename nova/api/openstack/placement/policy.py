@@ -35,8 +35,7 @@ def placement_init():
         # convenient for initial exploration. We will need to
         # determine how to manage authorization/policy and
         # implement that, probably per handler.
-        rules = policy.Rules.load_json(
-            jsonutils.dumps({'placement': 'role:admin'}))
+        rules = policy.Rules.load(jsonutils.dumps({'placement': 'role:admin'}))
         # Enforcer is initialized so that the above rule is loaded in and no
         # policy file is read.
         # TODO(alaski): Register a default rule rather than loading it in like
