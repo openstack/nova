@@ -34,6 +34,7 @@ from nova.network import model as network_model
 from nova import notifications
 from nova.notifications.objects import base as notification_base
 from nova.notifications.objects import exception as notification_exception
+from nova.notifications.objects import flavor as flavor_notification
 from nova.notifications.objects import instance as instance_notification
 from nova import objects
 from nova.objects import fields
@@ -363,7 +364,7 @@ def notify_about_instance_action(context, instance, host, action, phase=None,
     """
     ips = _get_instance_ips(instance)
 
-    flavor = instance_notification.FlavorPayload(instance=instance)
+    flavor = flavor_notification.FlavorPayload(instance=instance)
     fault, priority = _get_fault_and_priority_from_exc(exception)
     payload = instance_notification.InstanceActionPayload(
             instance=instance,
@@ -399,7 +400,7 @@ def notify_about_volume_swap(context, instance, host, action, phase,
     """
     ips = _get_instance_ips(instance)
 
-    flavor = instance_notification.FlavorPayload(instance=instance)
+    flavor = flavor_notification.FlavorPayload(instance=instance)
 
     fault, priority = _get_fault_and_priority_from_exc(exception)
     payload = instance_notification.InstanceActionVolumeSwapPayload(
