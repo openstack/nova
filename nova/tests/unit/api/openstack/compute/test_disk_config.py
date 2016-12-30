@@ -45,10 +45,10 @@ class DiskConfigTestCaseV21(test.TestCase):
 
     def setUp(self):
         super(DiskConfigTestCaseV21, self).setUp()
+        fakes.stub_out_nw_api(self)
+        fakes.stub_out_secgroup_api(self)
         self._set_up_app()
         self._setup_fake_image_service()
-
-        fakes.stub_out_nw_api(self)
 
         FAKE_INSTANCES = [
             fakes.stub_instance(1,

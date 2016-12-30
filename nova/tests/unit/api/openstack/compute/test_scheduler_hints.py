@@ -147,6 +147,7 @@ class ServersControllerCreateTestV21(test.TestCase):
         super(ServersControllerCreateTestV21, self).setUp()
 
         self.instance_cache_num = 0
+        fakes.stub_out_nw_api(self)
         self._set_up_controller()
 
         def instance_create(context, inst):

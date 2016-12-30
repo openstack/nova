@@ -82,6 +82,7 @@ class ExtendedServerAttributesTestV21(test.TestCase):
     def setUp(self):
         super(ExtendedServerAttributesTestV21, self).setUp()
         fakes.stub_out_nw_api(self)
+        fakes.stub_out_secgroup_api(self)
         self.stub_out('nova.compute.api.API.get', fake_compute_get)
         self.stub_out('nova.compute.api.API.get_all', fake_compute_get_all)
         self.stub_out('nova.db.instance_get_by_uuid', fake_compute_get)
