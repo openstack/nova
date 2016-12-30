@@ -1316,7 +1316,7 @@ class SecurityGroupsOutputTestV21(test.TestCase):
         self.app = self._setup_app()
 
     def _setup_app(self):
-        return fakes.wsgi_app_v21(init_only=('os-security-groups', 'servers'))
+        return fakes.wsgi_app_v21()
 
     def _make_request(self, url, body=None):
         req = fakes.HTTPRequest.blank(url)

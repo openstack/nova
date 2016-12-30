@@ -96,10 +96,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
 
     @property
     def app(self):
-        return fakes.wsgi_app_v21(init_only=('os-flavor-manage',
-                                             'os-flavor-rxtx',
-                                             'os-flavor-access', 'flavors',
-                                             'os-flavor-extra-data'))
+        return fakes.wsgi_app_v21()
 
     @mock.patch('nova.objects.Flavor.destroy')
     def test_delete(self, mock_destroy):
@@ -369,11 +366,7 @@ class PrivateFlavorManageTestV21(test.TestCase):
 
     @property
     def app(self):
-        return fakes.wsgi_app_v21(init_only=('os-flavor-manage',
-                                             'os-flavor-access',
-                                             'os-flavor-rxtx', 'flavors',
-                                             'os-flavor-extra-data'),
-                                 fake_auth_context=self._get_http_request().
+        return fakes.wsgi_app_v21(fake_auth_context=self._get_http_request().
                                      environ['nova.context'])
 
     def _get_http_request(self, url=''):

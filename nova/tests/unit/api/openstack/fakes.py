@@ -62,7 +62,7 @@ def fake_wsgi(self, req):
     return self.application
 
 
-def wsgi_app_v21(fake_auth_context=None, init_only=None, v2_compatible=False):
+def wsgi_app_v21(fake_auth_context=None, v2_compatible=False):
 
     inner_app_v21 = compute.APIRouterV21()
 

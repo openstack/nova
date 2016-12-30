@@ -221,7 +221,7 @@ class APIRouterV21(base_wsgi.Router):
     def api_extension_namespace():
         return 'nova.api.v21.extensions'
 
-    def __init__(self, init_only=None):
+    def __init__(self):
         def _check_load_extension(ext):
             return self._register_extension(ext)
 

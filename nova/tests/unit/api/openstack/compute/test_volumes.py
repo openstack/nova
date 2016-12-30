@@ -174,8 +174,7 @@ class BootFromVolumeTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dump_as_bytes(body)
         req.headers['content-type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app_v21(
-            init_only=('os-volumes', 'servers')))
+        res = req.get_response(fakes.wsgi_app_v21())
         self.assertEqual(202, res.status_int)
         server = jsonutils.loads(res.body)['server']
         self.assertEqual(FAKE_UUID, server['id'])
@@ -203,8 +202,7 @@ class BootFromVolumeTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dump_as_bytes(body)
         req.headers['content-type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app_v21(
-            init_only=('os-volumes', 'servers')))
+        res = req.get_response(fakes.wsgi_app_v21())
         self.assertEqual(202, res.status_int)
         server = jsonutils.loads(res.body)['server']
         self.assertEqual(FAKE_UUID, server['id'])
@@ -232,7 +230,7 @@ class VolumeApiTestV21(test.NoDBTestCase):
 
     @property
     def app(self):
-        return fakes.wsgi_app_v21(init_only=('os-volumes', 'servers'))
+        return fakes.wsgi_app_v21()
 
     def test_volume_create(self):
         self.stubs.Set(cinder.API, "create", fakes.stub_volume_create)

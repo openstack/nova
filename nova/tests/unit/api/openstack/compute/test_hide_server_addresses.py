@@ -40,8 +40,7 @@ class HideServerAddressesTestV21(test.TestCase):
     base_url = '/v2/fake/servers'
 
     def _setup_wsgi(self):
-        self.wsgi_app = fakes.wsgi_app_v21(
-            init_only=('servers', 'os-hide-server-addresses'))
+        self.wsgi_app = fakes.wsgi_app_v21()
 
     def setUp(self):
         super(HideServerAddressesTestV21, self).setUp()

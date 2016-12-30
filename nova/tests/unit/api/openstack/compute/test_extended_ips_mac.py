@@ -114,7 +114,7 @@ class ExtendedIpsMacTestV21(test.TestCase):
     def _make_request(self, url):
         req = fakes.HTTPRequest.blank(url)
         req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app_v21(init_only=('servers',)))
+        res = req.get_response(fakes.wsgi_app_v21())
         return res
 
     def _get_server(self, body):

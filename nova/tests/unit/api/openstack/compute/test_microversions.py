@@ -46,7 +46,7 @@ class LegacyMicroversionsTest(test.NoDBTestCase):
     @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace",
                 return_value='nova.api.v21.test_extensions')
     def test_microversions_no_header(self, mock_namespace):
-        app = fakes.wsgi_app_v21(init_only='test-microversions')
+        app = fakes.wsgi_app_v21()
         req = fakes.HTTPRequest.blank('/v2/fake/microversions')
         res = req.get_response(app)
         self.assertEqual(200, res.status_int)
@@ -56,7 +56,7 @@ class LegacyMicroversionsTest(test.NoDBTestCase):
     @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace",
                 return_value='nova.api.v21.test_extensions')
     def test_microversions_return_header(self, mock_namespace):
-        app = fakes.wsgi_app_v21(init_only='test-microversions')
+        app = fakes.wsgi_app_v21()
         req = fakes.HTTPRequest.blank('/v2/fake/microversions')
         res = req.get_response(app)
         self.assertEqual(200, res.status_int)
@@ -75,7 +75,7 @@ class LegacyMicroversionsTest(test.NoDBTestCase):
                                                         mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest("2.3")
 
-        app = fakes.wsgi_app_v21(init_only='test-microversions')
+        app = fakes.wsgi_app_v21()
         req = fakes.HTTPRequest.blank('/v2/fake/microversions')
         req.headers = self._make_header('2.3')
         res = req.get_response(app)
@@ -95,7 +95,7 @@ class LegacyMicroversionsTest(test.NoDBTestCase):
                                                         mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest("3.0")
 
-        app = fakes.wsgi_app_v21(init_only='test-microversions')
+        app = fakes.wsgi_app_v21()
         req = fakes.HTTPRequest.blank('/v2/fake/microversions')
         req.headers = self._make_header('3.0')
         res = req.get_response(app)
@@ -113,7 +113,7 @@ class LegacyMicroversionsTest(test.NoDBTestCase):
                                      mock_namespace, mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest('2.3')
 
-        app = fakes.wsgi_app_v21(init_only='test-microversions')
+        app = fakes.wsgi_app_v21()
         req = fakes.HTTPRequest.blank(url)
         req.headers = self._make_header(req_version)
         res = req.get_response(app)
@@ -139,7 +139,7 @@ class LegacyMicroversionsTest(test.NoDBTestCase):
     def test_microversions2_later_version(self, mock_namespace, mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest("3.1")
 
-        app = fakes.wsgi_app_v21(init_only='test-microversions')
+        app = fakes.wsgi_app_v21()
         req = fakes.HTTPRequest.blank('/v2/fake/microversions2')
         req.headers = self._make_header('3.0')
         res = req.get_response(app)
@@ -154,7 +154,7 @@ class LegacyMicroversionsTest(test.NoDBTestCase):
                                              mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest("3.5")
 
-        app = fakes.wsgi_app_v21(init_only='test-microversions')
+        app = fakes.wsgi_app_v21()
         req = fakes.HTTPRequest.blank('/v2/fake/microversions2')
         req.headers = {self.header_name: '3.2'}
         res = req.get_response(app)
@@ -163,7 +163,7 @@ class LegacyMicroversionsTest(test.NoDBTestCase):
     @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace",
                 return_value='nova.api.v21.test_extensions')
     def test_microversions2_version_too_low(self, mock_namespace):
-        app = fakes.wsgi_app_v21(init_only='test-microversions')
+        app = fakes.wsgi_app_v21()
         req = fakes.HTTPRequest.blank('/v2/fake/microversions2')
         req.headers = {self.header_name: '2.1'}
         res = req.get_response(app)
@@ -176,7 +176,7 @@ class LegacyMicroversionsTest(test.NoDBTestCase):
                                                    mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest("3.5")
 
-        app = fakes.wsgi_app_v21(init_only='test-microversions')
+        app = fakes.wsgi_app_v21()
         req = fakes.HTTPRequest.blank('/v2/fake/microversions2')
         req.headers = self._make_header('3.7')
         res = req.get_response(app)
@@ -192,7 +192,7 @@ class LegacyMicroversionsTest(test.NoDBTestCase):
     def test_microversions_schema(self, mock_namespace, mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest("3.3")
 
-        app = fakes.wsgi_app_v21(init_only='test-microversions')
+        app = fakes.wsgi_app_v21()
         req = fakes.HTTPRequest.blank('/v2/fake/microversions3')
         req.method = 'POST'
         req.headers = self._make_header('2.2')
@@ -215,7 +215,7 @@ class LegacyMicroversionsTest(test.NoDBTestCase):
     def test_microversions_schema_fail(self, mock_namespace, mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest("3.3")
 
-        app = fakes.wsgi_app_v21(init_only='test-microversions')
+        app = fakes.wsgi_app_v21()
         req = fakes.HTTPRequest.blank('/v2/fake/microversions3')
         req.method = 'POST'
         req.headers = {self.header_name: '2.2'}
@@ -235,7 +235,7 @@ class LegacyMicroversionsTest(test.NoDBTestCase):
                                                        mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest("3.3")
 
-        app = fakes.wsgi_app_v21(init_only='test-microversions')
+        app = fakes.wsgi_app_v21()
         req = fakes.HTTPRequest.blank('/v2/fake/microversions3/1')
         req.method = 'PUT'
         req.headers = self._make_header('2.2')
@@ -258,7 +258,7 @@ class LegacyMicroversionsTest(test.NoDBTestCase):
                                                        mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest("3.3")
 
-        app = fakes.wsgi_app_v21(init_only='test-microversions')
+        app = fakes.wsgi_app_v21()
         req = fakes.HTTPRequest.blank('/v2/fake/microversions3/1')
         req.headers = self._make_header('2.10')
         req.environ['CONTENT_TYPE'] = "application/json"
@@ -281,7 +281,7 @@ class LegacyMicroversionsTest(test.NoDBTestCase):
                                            mock_namespace,
                                            mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest("2.2")
-        app = fakes.wsgi_app_v21(init_only='test-microversions')
+        app = fakes.wsgi_app_v21()
         req = fakes.HTTPRequest.blank('/v2/fake/microversions4')
         req.headers = self._make_header(version)
         req.environ['CONTENT_TYPE'] = "application/json"
@@ -307,7 +307,7 @@ class LegacyMicroversionsTest(test.NoDBTestCase):
     def test_with_extends_decorator(self, mock_namespace, mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest('2.4')
 
-        app = fakes.wsgi_app_v21(init_only='test-microversions')
+        app = fakes.wsgi_app_v21()
         req = fakes.HTTPRequest.blank('/v2/fake/microversions5/item')
         req.headers = {'X-OpenStack-Nova-API-Version': '2.4'}
         res = req.get_response(app)
@@ -332,7 +332,7 @@ class LegacyMicroversionsTest(test.NoDBTestCase):
                                     mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest("2.3")
 
-        app = fakes.wsgi_app_v21(init_only='test-microversions')
+        app = fakes.wsgi_app_v21()
         req = fakes.HTTPRequest.blank('/v2/fake/microversions3/1/action')
         if req_header:
             req.headers = self._make_header(req_header)

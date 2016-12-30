@@ -40,8 +40,7 @@ def fake_instance_get(self, _context, instance_uuid, expected_attrs=None):
 class ServerDiagnosticsTestV21(test.NoDBTestCase):
 
     def _setup_router(self):
-        self.router = compute.APIRouterV21(init_only=('servers',
-                                                      'os-server-diagnostics'))
+        self.router = compute.APIRouterV21()
 
     def _get_request(self):
         return fakes.HTTPRequest.blank(

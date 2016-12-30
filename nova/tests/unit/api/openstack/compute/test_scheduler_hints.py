@@ -43,8 +43,7 @@ class SchedulerHintsTestCaseV21(test.TestCase):
         self._set_up_router()
 
     def _set_up_router(self):
-        self.app = compute.APIRouterV21(init_only=('servers',
-                                                   'os-scheduler-hints'))
+        self.app = compute.APIRouterV21()
 
     def _get_request(self):
         return fakes.HTTPRequest.blank('/fake/servers')

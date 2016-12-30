@@ -25,7 +25,7 @@ class PluginTest(test.NoDBTestCase):
     def test_plugin_framework_index(self, mock_namespace):
         mock_namespace.return_value = 'nova.api.v21.test_extensions'
 
-        app = fakes.wsgi_app_v21(init_only='test-basic')
+        app = fakes.wsgi_app_v21()
         req = fakes.HTTPRequest.blank('/v2/fake/test')
         res = req.get_response(app)
         self.assertEqual(200, res.status_int)
