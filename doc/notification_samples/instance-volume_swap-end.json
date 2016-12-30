@@ -18,13 +18,14 @@
                     "memory_mb": 512,
                     "disabled": false,
                     "rxtx_factor": 1.0,
+                    "extra_specs": {},
                     "swap": 0,
                     "is_public": true,
                     "vcpu_weight": 0
                 },
                 "nova_object.name": "FlavorPayload",
                 "nova_object.namespace": "nova",
-                "nova_object.version": "1.1"
+                "nova_object.version": "1.2"
             },
             "host": "compute",
             "host_name": "some-server",

@@ -448,6 +448,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
                                               reason='projects modified')
         self._add_access(project_id)
         self._load_projects()
+        self._send_notification(fields.NotificationAction.UPDATE)
 
     def _remove_access(self, project_id):
         if self.in_api:
@@ -462,6 +463,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
                                               reason='projects modified')
         self._remove_access(project_id)
         self._load_projects()
+        self._send_notification(fields.NotificationAction.UPDATE)
 
     @staticmethod
     def _flavor_create(context, updates):
@@ -578,6 +580,9 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
 
         if added_projects or deleted_projects:
             self.save_projects(added_projects, deleted_projects)
+
+        if added_keys or deleted_keys or added_projects or deleted_projects:
+            self._send_notification(fields.NotificationAction.UPDATE)
 
     @staticmethod
     def _flavor_destroy(context, flavor_id=None, flavorid=None):
