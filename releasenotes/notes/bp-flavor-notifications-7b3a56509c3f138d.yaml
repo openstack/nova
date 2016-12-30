@@ -1,0 +1,4 @@
+---
+features:
+  - Support versioned notifications for flavor operations like create and
+    delete.

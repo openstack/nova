@@ -143,6 +143,8 @@ class NotificationSampleTestBase(test.TestCase,
                                   }}
 
         flavor_id = self.api.post_flavor(flavor_body)['id']
+        # Ignore the create flavor notification
+        fake_notifier.reset()
 
         server = self._build_minimal_create_server_request(
             self.api, 'some-server',

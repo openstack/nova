@@ -364,7 +364,7 @@ def notify_about_instance_action(context, instance, host, action, phase=None,
     """
     ips = _get_instance_ips(instance)
 
-    flavor = flavor_notification.FlavorPayload(instance=instance)
+    flavor = flavor_notification.FlavorPayload(instance.flavor)
     fault, priority = _get_fault_and_priority_from_exc(exception)
     payload = instance_notification.InstanceActionPayload(
             instance=instance,
@@ -400,7 +400,7 @@ def notify_about_volume_swap(context, instance, host, action, phase,
     """
     ips = _get_instance_ips(instance)
 
-    flavor = flavor_notification.FlavorPayload(instance=instance)
+    flavor = flavor_notification.FlavorPayload(instance.flavor)
 
     fault, priority = _get_fault_and_priority_from_exc(exception)
     payload = instance_notification.InstanceActionVolumeSwapPayload(

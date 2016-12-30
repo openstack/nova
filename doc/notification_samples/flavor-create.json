@@ -1,0 +1,23 @@
+{
+    "priority": "INFO",
+    "payload": {
+        "nova_object.namespace": "nova",
+        "nova_object.version": "1.1",
+        "nova_object.name": "FlavorPayload",
+        "nova_object.data": {
+            "name": "test_flavor",
+            "memory_mb": 1024,
+            "ephemeral_gb": 0,
+            "disabled": false,
+            "vcpus": 2,
+            "swap": 0,
+            "rxtx_factor": 2.0,
+            "is_public": true,
+            "root_gb": 10,
+            "vcpu_weight": 0,
+            "flavorid": "a22d5517-147c-4147-a0d1-e698df5cd4e3"
+        }
+    },
+    "event_type": "flavor.create",
+    "publisher_id": "nova-api:fake-mini"
+}
