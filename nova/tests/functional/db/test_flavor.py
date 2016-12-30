@@ -10,6 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import api as db_api
@@ -291,3 +293,29 @@ class FlavorMigrationTestCase(test.NoDBTestCase):
             self.context, 0)
         self.assertEqual(0, match)
         self.assertEqual(0, done)
+
+    @mock.patch('nova.objects.flavor.LOG.error')
+    def test_migrate_flavors_duplicate_unicode(self, mock_log_error):
+        """Tests that we handle a duplicate flavor when migrating and that
+        we handle when the exception message is in unicode.
+        """
+        # First create a flavor that will be migrated from main to API DB.
+        main_flavor = _create_main_flavor(self.context)
+        # Now create that same flavor in the API DB.
+        del main_flavor['id']
+        api_flavor = ForcedFlavor(self.context, **main_flavor)
+        api_flavor.create()
+        # Now let's run the online data migration which will fail to create
+        # a duplicate flavor in the API database and will raise FlavorIdExists
+        # or FlavorExists which we want to modify to have a unicode message.
+        with mock.patch.object(exception.FlavorIdExists, 'msg_fmt',
+                               u'\xF0\x9F\x92\xA9'):
+            with mock.patch.object(exception.FlavorExists, 'msg_fmt',
+                                   u'\xF0\x9F\x92\xA9'):
+                match, done = flavor_obj.migrate_flavors(self.context, 50)
+                # we found one
+                self.assertEqual(1, match)
+                # but we didn't migrate it
+                self.assertEqual(0, done)
+                # and we logged an error for the duplicate flavor
+                mock_log_error.assert_called()
