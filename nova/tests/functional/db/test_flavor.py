@@ -49,6 +49,14 @@ class ForcedFlavor(objects.Flavor):
         return True
 
 
+def _create_main_flavor(ctxt, **updates):
+    values = dict(fake_api_flavor, flavorid='mainflavor')
+    del values['projects']
+    del values['extra_specs']
+    values.update(updates)
+    return db_api.flavor_create(ctxt, values)
+
+
 class FlavorObjectTestCase(test.NoDBTestCase):
     USES_DB_SELF = True
 
@@ -114,7 +122,7 @@ class FlavorObjectTestCase(test.NoDBTestCase):
         self._test_query(flavor)
 
     def test_query_main(self):
-        self._create_main_flavor()
+        _create_main_flavor(self.context)
         flavor = objects.Flavor.get_by_flavor_id(self.context, 'mainflavor')
         self._test_query(flavor)
 
@@ -169,15 +177,8 @@ class FlavorObjectTestCase(test.NoDBTestCase):
         self.assertEqual(
             0, self._collect_flavor_residue_api(self.context, flavor))
 
-    def _create_main_flavor(self, **updates):
-        values = dict(fake_api_flavor, flavorid='mainflavor')
-        del values['projects']
-        del values['extra_specs']
-        values.update(updates)
-        return db_api.flavor_create(self.context, values)
-
     def test_destroy_main(self):
-        self._create_main_flavor()
+        _create_main_flavor(self.context)
         flavor = objects.Flavor.get_by_flavor_id(self.context, 'mainflavor')
         self._test_destroy(flavor)
 
@@ -214,9 +215,10 @@ class FlavorObjectTestCase(test.NoDBTestCase):
         self._test_get_all(1)
 
     def test_get_all_with_marker_in_api(self):
-        db_flavors = [self._create_main_flavor(),
-                      self._create_main_flavor(flavorid='mainflavor2',
-                                               name='m1.foo2')]
+        db_flavors = [_create_main_flavor(self.context),
+                      _create_main_flavor(self.context,
+                                          flavorid='mainflavor2',
+                                          name='m1.foo2')]
         db_flavor_ids = [x['flavorid'] for x in db_flavors]
         flavor = ForcedFlavor(context=self.context, **fake_api_flavor)
         flavor.create()
@@ -228,10 +230,12 @@ class FlavorObjectTestCase(test.NoDBTestCase):
         self.assertEqual(['m1.zoo'] + db_flavor_ids[:2], result_flavorids)
 
     def test_get_all_with_marker_in_main(self):
-        db_flavors = [self._create_main_flavor(flavorid='mainflavor1',
-                                               name='main1'),
-                      self._create_main_flavor(flavorid='mainflavor2',
-                                               name='main2')]
+        db_flavors = [_create_main_flavor(self.context,
+                                          flavorid='mainflavor1',
+                                          name='main1'),
+                      _create_main_flavor(self.context,
+                                          flavorid='mainflavor2',
+                                          name='main2')]
         db_flavor_ids = [x['flavorid'] for x in db_flavors]
         flavor = ForcedFlavor(context=self.context, **fake_api_flavor)
         flavor.create()
@@ -252,7 +256,7 @@ class FlavorObjectTestCase(test.NoDBTestCase):
                           self._test_get_all, 2, marker='noflavoratall')
 
     def test_create_checks_main_flavors(self):
-        self._create_main_flavor()
+        _create_main_flavor(self.context)
         flavor = objects.Flavor(context=self.context, **fake_api_flavor)
         self.assertRaises(exception.ObjectActionError, flavor.create)
         self._delete_main_flavors()
@@ -269,7 +273,10 @@ class FlavorMigrationTestCase(test.NoDBTestCase):
         self.context = context.get_admin_context()
 
     def test_migration(self):
+        # create a flavor in the main database that will be migrated
+        _create_main_flavor(self.context)
         main_flavors = len(db.flavor_get_all(self.context))
+        self.assertEqual(1, main_flavors)
         match, done = flavor_obj.migrate_flavors(self.context, 50)
         self.assertEqual(main_flavors, match)
         self.assertEqual(main_flavors, done)
