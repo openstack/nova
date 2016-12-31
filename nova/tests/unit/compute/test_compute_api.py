@@ -992,7 +992,8 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(quota.QUOTAS, 'rollback')
         rpcapi = self.compute_api.compute_rpcapi
         self.mox.StubOutWithMock(rpcapi, 'confirm_resize')
-
+        self.mox.StubOutWithMock(self.compute_api.consoleauth_rpcapi,
+                                 'delete_tokens_for_instance')
         if (inst.vm_state in
             (vm_states.SHELVED, vm_states.SHELVED_OFFLOADED)):
             self._test_delete_shelved_part(inst)
@@ -1079,6 +1080,10 @@ class _ComputeAPIUnitTestMixIn(object):
             quota.QUOTAS.commit(self.context, reservations,
                                 project_id=inst.project_id,
                                 user_id=inst.user_id)
+
+        if self.cell_type is None or self.cell_type == 'api':
+            self.compute_api.consoleauth_rpcapi.delete_tokens_for_instance(
+                self.context, inst.uuid)
 
         self.mox.ReplayAll()
 

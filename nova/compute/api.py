@@ -154,6 +154,39 @@ def check_instance_state(vm_state=None, task_state=(None,),
     return outer
 
 
+def _set_or_none(q):
+    return q if q is None or isinstance(q, set) else set(q)
+
+
+def reject_instance_state(vm_state=None, task_state=None):
+    """Decorator.  Raise InstanceInvalidState if instance is in any of the
+    given states.
+    """
+
+    vm_state = _set_or_none(vm_state)
+    task_state = _set_or_none(task_state)
+
+    def outer(f):
+        @six.wraps(f)
+        def inner(self, context, instance, *args, **kw):
+            _InstanceInvalidState = functools.partial(
+                exception.InstanceInvalidState,
+                instance_uuid=instance.uuid,
+                method=f.__name__)
+
+            if vm_state is not None and instance.vm_state in vm_state:
+                raise _InstanceInvalidState(
+                    attr='vm_state', state=instance.vm_state)
+
+            if task_state is not None and instance.task_state in task_state:
+                raise _InstanceInvalidState(
+                    attr='task_state', state=instance.task_state)
+
+            return f(self, context, instance, *args, **kw)
+        return inner
+    return outer
+
+
 def check_instance_host(function):
     @six.wraps(function)
     def wrapped(self, context, instance, *args, **kwargs):
@@ -1854,6 +1887,12 @@ class API(base.Base):
                                                original_task_state,
                                                project_id, user_id)
 
+            # NOTE(dtp): cells.enable = False means "use cells v2".
+            # Run everywhere except v1 compute cells.
+            if not CONF.cells.enable or self.cell_type == 'api':
+                self.consoleauth_rpcapi.delete_tokens_for_instance(
+                    context, instance.uuid)
+
             if self.cell_type == 'api':
                 # NOTE(comstud): If we're in the API cell, we need to
                 # skip all remaining logic and just call the callback,
@@ -3412,6 +3451,8 @@ class API(base.Base):
                                                new_pass=password)
 
     @check_instance_host
+    @reject_instance_state(
+        task_state=[task_states.DELETING, task_states.MIGRATING])
     def get_vnc_console(self, context, instance, console_type):
         """Get a url to an instance Console."""
         connect_info = self.compute_rpcapi.get_vnc_console(context,
@@ -3433,6 +3474,8 @@ class API(base.Base):
         return connect_info
 
     @check_instance_host
+    @reject_instance_state(
+        task_state=[task_states.DELETING, task_states.MIGRATING])
     def get_spice_console(self, context, instance, console_type):
         """Get a url to an instance Console."""
         connect_info = self.compute_rpcapi.get_spice_console(context,
@@ -3453,6 +3496,8 @@ class API(base.Base):
         return connect_info
 
     @check_instance_host
+    @reject_instance_state(
+        task_state=[task_states.DELETING, task_states.MIGRATING])
     def get_rdp_console(self, context, instance, console_type):
         """Get a url to an instance Console."""
         connect_info = self.compute_rpcapi.get_rdp_console(context,
@@ -3473,6 +3518,8 @@ class API(base.Base):
         return connect_info
 
     @check_instance_host
+    @reject_instance_state(
+        task_state=[task_states.DELETING, task_states.MIGRATING])
     def get_serial_console(self, context, instance, console_type):
         """Get a url to a serial console."""
         connect_info = self.compute_rpcapi.get_serial_console(context,
@@ -3493,6 +3540,8 @@ class API(base.Base):
         return connect_info
 
     @check_instance_host
+    @reject_instance_state(
+        task_state=[task_states.DELETING, task_states.MIGRATING])
     def get_mks_console(self, context, instance, console_type):
         """Get a url to a MKS console."""
         connect_info = self.compute_rpcapi.get_mks_console(context,
@@ -3831,6 +3880,10 @@ class API(base.Base):
 
         self._record_action_start(context, instance,
                                   instance_actions.LIVE_MIGRATION)
+
+        self.consoleauth_rpcapi.delete_tokens_for_instance(
+            context, instance.uuid)
+
         try:
             request_spec = objects.RequestSpec.get_by_instance_uuid(
                 context, instance.uuid)
