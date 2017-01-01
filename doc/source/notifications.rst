@@ -293,13 +293,14 @@ requires the notification.
   payload (note that it is not supported by the notification framework
   currently) or sending both the old state and the new state of the entity in
   the payload.
-* You should not include those parts of the entity that are unchanged or static
-  in relation to the event you are sending the notification about. So that
-  you can limit the size of the payload and avoid unnecessary repetition.
 * You should never include a nova internal object in the payload. Create a new
   object and use the SCHEMA field to map the internal object to the
   notification payload. This way the evolution of the internal object model
   can be decoupled from the evolution of the notification payload.
+* The delete notification should contain the same information as the create or
+  update notifications. This makes it possible for the consumer to listen only to
+  the delete notifications but still filter on some fields of the entity
+  (e.g. project_id).
 
 Existing versioned notifications
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
