@@ -20,7 +20,6 @@ from nova.api.openstack.compute import attach_interfaces \
         as attach_interfaces_v21
 from nova.compute import api as compute_api
 from nova import exception
-from nova.network import api as network_api
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -74,15 +73,7 @@ fake_networks = [FAKE_NET_ID1, FAKE_NET_ID2]
 ports = [port_data1, port_data2, port_data3]
 
 
-def fake_list_ports(self, *args, **kwargs):
-    result = []
-    for port in ports:
-        if port['device_id'] == kwargs['device_id']:
-            result.append(port)
-    return {'ports': result}
-
-
-def fake_show_port(self, context, port_id, **kwargs):
+def fake_show_port(context, port_id, **kwargs):
     for port in ports:
         if port['id'] == port_id:
             return {'port': port}
@@ -130,8 +121,6 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
     def setUp(self):
         super(InterfaceAttachTestsV21, self).setUp()
         self.flags(timeout=30, group='neutron')
-        self.stubs.Set(network_api.API, 'show_port', fake_show_port)
-        self.stubs.Set(network_api.API, 'list_ports', fake_list_ports)
         self.stubs.Set(compute_api.API, 'get', fake_get_instance)
         self.expected_show = {'interfaceAttachment':
             {'net_id': FAKE_NET_ID1,
@@ -141,6 +130,10 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
              'fixed_ips': port_data1['fixed_ips'],
             }}
         self.attachments = self.controller_cls()
+        show_port_patch = mock.patch.object(self.attachments.network_api,
+                                            'show_port', fake_show_port)
+        show_port_patch.start()
+        self.addCleanup(show_port_patch.stop)
         self.req = fakes.HTTPRequest.blank('')
 
     @mock.patch.object(compute_api.API, 'get',
@@ -173,12 +166,12 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
                           self.attachments.show, self.req, FAKE_UUID2,
                           FAKE_PORT_ID1)
 
-    @mock.patch.object(network_api.API, 'show_port',
-                       side_effect=exception.Forbidden)
-    def test_show_forbidden(self, show_port_mock):
-        self.assertRaises(exc.HTTPForbidden,
-                          self.attachments.show, self.req, FAKE_UUID1,
-                          FAKE_PORT_ID1)
+    def test_show_forbidden(self):
+        with mock.patch.object(self.attachments.network_api, 'show_port',
+                               side_effect=exception.Forbidden):
+            self.assertRaises(exc.HTTPForbidden,
+                              self.attachments.show, self.req, FAKE_UUID1,
+                              FAKE_PORT_ID1)
 
     def test_delete(self):
         self.stubs.Set(compute_api.API, 'detach_interface',
