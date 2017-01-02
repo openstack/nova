@@ -878,6 +878,10 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         # This is needed for the live migration tests which spawn off the
         # operation for monitoring.
         self.useFixture(nova_fixtures.SpawnIsSynchronousFixture())
+        # When using CONF.use_neutron=True and destroying an instance os-vif
+        # will try to execute some commands which hangs tests so let's just
+        # stub out the unplug call to os-vif since we don't care about it.
+        self.stub_out('os_vif.unplug', lambda a, kw: None)
 
     def _fake_admin_context(self, *args, **kwargs):
         return self.ctxt
