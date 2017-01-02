@@ -29,6 +29,7 @@ class TestServerGet(test.TestCase):
     def setUp(self):
         super(TestServerGet, self).setUp()
         self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.NeutronFixture(self))
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
 

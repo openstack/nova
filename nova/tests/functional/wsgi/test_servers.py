@@ -38,6 +38,7 @@ class ServersPreSchedulingTestCase(test.TestCase):
         fake_image.stub_out_image_service(self)
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NoopConductorFixture())
+        self.useFixture(nova_fixtures.NeutronFixture(self))
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
 

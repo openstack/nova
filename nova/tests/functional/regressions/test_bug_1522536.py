@@ -12,8 +12,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from oslo_config import cfg
-
 import nova.scheduler.utils
 import nova.servicegroup
 from nova import test
@@ -23,8 +21,6 @@ from nova.tests.unit import cast_as_call
 import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
 
-CONF = cfg.CONF
-
 
 class TestServerGet(test.TestCase):
     REQUIRES_LOCKING = True
@@ -32,6 +28,7 @@ class TestServerGet(test.TestCase):
     def setUp(self):
         super(TestServerGet, self).setUp()
         self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.NeutronFixture(self))
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
 
@@ -43,8 +40,6 @@ class TestServerGet(test.TestCase):
         self.start_service('conductor')
         self.flags(driver='chance_scheduler', group='scheduler')
         self.start_service('scheduler')
-        self.network = self.start_service('network',
-                                          manager=CONF.network_manager)
         self.compute = self.start_service('compute')
 
         self.useFixture(cast_as_call.CastAsCall(self.stubs))

@@ -1,0 +1,9 @@
+---
+prelude: >
+    Neutron is now the default configuration for new deployments.
+upgrade:
+  - |
+    The nova-network service was deprecated in the 14.0.0 Newton release. In
+    the 15.0.0 Ocata release, nova-network will only work in a Cells v1
+    deployment. The Neutron networking service is now the default configuration
+    for new deployments based on the ``use_neutron`` configuration option.

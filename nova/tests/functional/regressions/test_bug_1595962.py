@@ -17,7 +17,7 @@ import time
 import fixtures
 import mock
 
-import nova.conf
+import nova
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import cast_as_call
@@ -27,15 +27,13 @@ from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt.libvirt import guest as libvirt_guest
 
 
-CONF = nova.conf.CONF
-
-
 class TestSerialConsoleLiveMigrate(test.TestCase):
     REQUIRES_LOCKING = True
 
     def setUp(self):
         super(TestSerialConsoleLiveMigrate, self).setUp()
         self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.NeutronFixture(self))
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
         # Replace libvirt with fakelibvirt
@@ -70,8 +68,6 @@ class TestSerialConsoleLiveMigrate(test.TestCase):
         self.start_service('conductor')
         self.flags(driver='chance_scheduler', group='scheduler')
         self.start_service('scheduler')
-        self.network = self.start_service('network',
-                                          manager=CONF.network_manager)
         self.compute = self.start_service('compute', host='test_compute1')
         self.consoleauth = self.start_service('consoleauth')
 
