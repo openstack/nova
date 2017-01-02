@@ -390,7 +390,10 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
     @mock.patch('nova.virt.hyperv.vmops.VMOps._create_ephemerals')
     @mock.patch('nova.virt.hyperv.vmops.VMOps._create_root_device')
     @mock.patch('nova.virt.hyperv.vmops.VMOps._delete_disk_files')
-    def _test_spawn(self, mock_delete_disk_files, mock_create_root_device,
+    @mock.patch('nova.virt.hyperv.vmops.VMOps._get_neutron_events',
+                return_value=[])
+    def _test_spawn(self, mock_get_neutron_events,
+                    mock_delete_disk_files, mock_create_root_device,
                     mock_create_ephemerals, mock_get_image_vm_gen,
                     mock_create_instance, mock_save_device_metadata,
                     mock_configdrive_required,
@@ -437,6 +440,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
                                                             fake_vm_gen)
             mock_create_ephemerals.assert_called_once_with(
                 mock_instance, block_device_info['ephemerals'])
+            mock_get_neutron_events.assert_called_once_with(mock.sentinel.INFO)
             mock_get_image_vm_gen.assert_called_once_with(mock_instance.uuid,
                                                           mock_image_meta)
             mock_create_instance.assert_called_once_with(

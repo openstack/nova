@@ -995,6 +995,7 @@ class ValidateIntegerTestCase(test.NoDBTestCase):
 
 class ValidateNeutronConfiguration(test.NoDBTestCase):
     def test_nova_network(self):
+        self.flags(use_neutron=False)
         self.assertFalse(utils.is_neutron())
 
     def test_neutron(self):
