@@ -275,6 +275,17 @@ class CPUThreadAllocationPolicy(BaseNovaEnum):
     ALL = (PREFER, ISOLATE, REQUIRE)
 
 
+class CPUEmulatorThreadsPolicy(BaseNovaEnum):
+
+    # share (default): Emulator threads float across the pCPUs
+    # associated to the guest.
+    SHARE = "share"
+    # isolate: Emulator threads are isolated on a single pCPU.
+    ISOLATE = "isolate"
+
+    ALL = (SHARE, ISOLATE)
+
+
 class CPUMode(BaseNovaEnum):
 
     CUSTOM = 'custom'
@@ -1022,6 +1033,10 @@ class CPUAllocationPolicyField(BaseEnumField):
 
 class CPUThreadAllocationPolicyField(BaseEnumField):
     AUTO_TYPE = CPUThreadAllocationPolicy()
+
+
+class CPUEmulatorThreadsPolicyField(BaseEnumField):
+    AUTO_TYPE = CPUEmulatorThreadsPolicy()
 
 
 class CPUModeField(BaseEnumField):

@@ -14,6 +14,7 @@ import copy
 
 import mock
 from oslo_serialization import jsonutils
+from oslo_versionedobjects import base as ovo_base
 
 from nova import exception
 from nova import objects
@@ -166,6 +167,26 @@ class _TestInstanceNUMATopology(object):
         self.assertEqual(-1, topo_obj.cells[0].id)
         self.assertEqual({}, topo_obj.cells[1].cpu_pinning)
         self.assertEqual(-1, topo_obj.cells[1].id)
+
+    def test_emulator_threads_policy(self):
+        topo_obj = get_fake_obj_numa_topology(self.context)
+        self.assertFalse(topo_obj.emulator_threads_isolated)
+        topo_obj.emulator_threads_policy = (
+            fields.CPUEmulatorThreadsPolicy.ISOLATE)
+        self.assertTrue(topo_obj.emulator_threads_isolated)
+
+    def test_obj_make_compatible_numa_pre_1_3(self):
+        topo_obj = objects.InstanceNUMATopology(
+            emulator_threads_policy=(
+                fields.CPUEmulatorThreadsPolicy.ISOLATE))
+        versions = ovo_base.obj_tree_get_versions('InstanceNUMATopology')
+        primitive = topo_obj.obj_to_primitive(target_version='1.2',
+                                              version_manifest=versions)
+        self.assertNotIn(
+            'emulator_threads_policy', primitive['nova_object.data'])
+
+        topo_obj = objects.InstanceNUMATopology.obj_from_primitive(primitive)
+        self.assertFalse(topo_obj.emulator_threads_isolated)
 
 
 class TestInstanceNUMATopology(test_objects._LocalTest,
