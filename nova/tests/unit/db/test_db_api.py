@@ -4214,13 +4214,16 @@ class InstanceFaultTestCase(test.TestCase, ModelsObjectComparatorMixin):
             for code in fault_codes:
                 fault_values = self._create_fault_values(uuid, code)
                 fault = db.instance_fault_create(self.ctxt, fault_values)
-                expected[uuid].append(fault)
+                # We expect the faults to be returned ordered by created_at in
+                # descending order, so insert the newly created fault at the
+                # front of our list.
+                expected[uuid].insert(0, fault)
 
         # Ensure faults are saved
         faults = db.instance_fault_get_by_instance_uuids(self.ctxt, uuids)
         self.assertEqual(len(expected), len(faults))
         for uuid in uuids:
-            self._assertEqualListsOfObjects(expected[uuid], faults[uuid])
+            self._assertEqualOrderedListOfObjects(expected[uuid], faults[uuid])
 
     def test_instance_faults_get_by_instance_uuids_no_faults(self):
         uuid = uuidsentinel.uuid1
