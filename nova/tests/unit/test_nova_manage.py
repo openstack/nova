@@ -126,6 +126,8 @@ class FloatingIpCommandsTestCase(test.NoDBTestCase):
 class NetworkCommandsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(NetworkCommandsTestCase, self).setUp()
+        # These are all tests that assume nova-network and using the nova DB.
+        self.flags(use_neutron=False)
         self.output = StringIO()
         self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
         self.commands = manage.NetworkCommands()
