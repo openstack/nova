@@ -21,7 +21,6 @@ from nova.api.openstack.compute import fping as fping_v21
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-import nova.utils
 
 
 FAKE_UUID = fakes.FAKE_UUID
@@ -43,10 +42,11 @@ class FpingTestV21(test.TestCase):
                       return_servers)
         self.stub_out("nova.db.instance_get_by_uuid",
                       return_server)
-        self.stubs.Set(nova.utils, "execute",
-                       execute)
-        self.stubs.Set(self.controller_cls, "check_fping",
-                       lambda self: None)
+        self.stub_out('nova.utils.execute',
+                      execute)
+        self.stub_out("nova.api.openstack.compute.fping.FpingController."
+                      "check_fping",
+                      lambda self: None)
         self.controller = self.controller_cls()
 
     def _get_url(self):
