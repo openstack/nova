@@ -413,31 +413,6 @@ class HostTestCase(test.NoDBTestCase):
         self.assertTrue(self.host.has_version(lv_ver, None, hv_type))
         self.assertTrue(self.host.has_version(None, hv_ver, hv_type))
 
-    @mock.patch.object(fakelibvirt.virConnect, "lookupByID")
-    def test_get_domain_by_id(self, fake_lookup):
-        dom = fakelibvirt.virDomain(self.host.get_connection(),
-                                    "<domain id='7'/>")
-
-        fake_lookup.return_value = dom
-
-        self.assertEqual(dom, self.host._get_domain_by_id(7))
-
-        fake_lookup.assert_called_once_with(7)
-
-    @mock.patch.object(fakelibvirt.virConnect, "lookupByID")
-    def test_get_domain_by_id_raises(self, fake_lookup):
-        fake_lookup.side_effect = fakelibvirt.make_libvirtError(
-            fakelibvirt.libvirtError,
-            'Domain not found: no domain with matching id 7',
-            error_code=fakelibvirt.VIR_ERR_NO_DOMAIN,
-            error_domain=fakelibvirt.VIR_FROM_QEMU)
-
-        self.assertRaises(exception.InstanceNotFound,
-                          self.host._get_domain_by_id,
-                          7)
-
-        fake_lookup.assert_called_once_with(7)
-
     @mock.patch.object(fakelibvirt.virConnect, "lookupByName")
     def test_get_domain_by_name(self, fake_lookup):
         dom = fakelibvirt.virDomain(self.host.get_connection(),
@@ -490,14 +465,15 @@ class HostTestCase(test.NoDBTestCase):
         fake_get_domain.assert_called_once_with("instance-0000007c")
 
     @mock.patch.object(fakelibvirt.Connection, "listAllDomains")
-    def test_list_instance_domains_fast(self, mock_list_all):
+    def test_list_instance_domains(self, mock_list_all):
+        vm0 = FakeVirtDomain(id=0, name="Domain-0")  # Xen dom-0
         vm1 = FakeVirtDomain(id=3, name="instance00000001")
         vm2 = FakeVirtDomain(id=17, name="instance00000002")
         vm3 = FakeVirtDomain(name="instance00000003")
         vm4 = FakeVirtDomain(name="instance00000004")
 
         def fake_list_all(flags):
-            vms = []
+            vms = [vm0]
             if flags & fakelibvirt.VIR_CONNECT_LIST_DOMAINS_ACTIVE:
                 vms.extend([vm1, vm2])
             if flags & fakelibvirt.VIR_CONNECT_LIST_DOMAINS_INACTIVE:
@@ -506,7 +482,7 @@ class HostTestCase(test.NoDBTestCase):
 
         mock_list_all.side_effect = fake_list_all
 
-        doms = self.host._list_instance_domains_fast()
+        doms = self.host.list_instance_domains()
 
         mock_list_all.assert_called_once_with(
             fakelibvirt.VIR_CONNECT_LIST_DOMAINS_ACTIVE)
@@ -516,11 +492,12 @@ class HostTestCase(test.NoDBTestCase):
         self.assertEqual(doms[0].name(), vm1.name())
         self.assertEqual(doms[1].name(), vm2.name())
 
-        doms = self.host._list_instance_domains_fast(only_running=False)
+        doms = self.host.list_instance_domains(only_running=False)
 
         mock_list_all.assert_called_once_with(
             fakelibvirt.VIR_CONNECT_LIST_DOMAINS_ACTIVE |
             fakelibvirt.VIR_CONNECT_LIST_DOMAINS_INACTIVE)
+        mock_list_all.reset_mock()
 
         self.assertEqual(len(doms), 4)
         self.assertEqual(doms[0].name(), vm1.name())
@@ -528,148 +505,16 @@ class HostTestCase(test.NoDBTestCase):
         self.assertEqual(doms[2].name(), vm3.name())
         self.assertEqual(doms[3].name(), vm4.name())
 
-    @mock.patch.object(fakelibvirt.Connection, "numOfDomains")
-    @mock.patch.object(fakelibvirt.Connection, "listDefinedDomains")
-    @mock.patch.object(fakelibvirt.Connection, "listDomainsID")
-    @mock.patch.object(host.Host, "_get_domain_by_name")
-    @mock.patch.object(host.Host, "_get_domain_by_id")
-    def test_list_instance_domains_slow(self,
-                                        mock_get_id, mock_get_name,
-                                        mock_list_ids, mock_list_names,
-                                        mock_num_ids):
-        vm1 = FakeVirtDomain(id=3, name="instance00000001")
-        vm2 = FakeVirtDomain(id=17, name="instance00000002")
-        vm3 = FakeVirtDomain(name="instance00000003")
-        vm4 = FakeVirtDomain(name="instance00000004")
-        vms = [vm1, vm2, vm3, vm4]
-
-        def fake_get_domain_by_id(id):
-            for vm in vms:
-                if vm.ID() == id:
-                    return vm
-            raise exception.InstanceNotFound(instance_id=id)
-
-        def fake_get_domain_by_name(name):
-            for vm in vms:
-                if vm.name() == name:
-                    return vm
-            raise exception.InstanceNotFound(instance_id=name)
-
-        def fake_list_ids():
-            # Include one ID that no longer exists
-            return [vm1.ID(), vm2.ID(), 666]
-
-        def fake_list_names():
-            # Include one name that no longer exists and
-            # one dup from running list to show race in
-            # transition from inactive -> running
-            return [vm1.name(), vm3.name(), vm4.name(), "fishfood"]
-
-        mock_get_id.side_effect = fake_get_domain_by_id
-        mock_get_name.side_effect = fake_get_domain_by_name
-        mock_list_ids.side_effect = fake_list_ids
-        mock_list_names.side_effect = fake_list_names
-        mock_num_ids.return_value = 2
-
-        doms = self.host._list_instance_domains_slow()
-
-        mock_list_ids.assert_called_once_with()
-        mock_num_ids.assert_called_once_with()
-        self.assertFalse(mock_list_names.called)
-        mock_list_ids.reset_mock()
-        mock_list_names.reset_mock()
-        mock_num_ids.reset_mock()
-
-        self.assertEqual(len(doms), 2)
-        self.assertEqual(doms[0].name(), vm1.name())
-        self.assertEqual(doms[1].name(), vm2.name())
-
-        doms = self.host._list_instance_domains_slow(only_running=False)
-
-        mock_list_ids.assert_called_once_with()
-        mock_num_ids.assert_called_once_with()
-        mock_list_names.assert_called_once_with()
-
-        self.assertEqual(len(doms), 4)
-        self.assertEqual(doms[0].name(), vm1.name())
-        self.assertEqual(doms[1].name(), vm2.name())
-        self.assertEqual(doms[2].name(), vm3.name())
-        self.assertEqual(doms[3].name(), vm4.name())
-
-    @mock.patch.object(fakelibvirt.Connection, "listAllDomains")
-    @mock.patch.object(fakelibvirt.Connection, "numOfDomains")
-    @mock.patch.object(fakelibvirt.Connection, "listDomainsID")
-    @mock.patch.object(host.Host, "_get_domain_by_id")
-    def test_list_instance_domains_fallback(self,
-                                            mock_get_id, mock_list_ids,
-                                            mock_num_ids, mock_list_all):
-        vm1 = FakeVirtDomain(id=3, name="instance00000001")
-        vm2 = FakeVirtDomain(id=17, name="instance00000002")
-        vms = [vm1, vm2]
-
-        def fake_get_domain_by_id(id):
-            for vm in vms:
-                if vm.ID() == id:
-                    return vm
-            raise exception.InstanceNotFound(instance_id=id)
-
-        def fake_list_doms():
-            return [vm1.ID(), vm2.ID()]
-
-        def fake_list_all(flags):
-            ex = fakelibvirt.make_libvirtError(
-                fakelibvirt.libvirtError,
-                "API is not supported",
-                error_code=fakelibvirt.VIR_ERR_NO_SUPPORT)
-            raise ex
-
-        mock_get_id.side_effect = fake_get_domain_by_id
-        mock_list_ids.side_effect = fake_list_doms
-        mock_num_ids.return_value = 2
-        mock_list_all.side_effect = fake_list_all
-
-        doms = self.host.list_instance_domains()
+        doms = self.host.list_instance_domains(only_guests=False)
 
         mock_list_all.assert_called_once_with(
             fakelibvirt.VIR_CONNECT_LIST_DOMAINS_ACTIVE)
-        mock_list_ids.assert_called_once_with()
-        mock_num_ids.assert_called_once_with()
+        mock_list_all.reset_mock()
 
-        self.assertEqual(len(doms), 2)
-        self.assertEqual(doms[0].ID(), vm1.ID())
-        self.assertEqual(doms[1].ID(), vm2.ID())
-
-    @mock.patch.object(host.Host, "_list_instance_domains_fast")
-    def test_list_instance_domains_filtering(self, mock_list):
-        vm0 = FakeVirtDomain(id=0, name="Domain-0")  # Xen dom-0
-        vm1 = FakeVirtDomain(id=3, name="instance00000001")
-        vm2 = FakeVirtDomain(id=17, name="instance00000002")
-        vm3 = FakeVirtDomain(name="instance00000003")
-        vm4 = FakeVirtDomain(name="instance00000004")
-
-        mock_list.return_value = [vm0, vm1, vm2]
-        doms = self.host.list_instance_domains()
-        self.assertEqual(len(doms), 2)
-        self.assertEqual(doms[0].name(), vm1.name())
-        self.assertEqual(doms[1].name(), vm2.name())
-        mock_list.assert_called_with(True)
-
-        mock_list.return_value = [vm0, vm1, vm2, vm3, vm4]
-        doms = self.host.list_instance_domains(only_running=False)
-        self.assertEqual(len(doms), 4)
-        self.assertEqual(doms[0].name(), vm1.name())
-        self.assertEqual(doms[1].name(), vm2.name())
-        self.assertEqual(doms[2].name(), vm3.name())
-        self.assertEqual(doms[3].name(), vm4.name())
-        mock_list.assert_called_with(False)
-
-        mock_list.return_value = [vm0, vm1, vm2]
-        doms = self.host.list_instance_domains(only_guests=False)
         self.assertEqual(len(doms), 3)
         self.assertEqual(doms[0].name(), vm0.name())
         self.assertEqual(doms[1].name(), vm1.name())
         self.assertEqual(doms[2].name(), vm2.name())
-        mock_list.assert_called_with(True)
 
     @mock.patch.object(host.Host, "list_instance_domains")
     def test_list_guests(self, mock_list_domains):
