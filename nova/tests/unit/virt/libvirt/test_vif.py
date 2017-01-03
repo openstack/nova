@@ -619,7 +619,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                     is_public=True, vcpu_weight=None,
                     id=2, disabled=False, rxtx_factor=1.0)
         conf = d.get_base_config(None, 'ca:fe:de:ad:be:ef', image_meta,
-                                 flavor, 'kvm')
+                                 flavor, 'kvm', 'normal')
         self.assertEqual(4, conf.vhost_queues)
         self.assertEqual('vhost', conf.driver_name)
 
@@ -734,9 +734,27 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         image_meta = {'properties': {'os_name': 'fedora22'}}
         image_meta = objects.ImageMeta.from_dict(image_meta)
         d.get_base_config(None, 'ca:fe:de:ad:be:ef', image_meta,
-                          None, 'kvm')
+                          None, 'kvm', 'normal')
         mock_set.assert_called_once_with(mock.ANY, 'ca:fe:de:ad:be:ef',
                                          'virtio', None, None)
+
+    @mock.patch.object(vif.designer, 'set_vif_guest_frontend_config')
+    def test_model_sriov_multi_queue_not_set(self, mock_set):
+        self.flags(use_virtio_for_bridges=True,
+                   virt_type='kvm',
+                   group='libvirt')
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.osinfo.libosinfo',
+            fakelibosinfo))
+        d = vif.LibvirtGenericVIFDriver()
+        image_meta = {'properties': {'os_name': 'fedora22'}}
+        image_meta = objects.ImageMeta.from_dict(image_meta)
+        conf = d.get_base_config(None, 'ca:fe:de:ad:be:ef', image_meta,
+                                 None, 'kvm', 'direct')
+        mock_set.assert_called_once_with(mock.ANY, 'ca:fe:de:ad:be:ef',
+                                         'virtio', None, None)
+        self.assertIsNone(conf.vhost_queues)
+        self.assertIsNone(conf.driver_name)
 
     def _test_model_qemu(self, *vif_objs, **kw):
         libvirt_version = kw.get('libvirt_version')
