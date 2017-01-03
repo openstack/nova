@@ -15,6 +15,12 @@ tests:
   response_json_paths:
       $.errors[0].title: Not Found
 
+- name: delete all inventory for missing resource provider
+  DELETE: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      openstack-api-version: placement 1.5
+  status: 404
+
 - name: post new resource provider
   POST: /resource_providers
   request_headers:
@@ -538,3 +544,40 @@ tests:
       - Unable to update inventory
   response_json_paths:
       $.errors[0].title: Bad Request
+
+- name: delete all inventory bad generation
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_provider_generation: 99
+      inventories:
+        IPV4_ADDRESS:
+          total: 253
+  status: 409
+  response_strings:
+      - resource provider generation conflict
+
+- name: delete all inventory
+  DELETE: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      openstack-api-version: placement 1.5
+  status: 204
+
+- name: get inventories after deletion
+  GET: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  response_json_paths:
+      $.resource_provider_generation: 7
+      $.inventories: {}
+
+- name: delete empty inventories
+  DELETE: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      openstack-api-version: placement 1.5
+  status: 204
+
+- name: delete inventories earlier version
+  DELETE: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      openstack-api-version: placement 1.4
+  status: 405

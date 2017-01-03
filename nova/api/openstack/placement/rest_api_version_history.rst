@@ -81,3 +81,11 @@ If the resource class does not exist, then it will return a HTTP 400.
     requested for a given inventory and resource provider. The `step_size` is
     the increment of resource that can be requested for a given resource on a
     given provider.
+
+1.5 DELETE all inventory for a resource provider
+------------------------------------------------
+
+Placement API version 1.5 adds DELETE method for deleting all inventory for a
+resource provider. The following new method is supported:
+
+* DELETE /resource_providers/{uuid}/inventories

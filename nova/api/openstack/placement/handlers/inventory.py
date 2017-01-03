@@ -18,6 +18,7 @@ from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 import webob
 
+from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
 from nova import db
@@ -376,6 +377,37 @@ def set_inventories(req):
                                           'error': exc})
 
     return _send_inventories(req.response, resource_provider, inventories)
+
+
+@wsgi_wrapper.PlacementWsgify
+def delete_inventories(req):
+    """DELETE all inventory for a resource provider.
+
+    Delete inventory as required to reset all the inventory.
+    If an inventory to be deleted is in use, return a 409 Conflict.
+    On success return a 204 No content.
+    Return 405 Method Not Allowed if the wanted microversion does not match.
+    """
+    microversion.raise_http_status_code_if_not_version(req, 405, (1, 5))
+    context = req.environ['placement.context']
+    uuid = util.wsgi_path_item(req.environ, 'uuid')
+    resource_provider = objects.ResourceProvider.get_by_uuid(
+        context, uuid)
+
+    inventories = objects.InventoryList(objects=[])
+
+    try:
+        resource_provider.set_inventory(inventories)
+    except (exception.ConcurrentUpdateDetected,
+            exception.InventoryInUse) as exc:
+        raise webob.exc.HTTPConflict(
+            _('update conflict: %(error)s') % {'error': exc})
+
+    response = req.response
+    response.status = 204
+    response.content_type = None
+
+    return response
 
 
 @wsgi_wrapper.PlacementWsgify
