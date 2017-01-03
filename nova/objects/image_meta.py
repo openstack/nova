@@ -164,12 +164,19 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.13: added os_secure_boot field
     # Version 1.14: Added 'hw_pointer_model' field
     # Version 1.15: Added hw_rescue_bus and hw_rescue_device.
-    VERSION = '1.15'
+    # Version 1.16: WatchdogActionField supports 'disabled' enum.
+    VERSION = '1.16'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 16) and 'hw_watchdog_action' in primitive:
+            # Check to see if hw_watchdog_action was set to 'disabled' and if
+            # so, remove it since not specifying it is the same behavior.
+            if primitive['hw_watchdog_action'] == \
+                    fields.WatchdogAction.DISABLED:
+                primitive.pop('hw_watchdog_action')
         if target_version < (1, 15):
             primitive.pop('hw_rescue_bus', None)
             primitive.pop('hw_rescue_device', None)
