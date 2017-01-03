@@ -196,14 +196,13 @@ class _ComputeAPIUnitTestMixIn(object):
                                     requested_networks=requested_networks,
                                     max_count=None)
 
-    def test_create_quota_exceeded_messages(self):
+    @mock.patch('nova.quota.QUOTAS.reserve')
+    @mock.patch('nova.quota.QUOTAS.limit_check')
+    def test_create_quota_exceeded_messages(self, mock_limit_check,
+                                            mock_reserve):
         image_href = "image_href"
         image_id = 0
         instance_type = self._create_flavor()
-
-        self.mox.StubOutWithMock(self.compute_api, "_get_image")
-        self.mox.StubOutWithMock(quota.QUOTAS, "limit_check")
-        self.mox.StubOutWithMock(quota.QUOTAS, "reserve")
 
         quotas = {'instances': 1, 'cores': 1, 'ram': 1}
         usages = {r: {'in_use': 1, 'reserved': 1} for r in
@@ -211,33 +210,23 @@ class _ComputeAPIUnitTestMixIn(object):
         quota_exception = exception.OverQuota(quotas=quotas,
             usages=usages, overs=['instances'])
 
-        for _unused in range(2):
-            self.compute_api._get_image(self.context, image_href).AndReturn(
-                (image_id, {}))
-            quota.QUOTAS.limit_check(self.context, metadata_items=mox.IsA(int),
-                                     project_id=mox.IgnoreArg(),
-                                     user_id=mox.IgnoreArg())
-            quota.QUOTAS.reserve(self.context, instances=40,
-                                 cores=mox.IsA(int),
-                                 expire=mox.IgnoreArg(),
-                                 project_id=mox.IgnoreArg(),
-                                 user_id=mox.IgnoreArg(),
-                                 ram=mox.IsA(int)).AndRaise(quota_exception)
+        mock_reserve.side_effect = quota_exception
 
-        self.mox.ReplayAll()
-
-        for min_count, message in [(20, '20-40'), (40, '40')]:
-            try:
-                with mock.patch.object(self.compute_api.network_api,
-                                       'validate_networks',
-                                       return_value=40):
+        with mock.patch.object(self.compute_api, '_get_image',
+                               return_value=(image_id, {})) as mock_get_image:
+            for min_count, message in [(20, '20-40'), (40, '40')]:
+                try:
                     self.compute_api.create(self.context, instance_type,
                                             "image_href", min_count=min_count,
                                             max_count=40)
-            except exception.TooManyInstances as e:
-                self.assertEqual(message, e.kwargs['req'])
-            else:
-                self.fail("Exception not raised")
+                except exception.TooManyInstances as e:
+                    self.assertEqual(message, e.kwargs['req'])
+                else:
+                    self.fail("Exception not raised")
+            mock_get_image.assert_called_with(self.context, image_href)
+            self.assertEqual(2, mock_get_image.call_count)
+            self.assertEqual(2, mock_reserve.call_count)
+            self.assertEqual(2, mock_limit_check.call_count)
 
     def _test_create_max_net_count(self, max_net_count, min_count, max_count):
         with test.nested(
@@ -426,26 +415,24 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertEqual(instance.vm_state, vm_states.ACTIVE)
         self.assertIsNone(instance.task_state)
 
-        self.mox.StubOutWithMock(instance, 'save')
-        self.mox.StubOutWithMock(self.compute_api,
-                '_record_action_start')
         if self.cell_type == 'api':
             rpcapi = self.compute_api.cells_rpcapi
         else:
             rpcapi = self.compute_api.compute_rpcapi
-        self.mox.StubOutWithMock(rpcapi, 'suspend_instance')
 
-        instance.save(expected_task_state=[None])
-        self.compute_api._record_action_start(self.context,
-                instance, instance_actions.SUSPEND)
-        rpcapi.suspend_instance(self.context, instance)
-
-        self.mox.ReplayAll()
-
-        self.compute_api.suspend(self.context, instance)
-        self.assertEqual(vm_states.ACTIVE, instance.vm_state)
-        self.assertEqual(task_states.SUSPENDING,
-                         instance.task_state)
+        with test.nested(
+            mock.patch.object(instance, 'save'),
+            mock.patch.object(self.compute_api, '_record_action_start'),
+            mock.patch.object(rpcapi, 'suspend_instance')
+        ) as (mock_inst_save, mock_record_action, mock_suspend_instance):
+            self.compute_api.suspend(self.context, instance)
+            self.assertEqual(vm_states.ACTIVE, instance.vm_state)
+            self.assertEqual(task_states.SUSPENDING, instance.task_state)
+            mock_inst_save.assert_called_once_with(expected_task_state=[None])
+            mock_record_action.assert_called_once_with(
+                self.context, instance, instance_actions.SUSPEND)
+            mock_suspend_instance.assert_called_once_with(self.context,
+                                                          instance)
 
     def _test_suspend_fails(self, vm_state):
         params = dict(vm_state=vm_state)
@@ -467,52 +454,48 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertEqual(instance.vm_state, vm_states.SUSPENDED)
         self.assertIsNone(instance.task_state)
 
-        self.mox.StubOutWithMock(instance, 'save')
-        self.mox.StubOutWithMock(self.compute_api,
-                '_record_action_start')
         if self.cell_type == 'api':
             rpcapi = self.compute_api.cells_rpcapi
         else:
             rpcapi = self.compute_api.compute_rpcapi
-        self.mox.StubOutWithMock(rpcapi, 'resume_instance')
 
-        instance.save(expected_task_state=[None])
-        self.compute_api._record_action_start(self.context,
-                instance, instance_actions.RESUME)
-        rpcapi.resume_instance(self.context, instance)
-
-        self.mox.ReplayAll()
-
-        self.compute_api.resume(self.context, instance)
-        self.assertEqual(vm_states.SUSPENDED, instance.vm_state)
-        self.assertEqual(task_states.RESUMING,
-                         instance.task_state)
+        with test.nested(
+            mock.patch.object(instance, 'save'),
+            mock.patch.object(self.compute_api, '_record_action_start'),
+            mock.patch.object(rpcapi, 'resume_instance')
+        ) as (mock_inst_save, mock_record_action, mock_resume_instance):
+            self.compute_api.resume(self.context, instance)
+            self.assertEqual(vm_states.SUSPENDED, instance.vm_state)
+            self.assertEqual(task_states.RESUMING,
+                             instance.task_state)
+            mock_inst_save.assert_called_once_with(expected_task_state=[None])
+            mock_record_action.assert_called_once_with(
+                self.context, instance, instance_actions.RESUME)
+            mock_resume_instance.assert_called_once_with(self.context,
+                                                         instance)
 
     def test_start(self):
         params = dict(vm_state=vm_states.STOPPED)
         instance = self._create_instance_obj(params=params)
 
-        self.mox.StubOutWithMock(instance, 'save')
-        self.mox.StubOutWithMock(self.compute_api,
-                '_record_action_start')
-
-        instance.save(expected_task_state=[None])
-        self.compute_api._record_action_start(self.context,
-                instance, instance_actions.START)
-
         if self.cell_type == 'api':
             rpcapi = self.compute_api.cells_rpcapi
         else:
             rpcapi = self.compute_api.compute_rpcapi
 
-        self.mox.StubOutWithMock(rpcapi, 'start_instance')
-        rpcapi.start_instance(self.context, instance)
-
-        self.mox.ReplayAll()
-
-        self.compute_api.start(self.context, instance)
-        self.assertEqual(task_states.POWERING_ON,
-                         instance.task_state)
+        with test.nested(
+            mock.patch.object(instance, 'save'),
+            mock.patch.object(self.compute_api, '_record_action_start'),
+            mock.patch.object(rpcapi, 'start_instance')
+        ) as (mock_inst_save, mock_record_action, mock_start_instance):
+            self.compute_api.start(self.context, instance)
+            self.assertEqual(task_states.POWERING_ON,
+                            instance.task_state)
+            mock_inst_save.assert_called_once_with(expected_task_state=[None])
+            mock_record_action.assert_called_once_with(
+                self.context, instance, instance_actions.START)
+            mock_start_instance.assert_called_once_with(self.context,
+                                                        instance)
 
     def test_start_invalid_state(self):
         instance = self._create_instance_obj()
@@ -533,34 +516,32 @@ class _ComputeAPIUnitTestMixIn(object):
         params = dict(task_state=None, progress=99, vm_state=vm_state)
         instance = self._create_instance_obj(params=params)
 
-        self.mox.StubOutWithMock(instance, 'save')
-        self.mox.StubOutWithMock(self.compute_api,
-                '_record_action_start')
-
-        instance.save(expected_task_state=[None])
-        self.compute_api._record_action_start(self.context,
-                instance, instance_actions.STOP)
-
         if self.cell_type == 'api':
             rpcapi = self.compute_api.cells_rpcapi
         else:
             rpcapi = self.compute_api.compute_rpcapi
 
-        self.mox.StubOutWithMock(rpcapi, 'stop_instance')
-        rpcapi.stop_instance(self.context, instance, do_cast=True,
-                             clean_shutdown=clean_shutdown)
+        with test.nested(
+            mock.patch.object(instance, 'save'),
+            mock.patch.object(self.compute_api, '_record_action_start'),
+            mock.patch.object(rpcapi, 'stop_instance')
+        ) as (mock_inst_save, mock_record_action, mock_stop_instance):
+            if force:
+                self.compute_api.force_stop(self.context, instance,
+                                            clean_shutdown=clean_shutdown)
+            else:
+                self.compute_api.stop(self.context, instance,
+                                      clean_shutdown=clean_shutdown)
+            self.assertEqual(task_states.POWERING_OFF,
+                             instance.task_state)
+            self.assertEqual(0, instance.progress)
 
-        self.mox.ReplayAll()
-
-        if force:
-            self.compute_api.force_stop(self.context, instance,
-                                        clean_shutdown=clean_shutdown)
-        else:
-            self.compute_api.stop(self.context, instance,
-                                  clean_shutdown=clean_shutdown)
-        self.assertEqual(task_states.POWERING_OFF,
-                         instance.task_state)
-        self.assertEqual(0, instance.progress)
+            mock_inst_save.assert_called_once_with(expected_task_state=[None])
+            mock_record_action.assert_called_once_with(
+                self.context, instance, instance_actions.STOP)
+            mock_stop_instance.assert_called_once_with(
+                self.context, instance, do_cast=True,
+                clean_shutdown=clean_shutdown)
 
     def test_stop(self):
         self._test_stop(vm_states.ACTIVE)
@@ -769,9 +750,6 @@ class _ComputeAPIUnitTestMixIn(object):
         inst.vm_state = vm_state
         inst.task_state = task_state
 
-        self.mox.StubOutWithMock(self.context, 'elevated')
-        self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
-        self.mox.StubOutWithMock(inst, 'save')
         expected_task_state = [None]
         if reboot_type == 'HARD':
             expected_task_state.extend([task_states.REBOOTING,
@@ -781,22 +759,28 @@ class _ComputeAPIUnitTestMixIn(object):
                                         task_states.RESUMING,
                                         task_states.UNPAUSING,
                                         task_states.SUSPENDING])
-        inst.save(expected_task_state=expected_task_state)
-        self.compute_api._record_action_start(self.context, inst,
-                                              instance_actions.REBOOT)
 
         if self.cell_type == 'api':
             rpcapi = self.compute_api.cells_rpcapi
         else:
             rpcapi = self.compute_api.compute_rpcapi
 
-        self.mox.StubOutWithMock(rpcapi, 'reboot_instance')
-        rpcapi.reboot_instance(self.context, instance=inst,
-                               block_device_info=None,
-                               reboot_type=reboot_type)
-        self.mox.ReplayAll()
+        with test.nested(
+            mock.patch.object(self.context, 'elevated'),
+            mock.patch.object(inst, 'save'),
+            mock.patch.object(self.compute_api, '_record_action_start'),
+            mock.patch.object(rpcapi, 'reboot_instance')
+        ) as (mock_elevated, mock_inst_save,
+              mock_record_action, mock_reboot_instance):
+            self.compute_api.reboot(self.context, inst, reboot_type)
 
-        self.compute_api.reboot(self.context, inst, reboot_type)
+            mock_inst_save.assert_called_once_with(
+                expected_task_state=expected_task_state)
+            mock_record_action.assert_called_once_with(
+                self.context, inst, instance_actions.REBOOT)
+            mock_reboot_instance.assert_called_once_with(
+                self.context, instance=inst,
+                block_device_info=None, reboot_type=reboot_type)
 
     def _test_reboot_type_fails(self, reboot_type, **updates):
         inst = self._create_instance_obj()
