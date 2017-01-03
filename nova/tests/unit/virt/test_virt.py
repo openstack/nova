@@ -19,9 +19,7 @@ import mock
 import six
 
 from nova import test
-from nova import utils
 from nova.virt.disk import api as disk_api
-from nova.virt.disk.mount import api as mount
 from nova.virt import driver
 
 PROC_MOUNTS_CONTENTS = """rootfs / rootfs rw 0 0
@@ -133,8 +131,8 @@ class TestDiskImage(test.NoDBTestCase):
         def fake_instance_for_format(image, mountdir, partition):
             return fakemount
 
-        self.stubs.Set(mount.Mount, 'instance_for_format',
-                       staticmethod(fake_instance_for_format))
+        self.stub_out('nova.virt.disk.mount.api.Mount.instance_for_format',
+                      staticmethod(fake_instance_for_format))
         diskimage = disk_api._DiskImage(image=image, mount_dir=mountdir)
         dev = diskimage.mount()
         self.assertEqual(diskimage._mounter, fakemount)
@@ -151,8 +149,8 @@ class TestDiskImage(test.NoDBTestCase):
         def fake_instance_for_format(image, mountdir, partition):
             return fakemount
 
-        self.stubs.Set(mount.Mount, 'instance_for_format',
-                       staticmethod(fake_instance_for_format))
+        self.stub_out('nova.virt.disk.mount.api.Mount.instance_for_format',
+                      staticmethod(fake_instance_for_format))
         diskimage = disk_api._DiskImage(image=image, mount_dir=mountdir)
         dev = diskimage.mount()
         self.assertEqual(diskimage._mounter, fakemount)
@@ -171,8 +169,8 @@ class TestDiskImage(test.NoDBTestCase):
         def fake_instance_for_format(image, mountdir, partition):
             return fakemount
 
-        self.stubs.Set(mount.Mount, 'instance_for_format',
-                       staticmethod(fake_instance_for_format))
+        self.stub_out('nova.virt.disk.mount.api.Mount.instance_for_format',
+                      staticmethod(fake_instance_for_format))
         diskimage = disk_api._DiskImage(image=image, mount_dir=mountdir)
         dev = diskimage.mount()
         self.assertEqual(diskimage._mounter, fakemount)
@@ -190,29 +188,30 @@ class TestVirtDisk(test.NoDBTestCase):
             self.executes.append(cmd)
             return None, None
 
-        self.stubs.Set(utils, 'execute', fake_execute)
+        self.stub_out('nova.utils.execute', fake_execute)
 
     def test_lxc_setup_container(self):
         image = '/tmp/fake-image'
         container_dir = '/mnt/fake_rootfs/'
 
-        def proc_mounts(self, mount_point):
+        def proc_mounts(mount_point):
             return None
 
         def fake_instance_for_format(image, mountdir, partition):
             return FakeMount(image, mountdir, partition)
 
         self.stub_out('os.path.exists', lambda _: True)
-        self.stubs.Set(disk_api._DiskImage, '_device_for_path', proc_mounts)
-        self.stubs.Set(mount.Mount, 'instance_for_format',
-                       staticmethod(fake_instance_for_format))
+        self.stub_out('nova.virt.disk.api._DiskImage._device_for_path',
+                      proc_mounts)
+        self.stub_out('nova.virt.disk.mount.api.Mount.instance_for_format',
+                      staticmethod(fake_instance_for_format))
 
         self.assertEqual(disk_api.setup_container(image, container_dir),
                          '/dev/fake')
 
     def test_lxc_teardown_container(self):
 
-        def proc_mounts(self, mount_point):
+        def proc_mounts(mount_point):
             mount_points = {
                 '/mnt/loop/nopart': '/dev/loop0',
                 '/mnt/loop/part': '/dev/mapper/loop0p1',
@@ -222,7 +221,8 @@ class TestVirtDisk(test.NoDBTestCase):
             return mount_points[mount_point]
 
         self.stub_out('os.path.exists', lambda _: True)
-        self.stubs.Set(disk_api._DiskImage, '_device_for_path', proc_mounts)
+        self.stub_out('nova.virt.disk.api._DiskImage._device_for_path',
+                      proc_mounts)
         expected_commands = []
 
         disk_api.teardown_container('/mnt/loop/nopart')
@@ -262,11 +262,12 @@ class TestVirtDisk(test.NoDBTestCase):
 
     def test_lxc_teardown_container_with_namespace_cleaned(self):
 
-        def proc_mounts(self, mount_point):
+        def proc_mounts(mount_point):
             return None
 
         self.stub_out('os.path.exists', lambda _: True)
-        self.stubs.Set(disk_api._DiskImage, '_device_for_path', proc_mounts)
+        self.stub_out('nova.virt.disk.api._DiskImage._device_for_path',
+                      proc_mounts)
         expected_commands = []
 
         disk_api.teardown_container('/mnt/loop/nopart', '/dev/loop0')
