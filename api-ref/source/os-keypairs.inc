@@ -38,9 +38,9 @@ Response
   - type: keypair_type
   - keypairs_links: keypair_links
 
-**Example List Keypairs: JSON response**
+**Example List Keypairs (v2.35): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/keypairs/keypairs-list-resp.json
+.. literalinclude:: ../../doc/api_samples/keypairs/v2.35/keypairs-list-resp.json
    :language: javascript
 
 Create Or Import Keypair
