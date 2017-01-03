@@ -71,7 +71,7 @@ Show Details of Specific API Version
 
 .. rest_method:: GET /{api_version}
 
-This gets the details of a specific API at it's root. Nearly all this
+This gets the details of a specific API at its root. Nearly all this
 information exists at the API root, so this is mostly a redundant
 operation.
 
