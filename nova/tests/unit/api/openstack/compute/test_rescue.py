@@ -48,27 +48,25 @@ class RescueTestV21(test.NoDBTestCase):
     def setUp(self):
         super(RescueTestV21, self).setUp()
 
-        self.stubs.Set(compute.api.API, "get", fake_compute_get)
-        self.stubs.Set(compute.api.API, "rescue", rescue)
-        self.stubs.Set(compute.api.API, "unrescue", unrescue)
+        self.stub_out("nova.compute.api.API.get", fake_compute_get)
+        self.stub_out("nova.compute.api.API.rescue", rescue)
+        self.stub_out("nova.compute.api.API.unrescue", unrescue)
         self.controller = self._set_up_controller()
         self.fake_req = fakes.HTTPRequest.blank('')
 
     def _set_up_controller(self):
         return rescue_v21.RescueController()
 
-    def test_rescue_from_locked_server(self):
-        def fake_rescue_from_locked_server(self, context,
-            instance, rescue_password=None, rescue_image_ref=None):
-            raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
+    @mock.patch.object(compute.api.API, "rescue")
+    def test_rescue_from_locked_server(self, mock_rescue):
+        mock_rescue.side_effect = exception.InstanceIsLocked(
+            instance_uuid=UUID)
 
-        self.stubs.Set(compute.api.API,
-                       'rescue',
-                       fake_rescue_from_locked_server)
         body = {"rescue": {"adminPass": "AABBCC112233"}}
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller._rescue,
                           self.fake_req, UUID, body=body)
+        self.assertTrue(mock_rescue.called)
 
     def test_rescue_with_preset_password(self):
         body = {"rescue": {"adminPass": "AABBCC112233"}}
@@ -80,16 +78,16 @@ class RescueTestV21(test.NoDBTestCase):
         resp = self.controller._rescue(self.fake_req, UUID, body=body)
         self.assertEqual(CONF.password_length, len(resp['adminPass']))
 
-    def test_rescue_of_rescued_instance(self):
+    @mock.patch.object(compute.api.API, "rescue")
+    def test_rescue_of_rescued_instance(self, mock_rescue):
+        mock_rescue.side_effect = exception.InstanceInvalidState(
+            'fake message')
         body = dict(rescue=None)
 
-        def fake_rescue(*args, **kwargs):
-            raise exception.InstanceInvalidState('fake message')
-
-        self.stubs.Set(compute.api.API, "rescue", fake_rescue)
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller._rescue,
                           self.fake_req, UUID, body=body)
+        self.assertTrue(mock_rescue.called)
 
     def test_unrescue(self):
         body = dict(unrescue=None)
@@ -103,41 +101,38 @@ class RescueTestV21(test.NoDBTestCase):
             status_int = resp.status_int
         self.assertEqual(202, status_int)
 
-    def test_unrescue_from_locked_server(self):
-        def fake_unrescue_from_locked_server(self, context,
-            instance):
-            raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
-
-        self.stubs.Set(compute.api.API,
-                       'unrescue',
-                       fake_unrescue_from_locked_server)
+    @mock.patch.object(compute.api.API, "unrescue")
+    def test_unrescue_from_locked_server(self, mock_unrescue):
+        mock_unrescue.side_effect = exception.InstanceIsLocked(
+            instance_uuid=UUID)
 
         body = dict(unrescue=None)
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller._unrescue,
                           self.fake_req, UUID, body=body)
+        self.assertTrue(mock_unrescue.called)
 
-    def test_unrescue_of_active_instance(self):
+    @mock.patch.object(compute.api.API, "unrescue")
+    def test_unrescue_of_active_instance(self, mock_unrescue):
+        mock_unrescue.side_effect = exception.InstanceInvalidState(
+            'fake message')
         body = dict(unrescue=None)
 
-        def fake_unrescue(*args, **kwargs):
-            raise exception.InstanceInvalidState('fake message')
-
-        self.stubs.Set(compute.api.API, "unrescue", fake_unrescue)
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller._unrescue,
                           self.fake_req, UUID, body=body)
+        self.assertTrue(mock_unrescue.called)
 
-    def test_rescue_raises_unrescuable(self):
+    @mock.patch.object(compute.api.API, "rescue")
+    def test_rescue_raises_unrescuable(self, mock_rescue):
+        mock_rescue.side_effect = exception.InstanceNotRescuable(
+            'fake message')
         body = dict(rescue=None)
 
-        def fake_rescue(*args, **kwargs):
-            raise exception.InstanceNotRescuable('fake message')
-
-        self.stubs.Set(compute.api.API, "rescue", fake_rescue)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._rescue,
                           self.fake_req, UUID, body=body)
+        self.assertTrue(mock_rescue.called)
 
     def test_rescue_with_bad_image_specified(self):
         body = {"rescue": {"adminPass": "ABC123",
