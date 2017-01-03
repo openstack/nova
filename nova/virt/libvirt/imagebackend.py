@@ -1050,7 +1050,7 @@ class Ploop(Image):
                 elif format == "raw":
                     self.pcs_format = "raw"
                 else:
-                    reason = _("PCS doesn't support images in %s format."
+                    reason = _("Virtuozzo doesn't support images in %s format."
                                 " You should either set force_raw_images=True"
                                 " in config or upload an image in ploop"
                                 " or raw format.") % format
