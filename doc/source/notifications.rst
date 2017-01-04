@@ -40,8 +40,8 @@ Notifier object to emit notifications. The configuration of the returned
 Notifier object depends on the parameters of the get_notifier call and the
 value of the oslo.messaging configuration options `driver` and `topics`.
 There are notification configuration options in Nova which are specific for
-certain notification types like `notify_on_state_change`,
-`notify_api_faults`, `default_notification_level`, etc.
+certain notification types like `notifications.notify_on_state_change`,
+`notifications.notify_on_api_faults`, `notifications.default_level`, etc.
 
 The structure of the payload of the unversioned notifications is defined in the
 code that emits the notification and no documentation or enforced backward
@@ -97,9 +97,10 @@ notification payload:
 * a major version bump indicates a backward incompatible change of the payload
   which can mean removed fields, type change, etc in the payload.
 
-There is a Nova configuration parameter `notification_format` that can be used
-to specify which notifications are emitted by Nova. The possible values are
-`unversioned`, `versioned`, `both` and the default value is `both`.
+There is a Nova configuration parameter `notifications.notification_format`
+that can be used to specify which notifications are emitted by Nova. The
+possible values are `unversioned`, `versioned`, `both` and the default value
+is `both`.
 
 How to add a new versioned notification
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

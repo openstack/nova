@@ -8744,7 +8744,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_instance_metadata(self):
         meta_changes = [None]
-        self.flags(notify_on_state_change='vm_state')
+        self.flags(notify_on_state_change='vm_state', group='notifications')
 
         def fake_change_instance_metadata(inst, ctxt, diff, instance=None,
                                           instance_uuid=None):

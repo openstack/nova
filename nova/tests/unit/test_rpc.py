@@ -273,7 +273,7 @@ class TestRPC(testtools.TestCase):
         conf = mock.Mock()
 
         conf.transport_url = None
-        conf.notification_format = notif_format
+        conf.notifications.notification_format = notif_format
         mock_exmods.return_value = ['foo']
         mock_noti_trans.return_value = notif_transport
         mock_ser.return_value = serializer

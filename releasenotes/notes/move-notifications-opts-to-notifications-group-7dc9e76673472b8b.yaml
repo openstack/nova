@@ -1,0 +1,11 @@
+---
+upgrade:
+  - |
+    Following Notifications related configuration options have been moved from
+    the ``DEFAULT`` group to the ``notifications`` group:
+
+    - ``notify_on_state_change``
+    - ``notify_on_api_faults`` (was ``notify_api_faults``)
+    - ``default_level`` (was ``default_notification_level``)
+    - ``default_publisher_id``
+    - ``notification_format``
