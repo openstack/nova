@@ -183,6 +183,7 @@ class FloatingIpTestV21(test.TestCase):
 
     def setUp(self):
         super(FloatingIpTestV21, self).setUp()
+        self.flags(use_neutron=False)
         self.stubs.Set(compute.api.API, "get",
                        compute_api_get)
         self.stubs.Set(network.api.API, "get_floating_ip",
@@ -884,13 +885,14 @@ class ExtendedFloatingIpTestV21(test.TestCase):
         def fake_associate_floating_ip(*args, **kwargs):
             self.assertEqual(fixed_address, kwargs['fixed_address'])
 
-        self.stubs.Set(network.api.API, "associate_floating_ip",
-                       fake_associate_floating_ip)
         body = dict(addFloatingIp=dict(address=self.floating_ip,
                                        fixed_address=fixed_address))
 
-        rsp = self.manager._add_floating_ip(self.fake_req, TEST_INST,
-                                            body=body)
+        with mock.patch.object(self.manager.network_api,
+                               'associate_floating_ip',
+                               fake_associate_floating_ip):
+            rsp = self.manager._add_floating_ip(self.fake_req, TEST_INST,
+                                                body=body)
         self.assertEqual(202, rsp.status_int)
 
     def test_extended_floating_ip_associate_fixed_not_allocated(self):

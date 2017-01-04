@@ -13,16 +13,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
 from nova.api.openstack.compute import floating_ip_pools \
         as fipp_v21
 from nova import context
 from nova import exception
-from nova import network
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 
 
-def fake_get_floating_ip_pools(self, context):
+def fake_get_floating_ip_pools(*args, **kwargs):
     return ['nova', 'other']
 
 
@@ -31,8 +32,6 @@ class FloatingIpPoolTestV21(test.NoDBTestCase):
 
     def setUp(self):
         super(FloatingIpPoolTestV21, self).setUp()
-        self.stubs.Set(network.api.API, "get_floating_ip_pools",
-                       fake_get_floating_ip_pools)
 
         self.context = context.RequestContext('fake', 'fake')
         self.controller = self.floating_ip_pools.FloatingIPPoolsController()
@@ -48,7 +47,10 @@ class FloatingIpPoolTestV21(test.NoDBTestCase):
                          pools[1])
 
     def test_floating_ips_pools_list(self):
-        res_dict = self.controller.index(self.req)
+        with mock.patch.object(self.controller.network_api,
+                               'get_floating_ip_pools',
+                               fake_get_floating_ip_pools):
+            res_dict = self.controller.index(self.req)
 
         pools = fake_get_floating_ip_pools(None, self.context)
         response = {'floating_ip_pools': [{'name': name} for name in pools]}

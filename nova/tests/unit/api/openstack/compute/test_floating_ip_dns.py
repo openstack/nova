@@ -117,6 +117,8 @@ class FloatingIpDNSTestV21(test.TestCase):
 
     def setUp(self):
         super(FloatingIpDNSTestV21, self).setUp()
+        # None of these APIs are implemented for Neutron.
+        self.flags(use_neutron=False)
         self.stubs.Set(network.api.API, "get_dns_domains",
                        network_get_dns_domains)
         self.stubs.Set(network.api.API, "get_dns_entries_by_address",
