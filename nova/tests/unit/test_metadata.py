@@ -949,6 +949,16 @@ class OpenStackMetadataTestCase(test.TestCase):
         self._test_vendordata2_response_inner_exceptional(
                 request_mock, log_mock, ks_exceptions.SSLError)
 
+    @mock.patch.object(vendordata_dynamic.LOG, 'warning')
+    @mock.patch.object(session.Session, 'request')
+    def test_vendor_data_response_vendordata2_ssl_error_fatal(self,
+                                                              request_mock,
+                                                              log_mock):
+        self.flags(vendordata_dynamic_failure_fatal=True, group='api')
+        self.assertRaises(ks_exceptions.SSLError,
+                          self._test_vendordata2_response_inner_exceptional,
+                          request_mock, log_mock, ks_exceptions.SSLError)
+
     def test_network_data_presence(self):
         inst = self.instance.obj_clone()
         mdinst = fake_InstanceMetadata(self, inst)

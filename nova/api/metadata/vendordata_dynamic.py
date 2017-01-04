@@ -16,6 +16,8 @@
 """Render vendordata as stored fetched from REST microservices."""
 
 import requests
+import six
+import sys
 
 from keystoneauth1 import exceptions as ks_exceptions
 from keystoneauth1 import loading as ks_loading
@@ -111,6 +113,9 @@ class DynamicVendorData(vendordata.VendorDataDriver):
                          'url': url,
                          'error': e},
                         instance=self.instance)
+            if CONF.api.vendordata_dynamic_failure_fatal:
+                six.reraise(type(e), e, sys.exc_info()[2])
+
             return {}
 
     def get(self):

@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    The vendordata metadata system now supports a hard failure mode. This can
+    be enabled using the ``api.vendordata_dynamic_failure_fatal`` configuration
+    option.  When enabled, an instance will fail to start if the instance
+    cannot fetch dynamic vendordata.

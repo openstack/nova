@@ -103,6 +103,7 @@ Related options:
 * vendordata_dynamic_ssl_certfile
 * vendordata_dynamic_connect_timeout
 * vendordata_dynamic_read_timeout
+* vendordata_dynamic_failure_fatal
 """),
     cfg.ListOpt('vendordata_dynamic_targets',
         default=[],
@@ -132,6 +133,7 @@ Related options:
 * vendordata_dynamic_targets
 * vendordata_dynamic_connect_timeout
 * vendordata_dynamic_read_timeout
+* vendordata_dynamic_failure_fatal
 """),
     cfg.IntOpt('vendordata_dynamic_connect_timeout',
         default=5,
@@ -152,6 +154,7 @@ Related options:
 * vendordata_dynamic_targets
 * vendordata_dynamic_ssl_certfile
 * vendordata_dynamic_read_timeout
+* vendordata_dynamic_failure_fatal
 """),
     cfg.IntOpt('vendordata_dynamic_read_timeout',
         default=5,
@@ -171,6 +174,20 @@ Related options:
 * vendordata_dynamic_targets
 * vendordata_dynamic_ssl_certfile
 * vendordata_dynamic_connect_timeout
+* vendordata_dynamic_failure_fatal
+"""),
+    cfg.BoolOpt('vendordata_dynamic_failure_fatal',
+        default=False,
+        help="""
+Should failures to fetch dynamic vendordata be fatal to instance boot?
+
+Related options:
+
+* vendordata_providers
+* vendordata_dynamic_targets
+* vendordata_dynamic_ssl_certfile
+* vendordata_dynamic_connect_timeout
+* vendordata_dynamic_read_timeout
 """),
     cfg.IntOpt("metadata_cache_expiration",
         default=15,
