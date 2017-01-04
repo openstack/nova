@@ -1190,7 +1190,6 @@ def numa_get_constraints(flavor, image_meta):
     :param flavor: a flavor object to read extra specs from
     :param image_meta: nova.objects.ImageMeta object instance
 
-    :returns: InstanceNUMATopology or None
     :raises: exception.InvalidNUMANodesNumber if the number of NUMA
              nodes is less than 1 or not an integer
     :raises: exception.ImageNUMATopologyForbidden if an attempt is made
@@ -1208,6 +1207,10 @@ def numa_get_constraints(flavor, image_meta):
              CPU given in a NUMA mapping is not valid
     :raises: exception.ImageNUMATopologyCPUDuplicates if an instance
              CPU is specified in CPU mappings for two NUMA nodes
+    :raises: exception.ImageNUMATopologyCPUsUnassigned if an instance
+             CPU given in a NUMA mapping is not assigned to any NUMA node
+    :raises: exception.ImageNUMATopologyMemoryOutOfRange if sum of memory from
+             each NUMA node is not equal with total requested memory
     :raises: exception.ImageCPUPinningForbidden if a CPU policy
              specified in a flavor conflicts with one defined in image
              metadata
