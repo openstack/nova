@@ -63,11 +63,16 @@ def fake_network_api_get_all(context):
 class TenantNetworksTestV21(test.NoDBTestCase):
     ctrlr = networks_v21.TenantNetworkController
     validation_error = exception.ValidationError
+    use_neutron = False
 
     def setUp(self):
         super(TenantNetworksTestV21, self).setUp()
+        # os-tenant-networks only supports Neutron when listing networks or
+        # showing details about a network, create and delete operations
+        # result in a 503 and 500 response, respectively.
+        self.flags(enable_network_quota=True,
+                   use_neutron=self.use_neutron)
         self.controller = self.ctrlr()
-        self.flags(enable_network_quota=True)
         self.req = fakes.HTTPRequest.blank('')
         self.original_value = CONF.api.use_neutron_default_nets
 
@@ -95,13 +100,16 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         if disassociate_ex:
             disassociate_mock.side_effect = disassociate_ex
 
+        if self.use_neutron:
+            expex = webob.exc.HTTPInternalServerError
         self.assertRaises(expex, self.controller.delete, self.req, 1)
 
-        disassociate_mock.assert_called_once_with(ctxt, 1)
-        if not disassociate_ex:
-            delete_mock.assert_called_once_with(ctxt, 1)
-        rollback_mock.assert_called_once_with(ctxt, 'rv')
-        reserve_mock.assert_called_once_with(ctxt, networks=-1)
+        if not self.use_neutron:
+            disassociate_mock.assert_called_once_with(ctxt, 1)
+            if not disassociate_ex:
+                delete_mock.assert_called_once_with(ctxt, 1)
+            rollback_mock.assert_called_once_with(ctxt, 'rv')
+            reserve_mock.assert_called_once_with(ctxt, networks=-1)
 
     def test_network_delete_exception_network_not_found(self):
         ex = exception.NetworkNotFound(network_id=1)
@@ -143,31 +151,31 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         commit_mock.assert_called_once_with(ctxt, 'rv')
         reserve_mock.assert_called_once_with(ctxt, networks=-1)
 
-    @mock.patch('nova.network.api.API.get')
-    def test_network_show(self, get_mock):
-        get_mock.return_value = NETWORKS[0]
-
-        res = self.controller.show(self.req, 1)
+    def test_network_show(self):
+        with mock.patch.object(self.controller.network_api, 'get',
+                               return_value=NETWORKS[0]):
+            res = self.controller.show(self.req, 1)
         self.assertEqual(NETWORKS[0], res['network'])
 
-    @mock.patch('nova.network.api.API.get')
-    def test_network_show_not_found(self, get_mock):
+    def test_network_show_not_found(self):
         ctxt = self.req.environ['nova.context']
-        get_mock.side_effect = exception.NetworkNotFound(network_id=1)
-        self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller.show, self.req, 1)
+        with mock.patch.object(self.controller.network_api, 'get',
+                               side_effect=exception.NetworkNotFound(
+                                   network_id=1)) as get_mock:
+            self.assertRaises(webob.exc.HTTPNotFound,
+                              self.controller.show, self.req, 1)
         get_mock.assert_called_once_with(ctxt, 1)
 
-    @mock.patch('nova.network.api.API.get_all')
-    def _test_network_index(self, get_all_mock, default_net=True):
+    def _test_network_index(self, default_net=True):
         CONF.set_override("use_neutron_default_nets", default_net, group='api')
-        get_all_mock.side_effect = fake_network_api_get_all
 
         expected = NETWORKS
         if default_net:
             expected = NETWORKS_WITH_DEFAULT_NET
 
-        res = self.controller.index(self.req)
+        with mock.patch.object(self.controller.network_api, 'get_all',
+                               side_effect=fake_network_api_get_all):
+            res = self.controller.index(self.req)
         self.assertEqual(expected, res['networks'])
 
     def test_network_index_with_default_net(self):
@@ -216,6 +224,8 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         create_mock.side_effect = ex
         body = {'network': {"cidr": "10.20.105.0/24",
                             "label": "new net 1"}}
+        if self.use_neutron:
+            expex = webob.exc.HTTPServiceUnavailable
         self.assertRaises(expex, self.controller.create, self.req, body=body)
         reserve_mock.assert_called_once_with(ctxt, networks=1)
 
@@ -258,6 +268,20 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         body = {'network': {"cidr": "10.20.105.0/24"}}
         self.assertRaises(self.validation_error,
                           self.controller.create, self.req, body=body)
+
+
+class TenantNeutronNetworksTestV21(TenantNetworksTestV21):
+    use_neutron = True
+
+    def test_network_create(self):
+        self.assertRaises(
+            webob.exc.HTTPServiceUnavailable,
+            super(TenantNeutronNetworksTestV21, self).test_network_create)
+
+    def test_network_delete(self):
+        self.assertRaises(
+            webob.exc.HTTPInternalServerError,
+            super(TenantNeutronNetworksTestV21, self).test_network_delete)
 
 
 class TenantNetworksEnforcementV21(test.NoDBTestCase):
