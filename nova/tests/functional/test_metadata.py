@@ -68,6 +68,9 @@ class MetadataTest(test.TestCase):
         # NOTE(mikal): We could create a network and a fixed IP here, but it
         # turns out to be heaps of fiddly boiler plate code, so let's just
         # fake it and hope mriedem doesn't notice.
+        # TODO(mriedem): Make this all work with the Neutron fixture.
+        self.flags(use_neutron=False)
+
         def fake_get_fixed_ip_by_address(self, ctxt, address):
             return {'instance_uuid': instance.uuid}
 

@@ -60,9 +60,9 @@ def fake_create_security_group(self, context, name, description):
 
 class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
     sample_dir = 'os-security-groups'
+    USE_NEUTRON = True
 
     def setUp(self):
-        self.flags(use_neutron=True)
         self.neutron = fixtures.NeutronFixture(self)
         self.useFixture(self.neutron)
         super(SecurityGroupsJsonTest, self).setUp()

@@ -63,11 +63,18 @@ def generate_new_element(items, prefix, numeric=False):
 class _IntegratedTestBase(test.TestCase):
     REQUIRES_LOCKING = True
     ADMIN_API = False
+    # Override this in subclasses which use the NeutronFixture. New tests
+    # should rely on Neutron since nova-network is deprecated. The default
+    # value of False here is only temporary while we update the existing
+    # functional tests to use Neutron.
+    USE_NEUTRON = False
 
     def setUp(self):
         super(_IntegratedTestBase, self).setUp()
 
         self.flags(verbose=True)
+        # TODO(mriedem): Fix the functional tests to work with Neutron.
+        self.flags(use_neutron=self.USE_NEUTRON)
 
         nova.tests.unit.image.fake.stub_out_image_service(self)
         self._setup_services()

@@ -486,7 +486,7 @@ with the name 'share_address'.
     # NOTE(stephenfin): This should move to True for a cycle before being
     # removed.
     cfg.BoolOpt('use_neutron',
-        default=False,
+        default=True,
         deprecated_for_removal=True,
         deprecated_since='15.0.0',
         deprecated_reason="""

@@ -16,7 +16,6 @@
 import time
 
 import mock
-from oslo_config import cfg
 
 from nova import context
 from nova import db
@@ -31,8 +30,6 @@ from nova.tests.unit import policy_fixture
 import nova.scheduler.utils
 import nova.servicegroup
 import nova.tests.unit.image.fake
-
-CONF = cfg.CONF
 
 # An alternate project id
 PROJECT_ID_ALT = "616c6c796f7572626173656172656f73"
@@ -70,6 +67,7 @@ class ServerGroupTestBase(test.TestCase,
         self.flags(report_interval=self._report_interval)
 
         self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.NeutronFixture(self))
 
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
@@ -111,7 +109,6 @@ class ServerGroupTestV21(ServerGroupTestBase):
     def setUp(self):
         super(ServerGroupTestV21, self).setUp()
 
-        self.start_service('network', manager=CONF.network_manager)
         self.compute = self.start_service('compute')
 
         # NOTE(gibi): start a second compute host to be able to test affinity

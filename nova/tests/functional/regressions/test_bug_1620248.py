@@ -10,15 +10,11 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from oslo_config import cfg
-
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import cast_as_call
 import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
-
-CONF = cfg.CONF
 
 
 class TestServerUpdate(test.TestCase):
@@ -27,6 +23,7 @@ class TestServerUpdate(test.TestCase):
     def setUp(self):
         super(TestServerUpdate, self).setUp()
         self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.NeutronFixture(self))
         # Simulate requests coming in before the instance is scheduled by
         # using a no-op for conductor build_instances
         self.useFixture(nova_fixtures.NoopConductorFixture())
