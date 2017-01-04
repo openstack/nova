@@ -192,7 +192,7 @@ def stub_out_nw_api(test, cls=None, private=None, publics=None):
         fake_network.stub_out_nw_api_get_instance_nw_info(test)
 
 
-def stub_out_secgroup_api(test):
+def stub_out_secgroup_api(test, security_groups=None):
 
     class FakeSecurityGroupAPI(security_group_base.SecurityGroupBase):
         """This handles both nova-network and neutron style security group APIs
@@ -208,6 +208,10 @@ def stub_out_secgroup_api(test):
                     server['id']: [] for server in servers
                 }
             return instances_security_group_bindings
+
+        def get_instance_security_groups(
+                self, context, instance, detailed=False):
+            return security_groups if security_groups is not None else []
 
     if CONF.use_neutron:
         test.stub_out(
