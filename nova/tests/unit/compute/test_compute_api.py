@@ -212,6 +212,9 @@ class _ComputeAPIUnitTestMixIn(object):
 
         mock_reserve.side_effect = quota_exception
 
+        # We don't care about network validation in this test.
+        self.compute_api.network_api.validate_networks = (
+            mock.Mock(return_value=40))
         with mock.patch.object(self.compute_api, '_get_image',
                                return_value=(image_id, {})) as mock_get_image:
             for min_count, message in [(20, '20-40'), (40, '40')]:
