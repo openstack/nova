@@ -63,11 +63,11 @@ Response
 
   - host: host_resource_array
   - resource: host_resource
-  - host.project: host_project
-  - host.cpu: host_cpu
-  - host.memory_mb: host_memory_mb
-  - host.disk_gb: host_disk_gb
-  - host.host: host_name_body
+  - resource.project: host_project
+  - resource.cpu: host_cpu
+  - resource.memory_mb: host_memory_mb
+  - resource.disk_gb: host_disk_gb
+  - resource.host: host_name_body
 
 **Example Show Host Details**
 

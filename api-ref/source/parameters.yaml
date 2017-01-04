@@ -116,23 +116,11 @@ floating_ip_id:
   in: path
   required: true
   type: string
-host_maintenance_mode_in:
-  description: |
-    Mode of maintenance state, either 'on_maintenance' or 'off_maintenance'
-  in: path
-  required: false
-  type: string
 host_name:
   description: |
     The name of the host.
   in: path
   required: true
-  type: string
-host_status_body_in:
-  description: |
-    The status of the current host, either 'enabled' or 'disabled'.
-  in: path
-  required: false
   type: string
 hypervisor_hostname_pattern:
   description: |
@@ -2393,16 +2381,16 @@ host:
   type: string
 host_cpu:
   description: |
-    The cpu info on the host.
+    The number of virtual CPUs on the host.
   in: body
   required: true
-  type: string
+  type: integer
 host_disk_gb:
   description: |
-    The disk info on the host (in GB).
+    The disk size on the host (in GB).
   in: body
   required: true
-  type: string
+  type: integer
 host_done_num:
   description: |
     The number of the hosts whose instance audit tasks have been done.
@@ -2417,16 +2405,23 @@ host_ip:
   type: string
 host_maintenance_mode:
   description: |
-    Mode of maintenance state, either 'on_maintenance' or 'off_maintenance'
+    Mode of maintenance state, either ``on_maintenance`` or
+    ``off_maintenance``.
   in: body
-  required: true
+  required: false
+  type: string
+host_maintenance_mode_in:
+  description: |
+    Mode of maintenance state, either ``enable`` or ``disable``.
+  in: body
+  required: false
   type: string
 host_memory_mb:
   description: |
-    The memory info on the host (in MB).
+    The memory size on the host (in MB).
   in: body
   required: true
-  type: string
+  type: integer
 host_migration:
   description: |
     The host to which to migrate the server. If this parameter is ``None``, the scheduler
@@ -2514,9 +2509,15 @@ host_status:
   min_version: 2.16
 host_status_body:
   description: |
-    The status of the current host, either 'enabled' or 'disabled'.
+    The status of the current host, either ``enabled`` or ``disabled``.
   in: body
-  required: true
+  required: false
+  type: string
+host_status_body_in:
+  description: |
+    The status of the host, either ``enable`` or ``disable``.
+  in: body
+  required: false
   type: string
 host_zone:
   description: |
