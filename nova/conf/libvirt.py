@@ -685,53 +685,92 @@ libvirt_vif_opts = [
 libvirt_volume_opts = [
     cfg.ListOpt('qemu_allowed_storage_drivers',
                 default=[],
-                help='Protocols listed here will be accessed directly '
-                     'from QEMU. Currently supported protocols: [gluster]'),
+                help="""
+Protocols listed here will be accessed directly from QEMU.
+
+If gluster is present in qemu_allowed_storage_drivers, glusterfs's backend will
+pass a disk configuration to QEMU. This allows QEMU to access the volume using
+libgfapi rather than mounting GlusterFS via fuse.
+
+Possible values:
+
+* [gluster]
+"""),
     cfg.BoolOpt('volume_use_multipath',
                 default=False,
                 deprecated_name='iscsi_use_multipath',
-                help='Use multipath connection of the iSCSI or FC volume')
+                help="""
+Use multipath connection of the iSCSI or FC volume
+
+Volumes can be connected in the LibVirt as multipath devices. This will
+provide high availability and fault tolerance.
+""")
 ]
 
 libvirt_volume_aoe_opts = [
     cfg.IntOpt('num_aoe_discover_tries',
                default=3,
-               help='Number of times to rediscover AoE target to find volume'),
+               help="""
+Number of times to rediscover AoE target to find volume.
+
+Nova provides support for block storage attaching to hosts via AOE (ATA over
+Ethernet). This option allows the user to specify the maximum number of retry
+attempts that can be made to discover the AoE device.
+""")
 ]
 
 libvirt_volume_glusterfs_opts = [
     cfg.StrOpt('glusterfs_mount_point_base',
                default=paths.state_path_def('mnt'),
-               help='Directory where the glusterfs volume is mounted on the '
-                    'compute node'),
+               help="""
+Absolute path to the directory where the glusterfs volume is mounted on the
+compute node.
+""")
 ]
 
+# TODO(sneti): This config option is also used for other protocols like
+# fibrechannel, scaleio, disco. So this should be renamed to
+# num_volume_scan_tries
 libvirt_volume_iscsi_opts = [
     cfg.IntOpt('num_iscsi_scan_tries',
                default=5,
-               help='Number of times to rescan iSCSI target to find volume'),
+               help="""
+Number of times to scan iSCSI target to find volume.
+"""),
     cfg.StrOpt('iscsi_iface',
                deprecated_name='iscsi_transport',
-               help='The iSCSI transport iface to use to connect to target in '
-                    'case offload support is desired. Default format is of '
-                    'the form <transport_name>.<hwaddress> where '
-                    '<transport_name> is one of (be2iscsi, bnx2i, cxgb3i, '
-                    'cxgb4i, qla4xxx, ocs) and <hwaddress> is the MAC address '
-                    'of the interface and can be generated via the '
-                    'iscsiadm -m iface command. Do not confuse the '
-                    'iscsi_iface parameter to be provided here with the '
-                    'actual transport name.'),
-    # iser is also supported, but use LibvirtISERVolumeDriver
-    # instead
+               help="""
+The iSCSI transport iface to use to connect to target in case offload support
+is desired.
+
+Default format is of the form <transport_name>.<hwaddress> where
+<transport_name> is one of (be2iscsi, bnx2i, cxgb3i, cxgb4i, qla4xxx, ocs) and
+<hwaddress> is the MAC address of the interface and can be generated via the
+iscsiadm -m iface command. Do not confuse the iscsi_iface parameter to be
+provided here with the actual transport name.
+""")
+# iser is also supported, but use LibvirtISERVolumeDriver
+# instead
 ]
 
 libvirt_volume_iser_opts = [
     cfg.IntOpt('num_iser_scan_tries',
                default=5,
-               help='Number of times to rescan iSER target to find volume'),
+               help="""
+Number of times to scan iSER target to find volume.
+
+iSER is a server network protocol that extends iSCSI protocol to use Remote
+Direct Memory Access (RDMA). This option allows the user to specify the maximum
+number of scan attempts that can be made to find iSER volume.
+"""),
     cfg.BoolOpt('iser_use_multipath',
                 default=False,
-                help='Use multipath connection of the iSER volume'),
+                help="""
+Use multipath connection of the iSER volume.
+
+iSER volumes can be connected as multipath devices. This will provide high
+availability and fault tolerance.
+""")
 ]
 
 libvirt_volume_net_opts = [
