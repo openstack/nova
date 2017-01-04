@@ -928,6 +928,23 @@ class TestAllocations(SchedulerReportClientTestCase):
         }
         self.assertEqual(expected, result)
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance')
+    def test_instance_to_allocations_dict_zero_disk(self, mock_vbi):
+        mock_vbi.return_value = True
+        inst = objects.Instance(
+            uuid=uuids.inst,
+            flavor=objects.Flavor(root_gb=10,
+                                  swap=0,
+                                  ephemeral_gb=0,
+                                  memory_mb=1024,
+                                  vcpus=2))
+        result = report._instance_to_allocations_dict(inst)
+        expected = {
+            'MEMORY_MB': 1024,
+            'VCPU': 2,
+        }
+        self.assertEqual(expected, result)
+
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'put')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'

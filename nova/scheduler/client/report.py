@@ -114,11 +114,13 @@ def _instance_to_allocations_dict(instance):
     disk = ((0 if is_bfv else instance.flavor.root_gb) +
             instance.flavor.swap +
             instance.flavor.ephemeral_gb)
-    return {
+    alloc_dict = {
         MEMORY_MB: instance.flavor.memory_mb,
         VCPU: instance.flavor.vcpus,
         DISK_GB: disk,
     }
+    # Remove any zero allocations.
+    return {key: val for key, val in alloc_dict.items() if val}
 
 
 def _extract_inventory_in_use(body):
