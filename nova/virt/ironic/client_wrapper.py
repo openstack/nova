@@ -15,7 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from keystoneauth1 import identity
 from keystoneauth1 import loading as ks_loading
 from oslo_log import log as logging
 from oslo_utils import importutils
@@ -23,7 +22,6 @@ from oslo_utils import importutils
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LW
 
 
 LOG = logging.getLogger(__name__)
@@ -68,24 +66,6 @@ class IronicClientWrapper(object):
         # group, register its options and load it.
         auth_plugin = ks_loading.load_auth_from_conf_options(CONF,
                                                              IRONIC_GROUP.name)
-
-        # If no plugin name is defined, load a v2Password plugin from the
-        # deprecated, legacy auth options in [ironic] group.
-        if auth_plugin is None:
-            LOG.warning(_LW("Couldn't find adequate authentication options "
-                            "under the [ironic] group of nova.conf. Falling "
-                            "to legacy auth options: admin_username, "
-                            "admin_password, admin_tenant_name and admin_url. "
-                            "Please note that these options are deprecated "
-                            "and won't be supported anymore in a future "
-                            "release."))
-            legacy_auth = {
-                'username': CONF.ironic.admin_username,
-                'password': CONF.ironic.admin_password,
-                'tenant_name': CONF.ironic.admin_tenant_name,
-                'auth_url': CONF.ironic.admin_url
-            }
-            auth_plugin = identity.V2Password(**legacy_auth)
 
         return auth_plugin
 

@@ -1,0 +1,11 @@
+---
+upgrade:
+  - |
+    Ironic configuration options that were used for a deprecated Identity v2
+    API have been removed from ``ironic`` group. Below is the detailed list of
+    removed options:
+
+    - admin_usernale
+    - admin_password
+    - admin_url
+    - admin_tenant_name
