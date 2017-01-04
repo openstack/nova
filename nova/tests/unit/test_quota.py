@@ -16,6 +16,7 @@
 
 import datetime
 
+import mock
 from oslo_db.sqlalchemy import enginefacade
 from oslo_utils import timeutils
 from six.moves import range
@@ -42,13 +43,7 @@ class QuotaIntegrationTestCase(test.TestCase):
     def setUp(self):
         super(QuotaIntegrationTestCase, self).setUp()
         self.flags(quota_instances=2,
-                   quota_cores=4,
-                   quota_floating_ips=1,
-                   network_manager='nova.network.manager.FlatDHCPManager')
-
-        # Apparently needed by the RPC tests...
-        self.network = self.start_service('network',
-                                          manager=CONF.network_manager)
+                   quota_cores=4)
 
         self.user_id = 'admin'
         self.project_id = 'admin'
@@ -59,6 +54,14 @@ class QuotaIntegrationTestCase(test.TestCase):
         nova.tests.unit.image.fake.stub_out_image_service(self)
 
         self.compute_api = compute.API()
+
+        def fake_validate_networks(context, requested_networks, num_instances):
+            return num_instances
+
+        # we aren't testing network quota in these tests when creating a server
+        # so just mock that out and assume network (port) quota is OK
+        self.compute_api.network_api.validate_networks = (
+            mock.Mock(side_effect=fake_validate_networks))
 
     def tearDown(self):
         super(QuotaIntegrationTestCase, self).tearDown()
@@ -124,6 +127,13 @@ class QuotaIntegrationTestCase(test.TestCase):
         db.instance_destroy(self.context, instance['uuid'])
 
     def test_too_many_addresses(self):
+        # This test is specifically relying on nova-network.
+        self.flags(use_neutron=False,
+                   quota_floating_ips=1,
+                   network_manager='nova.network.manager.FlatDHCPManager')
+        # Apparently needed by the RPC tests...
+        self.network = self.start_service('network',
+                                          manager=CONF.network_manager)
         address = '192.168.0.100'
         db.floating_ip_create(context.get_admin_context(),
                               {'address': address,
@@ -136,6 +146,13 @@ class QuotaIntegrationTestCase(test.TestCase):
         db.floating_ip_destroy(context.get_admin_context(), address)
 
     def test_auto_assigned(self):
+        # This test is specifically relying on nova-network.
+        self.flags(use_neutron=False,
+                   quota_floating_ips=1,
+                   network_manager='nova.network.manager.FlatDHCPManager')
+        # Apparently needed by the RPC tests...
+        self.network = self.start_service('network',
+                                          manager=CONF.network_manager)
         address = '192.168.0.100'
         db.floating_ip_create(context.get_admin_context(),
                               {'address': address,
