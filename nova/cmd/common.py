@@ -97,7 +97,8 @@ def add_command_parsers(subparsers, categories):
         category_subparsers = parser.add_subparsers(dest='action')
 
         for (action, action_fn) in methods_of(command_object):
-            parser = category_subparsers.add_parser(action, description=desc)
+            parser = category_subparsers.add_parser(
+                action, description=getattr(action_fn, 'description', desc))
 
             action_kwargs = []
             for args, kwargs in getattr(action_fn, 'args', []):
@@ -159,3 +160,18 @@ def get_action_fn():
             _("Missing arguments: %s") % ", ".join(missing))
 
     return fn, fn_args, fn_kwargs
+
+
+def action_description(text):
+    """Decorator for adding a description to command action.
+
+    To display help text on action call instead of common category help text
+    action function can be decorated.
+
+    command <category> <action> -h will show description and arguments.
+
+    """
+    def _decorator(func):
+        func.description = text
+        return func
+    return _decorator
