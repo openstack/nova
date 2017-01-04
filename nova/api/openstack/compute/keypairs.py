@@ -150,18 +150,21 @@ class KeypairController(wsgi.Controller):
             raise webob.exc.HTTPConflict(explanation=exc.format_message())
 
     @wsgi.Controller.api_version("2.1", "2.1")
+    @validation.query_schema(keypairs.delete_query_schema_v20)
     @wsgi.response(202)
     @extensions.expected_errors(404)
     def delete(self, req, id):
         self._delete(req, id)
 
     @wsgi.Controller.api_version("2.2", "2.9")    # noqa
+    @validation.query_schema(keypairs.delete_query_schema_v20)
     @wsgi.response(204)
     @extensions.expected_errors(404)
     def delete(self, req, id):
         self._delete(req, id)
 
     @wsgi.Controller.api_version("2.10")    # noqa
+    @validation.query_schema(keypairs.delete_query_schema_v210)
     @wsgi.response(204)
     @extensions.expected_errors(404)
     def delete(self, req, id):
@@ -188,6 +191,7 @@ class KeypairController(wsgi.Controller):
             return user_id
 
     @wsgi.Controller.api_version("2.10")
+    @validation.query_schema(keypairs.show_query_schema_v210)
     @extensions.expected_errors(404)
     def show(self, req, id):
         # handle optional user-id for admin only
@@ -195,11 +199,13 @@ class KeypairController(wsgi.Controller):
         return self._show(req, id, type=True, user_id=user_id)
 
     @wsgi.Controller.api_version("2.2", "2.9")  # noqa
+    @validation.query_schema(keypairs.show_query_schema_v20)
     @extensions.expected_errors(404)
     def show(self, req, id):
         return self._show(req, id, type=True)
 
     @wsgi.Controller.api_version("2.1", "2.1")  # noqa
+    @validation.query_schema(keypairs.show_query_schema_v20)
     @extensions.expected_errors(404)
     def show(self, req, id):
         return self._show(req, id)
@@ -228,12 +234,14 @@ class KeypairController(wsgi.Controller):
         return {'keypair': keypair}
 
     @wsgi.Controller.api_version("2.35")
+    @validation.query_schema(keypairs.index_query_schema_v235)
     @extensions.expected_errors(400)
     def index(self, req):
         user_id = self._get_user_id(req)
         return self._index(req, links=True, type=True, user_id=user_id)
 
     @wsgi.Controller.api_version("2.10", "2.34")  # noqa
+    @validation.query_schema(keypairs.index_query_schema_v210)
     @extensions.expected_errors(())
     def index(self, req):
         # handle optional user-id for admin only
@@ -241,11 +249,13 @@ class KeypairController(wsgi.Controller):
         return self._index(req, type=True, user_id=user_id)
 
     @wsgi.Controller.api_version("2.2", "2.9")  # noqa
+    @validation.query_schema(keypairs.index_query_schema_v20)
     @extensions.expected_errors(())
     def index(self, req):
         return self._index(req, type=True)
 
     @wsgi.Controller.api_version("2.1", "2.1")  # noqa
+    @validation.query_schema(keypairs.index_query_schema_v20)
     @extensions.expected_errors(())
     def index(self, req):
         return self._index(req)

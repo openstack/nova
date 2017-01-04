@@ -418,3 +418,8 @@ tag = {
     "minLength": 1, "maxLength": tag.MAX_TAG_LENGTH,
     "pattern": "^[^,/]*$"
 }
+
+pagination_parameters = {
+    'limit': multi_params(non_negative_integer),
+    'marker': multi_params({'type': 'string'})
+}

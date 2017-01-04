@@ -90,3 +90,26 @@ server_create = {
 server_create_v20 = {
     'key_name': parameter_types.name_with_leading_trailing_spaces,
 }
+
+index_query_schema_v20 = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True
+}
+
+index_query_schema_v210 = {
+    'type': 'object',
+    'properties': {
+        'user_id': parameter_types.multi_params({'type': 'string'})
+    },
+    'additionalProperties': True
+}
+
+index_query_schema_v235 = copy.deepcopy(index_query_schema_v210)
+index_query_schema_v235['properties'].update(
+    parameter_types.pagination_parameters)
+
+show_query_schema_v20 = index_query_schema_v20
+show_query_schema_v210 = index_query_schema_v210
+delete_query_schema_v20 = index_query_schema_v20
+delete_query_schema_v210 = index_query_schema_v210
