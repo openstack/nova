@@ -51,6 +51,9 @@ class MultiCreateExtensionTestV21(test.TestCase):
         self.instance_cache_by_id = {}
         self.instance_cache_by_uuid = {}
 
+        # Network API needs to be stubbed out before creating the controllers.
+        fakes.stub_out_nw_api(self)
+
         ext_info = extension_info.LoadedExtensionInfo()
         self.controller = servers_v21.ServersController(
             extension_info=ext_info)
@@ -113,7 +116,6 @@ class MultiCreateExtensionTestV21(test.TestCase):
 
         fakes.stub_out_key_pair_funcs(self)
         fake.stub_out_image_service(self)
-        fakes.stub_out_nw_api(self)
         self.stub_out('nova.db.instance_add_security_group',
                       return_security_group)
         self.stub_out('nova.db.project_get_networks', project_get_networks)

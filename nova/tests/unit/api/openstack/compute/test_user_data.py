@@ -59,6 +59,9 @@ class ServersControllerCreateTest(test.TestCase):
         self.instance_cache_by_id = {}
         self.instance_cache_by_uuid = {}
 
+        # Network API needs to be stubbed out before creating the controllers.
+        fakes.stub_out_nw_api(self)
+
         ext_info = extension_info.LoadedExtensionInfo()
         self.controller = servers.ServersController(extension_info=ext_info)
         CONF.set_override('extensions_blacklist', 'os-user-data',
@@ -120,7 +123,7 @@ class ServersControllerCreateTest(test.TestCase):
 
         fakes.stub_out_key_pair_funcs(self)
         fake.stub_out_image_service(self)
-        fakes.stub_out_nw_api(self)
+
         self.stubs.Set(uuid, 'uuid4', fake_gen_uuid)
         self.stub_out('nova.db.instance_add_security_group',
                       return_security_group)
