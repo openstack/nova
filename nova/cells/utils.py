@@ -123,7 +123,7 @@ class ServiceProxy(_CellProxy):
             # ComputeNode object that consumers of this Proxy don't use, we can
             # safely remove it from what's returned
             raise AttributeError
-        # NOTE(claudiub): needed for py34 compatiblity.
+        # NOTE(claudiub): needed for py34 compatibility.
         # get self._obj first, without ending into an infinite recursion.
         return getattr(self.__getattribute__("_obj"), key)
 

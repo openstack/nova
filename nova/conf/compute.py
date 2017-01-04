@@ -289,7 +289,7 @@ notifications are consumed by OpenStack Telemetry service.
         min=0,
         help="""
 Maximum number of 1 second retries in live_migration. It specifies number
-of retries to iptables when it complains. It happens when an user continously
+of retries to iptables when it complains. It happens when an user continuously
 sends live-migration request to same host leading to concurrent request
 to iptables.
 

@@ -257,7 +257,7 @@ xenapi_vm_utils_opts = [
         help="""
 Cache glance images locally.
 
-The value for this option must be choosen from the choices listed
+The value for this option must be chosen from the choices listed
 here. Configuring a value other than these will default to 'all'.
 
 Note: There is nothing that deletes these images.
@@ -336,7 +336,7 @@ If set to 0, should try once, no retries.
         help="""
 Whether or not to download images via Bit Torrent.
 
-The value for this option must be choosen from the choices listed
+The value for this option must be chosen from the choices listed
 here. Configuring a value other than these will default to 'none'.
 
 Possible values:
