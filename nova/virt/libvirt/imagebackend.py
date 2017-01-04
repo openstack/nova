@@ -685,7 +685,7 @@ class Lvm(Image):
         def create_lvm_image(base, size):
             base_size = disk.get_disk_size(base)
             self.verify_base_size(base, size, base_size=base_size)
-            resize = size > base_size
+            resize = size > base_size if size else False
             size = size if resize else base_size
             lvm.create_volume(self.vg, self.lv,
                                          size, sparse=self.sparse)

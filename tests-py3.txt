@@ -1,10 +1,6 @@
 nova.tests.unit.api.openstack.compute.test_user_data.ServersControllerCreateTest
 nova.tests.unit.test_wsgi.TestWSGIServerWithSSL
 nova.tests.unit.virt.libvirt.test_firewall.IptablesFirewallTestCase
-nova.tests.unit.virt.libvirt.test_imagebackend.EncryptedLvmTestCase
-nova.tests.unit.virt.libvirt.test_imagebackend.LvmTestCase
-nova.tests.unit.virt.libvirt.test_imagebackend.FlatTestCase
-nova.tests.unit.virt.libvirt.test_imagebackend.RbdTestCase
 nova.tests.unit.virt.libvirt.test_vif.LibvirtVifTestCase
 nova.tests.unit.virt.xenapi.test_vm_utils.ResizeFunctionTestCase
 nova.tests.unit.virt.xenapi.test_vm_utils.ScanSrTestCase
