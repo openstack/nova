@@ -10847,7 +10847,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                           self.api.update_aggregate_metadata, self.context,
                           aggr4.id, metadata)
 
-    def test_delete_aggregate(self):
+    @mock.patch('nova.compute.utils.notify_about_aggregate_action')
+    def test_delete_aggregate(self, mock_notify):
         # Ensure we can delete an aggregate.
         fake_notifier.NOTIFICATIONS = []
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
@@ -10859,6 +10860,13 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         msg = fake_notifier.NOTIFICATIONS[1]
         self.assertEqual(msg.event_type,
                          'aggregate.create.end')
+        mock_notify.assert_has_calls([
+            mock.call(context=self.context, aggregate=aggr,
+                      action='create', phase='start'),
+            mock.call(context=self.context, aggregate=aggr,
+                      action='create', phase='end')])
+
+        mock_notify.reset_mock()
         fake_notifier.NOTIFICATIONS = []
         self.api.delete_aggregate(self.context, aggr.id)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
@@ -10870,6 +10878,21 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                          'aggregate.delete.end')
         self.assertRaises(exception.AggregateNotFound,
                           self.api.delete_aggregate, self.context, aggr.id)
+
+        class AggregateIdMatcher(object):
+            def __init__(self, aggr):
+                self.aggr = aggr
+
+            def __eq__(self, other_aggr):
+                if type(self.aggr) != type(other_aggr):
+                    return False
+                return self.aggr.id == other_aggr.id
+
+        mock_notify.assert_has_calls([
+            mock.call(context=self.context, aggregate=AggregateIdMatcher(aggr),
+                      action='delete', phase='start'),
+            mock.call(context=self.context, aggregate=AggregateIdMatcher(aggr),
+                      action='delete', phase='end')])
 
     def test_delete_non_empty_aggregate(self):
         # Ensure InvalidAggregateAction is raised when non empty aggregate.
