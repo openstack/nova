@@ -6,3 +6,6 @@ features:
     *nova-novncproxy* server and the compute node VNC server.
 
     - ``auth_schemes``
+    - ``vencrypt_client_key``
+    - ``vencrypt_client_cert``
+    - ``vencrypt_ca_certs``

@@ -217,7 +217,7 @@ Related options:
     cfg.ListOpt(
         'auth_schemes',
         item_type=types.String(
-            choices=['none']
+            choices=['none', 'vencrypt']
         ),
         default=['none'],
         help="""
@@ -231,6 +231,41 @@ first.
 Possible values:
 
 * "none": allow connection without authentication
+"""),
+    cfg.StrOpt(
+        'vencrypt_client_key',
+        help="""The path to the client certificate PEM file (for x509)
+
+The fully qualified path to a PEM file containing the private key which the VNC
+proxy server presents to the compute node during VNC authentication.
+
+Related options:
+
+* ``vnc.auth_schemes``: must include "vencrypt"
+* ``vnc.vencrypt_client_cert```: must also be set
+"""),
+    cfg.StrOpt(
+        'vencrypt_client_cert',
+        help="""The path to the client key file (for x509)
+
+The fully qualified path to a PEM file containing the x509 certificate which
+the VNC proxy server presents to the compute node during VNC authentication.
+
+Realted options:
+
+* ``vnc.auth_schemes``: must include "vencrypt"
+* ``vnc.vencrypt_client_key```: must also be set
+"""),
+    cfg.StrOpt(
+        'vencrypt_ca_certs',
+        help="""The path to the CA certificate PEM file
+
+The fully qualified path to a PEM file containing one or more x509 certificates
+for the certificate authorities used by the compute node VNC server.
+
+Related options:
+
+* ``vnc.auth_schemes``: must include "vencrypt"
 """),
 ]
 
