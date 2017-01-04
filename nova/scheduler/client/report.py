@@ -14,6 +14,7 @@
 #    under the License.
 
 import functools
+import re
 import time
 
 from keystoneauth1 import exceptions as ks_exc
@@ -32,6 +33,8 @@ LOG = logging.getLogger(__name__)
 VCPU = fields.ResourceClass.VCPU
 MEMORY_MB = fields.ResourceClass.MEMORY_MB
 DISK_GB = fields.ResourceClass.DISK_GB
+_RE_INV_IN_USE = re.compile("Inventory for (.+) on resource provider "
+                            "(.+) in use")
 
 
 def safe_connect(f):
@@ -65,32 +68,38 @@ def _compute_node_to_inventory_dict(compute_node):
 
     :param compute_node: `objects.ComputeNode` object to translate
     """
-    return {
-        VCPU: {
+    result = {}
+
+    # NOTE(jaypipes): Ironic virt driver will return 0 values for vcpus,
+    # memory_mb and disk_gb if the Ironic node is not available/operable
+    if compute_node.vcpus > 0:
+        result[VCPU] = {
             'total': compute_node.vcpus,
             'reserved': 0,
             'min_unit': 1,
             'max_unit': compute_node.vcpus,
             'step_size': 1,
             'allocation_ratio': compute_node.cpu_allocation_ratio,
-        },
-        MEMORY_MB: {
+        }
+    if compute_node.memory_mb > 0:
+        result[MEMORY_MB] = {
             'total': compute_node.memory_mb,
             'reserved': CONF.reserved_host_memory_mb,
             'min_unit': 1,
             'max_unit': compute_node.memory_mb,
             'step_size': 1,
             'allocation_ratio': compute_node.ram_allocation_ratio,
-        },
-        DISK_GB: {
+        }
+    if compute_node.local_gb > 0:
+        result[DISK_GB] = {
             'total': compute_node.local_gb,
             'reserved': CONF.reserved_host_disk_mb * 1024,
             'min_unit': 1,
             'max_unit': compute_node.local_gb,
             'step_size': 1,
             'allocation_ratio': compute_node.disk_allocation_ratio,
-        },
-    }
+        }
+    return result
 
 
 def _instance_to_allocations_dict(instance):
@@ -110,6 +119,19 @@ def _instance_to_allocations_dict(instance):
         VCPU: instance.flavor.vcpus,
         DISK_GB: disk,
     }
+
+
+def _extract_inventory_in_use(body):
+    """Given an HTTP response body, extract the resource classes that were
+    still in use when we tried to delete inventory.
+
+    :returns: String of resource classes or None if there was no InventoryInUse
+              error in the response body.
+    """
+    match = _RE_INV_IN_USE.search(body)
+    if match:
+        return match.group(1)
+    return None
 
 
 class SchedulerReportClient(object):
@@ -271,13 +293,11 @@ class SchedulerReportClient(object):
             return {'inventories': {}}
         return result.json()
 
-    def _update_inventory_attempt(self, rp_uuid, inv_data):
-        """Update the inventory for this resource provider if needed.
-
-        :param rp_uuid: The resource provider UUID for the operation
-        :param inv_data: The new inventory for the resource provider
-        :returns: True if the inventory was updated (or did not need to be),
-                  False otherwise.
+    def _get_inventory_and_update_provider_generation(self, rp_uuid):
+        """Helper method that retrieves the current inventory for the supplied
+        resource provider according to the placement API. If the cached
+        generation of the resource provider is not the same as the generation
+        returned from the placement API, we update the cached generation.
         """
         curr = self._get_inventory(rp_uuid)
 
@@ -293,6 +313,17 @@ class SchedulerReportClient(object):
                           {'old': my_rp.generation,
                            'new': server_gen})
             my_rp.generation = server_gen
+        return curr
+
+    def _update_inventory_attempt(self, rp_uuid, inv_data):
+        """Update the inventory for this resource provider if needed.
+
+        :param rp_uuid: The resource provider UUID for the operation
+        :param inv_data: The new inventory for the resource provider
+        :returns: True if the inventory was updated (or did not need to be),
+                  False otherwise.
+        """
+        curr = self._get_inventory_and_update_provider_generation(rp_uuid)
 
         # Check to see if we need to update placement's view
         if inv_data == curr.get('inventories', {}):
@@ -359,6 +390,66 @@ class SchedulerReportClient(object):
             time.sleep(1)
         return False
 
+    @safe_connect
+    def _delete_inventory(self, rp_uuid):
+        """Deletes all inventory records for a resource provider with the
+        supplied UUID.
+        """
+        curr = self._get_inventory_and_update_provider_generation(rp_uuid)
+
+        # Check to see if we need to update placement's view
+        if not curr.get('inventories', {}):
+            msg = "No inventory to delete from resource provider %s."
+            LOG.debug(msg, rp_uuid)
+            return
+
+        msg = _LI("Compute node %s reported no inventory but previous "
+                  "inventory was detected. Deleting existing inventory "
+                  "records.")
+        LOG.info(msg, rp_uuid)
+
+        url = '/resource_providers/%s/inventories' % rp_uuid
+        cur_rp_gen = self._resource_providers[rp_uuid].generation
+        payload = {
+            'resource_provider_generation': cur_rp_gen,
+            'inventories': {},
+        }
+        r = self.put(url, payload)
+        if r.status_code == 200:
+            # Update our view of the generation for next time
+            updated_inv = r.json()
+            new_gen = updated_inv['resource_provider_generation']
+
+            self._resource_providers[rp_uuid].generation = new_gen
+            msg_args = {
+                'rp_uuid': rp_uuid,
+                'generation': new_gen,
+            }
+            LOG.info(_LI('Deleted all inventory for resource provider '
+                         '%(rp_uuid)s at generation %(generation)i'),
+                     msg_args)
+            return
+        elif r.status_code == 409:
+            rc_str = _extract_inventory_in_use(r.text)
+            if rc_str is not None:
+                msg = _LW("We cannot delete inventory %(rc_str)s for resource "
+                          "provider %(rp_uuid)s because the inventory is "
+                          "in use.")
+                msg_args = {
+                    'rp_uuid': rp_uuid,
+                    'rc_str': rc_str,
+                }
+                LOG.warning(msg, msg_args)
+                return
+
+        msg = _LE("Failed to delete inventory for resource provider "
+                  "%(rp_uuid)s. Got error response: %(err)s")
+        msg_args = {
+            'rp_uuid': rp_uuid,
+            'err': r.text,
+        }
+        LOG.error(msg, msg_args)
+
     def update_resource_stats(self, compute_node):
         """Creates or updates stats for the supplied compute node.
 
@@ -368,7 +459,10 @@ class SchedulerReportClient(object):
         self._ensure_resource_provider(compute_node.uuid,
                                        compute_node.hypervisor_hostname)
         inv_data = _compute_node_to_inventory_dict(compute_node)
-        self._update_inventory(compute_node.uuid, inv_data)
+        if inv_data:
+            self._update_inventory(compute_node.uuid, inv_data)
+        else:
+            self._delete_inventory(compute_node.uuid)
 
     def _get_allocations_for_instance(self, rp_uuid, instance):
         url = '/allocations/%s' % instance.uuid

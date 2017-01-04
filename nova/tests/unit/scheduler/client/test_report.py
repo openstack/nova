@@ -12,9 +12,11 @@
 
 from keystoneauth1 import exceptions as ks_exc
 import mock
+import six
 
 import nova.conf
 from nova import context
+from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
 from nova.scheduler.client import report
@@ -410,19 +412,221 @@ class TestComputeNodeToInventoryDict(test.NoDBTestCase):
         }
         self.assertEqual(expected, result)
 
+    def test_compute_node_inventory_empty(self):
+        uuid = uuids.compute_node
+        name = 'computehost'
+        compute_node = objects.ComputeNode(uuid=uuid,
+                                           hypervisor_hostname=name,
+                                           vcpus=0,
+                                           cpu_allocation_ratio=16.0,
+                                           memory_mb=0,
+                                           ram_allocation_ratio=1.5,
+                                           local_gb=0,
+                                           disk_allocation_ratio=1.0)
+        result = report._compute_node_to_inventory_dict(compute_node)
+        self.assertEqual({}, result)
+
 
 class TestInventory(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_update_inventory_attempt')
+                '_delete_inventory')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_update_inventory')
     @mock.patch('nova.objects.ComputeNode.save')
-    def test_update_resource_stats(self, mock_save, mock_ui, mock_erp):
+    def test_update_resource_stats(self, mock_save, mock_ui, mock_delete,
+            mock_erp):
         cn = self.compute_node
         self.client.update_resource_stats(cn)
         mock_save.assert_called_once_with()
         mock_erp.assert_called_once_with(cn.uuid, cn.hypervisor_hostname)
+        expected_inv_data = {
+            'VCPU': {
+                'total': 8,
+                'reserved': 0,
+                'min_unit': 1,
+                'max_unit': 8,
+                'step_size': 1,
+                'allocation_ratio': 16.0,
+            },
+            'MEMORY_MB': {
+                'total': 1024,
+                'reserved': 512,
+                'min_unit': 1,
+                'max_unit': 1024,
+                'step_size': 1,
+                'allocation_ratio': 1.5,
+            },
+            'DISK_GB': {
+                'total': 10,
+                'reserved': 0,
+                'min_unit': 1,
+                'max_unit': 10,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+        }
+        mock_ui.assert_called_once_with(
+            cn.uuid,
+            expected_inv_data,
+        )
+        self.assertFalse(mock_delete.called)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_ensure_resource_provider')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_delete_inventory')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_update_inventory')
+    @mock.patch('nova.objects.ComputeNode.save')
+    def test_update_resource_stats_no_inv(self, mock_save, mock_ui,
+            mock_delete, mock_erp):
+        """Ensure that if there are no inventory records, that we call
+        _delete_inventory() instead of _update_inventory().
+        """
+        cn = self.compute_node
+        cn.vcpus = 0
+        cn.memory_mb = 0
+        cn.local_gb = 0
+        self.client.update_resource_stats(cn)
+        mock_save.assert_called_once_with()
+        mock_erp.assert_called_once_with(cn.uuid, cn.hypervisor_hostname)
+        mock_delete.assert_called_once_with(cn.uuid)
         self.assertFalse(mock_ui.called)
+
+    @mock.patch('nova.scheduler.client.report._extract_inventory_in_use')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'put')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get')
+    def test_delete_inventory_already_no_inventory(self, mock_get, mock_put,
+            mock_extract):
+        cn = self.compute_node
+        rp = objects.ResourceProvider(uuid=cn.uuid, generation=42)
+        # Make sure the ResourceProvider exists for preventing to call the API
+        self.client._resource_providers[cn.uuid] = rp
+
+        mock_get.return_value.json.return_value = {
+            'resource_provider_generation': 1,
+            'inventories': {
+            }
+        }
+        result = self.client._delete_inventory(cn.uuid)
+        self.assertIsNone(result)
+        self.assertFalse(mock_put.called)
+        self.assertFalse(mock_extract.called)
+        new_gen = self.client._resource_providers[cn.uuid].generation
+        self.assertEqual(1, new_gen)
+
+    @mock.patch('nova.scheduler.client.report._extract_inventory_in_use')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'put')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get')
+    def test_delete_inventory(self, mock_get, mock_put, mock_extract):
+        cn = self.compute_node
+        rp = objects.ResourceProvider(uuid=cn.uuid, generation=42)
+        # Make sure the ResourceProvider exists for preventing to call the API
+        self.client._resource_providers[cn.uuid] = rp
+
+        mock_get.return_value.json.return_value = {
+            'resource_provider_generation': 1,
+            'inventories': {
+                'VCPU': {'total': 16},
+                'MEMORY_MB': {'total': 1024},
+                'DISK_GB': {'total': 10},
+            }
+        }
+        mock_put.return_value.status_code = 200
+        mock_put.return_value.json.return_value = {
+            'resource_provider_generation': 44,
+            'inventories': {
+            }
+        }
+        result = self.client._delete_inventory(cn.uuid)
+        self.assertIsNone(result)
+        self.assertFalse(mock_extract.called)
+        new_gen = self.client._resource_providers[cn.uuid].generation
+        self.assertEqual(44, new_gen)
+
+    @mock.patch.object(report.LOG, 'warning')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'put')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get')
+    def test_delete_inventory_inventory_in_use(self, mock_get, mock_put,
+            mock_warn):
+        cn = self.compute_node
+        rp = objects.ResourceProvider(uuid=cn.uuid, generation=42)
+        # Make sure the ResourceProvider exists for preventing to call the API
+        self.client._resource_providers[cn.uuid] = rp
+
+        mock_get.return_value.json.return_value = {
+            'resource_provider_generation': 1,
+            'inventories': {
+                'VCPU': {'total': 16},
+                'MEMORY_MB': {'total': 1024},
+                'DISK_GB': {'total': 10},
+            }
+        }
+        mock_put.return_value.status_code = 409
+        rc_str = "VCPU, MEMORY_MB"
+        in_use_exc = exception.InventoryInUse(
+            resource_classes=rc_str,
+            resource_provider=cn.uuid,
+        )
+        fault_text = """
+409 Conflict
+
+There was a conflict when trying to complete your request.
+
+ update conflict: %s
+ """ % six.text_type(in_use_exc)
+        mock_put.return_value.text = fault_text
+        mock_put.return_value.json.return_value = {
+            'resource_provider_generation': 44,
+            'inventories': {
+            }
+        }
+        result = self.client._delete_inventory(cn.uuid)
+        self.assertIsNone(result)
+        self.assertTrue(mock_warn.called)
+
+    @mock.patch.object(report.LOG, 'error')
+    @mock.patch.object(report.LOG, 'warning')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'put')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get')
+    def test_delete_inventory_inventory_error(self, mock_get, mock_put,
+            mock_warn, mock_error):
+        cn = self.compute_node
+        rp = objects.ResourceProvider(uuid=cn.uuid, generation=42)
+        # Make sure the ResourceProvider exists for preventing to call the API
+        self.client._resource_providers[cn.uuid] = rp
+
+        mock_get.return_value.json.return_value = {
+            'resource_provider_generation': 1,
+            'inventories': {
+                'VCPU': {'total': 16},
+                'MEMORY_MB': {'total': 1024},
+                'DISK_GB': {'total': 10},
+            }
+        }
+        mock_put.return_value.status_code = 409
+        mock_put.return_value.text = (
+            'There was a failure'
+        )
+        mock_put.return_value.json.return_value = {
+            'resource_provider_generation': 44,
+            'inventories': {
+            }
+        }
+        result = self.client._delete_inventory(cn.uuid)
+        self.assertIsNone(result)
+        self.assertFalse(mock_warn.called)
+        self.assertTrue(mock_error.called)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get')
