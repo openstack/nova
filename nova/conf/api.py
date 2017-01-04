@@ -25,7 +25,7 @@ auth_opts = [
     cfg.StrOpt("auth_strategy",
         default="keystone",
         choices=("keystone", "noauth2"),
-        deprecated_group="default",
+        deprecated_group="DEFAULT",
         help="""
 This determines the strategy to use for authentication: keystone or noauth2.
 'noauth2' is designed for testing only, as it does no actual credential
@@ -34,7 +34,7 @@ specified as the username.
 """),
     cfg.BoolOpt("use_forwarded_for",
         default=False,
-        deprecated_group="default",
+        deprecated_group="DEFAULT",
         help="""
 When True, the 'X-Forwarded-For' header is treated as the canonical remote
 address. When False (the default), the 'remote_address' header is used.
@@ -47,7 +47,7 @@ metadata_opts = [
     cfg.StrOpt("config_drive_skip_versions",
         default=("1.0 2007-01-19 2007-03-01 2007-08-29 2007-10-10 "
                  "2007-12-15 2008-02-01 2008-09-01"),
-        deprecated_group="default",
+        deprecated_group="DEFAULT",
         help="""
 When gathering the existing metadata for a config drive, the EC2-style
 metadata is returned for all versions that don't appear in this option.
@@ -72,7 +72,7 @@ Possible values:
 """),
     cfg.ListOpt('vendordata_providers',
         default=[],
-        deprecated_group="default",
+        deprecated_group="DEFAULT",
         help="""
 A list of vendordata providers.
 
@@ -106,7 +106,7 @@ Related options:
 """),
     cfg.ListOpt('vendordata_dynamic_targets',
         default=[],
-        deprecated_group="default",
+        deprecated_group="DEFAULT",
         help="""
 A list of targets for the dynamic vendordata provider. These targets are of
 the form <name>@<url>.
@@ -117,7 +117,7 @@ is documented in the vendordata.rst file in the nova developer reference.
 """),
     cfg.StrOpt('vendordata_dynamic_ssl_certfile',
         default='',
-        deprecated_group="default",
+        deprecated_group="DEFAULT",
         help="""
 Path to an optional certificate file or CA bundle to verify dynamic
 vendordata REST services ssl certificates against.
@@ -136,7 +136,7 @@ Related options:
     cfg.IntOpt('vendordata_dynamic_connect_timeout',
         default=5,
         min=3,
-        deprecated_group="default",
+        deprecated_group="DEFAULT",
         help="""
 Maximum wait time for an external REST service to connect.
 
@@ -156,7 +156,7 @@ Related options:
     cfg.IntOpt('vendordata_dynamic_read_timeout',
         default=5,
         min=0,
-        deprecated_group="default",
+        deprecated_group="DEFAULT",
         help="""
 Maximum wait time for an external REST service to return data once connected.
 
@@ -175,7 +175,7 @@ Related options:
     cfg.IntOpt("metadata_cache_expiration",
         default=15,
         min=0,
-        deprecated_group="default",
+        deprecated_group="DEFAULT",
         help="""
 This option is the time (in seconds) to cache metadata. When set to 0,
 metadata caching is disabled entirely; this is generally not recommended for
@@ -187,7 +187,7 @@ usage, and result in longer times for host metadata changes to take effect.
 
 file_opts = [
     cfg.StrOpt("vendordata_jsonfile_path",
-        deprecated_group="default",
+        deprecated_group="DEFAULT",
         help="""
 Cloud providers may store custom data in vendor data file that will then be
 available to the instances via the metadata service, and to the rendering of
@@ -206,14 +206,14 @@ osapi_opts = [
     cfg.IntOpt("max_limit",
         default=1000,
         min=0,
-        deprecated_group="default",
+        deprecated_group="DEFAULT",
         deprecated_name="osapi_max_limit",
         help="""
 As a query can potentially return many thousands of items, you can limit the
 maximum number of items in a single response by setting this option.
 """),
     cfg.StrOpt("compute_link_prefix",
-        deprecated_group="default",
+        deprecated_group="DEFAULT",
         deprecated_name="osapi_compute_link_prefix",
         help="""
 This string is prepended to the normal URL that is returned in links to the
@@ -225,7 +225,7 @@ Possible values:
 * Any string, including an empty string (the default).
 """),
     cfg.StrOpt("glance_link_prefix",
-        deprecated_group="default",
+        deprecated_group="DEFAULT",
         deprecated_name="osapi_glance_link_prefix",
         help="""
 This string is prepended to the normal URL that is returned in links to
@@ -241,7 +241,7 @@ Possible values:
 allow_instance_snapshots_opts = [
     cfg.BoolOpt("allow_instance_snapshots",
         default=True,
-        deprecated_group="default",
+        deprecated_group="DEFAULT",
         help="""
 Operators can turn off the ability for a user to take snapshots of their
 instances by setting this option to False. When disabled, any attempt to
@@ -256,7 +256,7 @@ BUILDING = "building"  # VM only exists in DB
 osapi_hide_opts = [
     cfg.ListOpt("hide_server_address_states",
         default=[BUILDING],
-        deprecated_group="default",
+        deprecated_group="DEFAULT",
         deprecated_name="osapi_hide_server_address_states",
         help="""
 This option is a list of all instance states for which network address
@@ -285,14 +285,14 @@ Possible values:
 fping_path_opts = [
     cfg.StrOpt("fping_path",
         default="/usr/sbin/fping",
-        deprecated_group="default",
+        deprecated_group="DEFAULT",
         help="The full path to the fping binary.")
 ]
 
 os_network_opts = [
     cfg.BoolOpt("use_neutron_default_nets",
         default=False,
-        deprecated_group="default",
+        deprecated_group="DEFAULT",
         help="""
 When True, the TenantNetworkController will query the Neutron API to get the
 default networks to use.
@@ -303,7 +303,7 @@ Related options:
 """),
     cfg.StrOpt("neutron_default_tenant_id",
         default="default",
-        deprecated_group="default",
+        deprecated_group="DEFAULT",
         help="""
 Tenant ID for getting the default network from Neutron API (also referred in
 some places as the 'project ID') to use.
@@ -317,7 +317,7 @@ Related options:
 enable_inst_pw_opts = [
     cfg.BoolOpt("enable_instance_password",
         default=True,
-        deprecated_group="default",
+        deprecated_group="DEFAULT",
         help="""
 Enables returning of the instance password by the relevant server API calls
 such as create, rebuild, evacuate, or rescue. If the hypervisor does not
