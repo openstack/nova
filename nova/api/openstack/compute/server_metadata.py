@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import six
+
 from webob import exc
 
 from nova.api.openstack import common
@@ -47,7 +47,7 @@ class ServerMetadataController(wsgi.Controller):
             msg = _('Server does not exist')
             raise exc.HTTPNotFound(explanation=msg)
         meta_dict = {}
-        for key, value in six.iteritems(meta):
+        for key, value in meta.items():
             meta_dict[key] = value
         return meta_dict
 

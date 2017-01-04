@@ -615,7 +615,7 @@ class InstanceMetadata(object):
                 path = 'openstack/%s/%s' % (version, VD2_JSON_NAME)
                 yield (path, self.lookup(path))
 
-        for (cid, content) in six.iteritems(self.content):
+        for (cid, content) in self.content.items():
             yield ('%s/%s/%s' % ("openstack", CONTENT_DIR, cid), content)
 
 

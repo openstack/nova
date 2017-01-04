@@ -15,7 +15,7 @@
 import copy
 
 from oslo_log import log as logging
-import six
+
 import webob.exc
 
 from nova.api.openstack import extensions
@@ -220,7 +220,7 @@ class ExtensionInfoController(wsgi.Controller):
                 item['description']
             )
 
-        for alias, ext in six.iteritems(self.extension_info.get_extensions()):
+        for alias, ext in self.extension_info.get_extensions().items():
             action = ':'.join([
                 base_policies.COMPUTE_API, alias, 'discoverable'])
             if context.can(action, fatal=False):
@@ -268,7 +268,7 @@ class ExtensionInfoController(wsgi.Controller):
         if req.is_legacy_v2():
             self._add_vif_extension(discoverable_extensions)
         sorted_ext_list = sorted(
-            six.iteritems(discoverable_extensions))
+            discoverable_extensions.items())
 
         extensions = []
         for _alias, ext in sorted_ext_list:

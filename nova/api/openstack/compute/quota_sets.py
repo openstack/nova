@@ -14,7 +14,7 @@
 #    under the License.
 
 from oslo_utils import strutils
-import six
+
 import six.moves.urllib.parse as urlparse
 import webob
 
@@ -159,7 +159,7 @@ class QuotaSetsController(wsgi.Controller):
         # NOTE(dims): Pass #1 - In this loop for quota_set.items(), we validate
         # min/max values and bail out if any of the items in the set is bad.
         valid_quotas = {}
-        for key, value in six.iteritems(body['quota_set']):
+        for key, value in body['quota_set'].items():
             if key == 'force' or (not value and value != 0):
                 continue
             # validate whether already used and reserved exceeds the new

@@ -17,7 +17,7 @@
 import itertools
 import os
 
-import six
+
 from webob import exc
 
 from nova.api.openstack.api_version_request \
@@ -112,7 +112,7 @@ class FpingController(wsgi.Controller):
             ip_list += ips
         alive_ips = self.fping(ip_list)
         res = []
-        for instance_uuid, ips in six.iteritems(instance_ips):
+        for instance_uuid, ips in instance_ips.items():
             res.append({
                 "id": instance_uuid,
                 "project_id": instance_projects[instance_uuid],
