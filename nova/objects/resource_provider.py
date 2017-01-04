@@ -900,15 +900,6 @@ class Allocation(_HasAResourceProvider):
         if not result:
             raise exception.NotFound()
 
-    def create(self):
-        if 'id' in self:
-            raise exception.ObjectActionError(action='create',
-                                              reason='already created')
-        _ensure_rc_cache(self._context)
-        updates = self._make_db(self.obj_get_changes())
-        db_allocation = self._create_in_db(self._context, updates)
-        self._from_db_object(self._context, self, db_allocation)
-
     def destroy(self):
         self._destroy(self._context, self.id)
 
@@ -1129,6 +1120,9 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
         # resource class names that don't exist this will raise a
         # ResourceClassNotFound exception.
         for alloc in allocs:
+            if 'id' in alloc:
+                raise exception.ObjectActionError(action='create',
+                                                  reason='already created')
             _RC_CACHE.id_from_string(alloc.resource_class)
 
         # Before writing any allocation records, we check that the submitted
@@ -1153,7 +1147,8 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
                         resource_class_id=rc_id,
                         consumer_id=alloc.consumer_id,
                         used=alloc.used)
-                conn.execute(ins_stmt)
+                result = conn.execute(ins_stmt)
+                alloc.id = result.lastrowid
 
             # Generation checking happens here. If the inventory for
             # this resource provider changed out from under us,

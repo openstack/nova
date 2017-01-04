@@ -21,8 +21,8 @@ tests:
       # required but superfluous, is present
       content-type: /application/json/
   response_json_paths:
-      $.resource_provider_generation: 2
-      $.usages.DISK_GB: 1024
+      $.resource_provider_generation: 4
+      $.usages.DISK_GB: 1000
       $.usages.VCPU: 6
 
 - name: fail to delete resource provider
