@@ -44,6 +44,7 @@ class ConfigDriveTestV21(test.TestCase):
         super(ConfigDriveTestV21, self).setUp()
         fakes.stub_out_networking(self)
         fake.stub_out_image_service(self)
+        fakes.stub_out_secgroup_api(self)
         self._setup_wsgi()
 
     def test_show(self):
@@ -105,6 +106,7 @@ class ServersControllerCreateTestV21(test.TestCase):
         super(ServersControllerCreateTestV21, self).setUp()
 
         self.instance_cache_num = 0
+        fakes.stub_out_nw_api(self)
         self._set_up_controller()
 
         def instance_create(context, inst):

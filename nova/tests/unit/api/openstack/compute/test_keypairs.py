@@ -77,6 +77,7 @@ class KeypairsTestV21(test.TestCase):
     def setUp(self):
         super(KeypairsTestV21, self).setUp()
         fakes.stub_out_networking(self)
+        fakes.stub_out_secgroup_api(self)
 
         self.stub_out("nova.db.key_pair_get_all_by_user",
                       db_key_pair_get_all_by_user)

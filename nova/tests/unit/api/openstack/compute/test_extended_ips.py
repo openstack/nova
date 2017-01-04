@@ -103,6 +103,7 @@ class ExtendedIpsTestV21(test.TestCase):
     def setUp(self):
         super(ExtendedIpsTestV21, self).setUp()
         fakes.stub_out_nw_api(self)
+        fakes.stub_out_secgroup_api(self)
         self.stub_out('nova.compute.api.API.get', fake_compute_get)
         self.stub_out('nova.compute.api.API.get_all', fake_compute_get_all)
 

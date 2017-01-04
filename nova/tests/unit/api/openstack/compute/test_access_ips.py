@@ -35,6 +35,7 @@ class AccessIPsAPIValidationTestV21(test.TestCase):
         def fake_rebuild(*args, **kwargs):
             pass
 
+        fakes.stub_out_nw_api(self)
         self._set_up_controller()
         fake.stub_out_image_service(self)
         self.stub_out('nova.db.instance_get_by_uuid',

@@ -53,6 +53,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
 
     def setUp(self):
         super(BlockDeviceMappingTestV21, self).setUp()
+        fakes.stub_out_nw_api(self)
         self._setup_controller()
         fake.stub_out_image_service(self)
         self.volume_id = fakes.FAKE_UUID
