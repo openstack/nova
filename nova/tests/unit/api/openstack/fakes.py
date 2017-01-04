@@ -37,6 +37,7 @@ import nova.conf
 from nova import context
 from nova.db.sqlalchemy import models
 from nova import exception as exc
+from nova.network.security_group import security_group_base
 from nova import objects
 from nova.objects import base
 from nova import quota
@@ -189,6 +190,32 @@ def stub_out_nw_api(test, cls=None, private=None, publics=None):
     else:
         test.stub_out('nova.network.api.API', cls)
         fake_network.stub_out_nw_api_get_instance_nw_info(test)
+
+
+def stub_out_secgroup_api(test):
+
+    class FakeSecurityGroupAPI(security_group_base.SecurityGroupBase):
+        """This handles both nova-network and neutron style security group APIs
+        """
+        def get_instances_security_groups_bindings(
+                self, context, servers, detailed=False):
+            # This method shouldn't be called unless using neutron.
+            if not CONF.use_neutron:
+                raise Exception('Invalid security group API call for nova-net')
+            instances_security_group_bindings = {}
+            if servers:
+                instances_security_group_bindings = {
+                    server['id']: [] for server in servers
+                }
+            return instances_security_group_bindings
+
+    if CONF.use_neutron:
+        test.stub_out(
+            'nova.network.security_group.neutron_driver.SecurityGroupAPI',
+            FakeSecurityGroupAPI)
+    else:
+        test.stub_out(
+            'nova.compute.api.SecurityGroupAPI', FakeSecurityGroupAPI)
 
 
 class FakeToken(object):
