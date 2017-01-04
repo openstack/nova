@@ -195,3 +195,23 @@ tests:
   status: 400
   response_strings:
       - JSON does not validate
+
+- name: try to create resource class with name exceed max characters
+  POST: /resource_classes
+  request_headers:
+      content-type: application/json
+  data:
+      name: &name_exceeds_max_length_check CUSTOM_THIS_IS_A_LONG_TEXT_OF_LENGTH_256_CHARACTERSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+  status: 400
+  response_strings:
+      - "Failed validating 'maxLength'"
+
+- name: try to update resource class with name exceed max characters
+  PUT: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
+  request_headers:
+      content-type: application/json
+  data:
+      name: *name_exceeds_max_length_check
+  status: 400
+  response_strings:
+      - "Failed validating 'maxLength'"
