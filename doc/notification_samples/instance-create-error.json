@@ -7,6 +7,7 @@
             "created_at":"2012-10-29T13:42:11Z",
             "deleted_at":null,
             "display_name":"some-server",
+            "display_description":"some-server",
             "fault": {
                 "nova_object.data": {
                     "exception": "FlavorDiskTooSmall",
@@ -25,6 +26,7 @@
             "launched_at":null,
             "image_uuid": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
             "metadata":{},
+            "locked":false,
             "node":"fake-mini",
             "os_type":null,
             "progress":0,
@@ -52,7 +54,7 @@
         },
         "nova_object.name":"InstanceActionPayload",
         "nova_object.namespace":"nova",
-        "nova_object.version":"1.0"
+        "nova_object.version":"1.1"
     },
     "priority":"ERROR",
     "publisher_id":"nova-compute:compute"
