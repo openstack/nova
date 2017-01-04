@@ -33,5 +33,7 @@ class TestExceptionNotificationSample(
         self.assertRaises(api_client.OpenStackApiException,
                           self.admin_api.api_post, 'os-aggregates', post)
 
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
-        self._verify_notification('compute-exception')
+        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'compute-exception',
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
