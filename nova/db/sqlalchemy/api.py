@@ -622,7 +622,7 @@ def _compute_node_select(context, filters=None, limit=None, marker=None):
         select = select.where(cn_tbl.c.id > marker)
     if limit is not None:
         select = select.limit(limit)
-    # Explictly order by id, so we're not dependent on the native sort
+    # Explicitly order by id, so we're not dependent on the native sort
     # order of the underlying DB.
     select = select.order_by(asc("id"))
     return select

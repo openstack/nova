@@ -123,7 +123,7 @@ class TestExtractJSON(test.NoDBTestCase):
                                   self.schema)
         self.assertIn('JSON does not validate', str(error))
 
-    def test_no_addtional_properties(self):
+    def test_no_additional_properties(self):
         error = self.assertRaises(webob.exc.HTTPBadRequest,
                                   util.extract_json,
                                   '{"name": "hello", "cow": "moo"}',
