@@ -1346,12 +1346,11 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         :returns: A list of instance uuids for which faults were found.
         """
         uuids = [inst.uuid for inst in self]
-        faults = objects.InstanceFaultList.get_by_instance_uuids(
+        faults = objects.InstanceFaultList.get_latest_by_instance_uuids(
             self._context, uuids)
         faults_by_uuid = {}
         for fault in faults:
-            if fault.instance_uuid not in faults_by_uuid:
-                faults_by_uuid[fault.instance_uuid] = fault
+            faults_by_uuid[fault.instance_uuid] = fault
 
         for instance in self:
             if instance.uuid in faults_by_uuid:

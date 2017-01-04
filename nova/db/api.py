@@ -1903,9 +1903,11 @@ def instance_fault_create(context, values):
     return IMPL.instance_fault_create(context, values)
 
 
-def instance_fault_get_by_instance_uuids(context, instance_uuids):
+def instance_fault_get_by_instance_uuids(context, instance_uuids,
+                                         latest=False):
     """Get all instance faults for the provided instance_uuids."""
-    return IMPL.instance_fault_get_by_instance_uuids(context, instance_uuids)
+    return IMPL.instance_fault_get_by_instance_uuids(context, instance_uuids,
+                                                     latest=latest)
 
 
 ####################

@@ -1104,7 +1104,7 @@ object_data = {
     'InstanceDeviceMetadata': '1.0-74d78dd36aa32d26d2769a1b57caf186',
     'InstanceExternalEvent': '1.1-6e446ceaae5f475ead255946dd443417',
     'InstanceFault': '1.2-7ef01f16f1084ad1304a513d6d410a38',
-    'InstanceFaultList': '1.1-f8ec07cbe3b60f5f07a8b7a06311ac0d',
+    'InstanceFaultList': '1.2-6bb72de2872fe49ded5eb937a93f2451',
     'InstanceGroup': '1.10-1a0c8c7447dc7ecb9da53849430c4a5f',
     'InstanceGroupList': '1.7-be18078220513316abd0ae1b2d916873',
     'InstanceInfoCache': '1.5-cd8b96fefe0fc8d4d337243ba0bf0e1e',
