@@ -754,13 +754,6 @@ user_id_query_set_quota:
   in: query
   required: false
   type: string
-user_id_server_group:
-  description: |
-    The user ID who owns the server group.
-  min_version: 2.13
-  in: query
-  required: false
-  type: string
 
 # variables in body
 accessIPv4:
@@ -3888,6 +3881,18 @@ server_description:
     A free form description of the server. Limited to 255 characters
     in length. Before microversion 2.19 this was set to the server
     name.
+server_group:
+  description: |
+    The server group obejct.
+  in: body
+  required: true
+  type: object
+server_group_id_body:
+  description: |
+    The UUID of the server group.
+  in: body
+  required: true
+  type: string
 server_group_members:
   description: |
     The number of allowed members for each server group.
@@ -4451,6 +4456,13 @@ user_id:
     The user ID of the user who owns the server.
   in: body
   required: true
+  type: string
+user_id_server_group:
+  description: |
+    The user ID who owns the server group.
+  min_version: 2.13
+  in: body
+  required: false
   type: string
 vcpus:
   description: |
