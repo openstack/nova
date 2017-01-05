@@ -27,8 +27,8 @@ Response
   - maxImageMeta: image_metadata_items
   - maxPersonality: injected_files
   - maxPersonalitySize: injected_file_content_bytes
-  - maxSecurityGroupRules: security_group_rules
-  - maxSecurityGroups: security_groups
+  - maxSecurityGroupRules: security_group_rules_quota
+  - maxSecurityGroups: security_groups_quota
   - maxServerGroupMembers: server_group_members
   - maxServerGroups: server_groups
   - maxServerMeta: metadata_items

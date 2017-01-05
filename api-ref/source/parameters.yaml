@@ -1816,6 +1816,7 @@ fixed_ips_quota:
   in: body
   required: true
   type: integer
+  max_version: 2.35
 fixed_ips_quota_details:
   description: |
     The object of detailed fixed ips quota, including in_use, limit and
@@ -1823,6 +1824,7 @@ fixed_ips_quota_details:
   in: body
   required: true
   type: object
+  max_version: 2.35
 fixed_ips_quota_optional:
   description: |
     The number of allowed fixed IP addresses for each tenant. Must be equal to or
@@ -1830,6 +1832,7 @@ fixed_ips_quota_optional:
   in: body
   required: false
   type: integer
+  max_version: 2.35
 fixed_ips_resp:
   description: |
     Fixed IP addresses with subnet IDs.
@@ -2048,6 +2051,7 @@ floating_ips:
   in: body
   required: true
   type: integer
+  max_version: 2.35
 floating_ips_list:
   description: |
     An array of floating ip objects.
@@ -2061,12 +2065,14 @@ floating_ips_quota_details:
   in: body
   required: true
   type: object
+  max_version: 2.35
 floating_ips_quota_optional:
   description: |
     The number of allowed floating IP addresses for each tenant.
   in: body
   required: false
   type: integer
+  max_version: 2.35
 force:
   description: |
     You can force the update even if the quota has already been used and the reserved
@@ -3882,12 +3888,14 @@ security_group_rules:
   in: body
   required: false
   type: integer
+  max_version: 2.35
 security_group_rules_quota:
   description: |
     The number of allowed rules for each security group.
   in: body
   required: true
   type: integer
+  max_version: 2.35
 security_group_rules_quota_details:
   description: |
     The object of detailed security group rules quota, including in_use,
@@ -3895,6 +3903,7 @@ security_group_rules_quota_details:
   in: body
   required: true
   type: object
+  max_version: 2.35
 security_groups:
   description: |
     One or more security groups. Specify the name of the security group in the ``name``
@@ -3915,6 +3924,7 @@ security_groups_quota:
   in: body
   required: true
   type: integer
+  max_version: 2.35
 security_groups_quota_details:
   description: |
     The object of detailed security groups, including in_use,
@@ -3922,12 +3932,14 @@ security_groups_quota_details:
   in: body
   required: true
   type: object
+  max_version: 2.35
 security_groups_quota_optional:
   description: |
     The number of allowed security groups for each tenant.
   in: body
   required: false
   type: integer
+  max_version: 2.35
 server:
   description: |
     A ``server`` object.
