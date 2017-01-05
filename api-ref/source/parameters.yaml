@@ -2263,6 +2263,12 @@ hosts.availability_zone:
   in: body
   required: true
   type: object
+hosts.availability_zone_none:
+  description: |
+    It is always ``null``.
+  in: body
+  required: true
+  type: none
 hours:
   description: |
    The duration that the server exists (in hours).

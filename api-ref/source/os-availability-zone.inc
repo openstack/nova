@@ -30,7 +30,7 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - availabilityZoneInfo: availability_zone_info
-  - hosts: hosts.availability_zone
+  - hosts: hosts.availability_zone_none
   - zoneName: OS-EXT-AZ:availability_zone
   - zoneState: availability_zone_state
   - available: available
