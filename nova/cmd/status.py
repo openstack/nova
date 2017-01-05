@@ -35,12 +35,16 @@ from sqlalchemy import MetaData, Table, select
 from nova.cmd import common as cmd_common
 import nova.conf
 from nova import config
+from nova import context as nova_context
 from nova.db.sqlalchemy import api as db_session
 from nova.i18n import _
 from nova.objects import cell_mapping as cell_mapping_obj
+from nova.objects import fields
 from nova import version
 
 CONF = nova.conf.CONF
+
+PLACEMENT_DOCS_LINK = 'http://docs.openstack.org/developer/nova/placement.html'
 
 
 class UpgradeCheckCode(enum.IntEnum):
@@ -92,9 +96,24 @@ class UpgradeCommands(object):
     schema migrations.
     """
 
-    def _count_compute_nodes(self):
+    def _count_compute_nodes(self, context=None):
         """Returns the number of compute nodes in the cell database."""
-        meta = MetaData(bind=db_session.get_engine())
+        # NOTE(mriedem): This does not filter based on the service status
+        # because a disabled nova-compute service could still be reporting
+        # inventory info to the placement service. There could be an outside
+        # chance that there are compute node records in the database for
+        # disabled nova-compute services that aren't yet upgraded to Ocata or
+        # the nova-compute service was deleted and the service isn't actually
+        # running on the compute host but the operator hasn't cleaned up the
+        # compute_nodes entry in the database yet. We consider those edge cases
+        # here and the worst case scenario is we give a warning that there are
+        # more compute nodes than resource providers. We can tighten this up
+        # later if needed, for example by not including compute nodes that
+        # don't have a corresponding nova-compute service in the services
+        # table, or by only counting compute nodes with a service version of at
+        # least 15 which was the highest service version when Newton was
+        # released.
+        meta = MetaData(bind=db_session.get_engine(context=context))
         compute_nodes = Table('compute_nodes', meta, autoload=True)
         return select([sqlfunc.count()]).select_from(compute_nodes).scalar()
 
@@ -201,25 +220,129 @@ class UpgradeCommands(object):
             msg = _('Placement API does not seem to be running.')
             return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
 
-        # TODO(mriedem): The placement service is running, fun! Now let's query
-        # the API DB to count the number of resource providers and compare that
-        # to the number of compute nodes (probably across all cells?). If there
-        # are no resource providers it's a clear fail. If there are fewer RPs
-        # than computes then it's a warning because you might be underutilized.
-
         return UpgradeCheckResult(UpgradeCheckCode.SUCCESS)
+
+    @staticmethod
+    def _count_compute_resource_providers():
+        """Returns the number of compute resource providers in the API database
+
+        The resource provider count is filtered based on resource providers
+        which have inventories records for the VCPU resource class, which is
+        assumed to only come from the ResourceTracker in compute nodes.
+        """
+        # TODO(mriedem): If/when we support a separate placement database this
+        # will need to change to just use the REST API.
+
+        # Get the VCPU resource class ID for filtering.
+        vcpu_rc_id = fields.ResourceClass.STANDARD.index(
+            fields.ResourceClass.VCPU)
+
+        # The inventories table has a unique constraint per resource provider
+        # and resource class, so we can simply count the number of inventories
+        # records for the given resource class and those will uniquely identify
+        # the number of resource providers we care about.
+        meta = MetaData(bind=db_session.get_api_engine())
+        inventories = Table('inventories', meta, autoload=True)
+        return select([sqlfunc.count()]).select_from(
+            inventories).where(
+                   inventories.c.resource_class_id == vcpu_rc_id).scalar()
+
+    @staticmethod
+    def _get_non_cell0_mappings():
+        """Queries the API database for non-cell0 cell mappings."""
+        meta = MetaData(bind=db_session.get_api_engine())
+        cell_mappings = Table('cell_mappings', meta, autoload=True)
+        return cell_mappings.select().where(
+            cell_mappings.c.uuid !=
+                cell_mapping_obj.CellMapping.CELL0_UUID).execute().fetchall()
+
+    def _check_resource_providers(self):
+        """Checks the status of resource provider reporting.
+
+        This check relies on the cells v2 check passing because it queries the
+        cells for compute nodes using cell mappings.
+
+        This check relies on the placement service running because if it's not
+        then there won't be any resource providers for the filter scheduler to
+        use during instance build and move requests.
+        """
+
+        # Get the total count of resource providers from the API DB that can
+        # host compute resources. This might be 0 so we have to figure out if
+        # this is a fresh install and if so we don't consider this an error.
+        num_rps = self._count_compute_resource_providers()
+
+        cell_mappings = self._get_non_cell0_mappings()
+        ctxt = nova_context.get_admin_context()
+        num_computes = 0
+        for cell_mapping in cell_mappings:
+            with nova_context.target_cell(ctxt, cell_mapping):
+                num_computes += self._count_compute_nodes(ctxt)
+        else:
+            # There are no cell mappings, cells v2 was maybe not deployed in
+            # Newton, but placement might have been, so let's check the single
+            # database for compute nodes.
+            num_computes = self._count_compute_nodes()
+
+        if num_rps == 0:
+
+            if num_computes != 0:
+                # This is a failure because there are compute nodes in the
+                # database but nothing is reporting resource providers to the
+                # placement service.
+                msg = (_('There are no compute resource providers in the '
+                         'Placement service but there are %(num_computes)s '
+                         'compute nodes in the deployment. This means no '
+                         'compute nodes are reporting into the Placement '
+                         'service and need to be upgraded and/or fixed. See '
+                         '%(placement_docs_link)s for more details.') %
+                       {'num_computes': num_computes,
+                        'placement_docs_link': PLACEMENT_DOCS_LINK})
+                return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
+
+            # There are no resource providers and no compute nodes so we
+            # assume this is a fresh install and move on. We should return a
+            # success code with a message here though.
+            msg = (_('There are no compute resource providers in the '
+                     'Placement service nor are there compute nodes in the '
+                     'database. Remember to configure new compute nodes to '
+                     'report into the Placement service. See '
+                     '%(placement_docs_link)s for more details.') %
+                   {'placement_docs_link': PLACEMENT_DOCS_LINK})
+            return UpgradeCheckResult(UpgradeCheckCode.SUCCESS, msg)
+
+        elif num_rps < num_computes:
+            # There are fewer resource providers than compute nodes, so return
+            # a warning explaining that the deployment might be underutilized.
+            msg = (_('There are %(num_resource_providers)s compute resource '
+                     'providers and %(num_compute_nodes)s compute nodes in '
+                     'the deployment. Ideally the number of compute resource '
+                     'providers should equal the number of enabled compute '
+                     'nodes otherwise the cloud may be underutilized. '
+                     'See %(placement_docs_link)s for more details.') %
+                   {'num_resource_providers': num_rps,
+                    'num_compute_nodes': num_computes,
+                    'placement_docs_link': PLACEMENT_DOCS_LINK})
+            return UpgradeCheckResult(UpgradeCheckCode.WARNING, msg)
+        else:
+            # We have RPs >= CNs which is what we want to see.
+            return UpgradeCheckResult(UpgradeCheckCode.SUCCESS)
 
     # The format of the check functions is to return an UpgradeCheckResult
     # object with the appropriate UpgradeCheckCode and details set. If the
     # check hits warnings or failures then those should be stored in the
     # returned UpgradeCheckResult's "details" attribute. The summary will
-    # be rolled up at the end of the check() function.
-    _upgrade_checks = {
+    # be rolled up at the end of the check() function. These functions are
+    # intended to be run in order and build on top of each other so order
+    # matters.
+    _upgrade_checks = (
         # Added in Ocata
-        _('Cells v2'): _check_cellsv2,
+        (_('Cells v2'), _check_cellsv2),
         # Added in Ocata
-        _('Placement API'): _check_placement,
-    }
+        (_('Placement API'), _check_placement),
+        # Added in Ocata
+        (_('Resource Providers'), _check_resource_providers),
+    )
 
     def _get_details(self, upgrade_check_result):
         if upgrade_check_result.details is not None:
@@ -240,9 +363,7 @@ class UpgradeCommands(object):
         return_code = UpgradeCheckCode.SUCCESS
         # This is a list if 2-item tuples for the check name and it's results.
         check_results = []
-        # Sort the checks by name so that we have predictable test results.
-        for name in sorted(self._upgrade_checks.keys()):
-            func = self._upgrade_checks[name]
+        for name, func in self._upgrade_checks:
             result = func(self)
             # store the result of the check for the summary table
             check_results.append((name, result))
