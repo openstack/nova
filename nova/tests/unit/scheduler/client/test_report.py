@@ -74,6 +74,24 @@ class SafeConnectedTestCase(test.NoDBTestCase):
         req.assert_not_called()
 
     @mock.patch('keystoneauth1.session.Session.request')
+    def test_unauthorized(self, req):
+        """Test Unauthorized handled correctly.
+
+        An unauthorized configuration should permanently disable the
+        client. And make future calls to it not happen.
+
+        """
+        req.side_effect = ks_exc.Unauthorized()
+        self.client._get_resource_provider("fake")
+        self.assertTrue(self.client._disabled)
+
+        # reset the call count to demonstrate that future calls don't
+        # work
+        req.reset_mock()
+        self.client._get_resource_provider("fake")
+        req.assert_not_called()
+
+    @mock.patch('keystoneauth1.session.Session.request')
     def test_connect_fail(self, req):
         """Test Connect Failure handled correctly.
 
