@@ -69,6 +69,11 @@ Possible values:
         default=10,
         deprecated_group='DEFAULT',
         deprecated_name='quota_floating_ips',
+        deprecated_for_removal=True,
+        deprecated_since='15.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 The number of floating IPs allowed per project.
 
@@ -86,6 +91,11 @@ Possible values:
         default=-1,
         deprecated_group='DEFAULT',
         deprecated_name='quota_fixed_ips',
+        deprecated_for_removal=True,
+        deprecated_since='15.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 The number of fixed IPs allowed per project.
 
@@ -164,6 +174,11 @@ Possible values:
         default=10,
         deprecated_group='DEFAULT',
         deprecated_name='quota_security_groups',
+        deprecated_for_removal=True,
+        deprecated_since='15.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 The number of security groups per project.
 
@@ -177,6 +192,11 @@ Possible values:
         default=20,
         deprecated_group='DEFAULT',
         deprecated_name='quota_security_group_rules',
+        deprecated_for_removal=True,
+        deprecated_since='15.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 The number of security rules per security group.
 
