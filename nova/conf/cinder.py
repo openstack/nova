@@ -33,6 +33,9 @@ Possible values:
 * Format is separated values of the form:
   <service_type>:<service_name>:<endpoint_type>
 
+Note: Nova does not support the Cinder v1 API since the Nova 15.0.0 Ocata
+release.
+
 Related options:
 
 * endpoint_template - Setting this option will override catalog_info
@@ -45,7 +48,10 @@ this template for cinder endpoint
 Possible values:
 
 * URL for cinder endpoint API
-  e.g. http://localhost:8776/v1/%(project_id)s
+  e.g. http://localhost:8776/v2/%(project_id)s
+
+Note: Nova does not support the Cinder v1 API since the Nova 15.0.0 Ocata
+release.
 
 Related options:
 

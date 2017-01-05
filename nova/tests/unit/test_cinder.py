@@ -14,10 +14,9 @@
 
 import collections
 
-from cinderclient.v1 import client as cinder_client_v1
 from cinderclient.v2 import client as cinder_client_v2
+import mock
 from requests_mock.contrib import fixture
-from testtools import matchers
 
 import nova.conf
 from nova import context
@@ -115,63 +114,25 @@ class BaseCinderTestCase(object):
         self.assertEqual(cacert, self.create_client().client.session.verify)
 
 
-class CinderTestCase(BaseCinderTestCase, test.NoDBTestCase):
-    """Test case for cinder volume v1 api."""
+# NOTE(mriedem): This does not extend BaseCinderTestCase because Cinder v1 is
+# no longer supported, this is just to test that trying to use v1 fails.
+class CinderV1TestCase(test.NoDBTestCase):
 
-    URL = "http://localhost:8776/v1/project_id"
-
-    CATALOG = [{
-        "type": "volumev2",
-        "name": "cinderv2",
-        "endpoints": [{"publicURL": URL}]
-    }]
-
-    def create_client(self):
-        c = super(CinderTestCase, self).create_client()
-        self.assertIsInstance(c, cinder_client_v1.Client)
-        return c
-
-    def stub_volume(self, **kwargs):
-        volume = {
-            'display_name': None,
-            'display_description': None,
-            "attachments": [],
-            "availability_zone": "cinder",
-            "created_at": "2012-09-10T00:00:00.000000",
-            "id": _volume_id,
-            "metadata": {},
-            "size": 1,
-            "snapshot_id": None,
-            "status": "available",
-            "volume_type": "None",
-            "bootable": "true",
-            "multiattach": "true"
-        }
-        volume.update(kwargs)
-        return volume
-
-    def test_cinder_endpoint_template(self):
-        endpoint = 'http://other_host:8776/v1/%(project_id)s'
-        self.flags(endpoint_template=endpoint, group='cinder')
-        self.assertEqual('http://other_host:8776/v1/project_id',
-                         self.create_client().client.endpoint_override)
-
-    def test_get_non_existing_volume(self):
-        self.requests.get(self.URL + '/volumes/nonexisting',
-                          status_code=404)
-
-        self.assertRaises(exception.VolumeNotFound, self.api.get, self.context,
-                          'nonexisting')
-
-    def test_volume_with_image_metadata(self):
-        v = self.stub_volume(id='1234', volume_image_metadata=_image_metadata)
-        m = self.requests.get(self.URL + '/volumes/5678', json={'volume': v})
-
-        volume = self.api.get(self.context, '5678')
-        self.assertThat(m.last_request.path,
-                        matchers.EndsWith('/volumes/5678'))
-        self.assertIn('volume_image_metadata', volume)
-        self.assertEqual(_image_metadata, volume['volume_image_metadata'])
+    @mock.patch.object(cinder.ks_loading, 'load_session_from_conf_options')
+    @mock.patch.object(cinder.cinder_client, 'get_volume_api_from_url',
+                       return_value='1')
+    def test_cinderclient_unsupported_v1(self, get_api_version, load_session):
+        """Tests that we fail if trying to use Cinder v1."""
+        self.flags(catalog_info='volume:cinder:publicURL', group='cinder')
+        # setup mocks
+        get_endpoint = mock.Mock(
+            return_value='http://localhost:8776/v1/%(project_id)s')
+        fake_session = mock.Mock(get_endpoint=get_endpoint)
+        load_session.return_value = fake_session
+        ctxt = context.get_admin_context()
+        self.assertRaises(exception.UnsupportedCinderAPIVersion,
+                          cinder.cinderclient, ctxt)
+        get_api_version.assert_called_once_with(get_endpoint.return_value)
 
 
 class CinderV2TestCase(BaseCinderTestCase, test.NoDBTestCase):
