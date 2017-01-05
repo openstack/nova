@@ -324,7 +324,7 @@ class ApiVersionsIntersect(Invalid):
 # Cannot be templated as the error syntax varies.
 # msg needs to be constructed when raised.
 class InvalidParameterValue(Invalid):
-    msg_fmt = _("%(err)s")
+    msg_fmt = "%(err)s"
 
 
 class InvalidAggregateAction(Invalid):
