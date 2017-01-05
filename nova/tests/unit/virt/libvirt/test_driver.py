@@ -11889,90 +11889,72 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     @mock.patch.object(objects.Instance, 'save')
     def test_destroy_undefines_no_undefine_flags(self, mock_save):
-        mock = self.mox.CreateMock(fakelibvirt.virDomain)
-        mock.ID()
-        mock.destroy()
-        mock.undefineFlags(1).AndRaise(fakelibvirt.libvirtError('Err'))
-        mock.ID().AndReturn(123)
-        mock.undefine()
-
-        self.mox.ReplayAll()
-
-        def fake_get_domain(instance):
-            return mock
-
-        def fake_get_info(instance_name):
-            return hardware.InstanceInfo(state=power_state.SHUTDOWN, id=-1)
-
-        def fake_delete_instance_files(instance):
-            return None
+        mock_domain = mock.Mock(fakelibvirt.virDomain)
+        mock_domain.undefineFlags.side_effect = fakelibvirt.libvirtError('Err')
+        mock_domain.ID.return_value = 123
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(drvr._host, 'get_domain', fake_get_domain)
-        self.stubs.Set(drvr, 'get_info', fake_get_info)
-        self.stubs.Set(drvr, 'delete_instance_files',
-                       fake_delete_instance_files)
+        drvr._host.get_domain = mock.Mock(return_value=mock_domain)
+        drvr.delete_instance_files = mock.Mock(return_value=None)
+        drvr.get_info = mock.Mock(return_value=
+            hardware.InstanceInfo(state=power_state.SHUTDOWN, id=-1)
+        )
+
         instance = objects.Instance(self.context, **self.test_instance)
         drvr.destroy(self.context, instance, [])
+
+        self.assertEqual(2, mock_domain.ID.call_count)
+        mock_domain.destroy.assert_called_once_with()
+        mock_domain.undefineFlags.assert_has_calls([mock.call(1)])
+        mock_domain.undefine.assert_called_once_with()
         mock_save.assert_called_once_with()
 
     @mock.patch.object(objects.Instance, 'save')
     def test_destroy_undefines_no_attribute_with_managed_save(self, mock_save):
-        mock = self.mox.CreateMock(fakelibvirt.virDomain)
-        mock.ID()
-        mock.destroy()
-        mock.undefineFlags(1).AndRaise(AttributeError())
-        mock.hasManagedSaveImage(0).AndReturn(True)
-        mock.managedSaveRemove(0)
-        mock.undefine()
-
-        self.mox.ReplayAll()
-
-        def fake_get_domain(instance):
-            return mock
-
-        def fake_get_info(instance_name):
-            return hardware.InstanceInfo(state=power_state.SHUTDOWN, id=-1)
-
-        def fake_delete_instance_files(instance):
-            return None
+        mock_domain = mock.Mock(fakelibvirt.virDomain)
+        mock_domain.undefineFlags.side_effect = AttributeError()
+        mock_domain.ID.return_value = 123
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(drvr._host, 'get_domain', fake_get_domain)
-        self.stubs.Set(drvr, 'get_info', fake_get_info)
-        self.stubs.Set(drvr, 'delete_instance_files',
-                       fake_delete_instance_files)
+        drvr._host.get_domain = mock.Mock(return_value=mock_domain)
+        drvr.delete_instance_files = mock.Mock(return_value=None)
+        drvr.get_info = mock.Mock(return_value=
+            hardware.InstanceInfo(state=power_state.SHUTDOWN, id=-1)
+        )
+
         instance = objects.Instance(self.context, **self.test_instance)
         drvr.destroy(self.context, instance, [])
+
+        self.assertEqual(1, mock_domain.ID.call_count)
+        mock_domain.destroy.assert_called_once_with()
+        mock_domain.undefineFlags.assert_has_calls([mock.call(1)])
+        mock_domain.hasManagedSaveImage.assert_has_calls([mock.call(0)])
+        mock_domain.managedSaveRemove.assert_called_once_with(0)
+        mock_domain.undefine.assert_called_once_with()
         mock_save.assert_called_once_with()
 
     @mock.patch.object(objects.Instance, 'save')
     def test_destroy_undefines_no_attribute_no_managed_save(self, mock_save):
-        mock = self.mox.CreateMock(fakelibvirt.virDomain)
-        mock.ID()
-        mock.destroy()
-        mock.undefineFlags(1).AndRaise(AttributeError())
-        mock.hasManagedSaveImage(0).AndRaise(AttributeError())
-        mock.undefine()
-
-        self.mox.ReplayAll()
-
-        def fake_get_domain(self, instance):
-            return mock
-
-        def fake_get_info(instance_name):
-            return hardware.InstanceInfo(state=power_state.SHUTDOWN)
-
-        def fake_delete_instance_files(instance):
-            return None
+        mock_domain = mock.Mock(fakelibvirt.virDomain)
+        mock_domain.undefineFlags.side_effect = AttributeError()
+        mock_domain.hasManagedSaveImage.side_effect = AttributeError()
+        mock_domain.ID.return_value = 123
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(host.Host, 'get_domain', fake_get_domain)
-        self.stubs.Set(drvr, 'get_info', fake_get_info)
-        self.stubs.Set(drvr, 'delete_instance_files',
-                       fake_delete_instance_files)
+        drvr._host.get_domain = mock.Mock(return_value=mock_domain)
+        drvr.delete_instance_files = mock.Mock(return_value=None)
+        drvr.get_info = mock.Mock(return_value=
+            hardware.InstanceInfo(state=power_state.SHUTDOWN, id=-1)
+        )
+
         instance = objects.Instance(self.context, **self.test_instance)
         drvr.destroy(self.context, instance, [])
+
+        self.assertEqual(1, mock_domain.ID.call_count)
+        mock_domain.destroy.assert_called_once_with()
+        mock_domain.undefineFlags.assert_has_calls([mock.call(1)])
+        mock_domain.hasManagedSaveImage.assert_has_calls([mock.call(0)])
+        mock_domain.undefine.assert_called_once_with()
         mock_save.assert_called_once_with()
 
     def test_destroy_timed_out(self):
