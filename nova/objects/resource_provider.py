@@ -540,7 +540,7 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
     }
 
     allowed_filters = (
-        'name', 'uuid'
+        'name', 'uuid', 'member_of'
     )
 
     @staticmethod
@@ -550,6 +550,7 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
         #  filters = {
         #      'name': <name>,
         #      'uuid': <uuid>,
+        #      'member_of': [<aggregate_uuid>, <aggregate_uuid>]
         #      'resources': {
         #          'VCPU': 1,
         #          'MEMORY_MB': 1024
@@ -564,6 +565,7 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
         name = filters.pop('name', None)
         uuid = filters.pop('uuid', None)
         can_host = filters.pop('can_host', 0)
+        member_of = filters.pop('member_of', [])
 
         resources = filters.pop('resources', {})
         # NOTE(sbauza): We want to key the dict by the resource class IDs
@@ -576,6 +578,19 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
         if uuid:
             query = query.filter(models.ResourceProvider.uuid == uuid)
         query = query.filter(models.ResourceProvider.can_host == can_host)
+
+        # If 'member_of' has values join with the PlacementAggregates to
+        # get those resource providers that are associated with any of the
+        # list of aggregate uuids provided with 'member_of'.
+        if member_of:
+            join_statement = sa.join(_AGG_TBL, _RP_AGG_TBL, sa.and_(
+                _AGG_TBL.c.id == _RP_AGG_TBL.c.aggregate_id,
+                _AGG_TBL.c.uuid.in_(member_of)))
+            resource_provider_id = _RP_AGG_TBL.c.resource_provider_id
+            rps_in_aggregates = sa.select(
+                [resource_provider_id]).select_from(join_statement)
+            query = query.filter(models.ResourceProvider.id.in_(
+                rps_in_aggregates))
 
         if not resources:
             # Returns quickly the list in case we don't need to check the
