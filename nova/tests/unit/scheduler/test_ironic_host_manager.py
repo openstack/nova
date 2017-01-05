@@ -182,7 +182,8 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
             hypervisor_version=1,
             hypervisor_hostname='fake_host',
             cpu_allocation_ratio=16.0, ram_allocation_ratio=1.5,
-            disk_allocation_ratio=1.0)
+            disk_allocation_ratio=1.0,
+            uuid=uuids.compute_node_uuid)
 
     @mock.patch.object(ironic_host_manager.IronicNodeState, '__init__')
     def test_create_ironic_node_state(self, init_mock):
@@ -264,6 +265,15 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
         self.assertEqual('ironic', host.hypervisor_type)
         self.assertEqual(1, host.hypervisor_version)
         self.assertEqual('fake_host', host.hypervisor_hostname)
+
+    def test_update_from_compute_node_not_ready(self):
+        """Tests that we ignore a compute node that does not have its
+        free_disk_gb field set yet from the compute resource tracker.
+        """
+        host = ironic_host_manager.IronicNodeState("fakehost", "fakenode")
+        self.compute_node.free_disk_gb = None
+        host.update(compute=self.compute_node)
+        self.assertEqual(0, host.free_disk_mb)
 
     def test_consume_identical_instance_from_compute(self):
         host = ironic_host_manager.IronicNodeState("fakehost", "fakenode")
