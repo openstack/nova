@@ -73,11 +73,9 @@ SCSI_MAX_CONNECT_NUMBER = 15
 # The max number of SCSI adaptors that could be created on one instance.
 SCSI_MAX_CONTROLLER_NUMBER = 4
 
-# This list was extracted from the installation iso image for ESX 6.0.
-# It is contained in s.v00, which is gzipped. The list was obtained by
-# searching for the string 'otherGuest' in the uncompressed contents of that
-# file, copying out the full list less the 'family' ids at the end, and sorting
-# it. The contents of this list should be updated whenever there is a new
+# This list was extracted from a file on an installation of ESX 6.5. The file
+# can be found in /usr/lib/vmware/hostd/vimLocale/en/gos.vmsg
+# The contents of this list should be updated whenever there is a new
 # release of ESX.
 VALID_OS_TYPES = set([
     'asianux3_64Guest',
@@ -85,8 +83,12 @@ VALID_OS_TYPES = set([
     'asianux4_64Guest',
     'asianux4Guest',
     'asianux5_64Guest',
+    'asianux7_64Guest',
     'centos64Guest',
     'centosGuest',
+    'centos6Guest',
+    'centos6_64Guest',
+    'centos7_64Guest',
     'coreos64Guest',
     'darwin10_64Guest',
     'darwin10Guest',
@@ -95,6 +97,8 @@ VALID_OS_TYPES = set([
     'darwin12_64Guest',
     'darwin13_64Guest',
     'darwin14_64Guest',
+    'darwin15_64Guest',
+    'darwin16_64Guest',
     'darwin64Guest',
     'darwinGuest',
     'debian4_64Guest',
@@ -107,6 +111,10 @@ VALID_OS_TYPES = set([
     'debian7Guest',
     'debian8_64Guest',
     'debian8Guest',
+    'debian9_64Guest',
+    'debian9Guest',
+    'debian10_64Guest',
+    'debian10Guest',
     'dosGuest',
     'eComStation2Guest',
     'eComStationGuest',
@@ -129,6 +137,9 @@ VALID_OS_TYPES = set([
     'opensuseGuest',
     'oracleLinux64Guest',
     'oracleLinuxGuest',
+    'oracleLinux6Guest',
+    'oracleLinux6_64Guest',
+    'oracleLinux7_64Guest',
     'os2Guest',
     'other24xLinux64Guest',
     'other24xLinuxGuest',
@@ -177,7 +188,9 @@ VALID_OS_TYPES = set([
     'unixWare7Guest',
     'vmkernel5Guest',
     'vmkernel6Guest',
+    'vmkernel65Guest',
     'vmkernelGuest',
+    'vmwarePhoton64Guest',
     'win2000AdvServGuest',
     'win2000ProGuest',
     'win2000ServGuest',
