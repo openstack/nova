@@ -785,6 +785,8 @@ class NotificationAction(BaseNovaEnum):
     TRIGGER_CRASH_DUMP = 'trigger_crash_dump'
     UNRESCUE = 'unrescue'
     UNSHELVE = 'unshelve'
+    ADD_HOST = 'add_host'
+    REMOVE_HOST = 'remove_host'
 
     ALL = (UPDATE, EXCEPTION, DELETE, PAUSE, UNPAUSE, RESIZE, VOLUME_SWAP,
            SUSPEND, POWER_ON, REBOOT, SHUTDOWN, SNAPSHOT, ADD_FIXED_IP,
@@ -794,7 +796,8 @@ class NotificationAction(BaseNovaEnum):
            LIVE_MIGRATION_PRE, LIVE_MIGRATION_ROLLBACK,
            LIVE_MIGRATION_ROLLBACK_DEST, REBUILD, REMOVE_FIXED_IP,
            RESIZE_CONFIRM, RESIZE_PREP, RESIZE_REVERT, SHELVE_OFFLOAD,
-           SOFT_DELETE, TRIGGER_CRASH_DUMP, UNRESCUE, UNSHELVE)
+           SOFT_DELETE, TRIGGER_CRASH_DUMP, UNRESCUE, UNSHELVE, ADD_HOST,
+           REMOVE_HOST)
 
 
 # TODO(rlrossit): These should be changed over to be a StateMachine enum from

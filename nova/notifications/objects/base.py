@@ -41,7 +41,9 @@ class EventType(NotificationObject):
     # Version 1.3: Set of new values are added to NotificationActionField enum
     # Version 1.4: Another set of new values are added to
     #              NotificationActionField enum
-    VERSION = '1.4'
+    # Version 1.5: Aggregate related values have been added to
+    #              NotificationActionField enum
+    VERSION = '1.5'
 
     fields = {
         'object': fields.StringField(nullable=False),
