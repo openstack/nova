@@ -56,6 +56,11 @@ def safe_connect(f):
                       "disabled.")
             LOG.warning(msg)
             self._disabled = True
+        except ks_exc.Unauthorized:
+            msg = _LW('Placement service credentials do not work. Optional '
+                      'use of placement API for reporting is now disabled.')
+            LOG.warning(msg)
+            self._disabled = True
         except ks_exc.ConnectFailure:
             msg = _LW('Placement API service is not responding.')
             LOG.warning(msg)
