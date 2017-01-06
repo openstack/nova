@@ -1644,7 +1644,8 @@ class LibvirtDriver(driver.ComputeDriver):
             if guest is not None:
                 self._attach_pci_devices(
                     guest, pci_manager.get_instance_pci_devs(instance))
-                self._attach_sriov_ports(context, instance, guest)
+                self._attach_direct_passthrough_ports(
+                    context, instance, guest)
 
     def _can_set_admin_password(self, image_meta):
 
@@ -2519,7 +2520,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._detach_pci_devices(guest,
             pci_manager.get_instance_pci_devs(instance))
-        self._detach_sriov_ports(context, instance, guest)
+        self._detach_direct_passthrough_ports(context, instance, guest)
         guest.save_memory_state()
 
     def resume(self, context, instance, network_info, block_device_info=None):
@@ -2536,7 +2537,8 @@ class LibvirtDriver(driver.ComputeDriver):
                            vifs_already_plugged=True)
         self._attach_pci_devices(guest,
             pci_manager.get_instance_pci_devs(instance))
-        self._attach_sriov_ports(context, instance, guest, network_info)
+        self._attach_direct_passthrough_ports(
+            context, instance, guest, network_info)
         timer = loopingcall.FixedIntervalLoopingCall(self._wait_for_running,
                                                      instance)
         timer.start(interval=0.5).wait()
@@ -3305,56 +3307,61 @@ class LibvirtDriver(driver.ComputeDriver):
             raise
 
     @staticmethod
-    def _has_sriov_port(network_info):
+    def _has_direct_passthrough_port(network_info):
         for vif in network_info:
-            if vif['vnic_type'] in [network_model.VNIC_TYPE_DIRECT,
-                                    network_model.VNIC_TYPE_DIRECT_PHYSICAL]:
+            if (vif['vnic_type'] in
+                network_model.VNIC_TYPES_DIRECT_PASSTHROUGH):
                 return True
         return False
 
-    def _attach_sriov_ports(self, context, instance, guest, network_info=None):
+    def _attach_direct_passthrough_ports(
+        self, context, instance, guest, network_info=None):
         if network_info is None:
             network_info = instance.info_cache.network_info
         if network_info is None:
             return
 
-        if self._has_sriov_port(network_info):
+        if self._has_direct_passthrough_port(network_info):
             for vif in network_info:
-                if vif['vnic_type'] in network_model.VNIC_TYPES_SRIOV:
+                if (vif['vnic_type'] in
+                    network_model.VNIC_TYPES_DIRECT_PASSTHROUGH):
                     cfg = self.vif_driver.get_config(instance,
                                                      vif,
                                                      instance.image_meta,
                                                      instance.flavor,
                                                      CONF.libvirt.virt_type,
                                                      self._host)
-                    LOG.debug('Attaching SR-IOV port %(port)s to %(dom)s',
-                              {'port': vif, 'dom': guest.id},
+                    LOG.debug('Attaching direct passthrough port %(port)s '
+                              'to %(dom)s', {'port': vif, 'dom': guest.id},
                               instance=instance)
                     guest.attach_device(cfg)
 
-    def _detach_sriov_ports(self, context, instance, guest):
+    def _detach_direct_passthrough_ports(self, context, instance, guest):
         network_info = instance.info_cache.network_info
         if network_info is None:
             return
 
-        if self._has_sriov_port(network_info):
-            # In case of SR-IOV vif types we create pci request per SR-IOV port
-            # Therefore we can trust that pci_slot value in the vif is correct.
-            sriov_pci_addresses = [
+        if self._has_direct_passthrough_port(network_info):
+            # In case of VNIC_TYPES_DIRECT_PASSTHROUGH ports we create
+            # pci request per direct passthrough port. Therefore we can trust
+            # that pci_slot value in the vif is correct.
+            direct_passthrough_pci_addresses = [
                 vif['profile']['pci_slot']
                 for vif in network_info
-                if vif['vnic_type'] in network_model.VNIC_TYPES_SRIOV and
-                   vif['profile'].get('pci_slot') is not None
+                if (vif['vnic_type'] in
+                    network_model.VNIC_TYPES_DIRECT_PASSTHROUGH and
+                    vif['profile'].get('pci_slot') is not None)
             ]
 
             # use detach_pci_devices to avoid failure in case of
-            # multiple guest SRIOV ports with the same MAC
+            # multiple guest direct passthrough ports with the same MAC
             # (protection use-case, ports are on different physical
             # interfaces)
             pci_devs = pci_manager.get_instance_pci_devs(instance, 'all')
-            sriov_devs = [pci_dev for pci_dev in pci_devs
-                          if pci_dev.address in sriov_pci_addresses]
-            self._detach_pci_devices(guest, sriov_devs)
+            direct_passthrough_pci_addresses = (
+                [pci_dev for pci_dev in pci_devs
+                 if pci_dev.address in direct_passthrough_pci_addresses])
+            self._detach_pci_devices(guest, direct_passthrough_pci_addresses)
 
     def _set_host_enabled(self, enabled,
                           disable_reason=DISABLE_REASON_UNDEFINED):

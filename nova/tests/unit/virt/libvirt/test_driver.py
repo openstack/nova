@@ -11521,14 +11521,16 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         @mock.patch.object(dmcrypt, 'delete_volume')
         @mock.patch.object(conn, '_get_instance_disk_info', return_value=[])
-        @mock.patch.object(conn, '_detach_sriov_ports')
+        @mock.patch.object(conn, '_detach_direct_passthrough_ports')
         @mock.patch.object(conn, '_detach_pci_devices')
         @mock.patch.object(pci_manager, 'get_instance_pci_devs',
                            return_value='pci devs')
         @mock.patch.object(conn._host, 'get_guest', return_value=guest)
         def suspend(mock_get_guest, mock_get_instance_pci_devs,
-                    mock_detach_pci_devices, mock_detach_sriov_ports,
-                    mock_get_instance_disk_info, mock_delete_volume):
+                    mock_detach_pci_devices,
+                    mock_detach_direct_passthrough_ports,
+                    mock_get_instance_disk_info,
+                    mock_delete_volume):
             mock_managedSave = mock.Mock()
             dom.managedSave = mock_managedSave
 
@@ -11616,10 +11618,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(FakeVirtDomain, 'ID', return_value=1)
     @mock.patch.object(utils, 'get_image_from_system_metadata',
                        return_value=None)
-    def test_attach_sriov_ports(self,
-                                mock_get_image_metadata,
-                                mock_ID,
-                                mock_attachDevice):
+    def test_attach_direct_passthrough_ports(self,
+            mock_get_image_metadata, mock_ID, mock_attachDevice):
         instance = objects.Instance(**self.test_instance)
 
         network_info = _fake_network_info(self, 1)
@@ -11627,7 +11627,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         guest = libvirt_guest.Guest(FakeVirtDomain())
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
-        drvr._attach_sriov_ports(self.context, instance, guest, network_info)
+        drvr._attach_direct_passthrough_ports(
+            self.context, instance, guest, network_info)
         mock_get_image_metadata.assert_called_once_with(
             instance.system_metadata)
         self.assertTrue(mock_attachDevice.called)
@@ -11636,10 +11637,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(FakeVirtDomain, 'ID', return_value=1)
     @mock.patch.object(utils, 'get_image_from_system_metadata',
                        return_value=None)
-    def test_attach_sriov_direct_physical_ports(self,
-                                mock_get_image_metadata,
-                                mock_ID,
-                                mock_attachDevice):
+    def test_attach_direct_physical_passthrough_ports(self,
+            mock_get_image_metadata, mock_ID, mock_attachDevice):
         instance = objects.Instance(**self.test_instance)
 
         network_info = _fake_network_info(self, 1)
@@ -11647,7 +11646,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         guest = libvirt_guest.Guest(FakeVirtDomain())
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
-        drvr._attach_sriov_ports(self.context, instance, guest, network_info)
+        drvr._attach_direct_passthrough_ports(
+            self.context, instance, guest, network_info)
         mock_get_image_metadata.assert_called_once_with(
             instance.system_metadata)
         self.assertTrue(mock_attachDevice.called)
@@ -11656,10 +11656,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(FakeVirtDomain, 'ID', return_value=1)
     @mock.patch.object(utils, 'get_image_from_system_metadata',
                        return_value=None)
-    def test_attach_sriov_ports_with_info_cache(self,
-                                                mock_get_image_metadata,
-                                                mock_ID,
-                                                mock_attachDevice):
+    def test_attach_direct_passthrough_ports_with_info_cache(self,
+            mock_get_image_metadata, mock_ID, mock_attachDevice):
         instance = objects.Instance(**self.test_instance)
 
         network_info = _fake_network_info(self, 1)
@@ -11669,14 +11667,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         guest = libvirt_guest.Guest(FakeVirtDomain())
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
-        drvr._attach_sriov_ports(self.context, instance, guest, None)
+        drvr._attach_direct_passthrough_ports(
+            self.context, instance, guest, None)
         mock_get_image_metadata.assert_called_once_with(
             instance.system_metadata)
         self.assertTrue(mock_attachDevice.called)
 
     @mock.patch.object(host.Host,
                        'has_min_version', return_value=True)
-    def _test_detach_sriov_ports(self,
+    def _test_detach_direct_passthrough_ports(self,
                                  mock_has_min_version, vif_type):
         instance = objects.Instance(**self.test_instance)
 
@@ -11707,25 +11706,25 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         guest = libvirt_guest.Guest(domain)
 
         with mock.patch.object(drvr, '_detach_pci_devices') as mock_detach_pci:
-            drvr._detach_sriov_ports(self.context, instance, guest)
+            drvr._detach_direct_passthrough_ports(
+                self.context, instance, guest)
             mock_detach_pci.assert_called_once_with(
                 guest, [expected_pci_device_obj])
 
-    def test_detach_sriov_ports_interface_interface_hostdev(self):
-        # Note: test detach_sriov_ports method for vif with config
+    def test_detach_direct_passthrough_ports_interface_interface_hostdev(self):
+        # Note: test detach_direct_passthrough_ports method for vif with config
         # LibvirtConfigGuestInterface
-        self._test_detach_sriov_ports(vif_type="hw_veb")
+        self._test_detach_direct_passthrough_ports(vif_type="hw_veb")
 
-    def test_detach_sriov_ports_interface_pci_hostdev(self):
-        # Note: test detach_sriov_ports method for vif with config
+    def test_detach_direct_passthrough_ports_interface_pci_hostdev(self):
+        # Note: test detach_direct_passthrough_ports method for vif with config
         # LibvirtConfigGuestHostdevPCI
-        self._test_detach_sriov_ports(vif_type="ib_hostdev")
+        self._test_detach_direct_passthrough_ports(vif_type="ib_hostdev")
 
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     @mock.patch.object(FakeVirtDomain, 'detachDeviceFlags')
-    def test_detach_duplicate_mac_sriov_ports(self,
-                                              mock_detachDeviceFlags,
-                                              mock_has_min_version):
+    def test_detach_duplicate_mac_direct_passthrough_ports(
+        self, mock_detachDeviceFlags, mock_has_min_version):
         instance = objects.Instance(**self.test_instance)
 
         network_info = _fake_network_info(self, 2)
@@ -11754,7 +11753,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         guest = libvirt_guest.Guest(domain)
 
-        drvr._detach_sriov_ports(self.context, instance, guest)
+        drvr._detach_direct_passthrough_ports(self.context, instance, guest)
 
         expected_xml = [
             ('<hostdev mode="subsystem" type="pci" managed="yes">\n'
