@@ -1017,21 +1017,6 @@ class Connection(object):
                 self.host_info.cpu_cores,
                 self.host_info.cpu_threads]
 
-    def numOfDomains(self):
-        return len(self._running_vms)
-
-    def listDomainsID(self):
-        return list(self._running_vms.keys())
-
-    def lookupByID(self, id):
-        if id in self._running_vms:
-            return self._running_vms[id]
-        raise make_libvirtError(
-                libvirtError,
-                'Domain not found: no domain with matching id %d' % id,
-                error_code=VIR_ERR_NO_DOMAIN,
-                error_domain=VIR_FROM_QEMU)
-
     def lookupByName(self, name):
         if name in self._vms:
             return self._vms[name]
@@ -1041,7 +1026,7 @@ class Connection(object):
                 error_code=VIR_ERR_NO_DOMAIN,
                 error_domain=VIR_FROM_QEMU)
 
-    def listAllDomains(self, flags):
+    def listAllDomains(self, flags=None):
         vms = []
         for vm in self._vms.values():
             if flags & VIR_CONNECT_LIST_DOMAINS_ACTIVE:
@@ -1405,9 +1390,6 @@ class Connection(object):
                     "no nodedev with matching name %s" % name,
                     error_code=VIR_ERR_NO_NODE_DEVICE,
                     error_domain=VIR_FROM_NODEDEV)
-
-    def listDefinedDomains(self):
-        return []
 
     def listDevices(self, cap, flags):
         return self.pci_info.get_all_devices()
