@@ -2891,14 +2891,14 @@ class ServersControllerCreateTest(test.TestCase):
             self._test_create_instance_numa_topology_wrong(exc)
 
     def test_create_instance_too_much_metadata(self):
-        self.flags(quota_metadata_items=1)
+        self.flags(metadata_items=1, group='quota')
         self.body['server']['metadata']['vote'] = 'fiddletown'
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(webob.exc.HTTPForbidden,
                           self.controller.create, self.req, body=self.body)
 
     def test_create_instance_metadata_key_too_long(self):
-        self.flags(quota_metadata_items=1)
+        self.flags(metadata_items=1, group='quota')
         self.body['server']['metadata'] = {('a' * 260): '12345'}
 
         self.req.body = jsonutils.dump_as_bytes(self.body)
@@ -2906,35 +2906,35 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create, self.req, body=self.body)
 
     def test_create_instance_metadata_value_too_long(self):
-        self.flags(quota_metadata_items=1)
+        self.flags(metadata_items=1, group='quota')
         self.body['server']['metadata'] = {'key1': ('a' * 260)}
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(exception.ValidationError,
                           self.controller.create, self.req, body=self.body)
 
     def test_create_instance_metadata_key_blank(self):
-        self.flags(quota_metadata_items=1)
+        self.flags(metadata_items=1, group='quota')
         self.body['server']['metadata'] = {'': 'abcd'}
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(exception.ValidationError,
                           self.controller.create, self.req, body=self.body)
 
     def test_create_instance_metadata_not_dict(self):
-        self.flags(quota_metadata_items=1)
+        self.flags(metadata_items=1, group='quota')
         self.body['server']['metadata'] = 'string'
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(exception.ValidationError,
                           self.controller.create, self.req, body=self.body)
 
     def test_create_instance_metadata_key_not_string(self):
-        self.flags(quota_metadata_items=1)
+        self.flags(metadata_items=1, group='quota')
         self.body['server']['metadata'] = {1: 'test'}
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(exception.ValidationError,
                           self.controller.create, self.req, body=self.body)
 
     def test_create_instance_metadata_value_not_string(self):
-        self.flags(quota_metadata_items=1)
+        self.flags(metadata_items=1, group='quota')
         self.body['server']['metadata'] = {'test': ['a', 'list']}
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(exception.ValidationError,

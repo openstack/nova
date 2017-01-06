@@ -1,0 +1,26 @@
+---
+upgrade:
+  - |
+    Most quota options have been moved into their own
+    configuration group. The exception is quota_networks
+    as it is an API flag not a quota flag. These options are as
+    below:
+
+    - ``quota_instances`` (now ``instances``)
+    - ``quota_cores`` (now ``cores``)
+    - ``quota_ram`` (now ``ram``)
+    - ``quota_floating_ips`` (now ``floating_ips``)
+    - ``quota_fixed_ips`` (now ``fixed_ips``)
+    - ``quota_metadata_items`` (now ``metadata_items``)
+    - ``quota_injected_files`` (now ``injected_files``)
+    - ``quota_injected_file_content_bytes`` (now ``injected_file_content_bytes``)
+    - ``quota_injected_file_path_length`` (now ``injected_file_path_length``)
+    - ``quota_security_groups`` (now ``security_groups``)
+    - ``quota_security_group_rules`` (now ``security_group_rules``)
+    - ``quota_key_pairs`` (now ``key_pairs``)
+    - ``quota_server_groups`` (now ``server_groups``)
+    - ``quota_server_group_members`` (now ``server_group_members``)
+    - ``reservation_expire``
+    - ``until_refresh``
+    - ``max_age``
+    - ``quota_driver`` (now ``driver``)

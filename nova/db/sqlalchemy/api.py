@@ -4510,7 +4510,7 @@ def _security_group_ensure_default(context):
                                 context.user_id,
                                 'security_groups',
                                 1, 0,
-                                CONF.until_refresh,
+                                CONF.quota.until_refresh,
                                 context.session)
         else:
             usage.update({'in_use': int(usage.first().in_use) + 1})
