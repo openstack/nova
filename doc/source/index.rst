@@ -154,6 +154,7 @@ Open Development.
    notifications
    placement
    placement_dev
+   quotas
    threading
    vmstates
 
