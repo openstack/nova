@@ -730,7 +730,7 @@ class _HasAResourceProvider(base.NovaObject):
             rc_str = _RC_CACHE.string_from_id(source['resource_class_id'])
             target.resource_class = rc_str
         if ('resource_provider' not in target and
-            'resource_provider' in source):
+                'resource_provider' in source):
             target.resource_provider = ResourceProvider()
             ResourceProvider._from_db_object(
                 context,
