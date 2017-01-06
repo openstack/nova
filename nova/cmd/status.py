@@ -156,8 +156,8 @@ class UpgradeCommands(object):
             # This may be a fresh install in which case there may not be any
             # compute_nodes in the cell database if the nova-compute service
             # hasn't started yet to create those records. So let's query the
-            # the cell database for compute_nodes records and if we find at
-            # least one it's a failure.
+            # cell database for compute_nodes records and if we find at least
+            # one it's a failure.
             num_computes = self._count_compute_nodes()
             if num_computes > 0:
                 msg = _('No host mappings found but there are compute nodes. '

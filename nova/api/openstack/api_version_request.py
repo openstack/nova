@@ -101,7 +101,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 
 # The minimum and maximum versions of the API supported
 # The default api version request is defined to be the
-# the minimum version of the API supported.
+# minimum version of the API supported.
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
