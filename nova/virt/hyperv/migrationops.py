@@ -187,7 +187,7 @@ class MigrationOps(object):
                                     block_device_info, vm_gen, image_meta)
 
         self._check_and_attach_config_drive(instance, vm_gen)
-
+        self._vmops.set_boot_order(instance_name, vm_gen, block_device_info)
         if power_on:
             self._vmops.power_on(instance)
 
@@ -296,7 +296,7 @@ class MigrationOps(object):
                                     block_device_info, vm_gen, image_meta)
 
         self._check_and_attach_config_drive(instance, vm_gen)
-
+        self._vmops.set_boot_order(instance_name, vm_gen, block_device_info)
         if power_on:
             self._vmops.power_on(instance)
 

@@ -379,8 +379,20 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         self.assertEqual(mock_InstanceDeviceMetadata.return_value,
                          mock_instance.device_metadata)
 
+    def test_set_boot_order(self):
+        self._vmops.set_boot_order(mock.sentinel.instance_name,
+                                   mock.sentinel.vm_gen,
+                                   mock.sentinel.bdi)
+
+        mock_get_boot_order = self._vmops._block_dev_man.get_boot_order
+        mock_get_boot_order.assert_called_once_with(
+            mock.sentinel.vm_gen, mock.sentinel.bdi)
+        self._vmops._vmutils.set_boot_order.assert_called_once_with(
+            mock.sentinel.instance_name, mock_get_boot_order.return_value)
+
     @mock.patch('nova.virt.hyperv.vmops.VMOps.destroy')
     @mock.patch('nova.virt.hyperv.vmops.VMOps.power_on')
+    @mock.patch('nova.virt.hyperv.vmops.VMOps.set_boot_order')
     @mock.patch('nova.virt.hyperv.vmops.VMOps.attach_config_drive')
     @mock.patch('nova.virt.hyperv.vmops.VMOps._create_config_drive')
     @mock.patch('nova.virt.configdrive.required_by')
@@ -398,6 +410,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
                     mock_create_instance, mock_save_device_metadata,
                     mock_configdrive_required,
                     mock_create_config_drive, mock_attach_config_drive,
+                    mock_set_boot_order,
                     mock_power_on, mock_destroy, exists,
                     configdrive_required, fail,
                     fake_vm_gen=constants.VM_GEN_2):
@@ -456,6 +469,8 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
                     mock.sentinel.INFO)
                 mock_attach_config_drive.assert_called_once_with(
                     mock_instance, fake_config_drive_path, fake_vm_gen)
+            mock_set_boot_order.assert_called_once_with(
+                mock_instance.name, fake_vm_gen, block_device_info)
             mock_power_on.assert_called_once_with(mock_instance)
 
     def test_spawn(self):

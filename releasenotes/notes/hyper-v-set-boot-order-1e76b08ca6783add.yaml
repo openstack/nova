@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    Added boot order support in the Hyper-V driver.
+    The HyperVDriver can now set the requested boot order for instances that are
+    Generation 2 VMs (the given image has the property "hw_machine_type=hyperv-gen2").
+    For Generation 1 VMs, the spawned VM's boot order is changed only if the given
+    image is an ISO, booting from ISO first.

@@ -271,6 +271,15 @@ class VMOps(object):
             instance.device_metadata = objects.InstanceDeviceMetadata(
                 devices=metadata)
 
+    def set_boot_order(self, instance_name, vm_gen, block_device_info):
+        boot_order = self._block_dev_man.get_boot_order(
+            vm_gen, block_device_info)
+        LOG.debug("Setting boot order for instance: %(instance_name)s: "
+                  "%(boot_order)s", {'instance_name': instance_name,
+                                     'boot_order': boot_order})
+
+        self._vmutils.set_boot_order(instance_name, boot_order)
+
     @check_admin_permissions
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None):
@@ -308,7 +317,7 @@ class VMOps(object):
                                                              network_info)
 
                 self.attach_config_drive(instance, configdrive_path, vm_gen)
-
+            self.set_boot_order(instance.name, vm_gen, block_device_info)
             self.power_on(instance)
         except Exception:
             with excutils.save_and_reraise_exception():
