@@ -44,3 +44,11 @@ The following new routes are added:
 Custom resource classes must begin with the prefix "CUSTOM\_" and contain only
 the letters A through Z, the numbers 0 through 9 and the underscore "\_"
 character.
+
+1.3 member_of query parameter
+-----------------------------
+
+Version 1.3 adds support for listing resource providers that are members of
+any of the list of aggregates provided using a ``member_of`` query parameter:
+
+* /resource_providers?member_of=in:{agg1_uuid},{agg2_uuid},{agg3_uuid}

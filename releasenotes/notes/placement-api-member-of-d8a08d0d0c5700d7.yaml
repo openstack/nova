@@ -1,0 +1,14 @@
+---
+features:
+  - |
+    A new Placement API microversion 1.3 is added with support for filtering
+    the list of resource providers to include only those resource providers
+    which are members of any of the aggregates listed by uuid in the `member_of`
+    query parameter. The parameter is used when making a
+    `GET /resource_providers` request. The value of the parameter uses the
+    `in:` syntax to provide a list of aggregate uuids as follows::
+
+        /resource_providers?member_of=in:09c931b0-c0d7-4e80-8e01-9e6511db8259,f8ab4fa2-804f-402e-b675-7918bd04b173
+
+    If other filtering query parameters are present, the results are a boolean
+    AND of all the filters.
