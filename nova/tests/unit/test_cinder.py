@@ -118,20 +118,19 @@ class BaseCinderTestCase(object):
 # no longer supported, this is just to test that trying to use v1 fails.
 class CinderV1TestCase(test.NoDBTestCase):
 
-    @mock.patch.object(cinder.ks_loading, 'load_session_from_conf_options')
-    @mock.patch.object(cinder.cinder_client, 'get_volume_api_from_url',
-                       return_value='1')
-    def test_cinderclient_unsupported_v1(self, get_api_version, load_session):
+    @mock.patch('nova.volume.cinder.cinder_client.get_volume_api_from_url',
+                return_value='1')
+    def test_cinderclient_unsupported_v1(self, get_api_version):
         """Tests that we fail if trying to use Cinder v1."""
         self.flags(catalog_info='volume:cinder:publicURL', group='cinder')
         # setup mocks
         get_endpoint = mock.Mock(
             return_value='http://localhost:8776/v1/%(project_id)s')
         fake_session = mock.Mock(get_endpoint=get_endpoint)
-        load_session.return_value = fake_session
         ctxt = context.get_admin_context()
-        self.assertRaises(exception.UnsupportedCinderAPIVersion,
-                          cinder.cinderclient, ctxt)
+        with mock.patch.object(cinder, '_SESSION', fake_session):
+            self.assertRaises(exception.UnsupportedCinderAPIVersion,
+                              cinder.cinderclient, ctxt)
         get_api_version.assert_called_once_with(get_endpoint.return_value)
 
 
