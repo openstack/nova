@@ -29,6 +29,9 @@ def _schema_validation_helper(schema, target, min_version, max_version,
     This method checks the request version whether matches the specified max
     version and min_version. It also takes a care of legacy v2 request.
 
+    If the version range matches the request, we validate the schema against
+    the target and a failure will result in a ValidationError being raised.
+
     :param schema: A dict, the JSON-Schema is used to validate the target.
     :param target: A dict, the target is validated by the JSON-Schema.
     :param min_version: A string of two numerals. X.Y indicating the minimum
@@ -39,8 +42,10 @@ def _schema_validation_helper(schema, target, min_version, max_version,
     :param kwargs: Keyword arguments which passed into original method.
     :param is_body: A boolean. Indicating whether the target is HTTP request
                     body or not.
-    :returns: A boolean. `True` if the JSON-Schema matches the request
-            version otherwise `False`.
+    :returns: A boolean. `True` if and only if the version range matches the
+              request AND the schema is successfully validated. `False` if the
+              version range does not match the request and no validation is
+              performed.
     :raises: ValidationError, when the validation fails.
     """
     min_ver = api_version.APIVersionRequest(min_version)
