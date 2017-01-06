@@ -44,9 +44,9 @@ Response
   - status: hypervisor_status
   - hypervisor_links: hypervisor_links
 
-**Example List Hypervisors: JSON response**
+**Example List Hypervisors (v2.33): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-hypervisors/hypervisors-list-resp.json
+.. literalinclude:: ../../doc/api_samples/os-hypervisors/v2.33/hypervisors-list-resp.json
    :language: javascript
 
 List Hypervisors Details
@@ -103,13 +103,9 @@ Response
   - vcpus_used: hypervisor_vcpus_used
   - hypervisor_links: hypervisor_links
 
-**Example List Hypervisors Details: JSON response**
+**Example List Hypervisors Details (v2.33): JSON response**
 
-.. note::
-
-   This API sample is actual since microversion v2.28
-
-.. literalinclude:: ../../doc/api_samples/os-hypervisors/v2.28/hypervisors-detail-resp.json
+.. literalinclude:: ../../doc/api_samples/os-hypervisors/v2.33/hypervisors-detail-resp.json
    :language: javascript
 
 Show Hypervisor Statistics
@@ -203,11 +199,7 @@ Response
   - vcpus: hypervisor_vcpus
   - vcpus_used: hypervisor_vcpus_used
 
-**Example Show Hypervisor Details: JSON response**
-
-.. note::
-
-   This API sample is actual since microversion v2.28
+**Example Show Hypervisor Details (v2.28): JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-hypervisors/v2.28/hypervisors-show-resp.json
    :language: javascript
