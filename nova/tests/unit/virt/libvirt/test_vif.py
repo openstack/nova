@@ -205,7 +205,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                    vnic_type=network_model.VNIC_TYPE_DIRECT,
                                    ovs_interfaceid=None,
                                    details={
-                                       network_model.VIF_DETAILS_VLAN: '100'},
+                                       network_model.VIF_DETAILS_VLAN: 100},
                                    profile={'pci_vendor_info': '1137:0043',
                                             'pci_slot': '0000:0a:00.1',
                                             'physical_network': 'phynet1'})
@@ -228,7 +228,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                     vnic_type=network_model.VNIC_TYPE_MACVTAP,
                                     ovs_interfaceid=None,
                                     details={
-                                      network_model.VIF_DETAILS_VLAN: '100'},
+                                      network_model.VIF_DETAILS_VLAN: 100},
                                     profile={'pci_vendor_info': '1137:0043',
                                              'pci_slot': '0000:0a:00.1',
                                              'physical_network': 'phynet1'})
@@ -270,7 +270,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                    vnic_type=network_model.VNIC_TYPE_DIRECT,
                                    ovs_interfaceid=None,
                                    details={
-                                       network_model.VIF_DETAILS_VLAN: '100'},
+                                       network_model.VIF_DETAILS_VLAN: 100},
                                    profile={'pci_vendor_info': '1137:0043',
                                             'pci_slot': '0000:0a:00.1',
                                             'physical_network': 'phynet1'})
@@ -360,7 +360,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
           address='ca:fe:de:ad:be:ef',
           network=network_8021,
           type=network_model.VIF_TYPE_MACVTAP,
-          details={network_model.VIF_DETAILS_VLAN: '1',
+          details={network_model.VIF_DETAILS_VLAN: 1,
                    network_model.VIF_DETAILS_PHYS_INTERFACE: 'eth0',
                    network_model.VIF_DETAILS_MACVTAP_SOURCE: 'eth0.1',
                    network_model.VIF_DETAILS_MACVTAP_MODE: 'vepa'})
@@ -1228,9 +1228,10 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         node = self._get_node(xml)
         self._assertTypeAndPciEquals(node, "hostdev", self.vif_hw_veb)
         self._assertMacEquals(node, self.vif_hw_veb)
-        vlan = node.find("vlan").find("tag").get("id")
-        vlan_want = self.vif_hw_veb["details"]["vlan"]
-        self.assertEqual(vlan, vlan_want)
+
+        conf = vconfig.LibvirtConfigGuestInterface()
+        conf.parse_dom(node)
+        self.assertEqual(conf.vlan, self.vif_hw_veb["details"]["vlan"])
 
     def test_hostdev_physical_driver(self):
         d = vif.LibvirtGenericVIFDriver()
@@ -1291,8 +1292,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
     def test_macvtap_plug_vlan(self, ensure_vlan_mock):
         d = vif.LibvirtGenericVIFDriver()
         d.plug(self.instance, self.vif_macvtap_vlan)
-        ensure_vlan_mock.assert_called_once_with('1', 'eth0',
-                                                 interface='eth0.1')
+        ensure_vlan_mock.assert_called_once_with(1, 'eth0', interface='eth0.1')
 
     @mock.patch.object(linux_net.LinuxBridgeInterfaceDriver, 'ensure_vlan')
     def test_macvtap_plug_flat(self, ensure_vlan_mock):

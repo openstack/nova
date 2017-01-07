@@ -147,7 +147,7 @@ class LibvirtGenericVIFDriver(object):
 
     def _is_multiqueue_enabled(self, image_meta, flavor):
         _, vhost_queues = self._get_virtio_mq_settings(image_meta, flavor)
-        return vhost_queues > 1
+        return vhost_queues > 1 if vhost_queues is not None else False
 
     def _get_virtio_mq_settings(self, image_meta, flavor):
         """A methods to set the number of virtio queues,
