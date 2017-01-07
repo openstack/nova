@@ -1218,7 +1218,7 @@ class HostStateTestCase(test.NoDBTestCase):
 
     def test_stat_consumption_from_compute_node_not_ready(self):
         compute = objects.ComputeNode(free_ram_mb=100,
-            updated_at=None)
+            uuid=uuids.compute_node_uuid)
 
         host = host_manager.HostState("fakehost", "fakenode")
         host._update_from_compute_node(compute)
