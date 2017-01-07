@@ -19,6 +19,7 @@ import datetime
 
 from webob import exc
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import aggregates
 from nova.api.openstack import extensions
@@ -47,7 +48,7 @@ class AggregateController(wsgi.Controller):
         context = _get_context(req)
         context.can(aggr_policies.POLICY_ROOT % 'index')
         aggregates = self.api.get_aggregate_list(context)
-        return {'aggregates': [self._marshall_aggregate(a)['aggregate']
+        return {'aggregates': [self._marshall_aggregate(req, a)['aggregate']
                                for a in aggregates]}
 
     # NOTE(gmann): Returns 200 for backwards compatibility but should be 201
@@ -77,7 +78,7 @@ class AggregateController(wsgi.Controller):
         except exception.InvalidAggregateAction as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
-        agg = self._marshall_aggregate(aggregate)
+        agg = self._marshall_aggregate(req, aggregate)
 
         # To maintain the same API result as before the changes for returning
         # nova objects were made.
@@ -95,7 +96,7 @@ class AggregateController(wsgi.Controller):
             aggregate = self.api.get_aggregate(context, id)
         except exception.AggregateNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
-        return self._marshall_aggregate(aggregate)
+        return self._marshall_aggregate(req, aggregate)
 
     @extensions.expected_errors((400, 404, 409))
     @validation.schema(aggregates.update_v20, '2.0', '2.0')
@@ -117,7 +118,7 @@ class AggregateController(wsgi.Controller):
         except exception.InvalidAggregateAction as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
-        return self._marshall_aggregate(aggregate)
+        return self._marshall_aggregate(req, aggregate)
 
     # NOTE(gmann): Returns 200 for backwards compatibility but should be 204
     # as this operation complete the deletion of aggregate resource and return
@@ -154,7 +155,7 @@ class AggregateController(wsgi.Controller):
         except (exception.AggregateHostExists,
                 exception.InvalidAggregateAction) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
-        return self._marshall_aggregate(aggregate)
+        return self._marshall_aggregate(req, aggregate)
 
     # NOTE(gmann): Returns 200 for backwards compatibility but should be 202
     # for representing async API as this API just accepts the request and
@@ -179,7 +180,7 @@ class AggregateController(wsgi.Controller):
             msg = _('Cannot remove host %(host)s in aggregate %(id)s') % {
                         'host': host, 'id': id}
             raise exc.HTTPConflict(explanation=msg)
-        return self._marshall_aggregate(aggregate)
+        return self._marshall_aggregate(req, aggregate)
 
     @extensions.expected_errors((400, 404))
     @wsgi.action('set_metadata')
@@ -198,18 +199,19 @@ class AggregateController(wsgi.Controller):
         except exception.InvalidAggregateAction as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
-        return self._marshall_aggregate(aggregate)
+        return self._marshall_aggregate(req, aggregate)
 
-    def _marshall_aggregate(self, aggregate):
+    def _marshall_aggregate(self, req, aggregate):
         _aggregate = {}
-        for key, value in self._build_aggregate_items(aggregate):
+        for key, value in self._build_aggregate_items(req, aggregate):
             # NOTE(danms): The original API specified non-TZ-aware timestamps
             if isinstance(value, datetime.datetime):
                 value = value.replace(tzinfo=None)
             _aggregate[key] = value
         return {"aggregate": _aggregate}
 
-    def _build_aggregate_items(self, aggregate):
+    def _build_aggregate_items(self, req, aggregate):
+        show_uuid = api_version_request.is_supported(req, min_version="2.41")
         keys = aggregate.obj_fields
         # NOTE(rlrossit): Within the compute API, metadata will always be
         # set on the aggregate object (at a minimum to {}). Because of this,
@@ -217,11 +219,9 @@ class AggregateController(wsgi.Controller):
         # case it is only ['availability_zone']) without worrying about
         # lazy-loading an unset variable
         for key in keys:
-            # NOTE(danms): Skip the uuid field because we have no microversion
-            # to expose it
             if ((aggregate.obj_attr_is_set(key)
                     or key in aggregate.obj_extra_fields) and
-                  key != 'uuid'):
+                    (show_uuid or key != 'uuid')):
                 yield key, getattr(aggregate, key)
 
 

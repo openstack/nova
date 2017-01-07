@@ -13,12 +13,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_serialization import jsonutils
+
 from nova.tests.functional.api_sample_tests import api_sample_base
 
 
 class AggregatesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     sample_dir = "os-aggregates"
+    # extra_subs is a noop in the base v2.1 test class; it's used to sub in
+    # additional details for response verification of actions performed on an
+    # existing aggregate.
+    extra_subs = {}
 
     def _test_aggregate_create(self):
         subs = {
@@ -37,6 +43,7 @@ class AggregatesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         }
         response = self._do_post('os-aggregates/%s/action' % aggregate_id,
                                  'aggregate-add-host-post-req', subs)
+        subs.update(self.extra_subs)
         self._verify_response('aggregates-add-host-post-resp', subs,
                               response, 200)
 
@@ -49,14 +56,15 @@ class AggregatesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     def test_aggregate_get(self):
         agg_id = self._test_aggregate_create()
         response = self._do_get('os-aggregates/%s' % agg_id)
-        self._verify_response('aggregates-get-resp', {}, response, 200)
+        self._verify_response('aggregates-get-resp', self.extra_subs,
+                              response, 200)
 
     def test_add_metadata(self):
         agg_id = self._test_aggregate_create()
         response = self._do_post('os-aggregates/%s/action' % agg_id,
                                  'aggregate-metadata-post-req',
                                  {'action': 'set_metadata'})
-        self._verify_response('aggregates-metadata-post-resp', {},
+        self._verify_response('aggregates-metadata-post-resp', self.extra_subs,
                               response, 200)
 
     def test_add_host(self):
@@ -70,6 +78,7 @@ class AggregatesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         }
         response = self._do_post('os-aggregates/1/action',
                                  'aggregate-remove-host-post-req', subs)
+        subs.update(self.extra_subs)
         self._verify_response('aggregates-remove-host-post-resp',
                               subs, response, 200)
 
@@ -78,4 +87,33 @@ class AggregatesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         response = self._do_put('os-aggregates/%s' % aggregate_id,
                                   'aggregate-update-post-req', {})
         self._verify_response('aggregate-update-post-resp',
-                              {}, response, 200)
+                              self.extra_subs, response, 200)
+
+
+class AggregatesV2_41_SampleJsonTest(AggregatesSampleJsonTest):
+    microversion = '2.41'
+    scenarios = [
+        (
+            "v2_41", {
+                'api_major_version': 'v2.1',
+            },
+        )
+    ]
+
+    def _test_aggregate_create(self):
+        subs = {
+            "aggregate_id": '(?P<id>\d+)',
+        }
+        response = self._do_post('os-aggregates', 'aggregate-post-req', subs)
+        # This feels like cheating since we're getting the uuid from the
+        # response before we even validate that it exists in the response based
+        # on the sample, but we'll fail with a KeyError if it doesn't which is
+        # maybe good enough. Alternatively we have to mock out the DB API
+        # to return a fake aggregate with a hard-coded uuid that matches the
+        # API sample which isn't fun either.
+        subs['uuid'] = jsonutils.loads(response.content)['aggregate']['uuid']
+        # save off the uuid for subs validation on other actions performed
+        # on this aggregate
+        self.extra_subs['uuid'] = subs['uuid']
+        return self._verify_response('aggregate-post-resp',
+                                     subs, response, 200)

@@ -1,0 +1,5 @@
+{
+    "remove_host": {
+        "host": "compute"
+    }
+}

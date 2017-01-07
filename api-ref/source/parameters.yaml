@@ -967,6 +967,12 @@ aggregate_remove_host:
   in: body
   required: true
   type: object
+aggregate_uuid:
+  description: |
+    The UUID of the host aggregate.
+  in: body
+  type: string
+  min_version: 2.41
 aggregates:
   description: |
     The list of existing aggregates.

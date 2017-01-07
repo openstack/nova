@@ -445,3 +445,11 @@ user documentation.
   `CONF.api.max_limit` to encourage the adoption of this new microversion,
   and circumvent the existing possibility DoS-like usage requests on systems
   with thousands of instances.
+
+2.41
+----
+
+  The 'uuid' attribute of an aggregate is now returned from calls to the
+  `/os-aggregates` endpoint. This attribute is auto-generated upon creation of
+  an aggregate. The `os-aggregates` API resource endpoint remains an
+  administrator-only API.

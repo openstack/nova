@@ -34,6 +34,7 @@ Response
   - metadata: aggregate_metadata
   - name: aggregate_name
   - updated_at: updated_consider_null
+  - uuid: aggregate_uuid
 
 **Example List Aggregates: JSON response**
 
@@ -79,6 +80,7 @@ Response
   - id: aggregate_id_body
   - name: aggregate_name
   - updated_at: updated_consider_null
+  - uuid: aggregate_uuid
 
 **Example Create Aggregate: JSON response**
 
@@ -118,6 +120,7 @@ Response
   - metadata: aggregate_metadata
   - name: aggregate_name
   - updated_at: updated_consider_null
+  - uuid: aggregate_uuid
 
 **Example Show Aggregate Details: JSON response**
 
@@ -168,6 +171,7 @@ Response
   - metadata: aggregate_metadata
   - name: aggregate_name
   - updated_at: updated_consider_null
+  - uuid: aggregate_uuid
 
 **Example Update Aggregate: JSON response**
 
@@ -240,6 +244,7 @@ Response
   - metadata: aggregate_metadata
   - name: aggregate_name
   - updated_at: updated_consider_null
+  - uuid: aggregate_uuid
 
 **Example Add Host: JSON response**
 
@@ -289,6 +294,7 @@ Response
   - metadata: aggregate_metadata
   - name: aggregate_name
   - updated_at: updated_consider_null
+  - uuid: aggregate_uuid
 
 **Example Remove Host: JSON response**
 
@@ -338,6 +344,7 @@ Response
   - metadata: aggregate_metadata
   - name: aggregate_name
   - updated_at: updated_consider_null
+  - uuid: aggregate_uuid
 
 **Example Create Or Update Aggregate Metadata: JSON response**
 
