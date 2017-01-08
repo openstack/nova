@@ -517,51 +517,46 @@ class Host(object):
         return self._version_check(
             lv_ver=lv_ver, hv_ver=hv_ver, hv_type=hv_type, op=operator.ne)
 
-    # TODO(sahid): needs to be private
-    def get_domain(self, instance):
-        """Retrieve libvirt domain object for an instance.
-
-        :param instance: an nova.objects.Instance object
-
-        Attempt to lookup the libvirt domain objects
-        corresponding to the Nova instance, based on
-        its name. If not found it will raise an
-        exception.InstanceNotFound exception. On other
-        errors, it will raise an exception.NovaException
-        exception.
-
-        :returns: a libvirt.Domain object
-        """
-        return self._get_domain_by_name(instance.name)
-
     def get_guest(self, instance):
-        """Retrieve libvirt domain object for an instance.
-
-        :param instance: an nova.objects.Instance object
-
-        :returns: a nova.virt.libvirt.Guest object
-        """
-        return libvirt_guest.Guest(
-            self.get_domain(instance))
-
-    def _get_domain_by_name(self, instance_name):
-        """Retrieve libvirt domain object given an instance name.
+        """Retrieve libvirt guest object for an instance.
 
         All libvirt error handling should be handled in this method and
         relevant nova exceptions should be raised in response.
 
+        :param instance: a nova.objects.Instance object
+
+        :returns: a nova.virt.libvirt.Guest object
+        :raises exception.InstanceNotFound: The domain was not found
+        :raises exception.NovaException: A libvirt error occured
+        """
+        return libvirt_guest.Guest(self.get_domain(instance))
+
+    # TODO(sahid): needs to be private
+    def get_domain(self, instance):
+        """Retrieve libvirt domain object for an instance.
+
+        All libvirt error handling should be handled in this method and
+        relevant nova exceptions should be raised in response.
+
+        :param instance: a nova.objects.Instance object
+
+        :returns: a libvirt.Domain object
+        :raises exception.InstanceNotFound: The domain was not found
+        :raises exception.NovaException: A libvirt error occured
         """
         try:
             conn = self.get_connection()
-            return conn.lookupByName(instance_name)
+            return conn.lookupByName(instance.name)
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
             if error_code == libvirt.VIR_ERR_NO_DOMAIN:
-                raise exception.InstanceNotFound(instance_id=instance_name)
+                raise exception.InstanceNotFound(instance_id=instance.uuid)
 
+            # TODO(stephenfin): Stop using NovaException here - it's too
+            # generic. InternalError would be a better fit.
             msg = (_('Error from libvirt while looking up %(instance_name)s: '
                      '[Error Code %(error_code)s] %(ex)s') %
-                   {'instance_name': instance_name,
+                   {'instance_name': instance.name,
                     'error_code': error_code,
                     'ex': ex})
             raise exception.NovaException(msg)
