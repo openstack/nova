@@ -269,8 +269,24 @@ class SingleCellSimple(fixtures.Fixture):
             'nova.objects.CellMappingList._get_all_from_db',
             self._fake_cell_list))
         self.useFixture(fixtures.MonkeyPatch(
+            'nova.objects.CellMapping._get_by_uuid_from_db',
+            self._fake_cell_get))
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.objects.HostMapping._get_by_host_from_db',
+            self._fake_hostmapping_get))
+        self.useFixture(fixtures.MonkeyPatch(
             'nova.context.target_cell',
             self._fake_target_cell))
+
+    def _fake_hostmapping_get(self, *args):
+        return {'id': 1,
+                'updated_at': None,
+                'created_at': None,
+                'host': 'host1',
+                'cell_mapping': self._fake_cell_list()[0]}
+
+    def _fake_cell_get(self, *args):
+        return self._fake_cell_list()[0]
 
     def _fake_cell_list(self, *args):
         return [{'id': 1,
