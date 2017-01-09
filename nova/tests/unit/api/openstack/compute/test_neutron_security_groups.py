@@ -191,7 +191,7 @@ class TestNeutronSecurityGroupsV21(
         neutron = neutron_api.API()
         with mock.patch.object(nova.db, 'instance_get_by_uuid',
                                return_value=db_inst):
-            neutron.allocate_for_instance(_context, instance,
+            neutron.allocate_for_instance(_context, instance, False, None,
                                           security_groups=[sg['id']])
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups/%s'
