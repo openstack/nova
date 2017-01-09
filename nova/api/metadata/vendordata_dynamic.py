@@ -78,7 +78,9 @@ class DynamicVendorData(vendordata.VendorDataDriver):
                     'image-id': self.instance.image_ref,
                     'user-data': self.instance.user_data,
                     'hostname': self.instance.hostname,
-                    'metadata': self.instance.metadata}
+                    'metadata': self.instance.metadata,
+                    'boot-roles': self.instance.system_metadata.get(
+                                      'boot_roles', '')}
             headers = {'Content-Type': 'application/json',
                        'Accept': 'application/json',
                        'User-Agent': 'openstack-nova-vendordata'}

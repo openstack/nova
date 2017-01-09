@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    The vendordata metadata system now caches boot time roles.  Some external
+    vendordata services want to provide metadata based on the role of the user
+    who started the instance. It would be confusing if the metadata returned
+    changed later if the role of the user changed, so we cache the boot time
+    roles and then pass those to the external vendordata service.

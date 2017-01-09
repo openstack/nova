@@ -1887,6 +1887,11 @@ class ComputeManager(manager.Manager):
             action=fields.NotificationAction.CREATE,
             phase=fields.NotificationPhase.START)
 
+        # NOTE(mikal): cache the keystone roles associated with the instance
+        # at boot time for later reference
+        instance.system_metadata.update(
+            {'boot_roles': ','.join(context.roles)})
+
         self._check_device_tagging(requested_networks, block_device_mapping)
 
         try:
