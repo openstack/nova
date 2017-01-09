@@ -48,7 +48,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
     def test_get_all_host_states_returns_cached_value(self, mock_up_hosts):
         self.driver.all_host_states = []
 
-        self.driver._get_all_host_states(self.context)
+        self.driver._get_all_host_states(self.context, None)
 
         self.assertFalse(mock_up_hosts.called)
         self.assertEqual([], self.driver.all_host_states)
@@ -58,7 +58,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
     def test_get_all_host_states_loads_hosts(self, mock_up_hosts):
         mock_up_hosts.return_value = ["asdf"]
 
-        result = self.driver._get_all_host_states(self.context)
+        result = self.driver._get_all_host_states(self.context, None)
 
         self.assertTrue(mock_up_hosts.called)
         self.assertEqual(["asdf"], self.driver.all_host_states)

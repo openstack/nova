@@ -15,6 +15,7 @@
 
 import functools
 import re
+from six.moves.urllib import parse
 import time
 
 from keystoneauth1 import exceptions as ks_exc
@@ -207,6 +208,43 @@ class SchedulerReportClient(object):
         return self._client.delete(
             url,
             endpoint_filter=self.ks_filter, raise_exc=False)
+
+    # TODO(sbauza): Change that poor interface into passing a rich versioned
+    # object that would provide the ResourceProvider requirements.
+    @safe_connect
+    def get_filtered_resource_providers(self, filters):
+        """Returns a list of ResourceProviders matching the requirements
+        expressed by the filters argument, which can include a dict named
+        'resources' where amounts are keyed by resource class names.
+
+        eg. filters = {'resources': {'VCPU': 1}}
+        """
+        resources = filters.pop("resources", None)
+        if resources:
+            resource_query = ",".join(sorted("%s:%s" % (rc, amount)
+                                      for (rc, amount) in resources.items()))
+            filters['resources'] = resource_query
+        resp = self.get("/resource_providers?%s" % parse.urlencode(filters),
+                        version='1.4')
+        if resp.status_code == 200:
+            data = resp.json()
+            raw_rps = data.get('resource_providers', [])
+            rps = [objects.ResourceProvider(uuid=rp['uuid'],
+                                            name=rp['name'],
+                                            generation=rp['generation'],
+                                            ) for rp in raw_rps]
+            return objects.ResourceProviderList(objects=rps)
+        else:
+            msg = _LE("Failed to retrieve filtered list of resource providers "
+                      "from placement API for filters %(filters)s. "
+                      "Got %(status_code)d: %(err_text)s.")
+            args = {
+                'filters': filters,
+                'status_code': resp.status_code,
+                'err_text': resp.text,
+            }
+            LOG.error(msg, args)
+            return None
 
     @safe_connect
     def _get_provider_aggregates(self, rp_uuid):

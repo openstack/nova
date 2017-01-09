@@ -576,17 +576,28 @@ class HostManager(object):
         return self.weight_handler.get_weighed_objects(self.weighers,
                 hosts, spec_obj)
 
+    def get_host_states_by_uuids(self, context, compute_uuids):
+        compute_nodes = objects.ComputeNodeList.get_all_by_uuids(context,
+                                                                 compute_uuids)
+        return self._get_host_states(context, compute_nodes)
+
     def get_all_host_states(self, context):
         """Returns a list of HostStates that represents all the hosts
         the HostManager knows about. Also, each of the consumable resources
         in HostState are pre-populated and adjusted based on data in the db.
         """
+        compute_nodes = objects.ComputeNodeList.get_all(context)
+        return self._get_host_states(context, compute_nodes)
 
+    def _get_host_states(self, context, compute_nodes):
+        """Returns a tuple of HostStates given a list of computes.
+
+        Also updates the HostStates internal mapping for the HostManager.
+        """
         service_refs = {service.host: service
                         for service in objects.ServiceList.get_by_binary(
                             context, 'nova-compute', include_disabled=True)}
         # Get resource usage across the available compute nodes:
-        compute_nodes = objects.ComputeNodeList.get_all(context)
         seen_nodes = set()
         for compute in compute_nodes:
             service = service_refs.get(compute.host)
@@ -621,7 +632,7 @@ class HostManager(object):
                          "from scheduler"), {'host': host, 'node': node})
             del self.host_state_map[state_key]
 
-        return six.itervalues(self.host_state_map)
+        return (self.host_state_map[host] for host in seen_nodes)
 
     def _get_aggregates_info(self, host):
         return [self.aggs_by_id[agg_id] for agg_id in

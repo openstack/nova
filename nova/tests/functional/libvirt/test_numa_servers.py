@@ -21,6 +21,7 @@ from oslo_log import log as logging
 from nova import context as nova_context
 from nova import objects
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.test_servers import ServersTestBase
 from nova.tests.unit import fake_network
 from nova.tests.unit.virt.libvirt import fake_imagebackend
@@ -75,6 +76,7 @@ class NUMAServersTest(ServersTestBase):
            'nova.virt.libvirt.guest.libvirt',
            fakelibvirt))
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.PlacementFixture())
 
     def _setup_compute_service(self):
         pass

@@ -62,7 +62,7 @@ class CachingScheduler(filter_scheduler.FilterScheduler):
         # fetch the list of hosts.
         self.all_host_states = self._get_up_hosts(elevated)
 
-    def _get_all_host_states(self, context):
+    def _get_all_host_states(self, context, spec_obj):
         """Called from the filter scheduler, in a template pattern."""
         if self.all_host_states is None:
             # NOTE(johngarbutt) We only get here when we a scheduler request

@@ -36,6 +36,7 @@ def main():
     logging.setup(CONF, "nova")
     utils.monkey_patch()
     objects.register_all()
+    objects.Service.enable_min_version_cache()
 
     gmr.TextGuruMeditation.setup_autorun(version)
 

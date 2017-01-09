@@ -13,6 +13,7 @@
 from keystoneauth1 import exceptions as ks_exc
 import mock
 import six
+from six.moves.urllib import parse
 
 import nova.conf
 from nova import context
@@ -267,6 +268,49 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                 uuids.compute_node,
                 mock.sentinel.name,
         )
+
+    def test_get_filtered_resource_providers(self):
+        uuid = uuids.compute_node
+        resp_mock = mock.Mock(status_code=200)
+        json_data = {
+            'resource_providers': [
+                {'uuid': uuid,
+                 'name': uuid,
+                 'generation': 42}
+            ],
+        }
+        filters = {'resources': {'VCPU': 1, 'MEMORY_MB': 1024}}
+        resp_mock.json.return_value = json_data
+        self.ks_sess_mock.get.return_value = resp_mock
+
+        result = self.client.get_filtered_resource_providers(filters)
+
+        expected_provider = objects.ResourceProvider(
+                uuid=uuid,
+                name=uuid,
+                generation=42,
+        )
+        expected_url = '/resource_providers?%s' % parse.urlencode(
+            {'resources': 'MEMORY_MB:1024,VCPU:1'})
+        self.ks_sess_mock.get.assert_called_once_with(
+            expected_url, endpoint_filter=mock.ANY, raise_exc=False,
+            headers={'OpenStack-API-Version': 'placement 1.4'})
+        self.assertTrue(obj_base.obj_equal_prims(expected_provider,
+                                                 result[0]))
+
+    def test_get_filtered_resource_providers_not_found(self):
+        # Ensure _get_resource_provider() just returns None when the placement
+        # API doesn't find a resource provider matching a UUID
+        resp_mock = mock.Mock(status_code=404)
+        self.ks_sess_mock.get.return_value = resp_mock
+
+        result = self.client.get_filtered_resource_providers({'foo': 'bar'})
+
+        expected_url = '/resource_providers?foo=bar'
+        self.ks_sess_mock.get.assert_called_once_with(
+            expected_url, endpoint_filter=mock.ANY, raise_exc=False,
+            headers={'OpenStack-API-Version': 'placement 1.4'})
+        self.assertIsNone(result)
 
     def test_get_resource_provider_found(self):
         # Ensure _get_resource_provider() returns a ResourceProvider object if

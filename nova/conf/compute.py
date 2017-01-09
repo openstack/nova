@@ -402,8 +402,12 @@ allocation_ratio_opts = [
         default=0.0,
         min=0.0,
         help="""
-This option helps you specify virtual CPU to physical CPU allocation
-ratio which affects all CPU filters.
+This option helps you specify virtual CPU to physical CPU allocation ratio.
+
+From Ocata (15.0.0) this is used to influence the hosts selected by
+the Placement API. Note that when Placement is used, the CoreFilter
+is redundant, because the Placement API will have already filtered
+out hosts that would have failed the CoreFilter.
 
 This configuration specifies ratio for CoreFilter which can be set
 per compute node. For AggregateCoreFilter, it will fall back to this
@@ -423,7 +427,12 @@ Possible values:
         min=0.0,
         help="""
 This option helps you specify virtual RAM to physical RAM
-allocation ratio which affects all RAM filters.
+allocation ratio.
+
+From Ocata (15.0.0) this is used to influence the hosts selected by
+the Placement API. Note that when Placement is used, the RamFilter
+is redundant, because the Placement API will have already filtered
+out hosts that would have failed the RamFilter.
 
 This configuration specifies ratio for RamFilter which can be set
 per compute node. For AggregateRamFilter, it will fall back to this
@@ -443,8 +452,12 @@ Possible values:
         min=0.0,
         help="""
 This option helps you specify virtual disk to physical disk
-allocation ratio used by the disk_filter.py script to determine if
-a host has sufficient disk space to fit a requested instance.
+allocation ratio.
+
+From Ocata (15.0.0) this is used to influence the hosts selected by
+the Placement API. Note that when Placement is used, the DiskFilter
+is redundant, because the Placement API will have already filtered
+out hosts that would have failed the DiskFilter.
 
 A ratio greater than 1.0 will result in over-subscription of the
 available physical disk, which can be useful for more
