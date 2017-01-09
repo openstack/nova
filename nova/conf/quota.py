@@ -26,261 +26,268 @@ Quota options allow to manage quotas in openstack deployment.
 
 quota_opts = [
     cfg.IntOpt('instances',
-               min=-1,
-               default=10,
-               deprecated_group='DEFAULT',
-               deprecated_name='quota_instances',
-               help="""
+        min=-1,
+        default=10,
+        deprecated_group='DEFAULT',
+        deprecated_name='quota_instances',
+        help="""
 The number of instances allowed per project.
 
 Possible Values
 
- * 10 (default) or any positive integer.
- * -1 : treated as unlimited.
+* A positive integer or 0.
+* -1 to disable the quota.
 """),
     cfg.IntOpt('cores',
-               min=-1,
-               default=20,
-               deprecated_group='DEFAULT',
-               deprecated_name='quota_cores',
-               help="""
-The number of instance cores or VCPUs allowed per project.
+        min=-1,
+        default=20,
+        deprecated_group='DEFAULT',
+        deprecated_name='quota_cores',
+        help="""
+The number of instance cores or vCPUs allowed per project.
 
 Possible values:
 
- * 20 (default) or any positive integer.
- * -1 : treated as unlimited.
+* A positive integer or 0.
+* -1 to disable the quota.
 """),
     cfg.IntOpt('ram',
-               min=-1,
-               default=50 * 1024,
-               deprecated_group='DEFAULT',
-               deprecated_name='quota_ram',
-               help="""
+        min=-1,
+        default=50 * 1024,
+        deprecated_group='DEFAULT',
+        deprecated_name='quota_ram',
+        help="""
 The number of megabytes of instance RAM allowed per project.
 
 Possible values:
 
- * 51200 (default) or any positive integer.
- * -1 : treated as unlimited.
+* A positive integer or 0.
+* -1 to disable the quota.
 """),
     cfg.IntOpt('floating_ips',
-               min=-1,
-               default=10,
-               deprecated_group='DEFAULT',
-               deprecated_name='quota_floating_ips',
-               help="""
-The number of floating IPs allowed per project. Floating IPs are not allocated
-to instances by default. Users need to select them from the pool configured by
-the OpenStack administrator to attach to their instances.
+        min=-1,
+        default=10,
+        deprecated_group='DEFAULT',
+        deprecated_name='quota_floating_ips',
+        help="""
+The number of floating IPs allowed per project.
+
+Floating IPs are not allocated to instances by default. Users need to select
+them from the pool configured by the OpenStack administrator to attach to their
+instances.
 
 Possible values:
 
- * 10 (default) or any positive integer.
- * -1 : treated as unlimited.
+* A positive integer or 0.
+* -1 to disable the quota.
 """),
     cfg.IntOpt('fixed_ips',
-               min=-1,
-               default=-1,
-               deprecated_group='DEFAULT',
-               deprecated_name='quota_fixed_ips',
-               help="""
-The number of fixed IPs allowed per project (this should be at least the number
-of instances allowed). Unlike floating IPs, fixed IPs are allocated dynamically
-by the network component when instances boot up.
+        min=-1,
+        default=-1,
+        deprecated_group='DEFAULT',
+        deprecated_name='quota_fixed_ips',
+        help="""
+The number of fixed IPs allowed per project.
+
+Unlike floating IPs, fixed IPs are allocated dynamically by the network
+component when instances boot up.  This quota value should be at least the
+number of instances allowed
 
 Possible values:
 
- * -1 (default) : treated as unlimited.
- * Any positive integer.
+* A positive integer or 0.
+* -1 to disable the quota.
 """),
     cfg.IntOpt('metadata_items',
-               min=-1,
-               default=128,
-               deprecated_group='DEFAULT',
-               deprecated_name='quota_metadata_items',
-               help="""
-The number of metadata items allowed per instance. User can associate metadata
-while instance creation in the form of key-value pairs.
+        min=-1,
+        default=128,
+        deprecated_group='DEFAULT',
+        deprecated_name='quota_metadata_items',
+        help="""
+The number of metadata items allowed per instance.
+
+Users can associate metadata with an instance during instance creation. This
+metadata takes the form of key-value pairs.
 
 Possible values:
 
- * 128 (default) or any positive integer.
- * -1 : treated as unlimited.
+* A positive integer or 0.
+* -1 to disable the quota.
 """),
     cfg.IntOpt('injected_files',
-               min=-1,
-               default=5,
-               deprecated_group='DEFAULT',
-               deprecated_name='quota_injected_files',
-               help="""
-The number of injected files allowed. It allow users to customize the
-personality of an instance by injecting data into it upon boot. Only text
-file injection is permitted. Binary or zip files won't work. During file
-injection, any existing files that match specified files are renamed to include
-.bak extension appended with a timestamp.
+        min=-1,
+        default=5,
+        deprecated_group='DEFAULT',
+        deprecated_name='quota_injected_files',
+        help="""
+The number of injected files allowed.
+
+File injection allows users to customize the personality of an instance by
+injecting data into it upon boot. Only text file injection is permitted: binary
+or ZIP files are not accepted. During file injection, any existing files that
+match specified files are renamed to include ``.bak`` extension appended with a
+timestamp.
 
 Possible values:
 
- * 5 (default) or any positive integer.
- * -1 : treated as unlimited.
+* A positive integer or 0.
+* -1 to disable the quota.
 """),
     cfg.IntOpt('injected_file_content_bytes',
-               min=-1,
-               default=10 * 1024,
-               deprecated_group='DEFAULT',
-               deprecated_name='quota_injected_file_content_bytes',
-               help="""
+        min=-1,
+        default=10 * 1024,
+        deprecated_group='DEFAULT',
+        deprecated_name='quota_injected_file_content_bytes',
+        help="""
 The number of bytes allowed per injected file.
 
 Possible values:
 
- * 10240 (default) or any positive integer representing number of bytes.
- * -1 : treated as unlimited.
+* A positive integer or 0.
+* -1 to disable the quota.
 """),
     cfg.IntOpt('injected_file_path_length',
-               min=-1,
-               default=255,
-               deprecated_group='DEFAULT',
-               deprecated_name='quota_injected_file_path_length',
-               help="""
+        min=-1,
+        default=255,
+        deprecated_group='DEFAULT',
+        deprecated_name='quota_injected_file_path_length',
+        help="""
 The maximum allowed injected file path length.
 
 Possible values:
 
- * 255 (default) or any positive integer.
- * -1 : treated as unlimited.
+* A positive integer or 0.
+* -1 to disable the quota.
 """),
     cfg.IntOpt('security_groups',
-               min=-1,
-               default=10,
-               deprecated_group='DEFAULT',
-               deprecated_name='quota_security_groups',
-               help="""
+        min=-1,
+        default=10,
+        deprecated_group='DEFAULT',
+        deprecated_name='quota_security_groups',
+        help="""
 The number of security groups per project.
 
 Possible values:
 
- * 10 (default) or any positive integer.
- * -1 : treated as unlimited.
+* A positive integer or 0.
+* -1 to disable the quota.
 """),
     cfg.IntOpt('security_group_rules',
-               min=-1,
-               default=20,
-               deprecated_group='DEFAULT',
-               deprecated_name='quota_security_group_rules',
-               help="""
-The number of security rules per security group. The associated rules in each
-security group control the traffic to instances in the group.
+        min=-1,
+        default=20,
+        deprecated_group='DEFAULT',
+        deprecated_name='quota_security_group_rules',
+        help="""
+The number of security rules per security group.
+
+The associated rules in each security group control the traffic to instances in
+the group.
 
 Possible values:
 
- * 20 (default) or any positive integer.
- * -1 : treated as unlimited.
+* A positive integer or 0.
+* -1 to disable the quota.
 """),
     cfg.IntOpt('key_pairs',
-               min=-1,
-               default=100,
-               deprecated_group='DEFAULT',
-               deprecated_name='quota_key_pairs',
-               help="""
-The maximum number of key pairs allowed per user. Users can create at least one
-key pair for each project and use the key pair for multiple instances that
-belong to that project.
+        min=-1,
+        default=100,
+        deprecated_group='DEFAULT',
+        deprecated_name='quota_key_pairs',
+        help="""
+The maximum number of key pairs allowed per user.
+
+Users can create at least one key pair for each project and use the key pair
+for multiple instances that belong to that project.
 
 Possible values:
 
- * 100 (default) or any positive integer.
- * -1 : treated as unlimited.
+* A positive integer or 0.
+* -1 to disable the quota.
 """),
     cfg.IntOpt('server_groups',
-               min=-1,
-               default=10,
-               deprecated_group='DEFAULT',
-               deprecated_name='quota_server_groups',
-               help="""
-Add quota values to constrain the number of server groups per project. Server
-group used to control the affinity and anti-affinity scheduling policy for a
-group of servers or instances. Reducing the quota will not affect any existing
-group, but new servers will not be allowed into groups that have become over
-quota.
+        min=-1,
+        default=10,
+        deprecated_group='DEFAULT',
+        deprecated_name='quota_server_groups',
+        help="""
+The maxiumum number of server groups per project.
+
+Server groups are used to control the affinity and anti-affinity scheduling
+policy for a group of servers or instances. Reducing the quota will not affect
+any existing group, but new servers will not be allowed into groups that have
+become over quota.
 
 Possible values:
 
- * 10 (default) or any positive integer.
- * -1 : treated as unlimited.
+* A positive integer or 0.
+* -1 to disable the quota.
 """),
     cfg.IntOpt('server_group_members',
-               min=-1,
-               default=10,
-               deprecated_group='DEFAULT',
-               deprecated_name='quota_server_group_members',
-               help="""
-Add quota values to constrain the number of servers per server group.
+        min=-1,
+        default=10,
+        deprecated_group='DEFAULT',
+        deprecated_name='quota_server_group_members',
+        help="""
+The maximum number of servers per server group.
 
 Possible values:
 
- * 10 (default) or any positive integer.
- * -1 : treated as unlimited.
+* A positive integer or 0.
+* -1 to disable the quota.
 """),
+    # TODO(stephenfin): This should have a min parameter
     cfg.IntOpt('reservation_expire',
-               default=86400,
-               deprecated_group='DEFAULT',
-               help="""
-The number of seconds until a reservation expires. It represents the time
-period for invalidating quota reservations.
+        default=86400,
+        deprecated_group='DEFAULT',
+        help="""
+The number of seconds until a reservation expires.
 
-Possible values:
-
- * 86400 (default) or any positive integer representing number of seconds.
+This quota represents the time period for invalidating quota reservations.
 """),
     cfg.IntOpt('until_refresh',
-               min=0,
-               default=0,
-               deprecated_group='DEFAULT',
-               help="""
-The count of reservations until usage is refreshed. This defaults to 0 (off) to
-avoid additional load but it is useful to turn on to help keep quota usage
-up-to-date and reduce the impact of out of sync usage issues.
+        min=0,
+        default=0,
+        deprecated_group='DEFAULT',
+        help="""
+The count of reservations until usage is refreshed.
 
-Possible values:
-
- * 0 (default) or any positive integer.
+This defaults to 0 (off) to avoid additional load but it is useful to turn on
+to help keep quota usage up-to-date and reduce the impact of out of sync usage
+issues.
 """),
     cfg.IntOpt('max_age',
-               min=0,
-               default=0,
-               deprecated_group='DEFAULT',
-               help="""
-The number of seconds between subsequent usage refreshes. This defaults to 0
-(off) to avoid additional load but it is useful to turn on to help keep quota
-usage up-to-date and reduce the impact of out of sync usage issues. Note that
-quotas are not updated on a periodic task, they will update on a new
-reservation if max_age has passed since the last reservation.
+        min=0,
+        default=0,
+        deprecated_group='DEFAULT',
+        help="""
+The number of seconds between subsequent usage refreshes.
 
-Possible values:
-
- * 0 (default) or any positive integer representing number of seconds.
+This defaults to 0 (off) to avoid additional load but it is useful to turn on
+to help keep quota usage up-to-date and reduce the impact of out of sync usage
+issues. Note that quotas are not updated on a periodic task, they will update
+on a new reservation if max_age has passed since the last reservation.
 """),
 
 # TODO(pumaranikar): Add a new config to select between the db_driver and
 # the no_op driver using stevedore.
     cfg.StrOpt('driver',
-               default='nova.quota.DbQuotaDriver',
-               deprecated_for_removal=True,
-               deprecated_since='14.0.0',
-               deprecated_group='DEFAULT',
-               deprecated_name='quota_driver',
-               help="""
+        default='nova.quota.DbQuotaDriver',
+        deprecated_for_removal=True,
+        deprecated_since='14.0.0',
+        deprecated_group='DEFAULT',
+        deprecated_name='quota_driver',
+        help="""
+The quota enforcer driver.
+
 Provides abstraction for quota checks. Users can configure a specific
 driver to use for quota checks.
 
 Possible values:
 
- * nova.quota.DbQuotaDriver (default) or any string representing fully
-   qualified class name.
+* nova.quota.DbQuotaDriver (default) or any string representing fully
+  qualified class name.
 """),
-    ]
+]
 
 
 def register_opts(conf):
