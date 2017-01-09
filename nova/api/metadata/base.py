@@ -37,6 +37,7 @@ from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
 import nova.conf
 from nova import context
+from nova import exception
 from nova.i18n import _LI, _LW
 from nova import network
 from nova.network.security_group import openstack_driver
@@ -662,12 +663,23 @@ def get_metadata_by_address(address):
 
 def get_metadata_by_instance_id(instance_id, address, ctxt=None):
     ctxt = ctxt or context.get_admin_context()
-    instance = objects.Instance.get_by_uuid(
-        ctxt, instance_id, expected_attrs=['ec2_ids', 'flavor', 'info_cache',
-                                           'metadata', 'system_metadata',
-                                           'security_groups', 'keypairs',
-                                           'device_metadata'])
-    return InstanceMetadata(instance, address)
+    attrs = ['ec2_ids', 'flavor', 'info_cache',
+             'metadata', 'system_metadata',
+             'security_groups', 'keypairs',
+             'device_metadata']
+    try:
+        im = objects.InstanceMapping.get_by_instance_uuid(ctxt, instance_id)
+    except exception.InstanceMappingNotFound:
+        LOG.warning(_LW('Instance mapping for %(uuid)s not found; '
+                        'cell setup is incomplete'), {'uuid': instance_id})
+        instance = objects.Instance.get_by_uuid(ctxt, instance_id,
+                                                expected_attrs=attrs)
+        return InstanceMetadata(instance, address)
+
+    with context.target_cell(ctxt, im.cell_mapping):
+        instance = objects.Instance.get_by_uuid(ctxt, instance_id,
+                                                expected_attrs=attrs)
+        return InstanceMetadata(instance, address)
 
 
 def _format_instance_mapping(ctxt, instance):

@@ -1480,13 +1480,14 @@ class MetadataHandlerTestCase(test.TestCase):
     def test_get_metadata_by_instance_id(self, mock_uuid, mock_context):
         inst = objects.Instance()
         mock_uuid.return_value = inst
+        ctxt = context.RequestContext()
 
         with mock.patch.object(base, 'InstanceMetadata') as imd:
-            base.get_metadata_by_instance_id('foo', 'bar', ctxt='CONTEXT')
+            base.get_metadata_by_instance_id('foo', 'bar', ctxt=ctxt)
 
         self.assertFalse(mock_context.called, "get_admin_context() should not"
                          "have been called, the context was given")
-        mock_uuid.assert_called_once_with('CONTEXT', 'foo',
+        mock_uuid.assert_called_once_with(ctxt, 'foo',
             expected_attrs=['ec2_ids', 'flavor', 'info_cache', 'metadata',
                             'system_metadata', 'security_groups', 'keypairs',
                             'device_metadata'])
@@ -1498,16 +1499,34 @@ class MetadataHandlerTestCase(test.TestCase):
             mock_uuid, mock_context):
         inst = objects.Instance()
         mock_uuid.return_value = inst
-        mock_context.return_value = 'CONTEXT'
+        mock_context.return_value = context.RequestContext()
 
         with mock.patch.object(base, 'InstanceMetadata') as imd:
             base.get_metadata_by_instance_id('foo', 'bar')
 
         mock_context.assert_called_once_with()
-        mock_uuid.assert_called_once_with('CONTEXT', 'foo',
+        mock_uuid.assert_called_once_with(mock_context.return_value, 'foo',
             expected_attrs=['ec2_ids', 'flavor', 'info_cache', 'metadata',
                             'system_metadata', 'security_groups', 'keypairs',
                             'device_metadata'])
+        imd.assert_called_once_with(inst, 'bar')
+
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
+    def test_get_metadata_by_instance_id_with_cell_mapping(self, mock_get_im,
+                                                           mock_get_inst):
+        ctxt = context.RequestContext()
+        inst = objects.Instance()
+        im = objects.InstanceMapping(cell_mapping=objects.CellMapping())
+        mock_get_inst.return_value = inst
+        mock_get_im.return_value = im
+
+        with mock.patch.object(base, 'InstanceMetadata') as imd:
+            with mock.patch('nova.context.target_cell') as mock_tc:
+                base.get_metadata_by_instance_id('foo', 'bar', ctxt=ctxt)
+                mock_tc.assert_called_once_with(ctxt, im.cell_mapping)
+
+        mock_get_im.assert_called_once_with(ctxt, 'foo')
         imd.assert_called_once_with(inst, 'bar')
 
 
