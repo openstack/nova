@@ -1530,8 +1530,11 @@ class _ComputeAPIUnitTestMixIn(object):
                                                              instance.uuid)
             self.assertEqual(instance, ret_instance)
             mock_inst_get.assert_called_once_with(self.context, instance.uuid)
-            mock_target_cell.assert_called_once_with(self.context,
-                                                     inst_map.cell_mapping)
+            if self.cell_type is None:
+                mock_target_cell.assert_called_once_with(self.context,
+                                                         inst_map.cell_mapping)
+            else:
+                self.assertFalse(mock_target_cell.called)
 
         test()
 
@@ -4219,8 +4222,9 @@ class _ComputeAPIUnitTestMixIn(object):
         # get looked up normally.
         self.compute_api.get(self.context, uuids.inst_uuid)
         mock_get_build_req.assert_not_called()
-        mock_get_inst_map.assert_called_once_with(self.context,
-                                                  uuids.inst_uuid)
+        if self.cell_type is None:
+            mock_get_inst_map.assert_called_once_with(self.context,
+                                                      uuids.inst_uuid)
         mock_get_inst.assert_called_once_with(self.context, uuids.inst_uuid,
                                               expected_attrs=[
                                                   'metadata',
@@ -4231,17 +4235,27 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch.object(objects.Service, 'get_minimum_version', return_value=15)
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
-    def test_get_instance_not_in_cell(self, mock_get_build_req,
-            mock_get_inst_map, mock_get_min_service):
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_get_instance_not_in_cell(self, mock_get_inst, mock_get_build_req,
+                mock_get_inst_map, mock_get_min_service):
         build_req_obj = fake_build_request.fake_req_obj(self.context)
         mock_get_inst_map.return_value = objects.InstanceMapping(
                 cell_mapping=None)
         mock_get_build_req.return_value = build_req_obj
-
         instance = build_req_obj.instance
+        mock_get_inst.return_value = instance
+
         inst_from_build_req = self.compute_api.get(self.context, instance.uuid)
-        mock_get_inst_map.assert_called_once_with(self.context, instance.uuid)
-        mock_get_build_req.assert_called_once_with(self.context, instance.uuid)
+        if self.cell_type is None:
+            mock_get_inst_map.assert_called_once_with(self.context,
+                                                      instance.uuid)
+            mock_get_build_req.assert_called_once_with(self.context,
+                                                       instance.uuid)
+        else:
+            mock_get_inst.assert_called_once_with(
+                self.context, instance.uuid,
+                expected_attrs=['metadata', 'system_metadata',
+                                'security_groups', 'info_cache'])
         self.assertEqual(instance, inst_from_build_req)
         mock_get_min_service.assert_called_once_with(self.context,
                                                      'nova-osapi_compute')
@@ -4274,10 +4288,12 @@ class _ComputeAPIUnitTestMixIn(object):
 
         inst_map_calls = [mock.call(self.context, instance.uuid),
                           mock.call(self.context, instance.uuid)]
-        mock_get_inst_map.assert_has_calls(inst_map_calls)
-        self.assertEqual(2, mock_get_inst_map.call_count)
-        mock_get_build_req.assert_called_once_with(self.context, instance.uuid)
-        mock_target_cell.assert_called_once_with(self.context,
+        if self.cell_type is None:
+            mock_get_inst_map.assert_has_calls(inst_map_calls)
+            self.assertEqual(2, mock_get_inst_map.call_count)
+            mock_get_build_req.assert_called_once_with(self.context,
+                                                       instance.uuid)
+            mock_target_cell.assert_called_once_with(self.context,
                                                  inst_map.cell_mapping)
         mock_get_inst.assert_called_once_with(self.context, instance.uuid,
                                               expected_attrs=[
@@ -4319,10 +4335,12 @@ class _ComputeAPIUnitTestMixIn(object):
 
         inst_map_calls = [mock.call(self.context, instance.uuid),
                           mock.call(self.context, instance.uuid)]
-        mock_get_inst_map.assert_has_calls(inst_map_calls)
-        self.assertEqual(2, mock_get_inst_map.call_count)
-        mock_get_build_req.assert_called_once_with(self.context, instance.uuid)
-        mock_target_cell.assert_not_called()
+        if self.cell_type is None:
+            mock_get_inst_map.assert_has_calls(inst_map_calls)
+            self.assertEqual(2, mock_get_inst_map.call_count)
+            mock_get_build_req.assert_called_once_with(self.context,
+                                                       instance.uuid)
+            mock_target_cell.assert_not_called()
         mock_get_inst.assert_called_once_with(self.context, instance.uuid,
                                               expected_attrs=[
                                                   'metadata',
@@ -4350,10 +4368,15 @@ class _ComputeAPIUnitTestMixIn(object):
 
         returned_inst = self.compute_api.get(self.context, instance.uuid)
         mock_get_build_req.assert_not_called()
-        mock_get_inst_map.assert_called_once_with(self.context, instance.uuid)
+        if self.cell_type is None:
+            mock_get_inst_map.assert_called_once_with(self.context,
+                                                      instance.uuid)
+            mock_target_cell.assert_called_once_with(self.context,
+                                                     inst_map.cell_mapping)
+        else:
+            self.assertFalse(mock_get_inst_map.called)
+            self.assertFalse(mock_target_cell.called)
         self.assertEqual(instance, returned_inst)
-        mock_target_cell.assert_called_once_with(self.context,
-                                                 inst_map.cell_mapping)
         mock_get_inst.assert_called_once_with(self.context, instance.uuid,
                                               expected_attrs=[
                                                   'metadata',
@@ -4647,8 +4670,9 @@ class _ComputeAPIUnitTestMixIn(object):
         with mock.patch.object(instance, 'save') as mock_inst_save:
             returned_instance = self.compute_api.update_instance(
                 self.context, instance, updates)
-        mock_target_cell.assert_called_once_with(self.context,
-                                                 inst_map.cell_mapping)
+        if self.cell_type is None:
+            mock_target_cell.assert_called_once_with(self.context,
+                                                     inst_map.cell_mapping)
         mock_buildreq_get.assert_not_called()
         self.assertEqual('foo_updated', returned_instance.display_name)
         mock_inst_save.assert_called_once_with()

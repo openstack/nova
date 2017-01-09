@@ -1648,13 +1648,16 @@ class API(base.Base):
             # guaranteed everyone is using cellsv2.
             pass
 
-        if inst_map is None or inst_map.cell_mapping is None:
+        if (inst_map is None or inst_map.cell_mapping is None or
+                CONF.cells.enable):
             # If inst_map is None then the deployment has not migrated to
             # cellsv2 yet.
             # If inst_map.cell_mapping is None then the instance is not in a
             # cell yet. Until instance creation moves to the conductor the
             # instance can be found in the configured database, so attempt
             # to look it up.
+            # If we're on cellsv1, we can't yet short-circuit the cells
+            # messaging path
             try:
                 instance = objects.Instance.get_by_uuid(context, uuid)
             except exception.InstanceNotFound:
@@ -2229,7 +2232,10 @@ class API(base.Base):
         # service versions.
         service_version = objects.Service.get_minimum_version(
             context, 'nova-osapi_compute')
-        if service_version < 15:
+        # If we're on cellsv1, we also need to consult the top-level
+        # merged replica instead of the cell directly, so fall through
+        # here in that case as well.
+        if service_version < 15 or CONF.cells.enable:
             return objects.Instance.get_by_uuid(context, instance_uuid,
                                                 expected_attrs=expected_attrs)
         inst_map = self._get_instance_map_or_none(context, instance_uuid)
@@ -2497,7 +2503,10 @@ class API(base.Base):
             # Instance has been scheduled and the BuildRequest has been deleted
             # we can directly write the update down to the right cell.
             inst_map = self._get_instance_map_or_none(context, instance.uuid)
-            if inst_map and (inst_map.cell_mapping is not None):
+            # If we have a cell_mapping and we're not on cells v1, then
+            # look up the instance in the cell database
+            if inst_map and (inst_map.cell_mapping is not None) and (
+                    not CONF.cells.enable):
                 with nova_context.target_cell(context, inst_map.cell_mapping):
                     instance.save()
             else:
