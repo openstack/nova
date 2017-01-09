@@ -302,6 +302,7 @@ class LibvirtDriver(driver.ComputeDriver):
         "supports_attach_interface": True,
         "supports_device_tagging": True,
         "supports_tagged_attach_interface": True,
+        "supports_tagged_attach_volume": True,
     }
 
     def __init__(self, virtapi, read_only=False):
@@ -1234,6 +1235,17 @@ class LibvirtDriver(driver.ComputeDriver):
                 encryptor.attach_volume(context, **encryption)
 
             guest.attach_device(conf, persistent=True, live=live)
+            # NOTE(artom) If we're attaching with a device role tag, we need to
+            # rebuild device_metadata. If we're attaching without a role
+            # tag, we're rebuilding it here needlessly anyways. This isn't a
+            # massive deal, and it helps reduce code complexity by not having
+            # to indicate to the virt driver that the attach is tagged. The
+            # really important optimization of not calling the database unless
+            # device_metadata has actually changed is done for us by
+            # instance.save().
+            instance.device_metadata = self._build_device_metadata(
+                context, instance)
+            instance.save()
         except Exception as ex:
             LOG.exception(_LE('Failed to attach volume at mountpoint: %s'),
                           mountpoint, instance=instance)

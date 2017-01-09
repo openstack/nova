@@ -6329,11 +6329,16 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock.patch.object(drvr, '_get_volume_config',
                               return_value=mock_conf),
             mock.patch.object(drvr, '_set_cache_mode'),
-            mock.patch.object(drvr, '_check_discard_for_attach_volume')
+            mock.patch.object(drvr, '_check_discard_for_attach_volume'),
+            mock.patch.object(drvr, '_build_device_metadata'),
+            mock.patch.object(objects.Instance, 'save')
         ) as (mock_connect_volume, mock_get_volume_config,
-              mock_set_cache_mode, mock_check_discard):
+              mock_set_cache_mode, mock_check_discard,
+              mock_build_metadata, mock_save):
             for state in (power_state.RUNNING, power_state.PAUSED):
                 mock_dom.info.return_value = [state, 512, 512, 2, 1234, 5678]
+                mock_build_metadata.return_value = \
+                    objects.InstanceDeviceMetadata()
 
                 drvr.attach_volume(self.context, connection_info, instance,
                                    "/dev/vdb", disk_bus=bdm['disk_bus'],
@@ -6353,6 +6358,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 mock_dom.attachDeviceFlags.assert_called_with(
                     mock_conf.to_xml(), flags=flags)
                 mock_check_discard.assert_called_with(mock_conf, instance)
+                mock_build_metadata.assert_called_with(self.context, instance)
+                mock_save.assert_called_with()
 
     @mock.patch('nova.virt.libvirt.host.Host.get_domain')
     def test_detach_volume_with_vir_domain_affect_live_flag(self,
