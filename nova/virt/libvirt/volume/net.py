@@ -105,11 +105,11 @@ class LibvirtNetVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
                                     netdisk_properties)
                 target_portal = netdisk_properties['target_portal']
             except KeyError:
-                raise exception.NovaException(_("Invalid volume source data"))
+                raise exception.InternalError(_("Invalid volume source data"))
 
             ip, port = utils.parse_server_string(target_portal)
             if ip == '' or port == '':
-                raise exception.NovaException(_("Invalid target_lun"))
+                raise exception.InternalError(_("Invalid target_lun"))
             conf.source_hosts = [ip]
             conf.source_ports = [port]
             self._set_auth_config_iscsi(conf, netdisk_properties)

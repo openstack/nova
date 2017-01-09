@@ -65,9 +65,9 @@ class Image(object):
         """
         if (CONF.ephemeral_storage_encryption.enabled and
                 not self._supports_encryption()):
-            raise exception.NovaException(_('Incompatible settings: '
-                                  'ephemeral storage encryption is supported '
-                                  'only for LVM images.'))
+            msg = _('Incompatible settings: ephemeral storage encryption is '
+                    'supported only for LVM images.')
+            raise exception.InternalError(msg)
 
         self.path = path
 
@@ -718,7 +718,7 @@ class Lvm(Image):
                         LOG.error(_LE("Failed to retrieve ephemeral encryption"
                                       " key"))
             else:
-                raise exception.NovaException(
+                raise exception.InternalError(
                     _("Instance disk to be encrypted but no context provided"))
         # Generate images with specified size right on volume
         if generated and size:

@@ -52,7 +52,7 @@ class LibvirtVZStorageVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
             msg = (_("You can't use %s options in vzstorage_mount_opts "
                      "configuration parameter.") %
                      ', '.join(invalid_cfg_opts))
-            raise exception.NovaException(msg)
+            raise exception.InternalError(msg)
 
         # Call the factory here so we can support
         # more than x86 architectures.

@@ -199,7 +199,7 @@ class Host(object):
     def _connect_auth_cb(creds, opaque):
         if len(creds) == 0:
             return 0
-        raise exception.NovaException(
+        raise exception.InternalError(
             _("Can not handle authentication request for %d credentials")
             % len(creds))
 
@@ -527,7 +527,7 @@ class Host(object):
 
         :returns: a nova.virt.libvirt.Guest object
         :raises exception.InstanceNotFound: The domain was not found
-        :raises exception.NovaException: A libvirt error occured
+        :raises exception.InternalError: A libvirt error occured
         """
         return libvirt_guest.Guest(self.get_domain(instance))
 
@@ -542,7 +542,7 @@ class Host(object):
 
         :returns: a libvirt.Domain object
         :raises exception.InstanceNotFound: The domain was not found
-        :raises exception.NovaException: A libvirt error occured
+        :raises exception.InternalError: A libvirt error occured
         """
         try:
             conn = self.get_connection()
@@ -552,14 +552,12 @@ class Host(object):
             if error_code == libvirt.VIR_ERR_NO_DOMAIN:
                 raise exception.InstanceNotFound(instance_id=instance.uuid)
 
-            # TODO(stephenfin): Stop using NovaException here - it's too
-            # generic. InternalError would be a better fit.
             msg = (_('Error from libvirt while looking up %(instance_name)s: '
                      '[Error Code %(error_code)s] %(ex)s') %
                    {'instance_name': instance.name,
                     'error_code': error_code,
                     'ex': ex})
-            raise exception.NovaException(msg)
+            raise exception.InternalError(msg)
 
     def list_guests(self, only_running=True, only_guests=True):
         """Get a list of Guest objects for nova instances
@@ -706,7 +704,7 @@ class Host(object):
             usage_type_const = libvirt.VIR_SECRET_USAGE_TYPE_VOLUME
         else:
             msg = _("Invalid usage_type: %s")
-            raise exception.NovaException(msg % usage_type)
+            raise exception.InternalError(msg % usage_type)
 
         try:
             conn = self.get_connection()
@@ -735,7 +733,7 @@ class Host(object):
             secret_conf.usage_type = 'volume'
         else:
             msg = _("Invalid usage_type: %s")
-            raise exception.NovaException(msg % usage_type)
+            raise exception.InternalError(msg % usage_type)
 
         xml = secret_conf.to_xml()
         try:

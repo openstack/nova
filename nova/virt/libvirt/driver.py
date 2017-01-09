@@ -509,23 +509,23 @@ class LibvirtDriver(driver.ComputeDriver):
             guestfs.force_tcg()
 
         if not self._host.has_min_version(MIN_LIBVIRT_VERSION):
-            raise exception.NovaException(
+            raise exception.InternalError(
                 _('Nova requires libvirt version %s or greater.') %
                 self._version_to_string(MIN_LIBVIRT_VERSION))
 
         if (CONF.libvirt.virt_type in ("qemu", "kvm") and
             not self._host.has_min_version(hv_ver=MIN_QEMU_VERSION)):
-            raise exception.NovaException(
+            raise exception.InternalError(
                 _('Nova requires QEMU version %s or greater.') %
                 self._version_to_string(MIN_QEMU_VERSION))
 
         if CONF.libvirt.virt_type == 'parallels':
             if not self._host.has_min_version(hv_ver=MIN_VIRTUOZZO_VERSION):
-                raise exception.NovaException(
+                raise exception.InternalError(
                     _('Nova requires Virtuozzo version %s or greater.') %
                     self._version_to_string(MIN_VIRTUOZZO_VERSION))
             if not self._host.has_min_version(MIN_LIBVIRT_VIRTUOZZO_VERSION):
-                raise exception.NovaException(
+                raise exception.InternalError(
                     _('Running Nova with parallels virt_type requires '
                       'libvirt version %s') %
                     self._version_to_string(MIN_LIBVIRT_VIRTUOZZO_VERSION))
@@ -554,7 +554,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 not self._host.has_min_version(
                                         MIN_LIBVIRT_OTHER_ARCH.get(kvm_arch),
                                         MIN_QEMU_OTHER_ARCH.get(kvm_arch))):
-            raise exception.NovaException(
+            raise exception.InternalError(
                 _('Running Nova with qemu/kvm virt_type on %(arch)s '
                   'requires libvirt version %(libvirt_ver)s and '
                   'qemu version %(qemu_ver)s, or greater') %
@@ -717,7 +717,7 @@ class LibvirtDriver(driver.ComputeDriver):
         try:
             self._host.get_guest(instance)
             return True
-        except exception.NovaException:
+        except exception.InternalError:
             return False
 
     def list_instances(self):
@@ -1679,7 +1679,7 @@ class LibvirtDriver(driver.ComputeDriver):
             msg = (_('Error from libvirt while set password for username '
                      '"%(user)s": [Error Code %(error_code)s] %(ex)s')
                    % {'user': user, 'error_code': error_code, 'ex': ex})
-            raise exception.NovaException(msg)
+            raise exception.InternalError(msg)
 
     def _can_quiesce(self, instance, image_meta):
         if (CONF.libvirt.virt_type not in ('kvm', 'qemu') or
@@ -1704,7 +1704,7 @@ class LibvirtDriver(driver.ComputeDriver):
                      '[Error Code %(error_code)s] %(ex)s')
                    % {'instance_name': instance.name,
                       'error_code': error_code, 'ex': ex})
-            raise exception.NovaException(msg)
+            raise exception.InternalError(msg)
 
     def quiesce(self, context, instance, image_meta):
         """Freeze the guest filesystems to prepare for snapshot.
@@ -1858,7 +1858,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if not disks_to_snap and not network_disks_to_snap:
             msg = _('Found no disk to snapshot.')
-            raise exception.NovaException(msg)
+            raise exception.InternalError(msg)
 
         snapshot = vconfig.LibvirtConfigGuestSnapshot()
 
@@ -1947,13 +1947,13 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.InstanceNotRunning(instance_id=instance.uuid)
 
         if create_info['type'] != 'qcow2':
-            raise exception.NovaException(_('Unknown type: %s') %
-                                          create_info['type'])
+            msg = _('Unknown type: %s') % create_info['type']
+            raise exception.InternalError(msg)
 
         snapshot_id = create_info.get('snapshot_id', None)
         if snapshot_id is None:
-            raise exception.NovaException(_('snapshot_id required '
-                                            'in create_info'))
+            msg = _('snapshot_id required in create_info')
+            raise exception.InternalError(msg)
 
         try:
             self._volume_snapshot_create(context, instance, guest,
@@ -2006,7 +2006,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     "has not been fully tested") % {'protocol':
                     active_protocol}
             LOG.error(msg)
-            raise exception.NovaException(msg)
+            raise exception.InternalError(msg)
 
         if rebase_base is None:
             # If backing_file is specified as "" (the empty string), then
@@ -2051,7 +2051,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if delete_info['type'] != 'qcow2':
             msg = _('Unknown delete_info type %s') % delete_info['type']
-            raise exception.NovaException(msg)
+            raise exception.InternalError(msg)
 
         try:
             guest = self._host.get_guest(instance)
@@ -2086,17 +2086,17 @@ class LibvirtDriver(driver.ComputeDriver):
                 break
 
         if my_dev is None or (active_disk is None and active_protocol is None):
-            msg = _('Disk with id: %s '
-                    'not found attached to instance.') % volume_id
             LOG.debug('Domain XML: %s', xml, instance=instance)
-            raise exception.NovaException(msg)
+            msg = (_('Disk with id: %s not found attached to instance.')
+                   % volume_id)
+            raise exception.InternalError(msg)
 
         LOG.debug("found device at %s", my_dev, instance=instance)
 
         def _get_snap_dev(filename, backing_store):
             if filename is None:
                 msg = _('filename cannot be None')
-                raise exception.NovaException(msg)
+                raise exception.InternalError(msg)
 
             # libgfapi delete
             LOG.debug("XML: %s", xml)
@@ -2125,7 +2125,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
             if matched_name is None:
                 msg = _('no match found for %s') % (filename_to_merge)
-                raise exception.NovaException(msg)
+                raise exception.InternalError(msg)
 
             LOG.debug('index of match (%s) is %s', b.source_name, index)
 
@@ -2560,7 +2560,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
             if state in ignored_states:
                 return
-        except exception.NovaException:
+        except (exception.InternalError, exception.InstanceNotFound):
             pass
 
         # Instance is not up and could be in an unknown state.
@@ -3632,7 +3632,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         if not os.path.exists("/etc/machine-id"):
             msg = _("Unable to get host UUID: /etc/machine-id does not exist")
-            raise exception.NovaException(msg)
+            raise exception.InternalError(msg)
 
         with open("/etc/machine-id") as f:
             # We want to have '-' in the right place
@@ -3640,7 +3640,7 @@ class LibvirtDriver(driver.ComputeDriver):
             lines = f.read().split()
             if not lines:
                 msg = _("Unable to get host UUID: /etc/machine-id is empty")
-                raise exception.NovaException(msg)
+                raise exception.InternalError(msg)
 
             return str(uuid.UUID(lines[0]))
 
@@ -5924,7 +5924,7 @@ class LibvirtDriver(driver.ComputeDriver):
             timeout_count.pop()
             if len(timeout_count) == 0:
                 msg = _('The firewall filter for %s does not exist')
-                raise exception.NovaException(msg % instance.name)
+                raise exception.InternalError(msg % instance.name)
             greenthread.sleep(1)
 
     def filter_defer_apply_on(self):

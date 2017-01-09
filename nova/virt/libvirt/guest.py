@@ -479,7 +479,7 @@ class Guest(object):
                    {'instance_name': self.name,
                     'error_code': error_code,
                     'ex': ex})
-            raise exception.NovaException(msg)
+            raise exception.InternalError(msg)
 
         return hardware.InstanceInfo(
             state=LIBVIRT_POWER_STATE[dom_info[0]],

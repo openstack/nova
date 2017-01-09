@@ -78,12 +78,12 @@ def validate_volume(mnt_base):
         msg = (_("The mount %(mount_path)s is not a valid"
                  " Quobyte volume. Error: %(exc)s")
                % {'mount_path': mnt_base, 'exc': exc})
-        raise nova_exception.NovaException(msg)
+        raise nova_exception.InternalError(msg)
 
     if not os.access(mnt_base, os.W_OK | os.X_OK):
         msg = (_LE("Volume is not writable. Please broaden the file"
                    " permissions. Mount: %s") % mnt_base)
-        raise nova_exception.NovaException(msg)
+        raise nova_exception.InternalError(msg)
 
 
 class LibvirtQuobyteVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
