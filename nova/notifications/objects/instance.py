@@ -193,32 +193,6 @@ class IpPayload(base.NotificationPayloadBase):
 
 
 @nova_base.NovaObjectRegistry.register_notification
-class FlavorPayload(base.NotificationPayloadBase):
-    # Version 1.0: Initial version
-    VERSION = '1.0'
-
-    SCHEMA = {
-        'flavorid': ('flavor', 'flavorid'),
-        'memory_mb': ('flavor', 'memory_mb'),
-        'vcpus': ('flavor', 'vcpus'),
-        'root_gb': ('flavor', 'root_gb'),
-        'ephemeral_gb': ('flavor', 'ephemeral_gb'),
-    }
-
-    fields = {
-        'flavorid': fields.StringField(nullable=True),
-        'memory_mb': fields.IntegerField(nullable=True),
-        'vcpus': fields.IntegerField(nullable=True),
-        'root_gb': fields.IntegerField(nullable=True),
-        'ephemeral_gb': fields.IntegerField(nullable=True),
-    }
-
-    def __init__(self, instance, **kwargs):
-        super(FlavorPayload, self).__init__(**kwargs)
-        self.populate_schema(instance=instance, flavor=instance.flavor)
-
-
-@nova_base.NovaObjectRegistry.register_notification
 class BandwidthPayload(base.NotificationPayloadBase):
     # Version 1.0: Initial version
     VERSION = '1.0'
