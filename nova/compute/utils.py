@@ -357,7 +357,7 @@ def notify_about_instance_action(context, instance, host, action, phase=None,
             context=context,
             priority=priority,
             publisher=notification_base.NotificationPublisher(
-                    context=context, host=host, binary=binary),
+                host=host, binary=binary),
             event_type=notification_base.EventType(
                     object='instance',
                     action=action,
@@ -387,7 +387,7 @@ def notify_about_volume_attach_detach(context, instance, host, action, phase,
             context=context,
             priority=priority,
             publisher=notification_base.NotificationPublisher(
-                    context=context, host=host, binary=binary),
+                    host=host, binary=binary),
             event_type=notification_base.EventType(
                     object='instance',
                     action=action,
@@ -421,7 +421,7 @@ def notify_about_volume_swap(context, instance, host, action, phase,
         context=context,
         priority=priority,
         publisher=notification_base.NotificationPublisher(
-            context=context, host=host, binary='nova-compute'),
+            host=host, binary='nova-compute'),
         event_type=notification_base.EventType(
             object='instance', action=action, phase=phase),
         payload=payload).emit(context)
@@ -463,7 +463,7 @@ def notify_about_aggregate_action(context, aggregate, action, phase):
     notification = aggregate_notification.AggregateNotification(
         priority=fields.NotificationPriority.INFO,
         publisher=notification_base.NotificationPublisher(
-            context=context, host=CONF.host, binary='nova-api'),
+            host=CONF.host, binary='nova-api'),
         event_type=notification_base.EventType(
             object='aggregate',
             action=action,
