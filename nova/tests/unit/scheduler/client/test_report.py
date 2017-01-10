@@ -42,73 +42,76 @@ class SafeConnectedTestCase(test.NoDBTestCase):
     def test_missing_endpoint(self, req):
         """Test EndpointNotFound behavior.
 
-        A missing endpoint entry should permanently disable the
-        client. And make future calls to it not happen.
+        A missing endpoint entry should not explode.
         """
         req.side_effect = ks_exc.EndpointNotFound()
         self.client._get_resource_provider("fake")
-        self.assertTrue(self.client._disabled)
 
-        # reset the call count to demonstrate that future calls don't
+        # reset the call count to demonstrate that future calls still
         # work
         req.reset_mock()
         self.client._get_resource_provider("fake")
-        req.assert_not_called()
+        self.assertTrue(req.called)
 
     @mock.patch('keystoneauth1.session.Session.request')
     def test_missing_auth(self, req):
         """Test Missing Auth handled correctly.
 
-        A missing auth configuration should permanently disable the
-        client. And make future calls to it not happen.
+        A missing auth configuration should not explode.
 
         """
         req.side_effect = ks_exc.MissingAuthPlugin()
         self.client._get_resource_provider("fake")
-        self.assertTrue(self.client._disabled)
 
-        # reset the call count to demonstrate that future calls don't
+        # reset the call count to demonstrate that future calls still
         # work
         req.reset_mock()
         self.client._get_resource_provider("fake")
-        req.assert_not_called()
+        self.assertTrue(req.called)
 
     @mock.patch('keystoneauth1.session.Session.request')
     def test_unauthorized(self, req):
         """Test Unauthorized handled correctly.
 
-        An unauthorized configuration should permanently disable the
-        client. And make future calls to it not happen.
+        An unauthorized configuration should not explode.
 
         """
         req.side_effect = ks_exc.Unauthorized()
         self.client._get_resource_provider("fake")
-        self.assertTrue(self.client._disabled)
 
-        # reset the call count to demonstrate that future calls don't
+        # reset the call count to demonstrate that future calls still
         # work
         req.reset_mock()
         self.client._get_resource_provider("fake")
-        req.assert_not_called()
+        self.assertTrue(req.called)
 
     @mock.patch('keystoneauth1.session.Session.request')
     def test_connect_fail(self, req):
         """Test Connect Failure handled correctly.
 
         If we get a connect failure, this is transient, and we expect
-        that this will end up working correctly later. We don't want
-        to disable the client.
+        that this will end up working correctly later.
 
         """
         req.side_effect = ks_exc.ConnectFailure()
         self.client._get_resource_provider("fake")
-        self.assertFalse(self.client._disabled)
 
         # reset the call count to demonstrate that future calls do
         # work
         req.reset_mock()
         self.client._get_resource_provider("fake")
         self.assertTrue(req.called)
+
+    @mock.patch.object(report, 'LOG')
+    def test_warning_limit(self, mock_log):
+        # Assert that __init__ initializes _warn_count as we expect
+        self.assertEqual(0, self.client._warn_count)
+        mock_self = mock.MagicMock()
+        mock_self._warn_count = 0
+        for i in range(0, report.WARN_EVERY + 3):
+            report.warn_limit(mock_self, 'warning')
+        mock_log.warning.assert_has_calls([mock.call('warning'),
+                                           mock.call('warning')])
 
 
 class SchedulerReportClientTestCase(test.NoDBTestCase):
