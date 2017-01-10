@@ -1,0 +1,50 @@
+{
+  "resource_providers": [
+    {
+      "generation": 1,
+      "uuid": "99c09379-6e52-4ef8-9a95-b9ce6f68452e",
+      "links": [
+        {
+          "href": "/resource_providers/99c09379-6e52-4ef8-9a95-b9ce6f68452e",
+          "rel": "self"
+        },
+        {
+          "href": "/resource_providers/99c09379-6e52-4ef8-9a95-b9ce6f68452e/aggregates",
+          "rel": "aggregates"
+        },
+        {
+          "href": "/resource_providers/99c09379-6e52-4ef8-9a95-b9ce6f68452e/inventories",
+          "rel": "inventories"
+        },
+        {
+          "href": "/resource_providers/99c09379-6e52-4ef8-9a95-b9ce6f68452e/usages",
+          "rel": "usages"
+        }
+      ],
+      "name": "vgr.localdomain"
+    },
+    {
+      "generation": 2,
+      "uuid": "d0b381e9-8761-42de-8e6c-bba99a96d5f5",
+      "links": [
+        {
+          "href": "/resource_providers/d0b381e9-8761-42de-8e6c-bba99a96d5f5",
+          "rel": "self"
+        },
+        {
+          "href": "/resource_providers/d0b381e9-8761-42de-8e6c-bba99a96d5f5/aggregates",
+          "rel": "aggregates"
+        },
+        {
+          "href": "/resource_providers/d0b381e9-8761-42de-8e6c-bba99a96d5f5/inventories",
+          "rel": "inventories"
+        },
+        {
+          "href": "/resource_providers/d0b381e9-8761-42de-8e6c-bba99a96d5f5/usages",
+          "rel": "usages"
+        }
+      ],
+      "name": "pony1"
+    }
+  ]
+}

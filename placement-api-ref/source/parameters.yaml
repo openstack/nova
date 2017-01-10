@@ -1,3 +1,65 @@
+member_of:
+  type: string
+  in: query
+  required: false
+  description: >
+    A comma-separated list of strings representing aggregate uuids.
+    The returned resource providers must be associated with at
+    least one of the aggregates identified by uuid.
+resource_provider_name_query:
+  type: string
+  in: query
+  required: false
+  description: >
+    The name of a resource provider to filter the list.
+resource_provider_uuid_query:
+  type: string
+  in: query
+  required: false
+  description: >
+    The uuid of a resource provider to filter the list.
+resources_query:
+  type: string
+  in: query
+  required: false
+  description: |
+    A comma-separated list of strings indicating an amount of
+    resource of a specified class that a provider must have the
+    capacity to serve::
+
+        resources=VCPU:4,DISK_GB:64,MEMORY_MB:2048
+
+resource_provider_generation:
+  type: integer
+  in: body
+  required: true
+  description: >
+    A consistent view marker that assists with the management of
+    concurrent resource provider updates.
+resource_provider_links:
+  type: array
+  in: body
+  required: true
+  description: >
+    A list of links associated with one resource provider.
+resource_provider_name:
+  type: string
+  in: body
+  required: true
+  description: >
+    The name of one resource provider.
+resource_provider_uuid:
+  type: string
+  in: body
+  required: true
+  description: >
+    The UUID for one resource provider.
+resource_providers:
+  type: array
+  in: body
+  required: true
+  description: >
+    A list of ``resource_provider`` objects.
 version_id:
   type: string
   in: body
