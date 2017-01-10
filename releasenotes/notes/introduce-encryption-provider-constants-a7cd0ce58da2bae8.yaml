@@ -1,0 +1,14 @@
+---
+features:
+  - |
+    Encryption provider constants have been introduced detailing the supported
+    encryption formats such as LUKs along with their associated in-tree
+    provider implementations. These constants should now be used to identify an
+    encryption provider implementation for a given encryption format.
+deprecations:
+  - |
+    The direct use of the encryption provider classes such as
+    nova.volume.encryptors.luks.LuksEncryptor is now deprecated and will be
+    blocked in the Pike release of Nova. The use of out of tree encryption
+    provider classes is also deprecated and will be blocked in the Pike release
+    of Nova.
