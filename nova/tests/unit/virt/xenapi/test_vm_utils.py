@@ -882,6 +882,7 @@ class UnplugVbdTestCase(VMUtilsTestBase):
 
     def test_unplug_vbd_raises_unexpected_error(self):
         session = stubs.get_fake_session()
+        session.XenAPI.Failure = fake.Failure
         vbd_ref = "vbd_ref"
         vm_ref = 'vm_ref'
         session.call_xenapi.side_effect = test.TestingException()
@@ -1469,6 +1470,7 @@ class ScanSrTestCase(VMUtilsTestBase):
 
     def test_scan_sr_unknown_error_fails_once(self):
         session = mock.Mock()
+        session.XenAPI.Failure = fake.Failure
         session.call_xenapi.side_effect = test.TestingException
         self.assertRaises(test.TestingException,
                           vm_utils._scan_sr, session, "sr_ref")
@@ -2422,9 +2424,6 @@ class ResizeFunctionTestCase(test.NoDBTestCase):
 
     def test_empty(self):
         self._test_is_resize("", "")
-
-    def test_bad_version(self):
-        self._test_is_resize("XenServer", "asdf")
 
 
 class VMInfoTests(VMUtilsTestBase):
