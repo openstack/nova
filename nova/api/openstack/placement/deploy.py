@@ -39,7 +39,7 @@ def deploy(conf, project_name):
     else:
         # Do not provide global conf to middleware here.
         auth_middleware = auth_token.filter_factory(
-            {}, olso_config_project=project_name)
+            {}, oslo_config_project=project_name)
 
     context_middleware = auth.PlacementKeystoneContext
     req_id_middleware = request_id.RequestId
