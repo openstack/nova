@@ -23,6 +23,7 @@ except ImportError:
 from eventlet import greenthread
 import mock
 from os_xenapi.client import session as xenapi_session
+import six
 
 from nova.compute import power_state
 from nova.compute import task_states
@@ -1726,3 +1727,92 @@ class GetVdisForInstanceTestCase(VMOpsTestBase):
             # our stub method is called which asserts the password is scrubbed
             self.assertTrue(debug_mock.called)
             self.assertTrue(fake_debug.matched)
+
+
+class AttachInterfaceTestCase(VMOpsTestBase):
+    """Test VIF hot plug/unplug"""
+    def setUp(self):
+        super(AttachInterfaceTestCase, self).setUp()
+        self.vmops.vif_driver = mock.Mock()
+        self.fake_vif = {'id': '12345'}
+        self.fake_instance = mock.Mock()
+        self.fake_instance.uuid = '6478'
+
+    @mock.patch.object(vmops.VMOps, '_get_vm_opaque_ref')
+    def test_attach_interface(self, mock_get_vm_opaque_ref):
+        mock_get_vm_opaque_ref.return_value = 'fake_vm_ref'
+        with mock.patch.object(self._session.VM, 'get_allowed_VIF_devices')\
+            as fake_devices:
+            fake_devices.return_value = [2, 3, 4]
+            self.vmops.attach_interface(self.fake_instance, self.fake_vif)
+            fake_devices.assert_called_once_with('fake_vm_ref')
+            mock_get_vm_opaque_ref.assert_called_once_with(self.fake_instance)
+            self.vmops.vif_driver.plug.assert_called_once_with(
+                self.fake_instance, self.fake_vif, vm_ref='fake_vm_ref',
+                device=2)
+
+    @mock.patch.object(vmops.VMOps, '_get_vm_opaque_ref')
+    def test_attach_interface_no_devices(self, mock_get_vm_opaque_ref):
+        mock_get_vm_opaque_ref.return_value = 'fake_vm_ref'
+        with mock.patch.object(self._session.VM, 'get_allowed_VIF_devices')\
+            as fake_devices:
+            fake_devices.return_value = []
+            self.assertRaises(exception.InterfaceAttachFailed,
+                              self.vmops.attach_interface,
+                              self.fake_instance, self.fake_vif)
+
+    @mock.patch.object(vmops.VMOps, '_get_vm_opaque_ref')
+    def test_attach_interface_plug_failed(self, mock_get_vm_opaque_ref):
+        mock_get_vm_opaque_ref.return_value = 'fake_vm_ref'
+        with mock.patch.object(self._session.VM, 'get_allowed_VIF_devices')\
+            as fake_devices:
+            fake_devices.return_value = [2, 3, 4]
+            self.vmops.vif_driver.plug.side_effect =\
+                exception.VirtualInterfacePlugException('Failed to plug VIF')
+            self.assertRaises(exception.VirtualInterfacePlugException,
+                              self.vmops.attach_interface,
+                              self.fake_instance, self.fake_vif)
+            self.vmops.vif_driver.plug.assert_called_once_with(
+                self.fake_instance, self.fake_vif, vm_ref='fake_vm_ref',
+                device=2)
+            self.vmops.vif_driver.unplug.assert_called_once_with(
+                self.fake_instance, self.fake_vif, 'fake_vm_ref')
+
+    @mock.patch.object(vmops.VMOps, '_get_vm_opaque_ref')
+    def test_attach_interface_reraise_exception(self, mock_get_vm_opaque_ref):
+        mock_get_vm_opaque_ref.return_value = 'fake_vm_ref'
+        with mock.patch.object(self._session.VM, 'get_allowed_VIF_devices')\
+            as fake_devices:
+            fake_devices.return_value = [2, 3, 4]
+            self.vmops.vif_driver.plug.side_effect =\
+                exception.VirtualInterfacePlugException('Failed to plug VIF')
+            self.vmops.vif_driver.unplug.side_effect =\
+                exception.VirtualInterfaceUnplugException(
+                    'Failed to unplug VIF')
+            ex = self.assertRaises(exception.VirtualInterfacePlugException,
+                                   self.vmops.attach_interface,
+                                   self.fake_instance, self.fake_vif)
+            self.assertEqual('Failed to plug VIF', six.text_type(ex))
+            self.vmops.vif_driver.plug.assert_called_once_with(
+                self.fake_instance, self.fake_vif, vm_ref='fake_vm_ref',
+                device=2)
+            self.vmops.vif_driver.unplug.assert_called_once_with(
+                self.fake_instance, self.fake_vif, 'fake_vm_ref')
+
+    @mock.patch.object(vmops.VMOps, '_get_vm_opaque_ref')
+    def test_detach_interface(self, mock_get_vm_opaque_ref):
+        mock_get_vm_opaque_ref.return_value = 'fake_vm_ref'
+        self.vmops.detach_interface(self.fake_instance, self.fake_vif)
+        mock_get_vm_opaque_ref.assert_called_once_with(self.fake_instance)
+        self.vmops.vif_driver.unplug.assert_called_once_with(
+            self.fake_instance, self.fake_vif, 'fake_vm_ref')
+
+    @mock.patch.object(vmops.VMOps, '_get_vm_opaque_ref')
+    def test_detach_interface_exception(self, mock_get_vm_opaque_ref):
+        mock_get_vm_opaque_ref.return_value = 'fake_vm_ref'
+        self.vmops.vif_driver.unplug.side_effect =\
+            exception.VirtualInterfaceUnplugException('Failed to unplug VIF')
+
+        self.assertRaises(exception.VirtualInterfaceUnplugException,
+                          self.vmops.detach_interface,
+                          self.fake_instance, self.fake_vif)

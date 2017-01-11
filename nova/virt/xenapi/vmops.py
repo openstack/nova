@@ -2484,3 +2484,47 @@ class VMOps(object):
                     volume_utils.forget_sr(self._session, sr_ref)
 
         return sr_uuid_map
+
+    def attach_interface(self, instance, vif):
+        LOG.debug("Attach interface, vif info: %s", vif, instance=instance)
+        vm_ref = self._get_vm_opaque_ref(instance)
+
+        @utils.synchronized('xenapi-vif-' + vm_ref)
+        def _attach_interface(instance, vm_ref, vif):
+            # find device for use with XenAPI
+            allowed_devices = self._session.VM.get_allowed_VIF_devices(vm_ref)
+            if allowed_devices is None or len(allowed_devices) == 0:
+                raise exception.InterfaceAttachFailed(
+                    _('attach network interface %(vif_id)s to instance '
+                      '%(instance_uuid)s failed, no allowed devices.'),
+                    vif_id=vif['id'], instance_uuid=instance.uuid)
+            device = allowed_devices[0]
+            try:
+                # plug VIF
+                self.vif_driver.plug(instance, vif, vm_ref=vm_ref,
+                                     device=device)
+                # set firewall filtering
+                self.firewall_driver.setup_basic_filtering(instance, [vif])
+            except exception.NovaException:
+                with excutils.save_and_reraise_exception():
+                    LOG.exception(_LE('attach network interface %s failed.'),
+                                  vif['id'], instance=instance)
+                    try:
+                        self.vif_driver.unplug(instance, vif, vm_ref)
+                    except exception.NovaException:
+                        # if unplug failed, no need to raise exception
+                        LOG.warning(_LW('Unplug VIF %s failed.'),
+                                    vif['id'], instance=instance)
+
+        _attach_interface(instance, vm_ref, vif)
+
+    def detach_interface(self, instance, vif):
+        LOG.debug("Detach interface, vif info: %s", vif, instance=instance)
+
+        try:
+            vm_ref = self._get_vm_opaque_ref(instance)
+            self.vif_driver.unplug(instance, vif, vm_ref)
+        except exception.NovaException:
+            with excutils.save_and_reraise_exception():
+                LOG.exception(_LE('detach network interface %s failed.'),
+                              vif['id'], instance=instance)
