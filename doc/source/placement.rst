@@ -108,10 +108,13 @@ in the service catalog.
 .. note:: After upgrading nova-compute code to Newton and restarting the
         service, the nova-compute service will attempt to make a connection
         to the placement API and if that is not yet available a warning will
-        be logged and the service will no longer make an attempt to connect
-        until the service is restarted. nova.conf on the compute nodes will
-        need to be updated in the ``[placement]`` group for credentials to
-        make requests from nova-compute to the placement-api service.
+        be logged. The nova-compute service will keep attempting to connect
+        to the placement API, warning periodically on error until it is
+        successful. Keep in mind that Placement is optional in Newton, but
+        required in Ocata, so the placement service should be enabled before
+        upgrading to Ocata. nova.conf on the compute nodes will need to be
+        updated in the ``[placement]`` group for credentials to make requests
+        from nova-compute to the placement-api service.
 
 References
 ~~~~~~~~~~
