@@ -18,6 +18,7 @@ from nova.objects import fields
 
 
 @base.notification_sample('flavor-create.json')
+@base.notification_sample('flavor-update.json')
 @base.notification_sample('flavor-delete.json')
 @nova_base.NovaObjectRegistry.register_notification
 class FlavorNotification(base.NotificationBase):
@@ -33,7 +34,8 @@ class FlavorNotification(base.NotificationBase):
 class FlavorPayload(base.NotificationPayloadBase):
     # Version 1.0: Initial version
     # Version 1.1: Add other fields for Flavor
-    VERSION = '1.1'
+    # Version 1.2: Add extra_specs and projects fields
+    VERSION = '1.2'
 
     # NOTE: if we'd want to rename some fields(memory_mb->ram, root_gb->disk,
     # ephemeral_gb: ephemeral), bumping to payload version 2.0 will be needed.
@@ -49,6 +51,8 @@ class FlavorPayload(base.NotificationPayloadBase):
         'vcpu_weight': ('flavor', 'vcpu_weight'),
         'disabled': ('flavor', 'disabled'),
         'is_public': ('flavor', 'is_public'),
+        'extra_specs': ('flavor', 'extra_specs'),
+        'projects': ('flavor', 'projects'),
     }
 
     fields = {
@@ -63,6 +67,8 @@ class FlavorPayload(base.NotificationPayloadBase):
         'vcpu_weight': fields.IntegerField(nullable=True),
         'disabled': fields.BooleanField(),
         'is_public': fields.BooleanField(),
+        'extra_specs': fields.DictOfStringsField(),
+        'projects': fields.ListOfStringsField(),
     }
 
     def __init__(self, flavor, **kwargs):
@@ -80,3 +86,6 @@ class FlavorPayload(base.NotificationPayloadBase):
             primitive.pop('vcpu_weight', None)
             primitive.pop('disabled', None)
             primitive.pop('is_public', None)
+        if target_version < (1, 2):
+            primitive.pop('extra_specs', None)
+            primitive.pop('projects', None)

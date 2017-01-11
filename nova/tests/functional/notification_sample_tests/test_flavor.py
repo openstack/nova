@@ -49,3 +49,40 @@ class TestFlavorNotificationSample(
             'flavors/a22d5517-147c-4147-a0d1-e698df5cd4e3')
         self._verify_notification(
             'flavor-delete', actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
+    def test_flavor_update(self):
+        body = {
+            "flavor": {
+                "name": "test_flavor",
+                "ram": 1024,
+                "vcpus": 2,
+                "disk": 10,
+                "id": "a22d5517-147c-4147-a0d1-e698df5cd4e3",
+                "os-flavor-access:is_public": False,
+                "rxtx_factor": 2.0
+            }
+        }
+        # Create a flavor.
+        self.admin_api.api_post('flavors', body)
+
+        body = {
+            "extra_specs": {
+                "key1": "value1",
+                "key2": "value2"
+            }
+        }
+        self.admin_api.api_post(
+            'flavors/a22d5517-147c-4147-a0d1-e698df5cd4e3/os-extra_specs',
+            body)
+
+        body = {
+            "addTenantAccess": {
+                "tenant": "fake_tenant"
+            }
+        }
+        self.admin_api.api_post(
+            'flavors/a22d5517-147c-4147-a0d1-e698df5cd4e3/action',
+            body)
+
+        self._verify_notification(
+            'flavor-update', actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])

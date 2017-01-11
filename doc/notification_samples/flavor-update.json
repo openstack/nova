@@ -10,14 +10,19 @@
             "ephemeral_gb": 0,
             "disabled": false,
             "vcpus": 2,
+            "extra_specs": {
+                "key1": "value1",
+                "key2": "value2"
+            },
+            "projects": ["fake_tenant"],
             "swap": 0,
             "rxtx_factor": 2.0,
-            "is_public": true,
+            "is_public": false,
             "root_gb": 10,
             "vcpu_weight": 0,
             "flavorid": "a22d5517-147c-4147-a0d1-e698df5cd4e3"
         }
     },
-    "event_type": "flavor.create",
+    "event_type": "flavor.update",
     "publisher_id": "nova-api:fake-mini"
 }

@@ -1,4 +1,11 @@
 ---
 features:
-  - Support versioned notifications for flavor operations like create and
-    delete.
+  - Support versioned notifications for flavor operations like create, delete,
+    update access and update extra_specs.
+issues:
+  - |
+    Flavor.projects (access) will not be present in the instance versioned
+    notifications since notifications currently do not lazy-load fields. This
+    limitation is being tracked with `bug 1653221`_.
+
+    .. _bug 1653221: https://bugs.launchpad.net/nova/+bug/1653221

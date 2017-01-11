@@ -28,14 +28,20 @@ class TestFlavorNotification(test.TestCase):
 
     @mock.patch('nova.notifications.objects.flavor.FlavorNotification')
     def _verify_notification(self, flavor_obj, flavor, action,
-                             mock_notification):
+                             mock_notification, project_id=None):
         notification = mock_notification
         if action == "CREATE":
             flavor_obj.create()
         elif action == "DELETE":
             flavor_obj.destroy()
+        elif action == "ADD_ACCESS":
+            action = "UPDATE"
+            flavor_obj.add_access(project_id)
+        elif action == "REMOVE_ACCESS":
+            action = "UPDATE"
+            flavor_obj.remove_access(project_id)
         else:
-            raise Exception('Unsupported action: %s' % action)
+            flavor_obj.save()
 
         self.assertTrue(notification.called)
 
@@ -67,6 +73,39 @@ class TestFlavorNotification(test.TestCase):
         flavor['id'] = flavorid
         mock_create.return_value = flavor
         self._verify_notification(flavor_obj, flavor, 'CREATE')
+
+    @mock.patch('nova.objects.Flavor._flavor_extra_specs_del')
+    def test_flavor_update_with_notification(self, mock_delete):
+        flavor = copy.deepcopy(fake_flavor)
+        flavorid = '1'
+        flavor['flavorid'] = flavorid
+        flavor['id'] = flavorid
+        flavor_obj = objects.Flavor(context=self.ctxt, **flavor)
+        flavor_obj.obj_reset_changes()
+
+        del flavor_obj.extra_specs['foo']
+        del flavor['extra_specs']['foo']
+        self._verify_notification(flavor_obj, flavor, "UPDATE")
+
+        projects = ['project-1', 'project-2']
+        flavor_obj.projects = projects
+        flavor['projects'] = projects
+        self._verify_notification(flavor_obj, flavor, "UPDATE")
+
+    @mock.patch('nova.objects.Flavor._add_access')
+    @mock.patch('nova.objects.Flavor._remove_access')
+    def test_flavor_access_with_notification(self, mock_remove_access,
+                                             mock_add_access):
+        flavor = copy.deepcopy(fake_flavor)
+        flavorid = '1'
+        flavor['flavorid'] = flavorid
+        flavor['id'] = flavorid
+        flavor_obj = objects.Flavor(context=self.ctxt, **flavor)
+        flavor_obj.obj_reset_changes()
+        self._verify_notification(flavor_obj, flavor, "ADD_ACCESS",
+                                  project_id="project1")
+        self._verify_notification(flavor_obj, flavor, "REMOVE_ACCESS",
+                                  project_id="project1")
 
     @mock.patch('nova.objects.Flavor._flavor_destroy')
     def test_flavor_destroy_with_notification(self, mock_destroy):
