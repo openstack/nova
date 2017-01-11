@@ -45,6 +45,7 @@
                 "nova_object.version": "1.0"},
             "tenant_id": "6f70656e737461636b20342065766572",
             "terminated_at": null,
+            "auto_disk_config":"MANUAL",
             "flavor": {
                 "nova_object.name": "FlavorPayload",
                 "nova_object.data": {
@@ -72,7 +73,7 @@
             "uuid": "c03c0bf9-f46e-4e4f-93f1-817568567ee2"},
         "nova_object.name": "InstanceUpdatePayload",
         "nova_object.namespace": "nova",
-        "nova_object.version": "1.2"},
+        "nova_object.version": "1.3"},
     "priority": "INFO",
     "publisher_id": "nova-compute:fake-mini"
 }

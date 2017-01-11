@@ -49,10 +49,12 @@ class InstancePayload(base.NotificationPayloadBase):
 
         'metadata': ('instance', 'metadata'),
         'locked': ('instance', 'locked'),
+        'auto_disk_config': ('instance', 'auto_disk_config')
     }
     # Version 1.0: Initial version
     # Version 1.1: add locked and display_description field
-    VERSION = '1.1'
+    # Version 1.2: Add auto_disk_config field
+    VERSION = '1.2'
     fields = {
         'uuid': fields.UUIDField(),
         'user_id': fields.StringField(nullable=True),
@@ -87,6 +89,7 @@ class InstancePayload(base.NotificationPayloadBase):
 
         'metadata': fields.DictOfStringsField(),
         'locked': fields.BooleanField(),
+        'auto_disk_config': fields.DiskConfigField()
     }
 
     def __init__(self, instance, **kwargs):
@@ -113,7 +116,8 @@ class InstanceActionPayload(InstancePayload):
     # No SCHEMA as all the additional fields are calculated
 
     # Version 1.1: locked and display_description added to InstancePayload
-    VERSION = '1.1'
+    # Version 1.2: Added auto_disk_config field to InstancePayload
+    VERSION = '1.2'
     fields = {
         'fault': fields.ObjectField('ExceptionPayload', nullable=True),
     }
@@ -130,7 +134,8 @@ class InstanceActionVolumeSwapPayload(InstanceActionPayload):
     # No SCHEMA as all the additional fields are calculated
 
     # Version 1.1: locked and display_description added to InstancePayload
-    VERSION = '1.1'
+    # Version 1.2: Added auto_disk_config field to InstancePayload
+    VERSION = '1.2'
     fields = {
         'old_volume_id': fields.UUIDField(),
         'new_volume_id': fields.UUIDField(),
@@ -149,7 +154,8 @@ class InstanceUpdatePayload(InstancePayload):
     # Version 1.0: Initial version
     # Version 1.1: locked and display_description added to InstancePayload
     # Version 1.2: Added tags field
-    VERSION = '1.2'
+    # Version 1.3: Added auto_disk_config field to InstancePayload
+    VERSION = '1.3'
     fields = {
         'state_update': fields.ObjectField('InstanceStateUpdatePayload'),
         'audit_period': fields.ObjectField('AuditPeriodPayload'),

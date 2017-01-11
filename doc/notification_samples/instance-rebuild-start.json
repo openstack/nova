@@ -5,13 +5,14 @@
     "payload": {
         "nova_object.name": "InstanceActionPayload",
         "nova_object.namespace": "nova",
-        "nova_object.version": "1.1",
+        "nova_object.version":"1.2",
         "nova_object.data": {
             "display_description": "some-server",
             "reservation_id": "r-rqe0mlje",
             "progress": 0,
             "user_id": "fake",
             "task_state": "rebuilding",
+            "auto_disk_config":"MANUAL",
             "node": "fake-mini",
             "created_at": "2012-10-29T13:42:11Z",
             "kernel_id": "",
