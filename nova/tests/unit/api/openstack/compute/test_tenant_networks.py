@@ -338,8 +338,6 @@ class TenantNetworksEnforcementV21(test.NoDBTestCase):
 
 
 class TenantNetworksDeprecationTest(test.NoDBTestCase):
-    ctrlr = networks_v21.TenantNetworkController
-    validation_error = exception.ValidationError
 
     def setUp(self):
         super(TenantNetworksDeprecationTest, self).setUp()
