@@ -3236,6 +3236,31 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 mock.call(self.context, inst_obj, 'fake-mini',
                           action='restore', phase='end')])
 
+    def test_delete_image_on_error_image_not_found_ignored(self):
+        """Tests that we don't log an exception trace if we get a 404 when
+        trying to delete an image as part of the image cleanup decorator.
+        """
+        @manager.delete_image_on_error
+        def some_image_related_op(self, context, image_id, instance):
+            raise test.TestingException('oops!')
+
+        image_id = uuids.image_id
+        instance = objects.Instance(uuid=uuids.instance_uuid)
+
+        with mock.patch.object(manager.LOG, 'exception') as mock_log:
+            with mock.patch.object(
+                    self, 'image_api', create=True) as mock_image_api:
+                mock_image_api.delete.side_effect = (
+                    exception.ImageNotFound(image_id=image_id))
+                self.assertRaises(test.TestingException,
+                                  some_image_related_op,
+                                  self, self.context, image_id, instance)
+
+        mock_image_api.delete.assert_called_once_with(
+            self.context, image_id)
+        # make sure nothing was logged at exception level
+        mock_log.assert_not_called()
+
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def setUp(self):
