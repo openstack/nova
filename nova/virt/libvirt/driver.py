@@ -948,9 +948,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 retry = False
 
         # FIXME(wangpan): if the instance is booted again here, such as the
-        #                 the soft reboot operation boot it here, it will
-        #                 become "running deleted", should we check and destroy
-        #                 it at the end of this method?
+        #                 soft reboot operation boot it here, it will become
+        #                 "running deleted", should we check and destroy it
+        #                 at the end of this method?
 
         # NOTE(vish): we disconnect from volumes regardless
         block_device_mapping = driver.block_device_info_get_mapping(

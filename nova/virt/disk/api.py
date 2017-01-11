@@ -701,8 +701,8 @@ def _set_passwd(username, admin_passwd, passwd_data, shadow_data):
         msg = _('User %(username)s not found in password file.')
         raise exception.NovaException(msg % username)
 
-    # update password in the shadow file.It's an error if the
-    # the user doesn't exist.
+    # update password in the shadow file. It's an error if the
+    # user doesn't exist.
     new_shadow = list()
     found = False
     for entry in s_file:
