@@ -264,7 +264,8 @@ notification_object_data = {
     'EventType': '1.5-ffa6d332f4462c45a2a363356a14165f',
     'ExceptionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'ExceptionPayload': '1.0-27db46ee34cd97e39f2643ed92ad0cc5',
-    'FlavorPayload': '1.0-89b17e778291bba22025b5956e072b66',
+    'FlavorNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
+    'FlavorPayload': '1.1-e3892169e2c946f6784fe130deaeae4f',
     'InstanceActionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'InstanceActionPayload': '1.1-8d12efc3251c606b61b3d479a9da51be',
     'InstanceActionVolumeSwapNotification':

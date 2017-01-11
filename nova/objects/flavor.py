@@ -22,6 +22,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.sql import text
 from sqlalchemy.sql import true
 
+import nova.conf
 from nova import db
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy.api import require_context
@@ -29,6 +30,8 @@ from nova.db.sqlalchemy import api_models
 from nova.db.sqlalchemy import models as main_models
 from nova import exception
 from nova.i18n import _LW
+from nova.notifications.objects import base as notification
+from nova.notifications.objects import flavor as flavor_notification
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -37,6 +40,8 @@ from nova.objects import fields
 LOG = logging.getLogger(__name__)
 OPTIONAL_FIELDS = ['extra_specs', 'projects']
 DEPRECATED_FIELDS = ['deleted', 'deleted_at']
+
+CONF = nova.conf.CONF
 
 
 def _dict_with_extra_specs(flavor_model):
@@ -185,6 +190,7 @@ def _flavor_destroy(context, flavor_id=None, flavorid=None):
     context.session.query(api_models.FlavorExtraSpecs).\
         filter_by(flavor_id=result.id).delete()
     context.session.delete(result)
+    return result
 
 
 @db_api.pick_context_manager_reader
@@ -487,6 +493,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         db_flavor = self._flavor_create(self._context, updates)
         self._from_db_object(self._context, self, db_flavor,
                              expected_attrs=expected_attrs)
+        self._send_notification(fields.NotificationAction.CREATE)
 
     @base.remotable
     def save_projects(self, to_add=None, to_delete=None):
@@ -574,7 +581,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
 
     @staticmethod
     def _flavor_destroy(context, flavor_id=None, flavorid=None):
-        _flavor_destroy(context, flavor_id=flavor_id, flavorid=flavorid)
+        return _flavor_destroy(context, flavor_id=flavor_id, flavorid=flavorid)
 
     @base.remotable
     def destroy(self):
@@ -586,11 +593,28 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         # far more specific.
         try:
             if 'id' in self:
-                self._flavor_destroy(self._context, flavor_id=self.id)
+                db_flavor = self._flavor_destroy(self._context,
+                                                 flavor_id=self.id)
             else:
-                self._flavor_destroy(self._context, flavorid=self.flavorid)
+                db_flavor = self._flavor_destroy(self._context,
+                                                 flavorid=self.flavorid)
+            self._from_db_object(self._context, self, db_flavor)
+            self._send_notification(fields.NotificationAction.DELETE)
         except exception.FlavorNotFound:
             db.flavor_destroy(self._context, self.flavorid)
+
+    def _send_notification(self, action):
+        notification_type = flavor_notification.FlavorNotification
+        payload_type = flavor_notification.FlavorPayload
+
+        payload = payload_type(self)
+        notification_type(
+            publisher=notification.NotificationPublisher(
+                host=CONF.host, binary="nova-api"),
+            event_type=notification.EventType(object="flavor",
+                                              action=action),
+            priority=fields.NotificationPriority.INFO,
+            payload=payload).emit(self._context)
 
 
 @db_api.api_context_manager.reader

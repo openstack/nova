@@ -363,12 +363,14 @@ class _TestFlavor(object):
 
     @mock.patch('nova.objects.Flavor._flavor_destroy')
     def test_destroy_api_by_id(self, mock_destroy):
+        mock_destroy.return_value = dict(fake_flavor, id=123)
         flavor = flavor_obj.Flavor(context=self.context, id=123)
         flavor.destroy()
         mock_destroy.assert_called_once_with(self.context, flavor_id=flavor.id)
 
     @mock.patch('nova.objects.Flavor._flavor_destroy')
     def test_destroy_api_by_flavorid(self, mock_destroy):
+        mock_destroy.return_value = dict(fake_flavor, flavorid='foo')
         flavor = flavor_obj.Flavor(context=self.context, flavorid='foo')
         flavor.destroy()
         mock_destroy.assert_called_once_with(self.context,

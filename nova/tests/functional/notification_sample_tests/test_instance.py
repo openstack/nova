@@ -488,6 +488,8 @@ class TestInstanceNotificationSample(
             }
         }
         other_flavor_id = self.api.post_flavor(other_flavor_body)['id']
+        # Ignore the create flavor notification
+        fake_notifier.reset()
 
         post = {
             'resize': {

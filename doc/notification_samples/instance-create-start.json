@@ -31,12 +31,18 @@
                 "nova_object.name": "FlavorPayload",
                 "nova_object.data": {
                     "flavorid": "a22d5517-147c-4147-a0d1-e698df5cd4e3",
+                    "name": "test_flavor",
                     "root_gb": 1,
                     "vcpus": 1,
                     "ephemeral_gb": 0,
-                    "memory_mb": 512
+                    "memory_mb": 512,
+                    "disabled": false,
+                    "rxtx_factor": 1.0,
+                    "swap": 0,
+                    "is_public": true,
+                    "vcpu_weight": 0
                 },
-                "nova_object.version": "1.0",
+                "nova_object.version": "1.1",
                 "nova_object.namespace": "nova"
             },
             "user_id":"fake",

@@ -317,7 +317,8 @@ class TestDatabaseAtVersionFixture(testtools.TestCase):
 
 
 class TestDefaultFlavorsFixture(testtools.TestCase):
-    def test_flavors(self):
+    @mock.patch("nova.objects.flavor.Flavor._send_notification")
+    def test_flavors(self, mock_send_notification):
         self.useFixture(conf_fixture.ConfFixture())
         self.useFixture(fixtures.Database())
         self.useFixture(fixtures.Database(database='api'))
