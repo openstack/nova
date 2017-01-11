@@ -17,11 +17,11 @@ import contextlib
 import tarfile
 
 import eventlet
+from os_xenapi.client import session as xenapi_session
 import six
 
 from nova.image import glance
 from nova import test
-from nova.virt.xenapi.client import session as xenapi_session
 from nova.virt.xenapi.image import vdi_through_dev
 
 

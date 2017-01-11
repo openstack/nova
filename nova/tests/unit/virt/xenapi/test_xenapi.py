@@ -24,6 +24,8 @@ import re
 
 import mock
 from mox3 import mox
+from os_xenapi.client import session as xenapi_session
+from os_xenapi.client import XenAPI
 from oslo_concurrency import lockutils
 from oslo_config import fixture as config_fixture
 from oslo_log import log as logging
@@ -62,7 +64,6 @@ from nova.tests.unit.virt.xenapi import stubs
 from nova.tests import uuidsentinel as uuids
 from nova.virt import fake
 from nova.virt.xenapi import agent
-from nova.virt.xenapi.client import session as xenapi_session
 from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake as xenapi_fake
 from nova.virt.xenapi import host
@@ -841,7 +842,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         vdi_recs_start = self._list_vdis()
         start_vms = self._list_vms()
         stubs.stubout_fetch_disk_image(self.stubs, raise_failure=True)
-        self.assertRaises(xenapi_fake.Failure, self._test_spawn,
+        self.assertRaises(XenAPI.Failure, self._test_spawn,
                           IMAGE_MACHINE, IMAGE_KERNEL, IMAGE_RAMDISK)
         # No additional VDI should be found.
         vdi_recs_end = self._list_vdis()
@@ -858,7 +859,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         vdi_recs_start = self._list_vdis()
         start_vms = self._list_vms()
         stubs.stubout_create_vm(self.stubs)
-        self.assertRaises(xenapi_fake.Failure, self._test_spawn,
+        self.assertRaises(XenAPI.Failure, self._test_spawn,
                           IMAGE_MACHINE, IMAGE_KERNEL, IMAGE_RAMDISK)
         # No additional VDI should be found.
         vdi_recs_end = self._list_vdis()
@@ -875,7 +876,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         stubs.stubout_attach_disks(self.stubs)
         vdi_recs_start = self._list_vdis()
         start_vms = self._list_vms()
-        self.assertRaises(xenapi_fake.Failure, self._test_spawn,
+        self.assertRaises(XenAPI.Failure, self._test_spawn,
                           IMAGE_MACHINE, IMAGE_KERNEL, IMAGE_RAMDISK)
         # No additional VDI should be found.
         vdi_recs_end = self._list_vdis()
@@ -1219,7 +1220,7 @@ iface eth0 inet6 static
 
         def fake_agent_call(self, method, args):
             if failure:
-                raise xenapi_fake.Failure([failure])
+                raise XenAPI.Failure([failure])
             else:
                 return value
 
@@ -1398,7 +1399,7 @@ iface eth0 inet6 static
         instance = self._create_instance(spawn=False)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         xenapi_fake.create_vm(instance['name'], 'Unknown')
-        self.assertRaises(xenapi_fake.Failure, conn.reboot, self.context,
+        self.assertRaises(XenAPI.Failure, conn.reboot, self.context,
                           instance, None, "SOFT")
 
     def test_reboot_rescued(self):
@@ -1491,34 +1492,6 @@ iface eth0 inet6 static
         inst_uuid = host._uuid_find(self.context, fake_inst['host'],
                                     expected_name)
         self.assertEqual(inst_uuid, fake_inst['uuid'])
-
-    def test_session_virtapi(self):
-        was = {'called': False}
-
-        def fake_aggregate_get_by_host(self, *args, **kwargs):
-            was['called'] = True
-            raise test.TestingException()
-        self.stub_out("nova.db.aggregate_get_by_host",
-                       fake_aggregate_get_by_host)
-
-        self.stubs.Set(self.conn._session, "is_slave", True)
-
-        self.assertRaises(test.TestingException,
-                self.conn._session._get_host_uuid)
-        self.assertTrue(was['called'])
-
-    def test_session_handles_aggregate_metadata(self):
-        def fake_aggregate_get(context, host, key):
-            agg = copy.copy(test_aggregate.fake_aggregate)
-            agg['metadetails'][CONF.host] = 'this_should_be_metadata'
-            return [agg]
-        self.stub_out('nova.db.aggregate_get_by_host',
-                      fake_aggregate_get)
-
-        self.stubs.Set(self.conn._session, "is_slave", True)
-
-        self.assertEqual('this_should_be_metadata',
-                         self.conn._session._get_host_uuid())
 
     def test_per_instance_usage_running(self):
         instance = self._create_instance(spawn=True)
@@ -4016,151 +3989,6 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBaseNoDB):
         instance = {'uuid': 'not_found'}
         self.conn._vmops.change_instance_metadata(instance, "fake_diff")
         self.assertTrue(self.called_fake_get_vm_opaque_ref)
-
-
-class XenAPISessionTestCase(test.NoDBTestCase):
-    def _get_mock_xapisession(self, software_version):
-        class MockXapiSession(xenapi_session.XenAPISession):
-            def __init__(_ignore):
-                "Skip the superclass's dirty init"
-
-            def _get_software_version(_ignore):
-                return software_version
-
-        return MockXapiSession()
-
-    def test_local_session(self):
-        session = self._get_mock_xapisession({})
-        session.is_local_connection = True
-        session.XenAPI = self.mox.CreateMockAnything()
-        session.XenAPI.xapi_local().AndReturn("local_connection")
-
-        self.mox.ReplayAll()
-        self.assertEqual("local_connection",
-                         session._create_session("unix://local"))
-
-    def test_remote_session(self):
-        session = self._get_mock_xapisession({})
-        session.is_local_connection = False
-        session.XenAPI = self.mox.CreateMockAnything()
-        session.XenAPI.Session("url").AndReturn("remote_connection")
-
-        self.mox.ReplayAll()
-        self.assertEqual("remote_connection", session._create_session("url"))
-
-    def test_get_product_version_product_brand_does_not_fail(self):
-        session = self._get_mock_xapisession({
-                    'build_number': '0',
-                    'date': '2012-08-03',
-                    'hostname': 'komainu',
-                    'linux': '3.2.0-27-generic',
-                    'network_backend': 'bridge',
-                    'platform_name': 'XCP_Kronos',
-                    'platform_version': '1.6.0',
-                    'xapi': '1.3',
-                    'xen': '4.1.2',
-                    'xencenter_max': '1.10',
-                    'xencenter_min': '1.10'
-                })
-
-        self.assertEqual(
-            ((1, 6, 0), None),
-            session._get_product_version_and_brand()
-        )
-
-    def test_get_product_version_product_brand_xs_6(self):
-        session = self._get_mock_xapisession({
-                    'product_brand': 'XenServer',
-                    'product_version': '6.0.50',
-                    'platform_version': '0.0.1'
-                })
-
-        self.assertEqual(
-            ((6, 0, 50), 'XenServer'),
-            session._get_product_version_and_brand()
-        )
-
-    def test_verify_plugin_version_same(self):
-        session = self._get_mock_xapisession({})
-
-        session.PLUGIN_REQUIRED_VERSION = '2.4'
-
-        self.mox.StubOutWithMock(session, 'call_plugin_serialized')
-        session.call_plugin_serialized('nova_plugin_version.py', 'get_version',
-                            ).AndReturn("2.4")
-
-        self.mox.ReplayAll()
-        session._verify_plugin_version()
-
-    def test_verify_plugin_version_compatible(self):
-        session = self._get_mock_xapisession({})
-        session.XenAPI = xenapi_fake.FakeXenAPI()
-
-        session.PLUGIN_REQUIRED_VERSION = '2.4'
-
-        self.mox.StubOutWithMock(session, 'call_plugin_serialized')
-        session.call_plugin_serialized('nova_plugin_version.py', 'get_version',
-                            ).AndReturn("2.5")
-
-        self.mox.ReplayAll()
-        session._verify_plugin_version()
-
-    def test_verify_plugin_version_python_extensions(self):
-        """Validate that 2.0 is equivalent to 1.8."""
-        session = self._get_mock_xapisession({})
-        session.XenAPI = xenapi_fake.FakeXenAPI()
-
-        session.PLUGIN_REQUIRED_VERSION = '2.0'
-
-        with mock.patch.object(session, 'call_plugin_serialized',
-                               return_value='1.8'):
-            session._verify_plugin_version()
-
-    def test_verify_plugin_version_bad_maj(self):
-        session = self._get_mock_xapisession({})
-        session.XenAPI = xenapi_fake.FakeXenAPI()
-
-        session.PLUGIN_REQUIRED_VERSION = '2.4'
-
-        self.mox.StubOutWithMock(session, 'call_plugin_serialized')
-        session.call_plugin_serialized('nova_plugin_version.py', 'get_version',
-                            ).AndReturn("3.0")
-
-        self.mox.ReplayAll()
-        self.assertRaises(xenapi_fake.Failure, session._verify_plugin_version)
-
-    def test_verify_plugin_version_bad_min(self):
-        session = self._get_mock_xapisession({})
-        session.XenAPI = xenapi_fake.FakeXenAPI()
-
-        session.PLUGIN_REQUIRED_VERSION = '2.4'
-
-        self.mox.StubOutWithMock(session, 'call_plugin_serialized')
-        session.call_plugin_serialized('nova_plugin_version.py', 'get_version',
-                            ).AndReturn("2.3")
-
-        self.mox.ReplayAll()
-        self.assertRaises(xenapi_fake.Failure, session._verify_plugin_version)
-
-    def test_verify_current_version_matches(self):
-        session = self._get_mock_xapisession({})
-
-        # Import the plugin to extract its version
-        path = os.path.dirname(__file__)
-        rel_path_elem = "../../../../../plugins/xenserver/xenapi/etc/xapi.d/" \
-            "plugins/nova_plugin_version.py"
-        for elem in rel_path_elem.split('/'):
-            path = os.path.join(path, elem)
-        path = os.path.realpath(path)
-
-        plugin_version = None
-        with open(path) as plugin_file:
-            for line in plugin_file:
-                if "PLUGIN_VERSION = " in line:
-                    plugin_version = line.strip()[17:].strip('"')
-
-        self.assertEqual(session.PLUGIN_REQUIRED_VERSION,
-                         plugin_version)
 
 
 class XenAPIFakeTestCase(test.NoDBTestCase):

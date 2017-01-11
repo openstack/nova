@@ -18,7 +18,7 @@ import time
 
 import mock
 from mox3 import mox
-from oslo_log import log as logging
+from os_xenapi.client import XenAPI
 
 from nova.compute import utils as compute_utils
 from nova import context
@@ -93,9 +93,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
     @mock.patch.object(random, 'shuffle')
     @mock.patch.object(time, 'sleep')
     @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
-    @mock.patch.object(logging.getLogger('nova.virt.xenapi.client.session'),
-                       'debug')
-    def test_download_image_retry(self, mock_log_debug, mock_fault, mock_sleep,
+    def test_download_image_retry(self, mock_fault, mock_sleep,
                                   mock_shuffle, mock_make_uuid_stack):
         params = self._get_download_params()
         self.flags(num_retries=2, group='glance')
@@ -107,16 +105,6 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
                  mock.call('glance.py', 'download_vhd2',
                            endpoint='http://10.0.0.1:9293',
                            **params)]
-        log_calls = [mock.call(mock.ANY,
-                               {'callback_result': 'http://10.0.1.1:9292',
-                                'attempts': 3, 'attempt': 1,
-                                'fn': 'download_vhd2',
-                                'plugin': 'glance.py'}),
-                     mock.call(mock.ANY,
-                               {'callback_result': 'http://10.0.0.1:9293',
-                                'attempts': 3, 'attempt': 2,
-                                'fn': 'download_vhd2',
-                                'plugin': 'glance.py'})]
 
         glance_api_servers = ['10.0.1.1:9292',
                               'http://10.0.0.1:9293']
@@ -132,7 +120,6 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
                                       self.instance, 'fake_image_uuid')
 
             mock_call_plugin_serialized.assert_has_calls(calls)
-            mock_log_debug.assert_has_calls(log_calls, any_order=True)
 
             self.assertEqual(1, mock_fault.call_count)
 
@@ -197,21 +184,21 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         self.session.call_plugin_serialized('glance.py', 'upload_vhd2',
                                             **params).AndRaise(error)
         compute_utils.add_instance_fault_from_exc(self.context, self.instance,
-                                                  error, (fake.Failure,
+                                                  error, (XenAPI.Failure,
                                                           error,
                                                           mox.IgnoreArg()))
         time.sleep(0.5)
         self.session.call_plugin_serialized('glance.py', 'upload_vhd2',
                                             **params).AndRaise(error)
         compute_utils.add_instance_fault_from_exc(self.context, self.instance,
-                                                  error, (fake.Failure,
+                                                  error, (XenAPI.Failure,
                                                           error,
                                                           mox.IgnoreArg()))
         time.sleep(1)
         self.session.call_plugin_serialized('glance.py', 'upload_vhd2',
                                             **params).AndRaise(error)
         compute_utils.add_instance_fault_from_exc(self.context, self.instance,
-                                                  error, (fake.Failure,
+                                                  error, (XenAPI.Failure,
                                                           error,
                                                           mox.IgnoreArg()))
         self.mox.ReplayAll()
@@ -234,7 +221,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         self.session.call_plugin_serialized('glance.py', 'upload_vhd2',
                                             **params).AndRaise(error)
         compute_utils.add_instance_fault_from_exc(self.context, self.instance,
-                                                  error, (fake.Failure,
+                                                  error, (XenAPI.Failure,
                                                           error,
                                                           mox.IgnoreArg()))
         time.sleep(0.5)
@@ -244,7 +231,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         self.session.call_plugin_serialized('glance.py', 'upload_vhd2',
                                             **params).AndRaise(error)
         compute_utils.add_instance_fault_from_exc(self.context, self.instance,
-                                                  error, (fake.Failure,
+                                                  error, (XenAPI.Failure,
                                                           error,
                                                           mox.IgnoreArg()))
         time.sleep(1)
