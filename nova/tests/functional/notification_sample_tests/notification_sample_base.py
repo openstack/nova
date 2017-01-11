@@ -143,6 +143,11 @@ class NotificationSampleTestBase(test.TestCase,
                                   }}
 
         flavor_id = self.api.post_flavor(flavor_body)['id']
+        extra_specs = {
+            "extra_specs": {
+                "hw:watchdog_action": "disabled"}}
+        self.admin_api.post_extra_spec(flavor_id, extra_specs)
+
         # Ignore the create flavor notification
         fake_notifier.reset()
 

@@ -46,7 +46,9 @@
                     "memory_mb": 512,
                     "disabled": false,
                     "rxtx_factor": 1.0,
-                    "extra_specs": {},
+                    "extra_specs": {
+                        "hw:watchdog_action": "disabled"
+                    },
                     "swap": 0,
                     "is_public": true,
                     "vcpu_weight": 0
