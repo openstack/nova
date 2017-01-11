@@ -19,6 +19,7 @@
 
 from oslo_log import log as logging
 
+from nova.compute import power_state
 import nova.conf
 from nova import exception
 from nova.i18n import _
@@ -72,6 +73,8 @@ class XenVIFDriver(object):
                 LOG.debug("vif didn't exist, no need to unplug vif %s",
                         vif, instance=instance)
                 return
+            # hot unplug the VIF first
+            self.hot_unplug(vif, instance, vm_ref, vif_ref)
             self._session.call_xenapi('VIF.destroy', vif_ref)
         except Exception as e:
             LOG.warning(
@@ -79,6 +82,44 @@ class XenVIFDriver(object):
                 {'vif': vif, 'exception': e}, instance=instance)
             raise exception.NovaException(
                 reason=_("Failed to unplug vif %s") % vif)
+
+    def hot_plug(self, vif, instance, vm_ref, vif_ref):
+        """hotplug virtual interface to running instance.
+        :param nova.network.model.VIF vif:
+            The object which has the information about the interface to attach.
+        :param nova.objects.instance.Instance instance:
+            The instance which will get an additional network interface.
+        :param string vm_ref:
+            The instance's reference from hypervisor's point of view.
+        :param string vif_ref:
+            The interface's reference from hypervisor's point of view.
+        :return: None
+        """
+        pass
+
+    def hot_unplug(self, vif, instance, vm_ref, vif_ref):
+        """hot unplug virtual interface from running instance.
+        :param nova.network.model.VIF vif:
+            The object which has the information about the interface to detach.
+        :param nova.objects.instance.Instance instance:
+            The instance which will remove additional network interface.
+        :param string vm_ref:
+            The instance's reference from hypervisor's point of view.
+        :param string vif_ref:
+            The interface's reference from hypervisor's point of view.
+        :return: None
+        """
+        pass
+
+    def post_start_actions(self, instance, vif_ref):
+        """post actions when the instance is power on.
+        :param nova.objects.instance.Instance instance:
+            The instance which will execute extra actions after power on
+        :param string vif_ref:
+            The interface's reference from hypervisor's point of view.
+        :return: None
+        """
+        pass
 
 
 class XenAPIBridgeDriver(XenVIFDriver):
@@ -181,10 +222,6 @@ class XenAPIBridgeDriver(XenVIFDriver):
     def unplug(self, instance, vif, vm_ref):
         super(XenAPIBridgeDriver, self).unplug(instance, vif, vm_ref)
 
-    def post_start_actions(self, instance, vif_ref):
-        """no further actions needed for this driver type"""
-        pass
-
 
 class XenAPIOpenVswitchDriver(XenVIFDriver):
     """VIF driver for Open vSwitch with XenAPI."""
@@ -221,7 +258,12 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
         # OVS on the hypervisor monitors this key and uses it to
         # set the iface-id attribute
         vif_rec['other_config'] = {'nicira-iface-id': vif['id']}
-        return self._create_vif(vif, vif_rec, vm_ref)
+        vif_ref = self._create_vif(vif, vif_rec, vm_ref)
+
+        # call XenAPI to plug vif
+        self.hot_plug(vif, instance, vm_ref, vif_ref)
+
+        return vif_ref
 
     def unplug(self, instance, vif, vm_ref):
         """unplug vif:
@@ -288,6 +330,29 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
                         {'if': vif, 'exception': e}, instance=instance)
             raise exception.VirtualInterfaceUnplugException(
                 reason=_("Failed to delete bridge"))
+
+    def hot_plug(self, vif, instance, vm_ref, vif_ref):
+        # hot plug vif only when VM's power state is running
+        LOG.debug("Hot plug vif, vif: %s", vif, instance=instance)
+        state = vm_utils.get_power_state(self._session, vm_ref)
+        if state != power_state.RUNNING:
+            LOG.debug("Skip hot plug VIF, VM is not running, vif: %s", vif,
+                      instance=instance)
+            return
+
+        self._session.VIF.plug(vif_ref)
+        self.post_start_actions(instance, vif_ref)
+
+    def hot_unplug(self, vif, instance, vm_ref, vif_ref):
+        # hot unplug vif only when VM's power state is running
+        LOG.debug("Hot unplug vif, vif: %s", vif, instance=instance)
+        state = vm_utils.get_power_state(self._session, vm_ref)
+        if state != power_state.RUNNING:
+            LOG.debug("Skip hot unplug VIF, VM is not running, vif: %s", vif,
+                      instance=instance)
+            return
+
+        self._session.VIF.unplug(vif_ref)
 
     def _get_qbr_name(self, iface_id):
         return ("qbr" + iface_id)[:network_model.NIC_NAME_LEN]

@@ -200,3 +200,18 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
 
         self.assertTrue(mock_cleanup.called)
         self.assertTrue(mock_ensure.called)
+
+    @mock.patch.object(xenapi_driver.vmops.VMOps, 'attach_interface')
+    def test_attach_interface(self, mock_attach_interface):
+        driver = self._get_driver()
+        driver.attach_interface('fake_context', 'fake_instance',
+                                'fake_image_meta', 'fake_vif')
+        mock_attach_interface.assert_called_once_with('fake_instance',
+                                                      'fake_vif')
+
+    @mock.patch.object(xenapi_driver.vmops.VMOps, 'detach_interface')
+    def test_detach_interface(self, mock_detach_interface):
+        driver = self._get_driver()
+        driver.detach_interface('fake_context', 'fake_instance', 'fake_vif')
+        mock_detach_interface.assert_called_once_with('fake_instance',
+                                                      'fake_vif')

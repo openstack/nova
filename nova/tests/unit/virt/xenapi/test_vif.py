@@ -15,12 +15,14 @@
 
 import mock
 
+from nova.compute import power_state
 from nova import exception
 from nova.network import model
 from nova import test
 from nova.tests.unit.virt.xenapi import stubs
 from nova.virt.xenapi import network_utils
 from nova.virt.xenapi import vif
+from nova.virt.xenapi import vm_utils
 
 
 fake_vif = {
@@ -126,14 +128,17 @@ class XenVIFDriverTestCase(XenVIFDriverTestBase):
                           self.base_driver._create_vif,
                           "fake_vif", "missing_vif_rec", "fake_vm_ref")
 
+    @mock.patch.object(vif.XenVIFDriver, 'hot_unplug')
     @mock.patch.object(vif.XenVIFDriver, '_get_vif_ref',
                        return_value='fake_vif_ref')
-    def test_unplug(self, mock_get_vif_ref):
+    def test_unplug(self, mock_get_vif_ref, mock_hot_unplug):
         instance = {'name': "fake_instance"}
         vm_ref = "fake_vm_ref"
         self.base_driver.unplug(instance, fake_vif, vm_ref)
         expected = [mock.call('VIF.destroy', 'fake_vif_ref')]
         self.assertEqual(expected, self._session.call_xenapi.call_args_list)
+        mock_hot_unplug.assert_called_once_with(
+            fake_vif, instance, 'fake_vm_ref', 'fake_vif_ref')
 
     @mock.patch.object(vif.XenVIFDriver, '_get_vif_ref',
                        return_value='missing_vif_ref')
@@ -173,6 +178,7 @@ class XenAPIOpenVswitchDriverTestCase(XenVIFDriverTestBase):
         super(XenAPIOpenVswitchDriverTestCase, self).setUp()
         self.ovs_driver = vif.XenAPIOpenVswitchDriver(self._session)
 
+    @mock.patch.object(vif.XenAPIOpenVswitchDriver, 'hot_plug')
     @mock.patch.object(vif.XenVIFDriver, '_create_vif',
                        return_value='fake_vif_ref')
     @mock.patch.object(vif.XenAPIOpenVswitchDriver,
@@ -181,7 +187,7 @@ class XenAPIOpenVswitchDriverTestCase(XenVIFDriverTestBase):
     @mock.patch.object(vif.vm_utils, 'lookup', return_value='fake_vm_ref')
     def test_plug(self, mock_lookup, mock_get_vif_ref,
                   mock_create_vif_interim_network,
-                  mock_create_vif):
+                  mock_create_vif, mock_hot_plug):
         instance = {'name': "fake_instance_name"}
         ret_vif_ref = self.ovs_driver.plug(
             instance, fake_vif, vm_ref=None, device=1)
@@ -190,6 +196,8 @@ class XenAPIOpenVswitchDriverTestCase(XenVIFDriverTestBase):
         self.assertTrue(mock_create_vif_interim_network.called)
         self.assertTrue(mock_create_vif.called)
         self.assertEqual('fake_vif_ref', ret_vif_ref)
+        mock_hot_plug.assert_called_once_with(fake_vif, instance,
+                                              'fake_vm_ref', 'fake_vif_ref')
 
     @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_delete_linux_bridge')
     @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_delete_linux_port')
@@ -299,3 +307,56 @@ class XenAPIOpenVswitchDriverTestCase(XenVIFDriverTestBase):
         network_ref = self.ovs_driver.create_vif_interim_network(fake_vif)
         self.assertTrue(mock_network_create.called)
         self.assertEqual(network_ref, 'new_network_ref')
+
+    @mock.patch.object(vif.XenAPIOpenVswitchDriver, 'post_start_actions')
+    @mock.patch.object(vm_utils, 'get_power_state')
+    def test_hot_plug_power_on(self, mock_get_power_state,
+                               mock_post_start_actions):
+        vif_ref = "fake_vif_ref"
+        vif = "fake_vif"
+        instance = "fake_instance"
+        vm_ref = "fake_vm_ref"
+        mock_get_power_state.return_value = power_state.RUNNING
+        mock_VIF_plug = self.mock_patch_object(
+                                self._session.VIF, 'plug', return_val=None)
+        self.ovs_driver.hot_plug(vif, instance, vm_ref, vif_ref)
+        mock_VIF_plug.assert_called_once_with(vif_ref)
+        mock_post_start_actions.assert_called_once_with(instance, vif_ref)
+        mock_get_power_state.assert_called_once_with(self._session, vm_ref)
+
+    @mock.patch.object(vm_utils, 'get_power_state')
+    def test_hot_plug_power_off(self, mock_get_power_state):
+        vif_ref = "fake_vif_ref"
+        vif = "fake_vif"
+        instance = "fake_instance"
+        vm_ref = "fake_vm_ref"
+        mock_get_power_state.return_value = power_state.SHUTDOWN
+        mock_VIF_plug = self.mock_patch_object(
+                                self._session.VIF, 'plug', return_val=None)
+        self.ovs_driver.hot_plug(vif, instance, vm_ref, vif_ref)
+        mock_VIF_plug.assert_not_called()
+        mock_get_power_state.assert_called_once_with(self._session, vm_ref)
+
+    @mock.patch.object(vm_utils, 'get_power_state')
+    def test_hot_unplug_power_on(self, mock_get_power_state):
+        vm_ref = 'fake_vm_ref'
+        vif_ref = 'fake_vif_ref'
+        instance = 'fake_instance'
+        mock_get_power_state.return_value = power_state.RUNNING
+        mock_VIF_unplug = self.mock_patch_object(
+                                self._session.VIF, 'unplug', return_val=None)
+        self.ovs_driver.hot_unplug(fake_vif, instance, vm_ref, vif_ref)
+        mock_VIF_unplug.assert_called_once_with(vif_ref)
+        mock_get_power_state.assert_called_once_with(self._session, vm_ref)
+
+    @mock.patch.object(vm_utils, 'get_power_state')
+    def test_hot_unplug_power_off(self, mock_get_power_state):
+        vm_ref = 'fake_vm_ref'
+        vif_ref = 'fake_vif_ref'
+        instance = 'fake_instance'
+        mock_get_power_state.return_value = power_state.SHUTDOWN
+        mock_VIF_unplug = self.mock_patch_object(
+                                self._session.VIF, 'unplug', return_val=None)
+        self.ovs_driver.hot_unplug(fake_vif, instance, vm_ref, vif_ref)
+        mock_VIF_unplug.assert_not_called()
+        mock_get_power_state.assert_called_once_with(self._session, vm_ref)
