@@ -35,32 +35,42 @@ MEMORY_MB = fields.ResourceClass.MEMORY_MB
 DISK_GB = fields.ResourceClass.DISK_GB
 _RE_INV_IN_USE = re.compile("Inventory for (.+) on resource provider "
                             "(.+) in use")
+WARN_EVERY = 10
+
+
+def warn_limit(self, msg):
+    if self._warn_count:
+        self._warn_count -= 1
+    else:
+        self._warn_count = WARN_EVERY
+        LOG.warning(msg)
 
 
 def safe_connect(f):
     @functools.wraps(f)
     def wrapper(self, *a, **k):
         try:
-            # We've failed in a non recoverable way, fully give up.
-            if self._disabled:
-                return
             return f(self, *a, **k)
         except ks_exc.EndpointNotFound:
-            msg = _LW("The placement API endpoint not found. Optional use of "
-                      "placement API for reporting is now disabled.")
-            LOG.warning(msg)
-            self._disabled = True
+            warn_limit(
+                self,
+                _LW('The placement API endpoint not found. Placement is '
+                    'optional in Newton, but required in Ocata. Please '
+                    'enable the placement service before upgrading.'))
         except ks_exc.MissingAuthPlugin:
-            msg = _LW("No authentication information found for placement API. "
-                      "Optional use of placement API for reporting is now "
-                      "disabled.")
-            LOG.warning(msg)
-            self._disabled = True
+            warn_limit(
+                self,
+                _LW('No authentication information found for placement '
+                    'API. Placement is optional in Newton, but required '
+                    'in Ocata. Please enable the placement service '
+                    'before upgrading.'))
         except ks_exc.Unauthorized:
-            msg = _LW('Placement service credentials do not work. Optional '
-                      'use of placement API for reporting is now disabled.')
-            LOG.warning(msg)
-            self._disabled = True
+            warn_limit(
+                self,
+                _LW('Placement service credentials do not work. '
+                    'Placement is optional in Newton, but required '
+                    'in Ocata. Please enable the placement service '
+                    'before upgrading.'))
         except ks_exc.ConnectFailure:
             msg = _LW('Placement API service is not responding.')
             LOG.warning(msg)
@@ -155,9 +165,8 @@ class SchedulerReportClient(object):
         auth_plugin = keystone.load_auth_from_conf_options(
             CONF, 'placement')
         self._client = session.Session(auth=auth_plugin)
-        # TODO(sdague): use this to disable fully when we don't find
-        # the endpoint.
-        self._disabled = False
+        # NOTE(danms): Keep track of how naggy we've been
+        self._warn_count = 0
 
     def get(self, url):
         return self._client.get(
