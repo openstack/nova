@@ -75,7 +75,7 @@ class ServerUsageTestV21(test.TestCase):
         return res
 
     def _get_app(self):
-        return fakes.wsgi_app_v21(init_only=('servers', 'os-server-usage'))
+        return fakes.wsgi_app_v21()
 
     def _get_server(self, body):
         return jsonutils.loads(body).get('server')

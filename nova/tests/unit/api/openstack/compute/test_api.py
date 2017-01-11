@@ -33,7 +33,7 @@ class APITest(test.NoDBTestCase):
 
     @property
     def wsgi_app(self):
-        return fakes.wsgi_app_v21(init_only=('versions',))
+        return fakes.wsgi_app_v21()
 
     def _wsgi_app(self, inner_app):
         return openstack_api.FaultWrapper(inner_app)

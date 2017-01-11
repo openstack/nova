@@ -26,9 +26,9 @@ class APIRouterV21(nova.api.openstack.APIRouterV21):
     """Routes requests on the OpenStack API to the appropriate controller
     and method.
     """
-    def __init__(self, init_only=None):
+    def __init__(self):
         self._loaded_extension_info = extension_info.LoadedExtensionInfo()
-        super(APIRouterV21, self).__init__(init_only)
+        super(APIRouterV21, self).__init__()
 
     def _register_extension(self, ext):
         return self.loaded_extension_info.register_extension(ext.obj)

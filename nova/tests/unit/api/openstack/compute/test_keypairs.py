@@ -70,8 +70,7 @@ class KeypairsTestV21(test.TestCase):
     wsgi_api_version = os_wsgi.DEFAULT_API_VERSION
 
     def _setup_app_and_controller(self):
-        self.app_server = fakes.wsgi_app_v21(init_only=('os-keypairs',
-                                                        'servers'))
+        self.app_server = fakes.wsgi_app_v21()
         self.controller = keypairs_v21.KeypairController()
 
     def setUp(self):
@@ -578,7 +577,7 @@ class KeypairsTestV235(test.TestCase):
     wsgi_api_version = '2.35'
 
     def _setup_app_and_controller(self):
-        self.app_server = fakes.wsgi_app_v21(init_only=('os-keypairs'))
+        self.app_server = fakes.wsgi_app_v21()
         self.controller = keypairs_v21.KeypairController()
 
     def setUp(self):

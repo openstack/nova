@@ -104,7 +104,7 @@ class VersionsTestV21WithV2CompatibleWrapper(test.NoDBTestCase):
 
     @property
     def wsgi_app(self):
-        return fakes.wsgi_app_v21(v2_compatible=True, init_only=('versions',))
+        return fakes.wsgi_app_v21(v2_compatible=True)
 
     def test_get_version_list(self):
         req = fakes.HTTPRequest.blank('/', base_url='')
@@ -446,7 +446,7 @@ class VersionsTestV21(test.NoDBTestCase):
 
     @property
     def wsgi_app(self):
-        return fakes.wsgi_app_v21(init_only=('versions',))
+        return fakes.wsgi_app_v21()
 
     def test_get_version_list_302(self):
         req = fakes.HTTPRequest.blank('/v2.1')
@@ -511,7 +511,7 @@ class VersionBehindSslTestCase(test.NoDBTestCase):
 
     @property
     def wsgi_app(self):
-        return fakes.wsgi_app_v21(v2_compatible=True, init_only=('versions',))
+        return fakes.wsgi_app_v21(v2_compatible=True)
 
     def test_versions_without_headers(self):
         req = wsgi.Request.blank('/')

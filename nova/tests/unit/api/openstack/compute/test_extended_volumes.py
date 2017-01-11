@@ -106,8 +106,7 @@ class ExtendedVolumesTestV21(test.TestCase):
         self.stub_out('nova.db.instance_get_by_uuid', return_server)
 
     def _setup_app(self):
-        return fakes.wsgi_app_v21(init_only=('os-extended-volumes',
-                                             'servers'))
+        return fakes.wsgi_app_v21()
 
     def _setUp(self):
         self.Controller = extended_volumes_v21.ExtendedVolumesController()

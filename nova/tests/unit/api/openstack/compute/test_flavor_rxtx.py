@@ -35,8 +35,7 @@ class FlavorRxtxTestV21(test.NoDBTestCase):
         return res
 
     def _get_app(self):
-        return fakes.wsgi_app_v21(init_only=('servers',
-            'flavors', 'os-flavor-rxtx'))
+        return fakes.wsgi_app_v21()
 
     def _get_flavor(self, body):
         return jsonutils.loads(body).get('flavor')

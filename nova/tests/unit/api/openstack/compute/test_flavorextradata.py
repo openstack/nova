@@ -29,7 +29,7 @@ class FlavorExtraDataTestV21(test.NoDBTestCase):
 
     @property
     def app(self):
-        return fakes.wsgi_app_v21(init_only=('flavors'))
+        return fakes.wsgi_app_v21()
 
     def _verify_flavor_response(self, flavor, expected):
         for key in expected:
