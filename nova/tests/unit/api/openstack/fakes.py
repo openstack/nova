@@ -696,11 +696,6 @@ def stub_bdm_get_all_by_instance_uuids(context, instance_uuids,
     return result
 
 
-def fake_get_available_languages():
-    existing_translations = ['en_GB', 'en_AU', 'de', 'zh_CN', 'en_US']
-    return existing_translations
-
-
 def fake_not_implemented(*args, **kwargs):
     raise NotImplementedError()
 
