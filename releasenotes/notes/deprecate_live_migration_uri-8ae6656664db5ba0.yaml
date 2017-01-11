@@ -1,0 +1,13 @@
+---
+deprecations:
+  - |
+    The ``live_migration_uri`` option in the [libvirt] configuration section
+    is deprecated, and will be removed in a future release. The
+    ``live_migration_scheme`` should be used to change scheme used for live
+    migration, and ``live_migration_inbound_addr`` should be used to change
+    target URI.
+features:
+  - |
+    The libvirt driver now has a ``live_migration_scheme`` configuration
+    option which should be used where the ``live_migration_uri`` would
+    previously have been configured with non-default scheme.
