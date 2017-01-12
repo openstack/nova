@@ -28,7 +28,7 @@ ALIAS = "os-flavor-manage"
 
 class FlavorManageController(wsgi.Controller):
     """The Flavor Lifecycle API controller for the OpenStack API."""
-    _view_builder_class = flavors_view.ViewBuilderV21
+    _view_builder_class = flavors_view.ViewBuilder
 
     def __init__(self):
         super(FlavorManageController, self).__init__()

@@ -32,7 +32,7 @@ ALIAS = 'flavors'
 class FlavorsController(wsgi.Controller):
     """Flavor controller for the OpenStack API."""
 
-    _view_builder_class = flavors_view.ViewBuilderV21
+    _view_builder_class = flavors_view.ViewBuilder
 
     @extensions.expected_errors(400)
     def index(self, req):
