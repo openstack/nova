@@ -17,6 +17,7 @@ import sys
 
 import fixtures
 import mock
+from oslo_db import exception as db_exc
 from oslo_utils import uuidutils
 from six.moves import StringIO
 
@@ -1125,7 +1126,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertEqual('fake://netloc/nova_api_cell0',
                          cell_mapping.database_connection)
 
-    def _test_migrate_simple_command(self, first_call=True):
+    def _test_migrate_simple_command(self, cell0_sync_fail=False):
         ctxt = context.RequestContext()
         CONF.set_default('connection',
                          'fake://netloc/nova_api',
@@ -1153,12 +1154,11 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         @mock.patch.object(uuidutils, 'generate_uuid',
                 return_value=cell_uuid)
         def _test(mock_gen_uuid, mock_db_sync):
+            if cell0_sync_fail:
+                mock_db_sync.side_effect = db_exc.DBError
             result = self.commands.simple_cell_setup(transport_url)
-            if first_call:
-                mock_db_sync.assert_called_once_with(
-                    None, context=test.MatchType(context.RequestContext))
-            else:
-                mock_db_sync.assert_not_called()
+            mock_db_sync.assert_called_once_with(
+                None, context=test.MatchType(context.RequestContext))
             return result
 
         r = _test()
@@ -1184,11 +1184,15 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
     def test_simple_command_single(self):
         self._test_migrate_simple_command()
 
+    def test_simple_command_cell0_fail(self):
+        # Make sure that if db_sync fails, we still do all the other
+        # bits
+        self._test_migrate_simple_command(cell0_sync_fail=True)
+
     def test_simple_command_multiple(self):
+        # Make sure that the command is idempotent
         self._test_migrate_simple_command()
-        with mock.patch.object(self.commands, '_map_cell_and_hosts') as m:
-            self._test_migrate_simple_command(first_call=False)
-            self.assertFalse(m.called)
+        self._test_migrate_simple_command()
 
     def test_simple_command_cellsv1(self):
         self.flags(enable=True, group='cells')
