@@ -1,0 +1,10 @@
+---
+features:
+  - The nova Hyper-V driver can now plug OVS VIFs. This means that
+    neutron-ovs-agent can be used as an L2 agent instead of
+    neutron-hyperv-agent.
+    In order to plug OVS VIFs, the configuration option "vswitch_name"
+    from the "hyperv" section must be set to the vSwitch which has the OVS
+    extension enabled.
+    Hot-plugging is only supported on Windows / Hyper-V Server 2016 + Generation 2 VMs.
+    Older Hyper-V versions only support attaching vNICs while the VM is turned off.

@@ -27,7 +27,7 @@ from oslo_log import log as logging
 import six
 
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _LE
 from nova.virt import driver
 from nova.virt.hyperv import eventhandler
 from nova.virt.hyperv import hostops
@@ -165,7 +165,7 @@ class HyperVDriver(driver.ComputeDriver):
     def cleanup(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True, migrate_data=None, destroy_vifs=True):
         """Cleanup after instance being destroyed by Hypervisor."""
-        pass
+        self.unplug_vifs(instance, network_info)
 
     def get_info(self, instance):
         return self._vmops.get_info(instance)
@@ -213,7 +213,7 @@ class HyperVDriver(driver.ComputeDriver):
 
     def power_on(self, context, instance, network_info,
                  block_device_info=None):
-        self._vmops.power_on(instance, block_device_info)
+        self._vmops.power_on(instance, block_device_info, network_info)
 
     def resume_state_on_host_boot(self, context, instance, network_info,
                                   block_device_info=None):
@@ -282,13 +282,11 @@ class HyperVDriver(driver.ComputeDriver):
 
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""
-        msg = _("VIF plugging is not supported by the Hyper-V driver.")
-        raise NotImplementedError(msg)
+        self._vmops.plug_vifs(instance, network_info)
 
     def unplug_vifs(self, instance, network_info):
         """Unplug VIFs from networks."""
-        msg = _("VIF unplugging is not supported by the Hyper-V driver.")
-        raise NotImplementedError(msg)
+        self._vmops.unplug_vifs(instance, network_info)
 
     def ensure_filtering_rules_for_instance(self, instance, network_info):
         LOG.debug("ensure_filtering_rules_for_instance called",

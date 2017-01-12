@@ -189,7 +189,7 @@ class MigrationOps(object):
         self._check_and_attach_config_drive(instance, vm_gen)
         self._vmops.set_boot_order(instance_name, vm_gen, block_device_info)
         if power_on:
-            self._vmops.power_on(instance)
+            self._vmops.power_on(instance, network_info=network_info)
 
     def _merge_base_vhd(self, diff_vhd_path, base_vhd_path):
         base_vhd_copy_path = os.path.join(os.path.dirname(diff_vhd_path),

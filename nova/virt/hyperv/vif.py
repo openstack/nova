@@ -16,14 +16,19 @@
 
 import abc
 
+import os_vif
 from os_win import utilsfactory
 
 import nova.conf
+from nova import exception
+from nova.i18n import _
+from nova.network import model
+from nova.network import os_vif_util
 
 CONF = nova.conf.CONF
 
 
-class HyperVBaseVIFDriver(object):
+class HyperVBaseVIFPlugin(object):
     @abc.abstractmethod
     def plug(self, instance, vif):
         pass
@@ -33,8 +38,8 @@ class HyperVBaseVIFDriver(object):
         pass
 
 
-class HyperVNeutronVIFDriver(HyperVBaseVIFDriver):
-    """Neutron VIF driver."""
+class HyperVNeutronVIFPlugin(HyperVBaseVIFPlugin):
+    """Neutron VIF plugin."""
 
     def plug(self, instance, vif):
         # Neutron takes care of plugging the port
@@ -45,8 +50,8 @@ class HyperVNeutronVIFDriver(HyperVBaseVIFDriver):
         pass
 
 
-class HyperVNovaNetworkVIFDriver(HyperVBaseVIFDriver):
-    """Nova network VIF driver."""
+class HyperVNovaNetworkVIFPlugin(HyperVBaseVIFPlugin):
+    """Nova network VIF plugin."""
 
     def __init__(self):
         self._netutils = utilsfactory.get_networkutils()
@@ -58,3 +63,42 @@ class HyperVNovaNetworkVIFDriver(HyperVBaseVIFDriver):
     def unplug(self, instance, vif):
         # TODO(alepilotti) Not implemented
         pass
+
+
+class HyperVVIFDriver(object):
+    def __init__(self):
+        self._netutils = utilsfactory.get_networkutils()
+        if nova.network.is_neutron():
+            self._vif_plugin = HyperVNeutronVIFPlugin()
+        else:
+            self._vif_plugin = HyperVNovaNetworkVIFPlugin()
+
+    def plug(self, instance, vif):
+        vif_type = vif['type']
+        if vif_type == model.VIF_TYPE_HYPERV:
+            self._vif_plugin.plug(instance, vif)
+        elif vif_type == model.VIF_TYPE_OVS:
+            vif = os_vif_util.nova_to_osvif_vif(vif)
+            instance = os_vif_util.nova_to_osvif_instance(instance)
+
+            # NOTE(claudiub): the vNIC has to be connected to a vSwitch
+            # before the ovs port is created.
+            self._netutils.connect_vnic_to_vswitch(CONF.hyperv.vswitch_name,
+                                                   vif.id)
+            os_vif.plug(vif, instance)
+        else:
+            reason = _("Failed to plug virtual interface: "
+                       "unexpected vif_type=%s") % vif_type
+            raise exception.VirtualInterfacePlugException(reason)
+
+    def unplug(self, instance, vif):
+        vif_type = vif['type']
+        if vif_type == model.VIF_TYPE_HYPERV:
+            self._vif_plugin.unplug(instance, vif)
+        elif vif_type == model.VIF_TYPE_OVS:
+            vif = os_vif_util.nova_to_osvif_vif(vif)
+            instance = os_vif_util.nova_to_osvif_instance(instance)
+            os_vif.unplug(vif, instance)
+        else:
+            reason = _("unexpected vif_type=%s") % vif_type
+            raise exception.VirtualInterfaceUnplugException(reason=reason)
