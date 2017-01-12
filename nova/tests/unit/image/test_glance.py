@@ -32,6 +32,7 @@ import nova.conf
 from nova import context
 from nova import exception
 from nova.image import glance
+from nova import service_auth
 from nova import test
 from nova.tests import uuidsentinel as uuids
 
@@ -342,7 +343,7 @@ class TestGetImageService(test.NoDBTestCase):
 
 class TestCreateGlanceClient(test.NoDBTestCase):
 
-    @mock.patch.object(context.RequestContext, 'get_auth_plugin')
+    @mock.patch.object(service_auth, 'get_auth_plugin')
     @mock.patch.object(ks_loading, 'load_session_from_conf_options')
     @mock.patch('glanceclient.Client')
     def test_glanceclient_with_ks_session(self, mock_client, mock_load,

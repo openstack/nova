@@ -32,7 +32,7 @@ service_user_opts = [
 When True, if sending a user token to an REST API, also send a service token.
 
 Nova often reuses the user token provided to the nova-api to talk to other
-REST APIs, such as Cinder and Neutron. It is possible that while the
+REST APIs, such as Cinder, Glance and Neutron. It is possible that while the
 user token was valid when the request was made to Nova, the token may expire
 before it reaches the other service. To avoid any failures, and to
 make it clear it is Nova calling the service on the users behalf, we include
