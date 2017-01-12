@@ -641,7 +641,7 @@ class Host(object):
                 and self._caps.host.cpu.model is not None):
                 try:
                     xml_str = self._caps.host.cpu.to_xml()
-                    if six.PY3:
+                    if six.PY3 and isinstance(xml_str, six.binary_type):
                         xml_str = xml_str.decode('utf-8')
                     features = self.get_connection().baselineCPU(
                         [xml_str],

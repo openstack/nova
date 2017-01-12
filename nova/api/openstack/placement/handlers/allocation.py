@@ -16,6 +16,7 @@ import collections
 import jsonschema
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_utils import encodeutils
 import webob
 
 from nova.api.openstack.placement import util
@@ -173,7 +174,7 @@ def list_for_consumer(req):
         _serialize_allocations_for_consumer(allocations))
 
     req.response.status = 200
-    req.response.body = allocations_json
+    req.response.body = encodeutils.to_utf8(allocations_json)
     req.response.content_type = 'application/json'
     return req.response
 
@@ -209,7 +210,7 @@ def list_for_resource_provider(req):
             allocations, resource_provider))
 
     req.response.status = 200
-    req.response.body = allocations_json
+    req.response.body = encodeutils.to_utf8(allocations_json)
     req.response.content_type = 'application/json'
     return req.response
 

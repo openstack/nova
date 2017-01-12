@@ -76,6 +76,8 @@ class LibvirtConfigObject(object):
     def to_xml(self, pretty_print=True):
         root = self.format_dom()
         xml_str = etree.tostring(root, pretty_print=pretty_print)
+        if six.PY3 and isinstance(xml_str, six.binary_type):
+            xml_str = xml_str.decode("utf-8")
         return xml_str
 
 

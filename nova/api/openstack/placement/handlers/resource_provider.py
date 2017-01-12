@@ -15,6 +15,7 @@ import copy
 
 from oslo_db import exception as db_exc
 from oslo_serialization import jsonutils
+from oslo_utils import encodeutils
 from oslo_utils import uuidutils
 import webob
 
@@ -148,8 +149,8 @@ def get_resource_provider(req):
     resource_provider = objects.ResourceProvider.get_by_uuid(
         context, uuid)
 
-    req.response.body = jsonutils.dumps(
-        _serialize_provider(req.environ, resource_provider))
+    req.response.body = encodeutils.to_utf8(jsonutils.dumps(
+        _serialize_provider(req.environ, resource_provider)))
     req.response.content_type = 'application/json'
     return req.response
 
@@ -200,8 +201,8 @@ def list_resource_providers(req):
         context, filters)
 
     response = req.response
-    response.body = jsonutils.dumps(_serialize_providers(
-        req.environ, resource_providers))
+    response.body = encodeutils.to_utf8(
+        jsonutils.dumps(_serialize_providers(req.environ, resource_providers)))
     response.content_type = 'application/json'
     return response
 
@@ -238,8 +239,8 @@ def update_resource_provider(req):
             {'rp_uuid': uuid, 'error': exc},
             json_formatter=util.json_error_formatter)
 
-    req.response.body = jsonutils.dumps(
-        _serialize_provider(req.environ, resource_provider))
+    req.response.body = encodeutils.to_utf8(jsonutils.dumps(
+        _serialize_provider(req.environ, resource_provider)))
     req.response.status = 200
     req.response.content_type = 'application/json'
     return req.response
