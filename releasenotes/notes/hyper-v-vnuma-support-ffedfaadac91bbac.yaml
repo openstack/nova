@@ -1,0 +1,15 @@
+---
+features:
+  - The nova Hyper-V driver now supports symmetric NUMA topologies. This means
+    that all the NUMA nodes in the NUMA topology must have the same amount of
+    vCPUs and memory. It can easily be requested by having the flavor
+    extra_spec "hw:numa_nodes", or the image property "hw_numa_nodes".
+    An instance with NUMA topology cannot have dynamic memory enabled. Thus,
+    if an instance requires a NUMA topology, it will be spawned without
+    dynamic memory, regardless of the value set in the "dynamic_memory_ratio"
+    config option in the compute node's "nova.conf" file.
+    In order to benefit from this feature, the host's NUMA spanning must be
+    disabled.
+    Hyper-V does not guarantee CPU pinning, thus, the nova Hyper-V driver will
+    not spawn instances with the flavor extra_spec "hw:cpu_policy" or image
+    property "hw_cpu_policy" set to "dedicated".
