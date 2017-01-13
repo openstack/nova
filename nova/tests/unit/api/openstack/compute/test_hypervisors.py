@@ -725,4 +725,4 @@ class HypervisorsTestV233(HypervisorsTestV228):
         req = self._get_request(True,
                                 '/v2/1234/os-hypervisors/detail?marker=99999')
         self.assertRaises(exc.HTTPBadRequest,
-                          self.controller.index, req)
+                          self.controller.detail, req)
