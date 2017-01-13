@@ -15314,6 +15314,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     """Test for nova.virt.libvirt.libvirt_driver.LibvirtDriver."""
     def setUp(self):
         super(LibvirtDriverTestCase, self).setUp()
+        self.flags(sysinfo_serial="none", group="libvirt")
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
         os_vif.initialize()
 
