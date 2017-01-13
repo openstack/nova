@@ -208,3 +208,111 @@ instance_id_mappings
 pci_devices
 block_device_mapping
 virtual_interfaces
+
+Setup of Cells V2
+=================
+
+Overview
+~~~~~~~~
+
+As more of the CellsV2 implementation is finished, all operators are
+required to make changes to their deployment. For all deployments
+(even those that only intend to have one cell), these changes are
+configuration-related, both in the main nova configuration file as
+well as some extra records in the databases.
+
+All nova deployments must now have the following databases available
+and configured:
+
+ 1. The "API" database
+ 2. One special "cell" database called "cell0"
+ 3. One (or eventually more) "cell" databases
+
+Thus, a small nova deployment will have an API database, a cell0, and
+what we will call here a "cell1" database. High-level tracking
+information is kept in the API database. Instances that are never
+scheduled are relegated to the cell0 database, which is effectively a
+graveyard of instances that failed to start. All successful/running
+instances are stored in "cell1".
+
+First Time Setup
+~~~~~~~~~~~~~~~~
+
+Since there is only one API database, the connection information for
+it is stored in the nova.conf file.
+::
+
+  [api_database]
+  connection = mysql+pymysql://root:secretmysql@dbserver/nova_api?charset=utf8
+
+Since there may be multiple "cell" databases (and in fact everyone
+will have cell0 and cell1 at a minimum), connection info for these is
+stored in the API database. Thus, you must have connection information
+in your config file for the API database before continuing to the
+steps below, so that `nova-manage` can find your other databases.
+
+The following examples show the full expanded command line usage of
+the setup commands. This is to make it easier to visualize which of
+the various URLs are used by each of the commands. However, you should
+be able to put all of that in the config file and `nova-manage` will
+use those values. If need be, you can create separate config files and
+pass them as `nova-manage --config-file foo.conf` to control the
+behavior without specifying things on the command lines.
+
+First we will create the necessary records for the cell0 database. To
+do that we use `nova-manage` like this::
+
+  nova-manage cell_v2 map_cell0 --database_connection \
+    mysql+pymysql://root:secretmysql@dbserver/nova_cell0?charset=utf8
+
+.. note:: If you don't specify `--database_connection` then
+          `nova-manage` will use the `[database]/connection` value
+          from your config file, and mangle the database name to have
+          an `_nova` suffix.
+
+Since no hosts are ever in cell0, nothing further is required for its
+setup. Note that all deployments only ever have one cell0, as it is
+special, so once you have done this step you never need to do it
+again, even if you add more regular cells.
+
+Now, we must create another cell which will be our first "regular"
+cell, which has actual compute hosts in it, and to which instances can
+actually be scheduled. First, we create the cell record like this::
+
+  nova-manage cell_v2 create_cell --verbose --name cell1 \
+    --database_connection  mysql+pymysql://root:secretmysql@127.0.0.1/nova?charset=utf8
+    --transport-url rabbit://stackrabbit:secretrabbit@mqserver:5672/
+
+.. note:: If you don't specify the database and transport urls then
+          `nova-manage` will use the
+          `[database]/connection` and `[DEFAULT]/transport_url` values
+          from the config file.
+
+.. note:: At this point, the API database can now find the cell
+          database, and further commands will attempt to look
+          inside. If this is a completely fresh database (such as if
+          you're adding a cell, or if this is a new deployment), then
+          you will need to run `nova-manage db sync` on it to
+          initialize the schema.
+
+The `nova-manage cell_v2 create_cell` command will print the UUID of the
+newly-created cell if `--verbose` is passed, which is useful if you
+need to run commands like `discover_hosts` targeted at a specific
+cell.
+
+Now we have a cell, but no hosts are in it which means the scheduler
+will never actually place instances there. The next step is to scan
+the database for compute node records and add them into the cell we
+just created. For this step, you must have had a compute node started
+such that it registers itself as a running service. Once that has
+happened, you can scan and add it to the cell::
+
+  nova-manage cell_v2 discover_hosts
+
+This command will connect to any databases for which you have created
+cells (as above), look for hosts that have registered themselves
+there, and map those hosts in the API database so that
+they are visible to the scheduler as available targets for
+instances. Any time you add more compute hosts to a cell, you need to
+re-run this command to map them from the top-level so they can be
+utilized.
