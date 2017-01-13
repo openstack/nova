@@ -179,4 +179,4 @@ class AttachInterfacesSampleJsonTest(test_servers.ServersSampleBase):
         response = self._do_delete('servers/%s/os-interface/%s' %
                                 (instance_uuid, port_id))
         self.assertEqual(202, response.status_code)
-        self.assertEqual('', response.content)
+        self.assertEqual('', response.text)

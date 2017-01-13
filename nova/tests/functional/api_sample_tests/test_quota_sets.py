@@ -48,7 +48,7 @@ class QuotaSetsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
         # Get api sample to delete quota.
         response = self._do_delete('os-quota-sets/fake_tenant')
         self.assertEqual(202, response.status_code)
-        self.assertEqual('', response.content)
+        self.assertEqual('', response.text)
 
     def test_update_quotas_force(self):
         # Get api sample to update quotas.
@@ -66,7 +66,7 @@ class QuotaSetsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
     def test_delete_quotas_for_user(self):
         response = self._do_delete('os-quota-sets/fake_tenant?user_id=1')
         self.assertEqual(202, response.status_code)
-        self.assertEqual('', response.content)
+        self.assertEqual('', response.text)
 
     def test_update_quotas_for_user(self):
         # Get api sample to update quotas for user.

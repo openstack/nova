@@ -95,4 +95,4 @@ class FloatingIpsTest(api_sample_base.ApiSampleTestBaseV21):
         self.test_floating_ips_create()
         response = self._do_delete('os-floating-ips/%d' % 1)
         self.assertEqual(202, response.status_code)
-        self.assertEqual("", response.content)
+        self.assertEqual("", response.text)

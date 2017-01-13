@@ -71,4 +71,4 @@ class CloudPipeSampleTest(api_sample_base.ApiSampleTestBaseV21):
                                 'cloud-pipe-update-req',
                                 subs)
         self.assertEqual(202, response.status_code)
-        self.assertEqual("", response.content)
+        self.assertEqual("", response.text)

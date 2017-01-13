@@ -29,4 +29,4 @@ class AdminPasswordJsonTest(test_servers.ServersSampleBase):
                                  'admin-password-change-password',
                                  subs)
         self.assertEqual(202, response.status_code)
-        self.assertEqual("", response.content)
+        self.assertEqual("", response.text)

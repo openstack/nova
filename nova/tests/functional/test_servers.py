@@ -521,7 +521,7 @@ class ServersTest(ServersTestBase):
         })
 
         # Inject a binary file
-        data = zlib.compress('Hello, World!')
+        data = zlib.compress(b'Hello, World!')
         personality.append({
             'path': '/helloworld.zip',
             'contents': base64.encode_as_bytes(data),

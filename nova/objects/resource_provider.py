@@ -155,7 +155,9 @@ def _update_inventory_for_provider(conn, rp, inv_list, to_update):
                 _ALLOC_TBL.c.resource_provider_id == rp.id,
                 _ALLOC_TBL.c.resource_class_id == rc_id))
         allocations = conn.execute(allocation_query).first()
-        if allocations and allocations['usage'] > inv_record.capacity:
+        if (allocations
+            and allocations['usage'] is not None
+            and allocations['usage'] > inv_record.capacity):
             exceeded.append((rp.uuid, rc_str))
         upd_stmt = _INV_TBL.update().where(sa.and_(
                 _INV_TBL.c.resource_provider_id == rp.id,
@@ -342,7 +344,7 @@ class ResourceProvider(base.NovaObject):
 
     def save(self):
         updates = self.obj_get_changes()
-        if updates and updates.keys() != ['name']:
+        if updates and list(updates.keys()) != ['name']:
             raise exception.ObjectActionError(
                 action='save',
                 reason='Immutable fields changed')
