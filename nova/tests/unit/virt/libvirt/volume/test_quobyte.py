@@ -253,7 +253,9 @@ class LibvirtQuobyteVolumeDriverTestCase(
 
     @mock.patch.object(quobyte, 'validate_volume')
     @mock.patch.object(quobyte, 'umount_volume')
+    @mock.patch.object(libvirt_utils, 'is_mounted', return_value=True)
     def test_libvirt_quobyte_driver_already_mounted(self,
+                                                    mock_is_mounted,
                                                     mock_umount_volume,
                                                     mock_validate_volume
                                                     ):
@@ -276,14 +278,6 @@ class LibvirtQuobyteVolumeDriverTestCase(
         tree = conf.format_dom()
         self._assertFileTypeEquals(tree, file_path)
         libvirt_driver.disconnect_volume(connection_info, "vde")
-
-        expected_commands = [
-            ('findmnt', '--target', export_mnt_base,
-             '--source', "quobyte@" + quobyte_volume),
-            ('findmnt', '--target', export_mnt_base,
-             '--source', "quobyte@" + quobyte_volume),
-            ]
-        self.assertEqual(expected_commands, self.executes)
 
         mock_umount_volume.assert_called_once_with(export_mnt_base)
         mock_validate_volume.assert_called_once_with(export_mnt_base)
@@ -324,7 +318,9 @@ class LibvirtQuobyteVolumeDriverTestCase(
 
         libvirt_driver.disconnect_volume(connection_info, "vde")
 
-    def test_libvirt_quobyte_driver_mount_non_quobyte_volume(self):
+    @mock.patch.object(libvirt_utils, 'is_mounted', return_value=True)
+    def test_libvirt_quobyte_driver_mount_non_quobyte_volume(self,
+            mock_is_mounted):
         mnt_base = '/mnt'
         self.flags(quobyte_mount_point_base=mnt_base, group='libvirt')
 

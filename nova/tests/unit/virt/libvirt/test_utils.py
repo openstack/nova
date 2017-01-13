@@ -740,3 +740,61 @@ disk size: 4.4M
             with mock.patch.object(libvirt_utils.LOG, 'warning') as mock_log:
                 libvirt_utils.update_mtime(mock.sentinel.path)
         self.assertTrue(mock_log.called)
+
+    def test_is_mounted(self):
+        mount_path = "/var/lib/nova/mnt"
+        source = "192.168.0.1:/nova"
+        proc_with_mnt = """/dev/sda3 / xfs rw,seclabel,attr2,inode64 0 0
+tmpfs /tmp tmpfs rw,seclabel 0 0
+hugetlbfs /dev/hugepages hugetlbfs rw,seclabel,relatime 0 0
+mqueue /dev/mqueue mqueue rw,seclabel,relatime 0 0
+debugfs /sys/kernel/debug debugfs rw,seclabel,relatime 0 0
+nfsd /proc/fs/nfsd nfsd rw,relatime 0 0
+/dev/sda1 /boot ext4 rw,seclabel,relatime,data=ordered 0 0
+sunrpc /var/lib/nfs/rpc_pipefs rpc_pipefs rw,relatime 0 0
+192.168.0.1:/nova /var/lib/nova/mnt nfs4 rw,relatime,vers=4.1
+"""
+        proc_wrong_mnt = """/dev/sda3 / xfs rw,seclabel,attr2,inode64 0 0
+tmpfs /tmp tmpfs rw,seclabel 0 0
+hugetlbfs /dev/hugepages hugetlbfs rw,seclabel,relatime 0 0
+mqueue /dev/mqueue mqueue rw,seclabel,relatime 0 0
+debugfs /sys/kernel/debug debugfs rw,seclabel,relatime 0 0
+nfsd /proc/fs/nfsd nfsd rw,relatime 0 0
+/dev/sda1 /boot ext4 rw,seclabel,relatime,data=ordered 0 0
+sunrpc /var/lib/nfs/rpc_pipefs rpc_pipefs rw,relatime 0 0
+192.168.0.2:/nova /var/lib/nova/mnt nfs4 rw,relatime,vers=4.1
+"""
+        proc_without_mnt = """/dev/sda3 / xfs rw,seclabel,,attr2,inode64 0 0
+tmpfs /tmp tmpfs rw,seclabel 0 0
+hugetlbfs /dev/hugepages hugetlbfs rw,seclabel,relatime 0 0
+mqueue /dev/mqueue mqueue rw,seclabel,relatime 0 0
+debugfs /sys/kernel/debug debugfs rw,seclabel,relatime 0 0
+nfsd /proc/fs/nfsd nfsd rw,relatime 0 0
+/dev/sda1 /boot ext4 rw,seclabel,relatime,data=ordered 0 0
+sunrpc /var/lib/nfs/rpc_pipefs rpc_pipefs rw,relatime 0 0
+"""
+        with mock.patch.object(os.path, 'ismount') as mock_ismount:
+            # is_mounted(mount_path) with no source is equivalent to
+            # os.path.ismount(mount_path)
+            mock_ismount.return_value = False
+            self.assertFalse(libvirt_utils.is_mounted(mount_path))
+
+            mock_ismount.return_value = True
+            self.assertTrue(libvirt_utils.is_mounted(mount_path))
+
+            # Source is given, and matches source in /proc/mounts
+            proc_mnt = mock.mock_open(read_data=proc_with_mnt)
+            with mock.patch.object(six.moves.builtins, "open", proc_mnt):
+                self.assertTrue(libvirt_utils.is_mounted(mount_path, source))
+
+            # Source is given, and doesn't match source in /proc/mounts
+            proc_mnt = mock.mock_open(read_data=proc_wrong_mnt)
+            with mock.patch.object(six.moves.builtins, "open", proc_mnt):
+                self.assertFalse(libvirt_utils.is_mounted(mount_path, source))
+
+            # Source is given, and mountpoint isn't present in /proc/mounts
+            # Note that this shouldn't occur, as os.path.ismount should have
+            # previously returned False in this case.
+            proc_umnt = mock.mock_open(read_data=proc_without_mnt)
+            with mock.patch.object(six.moves.builtins, "open", proc_umnt):
+                self.assertFalse(libvirt_utils.is_mounted(mount_path, source))

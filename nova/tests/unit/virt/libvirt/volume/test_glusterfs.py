@@ -78,7 +78,8 @@ class LibvirtGlusterfsVolumeDriverTestCase(
         self._assertFileTypeEquals(tree, file_path)
         self.assertEqual('qcow2', tree.find('./driver').get('type'))
 
-    def test_libvirt_glusterfs_driver_already_mounted(self):
+    @mock.patch.object(libvirt_utils, 'is_mounted', return_value=True)
+    def test_libvirt_glusterfs_driver_already_mounted(self, mock_is_mounted):
         mnt_base = '/mnt'
         self.flags(glusterfs_mount_point_base=mnt_base, group='libvirt')
 
@@ -93,8 +94,6 @@ class LibvirtGlusterfsVolumeDriverTestCase(
         libvirt_driver.disconnect_volume(connection_info, "vde")
 
         expected_commands = [
-            ('findmnt', '--target', export_mnt_base,
-             '--source', export_string),
             ('umount', export_mnt_base)]
         self.assertEqual(expected_commands, self.executes)
 
