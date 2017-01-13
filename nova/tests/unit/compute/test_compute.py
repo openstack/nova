@@ -11169,7 +11169,8 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
     @mock.patch.object(scheduler_client.SchedulerClient, 'delete_aggregate')
     def test_delete_aggregate(self, delete_aggregate):
         self.api.is_safe_to_update_az = mock.Mock()
-        agg = objects.Aggregate(hosts=[])
+        agg = objects.Aggregate(uuid=uuids.agg, name='fake-aggregate',
+                                hosts=[])
         agg.destroy = mock.Mock()
         with mock.patch.object(objects.Aggregate, 'get_by_id',
                                return_value=agg):

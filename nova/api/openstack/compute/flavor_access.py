@@ -25,7 +25,6 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import exception
 from nova.i18n import _
-from nova import objects
 from nova.policies import flavor_access as fa_policies
 
 ALIAS = 'os-flavor-access'
@@ -124,7 +123,11 @@ class FlavorActionController(wsgi.Controller):
         vals = body['removeTenantAccess']
         tenant = vals['tenant']
 
-        flavor = objects.Flavor(context=context, flavorid=id)
+        # NOTE(gibi): We have to load a flavor from the db here as
+        # flavor.remove_access() will try to emit a notification and that needs
+        # a fully loaded flavor.
+        flavor = common.get_flavor(context, id)
+
         try:
             flavor.remove_access(tenant)
         except (exception.FlavorAccessNotFound,
