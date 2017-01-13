@@ -1113,6 +1113,18 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertEqual('none:///', cell_mapping.transport_url)
         self.assertEqual(database_connection, cell_mapping.database_connection)
 
+    @mock.patch.object(manage.CellV2Commands, '_map_cell0', new=mock.Mock())
+    def test_map_cell0_returns_0_on_successful_create(self):
+        self.assertEqual(0, self.commands.map_cell0())
+
+    @mock.patch.object(manage.CellV2Commands, '_map_cell0')
+    def test_map_cell0_returns_0_if_cell0_already_exists(self, _map_cell0):
+        _map_cell0.side_effect = db_exc.DBDuplicateEntry
+        exit_code = self.commands.map_cell0()
+        self.assertEqual(0, exit_code)
+        output = self.output.getvalue().strip()
+        self.assertEqual('Cell0 is already setup', output)
+
     def test_map_cell0_default_database(self):
         CONF.set_default('connection',
                          'fake://netloc/nova_api',

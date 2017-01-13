@@ -1094,7 +1094,7 @@ class CellV2Commands(object):
             return 1
         ctxt = context.RequestContext()
         try:
-            cell0_mapping = self.map_cell0()
+            cell0_mapping = self._map_cell0()
         except db_exc.DBDuplicateEntry:
             print(_('Cell0 is already setup'))
             cell0_mapping = objects.CellMapping.get_by_uuid(
@@ -1131,6 +1131,18 @@ class CellV2Commands(object):
 
         This command creates a cell mapping for this special cell which
         requires a database to store the instance data.
+
+        Returns 0 if cell0 created successfully or already setup.
+        """
+        try:
+            self._map_cell0(database_connection=database_connection)
+        except db_exc.DBDuplicateEntry:
+            print(_('Cell0 is already setup'))
+        return 0
+
+    def _map_cell0(self, database_connection=None):
+        """Faciliate creation of a cell mapping for cell0.
+        See map_cell0 for more.
         """
         def cell0_default_connection():
             # If no database connection is provided one is generated
