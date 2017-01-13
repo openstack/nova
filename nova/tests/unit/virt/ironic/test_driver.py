@@ -129,11 +129,6 @@ class IronicDriverTestCase(test.NoDBTestCase):
                              'supports_migrate_to_same_host'],
                          'Driver capabilities for '
                          '\'supports_migrate_to_same_host\' is invalid')
-        self.assertFalse(self.driver.capabilities[
-                            'supports_attach_interface'],
-                         'Driver capabilities for '
-                         '\'supports_attach_interface\' '
-                         'is invalid')
 
     def test__get_hypervisor_type(self):
         self.assertEqual('ironic', self.driver._get_hypervisor_type())
@@ -1723,6 +1718,18 @@ class IronicDriverTestCase(test.NoDBTestCase):
         network_info = []
         self.driver.unplug_vifs(instance, network_info)
         self.assertFalse(mock_vdet.called)
+
+    @mock.patch.object(ironic_driver.IronicDriver, 'plug_vifs')
+    def test_attach_interface(self, mock_pv):
+        self.driver.attach_interface('fake_context', 'fake_instance',
+                                     'fake_image_meta', 'fake_vif')
+        mock_pv.assert_called_once_with('fake_instance', ['fake_vif'])
+
+    @mock.patch.object(ironic_driver.IronicDriver, 'unplug_vifs')
+    def test_detach_interface(self, mock_uv):
+        self.driver.detach_interface('fake_context', 'fake_instance',
+                                     'fake_vif')
+        mock_uv.assert_called_once_with('fake_instance', ['fake_vif'])
 
     @mock.patch.object(firewall.NoopFirewallDriver, 'unfilter_instance',
                        create=True)

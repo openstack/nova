@@ -129,7 +129,7 @@ class IronicDriver(virt_driver.ComputeDriver):
     capabilities = {"has_imagecache": False,
                     "supports_recreate": False,
                     "supports_migrate_to_same_host": False,
-                    "supports_attach_interface": False
+                    "supports_attach_interface": True
                     }
 
     def __init__(self, virtapi, read_only=False):
@@ -1301,6 +1301,44 @@ class IronicDriver(virt_driver.ComputeDriver):
         """
         node = self._get_node(instance.node)
         self._unplug_vifs(node, instance, network_info)
+
+    def attach_interface(self, context, instance, image_meta, vif):
+        """Use hotplug to add a network interface to a running instance.
+        The counter action to this is :func:`detach_interface`.
+
+        :param context: The request context.
+        :param nova.objects.instance.Instance instance:
+            The instance which will get an additional network interface.
+        :param nova.objects.ImageMeta image_meta:
+            The metadata of the image of the instance.
+        :param nova.network.model.VIF vif:
+            The object which has the information about the interface to attach.
+        :raise nova.exception.NovaException: If the attach fails.
+        :returns: None
+        """
+        # NOTE(vdrok): instance info cache gets updated by the network-changed
+        # event from neutron or by _heal_instance_info_cache periodic task. In
+        # both cases, this is done asynchronously, so the cache may not be up
+        # to date immediately after attachment.
+        self.plug_vifs(instance, [vif])
+
+    def detach_interface(self, context, instance, vif):
+        """Use hotunplug to remove a network interface from a running instance.
+        The counter action to this is :func:`attach_interface`.
+
+        :param context: The request context.
+        :param nova.objects.instance.Instance instance:
+            The instance which gets a network interface removed.
+        :param nova.network.model.VIF vif:
+            The object which has the information about the interface to detach.
+        :raise nova.exception.NovaException: If the detach fails.
+        :returns: None
+        """
+        # NOTE(vdrok): instance info cache gets updated by the network-changed
+        # event from neutron or by _heal_instance_info_cache periodic task. In
+        # both cases, this is done asynchronously, so the cache may not be up
+        # to date immediately after detachment.
+        self.unplug_vifs(instance, [vif])
 
     def rebuild(self, context, instance, image_meta, injected_files,
                 admin_password, bdms, detach_block_devices,
