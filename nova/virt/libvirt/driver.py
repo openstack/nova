@@ -681,12 +681,11 @@ class LibvirtDriver(driver.ComputeDriver):
 
     @staticmethod
     def _live_migration_uri(dest):
-        # Only Xen and QEMU support live migration, see
-        # https://libvirt.org/migration.html#scenarios for reference
         uris = {
             'kvm': 'qemu+tcp://%s/system',
             'qemu': 'qemu+tcp://%s/system',
             'xen': 'xenmigr://%s/system',
+            'parallels': 'parallels+tcp://%s/system',
         }
         virt_type = CONF.libvirt.virt_type
         uri = CONF.libvirt.live_migration_uri or uris.get(virt_type)
@@ -6036,11 +6035,13 @@ class LibvirtDriver(driver.ComputeDriver):
                     migrate_uri = self._migrate_uri(dest)
 
             params = None
-            new_xml_str = libvirt_migrate.get_updated_guest_xml(
-                # TODO(sahid): It's not a really good idea to pass
-                # the method _get_volume_config and we should to find
-                # a way to avoid this in future.
-                guest, migrate_data, self._get_volume_config)
+            new_xml_str = None
+            if CONF.libvirt.virt_type != "parallels":
+                new_xml_str = libvirt_migrate.get_updated_guest_xml(
+                    # TODO(sahid): It's not a really good idea to pass
+                    # the method _get_volume_config and we should to find
+                    # a way to avoid this in future.
+                    guest, migrate_data, self._get_volume_config)
             if self._host.has_min_version(
                     MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION):
                 params = {
@@ -6483,7 +6484,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         disk_paths = []
         device_names = []
-        if migrate_data.block_migration:
+        if (migrate_data.block_migration and
+                CONF.libvirt.virt_type != "parallels"):
             disk_paths, device_names = self._live_migration_copy_disk_paths(
                 context, instance, guest)
 
@@ -6792,6 +6794,12 @@ class LibvirtDriver(driver.ComputeDriver):
                not available.
 
         """
+
+        # Virtuozzo containers don't use backing file
+        if (CONF.libvirt.virt_type == "parallels" and
+                instance.vm_mode == fields.VMMode.EXE):
+            return
+
         if not disk_info:
             disk_info = []
 
