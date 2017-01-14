@@ -21,8 +21,9 @@ tests:
       # required but superfluous, is present
       content-type: /application/json/
   response_json_paths:
-      $.resource_provider_generation: 1
+      $.resource_provider_generation: 2
       $.usages.DISK_GB: 1024
+      $.usages.VCPU: 6
 
 - name: fail to delete resource provider
   DELETE: /resource_providers/$ENVIRON['RP_UUID']
