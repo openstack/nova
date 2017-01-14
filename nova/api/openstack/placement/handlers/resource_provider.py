@@ -66,8 +66,6 @@ GET_RPS_SCHEMA_1_0 = {
 # Placement API microversion 1.3 adds support for a member_of attribute
 GET_RPS_SCHEMA_1_3 = copy.deepcopy(GET_RPS_SCHEMA_1_0)
 GET_RPS_SCHEMA_1_3['properties']['member_of'] = {
-    # TODO(mriedem): At some point we need to do jsonschema and/or uuid
-    # validation of the value(s) here.
     "type": "string"
 }
 
@@ -290,6 +288,13 @@ def list_resource_providers(req):
                     value = value[3:].split(',')
                 else:
                     value = [value]
+                # Make sure the values are actually UUIDs.
+                for aggr_uuid in value:
+                    if not uuidutils.is_uuid_like(aggr_uuid):
+                        raise webob.exc.HTTPBadRequest(
+                            _('Invalid uuid value: %(uuid)s') %
+                            {'uuid': aggr_uuid},
+                            json_formatter=util.json_error_formatter)
             filters[attr] = value
     if 'resources' in req.GET:
         resources = _normalize_resources_qs_param(req.GET['resources'])
