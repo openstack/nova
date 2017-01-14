@@ -19,5 +19,5 @@ from nova.compute import resource_tracker
 class FakeResourceTracker(resource_tracker.ResourceTracker):
     """Version without a DB requirement."""
 
-    def _update(self, context):
+    def _update(self, context, compute_node):
         pass

@@ -517,9 +517,9 @@ class TestUpdateAvailableResources(BaseTestCase):
             'running_vms': 0
         }
         _update_compute_node(expected_resources, **vals)
-        update_mock.assert_called_once_with(mock.sentinel.ctx)
+        actual_resources = update_mock.call_args[0][1]
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
-                                                 self.rt.compute_node))
+                                                 actual_resources))
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
@@ -557,9 +557,9 @@ class TestUpdateAvailableResources(BaseTestCase):
             'running_vms': 0
         }
         _update_compute_node(expected_resources, **vals)
-        update_mock.assert_called_once_with(mock.sentinel.ctx)
+        actual_resources = update_mock.call_args[0][1]
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
-                                                 self.rt.compute_node))
+                                                 actual_resources))
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
@@ -605,9 +605,9 @@ class TestUpdateAvailableResources(BaseTestCase):
             'running_vms': 1  # One active instance
         }
         _update_compute_node(expected_resources, **vals)
-        update_mock.assert_called_once_with(mock.sentinel.ctx)
+        actual_resources = update_mock.call_args[0][1]
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
-                                                 self.rt.compute_node))
+                                                 actual_resources))
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
@@ -669,9 +669,9 @@ class TestUpdateAvailableResources(BaseTestCase):
             'running_vms': 0
         }
         _update_compute_node(expected_resources, **vals)
-        update_mock.assert_called_once_with(mock.sentinel.ctx)
+        actual_resources = update_mock.call_args[0][1]
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
-                                                 self.rt.compute_node))
+                                                 actual_resources))
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
@@ -732,9 +732,9 @@ class TestUpdateAvailableResources(BaseTestCase):
             'running_vms': 0
         }
         _update_compute_node(expected_resources, **vals)
-        update_mock.assert_called_once_with(mock.sentinel.ctx)
+        actual_resources = update_mock.call_args[0][1]
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
-                                                 self.rt.compute_node))
+                                                 actual_resources))
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
@@ -792,9 +792,9 @@ class TestUpdateAvailableResources(BaseTestCase):
             'running_vms': 0
         }
         _update_compute_node(expected_resources, **vals)
-        update_mock.assert_called_once_with(mock.sentinel.ctx)
+        actual_resources = update_mock.call_args[0][1]
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
-                                                 self.rt.compute_node))
+                                                 actual_resources))
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
@@ -848,9 +848,9 @@ class TestUpdateAvailableResources(BaseTestCase):
             'running_vms': 0
         }
         _update_compute_node(expected_resources, **vals)
-        update_mock.assert_called_once_with(mock.sentinel.ctx)
+        actual_resources = update_mock.call_args[0][1]
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
-                                                 self.rt.compute_node))
+                                                 actual_resources))
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
@@ -917,9 +917,9 @@ class TestUpdateAvailableResources(BaseTestCase):
             'running_vms': 2
         }
         _update_compute_node(expected_resources, **vals)
-        update_mock.assert_called_once_with(mock.sentinel.ctx)
+        actual_resources = update_mock.call_args[0][1]
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
-                                                 self.rt.compute_node))
+                                                 actual_resources))
 
 
 class TestInitComputeNode(BaseTestCase):
@@ -1057,84 +1057,40 @@ class TestUpdateComputeNode(BaseTestCase):
         # This is the same set of resources as the fixture, deliberately. We
         # are checking below to see that update_resource_stats() is not
         # needlessly called when the resources don't actually change.
-        compute = objects.ComputeNode(
-            host_ip='1.1.1.1',
-            numa_topology=None,
-            metrics='[]',
-            cpu_info='',
-            hypervisor_hostname=_NODENAME,
-            free_disk_gb=6,
-            hypervisor_version=0,
-            local_gb=6,
-            free_ram_mb=512,
-            memory_mb_used=0,
-            pci_device_pools=objects.PciDevicePoolList(),
-            vcpus_used=0,
-            hypervisor_type='fake',
-            local_gb_used=0,
-            memory_mb=512,
-            current_workload=0,
-            vcpus=4,
-            running_vms=0,
-            cpu_allocation_ratio=16.0,
-            ram_allocation_ratio=1.5,
-            disk_allocation_ratio=1.0,
-        )
-        self.rt.compute_node = compute
-        self.rt._update(mock.sentinel.ctx)
+        orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
+        self.rt.compute_node = orig_compute
+        self.rt.old_resources = orig_compute
 
-        self.assertFalse(self.rt.disabled)
-        self.assertFalse(service_mock.called)
+        new_compute = orig_compute.obj_clone()
 
-        # The above call to _update() will populate the
-        # RT.old_resources collection with the resources. Here, we check that
-        # if we call _update() again with the same resources, that
-        # the scheduler client won't be called again to update those
-        # (unchanged) resources for the compute node
-        self.sched_client_mock.reset_mock()
+        # Here, we check that if we call _update() with the same resources that
+        # are already stored in the resource tracker, that the scheduler client
+        # won't be called again to update those (unchanged) resources for the
+        # compute node
         urs_mock = self.sched_client_mock.update_resource_stats
-        self.rt._update(mock.sentinel.ctx)
+        self.rt._update(mock.sentinel.ctx, new_compute)
         self.assertFalse(urs_mock.called)
 
     @mock.patch('nova.objects.Service.get_by_compute_host')
     def test_existing_compute_node_updated_new_resources(self, service_mock):
         self._setup_rt()
 
+        orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
+        self.rt.compute_node = orig_compute
+        self.rt.old_resources = orig_compute
+
         # Deliberately changing local_gb_used, vcpus_used, and memory_mb_used
         # below to be different from the compute node fixture's base usages.
         # We want to check that the code paths update the stored compute node
         # usage records with what is supplied to _update().
-        compute = objects.ComputeNode(
-            host=_HOSTNAME,
-            host_ip='1.1.1.1',
-            numa_topology=None,
-            metrics='[]',
-            cpu_info='',
-            hypervisor_hostname=_NODENAME,
-            free_disk_gb=2,
-            hypervisor_version=0,
-            local_gb=6,
-            free_ram_mb=384,
-            memory_mb_used=128,
-            pci_device_pools=objects.PciDevicePoolList(),
-            vcpus_used=2,
-            hypervisor_type='fake',
-            local_gb_used=4,
-            memory_mb=512,
-            current_workload=0,
-            vcpus=4,
-            running_vms=0,
-            cpu_allocation_ratio=16.0,
-            ram_allocation_ratio=1.5,
-            disk_allocation_ratio=1.0,
-        )
-        self.rt.compute_node = compute
-        self.rt._update(mock.sentinel.ctx)
+        new_compute = orig_compute.obj_clone()
+        new_compute.memory_mb_used = 128
+        new_compute.vcpus_used = 2
+        new_compute.local_gb_used = 4
 
-        self.assertFalse(self.rt.disabled)
-        self.assertFalse(service_mock.called)
         urs_mock = self.sched_client_mock.update_resource_stats
-        urs_mock.assert_called_once_with(self.rt.compute_node)
+        self.rt._update(mock.sentinel.ctx, new_compute)
+        urs_mock.assert_called_once_with(new_compute)
 
 
 class TestInstanceClaim(BaseTestCase):
@@ -1223,9 +1179,9 @@ class TestInstanceClaim(BaseTestCase):
             with mock.patch.object(self.instance, 'save'):
                 self.rt.instance_claim(self.ctx, self.instance, _NODENAME,
                                        None)
-            update_mock.assert_called_once_with(self.elevated)
-            self.assertTrue(obj_base.obj_equal_prims(expected,
-                                                     self.rt.compute_node))
+            cn = self.rt.compute_node
+            update_mock.assert_called_once_with(self.elevated, cn)
+            self.assertTrue(obj_base.obj_equal_prims(expected, cn))
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
@@ -1258,9 +1214,9 @@ class TestInstanceClaim(BaseTestCase):
             with mock.patch.object(self.instance, 'save'):
                 self.rt.instance_claim(self.ctx, self.instance, _NODENAME,
                                        None)
-            update_mock.assert_called_once_with(self.elevated)
-            self.assertTrue(obj_base.obj_equal_prims(expected,
-                                                     self.rt.compute_node))
+            cn = self.rt.compute_node
+            update_mock.assert_called_once_with(self.elevated, cn)
+            self.assertTrue(obj_base.obj_equal_prims(expected, cn))
 
         expected_updated = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
@@ -1313,9 +1269,9 @@ class TestInstanceClaim(BaseTestCase):
             with mock.patch.object(self.instance, 'save'):
                 self.rt.instance_claim(self.ctx, self.instance, _NODENAME,
                                        None)
-            update_mock.assert_called_once_with(self.elevated)
-            self.assertTrue(obj_base.obj_equal_prims(expected,
-                                                     self.rt.compute_node))
+            cn = self.rt.compute_node
+            update_mock.assert_called_once_with(self.elevated, cn)
+            self.assertTrue(obj_base.obj_equal_prims(expected, cn))
 
         self.assertEqual(self.rt.host, self.instance.host)
         self.assertEqual(self.rt.host, self.instance.launched_on)
@@ -1371,10 +1327,10 @@ class TestInstanceClaim(BaseTestCase):
             with mock.patch.object(self.instance, 'save'):
                 self.rt.instance_claim(self.ctx, self.instance, _NODENAME,
                                        None)
-            update_mock.assert_called_once_with(self.elevated)
+            cn = self.rt.compute_node
+            update_mock.assert_called_once_with(self.elevated, cn)
             pci_stats_mock.assert_called_once_with([request])
-            self.assertTrue(obj_base.obj_equal_prims(expected,
-                                                     self.rt.compute_node))
+            self.assertTrue(obj_base.obj_equal_prims(expected, cn))
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
@@ -1492,8 +1448,9 @@ class TestInstanceClaim(BaseTestCase):
             with mock.patch.object(self.instance, 'save'):
                 self.rt.instance_claim(self.ctx, self.instance, _NODENAME,
                                        limits)
-            update_mock.assert_called_once_with(self.ctx.elevated())
             updated_compute_node = self.rt.compute_node
+            update_mock.assert_called_once_with(self.ctx.elevated(),
+                                                updated_compute_node)
             new_numa = updated_compute_node.numa_topology
             new_numa = objects.NUMATopology.obj_from_db_obj(new_numa)
             self.assertEqualNUMAHostTopology(expected_numa, new_numa)
@@ -1580,8 +1537,8 @@ class TestResize(BaseTestCase):
                 None  # move_type is None for resize...
         )
         self.assertIsInstance(claim, claims.MoveClaim)
-        self.assertTrue(obj_base.obj_equal_prims(expected,
-                                                 self.rt.compute_node))
+        cn = self.rt.compute_node
+        self.assertTrue(obj_base.obj_equal_prims(expected, cn))
         self.assertEqual(1, len(self.rt.tracked_migrations))
 
         # Now abort the resize claim and check that the resources have been set
@@ -1591,9 +1548,9 @@ class TestResize(BaseTestCase):
             claim.abort()
         drop_migr_mock.assert_called_once_with()
 
-        self.assertEqual(1, self.rt.compute_node.vcpus_used)
-        self.assertEqual(1, self.rt.compute_node.local_gb_used)
-        self.assertEqual(128, self.rt.compute_node.memory_mb_used)
+        self.assertEqual(1, cn.vcpus_used)
+        self.assertEqual(1, cn.local_gb_used)
+        self.assertEqual(128, cn.memory_mb_used)
         self.assertEqual(0, len(self.rt.tracked_migrations))
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
@@ -2124,7 +2081,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
                                             _NODENAME)
 
         mock_update_usage.assert_called_once_with(
-            self.rt._get_usage_dict(self.instance), sign=1)
+            self.rt._get_usage_dict(self.instance), _NODENAME, sign=1)
 
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_update_usage')
@@ -2137,7 +2094,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
                                             _NODENAME)
 
         mock_update_usage.assert_called_once_with(
-            self.rt._get_usage_dict(self.instance), sign=-1)
+            self.rt._get_usage_dict(self.instance), _NODENAME, sign=-1)
 
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_update_usage')
@@ -2147,7 +2104,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
                                             _NODENAME)
 
         mock_update_usage.assert_called_once_with(
-            self.rt._get_usage_dict(self.instance), sign=1)
+            self.rt._get_usage_dict(self.instance), _NODENAME, sign=1)
 
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_update_usage')
@@ -2160,7 +2117,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
                                             self.instance, _NODENAME, True)
 
         mock_update_usage.assert_called_once_with(
-            self.rt._get_usage_dict(self.instance), sign=-1)
+            self.rt._get_usage_dict(self.instance), _NODENAME, sign=-1)
 
 
 class TestInstanceInResizeState(test.NoDBTestCase):
