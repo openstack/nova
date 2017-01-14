@@ -12,6 +12,7 @@
 """Aggregate handlers for Placement API."""
 
 from oslo_serialization import jsonutils
+from oslo_utils import encodeutils
 import webob
 
 from nova.api.openstack.placement import microversion
@@ -31,7 +32,8 @@ PUT_AGGREGATES_SCHEMA = {
 
 def _send_aggregates(response, aggregate_uuids):
     response.status = 200
-    response.body = jsonutils.dumps(_serialize_aggregates(aggregate_uuids))
+    response.body = encodeutils.to_utf8(
+        jsonutils.dumps(_serialize_aggregates(aggregate_uuids)))
     response.content_type = 'application/json'
     return response
 

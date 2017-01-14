@@ -12,6 +12,7 @@
 """Handler for the root of the Placement API."""
 
 from oslo_serialization import jsonutils
+from oslo_utils import encodeutils
 import webob
 
 
@@ -31,6 +32,6 @@ def home(req):
         'min_version': min_version,
     }
     version_json = jsonutils.dumps({'versions': [version_data]})
-    req.response.body = version_json
+    req.response.body = encodeutils.to_utf8(version_json)
     req.response.content_type = 'application/json'
     return req.response

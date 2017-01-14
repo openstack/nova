@@ -6307,7 +6307,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
                 mock_get_domain.assert_called_with(instance)
                 mock_dom.detachDeviceFlags.assert_called_with(
-                    b"""<disk type="file" device="disk">
+                    """<disk type="file" device="disk">
   <source file="/path/to/fake-volume"/>
   <target bus="virtio" dev="vdc"/>
 </disk>
@@ -17147,13 +17147,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
               </domain>
               """
 
-        diska_xml = b"""<disk type="file" device="disk">
+        diska_xml = """<disk type="file" device="disk">
   <source file="disk1_file"/>
   <target bus="virtio" dev="vda"/>
   <serial>0e38683e-f0af-418f-a3f1-6b67ea0f919d</serial>
 </disk>"""
 
-        diskb_xml = b"""<disk type="block" device="disk">
+        diskb_xml = """<disk type="block" device="disk">
   <source dev="/path/to/dev/1"/>
   <target bus="virtio" dev="vdb"/>
 </disk>"""
@@ -17650,14 +17650,14 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         domain.XMLDesc(flags=0).AndReturn(self.dom_xml)
 
         snap_xml_src = (
-           b'<domainsnapshot>\n'
-           b'  <disks>\n'
-           b'    <disk name="disk1_file" snapshot="external" type="file">\n'
-           b'      <source file="new-file"/>\n'
-           b'    </disk>\n'
-           b'    <disk name="vdb" snapshot="no"/>\n'
-           b'  </disks>\n'
-           b'</domainsnapshot>\n')
+           '<domainsnapshot>\n'
+           '  <disks>\n'
+           '    <disk name="disk1_file" snapshot="external" type="file">\n'
+           '      <source file="new-file"/>\n'
+           '    </disk>\n'
+           '    <disk name="vdb" snapshot="no"/>\n'
+           '  </disks>\n'
+           '</domainsnapshot>\n')
 
         # Older versions of libvirt may be missing these.
         fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_REUSE_EXT = 32
@@ -17720,14 +17720,14 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         domain.XMLDesc(flags=0).AndReturn(self.dom_xml)
 
         snap_xml_src = (
-           b'<domainsnapshot>\n'
-           b'  <disks>\n'
-           b'    <disk name="disk1_file" snapshot="external" type="file">\n'
-           b'      <source file="new-file"/>\n'
-           b'    </disk>\n'
-           b'    <disk name="vdb" snapshot="no"/>\n'
-           b'  </disks>\n'
-           b'</domainsnapshot>\n')
+           '<domainsnapshot>\n'
+           '  <disks>\n'
+           '    <disk name="disk1_file" snapshot="external" type="file">\n'
+           '      <source file="new-file"/>\n'
+           '    </disk>\n'
+           '    <disk name="vdb" snapshot="no"/>\n'
+           '  </disks>\n'
+           '</domainsnapshot>\n')
 
         # Older versions of libvirt may be missing these.
         fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_REUSE_EXT = 32

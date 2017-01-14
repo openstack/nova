@@ -33,6 +33,7 @@ from oslo_service import loopingcall
 from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import importutils
+import six
 import time
 
 from nova.compute import power_state
@@ -120,6 +121,8 @@ class Guest(object):
         :returns guest.Guest: Guest ready to be launched
         """
         try:
+            if six.PY3 and isinstance(xml, six.binary_type):
+                xml = xml.decode('utf-8')
             guest = host.write_instance_config(xml)
         except Exception:
             with excutils.save_and_reraise_exception():
@@ -295,7 +298,11 @@ class Guest(object):
         """
         flags = persistent and libvirt.VIR_DOMAIN_AFFECT_CONFIG or 0
         flags |= live and libvirt.VIR_DOMAIN_AFFECT_LIVE or 0
+
         device_xml = conf.to_xml()
+        if six.PY3 and isinstance(device_xml, six.binary_type):
+            device_xml = device_xml.decode('utf-8')
+
         LOG.debug("attach device xml: %s", device_xml)
         self._domain.attachDeviceFlags(device_xml, flags=flags)
 
@@ -412,7 +419,11 @@ class Guest(object):
         """
         flags = persistent and libvirt.VIR_DOMAIN_AFFECT_CONFIG or 0
         flags |= live and libvirt.VIR_DOMAIN_AFFECT_LIVE or 0
+
         device_xml = conf.to_xml()
+        if six.PY3 and isinstance(device_xml, six.binary_type):
+            device_xml = device_xml.decode('utf-8')
+
         LOG.debug("detach device xml: %s", device_xml)
         self._domain.detachDeviceFlags(device_xml, flags=flags)
 
@@ -520,7 +531,12 @@ class Guest(object):
         flags |= reuse_ext and (libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_REUSE_EXT
                                 or 0)
         flags |= quiesce and libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE or 0
-        self._domain.snapshotCreateXML(conf.to_xml(), flags=flags)
+
+        device_xml = conf.to_xml()
+        if six.PY3 and isinstance(device_xml, six.binary_type):
+            device_xml = device_xml.decode('utf-8')
+
+        self._domain.snapshotCreateXML(device_xml, flags=flags)
 
     def shutdown(self):
         """Shutdown guest"""

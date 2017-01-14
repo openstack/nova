@@ -15,6 +15,7 @@ import copy
 
 from oslo_db import exception as db_exc
 from oslo_serialization import jsonutils
+from oslo_utils import encodeutils
 import webob
 
 from nova.api.openstack.placement import util
@@ -157,8 +158,8 @@ def _make_inventory_object(resource_provider, resource_class, **data):
 def _send_inventories(response, resource_provider, inventories):
     """Send a JSON representation of a list of inventories."""
     response.status = 200
-    response.body = jsonutils.dumps(_serialize_inventories(
-        inventories, resource_provider.generation))
+    response.body = encodeutils.to_utf8(jsonutils.dumps(
+        _serialize_inventories(inventories, resource_provider.generation)))
     response.content_type = 'application/json'
     return response
 
@@ -166,8 +167,8 @@ def _send_inventories(response, resource_provider, inventories):
 def _send_inventory(response, resource_provider, inventory, status=200):
     """Send a JSON representation of one single inventory."""
     response.status = status
-    response.body = jsonutils.dumps(_serialize_inventory(
-        inventory, generation=resource_provider.generation))
+    response.body = encodeutils.to_utf8(jsonutils.dumps(_serialize_inventory(
+        inventory, generation=resource_provider.generation)))
     response.content_type = 'application/json'
     return response
 

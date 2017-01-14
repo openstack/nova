@@ -12,6 +12,7 @@
 """Placement API handlers for usage information."""
 
 from oslo_serialization import jsonutils
+from oslo_utils import encodeutils
 import webob
 
 from nova.api.openstack.placement import util
@@ -58,7 +59,7 @@ def list_usages(req):
         context, uuid)
 
     response = req.response
-    response.body = jsonutils.dumps(
-        _serialize_usages(resource_provider, usage))
+    response.body = encodeutils.to_utf8(jsonutils.dumps(
+        _serialize_usages(resource_provider, usage)))
     req.response.content_type = 'application/json'
     return req.response

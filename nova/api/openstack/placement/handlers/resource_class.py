@@ -14,6 +14,7 @@
 import copy
 
 from oslo_serialization import jsonutils
+from oslo_utils import encodeutils
 import webob
 
 from nova.api.openstack.placement import microversion
@@ -131,8 +132,8 @@ def get_resource_class(req):
     # The containing application will catch a not found here.
     rc = objects.ResourceClass.get_by_name(context, name)
 
-    req.response.body = jsonutils.dumps(
-        _serialize_resource_class(req.environ, rc)
+    req.response.body = encodeutils.to_utf8(jsonutils.dumps(
+        _serialize_resource_class(req.environ, rc))
     )
     req.response.content_type = 'application/json'
     return req.response
@@ -151,8 +152,8 @@ def list_resource_classes(req):
     rcs = objects.ResourceClassList.get_all(context)
 
     response = req.response
-    response.body = jsonutils.dumps(
-        _serialize_resource_classes(req.environ, rcs)
+    response.body = encodeutils.to_utf8(jsonutils.dumps(
+        _serialize_resource_classes(req.environ, rcs))
     )
     response.content_type = 'application/json'
     return response
@@ -190,8 +191,8 @@ def update_resource_class(req):
             {'rp_name': name},
             json_formatter=util.json_error_formatter)
 
-    req.response.body = jsonutils.dumps(
-        _serialize_resource_class(req.environ, rc)
+    req.response.body = encodeutils.to_utf8(jsonutils.dumps(
+        _serialize_resource_class(req.environ, rc))
     )
     req.response.status = 200
     req.response.content_type = 'application/json'
