@@ -141,3 +141,25 @@ class HostMapping(base.NovaTimestampObject, base.NovaObject):
     @base.remotable
     def destroy(self):
         self._destroy_in_db(self._context, self.host)
+
+
+@base.NovaObjectRegistry.register
+class HostMappingList(base.ObjectListBase, base.NovaObject):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'objects': fields.ListOfObjectsField('HostMapping'),
+        }
+
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_by_cell_id_from_db(context, cell_id):
+        return (context.session.query(api_models.HostMapping)
+                .options(joinedload('cell_mapping'))
+                .filter(api_models.HostMapping.cell_id == cell_id)).all()
+
+    @base.remotable_classmethod
+    def get_by_cell_id(cls, context, cell_id):
+        db_mappings = cls._get_by_cell_id_from_db(context, cell_id)
+        return base.obj_make_list(context, cls(), HostMapping, db_mappings)

@@ -120,3 +120,17 @@ class HostMappingTestCase(test.NoDBTestCase):
         mapping_obj = create_mapping_obj(self.context, cell_mapping=cell)
         cell_map_obj = mapping_obj.cell_mapping
         self._compare_cell_obj_to_mapping(cell_map_obj, cell)
+
+    def test_host_mapping_list_get_by_cell_id(self):
+        """Tests getting all of the HostMappings for a given CellMapping id.
+        """
+        # we shouldn't have any host mappings yet
+        self.assertEqual(0, len(host_mapping.HostMappingList.get_by_cell_id(
+            self.context, sample_cell_mapping['id'])))
+        # now create a host mapping
+        db_host_mapping = create_mapping()
+        # now we should list out one host mapping for the cell
+        host_mapping_list = host_mapping.HostMappingList.get_by_cell_id(
+            self.context, db_host_mapping['cell_id'])
+        self.assertEqual(1, len(host_mapping_list))
+        self.assertEqual(db_host_mapping['id'], host_mapping_list[0].id)
