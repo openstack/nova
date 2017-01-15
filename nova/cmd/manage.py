@@ -1441,6 +1441,30 @@ class CellV2Commands(object):
             print(cell_mapping_uuid)
         return 0
 
+    @args('--verbose', action='store_true',
+          help=_('Show more details than just the cell name and uuid.'))
+    def list_cells(self, verbose=False):
+        """Lists the v2 cells in the deployment.
+
+        By default only the cell name and uuid are shown. Use the --verbose
+        option to see transport URL and database connection details.
+        """
+        cell_mappings = objects.CellMappingList.get_all(
+            context.get_admin_context())
+
+        field_names = [_('Name'), _('UUID')]
+        if verbose:
+            field_names.extend([_('Transport URL'), _('Database Connection')])
+
+        t = prettytable.PrettyTable(field_names)
+        for cell in sorted(cell_mappings, key=lambda _cell: _cell.name):
+            fields = [cell.name, cell.uuid]
+            if verbose:
+                fields.extend([cell.transport_url, cell.database_connection])
+            t.add_row(fields)
+        print(t)
+        return 0
+
 
 CATEGORIES = {
     'account': AccountCommands,
