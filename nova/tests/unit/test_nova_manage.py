@@ -1465,6 +1465,62 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
 +--------+--------------------+---------------+---------------------+''',
                          output)
 
+    def test_delete_cell_not_found(self):
+        """Tests trying to delete a cell that is not found by uuid."""
+        cell_uuid = uuidutils.generate_uuid()
+        self.assertEqual(1, self.commands.delete_cell(cell_uuid))
+        output = self.output.getvalue().strip()
+        self.assertEqual('Cell with uuid %s was not found.' % cell_uuid,
+                         output)
+
+    def test_delete_cell_host_mappings_exist(self):
+        """Tests trying to delete a cell which has host mappings."""
+        cell_uuid = uuidutils.generate_uuid()
+        ctxt = context.get_admin_context()
+        # create the cell mapping
+        cm = objects.CellMapping(
+            context=ctxt, uuid=cell_uuid, database_connection='fake:///db',
+            transport_url='fake:///mq')
+        cm.create()
+        # create a host mapping in this cell
+        hm = objects.HostMapping(
+            context=ctxt, host='fake-host', cell_mapping=cm)
+        hm.create()
+        self.assertEqual(2, self.commands.delete_cell(cell_uuid))
+        output = self.output.getvalue().strip()
+        self.assertIn('There are existing hosts mapped to cell', output)
+
+    def test_delete_cell_instance_mappings_exist(self):
+        """Tests trying to delete a cell which has instance mappings."""
+        cell_uuid = uuidutils.generate_uuid()
+        ctxt = context.get_admin_context()
+        # create the cell mapping
+        cm = objects.CellMapping(
+            context=ctxt, uuid=cell_uuid, database_connection='fake:///db',
+            transport_url='fake:///mq')
+        cm.create()
+        # create an instance mapping in this cell
+        im = objects.InstanceMapping(
+            context=ctxt, instance_uuid=uuidutils.generate_uuid(),
+            cell_mapping=cm, project_id=uuidutils.generate_uuid())
+        im.create()
+        self.assertEqual(3, self.commands.delete_cell(cell_uuid))
+        output = self.output.getvalue().strip()
+        self.assertIn('There are existing instances mapped to cell', output)
+
+    def test_delete_cell_success(self):
+        """Tests trying to delete an empty cell."""
+        cell_uuid = uuidutils.generate_uuid()
+        ctxt = context.get_admin_context()
+        # create the cell mapping
+        cm = objects.CellMapping(
+            context=ctxt, uuid=cell_uuid, database_connection='fake:///db',
+            transport_url='fake:///mq')
+        cm.create()
+        self.assertEqual(0, self.commands.delete_cell(cell_uuid))
+        output = self.output.getvalue().strip()
+        self.assertEqual('', output)
+
 
 class TestNovaManageMain(test.NoDBTestCase):
     """Tests the nova-manage:main() setup code."""
