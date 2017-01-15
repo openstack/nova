@@ -178,7 +178,52 @@ package:
 Adding a New Handler
 ====================
 
-.. TODO(cdent) short step by step summary of adding a new endpoint
+Adding a new URL or a new method (e.g, ``PATCH``) to an existing URL
+requires adding a new handler function. In either case a new microversion and
+release note is required. When adding an entirely new route a request for a
+lower microversion should return a ``404``. When adding a new method to an
+existing URL a request for a lower microversion should return a ``405``.
+
+In either case, the ``ROUTE_DECLARATIONS`` dictionary in the
+`nova.api.openstack.placement.handler` module should be updated to point to a
+function within a module that contains handlers for the type of entity
+identified by the URL. Collection and individual entity handlers of the same
+type should be in the same module.
+
+As mentioned above, the handler function should be decorated with
+``@webob.dec.wsgify``, take a single argument ``req`` which is a WebOb
+`Request`_ object, and return a WebOb `Response`_.
+
+For ``PUT`` and ``POST`` methods, request bodies are expected to be JSON
+based on a content-type of ``application/json``. This may be enforced by using
+a decorator: ``@util.require_content('application/json')``. If the body is not
+`JSON`, a ``415`` response status is returned.
+
+Response bodies are usually `JSON`. A handler can check the `Accept` header
+provided in a request using another decorator:
+``@util.check_accept('application/json')``. If the header does not allow
+`JSON`, a ``406`` response status is returned.
+
+`JSON` sent in a request should be validated against a JSON Schema. A
+``util.extract_json`` method is available. This takes a request body and a
+schema. If multiple schema are used for different microversions of the same
+request, the caller is responsible for selecting the right one before calling
+``extract_json``.
+
+When a handler needs to read or write the data store it should use methods on
+the objects found in the `nova.objects.resource_provider` package. Doing so
+requires a context which is provided to the handler method via the WSGI
+environment. It can be retrieved as follows::
+
+    context = req.environ['placement.context']
+
+.. note:: If your change requires new methods or new objects in the
+          `resource_provider` package, after you've made sure that you really
+          do need those new methods or objects (you may not!) make those
+          changes in a patch that is separate from and prior to the HTTP API
+          change.
+
+Testing of handler code is described in the next section.
 
 Testing
 =======
