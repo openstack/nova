@@ -318,7 +318,40 @@ example in devstack. See `gabbi-run`_ to get started.
 Futures
 =======
 
-.. TODO(cdent) extraction to own thing plans
+Since before it was created there has been a long term goal for the placement
+service to be extracted to its own repository and operate as its own
+independent service. There are many reasons for this, but two main ones are:
+
+* Multiple projects, not just nova, will eventually need to manage resource
+  providers using the placement API.
+* A separate service helps to maintain and preserve a strong contract between
+  the placement service and the consumers of the service.
+
+To lessen the pain of the eventual extraction of placement the service has been
+developed in a way to limit dependency on the rest of the nova codebase and be
+self-contained:
+
+* Most code is in `nova/api/openstack/placement` except for oslo versioned
+  object code in `nova/objects/resource_provider.py`.
+* Database query code is kept within the objects.
+* The methods on the objects are not remotable, as the only intended caller is
+  the placement API code.
+
+There are some exceptions to the self-contained rule (which will have to be
+addressed if the extraction ever happens):
+
+* Exceptions unique to the placement API are still within the `nova.exceptions`
+  package.
+* Code related to a resource class cache is within the `nova.db` package.
+* Database models, migrations and tables use the nova api database.
+* The nova `FaultWrapper` middleware is being used.
+* `nova.i18n` package provides the ``_`` and related functions.
+* `nova.conf` is used for configuration.
+* Unit and functional tests depend on fixtures and other functionality in base
+  classes provided by nova.
+
+When creating new code for the placement service, please be aware of the plan
+for an eventual extraction and avoid creating unnecessary interdependencies.
 
 .. _WSGI: https://www.python.org/dev/peps/pep-3333/
 .. _versioned objects: http://docs.openstack.org/developer/oslo.versionedobjects/
