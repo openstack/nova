@@ -147,3 +147,26 @@ class InstanceMappingListTestCase(test.NoDBTestCase):
             mapping = mappings[db_mapping.instance_uuid]
             for key in instance_mapping.InstanceMapping.fields.keys():
                 self.assertEqual(db_mapping[key], mapping[key])
+
+    def test_instance_mapping_list_get_by_cell_id(self):
+        """Tests getting all of the InstanceMappings for a given CellMapping id
+        """
+        # we shouldn't have any instance mappings yet
+        inst_mapping_list = (
+            instance_mapping.InstanceMappingList.get_by_cell_id(
+                self.context, sample_cell_mapping['id'])
+        )
+        self.assertEqual(0, len(inst_mapping_list))
+        # now create an instance mapping in a cell
+        db_inst_mapping1 = create_mapping()
+        # let's also create an instance mapping that's not in a cell to make
+        # sure our filtering is working
+        db_inst_mapping2 = create_mapping(cell_id=None)
+        self.assertIsNone(db_inst_mapping2['cell_id'])
+        # now we should list out one instance mapping for the cell
+        inst_mapping_list = (
+            instance_mapping.InstanceMappingList.get_by_cell_id(
+                self.context, db_inst_mapping1['cell_id'])
+        )
+        self.assertEqual(1, len(inst_mapping_list))
+        self.assertEqual(db_inst_mapping1['id'], inst_mapping_list[0].id)
