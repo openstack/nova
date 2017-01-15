@@ -183,8 +183,92 @@ Adding a New Handler
 Testing
 =======
 
-.. TODO(cdent) a bit about gabbi tests and unit tests: how to use
-               and when to use what
+Most of the handler code in the placement API is tested using `gabbi`_. Some
+utility code is tested with unit tests found in
+`nova/tests/unit/api/openstack/placement/`. The back-end objects are tested
+with a combination of unit and functional tests found in
+`nova/tests/unit/objects/test_resource_provider.py` and
+`nova/tests/functional/db`. Adding unit and non-gabbi functional tests is done
+in the same way as other aspects of nova.
+
+Using Gabbi
+-----------
+
+Gabbi was developed in the `telemetry`_ project to provide a declarative way to
+test HTTP APIs that preserves visibility of both the request and response of
+the HTTP interaction. Tests are written in YAML files where each file is an
+ordered suite of tests. Fixtures (such as a database) are set up and torn down
+at the beginning and end of each file, not each test. JSON response bodies can
+be evaluated with `JSONPath`_. The placement WSGI
+application is run via `wsgi-intercept`_, meaning that real HTTP requests are
+being made over a file handle that appears to Python to be a socket.
+
+In the placement API the YAML files (aka "gabbits") can be found in
+`nova/tests/functional/api/openstack/placement/gabbits`. Fixture definitions are
+in `fixtures.py` in the parent directory. Tests are currently grouped by handlers
+(e.g., `resource-provider.yaml` and `inventory.yaml`). This is not a
+requirement and as we increase the number of tests it makes sense to have more
+YAML files with fewer tests, divided up by the arc of API interaction that they
+test.
+
+The gabbi tests are integrated into the functional tox target, loaded via
+`nova/tests/functional/api/openstack/placement/test_placement_api.py`. If you
+want to run just the gabbi tests one way to do so is::
+
+    tox -efunctional test_placement_api
+
+If you want to run just one yaml file (in this example `inventory.yaml`)::
+
+    tox -efunctional placement_api.inventory
+
+It is also possible to run just one test from within one file. When you do this
+every test prior to the one you asked for will also be run. This is because
+the YAML represents a sequence of dependent requests. Select the test by using
+the name in the yaml file, replacing space with ``_``::
+
+    tox -efunctional placement_api.inventory_post_new_ipv4_address_inventory
+
+.. note:: `.testr.conf` in the nova repository is configured such that each
+          gabbi YAML is considered a group. Thus, all tests in the file will
+          be run in the same process when running testr concurrently (the
+          default).
+
+Writing More Gabbi Tests
+------------------------
+
+The docs for `gabbi`_ try to be complete and explain the `syntax`_ in some
+depth. Where something is missing or confusing, please log a `bug`_.
+
+While it is possible to test all aspects of a response (all the response
+headers, the status code, every attribute in a JSON structure) in one single
+test, doing so will likely make the test harder to read and will certainly make
+debugging more challenging. If there are multiple things that need to be
+asserted, making multiple requests is reasonable. Since database set up is only
+happening once per file (instead of once per test) and since there's no TCP
+overhead, the tests run quickly.
+
+While `fixtures`_ can be used to establish entities that are required for
+tests, creating those entities via the HTTP API results in tests which are more
+descriptive. For example the `inventory.yaml` file creates the resource
+provider to which it will then add inventory. This makes it easy to explore a
+sequence of interactions and a variety of responses with the tests:
+
+* create a resource provider
+* confirm it has empty inventory
+* add inventory to the resource provider (in a few different ways)
+* confirm the resource provider now has inventory
+* modify the inventory
+* delete the inventory
+* confirm the resource provider now has empty inventory
+
+Nothing special is required to add a new set of tests: create a YAML file with
+a unique name in the same directory as the others. The other files can provide
+examples. Gabbi can provide a useful way of doing test driven development of a
+new handler: create a YAML file that describes the desired URLs and behavior
+and write the code to make it pass.
+
+It's also possible to use gabbi against a running placement service, for
+example in devstack. See `gabbi-run`_ to get started.
 
 Futures
 =======
@@ -200,3 +284,11 @@ Futures
 .. _microversions: http://specs.openstack.org/openstack/api-wg/guidelines/microversion_specification.html
 .. _when a microversion is needed: http://docs.openstack.org/developer/nova/api_microversion_dev.html#when-do-i-need-a-new-microversion
 .. _release note: http://docs.openstack.org/developer/reno/usage.html
+.. _gabbi: https://gabbi.readthedocs.io/
+.. _telemetry: http://specs.openstack.org/openstack/telemetry-specs/specs/kilo/declarative-http-tests.html
+.. _wsgi-intercept: http://wsgi-intercept.readthedocs.io/
+.. _syntax: https://gabbi.readthedocs.io/en/latest/format.html
+.. _bug: https://github.com/cdent/gabbi/issues
+.. _fixtures: http://gabbi.readthedocs.io/en/latest/fixtures.html
+.. _JSONPath: http://goessner.net/articles/JsonPath/
+.. _gabbi-run: http://gabbi.readthedocs.io/en/latest/runner.html
