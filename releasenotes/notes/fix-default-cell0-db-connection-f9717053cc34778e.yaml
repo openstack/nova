@@ -1,0 +1,10 @@
+---
+fixes:
+  - |
+    The ``nova-manage cell_v2 simple_cell_setup`` command now creates the
+    default cell0 database connection using the ``[database]`` connection
+    configuration option rather than the ``[api_database]`` connection. The
+    cell0 database schema is the `main` database, i.e. the `instances` table,
+    rather than the `api` database schema. In other words, the cell0 database
+    would be called something like ``nova_cell0`` rather than
+    ``nova_api_cell0``.

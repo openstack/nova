@@ -1114,22 +1114,22 @@ class CellV2CommandsTestCase(test.TestCase):
 
     def test_map_cell0_default_database(self):
         CONF.set_default('connection',
-                         'fake://netloc/nova_api',
-                         group='api_database')
+                         'fake://netloc/nova',
+                         group='database')
         ctxt = context.RequestContext()
         self.commands.map_cell0()
         cell_mapping = objects.CellMapping.get_by_uuid(ctxt,
                 objects.CellMapping.CELL0_UUID)
         self.assertEqual('cell0', cell_mapping.name)
         self.assertEqual('none:///', cell_mapping.transport_url)
-        self.assertEqual('fake://netloc/nova_api_cell0',
+        self.assertEqual('fake://netloc/nova_cell0',
                          cell_mapping.database_connection)
 
     def _test_migrate_simple_command(self, cell0_sync_fail=False):
         ctxt = context.RequestContext()
         CONF.set_default('connection',
-                         'fake://netloc/nova_api',
-                         group='api_database')
+                         'fake://netloc/nova',
+                         group='database')
         values = {
                 'vcpus': 4,
                 'memory_mb': 4096,
@@ -1168,7 +1168,7 @@ class CellV2CommandsTestCase(test.TestCase):
                 objects.CellMapping.CELL0_UUID)
         self.assertEqual('cell0', cell_mapping.name)
         self.assertEqual('none:///', cell_mapping.transport_url)
-        self.assertEqual('fake://netloc/nova_api_cell0',
+        self.assertEqual('fake://netloc/nova_cell0',
                          cell_mapping.database_connection)
 
         # Verify the cell mapping

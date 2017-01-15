@@ -1257,7 +1257,7 @@ class CellV2Commands(object):
           metavar='<database_connection>',
           help='The database connection url for cell0. '
                'This is optional. If not provided, a standard database '
-               'connection will be used based on the API database connection '
+               'connection will be used based on the main database connection '
                'from the Nova configuration.'
          )
     def map_cell0(self, database_connection=None):
@@ -1272,11 +1272,11 @@ class CellV2Commands(object):
         """
         def cell0_default_connection():
             # If no database connection is provided one is generated
-            # based on the API database connection url.
+            # based on the database connection url.
             # The cell0 database will use the same database scheme and
-            # netloc as the API database, with a related path.
+            # netloc as the main database, with a related path.
             scheme, netloc, path, query, fragment = \
-                urlparse.urlsplit(CONF.api_database.connection)
+                urlparse.urlsplit(CONF.database.connection)
             root, ext = os.path.splitext(path)
             path = root + "_cell0" + ext
             return urlparse.urlunsplit((scheme, netloc, path, query,

@@ -10,4 +10,9 @@ upgrade:
     The new command is
     "nova-manage cell_v2 simple_cell_setup --transport_url <transport_url>"
     where transport_url is the connection information for the current message
-    queue used by Nova.
+    queue used by Nova. Operators must create a new database for cell0 before
+    running `cell_v2 simple_cell_setup`. The simple cell setup command expects
+    the name of the cell0 database to be `<main database name>_cell0` as it
+    will create a cell mapping for cell0 based on the main database connection,
+    sync the cell0 database, and associate existing hosts and instances with
+    the single cell.
