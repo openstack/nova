@@ -503,6 +503,20 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         self.assertIn("on resource provider '%s'."
                       % rp.uuid, str(error))
 
+    def test_add_allocation_increments_generation(self):
+        rp = objects.ResourceProvider(context=self.context,
+                uuid=uuidsentinel.inventory_resource_provider, name='foo')
+        rp.create()
+        inv = objects.Inventory(context=self.context, resource_provider=rp,
+                **DISK_INVENTORY)
+        inv.create()
+        expected_gen = rp.generation + 1
+        alloc = objects.Allocation(context=self.context, resource_provider=rp,
+                **DISK_ALLOCATION)
+        alloc_list = objects.AllocationList(self.context, objects=[alloc])
+        alloc_list.create_all()
+        self.assertEqual(expected_gen, rp.generation)
+
 
 class ResourceProviderListTestCase(ResourceProviderBaseCase):
     def setUp(self):

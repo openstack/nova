@@ -1071,10 +1071,7 @@ def _check_capacity_exceeded(conn, allocs):
                 resource_class=alloc.resource_class,
                 resource_provider=rp_uuid)
         if rp_uuid not in res_providers:
-            rp = ResourceProvider(id=usage['resource_provider_id'],
-                                  uuid=rp_uuid,
-                                  generation=usage['generation'])
-            res_providers[rp_uuid] = rp
+            res_providers[rp_uuid] = alloc.resource_provider
     return list(res_providers.values())
 
 
@@ -1162,7 +1159,7 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
             # by the caller to choose to try again. It will also rollback the
             # transaction so that these changes always happen atomically.
             for rp in before_gens:
-                _increment_provider_generation(conn, rp)
+                rp.generation = _increment_provider_generation(conn, rp)
 
     @classmethod
     def get_all_by_resource_provider_uuid(cls, context, rp_uuid):
