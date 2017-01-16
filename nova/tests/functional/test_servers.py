@@ -613,6 +613,38 @@ class ServersTest(ServersTestBase):
         # Cleanup
         self._delete_server(created_server_id)
 
+    def test_resize_server_negative_invalid_state(self):
+        # Avoid migration
+        self.flags(allow_resize_to_same_host=True)
+
+        # Create server
+        server = self._build_minimal_create_server_request()
+        created_server = self.api.post_server({"server": server})
+        created_server_id = created_server['id']
+        found_server = self._wait_for_state_change(created_server, 'BUILD')
+        self.assertEqual('ACTIVE', found_server['status'])
+
+        # Resize server(flavorRef: 1 -> 2)
+        post = {'resize': {"flavorRef": "2", "OS-DCF:diskConfig": "AUTO"}}
+        self.api.post_server_action(created_server_id, post)
+        found_server = self._wait_for_state_change(found_server, 'RESIZE')
+        self.assertEqual('VERIFY_RESIZE', found_server['status'])
+
+        # Resize server in VERIFY_RESIZE(flavorRef: 2 -> 1)
+        # NOTE(yatsumi): When resize API runs, the server status
+        # must be ACTIVE or SHUTOFF.
+        # By returning 409, I want to confirm that the VERIFY_RESIZE server
+        # does not cause unexpected behavior.
+        post = {'resize': {"flavorRef": "1", "OS-DCF:diskConfig": "AUTO"}}
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self.api.post_server_action,
+                               created_server_id, post)
+        self.assertEqual(409, ex.response.status_code)
+        self.assertEqual('VERIFY_RESIZE', found_server['status'])
+
+        # Cleanup
+        self._delete_server(created_server_id)
+
 
 class ServersTestV21(ServersTest):
     api_major_version = 'v2.1'
