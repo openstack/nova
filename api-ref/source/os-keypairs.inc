@@ -32,6 +32,7 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - keypairs: keypairs
+  - keypair: keypair
   - name: keypair_name
   - public_key: keypair_public_key
   - fingerprint: keypair_fingerprint
@@ -69,9 +70,9 @@ Request
   - type: keypair_type_in
   - user_id: keypair_userid_in
 
-**Example Create Or Import Keypair: JSON request**
+**Example Create Or Import Keypair (v2.10): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/keypairs/keypairs-import-post-req.json
+.. literalinclude:: ../../doc/api_samples/keypairs/v2.10/keypairs-import-post-req.json
    :language: javascript
 
 Response
@@ -82,14 +83,14 @@ Response
   - keypair: keypair
   - name: keypair_name
   - public_key: keypair_public_key
-  - private_key: keypair_private_key
   - fingerprint: keypair_fingerprint
-  - type: keypair_type
   - user_id: keypair_userid
+  - private_key: keypair_private_key
+  - type: keypair_type
 
-**Example Create Or Import Keypair: JSON response**
+**Example Create Or Import Keypair (v2.10): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/keypairs/keypairs-import-post-resp.json
+.. literalinclude:: ../../doc/api_samples/keypairs/v2.10/keypairs-import-post-resp.json
    :language: javascript
 
 Show Keypair Details
@@ -109,7 +110,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - keypair_name: keypair_name_path
-  - user_id: keypair_userid_in
+  - user_id: keypair_user
 
 Response
 --------
@@ -117,15 +118,20 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - keypair: keypair
+  - created_at: created
+  - deleted: keypair_deleted
+  - deleted_at: keypair_updated_deleted_at
+  - fingerprint: keypair_fingerprint
+  - id: keypair_id
   - name: keypair_name
   - public_key: keypair_public_key
-  - fingerprint: keypair_fingerprint
-  - type: keypair_type
+  - updated_at: keypair_updated_deleted_at
   - user_id: keypair_userid
+  - type: keypair_type
 
-**Example Show Keypair Details: JSON response**
+**Example Show Keypair Details (v2.10): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/keypairs/keypairs-get-resp.json
+.. literalinclude:: ../../doc/api_samples/keypairs/v2.10/keypairs-get-resp.json
    :language: javascript
 
 Delete Keypair
@@ -149,8 +155,8 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - keypair_name: keypair_name
-  - user_id: keypair_userid_in
+  - keypair_name: keypair_name_path
+  - user_id: keypair_user
 
 Response
 --------
