@@ -1288,7 +1288,7 @@ confirmResize:
     The action.
   in: body
   required: true
-  type: string
+  type: none
 console:
   description: |
     The console object.
@@ -2072,7 +2072,7 @@ forceDelete:
     The action.
   in: body
   required: true
-  type: string
+  type: none
 free_ram_mb:
   description: |
     The free RAM in this hypervisor(in MB).
@@ -2521,7 +2521,7 @@ injectNetworkInfo:
     The action.
   in: body
   required: true
-  type: string
+  type: none
 instance_action_events:
   description: |
     The events occurred in this action.
@@ -2849,7 +2849,7 @@ lock:
     The action.
   in: body
   required: true
-  type: string
+  type: none
 locked:
   description: |
     True if the instance is locked otherwise False.
@@ -3402,13 +3402,13 @@ os-start:
     The action.
   in: body
   required: true
-  type: string
+  type: none
 os-stop:
   description: |
     The action.
   in: body
   required: true
-  type: string
+  type: none
 os:scheduler_hints:
   description: |
     The dictionary of data to send to the scheduler. Alternatively, you can specify
@@ -3466,7 +3466,7 @@ pause:
     The action.
   in: body
   required: true
-  type: string
+  type: none
 period_beginning:
   description: |
     The beginning time of the instance usage audit period.
@@ -3716,7 +3716,7 @@ resetNetwork:
     The action.
   in: body
   required: true
-  type: string
+  type: none
 resize:
   description: |
     The action.
@@ -3728,13 +3728,13 @@ restore:
     The action.
   in: body
   required: true
-  type: string
+  type: none
 resume:
   description: |
     The action.
   in: body
   required: true
-  type: string
+  type: none
 return_reservation_id:
   description: |
     Set to ``True`` to request that the response return a reservation ID instead of
@@ -3747,7 +3747,7 @@ revertResize:
     The action.
   in: body
   required: true
-  type: string
+  type: none
 rules:
   description: |
     A security group rules object.
@@ -4119,13 +4119,13 @@ shelve:
     The action.
   in: body
   required: true
-  type: string
+  type: none
 shelveOffload:
   description: |
     The action.
   in: body
   required: true
-  type: string
+  type: none
 size:
   description: |
     The size of the volume, in gibibytes (GiB).
@@ -4279,7 +4279,7 @@ suspend:
     The action.
   in: body
   required: true
-  type: string
+  type: none
 tags:
   description: |
     A list of tags. The maximum count of tags in this list is 50.
@@ -4373,25 +4373,25 @@ unlock:
     The action.
   in: body
   required: true
-  type: string
+  type: none
 unpause:
   description: |
     The action.
   in: body
   required: true
-  type: string
+  type: none
 unrescue:
   description: |
     The action.
   in: body
   required: true
-  type: string
+  type: none
 unshelve:
   description: |
     The action.
   in: body
   required: true
-  type: string
+  type: none
 updated:
   description: |
     The date and time when the resource was updated. The date and time
