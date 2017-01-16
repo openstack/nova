@@ -3608,7 +3608,7 @@ quota_set:
     A ``quota_set`` object.
   in: body
   required: true
-  type: string
+  type: object
 quota_tenant_or_user_id_body:
   description: |
     The UUID of the tenant/user the quotas listed for.

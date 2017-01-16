@@ -164,6 +164,8 @@ Request
 Response
 --------
 
+There is no body content for the response of a successful DELETE operation.
+
 List Default Quotas For Tenant
 ==============================
 
