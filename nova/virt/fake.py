@@ -164,7 +164,7 @@ class FakeDriver(driver.ComputeDriver):
         return [self.instances[uuid].name for uuid in self.instances.keys()]
 
     def list_instance_uuids(self):
-        return self.instances.keys()
+        return list(self.instances.keys())
 
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""

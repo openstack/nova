@@ -47,4 +47,4 @@ class AssistedVolumeSnapshotsJsonTests(test_servers.ServersSampleBase):
                 '{"volume_id":"521752a6-acf6-4b2d-bc7a-119f9148cd8c"}'
                 % snapshot_id)
         self.assertEqual(204, response.status_code)
-        self.assertEqual('', response.content)
+        self.assertEqual('', response.text)

@@ -89,9 +89,9 @@ class NetworksJsonTests(api_sample_base.ApiSampleTestBaseV21):
         response = self._do_post("os-networks/add",
                                  'network-add-req', {})
         self.assertEqual(202, response.status_code)
-        self.assertEqual("", response.content)
+        self.assertEqual("", response.text)
 
     def test_network_delete(self):
         response = self._do_delete('os-networks/always_delete')
         self.assertEqual(202, response.status_code)
-        self.assertEqual("", response.content)
+        self.assertEqual("", response.text)

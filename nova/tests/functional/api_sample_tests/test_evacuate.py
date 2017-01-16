@@ -62,7 +62,7 @@ class EvacuateJsonTest(test_servers.ServersSampleBase):
             # NOTE(gibi): no server_resp means we expect empty body as
             # a response
             self.assertEqual(expected_resp_code, response.status_code)
-            self.assertEqual('', response.content)
+            self.assertEqual('', response.text)
 
     @mock.patch('nova.conductor.manager.ComputeTaskManager.rebuild_instance')
     def test_server_evacuate(self, rebuild_mock):

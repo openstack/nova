@@ -60,7 +60,8 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
             'glance_host': self._get_glance_host(),
             'access_ip_v4': '1.2.3.4',
             'access_ip_v6': '80fe::',
-            'user_data': self.user_data,
+            'user_data': (self.user_data if six.PY2
+                          else self.user_data.decode('utf-8')),
             'uuid': '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}'
                     '-[0-9a-f]{4}-[0-9a-f]{12}',
             'name': 'new-server-test' if name is None else name,
@@ -103,7 +104,8 @@ class ServersSampleJsonTest(ServersSampleBase):
         subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
         subs['access_ip_v4'] = '1.2.3.4'
         subs['access_ip_v6'] = '80fe::'
-        subs['user_data'] = self.user_data
+        subs['user_data'] = (self.user_data if six.PY2
+                             else self.user_data.decode('utf-8'))
         # config drive can be a string for True or empty value for False
         subs['cdrive'] = '.*'
         self._verify_response('server-get-resp', subs, response, 200)
@@ -128,7 +130,8 @@ class ServersSampleJsonTest(ServersSampleBase):
         subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
         subs['access_ip_v4'] = '1.2.3.4'
         subs['access_ip_v6'] = '80fe::'
-        subs['user_data'] = self.user_data
+        subs['user_data'] = (self.user_data if six.PY2
+                             else self.user_data.decode('utf-8'))
         # config drive can be a string for True or empty value for False
         subs['cdrive'] = '.*'
         self._verify_response('servers-details-resp', subs, response, 200)
@@ -227,7 +230,7 @@ class ServersActionsJsonTest(ServersSampleBase):
             self._verify_response(resp_tpl, subs, response, code)
         else:
             self.assertEqual(code, response.status_code)
-            self.assertEqual("", response.content)
+            self.assertEqual("", response.text)
 
     def test_server_reboot_hard(self):
         uuid = self._post_server()
@@ -365,7 +368,7 @@ class ServerStartStopJsonTest(ServersSampleBase):
                                  req_tpl,
                                  {'action': action})
         self.assertEqual(202, response.status_code)
-        self.assertEqual("", response.content)
+        self.assertEqual("", response.text)
 
     def test_server_start(self):
         uuid = self._post_server()
@@ -397,4 +400,4 @@ class ServerTriggerCrashDumpJsonTest(ServersSampleBase):
                                  'server-action-trigger-crash-dump',
                                  {})
         self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.content, "")
+        self.assertEqual(response.text, "")

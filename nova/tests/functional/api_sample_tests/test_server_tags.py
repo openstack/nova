@@ -10,6 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
+
 from nova.db.sqlalchemy import models
 from nova.tests.functional.api_sample_tests import test_servers
 
@@ -37,7 +39,8 @@ class ServerTagsJsonTest(test_servers.ServersSampleBase):
         subs['instance_name'] = 'instance-\d{8}'
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
         subs['cdrive'] = '.*'
-        subs['user_data'] = self.user_data
+        subs['user_data'] = (self.user_data if six.PY2
+                             else self.user_data.decode('utf-8'))
         return subs
 
     def _put_server_tags(self):
@@ -90,16 +93,16 @@ class ServerTagsJsonTest(test_servers.ServersSampleBase):
         expected_location = "%s/servers/%s/tags/%s" % (
             self._get_vers_compute_endpoint(), uuid, tag.tag)
         self.assertEqual(expected_location, response.headers['Location'])
-        self.assertEqual('', response.content)
+        self.assertEqual('', response.text)
 
     def test_server_tags_delete(self):
         uuid = self._put_server_tags()
         response = self._do_delete('servers/%s/tags/%s' % (uuid, TAG1))
         self.assertEqual(204, response.status_code)
-        self.assertEqual('', response.content)
+        self.assertEqual('', response.text)
 
     def test_server_tags_delete_all(self):
         uuid = self._put_server_tags()
         response = self._do_delete('servers/%s/tags' % uuid)
         self.assertEqual(204, response.status_code)
-        self.assertEqual('', response.content)
+        self.assertEqual('', response.text)
