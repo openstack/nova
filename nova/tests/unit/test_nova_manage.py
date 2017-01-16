@@ -1423,6 +1423,45 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertEqual(1, status)
         self.assertIn('--database_connection', self.output.getvalue())
 
+    def test_list_cells_no_cells_verbose_false(self):
+        self.assertEqual(0, self.commands.list_cells())
+        output = self.output.getvalue().strip()
+        self.assertEqual('''\
++------+------+
+| Name | UUID |
++------+------+
++------+------+''', output)
+
+    def test_list_cells_multiple_sorted_verbose_true(self):
+        ctxt = context.RequestContext()
+        # This uses fake uuids so the table can stay under 80 characeters.
+        cell_mapping0 = objects.CellMapping(
+            context=ctxt, uuid='00000000-0000-0000',
+            database_connection='fake:///db0', transport_url='none:///',
+            name='cell0')
+        cell_mapping0.create()
+        cell_mapping1 = objects.CellMapping(
+            context=ctxt, uuid='9e36a3ed-3eb6-4327',
+            database_connection='fake:///dblon', transport_url='fake:///mqlon',
+            name='london')
+        cell_mapping1.create()
+        cell_mapping2 = objects.CellMapping(
+            context=ctxt, uuid='8a3c608c-b275-496c',
+            database_connection='fake:///dbdal', transport_url='fake:///mqdal',
+            name='dallas')
+        cell_mapping2.create()
+        self.assertEqual(0, self.commands.list_cells(verbose=True))
+        output = self.output.getvalue().strip()
+        self.assertEqual('''\
++--------+--------------------+---------------+---------------------+
+|  Name  |        UUID        | Transport URL | Database Connection |
++--------+--------------------+---------------+---------------------+
+| cell0  | 00000000-0000-0000 |    none:///   |     fake:///db0     |
+| dallas | 8a3c608c-b275-496c | fake:///mqdal |    fake:///dbdal    |
+| london | 9e36a3ed-3eb6-4327 | fake:///mqlon |    fake:///dblon    |
++--------+--------------------+---------------+---------------------+''',
+                         output)
+
 
 class TestNovaManageMain(test.NoDBTestCase):
     """Tests the nova-manage:main() setup code."""
