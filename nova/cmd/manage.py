@@ -103,6 +103,7 @@ _EXTRA_DEFAULT_LOG_LEVELS = ['oslo_db=INFO', 'oslo_policy=INFO']
 
 # Decorators for actions
 args = cmd_common.args
+action_description = cmd_common.action_description
 
 
 def param2id(object_id):
@@ -1392,6 +1393,49 @@ class CellV2Commands(object):
                         ctxt, host=compute.host,
                         cell_mapping=cell_mapping)
                     host_mapping.create()
+
+    @action_description(
+        _("Add a new cell to nova API database. "
+          "DB and MQ urls can be provided directly "
+          "or can be taken from config. The result is cell uuid."))
+    @args('--name', metavar='<name>', help=_('The name of the cell'))
+    @args('--database_connection', metavar='<database url>',
+          dest='database_connection',
+          help=_('The database url for the cell database'))
+    @args('--transport-url', metavar='<transport url>', dest='transport_url',
+          help=_('The transport url for the cell message queue'))
+    @args('--verbose', action='store_true',
+          help=_('Output the uuid of the created cell'))
+    def create_cell(self, name=None, database_connection=None,
+                    transport_url=None, verbose=False):
+        ctxt = context.get_context()
+        transport_url = transport_url or CONF.transport_url
+        if not transport_url:
+            print(_('Must specify --transport-url if [DEFAULT]/transport_url '
+                    'is not set in the configuration file.'))
+            return 1
+        database_connection = database_connection or CONF.database.connection
+        if not database_connection:
+            print(_('Must specify --database_connection '
+                    'if [database]/connection is not set '
+                    'in the configuration file.'))
+            return 1
+        if any(cell.database_connection == database_connection
+               and cell.transport_url == transport_url
+               for cell in objects.CellMappingList.get_all(ctxt)):
+            print(_('Cell with the specified transport_url '
+                    'and database_connection combination already exists'))
+            return 2
+        cell_mapping_uuid = uuidutils.generate_uuid()
+        cell_mapping = objects.CellMapping(
+            ctxt,
+            uuid=cell_mapping_uuid, name=name,
+            transport_url=transport_url,
+            database_connection=database_connection)
+        cell_mapping.create()
+        if verbose:
+            print(cell_mapping_uuid)
+        return 0
 
 
 CATEGORIES = {
