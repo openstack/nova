@@ -1217,9 +1217,6 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         r = self.commands.verify_instance(uuidsentinel.instance)
         self.assertEqual(0, r)
 
-    def test_instance_verify_bad_uuid(self):
-        self.assertEqual(16, self.commands.verify_instance(''))
-
     def test_instance_verify_quiet(self):
         # NOTE(danms): This will hit the first use of the say() wrapper
         # and reasonably verify that path

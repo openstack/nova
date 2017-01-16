@@ -1335,10 +1335,6 @@ class CellV2Commands(object):
         due to an incomplete upgrade (1), or unmapped due to normally transient
         state (2).
         """
-        if not uuid:
-            print(_('Must specify --uuid'))
-            return 16
-
         def say(string):
             if not quiet:
                 print(string)
