@@ -1,0 +1,27 @@
+---
+features:
+  - |
+    The nova Hyper-V driver now supports adding PCI passthrough devices to
+    Hyper-V instances (discrete device assignment). This feature has been
+    introduced in Windows / Hyper-V Server 2016 and offers the possibility to
+    attach some of the host's PCI devices (e.g.: GPU devices) directly to
+    Hyper-V instances.
+    In order to benefit from this feature, Hyper-V compute nodes must support
+    SR-IOV and must have assignable PCI devices. This can easily be checked by
+    running the following powershell commands::
+
+        Start-BitsTransfer https://raw.githubusercontent.com/Microsoft/Virtualization-Documentation/master/hyperv-samples/benarm-powershell/DDA/survey-dda.ps1
+        .\survey-dda.ps1
+
+    The script above will print a list of assignable PCI devices available on
+    the host, and if the host supports SR-IOV.
+
+    If the host supports this feature and it has at least an assignable PCI
+    device, the host must be configured to allow those PCI devices to be
+    assigned to VMs. For information on how to do this, follow this guide [1].
+
+    After the compute nodes have been configured, the nova-api, nova-scheduler,
+    and the nova-compute services will have to be configured next [2].
+
+    [1] https://blogs.technet.microsoft.com/heyscriptingguy/2016/07/14/passing-through-devices-to-hyper-v-vms-by-using-discrete-device-assignment/
+    [2] http://docs.openstack.org/admin-guide/compute-pci-passthrough.html
