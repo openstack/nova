@@ -56,6 +56,7 @@ from nova.virt import hardware
 from nova.virt.ironic import client_wrapper
 from nova.virt.ironic import ironic_states
 from nova.virt.ironic import patcher
+from nova.virt import netutils
 
 
 ironic = None
@@ -700,6 +701,27 @@ class IronicDriver(virt_driver.ComputeDriver):
         ports = self.ironicclient.call("node.list_ports", node.uuid)
         return set([p.address for p in ports])
 
+    def _get_network_metadata(self, node, network_info):
+        """Gets a more complete representation of the instance network info.
+
+        This data is exposed as network_data.json in the metadata service and
+        the config drive.
+
+        :param node: The node object.
+        :param network_info: Instance network information.
+        """
+        base_metadata = netutils.get_network_metadata(network_info)
+
+        ports = self.ironicclient.call("node.list_ports",
+                                       node.uuid, detail=True)
+
+        for port in ports:
+            for link in base_metadata['links']:
+                if link['ethernet_mac_address'] == port.address:
+                    link['type'] = 'phy'
+
+        return base_metadata
+
     def _generate_configdrive(self, context, instance, node, network_info,
                               extra_md=None, files=None):
         """Generate a config drive.
@@ -718,6 +740,7 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         i_meta = instance_metadata.InstanceMetadata(instance,
             content=files, extra_md=extra_md, network_info=network_info,
+            network_metadata=self._get_network_metadata(node, network_info),
             request_context=context)
 
         with tempfile.NamedTemporaryFile() as uncompressed:
