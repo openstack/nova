@@ -2,14 +2,14 @@
 nova-manage
 ===========
 
-------------------------------------------------------
-control and manage cloud computer instances and images
-------------------------------------------------------
+-------------------------------------------
+control and manage cloud computer instances
+-------------------------------------------
 
 :Author: openstack@lists.openstack.org
-:Date:   2012-04-05
+:Date:   2017-01-15
 :Copyright: OpenStack Foundation
-:Version: 2012.1
+:Version: 15.0.0
 :Manual section: 1
 :Manual group: cloud computing
 
@@ -118,29 +118,6 @@ Nova Project
     Refresh the quota usages for the project/user so that the
     usage record matches the actual used.  If a key is not specified
     then all quota usages relevant to the project/user are refreshed.
-
-Nova Images
-~~~~~~~~~~~
-
-``nova-manage image image_register <path> <owner>``
-
-    Registers an image with the image service.
-
-``nova-manage image kernel_register <path> <owner>``
-
-    Registers a kernel with the image service.
-
-``nova-manage image ramdisk_register <path> <owner>``
-
-    Registers a ramdisk with the image service.
-
-``nova-manage image all_register <image_path> <kernel_path> <ramdisk_path> <owner>``
-
-    Registers an image kernel and ramdisk with the image service.
-
-``nova-manage image convert <directory>``
-
-    Converts all images in directory from the old (Bexar) format to the new format.
 
 SEE ALSO
 ========
