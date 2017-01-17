@@ -833,14 +833,15 @@ class API(base.Base):
                     length=l, maxsize=MAX_USERDATA_SIZE)
 
             try:
-                # TODO(gcb): Just use base64utils.decode_as_bytes(user_data)
-                # when https://review.openstack.org/#/c/410797/ is merged and
-                # ensure oslo.serialization >=2.15.0 in Nova requirements.txt.
-                if six.PY3:
-                    base64utils.decode_as_bytes(user_data)
-                else:
-                    base64.decodestring(user_data)
-            except base64.binascii.Error:
+                base64utils.decode_as_bytes(user_data)
+            except (base64.binascii.Error, TypeError):
+                # TODO(harlowja): reduce the above exceptions caught to
+                # only type error once we get a new oslo.serialization
+                # release that captures and makes only one be output.
+                #
+                # We can eliminate the capture of `binascii.Error` when:
+                #
+                # https://review.openstack.org/#/c/418066/ is released.
                 raise exception.InstanceUserDataMalformed()
 
         # When using Neutron, _check_requested_secgroups will translate and
