@@ -88,6 +88,16 @@ Nova Cells v2
     applies to instances that have encountered an error before they have been
     scheduled. Returns 0 if cell0 is created successfully or already setup.
 
+``nova-manage cell_v2 map_instances --cell_uuid <cell_uuid> [--max-count <max_count>]``
+
+    Map instances to the provided cell. Instances in the nova database will
+    be queried from oldest to newest and mapped to the provided cell. A
+    max_count can be set on the number of instance to map in a single run.
+    Repeated runs of the command will start from where the last run finished
+    so it is not necessary to increase max-count to finish. Returns 0 if all
+    instances have been mapped, and 1 if there are still instances to be
+    mapped.
+
 Nova Logs
 ~~~~~~~~~
 
