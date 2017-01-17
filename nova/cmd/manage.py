@@ -1361,7 +1361,9 @@ class CellV2Commands(object):
     @args('--cell_uuid', metavar='<cell_uuid>', dest='cell_uuid',
           help='If provided only this cell will be searched for new hosts to '
                'map.')
-    def discover_hosts(self, cell_uuid=None):
+    @args('--verbose', action='store_true',
+          help=_('Provide detailed output when discovering hosts.'))
+    def discover_hosts(self, cell_uuid=None, verbose=False):
         """Searches cells, or a single cell, and maps found hosts.
 
         When a new host is added to a deployment it will add a service entry
@@ -1379,16 +1381,40 @@ class CellV2Commands(object):
             cell_mappings = [objects.CellMapping.get_by_uuid(ctxt, cell_uuid)]
         else:
             cell_mappings = objects.CellMappingList.get_all(ctxt)
+            if verbose:
+                print(_('Found %s cell mappings.') % len(cell_mappings))
 
         for cell_mapping in cell_mappings:
             if cell_mapping.is_cell0():
+                if verbose:
+                    print(_('Skipping cell0 since it does not contain hosts.'))
                 continue
+            if verbose:
+                if 'name' in cell_mapping and cell_mapping.name:
+                    print(_("Getting compute nodes from cell '%(name)s': "
+                            "%(uuid)s") % {'name': cell_mapping.name,
+                                           'uuid': cell_mapping.uuid})
+                else:
+                    print(_("Getting compute nodes from cell: %(uuid)s") %
+                          {'uuid': cell_mapping.uuid})
             with context.target_cell(ctxt, cell_mapping):
                 compute_nodes = objects.ComputeNodeList.get_all(ctxt)
+                if verbose:
+                    print(_('Found %(num)s computes in cell: %(uuid)s') %
+                          {'num': len(compute_nodes),
+                           'uuid': cell_mapping.uuid})
             for compute in compute_nodes:
+                if verbose:
+                    print(_("Checking host mapping for compute host "
+                            "'%(host)s': %(uuid)s") %
+                          {'host': compute.host, 'uuid': compute.uuid})
                 try:
                     objects.HostMapping.get_by_host(ctxt, compute.host)
                 except exception.HostMappingNotFound:
+                    if verbose:
+                        print(_("Creating host mapping for compute host "
+                                "'%(host)s': %(uuid)s") %
+                              {'host': compute.host, 'uuid': compute.uuid})
                     host_mapping = objects.HostMapping(
                         ctxt, host=compute.host,
                         cell_mapping=cell_mapping)
