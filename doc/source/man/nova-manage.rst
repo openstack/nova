@@ -120,6 +120,18 @@ Nova Cells v2
     upgrading from a cells v1 environment, and the ``simple_cell_setup`` if
     you are upgrading from a non-cells v1 environment).
 
+``nova-manage cell_v2 create_cell [--name <cell_name>] [--transport-url <transport_url>] [--database_connection <database_connection>] [--verbose]``
+
+    Create a cell mapping to the database connection and message queue
+    transport url. If a database_connection is not specified, it will use
+    the one defined by ``[database]/connection`` in the configuration file
+    passed to nova-manage. If a transport_url is not specified, it will use
+    the one defined by ``[DEFAULT]/transport_url`` in the configuration file.
+    The verbose option will print out the resulting cell mapping uuid.
+    Returns 0 if the cell mapping was successfully created, 1 if the
+    transport url or database connection was missing, and 2 if a cell is
+    already using that transport url and database connection combination.
+
 Nova Logs
 ~~~~~~~~~
 
