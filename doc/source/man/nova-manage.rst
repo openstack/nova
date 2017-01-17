@@ -32,15 +32,13 @@ The standard pattern for executing a nova-manage command is:
 Run without arguments to see a list of available command categories:
 ``nova-manage``
 
-Categories are project, shell, vpn, and floating. Detailed descriptions are below.
-
 You can also run with a category argument such as user to see a list of all commands in that category:
 ``nova-manage db``
 
 These sections describe the available categories and arguments for nova-manage.
 
-Nova Db
-~~~~~~~
+Nova Database
+~~~~~~~~~~~~~
 
 ``nova-manage db version``
 
@@ -60,8 +58,8 @@ Nova Db
 
     Lists and optionally deletes database records where instance_uuid is NULL.
 
-Nova ApiDb
-~~~~~~~~~~
+Nova API Database
+~~~~~~~~~~~~~~~~~
 
 ``nova-manage api_db version``
 
