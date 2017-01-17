@@ -132,6 +132,15 @@ Nova Cells v2
     transport url or database connection was missing, and 2 if a cell is
     already using that transport url and database connection combination.
 
+``nova-manage cell_v2 discover_hosts [--cell_uuid <cell_uuid>] [--verbose]``
+
+    Searches cells, or a single cell, and maps found hosts. This command will
+    check the database for each cell (or a single one if passed in) and map
+    any hosts which are not currently mapped. If a host is already mapped
+    nothing will be done. You need to re-run this command each time you add
+    more compute hosts to a cell (otherwise the scheduler will never place
+    instances there).
+
 Nova Logs
 ~~~~~~~~~
 
