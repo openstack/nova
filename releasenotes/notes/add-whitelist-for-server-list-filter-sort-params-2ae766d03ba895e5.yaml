@@ -1,0 +1,115 @@
+---
+upgrade:
+  - |
+    The filter and sort query parameters for server list API are
+    now limited according to whitelists. The whitelists are different
+    for admin and non-admin users.
+
+    **Filtering**
+
+    The whitelist for REST API filters for admin users:
+
+    - access_ip_v4
+    - access_ip_v6
+    - all_tenants
+    - auto_disk_config
+    - availability_zone
+    - config_drive
+    - changes-since
+    - created_at
+    - deleted
+    - description
+    - display_description
+    - display_name
+    - flavor
+    - host
+    - hostname
+    - image
+    - image_ref
+    - ip
+    - ip6
+    - kernel_id
+    - key_name
+    - launch_index
+    - launched_at
+    - limit
+    - locked_by
+    - marker
+    - name
+    - node
+    - not-tags          (available in 2.26+)
+    - not-tags-any      (available in 2.26+)
+    - power_state
+    - progress
+    - project_id
+    - ramdisk_id
+    - reservation_id
+    - root_device_name
+    - sort_dir
+    - sort_key
+    - status
+    - tags              (available in 2.26+)
+    - tags-any          (available in 2.26+)
+    - task_state
+    - tenant_id
+    - terminated_at
+    - user_id
+    - uuid
+    - vm_state
+
+    For non-admin users, there is a whitelist for filters already. That
+    whitelist is unchanged.
+
+    **Sorting**
+
+    The whitelist for sort keys for admin users:
+
+    - access_ip_v4
+    - access_ip_v6
+    - auto_disk_config
+    - availability_zone
+    - config_drive
+    - created_at
+    - display_description
+    - display_name
+    - host
+    - hostname
+    - image_ref
+    - instance_type_id
+    - kernel_id
+    - key_name
+    - launch_index
+    - launched_at
+    - locked_by
+    - node
+    - power_state
+    - progress
+    - project_id
+    - ramdisk_id
+    - root_device_name
+    - task_state
+    - terminated_at
+    - updated_at
+    - user_id
+    - uuid
+    - vm_state
+
+    For non-admin users, the sort key ``host`` and ``node`` will be excluded.
+
+    **Other**
+
+    `HTTP Bad Request 400` will be returned for the filters/sort keys which
+    are on joined tables or internal data model attributes. They would
+    previously cause a `HTTP Server Internal Error 500`, namely:
+
+    - block_device_mapping
+    - info_cache
+    - metadata
+    - pci_devices
+    - security_groups
+    - services
+    - system_metadata
+
+    In order to maintain backward compatibility, filter and sort parameters
+    which are not mapped to the REST API `servers` resource representation are
+    ignored.
