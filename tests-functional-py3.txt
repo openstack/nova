@@ -1,4 +1,1 @@
-##############################################################################
-# NOTE(dims): The following test looks like a gabbi failure under python 3.5
-##############################################################################
-nova.tests.functional.api.openstack.placement.test_placement_api.unicode_get_a_raw_snowman_unicode.test_request
+# All functional tests currently work with python 3.5.

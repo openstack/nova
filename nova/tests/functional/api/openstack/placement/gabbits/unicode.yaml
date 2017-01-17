@@ -9,11 +9,6 @@ defaults:
 
 tests:
 
-- name: get a raw snowman unicode
-  desc: this should fall through to a NotFound on the resource provider object
-  GET: /resource_providers/☃
-  status: 404
-
 - name: get an encoded snowman
   desc: this should fall through to a NotFound on the resource provider object
   GET: /resources_providers/%e2%98%83
