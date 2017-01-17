@@ -1605,7 +1605,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # Upload that image to the image service
                 update_task_state(task_state=task_states.IMAGE_UPLOADING,
                         expected_state=task_states.IMAGE_PENDING_UPLOAD)
-                with libvirt_utils.file_open(out_path) as image_file:
+                with libvirt_utils.file_open(out_path, 'rb') as image_file:
                     self._image_api.update(context,
                                            image_id,
                                            metadata,
