@@ -147,6 +147,13 @@ Nova Cells v2
     uuid are shown. Use the --verbose option to see transport url and
     database connection details.
 
+``nova-manage cell_v2 delete_cell --cell_uuid <cell_uuid>``
+
+    Delete an empty cell by the given uuid. Returns 0 if the empty cell is
+    found and deleted successfully, 1 if a cell with that uuid could not be
+    found, 2 if host mappings were found for the cell (cell not empty), and
+    3 if there are instances mapped to the cell (cell not empty).
+
 Nova Logs
 ~~~~~~~~~
 
