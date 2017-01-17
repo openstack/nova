@@ -154,26 +154,49 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
-  - limit: limit
-  - marker: marker
-  - sort_key: sort_key_server
-  - sort_dir: sort_dir_server
-  - changes-since: changes_since_server
-  - image: image_query
-  - flavor: flavor_query
-  - name: server_name_query
-  - status: server_status_query
-  - ip: ip_query
-  - reservation_id: reservation_id_query
+  - access_ip_v4: access_ip_v4_query_server
+  - access_ip_v6: access_ip_v6_query_server
   - all_tenants: all_tenants_query
-  - tenant_id: tenant_id_query
+  - auto_disk_config: disk_config_query_server
+  - availability_zone: availability_zone_query_server
+  - config_drive: config_drive_query_server
+  - changes-since: changes_since_server
+  - created_at: created_at_query_server
   - deleted: deleted_query
+  - description: description_query_server
+  - flavor: flavor_query
+  - host: host_query_server
+  - hostname: hostname_query_server
+  - image: image_query
+  - ip: ip_query
   - ip6: ip6_query
-  - tags: tags_query
-  - tags-any: tags_any_query
+  - kernel_id: kernel_id_query_server
+  - key_name: key_name_query_server
+  - launch_index: launch_index_query_server
+  - launched_at: launched_at_query_server
+  - limit: limit
+  - locked_by: locked_by_query_server
+  - marker: marker
+  - name: server_name_query
+  - node: node_query_server
   - not-tags: not_tags_query
   - not-tags-any: not_tags_any_query
+  - power_state: power_state_query_server
+  - progress: progress_query_server
+  - project_id: project_id_query_server
+  - ramdisk_id: ramdisk_id_query_server
+  - reservation_id: reservation_id_query
+  - root_device_name: server_root_device_name_query
+  - sort_dir: sort_dir_server
+  - sort_key: sort_key_server
+  - status: server_status_query
+  - tags: tags_query
+  - tags-any: tags_any_query
+  - task_state: task_state_query_server
+  - terminated_at: terminated_at_query_server
+  - user_id: user_id_query_server
+  - uuid: server_uuid_query
+  - vm_state: vm_state_query_server
 
 Response
 --------
@@ -459,26 +482,49 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
-  - limit: limit
-  - marker: marker
-  - sort_key: sort_key_server
-  - sort_dir: sort_dir_server
-  - changes-since: changes_since_server
-  - image: image_query
-  - flavor: flavor_query
-  - name: server_name_query
-  - status: server_status_query
-  - ip: ip_query
-  - reservation_id: reservation_id_query
+  - access_ip_v4: access_ip_v4_query_server
+  - access_ip_v6: access_ip_v6_query_server
   - all_tenants: all_tenants_query
-  - tenant_id: tenant_id_query
+  - auto_disk_config: disk_config_query_server
+  - availability_zone: availability_zone_query_server
+  - config_drive: config_drive_query_server
+  - changes-since: changes_since_server
+  - created_at: created_at_query_server
   - deleted: deleted_query
+  - description: description_query_server
+  - flavor: flavor_query
+  - host: host_query_server
+  - hostname: hostname_query_server
+  - image: image_query
+  - ip: ip_query
   - ip6: ip6_query
-  - tags: tags_query
-  - tags-any: tags_any_query
+  - kernel_id: kernel_id_query_server
+  - key_name: key_name_query_server
+  - launch_index: launch_index_query_server
+  - launched_at: launched_at_query_server
+  - limit: limit
+  - locked_by: locked_by_query_server
+  - marker: marker
+  - name: server_name_query
+  - node: node_query_server
   - not-tags: not_tags_query
   - not-tags-any: not_tags_any_query
+  - power_state: power_state_query_server
+  - progress: progress_query_server
+  - project_id: project_id_query_server
+  - ramdisk_id: ramdisk_id_query_server
+  - reservation_id: reservation_id_query
+  - root_device_name: server_root_device_name_query
+  - sort_dir: sort_dir_server
+  - sort_key: sort_key_server
+  - status: server_status_query
+  - tags: tags_query
+  - tags-any: tags_any_query
+  - task_state: task_state_query_server
+  - terminated_at: terminated_at_query_server
+  - user_id: user_id_query_server
+  - uuid: server_uuid_query
+  - vm_state: vm_state_query_server
 
 Response
 --------
