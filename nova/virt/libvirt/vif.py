@@ -45,6 +45,8 @@ CONF = nova.conf.CONF
 
 # vhostuser queues support
 MIN_LIBVIRT_VHOSTUSER_MQ = (1, 2, 17)
+#  vlan tag for macvtap passthrough mode on SRIOV VFs
+MIN_LIBVIRT_MACVTAP_PASSTHROUGH_VLAN = (1, 3, 5)
 
 
 def is_vif_model_valid_for_virt(virt_type, vif_model):
@@ -325,6 +327,11 @@ class LibvirtGenericVIFDriver(object):
             conf, net_type, profile['pci_slot'],
             vif_details[network_model.VIF_DETAILS_VLAN])
 
+        # NOTE(vladikr): Not setting vlan tags for macvtap on SR-IOV VFs
+        # as vlan tag is not supported in Libvirt until version 1.3.5
+        if (vif['vnic_type'] == network_model.VNIC_TYPE_MACVTAP and not
+                host.has_min_version(MIN_LIBVIRT_MACVTAP_PASSTHROUGH_VLAN)):
+            conf.vlan = None
         designer.set_vif_bandwidth_config(conf, inst_type)
 
         return conf
@@ -634,6 +641,8 @@ class LibvirtGenericVIFDriver(object):
         pass
 
     def plug_hw_veb(self, instance, vif):
+        # TODO(vladikr): This code can be removed once the minimum version of
+        # Libvirt is incleased above 1.3.5, as vlan will be set by libvirt
         if vif['vnic_type'] == network_model.VNIC_TYPE_MACVTAP:
             linux_net.set_vf_interface_vlan(
                 vif['profile']['pci_slot'],
@@ -892,6 +901,8 @@ class LibvirtGenericVIFDriver(object):
         pass
 
     def unplug_hw_veb(self, instance, vif):
+        # TODO(vladikr): This code can be removed once the minimum version of
+        # Libvirt is incleased above 1.3.5, as vlan will be set by libvirt
         if vif['vnic_type'] == network_model.VNIC_TYPE_MACVTAP:
             # The ip utility doesn't accept the MAC 00:00:00:00:00:00.
             # Therefore, keep the MAC unchanged.  Later operations on
