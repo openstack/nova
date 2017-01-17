@@ -69,6 +69,17 @@ Nova API Database
 
     Sync the api cells database up to the most recent version. This is the standard way to create the db as well.
 
+Nova Cells v2
+~~~~~~~~~~~~~
+
+``nova-manage cell_v2 simple_cell_setup [--transport-url <transport_url>]``
+
+    Setup a fresh cells v2 environment; this should not be used if you
+    currently have a cells v1 environment. Returns 0 if setup is completed
+    (or has already been done), 1 if no hosts are reporting (and cannot be
+    mapped), 1 if no transport url is provided for the cell message queue,
+    and 2 if run in a cells v1 environment.
+
 Nova Logs
 ~~~~~~~~~
 
