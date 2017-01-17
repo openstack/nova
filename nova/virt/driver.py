@@ -488,7 +488,7 @@ class ComputeDriver(object):
             The instance which will get an additional network interface.
         :param nova.objects.ImageMeta image_meta:
             The metadata of the image of the instance.
-        :param nova.network.model.NetworkInfo vif:
+        :param nova.network.model.VIF vif:
             The object which has the information about the interface to attach.
 
         :raise nova.exception.NovaException: If the attach fails.
@@ -505,7 +505,7 @@ class ComputeDriver(object):
         :param context: The request context.
         :param nova.objects.instance.Instance instance:
             The instance which gets a network interface removed.
-        :param nova.network.model.NetworkInfo vif:
+        :param nova.network.model.VIF vif:
             The object which has the information about the interface to detach.
 
         :raise nova.exception.NovaException: If the detach fails.
