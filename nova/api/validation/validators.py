@@ -32,6 +32,17 @@ from nova import exception
 from nova.i18n import _
 
 
+@jsonschema.FormatChecker.cls_checks('regex')
+def _validate_regex_format(instance):
+    if not isinstance(instance, six.text_type):
+        return False
+    try:
+        re.compile(instance)
+    except re.error:
+        return False
+    return True
+
+
 @jsonschema.FormatChecker.cls_checks('date-time')
 def _validate_datetime_format(instance):
     try:

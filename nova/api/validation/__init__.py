@@ -17,6 +17,7 @@ Request Body validating middleware.
 """
 
 import functools
+import re
 
 from nova.api.openstack import api_version_request as api_version
 from nova.api.validation import validators
@@ -119,13 +120,23 @@ def _strip_additional_query_parameters(schema, req):
     after _schema_validation_helper return `True`.
     """
     additional_properties = schema.get('addtionalProperties', True)
+    pattern_regexes = []
+
+    patterns = schema.get('patternProperties', None)
+    if patterns:
+        for regex in patterns:
+            pattern_regexes.append(re.compile(regex))
 
     if additional_properties:
         # `req.GET.keys` will return duplicated keys for multiple values
         # parameters. To get rid of duplicated keys, convert it to set.
         for param in set(req.GET.keys()):
             if param not in schema['properties'].keys():
-                del req.GET[param]
+                # keys that can match the patternProperties will be
+                # retained and handle latter.
+                if not (list(regex for regex in pattern_regexes if
+                             regex.match(param))):
+                    del req.GET[param]
 
 
 def query_schema(query_params_schema, min_version=None,

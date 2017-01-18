@@ -15,6 +15,7 @@
 import copy
 
 from nova.api.validation import parameter_types
+from nova.api.validation.parameter_types import multi_params
 
 
 base_create = {
@@ -232,3 +233,101 @@ trigger_crash_dump = {
     'required': ['trigger_crash_dump'],
     'additionalProperties': False
 }
+
+# NOTE: We don't check actual values of queries on params
+# which are defined as the following common_param.
+common_param = multi_params({'type': 'string'})
+common_regex_param = multi_params({'type': 'string', 'format': 'regex'})
+
+JOINED_TABLE_QUERY_PARAMS_SERVERS = {
+    'block_device_mapping': common_param,
+    'services': common_param,
+    'metadata': common_param,
+    'system_metadata': common_param,
+    'info_cache': common_param,
+    'security_groups': common_param,
+    'pci_devices': common_param
+}
+
+query_params_v21 = {
+    'type': 'object',
+    'properties': {
+        'user_id': common_param,
+        'project_id': common_param,
+        # The alias of project_id. It should be removed in the
+        # future with microversion bump.
+        'tenant_id': common_param,
+        'launch_index': common_param,
+        # The alias of image. It should be removed in the
+        # future with microversion bump.
+        'image_ref': common_param,
+        'image': common_param,
+        'kernel_id': common_param,
+        'ramdisk_id': common_param,
+        'hostname': common_param,
+        'key_name': common_param,
+        'power_state': common_param,
+        'vm_state': common_param,
+        'task_state': common_param,
+        'host': common_param,
+        'node': common_param,
+        'flavor': common_param,
+        'reservation_id': common_param,
+        'launched_at': common_param,
+        'terminate_at': common_param,
+        'availability_zone': common_param,
+        # NOTE(alex_xu): This is pattern matching, it didn't get any benefit
+        # from DB index.
+        'name': common_regex_param,
+        # The alias of name. It should be removed in the future
+        # with microversion bump.
+        'display_name': common_regex_param,
+        'description': common_regex_param,
+        # The alias of description. It should be removed in the
+        # future with microversion bump.
+        'display_description': common_regex_param,
+        'locked_by': common_param,
+        'uuid': common_param,
+        'root_device_name': common_param,
+        'config_drive': common_param,
+        'accessIPv4': common_param,
+        'accessIPv6': common_param,
+        'auto_disk_config': common_param,
+        'progress': common_param,
+        'sort_key': common_param,
+        'sort_dir': common_param,
+        'all_tenants': common_param,
+        'deleted': common_param,
+        'status': common_param,
+        'changes-since': multi_params({'type': 'string',
+                                       'format': 'date-time'}),
+        # NOTE(alex_xu): The ip and ip6 are implemented in the python.
+        'ip': common_regex_param,
+        'ip6': common_regex_param,
+        'created_at': common_param,
+    },
+    # For backward-compatible additionalProperties is set to be True here.
+    # And we will either strip the extra params out or raise HTTP 400
+    # according to the params' value in the later process.
+    'additionalProperties': True,
+    # Prevent internal-attributes that are started with underscore from
+    # being striped out in schema validation, and raise HTTP 400 in API.
+    'patternProperties': {"^_": common_param}
+}
+
+# Update the joined-table fields to the list so it will not be
+# stripped in later process, thus can be handled later in api
+# to raise HTTP 400.
+query_params_v21['properties'].update(
+    JOINED_TABLE_QUERY_PARAMS_SERVERS)
+
+query_params_v21['properties'].update(
+    parameter_types.pagination_parameters)
+
+query_params_v226 = copy.deepcopy(query_params_v21)
+query_params_v226['properties'].update({
+    'tags': common_param,
+    'tags-any': common_param,
+    'not-tags': common_param,
+    'not-tags-any': common_param,
+})
