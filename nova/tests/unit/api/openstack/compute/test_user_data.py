@@ -14,12 +14,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import base64
 import datetime
 import uuid
 
 import mock
 from oslo_config import cfg
+from oslo_serialization import base64
 from oslo_serialization import jsonutils
 
 from nova.api.openstack.compute import extension_info
@@ -158,7 +158,7 @@ class ServersControllerCreateTest(test.TestCase):
         return server
 
     def test_create_instance_with_user_data_disabled(self):
-        params = {user_data.ATTRIBUTE_NAME: base64.b64encode('fake')}
+        params = {user_data.ATTRIBUTE_NAME: base64.encode_as_text('fake')}
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
@@ -171,7 +171,7 @@ class ServersControllerCreateTest(test.TestCase):
             override_controller=self.no_user_data_controller)
 
     def test_create_instance_with_user_data_enabled(self):
-        params = {user_data.ATTRIBUTE_NAME: base64.b64encode('fake')}
+        params = {user_data.ATTRIBUTE_NAME: base64.encode_as_text('fake')}
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
@@ -182,7 +182,7 @@ class ServersControllerCreateTest(test.TestCase):
         self._test_create_extra(params)
 
     def test_create_instance_with_user_data(self):
-        value = base64.b64encode("A random string")
+        value = base64.encode_as_text("A random string")
         params = {user_data.ATTRIBUTE_NAME: value}
         server = self._test_create_extra(params)
         self.assertEqual(FAKE_UUID, server['id'])
