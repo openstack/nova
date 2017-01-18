@@ -257,12 +257,13 @@ class XenAPIOpenVswitchDriverTestCase(XenVIFDriverTestBase):
                           self.ovs_driver.unplug, instance, fake_vif,
                           vm_ref)
 
+    @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_device_exists')
     @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_brctl_add_if')
     @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_create_linux_bridge')
     @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_ovs_add_port')
     def test_post_start_actions(self, mock_ovs_add_port,
                                 mock_create_linux_bridge,
-                                mock_brctl_add_if):
+                                mock_brctl_add_if, mock_device_exists):
         vif_ref = "fake_vif_ref"
         instance = {'name': 'fake_instance_name'}
         fake_vif_rec = {'uuid': fake_vif['uuid'],
@@ -279,6 +280,7 @@ class XenAPIOpenVswitchDriverTestCase(XenVIFDriverTestBase):
         mock_network_get_uuid = self.mock_patch_object(
             self._session.network, 'get_uuid',
             return_val='fake_network_uuid')
+        mock_device_exists.return_value = False
 
         self.ovs_driver.post_start_actions(instance, vif_ref)
 
@@ -287,6 +289,40 @@ class XenAPIOpenVswitchDriverTestCase(XenVIFDriverTestBase):
         self.assertTrue(mock_network_get_uuid.called)
         self.assertEqual(mock_ovs_add_port.call_count, 1)
         self.assertTrue(mock_brctl_add_if.called)
+
+    @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_device_exists')
+    @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_brctl_add_if')
+    @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_create_linux_bridge')
+    @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_ovs_add_port')
+    def test_post_start_actions_tap_exist(self, mock_ovs_add_port,
+                                mock_create_linux_bridge,
+                                mock_brctl_add_if, mock_device_exists):
+        vif_ref = "fake_vif_ref"
+        instance = {'name': 'fake_instance_name'}
+        fake_vif_rec = {'uuid': fake_vif['uuid'],
+                        'MAC': fake_vif['address'],
+                        'network': 'fake_network',
+                        'other_config': {
+                            'nicira-iface-id': 'fake-nicira-iface-id'}
+                       }
+        mock_VIF_get_record = self.mock_patch_object(
+            self._session.VIF, 'get_record', return_val=fake_vif_rec)
+        mock_network_get_bridge = self.mock_patch_object(
+            self._session.network, 'get_bridge',
+            return_val='fake_bridge_name')
+        mock_network_get_uuid = self.mock_patch_object(
+            self._session.network, 'get_uuid',
+            return_val='fake_network_uuid')
+        mock_device_exists.return_value = True
+
+        self.ovs_driver.post_start_actions(instance, vif_ref)
+
+        self.assertTrue(mock_VIF_get_record.called)
+        self.assertTrue(mock_network_get_bridge.called)
+        self.assertTrue(mock_network_get_uuid.called)
+        self.assertTrue(mock_create_linux_bridge.called)
+        self.assertFalse(mock_brctl_add_if.called)
+        self.assertFalse(mock_ovs_add_port.called)
 
     @mock.patch.object(network_utils, 'find_network_with_name_label',
                        return_value="exist_network_ref")
