@@ -15,6 +15,7 @@
 
 import uuid as uuid_lib
 
+import mock
 from oslo_utils import timeutils
 from webob import exc
 
@@ -44,16 +45,8 @@ def fake_vpn_instance():
         uuid=uuid, project_id=project_id)
 
 
-def compute_api_get_all_empty(context, search_opts=None):
-    return []
-
-
 def compute_api_get_all(context, search_opts=None):
         return [fake_vpn_instance()]
-
-
-def utils_vpn_ping(addr, port, timeout=0.05, session_id=None):
-    return True
 
 
 class CloudpipeTestV21(test.NoDBTestCase):
@@ -63,25 +56,23 @@ class CloudpipeTestV21(test.NoDBTestCase):
     def setUp(self):
         super(CloudpipeTestV21, self).setUp()
         self.controller = self.cloudpipe.CloudpipeController()
-        self.stubs.Set(self.controller.compute_api, "get_all",
-                       compute_api_get_all_empty)
-        self.stubs.Set(utils, 'vpn_ping', utils_vpn_ping)
         self.req = fakes.HTTPRequest.blank('')
 
     def test_cloudpipe_list_no_network(self):
+        with test.nested(
+            mock.patch.object(compute_utils, 'get_nw_info_for_instance',
+                              return_value={}),
+            mock.patch.object(self.controller.compute_api, "get_all",
+                              side_effect=compute_api_get_all)
+        ) as (mock_utils_get_nw, mock_cpu_get_all):
+            res_dict = self.controller.index(self.req)
+            response = {'cloudpipes': [{'project_id': project_id,
+                                        'instance_id': uuid,
+                                        'created_at': '1981-10-20T00:00:00Z'}]}
 
-        def fake_get_nw_info_for_instance(instance):
-            return {}
-
-        self.stubs.Set(compute_utils, "get_nw_info_for_instance",
-                       fake_get_nw_info_for_instance)
-        self.stubs.Set(self.controller.compute_api, "get_all",
-                       compute_api_get_all)
-        res_dict = self.controller.index(self.req)
-        response = {'cloudpipes': [{'project_id': project_id,
-                                    'instance_id': uuid,
-                                    'created_at': '1981-10-20T00:00:00Z'}]}
-        self.assertEqual(res_dict, response)
+            self.assertEqual(response, res_dict)
+            self.assertTrue(mock_cpu_get_all.called)
+            self.assertTrue(mock_utils_get_nw.called)
 
     def test_cloudpipe_list(self):
 
@@ -93,58 +84,81 @@ class CloudpipeTestV21(test.NoDBTestCase):
         def fake_get_nw_info_for_instance(instance):
             return fake_network.fake_get_instance_nw_info(self)
 
-        self.stubs.Set(compute_utils, "get_nw_info_for_instance",
-                       fake_get_nw_info_for_instance)
-        self.stubs.Set(self.controller.network_api, "get",
-                       network_api_get)
-        self.stubs.Set(self.controller.compute_api, "get_all",
-                       compute_api_get_all)
-        res_dict = self.controller.index(self.req)
-        response = {'cloudpipes': [{'project_id': project_id,
-                                    'internal_ip': '192.168.1.100',
-                                    'public_ip': '127.0.0.1',
-                                    'public_port': 22,
-                                    'state': 'running',
-                                    'instance_id': uuid,
-                                    'created_at': '1981-10-20T00:00:00Z'}]}
-        self.assertThat(res_dict, matchers.DictMatches(response))
+        with test.nested(
+            mock.patch.object(utils, 'vpn_ping', return_value=True),
+            mock.patch.object(compute_utils, 'get_nw_info_for_instance',
+                              side_effect=fake_get_nw_info_for_instance),
+            mock.patch.object(self.controller.network_api, "get",
+                              side_effect=network_api_get),
+            mock.patch.object(self.controller.compute_api, "get_all",
+                              side_effect=compute_api_get_all)
+        ) as (mock_vpn_ping, mock_utils_get, mock_nw_get, mock_cpu_get_all):
+            res_dict = self.controller.index(self.req)
+            response = {'cloudpipes': [{'project_id': project_id,
+                                        'internal_ip': '192.168.1.100',
+                                        'public_ip': '127.0.0.1',
+                                        'public_port': 22,
+                                        'state': 'running',
+                                        'instance_id': uuid,
+                                        'created_at': '1981-10-20T00:00:00Z'}]}
+
+            self.assertThat(response, matchers.DictMatches(res_dict))
+            self.assertTrue(mock_cpu_get_all.called)
+            self.assertTrue(mock_nw_get.called)
+            self.assertTrue(mock_utils_get.called)
+            self.assertTrue(mock_vpn_ping.called)
 
     def test_cloudpipe_create(self):
-        def launch_vpn_instance(context):
+        def _launch_vpn_instance(context):
             return ([fake_vpn_instance()], 'fake-reservation')
 
-        self.stubs.Set(self.controller.cloudpipe, 'launch_vpn_instance',
-                       launch_vpn_instance)
-        body = {'cloudpipe': {'project_id': project_id}}
-        res_dict = self.controller.create(self.req, body=body)
+        with test.nested(
+            mock.patch.object(self.controller.compute_api, "get_all",
+                              return_value=[]),
+            mock.patch.object(self.controller.cloudpipe,
+                              'launch_vpn_instance',
+                              side_effect=_launch_vpn_instance),
+        ) as (mock_cpu_get_all, mock_vpn_launch):
+            body = {'cloudpipe': {'project_id': project_id}}
+            res_dict = self.controller.create(self.req, body=body)
+            response = {'instance_id': uuid}
 
-        response = {'instance_id': uuid}
-        self.assertEqual(res_dict, response)
+            self.assertEqual(response, res_dict)
+            self.assertTrue(mock_cpu_get_all.called)
+            self.assertTrue(mock_vpn_launch.called)
 
     def test_cloudpipe_create_no_networks(self):
-        def launch_vpn_instance(context):
-            raise exception.NoMoreNetworks
+        with test.nested(
+            mock.patch.object(self.controller.compute_api, "get_all",
+                              return_value=[]),
+            mock.patch.object(self.controller.cloudpipe,
+                              'launch_vpn_instance',
+                              side_effect=exception.NoMoreNetworks),
+        ) as (mock_cpu_get_all, mock_vpn_launch):
+            body = {'cloudpipe': {'project_id': project_id}}
+            req = fakes.HTTPRequest.blank(self.url)
 
-        self.stubs.Set(self.controller.cloudpipe, 'launch_vpn_instance',
-                       launch_vpn_instance)
-        body = {'cloudpipe': {'project_id': project_id}}
-        req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(exc.HTTPBadRequest,
-                          self.controller.create, req, body=body)
+            self.assertRaises(exc.HTTPBadRequest,
+                              self.controller.create, req, body=body)
+            self.assertTrue(mock_cpu_get_all.called)
+            self.assertTrue(mock_vpn_launch.called)
 
     def test_cloudpipe_create_already_running(self):
-        def launch_vpn_instance(*args, **kwargs):
-            self.fail("Method should not have been called")
+        with test.nested(
+            mock.patch.object(self.controller.cloudpipe,
+                              'launch_vpn_instance'),
+            mock.patch.object(self.controller.compute_api, "get_all",
+                              side_effect=compute_api_get_all),
+        ) as (mock_vpn_launch, mock_cpu_get_all):
+            body = {'cloudpipe': {'project_id': project_id}}
+            req = fakes.HTTPRequest.blank(self.url)
+            res_dict = self.controller.create(req, body=body)
+            response = {'instance_id': uuid}
 
-        self.stubs.Set(self.controller.cloudpipe, 'launch_vpn_instance',
-                       launch_vpn_instance)
-        self.stubs.Set(self.controller.compute_api, "get_all",
-                       compute_api_get_all)
-        body = {'cloudpipe': {'project_id': project_id}}
-        req = fakes.HTTPRequest.blank(self.url)
-        res_dict = self.controller.create(req, body=body)
-        response = {'instance_id': uuid}
-        self.assertEqual(res_dict, response)
+            self.assertEqual(response, res_dict)
+            # cloudpipe.launch_vpn_instance() should not be called
+            self.assertFalse(mock_vpn_launch.called)
+            self.assertTrue(mock_cpu_get_all.called)
 
     def test_cloudpipe_create_with_bad_project_id_failed(self):
         body = {'cloudpipe': {'project_id': 'bad.project.id'}}
