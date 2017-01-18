@@ -4,7 +4,6 @@ nova.tests.unit.test_wsgi.TestWSGIServerWithSSL
 # NOTE(dims): The following tests randomly fail in the gate. Please be
 # careful before you re-enable them
 ##########################################################################
-nova.tests.unit.virt.test_virt_drivers.AbstractDriverTestCase
 nova.tests.unit.virt.vmwareapi.test_configdrive.ConfigDriveTestCase
 nova.tests.unit.virt.vmwareapi.test_driver_api.VMwareAPIVMTestCase
 nova.tests.unit.virt.xenapi.test_vmops.BootableTestCase
