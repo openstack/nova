@@ -39,6 +39,8 @@ from nova.pci import request as pci_request
 from nova.pci import utils as pci_utils
 from nova.pci import whitelist as pci_whitelist
 from nova.policies import base as base_policies
+from nova import service_auth
+
 
 CONF = nova.conf.CONF
 
@@ -136,7 +138,7 @@ def get_client(context, admin=False):
         auth_plugin = _ADMIN_AUTH
 
     elif context.auth_token:
-        auth_plugin = context.get_auth_plugin()
+        auth_plugin = service_auth.get_auth_plugin(context)
 
     if not auth_plugin:
         # We did not get a user token and we should not be using

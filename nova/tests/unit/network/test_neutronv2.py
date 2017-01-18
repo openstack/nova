@@ -20,6 +20,7 @@ import uuid
 
 from keystoneauth1.fixture import V2Token
 from keystoneauth1 import loading as ks_loading
+from keystoneauth1 import service_token
 import mock
 from mox3 import mox
 import netaddr
@@ -139,6 +140,17 @@ class TestNeutronClient(test.NoDBTestCase):
         self.assertRaises(exception.Unauthorized,
                           neutronapi.get_client,
                           my_context)
+
+    def test_non_admin_with_service_token(self):
+        self.flags(send_service_user_token=True, group='service_user')
+
+        my_context = context.RequestContext('userid',
+                                            uuids.my_tenant,
+                                            auth_token='token')
+
+        cl = neutronapi.get_client(my_context)
+        self.assertIsInstance(cl.httpclient.auth,
+                              service_token.ServiceTokenAuthWrapper)
 
     @mock.patch.object(client.Client, "list_networks",
                        side_effect=exceptions.Unauthorized())
