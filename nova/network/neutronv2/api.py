@@ -39,8 +39,8 @@ from nova.pci import request as pci_request
 from nova.pci import utils as pci_utils
 from nova.pci import whitelist as pci_whitelist
 from nova.policies import base as base_policies
+from nova import profiler
 from nova import service_auth
-
 
 CONF = nova.conf.CONF
 
@@ -74,6 +74,7 @@ def _load_auth_plugin(conf):
     raise neutron_client_exc.Unauthorized(message=err_msg)
 
 
+@profiler.trace_cls("neutron_api")
 class ClientWrapper(clientv20.Client):
     """A Neutron client wrapper class.
 

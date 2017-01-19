@@ -28,6 +28,7 @@ from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
 from nova import objects
 from nova.objects import base as obj_base
+from nova import profiler
 from nova import utils
 
 CONF = cfg.CONF
@@ -35,6 +36,7 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
+@profiler.trace_cls("network_api")
 class API(base_api.NetworkAPI):
     """API for doing networking via the nova-network network manager.
 

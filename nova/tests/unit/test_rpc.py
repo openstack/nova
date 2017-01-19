@@ -182,6 +182,7 @@ class TestRPC(testtools.TestCase):
         mock_url.parse.assert_called_once_with(conf, None,
                                                rpc.TRANSPORT_ALIASES)
 
+    @mock.patch.object(rpc, 'profiler', None)
     @mock.patch.object(rpc, 'RequestContextSerializer')
     @mock.patch.object(messaging, 'RPCClient')
     def test_get_client(self, mock_client, mock_ser):
@@ -199,9 +200,46 @@ class TestRPC(testtools.TestCase):
                                             serializer=ser)
         self.assertEqual('client', client)
 
+    @mock.patch.object(rpc, 'profiler', None)
     @mock.patch.object(rpc, 'RequestContextSerializer')
     @mock.patch.object(messaging, 'get_rpc_server')
     def test_get_server(self, mock_get, mock_ser):
+        rpc.TRANSPORT = mock.Mock()
+        ser = mock.Mock()
+        tgt = mock.Mock()
+        ends = mock.Mock()
+        mock_ser.return_value = ser
+        mock_get.return_value = 'server'
+
+        server = rpc.get_server(tgt, ends, serializer='foo')
+
+        mock_ser.assert_called_once_with('foo')
+        mock_get.assert_called_once_with(rpc.TRANSPORT, tgt, ends,
+                                         executor='eventlet', serializer=ser)
+        self.assertEqual('server', server)
+
+    @mock.patch.object(rpc, 'profiler', mock.Mock())
+    @mock.patch.object(rpc, 'ProfilerRequestContextSerializer')
+    @mock.patch.object(messaging, 'RPCClient')
+    def test_get_client_profiler_enabled(self, mock_client, mock_ser):
+        rpc.TRANSPORT = mock.Mock()
+        tgt = mock.Mock()
+        ser = mock.Mock()
+        mock_client.return_value = 'client'
+        mock_ser.return_value = ser
+
+        client = rpc.get_client(tgt, version_cap='1.0', serializer='foo')
+
+        mock_ser.assert_called_once_with('foo')
+        mock_client.assert_called_once_with(rpc.TRANSPORT,
+                                            tgt, version_cap='1.0',
+                                            serializer=ser)
+        self.assertEqual('client', client)
+
+    @mock.patch.object(rpc, 'profiler', mock.Mock())
+    @mock.patch.object(rpc, 'ProfilerRequestContextSerializer')
+    @mock.patch.object(messaging, 'get_rpc_server')
+    def test_get_server_profiler_enabled(self, mock_get, mock_ser):
         rpc.TRANSPORT = mock.Mock()
         ser = mock.Mock()
         tgt = mock.Mock()
@@ -362,6 +400,43 @@ class TestRequestContextSerializer(test.NoDBTestCase):
         self.ser.deserialize_context('context')
 
         mock_req.from_dict.assert_called_once_with('context')
+
+
+class TestProfilerRequestContextSerializer(test.NoDBTestCase):
+    def setUp(self):
+        super(TestProfilerRequestContextSerializer, self).setUp()
+        self.ser = rpc.ProfilerRequestContextSerializer(mock.Mock())
+
+    @mock.patch('nova.rpc.profiler')
+    def test_serialize_context(self, mock_profiler):
+        prof = mock_profiler.get.return_value
+        prof.hmac_key = 'swordfish'
+        prof.get_base_id.return_value = 'baseid'
+        prof.get_id.return_value = 'parentid'
+
+        context = mock.Mock()
+        context.to_dict.return_value = {'project_id': 'test'}
+
+        self.assertEqual({'project_id': 'test',
+                          'trace_info': {
+                              'hmac_key': 'swordfish',
+                              'base_id': 'baseid',
+                              'parent_id': 'parentid'}},
+                          self.ser.serialize_context(context))
+
+    @mock.patch('nova.rpc.profiler')
+    def test_deserialize_context(self, mock_profiler):
+        serialized = {'project_id': 'test',
+                      'trace_info': {
+                          'hmac_key': 'swordfish',
+                          'base_id': 'baseid',
+                          'parent_id': 'parentid'}}
+
+        context = self.ser.deserialize_context(serialized)
+
+        self.assertEqual('test', context.project_id)
+        mock_profiler.init.assert_called_once_with(
+            hmac_key='swordfish', base_id='baseid', parent_id='parentid')
 
 
 class TestClientRouter(test.NoDBTestCase):

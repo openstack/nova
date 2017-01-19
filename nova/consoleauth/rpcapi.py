@@ -19,11 +19,13 @@ Client side of the consoleauth RPC API.
 import oslo_messaging as messaging
 
 import nova.conf
+from nova import profiler
 from nova import rpc
 
 CONF = nova.conf.CONF
 
 
+@profiler.trace_cls("rpc")
 class ConsoleAuthAPI(object):
     '''Client side of the consoleauth rpc API.
 

@@ -34,6 +34,7 @@ from nova.network import linux_net
 from nova.network import model as network_model
 from nova.network import os_vif_util
 from nova import objects
+from nova import profiler
 from nova import utils
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import designer
@@ -82,6 +83,7 @@ def is_vif_model_valid_for_virt(virt_type, vif_model):
     return vif_model in valid_models[virt_type]
 
 
+@profiler.trace_cls("vif_driver")
 class LibvirtGenericVIFDriver(object):
     """Generic VIF driver for libvirt networking."""
 

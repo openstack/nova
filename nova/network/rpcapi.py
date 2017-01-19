@@ -22,12 +22,14 @@ from oslo_serialization import jsonutils
 import nova.conf
 from nova import exception
 from nova.objects import base as objects_base
+from nova import profiler
 from nova import rpc
 
 
 CONF = nova.conf.CONF
 
 
+@profiler.trace_cls("rpc")
 class NetworkAPI(object):
     '''Client side of the network rpc API.
 

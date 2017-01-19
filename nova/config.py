@@ -16,12 +16,15 @@
 #    under the License.
 
 from oslo_log import log
+from oslo_utils import importutils
 
 from nova.common import config
 import nova.conf
 from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova import rpc
 from nova import version
+
+profiler = importutils.try_import('osprofiler.opts')
 
 
 CONF = nova.conf.CONF
@@ -39,6 +42,8 @@ def parse_args(argv, default_config_files=None, configure_db=True,
     log.set_defaults(default_log_levels=log.get_default_log_levels() +
                      extra_default_log_levels)
     rpc.set_defaults(control_exchange='nova')
+    if profiler:
+        profiler.set_defaults(CONF)
     config.set_middleware_defaults()
 
     CONF(argv[1:],

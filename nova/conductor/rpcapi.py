@@ -21,11 +21,13 @@ from oslo_versionedobjects import base as ovo_base
 
 import nova.conf
 from nova.objects import base as objects_base
+from nova import profiler
 from nova import rpc
 
 CONF = nova.conf.CONF
 
 
+@profiler.trace_cls("rpc")
 class ConductorAPI(object):
     """Client side of the conductor RPC API
 
@@ -247,6 +249,7 @@ class ConductorAPI(object):
                           object_versions=object_versions)
 
 
+@profiler.trace_cls("rpc")
 class ComputeTaskAPI(object):
     """Client side of the conductor 'compute' namespaced RPC API
 

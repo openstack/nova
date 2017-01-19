@@ -60,6 +60,8 @@ from nova.i18n import _, _LE, _LI, _LW
 import nova.network
 from nova import safe_utils
 
+profiler = importutils.try_import('osprofiler.profiler')
+
 
 CONF = nova.conf.CONF
 
@@ -1045,6 +1047,22 @@ def validate_integer(value, name, min_value=None, max_value=None):
     return value
 
 
+def _serialize_profile_info():
+    if not profiler:
+        return None
+    prof = profiler.get()
+    trace_info = None
+    if prof:
+        # FIXME(DinaBelova): we'll add profiler.get_info() method
+        # to extract this info -> we'll need to update these lines
+        trace_info = {
+            "hmac_key": prof.hmac_key,
+            "base_id": prof.get_base_id(),
+            "parent_id": prof.get_id()
+        }
+    return trace_info
+
+
 def spawn(func, *args, **kwargs):
     """Passthrough method for eventlet.spawn.
 
@@ -1056,6 +1074,7 @@ def spawn(func, *args, **kwargs):
     context when using this method to spawn a new thread.
     """
     _context = common_context.get_current()
+    profiler_info = _serialize_profile_info()
 
     @functools.wraps(func)
     def context_wrapper(*args, **kwargs):
@@ -1063,6 +1082,8 @@ def spawn(func, *args, **kwargs):
         # available for the logger to pull from threadlocal storage.
         if _context is not None:
             _context.update_store()
+        if profiler_info and profiler:
+            profiler.init(**profiler_info)
         return func(*args, **kwargs)
 
     return eventlet.spawn(context_wrapper, *args, **kwargs)
@@ -1079,6 +1100,7 @@ def spawn_n(func, *args, **kwargs):
     context when using this method to spawn a new thread.
     """
     _context = common_context.get_current()
+    profiler_info = _serialize_profile_info()
 
     @functools.wraps(func)
     def context_wrapper(*args, **kwargs):
@@ -1086,6 +1108,8 @@ def spawn_n(func, *args, **kwargs):
         # available for the logger to pull from threadlocal storage.
         if _context is not None:
             _context.update_store()
+        if profiler_info and profiler:
+            profiler.init(**profiler_info)
         func(*args, **kwargs)
 
     eventlet.spawn_n(context_wrapper, *args, **kwargs)

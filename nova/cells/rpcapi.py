@@ -32,6 +32,7 @@ from nova import exception
 from nova.i18n import _LE
 from nova import objects
 from nova.objects import base as objects_base
+from nova import profiler
 from nova import rpc
 
 LOG = logging.getLogger(__name__)
@@ -39,6 +40,7 @@ LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
 
 
+@profiler.trace_cls("rpc")
 class CellsAPI(object):
     '''Cells client-side RPC API
 

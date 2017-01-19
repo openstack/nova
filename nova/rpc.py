@@ -32,6 +32,7 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_service import periodic_task
+from oslo_utils import importutils
 from oslo_utils import timeutils
 
 import nova.conf
@@ -39,6 +40,8 @@ import nova.context
 import nova.exception
 from nova.i18n import _
 from nova import objects
+
+profiler = importutils.try_import("osprofiler.profiler")
 
 
 CONF = nova.conf.CONF
@@ -150,13 +153,45 @@ class RequestContextSerializer(messaging.Serializer):
         return nova.context.RequestContext.from_dict(context)
 
 
+class ProfilerRequestContextSerializer(RequestContextSerializer):
+    def serialize_context(self, context):
+        _context = super(ProfilerRequestContextSerializer,
+                         self).serialize_context(context)
+
+        prof = profiler.get()
+        if prof:
+            # FIXME(DinaBelova): we'll add profiler.get_info() method
+            # to extract this info -> we'll need to update these lines
+            trace_info = {
+                "hmac_key": prof.hmac_key,
+                "base_id": prof.get_base_id(),
+                "parent_id": prof.get_id()
+            }
+            _context.update({"trace_info": trace_info})
+
+        return _context
+
+    def deserialize_context(self, context):
+        trace_info = context.pop("trace_info", None)
+        if trace_info:
+            profiler.init(**trace_info)
+
+        return super(ProfilerRequestContextSerializer,
+                     self).deserialize_context(context)
+
+
 def get_transport_url(url_str=None):
     return messaging.TransportURL.parse(CONF, url_str, TRANSPORT_ALIASES)
 
 
 def get_client(target, version_cap=None, serializer=None):
     assert TRANSPORT is not None
-    serializer = RequestContextSerializer(serializer)
+
+    if profiler:
+        serializer = ProfilerRequestContextSerializer(serializer)
+    else:
+        serializer = RequestContextSerializer(serializer)
+
     return messaging.RPCClient(TRANSPORT,
                                target,
                                version_cap=version_cap,
@@ -165,7 +200,12 @@ def get_client(target, version_cap=None, serializer=None):
 
 def get_server(target, endpoints, serializer=None):
     assert TRANSPORT is not None
-    serializer = RequestContextSerializer(serializer)
+
+    if profiler:
+        serializer = ProfilerRequestContextSerializer(serializer)
+    else:
+        serializer = RequestContextSerializer(serializer)
+
     return messaging.get_rpc_server(TRANSPORT,
                                     target,
                                     endpoints,
