@@ -32,3 +32,10 @@ deprecations:
     - ``floating_ip_dns_manager``
     - ``instance_dns_manager``
     - ``instance_dns_domain``
+
+    The following options, found in ``quota``, are also deprecated.
+
+    - ``floating_ips``
+    - ``fixed_ips``
+    - ``security_groups``
+    - ``security_group_rules``
