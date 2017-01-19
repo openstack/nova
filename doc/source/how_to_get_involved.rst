@@ -326,9 +326,9 @@ becoming a member of nova-core.
 How to do great nova-spec reviews?
 ==================================
 
-http://specs.openstack.org/openstack/nova-specs/specs/newton/template.html
+http://specs.openstack.org/openstack/nova-specs/specs/ocata/template.html
 
-http://docs.openstack.org/developer/nova/devref/kilo.blueprints.html#when-is-a-blueprint-needed
+http://docs.openstack.org/developer/nova/blueprints.html#specs
 
 Spec reviews are always a step ahead of the normal code reviews. Follow
 the above links for some great information on specs/reviews.
