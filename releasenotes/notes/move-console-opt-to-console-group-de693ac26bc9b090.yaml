@@ -1,0 +1,5 @@
+---
+upgrade:
+  - |
+    ``console_public_hostname`` console options under the ``DEFAULT`` group
+    have been moved to the ``xenserver`` group.

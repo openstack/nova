@@ -110,7 +110,8 @@ class ConsoleProxyManager(manager.Manager):
             pool_info['password'] = self.driver.fix_pool_password(
                                                     pool_info['password'])
             pool_info['host'] = self.host
-            pool_info['public_hostname'] = CONF.console_public_hostname
+            pool_info['public_hostname'] = \
+                CONF.xenserver.console_public_hostname
             pool_info['console_type'] = self.driver.console_type
             pool_info['compute_host'] = instance_host
             pool = self.db.console_pool_create(context, pool_info)
