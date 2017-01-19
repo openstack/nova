@@ -71,6 +71,13 @@ def safe_connect(f):
                     'Placement is optional in Newton, but required '
                     'in Ocata. Please enable the placement service '
                     'before upgrading.'))
+        except ks_exc.DiscoveryFailure:
+            # TODO(_gryf): Looks like DiscoveryFailure is not the only missing
+            # exception here. In Pike we should take care about keystoneauth1
+            # failures handling globally.
+            warn_limit(self,
+                       _LW('Discovering suitable URL for placement API '
+                           'failed.'))
         except ks_exc.ConnectFailure:
             msg = _LW('Placement API service is not responding.')
             LOG.warning(msg)
