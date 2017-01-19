@@ -48,7 +48,7 @@ class Create(task.Task):
         :param instance: The nova instance.
         :param stg_ftsk: FeedTask to defer storage connectivity operations.
         """
-        super(Create, self).__init__('crt_vm')
+        super(Create, self).__init__('crt_vm', provides='lpar_wrap')
         self.instance = instance
         self.adapter = adapter
         self.host_wrapper = host_wrapper

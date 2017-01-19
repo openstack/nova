@@ -536,3 +536,31 @@ class TestVM(test.NoDBTestCase):
         self.apt.read.side_effect = pvm_exc.Error("message", response=resp)
         self.assertRaises(pvm_exc.Error, vm.get_vm_qp, self.apt,
                           'lpar_uuid', log_errors=False)
+
+    @mock.patch('nova.virt.powervm.vm.get_pvm_uuid')
+    @mock.patch('pypowervm.wrappers.network.CNA.search')
+    @mock.patch('pypowervm.wrappers.network.CNA.get')
+    def test_get_cnas(self, mock_get, mock_search, mock_uuid):
+        # No kwargs: get
+        self.assertEqual(mock_get.return_value, vm.get_cnas(self.apt, 'inst'))
+        mock_uuid.assert_called_once_with('inst')
+        mock_get.assert_called_once_with(self.apt, parent_type=pvm_lpar.LPAR,
+                                         parent_uuid=mock_uuid.return_value)
+        mock_search.assert_not_called()
+        # With kwargs: search
+        mock_get.reset_mock()
+        mock_uuid.reset_mock()
+        self.assertEqual(mock_search.return_value, vm.get_cnas(
+            self.apt, 'inst', one=2, three=4))
+        mock_uuid.assert_called_once_with('inst')
+        mock_search.assert_called_once_with(
+            self.apt, parent_type=pvm_lpar.LPAR,
+            parent_uuid=mock_uuid.return_value, one=2, three=4)
+        mock_get.assert_not_called()
+
+    def test_norm_mac(self):
+        EXPECTED = "12:34:56:78:90:ab"
+        self.assertEqual(EXPECTED, vm.norm_mac("12:34:56:78:90:ab"))
+        self.assertEqual(EXPECTED, vm.norm_mac("1234567890ab"))
+        self.assertEqual(EXPECTED, vm.norm_mac("12:34:56:78:90:AB"))
+        self.assertEqual(EXPECTED, vm.norm_mac("1234567890AB"))

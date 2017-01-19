@@ -30,6 +30,7 @@ import retrying
 from taskflow import task
 
 from nova.api.metadata import base as instance_metadata
+from nova.network import model as network_model
 from nova.virt import configdrive
 from nova.virt.powervm import vm
 
@@ -134,9 +135,8 @@ class ConfigDrivePowerVM(object):
                     LOG.exception("Config drive ISO could not be built",
                                   instance=instance)
 
-    # TODO(esberglu) Add mgmt_cna when networking is introduced
     def create_cfg_drv_vopt(self, instance, injected_files, network_info,
-                            stg_ftsk, admin_pass=None):
+                            stg_ftsk, admin_pass=None, mgmt_cna=None):
         """Create the config drive virtual optical and attach to VM.
 
         :param instance: The VM instance from OpenStack.
@@ -145,7 +145,14 @@ class ConfigDrivePowerVM(object):
         :param network_info: The network_info from the nova spawn method.
         :param stg_ftsk: FeedTask to defer storage connectivity operations.
         :param admin_pass: (Optional) password to inject for the VM.
+        :param mgmt_cna: (Optional) The management (RMC) CNA wrapper.
         """
+        # If there is a management client network adapter, then we should
+        # convert that to a VIF and add it to the network info
+        if mgmt_cna is not None:
+            network_info = copy.deepcopy(network_info)
+            network_info.append(self._mgmt_cna_to_vif(mgmt_cna))
+
         iso_path, file_name = self._create_cfg_dr_iso(
             instance, injected_files, network_info, admin_pass=admin_pass)
 
@@ -168,6 +175,39 @@ class ConfigDrivePowerVM(object):
 
         # Add the subtask to create the mapping when the FeedTask runs
         stg_ftsk.wrapper_tasks[self.vios_uuid].add_functor_subtask(add_func)
+
+    def _mgmt_cna_to_vif(self, cna):
+        """Converts the mgmt CNA to VIF format for network injection."""
+        mac = vm.norm_mac(cna.mac)
+        ipv6_link_local = self._mac_to_link_local(mac)
+
+        subnet = network_model.Subnet(
+            version=6, cidr=_LLA_SUBNET,
+            ips=[network_model.FixedIP(address=ipv6_link_local)])
+        network = network_model.Network(id='mgmt', subnets=[subnet],
+                                        injected='yes')
+        return network_model.VIF(id='mgmt_vif', address=mac,
+                                 network=network)
+
+    @staticmethod
+    def _mac_to_link_local(mac):
+        # Convert the address to IPv6.  The first step is to separate out the
+        # mac address
+        splits = mac.split(':')
+
+        # Create EUI-64 id per RFC 4291 Appendix A
+        splits.insert(3, 'ff')
+        splits.insert(4, 'fe')
+
+        # Create modified EUI-64 id via bit flip per RFC 4291 Appendix A
+        splits[0] = "%.2x" % (int(splits[0], 16) ^ 0b00000010)
+
+        # Convert to the IPv6 link local format.  The prefix is fe80::.  Join
+        # the hexes together at every other digit.
+        ll = ['fe80:']
+        ll.extend([splits[x] + splits[x + 1]
+                   for x in range(0, len(splits), 2)])
+        return ':'.join(ll)
 
     def dlt_vopt(self, instance, stg_ftsk):
         """Deletes the virtual optical and scsi mappings for a VM.

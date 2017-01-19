@@ -36,6 +36,7 @@ from nova.virt import driver
 from nova.virt.powervm.disk import ssp
 from nova.virt.powervm import host as pvm_host
 from nova.virt.powervm.tasks import base as tf_base
+from nova.virt.powervm.tasks import network as tf_net
 from nova.virt.powervm.tasks import storage as tf_stg
 from nova.virt.powervm.tasks import vm as tf_vm
 from nova.virt.powervm import vm
@@ -179,7 +180,11 @@ class PowerVMDriver(driver.ComputeDriver):
         flow_spawn.add(tf_vm.Create(
             self.adapter, self.host_wrapper, instance, stg_ftsk))
 
-        # TODO(thorst, efried) Plug the VIFs
+        # Create a flow for the IO
+        flow_spawn.add(tf_net.PlugVifs(
+            self.virtapi, self.adapter, instance, network_info))
+        flow_spawn.add(tf_net.PlugMgmtVif(
+            self.adapter, instance))
 
         # Create the boot image.
         flow_spawn.add(tf_stg.CreateDiskForImg(
@@ -232,12 +237,15 @@ class PowerVMDriver(driver.ComputeDriver):
             # hard shutdown.
             flow.add(tf_vm.PowerOff(self.adapter, instance,
                                     force_immediate=destroy_disks))
-            # TODO(thorst, efried) Add unplug vifs task
 
             # The FeedTask accumulates storage disconnection tasks to be run in
             # parallel.
             stg_ftsk = pvm_par.build_active_vio_feed_task(
                 self.adapter, xag=[pvm_const.XAG.VIO_SMAP])
+
+            # Call the unplug VIFs task.  While CNAs get removed from the LPAR
+            # directly on the destroy, this clears up the I/O Host side.
+            flow.add(tf_net.UnplugVifs(self.adapter, instance, network_info))
 
             # Add the disconnect/deletion of the vOpt to the transaction
             # manager.
@@ -349,3 +357,11 @@ class PowerVMDriver(driver.ComputeDriver):
                 if e.response.status == 404:
                     sare.reraise = False
                     raise exc.InstanceNotFound(instance_id=instance.uuid)
+
+    def deallocate_networks_on_reschedule(self, instance):
+        """Does the driver want networks deallocated on reschedule?
+
+        :param instance: the instance object.
+        :returns: Boolean value. If True deallocate networks on reschedule.
+        """
+        return True
