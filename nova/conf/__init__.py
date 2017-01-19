@@ -65,7 +65,6 @@ from nova.conf import servicegroup
 from nova.conf import spice
 from nova.conf import ssl
 from nova.conf import upgrade_levels
-from nova.conf import virt
 from nova.conf import vmware
 from nova.conf import vnc
 from nova.conf import workarounds
@@ -120,7 +119,6 @@ servicegroup.register_opts(CONF)
 spice.register_opts(CONF)
 ssl.register_opts(CONF)
 upgrade_levels.register_opts(CONF)
-virt.register_opts(CONF)
 vmware.register_opts(CONF)
 vnc.register_opts(CONF)
 workarounds.register_opts(CONF)

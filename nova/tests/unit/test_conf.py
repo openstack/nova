@@ -19,7 +19,7 @@ import fixtures
 import mock
 from oslo_config import cfg
 
-import nova.conf.virt
+import nova.conf.compute
 from nova import config
 from nova import test
 
@@ -62,7 +62,7 @@ class ConfTest(test.NoDBTestCase):
         return tempfiles
 
     def test_reserved_huge_page(self):
-        nova.conf.virt.register_opts(self.conf)
+        nova.conf.compute.register_opts(self.conf)
 
         paths = self.create_tempfiles(
             [('1',
