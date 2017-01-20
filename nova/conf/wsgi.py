@@ -67,8 +67,22 @@ for the original request, even if it was removed by a SSL terminating proxy.
 
 Possible values:
 
-* None (default) - the request scheme is not influenced by any HTTP headers.
+* None (default) - the request scheme is not influenced by any HTTP headers
 * Valid HTTP header, like HTTP_X_FORWARDED_PROTO
+
+WARNING: Do not set this unless you know what you are doing.
+
+Make sure ALL of the following are true before setting this (assuming the
+values from the example above):
+* Your API is behind a proxy.
+* Your proxy strips the X-Forwarded-Proto header from all incoming requests.
+  In other words, if end users include that header in their requests, the proxy
+  will discard it.
+* Your proxy sets the X-Forwarded-Proto header and sends it to API, but only
+  for requests that originally come in via HTTPS.
+
+If any of those are not true, you should keep this setting set to None.
+
 """),
     cfg.StrOpt(
         'ssl_ca_file',
