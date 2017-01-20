@@ -1096,7 +1096,7 @@ def upgrade(migrate_engine):
     UniqueConstraint('flavorid', 'deleted', table=instance_types,
                      name='uniq_instance_types0flavorid0deleted').create()
 
-    # keypair contraint
+    # keypair constraint
     UniqueConstraint('user_id', 'name', 'deleted', table=key_pairs,
                      name='uniq_key_pairs0user_id0name0deleted').create()
 
