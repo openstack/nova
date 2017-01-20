@@ -683,24 +683,6 @@ class IronicDriver(virt_driver.ComputeDriver):
         """
         return True
 
-    def macs_for_instance(self, instance):
-        """List the MAC addresses of an instance.
-
-        List of MAC addresses for the node which this instance is
-        associated with.
-
-        :param instance: the instance object.
-        :return: None, or a set of MAC ids (e.g. set(['12:34:56:78:90:ab'])).
-            None means 'no constraints', a set means 'these and only these
-            MAC addresses'.
-        """
-        try:
-            node = self._get_node(instance.node)
-        except ironic.exc.NotFound:
-            return None
-        ports = self.ironicclient.call("node.list_ports", node.uuid)
-        return set([p.address for p in ports])
-
     def _get_network_metadata(self, node, network_info):
         """Gets a more complete representation of the instance network info.
 
@@ -715,10 +697,21 @@ class IronicDriver(virt_driver.ComputeDriver):
         ports = self.ironicclient.call("node.list_ports",
                                        node.uuid, detail=True)
 
-        for port in ports:
-            for link in base_metadata['links']:
-                if link['ethernet_mac_address'] == port.address:
-                    link['type'] = 'phy'
+        # TODO(vsaienko) add support of portgroups
+        vif_id_to_objects = {'ports': {}}
+        for p in ports:
+            vif_id = (p.internal_info.get('tenant_vif_port_id') or
+                      p.extra.get('vif_port_id'))
+            if vif_id:
+                vif_id_to_objects['ports'][vif_id] = p
+
+        for link in base_metadata['links']:
+            vif_id = link['vif_id']
+            if vif_id in vif_id_to_objects['ports']:
+                p = vif_id_to_objects['ports'][vif_id]
+                # Ironic updates neutron port's address during attachment
+                link.update({'ethernet_mac_address': p.address,
+                             'type': 'phy'})
 
         return base_metadata
 
@@ -1091,32 +1084,20 @@ class IronicDriver(virt_driver.ComputeDriver):
         LOG.debug("plug: instance_uuid=%(uuid)s vif=%(network_info)s",
                   {'uuid': instance.uuid,
                    'network_info': network_info_str})
-        # start by ensuring the ports are clear
-        self._unplug_vifs(node, instance, network_info)
-
-        ports = self.ironicclient.call("node.list_ports", node.uuid)
-
-        if len(network_info) > len(ports):
-            raise exception.VirtualInterfacePlugException(_(
-                "Ironic node: %(id)s virtual to physical interface count"
-                "  mismatch"
-                " (Vif count: %(vif_count)d, Pif count: %(pif_count)d)")
-                % {'id': node.uuid,
-                   'vif_count': len(network_info),
-                   'pif_count': len(ports)})
-
-        if len(network_info) > 0:
-            # not needed if no vif are defined
-            for vif in network_info:
-                for pif in ports:
-                    if vif['address'] == pif.address:
-                        # attach what neutron needs directly to the port
-                        port_id = six.text_type(vif['id'])
-                        patch = [{'op': 'add',
-                                  'path': '/extra/vif_port_id',
-                                  'value': port_id}]
-                        self.ironicclient.call("port.update", pif.uuid, patch)
-                        break
+        for vif in network_info:
+            port_id = six.text_type(vif['id'])
+            try:
+                self.ironicclient.call("node.vif_attach", node.uuid, port_id,
+                                       retry_on_conflict=False)
+            except ironic.exc.BadRequest as e:
+                msg = (_("Cannot attach VIF %(vif)s to the node %(node)s due "
+                         "to error: %(err)s") % {'vif': port_id,
+                                                 'node': node.uuid, 'err': e})
+                LOG.error(msg)
+                raise exception.VirtualInterfacePlugException(msg)
+            except ironic.exc.Conflict:
+                # NOTE (vsaienko) Pass since VIF already attached.
+                pass
 
     def _unplug_vifs(self, node, instance, network_info):
         # NOTE(PhilDay): Accessing network_info will block if the thread
@@ -1126,19 +1107,16 @@ class IronicDriver(virt_driver.ComputeDriver):
         LOG.debug("unplug: instance_uuid=%(uuid)s vif=%(network_info)s",
                   {'uuid': instance.uuid,
                    'network_info': network_info_str})
-        if network_info and len(network_info) > 0:
-            ports = self.ironicclient.call("node.list_ports", node.uuid,
-                                      detail=True)
-
-            # not needed if no vif are defined
-            for pif in ports:
-                if 'vif_port_id' in pif.extra:
-                    # we can not attach a dict directly
-                    patch = [{'op': 'remove', 'path': '/extra/vif_port_id'}]
-                    try:
-                        self.ironicclient.call("port.update", pif.uuid, patch)
-                    except ironic.exc.BadRequest:
-                        pass
+        if not network_info:
+            return
+        for vif in network_info:
+            port_id = six.text_type(vif['id'])
+            try:
+                self.ironicclient.call("node.vif_detach", node.uuid,
+                                       port_id)
+            except ironic.exc.BadRequest:
+                LOG.debug("VIF %(vif)s isn't attached to Ironic node %(node)s",
+                          {'vif': port_id, 'node': node.uuid})
 
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks.
@@ -1240,8 +1218,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         Neutron. If using the neutron network interface (separate networks for
         the control plane and tenants), return None here to indicate that the
         port should not yet be bound; Ironic will make a port-update call to
-        Neutron later to tell Neutron to bind the port. Otherwise, use the
-        default behavior and allow the port to be bound immediately.
+        Neutron later to tell Neutron to bind the port.
 
         NOTE: the late binding is important for security. If an ML2 mechanism
         manages to connect the tenant network to the baremetal machine before
@@ -1257,16 +1234,12 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param context:  request context
         :param instance: nova.objects.instance.Instance that the network
                          ports will be associated with
-        :returns: a string representing the host ID, or None
+        :returns: None
         """
-
-        node = self.ironicclient.call('node.get', instance.node,
-                                      fields=['network_interface'])
-        if node.network_interface == 'neutron':
-            return None
-        # flat network, go ahead and allow the port to be bound
-        return super(IronicDriver, self).network_binding_host_id(
-            context, instance)
+        # NOTE(vsaienko) Ironic will set binding:host_id later with port-update
+        # call when updating mac address or setting binding:profile
+        # to tell Neutron to bind the port.
+        return None
 
     def _get_node_console_with_reset(self, instance):
         """Acquire console information for an instance.

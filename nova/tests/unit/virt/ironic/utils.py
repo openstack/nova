@@ -58,6 +58,7 @@ def get_test_port(**kw):
                 'node_uuid': kw.get('node_uuid', get_test_node().uuid),
                 'address': kw.get('address', 'FF:FF:FF:FF:FF:FF'),
                 'extra': kw.get('extra', {}),
+                'internal_info': kw.get('internal_info', {}),
                 'created_at': kw.get('created_at'),
                 'updated_at': kw.get('updated_at')})()
 
@@ -120,7 +121,7 @@ class FakeNodeClient(object):
     def get_by_instance_uuid(self, instance_uuid, fields=None):
         pass
 
-    def list_ports(self, node_uuid):
+    def list_ports(self, node_uuid, detail=False):
         pass
 
     def set_power_state(self, node_uuid, target):
@@ -133,6 +134,12 @@ class FakeNodeClient(object):
         pass
 
     def validate(self, node_uuid):
+        pass
+
+    def vif_attach(self, node_uuid, port_id):
+        pass
+
+    def vif_detach(self, node_uuid, port_id):
         pass
 
 
