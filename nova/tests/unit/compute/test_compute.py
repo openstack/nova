@@ -157,8 +157,8 @@ class BaseTestCase(test.TestCase):
 
         # override tracker with a version that doesn't need the database:
         fake_rt = fake_resource_tracker.FakeResourceTracker(self.compute.host,
-                    self.compute.driver, NODENAME)
-        self.compute._resource_tracker_dict[NODENAME] = fake_rt
+                    self.compute.driver)
+        self.compute._resource_tracker = fake_rt
 
         def fake_get_compute_nodes_in_db(self, context, use_slave=False):
             fake_compute_nodes = [{'local_gb': 259,
@@ -255,7 +255,7 @@ class BaseTestCase(test.TestCase):
         self.compute_api = compute.API()
 
         # Just to make long lines short
-        self.rt = self.compute._get_resource_tracker(NODENAME)
+        self.rt = self.compute._get_resource_tracker()
 
     def tearDown(self):
         ctxt = context.get_admin_context()
@@ -1467,7 +1467,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.build_and_run_instance(self.context, instance, {}, {},
                                             filter_properties,
                                             block_device_mapping=[])
-        self.assertEqual(999999999999, self.rt.compute_node.memory_mb_used)
+        cn = self.rt.compute_nodes[NODENAME]
+        self.assertEqual(999999999999, cn.memory_mb_used)
 
     def test_create_instance_unlimited_disk(self):
         self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
@@ -1488,24 +1489,26 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance_obj(params)
         self.compute.build_and_run_instance(self.context, instance, {}, {},
                 {}, block_device_mapping=[], limits=limits)
-        self.assertEqual(1024, self.rt.compute_node.memory_mb_used)
-        self.assertEqual(256, self.rt.compute_node.local_gb_used)
+
+        cn = self.rt.compute_nodes[NODENAME]
+        self.assertEqual(1024, cn.memory_mb_used)
+        self.assertEqual(256, cn.local_gb_used)
 
         params = {"flavor": {"memory_mb": 2048, "root_gb": 256,
                              "ephemeral_gb": 256}}
         instance = self._create_fake_instance_obj(params)
         self.compute.build_and_run_instance(self.context, instance, {}, {},
                 {}, block_device_mapping=[], limits=limits)
-        self.assertEqual(3072, self.rt.compute_node.memory_mb_used)
-        self.assertEqual(768, self.rt.compute_node.local_gb_used)
+        self.assertEqual(3072, cn.memory_mb_used)
+        self.assertEqual(768, cn.local_gb_used)
 
         params = {"flavor": {"memory_mb": 8192, "root_gb": 8192,
                              "ephemeral_gb": 8192}}
         instance = self._create_fake_instance_obj(params)
         self.compute.build_and_run_instance(self.context, instance,
                 {}, {}, {}, block_device_mapping=[], limits=limits)
-        self.assertEqual(3072, self.rt.compute_node.memory_mb_used)
-        self.assertEqual(768, self.rt.compute_node.local_gb_used)
+        self.assertEqual(3072, cn.memory_mb_used)
+        self.assertEqual(768, cn.local_gb_used)
 
     def test_create_multiple_instance_with_neutron_port(self):
         instance_type = flavors.get_default_flavor()
@@ -1547,7 +1550,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.build_and_run_instance(self.context, instance, {}, {},
                 filter_properties, block_device_mapping=[])
 
-        self.assertEqual(instance_mb, self.rt.compute_node.memory_mb_used)
+        cn = self.rt.compute_nodes[NODENAME]
+        self.assertEqual(instance_mb, cn.memory_mb_used)
 
     def test_create_instance_with_oversubscribed_ram_fail(self):
         """Test passing of oversubscribed ram policy from the scheduler, but
@@ -1594,7 +1598,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.build_and_run_instance(self.context, instance, {}, {},
                 filter_properties, block_device_mapping=[])
 
-        self.assertEqual(2, self.rt.compute_node.vcpus_used)
+        cn = self.rt.compute_nodes[NODENAME]
+        self.assertEqual(2, cn.vcpus_used)
 
         # create one more instance:
         params = {"flavor": {"memory_mb": 10, "root_gb": 1,
@@ -1603,13 +1608,13 @@ class ComputeTestCase(BaseTestCase):
         self.compute.build_and_run_instance(self.context, instance, {}, {},
                 filter_properties, block_device_mapping=[])
 
-        self.assertEqual(3, self.rt.compute_node.vcpus_used)
+        self.assertEqual(3, cn.vcpus_used)
 
         # delete the instance:
         instance['vm_state'] = vm_states.DELETED
         self.rt.update_usage(self.context, instance, NODENAME)
 
-        self.assertEqual(2, self.rt.compute_node.vcpus_used)
+        self.assertEqual(2, cn.vcpus_used)
 
         # now oversubscribe vcpus and fail:
         params = {"flavor": {"memory_mb": 10, "root_gb": 1,
@@ -1644,7 +1649,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.build_and_run_instance(self.context, instance, {}, {},
                 filter_properties, block_device_mapping=[])
 
-        self.assertEqual(instance_gb, self.rt.compute_node.local_gb_used)
+        cn = self.rt.compute_nodes[NODENAME]
+        self.assertEqual(instance_gb, cn.local_gb_used)
 
     def test_create_instance_with_oversubscribed_disk_fail(self):
         """Test passing of oversubscribed disk policy from the scheduler, but
@@ -5240,7 +5246,7 @@ class ComputeTestCase(BaseTestCase):
         reservations = list('fake_res')
 
         # Get initial memory usage
-        memory_mb_used = self.rt.compute_node.memory_mb_used
+        memory_mb_used = self.rt.compute_nodes[NODENAME].memory_mb_used
 
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
@@ -5252,7 +5258,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(flavor.flavorid, '1')
 
         # Memory usage should have increased by the claim
-        self.assertEqual(self.rt.compute_node.memory_mb_used,
+        self.assertEqual(self.rt.compute_nodes[NODENAME].memory_mb_used,
                          memory_mb_used + flavor.memory_mb)
 
         instance.vm_state = old_vm_state
@@ -5268,7 +5274,7 @@ class ComputeTestCase(BaseTestCase):
                 filter_properties={}, node=None, clean_shutdown=True)
 
         # Memory usage should increase after the resize as well
-        self.assertEqual(self.rt.compute_node.memory_mb_used,
+        self.assertEqual(self.rt.compute_nodes[NODENAME].memory_mb_used,
              memory_mb_used + flavor.memory_mb +
              new_instance_type_ref.memory_mb)
 
@@ -5297,7 +5303,7 @@ class ComputeTestCase(BaseTestCase):
                     disk_info={}, image={}, instance=instance)
 
         # Memory usage shouldn't had changed
-        self.assertEqual(self.rt.compute_node.memory_mb_used,
+        self.assertEqual(self.rt.compute_nodes[NODENAME].memory_mb_used,
              memory_mb_used + flavor.memory_mb +
              new_instance_type_ref.memory_mb)
 
@@ -5318,7 +5324,7 @@ class ComputeTestCase(BaseTestCase):
 
         # Resources from the migration (based on initial flavor) should
         # be freed now
-        self.assertEqual(self.rt.compute_node.memory_mb_used,
+        self.assertEqual(self.rt.compute_nodes[NODENAME].memory_mb_used,
                          memory_mb_used + new_instance_type_ref.memory_mb)
 
         instance.refresh()
@@ -5408,7 +5414,8 @@ class ComputeTestCase(BaseTestCase):
 
         self.rt.tracked_migrations[instance.uuid] = (migration,
                                                      instance.flavor)
-        self.rt.compute_node.numa_topology = jsonutils.dumps(
+        cn = self.rt.compute_nodes[NODENAME]
+        cn.numa_topology = jsonutils.dumps(
             host_numa_topology.obj_to_primitive())
 
         with mock.patch.object(self.compute.network_api,
@@ -5419,7 +5426,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(vm_states.ACTIVE, instance['vm_state'])
 
         updated_topology = objects.NUMATopology.obj_from_primitive(
-            jsonutils.loads(self.rt.compute_node.numa_topology))
+            jsonutils.loads(cn.numa_topology))
 
         # after confirming resize all cpus on currect host must be free
         self.assertEqual(2, len(updated_topology.cells))
@@ -5526,7 +5533,7 @@ class ComputeTestCase(BaseTestCase):
         reservations = list('fake_res')
 
         # Get initial memory usage
-        memory_mb_used = self.rt.compute_node.memory_mb_used
+        memory_mb_used = self.rt.compute_nodes[NODENAME].memory_mb_used
 
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
@@ -5537,7 +5544,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(flavor.flavorid, '1')
 
         # Memory usage should have increased by the claim
-        self.assertEqual(self.rt.compute_node.memory_mb_used,
+        self.assertEqual(self.rt.compute_nodes[NODENAME].memory_mb_used,
                          memory_mb_used + flavor.memory_mb)
 
         old_vm_state = instance['vm_state']
@@ -5555,7 +5562,7 @@ class ComputeTestCase(BaseTestCase):
                 clean_shutdown=True)
 
         # Memory usage should increase after the resize as well
-        self.assertEqual(self.rt.compute_node.memory_mb_used,
+        self.assertEqual(self.rt.compute_nodes[NODENAME].memory_mb_used,
             memory_mb_used + flavor.memory_mb +
             new_instance_type_ref.memory_mb)
 
@@ -5583,7 +5590,7 @@ class ComputeTestCase(BaseTestCase):
                     disk_info={}, image={}, instance=instance)
 
         # Memory usage shouldn't had changed
-        self.assertEqual(self.rt.compute_node.memory_mb_used,
+        self.assertEqual(self.rt.compute_nodes[NODENAME].memory_mb_used,
             memory_mb_used + flavor.memory_mb +
             new_instance_type_ref.memory_mb)
 
@@ -5603,7 +5610,7 @@ class ComputeTestCase(BaseTestCase):
 
         # Resources from the migration (based on initial flavor) should
         # be freed now
-        self.assertEqual(self.rt.compute_node.memory_mb_used,
+        self.assertEqual(self.rt.compute_nodes[NODENAME].memory_mb_used,
                          memory_mb_used + flavor.memory_mb)
 
         instance.refresh()
@@ -6954,27 +6961,15 @@ class ComputeTestCase(BaseTestCase):
                 conductor_instance_update.assert_has_calls([
                     mock.call()])
 
-    def test_get_resource_tracker_fail(self):
-        self.assertRaises(exception.NovaException,
-                          self.compute._get_resource_tracker,
-                          'invalidnodename')
-
     @mock.patch.object(objects.Instance, 'save')
     def test_instance_update_host_check(self, mock_save):
         # make sure rt usage doesn't happen if the host or node is different
-        def fail_get(self, nodename):
-            raise test.TestingException("wrong host/node")
+        def fail_get(self):
+            raise test.TestingException("wrong host")
         self.stub_out('nova.compute.manager.ComputeManager.'
                       '_get_resource_tracker', fail_get)
 
         instance = self._create_fake_instance_obj({'host': 'someotherhost'})
-        self.compute._instance_update(self.context, instance, vcpus=4)
-
-        instance = self._create_fake_instance_obj({'node': 'someothernode'})
-        self.compute._instance_update(self.context, instance, vcpus=4)
-
-        params = {'host': 'someotherhost', 'node': 'someothernode'}
-        instance = self._create_fake_instance_obj(params)
         self.compute._instance_update(self.context, instance, vcpus=4)
 
     @mock.patch.object(compute_manager.ComputeManager,
@@ -7176,18 +7171,19 @@ class ComputeTestCase(BaseTestCase):
         self.assertNotEqual(0, instance.deleted)
 
     def test_terminate_instance_updates_tracker(self):
-        rt = self.compute._get_resource_tracker(NODENAME)
+        rt = self.compute._get_resource_tracker()
         admin_context = context.get_admin_context()
 
-        self.assertEqual(0, rt.compute_node.vcpus_used)
+        cn = self.rt.compute_nodes[NODENAME]
+        self.assertEqual(0, cn.vcpus_used)
         instance = self._create_fake_instance_obj()
         instance.vcpus = 1
 
         rt.instance_claim(admin_context, instance, NODENAME)
-        self.assertEqual(1, rt.compute_node.vcpus_used)
+        self.assertEqual(1, cn.vcpus_used)
 
         self.compute.terminate_instance(admin_context, instance, [], [])
-        self.assertEqual(0, rt.compute_node.vcpus_used)
+        self.assertEqual(0, cn.vcpus_used)
 
     @mock.patch('nova.compute.manager.ComputeManager'
                 '._notify_about_instance_usage')
@@ -7197,23 +7193,24 @@ class ComputeTestCase(BaseTestCase):
     # update properly.
     @mock.patch('nova.objects.Instance.destroy')
     def test_init_deleted_instance_updates_tracker(self, noop1, noop2, noop3):
-        rt = self.compute._get_resource_tracker(NODENAME)
+        rt = self.compute._get_resource_tracker()
         admin_context = context.get_admin_context()
 
-        self.assertEqual(0, rt.compute_node.vcpus_used)
+        cn = rt.compute_nodes[NODENAME]
+        self.assertEqual(0, cn.vcpus_used)
         instance = self._create_fake_instance_obj()
         instance.vcpus = 1
 
-        self.assertEqual(0, rt.compute_node.vcpus_used)
+        self.assertEqual(0, cn.vcpus_used)
 
         rt.instance_claim(admin_context, instance, NODENAME)
         self.compute._init_instance(admin_context, instance)
-        self.assertEqual(1, rt.compute_node.vcpus_used)
+        self.assertEqual(1, cn.vcpus_used)
 
         instance.vm_state = vm_states.DELETED
         self.compute._init_instance(admin_context, instance)
 
-        self.assertEqual(0, rt.compute_node.vcpus_used)
+        self.assertEqual(0, cn.vcpus_used)
 
     def test_init_instance_for_partial_deletion(self):
         admin_context = context.get_admin_context()
@@ -7515,9 +7512,6 @@ class ComputeTestCase(BaseTestCase):
         def fake_drop_move_claim(*args, **kwargs):
             pass
 
-        def fake_get_resource_tracker(self):
-            return fake_rt
-
         def fake_setup_networks_on_host(self, *args, **kwargs):
             pass
 
@@ -7525,7 +7519,7 @@ class ComputeTestCase(BaseTestCase):
             mock.patch.object(fake_rt, 'drop_move_claim',
                               side_effect=fake_drop_move_claim),
             mock.patch.object(self.compute, '_get_resource_tracker',
-                              side_effect=fake_get_resource_tracker),
+                              return_value=fake_rt),
             mock.patch.object(self.compute.network_api,
                               'setup_networks_on_host',
                               side_effect=fake_setup_networks_on_host)
@@ -11517,7 +11511,7 @@ class EvacuateHostTestCase(BaseTestCase):
         self.inst.save()
 
         def fake_get_compute_info(cls, context, host):
-            cn = objects.ComputeNode(hypervisor_hostname=self.rt.nodename)
+            cn = objects.ComputeNode(hypervisor_hostname=NODENAME)
             return cn
 
         self.stub_out('nova.compute.manager.ComputeManager._get_compute_info',
@@ -11565,7 +11559,7 @@ class EvacuateHostTestCase(BaseTestCase):
         def fake_get_compute_info(context, host):
             self.assertTrue(context.is_admin)
             self.assertEqual('fake-mini', host)
-            cn = objects.ComputeNode(hypervisor_hostname=self.rt.nodename)
+            cn = objects.ComputeNode(hypervisor_hostname=NODENAME)
             return cn
 
         with test.nested(
@@ -11821,7 +11815,7 @@ class EvacuateHostTestCase(BaseTestCase):
         patch_on_disk = mock.patch.object(
             self.compute.driver, 'instance_on_disk', return_value=True)
         patch_claim = mock.patch.object(
-            self.compute._resource_tracker_dict[NODENAME], 'rebuild_claim',
+            self.compute._resource_tracker, 'rebuild_claim',
             side_effect=exception.ComputeResourcesUnavailable(reason="boom"))
         with patch_spawn, patch_on_disk, patch_claim:
             self.assertRaises(exception.BuildAbortException,
@@ -11837,7 +11831,7 @@ class EvacuateHostTestCase(BaseTestCase):
         patch_on_disk = mock.patch.object(
             self.compute.driver, 'instance_on_disk', return_value=True)
         patch_claim = mock.patch.object(
-            self.compute._resource_tracker_dict[NODENAME], 'rebuild_claim')
+            self.compute._resource_tracker, 'rebuild_claim')
         patch_rebuild = mock.patch.object(
             self.compute, '_do_rebuild_instance_with_claim',
             side_effect=test.TestingException())

@@ -28,6 +28,8 @@ from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit.pci import fakes as pci_fakes
 
+_NODENAME = 'fake-node'
+
 
 class FakeResourceHandler(object):
     test_called = False
@@ -91,9 +93,9 @@ class ClaimTestCase(test.NoDBTestCase):
         @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                     return_value=db_numa_topology)
         def get_claim(mock_extra_get):
-            return claims.Claim(self.context, instance, self.tracker,
-                                self.resources, requests, overhead=overhead,
-                                limits=limits)
+            return claims.Claim(self.context, instance, _NODENAME,
+                                self.tracker, self.resources, requests,
+                                overhead=overhead, limits=limits)
         return get_claim()
 
     def _fake_instance(self, **kwargs):
@@ -409,10 +411,10 @@ class MoveClaimTestCase(ClaimTestCase):
         @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                     return_value=self.db_numa_topology)
         def get_claim(mock_extra_get, mock_numa_get):
-            return claims.MoveClaim(self.context, self.instance, instance_type,
-                                     image_meta, self.tracker, self.resources,
-                                     requests, overhead=overhead,
-                                     limits=limits)
+            return claims.MoveClaim(self.context, self.instance, _NODENAME,
+                                    instance_type, image_meta, self.tracker,
+                                    self.resources, requests,
+                                    overhead=overhead, limits=limits)
         return get_claim()
 
     @mock.patch('nova.objects.Instance.drop_migration_context')
