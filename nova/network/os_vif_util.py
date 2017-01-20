@@ -284,8 +284,10 @@ def _nova_to_osvif_vif_vhostuser(vif):
     if vif['details'].get(model.VIF_DETAILS_VHOSTUSER_OVS_PLUG, False):
         profile = objects.vif.VIFPortProfileOpenVSwitch(
             interface_id=vif.get('ovs_interfaceid') or vif['id'])
+        vif_name = ('vhu' + vif['id'])[:model.NIC_NAME_LEN]
         obj = _get_vif_instance(vif, objects.vif.VIFVHostUser,
-                                port_profile=profile, plugin="ovs")
+                                port_profile=profile, plugin="ovs",
+                                vif_name=vif_name)
         if vif["network"]["bridge"] is not None:
             obj.bridge_name = vif["network"]["bridge"]
         obj.mode = vif['details'].get(
