@@ -1707,13 +1707,75 @@ class IronicDriverGenerateConfigDriveTestCase(test.NoDBTestCase):
             request_context=None)
 
     @mock.patch.object(FAKE_CLIENT.node, 'list_ports')
-    def test_generate_network_metadata_ports_only(
-        self, mock_ports, mock_cd_builder, mock_instance_meta):
+    @mock.patch.object(FAKE_CLIENT.portgroup, 'list')
+    def _test_generate_network_metadata(self, mock_portgroups, mock_ports,
+                                        address=None, vif_internal_info=True):
+        internal_info = ({'tenant_vif_port_id': utils.FAKE_VIF_UUID}
+                         if vif_internal_info else {})
+        extra = ({'vif_port_id': utils.FAKE_VIF_UUID}
+                 if not vif_internal_info else {})
+        portgroup = ironic_utils.get_test_portgroup(
+            node_uuid=self.node.uuid, address=address,
+            extra=extra, internal_info=internal_info,
+            properties={'bond_miimon': 100, 'xmit_hash_policy': 'layer3+4'}
+        )
+        port1 = ironic_utils.get_test_port(uuid=uuidutils.generate_uuid(),
+                                           node_uuid=self.node.uuid,
+                                           address='00:00:00:00:00:01',
+                                           portgroup_uuid=portgroup.uuid)
+        port2 = ironic_utils.get_test_port(uuid=uuidutils.generate_uuid(),
+                                           node_uuid=self.node.uuid,
+                                           address='00:00:00:00:00:02',
+                                           portgroup_uuid=portgroup.uuid)
+        mock_ports.return_value = [port1, port2]
+        mock_portgroups.return_value = [portgroup]
+
+        metadata = self.driver._get_network_metadata(self.node,
+                                                     self.network_info)
+
+        pg_vif = metadata['links'][0]
+        self.assertEqual('bond', pg_vif['type'])
+        self.assertEqual('active-backup', pg_vif['bond_mode'])
+        self.assertEqual(address if address else utils.FAKE_VIF_MAC,
+                         pg_vif['ethernet_mac_address'])
+        self.assertEqual('layer3+4',
+                         pg_vif['bond_xmit_hash_policy'])
+        self.assertEqual(100, pg_vif['bond_miimon'])
+        self.assertEqual([port1.uuid, port2.uuid],
+                         pg_vif['bond_links'])
+        self.assertEqual([{'id': port1.uuid, 'type': 'phy',
+                           'ethernet_mac_address': port1.address},
+                          {'id': port2.uuid, 'type': 'phy',
+                           'ethernet_mac_address': port2.address}],
+                         metadata['links'][1:])
+        # assert there are no duplicate links
+        link_ids = [link['id'] for link in metadata['links']]
+        self.assertEqual(len(set(link_ids)), len(link_ids),
+                         'There are duplicate link IDs: %s' % link_ids)
+
+    def test_generate_network_metadata_with_pg_address(self, mock_cd_builder,
+                                       mock_instance_meta):
+        self._test_generate_network_metadata(address='00:00:00:00:00:00')
+
+    def test_generate_network_metadata_no_pg_address(self, mock_cd_builder,
+                                                     mock_instance_meta):
+        self._test_generate_network_metadata()
+
+    def test_generate_network_metadata_vif_in_extra(self, mock_cd_builder,
+                                                    mock_instance_meta):
+        self._test_generate_network_metadata(vif_internal_info=False)
+
+    @mock.patch.object(FAKE_CLIENT.node, 'list_ports')
+    @mock.patch.object(FAKE_CLIENT.portgroup, 'list')
+    def test_generate_network_metadata_ports_only(self, mock_portgroups,
+                                                  mock_ports, mock_cd_builder,
+                                                  mock_instance_meta):
         address = self.network_info[0]['address']
         port = ironic_utils.get_test_port(
             node_uuid=self.node.uuid, address=address,
             internal_info={'tenant_vif_port_id': utils.FAKE_VIF_UUID})
         mock_ports.return_value = [port]
+        mock_portgroups.return_value = []
 
         metadata = self.driver._get_network_metadata(self.node,
                                                      self.network_info)

@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    Updates the network metadata that is passed to configdrive by the Ironic
+    virt driver. The metadata now includes network information about port
+    groups and their associated ports. It will be used to configure port
+    groups on the baremetal instance side.
