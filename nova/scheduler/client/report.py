@@ -162,16 +162,27 @@ class SchedulerReportClient(object):
         # objects that will have their inventories and allocations tracked by
         # the placement API for the compute host
         self._resource_providers = {}
+        # A dict, keyed by resource provider UUID, of sets of aggregate UUIDs
+        # the provider is associated with
+        self._provider_aggregate_map = {}
         auth_plugin = keystone.load_auth_from_conf_options(
             CONF, 'placement')
         self._client = session.Session(auth=auth_plugin)
         # NOTE(danms): Keep track of how naggy we've been
         self._warn_count = 0
 
-    def get(self, url):
+    def get(self, url, version=None):
+        kwargs = {}
+        if version is not None:
+            # TODO(mriedem): Perform some version discovery at some point.
+            kwargs = {
+                'headers': {
+                    'OpenStack-API-Version': 'placement %s' % version
+                },
+            }
         return self._client.get(
             url,
-            endpoint_filter=self.ks_filter, raise_exc=False)
+            endpoint_filter=self.ks_filter, raise_exc=False, **kwargs)
 
     def post(self, url, data):
         # NOTE(sdague): using json= instead of data= sets the
@@ -195,6 +206,34 @@ class SchedulerReportClient(object):
         return self._client.delete(
             url,
             endpoint_filter=self.ks_filter, raise_exc=False)
+
+    @safe_connect
+    def _get_provider_aggregates(self, rp_uuid):
+        """Queries the placement API for a resource provider's aggregates.
+        Returns a set() of aggregate UUIDs or None if no such resource provider
+        was found or there was an error communicating with the placement API.
+
+        :param rp_uuid: UUID of the resource provider to grab aggregates for.
+        """
+        resp = self.get("/resource_providers/%s/aggregates" % rp_uuid,
+                        version='1.1')
+        if resp.status_code == 200:
+            data = resp.json()
+            return set(data['aggregates'])
+        if resp.status_code == 404:
+            msg = _LW("Tried to get a provider's aggregates; however the "
+                      "provider %s does not exist.")
+            LOG.warning(msg, rp_uuid)
+        else:
+            msg = _LE("Failed to retrieve aggregates from placement API "
+                      "for resource provider with UUID %(uuid)s. "
+                      "Got %(status_code)d: %(err_text)s.")
+            args = {
+                'uuid': rp_uuid,
+                'status_code': resp.status_code,
+                'err_text': resp.text,
+            }
+            LOG.error(msg, args)
 
     @safe_connect
     def _get_resource_provider(self, uuid):
@@ -291,6 +330,17 @@ class SchedulerReportClient(object):
                      value
         """
         if uuid in self._resource_providers:
+            # NOTE(jaypipes): This isn't optimal to check if aggregate
+            # associations have changed each time we call
+            # _ensure_resource_provider() and get a hit on the local cache of
+            # provider objects, however the alternative is to force operators
+            # to restart all their nova-compute workers every time they add or
+            # change an aggregate. We might optionally want to add some sort of
+            # cache refresh delay or interval as an optimization?
+            msg = "Refreshing aggregate associations for resource provider %s"
+            LOG.debug(msg, uuid)
+            aggs = self._get_provider_aggregates(uuid)
+            self._provider_aggregate_map[uuid] = aggs
             return self._resource_providers[uuid]
 
         rp = self._get_resource_provider(uuid)
@@ -299,7 +349,11 @@ class SchedulerReportClient(object):
             rp = self._create_resource_provider(uuid, name)
             if rp is None:
                 return
+        msg = "Grabbing aggregate associations for resource provider %s"
+        LOG.debug(msg, uuid)
+        aggs = self._get_provider_aggregates(uuid)
         self._resource_providers[uuid] = rp
+        self._provider_aggregate_map[uuid] = aggs
         return rp
 
     def _get_inventory(self, rp_uuid):
