@@ -678,6 +678,12 @@ class ServersControllerTest(ControllerTest):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.index, req)
 
+    def test_get_servers_with_invalid_regex_filter_param(self):
+        req = self.req('/fake/servers?flavor=[[[',
+                       use_admin_context=True)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.index, req)
+
     def test_get_servers_with_bad_option(self):
         server_uuid = uuids.fake
 

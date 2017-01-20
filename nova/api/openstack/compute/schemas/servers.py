@@ -262,20 +262,20 @@ query_params_v21 = {
         # future with microversion bump.
         'image_ref': common_param,
         'image': common_param,
-        'kernel_id': common_param,
-        'ramdisk_id': common_param,
-        'hostname': common_param,
-        'key_name': common_param,
-        'power_state': common_param,
+        'kernel_id': common_regex_param,
+        'ramdisk_id': common_regex_param,
+        'hostname': common_regex_param,
+        'key_name': common_regex_param,
+        'power_state': common_regex_param,
         'vm_state': common_param,
         'task_state': common_param,
         'host': common_param,
-        'node': common_param,
-        'flavor': common_param,
-        'reservation_id': common_param,
-        'launched_at': common_param,
-        'terminate_at': common_param,
-        'availability_zone': common_param,
+        'node': common_regex_param,
+        'flavor': common_regex_param,
+        'reservation_id': common_regex_param,
+        'launched_at': common_regex_param,
+        'terminate_at': common_regex_param,
+        'availability_zone': common_regex_param,
         # NOTE(alex_xu): This is pattern matching, it didn't get any benefit
         # from DB index.
         'name': common_regex_param,
@@ -286,14 +286,14 @@ query_params_v21 = {
         # The alias of description. It should be removed in the
         # future with microversion bump.
         'display_description': common_regex_param,
-        'locked_by': common_param,
+        'locked_by': common_regex_param,
         'uuid': common_param,
-        'root_device_name': common_param,
-        'config_drive': common_param,
-        'accessIPv4': common_param,
-        'accessIPv6': common_param,
-        'auto_disk_config': common_param,
-        'progress': common_param,
+        'root_device_name': common_regex_param,
+        'config_drive': common_regex_param,
+        'accessIPv4': common_regex_param,
+        'accessIPv6': common_regex_param,
+        'auto_disk_config': common_regex_param,
+        'progress': common_regex_param,
         'sort_key': common_param,
         'sort_dir': common_param,
         'all_tenants': common_param,
@@ -304,7 +304,7 @@ query_params_v21 = {
         # NOTE(alex_xu): The ip and ip6 are implemented in the python.
         'ip': common_regex_param,
         'ip6': common_regex_param,
-        'created_at': common_param,
+        'created_at': common_regex_param,
     },
     # For backward-compatible additionalProperties is set to be True here.
     # And we will either strip the extra params out or raise HTTP 400
@@ -326,8 +326,8 @@ query_params_v21['properties'].update(
 
 query_params_v226 = copy.deepcopy(query_params_v21)
 query_params_v226['properties'].update({
-    'tags': common_param,
-    'tags-any': common_param,
-    'not-tags': common_param,
-    'not-tags-any': common_param,
+    'tags': common_regex_param,
+    'tags-any': common_regex_param,
+    'not-tags': common_regex_param,
+    'not-tags-any': common_regex_param,
 })
