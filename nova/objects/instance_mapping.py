@@ -135,7 +135,8 @@ class InstanceMapping(base.NovaTimestampObject, base.NovaObject):
 @base.NovaObjectRegistry.register
 class InstanceMappingList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Added get_by_cell_id method.
+    VERSION = '1.1'
 
     fields = {
         'objects': fields.ListOfObjectsField('InstanceMapping'),
@@ -153,5 +154,18 @@ class InstanceMappingList(base.ObjectListBase, base.NovaObject):
     def get_by_project_id(cls, context, project_id):
         db_mappings = cls._get_by_project_id_from_db(context, project_id)
 
+        return base.obj_make_list(context, cls(), objects.InstanceMapping,
+                db_mappings)
+
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_by_cell_id_from_db(context, cell_id):
+        return (context.session.query(api_models.InstanceMapping)
+                .options(joinedload('cell_mapping'))
+                .filter(api_models.InstanceMapping.cell_id == cell_id)).all()
+
+    @base.remotable_classmethod
+    def get_by_cell_id(cls, context, cell_id):
+        db_mappings = cls._get_by_cell_id_from_db(context, cell_id)
         return base.obj_make_list(context, cls(), objects.InstanceMapping,
                 db_mappings)
