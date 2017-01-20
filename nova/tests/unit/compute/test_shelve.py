@@ -165,37 +165,32 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
     def test_shelve_and_offload(self):
         self._shelve_instance(0)
 
+    @mock.patch.object(nova.virt.fake.SmallFakeDriver, 'power_off')
+    def test_shelve_offload(self, mock_power_off):
+        instance = self._shelve_offload()
+        mock_power_off.assert_called_once_with(instance,
+            CONF.shutdown_timeout, self.compute.SHUTDOWN_RETRY_INTERVAL)
+
+    @mock.patch.object(nova.virt.fake.SmallFakeDriver, 'power_off')
+    def test_shelve_offload_forced_shutdown(self, mock_power_off):
+        instance = self._shelve_offload(clean_shutdown=False)
+        mock_power_off.assert_called_once_with(instance, 0, 0)
+
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_update_resource_tracker')
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_get_power_state', return_value = 123)
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_notify_about_instance_usage')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
-    def _shelve_offload(self, mock_notify, clean_shutdown=True):
+    def _shelve_offload(self, mock_notify, mock_notify_instance_usage,
+                        mock_get_power_state, mock_update_resource_tracker,
+                        clean_shutdown=True):
         host = 'fake-mini'
         instance = self._create_fake_instance_obj(params={'host': host})
         instance.task_state = task_states.SHELVING
         instance.save()
         self.useFixture(utils_fixture.TimeFixture())
-
-        self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
-        self.mox.StubOutWithMock(self.compute.driver, 'power_off')
-        self.mox.StubOutWithMock(self.compute, '_get_power_state')
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'cleanup_instance_network_on_host')
-        self.mox.StubOutWithMock(self.compute, '_update_resource_tracker')
-
-        self.compute._notify_about_instance_usage(self.context, instance,
-                'shelve_offload.start')
-        if clean_shutdown:
-            self.compute.driver.power_off(instance,
-                                          CONF.shutdown_timeout,
-                                          self.compute.SHUTDOWN_RETRY_INTERVAL)
-        else:
-            self.compute.driver.power_off(instance, 0, 0)
-        self.compute.network_api.cleanup_instance_network_on_host(
-                self.context, instance, instance.host)
-        self.compute._get_power_state(self.context,
-                instance).AndReturn(123)
-        self.compute._update_resource_tracker(self.context, instance)
-        self.compute._notify_about_instance_usage(self.context, instance,
-                'shelve_offload.end')
-        self.mox.ReplayAll()
 
         with mock.patch.object(instance, 'save'):
             self.compute.shelve_offload_instance(self.context, instance,
@@ -209,11 +204,22 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.assertEqual(vm_states.SHELVED_OFFLOADED, instance.vm_state)
         self.assertIsNone(instance.task_state)
 
-    def test_shelve_offload(self):
-        self._shelve_offload()
+        # prepare expect call lists
+        mock_notify_instance_usage_call_list = [
+            mock.call(self.context, instance, 'shelve_offload.start'),
+            mock.call(self.context, instance, 'shelve_offload.end')]
 
-    def test_shelve_offload_forced_shutdown(self):
-        self._shelve_offload(clean_shutdown=False)
+        mock_notify_instance_usage.assert_has_calls(
+            mock_notify_instance_usage_call_list)
+        # instance.host is replaced with host because
+        # original instance.host is clear after
+        # ComputeManager.shelve_offload_instance execute
+        mock_get_power_state.assert_called_once_with(
+            self.context, instance)
+        mock_update_resource_tracker.assert_called_once_with(self.context,
+                                                             instance)
+
+        return instance
 
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     def test_unshelve(self, mock_notify):
