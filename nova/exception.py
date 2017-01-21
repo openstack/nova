@@ -23,7 +23,7 @@ SHOULD include dedicated exception logging.
 """
 
 from oslo_log import log as logging
-import six
+
 import webob.exc
 from webob import util as woutil
 
@@ -89,7 +89,7 @@ class NovaException(Exception):
                 # kwargs doesn't match a variable in the message
                 # log the issue and the kwargs
                 LOG.exception(_LE('Exception in string format operation'))
-                for name, value in six.iteritems(kwargs):
+                for name, value in kwargs.items():
                     LOG.error("%s: %s" % (name, value))  # noqa
 
                 message = self.msg_fmt

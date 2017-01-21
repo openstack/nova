@@ -14,7 +14,7 @@ import functools
 import inspect
 
 from oslo_utils import excutils
-import six
+
 
 import nova.conf
 from nova.notifications.objects import base
@@ -91,4 +91,4 @@ def _get_call_dict(function, self, context, *args, **kw):
 
 def _cleanse_dict(original):
     """Strip all admin_password, new_pass, rescue_pass keys from a dict."""
-    return {k: v for k, v in six.iteritems(original) if "_pass" not in k}
+    return {k: v for k, v in original.items() if "_pass" not in k}

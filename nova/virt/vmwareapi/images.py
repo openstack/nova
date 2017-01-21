@@ -28,7 +28,7 @@ from oslo_utils import encodeutils
 from oslo_utils import strutils
 from oslo_utils import units
 from oslo_vmware import rw_handles
-import six
+
 
 from nova import exception
 from nova.i18n import _, _LI
@@ -173,7 +173,7 @@ class VMwareImage(object):
             'hw_vif_model': 'vif_model'
         }
 
-        for k, v in six.iteritems(props_map):
+        for k, v in props_map.items():
             if properties.obj_attr_is_set(k):
                 props[v] = properties.get(k)
 

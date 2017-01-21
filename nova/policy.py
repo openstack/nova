@@ -22,7 +22,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_policy import policy
 from oslo_utils import excutils
-import six
+
 
 from nova import exception
 from nova.i18n import _LE, _LW
@@ -89,7 +89,7 @@ def _serialize_rules(rules):
     rules list.
     """
     result = [(rule_name, str(rule))
-              for rule_name, rule in six.iteritems(rules)]
+              for rule_name, rule in rules.items()]
     return sorted(result, key=lambda rule: rule[0])
 
 

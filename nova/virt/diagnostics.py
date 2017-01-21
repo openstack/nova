@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import six
 
 from nova import exception
 from nova.i18n import _
@@ -174,7 +173,7 @@ class Diagnostics(object):
 
     def serialize(self):
         s = {}
-        for k, v in six.iteritems(self.__dict__):
+        for k, v in self.__dict__.items():
             # Treat case of CpuDiagnostics, NicDiagnostics and
             # DiskDiagnostics - these are lists
             if isinstance(v, list):

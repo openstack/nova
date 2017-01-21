@@ -21,7 +21,7 @@ Helper classes for Ironic HTTP PATCH creation.
 """
 
 from oslo_serialization import jsonutils
-import six
+
 
 import nova.conf
 
@@ -93,7 +93,7 @@ class GenericDriverFields(object):
         # scan through the extra_specs values and ignore the keys
         # not starting with keyword 'capabilities'.
 
-        for key, val in six.iteritems(extra_specs):
+        for key, val in extra_specs.items():
             if not key.startswith('capabilities:'):
                 continue
 

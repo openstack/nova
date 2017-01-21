@@ -569,7 +569,7 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
         # NOTE(sbauza): We want to key the dict by the resource class IDs
         # and we want to make sure those class names aren't incorrect.
         resources = {_RC_CACHE.id_from_string(r_name): amount
-                     for r_name, amount in six.iteritems(resources)}
+                     for r_name, amount in resources.items()}
         query = context.session.query(models.ResourceProvider)
         if name:
             query = query.filter(models.ResourceProvider.name == name)
@@ -663,7 +663,7 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
                 _INV_TBL.c.max_unit >= amount,
                 amount % _INV_TBL.c.step_size == 0
             )
-            for (r_idx, amount) in six.iteritems(resources)]
+            for (r_idx, amount) in resources.items()]
         query = query.filter(sa.or_(*where_clauses))
         query = query.group_by(_RP_TBL.c.uuid)
         # NOTE(sbauza): Only RPs having all the asked resources can be provided

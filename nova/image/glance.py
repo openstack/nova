@@ -201,7 +201,7 @@ class GlanceImageService(object):
         self._download_handlers = {}
         download_modules = image_xfers.load_transfer_modules()
 
-        for scheme, mod in six.iteritems(download_modules):
+        for scheme, mod in download_modules.items():
             if scheme not in CONF.glance.allowed_direct_url_schemes:
                 continue
 
@@ -436,7 +436,7 @@ class GlanceImageServiceV2(object):
         self._download_handlers = {}
         download_modules = image_xfers.load_transfer_modules()
 
-        for scheme, mod in six.iteritems(download_modules):
+        for scheme, mod in download_modules.items():
             if scheme not in CONF.glance.allowed_direct_url_schemes:
                 continue
 
@@ -875,9 +875,9 @@ def _translate_to_glance(image_meta):
 
 def _convert_to_v2(image_meta):
     output = {}
-    for name, value in six.iteritems(image_meta):
+    for name, value in image_meta.items():
         if name == 'properties':
-            for prop_name, prop_value in six.iteritems(value):
+            for prop_name, prop_value in value.items():
                 # if allow_additional_image_properties is disabled we can't
                 # define kernel_id and ramdisk_id as None, so we have to omit
                 # these properties if they are not set.
@@ -1018,7 +1018,7 @@ def _extract_attributes_v2(image, include_locations=False):
     output = {'properties': {}, 'deleted': False, 'deleted_at': None,
               'disk_format': None, 'container_format': None, 'name': None,
               'checksum': None}
-    for name, value in six.iteritems(image):
+    for name, value in image.items():
         if (name in omit_attrs
                 or name in include_locations_attrs and not include_locations):
             continue

@@ -14,7 +14,7 @@
 
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
-import six
+
 
 from nova.db.sqlalchemy import api as db
 from nova.db.sqlalchemy import api_models
@@ -215,7 +215,7 @@ class RequestSpec(base.NovaObject):
             return
         self.scheduler_hints = {
             hint: value if isinstance(value, list) else [value]
-            for hint, value in six.iteritems(hints_dict)}
+            for hint, value in hints_dict.items()}
 
     @classmethod
     def from_primitives(cls, context, request_spec, filter_properties):

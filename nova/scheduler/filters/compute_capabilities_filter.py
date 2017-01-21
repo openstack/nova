@@ -71,7 +71,7 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
         if 'extra_specs' not in instance_type:
             return True
 
-        for key, req in six.iteritems(instance_type.extra_specs):
+        for key, req in instance_type.extra_specs.items():
             # Either not scope format, or in capabilities scope
             scope = key.split(':')
             # If key does not have a namespace, the scope's size is 1, check

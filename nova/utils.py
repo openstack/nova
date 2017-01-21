@@ -930,7 +930,7 @@ def metadata_to_dict(metadata, include_deleted=False):
 
 def dict_to_metadata(metadata):
     result = []
-    for key, value in six.iteritems(metadata):
+    for key, value in metadata.items():
         result.append(dict(key=key, value=value))
     return result
 
@@ -1157,7 +1157,7 @@ def get_system_metadata_from_image(image_meta, flavor=None):
     system_meta = {}
     prefix_format = SM_IMAGE_PROP_PREFIX + '%s'
 
-    for key, value in six.iteritems(image_meta.get('properties', {})):
+    for key, value in image_meta.get('properties', {}).items():
         if key in SM_SKIP_KEYS:
             continue
 
@@ -1188,7 +1188,7 @@ def get_image_from_system_metadata(system_meta):
     if not isinstance(system_meta, dict):
         system_meta = metadata_to_dict(system_meta, include_deleted=True)
 
-    for key, value in six.iteritems(system_meta):
+    for key, value in system_meta.items():
         if value is None:
             continue
 
@@ -1319,7 +1319,7 @@ def filter_and_format_resource_metadata(resource_type, resource_list,
         if ids and _get_id(resource) not in ids:
             return {}
 
-        for k, v in six.iteritems(input_metadata):
+        for k, v in input_metadata.items():
             # Both keys and value defined -- AND
             if (keys_filter and values_filter and
                not _match_any(keys_filter, k) and

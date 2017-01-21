@@ -2752,7 +2752,7 @@ def _instance_update(context, instance_uuid, values, expected, original=None):
     else:
         # Coerce all single values to singleton lists
         expected = {k: [None] if v is None else sqlalchemyutils.to_list(v)
-                       for (k, v) in six.iteritems(expected)}
+                       for (k, v) in expected.items()}
 
     # Extract 'expected_' values from values dict, as these aren't actually
     # updates
@@ -2808,7 +2808,7 @@ def _instance_update(context, instance_uuid, values, expected, original=None):
 
         conflicts_expected = {}
         conflicts_actual = {}
-        for (field, expected_values) in six.iteritems(expected):
+        for (field, expected_values) in expected.items():
             actual = original[field]
             if actual not in expected_values:
                 conflicts_expected[field] = expected_values

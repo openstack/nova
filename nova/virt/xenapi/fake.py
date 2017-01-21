@@ -61,7 +61,7 @@ from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 from oslo_utils import units
 from oslo_utils import uuidutils
-import six
+
 
 from nova import exception
 from nova.i18n import _
@@ -561,7 +561,7 @@ class SessionBase(object):
 
     def SR_introduce(self, _1, sr_uuid, label, desc, type, content_type,
                      shared, sm_config):
-        for ref, rec in six.iteritems(_db_content['SR']):
+        for ref, rec in _db_content['SR'].items():
             if rec.get('uuid') == sr_uuid:
                 # make forgotten = 0 and return ref
                 _db_content['SR'][ref]['forgotten'] = 0
@@ -1081,7 +1081,7 @@ class SessionBase(object):
 
     def _get_by_field(self, recs, k, v, return_singleton):
         result = []
-        for ref, rec in six.iteritems(recs):
+        for ref, rec in recs.items():
             if rec.get(k) == v:
                 result.append(ref)
 
