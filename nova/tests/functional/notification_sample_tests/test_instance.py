@@ -163,7 +163,10 @@ class TestInstanceNotificationSample(
                          instance_updates[0]['publisher_id'])
         instance_updates[0]['publisher_id'] = 'nova-compute:fake-mini'
 
-        self.assertEqual(7, len(instance_updates))
+        self.assertEqual(7, len(instance_updates),
+                         'Unexpected number of instance.update notifications. '
+                         'Expected 7, got %s: %s' % (
+                             len(instance_updates), instance_updates))
         create_steps = [
             # nothing -> scheduling
             {'reservation_id': server['reservation_id'],
