@@ -221,7 +221,9 @@ class LibvirtLiveMigrateData(LiveMigrateData):
 
 @obj_base.NovaObjectRegistry.register
 class XenapiLiveMigrateData(LiveMigrateData):
-    VERSION = '1.0'
+    # Version 1.0: Initial version
+    # Version 1.1: Added vif_uuid_map
+    VERSION = '1.1'
 
     fields = {
         'block_migration': fields.BooleanField(nullable=True),
@@ -230,6 +232,7 @@ class XenapiLiveMigrateData(LiveMigrateData):
         'sr_uuid_map': fields.DictOfStringsField(),
         'kernel_file': fields.StringField(),
         'ramdisk_file': fields.StringField(),
+        'vif_uuid_map': fields.DictOfStringsField(),
     }
 
     def to_legacy_dict(self, pre_migration_result=False):
@@ -244,6 +247,8 @@ class XenapiLiveMigrateData(LiveMigrateData):
         live_result = {
             'sr_uuid_map': ('sr_uuid_map' in self and self.sr_uuid_map
                             or {}),
+            'vif_uuid_map': ('vif_uuid_map' in self and self.vif_uuid_map
+                             or {}),
         }
         if pre_migration_result:
             legacy['pre_live_migration_result'] = live_result
@@ -263,6 +268,16 @@ class XenapiLiveMigrateData(LiveMigrateData):
         if 'pre_live_migration_result' in legacy:
             self.sr_uuid_map = \
                 legacy['pre_live_migration_result']['sr_uuid_map']
+            self.vif_uuid_map = \
+                legacy['pre_live_migration_result'].get('vif_uuid_map', {})
+
+    def obj_make_compatible(self, primitive, target_version):
+        super(XenapiLiveMigrateData, self).obj_make_compatible(
+            primitive, target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1):
+            if 'vif_uuid_map' in primitive:
+                del primitive['vif_uuid_map']
 
 
 @obj_base.NovaObjectRegistry.register
