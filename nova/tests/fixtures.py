@@ -1175,6 +1175,9 @@ class PlacementFixture(fixtures.Fixture):
         self.addCleanup(self.service.stop)
 
         self._client = ks.Session(auth=None)
+        # NOTE(sbauza): We need to mock the scheduler report client because
+        # we need to fake Keystone by directly calling the endpoint instead
+        # of looking up the service catalog, like we did for the OSAPIFixture.
         self.useFixture(fixtures.MonkeyPatch(
             'nova.scheduler.client.report.SchedulerReportClient.get',
             self._fake_get))
@@ -1188,15 +1191,22 @@ class PlacementFixture(fixtures.Fixture):
             'nova.scheduler.client.report.SchedulerReportClient.delete',
             self._fake_delete))
 
-    def _fake_get(self, *args):
+    def _fake_get(self, *args, **kwargs):
         (url,) = args[1:]
+        version = kwargs.get("version")
         # TODO(sbauza): The current placement NoAuthMiddleware returns a 401
         # in case a token is not provided. We should change that by creating
         # a fake token so we could remove adding the header below.
+        headers = {'x-auth-token': self.token}
+        if version is not None:
+            # TODO(mriedem): Perform some version discovery at some point.
+            headers.update({
+                'OpenStack-API-Version': 'placement %s' % version
+            })
         return self._client.get(
             url,
             endpoint_override="http://127.0.0.1:%s" % self.service.port,
-            headers={'x-auth-token': self.token},
+            headers=headers,
             raise_exc=False)
 
     def _fake_post(self, *args):
