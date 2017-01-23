@@ -437,9 +437,9 @@ class TestNewtonCellsCheck(test.NoDBTestCase):
                                     database_connection='fake')
         cell1.create()
 
-        self.assertRaisesRegex(exception.ValidationError,
-                               'host mappings',
-                               self.migration.upgrade, self.engine)
+        with mock.patch.object(self.migration, 'LOG') as log:
+            self.migration.upgrade(self.engine)
+            self.assertTrue(log.warning.called)
 
     def test_upgrade_with_required_mappings(self):
         self._flavor_me()
