@@ -1431,7 +1431,8 @@ class CellV2Commands(object):
                 ctxt, uuid)
         except exception.InstanceMappingNotFound:
             say('Instance %s is not mapped to a cell '
-                '(upgrade is incomplete)' % uuid)
+                '(upgrade is incomplete) or instance '
+                'does not exist' % uuid)
             return 1
         if mapping.cell_mapping is None:
             say('Instance %s is not mapped to a cell' % uuid)
