@@ -672,21 +672,32 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         flavor = {'extra_specs': {}}
         mock_instance = mock.MagicMock(flavor=flavor)
         image_meta = mock.MagicMock(properties={})
-        mock_get_numa.return_value.cells = numa_cells
+        numa_topology = objects.InstanceNUMATopology(cells=numa_cells)
+        mock_get_numa.return_value = numa_topology
 
         self.assertRaises(exception.InstanceUnacceptable,
                           self._vmops._get_instance_vnuma_config,
                           mock_instance, image_meta)
 
     def test_get_instance_vnuma_config_bad_cpuset(self):
-        cell1 = mock.MagicMock(cpuset=set([0]), memory=1024)
-        cell2 = mock.MagicMock(cpuset=set([1, 2]), memory=1024)
+        cell1 = objects.InstanceNUMACell(cpuset=set([0]), memory=1024)
+        cell2 = objects.InstanceNUMACell(cpuset=set([1, 2]), memory=1024)
         self._check_get_instance_vnuma_config_exception(
             numa_cells=[cell1, cell2])
 
     def test_get_instance_vnuma_config_bad_memory(self):
-        cell1 = mock.MagicMock(cpuset=set([0]), memory=1024)
-        cell2 = mock.MagicMock(cpuset=set([1]), memory=2048)
+        cell1 = objects.InstanceNUMACell(cpuset=set([0]), memory=1024)
+        cell2 = objects.InstanceNUMACell(cpuset=set([1]), memory=2048)
+        self._check_get_instance_vnuma_config_exception(
+            numa_cells=[cell1, cell2])
+
+    def test_get_instance_vnuma_config_cpu_pinning(self):
+        cell1 = objects.InstanceNUMACell(
+            cpuset=set([0]), memory=1024,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED)
+        cell2 = objects.InstanceNUMACell(
+            cpuset=set([1]), memory=1024,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED)
         self._check_get_instance_vnuma_config_exception(
             numa_cells=[cell1, cell2])
 
@@ -705,10 +716,10 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         self.assertEqual(expected_mem_per_numa, result_memory_per_numa)
 
     def test_get_instance_vnuma_config(self):
-        cell1 = mock.MagicMock(cpuset=set([0]), memory=2048, cpu_pinning=None)
-        cell2 = mock.MagicMock(cpuset=set([1]), memory=2048, cpu_pinning=None)
-        mock_topology = mock.MagicMock(cells=[cell1, cell2])
-        self._check_get_instance_vnuma_config(numa_topology=mock_topology,
+        cell1 = objects.InstanceNUMACell(cpuset=set([0]), memory=2048)
+        cell2 = objects.InstanceNUMACell(cpuset=set([1]), memory=2048)
+        numa_topology = objects.InstanceNUMATopology(cells=[cell1, cell2])
+        self._check_get_instance_vnuma_config(numa_topology=numa_topology,
                                               expected_cpus_per_numa=1,
                                               expected_mem_per_numa=2048)
 
