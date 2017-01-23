@@ -259,6 +259,9 @@ use those values. If need be, you can create separate config files and
 pass them as `nova-manage --config-file foo.conf` to control the
 behavior without specifying things on the command lines.
 
+The commands below use the API database so remember to run
+`nova-manage api_db sync` first.
+
 First we will create the necessary records for the cell0 database. To
 do that we use `nova-manage` like this::
 
@@ -268,7 +271,14 @@ do that we use `nova-manage` like this::
 .. note:: If you don't specify `--database_connection` then
           `nova-manage` will use the `[database]/connection` value
           from your config file, and mangle the database name to have
-          an `_nova` suffix.
+          a `_cell0` suffix.
+.. warning:: If your databases are on separate hosts then you should specify
+             `--database_connection` or make certain that the nova.conf
+             being used has the `[database]/connection` value pointing to the
+             same user/password/host that will work for the cell0 database.
+             If the cell0 mapping was created incorrectly, it can be deleted
+             using the `nova-manage cell_v2 delete_cell` command and then run
+             `map_cell0` again with the proper database connection value.
 
 Since no hosts are ever in cell0, nothing further is required for its
 setup. Note that all deployments only ever have one cell0, as it is
