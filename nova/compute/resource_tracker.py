@@ -713,7 +713,8 @@ class ResourceTracker(object):
         """Check to see if any resources have changed."""
         nodename = compute_node.hypervisor_hostname
         old_compute = self.old_resources[nodename]
-        if not obj_base.obj_equal_prims(compute_node, old_compute):
+        if not obj_base.obj_equal_prims(
+                compute_node, old_compute, ['updated_at']):
             self.old_resources[nodename] = copy.deepcopy(compute_node)
             return True
         return False

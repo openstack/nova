@@ -1100,6 +1100,26 @@ class TestUpdateComputeNode(BaseTestCase):
         self.assertFalse(urs_mock.called)
 
     @mock.patch('nova.objects.Service.get_by_compute_host')
+    def test_existing_compute_node_updated_diff_updated_at(self, service_mock):
+        self._setup_rt()
+        ts1 = timeutils.utcnow()
+        ts2 = ts1 + datetime.timedelta(seconds=10)
+
+        orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
+        orig_compute.updated_at = ts1
+        self.rt.compute_nodes[_NODENAME] = orig_compute
+        self.rt.old_resources[_NODENAME] = orig_compute
+
+        # Make the new_compute object have a different timestamp
+        # from orig_compute.
+        new_compute = orig_compute.obj_clone()
+        new_compute.updated_at = ts2
+
+        urs_mock = self.sched_client_mock.update_resource_stats
+        self.rt._update(mock.sentinel.ctx, new_compute)
+        self.assertFalse(urs_mock.called)
+
+    @mock.patch('nova.objects.Service.get_by_compute_host')
     def test_existing_compute_node_updated_new_resources(self, service_mock):
         self._setup_rt()
 
