@@ -625,6 +625,165 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
 
         self.assertIsNone(os_vif_util.nova_to_osvif_vif(vif))
 
+    def test_nova_to_osvif_vhostuser_fp_ovs_hybrid(self):
+        vif = model.VIF(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            type=model.VIF_TYPE_VHOSTUSER,
+            address="22:52:25:62:e2:aa",
+            network=model.Network(
+                id="b82c1929-051e-481d-8110-4669916c7915",
+                label="Demo Net",
+                mtu="1500",
+                subnets=[]),
+            details={
+                model.VIF_DETAILS_VHOSTUSER_MODE: 'client',
+                model.VIF_DETAILS_VHOSTUSER_SOCKET: '/fake/socket',
+                model.VIF_DETAILS_VHOSTUSER_FP_PLUG: True,
+                model.VIF_DETAILS_VHOSTUSER_OVS_PLUG: True,
+                model.VIF_DETAILS_OVS_HYBRID_PLUG: True,
+                model.VIF_DETAILS_PORT_FILTER: False,
+            }
+        )
+
+        actual = os_vif_util.nova_to_osvif_vif(vif)
+
+        expect = osv_objects.vif.VIFVHostUser(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            active=False,
+            address="22:52:25:62:e2:aa",
+            plugin="vhostuser_fp",
+            port_profile=osv_objects.vif.VIFPortProfileFPOpenVSwitch(
+                interface_id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+                bridge_name="qbrdc065497-3c",
+                hybrid_plug=True),
+            vif_name="nicdc065497-3c",
+            path='/fake/socket',
+            mode='client',
+            has_traffic_filtering=False,
+            preserve_on_delete=False,
+            network=osv_objects.network.Network(
+                id="b82c1929-051e-481d-8110-4669916c7915",
+                bridge_interface=None,
+                label="Demo Net",
+                mtu="1500",
+                subnets=osv_objects.subnet.SubnetList(
+                    objects=[])))
+
+        self.assertObjEqual(expect, actual)
+
+    def test_nova_to_osvif_vhostuser_fp_ovs_plain(self):
+        vif = model.VIF(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            type=model.VIF_TYPE_VHOSTUSER,
+            address="22:52:25:62:e2:aa",
+            network=model.Network(
+                id="b82c1929-051e-481d-8110-4669916c7915",
+                label="Demo Net",
+                mtu="1500",
+                bridge="br-int",
+                subnets=[]),
+            details={
+                model.VIF_DETAILS_VHOSTUSER_MODE: 'client',
+                model.VIF_DETAILS_VHOSTUSER_SOCKET: '/fake/socket',
+                model.VIF_DETAILS_VHOSTUSER_FP_PLUG: True,
+                model.VIF_DETAILS_VHOSTUSER_OVS_PLUG: True,
+                model.VIF_DETAILS_OVS_HYBRID_PLUG: False,
+                model.VIF_DETAILS_PORT_FILTER: True,
+            }
+        )
+
+        actual = os_vif_util.nova_to_osvif_vif(vif)
+
+        expect = osv_objects.vif.VIFVHostUser(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            active=False,
+            address="22:52:25:62:e2:aa",
+            plugin="vhostuser_fp",
+            port_profile=osv_objects.vif.VIFPortProfileFPOpenVSwitch(
+                interface_id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+                bridge_name="br-int",
+                hybrid_plug=False),
+            vif_name="nicdc065497-3c",
+            path='/fake/socket',
+            mode='client',
+            has_traffic_filtering=True,
+            preserve_on_delete=False,
+            network=osv_objects.network.Network(
+                id="b82c1929-051e-481d-8110-4669916c7915",
+                bridge_interface=None,
+                label="Demo Net",
+                mtu="1500",
+                bridge="br-int",
+                subnets=osv_objects.subnet.SubnetList(
+                    objects=[])))
+
+        self.assertObjEqual(expect, actual)
+
+    def test_nova_to_osvif_vhostuser_fp_lb(self):
+        vif = model.VIF(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            type=model.VIF_TYPE_VHOSTUSER,
+            address="22:52:25:62:e2:aa",
+            network=model.Network(
+                id="b82c1929-051e-481d-8110-4669916c7915",
+                label="Demo Net",
+                mtu="1500",
+                bridge="brq12345",
+                subnets=[]),
+            details={
+                model.VIF_DETAILS_VHOSTUSER_MODE: 'client',
+                model.VIF_DETAILS_VHOSTUSER_SOCKET: '/fake/socket',
+                model.VIF_DETAILS_VHOSTUSER_FP_PLUG: True,
+                model.VIF_DETAILS_VHOSTUSER_OVS_PLUG: False,
+            }
+        )
+
+        actual = os_vif_util.nova_to_osvif_vif(vif)
+
+        expect = osv_objects.vif.VIFVHostUser(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            active=False,
+            address="22:52:25:62:e2:aa",
+            plugin="vhostuser_fp",
+            port_profile=osv_objects.vif.VIFPortProfileFPBridge(
+                bridge_name="brq12345"),
+            vif_name="nicdc065497-3c",
+            path='/fake/socket',
+            mode='client',
+            has_traffic_filtering=False,
+            preserve_on_delete=False,
+            network=osv_objects.network.Network(
+                id="b82c1929-051e-481d-8110-4669916c7915",
+                bridge_interface=None,
+                label="Demo Net",
+                mtu="1500",
+                bridge="brq12345",
+                subnets=osv_objects.subnet.SubnetList(
+                    objects=[])))
+
+        self.assertObjEqual(expect, actual)
+
+    def test_nova_to_osvif_vhostuser_fp_no_socket_path(self):
+        vif = model.VIF(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            type=model.VIF_TYPE_VHOSTUSER,
+            address="22:52:25:62:e2:aa",
+            network=model.Network(
+                id="b82c1929-051e-481d-8110-4669916c7915",
+                label="Demo Net",
+                subnets=[]),
+            details={
+                model.VIF_DETAILS_VHOSTUSER_MODE: 'client',
+                model.VIF_DETAILS_VHOSTUSER_FP_PLUG: True,
+                model.VIF_DETAILS_VHOSTUSER_OVS_PLUG: False,
+                model.VIF_DETAILS_PORT_FILTER: True,
+            }
+        )
+
+        self.assertRaises(exception.VifDetailsMissingVhostuserSockPath,
+                          os_vif_util.nova_to_osvif_vif,
+                          vif)
+
     def test_nova_to_osvif_vif_ivs_plain(self):
         vif = model.VIF(
             id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",

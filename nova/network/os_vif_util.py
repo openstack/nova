@@ -78,6 +78,26 @@ def _is_firewall_required(vif):
     return False
 
 
+def _set_vhostuser_settings(vif, obj):
+    """Set vhostuser socket mode and path
+
+    :param vif: the nova.network.model.VIF instance
+    :param obj: a os_vif.objects.vif.VIFVHostUser instance
+
+    :raises: exception.VifDetailsMissingVhostuserSockPath
+    """
+
+    obj.mode = vif['details'].get(
+        model.VIF_DETAILS_VHOSTUSER_MODE, 'server')
+    path = vif['details'].get(
+        model.VIF_DETAILS_VHOSTUSER_SOCKET, None)
+    if path:
+        obj.path = path
+    else:
+        raise exception.VifDetailsMissingVhostuserSockPath(
+            vif_id=vif['id'])
+
+
 def nova_to_osvif_instance(instance):
     """Convert a Nova instance object to an os-vif instance object
 
@@ -281,7 +301,28 @@ def _nova_to_osvif_vif_ovs(vif):
 
 # VIF_TYPE_VHOST_USER = 'vhostuser'
 def _nova_to_osvif_vif_vhostuser(vif):
-    if vif['details'].get(model.VIF_DETAILS_VHOSTUSER_OVS_PLUG, False):
+    if vif['details'].get(model.VIF_DETAILS_VHOSTUSER_FP_PLUG, False):
+        if vif['details'].get(model.VIF_DETAILS_VHOSTUSER_OVS_PLUG, False):
+            profile = objects.vif.VIFPortProfileFPOpenVSwitch(
+                    interface_id=vif.get('ovs_interfaceid') or vif['id'])
+            if _is_firewall_required(vif) or vif.is_hybrid_plug_enabled():
+                profile.bridge_name = _get_hybrid_bridge_name(vif)
+                profile.hybrid_plug = True
+            else:
+                profile.hybrid_plug = False
+                if vif["network"]["bridge"] is not None:
+                    profile.bridge_name = vif["network"]["bridge"]
+        else:
+            profile = objects.vif.VIFPortProfileFPBridge()
+            if vif["network"]["bridge"] is not None:
+                profile.bridge_name = vif["network"]["bridge"]
+        obj = _get_vif_instance(vif, objects.vif.VIFVHostUser,
+                        plugin="vhostuser_fp",
+                        vif_name=_get_vif_name(vif),
+                        port_profile=profile)
+        _set_vhostuser_settings(vif, obj)
+        return obj
+    elif vif['details'].get(model.VIF_DETAILS_VHOSTUSER_OVS_PLUG, False):
         profile = objects.vif.VIFPortProfileOpenVSwitch(
             interface_id=vif.get('ovs_interfaceid') or vif['id'])
         vif_name = ('vhu' + vif['id'])[:model.NIC_NAME_LEN]
@@ -290,15 +331,7 @@ def _nova_to_osvif_vif_vhostuser(vif):
                                 vif_name=vif_name)
         if vif["network"]["bridge"] is not None:
             obj.bridge_name = vif["network"]["bridge"]
-        obj.mode = vif['details'].get(
-            model.VIF_DETAILS_VHOSTUSER_MODE, 'server')
-        path = vif['details'].get(
-            model.VIF_DETAILS_VHOSTUSER_SOCKET, None)
-        if path:
-            obj.path = path
-        else:
-            raise exception.VifDetailsMissingVhostuserSockPath(
-                vif_id=vif['id'])
+        _set_vhostuser_settings(vif, obj)
         return obj
     else:
         raise NotImplementedError()
