@@ -56,6 +56,8 @@ CONF = nova.conf.CONF
 
 class ApiSampleTestBaseV21(testscenarios.WithScenarios,
                           api_samples_test_base.ApiSampleTestBase):
+    SUPPORTS_CELLS = False
+
     api_major_version = 'v2'
     # any additional fixtures needed for this scenario
     _additional_fixtures = []
@@ -87,13 +89,29 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
         for fix in self._additional_fixtures:
             self.useFixture(fix())
 
+        if not self.SUPPORTS_CELLS:
+            # NOTE(danms): Disable base automatic DB (and cells) config
+            self.USES_DB = False
+            self.USES_DB_SELF = True
+
         # super class call is delayed here so that we have the right
         # paste and conf before loading all the services, as we can't
         # change these later.
         super(ApiSampleTestBaseV21, self).setUp()
+
+        if not self.SUPPORTS_CELLS:
+            self.useFixture(fixtures.Database())
+            self.useFixture(fixtures.Database(database='api'))
+            self.useFixture(fixtures.DefaultFlavorsFixture())
+            self.useFixture(fixtures.SingleCellSimple())
+
+        super(ApiSampleTestBaseV21, self)._setup_services()
 
         self.useFixture(test.SampleNetworks(host=self.network.host))
         fake_network.stub_compute_with_ips(self.stubs)
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
         # this is used to generate sample docs
         self.generate_samples = os.getenv('GENERATE_SAMPLES') is not None
+
+    def _setup_services(self):
+        pass
