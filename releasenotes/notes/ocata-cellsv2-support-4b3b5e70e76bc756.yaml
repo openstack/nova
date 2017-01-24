@@ -1,0 +1,17 @@
+---
+features:
+  - |
+    All deployments will function as a single-cell
+    environment. Multiple v2 cells are technically possible, but should
+    only be used for testing as many other things will not work across
+    cell bounaries yet. For details on cells v2 and the setup required for Nova
+    with cells v2, see the cells documentation. [1]_
+
+    .. [1] http://docs.openstack.org/developer/nova/cells.html
+
+issues:
+  - Once fully uppgraded, if you create multiple real cells with hosts, the
+    scheduler will utilize them, but those instances will likely be unusable
+    because not all API functions are cells-aware yet.
+  - Listing instances across multiple cells with a sort order will
+    result in barber-pole sorting, striped across the cell boundaries.
