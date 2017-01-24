@@ -16,6 +16,7 @@
 
 """Tests For Console proxy."""
 
+import fixtures
 import mock
 
 from nova.compute import rpcapi as compute_rpcapi
@@ -28,6 +29,7 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit import fake_instance
+from nova.tests.unit import fake_xvp_console_proxy
 
 CONF = nova.conf.CONF
 
@@ -36,7 +38,9 @@ class ConsoleTestCase(test.TestCase):
     """Test case for console proxy manager."""
     def setUp(self):
         super(ConsoleTestCase, self).setUp()
-        self.flags(console_driver='nova.console.fake.FakeConsoleProxy')
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.console.manager.xvp.XVPConsoleProxy',
+            fake_xvp_console_proxy.FakeConsoleProxy))
         self.console = console_manager.ConsoleProxyManager()
         self.user_id = 'fake'
         self.project_id = 'fake'
