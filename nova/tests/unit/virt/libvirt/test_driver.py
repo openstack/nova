@@ -9043,8 +9043,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                              expected_mig_status='cancelled')
 
     @mock.patch.object(fakelibvirt.virDomain, "migrateSetMaxDowntime")
-    @mock.patch.object(libvirt_driver.LibvirtDriver,
-                       "_migration_downtime_steps")
+    @mock.patch("nova.virt.libvirt.migration.downtime_steps")
     def test_live_migration_monitor_downtime(self, mock_downtime_steps,
                                              mock_set_downtime):
         self.flags(live_migration_completion_timeout=1000000,
@@ -9191,29 +9190,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self._test_live_migration_monitoring(domain_info_records,
                                              fake_times, self.EXPECT_FAILURE)
-
-    def test_live_migration_downtime_steps(self):
-        self.flags(live_migration_downtime=400, group='libvirt')
-        self.flags(live_migration_downtime_steps=10, group='libvirt')
-        self.flags(live_migration_downtime_delay=30, group='libvirt')
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-
-        steps = drvr._migration_downtime_steps(3.0)
-
-        self.assertEqual([
-            (0, 37),
-            (90, 38),
-            (180, 39),
-            (270, 42),
-            (360, 46),
-            (450, 55),
-            (540, 70),
-            (630, 98),
-            (720, 148),
-            (810, 238),
-            (900, 400),
-        ], list(steps))
 
     @mock.patch('nova.virt.libvirt.migration.should_switch_to_postcopy')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
