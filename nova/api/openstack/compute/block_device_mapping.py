@@ -17,6 +17,7 @@
 
 from webob import exc
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack.compute.schemas import block_device_mapping as \
                                                   schema_block_device_mapping
 from nova.api.openstack import extensions
@@ -74,7 +75,16 @@ class BlockDeviceMapping(extensions.V21APIExtensionBase):
             create_kwargs['legacy_bdm'] = False
 
     def get_server_create_schema(self, version):
-        if version == '2.32':
-            return schema_block_device_mapping.server_create_v232
+        request_version = api_version_request.APIVersionRequest(version)
+        version_242 = api_version_request.APIVersionRequest('2.42')
+
+        # NOTE(artom) the following conditional was merged as
+        # "if version == '2.32'" The intent all along was to check whether
+        # version was greater than or equal to 2.32. In other words, we wanted
+        # to support tags in versions 2.32 and up, but ended up supporting them
+        # in version 2.32 only. Since we need a new microversion to add request
+        # body attributes, tags have been re-added in version 2.42.
+        if version == '2.32' or request_version >= version_242:
+            return schema_block_device_mapping.server_create_with_tags
         else:
             return schema_block_device_mapping.server_create

@@ -77,6 +77,7 @@ class ServersController(wsgi.Controller):
 
     schema_server_create_v232 = schema_servers.base_create_v232
     schema_server_create_v237 = schema_servers.base_create_v237
+    schema_server_create_v242 = schema_servers.base_create_v242
 
     @staticmethod
     def _add_location(robj):
@@ -169,6 +170,9 @@ class ServersController(wsgi.Controller):
                 invoke_kwds={"extension_info": self.extension_info},
                 propagate_map_exceptions=True)
         if list(self.create_schema_manager):
+            self.create_schema_manager.map(self._create_extension_schema,
+                                           self.schema_server_create_v242,
+                                           '2.42')
             self.create_schema_manager.map(self._create_extension_schema,
                                            self.schema_server_create_v237,
                                            '2.37')
@@ -517,7 +521,8 @@ class ServersController(wsgi.Controller):
     @validation.schema(schema_server_create, '2.1', '2.18')
     @validation.schema(schema_server_create_v219, '2.19', '2.31')
     @validation.schema(schema_server_create_v232, '2.32', '2.36')
-    @validation.schema(schema_server_create_v237, '2.37')
+    @validation.schema(schema_server_create_v237, '2.37', '2.41')
+    @validation.schema(schema_server_create_v242, '2.42')
     def create(self, req, body):
         """Creates a new server for a given user."""
 

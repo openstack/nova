@@ -105,6 +105,30 @@ base_create_v237['properties']['server']['properties']['networks'] = {
     ]}
 
 
+# 2.42 builds on 2.37 and re-introduces the tag field to the list of network
+# objects.
+base_create_v242 = copy.deepcopy(base_create_v237)
+base_create_v242['properties']['server']['properties']['networks'] = {
+    'oneOf': [
+        {'type': 'array',
+         'items': {
+             'type': 'object',
+             'properties': {
+                 'fixed_ip': parameter_types.ip_address,
+                 'port': {
+                     'oneOf': [{'type': 'string', 'format': 'uuid'},
+                               {'type': 'null'}]
+                 },
+                 'uuid': {'type': 'string', 'format': 'uuid'},
+                 'tag': parameter_types.tag,
+             },
+             'additionalProperties': False,
+         },
+        },
+        {'type': 'string', 'enum': ['none', 'auto']},
+    ]}
+
+
 base_update = {
     'type': 'object',
     'properties': {

@@ -1,0 +1,10 @@
+fixes:
+  - |
+    In the context of virtual device role tagging at server create time, the
+    2.42 microversion restores the tag attribute to networks and
+    block_device_mapping_v2. A bug has caused the tag attribute to no longer be
+    accepted starting with version 2.33 for block_device_mapping_v2 and
+    starting with version 2.37 for networks. In other words, block devices
+    could only be tagged in version 2.32 and network interfaces between
+    versions 2.32 and 2.36 inclusively. Starting with 2.42, both network
+    interfaces and block devices can be tagged again.

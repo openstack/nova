@@ -1174,11 +1174,14 @@ block_device_mapping_v2:
             "delete_on_termination": true,
             "tag": "disk1" }]
 
-    Starting in microversion 2.32, the tag is an optional, arbitrary attribute
-    that can be used to assign a tag to the block device. This tag is then
-    exposed to the guest in the metadata API and the config drive and is
-    associated to hardware metadata for that block device, such as bus (ex:
-    SCSI), bus address (ex: 1:0:2:0), and serial.
+    In microversion 2.32, ``tag`` is an optional string attribute that can
+    be used to assign a tag to the block device. This tag is then exposed to
+    the guest in the metadata API and the config drive and is associated to
+    hardware metadata for that block device, such as bus (ex: SCSI), bus
+    address (ex: 1:0:2:0), and serial.
+
+    A bug has caused the ``tag`` attribute to no longer be accepted starting
+    with version 2.33. It has been restored in version 2.42.
   in: body
   required: false
   type: object
@@ -1501,9 +1504,28 @@ device_resp:
   in: body
   required: true
   type: string
-device_tag:
+device_tag_bdm:
   description: |
-    An arbitrary tag.
+    A device role tag that can be applied to a block device. The guest OS of a
+    server that has devices tagged in this manner can access hardware metadata
+    about the tagged devices from the metadata API and on the config drive, if
+    enabled.
+
+    .. note:: Due to a bug, block device tags are accepted in version 2.32 and
+      subsequently starting with version 2.42.
+  in: body
+  required: false
+  type: string
+  min_version: 2.32
+device_tag_nic:
+  description: |
+    A device role tag that can be applied to a network interface. The guest OS
+    of a server that has devices tagged in this manner can access hardware
+    metadata about the tagged devices from the metadata API and on the config
+    drive, if enabled.
+
+    .. note:: Due to a bug, network interface tags are accepted between 2.32
+      and 2.36 inclusively, and subsequently starting with version 2.42.
   in: body
   required: false
   type: string
@@ -3168,12 +3190,16 @@ networks:
     object.  To provision the server instance with a NIC for an already existing port,
     specify the port-id in the ``port`` attribute in a ``networks`` object.
 
-    Starting in microversion 2.32, it's possible to optionally assign an
-    arbitrary tag to a virtual network interface, specify the tag attribute in
-    the ``network`` object. An interface's tag is exposed to the guest in the
-    metadata API and the config drive and is associated to hardware metadata
-    for that network interface, such as bus (ex: PCI), bus address (ex:
-    0000:00:02.0), and MAC address.
+    In microversion 2.32, the ``tag`` is an optional string attribute that
+    can be used to assign a tag to a virtual network interface. This tag is
+    then exposed to the guest in the metadata API and the config drive and is
+    associated to hardware metadata for that network interface, such as bus
+    (ex: PCI), bus address (ex: 0000:00:02.0), and MAC address.
+
+    A bug has caused the ``tag`` attribute to no longer be accepted starting
+    with version 2.37. Therefore, network interfaces could only be tagged in
+    versions 2.32 to 2.36 inclusively. Version 2.42 has restored the ``tag``
+    attribute.
 
     Starting with microversion 2.37, this field is required and the special
     values *auto* and *none* can be specified for networks. *auto* tells the

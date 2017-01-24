@@ -193,6 +193,15 @@ class ServersSampleJson237Test(ServersSampleBase):
         self._post_server(use_common_server_api_samples=False)
 
 
+class ServersSampleJson242Test(ServersSampleBase):
+    microversion = '2.42'
+    sample_dir = 'servers'
+    scenarios = [('v2_42', {'api_major_version': 'v2.1'})]
+
+    def test_servers_post(self):
+        self._post_server(use_common_server_api_samples=False)
+
+
 class ServersUpdateSampleJsonTest(ServersSampleBase):
 
     def test_update_server(self):
