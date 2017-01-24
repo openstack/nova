@@ -993,8 +993,6 @@ class IronicDriver(virt_driver.ComputeDriver):
                block_device_info=None, bad_volumes_callback=None):
         """Reboot the specified instance.
 
-        NOTE: Ironic does not support soft-off, so this method
-              always performs a hard-reboot.
         NOTE: Unlike the libvirt driver, this method does not delete
               and recreate the instance; it preserves local state.
 
@@ -1002,23 +1000,40 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param instance: The instance object.
         :param network_info: Instance network information. Ignored by
             this driver.
-        :param reboot_type: Either a HARD or SOFT reboot. Ignored by
-            this driver.
+        :param reboot_type: Either a HARD or SOFT reboot.
         :param block_device_info: Info pertaining to attached volumes.
             Ignored by this driver.
         :param bad_volumes_callback: Function to handle any bad volumes
             encountered. Ignored by this driver.
 
         """
-        LOG.debug('Reboot called for instance', instance=instance)
+        LOG.debug('Reboot(type %s) called for instance',
+                  reboot_type, instance=instance)
         node = self._validate_instance_and_node(instance)
-        self.ironicclient.call("node.set_power_state", node.uuid, 'reboot')
+
+        hard = True
+        if reboot_type == 'SOFT':
+            try:
+                self.ironicclient.call("node.set_power_state", node.uuid,
+                                       'reboot', soft=True)
+                hard = False
+            except ironic.exc.BadRequest as exc:
+                LOG.info(_LI('Soft reboot is not supported by ironic hardware '
+                             'driver. Falling back to hard reboot: %s'),
+                         exc,
+                         instance=instance)
+
+        if hard:
+            self.ironicclient.call("node.set_power_state", node.uuid, 'reboot')
 
         timer = loopingcall.FixedIntervalLoopingCall(
                     self._wait_for_power_state, instance, 'reboot')
         timer.start(interval=CONF.ironic.api_retry_interval).wait()
-        LOG.info(_LI('Successfully rebooted Ironic node %s'),
-                 node.uuid, instance=instance)
+        LOG.info(_LI('Successfully rebooted(type %(type)s) Ironic node '
+                     '%(node)s'),
+                 {'type': ('HARD' if hard else 'SOFT'),
+                  'node': node.uuid},
+                 instance=instance)
 
     def power_off(self, instance, timeout=0, retry_interval=0):
         """Power off the specified instance.

@@ -147,7 +147,7 @@ class FakeNodeClient(object):
     def list_ports(self, node_uuid, detail=False):
         pass
 
-    def set_power_state(self, node_uuid, target):
+    def set_power_state(self, node_uuid, target, soft=False):
         pass
 
     def set_provision_state(self, node_uuid, target):

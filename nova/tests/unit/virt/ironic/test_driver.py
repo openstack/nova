@@ -1336,8 +1336,41 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_looping.return_value = fake_looping_call
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=node.uuid)
-        self.driver.reboot(self.ctx, instance, None, None)
+        self.driver.reboot(self.ctx, instance, None, 'HARD')
         mock_sp.assert_called_once_with(node.uuid, 'reboot')
+
+    @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_validate_instance_and_node')
+    @mock.patch.object(FAKE_CLIENT.node, 'set_power_state')
+    def test_reboot_soft(self, mock_sp, fake_validate, mock_looping):
+        node = ironic_utils.get_test_node()
+        fake_validate.side_effect = [node, node]
+
+        fake_looping_call = FakeLoopingCall()
+        mock_looping.return_value = fake_looping_call
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   node=node.uuid)
+        self.driver.reboot(self.ctx, instance, None, 'SOFT')
+        mock_sp.assert_called_once_with(node.uuid, 'reboot', soft=True)
+
+    @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_validate_instance_and_node')
+    @mock.patch.object(FAKE_CLIENT.node, 'set_power_state')
+    def test_reboot_soft_not_supported(self, mock_sp, fake_validate,
+                                       mock_looping):
+        node = ironic_utils.get_test_node()
+        fake_validate.side_effect = [node, node]
+        mock_sp.side_effect = [ironic_exception.BadRequest(), None]
+
+        fake_looping_call = FakeLoopingCall()
+        mock_looping.return_value = fake_looping_call
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   node=node.uuid)
+        self.driver.reboot(self.ctx, instance, None, 'SOFT')
+        mock_sp.assert_has_calls([mock.call(node.uuid, 'reboot', soft=True),
+                                  mock.call(node.uuid, 'reboot')])
 
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
     @mock.patch.object(ironic_driver.IronicDriver,
