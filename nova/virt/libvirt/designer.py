@@ -57,7 +57,7 @@ def set_vif_host_backend_ethernet_config(conf, tapname):
 
     conf.net_type = "ethernet"
     conf.target_dev = tapname
-    conf.script = ""
+    conf.script = None
 
 
 def set_vif_host_backend_802qbg_config(conf, devname, managerid,

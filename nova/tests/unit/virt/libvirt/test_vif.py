@@ -808,8 +808,8 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         node = self._get_node(xml)
         self._assertTypeAndMacEquals(node, "ethernet", "target", "dev",
                                      self.vif_ivs, prefix=dev_prefix)
-        script = node.find("script").get("path")
-        self.assertEqual(script, "")
+        script = node.find("script")
+        self.assertIsNone(script)
 
     def test_unplug_ivs_ethernet(self):
         d = vif.LibvirtGenericVIFDriver()

@@ -58,7 +58,7 @@ class DesignerTestCase(test.NoDBTestCase):
         designer.set_vif_host_backend_ethernet_config(conf, 'fake-tap')
         self.assertEqual('ethernet', conf.net_type)
         self.assertEqual('fake-tap', conf.target_dev)
-        self.assertEqual('', conf.script)
+        self.assertIsNone(conf.script)
 
     def test_set_vif_host_backend_802qbg_config(self):
         conf = config.LibvirtConfigGuestInterface()
