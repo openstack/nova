@@ -1112,7 +1112,7 @@ object_data = {
     'InstanceList': '2.2-ff71772c7bf6d72f6ef6eee0199fb1c9',
     'InstanceMapping': '1.0-65de80c491f54d19374703c0753c4d47',
     'InstanceMappingList': '1.1-14d4a4296c3cbf51e660b657dc37b19e',
-    'InstanceNUMACell': '1.3-6991a20992c5faa57fae71a45b40241b',
+    'InstanceNUMACell': '1.4-7c1eb9a198dee076b4de0840e45f4f55',
     'InstanceNUMATopology': '1.3-ec0030cb0402a49c96da7051c037082a',
     'InstancePCIRequest': '1.1-b1d75ebc716cb12906d9d513890092bf',
     'InstancePCIRequests': '1.1-65e38083177726d806684cb1cc0136d2',
