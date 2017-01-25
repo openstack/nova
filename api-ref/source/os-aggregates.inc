@@ -36,9 +36,9 @@ Response
   - updated_at: updated_consider_null
   - uuid: aggregate_uuid
 
-**Example List Aggregates: JSON response**
+**Example List Aggregates (v2.41): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregates-list-get-resp.json
+.. literalinclude:: ../../doc/api_samples/os-aggregates/v2.41/aggregates-list-get-resp.json
    :language: javascript
 
 Create Aggregate
@@ -82,9 +82,9 @@ Response
   - updated_at: updated_consider_null
   - uuid: aggregate_uuid
 
-**Example Create Aggregate: JSON response**
+**Example Create Aggregate (v2.41): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-post-resp.json
+.. literalinclude:: ../../doc/api_samples/os-aggregates/v2.41/aggregate-post-resp.json
    :language: javascript
 
 Show Aggregate Details
@@ -122,9 +122,9 @@ Response
   - updated_at: updated_consider_null
   - uuid: aggregate_uuid
 
-**Example Show Aggregate Details: JSON response**
+**Example Show Aggregate Details (v2.41): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregates-get-resp.json
+.. literalinclude:: ../../doc/api_samples/os-aggregates/v2.41/aggregates-get-resp.json
    :language: javascript
 
 Update Aggregate
@@ -173,9 +173,9 @@ Response
   - updated_at: updated_consider_null
   - uuid: aggregate_uuid
 
-**Example Update Aggregate: JSON response**
+**Example Update Aggregate (v2.41): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-update-post-resp.json
+.. literalinclude:: ../../doc/api_samples/os-aggregates/v2.41/aggregate-update-post-resp.json
    :language: javascript
 
 Delete Aggregate
@@ -246,9 +246,9 @@ Response
   - updated_at: updated_consider_null
   - uuid: aggregate_uuid
 
-**Example Add Host: JSON response**
+**Example Add Host (v2.41): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregates-add-host-post-resp.json
+.. literalinclude:: ../../doc/api_samples/os-aggregates/v2.41/aggregates-add-host-post-resp.json
    :language: javascript
 
 Remove Host
@@ -296,9 +296,9 @@ Response
   - updated_at: updated_consider_null
   - uuid: aggregate_uuid
 
-**Example Remove Host: JSON response**
+**Example Remove Host (v2.41): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregates-remove-host-post-resp.json
+.. literalinclude:: ../../doc/api_samples/os-aggregates/v2.41/aggregates-remove-host-post-resp.json
    :language: javascript
 
 Create Or Update Aggregate Metadata
@@ -346,7 +346,7 @@ Response
   - updated_at: updated_consider_null
   - uuid: aggregate_uuid
 
-**Example Create Or Update Aggregate Metadata: JSON response**
+**Example Create Or Update Aggregate Metadata (v2.41): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregates-metadata-post-resp.json
+.. literalinclude:: ../../doc/api_samples/os-aggregates/v2.41/aggregates-metadata-post-resp.json
    :language: javascript

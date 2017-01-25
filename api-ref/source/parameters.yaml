@@ -28,7 +28,7 @@ aggregate_id:
     The aggregate ID.
   in: path
   required: true
-  type: string
+  type: integer
 api_version:
   in: path
   required: true
@@ -950,7 +950,7 @@ aggregate_id_body:
     The ID of the host aggregate.
   in: body
   required: true
-  type: string
+  type: integer
 aggregate_metadata:
   description: |
     Metadata key and value pairs associate with the aggregate.
@@ -979,6 +979,7 @@ aggregate_uuid:
   description: |
     The UUID of the host aggregate.
   in: body
+  required: true
   type: string
   min_version: 2.41
 aggregates:
