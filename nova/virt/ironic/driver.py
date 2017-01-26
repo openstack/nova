@@ -1038,25 +1038,58 @@ class IronicDriver(virt_driver.ComputeDriver):
     def power_off(self, instance, timeout=0, retry_interval=0):
         """Power off the specified instance.
 
-        NOTE: Ironic does not support soft-off, so this method ignores
-              timeout and retry_interval parameters.
         NOTE: Unlike the libvirt driver, this method does not delete
               and recreate the instance; it preserves local state.
 
         :param instance: The instance object.
-        :param timeout: time to wait for node to shutdown. Ignored by
-            this driver.
+        :param timeout: time to wait for node to shutdown. If it is set,
+            soft power off is attempted before hard power off.
         :param retry_interval: How often to signal node while waiting
-            for it to shutdown. Ignored by this driver.
+            for it to shutdown. Ignored by this driver. Retrying depends on
+            Ironic hardware driver.
         """
         LOG.debug('Power off called for instance', instance=instance)
         node = self._validate_instance_and_node(instance)
-        self.ironicclient.call("node.set_power_state", node.uuid, 'off')
 
+        if timeout:
+            try:
+                self.ironicclient.call("node.set_power_state", node.uuid,
+                                       'off', soft=True, timeout=timeout)
+
+                timer = loopingcall.FixedIntervalLoopingCall(
+                    self._wait_for_power_state, instance, 'soft power off')
+                timer.start(interval=CONF.ironic.api_retry_interval).wait()
+                node = self._validate_instance_and_node(instance)
+                if node.power_state == ironic_states.POWER_OFF:
+                    LOG.info(_LI('Successfully soft powered off Ironic node '
+                                 '%s'),
+                             node.uuid, instance=instance)
+                    return
+                LOG.info(_LI("Failed to soft power off instance "
+                             "%(instance)s on baremetal node %(node)s "
+                             "within the required timeout %(timeout)d "
+                             "seconds due to error: %(reason)s. "
+                             "Attempting hard power off."),
+                         {'instance': instance.uuid,
+                          'timeout': timeout,
+                          'node': node.uuid,
+                          'reason': node.last_error},
+                         instance=instance)
+            except ironic.exc.ClientException as e:
+                LOG.info(_LI("Failed to soft power off instance "
+                             "%(instance)s on baremetal node %(node)s "
+                             "due to error: %(reason)s. "
+                             "Attempting hard power off."),
+                         {'instance': instance.uuid,
+                          'node': node.uuid,
+                          'reason': e},
+                         instance=instance)
+
+        self.ironicclient.call("node.set_power_state", node.uuid, 'off')
         timer = loopingcall.FixedIntervalLoopingCall(
                     self._wait_for_power_state, instance, 'power off')
         timer.start(interval=CONF.ironic.api_retry_interval).wait()
-        LOG.info(_LI('Successfully powered off Ironic node %s'),
+        LOG.info(_LI('Successfully hard powered off Ironic node %s'),
                  node.uuid, instance=instance)
 
     def power_on(self, context, instance, network_info,
