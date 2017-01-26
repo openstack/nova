@@ -316,7 +316,7 @@ class ComputeAPI(object):
         * 4.12 - Remove migration_id from live_migration_force_complete
         * 4.13 - Make get_instance_diagnostics send an instance object
 
-        ... Newton supports messaging version 4.13. So, any changes to
+        ... Newton and Ocata support messaging version 4.13. So, any changes to
         existing methods in 4.x after that point should be done so that they
         can handle the version_cap being set to 4.13
     '''
@@ -328,6 +328,7 @@ class ComputeAPI(object):
         'liberty': '4.5',
         'mitaka': '4.11',
         'newton': '4.13',
+        'ocata': '4.13',
     }
 
     def __init__(self):

@@ -116,8 +116,8 @@ class CellsAPI(object):
         * 1.36 - Added 'delete_type' parameter to terminate_instance()
         * 1.37 - Add get_keypair_at_top to fetch keypair from api cell
 
-        ... Liberty, Mitaka and Newton support message version 1.37.  So, any
-        changes to existing methods in 1.x after that point should be
+        ... Liberty, Mitaka, Newton, and Ocata support message version 1.37.
+        So, any changes to existing methods in 1.x after that point should be
         done such that they can handle the version_cap being set to
         1.37.
     '''
@@ -131,6 +131,7 @@ class CellsAPI(object):
         'liberty': '1.37',
         'mitaka': '1.37',
         'newton': '1.37',
+        'ocata': '1.37',
     }
 
     def __init__(self):
