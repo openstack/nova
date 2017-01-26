@@ -1349,7 +1349,9 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         with context.target_cell(ctxt, cell_mapping2):
             compute_nodes[1].create()
 
-        self.commands.discover_hosts()
+        self.commands.discover_hosts(verbose=True)
+        output = self.output.getvalue().strip()
+        self.assertNotEqual('', output)
 
         # Check that the host mappings were created
         for i, compute_node in enumerate(compute_nodes):
