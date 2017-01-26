@@ -622,7 +622,7 @@ class ServersControllerTest(ControllerTest):
     def test_get_server_details_with_limit_and_other_params(self):
         req = self.req('/fake/servers/detail'
                                       '?limit=3&blah=2:t'
-                                      '&sort_key=id1&sort_dir=asc')
+                                      '&sort_key=uuid&sort_dir=asc')
         res = self.controller.detail(req)
 
         servers = res['servers']
@@ -636,7 +636,7 @@ class ServersControllerTest(ControllerTest):
         self.assertEqual('/v2/fake/servers/detail', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
         expected = {'limit': ['3'],
-                    'sort_key': ['id1'], 'sort_dir': ['asc'],
+                    'sort_key': ['uuid'], 'sort_dir': ['asc'],
                     'marker': [fakes.get_fake_uuid(2)]}
         self.assertThat(params, matchers.DictMatches(expected))
 
@@ -683,6 +683,59 @@ class ServersControllerTest(ControllerTest):
                        use_admin_context=True)
         self.assertRaises(exception.ValidationError,
                           self.controller.index, req)
+
+    def test_get_servers_invalid_sort_key(self):
+        req = self.req('/fake/servers?sort_key=foo&sort_dir=desc')
+        self.assertRaises(exception.ValidationError,
+                          self.controller.index, req)
+
+    @mock.patch.object(compute_api.API, 'get_all')
+    def test_get_servers_ignore_sort_key(self, mock_get):
+        req = self.req('/fake/servers?sort_key=vcpus&sort_dir=asc')
+        self.controller.index(req)
+        mock_get.assert_called_once_with(
+            mock.ANY, search_opts=mock.ANY, limit=mock.ANY, marker=mock.ANY,
+            expected_attrs=mock.ANY, sort_keys=[], sort_dirs=[])
+
+    @mock.patch.object(compute_api.API, 'get_all')
+    def test_get_servers_ignore_sort_key_only_one_dir(self, mock_get):
+        req = self.req(
+            '/fake/servers?sort_key=user_id&sort_key=vcpus&sort_dir=asc')
+        self.controller.index(req)
+        mock_get.assert_called_once_with(
+            mock.ANY, search_opts=mock.ANY, limit=mock.ANY, marker=mock.ANY,
+            expected_attrs=mock.ANY, sort_keys=['user_id'],
+            sort_dirs=['asc'])
+
+    @mock.patch.object(compute_api.API, 'get_all')
+    def test_get_servers_ignore_sort_key_with_no_sort_dir(self, mock_get):
+        req = self.req('/fake/servers?sort_key=vcpus&sort_key=user_id')
+        self.controller.index(req)
+        mock_get.assert_called_once_with(
+            mock.ANY, search_opts=mock.ANY, limit=mock.ANY, marker=mock.ANY,
+            expected_attrs=mock.ANY, sort_keys=['user_id'], sort_dirs=[])
+
+    @mock.patch.object(compute_api.API, 'get_all')
+    def test_get_servers_ignore_sort_key_with_bad_sort_dir(self, mock_get):
+        req = self.req('/fake/servers?sort_key=vcpus&sort_dir=bad_dir')
+        self.controller.index(req)
+        mock_get.assert_called_once_with(
+            mock.ANY, search_opts=mock.ANY, limit=mock.ANY, marker=mock.ANY,
+            expected_attrs=mock.ANY, sort_keys=[], sort_dirs=[])
+
+    def test_get_servers_non_admin_with_admin_only_sort_key(self):
+        req = self.req('/fake/servers?sort_key=host&sort_dir=desc')
+        self.assertRaises(webob.exc.HTTPForbidden,
+                          self.controller.index, req)
+
+    @mock.patch.object(compute_api.API, 'get_all')
+    def test_get_servers_admin_with_admin_only_sort_key(self, mock_get):
+        req = self.req('/fake/servers?sort_key=node&sort_dir=desc',
+                       use_admin_context=True)
+        self.controller.detail(req)
+        mock_get.assert_called_once_with(
+            mock.ANY, search_opts=mock.ANY, limit=mock.ANY, marker=mock.ANY,
+            expected_attrs=mock.ANY, sort_keys=['node'], sort_dirs=['desc'])
 
     def test_get_servers_with_bad_option(self):
         server_uuid = uuids.fake
@@ -1388,8 +1441,8 @@ class ServersControllerTestV29(ServersControllerTest):
     @mock.patch.object(compute_api.API, 'get_all')
     def test_get_servers_remove_non_search_options(self, get_all_mock):
         req = fakes.HTTPRequestV21.blank('/servers'
-                                         '?sort_key=id1&sort_dir=asc'
-                                         '&sort_key=id2&sort_dir=desc'
+                                         '?sort_key=uuid&sort_dir=asc'
+                                         '&sort_key=user_id&sort_dir=desc'
                                          '&limit=1&marker=123',
                                          use_admin_context=True)
         self.controller.index(req)
