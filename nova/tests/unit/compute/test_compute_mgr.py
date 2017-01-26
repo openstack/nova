@@ -12,6 +12,7 @@
 
 """Unit tests for ComputeManager()."""
 
+import copy
 import datetime
 import time
 
@@ -2789,6 +2790,21 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             jsonutils.dumps({'address': 'foo', 'devname': 'bar'})],
             group='pci')
         self.assertRaises(exception.PciDeviceInvalidDeviceName,
+                          self.compute.init_host)
+
+    def test_init_host_placement_ensures_default_config_is_unset(self):
+        # Tests that by default the placement config option is unset
+        # NOTE(sbauza): Just resets the conf opt to the real value and not
+        # the faked one.
+        fake_conf = copy.copy(CONF)
+        fake_conf.clear_default('os_region_name', group='placement')
+        self.assertIsNone(CONF.placement.os_region_name)
+
+    def test_init_host_placement_config_failure(self):
+        # Tests that we fail init_host if the placement section is
+        # configured incorrectly.
+        self.flags(os_region_name=None, group='placement')
+        self.assertRaises(exception.PlacementNotConfigured,
                           self.compute.init_host)
 
     @mock.patch('nova.compute.manager.ComputeManager._instance_update')

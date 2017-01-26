@@ -1129,6 +1129,12 @@ class ComputeManager(manager.Manager):
             # if the configuration is wrong.
             whitelist.Whitelist(CONF.pci.passthrough_whitelist)
 
+        # NOTE(sbauza): We want the compute node to hard fail if it can't be
+        # able to provide its resources to the placement API, or it would not
+        # be able to be eligible as a destination.
+        if CONF.placement.os_region_name is None:
+            raise exception.PlacementNotConfigured()
+
         self.driver.init_host(host=self.host)
         context = nova.context.get_admin_context()
         instances = objects.InstanceList.get_by_host(
