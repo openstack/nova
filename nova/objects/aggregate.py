@@ -16,6 +16,7 @@ from oslo_db import exception as db_exc
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import uuidutils
+import six
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql import func
@@ -605,7 +606,7 @@ def migrate_aggregates(ctxt, count):
                 _LW('Aggregate id %(id)i disappeared during migration'),
                 {'id': aggregate_id})
         except (exception.AggregateNameExists) as e:
-            LOG.error(str(e))
+            LOG.error(six.text_type(e))
 
     return count_all, count_hit
 

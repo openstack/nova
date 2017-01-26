@@ -635,3 +635,26 @@ class AggregateMigrationTestCase(test.TestCase):
             self.context, 0)
         self.assertEqual(0, match)
         self.assertEqual(0, done)
+
+    @mock.patch('nova.objects.aggregate.LOG.error')
+    def test_migrate_aggregates_duplicate_unicode(self, mock_log_error):
+        """Tests that we handle a duplicate aggregate when migrating and that
+        we handle when the exception message is in unicode.
+        """
+        # First create an aggregate that will be migrated from main to API DB.
+        create_aggregate(self.context, 1, in_api=False)
+        # Now create that same aggregate in the API DB.
+        create_aggregate(self.context, 1, in_api=True)
+        # Now let's run the online data migration which will fail to create
+        # a duplicate aggregate in the API database and will raise
+        # AggregateNameExists which we want to modify to have a unicode
+        # message.
+        with mock.patch.object(exception.AggregateNameExists, 'msg_fmt',
+                               u'\xF0\x9F\x92\xA9'):
+            match, done = aggregate_obj.migrate_aggregates(self.context, 50)
+            # we found one
+            self.assertEqual(1, match)
+            # but we didn't migrate it
+            self.assertEqual(0, done)
+            # and we logged an error for the duplicate aggregate
+            mock_log_error.assert_called()
