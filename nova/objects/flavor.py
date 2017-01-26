@@ -15,6 +15,7 @@
 from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import utils as sqlalchemyutils
 from oslo_log import log as logging
+import six
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.expression import asc
@@ -752,7 +753,7 @@ def migrate_flavors(ctxt, count, hard_delete=False):
             LOG.warning(_LW('Flavor id %(id)i disappeared during migration'),
                         {'id': flavor_id})
         except (exception.FlavorExists, exception.FlavorIdExists) as e:
-            LOG.error(str(e))
+            LOG.error(six.text_type(e))
 
     return count_all, count_hit
 
