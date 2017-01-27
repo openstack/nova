@@ -575,6 +575,7 @@ class SchedulerReportClient(object):
         else:
             self._delete_inventory(compute_node.uuid)
 
+    @safe_connect
     def _get_allocations_for_instance(self, rp_uuid, instance):
         url = '/allocations/%s' % instance.uuid
         resp = self.get(url)
@@ -587,10 +588,7 @@ class SchedulerReportClient(object):
             return resp.json()['allocations'].get(
                 rp_uuid, {}).get('resources', {})
 
-    @safe_connect
     def _allocate_for_instance(self, rp_uuid, instance):
-        url = '/allocations/%s' % instance.uuid
-
         my_allocations = _instance_to_allocations_dict(instance)
         current_allocations = self._get_allocations_for_instance(rp_uuid,
                                                                  instance)
@@ -601,30 +599,49 @@ class SchedulerReportClient(object):
                       {'uuid': instance.uuid, 'alloc': allocstr})
             return
 
-        allocations = {
+        LOG.debug('Sending allocation for instance %s',
+                  my_allocations,
+                  instance=instance)
+        res = self._put_allocations(rp_uuid, instance.uuid, my_allocations)
+        if res:
+            LOG.info(_LI('Submitted allocation for instance'),
+                     instance=instance)
+
+    @safe_connect
+    def _put_allocations(self, rp_uuid, consumer_uuid, alloc_data):
+        """Creates allocation records for the supplied instance UUID against
+        the supplied resource provider.
+
+        :note Currently we only allocate against a single resource provider.
+              Once shared storage and things like NUMA allocations are a
+              reality, this will change to allocate against multiple providers.
+
+        :param rp_uuid: The UUID of the resource provider to allocate against.
+        :param consumer_uuid: The instance's UUID.
+        :param alloc_data: Dict, keyed by resource class, of amounts to
+                           consume.
+        :returns: True if the allocations were created, False otherwise.
+        """
+        payload = {
             'allocations': [
                 {
                     'resource_provider': {
                         'uuid': rp_uuid,
                     },
-                    'resources': my_allocations,
+                    'resources': alloc_data,
                 },
             ],
         }
-        LOG.debug('Sending allocation for instance %s',
-                  allocations,
-                  instance=instance)
-        r = self.put(url, allocations)
-        if r:
-            LOG.info(_LI('Submitted allocation for instance'),
-                     instance=instance)
-        else:
+        url = '/allocations/%s' % consumer_uuid
+        r = self.put(url, payload)
+        if r.status_code != 204:
             LOG.warning(
                 _LW('Unable to submit allocation for instance '
                     '%(uuid)s (%(code)i %(text)s)'),
-                {'uuid': instance.uuid,
+                {'uuid': consumer_uuid,
                  'code': r.status_code,
                  'text': r.text})
+        return r.status_code == 204
 
     @safe_connect
     def _delete_allocation_for_instance(self, uuid):
