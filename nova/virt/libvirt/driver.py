@@ -7606,9 +7606,13 @@ class LibvirtDriver(driver.ComputeDriver):
         def _get_device_name(bdm):
             return block_device.strip_dev(bdm.device_name)
 
+        network_info = instance.info_cache.network_info
+        vlans_by_mac = netutils.get_cached_vifs_with_vlan(network_info)
         vifs = objects.VirtualInterfaceList.get_by_instance_uuid(context,
                                                                  instance.uuid)
-        tagged_vifs = {vif.address: vif for vif in vifs if vif.tag}
+        vifs_to_expose = {vif.address: vif for vif in vifs
+                          if ('tag' in vif and vif.tag) or
+                             vlans_by_mac.get(vif.address)}
         # TODO(mriedem): We should be able to avoid the DB query here by using
         # block_device_info['block_device_mapping'] which is passed into most
         # methods that call this function.
@@ -7626,16 +7630,18 @@ class LibvirtDriver(driver.ComputeDriver):
         for dev in guest_config.devices:
             # Build network interfaces related metadata
             if isinstance(dev, vconfig.LibvirtConfigGuestInterface):
-                vif = tagged_vifs.get(dev.mac_addr)
+                vif = vifs_to_expose.get(dev.mac_addr)
                 if not vif:
                     continue
                 bus = self._prepare_device_bus(dev)
-                device = objects.NetworkInterfaceMetadata(
-                    mac=vif.address,
-                    tags=[vif.tag]
-                )
+                device = objects.NetworkInterfaceMetadata(mac=vif.address)
+                if 'tag' in vif and vif.tag:
+                    device.tags = [vif.tag]
                 if bus:
                     device.bus = bus
+                vlan = vlans_by_mac.get(vif.address)
+                if vlan:
+                    device.vlan = int(vlan)
                 devices.append(device)
 
             # Build disks related metadata
