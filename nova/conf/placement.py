@@ -28,6 +28,13 @@ Possible values:
 
 * Any string representing region name
 """),
+    cfg.StrOpt('os_interface',
+               default="public",
+               choices=["public", "admin", "internal"],
+               help="""
+Endpoint interface for this node. This is used when picking the URL in the
+service catalog.
+""")
 ]
 
 
