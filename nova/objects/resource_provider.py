@@ -271,6 +271,8 @@ def _set_inventory(context, rp, inv_list):
     :raises `exception.ResourceClassNotFound` if any resource class in any
             inventory in inv_list cannot be found in either the standard
             classes or the DB.
+    :raises `exception.InventoryInUse` if we attempt to delete inventory
+            from a provider that has allocations for that resource class.
     """
     _ensure_rc_cache(context)
     conn = context.session.connection()
