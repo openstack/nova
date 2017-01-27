@@ -779,10 +779,26 @@ class ServersControllerTest(ControllerTest):
     def test_tenant_id_filter_no_admin_context(self):
         def fake_get_all(context, search_opts=None, **kwargs):
             self.assertIsNotNone(search_opts)
+            self.assertNotIn('tenant_id', search_opts)
             self.assertEqual(search_opts['project_id'], 'fake')
             return [fakes.stub_instance_obj(100)]
 
         req = self.req('/fake/servers?tenant_id=newfake')
+        with mock.patch.object(compute_api.API, 'get_all') as mock_get:
+            mock_get.side_effect = fake_get_all
+            servers = self.controller.index(req)['servers']
+        self.assertEqual(len(servers), 1)
+
+    def test_tenant_id_filter_admin_context(self):
+        """"Test tenant_id search opt is dropped if all_tenants is not set."""
+        def fake_get_all(context, search_opts=None, **kwargs):
+            self.assertIsNotNone(search_opts)
+            self.assertNotIn('tenant_id', search_opts)
+            self.assertEqual('fake', search_opts['project_id'])
+            return [fakes.stub_instance_obj(100)]
+
+        req = self.req('/fake/servers?tenant_id=newfake',
+                       use_admin_context=True)
         with mock.patch.object(compute_api.API, 'get_all') as mock_get:
             mock_get.side_effect = fake_get_all
             servers = self.controller.index(req)['servers']

@@ -319,6 +319,11 @@ class ServersController(wsgi.Controller):
                 context.can(server_policies.SERVERS % 'index:get_all_tenants')
             elevated = context.elevated()
         else:
+            # As explained in lp:#1185290, if `all_tenants` is not passed
+            # we must ignore the `tenant_id` search option. As explained
+            # in a above code comment, any change to this behavior would
+            # require a microversion bump.
+            search_opts.pop('tenant_id', None)
             if context.project_id:
                 search_opts['project_id'] = context.project_id
             else:
