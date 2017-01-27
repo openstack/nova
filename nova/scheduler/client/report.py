@@ -604,6 +604,7 @@ class SchedulerReportClient(object):
             'inventories': {},
         }
         r = self.put(url, payload)
+        placement_req_id = get_placement_request_id(r)
         if r.status_code == 200:
             # Update our view of the generation for next time
             updated_inv = r.json()
@@ -613,29 +614,33 @@ class SchedulerReportClient(object):
             msg_args = {
                 'rp_uuid': rp_uuid,
                 'generation': new_gen,
+                'placement_req_id': placement_req_id,
             }
-            LOG.info(_LI('Deleted all inventory for resource provider '
-                         '%(rp_uuid)s at generation %(generation)i'),
+            LOG.info(_LI('[%(placement_req_id)s] Deleted all inventory for '
+                         'resource provider %(rp_uuid)s at generation '
+                         '%(generation)i'),
                      msg_args)
             return
         elif r.status_code == 409:
             rc_str = _extract_inventory_in_use(r.text)
             if rc_str is not None:
-                msg = _LW("We cannot delete inventory %(rc_str)s for resource "
-                          "provider %(rp_uuid)s because the inventory is "
-                          "in use.")
+                msg = _LW("[%(placement_req_id)s] We cannot delete inventory "
+                          "%(rc_str)s for resource provider %(rp_uuid)s "
+                          "because the inventory is in use.")
                 msg_args = {
                     'rp_uuid': rp_uuid,
                     'rc_str': rc_str,
+                    'placement_req_id': placement_req_id,
                 }
                 LOG.warning(msg, msg_args)
                 return
 
-        msg = _LE("Failed to delete inventory for resource provider "
-                  "%(rp_uuid)s. Got error response: %(err)s")
+        msg = _LE("[%(placement_req_id)s] Failed to delete inventory for "
+                  "resource provider %(rp_uuid)s. Got error response: %(err)s")
         msg_args = {
             'rp_uuid': rp_uuid,
             'err': r.text,
+            'placement_req_id': placement_req_id,
         }
         LOG.error(msg, msg_args)
 
