@@ -24,6 +24,7 @@ from oslo_utils import timeutils
 from oslo_versionedobjects import exception as ovo_exc
 import six
 
+from nova import block_device
 from nova.compute import flavors
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
@@ -1420,7 +1421,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             source_type='blank', destination_type='local',
             guest_format='foo', device_type='disk', disk_bus='',
             boot_index=1, device_name='xvda', delete_on_termination=False,
-            snapshot_id=None, volume_id=None, volume_size=0,
+            snapshot_id=None, volume_id=None, volume_size=1,
             image_id='bar', no_device=False, connection_info=None,
             tag=''))
         params['block_device_mapping'] = objects.BlockDeviceMappingList(
@@ -1435,8 +1436,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                              'nodename': 'fake-nodename',
                                              'limits': None}]
         params = self.params
+        details = {}
 
         def _build_and_run_instance(ctxt, *args, **kwargs):
+            details['instance'] = kwargs['instance']
             self.assertTrue(kwargs['instance'].id)
             self.assertEqual(1, len(kwargs['block_device_mapping']))
             # FIXME(danms): How to validate the db connection here?
@@ -1445,6 +1448,16 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         build_and_run_instance.side_effect = _build_and_run_instance
         self.conductor.schedule_and_build_instances(**params)
         self.assertTrue(build_and_run_instance.called)
+
+        instance_uuid = details['instance'].uuid
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+            self.context, instance_uuid)
+        ephemeral = list(filter(block_device.new_format_is_ephemeral, bdms))
+        self.assertEqual(1, len(ephemeral))
+        swap = list(filter(block_device.new_format_is_swap, bdms))
+        self.assertEqual(0, len(swap))
+
+        self.assertEqual(1, ephemeral[0].volume_size)
 
     @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')

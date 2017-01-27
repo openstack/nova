@@ -7798,17 +7798,18 @@ class ComputeAPITestCase(BaseTestCase):
         self.fake_show = fake_show
 
         def fake_lookup(self, context, instance):
-            return instance
+            return None, instance
 
         self.stub_out('nova.compute.api.API._lookup_instance', fake_lookup)
 
-        # Mock out build_instances and rebuild_instance since nothing in these
-        # tests should need those to actually run. We do this to avoid
-        # possible races with other tests that actually test those methods
-        # and mock things out within them, like conductor tests.
-        self.build_instances_mock = mock.Mock(autospec=True)
-        self.compute_api.compute_task_api.build_instances = \
-            self.build_instances_mock
+        # Mock out schedule_and_build_instances and rebuild_instance
+        # since nothing in these tests should need those to actually
+        # run. We do this to avoid possible races with other tests
+        # that actually test those methods and mock things out within
+        # them, like conductor tests.
+        self.schedule_and_build_instances_mock = mock.Mock(autospec=True)
+        self.compute_api.compute_task_api.schedule_and_build_instances = \
+            self.schedule_and_build_instances_mock
 
         self.rebuild_instance_mock = mock.Mock(autospec=True)
         self.compute_api.compute_task_api.rebuild_instance = \
@@ -7921,30 +7922,6 @@ class ComputeAPITestCase(BaseTestCase):
         (refs, resv_id) = self.compute_api.create(self.context,
                 inst_type, self.fake_image['id'])
 
-    def test_create_bdm_from_flavor(self):
-        instance_type_params = {
-            'flavorid': 'test', 'name': 'test',
-            'swap': 1024, 'ephemeral_gb': 1, 'root_gb': 1,
-        }
-        self._create_instance_type(params=instance_type_params)
-        inst_type = flavors.get_flavor_by_name('test')
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      self.fake_show)
-        (refs, resv_id) = self.compute_api.create(self.context, inst_type,
-                                                  self.fake_image['id'])
-
-        instance_uuid = refs[0]['uuid']
-        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
-            self.context, instance_uuid)
-
-        ephemeral = list(filter(block_device.new_format_is_ephemeral, bdms))
-        self.assertEqual(1, len(ephemeral))
-        swap = list(filter(block_device.new_format_is_swap, bdms))
-        self.assertEqual(1, len(swap))
-
-        self.assertEqual(1024, swap[0].volume_size)
-        self.assertEqual(1, ephemeral[0].volume_size)
-
     def test_create_with_deleted_image(self):
         # If we're given a deleted image by glance, we should not be able to
         # build from it
@@ -7998,53 +7975,54 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_create_instance_sets_system_metadata(self):
         # Make sure image properties are copied into system metadata.
-        (ref, resv_id) = self.compute_api.create(
+        with mock.patch.object(self.compute_api.compute_task_api,
+                               'schedule_and_build_instances') as mock_sbi:
+            (ref, resv_id) = self.compute_api.create(
                 self.context,
                 instance_type=flavors.get_default_flavor(),
                 image_href='f5000000-0000-0000-0000-000000000000')
 
-        sys_metadata = db.instance_system_metadata_get(self.context,
-                ref[0]['uuid'])
+            build_call = mock_sbi.call_args_list[0]
+            instance = build_call[1]['build_requests'][0].instance
 
         image_props = {'image_kernel_id': uuids.kernel_id,
                  'image_ramdisk_id': uuids.ramdisk_id,
                  'image_something_else': 'meow', }
         for key, value in six.iteritems(image_props):
-            self.assertIn(key, sys_metadata)
-            self.assertEqual(value, sys_metadata[key])
+            self.assertIn(key, instance.system_metadata)
+            self.assertEqual(value, instance.system_metadata[key])
 
     def test_create_saves_flavor(self):
-        instance_type = flavors.get_default_flavor()
-        (ref, resv_id) = self.compute_api.create(
+        with mock.patch.object(self.compute_api.compute_task_api,
+                               'schedule_and_build_instances') as mock_sbi:
+            instance_type = flavors.get_default_flavor()
+            (ref, resv_id) = self.compute_api.create(
                 self.context,
                 instance_type=instance_type,
                 image_href=uuids.image_href_id)
 
-        instance = objects.Instance.get_by_uuid(self.context, ref[0]['uuid'])
+            build_call = mock_sbi.call_args_list[0]
+            instance = build_call[1]['build_requests'][0].instance
+        self.assertIn('flavor', instance)
         self.assertEqual(instance_type.flavorid, instance.flavor.flavorid)
         self.assertNotIn('instance_type_id', instance.system_metadata)
 
     def test_create_instance_associates_security_groups(self):
         # Make sure create associates security groups.
         group = self._create_group()
-        (ref, resv_id) = self.compute_api.create(
+        with mock.patch.object(self.compute_api.compute_task_api,
+                               'schedule_and_build_instances') as mock_sbi:
+            (ref, resv_id) = self.compute_api.create(
                 self.context,
                 instance_type=flavors.get_default_flavor(),
                 image_href=uuids.image_href_id,
                 security_groups=['testgroup'])
 
-        groups_for_instance = db.security_group_get_by_instance(
-                         self.context, ref[0]['uuid'])
-        # For Neutron we don't store the security groups in the nova database.
-        if CONF.use_neutron:
-            self.assertEqual(0, len(groups_for_instance))
-        else:
-            self.assertEqual(1, len(groups_for_instance))
-            self.assertEqual(group.id, groups_for_instance[0].id)
-            group_with_instances = db.security_group_get(self.context,
-                                          group.id,
-                                          columns_to_join=['instances'])
-            self.assertEqual(1, len(group_with_instances.instances))
+            build_call = mock_sbi.call_args_list[0]
+            reqspec = build_call[1]['request_spec'][0]
+
+        self.assertEqual(1, len(reqspec.security_groups))
+        self.assertEqual(group.name, reqspec.security_groups[0].name)
 
     def test_create_instance_with_invalid_security_group_raises(self):
         instance_type = flavors.get_default_flavor()
@@ -9259,7 +9237,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.remove_fixed_ip(self.context,
                                          instance, '192.168.1.1')
         with mock.patch.object(self.compute_api, '_lookup_instance',
-                               return_value=instance):
+                               return_value=(None, instance)):
             with mock.patch.object(self.compute_api.network_api,
                                    'deallocate_for_instance'):
                 self.compute_api.delete(self.context, instance)

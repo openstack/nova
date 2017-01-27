@@ -933,6 +933,14 @@ class ComputeTaskManager(base.Base):
                         instance.destroy()
                     except exception.InstanceNotFound:
                         pass
+                    except exception.ObjectActionError:
+                        # NOTE(melwitt): Instance became scheduled during
+                        # the destroy, "host changed". Refresh and re-destroy.
+                        try:
+                            instance.refresh()
+                            instance.destroy()
+                        except exception.InstanceNotFound:
+                            pass
                 for bdm in instance_bdms:
                     with obj_target_cell(bdm, cell):
                         try:

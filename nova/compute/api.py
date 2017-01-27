@@ -67,7 +67,6 @@ from nova import network
 from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova.network.security_group import security_group_base
-from nova import notifications
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
@@ -967,6 +966,10 @@ class API(base.Base):
                         base_options['pci_requests'], filter_properties,
                         instance_group, base_options['availability_zone'],
                         security_groups=security_groups)
+                # NOTE(danms): We need to record num_instances on the request
+                # spec as this is how the conductor knows how many were in this
+                # batch.
+                req_spec.num_instances = num_instances
                 req_spec.create()
 
                 # Create an instance object, but do not store in db yet.
@@ -1214,35 +1217,21 @@ class API(base.Base):
                 key_pair)
 
         instances = []
+        request_specs = []
         build_requests = []
-        # TODO(alaski): Cast to conductor here which will call the
-        # scheduler and defer instance creation until the scheduler
-        # has picked a cell/host. Set the instance_mapping to the cell
-        # that the instance is scheduled to.
-        # NOTE(alaski): Instance and block device creation are going
-        # to move to the conductor.
-        try:
-            for rs, build_request, im in instances_to_build:
-                build_requests.append(build_request)
-                instance = build_request.get_new_instance(context)
+        for rs, build_request, im in instances_to_build:
+            build_requests.append(build_request)
+            instance = build_request.get_new_instance(context)
+            instances.append(instance)
+            request_specs.append(rs)
+
+        if CONF.cells.enable:
+            # NOTE(danms): CellsV1 can't do the new thing, so we
+            # do the old thing here. We can remove this path once
+            # we stop supporting v1.
+            for instance in instances:
                 instance.create()
-                instances.append(instance)
-                self._create_block_device_mapping(
-                    build_request.block_device_mappings)
-                # send a state update notification for the initial create to
-                # show it going from non-existent to BUILDING
-                notifications.send_update_with_states(context, instance, None,
-                        vm_states.BUILDING, None, None, service="api")
-        except Exception:
-            with excutils.save_and_reraise_exception():
-                self._safe_destroy_instance_residue(instances,
-                                                    instances_to_build)
-
-        for instance in instances:
-            self._record_action_start(context, instance,
-                                      instance_actions.CREATE)
-
-        self.compute_task_api.build_instances(context,
+            self.compute_task_api.build_instances(context,
                 instances=instances, image=boot_meta,
                 filter_properties=filter_properties,
                 admin_password=admin_password,
@@ -1251,6 +1240,16 @@ class API(base.Base):
                 security_groups=security_groups,
                 block_device_mapping=block_device_mapping,
                 legacy_bdm=False)
+        else:
+            self.compute_task_api.schedule_and_build_instances(
+                context,
+                build_requests=build_requests,
+                request_spec=request_specs,
+                image=boot_meta,
+                admin_password=admin_password,
+                injected_files=injected_files,
+                requested_networks=requested_networks,
+                block_device_mapping=block_device_mapping)
 
         return (instances, reservation_id)
 
@@ -1666,6 +1665,7 @@ class API(base.Base):
             # to look it up.
             # If we're on cellsv1, we can't yet short-circuit the cells
             # messaging path
+            cell = None
             try:
                 instance = objects.Instance.get_by_uuid(context, uuid)
             except exception.InstanceNotFound:
@@ -1673,9 +1673,10 @@ class API(base.Base):
                 # instance to the database and hasn't done that yet. It's up to
                 # the caller of this method to determine what to do with that
                 # information.
-                return
+                return None, None
         else:
-            with nova_context.target_cell(context, inst_map.cell_mapping):
+            cell = inst_map.cell_mapping
+            with nova_context.target_cell(context, cell):
                 try:
                     instance = objects.Instance.get_by_uuid(context,
                                                             uuid)
@@ -1683,8 +1684,8 @@ class API(base.Base):
                     # Since the cell_mapping exists we know the instance is in
                     # the cell, however InstanceNotFound means it's already
                     # deleted.
-                    return
-        return instance
+                    return None, None
+        return cell, instance
 
     def _delete_while_booting(self, context, instance):
         """Handle deletion if the instance has not reached a cell yet
@@ -1734,10 +1735,14 @@ class API(base.Base):
                 # Look up the instance because the current instance object was
                 # stashed on the buildrequest and therefore not complete enough
                 # to run .destroy().
-                instance = self._lookup_instance(context, instance.uuid)
+                cell, instance = self._lookup_instance(context, instance.uuid)
                 if instance is not None:
                     # If instance is None it has already been deleted.
-                    instance.destroy()
+                    if cell:
+                        with nova_context.target_cell(context, cell):
+                            instance.destroy()
+                    else:
+                        instance.destroy()
             except exception.InstanceNotFound:
                 quotas.rollback()
 
@@ -1769,19 +1774,36 @@ class API(base.Base):
         # sent to a cell/compute which means it was pulled from the cell db.
         # Normal delete should be attempted.
         if not instance.host:
-            if self._delete_while_booting(context, instance):
-                return
-            # If instance.host was not set it's possible that the Instance
-            # object here was pulled from a BuildRequest object and is not
-            # fully populated. Notably it will be missing an 'id' field which
-            # will prevent instance.destroy from functioning properly. A lookup
-            # is attempted which will either return a full Instance or None if
-            # not found. If not found then it's acceptable to skip the rest of
-            # the delete processing.
-            instance = self._lookup_instance(context, instance.uuid)
-            if not instance:
-                # Instance is already deleted.
-                return
+            try:
+                if self._delete_while_booting(context, instance):
+                    return
+                # If instance.host was not set it's possible that the Instance
+                # object here was pulled from a BuildRequest object and is not
+                # fully populated. Notably it will be missing an 'id' field
+                # which will prevent instance.destroy from functioning
+                # properly. A lookup is attempted which will either return a
+                # full Instance or None if not found. If not found then it's
+                # acceptable to skip the rest of the delete processing.
+                cell, instance = self._lookup_instance(context, instance.uuid)
+                if cell and instance:
+                    with nova_context.target_cell(context, cell):
+                        instance.destroy()
+                        return
+                if not instance:
+                    # Instance is already deleted.
+                    return
+            except exception.ObjectActionError:
+                # NOTE(melwitt): This means the instance.host changed
+                # under us indicating the instance became scheduled
+                # during the destroy(). Refresh the instance from the DB and
+                # continue on with the delete logic for a scheduled instance.
+                # NOTE(danms): If instance.host is set, we should be able to
+                # do the following lookup. If not, there's not much we can
+                # do to recover.
+                cell, instance = self._lookup_instance(context, instance.uuid)
+                if not instance:
+                    # Instance is already deleted
+                    return
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
@@ -2497,8 +2519,7 @@ class API(base.Base):
         if not CELLS:
             CELLS = objects.CellMappingList.get_all(context)
             LOG.debug('Found %(count)i cells: %(cells)s',
-                      count=len(CELLS),
-                      cells=CELLS)
+                      dict(count=len(CELLS), cells=CELLS))
 
         if not CELLS:
             LOG.error(_LE('No cells are configured, unable to list instances'))
