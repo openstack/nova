@@ -13504,7 +13504,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
-        self.assertEqual(5, drvr._get_vcpu_used())
+        self.assertEqual(6, drvr._get_vcpu_used())
         mock_list.assert_called_with(only_guests=True, only_running=True)
 
     def test_get_instance_capabilities(self):

@@ -5131,18 +5131,37 @@ class LibvirtDriver(driver.ComputeDriver):
         """
 
         total = 0
-        if CONF.libvirt.virt_type == 'lxc':
-            return total + 1
 
+        # Not all libvirt drivers will support the get_vcpus_info()
+        #
+        # For example, LXC does not have a concept of vCPUs, while
+        # QEMU (TCG) traditionally handles all vCPUs in a single
+        # thread. So both will report an exception when the vcpus()
+        # API call is made. In such a case we should report the
+        # guest as having 1 vCPU, since that lets us still do
+        # CPU over commit calculations that apply as the total
+        # guest count scales.
+        #
+        # It is also possible that we might see an exception if
+        # the guest is just in middle of shutting down. Technically
+        # we should report 0 for vCPU usage in this case, but we
+        # we can't reliably distinguish the vcpu not supported
+        # case from the just shutting down case. Thus we don't know
+        # whether to report 1 or 0 for vCPU count.
+        #
+        # Under-reporting vCPUs is bad because it could conceivably
+        # let the scheduler place too many guests on the host. Over-
+        # reporting vCPUs is not a problem as it'll auto-correct on
+        # the next refresh of usage data.
+        #
+        # Thus when getting an exception we always report 1 as the
+        # vCPU count, as the least worst value.
         for guest in self._host.list_guests():
             try:
                 vcpus = guest.get_vcpus_info()
                 total += len(list(vcpus))
-            except libvirt.libvirtError as e:
-                LOG.warning(
-                    _LW("couldn't obtain the vcpu count from domain id:"
-                        " %(uuid)s, exception: %(ex)s"),
-                    {"uuid": guest.uuid, "ex": e})
+            except libvirt.libvirtError:
+                total += 1
             # NOTE(gtt116): give other tasks a chance.
             greenthread.sleep(0)
         return total
