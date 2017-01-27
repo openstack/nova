@@ -1710,6 +1710,13 @@ class PloopTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.mox.VerifyAll()
 
+    def test_create_image_generated(self):
+        fn = mock.Mock()
+        image = self.image_class(self.INSTANCE, self.NAME)
+        image.create_image(fn, self.TEMPLATE_PATH, 2048, ephemeral_size=2)
+        fn.assert_called_with(target=self.PATH,
+                              ephemeral_size=2)
+
     def test_prealloc_image(self):
         self.flags(preallocate_images='space')
         fake_processutils.fake_execute_clear_log()

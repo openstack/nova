@@ -32,6 +32,7 @@ from nova.i18n import _LI
 from nova.i18n import _LW
 from nova.objects import fields as obj_fields
 from nova import utils
+from nova.virt.disk import api as disk
 from nova.virt import images
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt.volume import remotefs
@@ -96,6 +97,33 @@ def create_cow_image(backing_file, path, size=None):
         cow_opts = ['-o', csv_opts]
     cmd = base_cmd + cow_opts + [path]
     execute(*cmd)
+
+
+def create_ploop_image(disk_format, path, size, fs_type):
+    """Create ploop image
+
+    :param disk_format: Disk image format (as known by ploop)
+    :param path: Desired location of the ploop image
+    :param size: Desired size of ploop image. May be given as an int or
+                 a string. If given as an int, it will be interpreted
+                 as bytes. If it's a string, it should consist of a number
+                 with an optional suffix ('K' for Kibibytes,
+                 M for Mebibytes, 'G' for Gibibytes, 'T' for Tebibytes).
+                 If no suffix is given, it will be interpreted as bytes.
+    :param fs_type: Filesystem type
+    """
+    if not fs_type:
+        fs_type = CONF.default_ephemeral_format or \
+                  disk.FS_FORMAT_EXT4
+    execute('mkdir', '-p', path)
+    disk_path = os.path.join(path, 'root.hds')
+    execute('ploop', 'init', '-s', size, '-f', disk_format, '-t', fs_type,
+            disk_path, run_as_root=True, check_exit_code=True)
+    # Add read access for all users, because "ploop init" creates
+    # disk with rw rights only for root. OpenStack user should have access
+    # to the disk to request info via "qemu-img info"
+    execute('chmod', '-R', 'a+r', path,
+            run_as_root=True, check_exit_code=True)
 
 
 def pick_disk_driver_name(hypervisor_version, is_block_dev=False):

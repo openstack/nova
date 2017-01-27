@@ -34,6 +34,10 @@ def create_cow_image(backing_file, path):
     pass
 
 
+def create_ploop_image(disk_format, path, size, fs_type):
+    pass
+
+
 def get_disk_size(path, format=None):
     return 0
 

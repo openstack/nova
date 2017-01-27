@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import ddt
 import functools
 import os
 import tempfile
@@ -39,6 +40,7 @@ from nova.virt.libvirt import utils as libvirt_utils
 CONF = cfg.CONF
 
 
+@ddt.ddt
 class LibvirtUtilsTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.utils.execute')
@@ -333,6 +335,32 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
                            '-o', 'backing_file=/some/path',
                            '/the/new/cow'),)]
         self.assertEqual(expected_args, mock_execute.call_args_list)
+
+    @ddt.unpack
+    @ddt.data({'fs_type': 'some_fs_type',
+               'default_eph_format': None,
+               'expected_fs_type': 'some_fs_type'},
+              {'fs_type': None,
+               'default_eph_format': None,
+               'expected_fs_type': disk.FS_FORMAT_EXT4},
+              {'fs_type': None,
+               'default_eph_format': 'eph_format',
+               'expected_fs_type': 'eph_format'})
+    def test_create_ploop_image(self, fs_type,
+                                default_eph_format,
+                                expected_fs_type):
+        with mock.patch('nova.utils.execute') as mock_execute:
+            self.flags(default_ephemeral_format=default_eph_format)
+            libvirt_utils.create_ploop_image('expanded', '/some/path',
+                                             '5G', fs_type)
+            mock_execute.assert_has_calls([
+                mock.call('mkdir', '-p', '/some/path'),
+                mock.call('ploop', 'init', '-s', '5G',
+                          '-f', 'expanded', '-t', expected_fs_type,
+                          '/some/path/root.hds',
+                          run_as_root=True, check_exit_code=True),
+                mock.call('chmod', '-R', 'a+r', '/some/path',
+                          run_as_root=True, check_exit_code=True)])
 
     def test_pick_disk_driver_name(self):
         type_map = {'kvm': ([True, 'qemu'], [False, 'qemu'], [None, 'qemu']),
