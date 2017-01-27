@@ -1,0 +1,7 @@
+---
+features:
+  - The placement API can be set to connect to a specific
+    keystone endpoint interface using the ``os_interface``
+    option in the ``[placement]`` section inside ``nova.conf``.
+    This value is not required and will default to ``public``.
+    Other acceptable options are  ``admin`` or ``internal``.
