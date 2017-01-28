@@ -1,5 +1,3 @@
-nova.tests.unit.test_wsgi.TestWSGIServerWithSSL
-
 ##########################################################################
 # NOTE(dims): The following tests randomly fail in the gate. Please be
 # careful before you re-enable them
