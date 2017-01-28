@@ -7891,6 +7891,21 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
             self.assertEqual(forced_uri % dest, drvr._live_migration_uri(dest))
 
+    def test_live_migration_scheme(self):
+        self.flags(live_migration_scheme='ssh', group='libvirt')
+        dest = 'destination'
+        uri = 'qemu+ssh://%s/system'
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertEqual(uri % dest, drvr._live_migration_uri(dest))
+
+    def test_live_migration_scheme_does_not_override_uri(self):
+        forced_uri = 'qemu+ssh://%s/system'
+        self.flags(live_migration_uri=forced_uri, group='libvirt')
+        self.flags(live_migration_scheme='tcp', group='libvirt')
+        dest = 'destination'
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertEqual(forced_uri % dest, drvr._live_migration_uri(dest))
+
     def test_migrate_uri(self):
         hypervisor_uri_map = (
             ('xen', None),

@@ -259,6 +259,13 @@ Possible values:
     # TODO(hieulq): change to URIOpt for validating schemas with next release
     # of oslo_config.
     cfg.StrOpt('live_migration_uri',
+               deprecated_for_removal=True,
+               deprecated_since="15.0.0",
+               deprecated_reason="""
+live_migration_uri is deprecated for removal in favor of two other options that
+allow to change live migration scheme and target URI: ``live_migration_scheme``
+and ``live_migration_inbound_addr`` respectively.
+""",
                help="""
 Live migration target URI to use.
 
@@ -277,6 +284,23 @@ Related options:
 * ``live_migration_inbound_addr``: If ``live_migration_inbound_addr`` value
   is not None, the ip/hostname address of target compute node is used instead
   of ``live_migration_uri`` as the uri for live migration.
+* ``live_migration_scheme``: If ``live_migration_uri`` is not set, the scheme
+  used for live migration is taken from ``live_migration_scheme`` instead.
+"""),
+    cfg.StrOpt('live_migration_scheme',
+               help="""
+Schema used for live migration.
+
+Override the default libvirt live migration scheme (which is dependant on
+virt_type). If this option is set to None, nova will automatically choose a
+sensible default based on the hypervisor. It is not recommended that you change
+this unless you are very sure that hypervisor supports a particular scheme.
+
+Related options:
+* ``virt_type``: This option is meaningful only when ``virt_type`` is set to
+  `kvm` or `qemu`.
+* ``live_migration_uri``: If ``live_migration_uri`` value is not None, the
+  scheme used for live migration is taken from ``live_migration_uri`` instead.
 """),
     cfg.BoolOpt('live_migration_tunnelled',
                 default=False,

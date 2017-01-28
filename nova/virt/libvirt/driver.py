@@ -682,16 +682,26 @@ class LibvirtDriver(driver.ComputeDriver):
     @staticmethod
     def _live_migration_uri(dest):
         uris = {
-            'kvm': 'qemu+tcp://%s/system',
-            'qemu': 'qemu+tcp://%s/system',
+            'kvm': 'qemu+%s://%s/system',
+            'qemu': 'qemu+%s://%s/system',
             'xen': 'xenmigr://%s/system',
             'parallels': 'parallels+tcp://%s/system',
         }
         virt_type = CONF.libvirt.virt_type
-        uri = CONF.libvirt.live_migration_uri or uris.get(virt_type)
+        # TODO(pkoniszewski): Remove fetching live_migration_uri in Pike
+        uri = CONF.libvirt.live_migration_uri
+        if uri:
+            return uri % dest
+
+        uri = uris.get(virt_type)
         if uri is None:
             raise exception.LiveMigrationURINotAvailable(virt_type=virt_type)
-        return uri % dest
+
+        str_format = (dest,)
+        if virt_type in ('kvm', 'qemu'):
+            scheme = CONF.libvirt.live_migration_scheme or 'tcp'
+            str_format = (scheme, dest)
+        return uris.get(virt_type) % str_format
 
     @staticmethod
     def _migrate_uri(dest):
