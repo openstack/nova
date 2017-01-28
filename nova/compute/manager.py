@@ -1989,7 +1989,8 @@ class ComputeManager(manager.Manager):
                 exception.InvalidDiskInfo,
                 exception.InvalidDiskFormat,
                 exception.SignatureVerificationError,
-                exception.VolumeEncryptionNotSupported) as e:
+                exception.VolumeEncryptionNotSupported,
+                exception.InvalidInput) as e:
             self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
             compute_utils.notify_about_instance_action(
