@@ -112,18 +112,17 @@ class _ImageTestCase(object):
         def fake_fetch(target, *args, **kwargs):
             return
 
-        self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
         self.stub_out('os.path.exists', lambda _: True)
         self.stub_out('os.access', lambda p, w: True)
+        with mock.patch.object(image, 'get_disk_size', return_value=self.SIZE):
+            # Call twice to verify testing fallocate is only called once.
+            image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
+            image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
 
-        # Call twice to verify testing fallocate is only called once.
-        image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
-        image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
-
-        self.assertEqual(fake_processutils.fake_execute_get_log(),
-            ['fallocate -l 1 %s.fallocate_test' % self.PATH,
-             'fallocate -n -l %s %s' % (self.SIZE, self.PATH),
-             'fallocate -n -l %s %s' % (self.SIZE, self.PATH)])
+            self.assertEqual(fake_processutils.fake_execute_get_log(),
+                ['fallocate -l 1 %s.fallocate_test' % self.PATH,
+                 'fallocate -n -l %s %s' % (self.SIZE, self.PATH),
+                 'fallocate -n -l %s %s' % (self.SIZE, self.PATH)])
 
     def test_prealloc_image_without_write_access(self):
         CONF.set_override('preallocate_images', 'space')
@@ -654,67 +653,59 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
         self.INSTANCE['ephemeral_key_uuid'] = None
         self.LV = '%s_%s' % (self.INSTANCE['uuid'], self.NAME)
         self.PATH = os.path.join('/dev', self.VG, self.LV)
-        self.disk = imagebackend.disk
-        self.utils = imagebackend.utils
-        self.lvm = imagebackend.lvm
 
-    def prepare_mocks(self):
-        fn = self.mox.CreateMockAnything()
-        self.mox.StubOutWithMock(self.disk, 'resize2fs')
-        self.mox.StubOutWithMock(self.lvm, 'create_volume')
-        self.mox.StubOutWithMock(self.disk, 'get_disk_size')
-        self.mox.StubOutWithMock(self.utils, 'execute')
-        return fn
-
-    def _create_image(self, sparse):
-        fn = self.prepare_mocks()
-        fn(target=self.TEMPLATE_PATH)
-        self.lvm.create_volume(self.VG,
-                               self.LV,
-                               self.TEMPLATE_SIZE,
-                               sparse=sparse)
-        self.disk.get_disk_size(self.TEMPLATE_PATH
-                                         ).AndReturn(self.TEMPLATE_SIZE)
+    @mock.patch.object(imagebackend.lvm, 'create_volume')
+    @mock.patch.object(imagebackend.disk, 'get_disk_size',
+                       return_value=TEMPLATE_SIZE)
+    @mock.patch.object(imagebackend.utils, 'execute')
+    def _create_image(self, sparse, mock_execute, mock_get, mock_create):
+        fn = mock.MagicMock()
         cmd = ('qemu-img', 'convert', '-O', 'raw', self.TEMPLATE_PATH,
                self.PATH)
-        self.utils.execute(*cmd, run_as_root=True)
-        self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
+
         image.create_image(fn, self.TEMPLATE_PATH, None)
 
-        self.mox.VerifyAll()
+        mock_create.assert_called_once_with(self.VG, self.LV,
+                                            self.TEMPLATE_SIZE,
+                                            sparse=sparse)
 
-    def _create_image_generated(self, sparse):
-        fn = self.prepare_mocks()
-        self.lvm.create_volume(self.VG, self.LV,
-                               self.SIZE, sparse=sparse)
-        fn(target=self.PATH, ephemeral_size=None)
-        self.mox.ReplayAll()
+        fn.assert_called_once_with(target=self.TEMPLATE_PATH)
+        mock_get.assert_called_once_with(self.TEMPLATE_PATH)
+        mock_execute.assert_called_once_with(*cmd, run_as_root=True)
 
+    @mock.patch.object(imagebackend.lvm, 'create_volume')
+    def _create_image_generated(self, sparse, mock_create):
+        fn = mock.MagicMock()
         image = self.image_class(self.INSTANCE, self.NAME)
+
         image.create_image(fn, self.TEMPLATE_PATH,
                 self.SIZE, ephemeral_size=None)
 
-        self.mox.VerifyAll()
+        mock_create.assert_called_once_with(self.VG, self.LV,
+                                            self.SIZE, sparse=sparse)
+        fn.assert_called_once_with(target=self.PATH, ephemeral_size=None)
 
-    def _create_image_resize(self, sparse):
-        fn = self.prepare_mocks()
+    @mock.patch.object(imagebackend.disk, 'resize2fs')
+    @mock.patch.object(imagebackend.lvm, 'create_volume')
+    @mock.patch.object(imagebackend.disk, 'get_disk_size',
+                       return_value=TEMPLATE_SIZE)
+    @mock.patch.object(imagebackend.utils, 'execute')
+    def _create_image_resize(self, sparse, mock_execute, mock_get,
+                             mock_create, mock_resize):
+        fn = mock.MagicMock()
         fn(target=self.TEMPLATE_PATH)
-        self.lvm.create_volume(self.VG, self.LV,
-                               self.SIZE, sparse=sparse)
-        self.disk.get_disk_size(self.TEMPLATE_PATH
-                                         ).AndReturn(self.TEMPLATE_SIZE)
         cmd = ('qemu-img', 'convert', '-O', 'raw', self.TEMPLATE_PATH,
                self.PATH)
-        self.utils.execute(*cmd, run_as_root=True)
-        self.disk.resize2fs(self.PATH, run_as_root=True)
-        self.mox.ReplayAll()
-
         image = self.image_class(self.INSTANCE, self.NAME)
         image.create_image(fn, self.TEMPLATE_PATH, self.SIZE)
 
-        self.mox.VerifyAll()
+        mock_create.assert_called_once_with(self.VG, self.LV,
+                                            self.SIZE, sparse=sparse)
+        mock_get.assert_called_once_with(self.TEMPLATE_PATH)
+        mock_execute.assert_called_once_with(*cmd, run_as_root=True)
+        mock_resize.assert_called_once_with(self.PATH, run_as_root=True)
 
     def test_cache(self):
         self.mox.StubOutWithMock(os.path, 'exists')
@@ -833,44 +824,37 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
         self.flags(sparse_logical_volumes=True, group='libvirt')
         self._create_image_resize(True)
 
-    def test_create_image_negative(self):
-        fn = self.prepare_mocks()
-        fn(target=self.TEMPLATE_PATH)
-        self.lvm.create_volume(self.VG,
-                               self.LV,
-                               self.SIZE,
-                               sparse=False
-                               ).AndRaise(RuntimeError())
-        self.disk.get_disk_size(self.TEMPLATE_PATH
-                                         ).AndReturn(self.TEMPLATE_SIZE)
-        self.mox.StubOutWithMock(self.lvm, 'remove_volumes')
-        self.lvm.remove_volumes([self.PATH])
-        self.mox.ReplayAll()
-
+    @mock.patch.object(imagebackend.lvm, 'create_volume',
+                       side_effect=RuntimeError)
+    @mock.patch.object(imagebackend.disk, 'get_disk_size',
+                       return_value=TEMPLATE_SIZE)
+    @mock.patch.object(imagebackend.lvm, 'remove_volumes')
+    def test_create_image_negative(self, mock_remove, mock_get, mock_create):
+        fn = mock.MagicMock()
         image = self.image_class(self.INSTANCE, self.NAME)
 
         self.assertRaises(RuntimeError, image.create_image, fn,
                           self.TEMPLATE_PATH, self.SIZE)
-        self.mox.VerifyAll()
+        mock_create.assert_called_once_with(self.VG, self.LV,
+                                            self.SIZE, sparse=False)
+        fn.assert_called_once_with(target=self.TEMPLATE_PATH)
+        mock_get.assert_called_once_with(self.TEMPLATE_PATH)
+        mock_remove.assert_called_once_with([self.PATH])
 
-    def test_create_image_generated_negative(self):
-        fn = self.prepare_mocks()
-        fn(target=self.PATH,
-           ephemeral_size=None).AndRaise(RuntimeError())
-        self.lvm.create_volume(self.VG,
-                               self.LV,
-                               self.SIZE,
-                               sparse=False)
-        self.mox.StubOutWithMock(self.lvm, 'remove_volumes')
-        self.lvm.remove_volumes([self.PATH])
-        self.mox.ReplayAll()
-
+    @mock.patch.object(imagebackend.lvm, 'create_volume')
+    @mock.patch.object(imagebackend.lvm, 'remove_volumes')
+    def test_create_image_generated_negative(self, mock_remove, mock_create):
+        fn = mock.MagicMock()
+        fn.side_effect = RuntimeError
         image = self.image_class(self.INSTANCE, self.NAME)
 
         self.assertRaises(RuntimeError, image.create_image, fn,
                           self.TEMPLATE_PATH, self.SIZE,
                           ephemeral_size=None)
-        self.mox.VerifyAll()
+        mock_create.assert_called_once_with(self.VG, self.LV, self.SIZE,
+                                            sparse=False)
+        fn.assert_called_once_with(target=self.PATH, ephemeral_size=None)
+        mock_remove.assert_called_once_with([self.PATH])
 
     def test_prealloc_image(self):
         CONF.set_override('preallocate_images', 'space')
