@@ -216,6 +216,9 @@ class UpgradeCommands(object):
         except ks_exc.EndpointNotFound:
             msg = _('Placement API endpoint not found.')
             return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
+        except ks_exc.DiscoveryFailure:
+            msg = _('Discovery for placement API URI failed.')
+            return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
         except ks_exc.NotFound:
             msg = _('Placement API does not seem to be running.')
             return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)

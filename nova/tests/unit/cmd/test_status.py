@@ -149,6 +149,19 @@ class TestPlacementCheck(test.NoDBTestCase):
         self.assertIn('Placement API endpoint not found', res.details)
 
     @mock.patch.object(status.UpgradeCommands, "_placement_get")
+    def test_discovery_failure(self, get):
+        """Test failure when discovery for placement URL failed.
+
+        Replicate in devstack: start devstack with placement
+        engine, create valid placement service user and specify it
+        in auth section of [placement] in nova.conf. Stop keystone service.
+        """
+        get.side_effect = ks_exc.DiscoveryFailure()
+        res = self.cmd._check_placement()
+        self.assertEqual(status.UpgradeCheckCode.FAILURE, res.code)
+        self.assertIn('Discovery for placement API URI failed.', res.details)
+
+    @mock.patch.object(status.UpgradeCommands, "_placement_get")
     def test_down_endpoint(self, get):
         """Test failure when endpoint is down.
 

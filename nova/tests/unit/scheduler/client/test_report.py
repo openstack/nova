@@ -114,6 +114,21 @@ class SafeConnectedTestCase(test.NoDBTestCase):
         mock_log.warning.assert_has_calls([mock.call('warning'),
                                            mock.call('warning')])
 
+    @mock.patch('keystoneauth1.session.Session.request')
+    def test_failed_discovery(self, req):
+        """Test DiscoveryFailure behavior.
+
+        Failed discovery should not blow up.
+        """
+        req.side_effect = ks_exc.DiscoveryFailure()
+        self.client._get_resource_provider("fake")
+
+        # reset the call count to demonstrate that future calls still
+        # work
+        req.reset_mock()
+        self.client._get_resource_provider("fake")
+        self.assertTrue(req.called)
+
 
 class TestConstructor(test.NoDBTestCase):
     @mock.patch('keystoneauth1.session.Session')
