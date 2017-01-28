@@ -127,12 +127,19 @@ host_status_body_in:
   in: path
   required: false
   type: string
+hypervisor_hostname_pattern:
+  description: |
+    The hypervisor host name or a portion of it.
+    The hypervisor hosts are selected with the host name matching this pattern.
+  in: path
+  required: true
+  type: string
 hypervisor_id:
   description: |
     The ID of the hypervisor.
   in: path
   required: true
-  type: string
+  type: integer
 image_id:
   description: |
     The UUID of the image.

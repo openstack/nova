@@ -246,9 +246,9 @@ Response
 Search Hypervisor
 =================
 
-.. rest_method:: GET /os-hypervisors/{hypervisor_id}/search
+.. rest_method:: GET /os-hypervisors/{hypervisor_hostname_pattern}/search
 
-Search hypervisor by given hypervisor id.
+Search hypervisor by a given hypervisor host name or portion of it.
 
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through
@@ -263,7 +263,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - hypervisor_id: hypervisor_id
+  - hypervisor_hostname_pattern: hypervisor_hostname_pattern
 
 Response
 --------
@@ -284,9 +284,10 @@ Response
 List Hypervisor Servers
 =======================
 
-.. rest_method:: GET /os-hypervisors/{hypervisor_id}/servers
+.. rest_method:: GET /os-hypervisors/{hypervisor_hostname_pattern}/servers
 
-List all servers belong to given hypervisor.
+List all servers belong to each hypervisor whose host name is matching
+a given hypervisor host name or portion of it.
 
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through
@@ -301,7 +302,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - hypervisor_id: hypervisor_id
+  - hypervisor_hostname_pattern: hypervisor_hostname_pattern
 
 Response
 --------
