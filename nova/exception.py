@@ -647,10 +647,6 @@ class InstanceMappingNotFound(NotFound):
     msg_fmt = _("Instance %(uuid)s has no mapping to a cell.")
 
 
-class NetworkDuplicated(Invalid):
-    msg_fmt = _("Network %(network_id)s is duplicated.")
-
-
 class NetworkDhcpReleaseFailed(NovaException):
     msg_fmt = _("Failed to release IP %(address)s with MAC %(mac_address)s")
 
