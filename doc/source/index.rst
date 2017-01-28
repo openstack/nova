@@ -186,6 +186,7 @@ Advanced testing and guides
     gmr
     testing/libvirt-numa
     testing/serial-console
+    testing/zero-downtime-upgrade
 
 Sample Configuration File
 -------------------------
