@@ -80,6 +80,14 @@ Nova Cells v2
     mapped), 1 if no transport url is provided for the cell message queue,
     and 2 if run in a cells v1 environment.
 
+``nova-manage cell_v2 map_cell0 [--database_connection <database_connection>]``
+
+    Create a cell mapping to the database connection and message queue
+    transport url for the cell0 database. The cell0 database is used for
+    instances that have not been scheduled to any cell. This generally
+    applies to instances that have encountered an error before they have been
+    scheduled. Returns 0 if cell0 is created successfully or already setup.
+
 Nova Logs
 ~~~~~~~~~
 
