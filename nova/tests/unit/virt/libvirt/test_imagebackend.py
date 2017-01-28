@@ -93,6 +93,11 @@ class _ImageTestCase(object):
             'nova.virt.libvirt.imagebackend.libvirt_utils',
             fake_libvirt_utils))
 
+        # This will be used to mock some decorations like utils.synchronize
+        def _fake_deco(func):
+            return func
+        self._fake_deco = _fake_deco
+
     def tearDown(self):
         super(_ImageTestCase, self).tearDown()
         shutil.rmtree(self.INSTANCES_PATH)
@@ -204,14 +209,6 @@ class FlatTestCase(_ImageTestCase, test.NoDBTestCase):
     def setUp(self):
         self.image_class = imagebackend.Flat
         super(FlatTestCase, self).setUp()
-
-    def prepare_mocks(self):
-        fn = self.mox.CreateMockAnything()
-        self.mox.StubOutWithMock(imagebackend.utils.synchronized,
-                                 '__call__')
-        self.mox.StubOutWithMock(imagebackend.libvirt_utils, 'copy_image')
-        self.mox.StubOutWithMock(imagebackend.disk, 'extend')
-        return fn
 
     @mock.patch.object(imagebackend.fileutils, 'ensure_tree')
     @mock.patch.object(os.path, 'exists')
@@ -340,42 +337,57 @@ class FlatTestCase(_ImageTestCase, test.NoDBTestCase):
             # raise AssertionError which, if we get here, it clearly didn't.
             self.assertFalse(image.resize_image.called)
 
-    def test_create_image(self):
-        fn = self.prepare_mocks()
-        fn(target=self.TEMPLATE_PATH, image_id=None)
-        imagebackend.libvirt_utils.copy_image(self.TEMPLATE_PATH, self.PATH)
-        self.mox.ReplayAll()
-
+    @mock.patch.object(imagebackend.disk, 'extend')
+    @mock.patch.object(fake_libvirt_utils, 'copy_image')
+    @mock.patch.object(imagebackend.utils, 'synchronized')
+    def test_create_image(self, mock_sync, mock_copy, mock_extend):
+        mock_sync.side_effect = lambda *a, **kw: self._fake_deco
+        fn = mock.MagicMock()
         image = self.image_class(self.INSTANCE, self.NAME)
         image.create_image(fn, self.TEMPLATE_PATH, None, image_id=None)
 
-        self.mox.VerifyAll()
+        mock_copy.assert_called_once_with(self.TEMPLATE_PATH, self.PATH)
+        fn.assert_called_once_with(target=self.TEMPLATE_PATH, image_id=None)
+        self.assertTrue(mock_sync.called)
+        self.assertFalse(mock_extend.called)
 
-    def test_create_image_generated(self):
-        fn = self.prepare_mocks()
-        fn(target=self.PATH)
-        self.mox.ReplayAll()
-
+    @mock.patch.object(imagebackend.disk, 'extend')
+    @mock.patch.object(fake_libvirt_utils, 'copy_image')
+    @mock.patch.object(imagebackend.utils, 'synchronized')
+    def test_create_image_generated(self, mock_sync, mock_copy, mock_extend):
+        mock_sync.side_effect = lambda *a, **kw: self._fake_deco
+        fn = mock.MagicMock()
         image = self.image_class(self.INSTANCE, self.NAME)
+
         image.create_image(fn, self.TEMPLATE_PATH, None)
 
-        self.mox.VerifyAll()
+        fn.assert_called_once_with(target=self.PATH)
+        self.assertFalse(mock_copy.called)
+        self.assertTrue(mock_sync.called)
+        self.assertFalse(mock_extend.called)
 
+    @mock.patch.object(imagebackend.disk, 'extend')
+    @mock.patch.object(fake_libvirt_utils, 'copy_image')
+    @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch.object(images, 'qemu_img_info',
                        return_value=imageutils.QemuImgInfo())
-    def test_create_image_extend(self, fake_qemu_img_info):
-        fn = self.prepare_mocks()
-        fake_qemu_img_info.return_value.virtual_size = 1024
+    def test_create_image_extend(self, mock_qemu, mock_sync, mock_copy,
+                                 mock_extend):
+        mock_sync.side_effect = lambda *a, **kw: self._fake_deco
+        fn = mock.MagicMock()
+        mock_qemu.return_value.virtual_size = 1024
         fn(target=self.TEMPLATE_PATH, image_id=None)
-        imagebackend.libvirt_utils.copy_image(self.TEMPLATE_PATH, self.PATH)
-        image = imgmodel.LocalFileImage(self.PATH, imgmodel.FORMAT_RAW)
-        imagebackend.disk.extend(image, self.SIZE)
-        self.mox.ReplayAll()
-
         image = self.image_class(self.INSTANCE, self.NAME)
-        image.create_image(fn, self.TEMPLATE_PATH, self.SIZE, image_id=None)
 
-        self.mox.VerifyAll()
+        image.create_image(fn, self.TEMPLATE_PATH,
+                           self.SIZE, image_id=None)
+
+        mock_copy.assert_called_once_with(self.TEMPLATE_PATH, self.PATH)
+        self.assertTrue(mock_sync.called)
+        mock_extend.assert_called_once_with(
+            imgmodel.LocalFileImage(self.PATH, imgmodel.FORMAT_RAW),
+            self.SIZE)
+        mock_qemu.assert_called_once_with(self.TEMPLATE_PATH)
 
     @mock.patch.object(os.path, 'exists')
     @mock.patch.object(imagebackend.images, 'qemu_img_info')
@@ -417,16 +429,6 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         super(Qcow2TestCase, self).setUp()
         self.QCOW2_BASE = (self.TEMPLATE_PATH +
                            '_%d' % (self.SIZE / units.Gi))
-
-    def prepare_mocks(self):
-        fn = self.mox.CreateMockAnything()
-        self.mox.StubOutWithMock(imagebackend.utils.synchronized,
-                                 '__call__')
-        self.mox.StubOutWithMock(imagebackend.libvirt_utils,
-                                 'create_cow_image')
-        self.mox.StubOutWithMock(imagebackend.libvirt_utils, 'copy_image')
-        self.mox.StubOutWithMock(imagebackend.disk, 'extend')
-        return fn
 
     def test_cache(self):
         self.mox.StubOutWithMock(os.path, 'exists')
@@ -492,112 +494,139 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.mox.VerifyAll()
 
-    def test_create_image(self):
-        fn = self.prepare_mocks()
-        fn(target=self.TEMPLATE_PATH)
-        imagebackend.libvirt_utils.create_cow_image(self.TEMPLATE_PATH,
-                                                    self.PATH)
-        self.mox.ReplayAll()
-
+    @mock.patch.object(imagebackend.utils, 'synchronized')
+    @mock.patch.object(fake_libvirt_utils, 'create_cow_image')
+    @mock.patch.object(imagebackend.disk, 'extend')
+    def test_create_image(self, mock_extend, mock_create, mock_sync):
+        mock_sync.side_effect = lambda *a, **kw: self._fake_deco
+        fn = mock.MagicMock()
         image = self.image_class(self.INSTANCE, self.NAME)
+
         image.create_image(fn, self.TEMPLATE_PATH, None)
 
-        self.mox.VerifyAll()
+        mock_create.assert_called_once_with(self.TEMPLATE_PATH, self.PATH)
+        fn.assert_called_once_with(target=self.TEMPLATE_PATH)
+        self.assertTrue(mock_sync.called)
+        self.assertFalse(mock_extend.called)
 
-    def test_create_image_with_size(self):
-        fn = self.prepare_mocks()
-        fn(target=self.TEMPLATE_PATH)
-        self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(imagebackend.Image,
-                                 'verify_base_size')
-        os.path.exists(self.DISK_INFO_PATH).AndReturn(False)
-        os.path.exists(self.INSTANCES_PATH).AndReturn(True)
-        os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
-        os.path.exists(self.PATH).AndReturn(False)
-        os.path.exists(self.PATH).AndReturn(False)
-        imagebackend.Image.verify_base_size(self.TEMPLATE_PATH, self.SIZE)
-        imagebackend.libvirt_utils.create_cow_image(self.TEMPLATE_PATH,
-                                                    self.PATH)
-        image = imgmodel.LocalFileImage(self.PATH, imgmodel.FORMAT_QCOW2)
-        imagebackend.disk.extend(image, self.SIZE)
-        self.mox.ReplayAll()
-
+    @mock.patch.object(imagebackend.utils, 'synchronized')
+    @mock.patch.object(fake_libvirt_utils, 'create_cow_image')
+    @mock.patch.object(imagebackend.disk, 'extend')
+    @mock.patch.object(os.path, 'exists', side_effect=[])
+    @mock.patch.object(imagebackend.Image, 'verify_base_size')
+    def test_create_image_with_size(self, mock_verify, mock_exist,
+                                    mock_extend, mock_create, mock_sync):
+        mock_sync.side_effect = lambda *a, **kw: self._fake_deco
+        fn = mock.MagicMock()
+        mock_exist.side_effect = [False, True, False, False, False]
+        exist_calls = [mock.call(self.DISK_INFO_PATH),
+                       mock.call(self.INSTANCES_PATH),
+                       mock.call(self.TEMPLATE_PATH),
+                       mock.call(self.PATH),
+                       mock.call(self.PATH)]
         image = self.image_class(self.INSTANCE, self.NAME)
+
         image.create_image(fn, self.TEMPLATE_PATH, self.SIZE)
 
-        self.mox.VerifyAll()
+        mock_verify.assert_called_once_with(self.TEMPLATE_PATH, self.SIZE)
+        mock_create.assert_called_once_with(self.TEMPLATE_PATH, self.PATH)
+        mock_extend.assert_called_once_with(
+            imgmodel.LocalFileImage(self.PATH, imgmodel.FORMAT_QCOW2),
+            self.SIZE)
+        fn.assert_called_once_with(target=self.TEMPLATE_PATH)
+        mock_exist.assert_has_calls(exist_calls)
+        self.assertTrue(mock_sync.called)
 
-    def test_create_image_too_small(self):
-        fn = self.prepare_mocks()
-        self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(imagebackend.Qcow2, 'get_disk_size')
-        os.path.exists(self.DISK_INFO_PATH).AndReturn(False)
-        os.path.exists(self.INSTANCES_PATH).AndReturn(True)
-        os.path.exists(self.TEMPLATE_PATH).AndReturn(True)
-        imagebackend.Qcow2.get_disk_size(self.TEMPLATE_PATH
-                                         ).AndReturn(self.SIZE)
-        self.mox.ReplayAll()
-
+    @mock.patch.object(imagebackend.utils, 'synchronized')
+    @mock.patch.object(fake_libvirt_utils, 'create_cow_image')
+    @mock.patch.object(imagebackend.disk, 'extend')
+    @mock.patch.object(os.path, 'exists', side_effect=[])
+    @mock.patch.object(imagebackend.Qcow2, 'get_disk_size')
+    def test_create_image_too_small(self, mock_get, mock_exist, mock_extend,
+                                    mock_create, mock_sync):
+        mock_sync.side_effect = lambda *a, **kw: self._fake_deco
+        mock_get.return_value = self.SIZE
+        fn = mock.MagicMock()
+        mock_exist.side_effect = [False, True, True]
+        exist_calls = [mock.call(self.DISK_INFO_PATH),
+                       mock.call(self.INSTANCES_PATH),
+                       mock.call(self.TEMPLATE_PATH)]
         image = self.image_class(self.INSTANCE, self.NAME)
+
         self.assertRaises(exception.FlavorDiskSmallerThanImage,
                           image.create_image, fn, self.TEMPLATE_PATH, 1)
-        self.mox.VerifyAll()
+        mock_get.assert_called_once_with(self.TEMPLATE_PATH)
+        mock_exist.assert_has_calls(exist_calls)
+        self.assertTrue(mock_sync.called)
+        self.assertFalse(mock_create.called)
+        self.assertFalse(mock_extend.called)
 
-    def test_generate_resized_backing_files(self):
-        fn = self.prepare_mocks()
-        fn(target=self.TEMPLATE_PATH)
-        self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(imagebackend.libvirt_utils,
-                                 'get_disk_backing_file')
-        self.mox.StubOutWithMock(imagebackend.Image,
-                                 'verify_base_size')
-        os.path.exists(self.DISK_INFO_PATH).AndReturn(False)
-        os.path.exists(CONF.instances_path).AndReturn(True)
-        os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
-        os.path.exists(self.PATH).AndReturn(True)
-
-        imagebackend.libvirt_utils.get_disk_backing_file(self.PATH)\
-            .AndReturn(self.QCOW2_BASE)
-        os.path.exists(self.QCOW2_BASE).AndReturn(False)
-        imagebackend.Image.verify_base_size(self.TEMPLATE_PATH, self.SIZE)
-        imagebackend.libvirt_utils.copy_image(self.TEMPLATE_PATH,
-                                              self.QCOW2_BASE)
-        image = imgmodel.LocalFileImage(self.QCOW2_BASE,
-                                        imgmodel.FORMAT_QCOW2)
-        imagebackend.disk.extend(image, self.SIZE)
-
-        os.path.exists(self.PATH).AndReturn(True)
-        self.mox.ReplayAll()
-
+    @mock.patch.object(imagebackend.utils, 'synchronized')
+    @mock.patch.object(fake_libvirt_utils, 'create_cow_image')
+    @mock.patch.object(fake_libvirt_utils, 'get_disk_backing_file')
+    @mock.patch.object(imagebackend.disk, 'extend')
+    @mock.patch.object(os.path, 'exists', side_effect=[])
+    @mock.patch.object(imagebackend.Image, 'verify_base_size')
+    @mock.patch.object(fake_libvirt_utils, 'copy_image')
+    def test_generate_resized_backing_files(self, mock_copy, mock_verify,
+                                            mock_exist, mock_extend, mock_get,
+                                            mock_create, mock_sync):
+        mock_sync.side_effect = lambda *a, **kw: self._fake_deco
+        mock_get.return_value = self.QCOW2_BASE
+        fn = mock.MagicMock()
+        mock_exist.side_effect = [False, True, False, True, False, True]
+        exist_calls = [mock.call(self.DISK_INFO_PATH),
+                       mock.call(CONF.instances_path),
+                       mock.call(self.TEMPLATE_PATH),
+                       mock.call(self.PATH),
+                       mock.call(self.QCOW2_BASE),
+                       mock.call(self.PATH)]
         image = self.image_class(self.INSTANCE, self.NAME)
+
         image.create_image(fn, self.TEMPLATE_PATH, self.SIZE)
 
-        self.mox.VerifyAll()
+        mock_get.assert_called_once_with(self.PATH)
+        mock_verify.assert_called_once_with(self.TEMPLATE_PATH, self.SIZE)
+        mock_copy.assert_called_once_with(self.TEMPLATE_PATH,
+                                          self.QCOW2_BASE)
+        mock_extend.assert_called_once_with(
+            imgmodel.LocalFileImage(self.QCOW2_BASE,
+                                    imgmodel.FORMAT_QCOW2), self.SIZE)
+        mock_exist.assert_has_calls(exist_calls)
+        fn.assert_called_once_with(target=self.TEMPLATE_PATH)
+        self.assertTrue(mock_sync.called)
+        self.assertFalse(mock_create.called)
 
-    def test_qcow2_exists_and_has_no_backing_file(self):
-        fn = self.prepare_mocks()
-        fn(target=self.TEMPLATE_PATH)
-        self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(imagebackend.libvirt_utils,
-                                 'get_disk_backing_file')
-        self.mox.StubOutWithMock(imagebackend.Image,
-                                 'verify_base_size')
-        os.path.exists(self.DISK_INFO_PATH).AndReturn(False)
-        os.path.exists(self.INSTANCES_PATH).AndReturn(True)
-
-        os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
-        os.path.exists(self.PATH).AndReturn(True)
-
-        imagebackend.libvirt_utils.get_disk_backing_file(self.PATH)\
-            .AndReturn(None)
-        imagebackend.Image.verify_base_size(self.TEMPLATE_PATH, self.SIZE)
-        os.path.exists(self.PATH).AndReturn(True)
-        self.mox.ReplayAll()
-
+    @mock.patch.object(imagebackend.utils, 'synchronized')
+    @mock.patch.object(fake_libvirt_utils, 'create_cow_image')
+    @mock.patch.object(fake_libvirt_utils, 'get_disk_backing_file')
+    @mock.patch.object(imagebackend.disk, 'extend')
+    @mock.patch.object(os.path, 'exists', side_effect=[])
+    @mock.patch.object(imagebackend.Image, 'verify_base_size')
+    def test_qcow2_exists_and_has_no_backing_file(self, mock_verify,
+                                                  mock_exist, mock_extend,
+                                                  mock_get, mock_create,
+                                                  mock_sync):
+        mock_sync.side_effect = lambda *a, **kw: self._fake_deco
+        mock_get.return_value = None
+        fn = mock.MagicMock()
+        mock_exist.side_effect = [False, True, False, True, True]
+        exist_calls = [mock.call(self.DISK_INFO_PATH),
+                       mock.call(self.INSTANCES_PATH),
+                       mock.call(self.TEMPLATE_PATH),
+                       mock.call(self.PATH),
+                       mock.call(self.PATH)]
         image = self.image_class(self.INSTANCE, self.NAME)
+
         image.create_image(fn, self.TEMPLATE_PATH, self.SIZE)
 
-        self.mox.VerifyAll()
+        mock_get.assert_called_once_with(self.PATH)
+        fn.assert_called_once_with(target=self.TEMPLATE_PATH)
+        mock_verify.assert_called_once_with(self.TEMPLATE_PATH, self.SIZE)
+        mock_exist.assert_has_calls(exist_calls)
+        self.assertTrue(mock_sync.called)
+        self.assertFalse(mock_create.called)
+        self.assertFalse(mock_extend.called)
 
     def test_resolve_driver_format(self):
         image = self.image_class(self.INSTANCE, self.NAME)
