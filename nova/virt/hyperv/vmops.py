@@ -367,6 +367,13 @@ class VMOps(object):
             dynamic_memory_ratio = CONF.hyperv.dynamic_memory_ratio
             vnuma_enabled = False
 
+        if instance.pci_requests.requests:
+            # NOTE(claudiub): if the instance requires PCI devices, its
+            # host shutdown action MUST be shutdown.
+            host_shutdown_action = os_win_const.HOST_SHUTDOWN_ACTION_SHUTDOWN
+        else:
+            host_shutdown_action = None
+
         self._vmutils.create_vm(instance_name,
                                 vnuma_enabled,
                                 vm_gen,
@@ -379,7 +386,8 @@ class VMOps(object):
                                 instance.flavor.vcpus,
                                 cpus_per_numa_node,
                                 CONF.hyperv.limit_cpu_features,
-                                dynamic_memory_ratio)
+                                dynamic_memory_ratio,
+                                host_shutdown_action=host_shutdown_action)
 
         self._configure_remotefx(instance, vm_gen)
 
@@ -414,6 +422,16 @@ class VMOps(object):
             certificate_required = self._requires_certificate(image_meta)
             self._vmutils.enable_secure_boot(
                 instance.name, msft_ca_required=certificate_required)
+
+        self._attach_pci_devices(instance)
+
+    def _attach_pci_devices(self, instance):
+        for pci_request in instance.pci_requests.requests:
+            spec = pci_request.spec[0]
+            for counter in range(pci_request.count):
+                self._vmutils.add_pci_device(instance.name,
+                                             spec['vendor_id'],
+                                             spec['product_id'])
 
     def _get_instance_vnuma_config(self, instance, image_meta):
         """Returns the appropriate NUMA configuration for Hyper-V instances,

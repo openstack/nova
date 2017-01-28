@@ -176,11 +176,37 @@ class HostOps(object):
                     obj_fields.HVType.HYPERV,
                     obj_fields.VMMode.HVM)],
                'numa_topology': self._get_host_numa_topology()._to_json(),
+               'pci_passthrough_devices': self._get_pci_passthrough_devices(),
                }
 
         gpu_info = self._get_remotefx_gpu_info()
         dic.update(gpu_info)
         return dic
+
+    def _get_pci_passthrough_devices(self):
+        """Get host PCI devices information.
+
+        Obtains PCI devices information and returns it as a JSON string.
+
+        :returns: a JSON string containing a list of the assignable PCI
+                  devices information.
+        """
+
+        pci_devices = self._hostutils.get_pci_passthrough_devices()
+
+        for pci_dev in pci_devices:
+            # NOTE(claudiub): These fields are required by the PCI tracker.
+            dev_label = 'label_%(vendor_id)s_%(product_id)s' % {
+                'vendor_id': pci_dev['vendor_id'],
+                'product_id': pci_dev['product_id']}
+
+            # TODO(claudiub): Find a way to associate the PCI devices with
+            # the NUMA nodes they are in.
+            pci_dev.update(dev_type=obj_fields.PciDeviceType.STANDARD,
+                           label=dev_label,
+                           numa_node=None)
+
+        return jsonutils.dumps(pci_devices)
 
     def host_power_action(self, action):
         """Reboots, shuts down or powers up the host."""
