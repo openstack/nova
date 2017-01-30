@@ -124,7 +124,25 @@ Possible values:
 
 * A positive integer, where the integer corresponds to the max number of
   attempts that can be made when scheduling an instance.
-""")]
+        """),
+    cfg.IntOpt("discover_hosts_in_cells_interval",
+               default=-1,
+               min=-1,
+               help="""
+Periodic task interval.
+
+This value controls how often (in seconds) the scheduler should attept
+to discover new hosts that have been added to cells. If negative (the
+default), no automatic discovery will occur.
+
+Small deployments may want this periodic task enabled, as surveying the
+cells for new hosts is likely to be lightweight enough to not cause undue
+burdon to the scheduler. However, larger clouds (and those that are not
+adding hosts regularly) will likely want to disable this automatic
+behavior and instead use the `nova-manage cell_v2 discover_hosts` command
+when hosts have been added to a cell.
+"""),
+]
 
 filter_scheduler_group = cfg.OptGroup(name="filter_scheduler",
                            title="Filter scheduler options")

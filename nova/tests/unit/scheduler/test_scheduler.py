@@ -160,6 +160,16 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                                               mock.sentinel.host_name,
                                               mock.sentinel.instance_uuids)
 
+    @mock.patch('nova.objects.host_mapping.discover_hosts')
+    def test_discover_hosts(self, mock_discover):
+        cm1 = objects.CellMapping(name='cell1')
+        cm2 = objects.CellMapping(name='cell2')
+        mock_discover.return_value = [objects.HostMapping(host='a',
+                                                          cell_mapping=cm1),
+                                      objects.HostMapping(host='b',
+                                                          cell_mapping=cm2)]
+        self.manager._discover_hosts_in_cells(mock.sentinel.context)
+
 
 class SchedulerInitTestCase(test.NoDBTestCase):
     """Test case for base scheduler driver initiation."""

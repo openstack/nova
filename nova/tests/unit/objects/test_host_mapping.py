@@ -12,11 +12,14 @@
 
 import mock
 
+from nova import context
+from nova import exception
 from nova import objects
 from nova.objects import host_mapping
 from nova import test
 from nova.tests.unit.objects import test_cell_mapping
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel as uuids
 
 
 def get_db_mapping(mapped_cell=None, **updates):
@@ -145,3 +148,62 @@ class TestHostMappingObject(test_objects._LocalTest,
 class TestRemoteHostMappingObject(test_objects._RemoteTest,
                                   _TestHostMappingObject):
     pass
+
+
+class TestHostMappingDiscovery(test.NoDBTestCase):
+    @mock.patch('nova.objects.CellMappingList.get_all')
+    @mock.patch('nova.objects.HostMapping.create')
+    @mock.patch('nova.objects.HostMapping.get_by_host')
+    @mock.patch('nova.objects.ComputeNodeList.get_all')
+    def test_discover_hosts_all(self, mock_cn_get, mock_hm_get, mock_hm_create,
+                                mock_cm):
+        def _hm_get(context, host):
+            if host in ['a', 'b', 'c']:
+                return objects.HostMapping()
+            raise exception.HostMappingNotFound(name=host)
+
+        mock_hm_get.side_effect = _hm_get
+        mock_cn_get.side_effect = [[objects.ComputeNode(host='d',
+                                                        uuid=uuids.cn1)],
+                                   [objects.ComputeNode(host='e',
+                                                        uuid=uuids.cn2)]]
+
+        cell_mappings = [objects.CellMapping(name='foo',
+                                             uuid=uuids.cm1),
+                         objects.CellMapping(name='bar',
+                                             uuid=uuids.cm2)]
+        mock_cm.return_value = cell_mappings
+        ctxt = context.get_admin_context()
+        hms = host_mapping.discover_hosts(ctxt)
+        self.assertEqual(2, len(hms))
+        self.assertTrue(mock_hm_create.called)
+        self.assertEqual(['d', 'e'],
+                         [hm.host for hm in hms])
+
+    @mock.patch('nova.objects.CellMapping.get_by_uuid')
+    @mock.patch('nova.objects.HostMapping.create')
+    @mock.patch('nova.objects.HostMapping.get_by_host')
+    @mock.patch('nova.objects.ComputeNodeList.get_all')
+    def test_discover_hosts_one(self, mock_cn_get, mock_hm_get, mock_hm_create,
+                                mock_cm):
+        def _hm_get(context, host):
+            if host in ['a', 'b', 'c']:
+                return objects.HostMapping()
+            raise exception.HostMappingNotFound(name=host)
+
+        mock_hm_get.side_effect = _hm_get
+        # NOTE(danms): Provide both side effects, but expect it to only
+        # be called once if we provide a cell
+        mock_cn_get.side_effect = [[objects.ComputeNode(host='d',
+                                                        uuid=uuids.cn1)],
+                                   [objects.ComputeNode(host='e',
+                                                        uuid=uuids.cn2)]]
+
+        mock_cm.return_value = objects.CellMapping(name='foo',
+                                                   uuid=uuids.cm1)
+        ctxt = context.get_admin_context()
+        hms = host_mapping.discover_hosts(ctxt, uuids.cm1)
+        self.assertEqual(1, len(hms))
+        self.assertTrue(mock_hm_create.called)
+        self.assertEqual(['d'],
+                         [hm.host for hm in hms])
