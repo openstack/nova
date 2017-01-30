@@ -1,0 +1,23 @@
+---
+features:
+  - |
+
+    The following legacy notifications have been transformed to
+    a new versioned payload:
+
+    * aggregate.create
+    * aggregate.delete
+    * instance.create
+    * instance.finish_resize
+    * instance.power_off
+    * instance.resume
+    * instance.shelve_offload
+    * instance.shutdown
+    * instance.snapshot
+    * instance.unpause
+    * instance.unshelve
+
+    Every versioned notification has a sample file stored under
+    doc/notification_samples directory. Consult
+    http://docs.openstack.org/developer/nova/notifications.html for more information.
+
