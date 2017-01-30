@@ -513,6 +513,8 @@ class TestAggregates(SchedulerReportClientTestCase):
         uuid = uuids.compute_node
         resp_mock = mock.Mock(status_code=404)
         self.ks_sess_mock.get.return_value = resp_mock
+        self.ks_sess_mock.get.return_value.headers = {
+            'x-openstack-request-id': uuids.request_id}
 
         result = self.client._get_provider_aggregates(uuid)
 
@@ -521,6 +523,8 @@ class TestAggregates(SchedulerReportClientTestCase):
             expected_url, endpoint_filter=mock.ANY, raise_exc=False,
             headers={'OpenStack-API-Version': 'placement 1.1'})
         self.assertTrue(log_mock.called)
+        self.assertEqual(uuids.request_id,
+                        log_mock.call_args[0][1]['placement_req_id'])
         self.assertIsNone(result)
 
     @mock.patch.object(report.LOG, 'error')
@@ -531,6 +535,8 @@ class TestAggregates(SchedulerReportClientTestCase):
         uuid = uuids.compute_node
         resp_mock = mock.Mock(status_code=400)
         self.ks_sess_mock.get.return_value = resp_mock
+        self.ks_sess_mock.get.return_value.headers = {
+            'x-openstack-request-id': uuids.request_id}
 
         result = self.client._get_provider_aggregates(uuid)
 
@@ -539,6 +545,8 @@ class TestAggregates(SchedulerReportClientTestCase):
             expected_url, endpoint_filter=mock.ANY, raise_exc=False,
             headers={'OpenStack-API-Version': 'placement 1.1'})
         self.assertTrue(log_mock.called)
+        self.assertEqual(uuids.request_id,
+                        log_mock.call_args[0][1]['placement_req_id'])
         self.assertIsNone(result)
 
 

@@ -288,15 +288,23 @@ class SchedulerReportClient(object):
         if resp.status_code == 200:
             data = resp.json()
             return set(data['aggregates'])
+
+        placement_req_id = get_placement_request_id(resp)
         if resp.status_code == 404:
-            msg = _LW("Tried to get a provider's aggregates; however the "
-                      "provider %s does not exist.")
-            LOG.warning(msg, rp_uuid)
-        else:
-            msg = _LE("Failed to retrieve aggregates from placement API "
-                      "for resource provider with UUID %(uuid)s. "
-                      "Got %(status_code)d: %(err_text)s.")
+            msg = _LW("[%(placement_req_id)s] Tried to get a provider's "
+                      "aggregates; however the provider %(uuid)s does not "
+                      "exist.")
             args = {
+                'uuid': rp_uuid,
+                'placement_req_id': placement_req_id,
+            }
+            LOG.warning(msg, args)
+        else:
+            msg = _LE("[%(placement_req_id)s] Failed to retrieve aggregates "
+                      "from placement API for resource provider with UUID "
+                      "%(uuid)s. Got %(status_code)d: %(err_text)s.")
+            args = {
+                'placement_req_id': placement_req_id,
                 'uuid': rp_uuid,
                 'status_code': resp.status_code,
                 'err_text': resp.text,
