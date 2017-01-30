@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    A new ``nova-status upgrade check`` CLI is provided for checking the
+    readiness of a deployment when preparing to upgrade to the latest release.
+    The tool is written to handle both fresh installs and upgrades from an
+    earlier release, for example upgrading from the 14.0.3 Newton release.
+    There can be multiple checks performed with varying degrees of success.
+    More details on the command and how to interpret results are in the
+    `nova-status man page`_.
+
+    .. _nova-status man page: http://docs.openstack.org/developer/nova/man/nova-status.html
