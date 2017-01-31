@@ -469,7 +469,7 @@ class TestUpgradeCheckResourceProviders(test.NoDBTestCase):
 
     def test_check_resource_providers_no_rps_one_compute(self):
         """Tests the scenario where we have compute nodes in the cell but no
-        resource providers yet - VCPU or otherwise. This is a failure because
+        resource providers yet - VCPU or otherwise. This is a warning because
         the compute isn't reporting into placement.
         """
         self._setup_cells()
@@ -488,7 +488,7 @@ class TestUpgradeCheckResourceProviders(test.NoDBTestCase):
             cpu_info='{"arch": "x86_64"}')
         cn.create()
         result = self.cmd._check_resource_providers()
-        self.assertEqual(status.UpgradeCheckCode.FAILURE, result.code)
+        self.assertEqual(status.UpgradeCheckCode.WARNING, result.code)
         self.assertIn('There are no compute resource providers in the '
                       'Placement service but there are 1 compute nodes in the '
                       'deployment.', result.details)
@@ -511,7 +511,7 @@ class TestUpgradeCheckResourceProviders(test.NoDBTestCase):
 
     def test_check_resource_providers_no_compute_rps_one_compute(self):
         """Tests the scenario where we have compute nodes in the cell but no
-        compute (VCPU) resource providers yet. This is a failure because the
+        compute (VCPU) resource providers yet. This is a failure warning the
         compute isn't reporting into placement.
         """
         self._setup_cells()
@@ -536,7 +536,7 @@ class TestUpgradeCheckResourceProviders(test.NoDBTestCase):
         self._create_resource_provider(FAKE_IP_POOL_INVENTORY)
 
         result = self.cmd._check_resource_providers()
-        self.assertEqual(status.UpgradeCheckCode.FAILURE, result.code)
+        self.assertEqual(status.UpgradeCheckCode.WARNING, result.code)
         self.assertIn('There are no compute resource providers in the '
                       'Placement service but there are 1 compute nodes in the '
                       'deployment.', result.details)
