@@ -6808,9 +6808,15 @@ class ComputeManager(manager.Manager):
                              {'event': event.key, 'error': six.text_type(e)},
                              instance=instance)
             elif event.name == 'network-vif-deleted':
-                self._process_instance_vif_deleted_event(context,
-                                                         instance,
-                                                         event.tag)
+                try:
+                    self._process_instance_vif_deleted_event(context,
+                                                             instance,
+                                                             event.tag)
+                except exception.NotFound as e:
+                    LOG.info(_LI('Failed to process external instance event '
+                                 '%(event)s due to: %(error)s'),
+                             {'event': event.key, 'error': six.text_type(e)},
+                             instance=instance)
             else:
                 self._process_instance_event(instance, event)
 
