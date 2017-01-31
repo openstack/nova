@@ -1339,6 +1339,29 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.driver.reboot(self.ctx, instance, None, 'HARD')
         mock_sp.assert_called_once_with(node.uuid, 'reboot')
 
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_validate_instance_and_node')
+    @mock.patch.object(FAKE_CLIENT.node, 'inject_nmi')
+    def test_trigger_crash_dump(self, mock_nmi, fake_validate):
+        node = ironic_utils.get_test_node()
+        fake_validate.return_value = node
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   node=node.uuid)
+        self.driver.trigger_crash_dump(instance)
+        mock_nmi.assert_called_once_with(node.uuid)
+
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_validate_instance_and_node')
+    @mock.patch.object(FAKE_CLIENT.node, 'inject_nmi')
+    def test_trigger_crash_dump_error(self, mock_nmi, fake_validate):
+        node = ironic_utils.get_test_node()
+        fake_validate.return_value = node
+        mock_nmi.side_effect = ironic_exception.BadRequest()
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   node=node.uuid)
+        self.assertRaises(ironic_exception.BadRequest,
+                          self.driver.trigger_crash_dump, instance)
+
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_validate_instance_and_node')
