@@ -4533,8 +4533,9 @@ class _ComputeAPIUnitTestMixIn(object):
                 limit=10, marker='fake-marker', sort_keys=['baz'],
                 sort_dirs=['desc'])
 
-            for cm in mock_cm_get_all.return_value:
-                mock_target_cell.assert_any_call(self.context, cm)
+            if self.cell_type is None:
+                for cm in mock_cm_get_all.return_value:
+                    mock_target_cell.assert_any_call(self.context, cm)
             inst_get_calls = [mock.call(self.context, {'foo': 'bar'},
                                         limit=10, marker='fake-marker',
                                         expected_attrs=None, sort_keys=['baz'],
@@ -4588,8 +4589,9 @@ class _ComputeAPIUnitTestMixIn(object):
                 limit=10, marker='fake-marker', sort_keys=['baz'],
                 sort_dirs=['desc'])
 
-            for cm in mock_cm_get_all.return_value:
-                mock_target_cell.assert_any_call(self.context, cm)
+            if self.cell_type is None:
+                for cm in mock_cm_get_all.return_value:
+                    mock_target_cell.assert_any_call(self.context, cm)
             inst_get_calls = [mock.call(self.context, {'foo': 'bar'},
                                         limit=8, marker='fake-marker',
                                         expected_attrs=None, sort_keys=['baz'],
@@ -4644,8 +4646,9 @@ class _ComputeAPIUnitTestMixIn(object):
                 limit=10, marker=marker, sort_keys=['baz'],
                 sort_dirs=['desc'])
 
-            for cm in mock_cm_get_all.return_value:
-                mock_target_cell.assert_any_call(self.context, cm)
+            if self.cell_type is None:
+                for cm in mock_cm_get_all.return_value:
+                    mock_target_cell.assert_any_call(self.context, cm)
             inst_get_calls = [mock.call(self.context, {'foo': 'bar'},
                                         limit=10, marker=marker,
                                         expected_attrs=None, sort_keys=['baz'],
