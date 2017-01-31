@@ -326,3 +326,8 @@ they are visible to the scheduler as available targets for
 instances. Any time you add more compute hosts to a cell, you need to
 re-run this command to map them from the top-level so they can be
 utilized.
+
+References
+~~~~~~~~~~
+
+* `man pages for the cells v2 commands <http://docs.openstack.org/developer/nova/man/nova-manage.html#nova-cells-v2>`_
