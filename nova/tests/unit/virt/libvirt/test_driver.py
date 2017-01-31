@@ -14735,18 +14735,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._swap_volume')
-    @mock.patch('nova.objects.block_device.BlockDeviceMapping.'
-                'get_by_volume_and_instance')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_config')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._connect_volume')
     @mock.patch('nova.virt.libvirt.host.Host.get_guest')
-    def _test_swap_volume_driver_bdm_save(self, get_guest,
-                                         connect_volume, get_volume_config,
-                                         get_by_volume_and_instance,
-                                         swap_volume,
-                                         disconnect_volume,
-                                         volume_save,
-                                         source_type):
+    def _test_swap_volume_driver(self, get_guest, connect_volume,
+                                 get_volume_config, swap_volume,
+                                 disconnect_volume, source_type):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         instance = objects.Instance(**self.test_instance)
         old_connection_info = {'driver_volume_type': 'fake',
@@ -14775,16 +14769,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         get_volume_config.return_value = mock.MagicMock(
             source_path='/fake-new-volume')
 
-        bdm = objects.BlockDeviceMapping(self.context,
-            **fake_block_device.FakeDbBlockDeviceDict(
-                {'id': 2, 'instance_uuid': uuids.instance,
-                 'device_name': '/dev/vdb',
-                 'source_type': source_type,
-                 'destination_type': 'volume',
-                 'volume_id': 'fake-volume-id-2',
-                 'boot_index': 0}))
-        get_by_volume_and_instance.return_value = bdm
-
         conn.swap_volume(old_connection_info, new_connection_info, instance,
                          '/dev/vdb', 1)
 
@@ -14794,22 +14778,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         swap_volume.assert_called_once_with(guest, 'vdb',
                                             '/fake-new-volume', 1)
         disconnect_volume.assert_called_once_with(old_connection_info, 'vdb')
-        volume_save.assert_called_once_with()
 
-    @mock.patch('nova.virt.block_device.DriverVolumeBlockDevice.save')
-    def test_swap_volume_driver_bdm_save_source_is_volume(self, volume_save):
-        self._test_swap_volume_driver_bdm_save(volume_save=volume_save,
-                                          source_type='volume')
+    def test_swap_volume_driver_source_is_volume(self):
+        self._test_swap_volume_driver(source_type='volume')
 
-    @mock.patch('nova.virt.block_device.DriverImageBlockDevice.save')
-    def test_swap_volume_driver_bdm_save_source_is_image(self, volume_save):
-        self._test_swap_volume_driver_bdm_save(volume_save=volume_save,
-                                          source_type='image')
+    def test_swap_volume_driver_source_is_image(self):
+        self._test_swap_volume_driver(source_type='image')
 
-    @mock.patch('nova.virt.block_device.DriverSnapshotBlockDevice.save')
-    def test_swap_volume_driver_bdm_save_source_is_snapshot(self, volume_save):
-        self._test_swap_volume_driver_bdm_save(volume_save=volume_save,
-                                          source_type='snapshot')
+    def test_swap_volume_driver_source_is_snapshot(self):
+        self._test_swap_volume_driver(source_type='snapshot')
 
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
     def _test_live_snapshot(self, mock_is_job_complete,
