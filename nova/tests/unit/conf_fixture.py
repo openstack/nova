@@ -75,6 +75,10 @@ class ConfFixture(config_fixture.Config):
                               paths.state_path_def('etc/nova/api-paste.ini'),
                               group='wsgi')
 
+        # placement group
+        self.conf.set_default('os_region_name', 'RegionOne',
+                              group='placement')
+
         config.parse_args([], default_config_files=[], configure_db=False,
                           init_rpc=False)
         policy_opts.set_defaults(self.conf)

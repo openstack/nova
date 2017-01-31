@@ -30,7 +30,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 15
+SERVICE_VERSION = 16
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -91,6 +91,9 @@ SERVICE_VERSION_HISTORY = (
     {'compute_rpc': '4.13'},
     # Version 15: Indicate that nova-conductor will stop a boot if BuildRequest
     # is deleted before RPC to nova-compute.
+    {'compute_rpc': '4.13'},
+    # Version 16: Indicate that nova-compute will refuse to start if it doesn't
+    # have a placement section configured.
     {'compute_rpc': '4.13'},
 )
 

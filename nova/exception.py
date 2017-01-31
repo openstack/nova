@@ -2177,3 +2177,9 @@ class Unauthorized(NovaException):
 
 class NeutronAdminCredentialConfigurationInvalid(Invalid):
     msg_fmt = _("Networking client is experiencing an unauthorized exception.")
+
+
+class PlacementNotConfigured(NovaException):
+    msg_fmt = _("This compute is not configured to talk to the placement "
+                "service. Configure the [placement] section of nova.conf "
+                "and restart the service.")
