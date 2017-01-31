@@ -16,6 +16,7 @@ import datetime
 
 from nova import exception
 from nova import objects
+from nova.objects import fields
 from nova import test
 
 
@@ -294,6 +295,7 @@ class TestImageMetaProps(test.NoDBTestCase):
             'os_secure_boot': 'required',
             'hw_rescue_bus': 'ide',
             'hw_rescue_device': 'disk',
+            'hw_watchdog_action': fields.WatchdogAction.DISABLED,
         }
 
         obj = objects.ImageMetaProps(**props)
@@ -305,6 +307,17 @@ class TestImageMetaProps(test.NoDBTestCase):
             obj.hw_disk_bus = bus
             self.assertRaises(exception.ObjectActionError,
                               obj.obj_to_primitive, '1.0')
+
+    def test_obj_make_compatible_watchdog_action_not_disabled(self):
+        """Tests that we don't pop the hw_watchdog_action if the value is not
+        'disabled'.
+        """
+        obj = objects.ImageMetaProps(
+            hw_watchdog_action=fields.WatchdogAction.PAUSE)
+        primitive = obj.obj_to_primitive('1.0')
+        self.assertIn('hw_watchdog_action', primitive['nova_object.data'])
+        self.assertEqual(fields.WatchdogAction.PAUSE,
+                         primitive['nova_object.data']['hw_watchdog_action'])
 
     def test_set_os_secure_boot(self):
         props = {'os_secure_boot': "required"}

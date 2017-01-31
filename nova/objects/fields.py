@@ -632,8 +632,9 @@ class WatchdogAction(BaseNovaEnum):
     PAUSE = "pause"
     POWEROFF = "poweroff"
     RESET = "reset"
+    DISABLED = "disabled"
 
-    ALL = (NONE, PAUSE, POWEROFF, RESET)
+    ALL = (NONE, PAUSE, POWEROFF, RESET, DISABLED)
 
 
 class MonitorMetricType(BaseNovaEnum):

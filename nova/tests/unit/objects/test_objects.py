@@ -1096,7 +1096,7 @@ object_data = {
     'HVSpec': '1.2-de06bcec472a2f04966b855a49c46b41',
     'IDEDeviceBus': '1.0-29d4c9f27ac44197f01b6ac1b7e16502',
     'ImageMeta': '1.8-642d1b2eb3e880a367f37d72dd76162d',
-    'ImageMetaProps': '1.15-89dcdd30b2ec5995a45c8da73c9e1eb9',
+    'ImageMetaProps': '1.16-3e5ad8e86f2ea36e565702162acc3e65',
     'Instance': '2.3-4f98ab23f4b0a25fabb1040c8f5edecc',
     'InstanceAction': '1.1-f9f293e526b66fca0d05c3b3a2d13914',
     'InstanceActionEvent': '1.1-e56a64fa4710e43ef7af2ad9d6028b33',
