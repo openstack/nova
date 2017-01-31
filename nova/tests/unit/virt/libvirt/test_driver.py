@@ -10232,7 +10232,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         def fake_create_domain_and_network(
                 context, xml, instance, network_info, disk_info,
                 block_device_info=None, power_on=True, reboot=False,
-                vifs_already_plugged=False, post_xml_callback=None):
+                vifs_already_plugged=False, post_xml_callback=None,
+                destroy_disks_on_failure=False):
             # The config disk should be created by this callback, so we need
             # to execute it.
             post_xml_callback()
@@ -14362,14 +14363,22 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               drvr._create_domain_and_network,
                               self.context, 'xml', instance, [], None)
             mock_cleanup.assert_called_once_with(self.context, instance,
-                                                 [], None, None)
+                                                 [], None, None, False)
+            # destroy_disks_on_failure=True, used only by spawn()
+            mock_cleanup.reset_mock()
+            self.assertRaises(test.TestingException,
+                              drvr._create_domain_and_network,
+                              self.context, 'xml', instance, [], None,
+                              destroy_disks_on_failure=True)
+            mock_cleanup.assert_called_once_with(self.context, instance,
+                                                 [], None, None, True)
 
         the_test()
 
     def test_cleanup_failed_start_no_guest(self):
         drvr = libvirt_driver.LibvirtDriver(mock.MagicMock(), False)
         with mock.patch.object(drvr, 'cleanup') as mock_cleanup:
-            drvr._cleanup_failed_start(None, None, None, None, None)
+            drvr._cleanup_failed_start(None, None, None, None, None, False)
             self.assertTrue(mock_cleanup.called)
 
     def test_cleanup_failed_start_inactive_guest(self):
@@ -14377,7 +14386,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         guest = mock.MagicMock()
         guest.is_active.return_value = False
         with mock.patch.object(drvr, 'cleanup') as mock_cleanup:
-            drvr._cleanup_failed_start(None, None, None, None, guest)
+            drvr._cleanup_failed_start(None, None, None, None, guest, False)
             self.assertTrue(mock_cleanup.called)
             self.assertFalse(guest.poweroff.called)
 
@@ -14386,7 +14395,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         guest = mock.MagicMock()
         guest.is_active.return_value = True
         with mock.patch.object(drvr, 'cleanup') as mock_cleanup:
-            drvr._cleanup_failed_start(None, None, None, None, guest)
+            drvr._cleanup_failed_start(None, None, None, None, guest, False)
             self.assertTrue(mock_cleanup.called)
             self.assertTrue(guest.poweroff.called)
 
@@ -14398,8 +14407,21 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         with mock.patch.object(drvr, 'cleanup') as mock_cleanup:
             self.assertRaises(test.TestingException,
                               drvr._cleanup_failed_start,
-                              None, None, None, None, guest)
+                              None, None, None, None, guest, False)
             self.assertTrue(mock_cleanup.called)
+            self.assertTrue(guest.poweroff.called)
+
+    def test_cleanup_failed_start_failed_poweroff_destroy_disks(self):
+        drvr = libvirt_driver.LibvirtDriver(mock.MagicMock(), False)
+        guest = mock.MagicMock()
+        guest.is_active.return_value = True
+        guest.poweroff.side_effect = test.TestingException
+        with mock.patch.object(drvr, 'cleanup') as mock_cleanup:
+            self.assertRaises(test.TestingException,
+                              drvr._cleanup_failed_start,
+                              None, None, None, None, guest, True)
+            mock_cleanup.called_once_with(None, None, network_info=None,
+                    block_device_info=None, destroy_disks=True)
             self.assertTrue(guest.poweroff.called)
 
     @mock.patch('nova.volume.encryptors.get_encryption_metadata')
