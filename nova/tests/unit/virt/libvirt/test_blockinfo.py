@@ -989,6 +989,16 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
                                                'disk_bus': 'scsi',
                                                'device_type': 'disk'},
                                               {}, 'virtio')
+        mock_get_info.reset_mock()
+        # xen with incompatible root_device_name/disk_bus combination
+        root_bdm['disk_bus'] = 'xen'
+        blockinfo.get_root_info(instance, 'xen', image_meta, root_bdm,
+                                'xen', 'ide', root_device_name='sda')
+        mock_get_info.assert_called_once_with(instance, 'xen', image_meta,
+                                              {'device_name': 'xvda',
+                                               'disk_bus': 'xen',
+                                               'device_type': 'disk'},
+                                              {}, 'xen')
 
     def test_get_boot_order_simple(self):
         disk_info = {

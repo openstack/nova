@@ -451,6 +451,13 @@ def get_root_info(instance, virt_type, image_meta, root_bdm,
 
     if not get_device_name(root_bdm) and root_device_name:
         root_bdm = root_bdm.copy()
+        # it can happen, eg for libvirt+Xen, that the root_device_name is
+        # incompatible with the disk bus. In that case fix the root_device_name
+        if virt_type == 'xen':
+            dev_prefix = get_dev_prefix_for_disk_bus(disk_bus)
+            if not root_device_name.startswith(dev_prefix):
+                letter = block_device.get_device_letter(root_device_name)
+                root_device_name = '%s%s' % (dev_prefix, letter)
         root_bdm['device_name'] = root_device_name
     return get_info_from_bdm(instance, virt_type, image_meta,
                              root_bdm, {}, disk_bus)
