@@ -189,3 +189,49 @@ class PowerVMDriver(driver.ComputeDriver):
             LOG.exception("PowerVM error during destroy.", instance=instance)
             # Convert to a Nova exception
             raise exc.InstanceTerminationFailure(reason=six.text_type(e))
+
+    def power_off(self, instance, timeout=0, retry_interval=0):
+        """Power off the specified instance.
+
+        :param instance: nova.objects.instance.Instance
+        :param timeout: time to wait for GuestOS to shutdown
+        :param retry_interval: How often to signal guest while
+                               waiting for it to shutdown
+        """
+        self._log_operation('power_off', instance)
+        force_immediate = (timeout == 0)
+        timeout = timeout or None
+        vm.power_off(self.adapter, instance, force_immediate=force_immediate,
+                     timeout=timeout)
+
+    def power_on(self, context, instance, network_info,
+                 block_device_info=None):
+        """Power on the specified instance.
+
+        :param instance: nova.objects.instance.Instance
+        """
+        self._log_operation('power_on', instance)
+        vm.power_on(self.adapter, instance)
+
+    def reboot(self, context, instance, network_info, reboot_type,
+               block_device_info=None, bad_volumes_callback=None):
+        """Reboot the specified instance.
+
+        After this is called successfully, the instance's state
+        goes back to power_state.RUNNING. The virtualization
+        platform should ensure that the reboot action has completed
+        successfully even in cases in which the underlying domain/vm
+        is paused or halted/stopped.
+
+        :param instance: nova.objects.instance.Instance
+        :param network_info:
+           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param reboot_type: Either a HARD or SOFT reboot
+        :param block_device_info: Info pertaining to attached volumes
+        :param bad_volumes_callback: Function to handle any bad volumes
+            encountered
+        """
+        self._log_operation(reboot_type + ' reboot', instance)
+        vm.reboot(self.adapter, instance, reboot_type == 'HARD')
+        # pypowervm exceptions are sufficient to indicate real failure.
+        # Otherwise, pypowervm thinks the instance is up.
