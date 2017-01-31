@@ -74,6 +74,7 @@ class ServerGroupTestBase(test.TestCase,
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
 
+        self.useFixture(nova_fixtures.PlacementFixture())
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
 
@@ -141,6 +142,10 @@ class ServerGroupTestV21(ServerGroupTestBase):
         self.compute = self.start_service('compute')
 
         # NOTE(gibi): start a second compute host to be able to test affinity
+        # NOTE(sbauza): Make sure the FakeDriver returns a different nodename
+        # for the second compute node.
+        fake.set_nodes(['host2'])
+        self.addCleanup(fake.restore_nodes)
         self.compute2 = self.start_service('compute', host='host2')
         fake_network.set_stub_network_methods(self)
 
@@ -361,6 +366,7 @@ class ServerGroupTestV21(ServerGroupTestBase):
 
     def test_migrate_with_anti_affinity(self):
         # Start additional host to test migration with anti-affinity
+        fake.set_nodes(['host3'])
         self.start_service('compute', host='host3')
 
         created_group = self.api.post_server_groups(self.anti_affinity)

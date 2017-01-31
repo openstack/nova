@@ -42,12 +42,18 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
     @mock.patch('nova.objects.ServiceList.get_by_binary',
                 return_value=fakes.SERVICES)
     @mock.patch('nova.objects.InstanceList.get_by_host')
-    @mock.patch('nova.objects.ComputeNodeList.get_all',
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids',
                 return_value=fakes.COMPUTE_NODES)
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_filtered_resource_providers',
+                return_value=fakes.RESOURCE_PROVIDERS)
+    @mock.patch('nova.objects.Service.get_minimum_version',
+                return_value=objects.service.SERVICE_VERSION)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
-    def test_schedule_happy_day(self, mock_get_extra, mock_get_all,
+    def test_schedule_happy_day(self, mock_get_extra, mock_get_mv,
+                                mock_get_rps, mock_get_all,
                                 mock_by_host, mock_get_by_binary):
         """Make sure there's nothing glaringly wrong with _schedule()
         by doing a happy day pass through.
@@ -68,6 +74,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             flavor=objects.Flavor(memory_mb=512,
                                   root_gb=512,
                                   ephemeral_gb=0,
+                                  swap=0,
                                   vcpus=1),
             project_id=1,
             os_type='Linux',
@@ -115,12 +122,18 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
     @mock.patch('nova.objects.ServiceList.get_by_binary',
                 return_value=fakes.SERVICES)
     @mock.patch('nova.objects.InstanceList.get_by_host')
-    @mock.patch('nova.objects.ComputeNodeList.get_all',
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids',
                 return_value=fakes.COMPUTE_NODES)
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_filtered_resource_providers',
+                return_value=fakes.RESOURCE_PROVIDERS)
+    @mock.patch('nova.objects.Service.get_minimum_version',
+                return_value=objects.service.SERVICE_VERSION)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
-    def test_schedule_host_pool(self, mock_get_extra, mock_get_all,
+    def test_schedule_host_pool(self, mock_get_extra, mock_get_mv,
+                                mock_get_rps, mock_get_all,
                                 mock_by_host, mock_get_by_binary):
         """Make sure the host_subset_size property works properly."""
 
@@ -134,6 +147,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             flavor=objects.Flavor(root_gb=512,
                                   memory_mb=512,
                                   ephemeral_gb=0,
+                                  swap=0,
                                   vcpus=1),
             pci_requests=None,
             numa_topology=None,
@@ -150,12 +164,18 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
     @mock.patch('nova.objects.ServiceList.get_by_binary',
                 return_value=fakes.SERVICES)
     @mock.patch('nova.objects.InstanceList.get_by_host')
-    @mock.patch('nova.objects.ComputeNodeList.get_all',
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids',
                 return_value=fakes.COMPUTE_NODES)
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_filtered_resource_providers',
+                return_value=fakes.RESOURCE_PROVIDERS)
+    @mock.patch('nova.objects.Service.get_minimum_version',
+                return_value=objects.service.SERVICE_VERSION)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
-    def test_schedule_large_host_pool(self, mock_get_extra, mock_get_all,
+    def test_schedule_large_host_pool(self, mock_get_extra, mock_get_mv,
+                                      mock_get_rps, mock_get_all,
                                       mock_by_host, mock_get_by_binary):
         """Hosts should still be chosen if pool size
         is larger than number of filtered hosts.
@@ -171,6 +191,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             flavor=objects.Flavor(root_gb=512,
                                   memory_mb=512,
                                   ephemeral_gb=0,
+                                  swap=0,
                                   vcpus=1),
             pci_requests=None,
             numa_topology=None,
@@ -187,12 +208,18 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
     @mock.patch('nova.scheduler.host_manager.HostManager._get_instance_info')
     @mock.patch('nova.objects.ServiceList.get_by_binary',
                 return_value=fakes.SERVICES)
-    @mock.patch('nova.objects.ComputeNodeList.get_all',
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids',
                 return_value=fakes.COMPUTE_NODES)
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_filtered_resource_providers',
+                return_value=fakes.RESOURCE_PROVIDERS)
+    @mock.patch('nova.objects.Service.get_minimum_version',
+                return_value=objects.service.SERVICE_VERSION)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
-    def test_schedule_chooses_best_host(self, mock_get_extra, mock_cn_get_all,
+    def test_schedule_chooses_best_host(self, mock_get_extra, mock_get_mv,
+                                        mock_get_rps, mock_cn_get_all,
                                         mock_get_by_binary,
                                         mock_get_inst_info):
         """If host_subset_size is 1, the largest host with greatest weight
@@ -219,6 +246,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             flavor=objects.Flavor(root_gb=512,
                                   memory_mb=512,
                                   ephemeral_gb=0,
+                                  swap=0,
                                   vcpus=1),
             pci_requests=None,
             numa_topology=None,
@@ -234,15 +262,33 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.assertEqual(50, hosts[0].weight)
 
+    # TODO(sbauza): Remove that unit test in Pike
+    @mock.patch('nova.objects.Service.get_minimum_version',
+                return_value=15)
+    def test_get_all_host_states_with_newton_computes(self, mock_get_mv):
+        """If at least one compute node is older than Ocata, then we should
+        not call the placement API.
+        """
+        with mock.patch.object(self.driver.host_manager,
+                               'get_all_host_states') as mock_get_hosts:
+            self.driver._get_all_host_states(self.context, mock.sentinel.spec)
+        mock_get_hosts.assert_called_once_with(self.context)
+
     @mock.patch('nova.objects.ServiceList.get_by_binary',
                 return_value=fakes.SERVICES)
     @mock.patch('nova.objects.InstanceList.get_by_host')
-    @mock.patch('nova.objects.ComputeNodeList.get_all',
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids',
                 return_value=fakes.COMPUTE_NODES)
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_filtered_resource_providers',
+                return_value=fakes.RESOURCE_PROVIDERS)
+    @mock.patch('nova.objects.Service.get_minimum_version',
+                return_value=objects.service.SERVICE_VERSION)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
-    def test_select_destinations(self, mock_get_extra, mock_get_all,
+    def test_select_destinations(self, mock_get_extra, mock_get_mv,
+                                 mock_get_rps, mock_get_all,
                                  mock_by_host, mock_get_by_binary):
         """select_destinations is basically a wrapper around _schedule().
 
@@ -269,6 +315,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             flavor=objects.Flavor(memory_mb=512,
                                   root_gb=512,
                                   ephemeral_gb=0,
+                                  swap=0,
                                   vcpus=1),
             project_id=1,
             os_type='Linux',
@@ -286,6 +333,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         (host, node) = (dests[0]['host'], dests[0]['nodename'])
         self.assertEqual(host, selected_hosts[0])
         self.assertEqual(node, selected_nodes[0])
+        mock_get_mv.assert_called_once_with(mock.ANY, 'nova-compute')
 
     @mock.patch.object(filter_scheduler.FilterScheduler, '_schedule')
     def test_select_destinations_notifications(self, mock_schedule):
@@ -332,3 +380,29 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 # Make sure that the consumed hosts have chance to be reverted.
                 for host in consumed_hosts:
                     self.assertIsNone(host.obj.updated)
+
+    def _test_get_resources_per_request_spec(self, flavor, expected):
+        fake_spec = objects.RequestSpec(flavor=flavor)
+        resources = self.driver._get_resources_per_request_spec(fake_spec)
+        self.assertEqual(expected, resources)
+
+    def test_get_resources_per_request_spec(self):
+        flavor = objects.Flavor(vcpus=1,
+                                memory_mb=1024,
+                                root_gb=10,
+                                ephemeral_gb=5,
+                                swap=0)
+        expected_resources = {'VCPU': 1,
+                              'MEMORY_MB': 1024,
+                              'DISK_GB': 15}
+        self._test_get_resources_per_request_spec(flavor, expected_resources)
+
+    def test_get_resources_per_request_spec_with_no_disk(self):
+        flavor = objects.Flavor(vcpus=1,
+                                memory_mb=1024,
+                                root_gb=0,
+                                ephemeral_gb=0,
+                                swap=0)
+        expected_resources = {'VCPU': 1,
+                              'MEMORY_MB': 1024}
+        self._test_get_resources_per_request_spec(flavor, expected_resources)

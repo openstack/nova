@@ -22,6 +22,7 @@ import six
 from nova import objects
 from nova.scheduler import driver
 from nova.scheduler import host_manager
+from nova.tests import uuidsentinel
 
 NUMA_TOPOLOGY = objects.NUMATopology(
                            cells=[
@@ -120,6 +121,25 @@ COMPUTE_NODES = [
         objects.ComputeNode(
             id=5, local_gb=1024, memory_mb=1024, vcpus=1,
             host='fake', hypervisor_hostname='fake-hyp'),
+]
+
+RESOURCE_PROVIDERS = [
+    objects.ResourceProvider(
+        uuid=uuidsentinel.rp1,
+        name='host1',
+        generation=1),
+    objects.ResourceProvider(
+        uuid=uuidsentinel.rp2,
+        name='host2',
+        generation=1),
+    objects.ResourceProvider(
+        uuid=uuidsentinel.rp3,
+        name='host3',
+        generation=1),
+    objects.ResourceProvider(
+        uuid=uuidsentinel.rp4,
+        name='host4',
+        generation=1),
 ]
 
 SERVICES = [

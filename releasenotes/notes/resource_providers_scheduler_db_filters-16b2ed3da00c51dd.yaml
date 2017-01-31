@@ -1,0 +1,18 @@
+---
+features:
+  - nova-scheduler process is now calling the placement API in order to get
+    a list of valid destinations before calling the filters. That works only
+    if all your compute nodes are fully upgraded to Ocata. If some
+    nodes are not upgraded, the scheduler will still lookup from the DB
+    instead which is less performant.
+upgrade:
+  - Since the Placement service is now mandatory in Ocata, you need to deploy
+    it and amend your compute node configuration with correct placement
+    instructions before restarting nova-compute or the compute node will
+    refuse to start.
+  - If by Newton (14.0.0), you don't use any of the CoreFilter, RamFilter or
+    DiskFilter, then please modify all your compute node's configuration by
+    amending either ``cpu_allocation_ratio`` (if you don't use CoreFilter) or
+    ``ram_allocation_ratio`` (if you don't use RamFilter) or
+    ``disk_allocation_ratio`` (if you don't use DiskFilter) by putting a 9999.0
+    value for the ratio before upgrading the nova-scheduler to Ocata.
