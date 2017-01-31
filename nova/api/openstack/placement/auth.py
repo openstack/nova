@@ -71,7 +71,7 @@ class PlacementKeystoneContext(Middleware):
         ctx = RequestContext.from_environ(
             req.environ, request_id=req_id)
 
-        if ctx.user is None:
+        if ctx.user_id is None:
             LOG.debug("Neither X_USER_ID nor X_USER found in request")
             return webob.exc.HTTPUnauthorized()
 
