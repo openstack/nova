@@ -141,6 +141,12 @@ Nova Cells v2
     more compute hosts to a cell (otherwise the scheduler will never place
     instances there).
 
+``nova-manage cell_v2 list_cells [--verbose]``
+
+    Lists the v2 cells in the deployment. By default only the cell name and
+    uuid are shown. Use the --verbose option to see transport url and
+    database connection details.
+
 Nova Logs
 ~~~~~~~~~
 
