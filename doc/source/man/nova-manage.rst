@@ -109,6 +109,17 @@ Nova Cells v2
     verbose option will print out the resulting cell mapping uuid. Returns 0
     on successful completion, and 1 if the transport url is missing.
 
+``nova-manage cell_v2 verify_instance --uuid <instance_uuid> [--quiet]``
+
+    Verify instance mapping to a cell. This command is useful to determine if
+    the cells v2 environment is properly setup, specifically in terms of the
+    cell, host, and instance mapping records required. Returns 0 when the
+    instance is successfully mapped to a cell, 1 if the instance is not
+    mapped to a cell (see the ``map_instances`` command), and 2 if the cell
+    mapping is missing (see the ``map_cell_and_hosts`` command if you are
+    upgrading from a cells v1 environment, and the ``simple_cell_setup`` if
+    you are upgrading from a non-cells v1 environment).
+
 Nova Logs
 ~~~~~~~~~
 
