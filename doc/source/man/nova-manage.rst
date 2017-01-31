@@ -44,9 +44,16 @@ Nova Database
 
     Print the current main database version.
 
-``nova-manage db sync``
+``nova-manage db sync [--version <version>] [--local_cell]``
 
-    Sync the main database up to the most recent version. This is the standard way to create the db as well.
+    Upgrade the main database schema up to the most recent version or
+    ``--version`` if specified. By default, this command will also attempt to
+    upgrade the schema for the cell0 database if it is mapped (see the
+    ``map_cell0`` or ``simple_cell_setup`` commands for more details on mapping
+    the cell0 database). If ``--local_cell`` is specified, then only the main
+    database in the current cell is upgraded. The local database connection is
+    determined by ``[database]/connection`` in the configuration file passed to
+    nova-manage.
 
 ``nova-manage db archive_deleted_rows [--max_rows <number>] [--verbose]``
 
