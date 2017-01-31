@@ -298,7 +298,7 @@ class SchedulerReportClient(object):
             return objects.ResourceProvider(
                     uuid=uuid,
                     name=name,
-                    generation=1,
+                    generation=0,
             )
         elif resp.status_code == 409:
             # Another thread concurrently created a resource provider with the
