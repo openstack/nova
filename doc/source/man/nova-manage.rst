@@ -98,6 +98,17 @@ Nova Cells v2
     instances have been mapped, and 1 if there are still instances to be
     mapped.
 
+``nova-manage cell_v2 map_cell_and_hosts [--name <cell_name>] [--transport-url <transport_url>] [--verbose]``
+
+    Create a cell mapping to the database connection and message queue
+    transport url, and map hosts to that cell. The database connection
+    comes from the ``[database]/connection`` defined in the configuration
+    file passed to nova-manage. If a transport_url is not specified, it will
+    use the one defined by ``[DEFAULT]/transport_url`` in the configuration
+    file. This command is idempotent (can be run multiple times), and the
+    verbose option will print out the resulting cell mapping uuid. Returns 0
+    on successful completion, and 1 if the transport url is missing.
+
 Nova Logs
 ~~~~~~~~~
 
