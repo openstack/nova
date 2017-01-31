@@ -772,6 +772,24 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
               <boot order="1"/>
             </disk>""", xml)
 
+    def test_config_mirror_parse(self):
+        xml = """
+<disk type="file" device="disk">
+  <driver name="qemu" type="qcow2" cache="none" discard="unmap"/>
+  <source file="/tmp/hello.qcow2"/>
+  <target bus="ide" dev="/dev/hda"/>
+  <serial>7a97c4a3-6f59-41d4-bf47-191d7f97f8e9</serial>
+  <mirror type='file' file='/tmp/new.img' format='raw' job='copy' ready='yes'>
+    <format type='raw'/>
+    <source file='/tmp/new.img'/>
+  </mirror>
+  <boot order="1"/>
+</disk>"""
+        xmldoc = etree.fromstring(xml)
+        obj = config.LibvirtConfigGuestDisk()
+        obj.parse_dom(xmldoc)
+        self.assertEqual(obj.mirror.ready, "yes")
+
     def test_config_boot_order_parse(self):
         xml = """
             <disk type="file" device="disk">

@@ -682,14 +682,32 @@ class GuestBlockTestCase(test.NoDBTestCase):
         is_complete = self.gblock.is_job_complete()
         self.assertFalse(is_complete)
 
-    def test_is_job_complete_finished(self):
-        self.domain.blockJobInfo.return_value = {
-            "type": 4,
-            "bandwidth": 18,
-            "cur": 100,
-            "end": 100}
-        is_complete = self.gblock.is_job_complete()
-        self.assertTrue(is_complete)
+    def test_is_job_complete_not_ready(self):
+        gblock = self.guest.get_block_device('vda')
+        disk = vconfig.LibvirtConfigGuestDisk()
+        disk.mirror = vconfig.LibvirtConfigGuestDiskMirror()
+        with mock.patch.object(self.guest, 'get_disk', return_value=disk):
+            self.domain.blockJobInfo.return_value = {
+                "type": 4,
+                "bandwidth": 18,
+                "cur": 100,
+                "end": 100}
+            is_complete = gblock.is_job_complete()
+            self.assertFalse(is_complete)
+
+    def test_is_job_complete_ready(self):
+        gblock = self.guest.get_block_device('vda')
+        disk = vconfig.LibvirtConfigGuestDisk()
+        disk.mirror = vconfig.LibvirtConfigGuestDiskMirror()
+        disk.mirror.ready = 'yes'
+        with mock.patch.object(self.guest, 'get_disk', return_value=disk):
+            self.domain.blockJobInfo.return_value = {
+                "type": 4,
+                "bandwidth": 18,
+                "cur": 100,
+                "end": 100}
+            is_complete = gblock.is_job_complete()
+            self.assertTrue(is_complete)
 
     def test_is_job_complete_no_job(self):
         self.domain.blockJobInfo.return_value = {}
