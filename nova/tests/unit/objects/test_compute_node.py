@@ -552,6 +552,17 @@ class _TestComputeNodeObject(object):
         self.assertEqual(1.5, compute.ram_allocation_ratio)
         self.assertEqual(1.0, compute.disk_allocation_ratio)
 
+    def test_get_all_by_not_mapped(self):
+        for mapped in (1, 0, 1, 3):
+            compute = fake_compute_with_resources.obj_clone()
+            compute._context = self.context
+            compute.mapped = mapped
+            compute.create()
+        nodes = compute_node.ComputeNodeList.get_all_by_not_mapped(
+            self.context, 2)
+        self.assertEqual(3, len(nodes))
+        self.assertEqual([0, 1, 1], sorted([x.mapped for x in nodes]))
+
 
 class TestComputeNodeObject(test_objects._LocalTest,
                             _TestComputeNodeObject):

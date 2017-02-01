@@ -369,7 +369,8 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     # Version 1.14 ComputeNode version 1.14
     # Version 1.15 Added get_by_pagination()
     # Version 1.16: Added get_all_by_uuids()
-    VERSION = '1.16'
+    # Version 1.17: Added get_all_by_not_mapped()
+    VERSION = '1.17'
     fields = {
         'objects': fields.ListOfObjectsField('ComputeNode'),
         }
@@ -377,6 +378,14 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_all(cls, context):
         db_computes = db.compute_node_get_all(context)
+        return base.obj_make_list(context, cls(context), objects.ComputeNode,
+                                  db_computes)
+
+    @base.remotable_classmethod
+    def get_all_by_not_mapped(cls, context, mapped_less_than):
+        """Return ComputeNode records that are not mapped at a certain level"""
+        db_computes = db.compute_node_get_all_mapped_less_than(
+            context, mapped_less_than)
         return base.obj_make_list(context, cls(context), objects.ComputeNode,
                                   db_computes)
 

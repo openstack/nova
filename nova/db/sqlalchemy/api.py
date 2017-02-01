@@ -625,6 +625,8 @@ def _compute_node_select(context, filters=None, limit=None, marker=None):
     if "hypervisor_hostname" in filters:
         hyp_hostname = filters["hypervisor_hostname"]
         select = select.where(cn_tbl.c.hypervisor_hostname == hyp_hostname)
+    if "mapped" in filters:
+        select = select.where(cn_tbl.c.mapped < filters['mapped'])
     if marker is not None:
         try:
             compute_node_get(context, marker)
@@ -700,6 +702,12 @@ def compute_node_get_all_by_host(context, host):
 @pick_context_manager_reader
 def compute_node_get_all(context):
     return _compute_node_fetchall(context)
+
+
+@pick_context_manager_reader
+def compute_node_get_all_mapped_less_than(context, mapped_less_than):
+    return _compute_node_fetchall(context,
+                                  {'mapped': mapped_less_than})
 
 
 @pick_context_manager_reader

@@ -254,6 +254,19 @@ def compute_node_get_all(context):
     return IMPL.compute_node_get_all(context)
 
 
+def compute_node_get_all_mapped_less_than(context, mapped_less_than):
+    """Get all ComputeNode objects with specific mapped values.
+
+    :param context: The security context
+    :param mapped_less_than: Get compute nodes with mapped less than this
+                             value
+
+    :returns: List of dictionaries each containing compute node properties
+    """
+    return IMPL.compute_node_get_all_mapped_less_than(context,
+                                                      mapped_less_than)
+
+
 def compute_node_get_all_by_pagination(context, limit=None, marker=None):
     """Get compute nodes by pagination.
     :param context: The security context
