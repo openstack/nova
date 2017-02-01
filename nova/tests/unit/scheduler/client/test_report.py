@@ -407,7 +407,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         expected_provider = objects.ResourceProvider(
             uuid=uuid,
             name=name,
-            generation=1,
+            generation=0,
         )
         expected_url = '/resource_providers'
         self.ks_sess_mock.post.assert_called_once_with(
