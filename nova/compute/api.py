@@ -2451,10 +2451,21 @@ class API(base.Base):
         # instance lists should be proxied to project Searchlight, or a similar
         # alternative.
         if limit is None or limit > 0:
-            cell_instances = self._get_instances_by_filters_all_cells(
-                    context, filters,
-                    limit=limit, marker=marker, expected_attrs=expected_attrs,
-                    sort_keys=sort_keys, sort_dirs=sort_dirs)
+            if not CONF.cells.enable:
+                cell_instances = self._get_instances_by_filters_all_cells(
+                        context, filters,
+                        limit=limit, marker=marker,
+                        expected_attrs=expected_attrs, sort_keys=sort_keys,
+                        sort_dirs=sort_dirs)
+            else:
+                # NOTE(melwitt): If we're on cells v1, we need to read
+                # instances from the top-level database because reading from
+                # cells results in changed behavior, because of the syncing.
+                # We can remove this path once we stop supporting cells v1.
+                cell_instances = self._get_instances_by_filters(
+                    context, filters, limit=limit, marker=marker,
+                    expected_attrs=expected_attrs, sort_keys=sort_keys,
+                    sort_dirs=sort_dirs)
         else:
             LOG.debug('Limit excludes any results from real cells')
             cell_instances = objects.InstanceList(objects=[])
