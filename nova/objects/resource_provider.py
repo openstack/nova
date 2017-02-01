@@ -624,7 +624,7 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
         #        total + reserved) * inv.allocation_ratio) AND
         #        inv.min_unit <= $AMOUNT_Z AND inv.max_unit >= $AMOUNT_Z AND
         #        $AMOUNT_Z % inv.step_size == 0))
-        # GROUP BY rp.uuid
+        # GROUP BY rp.id
         # HAVING
         #  COUNT(DISTINCT(inv.resource_class_id)) == len($RESOURCE_CLASSES)
         #
@@ -637,7 +637,6 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
 
         # Now, below is the LEFT JOIN for getting the allocations usage
         usage = sa.select([_ALLOC_TBL.c.resource_provider_id,
-                           _ALLOC_TBL.c.consumer_id,
                            _ALLOC_TBL.c.resource_class_id,
                            sql.func.sum(_ALLOC_TBL.c.used).label('used')])
         usage = usage.where(_ALLOC_TBL.c.resource_class_id.in_(
@@ -667,7 +666,7 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
             )
             for (r_idx, amount) in resources.items()]
         query = query.filter(sa.or_(*where_clauses))
-        query = query.group_by(_RP_TBL.c.uuid)
+        query = query.group_by(_RP_TBL.c.id)
         # NOTE(sbauza): Only RPs having all the asked resources can be provided
         query = query.having(sql.func.count(
             sa.distinct(_INV_TBL.c.resource_class_id)) == len(resources))
