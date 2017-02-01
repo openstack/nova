@@ -11974,6 +11974,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr._host.get_domain = mock.Mock(return_value=mock_domain)
+        drvr._has_uefi_support = mock.Mock(return_value=False)
         drvr.delete_instance_files = mock.Mock(return_value=None)
         drvr.get_info = mock.Mock(return_value=
             hardware.InstanceInfo(state=power_state.SHUTDOWN, id=-1)
@@ -11996,6 +11997,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr._host.get_domain = mock.Mock(return_value=mock_domain)
+        drvr._has_uefi_support = mock.Mock(return_value=False)
         drvr.delete_instance_files = mock.Mock(return_value=None)
         drvr.get_info = mock.Mock(return_value=
             hardware.InstanceInfo(state=power_state.SHUTDOWN, id=-1)
@@ -12021,6 +12023,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr._host.get_domain = mock.Mock(return_value=mock_domain)
+        drvr._has_uefi_support = mock.Mock(return_value=False)
         drvr.delete_instance_files = mock.Mock(return_value=None)
         drvr.get_info = mock.Mock(return_value=
             hardware.InstanceInfo(state=power_state.SHUTDOWN, id=-1)
@@ -12034,6 +12037,32 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_domain.undefineFlags.assert_has_calls([mock.call(1)])
         mock_domain.hasManagedSaveImage.assert_has_calls([mock.call(0)])
         mock_domain.undefine.assert_called_once_with()
+        mock_save.assert_called_once_with()
+
+    @mock.patch.object(objects.Instance, 'save')
+    def test_destroy_removes_nvram(self, mock_save):
+        mock_domain = mock.Mock(fakelibvirt.virDomain)
+        mock_domain.ID.return_value = 123
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr._host.get_domain = mock.Mock(return_value=mock_domain)
+        drvr._has_uefi_support = mock.Mock(return_value=True)
+        drvr.delete_instance_files = mock.Mock(return_value=None)
+        drvr.get_info = mock.Mock(return_value=
+            hardware.InstanceInfo(state=power_state.SHUTDOWN, id=-1)
+        )
+
+        instance = objects.Instance(self.context, **self.test_instance)
+        drvr.destroy(self.context, instance, [])
+
+        self.assertEqual(1, mock_domain.ID.call_count)
+        mock_domain.destroy.assert_called_once_with()
+        # undefineFlags should now be called with 5 as uefi us supported
+        mock_domain.undefineFlags.assert_has_calls([mock.call(
+            fakelibvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE |
+            fakelibvirt.VIR_DOMAIN_UNDEFINE_NVRAM
+        )])
+        mock_domain.undefine.assert_not_called()
         mock_save.assert_called_once_with()
 
     def test_destroy_timed_out(self):

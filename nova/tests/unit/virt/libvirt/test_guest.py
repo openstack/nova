@@ -155,6 +155,12 @@ class GuestTestCase(test.NoDBTestCase):
         self.domain.undefineFlags.assert_called_once_with(
             fakelibvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE)
 
+    def test_delete_configuration_with_nvram(self):
+        self.guest.delete_configuration(support_uefi=True)
+        self.domain.undefineFlags.assert_called_once_with(
+            fakelibvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE |
+            fakelibvirt.VIR_DOMAIN_UNDEFINE_NVRAM)
+
     def test_delete_configuration_exception(self):
         self.domain.undefineFlags.side_effect = fakelibvirt.libvirtError(
             'oops')
