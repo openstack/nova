@@ -154,7 +154,7 @@ class TestHostMappingDiscovery(test.NoDBTestCase):
     @mock.patch('nova.objects.CellMappingList.get_all')
     @mock.patch('nova.objects.HostMapping.create')
     @mock.patch('nova.objects.HostMapping.get_by_host')
-    @mock.patch('nova.objects.ComputeNodeList.get_all')
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_not_mapped')
     def test_discover_hosts_all(self, mock_cn_get, mock_hm_get, mock_hm_create,
                                 mock_cm):
         def _hm_get(context, host):
@@ -174,7 +174,9 @@ class TestHostMappingDiscovery(test.NoDBTestCase):
                                              uuid=uuids.cm2)]
         mock_cm.return_value = cell_mappings
         ctxt = context.get_admin_context()
-        hms = host_mapping.discover_hosts(ctxt)
+        with mock.patch('nova.objects.ComputeNode.save') as mock_save:
+            hms = host_mapping.discover_hosts(ctxt)
+            mock_save.assert_has_calls([mock.call(), mock.call()])
         self.assertEqual(2, len(hms))
         self.assertTrue(mock_hm_create.called)
         self.assertEqual(['d', 'e'],
@@ -183,7 +185,7 @@ class TestHostMappingDiscovery(test.NoDBTestCase):
     @mock.patch('nova.objects.CellMapping.get_by_uuid')
     @mock.patch('nova.objects.HostMapping.create')
     @mock.patch('nova.objects.HostMapping.get_by_host')
-    @mock.patch('nova.objects.ComputeNodeList.get_all')
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_not_mapped')
     def test_discover_hosts_one(self, mock_cn_get, mock_hm_get, mock_hm_create,
                                 mock_cm):
         def _hm_get(context, host):
@@ -202,7 +204,9 @@ class TestHostMappingDiscovery(test.NoDBTestCase):
         mock_cm.return_value = objects.CellMapping(name='foo',
                                                    uuid=uuids.cm1)
         ctxt = context.get_admin_context()
-        hms = host_mapping.discover_hosts(ctxt, uuids.cm1)
+        with mock.patch('nova.objects.ComputeNode.save') as mock_save:
+            hms = host_mapping.discover_hosts(ctxt, uuids.cm1)
+            mock_save.assert_called_once_with()
         self.assertEqual(1, len(hms))
         self.assertTrue(mock_hm_create.called)
         self.assertEqual(['d'],

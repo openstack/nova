@@ -133,12 +133,11 @@ This value controls how often (in seconds) the scheduler should attempt
 to discover new hosts that have been added to cells. If negative (the
 default), no automatic discovery will occur.
 
-Small deployments may want this periodic task enabled, as surveying the
-cells for new hosts is likely to be lightweight enough to not cause undue
-burdon to the scheduler. However, larger clouds (and those that are not
-adding hosts regularly) will likely want to disable this automatic
-behavior and instead use the `nova-manage cell_v2 discover_hosts` command
-when hosts have been added to a cell.
+Deployments where compute nodes come and go frequently may want this
+enabled, where others may prefer to manually discover hosts when one
+is added to avoid any overhead from constantly checking. If enabled,
+every time this runs, we will select any unmapped hosts out of each
+cell database on every run.
 """),
 ]
 

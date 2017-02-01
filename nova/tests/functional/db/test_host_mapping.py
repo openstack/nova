@@ -10,14 +10,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 from oslo_utils import uuidutils
 
 from nova import context
 from nova import exception
+from nova import objects
 from nova.objects import cell_mapping
 from nova.objects import host_mapping
 from nova import test
 from nova.tests import fixtures
+from nova.tests import uuidsentinel as uuids
 
 
 sample_mapping = {'host': 'fake-host',
@@ -134,3 +137,81 @@ class HostMappingTestCase(test.NoDBTestCase):
             self.context, db_host_mapping['cell_id'])
         self.assertEqual(1, len(host_mapping_list))
         self.assertEqual(db_host_mapping['id'], host_mapping_list[0].id)
+
+
+class HostMappingDiscoveryTest(test.TestCase):
+    def _setup_cells(self):
+        ctxt = context.get_admin_context()
+        self.celldbs = fixtures.CellDatabases()
+        cells = []
+        for uuid in (uuids.cell1, uuids.cell2, uuids.cell3):
+            cm = objects.CellMapping(context=ctxt,
+                                     uuid=uuid,
+                                     database_connection=uuid,
+                                     transport_url='fake://')
+            cm.create()
+            cells.append(cm)
+            self.celldbs.add_cell_database(uuid)
+        self.useFixture(self.celldbs)
+
+        for cell in cells:
+            for i in (1, 2, 3):
+                # Make one host in each cell unmapped
+                mapped = 0 if i == 2 else 1
+
+                host = 'host-%s-%i' % (cell.uuid, i)
+                if mapped:
+                    hm = objects.HostMapping(context=ctxt,
+                                             cell_mapping=cell,
+                                             host=host)
+                    hm.create()
+
+                with context.target_cell(ctxt, cell):
+                    cn = objects.ComputeNode(
+                        context=ctxt, vcpus=1, memory_mb=1, local_gb=1,
+                        vcpus_used=0, memory_mb_used=0, local_gb_used=0,
+                        hypervisor_type='danvm', hypervisor_version='1',
+                        cpu_info='foo',
+                        cpu_allocation_ratio=1.0,
+                        ram_allocation_ratio=1.0,
+                        disk_allocation_ratio=1.0,
+                        mapped=mapped, host=host)
+                    cn.create()
+
+    def test_discover_hosts(self):
+        status = lambda m: None
+
+        ctxt = context.get_admin_context()
+
+        # NOTE(danms): Three cells, one unmapped host per cell
+        mappings = host_mapping.discover_hosts(ctxt, status_fn=status)
+        self.assertEqual(3, len(mappings))
+
+        # NOTE(danms): All hosts should be mapped now, so we should do
+        # no lookups for them
+        with mock.patch('nova.objects.HostMapping.get_by_host') as mock_gbh:
+            mappings = host_mapping.discover_hosts(ctxt, status_fn=status)
+            self.assertFalse(mock_gbh.called)
+        self.assertEqual(0, len(mappings))
+
+    def test_discover_hosts_one_cell(self):
+        status = lambda m: None
+
+        ctxt = context.get_admin_context()
+        cells = objects.CellMappingList.get_all(ctxt)
+
+        # NOTE(danms): One cell, one unmapped host per cell
+        mappings = host_mapping.discover_hosts(ctxt, cells[1].uuid,
+                                               status_fn=status)
+        self.assertEqual(1, len(mappings))
+
+        # NOTE(danms): Three cells, two with one more unmapped host
+        mappings = host_mapping.discover_hosts(ctxt, status_fn=status)
+        self.assertEqual(2, len(mappings))
+
+        # NOTE(danms): All hosts should be mapped now, so we should do
+        # no lookups for them
+        with mock.patch('nova.objects.HostMapping.get_by_host') as mock_gbh:
+            mappings = host_mapping.discover_hosts(ctxt, status_fn=status)
+            self.assertFalse(mock_gbh.called)
+        self.assertEqual(0, len(mappings))
