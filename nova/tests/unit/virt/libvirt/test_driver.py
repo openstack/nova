@@ -12021,7 +12021,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.assertEqual(2, mock_domain.ID.call_count)
         mock_domain.destroy.assert_called_once_with()
-        mock_domain.undefineFlags.assert_has_calls([mock.call(1)])
+        mock_domain.undefineFlags.assert_called_once_with(1)
         mock_domain.undefine.assert_called_once_with()
         mock_save.assert_called_once_with()
 
@@ -12044,7 +12044,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.assertEqual(1, mock_domain.ID.call_count)
         mock_domain.destroy.assert_called_once_with()
-        mock_domain.undefineFlags.assert_has_calls([mock.call(1)])
+        mock_domain.undefineFlags.assert_called_once_with(1)
         mock_domain.hasManagedSaveImage.assert_has_calls([mock.call(0)])
         mock_domain.managedSaveRemove.assert_called_once_with(0)
         mock_domain.undefine.assert_called_once_with()
@@ -12070,7 +12070,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.assertEqual(1, mock_domain.ID.call_count)
         mock_domain.destroy.assert_called_once_with()
-        mock_domain.undefineFlags.assert_has_calls([mock.call(1)])
+        mock_domain.undefineFlags.assert_called_once_with(1)
         mock_domain.hasManagedSaveImage.assert_has_calls([mock.call(0)])
         mock_domain.undefine.assert_called_once_with()
         mock_save.assert_called_once_with()
@@ -12094,10 +12094,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(1, mock_domain.ID.call_count)
         mock_domain.destroy.assert_called_once_with()
         # undefineFlags should now be called with 5 as uefi us supported
-        mock_domain.undefineFlags.assert_has_calls([mock.call(
+        mock_domain.undefineFlags.assert_called_once_with(
             fakelibvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE |
             fakelibvirt.VIR_DOMAIN_UNDEFINE_NVRAM
-        )])
+        )
         mock_domain.undefine.assert_not_called()
         mock_save.assert_called_once_with()
 
