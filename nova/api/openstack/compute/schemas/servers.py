@@ -300,7 +300,7 @@ query_params_v21 = {
         'flavor': common_regex_param,
         'reservation_id': common_regex_param,
         'launched_at': common_regex_param,
-        'terminate_at': common_regex_param,
+        'terminated_at': common_regex_param,
         'availability_zone': common_regex_param,
         # NOTE(alex_xu): This is pattern matching, it didn't get any benefit
         # from DB index.
