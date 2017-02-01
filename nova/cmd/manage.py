@@ -1310,7 +1310,7 @@ class CellV2Commands(object):
           help='The transport url for the cell message queue')
     @args('--name', metavar='<name>', help='The name of the cell')
     @args('--verbose', action='store_true',
-          help='Return and output the uuid of the created cell')
+          help='Output the cell mapping uuid for any newly mapped hosts.')
     def map_cell_and_hosts(self, transport_url=None, name=None, verbose=False):
         """EXPERIMENTAL. Create a cell mapping and host mappings for a cell.
 
