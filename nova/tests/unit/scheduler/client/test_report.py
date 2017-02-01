@@ -376,6 +376,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         # deal with
         resp_mock = mock.Mock(status_code=503)
         self.ks_sess_mock.get.return_value = resp_mock
+        self.ks_sess_mock.get.return_value.headers = {
+            'openstack-request-id': uuids.request_id}
 
         uuid = uuids.compute_node
         result = self.client._get_resource_provider(uuid)
@@ -384,9 +386,12 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.ks_sess_mock.get.assert_called_once_with(expected_url,
                                                       endpoint_filter=mock.ANY,
                                                       raise_exc=False)
-        # A 503 Service Unavailable should trigger an error logged and
-        # return None from _get_resource_provider()
+        # A 503 Service Unavailable should trigger an error log
+        # that includes the placement request id and return None
+        # from _get_resource_provider()
         self.assertTrue(logging_mock.called)
+        self.assertEqual(uuids.request_id,
+                        logging_mock.call_args[0][1]['placement_req_id'])
         self.assertIsNone(result)
 
     def test_create_resource_provider(self):
@@ -418,9 +423,11 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.assertTrue(obj_base.obj_equal_prims(expected_provider,
                                                  result))
 
+    @mock.patch.object(report.LOG, 'info')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_resource_provider')
-    def test_create_resource_provider_concurrent_create(self, get_rp_mock):
+    def test_create_resource_provider_concurrent_create(self, get_rp_mock,
+                                                        logging_mock):
         # Ensure _create_resource_provider() returns a ResourceProvider object
         # gotten from _get_resource_provider() if the call to create the
         # resource provider in the placement API returned a 409 Conflict,
@@ -430,6 +437,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         name = 'computehost'
         resp_mock = mock.Mock(status_code=409)
         self.ks_sess_mock.post.return_value = resp_mock
+        self.ks_sess_mock.post.return_value.headers = {
+            'openstack-request-id': uuids.request_id}
 
         get_rp_mock.return_value = mock.sentinel.get_rp
 
@@ -446,6 +455,10 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                 json=expected_payload,
                 raise_exc=False)
         self.assertEqual(mock.sentinel.get_rp, result)
+        # The 409 response will produce a message to the info log.
+        self.assertTrue(logging_mock.called)
+        self.assertEqual(uuids.request_id,
+                        logging_mock.call_args[0][1]['placement_req_id'])
 
     @mock.patch.object(report.LOG, 'error')
     def test_create_resource_provider_error(self, logging_mock):
@@ -456,6 +469,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         name = 'computehost'
         resp_mock = mock.Mock(status_code=503)
         self.ks_sess_mock.post.return_value = resp_mock
+        self.ks_sess_mock.post.return_value.headers = {
+            'x-openstack-request-id': uuids.request_id}
 
         result = self.client._create_resource_provider(uuid, name)
 
@@ -469,9 +484,12 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                 endpoint_filter=mock.ANY,
                 json=expected_payload,
                 raise_exc=False)
-        # A 503 Service Unavailable should log an error and
+        # A 503 Service Unavailable should log an error that
+        # includes the placement request id and
         # _create_resource_provider() should return None
         self.assertTrue(logging_mock.called)
+        self.assertEqual(uuids.request_id,
+                        logging_mock.call_args[0][1]['placement_req_id'])
         self.assertFalse(result)
 
 
