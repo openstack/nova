@@ -111,6 +111,12 @@ The following data is passed to your REST service as a JSON encoded POST:
 | metadata    | As specified by the user at boot time.          |
 +-------------+-------------------------------------------------+
 
-The REST service is also passed the Keystone authentication details for the
-original API request which caused this boot, which can be used by the REST
-service to determine if the action is authorized.
+Deployment considerations
+=========================
+
+Nova provides authentication to external metadata services in order to provide
+some level of certainty that the request came from nova. This is done by
+providing a service token with the request -- you can then just deploy your
+metadata service with the keystone authentication WSGI middleware. This is
+configured using the keystone authentication parameters in the
+``vendordata_dynamic_auth`` configuration group.
