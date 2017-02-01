@@ -1544,6 +1544,36 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
     @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
+    @mock.patch('nova.objects.BuildRequest.get_by_instance_uuid')
+    @mock.patch('nova.objects.BuildRequest.destroy')
+    @mock.patch('nova.conductor.manager.ComputeTaskManager._bury_in_cell0')
+    @mock.patch('nova.objects.Instance.create')
+    def test_schedule_and_build_delete_before_scheduling(self, inst_create,
+                                                         bury, br_destroy,
+                                                         br_get_by_inst,
+                                                         select_destinations,
+                                                         build_and_run):
+        """Tests the case that the build request is deleted before the instance
+        is created, so we do not create the instance.
+        """
+        inst_uuid = self.params['build_requests'][0].instance.uuid
+        br_get_by_inst.side_effect = exc.BuildRequestNotFound(uuid=inst_uuid)
+        self.start_service('compute', host='fake-host')
+        select_destinations.return_value = [{'host': 'fake-host',
+                                             'nodename': 'nodesarestupid',
+                                             'limits': None}]
+        self.conductor.schedule_and_build_instances(**self.params)
+        # we don't create the instance since the build request is gone
+        self.assertFalse(inst_create.called)
+        # we don't build the instance since we didn't create it
+        self.assertFalse(build_and_run.called)
+        # we don't bury the instance in cell0 since it's already deleted
+        self.assertFalse(bury.called)
+        # we don't don't destroy the build request since it's already gone
+        self.assertFalse(br_destroy.called)
+
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
+    @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
     @mock.patch('nova.objects.BuildRequest.destroy')
     @mock.patch('nova.conductor.manager.ComputeTaskManager._bury_in_cell0')
     def test_schedule_and_build_unmapped_host_ends_up_in_cell0(self,

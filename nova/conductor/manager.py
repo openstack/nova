@@ -898,8 +898,20 @@ class ComputeTaskManager(base.Base):
 
             cell = host_mapping.cell_mapping
 
-            with obj_target_cell(instance, cell):
-                instance.create()
+            # Before we create the instance, let's make one final check that
+            # the build request is still around and wasn't deleted by the user
+            # already.
+            try:
+                objects.BuildRequest.get_by_instance_uuid(
+                    context, instance.uuid)
+            except exception.BuildRequestNotFound:
+                # the build request is gone so we're done for this instance
+                LOG.debug('While scheduling instance, the build request '
+                          'was already deleted.', instance=instance)
+                continue
+            else:
+                with obj_target_cell(instance, cell):
+                    instance.create()
 
             # send a state update notification for the initial create to
             # show it going from non-existent to BUILDING
