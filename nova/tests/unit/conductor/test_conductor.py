@@ -1466,11 +1466,16 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                                    get_hostmapping,
                                                    select_destinations,
                                                    build_and_run_instance):
+        # This list needs to match the number of build_requests and the number
+        # of request_specs in params.
         select_destinations.return_value = [{'host': 'fake-host',
                                              'nodename': 'fake-nodename',
                                              'limits': None},
                                             {'host': 'fake-host',
                                              'nodename': 'fake-nodename',
+                                             'limits': None},
+                                            {'host': 'fake-host2',
+                                             'nodename': 'fake-nodename2',
                                              'limits': None},
                                             {'host': 'fake-host2',
                                              'nodename': 'fake-nodename2',
@@ -1485,32 +1490,41 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         # once for the first and once for the third request.
         get_hostmapping.side_effect = self.host_mappings.values()
 
-        build_request2 = fake_build_request.fake_req_obj(self.ctxt)
-        del build_request2.instance.id
-        build_request2.create()
-        params['build_requests'].objects.append(build_request2)
-        im2 = objects.InstanceMapping(
-            self.ctxt, instance_uuid=build_request2.instance.uuid,
-            cell_mapping=None, project_id=self.ctxt.project_id)
-        im2.create()
+        # create three additional build requests for a total of four
+        for x in range(3):
+            build_request = fake_build_request.fake_req_obj(self.ctxt)
+            del build_request.instance.id
+            build_request.create()
+            params['build_requests'].objects.append(build_request)
+            im2 = objects.InstanceMapping(
+                self.ctxt, instance_uuid=build_request.instance.uuid,
+                cell_mapping=None, project_id=self.ctxt.project_id)
+            im2.create()
+            params['request_specs'].append(objects.RequestSpec(
+                instance_uuid=build_request.instance_uuid))
 
-        build_request3 = fake_build_request.fake_req_obj(self.ctxt)
-        del build_request3.instance.id
-        build_request3.create()
-        params['build_requests'].objects.append(build_request3)
-        im3 = objects.InstanceMapping(
-            self.ctxt, instance_uuid=build_request3.instance.uuid,
-            cell_mapping=None, project_id=self.ctxt.project_id)
-        im3.create()
+        # Now let's have some fun and delete the third build request before
+        # passing the object on to schedule_and_build_instances so that the
+        # instance will be created for that build request but when it calls
+        # BuildRequest.destroy(), it will raise BuildRequestNotFound and we'll
+        # cleanup the instance instead of passing it to build_and_run_instance
+        # and we make sure that the fourth build request still gets processed.
+        deleted_build_request = params['build_requests'][2]
+        deleted_build_request.destroy()
 
         def _build_and_run_instance(ctxt, *args, **kwargs):
+            # Make sure the instance wasn't the one that was deleted.
+            instance = kwargs['instance']
+            self.assertNotEqual(deleted_build_request.instance_uuid,
+                                instance.uuid)
+            # This just makes sure that the instance was created in the DB.
             self.assertTrue(kwargs['instance'].id)
             self.assertEqual(1, len(kwargs['block_device_mapping']))
             # FIXME(danms): How to validate the db connection here?
 
         build_and_run_instance.side_effect = _build_and_run_instance
         self.conductor.schedule_and_build_instances(**params)
-        self.assertTrue(build_and_run_instance.called)
+        self.assertEqual(3, build_and_run_instance.call_count)
 
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
     def test_schedule_and_build_scheduler_failure(self, select_destinations):

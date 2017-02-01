@@ -922,32 +922,12 @@ class ComputeTaskManager(base.Base):
             inst_mapping.cell_mapping = cell
             inst_mapping.save()
 
-            try:
-                build_request.destroy()
-            except exception.BuildRequestNotFound:
-                # This indicates an instance deletion request has been
-                # processed, and the build should halt here. Clean up the
-                # bdm and instance record.
-                with obj_target_cell(instance, cell):
-                    try:
-                        instance.destroy()
-                    except exception.InstanceNotFound:
-                        pass
-                    except exception.ObjectActionError:
-                        # NOTE(melwitt): Instance became scheduled during
-                        # the destroy, "host changed". Refresh and re-destroy.
-                        try:
-                            instance.refresh()
-                            instance.destroy()
-                        except exception.InstanceNotFound:
-                            pass
-                for bdm in instance_bdms:
-                    with obj_target_cell(bdm, cell):
-                        try:
-                            bdm.destroy()
-                        except exception.ObjectActionError:
-                            pass
-                return
+            if not self._delete_build_request(
+                    build_request, instance, cell, instance_bdms):
+                # The build request was deleted before/during scheduling so
+                # the instance is gone and we don't have anything to build for
+                # this one.
+                continue
 
             # NOTE(danms): Compute RPC expects security group names or ids
             # not objects, so convert this to a list of names until we can
@@ -967,3 +947,49 @@ class ComputeTaskManager(base.Base):
                     block_device_mapping=instance_bdms,
                     host=host['host'], node=host['nodename'],
                     limits=host['limits'])
+
+    def _delete_build_request(self, build_request, instance, cell,
+                              instance_bdms):
+        """Delete a build request after creating the instance in the cell.
+
+        This method handles cleaning up the instance in case the build request
+        is already deleted by the time we try to delete it.
+
+        :param build_request: the build request to delete
+        :type build_request: nova.objects.BuildRequest
+        :param instance: the instance created from the build_request
+        :type instance: nova.objects.Instance
+        :param cell: the cell in which the instance was created
+        :type cell: nova.objects.CellMapping
+        :param instance_bdms: list of block device mappings for the instance
+        :type instance_bdms: nova.objects.BlockDeviceMappingList
+        :returns: True if the build request was successfully deleted, False if
+            the build request was already deleted and the instance is now gone.
+        """
+        try:
+            build_request.destroy()
+        except exception.BuildRequestNotFound:
+            # This indicates an instance deletion request has been
+            # processed, and the build should halt here. Clean up the
+            # bdm and instance record.
+            with obj_target_cell(instance, cell):
+                try:
+                    instance.destroy()
+                except exception.InstanceNotFound:
+                    pass
+                except exception.ObjectActionError:
+                    # NOTE(melwitt): Instance became scheduled during
+                    # the destroy, "host changed". Refresh and re-destroy.
+                    try:
+                        instance.refresh()
+                        instance.destroy()
+                    except exception.InstanceNotFound:
+                        pass
+            for bdm in instance_bdms:
+                with obj_target_cell(bdm, cell):
+                    try:
+                        bdm.destroy()
+                    except exception.ObjectActionError:
+                        pass
+            return False
+        return True
