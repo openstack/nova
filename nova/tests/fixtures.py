@@ -264,7 +264,13 @@ class SingleCellSimple(fixtures.Fixture):
 
     If you need to distinguish between cell0 and cellN, then you
     should use the CellDatabases fixture.
+
+    If instances should appear to still be in scheduling state, pass
+    instances_created=False to init.
     """
+
+    def __init__(self, instances_created=True):
+        self.instances_created = instances_created
 
     def setUp(self):
         super(SingleCellSimple, self).setUp()
@@ -278,6 +284,12 @@ class SingleCellSimple(fixtures.Fixture):
             'nova.objects.HostMapping._get_by_host_from_db',
             self._fake_hostmapping_get))
         self.useFixture(fixtures.MonkeyPatch(
+            'nova.objects.InstanceMapping._get_by_instance_uuid_from_db',
+            self._fake_instancemapping_get))
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.objects.InstanceMapping._save_in_db',
+            self._fake_instancemapping_get))
+        self.useFixture(fixtures.MonkeyPatch(
             'nova.context.target_cell',
             self._fake_target_cell))
 
@@ -287,6 +299,18 @@ class SingleCellSimple(fixtures.Fixture):
                 'created_at': None,
                 'host': 'host1',
                 'cell_mapping': self._fake_cell_list()[0]}
+
+    def _fake_instancemapping_get(self, *args):
+        return {
+            'id': 1,
+            'updated_at': None,
+            'created_at': None,
+            'instance_uuid': uuidsentinel.instance,
+            'cell_id': (self.instances_created and 1 or None),
+            'project_id': 'project',
+            'cell_mapping': (
+                self.instances_created and self._fake_cell_get() or None),
+        }
 
     def _fake_cell_get(self, *args):
         return self._fake_cell_list()[0]

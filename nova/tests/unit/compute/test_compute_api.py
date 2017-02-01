@@ -4223,19 +4223,21 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_get_inst_map):
 
         self.useFixture(fixtures.AllServicesCurrent())
-        # Just check that an InstanceMappingNotFound causes the instance to
-        # get looked up normally.
-        self.compute_api.get(self.context, uuids.inst_uuid)
-        mock_get_build_req.assert_not_called()
         if self.cell_type is None:
-            mock_get_inst_map.assert_called_once_with(self.context,
-                                                      uuids.inst_uuid)
-        mock_get_inst.assert_called_once_with(self.context, uuids.inst_uuid,
-                                              expected_attrs=[
-                                                  'metadata',
-                                                  'system_metadata',
-                                                  'security_groups',
-                                                  'info_cache'])
+            # No Mapping means NotFound
+            self.assertRaises(exception.InstanceNotFound,
+                              self.compute_api.get, self.context,
+                              uuids.inst_uuid)
+        else:
+            self.compute_api.get(self.context, uuids.inst_uuid)
+            mock_get_build_req.assert_not_called()
+            mock_get_inst.assert_called_once_with(self.context,
+                                                  uuids.inst_uuid,
+                                                  expected_attrs=[
+                                                      'metadata',
+                                                      'system_metadata',
+                                                      'security_groups',
+                                                      'info_cache'])
 
     @mock.patch.object(objects.Service, 'get_minimum_version', return_value=15)
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
@@ -4336,23 +4338,21 @@ class _ComputeAPIUnitTestMixIn(object):
             uuid=instance.uuid)
         mock_get_inst.return_value = instance
 
-        inst_from_get = self.compute_api.get(self.context, instance.uuid)
-
-        inst_map_calls = [mock.call(self.context, instance.uuid),
-                          mock.call(self.context, instance.uuid)]
         if self.cell_type is None:
-            mock_get_inst_map.assert_has_calls(inst_map_calls)
-            self.assertEqual(2, mock_get_inst_map.call_count)
-            mock_get_build_req.assert_called_once_with(self.context,
-                                                       instance.uuid)
-            mock_target_cell.assert_not_called()
-        mock_get_inst.assert_called_once_with(self.context, instance.uuid,
-                                              expected_attrs=[
-                                                  'metadata',
-                                                  'system_metadata',
-                                                  'security_groups',
-                                                  'info_cache'])
-        self.assertEqual(instance, inst_from_get)
+            self.assertRaises(exception.InstanceNotFound,
+                              self.compute_api.get,
+                              self.context, instance.uuid)
+        else:
+            inst_from_get = self.compute_api.get(self.context, instance.uuid)
+
+            mock_get_inst.assert_called_once_with(self.context,
+                                                  instance.uuid,
+                                                  expected_attrs=[
+                                                      'metadata',
+                                                      'system_metadata',
+                                                      'security_groups',
+                                                      'info_cache'])
+            self.assertEqual(instance, inst_from_get)
 
     @mock.patch.object(context, 'target_cell')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
