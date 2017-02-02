@@ -85,6 +85,7 @@ from nova import objects
 from nova.objects import aggregate as aggregate_obj
 from nova.objects import build_request as build_request_obj
 from nova.objects import flavor as flavor_obj
+from nova.objects import host_mapping as host_mapping_obj
 from nova.objects import instance as instance_obj
 from nova.objects import instance_group as instance_group_obj
 from nova.objects import keypair as keypair_obj
@@ -1383,54 +1384,12 @@ class CellV2Commands(object):
         each cell, or a single one if passed in, and map any hosts which are
         not currently mapped. If a host is already mapped nothing will be done.
         """
+        def status_fn(msg):
+            if verbose:
+                print(msg)
+
         ctxt = context.RequestContext()
-
-        # TODO(alaski): If this is not run on a host configured to use the API
-        # database most of the lookups below will fail and may not provide a
-        # great error message. Add a check which will raise a useful error
-        # message about running this from an API host.
-        if cell_uuid:
-            cell_mappings = [objects.CellMapping.get_by_uuid(ctxt, cell_uuid)]
-        else:
-            cell_mappings = objects.CellMappingList.get_all(ctxt)
-            if verbose:
-                print(_('Found %s cell mappings.') % len(cell_mappings))
-
-        for cell_mapping in cell_mappings:
-            if cell_mapping.is_cell0():
-                if verbose:
-                    print(_('Skipping cell0 since it does not contain hosts.'))
-                continue
-            if verbose:
-                if 'name' in cell_mapping and cell_mapping.name:
-                    print(_("Getting compute nodes from cell '%(name)s': "
-                            "%(uuid)s") % {'name': cell_mapping.name,
-                                           'uuid': cell_mapping.uuid})
-                else:
-                    print(_("Getting compute nodes from cell: %(uuid)s") %
-                          {'uuid': cell_mapping.uuid})
-            with context.target_cell(ctxt, cell_mapping):
-                compute_nodes = objects.ComputeNodeList.get_all(ctxt)
-                if verbose:
-                    print(_('Found %(num)s computes in cell: %(uuid)s') %
-                          {'num': len(compute_nodes),
-                           'uuid': cell_mapping.uuid})
-            for compute in compute_nodes:
-                if verbose:
-                    print(_("Checking host mapping for compute host "
-                            "'%(host)s': %(uuid)s") %
-                          {'host': compute.host, 'uuid': compute.uuid})
-                try:
-                    objects.HostMapping.get_by_host(ctxt, compute.host)
-                except exception.HostMappingNotFound:
-                    if verbose:
-                        print(_("Creating host mapping for compute host "
-                                "'%(host)s': %(uuid)s") %
-                              {'host': compute.host, 'uuid': compute.uuid})
-                    host_mapping = objects.HostMapping(
-                        ctxt, host=compute.host,
-                        cell_mapping=cell_mapping)
-                    host_mapping.create()
+        host_mapping_obj.discover_hosts(ctxt, cell_uuid, status_fn)
 
     @action_description(
         _("Add a new cell to nova API database. "

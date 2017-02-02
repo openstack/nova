@@ -12,9 +12,11 @@
 
 from sqlalchemy.orm import joinedload
 
+from nova import context
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
 from nova import exception
+from nova.i18n import _
 from nova.objects import base
 from nova.objects import cell_mapping
 from nova.objects import fields
@@ -163,3 +165,55 @@ class HostMappingList(base.ObjectListBase, base.NovaObject):
     def get_by_cell_id(cls, context, cell_id):
         db_mappings = cls._get_by_cell_id_from_db(context, cell_id)
         return base.obj_make_list(context, cls(), HostMapping, db_mappings)
+
+
+def discover_hosts(ctxt, cell_uuid=None, status_fn=None):
+    # TODO(alaski): If this is not run on a host configured to use the API
+    # database most of the lookups below will fail and may not provide a
+    # great error message. Add a check which will raise a useful error
+    # message about running this from an API host.
+
+    from nova import objects
+
+    if not status_fn:
+        status_fn = lambda x: None
+
+    if cell_uuid:
+        cell_mappings = [objects.CellMapping.get_by_uuid(ctxt, cell_uuid)]
+    else:
+        cell_mappings = objects.CellMappingList.get_all(ctxt)
+        status_fn(_('Found %s cell mappings.') % len(cell_mappings))
+
+    host_mappings = []
+    for cm in cell_mappings:
+        if cm.is_cell0():
+            status_fn(_('Skipping cell0 since it does not contain hosts.'))
+            continue
+        if 'name' in cm and cm.name:
+            status_fn(_("Getting compute nodes from cell '%(name)s': "
+                        "%(uuid)s") % {'name': cm.name,
+                                       'uuid': cm.uuid})
+        else:
+            status_fn(_("Getting compute nodes from cell: %(uuid)s") %
+                      {'uuid': cm.uuid})
+        with context.target_cell(ctxt, cm):
+            compute_nodes = objects.ComputeNodeList.get_all(ctxt)
+            status_fn(_('Found %(num)s computes in cell: %(uuid)s') %
+                      {'num': len(compute_nodes),
+                       'uuid': cm.uuid})
+        for compute in compute_nodes:
+            status_fn(_("Checking host mapping for compute host "
+                        "'%(host)s': %(uuid)s") %
+                      {'host': compute.host, 'uuid': compute.uuid})
+            try:
+                objects.HostMapping.get_by_host(ctxt, compute.host)
+            except exception.HostMappingNotFound:
+                status_fn(_("Creating host mapping for compute host "
+                            "'%(host)s': %(uuid)s") %
+                          {'host': compute.host, 'uuid': compute.uuid})
+                host_mapping = objects.HostMapping(
+                    ctxt, host=compute.host,
+                    cell_mapping=cm)
+                host_mapping.create()
+                host_mappings.append(host_mapping)
+    return host_mappings

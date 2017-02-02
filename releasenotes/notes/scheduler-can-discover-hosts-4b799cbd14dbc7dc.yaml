@@ -1,0 +1,13 @@
+---
+features:
+  - As new hosts are added to Nova, the `nova-manage cell_v2
+    discover_hosts` command must be run in order to map them into
+    their cell. For deployments with proper automation, this is a
+    trivial extra step in that process. However, for smaller or
+    non-automated deployments, there is a new configuration variable
+    for the scheduler process which will perform this discovery
+    periodically. By setting
+    `scheduler.discover_hosts_in_cells_interval` to a positive value,
+    the scheduler will handle this for you. Note that this process
+    involves listing all hosts in all cells, and is likely to be too
+    heavyweight for large deployments to run all the time.
