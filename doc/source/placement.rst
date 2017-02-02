@@ -134,6 +134,57 @@ https://review.openstack.org/#/c/363335/
 https://review.openstack.org/#/c/363724/
 
 
+Upgrade Notes
+=============
+
+The follow sub-sections provide notes on upgrading to a given target release.
+
+.. note:: As a reminder, the `nova-status upgrade check`_ tool can be used to
+  help determine the status of your deployment and how ready it is to perform
+  an upgrade.
+
+.. _nova-status upgrade check: http://docs.openstack.org/developer/nova/man/nova-status.html
+
+Ocata (15.0.0)
+~~~~~~~~~~~~~~
+
+* The ``nova-compute`` service will fail to start in Ocata unless the
+  ``[placement]`` section of nova.conf on the compute is configured. As
+  mentioned in the deployment steps above, the Placement service should be
+  deployed by this point so the computes can register and start reporting
+  inventory and allocation information. If the computes are deployed
+  and configured `before` the Placement service, they will continue to try
+  and reconnect in a loop so that you do not need to restart the nova-compute
+  process to talk to the Placement service after the compute is properly
+  configured.
+* The ``nova.scheduler.filter_scheduler.FilterScheduler`` in Ocata will
+  fallback to not using the Placement service as long as there are older
+  ``nova-compute`` services running in the deployment. This allows for rolling
+  upgrades of the computes to not affect scheduling for the FilterScheduler.
+  However, the fallback mechanism will be removed in the 16.0.0 Pike release
+  such that the scheduler will make decisions based on the Placement service
+  and the resource providers (compute nodes) registered there. This means if
+  the computes are not reporting into Placement by Pike, build requests will
+  fail with **NoValidHost** errors.
+* While the FilterScheduler technically depends on the Placement service
+  in Ocata, if you deploy the Placement service `after` you upgrade the
+  ``nova-scheduler`` service to Ocata and restart it, things will still work.
+  The scheduler will gracefully handle the absence of the Placement service.
+  However, once all computes are upgraded, the scheduler not being able to make
+  requests to Placement will result in **NoValidHost** errors.
+* It is currently possible to exclude the ``CoreFilter``, ``RamFilter`` and
+  ``DiskFilter`` from the list of enabled FilterScheduler filters such that
+  scheduling decisions are not based on CPU, RAM or disk usage. Once all
+  computes are reporting into the Placement service, however, and the
+  FilterScheduler starts to use the Placement service for decisions, those
+  excluded filters are ignored and the scheduler will make requests based on
+  VCPU, MEMORY_MB and DISK_GB inventory. If you wish to effectively ignore
+  that type of resource for placement decisions, you will need to adjust the
+  corresponding ``cpu_allocation_ratio``, ``ram_allocation_ratio``, and/or
+  ``disk_allocation_ratio`` configuration options to be very high values, e.g.
+  9999.0.
+
+
 REST API
 ========
 
