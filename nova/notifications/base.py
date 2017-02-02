@@ -262,6 +262,7 @@ def _map_service_to_binary(service):
     return binary
 
 
+@rpc.if_notifications_enabled
 def _send_versioned_instance_update(context, instance, payload, host, service):
 
     state_update = instance_notification.InstanceStateUpdatePayload(

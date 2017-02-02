@@ -223,6 +223,12 @@ class TestCase(testtools.TestCase):
         self.useFixture(conf_fixture.ConfFixture(CONF))
         self.useFixture(nova_fixtures.RPCFixture('nova.test'))
 
+        # we cannot set this in the ConfFixture as oslo only registers the
+        # notification opts at the first instantiation of a Notifier that
+        # happens only in the RPCFixture
+        CONF.set_default('driver', ['test'],
+                         group='oslo_messaging_notifications')
+
         # NOTE(danms): Make sure to reset us back to non-remote objects
         # for each test to avoid interactions. Also, backup the object
         # registry.

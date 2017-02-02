@@ -215,6 +215,19 @@ def get_versioned_notifier(publisher_id):
     return NOTIFIER.prepare(publisher_id=publisher_id)
 
 
+def if_notifications_enabled(f):
+    """Calls decorated method only if versioned notifications are enabled."""
+    @functools.wraps(f)
+    def wrapped(*args, **kwargs):
+        if (NOTIFIER.is_enabled() and
+                CONF.notifications.notification_format in ('both',
+                                                           'versioned')):
+            return f(*args, **kwargs)
+        else:
+            return None
+    return wrapped
+
+
 def create_transport(url):
     exmods = get_allowed_exmods()
     return messaging.get_transport(CONF,
