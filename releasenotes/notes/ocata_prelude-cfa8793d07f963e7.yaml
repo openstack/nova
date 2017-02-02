@@ -1,0 +1,41 @@
+---
+prelude: |
+    The 15.0.0 release includes many new features and bug fixes. It is
+    difficult to cover all the changes that have been introduced. Please at
+    least read the upgrade section which describes the required actions to
+    upgrade your cloud from 14.0.0 (Newton) to 15.0.0 (Ocata).
+
+    That said, a few major changes are worth mentioning. This is not an
+    exhaustive list:
+
+    - The latest API microversion supported for Ocata is v2.42. Details on
+      REST API microversions added since the 14.0.0 Newton release can be found
+      in the `REST API Version History`_ page.
+    - The Nova FilterScheduler driver is now able to make scheduling
+      decisions based on the new Placement RESTful API endpoint that becomes
+      mandatory in Ocata. Accordingly, the compute nodes will
+      refuse to start if you do not amend the configuration to add the
+      ``[placement]`` section so they can provide their resource usage.
+      For the moment, only CPU, RAM and disk resource usage are verified by
+      the Placement API, but we plan to add more resource classes in the
+      next release. You will find further details in the features and
+      upgrade sections below, and the `Placement API`_ page.
+    - Ocata contains a lot of new CellsV2 functions, but not all of it is
+      fully ready for production. All deployments must set up their existing
+      nodes as a cell, with database connection and MQ transport_url config
+      items matching that cell. In a subsequent release, additional cells
+      will be fully supported, as will a migration path for CellsV1 users.
+      By default, an Ocata deployment now needs to configure at least one new
+      "Cell V2" (not to be confused with the first version of cells). In
+      Newton, it was possible to deploy a single cell V2 and schedule on it
+      but this was optional. Now in Ocata, single CellsV2 deployments are
+      mandatory.
+      More details to be found when reading the release notes below.
+    - There is a new nova-status command that gives operators a better
+      view of their cloud. In particular, a new subcommand called "upgrade"
+      allows operators to run a pre-flight check on their deployment before
+      upgrading. This helps them to proactively identify potential upgrade
+      issues that could occur.
+
+    .. _REST API Version History: http://docs.openstack.org/developer/nova/api_microversion_history.html
+    .. _Placement API: http://docs.openstack.org/developer/nova/placement.html
