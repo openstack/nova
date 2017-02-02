@@ -14,6 +14,12 @@
 
 EXPERIMENTAL support script for running Nova API under Apache2 etc.
 
+Just to be clear, EXPERIMENTAL means DO NOT RUN THIS IN
+PRODUCTION. There are KNOWN things that will break if you run your API
+services under Apache (et al), plus a bunch of other unknown ones most
+likely. At this point, this is not tested anywhere in Nova's gate.
+Buyer beware.
+
 """
 
 from oslo_config import cfg
