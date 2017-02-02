@@ -131,7 +131,7 @@ Possible values:
                help="""
 Periodic task interval.
 
-This value controls how often (in seconds) the scheduler should attept
+This value controls how often (in seconds) the scheduler should attempt
 to discover new hosts that have been added to cells. If negative (the
 default), no automatic discovery will occur.
 
