@@ -1272,6 +1272,54 @@ class ServersControllerTest(ControllerTest):
         self.assertEqual(len(servers), 1)
         self.assertEqual(servers[0]['id'], server_uuid)
 
+    def test_get_servers_admin_allows_access_ip_v4(self):
+        """Test getting servers by access_ip_v4 with admin_api enabled and
+        admin context
+        """
+        server_uuid = uuids.fake
+
+        def fake_get_all(compute_self, context, search_opts=None,
+                         limit=None, marker=None,
+                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+            self.assertIsNotNone(search_opts)
+            self.assertIn('access_ip_v4', search_opts)
+            self.assertEqual(search_opts['access_ip_v4'], 'ffff.*')
+            return objects.InstanceList(
+                objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
+
+        self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
+
+        req = self.req('/fake/servers?access_ip_v4=ffff.*',
+                       use_admin_context=True)
+        servers = self.controller.index(req)['servers']
+
+        self.assertEqual(1, len(servers))
+        self.assertEqual(server_uuid, servers[0]['id'])
+
+    def test_get_servers_admin_allows_access_ip_v6(self):
+        """Test getting servers by access_ip_v6 with admin_api enabled and
+        admin context
+        """
+        server_uuid = uuids.fake
+
+        def fake_get_all(compute_self, context, search_opts=None,
+                         limit=None, marker=None,
+                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+            self.assertIsNotNone(search_opts)
+            self.assertIn('access_ip_v6', search_opts)
+            self.assertEqual(search_opts['access_ip_v6'], 'ffff.*')
+            return objects.InstanceList(
+                objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
+
+        self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
+
+        req = self.req('/fake/servers?access_ip_v6=ffff.*',
+                       use_admin_context=True)
+        servers = self.controller.index(req)['servers']
+
+        self.assertEqual(1, len(servers))
+        self.assertEqual(server_uuid, servers[0]['id'])
+
     def test_get_all_server_details(self):
         expected_flavor = {
                 "id": "2",
