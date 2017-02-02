@@ -69,17 +69,17 @@ server_create = {
     }
 }
 
-block_device_mapping_v232_new_item = {
+block_device_mapping_with_tags_new_item = {
     'tag': parameter_types.tag
 }
 
-block_device_mapping_v232 = copy.deepcopy(block_device_mapping)
-block_device_mapping_v232['properties'].update(
-    block_device_mapping_v232_new_item)
+block_device_mapping_with_tags = copy.deepcopy(block_device_mapping)
+block_device_mapping_with_tags['properties'].update(
+    block_device_mapping_with_tags_new_item)
 
-server_create_v232 = {
+server_create_with_tags = {
     'block_device_mapping_v2': {
         'type': 'array',
-        'items': block_device_mapping_v232
+        'items': block_device_mapping_with_tags
     }
 }

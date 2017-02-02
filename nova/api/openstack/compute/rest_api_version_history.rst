@@ -336,6 +336,13 @@ user documentation.
   with 'nic1' will appear in the metadata along with its bus (PCI), bus address
   (ex: 0000:00:02.0), MAC address, and tag ('nic1').
 
+  .. note:: A bug has caused the tag attribute to no longer be accepted for
+    networks starting with version 2.37 and for block_device_mapping_v2
+    starting with version 2.33. In other words, networks could only be tagged
+    between versions 2.32 and 2.36 inclusively and block devices only in
+    version 2.32. As of version 2.42 the tag attribute has been restored and
+    both networks and block devices can be tagged again.
+
 2.33
 ----
 
@@ -343,6 +350,10 @@ user documentation.
   API request::
 
     GET /v2.1/{tenant_id}/os-hypervisors?marker={hypervisor_id}&limit={limit}
+
+  In the context of device tagging at server create time, 2.33 also removes the
+  tag attribute from block_device_mapping_v2. This is a bug that is fixed in
+  2.42, in which the tag attribute is reintroduced.
 
 2.34
 ----
@@ -406,6 +417,10 @@ user documentation.
   Also, the ``uuid`` field in the ``networks`` object in the server create
   request is now strictly enforced to be in UUID format.
 
+  In the context of device tagging at server create time, 2.37 also removes the
+  tag attribute from networks. This is a bug that is fixed in 2.42, in which
+  the tag attribute is reintroduced.
+
 2.38 (Maximum in Newton)
 ------------------------
 
@@ -453,3 +468,12 @@ user documentation.
   `/os-aggregates` endpoint. This attribute is auto-generated upon creation of
   an aggregate. The `os-aggregates` API resource endpoint remains an
   administrator-only API.
+
+2.42
+----
+
+  In the context of device tagging at server create time, a bug has caused the
+  tag attribute to no longer be accepted for networks starting with version
+  2.37 and for block_device_mapping_v2 starting with version 2.33. Microversion
+  2.42 restores the tag parameter to both networks and block_device_mapping_v2,
+  allowing networks and block devices to be tagged again.
