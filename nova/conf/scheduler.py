@@ -192,9 +192,9 @@ Possible values:
 * An integer, where the integer corresponds to the max number of instances
   that can be actively performing IO on any given host.
 """),
-    # TODO(sfinucan): Add 'min' parameter
     cfg.IntOpt("max_instances_per_host",
         default=50,
+        min=1,
         deprecated_group="DEFAULT",
         help="""
 Maximum number of instances that be active on a host.
@@ -710,9 +710,9 @@ Related options:
 * attestation_auth_timeout
 * attestation_insecure_ssl
 """),
-    # TODO(stephenfin): Add min parameter
     cfg.IntOpt("attestation_auth_timeout",
             default=60,
+            min=0,
             help="""
 This value controls how long a successful attestation is cached. Once this
 period has elapsed, a new attestation request will be made. See the

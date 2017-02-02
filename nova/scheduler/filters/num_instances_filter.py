@@ -54,14 +54,6 @@ class AggregateNumInstancesFilter(NumInstancesFilter):
     def _get_max_instances_per_host(self, host_state, spec_obj):
         max_instances_per_host = CONF.filter_scheduler.max_instances_per_host
 
-        # TODO(sfinucan): Remove this warning when the named config options
-        # gains a 'min' parameter.
-        if max_instances_per_host < 1:
-            LOG.warning(_LW('Future versions of nova will restrict the '
-                '"filter_scheduler.max_instances_per_host" config option to '
-                'values >=0. Update your configuration file to mitigate '
-                'future upgrade issues.'))
-
         aggregate_vals = utils.aggregate_values_from_key(
             host_state,
             'max_instances_per_host')
