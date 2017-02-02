@@ -21,6 +21,11 @@ cells_group = cfg.OptGroup('cells',
 Cells options allow you to use cells functionality in openstack
 deployment.
 
+Note that the options in this group are only for cells v1 functionality, which
+is considered experimental and not recommended for new deployments. Cells v1
+is being replaced with cells v2, which starting in the 15.0.0 Ocata release is
+required and all Nova deployments will be at least a cells v2 cell of one.
+
 """)
 
 cells_opts = [
@@ -46,7 +51,13 @@ Possible values:
     cfg.BoolOpt('enable',
         default=False,
         help="""
-Enable cell functionality.
+Enable cell v1 functionality.
+
+Note that cells v1 is considered experimental and not recommended for new
+Nova deployments. Cells v1 is being replaced by cells v2 which starting in
+the 15.0.0 Ocata release, all Nova deployments are at least a cells v2 cell
+of one. Setting this option, or any other options in the [cells] group, is
+not required for cells v2.
 
 When this functionality is enabled, it lets you to scale an OpenStack
 Compute cloud in a more distributed fashion without having to use
