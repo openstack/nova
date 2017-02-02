@@ -1301,3 +1301,83 @@ class TestAllocations(SchedulerReportClientTestCase):
         mock_log.info.assert_not_called()
         # make sure warning wasn't called for the 404
         mock_log.warning.assert_not_called()
+
+    @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
+                "delete")
+    @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
+                "_delete_allocation_for_instance")
+    @mock.patch("nova.objects.InstanceList.get_by_host_and_node")
+    def test_delete_resource_provider_cascade(self, mock_by_host,
+            mock_del_alloc, mock_delete):
+        cn = objects.ComputeNode(uuid=uuids.cn, host="fake_host",
+                hypervisor_hostname="fake_hostname", )
+        inst1 = objects.Instance(uuid=uuids.inst1)
+        inst2 = objects.Instance(uuid=uuids.inst2)
+        mock_by_host.return_value = objects.InstanceList(
+                objects=[inst1, inst2])
+        resp_mock = mock.Mock(status_code=204)
+        mock_delete.return_value = resp_mock
+        self.client.delete_resource_provider(self.context, cn, cascade=True)
+        self.assertEqual(2, mock_del_alloc.call_count)
+        exp_url = "/resource_providers/%s" % uuids.cn
+        mock_delete.assert_called_once_with(exp_url)
+
+    @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
+                "delete")
+    @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
+                "_delete_allocation_for_instance")
+    @mock.patch("nova.objects.InstanceList.get_by_host_and_node")
+    def test_delete_resource_provider_no_cascade(self, mock_by_host,
+            mock_del_alloc, mock_delete):
+        cn = objects.ComputeNode(uuid=uuids.cn, host="fake_host",
+                hypervisor_hostname="fake_hostname", )
+        inst1 = objects.Instance(uuid=uuids.inst1)
+        inst2 = objects.Instance(uuid=uuids.inst2)
+        mock_by_host.return_value = objects.InstanceList(
+                objects=[inst1, inst2])
+        resp_mock = mock.Mock(status_code=204)
+        mock_delete.return_value = resp_mock
+        self.client.delete_resource_provider(self.context, cn)
+        mock_del_alloc.assert_not_called()
+        exp_url = "/resource_providers/%s" % uuids.cn
+        mock_delete.assert_called_once_with(exp_url)
+
+    @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
+                "delete")
+    @mock.patch('nova.scheduler.client.report.LOG')
+    def test_delete_resource_provider_log_calls(self, mock_log, mock_delete):
+        # First, check a successful call
+        cn = objects.ComputeNode(uuid=uuids.cn, host="fake_host",
+                hypervisor_hostname="fake_hostname", )
+        resp_mock = mock.MagicMock(status_code=204)
+        try:
+            resp_mock.__nonzero__.return_value = True
+        except AttributeError:
+            # py3 uses __bool__
+            resp_mock.__bool__.return_value = True
+        mock_delete.return_value = resp_mock
+        self.client.delete_resource_provider(self.context, cn)
+        # With a 204, only the info should be called
+        self.assertEqual(1, mock_log.info.call_count)
+        self.assertEqual(0, mock_log.warning.call_count)
+
+        # Now check a 404 response
+        mock_log.reset_mock()
+        resp_mock.status_code = 404
+        try:
+            resp_mock.__nonzero__.return_value = False
+        except AttributeError:
+            # py3 uses __bool__
+            resp_mock.__bool__.return_value = False
+        self.client.delete_resource_provider(self.context, cn)
+        # With a 404, neither log message should be called
+        self.assertEqual(0, mock_log.info.call_count)
+        self.assertEqual(0, mock_log.warning.call_count)
+
+        # Finally, check a 409 response
+        mock_log.reset_mock()
+        resp_mock.status_code = 409
+        self.client.delete_resource_provider(self.context, cn)
+        # With a 409, only the warning should be called
+        self.assertEqual(0, mock_log.info.call_count)
+        self.assertEqual(1, mock_log.warning.call_count)

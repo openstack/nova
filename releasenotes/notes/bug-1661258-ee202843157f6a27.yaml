@@ -1,0 +1,9 @@
+---
+issues:
+   - |
+      Ironic nodes that were deleted from ironic's database during Newton
+      may result in orphaned resource providers causing incorrect scheduling
+      decisions, leading to a reschedule. If this happens, the orphaned
+      resource providers will need to be identified and removed.
+
+      See also https://bugs.launchpad.net/nova/+bug/1661258
