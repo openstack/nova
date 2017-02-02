@@ -1182,6 +1182,7 @@ class ServersControllerTest(ControllerTest):
             self.assertIsNotNone(search_opts)
             # Allowed by user
             self.assertIn('name', search_opts)
+            self.assertIn('terminated_at', search_opts)
             # OSAPI converts status to vm_state
             self.assertIn('vm_state', search_opts)
             # Allowed only by admins with admin API on
@@ -1192,7 +1193,8 @@ class ServersControllerTest(ControllerTest):
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
-        query_str = "name=foo&ip=10.*&status=active&unknown_option=meow"
+        query_str = ("name=foo&ip=10.*&status=active&unknown_option=meow&"
+                     "terminated_at=^2016-02-01.*")
         req = self.req('/fake/servers?%s' % query_str,
                                       use_admin_context=True)
         servers = self.controller.index(req)['servers']
