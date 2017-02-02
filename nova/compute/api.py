@@ -2293,23 +2293,9 @@ class API(base.Base):
                             context, instance_uuid,
                             expected_attrs=expected_attrs)
                 else:
-                    # If BuildRequest is not found but inst_map.cell_mapping
-                    # does not point at a cell then cell migration has not
-                    # happened yet. This will be a failure case later.
-                    # TODO(alaski): Make this a failure case after we put in
-                    # a block that requires migrating to cellsv2.
-                    instance = objects.Instance.get_by_uuid(
-                        context, instance_uuid, expected_attrs=expected_attrs)
+                    raise exception.InstanceNotFound(instance_id=instance_uuid)
         else:
-            # This should not happen once a deployment has migrated to cellsv2.
-            # If it happens after that point we handle it gracefully for now
-            # but this will become an exception in the future.
-            # TODO(alaski): Once devstack is setting up cellsv2 by default add
-            # a warning log message that this will become an exception in the
-            # future. The warning message will be conditional upon the
-            # migration having happened, which means a db lookup to check that.
-            instance = objects.Instance.get_by_uuid(
-                context, instance_uuid, expected_attrs=expected_attrs)
+            raise exception.InstanceNotFound(instance_id=instance_uuid)
 
         return instance
 

@@ -44,7 +44,8 @@ class ServersPreSchedulingTestCase(test.TestCase):
 
         self.api = api_fixture.api
         self.api.microversion = 'latest'
-        self.useFixture(nova_fixtures.SingleCellSimple())
+        self.useFixture(nova_fixtures.SingleCellSimple(
+            instances_created=False))
 
     def test_instance_from_buildrequest(self):
         self.useFixture(nova_fixtures.AllServicesCurrent())
