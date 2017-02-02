@@ -87,6 +87,15 @@ def safe_connect(f):
     return wrapper
 
 
+def _convert_mb_to_ceil_gb(mb_value):
+    gb_int = 0
+    if mb_value:
+        gb_float = mb_value / 1024.0
+        # ensure we reserve/allocate enough space by rounding up to nearest GB
+        gb_int = int(math.ceil(gb_float))
+    return gb_int
+
+
 def _compute_node_to_inventory_dict(compute_node):
     """Given a supplied `objects.ComputeNode` object, return a dict, keyed
     by resource class, of various inventory information.
@@ -116,13 +125,9 @@ def _compute_node_to_inventory_dict(compute_node):
             'allocation_ratio': compute_node.ram_allocation_ratio,
         }
     if compute_node.local_gb > 0:
-        reserved_disk_gb = 0
         # TODO(johngarbutt) We should either move to reserved_host_disk_gb
         # or start tracking DISK_MB.
-        if CONF.reserved_host_disk_mb:
-            reserved_disk_gb = CONF.reserved_host_disk_mb / 1024.0
-            # ensure we reserve enough space by rounding up to nearest GB
-            reserved_disk_gb = int(math.ceil(reserved_disk_gb))
+        reserved_disk_gb = _convert_mb_to_ceil_gb(CONF.reserved_host_disk_mb)
         result[DISK_GB] = {
             'total': compute_node.local_gb,
             'reserved': reserved_disk_gb,
@@ -143,9 +148,11 @@ def _instance_to_allocations_dict(instance):
     # NOTE(danms): Boot-from-volume instances consume no local disk
     is_bfv = compute_utils.is_volume_backed_instance(instance._context,
                                                      instance)
+    # TODO(johngarbutt) we have to round up swap MB to the next GB.
+    # It would be better to claim disk in MB, but that is hard now.
+    swap_in_gb = _convert_mb_to_ceil_gb(instance.flavor.swap)
     disk = ((0 if is_bfv else instance.flavor.root_gb) +
-            instance.flavor.swap +
-            instance.flavor.ephemeral_gb)
+            swap_in_gb + instance.flavor.ephemeral_gb)
     alloc_dict = {
         MEMORY_MB: instance.flavor.memory_mb,
         VCPU: instance.flavor.vcpus,

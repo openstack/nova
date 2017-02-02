@@ -1106,7 +1106,7 @@ class TestAllocations(SchedulerReportClientTestCase):
         inst = objects.Instance(
             uuid=uuids.inst,
             flavor=objects.Flavor(root_gb=10,
-                                  swap=1,
+                                  swap=1023,
                                   ephemeral_gb=100,
                                   memory_mb=1024,
                                   vcpus=2))
