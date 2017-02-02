@@ -14,6 +14,7 @@
 #    under the License.
 
 import functools
+import math
 import re
 from six.moves.urllib import parse
 import time
@@ -115,9 +116,16 @@ def _compute_node_to_inventory_dict(compute_node):
             'allocation_ratio': compute_node.ram_allocation_ratio,
         }
     if compute_node.local_gb > 0:
+        reserved_disk_gb = 0
+        # TODO(johngarbutt) We should either move to reserved_host_disk_gb
+        # or start tracking DISK_MB.
+        if CONF.reserved_host_disk_mb:
+            reserved_disk_gb = CONF.reserved_host_disk_mb / 1024.0
+            # ensure we reserve enough space by rounding up to nearest GB
+            reserved_disk_gb = int(math.ceil(reserved_disk_gb))
         result[DISK_GB] = {
             'total': compute_node.local_gb,
-            'reserved': CONF.reserved_host_disk_mb * 1024,
+            'reserved': reserved_disk_gb,
             'min_unit': 1,
             'max_unit': compute_node.local_gb,
             'step_size': 1,

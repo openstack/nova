@@ -556,7 +556,7 @@ class TestComputeNodeToInventoryDict(test.NoDBTestCase):
                                            disk_allocation_ratio=1.0)
 
         self.flags(reserved_host_memory_mb=1000)
-        self.flags(reserved_host_disk_mb=2000)
+        self.flags(reserved_host_disk_mb=200)
 
         result = report._compute_node_to_inventory_dict(compute_node)
 
@@ -579,7 +579,7 @@ class TestComputeNodeToInventoryDict(test.NoDBTestCase):
             },
             'DISK_GB': {
                 'total': compute_node.local_gb,
-                'reserved': CONF.reserved_host_disk_mb * 1024,
+                'reserved': 1,  # this is ceil(1000/1024)
                 'min_unit': 1,
                 'max_unit': compute_node.local_gb,
                 'step_size': 1,
