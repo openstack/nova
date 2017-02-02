@@ -29,6 +29,7 @@ import contextlib
 import copy
 import datetime
 import inspect
+import itertools
 import os
 import pprint
 import sys
@@ -431,7 +432,15 @@ class TestCase(testtools.TestCase):
             if isinstance(expected, dict) and isinstance(observed, dict):
                 self.assertEqual(
                     len(expected), len(observed),
-                    'path: %s. Dict lengths are not equal' % path)
+                    ('path: %s. Different dict key sets\n'
+                     'expected=%s\n'
+                     'observed=%s\n'
+                     'difference=%s') %
+                    (path,
+                     sorted(expected.keys()),
+                     sorted(observed.keys()),
+                     list(set(expected.keys()).symmetric_difference(
+                         set(observed.keys())))))
                 expected_keys = sorted(expected)
                 observed_keys = sorted(observed)
                 self.assertEqual(
@@ -443,7 +452,15 @@ class TestCase(testtools.TestCase):
                       isinstance(observed, (list, tuple, set))):
                 self.assertEqual(
                     len(expected), len(observed),
-                    'path: %s. List lengths are not equal' % path)
+                    ('path: %s. Different list items\n'
+                     'expected=%s\n'
+                     'observed=%s\n'
+                     'difference=%s') %
+                    (path,
+                     sorted(expected, key=sort_key),
+                     sorted(observed, key=sort_key),
+                     [a for a in itertools.chain(expected, observed) if
+                      (a not in expected) or (a not in observed)]))
 
                 expected_values_iter = iter(sorted(expected, key=sort_key))
                 observed_values_iter = iter(sorted(observed, key=sort_key))
