@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 # Nova Release Notes documentation build configuration file, created by
 # sphinx-quickstart on Thu Nov  5 11:50:32 2015.
 #
