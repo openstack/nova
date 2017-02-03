@@ -531,20 +531,15 @@ def get_arch(image_meta):
 
 def is_mounted(mount_path, source=None):
     """Check if the given source is mounted at given destination point."""
-    try:
-        check_cmd = ['findmnt', '--target', mount_path]
-        if source:
-            check_cmd.extend(['--source', source])
+    if not os.path.ismount(mount_path):
+        return False
 
-        utils.execute(*check_cmd)
+    if source is None:
         return True
-    except processutils.ProcessExecutionError:
-        return False
-    except OSError as exc:
-        # info since it's not required to have this tool.
-        if exc.errno == errno.ENOENT:
-            LOG.info(_LI("findmnt tool is not installed"))
-        return False
+
+    with open('/proc/mounts', 'r') as proc_mounts:
+        mounts = [mount.split() for mount in proc_mounts.readlines()]
+        return any(mnt[0] == source and mnt[1] == mount_path for mnt in mounts)
 
 
 def is_valid_hostname(hostname):

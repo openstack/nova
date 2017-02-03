@@ -94,7 +94,8 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         self.assertEqual('raw', tree.find('./driver').get('type'))
         self.assertEqual('native', tree.find('./driver').get('io'))
 
-    def test_libvirt_nfs_driver_already_mounted(self):
+    @mock.patch.object(libvirt_utils, 'is_mounted', return_value=True)
+    def test_libvirt_nfs_driver_already_mounted(self, mock_is_mounted):
         libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_host)
 
         export_string = '192.168.1.1:/nfs/share1'
@@ -107,8 +108,6 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         libvirt_driver.disconnect_volume(connection_info, "vde")
 
         expected_commands = [
-            ('findmnt', '--target', export_mnt_base, '--source',
-             export_string),
             ('umount', export_mnt_base)]
         self.assertEqual(expected_commands, self.executes)
 
