@@ -749,3 +749,40 @@ class SchedulerReportClient(object):
             LOG.warning(_LW('Deleting stale allocation for instance %s'),
                         uuid)
             self._delete_allocation_for_instance(uuid)
+
+    @safe_connect
+    def delete_resource_provider(self, context, compute_node, cascade=False):
+        """Deletes the ResourceProvider record for the compute_node.
+
+        :param context: The security context
+        :param compute_node: The nova.objects.ComputeNode object that is the
+                             resource provider being deleted.
+        :param cascade: Boolean value that, when True, will first delete any
+                        associated Allocation and Inventory records for the
+                        compute node
+        """
+        nodename = compute_node.hypervisor_hostname
+        host = compute_node.host
+        rp_uuid = compute_node.uuid
+        if cascade:
+            # Delete any allocations for this resource provider.
+            # Since allocations are by consumer, we get the consumers on this
+            # host, which are its instances.
+            instances = objects.InstanceList.get_by_host_and_node(context,
+                    host, nodename)
+            for instance in instances:
+                self._delete_allocation_for_instance(instance.uuid)
+        url = "/resource_providers/%s" % rp_uuid
+        resp = self.delete(url)
+        if resp:
+            LOG.info(_LI("Deleted resource provider %s"), rp_uuid)
+        else:
+            # Check for 404 since we don't need to log a warning if we tried to
+            # delete something which doesn"t actually exist.
+            if resp.status_code != 404:
+                LOG.warning(
+                    _LW("Unable to delete resource provider "
+                        "%(uuid)s: (%(code)i %(text)s)"),
+                    {"uuid": rp_uuid,
+                     "code": resp.status_code,
+                     "text": resp.text})

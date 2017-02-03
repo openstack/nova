@@ -210,12 +210,14 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertTrue(log_mock.info.called)
         self.assertIsNone(self.compute._resource_tracker)
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'delete_resource_provider')
     @mock.patch.object(manager.ComputeManager,
                        'update_available_resource_for_node')
     @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
     @mock.patch.object(manager.ComputeManager, '_get_compute_nodes_in_db')
     def test_update_available_resource(self, get_db_nodes, get_avail_nodes,
-                                       update_mock):
+                                       update_mock, del_rp_mock):
         db_nodes = [self._make_compute_node('node%s' % i, i)
                     for i in range(1, 5)]
         avail_nodes = set(['node2', 'node3', 'node4', 'node5'])
@@ -233,6 +235,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         for db_node in db_nodes:
             if db_node.hypervisor_hostname == 'node1':
                 db_node.destroy.assert_called_once_with()
+                del_rp_mock.assert_called_once_with(self.context, db_node,
+                        cascade=True)
             else:
                 self.assertFalse(db_node.destroy.called)
 
