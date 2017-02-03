@@ -183,6 +183,8 @@ Ocata (15.0.0)
   corresponding ``cpu_allocation_ratio``, ``ram_allocation_ratio``, and/or
   ``disk_allocation_ratio`` configuration options to be very high values, e.g.
   9999.0.
+* Users of CellsV1 will need to deploy a placement per cell, matching
+  the scope and cardinality of the regular ``nova-scheduler`` process.
 
 
 REST API
