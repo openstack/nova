@@ -53,8 +53,8 @@ any of the list of aggregates provided using a ``member_of`` query parameter:
 
 * /resource_providers?member_of=in:{agg1_uuid},{agg2_uuid},{agg3_uuid}
 
-1.4 -- Filter resource providers having requested resource capacity
--------------------------------------------------------------------
+1.4 Filter resource providers by requested resource capacity (Maximum in Ocata)
+-------------------------------------------------------------------------------
 
 The 1.4 version adds support for querying resource providers that have the
 ability to serve a requested set of resources. A new "resources" query string
