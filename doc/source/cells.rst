@@ -442,6 +442,112 @@ database. This will set up a single cell Nova deployment.
           so you must be sure to configure it on all of your nova-scheduler
           hosts.
 
+Upgrade with Cells V1
+~~~~~~~~~~~~~~~~~~~~~
+
+You are upgrading an existing Nova install that has Cells V1 enabled and have
+compute hosts in your databases. This will set up a multiple cell Nova
+deployment. At this time, it is recommended to keep Cells V1 enabled during and
+after the upgrade as multiple Cells V2 cell support is not fully finished and
+may not work properly in all scenarios. These upgrade steps will help ensure a
+simple cutover from Cells V1 to Cells V2 in the future.
+
+1. If you haven't already created a cell0 database in a prior release,
+   create a database for cell0. If you are going to pass the database
+   connection url on the command line in step 2, you can name the cell0
+   database whatever you want. If you are not going to pass the database url on
+   the command line in step 2, you need to name the cell0 database based on the
+   name of your existing Nova database: <Nova database name>_cell0. For
+   example, if your Nova database is named ``nova``, then your cell0 database
+   should be named ``nova_cell0``.
+
+2. Run the ``map_cell0`` command to create and map cell0::
+
+     nova-manage cell_v2 map_cell0 \
+       --database_connection <database connection url>
+
+   The database connection url is generated based on the
+   ``[database]/connection`` setting in the Nova configuration file if not
+   specified on the command line.
+
+3. Run ``nova-manage db sync`` to populate the cell0 database with a schema.
+   The ``db sync`` command reads the database connection for cell0 that was
+   created in step 2.
+
+4. Run the ``create_cell`` command to create cells which will contain your
+   compute hosts::
+
+     nova-manage cell_v2 create_cell --name <cell name> \
+       --transport-url <transport url for message queue> \
+       --database_connection <database connection url>
+
+   You will need to repeat this step for each cell in your deployment. Your
+   existing cell database will be re-used -- this simply informs the top-level
+   API database about your existing cell databases.
+
+   It is a good idea to specify a name for the new cell you create so you can
+   easily look up cell uuids with the ``list_cells`` command later if needed.
+
+   The transport url is taken from the ``[DEFAULT]/transport_url`` setting in
+   the Nova configuration file if not specified on the command line. The
+   database url is taken from the ``[database]/connection`` setting in the Nova
+   configuration file if not specified on the command line. If you are not
+   going to specify ``--database_connection`` and ``--transport-url`` on the
+   command line, be sure to specify your existing cell Nova configuration
+   file::
+
+     nova-manage --config-file <cell nova.conf> cell_v2 create_cell \
+       --name <cell name>
+
+5. Run the ``discover_hosts`` command to map compute hosts to cells::
+
+     nova-manage cell_v2 discover_hosts --cell_uuid <cell uuid>
+
+   You will need to repeat this step for each cell in your deployment unless
+   you omit the ``--cell_uuid`` option. If the cell uuid is not specified on
+   the command line, ``discover_hosts`` will search for compute hosts in each
+   cell database and map them to the corresponding cell. You can use the
+   ``list_cells`` command to look up cell uuids if you are going to specify
+   ``--cell_uuid``.
+
+   You can also configure a periodic task to have Nova discover new hosts
+   automatically by setting the
+   ``[scheduler]/discover_hosts_in_cells_interval`` to a time interval in
+   seconds. The periodic task is run by the nova-scheduler service, so you must
+   be sure to configure it on all of your nova-scheduler hosts.
+
+6. Run the ``map_instances`` command to map instances to cells::
+
+     nova-manage cell_v2 map_instances --cell_uuid <cell uuid> \
+       --max-count <max count>
+
+   You will need to repeat this step for each cell in your deployment. You can
+   use the ``list_cells`` command to look up cell uuids.
+
+   The ``--max-count`` option can be specified if you would like to limit the
+   number of instances to map in a single run. If ``--max-count`` is not
+   specified, all instances will be mapped. Repeated runs of the command will
+   start from where the last run finished so it is not necessary to increase
+   ``--max-count`` to finish. An exit code of 0 indicates that all instances
+   have been mapped. An exit code of 1 indicates that there are remaining
+   instances that need to be mapped.
+
+.. note:: Remember: In the future, whenever you add new compute hosts, you
+          will need to run the ``discover_hosts`` command after starting them
+          to map them to a cell if you did not configure the automatic host
+          discovery in step 5.
+
+Adding a new cell to an existing deployment
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To expand your deployment with a new cell, first follow the usual steps for
+standing up a new Cells V1 cell. After that is finished, follow step 4 in
+`Upgrade with Cells V1`_ to create a new Cells V2 cell for it. If you have
+added new compute hosts for the new cell, you will also need to run the
+``discover_hosts`` command after starting them to map them to the new cell if
+you did not configure the automatic host discovery as described in step 5 in
+`Upgrade with Cells V1`_.
+
 References
 ~~~~~~~~~~
 
