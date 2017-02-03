@@ -52,7 +52,18 @@ tests:
   response_json_paths:
       $.errors[0].title: Bad Request
 
-- name: post an invalid inventory
+- name: post an inventory with no total specified
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: DISK_GB
+  status: 400
+  response_strings:
+      - JSON does not validate
+      - "'total' is a required property"
+
+- name: post a negative inventory
   POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
   request_headers:
       content-type: application/json
@@ -61,9 +72,76 @@ tests:
       total: -1
   status: 400
   response_strings:
-      - Bad inventory DISK_GB for resource provider $ENVIRON['RP_UUID']
-  response_json_paths:
-      $.errors[0].title: Bad Request
+      - JSON does not validate
+      - -1 is less than the minimum of 1
+
+- name: post an inventory with invalid total
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: DISK_GB
+      total: 0
+      reserved: 512
+      min_unit: 1
+      max_unit: 1024
+      step_size: 10
+      allocation_ratio: 1.0
+  status: 400
+  response_strings:
+      - "JSON does not validate: 0 is less than the minimum of 1"
+      - "Failed validating 'minimum' in schema['properties']['total']"
+
+- name: post an inventory invalid min_unit
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: DISK_GB
+      total: 2048
+      reserved: 512
+      min_unit: 0
+      max_unit: 1024
+      step_size: 10
+      allocation_ratio: 1.0
+  status: 400
+  response_strings:
+      - "JSON does not validate: 0 is less than the minimum of 1"
+      - "Failed validating 'minimum' in schema['properties']['min_unit']"
+
+- name: post an inventory invalid max_unit
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: DISK_GB
+      total: 2048
+      reserved: 512
+      min_unit: 10
+      max_unit: 0
+      step_size: 10
+      allocation_ratio: 1.0
+  status: 400
+  response_strings:
+      - "JSON does not validate: 0 is less than the minimum of 1"
+      - "Failed validating 'minimum' in schema['properties']['max_unit']"
+
+- name: post an inventory invalid step_size
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: DISK_GB
+      total: 2048
+      reserved: 512
+      min_unit: 10
+      max_unit: 1024
+      step_size: 0
+      allocation_ratio: 1.0
+  status: 400
+  response_strings:
+      - "JSON does not validate: 0 is less than the minimum of 1"
+      - "Failed validating 'minimum' in schema['properties']['step_size']"
 
 - name: post an inventory
   POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
