@@ -469,8 +469,8 @@ user documentation.
   an aggregate. The `os-aggregates` API resource endpoint remains an
   administrator-only API.
 
-2.42
-----
+2.42 (Maximum in Ocata)
+-----------------------
 
   In the context of device tagging at server create time, a bug has caused the
   tag attribute to no longer be accepted for networks starting with version
