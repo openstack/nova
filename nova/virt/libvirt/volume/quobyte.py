@@ -19,6 +19,7 @@ import os
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import fileutils
+import psutil
 import six
 
 import nova.conf
@@ -42,12 +43,15 @@ def mount_volume(volume, mnt_base, configfile=None):
     """Wraps execute calls for mounting a Quobyte volume"""
     fileutils.ensure_tree(mnt_base)
 
-    command = ['mount.quobyte', volume, mnt_base]
+    # NOTE(kaisers): disable xattrs to speed up io as this omits
+    # additional metadata requests in the backend. xattrs can be
+    # enabled without issues but will reduce performance.
+    command = ['mount.quobyte', '--disable-xattrs', volume, mnt_base]
     if os.path.exists(" /run/systemd/system"):
         # Note(kaisers): with systemd this requires a separate CGROUP to
         # prevent Nova service stop/restarts from killing the mount.
-        command = ['systemd-run', '--scope', '--user', 'mount.quobyte', volume,
-                   mnt_base]
+        command = ['systemd-run', '--scope', '--user', 'mount.quobyte',
+                   '--disable-xattrs', volume, mnt_base]
     if configfile:
         command.extend(['-c', configfile])
 
@@ -70,21 +74,32 @@ def umount_volume(mnt_base):
                           mnt_base)
 
 
-def validate_volume(mnt_base):
-    """Wraps execute calls for checking validity of a Quobyte volume"""
-    command = ['getfattr', "-n", "quobyte.info", mnt_base]
-    try:
-        utils.execute(*command)
-    except processutils.ProcessExecutionError as exc:
-        msg = (_("The mount %(mount_path)s is not a valid"
-                 " Quobyte volume. Error: %(exc)s")
-               % {'mount_path': mnt_base, 'exc': exc})
-        raise nova_exception.InternalError(msg)
-
-    if not os.access(mnt_base, os.W_OK | os.X_OK):
-        msg = _("Volume is not writable. Please broaden the file"
-                " permissions. Mount: %s") % mnt_base
-        raise nova_exception.InternalError(msg)
+def validate_volume(mount_path):
+    """Runs a number of tests to be sure this is a (working) Quobyte mount"""
+    partitions = psutil.disk_partitions(all=True)
+    for p in partitions:
+        if mount_path != p.mountpoint:
+            continue
+        if p.device.startswith("quobyte@"):
+            statresult = os.stat(mount_path)
+            # Note(kaisers): Quobyte always shows mount points with size 0
+            if statresult.st_size == 0:
+                # client looks healthy
+                return  # we're happy here
+            else:
+                msg = (_("The mount %(mount_path)s is not a "
+                         "valid Quobyte volume. Stale mount?")
+                       % {'mount_path': mount_path})
+            raise nova_exception.InvalidVolume(msg)
+        else:
+            msg = (_("The mount %(mount_path)s is not a valid"
+                     " Quobyte volume according to partition list.")
+                   % {'mount_path': mount_path})
+            raise nova_exception.InvalidVolume(msg)
+    msg = (_("No matching Quobyte mount entry for %(mount_path)s"
+             " could be found for validation in partition list.")
+           % {'mount_path': mount_path})
+    raise nova_exception.InvalidVolume(msg)
 
 
 class LibvirtQuobyteVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):

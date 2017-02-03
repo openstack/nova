@@ -1,0 +1,6 @@
+---
+
+fixes:
+  - |
+    The i/o performance for Quobyte volumes has been increased significantly
+    by disabling xattrs.
