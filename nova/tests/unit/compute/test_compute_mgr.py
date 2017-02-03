@@ -2165,6 +2165,31 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                      inst_obj, vif2)
         do_test()
 
+    def test_process_instance_vif_deleted_event_not_implemented_error(self):
+        """Tests the case where driver.detach_interface raises
+        NotImplementedError.
+        """
+        vif = fake_network_cache_model.new_vif()
+        nw_info = network_model.NetworkInfo([vif])
+        info_cache = objects.InstanceInfoCache(network_info=nw_info,
+                                               instance_uuid=uuids.instance)
+        inst_obj = objects.Instance(id=3, uuid=uuids.instance,
+                                    info_cache=info_cache)
+
+        @mock.patch.object(manager.base_net_api,
+                           'update_instance_cache_with_nw_info')
+        @mock.patch.object(self.compute.driver, 'detach_interface',
+                           side_effect=NotImplementedError)
+        def do_test(detach_interface, update_instance_cache_with_nw_info):
+            self.compute._process_instance_vif_deleted_event(
+                self.context, inst_obj, vif['id'])
+            update_instance_cache_with_nw_info.assert_called_once_with(
+                self.compute.network_api, self.context, inst_obj, nw_info=[])
+            detach_interface.assert_called_once_with(
+                self.context, inst_obj, vif)
+
+        do_test()
+
     def test_external_instance_event(self):
         instances = [
             objects.Instance(id=1, uuid=uuids.instance_1),

@@ -6791,6 +6791,10 @@ class ComputeManager(manager.Manager):
                                  nw_info=network_info)
                 try:
                     self.driver.detach_interface(context, instance, vif)
+                except NotImplementedError:
+                    # Not all virt drivers support attach/detach of interfaces
+                    # yet (like Ironic), so just ignore this.
+                    pass
                 except exception.NovaException as ex:
                     LOG.warning(_LW("Detach interface failed, "
                                     "port_id=%(port_id)s, reason: %(msg)s"),
