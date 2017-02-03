@@ -268,6 +268,13 @@ class UpgradeCommands(object):
         This check relies on the placement service running because if it's not
         then there won't be any resource providers for the filter scheduler to
         use during instance build and move requests.
+
+        Note that in Ocata, the filter scheduler will only use placement if
+        the minimum nova-compute service version in the deployment is >= 16
+        which signals when nova-compute will fail to start if placement is not
+        configured on the compute. Otherwise the scheduler will fallback
+        to pulling compute nodes from the database directly as it has always
+        done. That fallback will be removed in Pike.
         """
 
         # Get the total count of resource providers from the API DB that can
@@ -290,9 +297,11 @@ class UpgradeCommands(object):
         if num_rps == 0:
 
             if num_computes != 0:
-                # This is a failure because there are compute nodes in the
+                # This is a warning because there are compute nodes in the
                 # database but nothing is reporting resource providers to the
-                # placement service.
+                # placement service. This will not result in scheduling
+                # failures in Ocata because of the fallback that is in place
+                # but we signal it as a warning since there is work to do.
                 msg = (_('There are no compute resource providers in the '
                          'Placement service but there are %(num_computes)s '
                          'compute nodes in the deployment. This means no '
@@ -301,7 +310,7 @@ class UpgradeCommands(object):
                          '%(placement_docs_link)s for more details.') %
                        {'num_computes': num_computes,
                         'placement_docs_link': PLACEMENT_DOCS_LINK})
-                return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
+                return UpgradeCheckResult(UpgradeCheckCode.WARNING, msg)
 
             # There are no resource providers and no compute nodes so we
             # assume this is a fresh install and move on. We should return a
@@ -317,6 +326,11 @@ class UpgradeCommands(object):
         elif num_rps < num_computes:
             # There are fewer resource providers than compute nodes, so return
             # a warning explaining that the deployment might be underutilized.
+            # Technically this is not going to result in scheduling failures in
+            # Ocata because of the fallback that is in place if there are older
+            # compute nodes still, but it is probably OK to leave the wording
+            # on this as-is to prepare for when the fallback is removed in
+            # Pike.
             msg = (_('There are %(num_resource_providers)s compute resource '
                      'providers and %(num_compute_nodes)s compute nodes in '
                      'the deployment. Ideally the number of compute resource '
