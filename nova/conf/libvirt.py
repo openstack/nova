@@ -736,7 +736,13 @@ Use multipath connection of the iSCSI or FC volume
 
 Volumes can be connected in the LibVirt as multipath devices. This will
 provide high availability and fault tolerance.
-""")
+"""),
+    cfg.IntOpt('num_volume_scan_tries',
+               deprecated_name='num_iscsi_scan_tries',
+               default=5,
+               help="""
+Number of times to scan given storage protocol to find volume.
+"""),
 ]
 
 libvirt_volume_aoe_opts = [
@@ -760,15 +766,7 @@ compute node.
 """)
 ]
 
-# TODO(sneti): This config option is also used for other protocols like
-# fibrechannel, scaleio, disco. So this should be renamed to
-# num_volume_scan_tries
 libvirt_volume_iscsi_opts = [
-    cfg.IntOpt('num_iscsi_scan_tries',
-               default=5,
-               help="""
-Number of times to scan iSCSI target to find volume.
-"""),
     cfg.StrOpt('iscsi_iface',
                deprecated_name='iscsi_transport',
                help="""
