@@ -781,6 +781,21 @@ class AssistedSnapshotCreateTestCaseV21(test.NoDBTestCase):
         self.assertRaises(self.bad_request, self.controller.create,
                 req, body=body)
 
+    @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume',
+                side_effect=exception.VolumeBDMIsMultiAttach(volume_id='1'))
+    def test_assisted_create_multiattach_fails(self, bdm_get_by_volume):
+        # unset the stub on volume_snapshot_create from setUp
+        self.mox.UnsetStubs()
+        req = fakes.HTTPRequest.blank('/v2/fake/os-assisted-volume-snapshots')
+        body = {'snapshot':
+                   {'volume_id': '1',
+                    'create_info': {'type': 'qcow2',
+                                    'new_file': 'new_file',
+                                    'snapshot_id': 'snapshot_id'}}}
+        req.method = 'POST'
+        self.assertRaises(
+            webob.exc.HTTPBadRequest, self.controller.create, req, body=body)
+
 
 class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
     assisted_snaps = assisted_snaps_v21
