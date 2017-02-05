@@ -175,6 +175,13 @@ def _extract_inventory_in_use(body):
     return None
 
 
+def get_placement_request_id(response):
+    if response is not None:
+        return response.headers.get(
+            'openstack-request-id',
+            response.headers.get('x-openstack-request-id'))
+
+
 class SchedulerReportClient(object):
     """Client class for updating the scheduler."""
 
@@ -468,8 +475,12 @@ class SchedulerReportClient(object):
         url = '/resource_providers/%s/inventories' % rp_uuid
         result = self.put(url, payload)
         if result.status_code == 409:
-            LOG.info(_LI('Inventory update conflict for %s'),
-                     rp_uuid)
+            LOG.info(_LI('[%(placement_req_id)s] Inventory update conflict '
+                         'for %(resource_provider_uuid)s with generation ID '
+                         '%(generation_id)s'),
+                     {'placement_req_id': get_placement_request_id(result),
+                      'resource_provider_uuid': rp_uuid,
+                      'generation_id': cur_rp_gen})
             # NOTE(jaypipes): There may be cases when we try to set a
             # provider's inventory that results in attempting to delete an
             # inventory record for a resource class that has an active
@@ -515,19 +526,30 @@ class SchedulerReportClient(object):
             self._ensure_resource_provider(rp_uuid)
             return False
         elif not result:
-            LOG.warning(_LW('Failed to update inventory for resource provider '
+            placement_req_id = get_placement_request_id(result)
+            LOG.warning(_LW('[%(placement_req_id)s] Failed to update '
+                            'inventory for resource provider '
                             '%(uuid)s: %(status)i %(text)s'),
-                        {'uuid': rp_uuid,
+                        {'placement_req_id': placement_req_id,
+                         'uuid': rp_uuid,
                          'status': result.status_code,
                          'text': result.text})
+            # log the body at debug level
+            LOG.debug('[%(placement_req_id)s] Failed inventory update request '
+                      'for resource provider %(uuid)s with body: %(payload)s',
+                      {'placement_req_id': placement_req_id,
+                       'uuid': rp_uuid,
+                       'payload': payload})
             return False
 
         if result.status_code != 200:
+            placement_req_id = get_placement_request_id(result)
             LOG.info(
-                _LI('Received unexpected response code %(code)i while '
-                    'trying to update inventory for resource provider %(uuid)s'
-                    ': %(text)s'),
-                {'uuid': rp_uuid,
+                _LI('[%(placement_req_id)s] Received unexpected response code '
+                    '%(code)i while trying to update inventory for resource '
+                    'provider %(uuid)s: %(text)s'),
+                {'placement_req_id': placement_req_id,
+                 'uuid': rp_uuid,
                  'code': result.status_code,
                  'text': result.text})
             return False
