@@ -695,7 +695,6 @@ def _check_capacity_exceeded(conn, allocs):
     provider_uuids = set([a.resource_provider.uuid for a in allocs])
 
     usage = sa.select([_ALLOC_TBL.c.resource_provider_id,
-                       _ALLOC_TBL.c.consumer_id,
                        _ALLOC_TBL.c.resource_class_id,
                        sql.func.sum(_ALLOC_TBL.c.used).label('used')])
     usage = usage.where(_ALLOC_TBL.c.resource_class_id.in_(res_classes))
