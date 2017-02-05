@@ -153,6 +153,10 @@ See `Running Python Unit Tests`_.
 
 .. _`Running Python Unit Tests`: http://docs.openstack.org/infra/manual/python.html#running-python-unit-tests
 
+Note that some unit and functional tests use a database. See the file
+``tools/test-setup.sh`` on how the databases are set up in the
+OpenStack CI environment and replicate it in your test environment.
+
 Using a remote debugger
 =======================
 
