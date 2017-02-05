@@ -4038,22 +4038,38 @@ class API(base.Base):
     def volume_snapshot_create(self, context, volume_id, create_info):
         bdm = objects.BlockDeviceMapping.get_by_volume(
                 context, volume_id, expected_attrs=['instance'])
-        self.compute_rpcapi.volume_snapshot_create(context, bdm.instance,
-                volume_id, create_info)
-        snapshot = {
-            'snapshot': {
-                'id': create_info.get('id'),
-                'volumeId': volume_id
+
+        # We allow creating the snapshot in any vm_state as long as there is
+        # no task being performed on the instance and it has a host.
+        @check_instance_host
+        @check_instance_state(vm_state=None)
+        def do_volume_snapshot_create(self, context, instance):
+            self.compute_rpcapi.volume_snapshot_create(context, instance,
+                    volume_id, create_info)
+            snapshot = {
+                'snapshot': {
+                    'id': create_info.get('id'),
+                    'volumeId': volume_id
+                }
             }
-        }
-        return snapshot
+            return snapshot
+
+        return do_volume_snapshot_create(self, context, bdm.instance)
 
     def volume_snapshot_delete(self, context, volume_id, snapshot_id,
                                delete_info):
         bdm = objects.BlockDeviceMapping.get_by_volume(
                 context, volume_id, expected_attrs=['instance'])
-        self.compute_rpcapi.volume_snapshot_delete(context, bdm.instance,
-                volume_id, snapshot_id, delete_info)
+
+        # We allow deleting the snapshot in any vm_state as long as there is
+        # no task being performed on the instance and it has a host.
+        @check_instance_host
+        @check_instance_state(vm_state=None)
+        def do_volume_snapshot_delete(self, context, instance):
+            self.compute_rpcapi.volume_snapshot_delete(context, instance,
+                    volume_id, snapshot_id, delete_info)
+
+        do_volume_snapshot_delete(self, context, bdm.instance)
 
     def external_instance_event(self, context, instances, mappings, events):
         # NOTE(danms): The external API consumer just provides events,

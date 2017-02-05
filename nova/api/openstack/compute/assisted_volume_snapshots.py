@@ -57,6 +57,13 @@ class AssistedVolumeSnapshotsController(wsgi.Controller):
                 exception.VolumeBDMIsMultiAttach,
                 exception.InvalidVolume) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
+        except (exception.InstanceInvalidState,
+                exception.InstanceNotReady) as e:
+            # TODO(mriedem) InstanceInvalidState and InstanceNotReady would
+            # normally result in a 409 but that would require bumping the
+            # microversion, which we should just do in a single microversion
+            # across all APIs when we fix status code wrinkles.
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
     @wsgi.response(204)
     @extensions.expected_errors((400, 404))
@@ -82,6 +89,13 @@ class AssistedVolumeSnapshotsController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except exception.NotFound as e:
             return exc.HTTPNotFound(explanation=e.format_message())
+        except (exception.InstanceInvalidState,
+                exception.InstanceNotReady) as e:
+            # TODO(mriedem) InstanceInvalidState and InstanceNotReady would
+            # normally result in a 409 but that would require bumping the
+            # microversion, which we should just do in a single microversion
+            # across all APIs when we fix status code wrinkles.
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
 
 class AssistedVolumeSnapshots(extensions.V21APIExtensionBase):
