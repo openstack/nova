@@ -1,0 +1,16 @@
+---
+issues:
+  - |
+    The live-migration progress timeout controlled by the configuration option
+    ``[libvirt]/live_migration_progress_timeout`` has been discovered to
+    frequently cause live-migrations to fail with a progress timeout error,
+    even though the live-migration is still making good progress.
+    To minimize problems caused by these checks we have changed the default
+    to 0, which means do not trigger a timeout.
+    To modify when a live-migration will fail with a timeout error, please now
+    look at ``[libvirt]/live_migration_completion_timeout`` and
+    ``[libvirt]/live_migration_downtime``.
+deprecations:
+  - |
+    ``[libvirt]/live_migration_progress_timeout`` has been deprecated as this
+    feature has been found not to work. See bug 1644248 for more details.
