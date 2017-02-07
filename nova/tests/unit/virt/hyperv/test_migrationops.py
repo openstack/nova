@@ -446,7 +446,7 @@ class MigrationOpsTestCase(test_base.HyperVBaseTestCase):
             mock_instance.name, get_image_vm_gen.return_value,
             block_device_info)
         self._migrationops._vmops.power_on.assert_called_once_with(
-            mock_instance)
+            mock_instance, network_info=mock.sentinel.network_info)
 
     def test_finish_migration(self):
         self._check_finish_migration(disk_type=constants.DISK)
