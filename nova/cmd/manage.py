@@ -1496,6 +1496,49 @@ class CellV2Commands(object):
         cell_mapping.destroy()
         return 0
 
+    @args('--cell_uuid', metavar='<cell_uuid>', dest='cell_uuid',
+          required=True, help=_('The uuid of the cell to update.'))
+    @args('--name', metavar='<name>', dest='name',
+          help=_('Set the cell name.'))
+    @args('--transport-url', metavar='<transport>', dest='transport_url',
+          help=_('Set the cell transport_url. NOTE that running nodes '
+                 'will not see the change until restart!'))
+    @args('--database_connection', metavar='<database>', dest='db_connection',
+          help=_('Set the cell database_connection. NOTE that running nodes '
+                 'will not see the change until restart!'))
+    def update_cell(self, cell_uuid, name, transport_url, db_connection):
+        """Updates the properties of a cell by the given uuid.
+
+        If the cell is not found by uuid, this command will return an exit
+        code of 1. If the properties cannot be set, this will return 2.
+        Otherwise, the exit code will be 0.
+
+        NOTE: Updating the transport_url or database_connection fields on
+        a running system will NOT result in all nodes immediately using the
+        new values. Use caution when changing these values.
+        """
+        ctxt = context.get_admin_context()
+        try:
+            cell_mapping = objects.CellMapping.get_by_uuid(ctxt, cell_uuid)
+        except exception.CellMappingNotFound:
+            print(_('Cell with uuid %s was not found.') % cell_uuid)
+            return 1
+
+        if name:
+            cell_mapping.name = name
+        if transport_url:
+            cell_mapping.transport_url = transport_url
+        if db_connection:
+            cell_mapping.database_connection = db_connection
+
+        try:
+            cell_mapping.save()
+        except Exception as e:
+            print(_('Unable to update CellMapping: %s') % e)
+            return 2
+
+        return 0
+
 
 CATEGORIES = {
     'account': AccountCommands,
