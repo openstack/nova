@@ -915,11 +915,17 @@ class LibvirtDriver(driver.ComputeDriver):
                 support_uefi = self._has_uefi_support()
                 guest.delete_configuration(support_uefi)
             except libvirt.libvirtError as e:
-                with excutils.save_and_reraise_exception():
+                with excutils.save_and_reraise_exception() as ctxt:
                     errcode = e.get_error_code()
-                    LOG.error(_LE('Error from libvirt during undefine. '
-                                  'Code=%(errcode)s Error=%(e)s'),
-                              {'errcode': errcode, 'e': e}, instance=instance)
+                    if errcode == libvirt.VIR_ERR_NO_DOMAIN:
+                        LOG.debug("Called undefine, but domain already gone.",
+                                  instance=instance)
+                        ctxt.reraise = False
+                    else:
+                        LOG.error(_LE('Error from libvirt during undefine. '
+                                      'Code=%(errcode)s Error=%(e)s'),
+                                  {'errcode': errcode, 'e': e},
+                                  instance=instance)
         except exception.InstanceNotFound:
             pass
 
