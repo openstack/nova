@@ -1019,6 +1019,10 @@ class API(base_api.NetworkAPI):
             self._refresh_neutron_extensions_cache(context, neutron=neutron)
         return constants.AUTO_ALLOCATE_TOPO_EXT in self.extensions
 
+    def _has_multi_provider_extension(self, context, neutron=None):
+        self._refresh_neutron_extensions_cache(context, neutron=neutron)
+        return constants.MULTI_NET_EXT in self.extensions
+
     def _get_pci_device_profile(self, pci_dev):
         dev_spec = self.pci_whitelist.get_devspec(pci_dev)
         if dev_spec:
@@ -1402,6 +1406,37 @@ class API(base_api.NetworkAPI):
         raise exception.FixedIpNotFoundForSpecificInstance(
                 instance_uuid=instance.uuid, ip=address)
 
+    def _get_phynet_info(self, context, neutron, net_id):
+        phynet_name = None
+        if self._has_multi_provider_extension(context, neutron=neutron):
+            network = neutron.show_network(net_id,
+                                           fields='segments').get('network')
+            segments = network.get('segments', {})
+            for net in segments:
+                # NOTE(vladikr): In general, "multi-segments" network is a
+                # combination of L2 segments. The current implementation
+                # contains a vxlan and vlan(s) segments, where only a vlan
+                # network will have a physical_network specified, but may
+                # change in the future. The purpose of this method
+                # is to find a first segment that provides a physical network.
+                # TODO(vladikr): Additional work will be required to handle the
+                # case of multiple vlan segments associated with different
+                # physical networks.
+                phynet_name = net.get('provider:physical_network')
+                if phynet_name:
+                    return phynet_name
+            # Raising here as at least one segment should
+            # have a physical network provided.
+            if segments:
+                msg = (_("None of the segments of network %s provides a "
+                         "physical_network") % net_id)
+                raise exception.NovaException(message=msg)
+
+        net = neutron.show_network(net_id,
+                        fields='provider:physical_network').get('network')
+        phynet_name = net.get('provider:physical_network')
+        return phynet_name
+
     def _get_port_vnic_info(self, context, neutron, port_id):
         """Retrieve port vnic info
 
@@ -1415,9 +1450,7 @@ class API(base_api.NetworkAPI):
                              network_model.VNIC_TYPE_NORMAL)
         if vnic_type in network_model.VNIC_TYPES_SRIOV:
             net_id = port['network_id']
-            net = neutron.show_network(net_id,
-                fields='provider:physical_network').get('network')
-            phynet_name = net.get('provider:physical_network')
+            phynet_name = self._get_phynet_info(context, neutron, net_id)
         return vnic_type, phynet_name
 
     def create_pci_requests_for_sriov_ports(self, context, pci_requests,
