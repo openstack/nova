@@ -48,302 +48,296 @@ class LibvirtVifTestCase(test.NoDBTestCase):
     gateway_bridge_4 = network_model.IP(address='101.168.1.1', type='gateway')
     dns_bridge_4 = network_model.IP(address='8.8.8.8', type=None)
     ips_bridge_4 = [network_model.IP(address='101.168.1.9', type=None)]
-    subnet_bridge_4 = network_model.Subnet(cidr='101.168.1.0/24',
-                                           dns=[dns_bridge_4],
-                                           gateway=gateway_bridge_4,
-                                           routes=None,
-                                           dhcp_server='191.168.1.1')
+    subnet_bridge_4 = network_model.Subnet(
+        cidr='101.168.1.0/24',
+        dns=[dns_bridge_4],
+        gateway=gateway_bridge_4,
+        routes=None,
+        dhcp_server='191.168.1.1')
 
     gateway_bridge_6 = network_model.IP(address='101:1db9::1', type='gateway')
     subnet_bridge_6 = network_model.Subnet(cidr='101:1db9::/64',
-                                           dns=None,
-                                           gateway=gateway_bridge_6,
-                                           ips=None,
-                                           routes=None)
+        dns=None,
+        gateway=gateway_bridge_6,
+        ips=None,
+        routes=None)
 
     network_bridge = network_model.Network(id='network-id-xxx-yyy-zzz',
-                                           bridge='br0',
-                                           label=None,
-                                           subnets=[subnet_bridge_4,
-                                                    subnet_bridge_6],
-                                           bridge_interface='eth0',
-                                           vlan=99, mtu=9000)
+        bridge='br0',
+        label=None,
+        subnets=[subnet_bridge_4, subnet_bridge_6],
+        bridge_interface='eth0',
+        vlan=99, mtu=9000)
 
     vif_bridge = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                   address='ca:fe:de:ad:be:ef',
-                                   network=network_bridge,
-                                   type=network_model.VIF_TYPE_BRIDGE,
-                                   devname='tap-xxx-yyy-zzz',
-                                   ovs_interfaceid=None)
+        address='ca:fe:de:ad:be:ef',
+        network=network_bridge,
+        type=network_model.VIF_TYPE_BRIDGE,
+        devname='tap-xxx-yyy-zzz',
+        ovs_interfaceid=None)
 
     network_bridge_neutron = network_model.Network(id='network-id-xxx-yyy-zzz',
-                                                   bridge=None,
-                                                   label=None,
-                                                   subnets=[subnet_bridge_4,
-                                                            subnet_bridge_6],
-                                                   bridge_interface='eth0',
-                                                   vlan=99)
+        bridge=None,
+        label=None,
+        subnets=[subnet_bridge_4, subnet_bridge_6],
+        bridge_interface='eth0',
+        vlan=99)
 
     vif_bridge_neutron = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                           address='ca:fe:de:ad:be:ef',
-                                           network=network_bridge_neutron,
-                                           type=None,
-                                           devname='tap-xxx-yyy-zzz',
-                                           ovs_interfaceid='aaa-bbb-ccc')
+        address='ca:fe:de:ad:be:ef',
+        network=network_bridge_neutron,
+        type=None,
+        devname='tap-xxx-yyy-zzz',
+        ovs_interfaceid='aaa-bbb-ccc')
 
     network_ovs = network_model.Network(id='network-id-xxx-yyy-zzz',
-                                        bridge='br0',
-                                        label=None,
-                                        subnets=[subnet_bridge_4,
-                                                 subnet_bridge_6],
-                                        bridge_interface=None,
-                                        vlan=99, mtu=1000)
+        bridge='br0',
+        label=None,
+        subnets=[subnet_bridge_4, subnet_bridge_6],
+        bridge_interface=None,
+        vlan=99, mtu=1000)
 
     network_ivs = network_model.Network(id='network-id-xxx-yyy-zzz',
-                                        bridge='br0',
-                                        label=None,
-                                        subnets=[subnet_bridge_4,
-                                                 subnet_bridge_6],
-                                        bridge_interface=None,
-                                        vlan=99)
+        bridge='br0',
+        label=None,
+        subnets=[subnet_bridge_4, subnet_bridge_6],
+        bridge_interface=None,
+        vlan=99)
 
     vif_ovs = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                address='ca:fe:de:ad:be:ef',
-                                network=network_ovs,
-                                type=network_model.VIF_TYPE_OVS,
-                                devname='tap-xxx-yyy-zzz',
-                                ovs_interfaceid='aaa-bbb-ccc')
+        address='ca:fe:de:ad:be:ef',
+        network=network_ovs,
+        type=network_model.VIF_TYPE_OVS,
+        devname='tap-xxx-yyy-zzz',
+        ovs_interfaceid='aaa-bbb-ccc')
 
     vif_ovs_hybrid = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                       address='ca:fe:de:ad:be:ef',
-                                       network=network_ovs,
-                                       type=network_model.VIF_TYPE_OVS,
-                                       details={'ovs_hybrid_plug': True,
-                                                'port_filter': True},
-                                       devname='tap-xxx-yyy-zzz',
-                                       ovs_interfaceid='aaa-bbb-ccc')
+        address='ca:fe:de:ad:be:ef',
+        network=network_ovs,
+        type=network_model.VIF_TYPE_OVS,
+        details={'ovs_hybrid_plug': True,
+                 'port_filter': True},
+        devname='tap-xxx-yyy-zzz',
+        ovs_interfaceid='aaa-bbb-ccc')
 
     vif_ovs_filter_cap = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                           address='ca:fe:de:ad:be:ef',
-                                           network=network_ovs,
-                                           type=network_model.VIF_TYPE_OVS,
-                                           details={'port_filter': True},
-                                           devname='tap-xxx-yyy-zzz',
-                                           ovs_interfaceid='aaa-bbb-ccc')
+        address='ca:fe:de:ad:be:ef',
+        network=network_ovs,
+        type=network_model.VIF_TYPE_OVS,
+        details={'port_filter': True},
+        devname='tap-xxx-yyy-zzz',
+        ovs_interfaceid='aaa-bbb-ccc')
 
     vif_ovs_legacy = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                       address='ca:fe:de:ad:be:ef',
-                                       network=network_ovs,
-                                       type=None,
-                                       devname=None,
-                                       ovs_interfaceid=None)
+        address='ca:fe:de:ad:be:ef',
+        network=network_ovs,
+        type=None,
+        devname=None,
+        ovs_interfaceid=None)
 
     vif_ivs = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                address='ca:fe:de:ad:be:ef',
-                                network=network_ivs,
-                                type=network_model.VIF_TYPE_IVS,
-                                devname='tap-xxx-yyy-zzz',
-                                ovs_interfaceid='aaa-bbb-ccc')
+        address='ca:fe:de:ad:be:ef',
+        network=network_ivs,
+        type=network_model.VIF_TYPE_IVS,
+        devname='tap-xxx-yyy-zzz',
+        ovs_interfaceid='aaa-bbb-ccc')
 
     vif_ivs_legacy = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                       address='ca:fe:de:ad:be:ef',
-                                       network=network_ovs,
-                                       type=None,
-                                       devname=None,
-                                       ovs_interfaceid='aaa')
+        address='ca:fe:de:ad:be:ef',
+        network=network_ovs,
+        type=None,
+        devname=None,
+        ovs_interfaceid='aaa')
 
     vif_ivs_filter_direct = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                              address='ca:fe:de:ad:be:ef',
-                                              network=network_ivs,
-                                              type=network_model.VIF_TYPE_IVS,
-                                              details={'port_filter': True},
-                                              devname='tap-xxx-yyy-zzz',
-                                              ovs_interfaceid='aaa-bbb-ccc')
+        address='ca:fe:de:ad:be:ef',
+        network=network_ivs,
+        type=network_model.VIF_TYPE_IVS,
+        details={'port_filter': True},
+        devname='tap-xxx-yyy-zzz',
+        ovs_interfaceid='aaa-bbb-ccc')
 
     vif_ivs_filter_hybrid = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                              address='ca:fe:de:ad:be:ef',
-                                              network=network_ivs,
-                                              type=network_model.VIF_TYPE_IVS,
-                                              details={
-                                                  'port_filter': True,
-                                                  'ovs_hybrid_plug': True},
-                                              devname='tap-xxx-yyy-zzz',
-                                              ovs_interfaceid='aaa-bbb-ccc')
+        address='ca:fe:de:ad:be:ef',
+        network=network_ivs,
+        type=network_model.VIF_TYPE_IVS,
+        details={
+            'port_filter': True,
+            'ovs_hybrid_plug': True},
+        devname='tap-xxx-yyy-zzz',
+        ovs_interfaceid='aaa-bbb-ccc')
 
     vif_none = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                 address='ca:fe:de:ad:be:ef',
-                                 network=network_bridge,
-                                 type=None,
-                                 devname='tap-xxx-yyy-zzz',
-                                 ovs_interfaceid=None)
+        address='ca:fe:de:ad:be:ef',
+        network=network_bridge,
+        type=None,
+        devname='tap-xxx-yyy-zzz',
+        ovs_interfaceid=None)
 
     network_8021 = network_model.Network(id='network-id-xxx-yyy-zzz',
-                                         bridge=None,
-                                         label=None,
-                                         subnets=[subnet_bridge_4,
-                                                  subnet_bridge_6],
-                                         interface='eth0',
-                                         vlan=99)
+        bridge=None,
+        label=None,
+        subnets=[subnet_bridge_4,
+                 subnet_bridge_6],
+        interface='eth0',
+        vlan=99)
 
     vif_8021qbh = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                    address='ca:fe:de:ad:be:ef',
-                                    network=network_8021,
-                                    type=network_model.VIF_TYPE_802_QBH,
-                                    vnic_type=network_model.VNIC_TYPE_DIRECT,
-                                    ovs_interfaceid=None,
-                                    details={
-                                        network_model.VIF_DETAILS_PROFILEID:
-                                        'MyPortProfile'},
-                                    profile={'pci_vendor_info': '1137:0043',
-                                             'pci_slot': '0000:0a:00.1',
-                                             'physical_network': 'phynet1'})
+        address='ca:fe:de:ad:be:ef',
+        network=network_8021,
+        type=network_model.VIF_TYPE_802_QBH,
+        vnic_type=network_model.VNIC_TYPE_DIRECT,
+        ovs_interfaceid=None,
+        details={
+            network_model.VIF_DETAILS_PROFILEID:
+            'MyPortProfile'},
+        profile={'pci_vendor_info': '1137:0043',
+                 'pci_slot': '0000:0a:00.1',
+                 'physical_network': 'phynet1'})
 
     vif_hw_veb = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                   address='ca:fe:de:ad:be:ef',
-                                   network=network_8021,
-                                   type=network_model.VIF_TYPE_HW_VEB,
-                                   vnic_type=network_model.VNIC_TYPE_DIRECT,
-                                   ovs_interfaceid=None,
-                                   details={
-                                       network_model.VIF_DETAILS_VLAN: 100},
-                                   profile={'pci_vendor_info': '1137:0043',
-                                            'pci_slot': '0000:0a:00.1',
-                                            'physical_network': 'phynet1'})
+        address='ca:fe:de:ad:be:ef',
+        network=network_8021,
+        type=network_model.VIF_TYPE_HW_VEB,
+        vnic_type=network_model.VNIC_TYPE_DIRECT,
+        ovs_interfaceid=None,
+        details={
+            network_model.VIF_DETAILS_VLAN: 100},
+        profile={'pci_vendor_info': '1137:0043',
+                 'pci_slot': '0000:0a:00.1',
+                 'physical_network': 'phynet1'})
 
     vif_hostdev_physical = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                   address='ca:fe:de:ad:be:ef',
-                                   network=network_8021,
-                                   type=network_model.VIF_TYPE_HOSTDEV,
-                                   vnic_type=
-                                       network_model.VNIC_TYPE_DIRECT_PHYSICAL,
-                                   ovs_interfaceid=None,
-                                   profile={'pci_vendor_info': '1137:0043',
-                                            'pci_slot': '0000:0a:00.1',
-                                            'physical_network': 'phynet1'})
+        address='ca:fe:de:ad:be:ef',
+        network=network_8021,
+        type=network_model.VIF_TYPE_HOSTDEV,
+        vnic_type=network_model.VNIC_TYPE_DIRECT_PHYSICAL,
+        ovs_interfaceid=None,
+        profile={'pci_vendor_info': '1137:0043',
+                 'pci_slot': '0000:0a:00.1',
+                 'physical_network': 'phynet1'})
 
     vif_hw_veb_macvtap = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                    address='ca:fe:de:ad:be:ef',
-                                    network=network_8021,
-                                    type=network_model.VIF_TYPE_HW_VEB,
-                                    vnic_type=network_model.VNIC_TYPE_MACVTAP,
-                                    ovs_interfaceid=None,
-                                    details={
-                                      network_model.VIF_DETAILS_VLAN: 100},
-                                    profile={'pci_vendor_info': '1137:0043',
-                                             'pci_slot': '0000:0a:00.1',
-                                             'physical_network': 'phynet1'})
+        address='ca:fe:de:ad:be:ef',
+        network=network_8021,
+        type=network_model.VIF_TYPE_HW_VEB,
+        vnic_type=network_model.VNIC_TYPE_MACVTAP,
+        ovs_interfaceid=None,
+        details={network_model.VIF_DETAILS_VLAN: 100},
+        profile={'pci_vendor_info': '1137:0043',
+                 'pci_slot': '0000:0a:00.1',
+                 'physical_network': 'phynet1'})
 
     vif_8021qbg = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                    address='ca:fe:de:ad:be:ef',
-                                    network=network_8021,
-                                    type=network_model.VIF_TYPE_802_QBG,
-                                    ovs_interfaceid=None,
-                                    qbg_params=network_model.VIF8021QbgParams(
-                                    managerid="xxx-yyy-zzz",
-                                    typeid="aaa-bbb-ccc",
-                                    typeidversion="1",
-                                    instanceid="ddd-eee-fff"))
+        address='ca:fe:de:ad:be:ef',
+        network=network_8021,
+        type=network_model.VIF_TYPE_802_QBG,
+        ovs_interfaceid=None,
+        qbg_params=network_model.VIF8021QbgParams(
+        managerid="xxx-yyy-zzz",
+        typeid="aaa-bbb-ccc",
+        typeidversion="1",
+        instanceid="ddd-eee-fff"))
 
     network_midonet = network_model.Network(id='network-id-xxx-yyy-zzz',
-                                            label=None,
-                                            bridge=None,
-                                            subnets=[subnet_bridge_4],
-                                            interface='eth0')
+        label=None,
+        bridge=None,
+        subnets=[subnet_bridge_4],
+        interface='eth0')
 
     network_vrouter = network_model.Network(id='network-id-xxx-yyy-zzz',
-                                            label=None,
-                                            bridge=None,
-                                            subnets=[subnet_bridge_4,
-                                                     subnet_bridge_6],
-                                            interface='eth0')
+        label=None,
+        bridge=None,
+        subnets=[subnet_bridge_4, subnet_bridge_6],
+        interface='eth0')
 
     vif_vrouter = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                    address='ca:fe:de:ad:be:ef',
-                                    network=network_vrouter,
-                                    type=network_model.VIF_TYPE_VROUTER,
-                                    devname='tap-xxx-yyy-zzz')
+        address='ca:fe:de:ad:be:ef',
+        network=network_vrouter,
+        type=network_model.VIF_TYPE_VROUTER,
+        devname='tap-xxx-yyy-zzz')
 
     vif_ib_hostdev = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                   address='ca:fe:de:ad:be:ef',
-                                   network=network_8021,
-                                   type=network_model.VIF_TYPE_IB_HOSTDEV,
-                                   vnic_type=network_model.VNIC_TYPE_DIRECT,
-                                   ovs_interfaceid=None,
-                                   details={
-                                       network_model.VIF_DETAILS_VLAN: 100},
-                                   profile={'pci_vendor_info': '1137:0043',
-                                            'pci_slot': '0000:0a:00.1',
-                                            'physical_network': 'phynet1'})
+        address='ca:fe:de:ad:be:ef',
+        network=network_8021,
+        type=network_model.VIF_TYPE_IB_HOSTDEV,
+        vnic_type=network_model.VNIC_TYPE_DIRECT,
+        ovs_interfaceid=None,
+        details={network_model.VIF_DETAILS_VLAN: 100},
+        profile={'pci_vendor_info': '1137:0043',
+                 'pci_slot': '0000:0a:00.1',
+                 'physical_network': 'phynet1'})
 
     vif_midonet = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                    address='ca:fe:de:ad:be:ef',
-                                    network=network_midonet,
-                                    type=network_model.VIF_TYPE_MIDONET,
-                                    devname='tap-xxx-yyy-zzz')
+        address='ca:fe:de:ad:be:ef',
+        network=network_midonet,
+        type=network_model.VIF_TYPE_MIDONET,
+        devname='tap-xxx-yyy-zzz')
 
     vif_tap = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                address='ca:fe:de:ad:be:ef',
-                                type=network_model.VIF_TYPE_TAP,
-                                devname='tap-xxx-yyy-zzz')
+        address='ca:fe:de:ad:be:ef',
+        type=network_model.VIF_TYPE_TAP,
+        devname='tap-xxx-yyy-zzz')
 
     vif_iovisor = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                   address='ca:fe:de:ad:be:ef',
-                                   network=network_bridge,
-                                   type=network_model.VIF_TYPE_IOVISOR,
-                                   devname='tap-xxx-yyy-zzz',
-                                   ovs_interfaceid=None)
+        address='ca:fe:de:ad:be:ef',
+        network=network_bridge,
+        type=network_model.VIF_TYPE_IOVISOR,
+        devname='tap-xxx-yyy-zzz',
+        ovs_interfaceid=None)
 
     vif_vhostuser = network_model.VIF(id='vif-xxx-yyy-zzz',
-              address='ca:fe:de:ad:be:ef',
-              network=network_bridge,
-              type=network_model.VIF_TYPE_VHOSTUSER,
-              details = {network_model.VIF_DETAILS_VHOSTUSER_MODE: 'client',
-                         network_model.VIF_DETAILS_VHOSTUSER_SOCKET:
-                                                    '/tmp/vif-xxx-yyy-zzz'}
-              )
+        address='ca:fe:de:ad:be:ef',
+        network=network_bridge,
+        type=network_model.VIF_TYPE_VHOSTUSER,
+        details={
+            network_model.VIF_DETAILS_VHOSTUSER_MODE: 'client',
+            network_model.VIF_DETAILS_VHOSTUSER_SOCKET: '/tmp/vif-xxx-yyy-zzz'
+        })
 
     vif_vhostuser_ovs = network_model.VIF(id='vif-xxx-yyy-zzz',
-              address='ca:fe:de:ad:be:ef',
-              network=network_bridge,
-              type=network_model.VIF_TYPE_VHOSTUSER,
-              details = {network_model.VIF_DETAILS_VHOSTUSER_MODE: 'client',
-                         network_model.VIF_DETAILS_VHOSTUSER_SOCKET:
-                                                     '/tmp/usv-xxx-yyy-zzz',
-                         network_model.VIF_DETAILS_VHOSTUSER_OVS_PLUG: True},
-              ovs_interfaceid='aaa-bbb-ccc', mtu=1500
-              )
+        address='ca:fe:de:ad:be:ef',
+        network=network_bridge,
+        type=network_model.VIF_TYPE_VHOSTUSER,
+        details={
+            network_model.VIF_DETAILS_VHOSTUSER_MODE: 'client',
+            network_model.VIF_DETAILS_VHOSTUSER_SOCKET: '/tmp/usv-xxx-yyy-zzz',
+            network_model.VIF_DETAILS_VHOSTUSER_OVS_PLUG: True},
+        ovs_interfaceid='aaa-bbb-ccc', mtu=1500)
 
     vif_vhostuser_no_path = network_model.VIF(id='vif-xxx-yyy-zzz',
-          address='ca:fe:de:ad:be:ef',
-          network=network_bridge,
-          type=network_model.VIF_TYPE_VHOSTUSER,
-          details = {network_model.VIF_DETAILS_VHOSTUSER_MODE: 'client'})
+        address='ca:fe:de:ad:be:ef',
+        network=network_bridge,
+        type=network_model.VIF_TYPE_VHOSTUSER,
+        details={network_model.VIF_DETAILS_VHOSTUSER_MODE: 'client'})
 
     vif_macvtap_vlan = network_model.VIF(id='vif-xxx-yyy-zzz',
-          address='ca:fe:de:ad:be:ef',
-          network=network_8021,
-          type=network_model.VIF_TYPE_MACVTAP,
-          details={network_model.VIF_DETAILS_VLAN: 1,
-                   network_model.VIF_DETAILS_PHYS_INTERFACE: 'eth0',
-                   network_model.VIF_DETAILS_MACVTAP_SOURCE: 'eth0.1',
-                   network_model.VIF_DETAILS_MACVTAP_MODE: 'vepa'})
+        address='ca:fe:de:ad:be:ef',
+        network=network_8021,
+        type=network_model.VIF_TYPE_MACVTAP,
+        details={
+            network_model.VIF_DETAILS_VLAN: 1,
+            network_model.VIF_DETAILS_PHYS_INTERFACE: 'eth0',
+            network_model.VIF_DETAILS_MACVTAP_SOURCE: 'eth0.1',
+            network_model.VIF_DETAILS_MACVTAP_MODE: 'vepa'})
 
     vif_macvtap_flat = network_model.VIF(id='vif-xxx-yyy-zzz',
-          address='ca:fe:de:ad:be:ef',
-          network=network_8021,
-          type=network_model.VIF_TYPE_MACVTAP,
-          details={network_model.VIF_DETAILS_PHYS_INTERFACE: 'eth0',
-                   network_model.VIF_DETAILS_MACVTAP_SOURCE: 'eth0',
-                   network_model.VIF_DETAILS_MACVTAP_MODE: 'bridge'})
+        address='ca:fe:de:ad:be:ef',
+        network=network_8021,
+        type=network_model.VIF_TYPE_MACVTAP,
+        details={
+            network_model.VIF_DETAILS_PHYS_INTERFACE: 'eth0',
+            network_model.VIF_DETAILS_MACVTAP_SOURCE: 'eth0',
+            network_model.VIF_DETAILS_MACVTAP_MODE: 'bridge'})
 
     vif_macvtap_exception = network_model.VIF(id='vif-xxx-yyy-zzz',
-          address='ca:fe:de:ad:be:ef',
-          network=network_8021,
-          type=network_model.VIF_TYPE_MACVTAP)
+        address='ca:fe:de:ad:be:ef',
+        network=network_8021,
+        type=network_model.VIF_TYPE_MACVTAP)
 
     instance = objects.Instance(id=1,
-                                uuid='f0000000-0000-0000-0000-000000000001',
-                                project_id=723)
+        uuid='f0000000-0000-0000-0000-000000000001',
+        project_id=723)
 
     bandwidth = {
         'quota:vif_inbound_peak': '200',
