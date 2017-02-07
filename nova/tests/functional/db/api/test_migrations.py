@@ -139,7 +139,7 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
     def setUp(self):
         # NOTE(sdague): the oslo_db base test case completely
         # invalidates our logging setup, we actually have to do that
-        # before it is called to keep this from vomitting all over our
+        # before it is called to keep this from vomiting all over our
         # test output.
         self.useFixture(nova_fixtures.StandardLogging())
         super(NovaAPIMigrationsWalk, self).setUp()
