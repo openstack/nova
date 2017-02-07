@@ -332,13 +332,15 @@ class SchedulerReportClient(object):
         elif resp.status_code == 404:
             return None
         else:
-            msg = _LE("Failed to retrieve resource provider record from "
-                      "placement API for UUID %(uuid)s. "
+            placement_req_id = get_placement_request_id(resp)
+            msg = _LE("[%(placement_req_id)s] Failed to retrieve resource "
+                      "provider record from placement API for UUID %(uuid)s. "
                       "Got %(status_code)d: %(err_text)s.")
             args = {
                 'uuid': uuid,
                 'status_code': resp.status_code,
                 'err_text': resp.text,
+                'placement_req_id': placement_req_id,
             }
             LOG.error(msg, args)
 
@@ -358,11 +360,17 @@ class SchedulerReportClient(object):
             'name': name,
         }
         resp = self.post(url, payload)
+        placement_req_id = get_placement_request_id(resp)
         if resp.status_code == 201:
-            msg = _LI("Created resource provider record via placement API "
-                      "for resource provider with UUID {0} and name {1}.")
-            msg = msg.format(uuid, name)
-            LOG.info(msg)
+            msg = _LI("[%(placement_req_id)s] Created resource provider "
+                      "record via placement API for resource provider with "
+                      "UUID %(uuid)s and name %(name)s.")
+            args = {
+                'uuid': uuid,
+                'name': name,
+                'placement_req_id': placement_req_id,
+            }
+            LOG.info(msg, args)
             return objects.ResourceProvider(
                     uuid=uuid,
                     name=name,
@@ -372,20 +380,24 @@ class SchedulerReportClient(object):
             # Another thread concurrently created a resource provider with the
             # same UUID. Log a warning and then just return the resource
             # provider object from _get_resource_provider()
-            msg = _LI("Another thread already created a resource provider "
-                      "with the UUID {0}. Grabbing that record from "
-                      "the placement API.")
-            msg = msg.format(uuid)
-            LOG.info(msg)
+            msg = _LI("[%(placement_req_id)s] Another thread already created "
+                      "a resource provider with the UUID %(uuid)s. Grabbing "
+                      "that record from the placement API.")
+            args = {
+                'uuid': uuid,
+                'placement_req_id': placement_req_id,
+            }
+            LOG.info(msg, args)
             return self._get_resource_provider(uuid)
         else:
-            msg = _LE("Failed to create resource provider record in "
-                      "placement API for UUID %(uuid)s. "
+            msg = _LE("[%(placement_req_id)s] Failed to create resource "
+                      "provider record in placement API for UUID %(uuid)s. "
                       "Got %(status_code)d: %(err_text)s.")
             args = {
                 'uuid': uuid,
                 'status_code': resp.status_code,
                 'err_text': resp.text,
+                'placement_req_id': placement_req_id,
             }
             LOG.error(msg, args)
 
