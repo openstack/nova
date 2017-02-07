@@ -4,6 +4,7 @@ fixtures:
 defaults:
     request_headers:
         x-auth-token: admin
+        accept: application/json
         OpenStack-API-Version: placement latest
 
 tests:
@@ -14,6 +15,8 @@ tests:
     OpenStack-API-Version: placement 1.1
     content-type: application/json
   status: 404
+  response_json_paths:
+      $.errors[0].title: Not Found
 
 - name: test microversion mask when wrong content type
   desc: we want to get a 404 before a 415
@@ -67,6 +70,8 @@ tests:
   status: 400
   response_strings:
       - JSON does not validate
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: post new resource class
   POST: /resource_classes
@@ -89,6 +94,8 @@ tests:
   status: 409
   response_strings:
       - Conflicting resource class already exists
+  response_json_paths:
+      $.errors[0].title: Conflict
 
 - name: confirm the correct post
   GET: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
@@ -123,6 +130,8 @@ tests:
   status: 400
   response_strings:
       - JSON does not validate
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: update custom resource class to standard resource class name
   PUT: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
@@ -133,6 +142,8 @@ tests:
   status: 400
   response_strings:
       - JSON does not validate
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: post another custom resource class
   POST: /resource_classes
@@ -152,6 +163,8 @@ tests:
   response_strings:
       - Resource class already exists
       - $ENVIRON['CUSTOM_RES_CLASS']
+  response_json_paths:
+      $.errors[0].title: Conflict
 
 - name: update custom resource class
   PUT: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
@@ -169,6 +182,8 @@ tests:
   status: 400
   response_strings:
       - Cannot delete standard resource class
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: delete custom resource class
   DELETE: /resource_classes/CUSTOM_NFV_BAR
@@ -177,6 +192,8 @@ tests:
 - name: 404 on deleted resource class
   DELETE: $LAST_URL
   status: 404
+  response_json_paths:
+      $.errors[0].title: Not Found
 
 - name: post malformed json as json
   POST: /resource_classes
@@ -186,6 +203,8 @@ tests:
   status: 400
   response_strings:
       - 'Malformed JSON:'
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: post bad resource class name IRON_NFV
   POST: /resource_classes
@@ -196,6 +215,8 @@ tests:
   status: 400
   response_strings:
       - JSON does not validate
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: try to create resource class with name exceed max characters
   POST: /resource_classes
@@ -206,6 +227,8 @@ tests:
   status: 400
   response_strings:
       - "Failed validating 'maxLength'"
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: try to update resource class with name exceed max characters
   PUT: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
@@ -216,3 +239,5 @@ tests:
   status: 400
   response_strings:
       - "Failed validating 'maxLength'"
+  response_json_paths:
+      $.errors[0].title: Bad Request
