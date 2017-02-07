@@ -5287,12 +5287,16 @@ class ComputeManager(manager.Manager):
                                        self._rollback_live_migration,
                                        block_migration, migrate_data)
         except Exception:
-            # Executing live migration
-            # live_migration might raises exceptions, but
-            # nothing must be recovered in this version.
             LOG.exception(_LE('Live migration failed.'), instance=instance)
             with excutils.save_and_reraise_exception():
+                # Put instance and migration into error state,
+                # as its almost certainly too late to rollback
                 self._set_migration_status(migration, 'error')
+                # first refresh instance as it may have got updated by
+                # post_live_migration_at_destination
+                instance.refresh()
+                self._set_instance_obj_error_state(context, instance,
+                                                   clean_task_state=True)
 
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
