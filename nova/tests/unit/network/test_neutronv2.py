@@ -3138,6 +3138,98 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertEqual(0, len(networks))
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_get_port_vnic_info_multi_segment(self, mock_get_client):
+        api = neutronapi.API()
+        self.mox.ResetAll()
+        test_port = {
+            'port': {'id': 'my_port_id1',
+                      'network_id': 'net-id',
+                      'binding:vnic_type': model.VNIC_TYPE_DIRECT,
+                     },
+            }
+        test_net = {'network': {'segments':
+                                    [{'provider:physical_network': 'phynet10',
+                                      'provider:segmentation_id': 1000,
+                                      'provider:network_type': 'vlan'},
+                                     {'provider:physical_network': None,
+                                      'provider:segmentation_id': 153,
+                                      'provider:network_type': 'vxlan'}]}}
+        test_ext_list = {'extensions':
+                            [{'name': 'Multi Provider Network',
+                             'alias': 'multi-segments'}]}
+
+        mock_client = mock_get_client()
+        mock_client.show_port.return_value = test_port
+        mock_client.list_extensions.return_value = test_ext_list
+        mock_client.show_network.return_value = test_net
+        vnic_type, phynet_name = api._get_port_vnic_info(
+            self.context, mock_client, test_port['port']['id'])
+
+        mock_client.show_network.assert_called_once_with(
+            test_port['port']['network_id'],
+            fields='segments')
+        self.assertEqual('phynet10', phynet_name)
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_get_port_vnic_info_vlan_with_multi_segment_ext(self,
+                                                            mock_get_client):
+        api = neutronapi.API()
+        self.mox.ResetAll()
+        test_port = {
+            'port': {'id': 'my_port_id1',
+                      'network_id': 'net-id',
+                      'binding:vnic_type': model.VNIC_TYPE_DIRECT,
+                     },
+            }
+        test_net = {'network': {'provider:physical_network': 'phynet10',
+                                'provider:segmentation_id': 1000,
+                                'provider:network_type': 'vlan'}}
+        test_ext_list = {'extensions':
+                            [{'name': 'Multi Provider Network',
+                             'alias': 'multi-segments'}]}
+
+        mock_client = mock_get_client()
+        mock_client.show_port.return_value = test_port
+        mock_client.list_extensions.return_value = test_ext_list
+        mock_client.show_network.return_value = test_net
+        vnic_type, phynet_name = api._get_port_vnic_info(
+            self.context, mock_client, test_port['port']['id'])
+
+        mock_client.show_network.assert_called_with(
+            test_port['port']['network_id'],
+            fields='provider:physical_network')
+        self.assertEqual('phynet10', phynet_name)
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_get_port_vnic_info_multi_segment_no_phynet(self, mock_get_client):
+        api = neutronapi.API()
+        self.mox.ResetAll()
+        test_port = {
+            'port': {'id': 'my_port_id1',
+                      'network_id': 'net-id',
+                      'binding:vnic_type': model.VNIC_TYPE_DIRECT,
+                     },
+            }
+        test_net = {'network': {'segments':
+                                    [{'provider:physical_network': None,
+                                      'provider:segmentation_id': 1000,
+                                      'provider:network_type': 'vlan'},
+                                     {'provider:physical_network': None,
+                                      'provider:segmentation_id': 153,
+                                      'provider:network_type': 'vlan'}]}}
+        test_ext_list = {'extensions':
+                            [{'name': 'Multi Provider Network',
+                             'alias': 'multi-segments'}]}
+
+        mock_client = mock_get_client()
+        mock_client.show_port.return_value = test_port
+        mock_client.list_extensions.return_value = test_ext_list
+        mock_client.show_network.return_value = test_net
+        self.assertRaises(exception.NovaException,
+                          api._get_port_vnic_info,
+                          self.context, mock_client, test_port['port']['id'])
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.MagicMock())
     def test_get_port_vnic_info_1(self, mock_get_client):
         api = neutronapi.API()
         self.mox.ResetAll()
