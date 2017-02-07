@@ -1266,7 +1266,8 @@ def numa_get_constraints(flavor, image_meta):
                 nodes, flavor, cpu_list, mem_list)
 
         # We currently support same pagesize for all cells.
-        [setattr(c, 'pagesize', pagesize) for c in numa_topology.cells]
+        for c in numa_topology.cells:
+            setattr(c, 'pagesize', pagesize)
 
     cpu_policy = _get_cpu_policy_constraints(flavor, image_meta)
     cpu_thread_policy = _get_cpu_thread_policy_constraints(flavor, image_meta)
