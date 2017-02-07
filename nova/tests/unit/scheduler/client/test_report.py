@@ -695,12 +695,14 @@ class TestInventory(SchedulerReportClientTestCase):
         new_gen = self.client._resource_providers[cn.uuid].generation
         self.assertEqual(1, new_gen)
 
+    @mock.patch.object(report.LOG, 'info')
     @mock.patch('nova.scheduler.client.report._extract_inventory_in_use')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'put')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get')
-    def test_delete_inventory(self, mock_get, mock_put, mock_extract):
+    def test_delete_inventory(self, mock_get, mock_put, mock_extract,
+                              mock_info):
         cn = self.compute_node
         rp = objects.ResourceProvider(uuid=cn.uuid, generation=42)
         # Make sure the ResourceProvider exists for preventing to call the API
@@ -720,11 +722,16 @@ class TestInventory(SchedulerReportClientTestCase):
             'inventories': {
             }
         }
+        mock_put.return_value.headers = {'openstack-request-id':
+                                         uuids.request_id}
         result = self.client._delete_inventory(cn.uuid)
         self.assertIsNone(result)
         self.assertFalse(mock_extract.called)
         new_gen = self.client._resource_providers[cn.uuid].generation
         self.assertEqual(44, new_gen)
+        self.assertTrue(mock_info.called)
+        self.assertEqual(uuids.request_id,
+                         mock_info.call_args[0][1]['placement_req_id'])
 
     @mock.patch.object(report.LOG, 'warning')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -747,6 +754,8 @@ class TestInventory(SchedulerReportClientTestCase):
             }
         }
         mock_put.return_value.status_code = 409
+        mock_put.return_value.headers = {'openstack-request-id':
+                                         uuids.request_id}
         rc_str = "VCPU, MEMORY_MB"
         in_use_exc = exception.InventoryInUse(
             resource_classes=rc_str,
@@ -768,6 +777,8 @@ There was a conflict when trying to complete your request.
         result = self.client._delete_inventory(cn.uuid)
         self.assertIsNone(result)
         self.assertTrue(mock_warn.called)
+        self.assertEqual(uuids.request_id,
+                         mock_warn.call_args[0][1]['placement_req_id'])
 
     @mock.patch.object(report.LOG, 'error')
     @mock.patch.object(report.LOG, 'warning')
@@ -799,10 +810,14 @@ There was a conflict when trying to complete your request.
             'inventories': {
             }
         }
+        mock_put.return_value.headers = {'openstack-request-id':
+                                         uuids.request_id}
         result = self.client._delete_inventory(cn.uuid)
         self.assertIsNone(result)
         self.assertFalse(mock_warn.called)
         self.assertTrue(mock_error.called)
+        self.assertEqual(uuids.request_id,
+                         mock_error.call_args[0][1]['placement_req_id'])
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get')
