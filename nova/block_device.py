@@ -369,7 +369,7 @@ def from_legacy_mapping(legacy_block_device_mapping, image_uuid='',
 
 
 def properties_root_device_name(properties):
-    """get root device name from image meta data.
+    """Get root device name from image meta data.
     If it isn't specified, return None.
     """
     root_device_name = None
@@ -391,7 +391,7 @@ def validate_device_name(value):
     try:
         # NOTE (ndipanov): Do not allow empty device names
         #                  until assigning default values
-        #                  is supported by nova.compute
+        #                  are supported by nova.compute
         utils.check_string_length(value, 'Device name',
                                   min_length=1, max_length=255)
     except exception.InvalidInput:
@@ -410,7 +410,7 @@ def validate_and_default_volume_size(bdm):
                 bdm['volume_size'], 'volume_size', min_value=0)
         except exception.InvalidInput:
             # NOTE: We can remove this validation code after removing
-            # Nova v2.0 API code because v2.1 API validates this case
+            # Nova v2.0 API code, because v2.1 API validates this case
             # already at its REST API layer.
             raise exception.InvalidBDMFormat(
                 details=_("Invalid volume_size."))
