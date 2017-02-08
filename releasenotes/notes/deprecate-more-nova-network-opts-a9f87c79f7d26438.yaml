@@ -6,3 +6,39 @@ deprecations:
 
     - ``ipv6_backend``
     - ``firewall_driver``
+    - ``metadata_host``
+    - ``metadata_port``
+    - ``iptables_top_regex``
+    - ``iptables_bottom_regex``
+    - ``iptables_drop_action``
+    - ``ldap_dns_url``
+    - ``ldap_dns_user``
+    - ``ldap_dns_password``
+    - ``ldap_dns_soa_hostmaster``
+    - ``ldap_dns_server``
+    - ``ldap_dns_base_dn``
+    - ``ldap_dns_soa_refresh``
+    - ``ldap_dns_soa_retry``
+    - ``ldap_dns_soa_expiry``
+    - ``ldap_dns_soa_minimum``
+    - ``dhcpbridge_flagfile``
+    - ``dhcpbridge``
+    - ``dhcp_lease_time``
+    - ``dns_server``
+    - ``use_network_dns_servers``
+    - ``dnsmasq_config_file``
+    - ``ebtables_exec_attempts``
+    - ``ebtables_retry_interval``
+    - ``fake_network``
+    - ``send_arp_for_ha``
+    - ``send_arp_for_ha_count``
+    - ``dmz_cidr``
+    - ``force_snat_range``
+    - ``linuxnet_interface_driver``
+    - ``linuxnet_ovs_integration_bridge``
+    - ``use_single_default_gateway``
+    - ``forward_bridge_interface``
+    - ``ovs_vsctl_timeout``
+    - ``networks_path``
+    - ``public_interface``
+    - ``routing_source_ip``

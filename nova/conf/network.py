@@ -20,6 +20,10 @@ from nova.conf import paths
 network_opts = [
     # NOTE(sfinucan): Don't move this option to a group as it will be
     # deprecated in a future release.
+    # TODO(sfinucan): This option is tied into the XenAPI and VMWare drivers.
+    # We should remove this dependency by either adding a new opt for each
+    # driver or simply removing the offending code. Until then we cannot
+    # deprecate this option.
     cfg.BoolOpt("flat_injected",
         default=False,
         help="""
@@ -137,13 +141,13 @@ Possible values:
     Any valid virtual interface name, such as 'eth0'
 """),
     cfg.IntOpt("num_networks",
+        default=1,
+        min=1,
         deprecated_for_removal=True,
         deprecated_since='15.0.0',
         deprecated_reason="""
 nova-network is deprecated, as are any related configuration options.
 """,
-        default=1,
-        min=1,
         help="""
 This option represents the number of networks to create if not explicitly
 specified when the network is created. The only time this is used is if a CIDR
@@ -500,6 +504,11 @@ nova-network is deprecated, as are any related configuration options.
 linux_net_opts = [
     cfg.MultiStrOpt('dhcpbridge_flagfile',
         default=['/etc/nova/nova-dhcpbridge.conf'],
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 This option is a list of full paths to one or more configuration files for
 dhcpbridge. In most cases the default path of '/etc/nova/nova-dhcpbridge.conf'
@@ -513,6 +522,11 @@ Possible values
 """),
     cfg.StrOpt('networks_path',
         default=paths.state_path_def('networks'),
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 The location where the network configuration files will be kept. The default is
 the 'networks' directory off of the location where nova's Python module is
@@ -524,6 +538,11 @@ Possible values
 """),
     cfg.StrOpt('public_interface',
         default='eth0',
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 This is the name of the network interface for public IP addresses. The default
 is 'eth0'.
@@ -534,6 +553,11 @@ Possible values:
 """),
     cfg.StrOpt('dhcpbridge',
         default=paths.bindir_def('nova-dhcpbridge'),
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 The location of the binary nova-dhcpbridge. By default it is the binary named
 'nova-dhcpbridge' that is installed with all the other nova binaries.
@@ -544,6 +568,11 @@ Possible values:
 """),
     cfg.StrOpt('routing_source_ip',
         default='$my_ip',
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 This is the public IP address of the network host. It is used when creating a
 SNAT rule.
@@ -559,6 +588,11 @@ Related options:
     cfg.IntOpt('dhcp_lease_time',
         default=86400,
         min=1,
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 The lifetime of a DHCP lease, in seconds. The default is 86400 (one day).
 
@@ -567,8 +601,13 @@ Possible values:
     Any positive integer value.
 """),
     cfg.MultiStrOpt("dns_server",
-            default=[],
-            help="""
+        default=[],
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
+        help="""
 Despite the singular form of the name of this option, it is actually a list of
 zero or more server addresses that dnsmasq will use for DNS nameservers. If
 this is not empty, dnsmasq will not read /etc/resolv.conf, but will only use
@@ -586,6 +625,11 @@ Related options:
 """),
     cfg.BoolOpt("use_network_dns_servers",
         default=False,
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 When this option is set to True, the dns1 and dns2 servers for the network
 specified by the user on boot will be used for DNS, as well as any specified in
@@ -597,6 +641,11 @@ Related options:
 """),
     cfg.ListOpt("dmz_cidr",
         default=[],
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 This option is a list of zero or more IP address ranges in your network's DMZ
 that should be accepted.
@@ -607,6 +656,11 @@ Possible values:
 """),
     cfg.MultiStrOpt("force_snat_range",
         default=[],
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 This is a list of zero or more IP ranges that traffic from the
 `routing_source_ip` will be SNATted to. If the list is empty, then no SNAT
@@ -622,6 +676,11 @@ Related options:
 """),
     cfg.StrOpt("dnsmasq_config_file",
         default="",
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 The path to the custom dnsmasq configuration file, if any.
 
@@ -632,6 +691,11 @@ Possible values:
 """),
     cfg.StrOpt("linuxnet_interface_driver",
         default="nova.network.linux_net.LinuxBridgeInterfaceDriver",
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 This is the class used as the ethernet device driver for linuxnet bridge
 operations. The default value should be all you need for most cases, but if you
@@ -644,6 +708,11 @@ Possible values:
 """),
     cfg.StrOpt("linuxnet_ovs_integration_bridge",
         default="br-int",
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 The name of the Open vSwitch bridge that is used with linuxnet when connecting
 with Open vSwitch."
@@ -654,6 +723,10 @@ Possible values:
 """),
     cfg.BoolOpt("send_arp_for_ha",
         default=False,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 When True, when a device starts up, and upon binding floating IP addresses, arp
 messages will be sent to ensure that the arp caches on the compute hosts are
@@ -665,6 +738,10 @@ Related options:
 """),
     cfg.IntOpt("send_arp_for_ha_count",
         default=3,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 When arp messages are configured to be sent, they will be sent with the count
 set to the value of this option. Of course, if this is set to zero, no arp
@@ -680,12 +757,22 @@ Related options:
 """),
     cfg.BoolOpt("use_single_default_gateway",
         default=False,
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 When set to True, only the firt nic of a VM will get its default gateway from
 the DHCP server.
 """),
     cfg.MultiStrOpt("forward_bridge_interface",
         default=["all"],
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 One or more interfaces that bridges can forward traffic to. If any of the items
 in this list is the special keyword 'all', then all traffic will be forwarded.
@@ -696,8 +783,16 @@ Possible values:
 """),
     cfg.StrOpt("metadata_host",
         default="$my_ip",
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 This option determines the IP address for the network metadata API server.
+
+This is really the client side of the metadata host equation that allows
+nova-network to find the metadata server when doing a default multi host
+networking.
 
 Possible values:
 
@@ -709,6 +804,11 @@ Related options:
 """),
     cfg.PortOpt("metadata_port",
         default=8775,
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 This option determines the port used for the metadata API server.
 
@@ -718,6 +818,11 @@ Related options:
 """),
     cfg.StrOpt("iptables_top_regex",
         default="",
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 This expression, if defined, will select any matching iptables rules and place
 them at the top when applying metadata changes to the rules.
@@ -732,6 +837,11 @@ Related options:
 """),
     cfg.StrOpt("iptables_bottom_regex",
         default="",
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 This expression, if defined, will select any matching iptables rules and place
 them at the bottom when applying metadata changes to the rules.
@@ -746,6 +856,11 @@ Related options:
 """),
     cfg.StrOpt("iptables_drop_action",
         default="DROP",
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 By default, packets that do not pass the firewall are DROPped. In many cases,
 though, an operator may find it more useful to change this from DROP to REJECT,
@@ -759,6 +874,11 @@ Possible values:
     cfg.IntOpt("ovs_vsctl_timeout",
         default=120,
         min=0,
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 This option represents the period of time, in seconds, that the ovs_vsctl calls
 will wait for a response from the database before timing out. A setting of 0
@@ -771,6 +891,11 @@ Possible values:
 """),
     cfg.BoolOpt("fake_network",
         default=False,
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 This option is used mainly in testing to avoid calls to the underlying network
 utilities.
@@ -778,6 +903,11 @@ utilities.
     cfg.IntOpt("ebtables_exec_attempts",
         default=3,
         min=1,
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 This option determines the number of times to retry ebtables commands before
 giving up. The minimum number of retries is 1.
@@ -792,6 +922,11 @@ Related options:
 """),
     cfg.FloatOpt("ebtables_retry_interval",
         default=1.0,
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 This option determines the time, in seconds, that the system will sleep in
 between ebtables retries. Note that each successive retry waits a multiple of
@@ -812,10 +947,13 @@ Related options:
 ]
 
 ldap_dns_opts = [
-    # TODO(siva_krishnan): Validate URL scheme once that feature is added
-    # in oslo_config
     cfg.URIOpt('ldap_dns_url',
         default='ldap://ldap.example.com:389',
+        deprecated_for_removal=True,
+        deprecated_since='16.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 URL for LDAP server which will store DNS entries
 
@@ -825,13 +963,28 @@ Possible values:
 """),
     cfg.StrOpt('ldap_dns_user',
         default='uid=admin,ou=people,dc=example,dc=org',
+        deprecated_for_removal=True,
+        deprecated_since='16.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help='Bind user for LDAP server'),
     cfg.StrOpt('ldap_dns_password',
         default='password',
         secret=True,
+        deprecated_for_removal=True,
+        deprecated_since='16.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="Bind user's password for LDAP server"),
     cfg.StrOpt('ldap_dns_soa_hostmaster',
         default='hostmaster@example.org',
+        deprecated_for_removal=True,
+        deprecated_since='16.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 Hostmaster for LDAP DNS driver Statement of Authority
 
@@ -839,10 +992,13 @@ Possible values:
 
 * Any valid string representing LDAP DNS hostmaster.
 """),
-    # TODO(sfinucan): This should be converted to a ListOpt. Perhaps when the
-    # option is moved to a group?
     cfg.MultiStrOpt('ldap_dns_servers',
         default=['dns.example.org'],
+        deprecated_for_removal=True,
+        deprecated_since='16.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 DNS Servers for LDAP DNS driver
 
@@ -852,14 +1008,23 @@ Possible values:
 """),
     cfg.StrOpt('ldap_dns_base_dn',
         default='ou=hosts,dc=example,dc=org',
+        deprecated_for_removal=True,
+        deprecated_since='16.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 Base distinguished name for the LDAP search query
 
 This option helps to decide where to look up the host in LDAP.
 """),
-    # TODO(sfinucan): Add a min parameter to this and the below options
     cfg.IntOpt('ldap_dns_soa_refresh',
         default=1800,
+        deprecated_for_removal=True,
+        deprecated_since='16.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 Refresh interval (in seconds) for LDAP DNS driver Start of Authority
 
@@ -871,6 +1036,11 @@ NOTE: Lower values would cause more traffic.
 """),
     cfg.IntOpt('ldap_dns_soa_retry',
         default=3600,
+        deprecated_for_removal=True,
+        deprecated_since='16.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 Retry interval (in seconds) for LDAP DNS driver Start of Authority
 
@@ -879,6 +1049,11 @@ attempt to transfer zone failed during the previous refresh interval.
 """),
     cfg.IntOpt('ldap_dns_soa_expiry',
         default=86400,
+        deprecated_for_removal=True,
+        deprecated_since='16.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 Expiry interval (in seconds) for LDAP DNS driver Start of Authority
 
@@ -887,6 +1062,11 @@ before it is no longer considered authoritative.
 """),
     cfg.IntOpt('ldap_dns_soa_minimum',
         default=7200,
+        deprecated_for_removal=True,
+        deprecated_since='16.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 Minimum interval (in seconds) for LDAP DNS driver Start of Authority
 
