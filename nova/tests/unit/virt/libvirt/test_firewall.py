@@ -314,19 +314,11 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
         self.assertGreater(len(match_rules), 0,
                            "TCP port 80/81 acceptance rule wasn't added")
 
-    def test_filters_for_instance_with_ip_v6(self):
-        self.flags(use_ipv6=True)
+    def test_filters_for_instance(self):
         network_info = _fake_network_info(self, 1)
         rulesv4, rulesv6 = self.fw._filters_for_instance("fake", network_info)
         self.assertEqual(len(rulesv4), 2)
         self.assertEqual(len(rulesv6), 1)
-
-    def test_filters_for_instance_without_ip_v6(self):
-        self.flags(use_ipv6=False)
-        network_info = _fake_network_info(self, 1)
-        rulesv4, rulesv6 = self.fw._filters_for_instance("fake", network_info)
-        self.assertEqual(len(rulesv4), 2)
-        self.assertEqual(len(rulesv6), 0)
 
     @mock.patch.object(objects.SecurityGroupRuleList, "get_by_instance")
     def test_multinic_iptables(self, mock_secrule):

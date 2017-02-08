@@ -155,12 +155,12 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
             dhcp_server = subnet.get_meta('dhcp_server')
             if dhcp_server:
                 parameters.append(format_parameter('DHCPSERVER', dhcp_server))
-        if CONF.use_ipv6:
-            for subnet in v6_subnets:
-                gateway = subnet.get('gateway')
-                if gateway:
-                    ra_server = gateway['address'] + "/128"
-                    parameters.append(format_parameter('RASERVER', ra_server))
+
+        for subnet in v6_subnets:
+            gateway = subnet.get('gateway')
+            if gateway:
+                ra_server = gateway['address'] + "/128"
+                parameters.append(format_parameter('RASERVER', ra_server))
 
         if CONF.allow_same_net_traffic:
             for subnet in v4_subnets:
@@ -169,12 +169,11 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
                 parameters.append(format_parameter('PROJNET', net))
                 parameters.append(format_parameter('PROJMASK', mask))
 
-            if CONF.use_ipv6:
-                for subnet in v6_subnets:
-                    ipv6_cidr = subnet['cidr']
-                    net, prefix = netutils.get_net_and_prefixlen(ipv6_cidr)
-                    parameters.append(format_parameter('PROJNET6', net))
-                    parameters.append(format_parameter('PROJMASK6', prefix))
+            for subnet in v6_subnets:
+                ipv6_cidr = subnet['cidr']
+                net, prefix = netutils.get_net_and_prefixlen(ipv6_cidr)
+                parameters.append(format_parameter('PROJNET6', net))
+                parameters.append(format_parameter('PROJMASK6', prefix))
 
         return parameters
 
