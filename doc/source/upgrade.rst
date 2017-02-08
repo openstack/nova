@@ -54,11 +54,13 @@ Plan your upgrade
 Rolling upgrade process
 '''''''''''''''''''''''
 
-To reduce downtime, the services can be upgraded in a rolling fashion. It
+To reduce downtime, the compute services can be upgraded in a rolling fashion. It
 means upgrading a few services at a time. This results in a condition where
 both old (N) and new (N+1) nova-compute services co-exist for a certain time
 period. Note that, there is no upgrade of the hypervisor here, this is just
-upgrading the nova services.
+upgrading the nova services. If reduced downtime is not a concern (or lower
+complexity is desired), all services may be taken down and restarted at the
+same time.
 
 #. Before maintenance window:
 
@@ -80,52 +82,60 @@ upgrading the nova services.
    * For maximum safety (no failed API operations), gracefully shutdown all
      the services (i.e. SIG_TERM) except nova-compute.
 
-   * Start all services, with ``[upgrade_levels]compute=auto`` in nova.conf.
-     It is safest to start nova-conductor first and nova-api last. Note that
-     for older releases, before Liberty, you need to use a static alias name
-     instead of ``auto``, such as ``[upgrade_levels]compute=mitaka``
+   * Start all services on the new code, with
+     ``[upgrade_levels]compute=auto`` in nova.conf.  It is safest to
+     start nova-conductor first and nova-api last. Note that you may
+     use a static alias name instead of ``auto``, such as
+     ``[upgrade_levels]compute=newton``. Also note that this step is
+     only required if compute services are not upgraded in lock-step
+     with the control services.
 
-   * In small batches gracefully shutdown nova-compute (i.e. SIG_TERM), then
-     start the new version of the code with: ``[upgrade_levels]compute=auto``
-     Note this is done in batches so only a few compute nodes will have any
-     delayed API actions, and to ensure there is enough capacity online to
-     service any boot requests that happen during this time.
+   * If desired, gracefully shutdown nova-compute (i.e. SIG_TERM)
+     services in small batches, then start the new version of the code
+     with: ``[upgrade_levels]compute=auto``. If this batch-based approach
+     is used, only a few compute nodes will have any delayed API
+     actions, and to ensure there is enough capacity online to service
+     any boot requests that happen during this time.
 
 #. After maintenance window:
 
    * Once all services are running the new code, double check in the DB that
-     there are no old orphaned service records.
+     there are no old orphaned service records using `nova service-list`.
 
-   * Now all services are upgraded, we need to send the SIG_HUP signal, so all
+   * Now that all services are upgraded, we need to send the SIG_HUP signal, so all
      the services clear any cached service version data. When a new service
      starts, it automatically detects which version of the compute RPC protocol
      to use, and it can decide if it is safe to do any online data migrations.
      Note, if you used a static value for the upgrade_level, such as
-     ``[upgrade_levels]compute=mitaka``, you must update nova.conf to remove
-     that configuration value before you send the SIG_HUP signal.
+     ``[upgrade_levels]compute=newton``, you must update nova.conf to remove
+     that configuration value and do a full service restart.
 
-   * Now all the services are upgraded, the system is able to use the latest
-     version of the RPC protocol and so get access to all the new features in
-     the new release.
+   * Now all the services are upgraded and signaled, the system is able to use
+     the latest version of the RPC protocol and can access all of the
+     features in the new release.
 
-   * Now all the services are running the latest version of the code, and all
+   * Once all the services are running the latest version of the code, and all
      the services are aware they all have been upgraded, it is safe to
-     transform the data in the database into its new format. While this
-     happens on demand when the system reads a database row that needs
+     transform the data in the database into its new format. While some of this
+     work happens on demand when the system reads a database row that needs
      updating, we must get all the data transformed into the current version
-     before we next upgrade.
+     before the next upgrade. Additionally, some data may not be transformed
+     automatically so performing the data migration is necessary to avoid
+     performance degredation due to compatibility routines.
 
-   * This process can also put significant extra write load on the database.
-     Complete all online data migrations using:
-     ``nova-manage db online_data_migrations --limit <number>``. Note that you
-     can use the limit argument to reduce the load this operation will place
-     on the database.
-
-   * The limit argument in online data migrations allows you to run a small
-     chunk of upgrades until all of the work is done. Each time it is run, it
-     will show summary of completed and remaining records. You run this command
-     until you see completed and remaining records as zeros. The size of
-     chunks you should use depend on your infrastructure.
+   * This process can put significant extra write load on the
+     database.  Complete all online data migrations using:
+     ``nova-manage db online_data_migrations --limit <number>``. Note
+     that you can use the limit argument to reduce the load this
+     operation will place on the database, which allows you to run a
+     small chunk of the migrations until all of the work is done. Each
+     time it is run, it will show summary of completed and remaining
+     records. You run this command until you see completed and
+     remaining records as zeros. The chunk size you should use depend
+     on your infrastructure and how much additional load you can
+     impose on the database. To reduce load, perform smaller batches
+     with delays between chunks. To reduce time to completion, run
+     larger batches.
 
    * At this point, you must also ensure you update the configuration, to stop
      using any deprecated features or options, and perform any required work
@@ -139,27 +149,32 @@ Current Database Upgrade Types
 
 Currently Nova has 2 types of database upgrades that are in use.
 
-#. Offline Migrations
-#. Online Migrations
+#. Schema Migrations
+#. Data Migrations
 
 
-Offline Migrations consist of:
-''''''''''''''''''''''''''''''
+Schema Migrations
+''''''''''''''''''
 
-    #. Database schema migrations from pre-defined migrations in
-       nova/db/sqlalchemy/migrate_repo/versions.
+Schema migrations are defined in
+``nova/db/sqlalchemy/migrate_repo/versions`` and in
+``nova/db/sqlalchemy/api_migrations/migrate_repo/versions``. They are
+the routines that transform our database structure, which should be
+additive and able to be applied to a running system before service
+code has been upgraded.
 
-    #. *Deprecated* Database data migrations from pre-defined migrations in
-       nova/db/sqlalchemy/migrate_repo/versions.
 
+Data Migrations
+'''''''''''''''''
 
-Online Migrations consist of:
-'''''''''''''''''''''''''''''
+Online data migrations occur in two places:
 
-    #. Online data migrations from inside Nova object source code.
-
-    #. *Future* Online schema migrations using auto-generation from models.
-
+#. Inline migrations that occur as part of normal run-time
+   activity as data is read in the old format and written in the
+   new format
+#. Background online migrations that are performed using
+   ``nova-manage`` to complete transformations that will not occur
+   incidentially due to normal runtime activity.
 
 An example of online data migrations are the flavor migrations done as part
 of Nova object version 1.18. This included a transient migration of flavor
@@ -273,9 +288,10 @@ Expand/Contract DB Migrations
     writing to the database. Taking this a step further, we can make all DB
     changes by first adding the new structures, expanding. Then you can slowly
     move all the data into a new location and format. Once that is complete,
-    you can drop bits of the scheme that are no long needed, i.e. contract.
-    We have plans to implement this here:
-    https://review.openstack.org/#/c/102545/5/specs/juno/online-schema-changes.rst,cm
+    you can drop bits of the scheme that are no long needed,
+    i.e. contract. This happens multiple cycles after we have stopped
+    using a particular piece of schema, and can happen in a schema
+    migration without affecting runtime code.
 
 Online Data Migrations using objects
     In Kilo we are moving all data migration into the DB objects code.
@@ -284,11 +300,9 @@ Online Data Migrations using objects
     that are in the old format. For records that are not updated, you need to
     run a background process to convert those records into the newer format.
     This process must be completed before you contract the database schema.
-    We have the first example of this happening here:
-    http://specs.openstack.org/openstack/nova-specs/specs/kilo/approved/flavor-from-sysmeta-to-blob.html
 
 DB prune deleted rows
-    Currently resources are soft deleted in the database, so users are able
+    Currently resources are soft deleted in the main database, so users are able
     to track instances in the DB that are created and destroyed in production.
     However, most people have a data retention policy, of say 30 days or 90
     days after which they will want to delete those entries. Not deleting
@@ -310,18 +324,6 @@ Once we have all the pieces in place, we hope to move the Grenade testing
 to follow this new pattern.
 
 The current tests only cover the existing upgrade process where:
+
 * old computes can run with new control plane
 * but control plane is turned off for DB migrations
-
-Unresolved issues
------------------
-
-Ideally you could rollback. We would need to add some kind of object data
-version pinning, so you can be running all new code to some extent, before
-there is no path back. Or have some way of reversing the data migration
-before the final contract.
-
-It is unknown how expensive on demand object backports would be. We could
-instead always send older versions of objects until the RPC pin is removed,
-but that means we might have new code getting old objects, which is currently
-not the case.
