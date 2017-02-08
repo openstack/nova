@@ -30,6 +30,7 @@ from oslo_vmware import pbm
 from oslo_vmware import vim
 from oslo_vmware import vim_util
 
+from nova.compute import power_state
 from nova.compute import task_states
 import nova.conf
 from nova import exception
@@ -201,8 +202,8 @@ class VMwareVCDriver(driver.ComputeDriver):
         # Check if the instance is running already and avoid doing
         # anything if it is.
         state = vm_util.get_vm_state(self._session, instance)
-        ignored_states = ['poweredon', 'suspended']
-        if state.lower() in ignored_states:
+        ignored_states = [power_state.RUNNING, power_state.SUSPENDED]
+        if state in ignored_states:
             return
         # Instance is not up and could be in an unknown state.
         # Be as absolute as possible about getting it back into

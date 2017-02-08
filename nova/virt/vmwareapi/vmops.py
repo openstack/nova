@@ -66,10 +66,6 @@ CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
-VMWARE_POWER_STATES = {'poweredOff': power_state.SHUTDOWN,
-                       'poweredOn': power_state.RUNNING,
-                       'suspended': power_state.SUSPENDED}
-
 RESIZE_TOTAL_STEPS = 6
 
 
@@ -1517,7 +1513,7 @@ class VMwareVMOps(object):
         max_mem = int(vm_props.get('summary.config.memorySizeMB', 0)) * 1024
         num_cpu = int(vm_props.get('summary.config.numCpu', 0))
         return hardware.InstanceInfo(
-            state=VMWARE_POWER_STATES[vm_props['runtime.powerState']],
+            state=constants.POWER_STATES[vm_props['runtime.powerState']],
             max_mem_kb=max_mem,
             mem_kb=max_mem,
             num_cpu=num_cpu)
@@ -1550,7 +1546,7 @@ class VMwareVMOps(object):
         data = self._get_diagnostics(instance)
         state = data.get('powerState')
         if state:
-            state = power_state.STATE_MAP[VMWARE_POWER_STATES[state]]
+            state = power_state.STATE_MAP[constants.POWER_STATES[state]]
         uptime = data.get('uptimeSeconds', 0)
         config_drive = configdrive.required_by(instance)
         diags = diagnostics.Diagnostics(state=state,
