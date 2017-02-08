@@ -1,0 +1,26 @@
+---
+upgrade:
+  - |
+    The libvirt driver provides port filtering capability. This capability is
+    enabled when the following is true:
+
+    - The `nova.virt.libvirt.firewall.IptablesFirewallDriver` firewall driver
+      is enabled
+    - Security groups are disabled
+    - Neutron port filtering is disabled
+    - An IPTables-compatible interface is used, e.g. hybrid mode, where the
+        VIF is a tap device
+
+    When enabled, libvirt applies IPTables rules that provide MAC, IP, and
+    ARP spoofing protection.
+
+    Previously, setting the `allow_same_net_traffic` config option to `True`
+    allowed for same network traffic when using these port filters. This was
+    the default case and was the only case tested. Setting this to `False`
+    disabled same network traffic *when using the libvirt driver port filtering
+    functionality only*, however, this was neither tested nor documented.
+
+    Given that there are other better documented and better tested ways to
+    approach this, such as through use of neutron's native port filtering or
+    security groups, this functionality has been removed.  Users should instead
+    rely on one of these alternatives.

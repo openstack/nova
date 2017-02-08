@@ -156,24 +156,21 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
             if dhcp_server:
                 parameters.append(format_parameter('DHCPSERVER', dhcp_server))
 
+            ipv4_cidr = subnet['cidr']
+            net, mask = netutils.get_net_and_mask(ipv4_cidr)
+            parameters.append(format_parameter('PROJNET', net))
+            parameters.append(format_parameter('PROJMASK', mask))
+
         for subnet in v6_subnets:
             gateway = subnet.get('gateway')
             if gateway:
                 ra_server = gateway['address'] + "/128"
                 parameters.append(format_parameter('RASERVER', ra_server))
 
-        if CONF.allow_same_net_traffic:
-            for subnet in v4_subnets:
-                ipv4_cidr = subnet['cidr']
-                net, mask = netutils.get_net_and_mask(ipv4_cidr)
-                parameters.append(format_parameter('PROJNET', net))
-                parameters.append(format_parameter('PROJMASK', mask))
-
-            for subnet in v6_subnets:
-                ipv6_cidr = subnet['cidr']
-                net, prefix = netutils.get_net_and_prefixlen(ipv6_cidr)
-                parameters.append(format_parameter('PROJNET6', net))
-                parameters.append(format_parameter('PROJMASK6', prefix))
+            ipv6_cidr = subnet['cidr']
+            net, prefix = netutils.get_net_and_prefixlen(ipv6_cidr)
+            parameters.append(format_parameter('PROJNET6', net))
+            parameters.append(format_parameter('PROJMASK6', prefix))
 
         return parameters
 
