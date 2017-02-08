@@ -101,8 +101,8 @@ class BaseWeigher(object):
         for obj in weighed_obj_list:
             weight = self._weigh_object(obj.obj, weight_properties)
 
-            # Record the min and max values if they are None. If they anything
-            # but none we assume that the weigher has set them
+            # Record the min and max values if they are None. If they are
+            # anything but none, we assume that the weigher had set them.
             if self.minval is None:
                 self.minval = weight
             if self.maxval is None:
