@@ -62,7 +62,7 @@ class SecgroupsFullstack(testscenarios.WithScenarios, test.TestCase):
         server = {}
 
         image = self.api.get_images()[0]
-        LOG.info("Image: %s" % image)
+        LOG.info("Image: %s", image)
 
         if self._image_ref_parameter in image:
             image_href = image[self._image_ref_parameter]

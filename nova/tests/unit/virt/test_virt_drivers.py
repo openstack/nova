@@ -60,7 +60,7 @@ def catch_notimplementederror(f):
         except NotImplementedError:
             frame = traceback.extract_tb(sys.exc_info()[2])[-1]
             LOG.error("%(driver)s does not implement %(method)s "
-                      "required for test %(test)s" %
+                      "required for test %(test)s",
                       {'driver': type(self.connection),
                        'method': frame[2], 'test': f.__name__})
 
