@@ -226,7 +226,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         get_db_nodes.return_value = db_nodes
         get_avail_nodes.return_value = avail_nodes
         self.compute.update_available_resource(self.context)
-        get_db_nodes.assert_called_once_with(self.context, use_slave=True)
+        get_db_nodes.assert_called_once_with(self.context, use_slave=True,
+                                             startup=False)
         update_mock.has_calls(
             [mock.call(self.context, node) for node in avail_nodes_l]
         )
@@ -239,6 +240,32 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                         cascade=True)
             else:
                 self.assertFalse(db_node.destroy.called)
+
+    @mock.patch('nova.context.get_admin_context')
+    def test_pre_start_hook(self, get_admin_context):
+        """Very simple test just to make sure update_available_resource is
+        called as expected.
+        """
+        with mock.patch.object(
+                self.compute, 'update_available_resource') as update_res:
+            self.compute.pre_start_hook()
+        update_res.assert_called_once_with(
+            get_admin_context.return_value, startup=True)
+
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host',
+                       side_effect=exception.NotFound)
+    @mock.patch('nova.compute.manager.LOG')
+    def test_get_compute_nodes_in_db_on_startup(self, mock_log,
+                                                get_all_by_host):
+        """Tests to make sure we only log a warning when we do not find a
+        compute node on startup since this may be expected.
+        """
+        self.assertEqual([], self.compute._get_compute_nodes_in_db(
+            self.context, startup=True))
+        get_all_by_host.assert_called_once_with(
+            self.context, self.compute.host, use_slave=False)
+        self.assertTrue(mock_log.warning.called)
+        self.assertFalse(mock_log.error.called)
 
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     def test_delete_instance_without_info_cache(self, mock_notify):

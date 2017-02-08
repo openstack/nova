@@ -1165,7 +1165,8 @@ class ComputeManager(manager.Manager):
         the service up by listening on RPC queues, make sure to update
         our available resources (and indirectly our available nodes).
         """
-        self.update_available_resource(nova.context.get_admin_context())
+        self.update_available_resource(nova.context.get_admin_context(),
+                                       startup=True)
 
     def _get_power_state(self, context, instance):
         """Retrieve the power state for the given instance."""
@@ -6559,17 +6560,20 @@ class ComputeManager(manager.Manager):
                           "%(node)s."), {'node': nodename})
 
     @periodic_task.periodic_task(spacing=CONF.update_resources_interval)
-    def update_available_resource(self, context):
+    def update_available_resource(self, context, startup=False):
         """See driver.get_available_resource()
 
         Periodic process that keeps that the compute host's understanding of
         resource availability and usage in sync with the underlying hypervisor.
 
         :param context: security context
+        :param startup: True if this is being called when the nova-compute
+            service is starting, False otherwise.
         """
 
         compute_nodes_in_db = self._get_compute_nodes_in_db(context,
-                                                            use_slave=True)
+                                                            use_slave=True,
+                                                            startup=startup)
         nodenames = set(self.driver.get_available_nodes())
         for nodename in nodenames:
             self.update_available_resource_for_node(context, nodename)
@@ -6589,12 +6593,19 @@ class ComputeManager(manager.Manager):
                 self.scheduler_client.reportclient.delete_resource_provider(
                     context, cn, cascade=True)
 
-    def _get_compute_nodes_in_db(self, context, use_slave=False):
+    def _get_compute_nodes_in_db(self, context, use_slave=False,
+                                 startup=False):
         try:
             return objects.ComputeNodeList.get_all_by_host(context, self.host,
                                                            use_slave=use_slave)
         except exception.NotFound:
-            LOG.error(_LE("No compute node record for host %s"), self.host)
+            if startup:
+                LOG.warning(
+                    _LW("No compute node record found for host %s. If this is "
+                        "the first time this service is starting on this "
+                        "host, then you can ignore this warning."), self.host)
+            else:
+                LOG.error(_LE("No compute node record for host %s"), self.host)
             return []
 
     @periodic_task.periodic_task(

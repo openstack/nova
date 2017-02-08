@@ -160,7 +160,7 @@ class BaseTestCase(test.TestCase):
                     self.compute.driver)
         self.compute._resource_tracker = fake_rt
 
-        def fake_get_compute_nodes_in_db(self, context, use_slave=False):
+        def fake_get_compute_nodes_in_db(self, context, **kwargs):
             fake_compute_nodes = [{'local_gb': 259,
                                    'uuid': uuids.fake_compute_node,
                                    'vcpus_used': 0,
