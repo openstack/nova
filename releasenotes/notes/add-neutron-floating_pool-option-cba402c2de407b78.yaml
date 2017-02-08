@@ -1,0 +1,7 @@
+---
+upgrade:
+  - |
+    A ``default_floating_pool`` configuration option has been added in the
+    ``[neutron]`` group. The existing ``default_floating_pool`` option in the
+    ``[DEFAULT]`` group is retained and should be used by nova-network users.
+    Neutron users meanwhile should migrate to the new option.

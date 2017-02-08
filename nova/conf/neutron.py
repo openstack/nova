@@ -52,12 +52,20 @@ region the request is coming from.
     cfg.StrOpt('ovs_bridge',
          default='br-int',
          help="""
+Default name for the Open vSwitch integration bridge.
+
 Specifies the name of an integration bridge interface used by OpenvSwitch.
-This option is used only if Neutron does not specify the OVS bridge name.
+This option is only used if Neutron does not specify the OVS bridge name in
+port binding responses.
+"""),
+    cfg.StrOpt('default_floating_pool',
+        default='nova',
+        help="""
+Default name for the floating IP pool.
 
-Possible values:
-
-* Any string representing OVS bridge name.
+Specifies the name of floating IP pool used for allocating floating IPs. This
+option is only used if Neutron does not specify the floating IP pool name in
+port binding reponses.
 """),
     cfg.IntOpt('extension_sync_interval',
          default=600,
