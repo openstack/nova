@@ -5,3 +5,4 @@ deprecations:
     nova-network and are, like nova-network itself, now deprecated.
 
     - ``ipv6_backend``
+    - ``firewall_driver``
