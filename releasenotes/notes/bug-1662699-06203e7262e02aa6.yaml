@@ -1,0 +1,10 @@
+---
+fixes:
+  - |
+    Fixes `bug 1662699`_ which was a regression in the v2.1 API from the
+    ``block_device_mapping_v2.boot_index`` validation that was performed in the
+    legacy v2 API. With this fix, requests to create a server with
+    ``boot_index=None`` will be treated as if ``boot_index`` was not specified,
+    which defaults to meaning a non-bootable block device.
+
+    .. _bug 1662699: https://bugs.launchpad.net/nova/+bug/1662699
