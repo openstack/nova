@@ -38,7 +38,7 @@ class TestNetUtilsTestCase(test.NoDBTestCase):
 
         network_info[1]['vnic_type'] = network_model.VNIC_TYPE_DIRECT_PHYSICAL
         network_info[1]['address'] = "fa:16:3e:d1:28:e4"
-        network_info[1]['details'] = dict(vlan=2145)
-        expected = {'fa:16:3e:d1:28:e4': 2145}
+        network_info[1]['details'] = dict(vlan='2145')
+        expected = {'fa:16:3e:d1:28:e4': '2145'}
         self.assertEqual(expected,
                          netutils.get_cached_vifs_with_vlan(network_info))

@@ -1585,7 +1585,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         network_info = _fake_network_info(self, 4)
         network_info[0]['vnic_type'] = network_model.VNIC_TYPE_DIRECT_PHYSICAL
         network_info[0]['address'] = "51:5a:2c:a4:5e:1b"
-        network_info[0]['details'] = dict(vlan=2145)
+        network_info[0]['details'] = dict(vlan='2145')
         instance_ref.info_cache = objects.InstanceInfoCache(
             network_info=network_info)
 
