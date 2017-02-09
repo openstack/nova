@@ -74,7 +74,7 @@ Request
 
    - flavor: flavor
    - name: flavor_name
-   - id: flavor_id_body
+   - id: flavor_id_body_create
    - ram: flavor_ram
    - disk: flavor_disk
    - vcpus: flavor_cpus

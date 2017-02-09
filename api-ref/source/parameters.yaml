@@ -1914,6 +1914,13 @@ flavor_id_body:
   in: body
   required: true
   type: string
+flavor_id_body_create:
+  description: |
+    The ID of the flavor. While people often make this look like an int, this
+    is really a string. If not provided, this defaults to a uuid.
+  in: body
+  required: false
+  type: string
 flavor_is_public:
   description: |
     Whether the flavor is public (available to all projects) or scoped
