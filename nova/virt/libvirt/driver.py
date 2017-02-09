@@ -1286,19 +1286,18 @@ class LibvirtDriver(driver.ComputeDriver):
                 CONF.libvirt.virt_type, disk_dev),
             'type': 'disk',
             }
+        # NOTE (lyarwood): new_connection_info will be modified by the
+        # following _connect_volume call down into the volume drivers. The
+        # majority of the volume drivers will add a device_path that is in turn
+        # used by _get_volume_config to set the source_path of the
+        # LibvirtConfigGuestDisk object it returns. We do not explicitly save
+        # this to the BDM here as the upper compute swap_volume method will
+        # eventually do this for us.
         self._connect_volume(new_connection_info, disk_info)
         conf = self._get_volume_config(new_connection_info, disk_info)
         if not conf.source_path:
             self._disconnect_volume(new_connection_info, disk_dev)
             raise NotImplementedError(_("Swap only supports host devices"))
-
-        # Save updates made in connection_info when connect_volume was called
-        volume_id = new_connection_info.get('serial')
-        bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
-            nova_context.get_admin_context(), volume_id, instance.uuid)
-        driver_bdm = driver_block_device.convert_volume(bdm)
-        driver_bdm['connection_info'] = new_connection_info
-        driver_bdm.save()
 
         self._swap_volume(guest, disk_dev, conf.source_path, resize_to)
         self._disconnect_volume(old_connection_info, disk_dev)
