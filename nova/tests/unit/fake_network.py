@@ -219,16 +219,16 @@ def fake_network_obj(context, network_id=1, ipv6=None):
 
 
 def fake_vif(x):
-    return{'id': x,
-           'created_at': None,
-           'updated_at': None,
-           'deleted_at': None,
-           'deleted': 0,
-           'address': 'DE:AD:BE:EF:00:%02x' % x,
-           'uuid': getattr(uuids, 'vif%i' % x),
-           'network_id': x,
-           'instance_uuid': uuids.vifs_1,
-           'tag': 'fake-tag'}
+    return {'id': x,
+            'created_at': None,
+            'updated_at': None,
+            'deleted_at': None,
+            'deleted': 0,
+            'address': 'DE:AD:BE:EF:00:%02x' % x,
+            'uuid': getattr(uuids, 'vif%i' % x),
+            'network_id': x,
+            'instance_uuid': uuids.vifs_1,
+            'tag': 'fake-tag'}
 
 
 def floating_ip_ids():

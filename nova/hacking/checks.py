@@ -108,6 +108,7 @@ log_remove_context = re.compile(
 log_string_interpolation = re.compile(r".*LOG\.(error|warning|info"
                                       r"|critical|exception|debug)"
                                       r"\([^,]*%[^,]*[,)]")
+return_not_followed_by_space = re.compile(r"^\s*return(?:\(|{|\"|'|#).*$")
 
 
 class BaseASTChecker(ast.NodeVisitor):
@@ -876,6 +877,23 @@ def check_uuid4(logical_line):
         yield (0, msg)
 
 
+def return_followed_by_space(logical_line):
+    """Return should be followed by a space.
+
+    Return should be followed by a space to clarify that return is
+    not a function. Adding a space may force the developer to rethink
+    if there are unnecessary parentheses in the written code.
+
+    Not correct: return(42), return(a, b)
+    Correct: return 42, return (a, b), return a, b
+
+    N358
+    """
+    if return_not_followed_by_space.match(logical_line):
+        yield (0,
+               "N357: Return keyword should be followed by a space.")
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -920,3 +938,4 @@ def factory(register):
     register(no_assert_equal_true_false)
     register(no_assert_true_false_is_not)
     register(check_uuid4)
+    register(return_followed_by_space)

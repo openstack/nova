@@ -235,14 +235,14 @@ class ProjectCommands(object):
                     value = -1
                 if int(value) < -1:
                     print(_('Quota limit must be -1 or greater.'))
-                    return(2)
+                    return 2
                 if ((int(value) < minimum) and
                    (maximum != -1 or (maximum == -1 and int(value) != -1))):
                     print(_('Quota limit must be greater than %s.') % minimum)
-                    return(2)
+                    return 2
                 if maximum != -1 and int(value) > maximum:
                     print(_('Quota limit must be less than %s.') % maximum)
-                    return(2)
+                    return 2
                 try:
                     db.quota_create(ctxt, project_id, key, value,
                                     user_id=user_id)
@@ -253,7 +253,7 @@ class ProjectCommands(object):
                 print(_('%(key)s is not a valid quota key. Valid options are: '
                         '%(options)s.') % {'key': key,
                                            'options': ', '.join(quota)})
-                return(2)
+                return 2
         print_format = "%-36s %-10s %-10s %-10s"
         print(print_format % (
                     _('Quota'),
@@ -353,7 +353,7 @@ class FloatingIpCommands(object):
             # instead of printing, but logging isn't used here and I
             # don't know why.
             print('error: %s' % exc)
-            return(1)
+            return 1
 
     @args('--ip_range', metavar='<range>', help='IP range')
     def delete(self, ip_range):
@@ -398,7 +398,7 @@ def validate_network_plugin(f, *args, **kwargs):
     if utils.is_neutron():
         print(_("ERROR: Network commands are not supported when using the "
                 "Neutron API.  Use python-neutronclient instead."))
-        return(2)
+        return 2
     return f(*args, **kwargs)
 
 
@@ -554,7 +554,7 @@ class NetworkCommands(object):
                 error_msg = "ERROR: Unexpected arguments provided. Please " \
                     "use separate commands."
                 print(error_msg)
-                return(1)
+                return 1
             db.network_update(admin_context, network['id'], net)
             return
 
@@ -666,11 +666,11 @@ class DbCommands(object):
         max_rows = int(max_rows)
         if max_rows < 0:
             print(_("Must supply a positive value for max_rows"))
-            return(2)
+            return 2
         if max_rows > db.MAX_INT:
             print(_('max rows must be <= %(max_value)d') %
                   {'max_value': db.MAX_INT})
-            return(2)
+            return 2
 
         table_to_rows_archived = {}
         if until_complete and verbose:
@@ -935,7 +935,7 @@ class GetLogCommands(object):
             log_file = '/var/log/messages'
         else:
             print(_('Unable to find system log file!'))
-            return(1)
+            return 1
         lines = [line.strip() for line in open(log_file, "r")]
         lines.reverse()
         print(_('Last %s nova syslog entries:-') % (entries))
@@ -1020,7 +1020,7 @@ class CellCommands(object):
         if cell_type not in ['parent', 'child', 'api', 'compute']:
             print("Error: cell type must be 'parent'/'api' or "
                 "'child'/'compute'")
-            return(2)
+            return 2
 
         # Set up the transport URL
         transport_hosts = self._create_transport_hosts(
@@ -1582,21 +1582,21 @@ def main():
 
     if CONF.category.name == "version":
         print(version.version_string_with_package())
-        return(0)
+        return 0
 
     if CONF.category.name == "bash-completion":
         cmd_common.print_bash_completion(CATEGORIES)
-        return(0)
+        return 0
 
     try:
         fn, fn_args, fn_kwargs = cmd_common.get_action_fn()
         ret = fn(*fn_args, **fn_kwargs)
         rpc.cleanup()
-        return(ret)
+        return ret
     except Exception:
         if CONF.post_mortem:
             import pdb
             pdb.post_mortem()
         else:
             print(_("An error has occurred:\n%s") % traceback.format_exc())
-        return(1)
+        return 1

@@ -157,7 +157,7 @@ def get_vm_device_id(session, image_meta):
 
 def _hypervisor_supports_device_id(version):
     version_as_string = '.'.join(str(v) for v in version)
-    return(versionutils.is_compatible('6.1', version_as_string))
+    return versionutils.is_compatible('6.1', version_as_string)
 
 
 def create_vm(session, instance, name_label, kernel, ramdisk,
