@@ -369,7 +369,9 @@ class API(base_api.NetworkAPI):
             IpAddressGenerationFailure error.
         :raises: PortBindingFailed: If port binding failed.
         """
-        port_req_body = {'port': {}}
+        # Set the device_id so it's clear who this port was created for,
+        # and to stop other instances trying to use it
+        port_req_body = {'port': {'device_id': instance.uuid}}
         try:
             if fixed_ip:
                 port_req_body['port']['fixed_ips'] = [
