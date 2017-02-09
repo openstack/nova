@@ -1578,9 +1578,20 @@ class TestNovaManageMain(test.NoDBTestCase):
     def test_error_traceback(self, mock_conf, mock_parse_args):
         with mock.patch.object(manage.cmd_common, 'get_action_fn',
                                side_effect=test.TestingException('oops')):
+            mock_conf.post_mortem = False
             self.assertEqual(1, manage.main())
             # assert the traceback is dumped to stdout
             output = self.output.getvalue()
             self.assertIn('An error has occurred', output)
             self.assertIn('Traceback', output)
             self.assertIn('oops', output)
+
+    @mock.patch('pdb.post_mortem')
+    @mock.patch.object(manage.config, 'parse_args')
+    @mock.patch.object(manage, 'CONF')
+    def test_error_post_mortem(self, mock_conf, mock_parse_args, mock_pm):
+        with mock.patch.object(manage.cmd_common, 'get_action_fn',
+                               side_effect=test.TestingException('oops')):
+            mock_conf.post_mortem = True
+            self.assertEqual(1, manage.main())
+            self.assertTrue(mock_pm.called)

@@ -1565,10 +1565,14 @@ category_opt = cfg.SubCommandOpt('category',
                                  help='Available categories',
                                  handler=add_command_parsers)
 
+post_mortem_opt = cfg.BoolOpt('post-mortem',
+                              default=False,
+                              help='Allow post-mortem debugging')
+
 
 def main():
     """Parse options and call the appropriate class/method."""
-    CONF.register_cli_opt(category_opt)
+    CONF.register_cli_opts([category_opt, post_mortem_opt])
     config.parse_args(sys.argv)
     logging.set_defaults(
         default_log_levels=logging.get_default_log_levels() +
@@ -1590,5 +1594,9 @@ def main():
         rpc.cleanup()
         return(ret)
     except Exception:
-        print(_("An error has occurred:\n%s") % traceback.format_exc())
+        if CONF.post_mortem:
+            import pdb
+            pdb.post_mortem()
+        else:
+            print(_("An error has occurred:\n%s") % traceback.format_exc())
         return(1)
