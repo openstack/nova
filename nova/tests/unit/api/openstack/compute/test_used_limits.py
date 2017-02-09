@@ -47,7 +47,6 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
         self.fake_context = nova.context.RequestContext('fake', 'fake')
 
     def _set_up_controller(self):
-        self.ext_mgr = None
         self.controller = used_limits_v21.UsedLimitsController()
         patcher = self.mock_can = mock.patch('nova.context.RequestContext.can')
         self.mock_can = patcher.start()
@@ -83,13 +82,8 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
         def stub_get_project_quotas(context, project_id, usages=True):
             return limits
 
-        self.stubs.Set(quota.QUOTAS, "get_project_quotas",
-                       stub_get_project_quotas)
-        if self.ext_mgr is not None:
-            self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(False)
-            self.ext_mgr.is_loaded('os-server-group-quotas').AndReturn(
-                self.include_server_group_quotas)
-            self.mox.ReplayAll()
+        self.stub_out('nova.quota.QUOTAS.get_project_quotas',
+                      stub_get_project_quotas)
 
         self.controller.index(fake_req, res)
         abs_limits = res.obj['limits']['absolute']
@@ -122,18 +116,15 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
         }
         fake_req = FakeRequest(self.fake_context)
         fake_req.GET = {'tenant_id': tenant_id}
-        if self.ext_mgr is not None:
-            self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(True)
-            self.ext_mgr.is_loaded('os-server-group-quotas').AndReturn(
-                self.include_server_group_quotas)
-        self.mox.StubOutWithMock(quota.QUOTAS, 'get_project_quotas')
-        quota.QUOTAS.get_project_quotas(self.fake_context, tenant_id,
-                                        usages=True).AndReturn({})
-        self.mox.ReplayAll()
-        res = wsgi.ResponseObject(obj)
-        self.controller.index(fake_req, res)
-        self.mock_can.assert_called_once_with(ul_policies.BASE_POLICY_NAME,
-                                              target)
+
+        with mock.patch.object(quota.QUOTAS, 'get_project_quotas',
+                              return_value={}) as mock_get_quotas:
+            res = wsgi.ResponseObject(obj)
+            self.controller.index(fake_req, res)
+            self.mock_can.assert_called_once_with(ul_policies.BASE_POLICY_NAME,
+                                                  target)
+            mock_get_quotas.assert_called_once_with(self.fake_context,
+                tenant_id, usages=True)
 
     def test_admin_can_fetch_used_limits_for_own_project(self):
         project_id = "123456"
@@ -148,16 +139,14 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
         }
         fake_req = FakeRequest(self.fake_context)
         fake_req.GET = {}
-        if self.ext_mgr is not None:
-            self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(True)
-            self.ext_mgr.is_loaded('os-server-group-quotas').AndReturn(
-                self.include_server_group_quotas)
-        self.mox.StubOutWithMock(quota.QUOTAS, 'get_project_quotas')
-        quota.QUOTAS.get_project_quotas(self.fake_context, project_id,
-                                        usages=True).AndReturn({})
-        self.mox.ReplayAll()
-        res = wsgi.ResponseObject(obj)
-        self.controller.index(fake_req, res)
+
+        with mock.patch.object(quota.QUOTAS, 'get_project_quotas',
+                               return_value={}) as mock_get_quotas:
+            res = wsgi.ResponseObject(obj)
+            self.controller.index(fake_req, res)
+
+            mock_get_quotas.assert_called_once_with(self.fake_context,
+                project_id, usages=True)
 
     def test_non_admin_cannot_fetch_used_limits_for_any_other_project(self):
         project_id = "123456"
@@ -177,14 +166,15 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
         }
         fake_req = FakeRequest(self.fake_context)
         fake_req.GET = {'tenant_id': tenant_id}
-        if self.ext_mgr is not None:
-            self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(True)
+
         self.mock_can.side_effect = exception.PolicyNotAuthorized(
             action=self.used_limit_extension)
-        self.mox.ReplayAll()
+
         res = wsgi.ResponseObject(obj)
-        self.assertRaises(exception.PolicyNotAuthorized, self.controller.index,
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.index,
                           fake_req, res)
+
         self.mock_can.assert_called_once_with(ul_policies.BASE_POLICY_NAME,
                                               target)
 
@@ -198,16 +188,14 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
             },
         }
         fake_req = FakeRequest(self.fake_context)
-        if self.ext_mgr is not None:
-            self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(False)
-            self.ext_mgr.is_loaded('os-server-group-quotas').AndReturn(
-                self.include_server_group_quotas)
-        self.mox.StubOutWithMock(quota.QUOTAS, 'get_project_quotas')
-        quota.QUOTAS.get_project_quotas(self.fake_context, project_id,
-                                        usages=True).AndReturn({})
-        self.mox.ReplayAll()
-        res = wsgi.ResponseObject(obj)
-        self.controller.index(fake_req, res)
+
+        with mock.patch.object(quota.QUOTAS, 'get_project_quotas',
+                               return_value={}) as mock_get_quotas:
+            res = wsgi.ResponseObject(obj)
+            self.controller.index(fake_req, res)
+
+            mock_get_quotas.assert_called_once_with(self.fake_context,
+                project_id, usages=True)
 
     def test_used_ram_added(self):
         fake_req = FakeRequest(self.fake_context)
@@ -224,18 +212,15 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
         def stub_get_project_quotas(context, project_id, usages=True):
             return {'ram': {'limit': 512, 'in_use': 256}}
 
-        if self.ext_mgr is not None:
-            self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(False)
-            self.ext_mgr.is_loaded('os-server-group-quotas').AndReturn(
-                self.include_server_group_quotas)
-        self.stubs.Set(quota.QUOTAS, "get_project_quotas",
-                       stub_get_project_quotas)
-        self.mox.ReplayAll()
+        with mock.patch.object(quota.QUOTAS, 'get_project_quotas',
+                               side_effect=stub_get_project_quotas
+                               ) as mock_get_quotas:
 
-        self.controller.index(fake_req, res)
-        abs_limits = res.obj['limits']['absolute']
-        self.assertIn('totalRAMUsed', abs_limits)
-        self.assertEqual(256, abs_limits['totalRAMUsed'])
+            self.controller.index(fake_req, res)
+            abs_limits = res.obj['limits']['absolute']
+            self.assertIn('totalRAMUsed', abs_limits)
+            self.assertEqual(256, abs_limits['totalRAMUsed'])
+            self.assertEqual(1, mock_get_quotas.call_count)
 
     def test_no_ram_quota(self):
         fake_req = FakeRequest(self.fake_context)
@@ -247,17 +232,10 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
         }
         res = wsgi.ResponseObject(obj)
 
-        def stub_get_project_quotas(context, project_id, usages=True):
-            return {}
+        with mock.patch.object(quota.QUOTAS, 'get_project_quotas',
+                               return_value={}) as mock_get_quotas:
 
-        if self.ext_mgr is not None:
-            self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(False)
-            self.ext_mgr.is_loaded('os-server-group-quotas').AndReturn(
-                self.include_server_group_quotas)
-        self.stubs.Set(quota.QUOTAS, "get_project_quotas",
-                       stub_get_project_quotas)
-        self.mox.ReplayAll()
-
-        self.controller.index(fake_req, res)
-        abs_limits = res.obj['limits']['absolute']
-        self.assertNotIn('totalRAMUsed', abs_limits)
+            self.controller.index(fake_req, res)
+            abs_limits = res.obj['limits']['absolute']
+            self.assertNotIn('totalRAMUsed', abs_limits)
+            self.assertEqual(1, mock_get_quotas.call_count)
