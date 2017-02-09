@@ -3263,6 +3263,10 @@ class LibvirtDriver(driver.ComputeDriver):
                     # NOTE(mikal): if the config drive was imported into RBD,
                     # then we no longer need the local copy
                     if CONF.libvirt.images_type == 'rbd':
+                        LOG.info(_LI('Deleting local config drive %(path)s '
+                                 'because it was imported into RBD.'),
+                                 {'path': config_disk_local_path},
+                                 instance=instance)
                         os.unlink(config_disk_local_path)
 
     def _prepare_pci_devices_for_use(self, pci_devices):
