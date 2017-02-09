@@ -183,7 +183,7 @@ def update_resource_class(req):
     except exception.ResourceClassExists:
         raise webob.exc.HTTPConflict(
             _('Resource class already exists: %(name)s') %
-            {'name': name},
+            {'name': rc.name},
             json_formatter=util.json_error_formatter)
     except exception.ResourceClassCannotUpdateStandard:
         raise webob.exc.HTTPBadRequest(
