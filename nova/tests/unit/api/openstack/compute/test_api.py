@@ -15,7 +15,6 @@
 
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
-import six
 import webob.dec
 import webob.exc
 
@@ -142,7 +141,7 @@ class APITest(test.NoDBTestCase):
         self.assertEqual(resp.status_int, exception_type.code, resp.text)
 
         if hasattr(exception_type, 'headers'):
-            for (key, value) in six.iteritems(exception_type.headers):
+            for (key, value) in exception_type.headers.items():
                 self.assertIn(key, resp.headers)
                 self.assertEqual(resp.headers[key], str(value))
 

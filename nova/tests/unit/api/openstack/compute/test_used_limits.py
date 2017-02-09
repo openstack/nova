@@ -14,7 +14,6 @@
 #    under the License.
 
 import mock
-import six
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack.compute import used_limits \
@@ -71,7 +70,7 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
         }
         limits = {}
         expected_abs_limits = []
-        for display_name, q in six.iteritems(quota_map):
+        for display_name, q in quota_map.items():
             limits[q] = {'limit': len(display_name),
                          'in_use': len(display_name) / 2,
                          'reserved': len(display_name) / 3}

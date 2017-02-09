@@ -16,7 +16,6 @@
 import datetime
 
 import mock
-import six
 from webob import exc
 
 from nova.api.openstack import api_version_request as api_version
@@ -90,7 +89,7 @@ def fake_get_all_flavors_sorted_list(context, inactive=False,
         return sorted(INSTANCE_TYPES.values(), key=lambda item: item[sort_key])
 
     res = {}
-    for k, v in six.iteritems(INSTANCE_TYPES):
+    for k, v in INSTANCE_TYPES.items():
         if filters['is_public'] and _has_flavor_access(k, context.project_id):
             res.update({k: v})
             continue

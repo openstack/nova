@@ -35,7 +35,6 @@ from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
 from oslo_utils import units
 from oslo_utils import uuidutils
-import six
 import testtools
 from testtools import matchers as testtools_matchers
 
@@ -118,7 +117,7 @@ def unify_instance(instance):
     model-initiated sources that can reasonably be compared.
     """
     newdict = dict()
-    for k, v in six.iteritems(instance):
+    for k, v in instance.items():
         if isinstance(v, datetime.datetime):
             # NOTE(danms): DB models and Instance objects have different
             # timezone expectations
@@ -6907,7 +6906,7 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute._poll_unconfirmed_resizes(ctxt)
 
-        for instance_uuid, status in six.iteritems(expected_migration_status):
+        for instance_uuid, status in expected_migration_status.items():
             self.assertEqual(status,
                              fetch_instance_migration_status(instance_uuid))
 
@@ -7991,7 +7990,7 @@ class ComputeAPITestCase(BaseTestCase):
         image_props = {'image_kernel_id': uuids.kernel_id,
                  'image_ramdisk_id': uuids.ramdisk_id,
                  'image_something_else': 'meow', }
-        for key, value in six.iteritems(image_props):
+        for key, value in image_props.items():
             self.assertIn(key, instance.system_metadata)
             self.assertEqual(value, instance.system_metadata[key])
 

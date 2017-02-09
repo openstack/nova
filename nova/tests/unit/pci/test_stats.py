@@ -15,7 +15,6 @@
 
 import mock
 from oslo_config import cfg
-import six
 
 from nova import exception
 from nova import objects
@@ -266,7 +265,7 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
         self.assertEqual(product_id, pool['product_id'])
         self.assertEqual(count, pool['count'])
         if tags:
-            for k, v in six.iteritems(tags):
+            for k, v in tags.items():
                 self.assertEqual(v, pool[k])
 
     def _assertPools(self):

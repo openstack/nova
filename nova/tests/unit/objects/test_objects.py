@@ -1011,7 +1011,7 @@ class TestArgsSerializer(test.NoDBTestCase):
 
         expected_kwargs = {'a': 'untouched', 'b': self.str_now,
                            'c': self.str_now, 'exc_val': self.unicode_str}
-        for key, val in six.iteritems(kwargs):
+        for key, val in kwargs.items():
             self.assertEqual(expected_kwargs[key], val)
 
     def test_serialize_args(self):

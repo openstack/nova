@@ -17,7 +17,6 @@ import time
 
 import fixtures
 from lxml import etree
-import six
 
 from nova.objects import fields as obj_fields
 from nova.tests import uuidsentinel as uuids
@@ -1033,7 +1032,7 @@ class Connection(object):
 
         dom._id = -1
 
-        for (k, v) in six.iteritems(self._running_vms):
+        for (k, v) in self._running_vms.items():
             if v == dom:
                 del self._running_vms[k]
                 self._emit_lifecycle(dom, VIR_DOMAIN_EVENT_STOPPED, 0)

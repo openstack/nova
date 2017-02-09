@@ -8219,7 +8219,7 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 'local_gb': 2048,
                 'free_ram_mb': 1024,
                 'memory_mb_used': 0}
-        for key, value in six.iteritems(data):
+        for key, value in data.items():
             self.assertEqual(value, stats.pop(key))
 
     def test_compute_node_not_found(self):

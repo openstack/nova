@@ -14,8 +14,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import six
-
 import testscenarios
 
 from nova import context
@@ -112,7 +110,7 @@ class FlavorManageFullstack(testscenarios.WithScenarios, test.TestCase):
             'id': 'flavorid',
             'swap': 'swap'
         }
-        for k, v in six.iteritems(mapping):
+        for k, v in mapping.items():
             if k in flav:
                 self.assertEqual(flav[k], flavdb[v],
                                  "%s != %s" % (flav, flavdb))
@@ -120,7 +118,7 @@ class FlavorManageFullstack(testscenarios.WithScenarios, test.TestCase):
     def assertFlavorAPIEqual(self, flav, flavapi):
         # for all keys in the flavor, ensure they are correctly set in
         # flavapi response.
-        for k, v in six.iteritems(flav):
+        for k in flav:
             if k in flavapi:
                 self.assertEqual(flav[k], flavapi[k],
                                  "%s != %s" % (flav, flavapi))

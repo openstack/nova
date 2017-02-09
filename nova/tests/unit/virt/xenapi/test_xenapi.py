@@ -32,7 +32,6 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
 from oslo_utils import uuidutils
-import six
 import testtools
 
 from nova.compute import api as compute_api
@@ -596,8 +595,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         # Get Nova record for VM
         vm_info = conn.get_info({'name': name})
         # Get XenAPI record for VM
-        vms = [rec for ref, rec
-               in six.iteritems(xenapi_fake.get_all_records('VM'))
+        vms = [rec for rec
+               in xenapi_fake.get_all_records('VM').values()
                if not rec['is_control_domain']]
         vm = vms[0]
         self.vm_info = vm_info
@@ -2533,7 +2532,7 @@ class XenAPIBWCountersTestCase(stubs.XenAPITestBaseNoDB):
 
     @classmethod
     def _fake_list_vms(cls, session):
-        return six.iteritems(cls.FAKE_VMS)
+        return cls.FAKE_VMS.items()
 
     @staticmethod
     def _fake_fetch_bandwidth_mt(session):
@@ -2923,7 +2922,7 @@ class XenAPISRSelectionTestCase(stubs.XenAPITestBaseNoDB):
 def _create_service_entries(context, values={'avail_zone1': ['fake_host1',
                                                          'fake_host2'],
                                          'avail_zone2': ['fake_host3'], }):
-    for avail_zone, hosts in six.iteritems(values):
+    for hosts in values.values():
         for service_host in hosts:
             db.service_create(context,
                               {'host': service_host,
