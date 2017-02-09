@@ -24,26 +24,6 @@ from nova.tests.unit.virt.libvirt import fake_libvirt_utils
 from nova.tests.unit.virt.libvirt import fakelibvirt
 
 
-class NumaHostInfo(fakelibvirt.HostInfo):
-
-    def get_numa_topology(self):
-        if self.numa_topology:
-            return self.numa_topology
-
-        topology = fakelibvirt.NUMATopology(self.cpu_nodes, self.cpu_sockets,
-                                            self.cpu_cores, self.cpu_threads,
-                                            self.kB_mem)
-        self.numa_topology = topology
-
-        # update number of active cpus
-        cpu_count = len(topology.cells) * len(topology.cells[0].cpus)
-        self.cpus = cpu_count - len(self.disabled_cpus_list)
-        return topology
-
-    def set_custom_numa_toplogy(self, topology):
-        self.numa_topology = topology
-
-
 class RealTimeServersTest(ServersTestBase):
 
     def setUp(self):
@@ -89,8 +69,9 @@ class RealTimeServersTest(ServersTestBase):
             self.api.post_server, {'server': server})
 
     def test_invalid_libvirt_version(self):
-        host_info = NumaHostInfo(cpu_nodes=2, cpu_sockets=1, cpu_cores=2,
-                                 cpu_threads=2, kB_mem=15740000)
+        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
+                                             cpu_cores=2, cpu_threads=2,
+                                             kB_mem=15740000)
         fake_connection = fakelibvirt.Connection('qemu:///system',
                                                  version=1002007,
                                                  hv_version=2001000,
@@ -114,8 +95,9 @@ class RealTimeServersTest(ServersTestBase):
             self._delete_server(instance['id'])
 
     def test_success(self):
-        host_info = NumaHostInfo(cpu_nodes=2, cpu_sockets=1, cpu_cores=2,
-                                 cpu_threads=2, kB_mem=15740000)
+        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
+                                             cpu_cores=2, cpu_threads=2,
+                                             kB_mem=15740000)
         fake_connection = fakelibvirt.Connection('qemu:///system',
                                                  version=1002013,
                                                  hv_version=2001000,
