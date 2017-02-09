@@ -167,6 +167,7 @@ Request
   - ip: ip_query
   - reservation_id: reservation_id_query
   - all_tenants: all_tenants_query
+  - tenant_id: tenant_id_query
   - deleted: deleted_query
   - ip6: ip6_query
   - tags: tags_query
@@ -471,6 +472,7 @@ Request
   - ip: ip_query
   - reservation_id: reservation_id_query
   - all_tenants: all_tenants_query
+  - tenant_id: tenant_id_query
   - deleted: deleted_query
   - ip6: ip6_query
   - tags: tags_query

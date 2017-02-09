@@ -724,6 +724,16 @@ tags_query:
     all tags in this list will be returned. Boolean expression in this
     case is 't1 AND t2'. Tags in query must be separated by comma.
   min_version: 2.26
+tenant_id_query:
+  description: |
+    When passed alongside the ``all_tenants=1`` query parameter, the
+    ``tenant_id`` query parameter only returns the resources that belong to the
+    specified tenant. By default this is only allowed by admin users. Note that
+    this query parameter has no effect and is ignored unless the
+    ``all_tenants=1`` query parameter is also passed.
+  in: query
+  required: false
+  type: string
 usage_limit:
   description: |
     Requests a page size of items. Calculate usage for the limited number of
