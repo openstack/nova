@@ -527,7 +527,7 @@ class Host(object):
 
         :returns: a nova.virt.libvirt.Guest object
         :raises exception.InstanceNotFound: The domain was not found
-        :raises exception.InternalError: A libvirt error occured
+        :raises exception.InternalError: A libvirt error occurred
         """
         return libvirt_guest.Guest(self.get_domain(instance))
 
@@ -542,7 +542,7 @@ class Host(object):
 
         :returns: a libvirt.Domain object
         :raises exception.InstanceNotFound: The domain was not found
-        :raises exception.InternalError: A libvirt error occured
+        :raises exception.InternalError: A libvirt error occurred
         """
         try:
             conn = self.get_connection()
