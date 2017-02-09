@@ -340,8 +340,14 @@ Please refer to the libvirt documentation for further details.
 Maximum permitted downtime, in milliseconds, for live migration
 switchover.
 
-Will be rounded up to a minimum of %dms. Use a large value if guest liveness
-is unimportant.
+Will be rounded up to a minimum of %dms. You can increase this value
+if you want to allow live-migrations to complete faster, or avoid
+live-migration timeout errors by allowing the guest to be paused for
+longer during the live-migration switch over.
+
+Related options:
+
+* live_migration_completion_timeout
 """ % LIVE_MIGRATION_DOWNTIME_MIN),
     # TODO(hieulq): Need to add min argument by moving from
     # LIVE_MIGRATION_DOWNTIME_STEPS_MIN constant.
@@ -373,16 +379,27 @@ data before aborting the operation.
 Value is per GiB of guest RAM + disk to be transferred, with lower bound of
 a minimum of 2 GiB. Should usually be larger than downtime delay * downtime
 steps. Set to 0 to disable timeouts.
-Default is 800.
+
+Related options:
+
+* live_migration_downtime
+* live_migration_downtime_steps
+* live_migration_downtime_delay
 """),
     cfg.IntOpt('live_migration_progress_timeout',
-               default=150,
+               default=0,
+               deprecated_for_removal=True,
+               deprecated_reason="Serious bugs found in this feature.",
                mutable=True,
                help="""
 Time to wait, in seconds, for migration to make forward progress in
 transferring data before aborting the operation.
 
 Set to 0 to disable timeouts.
+
+This is deprecated, and now disabled by default because we have found serious
+bugs in this feature that caused false live-migration timeout failures. This
+feature will be removed or replaced in a future release.
 """),
     cfg.BoolOpt('live_migration_permit_post_copy',
                 default=False,
