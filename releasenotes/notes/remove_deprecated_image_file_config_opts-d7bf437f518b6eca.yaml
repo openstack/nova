@@ -1,0 +1,10 @@
+---
+upgrade:
+  - |
+    Configuration options related to image file have been removed. They were
+    marked as deprecated because the feature to download images from glance
+    via filesystem is not used. Below are the removed options:
+
+    - ``image_file_url.filesystems``
+    - ``image_file_url.FS.id``
+    - ``image_file_url.FS.mountpoint``
