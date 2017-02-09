@@ -161,12 +161,16 @@ class ServerGroupTestV21(test.TestCase):
         ig_uuid = self._create_instance_group(ctx, members)
         return (ig_uuid, instances, members)
 
+    def _test_list_server_group_all(self, api_version='2.1'):
+        self._test_list_server_group(api_version=api_version, limited=False)
+
+    def _test_list_server_group_offset_and_limit(self, api_version='2.1'):
+        self._test_list_server_group(api_version=api_version, limited=True)
+
     @mock.patch.object(nova.db, 'instance_group_get_all_by_project_id')
     @mock.patch.object(nova.db, 'instance_group_get_all')
-    def _test_list_server_group_all(self,
-                                    mock_get_all,
-                                    mock_get_by_project,
-                                    api_version='2.1'):
+    def _test_list_server_group(self, mock_get_all, mock_get_by_project,
+                                api_version='2.1', limited=False):
         policies = ['anti-affinity']
         members = []
         metadata = {}  # always empty
@@ -202,8 +206,12 @@ class ServerGroupTestV21(test.TestCase):
         tenant_groups = [sg2]
         all_groups = [sg1, sg2]
 
-        all = {'server_groups': all_groups}
-        tenant_specific = {'server_groups': tenant_groups}
+        if limited:
+            all = {'server_groups': [sg2]}
+            tenant_specific = {'server_groups': []}
+        else:
+            all = {'server_groups': all_groups}
+            tenant_specific = {'server_groups': tenant_groups}
 
         def return_all_server_groups():
             return [server_group_db(sg) for sg in all_groups]
@@ -216,7 +224,8 @@ class ServerGroupTestV21(test.TestCase):
         mock_get_by_project.return_value = return_tenant_server_groups()
 
         path = '/os-server-groups?all_projects=True'
-
+        if limited:
+            path += '&offset=1&limit=1'
         req = fakes.HTTPRequest.blank(path, version=api_version)
         admin_req = fakes.HTTPRequest.blank(path, use_admin_context=True,
                                             version=api_version)
@@ -454,6 +463,9 @@ class ServerGroupTestV21(test.TestCase):
     def test_list_server_group_all(self):
         self._test_list_server_group_all(api_version='2.1')
 
+    def test_list_server_group_offset_and_limit(self):
+        self._test_list_server_group_offset_and_limit(api_version='2.1')
+
     def test_list_server_groups_rbac_default(self):
         # test as admin
         self.controller.index(self.admin_req)
@@ -549,6 +561,9 @@ class ServerGroupTestV213(ServerGroupTestV21):
 
     def test_list_server_group_all(self):
         self._test_list_server_group_all(api_version='2.13')
+
+    def test_list_server_group_offset_and_limit(self):
+        self._test_list_server_group_offset_and_limit(api_version='2.13')
 
     def test_list_server_group_by_tenant(self):
         self._test_list_server_group_by_tenant(api_version='2.13')

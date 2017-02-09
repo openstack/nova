@@ -28,6 +28,14 @@ Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - limit: limit_simple
+  - offset: offset_simple
+
 Response
 --------
 

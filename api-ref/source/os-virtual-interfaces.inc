@@ -35,6 +35,8 @@ Request
 
 
   - server_id: server_id_path
+  - limit: limit_simple
+  - offset: offset_simple
 
 Response
 --------

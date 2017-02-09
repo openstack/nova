@@ -321,6 +321,12 @@ class TestSecurityGroupsV21(test.TestCase):
                           self.req, {'security_group': sg})
 
     def test_get_security_group_list(self):
+        self._test_get_security_group_list()
+
+    def test_get_security_group_list_offset_and_limit(self):
+        self._test_get_security_group_list(limited=True)
+
+    def _test_get_security_group_list(self, limited=False):
         groups = []
         for i, name in enumerate(['default', 'test']):
             sg = security_group_template(id=i + 1,
@@ -328,7 +334,10 @@ class TestSecurityGroupsV21(test.TestCase):
                                          description=name + '-desc',
                                          rules=[])
             groups.append(sg)
-        expected = {'security_groups': groups}
+        if limited:
+            expected = {'security_groups': [groups[1]]}
+        else:
+            expected = {'security_groups': groups}
 
         def return_security_groups(context, project_id):
             return [security_group_db(sg) for sg in groups]
@@ -336,7 +345,12 @@ class TestSecurityGroupsV21(test.TestCase):
         self.stub_out('nova.db.security_group_get_by_project',
                       return_security_groups)
 
-        res_dict = self.controller.index(self.req)
+        path = '/v2/fake/os-security-groups'
+        if limited:
+            path += '?offset=1&limit=1'
+        req = fakes.HTTPRequest.blank(path, use_admin_context=True)
+
+        res_dict = self.controller.index(req)
 
         self.assertEqual(res_dict, expected)
 

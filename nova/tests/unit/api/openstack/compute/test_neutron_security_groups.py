@@ -140,6 +140,13 @@ class TestNeutronSecurityGroupsV21(
         list_dict = self.controller.index(req)
         self.assertEqual(len(list_dict['security_groups']), 2)
 
+    def test_get_security_group_list_offset_and_limit(self):
+        path = '/v2/fake/os-security-groups?offset=1&limit=1'
+        self._create_sg_template().get('security_group')
+        req = fakes.HTTPRequest.blank(path)
+        list_dict = self.controller.index(req)
+        self.assertEqual(len(list_dict['security_groups']), 1)
+
     def test_get_security_group_list_all_tenants(self):
         pass
 
