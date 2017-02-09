@@ -2007,7 +2007,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
         caps.host.cpu.arch = fields.Architecture.X86_64
-        caps.host.topology = self._fake_caps_numa_topology()
+        caps.host.topology = fakelibvirt.NUMATopology()
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -2039,7 +2039,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
         caps.host.cpu.arch = fields.Architecture.X86_64
-        caps.host.topology = self._fake_caps_numa_topology()
+        caps.host.topology = fakelibvirt.NUMATopology()
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -2152,7 +2152,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
         caps.host.cpu.arch = fields.Architecture.X86_64
-        caps.host.topology = self._fake_caps_numa_topology()
+        caps.host.topology = fakelibvirt.NUMATopology()
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -2200,7 +2200,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
         caps.host.cpu.arch = fields.Architecture.X86_64
-        caps.host.topology = self._fake_caps_numa_topology()
+        caps.host.topology = fakelibvirt.NUMATopology()
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -2262,7 +2262,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
         caps.host.cpu.arch = fake_arch
-        caps.host.topology = self._fake_caps_numa_topology()
+        caps.host.topology = fakelibvirt.NUMATopology()
 
         mock_type.return_value = fake_type
         mock_version.return_value = fake_version
@@ -2410,7 +2410,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
         caps.host.cpu.arch = fields.Architecture.X86_64
-        caps.host.topology = self._fake_caps_numa_topology(kb_mem=4194304)
+        caps.host.topology = fakelibvirt.NUMATopology(kb_mem=4194304)
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -2505,7 +2505,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
         caps.host.cpu.arch = fields.Architecture.X86_64
-        caps.host.topology = self._fake_caps_numa_topology()
+        caps.host.topology = fakelibvirt.NUMATopology()
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -2583,7 +2583,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
         caps.host.cpu.arch = fields.Architecture.X86_64
-        caps.host.topology = self._fake_caps_numa_topology()
+        caps.host.topology = fakelibvirt.NUMATopology()
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -2659,7 +2659,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
         caps.host.cpu.arch = fields.Architecture.X86_64
-        caps.host.topology = self._fake_caps_numa_topology(
+        caps.host.topology = fakelibvirt.NUMATopology(
             sockets_per_cell=4, cores_per_socket=3, threads_per_core=2)
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -2737,7 +2737,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
         caps.host.cpu.arch = fields.Architecture.X86_64
-        caps.host.topology = self._fake_caps_numa_topology()
+        caps.host.topology = fakelibvirt.NUMATopology()
+        for i, cell in enumerate(caps.host.topology.cells):
+            cell.mempages = fakelibvirt.create_mempages(
+                [(4, 1024 * i), (2048, i)])
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -2811,7 +2814,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
         caps.host.cpu.arch = fields.Architecture.X86_64
-        caps.host.topology = self._fake_caps_numa_topology()
+        caps.host.topology = fakelibvirt.NUMATopology()
+        for i, cell in enumerate(caps.host.topology.cells):
+            cell.mempages = fakelibvirt.create_mempages(
+                [(4, 1024 * i), (2048, i)])
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -2954,7 +2960,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
         caps.host.cpu.arch = fields.Architecture.X86_64
-        caps.host.topology = self._fake_caps_numa_topology()
+        caps.host.topology = fakelibvirt.NUMATopology()
 
         mock_caps.return_value = caps
 
@@ -3000,7 +3006,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
         caps.host.cpu.arch = architecture
-        caps.host.topology = self._fake_caps_numa_topology()
+        caps.host.topology = fakelibvirt.NUMATopology()
+        for i, cell in enumerate(caps.host.topology.cells):
+            cell.mempages = fakelibvirt.create_mempages(
+                [(4, 1024 * i), (2048, i)])
 
         mock_caps.return_value = caps
 
@@ -5737,7 +5746,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
         caps.host.cpu.arch = fields.Architecture.X86_64
-        caps.host.topology = self._fake_caps_numa_topology()
+        caps.host.topology = fakelibvirt.NUMATopology()
 
         mock_get_caps.return_value = caps
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -5778,7 +5787,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
         caps.host.cpu.arch = fields.Architecture.X86_64
-        caps.host.topology = self._fake_caps_numa_topology()
+        caps.host.topology = fakelibvirt.NUMATopology()
 
         features = []
         for f in ('cmt', 'mbm_local', 'mbm_total'):
@@ -5819,7 +5828,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
         caps.host.cpu.arch = fields.Architecture.X86_64
-        caps.host.topology = self._fake_caps_numa_topology()
+        caps.host.topology = fakelibvirt.NUMATopology()
 
         self._test_get_guest_with_perf(caps, [])
 
@@ -12684,41 +12693,16 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 if key not in ['phys_function', 'virt_functions', 'label']:
                     self.assertEqual(expectvfs[dev][key], actualvfs[dev][key])
 
-    def _fake_caps_numa_topology(self,
-                                 cells_per_host=4,
-                                 sockets_per_cell=1,
-                                 cores_per_socket=1,
-                                 threads_per_core=2,
-                                 kb_mem=1048576):
-
-        # Generate mempages list per cell
-        cell_mempages = list()
-        for cellid in range(cells_per_host):
-            mempages_0 = vconfig.LibvirtConfigCapsNUMAPages()
-            mempages_0.size = 4
-            mempages_0.total = 1024 * cellid
-
-            mempages_1 = vconfig.LibvirtConfigCapsNUMAPages()
-            mempages_1.size = 2048
-            mempages_1.total = 0 + cellid
-
-            cell_mempages.append([mempages_0, mempages_1])
-
-        topology = fakelibvirt.HostInfo._gen_numa_topology(cells_per_host,
-                                         sockets_per_cell,
-                                         cores_per_socket,
-                                         threads_per_core,
-                                         kb_mem=kb_mem,
-                                         numa_mempages_list=cell_mempages)
-
-        return topology
-
     def _test_get_host_numa_topology(self, mempages):
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
         caps.host.cpu.arch = fields.Architecture.X86_64
-        caps.host.topology = self._fake_caps_numa_topology()
+        caps.host.topology = fakelibvirt.NUMATopology()
+        if mempages:
+            for i, cell in enumerate(caps.host.topology.cells):
+                cell.mempages = fakelibvirt.create_mempages(
+                    [(4, 1024 * i), (2048, i)])
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         expected_topo_dict = {'cells': [

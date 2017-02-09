@@ -330,11 +330,21 @@ class HostInfo(object):
         self.numa_topology = numa_topology
         self.disabled_cpus_list = cpu_disabled or []
 
-    @classmethod
-    def _gen_numa_topology(cls, cpu_nodes, cpu_sockets, cpu_cores,
-                           cpu_threads, kb_mem, numa_mempages_list=None):
+    def get_numa_topology(self):
+        return self.numa_topology
 
-        topology = vconfig.LibvirtConfigCapsNUMATopology()
+
+class NUMATopology(vconfig.LibvirtConfigCapsNUMATopology):
+    """A batteries-included variant of LibvirtConfigCapsNUMATopology.
+
+    Provides sane defaults for LibvirtConfigCapsNUMATopology that can be used
+    in tests as is, or overridden where necessary.
+    """
+
+    def __init__(self, cpu_nodes=4, cpu_sockets=1, cpu_cores=1, cpu_threads=2,
+                 kb_mem=1048576, mempages=None, **kwargs):
+
+        super(NUMATopology, self).__init__(**kwargs)
 
         cpu_count = 0
         for cell_count in range(cpu_nodes):
@@ -353,22 +363,32 @@ class HostInfo(object):
                     cell.cpus.append(cpu)
 
                     cpu_count += 1
-            # Set mempages per numa cell. if numa_mempages_list is empty
-            # we will set only the default 4K pages.
-            if numa_mempages_list:
-                mempages = numa_mempages_list[cell_count]
+
+            # If no mempages are provided, use only the default 4K pages
+            if mempages:
+                cell.mempages = mempages[cell_count]
             else:
-                mempages = vconfig.LibvirtConfigCapsNUMAPages()
-                mempages.size = 4
-                mempages.total = cell.memory // mempages.size
-                mempages = [mempages]
-            cell.mempages = mempages
-            topology.cells.append(cell)
+                cell.mempages = create_mempages([(4, cell.memory // 4)])
 
-        return topology
+            self.cells.append(cell)
 
-    def get_numa_topology(self):
-        return self.numa_topology
+
+def create_mempages(mappings):
+    """Generate a list of LibvirtConfigCapsNUMAPages objects.
+
+    :param mappings: (dict) A mapping of page size to quantity of
+        said pages.
+    :returns: [LibvirtConfigCapsNUMAPages, ...]
+    """
+    mempages = []
+
+    for page_size, page_qty in mappings:
+        mempage = vconfig.LibvirtConfigCapsNUMAPages()
+        mempage.size = page_size
+        mempage.total = page_qty
+        mempages.append(mempage)
+
+    return mempages
 
 
 VIR_DOMAIN_JOB_NONE = 0
