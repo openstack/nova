@@ -1077,7 +1077,7 @@ class CellV2Commands(object):
                   'is not set in the configuration file.')
         return transport_url
 
-    @args('--transport-url', metavar='<transport url>', dest='transport_url',
+    @args('--transport-url', metavar='<transport_url>', dest='transport_url',
           help='The transport url for the cell message queue')
     def simple_cell_setup(self, transport_url=None):
         """Simple cellsv2 setup.
@@ -1307,9 +1307,9 @@ class CellV2Commands(object):
             print(cell_mapping_uuid)
         return cell_mapping_uuid
 
-    @args('--transport-url', metavar='<transport url>', dest='transport_url',
+    @args('--transport-url', metavar='<transport_url>', dest='transport_url',
           help='The transport url for the cell message queue')
-    @args('--name', metavar='<name>', help='The name of the cell')
+    @args('--name', metavar='<cell_name>', help='The name of the cell')
     @args('--verbose', action='store_true',
           help='Output the cell mapping uuid for any newly mapped hosts.')
     def map_cell_and_hosts(self, transport_url=None, name=None, verbose=False):
@@ -1333,7 +1333,7 @@ class CellV2Commands(object):
         # partial work so 0 is appropriate.
         return 0
 
-    @args('--uuid', metavar='<uuid>', dest='uuid', required=True,
+    @args('--uuid', metavar='<instance_uuid>', dest='uuid', required=True,
           help=_('The instance UUID to verify'))
     @args('--quiet', action='store_true', dest='quiet',
           help=_('Do not print anything'))
@@ -1395,11 +1395,11 @@ class CellV2Commands(object):
         _("Add a new cell to nova API database. "
           "DB and MQ urls can be provided directly "
           "or can be taken from config. The result is cell uuid."))
-    @args('--name', metavar='<name>', help=_('The name of the cell'))
-    @args('--database_connection', metavar='<database url>',
+    @args('--name', metavar='<cell_name>', help=_('The name of the cell'))
+    @args('--database_connection', metavar='<database_connection>',
           dest='database_connection',
           help=_('The database url for the cell database'))
-    @args('--transport-url', metavar='<transport url>', dest='transport_url',
+    @args('--transport-url', metavar='<transport_url>', dest='transport_url',
           help=_('The transport url for the cell message queue'))
     @args('--verbose', action='store_true',
           help=_('Output the uuid of the created cell'))
@@ -1498,12 +1498,13 @@ class CellV2Commands(object):
 
     @args('--cell_uuid', metavar='<cell_uuid>', dest='cell_uuid',
           required=True, help=_('The uuid of the cell to update.'))
-    @args('--name', metavar='<name>', dest='name',
+    @args('--name', metavar='<cell_name>', dest='name',
           help=_('Set the cell name.'))
-    @args('--transport-url', metavar='<transport>', dest='transport_url',
+    @args('--transport-url', metavar='<transport_url>', dest='transport_url',
           help=_('Set the cell transport_url. NOTE that running nodes '
                  'will not see the change until restart!'))
-    @args('--database_connection', metavar='<database>', dest='db_connection',
+    @args('--database_connection', metavar='<database_connection>',
+          dest='db_connection',
           help=_('Set the cell database_connection. NOTE that running nodes '
                  'will not see the change until restart!'))
     def update_cell(self, cell_uuid, name, transport_url, db_connection):
