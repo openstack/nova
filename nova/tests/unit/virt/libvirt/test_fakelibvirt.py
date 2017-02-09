@@ -467,8 +467,7 @@ class FakeLibvirtTests(test.NoDBTestCase):
 </device>"""
 
         # create fake pci devices
-        pci_info = libvirt.HostPciSRIOVDevicesInfo()
-        pci_info.create_pci_devices(num_pfs=1, num_vfs=1)
+        pci_info = libvirt.HostPciSRIOVDevicesInfo(num_pfs=1, num_vfs=1)
 
         # generate xml for the created pci devices
         gen_pf = pci_info.get_device_by_name('pci_0000_81_00_0')

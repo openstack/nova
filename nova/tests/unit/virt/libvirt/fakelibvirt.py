@@ -238,14 +238,11 @@ class FakePciDevice(object):
 
 
 class HostPciSRIOVDevicesInfo(object):
+    """Represent a pool of host SR-IOV devices."""
 
-    def __init__(self):
-        self.sriov_devices = {}
-
-    def create_pci_devices(self, vf_product_id=1515, pf_product_id=1528,
-                           num_pfs=2, num_vfs=8, group=47, numa_node=None,
-                           total_numa_nodes=2):
-        """Populate pci devices
+    def __init__(self, vf_product_id=1515, pf_product_id=1528, num_pfs=2,
+                 num_vfs=8, group=47, numa_node=None, total_numa_nodes=2):
+        """Create a new HostPciSRIOVDevicesInfo object.
 
         :param vf_product_id: (int) Product ID of the Virtual Functions
         :param pf_product_id=1528: (int) Product ID of the Physical Functions
@@ -259,38 +256,42 @@ class HostPciSRIOVDevicesInfo(object):
         def _calc_numa_node(dev):
             return dev % total_numa_nodes if numa_node is None else numa_node
 
-        vf_ratio = num_vfs // num_pfs
+        self.devices = {}
+        if num_vfs and not num_pfs:
+            raise ValueError('Cannot create VFs without PFs')
+
+        vf_ratio = num_vfs // num_pfs if num_pfs else 0
 
         # Generate PFs
         for dev in range(num_pfs):
             dev_group = group + dev + 1
             pci_dev_name = 'pci_0000_81_%(slot)s_%(dev)d' % {'slot': PF_SLOT,
                                                              'dev': dev}
-            self.sriov_devices[pci_dev_name] = FakePciDevice('PF', vf_ratio,
-                                                             dev_group, dev,
-                                                             pf_product_id,
-                                                        _calc_numa_node(dev))
+            self.devices[pci_dev_name] = FakePciDevice('PF', vf_ratio,
+                                                       dev_group, dev,
+                                                       pf_product_id,
+                                                       _calc_numa_node(dev))
 
         # Generate VFs
         for dev in range(num_vfs):
             dev_group = group + dev + 1
             pci_dev_name = 'pci_0000_81_%(slot)s_%(dev)d' % {'slot': VF_SLOT,
                                                              'dev': dev}
-            self.sriov_devices[pci_dev_name] = FakePciDevice('VF', vf_ratio,
-                                                             dev_group, dev,
-                                                             vf_product_id,
-                                                        _calc_numa_node(dev))
+            self.devices[pci_dev_name] = FakePciDevice('VF', vf_ratio,
+                                                       dev_group, dev,
+                                                       vf_product_id,
+                                                       _calc_numa_node(dev))
 
     def get_all_devices(self):
-        return self.sriov_devices.keys()
+        return self.devices.keys()
 
     def get_device_by_name(self, device_name):
-
-        pci_dev = self.sriov_devices.get(device_name)
+        pci_dev = self.devices.get(device_name)
         return pci_dev
 
 
 class HostInfo(object):
+
     def __init__(self, arch=obj_fields.Architecture.X86_64, kB_mem=4096,
                  cpus=2, cpu_mhz=800, cpu_nodes=1,
                  cpu_sockets=1, cpu_cores=2,
@@ -972,7 +973,8 @@ class Connection(object):
         self.fakeLibVersion = version
         self.fakeVersion = hv_version
         self.host_info = host_info or HostInfo()
-        self.pci_info = pci_info or HostPciSRIOVDevicesInfo()
+        self.pci_info = pci_info or HostPciSRIOVDevicesInfo(num_pfs=0,
+                                                            num_vfs=0)
 
     def _add_filter(self, nwfilter):
         self._nwfilters[nwfilter._name] = nwfilter
