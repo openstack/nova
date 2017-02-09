@@ -1604,111 +1604,112 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_confirm_resize_with_migration_ref(self):
         self._test_confirm_resize(mig_ref_passed=True)
 
-    def _test_revert_resize(self):
+    @mock.patch('nova.quota.QUOTAS.commit')
+    @mock.patch.object(compute_utils, 'reserve_quota_delta')
+    @mock.patch.object(compute_utils, 'reverse_upsize_quota_delta')
+    @mock.patch('nova.objects.Migration.get_by_instance_and_status')
+    @mock.patch('nova.context.RequestContext.elevated')
+    def _test_revert_resize(self, mock_elevated, mock_get_migration,
+                            mock_reverse_upsize_quota_delta,
+                            mock_reserve_quota_delta,
+                            mock_quota_commit):
         params = dict(vm_state=vm_states.RESIZED)
         fake_inst = self._create_instance_obj(params=params)
         fake_mig = objects.Migration._from_db_object(
                 self.context, objects.Migration(),
                 test_migration.fake_db_migration())
 
-        self.mox.StubOutWithMock(self.context, 'elevated')
-        self.mox.StubOutWithMock(objects.Migration,
-                                 'get_by_instance_and_status')
-        self.mox.StubOutWithMock(compute_utils,
-                                 'reverse_upsize_quota_delta')
-        self.mox.StubOutWithMock(compute_utils, 'reserve_quota_delta')
-        self.mox.StubOutWithMock(fake_inst, 'save')
-        self.mox.StubOutWithMock(fake_mig, 'save')
-        self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
-        self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
-        self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
-                                 'revert_resize')
-
-        self.context.elevated().AndReturn(self.context)
-        objects.Migration.get_by_instance_and_status(
-                self.context, fake_inst['uuid'], 'finished').AndReturn(
-                        fake_mig)
-        compute_utils.reverse_upsize_quota_delta(
-            self.context, fake_inst).AndReturn('deltas')
-
         resvs = ['resvs']
         fake_quotas = objects.Quotas.from_reservations(self.context, resvs)
 
-        compute_utils.reserve_quota_delta(self.context, 'deltas',
-                                          fake_inst).AndReturn(fake_quotas)
+        mock_elevated.return_value = self.context
+        mock_get_migration.return_value = fake_mig
+        mock_reverse_upsize_quota_delta.return_value = 'deltas'
+        mock_reserve_quota_delta.return_value = fake_quotas
 
         def _check_state(expected_task_state=None):
             self.assertEqual(task_states.RESIZE_REVERTING,
                              fake_inst.task_state)
 
-        fake_inst.save(expected_task_state=[None]).WithSideEffects(
-                _check_state)
-
         def _check_mig(expected_task_state=None):
             self.assertEqual('reverting', fake_mig.status)
 
-        fake_mig.save().WithSideEffects(_check_mig)
+        with test.nested(
+            mock.patch.object(fake_inst, 'save', side_effect=_check_state),
+            mock.patch.object(fake_mig, 'save', side_effect=_check_mig),
+            mock.patch.object(self.compute_api, '_record_action_start'),
+            mock.patch.object(self.compute_api.compute_rpcapi, 'revert_resize')
+        ) as (mock_inst_save, mock_mig_save, mock_record_action,
+              mock_revert_resize):
+            self.compute_api.revert_resize(self.context, fake_inst)
 
-        if self.cell_type:
-            quota.QUOTAS.commit(self.context, resvs, project_id=None,
-                                user_id=None)
-
-        self.compute_api._record_action_start(self.context, fake_inst,
-                                              'revertResize')
-
-        self.compute_api.compute_rpcapi.revert_resize(
+            mock_elevated.assert_called_once_with()
+            mock_get_migration.assert_called_once_with(
+                self.context, fake_inst['uuid'], 'finished')
+            mock_reverse_upsize_quota_delta.assert_called_once_with(
+                self.context, fake_inst)
+            mock_reserve_quota_delta.assert_called_once_with(
+                self.context, 'deltas', fake_inst)
+            mock_inst_save.assert_called_once_with(expected_task_state=[None])
+            mock_mig_save.assert_called_once_with()
+            if self.cell_type:
+                mock_quota_commit.assert_called_once_with(
+                    self.context, resvs, project_id=None, user_id=None)
+            mock_record_action.assert_called_once_with(self.context, fake_inst,
+                                                       'revertResize')
+            mock_revert_resize.assert_called_once_with(
                 self.context, fake_inst, fake_mig, 'compute-dest',
                 [] if self.cell_type else fake_quotas.reservations)
-
-        self.mox.ReplayAll()
-
-        self.compute_api.revert_resize(self.context, fake_inst)
 
     def test_revert_resize(self):
         self._test_revert_resize()
 
-    def test_revert_resize_concurrent_fail(self):
+    @mock.patch('nova.quota.QUOTAS.rollback')
+    @mock.patch.object(compute_utils, 'reserve_quota_delta')
+    @mock.patch.object(compute_utils, 'reverse_upsize_quota_delta')
+    @mock.patch('nova.objects.Migration.get_by_instance_and_status')
+    @mock.patch('nova.context.RequestContext.elevated')
+    def test_revert_resize_concurrent_fail(self, mock_elevated,
+                                           mock_get_migration,
+                                           mock_reverse_upsize_quota_delta,
+                                           mock_reserve_quota_delta,
+                                           mock_quota_rollback):
         params = dict(vm_state=vm_states.RESIZED)
         fake_inst = self._create_instance_obj(params=params)
         fake_mig = objects.Migration._from_db_object(
                 self.context, objects.Migration(),
                 test_migration.fake_db_migration())
 
-        self.mox.StubOutWithMock(self.context, 'elevated')
-        self.mox.StubOutWithMock(objects.Migration,
-                                 'get_by_instance_and_status')
-        self.mox.StubOutWithMock(compute_utils,
-                                 'reverse_upsize_quota_delta')
-        self.mox.StubOutWithMock(compute_utils, 'reserve_quota_delta')
-        self.mox.StubOutWithMock(fake_inst, 'save')
-        self.mox.StubOutWithMock(quota.QUOTAS, 'rollback')
-
-        self.context.elevated().AndReturn(self.context)
-        objects.Migration.get_by_instance_and_status(
-            self.context, fake_inst['uuid'], 'finished').AndReturn(fake_mig)
-
+        mock_elevated.return_value = self.context
+        mock_get_migration.return_value = fake_mig
         delta = ['delta']
-        compute_utils.reverse_upsize_quota_delta(
-            self.context, fake_inst).AndReturn(delta)
+        mock_reverse_upsize_quota_delta.return_value = delta
         resvs = ['resvs']
         fake_quotas = objects.Quotas.from_reservations(self.context, resvs)
-        compute_utils.reserve_quota_delta(
-            self.context, delta, fake_inst).AndReturn(fake_quotas)
+        mock_reserve_quota_delta.return_value = fake_quotas
 
         exc = exception.UnexpectedTaskStateError(
             instance_uuid=fake_inst['uuid'],
             actual={'task_state': task_states.RESIZE_REVERTING},
             expected={'task_state': [None]})
-        fake_inst.save(expected_task_state=[None]).AndRaise(exc)
 
-        quota.QUOTAS.rollback(self.context, resvs, project_id=None,
-                              user_id=None)
-
-        self.mox.ReplayAll()
-        self.assertRaises(exception.UnexpectedTaskStateError,
+        with mock.patch.object(
+                fake_inst, 'save', side_effect=exc) as mock_inst_save:
+            self.assertRaises(exception.UnexpectedTaskStateError,
                           self.compute_api.revert_resize,
                           self.context,
                           fake_inst)
+
+            mock_elevated.assert_called_once_with()
+            mock_get_migration.assert_called_once_with(
+                self.context, fake_inst['uuid'], 'finished')
+            mock_reverse_upsize_quota_delta.assert_called_once_with(
+                self.context, fake_inst)
+            mock_reserve_quota_delta.assert_called_once_with(
+                self.context, delta, fake_inst)
+            mock_inst_save.assert_called_once_with(expected_task_state=[None])
+            mock_quota_rollback.assert_called_once_with(
+                    self.context, resvs, project_id=None, user_id=None)
 
     def _test_resize(self, flavor_id_passed=True,
                      same_host=False, allow_same_host=False,
