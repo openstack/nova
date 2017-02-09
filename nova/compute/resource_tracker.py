@@ -364,10 +364,23 @@ class ResourceTracker(object):
 
         self._update(context.elevated(), self.compute_nodes[nodename])
 
+    def _drop_pci_devices(self, instance, nodename, prefix):
+        if self.pci_tracker:
+            # free old/new allocated pci devices
+            pci_devices = self._get_migration_context_resource(
+                'pci_devices', instance, prefix=prefix)
+            if pci_devices:
+                for pci_device in pci_devices:
+                    self.pci_tracker.free_device(pci_device, instance)
+
+                dev_pools_obj = self.pci_tracker.stats.to_device_pools_obj()
+                self.compute_nodes[nodename].pci_device_pools = dev_pools_obj
+
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def drop_move_claim(self, context, instance, nodename,
                         instance_type=None, prefix='new_'):
-        """Remove usage for an incoming/outgoing migration."""
+        # Remove usage for an incoming/outgoing migration on the destination
+        # node.
         if instance['uuid'] in self.tracked_migrations:
             migration = self.tracked_migrations.pop(instance['uuid'])
 
@@ -381,17 +394,22 @@ class ResourceTracker(object):
                     'numa_topology', instance, prefix=prefix)
                 usage = self._get_usage_dict(
                         instance_type, numa_topology=numa_topology)
-                if self.pci_tracker:
-                    # free old/new allocated pci devices
-                    pci_devices = self._get_migration_context_resource(
-                        'pci_devices', instance, prefix=prefix)
-                    if pci_devices:
-                        for pci_device in pci_devices:
-                            self.pci_tracker.free_device(pci_device, instance)
+                self._drop_pci_devices(instance, nodename, prefix)
                 self._update_usage(usage, nodename, sign=-1)
 
                 ctxt = context.elevated()
                 self._update(ctxt, self.compute_nodes[nodename])
+        # Remove usage for an instance that is not tracked in migrations (such
+        # as on the source node after a migration).
+        # NOTE(lbeliveau): On resize on the same node, the instance is
+        # included in both tracked_migrations and tracked_instances.
+        elif (instance['uuid'] in self.tracked_instances):
+            self.tracked_instances.pop(instance['uuid'])
+            self._drop_pci_devices(instance, nodename, prefix)
+            # TODO(lbeliveau): Validate if numa needs the same treatment.
+
+            ctxt = context.elevated()
+            self._update(ctxt, self.compute_nodes[nodename])
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def update_usage(self, context, instance, nodename):

@@ -1784,7 +1784,7 @@ class TestResize(BaseTestCase):
         # PCI requests defined directly above.
         pci_req_mock.return_value = objects.InstancePCIRequests(requests=[])
 
-        # not using mock.sentinel.ctx because resize_claim calls #elevated
+        # not using mock.sentinel.ctx because resize_claim calls elevated
         ctx = mock.MagicMock()
 
         with test.nested(
@@ -1807,6 +1807,41 @@ class TestResize(BaseTestCase):
         self.assertEqual(1, len(pci_req_mock.return_value.requests))
         self.assertEqual(request, pci_req_mock.return_value.requests[0])
         alloc_mock.assert_called_once_with(instance)
+
+    def test_drop_move_claim_on_revert(self):
+        self._setup_rt()
+        cn = _COMPUTE_NODE_FIXTURES[0].obj_clone()
+        self.rt.compute_nodes[_NODENAME] = cn
+
+        # TODO(jaypipes): Remove once the PCI tracker is always created
+        # upon the resource tracker being initialized...
+        self.rt.pci_tracker = pci_manager.PciDevTracker(mock.sentinel.ctx)
+
+        pci_dev = pci_device.PciDevice.create(
+            None, fake_pci_device.dev_dict)
+        pci_devs = [pci_dev]
+
+        instance = _INSTANCE_FIXTURES[0].obj_clone()
+        instance.task_state = task_states.RESIZE_MIGRATING
+        instance.new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+        instance.migration_context = objects.MigrationContext()
+        instance.migration_context.new_pci_devices = objects.PciDeviceList(
+            objects=pci_devs)
+
+        self.rt.tracked_instances = {
+            instance.uuid: obj_base.obj_to_primitive(instance)
+        }
+
+        # not using mock.sentinel.ctx because drop_move_claim calls elevated
+        ctx = mock.MagicMock()
+
+        with test.nested(
+            mock.patch.object(self.rt, '_update'),
+            mock.patch.object(self.rt.pci_tracker, 'free_device')
+            ) as (update_mock, mock_pci_free_device):
+                self.rt.drop_move_claim(ctx, instance, _NODENAME)
+                mock_pci_free_device.assert_called_once_with(
+                    pci_dev, mock.ANY)
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
