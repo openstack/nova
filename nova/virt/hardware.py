@@ -678,6 +678,16 @@ def _pack_instance_onto_cores(available_siblings,
               exposed to the instance. None if there is no valid way to
               satisfy the sibling requirements for the instance.
     """
+    LOG.debug('Packing an instance onto a set of siblings: '
+             '    available_siblings: %(siblings)s'
+             '    instance_cell: %(cells)s'
+             '    host_cell_id: %(host_cell_id)s'
+             '    threads_per_core: %(threads_per_core)s',
+                {'siblings': available_siblings,
+                 'cells': instance_cell,
+                 'host_cell_id': host_cell_id,
+                 'threads_per_core': threads_per_core})
+
     # We build up a data structure that answers the question: 'Given the
     # number of threads I want to pack, give me a list of all the available
     # sibling sets (or groups thereof) that can accommodate it'
@@ -685,6 +695,7 @@ def _pack_instance_onto_cores(available_siblings,
     for sib in available_siblings:
         for threads_no in range(1, len(sib) + 1):
             sibling_sets[threads_no].append(sib)
+    LOG.debug('Built sibling_sets: %(siblings)s', {'siblings': sibling_sets})
 
     pinning = None
     threads_no = 1
@@ -728,6 +739,13 @@ def _pack_instance_onto_cores(available_siblings,
 
     def _get_pinning(threads_no, sibling_set, instance_cores):
         """Generate a CPU-vCPU pin mapping."""
+        LOG.debug('Attempting to pin:'
+                 '    threads_no: %(threads_no)s'
+                 '    sibling_set: %(sibling_set)s'
+                 '    instance_cores: %(cores)s',
+                    {'threads_no': threads_no,
+                     'sibling_set': sibling_set,
+                     'cores': instance_cores})
         if threads_no * len(sibling_set) < len(instance_cores):
             return
 
@@ -778,6 +796,8 @@ def _pack_instance_onto_cores(available_siblings,
             if (instance_cell.cpu_thread_policy ==
                     fields.CPUThreadAllocationPolicy.REQUIRE):
                 if threads_no <= 1:
+                    LOG.debug('Skipping threads_no: %s, as it does not satisfy'
+                              ' the require policy', threads_no)
                     continue
 
             pinning = _get_pinning(threads_no, sibling_set,
@@ -798,6 +818,8 @@ def _pack_instance_onto_cores(available_siblings,
 
     if not pinning:
         return
+    LOG.debug('Selected cores for pinning: %s, in cell %s', pinning,
+                                                            host_cell_id)
 
     topology = objects.VirtCPUTopology(sockets=1,
                                        cores=len(pinning) // threads_no,
@@ -836,6 +858,7 @@ def _numa_fit_instance_cell_with_pinning(host_cell, instance_cell):
         return
 
     if host_cell.siblings:
+        LOG.debug('Using thread siblings for packing')
         # Try to pack the instance cell onto cores
         numa_cell = _pack_instance_onto_cores(
             host_cell.free_siblings, instance_cell, host_cell.id,
@@ -874,6 +897,8 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None):
     :returns: objects.InstanceNUMACell with the id set to that of the
               host, or None
     """
+    LOG.debug('Attempting to fit instance cell %(cell)s on host_cell '
+              '%(host_cell)s', {'cell': instance_cell, 'host_cell': host_cell})
     # NOTE (ndipanov): do not allow an instance to overcommit against
     # itself on any NUMA cell
     if instance_cell.memory > host_cell.memory:
@@ -891,6 +916,7 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None):
         return
 
     if instance_cell.cpu_pinning_requested:
+        LOG.debug('Pinning has been requested')
         new_instance_cell = _numa_fit_instance_cell_with_pinning(
             host_cell, instance_cell)
         if not new_instance_cell:
@@ -899,6 +925,8 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None):
         instance_cell = new_instance_cell
 
     elif limit_cell:
+        LOG.debug('No pinning requested, considering limitations on usable cpu'
+                  ' and memory')
         memory_usage = host_cell.memory_usage + instance_cell.memory
         cpu_usage = host_cell.cpu_usage + len(instance_cell.cpuset)
         cpu_limit = len(host_cell.cpuset) * limit_cell.cpu_allocation_ratio
