@@ -107,14 +107,14 @@ def set_vif_host_backend_hw_veb(conf, net_type, devname, vlan,
     """
 
     conf.net_type = net_type
+    conf.vlan = vlan
     if net_type == 'direct':
         conf.source_mode = 'passthrough'
         conf.source_dev = pci_utils.get_ifname_by_pci_address(devname)
         conf.driver_name = 'vhost'
-    else:
+    else:  # net_type == network_model.VNIC_TYPE_DIRECT
         conf.source_dev = devname
         conf.model = None
-        conf.vlan = vlan
     if tapname:
         conf.target_dev = tapname
 
