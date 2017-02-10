@@ -581,16 +581,6 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         self.assertEqual(retexp,
                          block_device.BlockDeviceDict.from_api(api_dict, True))
 
-    def test_from_api_invalid_source_to_local_mapping_with_string_bi(self):
-        api_dict = {'id': 1,
-            'source_type': 'image',
-            'destination_type': 'local',
-            'uuid': 'fake-volume-id-1',
-            'boot_index': 'aaaa0'}
-        self.assertRaises(exception.InvalidBDMFormat,
-                          block_device.BlockDeviceDict.from_api, api_dict,
-                          False)
-
     def test_from_api_valid_source_to_local_mapping_with_string_bi(self):
         api_dict = {'id': 1,
                     'source_type': 'image',
