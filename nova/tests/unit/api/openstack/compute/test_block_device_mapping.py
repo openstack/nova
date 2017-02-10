@@ -165,6 +165,51 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self.assertRaises(exception.ValidationError,
                           self._test_create, params)
 
+    def test_create_instance_with_boot_index_none_ok(self):
+        """Tests creating a server with two block devices. One is the boot
+        device and the other is a non-bootable device.
+        """
+        # From the docs:
+        # To disable a device from booting, set the boot index to a negative
+        # value or use the default boot index value, which is None. The
+        # simplest usage is, set the boot index of the boot device to 0 and use
+        # the default boot index value, None, for any other devices.
+        bdms = [
+            # This is the bootable device that would create a 20GB cinder
+            # volume from the given image.
+            {
+                'source_type': 'image',
+                'destination_type': 'volume',
+                'boot_index': 0,
+                'uuid': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
+                'volume_size': 20
+            },
+            # This is the non-bootable 10GB ext4 ephemeral block device.
+            {
+                'source_type': 'blank',
+                'destination_type': 'local',
+                'boot_index': None,
+                # If 'guest_format' is 'swap' then a swap device is created.
+                'guest_format': 'ext4'
+            }
+        ]
+        params = {block_device_mapping.ATTRIBUTE_NAME: bdms}
+        self._test_create(params, no_image=True)
+
+    def test_create_instance_with_boot_index_none_image_local_fails(self):
+        """Tests creating a server with a local image-based block device which
+        has a boot_index of None which is invalid.
+        """
+        bdms = [{
+            'source_type': 'image',
+            'destination_type': 'local',
+            'boot_index': None,
+            'uuid': '155d900f-4e14-4e4c-a73d-069cbf4541e6'
+        }]
+        params = {block_device_mapping.ATTRIBUTE_NAME: bdms}
+        self.assertRaises(exc.HTTPBadRequest, self._test_create,
+                          params, no_image=True)
+
     def test_create_instance_with_device_name_not_string(self):
         self.bdm[0]['device_name'] = 123
         old_create = compute_api.API.create
