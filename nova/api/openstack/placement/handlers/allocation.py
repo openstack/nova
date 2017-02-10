@@ -20,6 +20,7 @@ from oslo_utils import encodeutils
 import webob
 
 from nova.api.openstack.placement import util
+from nova.api.openstack.placement import wsgi_wrapper
 from nova import exception
 from nova.i18n import _, _LE
 from nova import objects
@@ -157,7 +158,7 @@ def _serialize_allocations_for_resource_provider(allocations,
                              resource_provider=resource_provider)
 
 
-@webob.dec.wsgify
+@wsgi_wrapper.PlacementWsgify
 @util.check_accept('application/json')
 def list_for_consumer(req):
     """List allocations associated with a consumer."""
@@ -179,7 +180,7 @@ def list_for_consumer(req):
     return req.response
 
 
-@webob.dec.wsgify
+@wsgi_wrapper.PlacementWsgify
 @util.check_accept('application/json')
 def list_for_resource_provider(req):
     """List allocations associated with a resource provider."""
@@ -199,8 +200,7 @@ def list_for_resource_provider(req):
     except exception.NotFound as exc:
         raise webob.exc.HTTPNotFound(
             _("Resource provider '%(rp_uuid)s' not found: %(error)s") %
-            {'rp_uuid': uuid, 'error': exc},
-            json_formatter=util.json_error_formatter)
+            {'rp_uuid': uuid, 'error': exc})
 
     allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
         context, uuid)
@@ -215,7 +215,7 @@ def list_for_resource_provider(req):
     return req.response
 
 
-@webob.dec.wsgify
+@wsgi_wrapper.PlacementWsgify
 @util.require_content('application/json')
 def set_allocations(req):
     context = req.environ['placement.context']
@@ -236,8 +236,7 @@ def set_allocations(req):
             raise webob.exc.HTTPBadRequest(
                 _("Allocation for resource provider '%(rp_uuid)s' "
                   "that does not exist.") %
-                {'rp_uuid': resource_provider_uuid},
-                json_formatter=util.json_error_formatter)
+                {'rp_uuid': resource_provider_uuid})
 
         resources = allocation['resources']
         for resource_class in resources:
@@ -264,21 +263,19 @@ def set_allocations(req):
     except exception.InvalidInventory as exc:
         LOG.exception(_LE("Bad inventory"))
         raise webob.exc.HTTPConflict(
-            _('Unable to allocate inventory: %(error)s') % {'error': exc},
-            json_formatter=util.json_error_formatter)
+            _('Unable to allocate inventory: %(error)s') % {'error': exc})
     except exception.ConcurrentUpdateDetected as exc:
         LOG.exception(_LE("Concurrent Update"))
         raise webob.exc.HTTPConflict(
             _('Inventory changed while attempting to allocate: %(error)s') %
-            {'error': exc},
-            json_formatter=util.json_error_formatter)
+            {'error': exc})
 
     req.response.status = 204
     req.response.content_type = None
     return req.response
 
 
-@webob.dec.wsgify
+@wsgi_wrapper.PlacementWsgify
 def delete_allocations(req):
     context = req.environ['placement.context']
     consumer_uuid = util.wsgi_path_item(req.environ, 'consumer_uuid')
@@ -295,13 +292,11 @@ def delete_allocations(req):
             raise webob.exc.HTPPNotFound(
                   _("Allocation for consumer with id %(id)s not found."
                     "error: %(error)s") %
-                  {'id': consumer_uuid, 'error': exc},
-                  json_formatter=util.json_error_formatter)
+                  {'id': consumer_uuid, 'error': exc})
     else:
         raise webob.exc.HTTPNotFound(
             _("No allocations for consumer '%(consumer_uuid)s'") %
-            {'consumer_uuid': consumer_uuid},
-            json_formatter=util.json_error_formatter)
+            {'consumer_uuid': consumer_uuid})
     LOG.debug("Successfully deleted allocations %s", allocations)
 
     req.response.status = 204

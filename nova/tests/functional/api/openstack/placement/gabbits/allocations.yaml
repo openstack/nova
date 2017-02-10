@@ -17,6 +17,8 @@ tests:
 - name: get allocations no consumer is 404
   GET: /allocations
   status: 404
+  response_json_paths:
+     $.errors[0].title: Not Found
 
 - name: get allocations is empty dict
   GET: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
@@ -32,6 +34,8 @@ tests:
           - resources:
               DISK_GB: 10
   status: 400
+  response_json_paths:
+     $.errors[0].title: Bad Request
 
 - name: create the resource provider
   POST: /resource_providers
@@ -47,6 +51,8 @@ tests:
   request_headers:
       content-type: application/json
   status: 400
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: put an allocation violate schema
   PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
@@ -59,6 +65,8 @@ tests:
             resources:
                 cow: 10
   status: 400
+  response_json_paths:
+     $.errors[0].title: Bad Request
 
 - name: put an allocation no inventory
   PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
@@ -71,6 +79,8 @@ tests:
             resources:
                 DISK_GB: 10
   status: 409
+  response_json_paths:
+     $.errors[0].title: Conflict
 
 - name: post some inventory
   POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
@@ -145,6 +155,8 @@ tests:
   status: 400
   response_strings:
       - No such resource class COWS
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: delete allocation
   DELETE: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
@@ -155,10 +167,14 @@ tests:
   status: 404
   response_strings:
       - No allocations for consumer '599ffd2d-526a-4b2e-8683-f13ad25f9958'
+  response_json_paths:
+      $.errors[0].title: Not Found
 
 - name: delete allocation of unknown consumer id
   DELETE: /allocations/da78521f-bf7e-4e6e-9901-3f79bd94d55d
   status: 404
+  response_json_paths:
+      $.errors[0].title: Not Found
 
 - name: redo an allocation
   PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
@@ -217,6 +233,8 @@ tests:
 - name: confirm 404 for allocations of bad resource provider
   GET: /resource_providers/cb8a3007-b93a-471f-9e1f-4d58355678bd/allocations
   status: 404
+  response_json_paths:
+      $.errors[0].title: Not Found
 
 - name: check allocations by consumer id
   GET: /allocations/833f0885-f78c-4788-bb2b-3607b0656be7
@@ -358,3 +376,5 @@ tests:
   status: 400
   response_strings:
       - Allocation for resource provider 'be8b9cba-e7db-4a12-a386-99b4242167fe' that does not exist
+  response_json_paths:
+      $.errors[0].title: Bad Request
