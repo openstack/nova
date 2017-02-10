@@ -222,7 +222,6 @@ Related options:
 * ``flat_inject``: This must be set to ``True`` to ensure nova embeds network
   configuration information in the metadata provided through the config drive.
 """),
-    # TODO(sfinucan): This should be a BooleanOpt
     cfg.StrOpt('preallocate_images',
         default='none',
         choices=('none', 'space'),
@@ -397,7 +396,6 @@ Possible values:
 ]
 
 allocation_ratio_opts = [
-    # TODO(sfinucan): Add min parameter
     cfg.FloatOpt('cpu_allocation_ratio',
         default=0.0,
         min=0.0,
@@ -421,7 +419,6 @@ Possible values:
 
 * Any valid positive integer or float value
 """),
-    # TODO(sfinucan): Add min parameter
     cfg.FloatOpt('ram_allocation_ratio',
         default=0.0,
         min=0.0,
@@ -446,7 +443,6 @@ Possible values:
 
 * Any valid positive integer or float value
 """),
-    # TODO(sfinucan): Add min parameter
     cfg.FloatOpt('disk_allocation_ratio',
         default=0.0,
         min=0.0,
