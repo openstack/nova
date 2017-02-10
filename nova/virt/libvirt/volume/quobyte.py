@@ -43,13 +43,17 @@ def mount_volume(volume, mnt_base, configfile=None):
     fileutils.ensure_tree(mnt_base)
 
     command = ['mount.quobyte', volume, mnt_base]
+    if os.path.exists(" /run/systemd/system"):
+        # Note(kaisers): with systemd this requires a separate CGROUP to
+        # prevent Nova service stop/restarts from killing the mount.
+        command = ['systemd-run', '--scope', '--user', 'mount.quobyte', volume,
+                   mnt_base]
     if configfile:
         command.extend(['-c', configfile])
 
     LOG.debug('Mounting volume %s at mount point %s ...',
               volume,
               mnt_base)
-    # Run mount command but do not fail on already mounted exit code
     utils.execute(*command, check_exit_code=[0, 4])
     LOG.info('Mounted volume: %s', volume)
 
@@ -124,8 +128,8 @@ class LibvirtQuobyteVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
 
         if not mounted:
             mount_volume(quobyte_volume,
-                                 mount_path,
-                                 CONF.libvirt.quobyte_client_cfg)
+                         mount_path,
+                         CONF.libvirt.quobyte_client_cfg)
 
         validate_volume(mount_path)
 

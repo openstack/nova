@@ -31,9 +31,12 @@ from nova.virt.libvirt.volume import quobyte
 class QuobyteTestCase(test.NoDBTestCase):
     """Tests the nova.virt.libvirt.volume.quobyte module utilities."""
 
+    @mock.patch.object(os.path, "exists", return_value=False)
     @mock.patch.object(fileutils, "ensure_tree")
     @mock.patch.object(utils, "execute")
-    def test_quobyte_mount_volume(self, mock_execute, mock_ensure_tree):
+    def test_quobyte_mount_volume_not_systemd(self, mock_execute,
+                                              mock_ensure_tree,
+                                              mock_exists):
         mnt_base = '/mnt'
         quobyte_volume = '192.168.1.1/volume-00001'
         export_mnt_base = os.path.join(mnt_base,
@@ -48,12 +51,40 @@ class QuobyteTestCase(test.NoDBTestCase):
                                        check_exit_code=[0, 4])
                              ]
         mock_execute.assert_has_calls(expected_commands)
+        mock_exists.assert_called_once_with(" /run/systemd/system")
 
+    @mock.patch.object(os.path, "exists", return_value=True)
+    @mock.patch.object(fileutils, "ensure_tree")
+    @mock.patch.object(utils, "execute")
+    def test_quobyte_mount_volume_systemd(self, mock_execute,
+                                          mock_ensure_tree,
+                                          mock_exists):
+        mnt_base = '/mnt'
+        quobyte_volume = '192.168.1.1/volume-00001'
+        export_mnt_base = os.path.join(mnt_base,
+                                       utils.get_hash_str(quobyte_volume))
+
+        quobyte.mount_volume(quobyte_volume, export_mnt_base)
+
+        mock_ensure_tree.assert_called_once_with(export_mnt_base)
+        expected_commands = [mock.call('systemd-run',
+                                       '--scope',
+                                       '--user',
+                                       'mount.quobyte',
+                                       quobyte_volume,
+                                       export_mnt_base,
+                                       check_exit_code=[0, 4])
+                             ]
+        mock_execute.assert_has_calls(expected_commands)
+        mock_exists.assert_called_once_with(" /run/systemd/system")
+
+    @mock.patch.object(os.path, "exists", return_value=False)
     @mock.patch.object(fileutils, "ensure_tree")
     @mock.patch.object(utils, "execute")
     def test_quobyte_mount_volume_with_config(self,
                                               mock_execute,
-                                              mock_ensure_tree):
+                                              mock_ensure_tree,
+                                              mock_exists):
         mnt_base = '/mnt'
         quobyte_volume = '192.168.1.1/volume-00001'
         export_mnt_base = os.path.join(mnt_base,
@@ -73,6 +104,7 @@ class QuobyteTestCase(test.NoDBTestCase):
                                        check_exit_code=[0, 4])
                              ]
         mock_execute.assert_has_calls(expected_commands)
+        mock_exists.assert_called_once_with(" /run/systemd/system")
 
     @mock.patch.object(fileutils, "ensure_tree")
     @mock.patch.object(utils, "execute",
