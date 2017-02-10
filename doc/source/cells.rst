@@ -362,8 +362,8 @@ database yet. This will set up a single cell Nova deployment.
 
 3. Run the ``map_cell0`` command to create and map cell0::
 
-     nova-manage cell_v2 map_cell0 --database_connection <database connection
-     url>
+     nova-manage cell_v2 map_cell0 \
+       --database_connection <database connection url>
 
    The database connection url is generated based on the
    ``[database]/connection`` setting in the Nova configuration file if not
@@ -376,16 +376,17 @@ database yet. This will set up a single cell Nova deployment.
 5. Run the ``create_cell`` command to create the single cell which will contain
    your compute hosts::
 
-     nova-manage cell_v2 create_cell --name <name> --transport-url
-     <transport url for message queue> --database_connection <database
-     connection url>
+     nova-manage cell_v2 create_cell --name <name> \
+       --transport-url <transport url for message queue> \
+       --database_connection <database connection url>
 
    The transport url is taken from the ``[DEFAULT]/transport_url`` setting in
    the Nova configuration file if not specified on the command line. The
    database url is taken from the ``[database]/connection`` setting in the Nova
    configuration file if not specified on the command line.
 
-6. Configure and start your compute hosts.
+6. Configure and start your compute hosts. Before step 7, make sure you have
+   compute hosts in the database by running ``nova hypervisor-list``.
 
 7. Run the ``discover_hosts`` command to map compute hosts to the single cell::
 
@@ -395,7 +396,13 @@ database yet. This will set up a single cell Nova deployment.
    created in step 5 and map them to the cell. You can also configure a
    periodic task to have Nova discover new hosts automatically by setting
    the ``[scheduler]/discover_hosts_in_cells_interval`` to a time interval in
-   seconds.
+   seconds. The periodic task is run by the nova-scheduler service, so you must
+   be sure to configure it on all of your nova-scheduler hosts.
+
+.. note:: Remember: In the future, whenever you add new compute hosts, you
+          will need to run the ``discover_hosts`` command after starting them
+          to map them to the cell if you did not configure the automatic host
+          discovery in step 7.
 
 Upgrade (minimal)
 ~~~~~~~~~~~~~~~~~
@@ -418,20 +425,22 @@ database. This will set up a single cell Nova deployment.
    map the single cell, and map existing compute hosts and instances to the
    single cell::
 
-     nova-manage cell_v2 simple_cell_setup --transport-url <transport url for
-     message queue>
+     nova-manage cell_v2 simple_cell_setup \
+       --transport-url <transport url for message queue>
 
    The transport url is taken from the ``[DEFAULT]/transport_url`` setting in
    the Nova configuration file if not specified on the command line. The
    database connection url will be generated based on the
    ``[database]/connection`` setting in the Nova configuration file.
 
-3. Remember: In the future, whenever you  add new compute hosts, you will need
-   to run the ``discover_hosts`` command after starting them, to map them to
-   the cell. You can also configure a periodic task to have Nova discover new
-   hosts automatically by setting the
-   ``[scheduler]/discover_hosts_in_cells_interval`` to a time interval in
-   seconds.
+.. note:: Remember: In the future, whenever you add new compute hosts, you
+          will need to run the ``discover_hosts`` command after starting them
+          to map them to the cell. You can also configure a periodic task to
+          have Nova discover new hosts automatically by setting the
+          ``[scheduler]/discover_hosts_in_cells_interval`` to a time interval
+          in seconds. The periodic task is run by the nova-scheduler service,
+          so you must be sure to configure it on all of your nova-scheduler
+          hosts.
 
 References
 ~~~~~~~~~~
