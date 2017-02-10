@@ -49,7 +49,6 @@ cli_opt = cfg.StrOpt('command',
 CONF = nova.conf.CONF
 CONF.register_opts(cleaner_opts)
 CONF.register_cli_opt(cli_opt)
-CONF.import_opt('verbose', 'nova.openstack.common.log')
 
 
 ALLOWED_COMMANDS = ["list-vdis", "clean-vdis", "list-instances",
@@ -123,8 +122,6 @@ def print_xen_object(obj_type, obj, indent_level=0, spaces_per_indent=4):
 
         VM (abcd-abcd-abcd): 'name label here'
     """
-    if not CONF.verbose:
-        return
     uuid = obj["uuid"]
     try:
         name_label = obj["name_label"]
@@ -246,17 +243,13 @@ def find_orphaned_vdi_uuids(xenapi):
 def list_orphaned_vdis(vdi_uuids):
     """List orphaned VDIs."""
     for vdi_uuid in vdi_uuids:
-        if CONF.verbose:
-            print("ORPHANED VDI (%s)" % vdi_uuid)
-        else:
-            print(vdi_uuid)
+        print("ORPHANED VDI (%s)" % vdi_uuid)
 
 
 def clean_orphaned_vdis(xenapi, vdi_uuids):
     """Clean orphaned VDIs."""
     for vdi_uuid in vdi_uuids:
-        if CONF.verbose:
-            print("CLEANING VDI (%s)" % vdi_uuid)
+        print("CLEANING VDI (%s)" % vdi_uuid)
 
         vdi_ref = call_xenapi(xenapi, 'VDI.get_by_uuid', vdi_uuid)
         try:
@@ -268,17 +261,13 @@ def clean_orphaned_vdis(xenapi, vdi_uuids):
 def list_orphaned_instances(orphaned_instances):
     """List orphaned instances."""
     for vm_ref, vm_rec, orphaned_instance in orphaned_instances:
-        if CONF.verbose:
-            print("ORPHANED INSTANCE (%s)" % orphaned_instance.name)
-        else:
-            print(orphaned_instance.name)
+        print("ORPHANED INSTANCE (%s)" % orphaned_instance.name)
 
 
 def clean_orphaned_instances(xenapi, orphaned_instances):
     """Clean orphaned instances."""
     for vm_ref, vm_rec, instance in orphaned_instances:
-        if CONF.verbose:
-            print("CLEANING INSTANCE (%s)" % instance.name)
+        print("CLEANING INSTANCE (%s)" % instance.name)
 
         cleanup_instance(xenapi, instance, vm_ref, vm_rec)
 
@@ -303,11 +292,9 @@ def main():
     xenapi = xenapi_driver.XenAPIDriver(virtapi.VirtAPI())
 
     if command == "list-vdis":
-        if CONF.verbose:
-            print("Connected VDIs:\n")
+        print("Connected VDIs:\n")
         orphaned_vdi_uuids = find_orphaned_vdi_uuids(xenapi)
-        if CONF.verbose:
-            print("\nOrphaned VDIs:\n")
+        print("\nOrphaned VDIs:\n")
         list_orphaned_vdis(orphaned_vdi_uuids)
     elif command == "clean-vdis":
         orphaned_vdi_uuids = find_orphaned_vdi_uuids(xenapi)

@@ -29,7 +29,7 @@ are in the ``nova.conf`` file in a separate ``trust`` section.  For example,
 the config file will look something like:
 
     [DEFAULT]
-    verbose=True
+    debug=True
     ...
     [trust]
     server=attester.mynetwork.com
