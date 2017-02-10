@@ -250,8 +250,6 @@ Possible values:
 
 * A valid IP address or hostname, else None.
 """),
-    # TODO(hieulq): change to URIOpt for validating schemas with next release
-    # of oslo_config.
     cfg.StrOpt('live_migration_uri',
                deprecated_for_removal=True,
                deprecated_since="15.0.0",
