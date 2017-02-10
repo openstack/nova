@@ -526,32 +526,6 @@ def downtime_steps(data_gb):
     steps = CONF.libvirt.live_migration_downtime_steps
     delay = CONF.libvirt.live_migration_downtime_delay
 
-    downtime_min = nova.conf.libvirt.LIVE_MIGRATION_DOWNTIME_MIN
-    steps_min = nova.conf.libvirt.LIVE_MIGRATION_DOWNTIME_STEPS_MIN
-    delay_min = nova.conf.libvirt.LIVE_MIGRATION_DOWNTIME_DELAY_MIN
-
-    # TODO(hieulq): Need to move min/max value into the config option,
-    # currently oslo_config will raise ValueError instead of setting
-    # option value to its min/max.
-    if downtime < downtime_min:
-        LOG.warning(_LW("Config option live_migration_downtime's value "
-                        "is less than minimum value %dms, rounded up to "
-                        "the minimum value and will raise ValueError in "
-                        "the future release."), downtime_min)
-        downtime = downtime_min
-
-    if steps < steps_min:
-        LOG.warning(_LW("Config option live_migration_downtime_steps's "
-                        "value is less than minimum value %dms, rounded "
-                        "up to the minimum value and will raise "
-                        "ValueError in the future release."), steps_min)
-        steps = steps_min
-    if delay < delay_min:
-        LOG.warning(_LW("Config option live_migration_downtime_delay's "
-                        "value is less than minimum value %dms, rounded "
-                        "up to the minimum value and will raise "
-                        "ValueError in the future release."), delay_min)
-        delay = delay_min
     delay = int(delay * data_gb)
 
     base = downtime / steps

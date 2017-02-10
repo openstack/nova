@@ -25,12 +25,6 @@ from oslo_config import cfg
 
 from nova.conf import paths
 
-# Downtime period in milliseconds
-LIVE_MIGRATION_DOWNTIME_MIN = 100
-# Step count
-LIVE_MIGRATION_DOWNTIME_STEPS_MIN = 3
-# Delay in seconds
-LIVE_MIGRATION_DOWNTIME_DELAY_MIN = 10
 
 libvirt_group = cfg.OptGroup("libvirt",
                              title="Libvirt Options",
@@ -332,15 +326,14 @@ If set to 0, the hypervisor will choose a suitable default. Some hypervisors
 do not support this feature and will return an error if bandwidth is not 0.
 Please refer to the libvirt documentation for further details.
 """),
-    # TODO(hieulq): Need to add min argument by moving from
-    # LIVE_MIGRATION_DOWNTIME_MIN constant.
     cfg.IntOpt('live_migration_downtime',
                default=500,
+               min=100,
                help="""
 Maximum permitted downtime, in milliseconds, for live migration
 switchover.
 
-Will be rounded up to a minimum of %dms. You can increase this value
+Will be rounded up to a minimum of 100ms. You can increase this value
 if you want to allow live-migrations to complete faster, or avoid
 live-migration timeout errors by allowing the guest to be paused for
 longer during the live-migration switch over.
@@ -348,27 +341,25 @@ longer during the live-migration switch over.
 Related options:
 
 * live_migration_completion_timeout
-""" % LIVE_MIGRATION_DOWNTIME_MIN),
-    # TODO(hieulq): Need to add min argument by moving from
-    # LIVE_MIGRATION_DOWNTIME_STEPS_MIN constant.
+"""),
     cfg.IntOpt('live_migration_downtime_steps',
                default=10,
+               min=3,
                help="""
 Number of incremental steps to reach max downtime value.
 
-Will be rounded up to a minimum of %d steps.
-""" % LIVE_MIGRATION_DOWNTIME_STEPS_MIN),
-    # TODO(hieulq): Need to add min argument by moving from
-    # LIVE_MIGRATION_DOWNTIME_DELAY_MIN constant.
+Will be rounded up to a minimum of 3 steps.
+"""),
     cfg.IntOpt('live_migration_downtime_delay',
                default=75,
+               min=3,
                help="""
 Time to wait, in seconds, between each step increase of the migration
 downtime.
 
-Minimum delay is %d seconds. Value is per GiB of guest RAM + disk to be
+Minimum delay is 3 seconds. Value is per GiB of guest RAM + disk to be
 transferred, with lower bound of a minimum of 2 GiB per device.
-""" % LIVE_MIGRATION_DOWNTIME_DELAY_MIN),
+"""),
     cfg.IntOpt('live_migration_completion_timeout',
                default=800,
                mutable=True,
