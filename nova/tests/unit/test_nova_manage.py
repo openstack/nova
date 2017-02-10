@@ -1532,6 +1532,38 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         output = self.output.getvalue().strip()
         self.assertEqual('', output)
 
+    def test_update_cell_not_found(self):
+        self.assertEqual(1, self.commands.update_cell(
+            uuidsentinel.cell1, 'foo', 'fake://new', 'fake:///new'))
+        self.assertIn('not found', self.output.getvalue())
+
+    def test_update_cell_failed(self):
+        ctxt = context.get_admin_context()
+        objects.CellMapping(context=ctxt, uuid=uuidsentinel.cell1,
+                            name='cell1',
+                            transport_url='fake://mq',
+                            database_connection='fake:///db').create()
+        with mock.patch('nova.objects.CellMapping.save') as mock_save:
+            mock_save.side_effect = Exception
+            self.assertEqual(2, self.commands.update_cell(
+                uuidsentinel.cell1, 'foo', 'fake://new', 'fake:///new'))
+        self.assertIn('Unable to update', self.output.getvalue())
+
+    def test_update_cell_success(self):
+        ctxt = context.get_admin_context()
+        objects.CellMapping(context=ctxt, uuid=uuidsentinel.cell1,
+                            name='cell1',
+                            transport_url='fake://mq',
+                            database_connection='fake:///db').create()
+        self.assertEqual(0, self.commands.update_cell(
+            uuidsentinel.cell1, 'foo', 'fake://new', 'fake:///new'))
+        cm = objects.CellMapping.get_by_uuid(ctxt, uuidsentinel.cell1)
+        self.assertEqual('foo', cm.name)
+        self.assertEqual('fake://new', cm.transport_url)
+        self.assertEqual('fake:///new', cm.database_connection)
+        output = self.output.getvalue().strip()
+        self.assertEqual('', output)
+
 
 class TestNovaManageMain(test.NoDBTestCase):
     """Tests the nova-manage:main() setup code."""

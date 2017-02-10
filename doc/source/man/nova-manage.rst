@@ -163,6 +163,17 @@ Nova Cells v2
     found, 2 if host mappings were found for the cell (cell not empty), and
     3 if there are instances mapped to the cell (cell not empty).
 
+``nova-manage cell_v2 update_cell --cell_uuid <cell_uuid> [--name <cell_name>] [--transport-url <transport_url>] [--database_connection <database_connection>]``
+
+    Updates the properties of a cell by the given uuid. If the cell is not
+    found by uuid, this command will return an exit code of 1. If the
+    properties cannot be set, this will return 2. Otherwise, the exit code
+    will be 0.
+
+    NOTE: Updating the transport_url or database_connection fields on
+    a running system will NOT result in all nodes immediately using the
+    new values. Use caution when changing these values.
+
 Nova Logs
 ~~~~~~~~~
 
