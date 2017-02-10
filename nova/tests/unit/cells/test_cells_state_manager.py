@@ -112,11 +112,11 @@ def _fake_cell_get_all(context):
     return []
 
 
-def _fake_instance_type_all(context):
+def _fake_instance_type_all(*args):
     def _type(mem, root, eph):
-        return {'root_gb': root,
-                'ephemeral_gb': eph,
-                'memory_mb': mem}
+        return objects.Flavor(root_gb=root,
+                              ephemeral_gb=eph,
+                              memory_mb=mem)
 
     return [_type(*fake) for fake in FAKE_ITYPES]
 
@@ -130,7 +130,8 @@ class TestCellsStateManager(test.NoDBTestCase):
                       _fake_compute_node_get_all)
         self.stub_out('nova.objects.ServiceList.get_by_binary',
                       _fake_service_get_all_by_binary)
-        self.stub_out('nova.db.flavor_get_all', _fake_instance_type_all)
+        self.stub_out('nova.objects.FlavorList.get_all',
+                      _fake_instance_type_all)
         self.stub_out('nova.db.cell_get_all', _fake_cell_get_all)
 
     def test_cells_config_not_found(self):
@@ -268,7 +269,8 @@ class TestCellsStateManagerNodeDown(test.NoDBTestCase):
                        _fake_compute_node_get_all)
         self.stub_out('nova.objects.ServiceList.get_by_binary',
                _fake_service_get_all_by_binary_nodedown)
-        self.stub_out('nova.db.flavor_get_all', _fake_instance_type_all)
+        self.stub_out('nova.objects.FlavorList.get_all',
+                      _fake_instance_type_all)
         self.stub_out('nova.db.cell_get_all', _fake_cell_get_all)
 
     def test_capacity_no_reserve_nodedown(self):
