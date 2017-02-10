@@ -4,6 +4,7 @@ fixtures:
 defaults:
     request_headers:
         x-auth-token: admin
+        accept: application/json
 
 tests:
 - name: inventories for missing provider
@@ -11,6 +12,8 @@ tests:
   status: 404
   response_strings:
       - No resource provider with uuid 7260669a-e3d4-4867-aaa7-683e2ab6958c found
+  response_json_paths:
+      $.errors[0].title: Not Found
 
 - name: post new resource provider
   POST: /resource_providers
@@ -40,6 +43,8 @@ tests:
   status: 400
   response_strings:
       - Unable to create inventory for resource provider
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: post an invalid inventory
   POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
@@ -51,6 +56,8 @@ tests:
   status: 400
   response_strings:
       - Bad inventory DISK_GB for resource provider $ENVIRON['RP_UUID']
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: post an inventory
   POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
@@ -119,6 +126,8 @@ tests:
   status: 409
   response_strings:
       - resource provider generation conflict
+  response_json_paths:
+      $.errors[0].title: Conflict
 
 - name: modify inventory no such resource class in inventory
   PUT: /resource_providers/$ENVIRON['RP_UUID']/inventories/MEMORY_MB
@@ -130,6 +139,8 @@ tests:
   status: 400
   response_strings:
       - No inventory record with resource class
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: modify inventory invalid data
   desc: This should 400 because reserved is greater than total
@@ -147,6 +158,8 @@ tests:
   status: 400
   response_strings:
       - Unable to update inventory for resource provider $ENVIRON['RP_UUID']
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: put inventory bad form
   desc: This should 400 because reserved is greater than total
@@ -159,6 +172,8 @@ tests:
   status: 400
   response_strings:
       - JSON does not validate
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: post inventory malformed json
   POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
@@ -168,6 +183,8 @@ tests:
   status: 400
   response_strings:
       - Malformed JSON
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: post inventory bad syntax schema
   POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
@@ -177,6 +194,8 @@ tests:
       resource_class: bad_class
       total: 2048
   status: 400
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: post inventory bad resource class
   POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
@@ -188,6 +207,8 @@ tests:
   status: 400
   response_strings:
       - No such resource class NO_CLASS_14
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: post inventory duplicated resource class
   desc: DISK_GB was already created above
@@ -200,6 +221,8 @@ tests:
   status: 409
   response_strings:
       - Update conflict
+  response_json_paths:
+      $.errors[0].title: Conflict
 
 - name: get list of inventories
   GET: /resource_providers/$ENVIRON['RP_UUID']/inventories
@@ -255,6 +278,8 @@ tests:
       total: 255
       reserved: 2
   status: 409
+  response_json_paths:
+      $.errors[0].title: Conflict
 
 - name: delete inventory
   DELETE: /resource_providers/$ENVIRON['RP_UUID']/inventories/IPV4_ADDRESS
@@ -267,18 +292,24 @@ tests:
   status: 404
   response_strings:
       - No inventory of class IPV4_ADDRESS found for delete
+  response_json_paths:
+      $.errors[0].title: Not Found
 
 - name: get missing inventory class
   GET: /resource_providers/$ENVIRON['RP_UUID']/inventories/IPV4_ADDRESS
   status: 404
   response_strings:
      - No inventory of class IPV4_ADDRESS for $ENVIRON['RP_UUID']
+  response_json_paths:
+      $.errors[0].title: Not Found
 
 - name: get invalid inventory class
   GET: /resource_providers/$ENVIRON['RP_UUID']/inventories/HOUSE
   status: 404
   response_strings:
      - No inventory of class HOUSE for $ENVIRON['RP_UUID']
+  response_json_paths:
+      $.errors[0].title: Not Found
 
 - name: create another resource provider
   POST: /resource_providers
@@ -331,6 +362,8 @@ tests:
   status: 409
   response_strings:
       - resource provider generation conflict
+  response_json_paths:
+      $.errors[0].title: Conflict
 
 - name: put all inventory unknown resource class
   PUT: /resource_providers/$ENVIRON['RP_UUID']/inventories
@@ -344,6 +377,8 @@ tests:
   status: 400
   response_strings:
       - Unknown resource class in inventory
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: post an inventory with total exceed max limit
   POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
@@ -360,6 +395,8 @@ tests:
   status: 400
   response_strings:
       - "Failed validating 'maximum'"
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: post an inventory with reserved exceed max limit
   POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
@@ -376,6 +413,8 @@ tests:
   status: 400
   response_strings:
       - "Failed validating 'maximum'"
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: post an inventory with min_unit exceed max limit
   POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
@@ -392,6 +431,8 @@ tests:
   status: 400
   response_strings:
       - "Failed validating 'maximum'"
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: post an inventory with max_unit exceed max limit
   POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
@@ -408,6 +449,8 @@ tests:
   status: 400
   response_strings:
       - "Failed validating 'maximum'"
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: post an inventory with step_size exceed max limit
   POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
@@ -424,6 +467,8 @@ tests:
   status: 400
   response_strings:
       - "Failed validating 'maximum'"
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: post an inventory with allocation_ratio exceed max limit
   POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
@@ -440,6 +485,8 @@ tests:
   status: 400
   response_strings:
       - "Failed validating 'maximum'"
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: modify the inventory with total exceed max limit
   PUT: $LAST_URL
@@ -454,6 +501,8 @@ tests:
   status: 400
   response_strings:
       - "Failed validating 'maximum'"
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: modify the inventory with allocation_ratio exceed max limit
   PUT: $LAST_URL
@@ -469,6 +518,8 @@ tests:
   status: 400
   response_strings:
       - "Failed validating 'maximum'"
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 # NOTE(cdent): The generation is 6 now, based on the activity at
 # the start of this file.
@@ -485,3 +536,5 @@ tests:
   status: 400
   response_strings:
       - Unable to update inventory
+  response_json_paths:
+      $.errors[0].title: Bad Request
