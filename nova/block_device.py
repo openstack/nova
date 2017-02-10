@@ -197,7 +197,13 @@ class BlockDeviceDict(dict):
                 api_dict[source_type + '_id'] = device_uuid
             if source_type == 'image' and destination_type == 'local':
                 try:
-                    boot_index = int(api_dict.get('boot_index', -1))
+                    # NOTE(mriedem): boot_index can be None so we need to
+                    # account for that to avoid a TypeError.
+                    boot_index = api_dict.get('boot_index', -1)
+                    if boot_index is None:
+                        # boot_index=None is equivalent to -1.
+                        boot_index = -1
+                    boot_index = int(boot_index)
                 except ValueError:
                     raise exception.InvalidBDMFormat(
                         details=_("Boot index is invalid."))

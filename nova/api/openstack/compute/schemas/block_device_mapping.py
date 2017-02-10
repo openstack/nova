@@ -52,8 +52,10 @@ block_device_mapping_new_item = {
         'type': 'string', 'maxLength': 255,
     },
     # Defined as integer in nova/block_device.py:from_api()
+    # NOTE(mriedem): boot_index=None is also accepted for backward
+    # compatibility with the legacy v2 API.
     'boot_index': {
-        'type': ['integer', 'string'],
+        'type': ['integer', 'string', 'null'],
         'pattern': '^-?[0-9]+$',
     },
 }
