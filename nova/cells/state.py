@@ -300,12 +300,12 @@ class CellStateManager(base.Base):
             else:
                 return 0
 
-        instance_types = self.db.flavor_get_all(ctxt)
+        flavors = objects.FlavorList.get_all(ctxt)
         memory_mb_slots = frozenset(
-                [inst_type['memory_mb'] for inst_type in instance_types])
+                [flavor.memory_mb for flavor in flavors])
         disk_mb_slots = frozenset(
-                [(inst_type['root_gb'] + inst_type['ephemeral_gb']) * units.Ki
-                    for inst_type in instance_types])
+                [(flavor.root_gb + flavor.ephemeral_gb) * units.Ki
+                    for flavor in flavors])
 
         for compute_values in compute_hosts.values():
             total_ram_mb_free += compute_values['free_ram_mb']
