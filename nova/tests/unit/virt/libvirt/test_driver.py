@@ -18092,38 +18092,6 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                                    snapshot_id, self.delete_info_1)
             self.assertIn('has not been fully tested', six.text_type(ex))
 
-    def test_volume_snapshot_delete_2(self):
-        """Deleting older snapshot -- blockCommit."""
-
-        # libvirt lib doesn't have VIR_DOMAIN_BLOCK_COMMIT_RELATIVE
-        fakelibvirt.__dict__.pop('VIR_DOMAIN_BLOCK_COMMIT_RELATIVE')
-        self.stubs.Set(libvirt_driver, 'libvirt', fakelibvirt)
-
-        instance = objects.Instance(**self.inst)
-        snapshot_id = 'snapshot-1234'
-
-        domain = FakeVirtDomain(fake_xml=self.dom_xml)
-        self.mox.StubOutWithMock(domain, 'XMLDesc')
-        domain.XMLDesc(flags=0).AndReturn(self.dom_xml)
-
-        self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
-        self.mox.StubOutWithMock(domain, 'blockRebase')
-        self.mox.StubOutWithMock(domain, 'blockCommit')
-
-        self.drvr._host.get_domain(instance).AndReturn(domain)
-
-        self.mox.ReplayAll()
-
-        self.assertRaises(exception.Invalid,
-                          self.drvr._volume_snapshot_delete,
-                          self.c,
-                          instance,
-                          self.volume_uuid,
-                          snapshot_id,
-                          self.delete_info_2)
-
-        fakelibvirt.__dict__.update({'VIR_DOMAIN_BLOCK_COMMIT_RELATIVE': 4})
-
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
     def test_volume_snapshot_delete_relative_2(self, mock_is_job_complete):
         """Deleting older snapshot -- blockCommit using relative flag"""
@@ -18383,44 +18351,6 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         self.mox.VerifyAll()
         self.assertEqual(2, mock_is_job_complete.call_count)
-
-    def test_volume_snapshot_delete_netdisk_2(self):
-        """Delete older snapshot -- blockCommit for libgfapi/network disk."""
-
-        class FakeNetdiskDomain(FakeVirtDomain):
-            def __init__(self, *args, **kwargs):
-                super(FakeNetdiskDomain, self).__init__(*args, **kwargs)
-
-            def XMLDesc(self, flags):
-                return self.dom_netdisk_xml
-
-        # libvirt lib doesn't have VIR_DOMAIN_BLOCK_COMMIT_RELATIVE
-        fakelibvirt.__dict__.pop('VIR_DOMAIN_BLOCK_COMMIT_RELATIVE')
-        self.stubs.Set(libvirt_driver, 'libvirt', fakelibvirt)
-
-        instance = objects.Instance(**self.inst)
-        snapshot_id = 'snapshot-1234'
-
-        domain = FakeNetdiskDomain(fake_xml=self.dom_netdisk_xml)
-        self.mox.StubOutWithMock(domain, 'XMLDesc')
-        domain.XMLDesc(flags=0).AndReturn(self.dom_netdisk_xml)
-
-        self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
-        self.mox.StubOutWithMock(domain, 'blockRebase')
-        self.mox.StubOutWithMock(domain, 'blockCommit')
-
-        self.drvr._host.get_domain(instance).AndReturn(domain)
-
-        self.mox.ReplayAll()
-
-        self.assertRaises(exception.Invalid,
-                          self.drvr._volume_snapshot_delete,
-                          self.c,
-                          instance,
-                          self.volume_uuid,
-                          snapshot_id,
-                          self.delete_info_netdisk)
-        fakelibvirt.__dict__.update({'VIR_DOMAIN_BLOCK_COMMIT_RELATIVE': 4})
 
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
     def test_volume_snapshot_delete_netdisk_relative_2(
