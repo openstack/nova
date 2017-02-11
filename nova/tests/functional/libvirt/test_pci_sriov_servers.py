@@ -85,7 +85,7 @@ class SRIOVServersTest(ServersTestBase):
 
     def _get_connection(self, host_info, pci_info):
         fake_connection = fakelibvirt.Connection('qemu:///system',
-                                                 version=1002007,
+                                                 version=1002009,
                                                  hv_version=2001000,
                                                  host_info=host_info,
                                                  pci_info=pci_info)

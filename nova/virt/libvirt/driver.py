@@ -197,15 +197,15 @@ patch_tpool_proxy()
 # versions. Over time, this will become a common min version
 # for all architectures/hypervisors, as this value rises to
 # meet them.
-MIN_LIBVIRT_VERSION = (1, 2, 1)
-MIN_QEMU_VERSION = (1, 5, 3)
+MIN_LIBVIRT_VERSION = (1, 2, 9)
+MIN_QEMU_VERSION = (2, 1, 0)
 # TODO(berrange): Re-evaluate this at start of each release cycle
 # to decide if we want to plan a future min version bump.
 # MIN_LIBVIRT_VERSION can be updated to match this after
 # NEXT_MIN_LIBVIRT_VERSION  has been at a higher value for
 # one cycle
-NEXT_MIN_LIBVIRT_VERSION = (1, 2, 9)
-NEXT_MIN_QEMU_VERSION = (2, 1, 0)
+NEXT_MIN_LIBVIRT_VERSION = (1, 3, 1)
+NEXT_MIN_QEMU_VERSION = (2, 5, 0)
 
 # When the above version matches/exceeds this version
 # delete it & corresponding code using it
