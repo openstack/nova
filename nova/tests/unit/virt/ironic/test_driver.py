@@ -1723,11 +1723,15 @@ class IronicDriverGenerateConfigDriveTestCase(test.NoDBTestCase):
         mock_instance_meta.return_value = 'fake-instance'
         mock_make_drive = mock.MagicMock(make_drive=lambda *_: None)
         mock_cd_builder.return_value.__enter__.return_value = mock_make_drive
+        network_metadata_mock = mock.Mock()
+        self.driver._get_network_metadata = network_metadata_mock
         self.driver._generate_configdrive(None, self.instance,
                                           self.node, self.network_info)
         mock_cd_builder.assert_called_once_with(instance_md='fake-instance')
-        mock_instance_meta.assert_called_once_with(self.instance,
-            network_info=self.network_info, extra_md={}, content=None,
+        mock_instance_meta.assert_called_once_with(
+            self.instance, content=None, extra_md={},
+            network_info=self.network_info,
+            network_metadata=network_metadata_mock.return_value,
             request_context=None)
 
     def test_generate_configdrive_fail(self, mock_cd_builder,
@@ -1737,15 +1741,35 @@ class IronicDriverGenerateConfigDriveTestCase(test.NoDBTestCase):
         mock_instance_meta.return_value = 'fake-instance'
         mock_make_drive = mock.MagicMock(make_drive=lambda *_: None)
         mock_cd_builder.return_value.__enter__.return_value = mock_make_drive
+        network_metadata_mock = mock.Mock()
+        self.driver._get_network_metadata = network_metadata_mock
 
         self.assertRaises(exception.ConfigDriveMountFailed,
                           self.driver._generate_configdrive, None,
                           self.instance, self.node, self.network_info)
 
         mock_cd_builder.assert_called_once_with(instance_md='fake-instance')
-        mock_instance_meta.assert_called_once_with(self.instance,
-            network_info=self.network_info, extra_md={}, content=None,
+        mock_instance_meta.assert_called_once_with(
+            self.instance, content=None, extra_md={},
+            network_info=self.network_info,
+            network_metadata=network_metadata_mock.return_value,
             request_context=None)
+
+    @mock.patch.object(FAKE_CLIENT.node, 'list_ports')
+    def test_generate_network_metadata_ports_only(
+        self, mock_ports, mock_cd_builder, mock_instance_meta):
+        address = self.network_info[0]['address']
+        port = ironic_utils.get_test_port(
+            node_uuid=self.node.uuid, address=address,
+            internal_info={'tenant_vif_port_id': utils.FAKE_VIF_UUID})
+        mock_ports.return_value = [port]
+
+        metadata = self.driver._get_network_metadata(self.node,
+                                                     self.network_info)
+
+        self.assertEqual(port.address,
+                         metadata['links'][0]['ethernet_mac_address'])
+        self.assertEqual('phy', metadata['links'][0]['type'])
 
 
 class HashRingTestCase(test.NoDBTestCase):
