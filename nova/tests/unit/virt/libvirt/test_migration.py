@@ -83,6 +83,17 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
         addr = migration.serial_listen_addr(data)
         self.assertIsNone(addr)
 
+    def test_serial_listen_ports(self):
+        data = objects.LibvirtLiveMigrateData(
+            serial_listen_ports=[1, 2, 3])
+        ports = migration.serial_listen_ports(data)
+        self.assertEqual([1, 2, 3], ports)
+
+    def test_serial_listen_ports_emtpy(self):
+        data = objects.LibvirtLiveMigrateData()
+        ports = migration.serial_listen_ports(data)
+        self.assertEqual([], ports)
+
     @mock.patch('lxml.etree.tostring')
     @mock.patch.object(migration, '_update_perf_events_xml')
     @mock.patch.object(migration, '_update_graphics_xml')
@@ -105,26 +116,60 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
 
     def test_update_serial_xml_serial(self):
         data = objects.LibvirtLiveMigrateData(
-            serial_listen_addr='127.0.0.100')
+            serial_listen_addr='127.0.0.100',
+            serial_listen_ports=[2001])
         xml = """<domain>
   <devices>
     <serial type="tcp">
-      <source host="127.0.0.1"/>
+      <source host="127.0.0.1" service="2000"/>
+      <target type="serial" port="0"/>
     </serial>
   </devices>
 </domain>"""
         doc = etree.fromstring(xml)
         res = etree.tostring(migration._update_serial_xml(doc, data))
-        new_xml = xml.replace("127.0.0.1", "127.0.0.100")
+        new_xml = xml.replace("127.0.0.1", "127.0.0.100").replace(
+            "2000", "2001")
         self.assertThat(res, matchers.XMLMatches(new_xml))
 
     def test_update_serial_xml_console(self):
         data = objects.LibvirtLiveMigrateData(
-            serial_listen_addr='127.0.0.100')
+            serial_listen_addr='127.0.0.100',
+            serial_listen_ports=[299, 300])
         xml = """<domain>
   <devices>
     <console type="tcp">
-      <source host="127.0.0.1"/>
+      <source host="127.0.0.1" service="2001"/>
+      <target type="serial" port="0"/>
+    </console>
+    <console type="tcp">
+      <source host="127.0.0.1" service="2002"/>
+      <target type="serial" port="1"/>
+    </console>
+  </devices>
+</domain>"""
+        doc = etree.fromstring(xml)
+        res = etree.tostring(migration._update_serial_xml(doc, data))
+        new_xml = xml.replace("127.0.0.1", "127.0.0.100").replace(
+            "2001", "299").replace("2002", "300")
+
+        self.assertThat(res, matchers.XMLMatches(new_xml))
+
+    def test_update_serial_xml_without_ports(self):
+        # This test is for backwards compatibility when we don't
+        # get the serial ports from the target node.
+        data = objects.LibvirtLiveMigrateData(
+            serial_listen_addr='127.0.0.100',
+            serial_listen_ports=[])
+        xml = """<domain>
+  <devices>
+    <console type="tcp">
+      <source host="127.0.0.1" service="2001"/>
+      <target type="serial" port="0"/>
+    </console>
+    <console type="tcp">
+      <source host="127.0.0.1" service="2002"/>
+      <target type="serial" port="1"/>
     </console>
   </devices>
 </domain>"""

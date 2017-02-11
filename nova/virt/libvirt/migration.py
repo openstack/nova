@@ -65,6 +65,15 @@ def serial_listen_addr(migrate_data):
     return listen_addr
 
 
+# TODO(sahid): remove me for Q*
+def serial_listen_ports(migrate_data):
+    """Returns ports serial from a LibvirtLiveMigrateData"""
+    ports = []
+    if migrate_data.obj_attr_is_set('serial_listen_ports'):
+        ports = migrate_data.serial_listen_ports
+    return ports
+
+
 def get_updated_guest_xml(guest, migrate_data, get_volume_config):
     xml_doc = etree.fromstring(guest.get_xml_desc(dump_migratable=True))
     xml_doc = _update_graphics_xml(xml_doc, migrate_data)
@@ -91,12 +100,31 @@ def _update_graphics_xml(xml_doc, migrate_data):
 
 def _update_serial_xml(xml_doc, migrate_data):
     listen_addr = serial_listen_addr(migrate_data)
-    for dev in xml_doc.findall("./devices/serial[@type='tcp']/source"):
-        if dev.get('host') is not None:
-            dev.set('host', listen_addr)
-    for dev in xml_doc.findall("./devices/console[@type='tcp']/source"):
-        if dev.get('host') is not None:
-            dev.set('host', listen_addr)
+    listen_ports = serial_listen_ports(migrate_data)
+
+    def set_listen_addr_and_port(source, listen_addr, serial_listen_ports):
+        # The XML nodes can be empty, which would make checks like
+        # "if source.get('host'):" different to an explicit check for
+        # None. That's why we have to check for None in this method.
+        if source.get('host') is not None:
+            source.set('host', listen_addr)
+        device = source.getparent()
+        target = device.find("target")
+        if target is not None and source.get('service') is not None:
+            port_index = int(target.get('port'))
+            # NOTE (markus_z): Previous releases might not give us the
+            # ports yet, that's why we have this check here.
+            if len(serial_listen_ports) > port_index:
+                source.set('service', str(serial_listen_ports[port_index]))
+
+    # This updates all "LibvirtConfigGuestSerial" devices
+    for source in xml_doc.findall("./devices/serial[@type='tcp']/source"):
+        set_listen_addr_and_port(source, listen_addr, listen_ports)
+
+    # This updates all "LibvirtConfigGuestConsole" devices
+    for source in xml_doc.findall("./devices/console[@type='tcp']/source"):
+        set_listen_addr_and_port(source, listen_addr, listen_ports)
+
     return xml_doc
 
 
