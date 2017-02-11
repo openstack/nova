@@ -743,8 +743,8 @@ def _pack_instance_onto_cores(available_siblings,
 
         usable_cores = map(lambda s: list(s)[:threads_no], sibling_set)
 
-        return zip(sorted(instance_cores),
-                   itertools.chain(*usable_cores))
+        return list(zip(sorted(instance_cores),
+                        itertools.chain(*usable_cores)))
 
     if (instance_cell.cpu_thread_policy ==
             fields.CPUThreadAllocationPolicy.REQUIRE):
@@ -801,8 +801,8 @@ def _pack_instance_onto_cores(available_siblings,
         if (instance_cell.cpu_thread_policy !=
                 fields.CPUThreadAllocationPolicy.REQUIRE and
                 not pinning):
-            pinning = zip(sorted(instance_cell.cpuset),
-                          itertools.chain(*sibling_set))
+            pinning = list(zip(sorted(instance_cell.cpuset),
+                               itertools.chain(*sibling_set)))
 
         threads_no = _threads(instance_cell, threads_no)
 

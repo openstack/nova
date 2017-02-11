@@ -60,6 +60,15 @@ class NUMATopologyFilter(filters.BaseHostFilter):
         return True
 
     def host_passes(self, host_state, spec_obj):
+        # TODO(stephenfin): The 'numa_fit_instance_to_host' function has the
+        # unfortunate side effect of modifying 'spec_obj.numa_topology' - an
+        # InstanceNUMATopology object - by populating the 'cpu_pinning' field.
+        # This is rather rude and said function should be reworked to avoid
+        # doing this. That's a large, non-backportable cleanup however, so for
+        # now we just duplicate spec_obj to prevent changes propagating to
+        # future filter calls.
+        spec_obj = spec_obj.obj_clone()
+
         ram_ratio = host_state.ram_allocation_ratio
         cpu_ratio = host_state.cpu_allocation_ratio
         extra_specs = spec_obj.flavor.extra_specs
