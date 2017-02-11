@@ -5450,6 +5450,10 @@ class LibvirtDriver(driver.ComputeDriver):
         data = objects.LibvirtLiveMigrateData()
         data.filename = filename
         data.image_type = CONF.libvirt.images_type
+        if CONF.serial_console.enabled:
+            data.serial_listen_addr = CONF.serial_console.proxyclient_address
+        else:
+            data.serial_listen_addr = None
         # Notes(eliqiao): block_migration and disk_over_commit are not
         # nullable, so just don't set them if they are None
         if block_migration is not None:
