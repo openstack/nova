@@ -183,7 +183,9 @@ class HostState(object):
         """Update information about a host from a ComputeNode object."""
         # NOTE(jichenjc): if the compute record is just created but not updated
         # some field such as free_disk_gb can be None
-        if compute.updated_at is None:
+        if 'free_disk_gb' not in compute or compute.free_disk_gb is None:
+            LOG.debug('Ignoring compute node %s as its usage has not been '
+                      'updated yet.', compute.uuid)
             return
 
         if (self.updated and compute.updated_at
