@@ -212,8 +212,6 @@ NEXT_MIN_QEMU_VERSION = (2, 5, 0)
 # Libvirt version 1.2.17 is required for successful block live migration
 # of vm booted from image with attached devices
 MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION = (1, 2, 17)
-# libvirt discard feature
-MIN_QEMU_DISCARD_VERSION = (1, 6, 0)
 # While earlier versions could support NUMA reporting and
 # NUMA placement, not until 1.2.7 was there the ability
 # to pin guest nodes to host nodes, so mandate that. Without
@@ -3471,14 +3469,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _get_guest_disk_config(self, instance, name, disk_mapping, inst_type,
                                image_type=None):
-        if CONF.libvirt.hw_disk_discard:
-            if not self._host.has_min_version(hv_ver=MIN_QEMU_DISCARD_VERSION,
-                                              hv_type=host.HV_DRIVER_QEMU):
-                msg = (_('Volume sets discard option, qemu %(qemu)s'
-                         ' or later is required.') %
-                      {'qemu': MIN_QEMU_DISCARD_VERSION})
-                raise exception.Invalid(msg)
-
         disk = self.image_backend.by_name(instance, name, image_type)
         if (name == 'disk.config' and image_type == 'rbd' and
                 not disk.exists()):

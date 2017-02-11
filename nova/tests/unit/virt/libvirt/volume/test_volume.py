@@ -290,22 +290,3 @@ class LibvirtVolumeTestCase(LibvirtISCSIVolumeBaseTestCase):
         conf = libvirt_driver.get_config(connection_info, self.disk_info)
         tree = conf.format_dom()
         self.assertIsNone(tree.find("driver[@discard]"))
-
-    @mock.patch('nova.virt.libvirt.host.Host.has_min_version')
-    def test_libvirt_volume_driver_discard_true_bad_version(
-            self, mock_has_min_version):
-        # Check the discard attrib is not present in driver section
-        mock_has_min_version.return_value = False
-        libvirt_driver = volume.LibvirtVolumeDriver(self.fake_host)
-        connection_info = {
-            'driver_volume_type': 'fake',
-            'data': {
-                'device_path': '/foo',
-                'discard': True,
-            },
-            'serial': 'fake_serial',
-        }
-
-        conf = libvirt_driver.get_config(connection_info, self.disk_info)
-        tree = conf.format_dom()
-        self.assertIsNone(tree.find("driver[@discard]"))
