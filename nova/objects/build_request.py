@@ -19,6 +19,7 @@ from oslo_serialization import jsonutils
 from oslo_utils import versionutils
 from oslo_versionedobjects import exception as ovoo_exc
 import six
+from sqlalchemy.sql import null
 
 from nova.db.sqlalchemy import api as db
 from nova.db.sqlalchemy import api_models
@@ -391,3 +392,52 @@ class BuildRequestList(base.ObjectListBase, base.NovaObject):
 
         return cls(context,
                    objects=sorted_build_reqs[marker_index:limit_index])
+
+
+@db.api_context_manager.reader
+def _get_build_requests_with_no_instance_uuid(context, limit):
+    """Returns up to $limit build_requests where instance_uuid is null"""
+    # build_requests don't use the SoftDeleteMixin so we don't have to filter
+    # on the deleted column.
+    return context.session.query(api_models.BuildRequest).\
+        filter_by(instance_uuid=null()).\
+        limit(limit).\
+        all()
+
+
+@db.api_context_manager.writer
+def _destroy_in_db(context, id):
+    return context.session.query(api_models.BuildRequest).filter_by(
+        id=id).delete()
+
+
+def delete_build_requests_with_no_instance_uuid(context, count):
+    """Online data migration which cleans up failed build requests from Mitaka
+
+    build_requests were initially a mirror of instances and had similar fields
+    to satisfy listing/showing instances while they were building. In Mitaka
+    if an instance failed to build we'd delete the instance but didn't delete
+    the associated BuildRequest. In the Newton release we changed the schema
+    on the build_requests table to just store a serialized Instance object and
+    added an instance_uuid field which is expected to not be None as seen how
+    it's used in _from_db_object. However, failed build requests created before
+    that schema migration won't have the instance_uuid set and fail to load
+    as an object when calling BuildRequestList.get_all(). So we need to perform
+    a cleanup routine here where we search for build requests which do not have
+    the instance_uuid field set and delete them.
+
+    :param context: The auth context used to query the database.
+    :type context: nova.context.RequestContext
+    :param count: The max number of build requests to delete.
+    :type count: int
+    :returns: 2-item tuple of
+        (number of orphaned build requests read from DB, number deleted)
+    """
+    orphaned_build_requests = (
+        _get_build_requests_with_no_instance_uuid(context, count))
+    done = 0
+    for orphan_buildreq in orphaned_build_requests:
+        result = _destroy_in_db(context, orphan_buildreq.id)
+        if result:
+            done += 1
+    return len(orphaned_build_requests), done
