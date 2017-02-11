@@ -642,48 +642,42 @@ class GuestBlockTestCase(test.NoDBTestCase):
             'vda', "foo", "top", 0,
             flags=fakelibvirt.VIR_DOMAIN_BLOCK_COMMIT_RELATIVE)
 
-    def test_wait_for_job_cur_end_zeros(self):
+    def test_is_job_complete_cur_end_zeros(self):
         self.domain.blockJobInfo.return_value = {
             "type": 4,
             "bandwidth": 18,
             "cur": 0,
             "end": 0}
-        in_progress = self.gblock.wait_for_job()
-        self.assertTrue(in_progress)
+        is_complete = self.gblock.is_job_complete()
+        self.assertFalse(is_complete)
 
-    def test_wait_for_job_current_lower_than_end(self):
+    def test_is_job_complete_current_lower_than_end(self):
         self.domain.blockJobInfo.return_value = {
             "type": 4,
             "bandwidth": 18,
             "cur": 95,
             "end": 100}
-        in_progress = self.gblock.wait_for_job()
-        self.assertTrue(in_progress)
+        is_complete = self.gblock.is_job_complete()
+        self.assertFalse(is_complete)
 
-    def test_wait_for_job_finished(self):
+    def test_is_job_complete_finished(self):
         self.domain.blockJobInfo.return_value = {
             "type": 4,
             "bandwidth": 18,
             "cur": 100,
             "end": 100}
-        in_progress = self.gblock.wait_for_job()
-        self.assertFalse(in_progress)
+        is_complete = self.gblock.is_job_complete()
+        self.assertTrue(is_complete)
 
-    def test_wait_for_job_clean(self):
-        self.domain.blockJobInfo.return_value = {"type": 0}
-        in_progress = self.gblock.wait_for_job(wait_for_job_clean=True)
-        self.assertFalse(in_progress)
+    def test_is_job_complete_no_job(self):
+        self.domain.blockJobInfo.return_value = {}
+        is_complete = self.gblock.is_job_complete()
+        self.assertTrue(is_complete)
 
-    def test_wait_for_job_abort_on_error(self):
-        self.domain.blockJobInfo.return_value = -1
-        self.assertRaises(
-            exception.NovaException,
-            self.gblock.wait_for_job, abort_on_error=True)
-
-    def test_wait_for_job_ignore_on_error(self):
-        self.domain.blockJobInfo.return_value = -1
-        in_progress = self.gblock.wait_for_job()
-        self.assertFalse(in_progress)
+    def test_is_job_complete_exception(self):
+        self.domain.blockJobInfo.side_effect = fakelibvirt.libvirtError('fake')
+        self.assertRaises(fakelibvirt.libvirtError,
+                          self.gblock.is_job_complete)
 
 
 class JobInfoTestCase(test.NoDBTestCase):
