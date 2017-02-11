@@ -3841,11 +3841,27 @@ class LibvirtDriver(driver.ComputeDriver):
                 # Now get the CpuTune configuration from the numa_topology
                 guest_cpu_tune = vconfig.LibvirtConfigGuestCPUTune()
                 guest_numa_tune = vconfig.LibvirtConfigGuestNUMATune()
-                allpcpus = []
+                emupcpus = []
 
                 numa_mem = vconfig.LibvirtConfigGuestNUMATuneMemory()
                 numa_memnodes = [vconfig.LibvirtConfigGuestNUMATuneMemNode()
                                  for _ in guest_cpu_numa_config.cells]
+
+                vcpus_rt = set([])
+                wants_realtime = hardware.is_realtime_enabled(flavor)
+                if wants_realtime:
+                    if not self._host.has_min_version(
+                            MIN_LIBVIRT_REALTIME_VERSION):
+                        raise exception.RealtimePolicyNotSupported()
+                    # Prepare realtime config for libvirt
+                    vcpus_rt = hardware.vcpus_realtime_topology(
+                        flavor, image_meta)
+                    vcpusched = vconfig.LibvirtConfigGuestCPUTuneVCPUSched()
+                    vcpusched.vcpus = vcpus_rt
+                    vcpusched.scheduler = "fifo"
+                    vcpusched.priority = (
+                        CONF.libvirt.realtime_scheduler_priority)
+                    guest_cpu_tune.vcpusched.append(vcpusched)
 
                 for host_cell in topology.cells:
                     for guest_node_id, guest_config_cell in enumerate(
@@ -3875,7 +3891,21 @@ class LibvirtDriver(driver.ComputeDriver):
                                     pin_cpuset.cpuset = set([pcpu])
                                 else:
                                     pin_cpuset.cpuset = host_cell.cpuset
-                                allpcpus.extend(pin_cpuset.cpuset)
+                                if not wants_realtime or cpu not in vcpus_rt:
+                                    # - If realtime IS NOT enabled, the
+                                    #   emulator threads are allowed to float
+                                    #   across all the pCPUs associated with
+                                    #   the guest vCPUs ("not wants_realtime"
+                                    #   is true, so we add all pcpus)
+                                    # - If realtime IS enabled, then at least
+                                    #   1 vCPU is required to be set aside for
+                                    #   non-realtime usage. The emulator
+                                    #   threads are allowed to float acros the
+                                    #   pCPUs that are associated with the
+                                    #   non-realtime VCPUs (the "cpu not in
+                                    #   vcpu_rt" check deals with this
+                                    #   filtering)
+                                    emupcpus.extend(pin_cpuset.cpuset)
                                 guest_cpu_tune.vcpupin.append(pin_cpuset)
 
                 # TODO(berrange) When the guest has >1 NUMA node, it will
@@ -3895,27 +3925,10 @@ class LibvirtDriver(driver.ComputeDriver):
                 # cross NUMA node traffic. This is an area of investigation
                 # for QEMU community devs.
                 emulatorpin = vconfig.LibvirtConfigGuestCPUTuneEmulatorPin()
-                emulatorpin.cpuset = set(allpcpus)
+                emulatorpin.cpuset = set(emupcpus)
                 guest_cpu_tune.emulatorpin = emulatorpin
                 # Sort the vcpupin list per vCPU id for human-friendlier XML
                 guest_cpu_tune.vcpupin.sort(key=operator.attrgetter("id"))
-
-                if hardware.is_realtime_enabled(flavor):
-                    if not self._host.has_min_version(
-                            MIN_LIBVIRT_REALTIME_VERSION):
-                        raise exception.RealtimePolicyNotSupported()
-
-                    vcpus_rt, vcpus_em = hardware.vcpus_realtime_topology(
-                        set(cpu.id for cpu in guest_cpu_tune.vcpupin),
-                        flavor, image_meta)
-
-                    vcpusched = vconfig.LibvirtConfigGuestCPUTuneVCPUSched()
-                    vcpusched.vcpus = vcpus_rt
-                    vcpusched.scheduler = "fifo"
-                    vcpusched.priority = (
-                        CONF.libvirt.realtime_scheduler_priority)
-                    guest_cpu_tune.vcpusched.append(vcpusched)
-                    guest_cpu_tune.emulatorpin.cpuset = vcpus_em
 
                 guest_numa_tune.memory = numa_mem
                 guest_numa_tune.memnodes = numa_memnodes
