@@ -255,6 +255,20 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
 
         vfs.teardown()
 
+    def test_set_ownership_not_supported(self):
+        # NOTE(andreaf) Setting ownership relies on /etc/passwd and/or
+        # /etc/group being available in the image, which is not always the
+        # case - e.g. CirrOS image before boot.
+        vfs = vfsimpl.VFSGuestFS(self.qcowfile)
+        vfs.setup()
+        self.stub_out('nova.tests.unit.virt.disk.vfs.fakeguestfs.GuestFS.'
+                      'CAN_SET_OWNERSHIP', False)
+
+        self.assertRaises(exception.NovaException, vfs.set_ownership,
+                          "/some/file", "fred", None)
+        self.assertRaises(exception.NovaException, vfs.set_ownership,
+                          "/some/file", None, "users")
+
     def test_close_on_error(self):
         vfs = vfsimpl.VFSGuestFS(self.qcowfile)
         vfs.setup()
