@@ -241,9 +241,6 @@ BAD_LIBVIRT_CPU_POLICY_VERSIONS = [(1, 2, 10)]
 # sizes per guest NUMA node
 MIN_QEMU_NUMA_HUGEPAGE_VERSION = (2, 1, 0)
 
-# UEFI booting support
-MIN_LIBVIRT_UEFI_VERSION = (1, 2, 9)
-
 # Hyper-V paravirtualized time source
 MIN_LIBVIRT_HYPERV_TIMER_VERSION = (1, 2, 2)
 MIN_QEMU_HYPERV_TIMER_VERSION = (2, 0, 0)
@@ -4305,7 +4302,6 @@ class LibvirtDriver(driver.ComputeDriver):
                            fields.Architecture.AARCH64]
         caps = self._host.get_capabilities()
         return ((caps.host.cpu.arch in supported_archs) and
-                self._host.has_min_version(MIN_LIBVIRT_UEFI_VERSION) and
                 os.path.exists(DEFAULT_UEFI_LOADER_PATH[caps.host.cpu.arch]))
 
     def _get_supported_perf_events(self):
