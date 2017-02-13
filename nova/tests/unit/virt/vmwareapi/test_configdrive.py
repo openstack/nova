@@ -15,7 +15,6 @@
 
 import fixtures
 import mock
-from mox3 import mox
 
 from nova import context
 from nova.image import glance
@@ -137,40 +136,34 @@ class ConfigDriveTestCase(test.NoDBTestCase):
                         network_info=self.network_info,
                         block_device_info=block_device_info)
 
-    def test_create_vm_with_config_drive_verify_method_invocation(self):
+    @mock.patch.object(vmops.VMwareVMOps, '_create_config_drive',
+                                 return_value=('[ds1] fake.iso'))
+    @mock.patch.object(vmops.VMwareVMOps, '_attach_cdrom_to_vm')
+    def test_create_vm_with_config_drive_verify_method_invocation(self,
+                            mock_attach_cdrom, mock_create_config_drive):
         self.test_instance.config_drive = 'True'
-        self.mox.StubOutWithMock(vmops.VMwareVMOps, '_create_config_drive')
-        self.mox.StubOutWithMock(vmops.VMwareVMOps, '_attach_cdrom_to_vm')
-        self.conn._vmops._create_config_drive(mox.IgnoreArg(),
-                                              self.test_instance,
-                                              mox.IgnoreArg(),
-                                              mox.IgnoreArg(),
-                                              mox.IgnoreArg(),
-                                              mox.IgnoreArg(),
-                                              mox.IgnoreArg(),
-                                              mox.IgnoreArg(),
-                                              mox.IgnoreArg()
-                                              ).AndReturn('[ds1] fake.iso')
-        self.conn._vmops._attach_cdrom_to_vm(mox.IgnoreArg(),
-                                               mox.IgnoreArg(),
-                                               mox.IgnoreArg(),
-                                               mox.IgnoreArg())
-        self.mox.ReplayAll()
-        # if spawn does not call the _create_config_drive or
-        # _attach_cdrom_to_vm call with the correct set of parameters
-        # then mox's VerifyAll will throw a Expected methods never called
-        # Exception
         self._spawn_vm()
+        mock_create_config_drive.assert_called_once_with(mock.ANY,
+                                                         self.test_instance,
+                                                         mock.ANY,
+                                                         mock.ANY,
+                                                         mock.ANY,
+                                                         mock.ANY,
+                                                         mock.ANY,
+                                                         mock.ANY,
+                                                         mock.ANY)
+        mock_attach_cdrom.assert_called_once_with(mock.ANY, mock.ANY,
+                                                  mock.ANY, mock.ANY)
 
-    def test_create_vm_without_config_drive(self):
+    @mock.patch.object(vmops.VMwareVMOps, '_create_config_drive',
+                       return_value=('[ds1] fake.iso'))
+    @mock.patch.object(vmops.VMwareVMOps, '_attach_cdrom_to_vm')
+    def test_create_vm_without_config_drive(self, mock_attach_cdrom,
+                                            mock_create_config_drive):
         self.test_instance.config_drive = None
-        self.mox.StubOutWithMock(vmops.VMwareVMOps, '_create_config_drive')
-        self.mox.StubOutWithMock(vmops.VMwareVMOps, '_attach_cdrom_to_vm')
-        self.mox.ReplayAll()
-        # if spawn ends up calling _create_config_drive or
-        # _attach_cdrom_to_vm then mox will log a Unexpected method call
-        # exception
         self._spawn_vm()
+        mock_create_config_drive.assert_not_called()
+        mock_attach_cdrom.assert_not_called()
 
     def test_create_vm_with_config_drive(self):
         self.test_instance.config_drive = 'True'
