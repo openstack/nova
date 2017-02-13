@@ -180,7 +180,8 @@ class UpgradeCommands(object):
 
         """
         ks_filter = {'service_type': 'placement',
-                     'region_name': CONF.placement.os_region_name}
+                     'region_name': CONF.placement.os_region_name,
+                     'interface': CONF.placement.os_interface}
         auth = keystone.load_auth_from_conf_options(
             CONF, 'placement')
         client = session.Session(auth=auth)
