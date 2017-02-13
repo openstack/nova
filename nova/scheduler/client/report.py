@@ -186,7 +186,8 @@ class SchedulerReportClient(object):
     """Client class for updating the scheduler."""
 
     ks_filter = {'service_type': 'placement',
-                 'region_name': CONF.placement.os_region_name}
+                 'region_name': CONF.placement.os_region_name,
+                 'interface': CONF.placement.os_interface}
 
     def __init__(self):
         # A dict, keyed by the resource provider UUID, of ResourceProvider
