@@ -1988,6 +1988,15 @@ extra_specs:
   in: body
   required: true
   type: object
+extra_specs_2_47:
+  min_version: 2.47
+  description: |
+    A dictionary of the flavor's extra-specs key-and-value pairs.  This will
+    only be included if the user is allowed by policy to index flavor
+    extra_specs.
+  in: body
+  required: false
+  type: object
 fault:
   description: |
     A fault object. Only displayed in the failed response.
@@ -2092,6 +2101,13 @@ flavor_cpus:
   type: integer
   description: |
     The number of virtual CPUs that will be allocated to the server.
+flavor_cpus_2_47:
+  min_version: 2.47
+  in: body
+  required: true
+  type: integer
+  description: |
+    The number of virtual CPUs that were allocated to the server.
 flavor_disabled:
   in: body
   required: false
@@ -2110,6 +2126,13 @@ flavor_disk:
     select the compute host based on the virtual image size. Therefore,
     0 should only be used for volume booted instances or for testing
     purposes.
+flavor_disk_2_47:
+  min_version: 2.47
+  in: body
+  required: true
+  type: integer
+  description: |
+    The size of the root disk that was created in GiB.
 flavor_ephem_disk:
   in: body
   required: true
@@ -2119,6 +2142,13 @@ flavor_ephem_disk:
     GiB. Ephemeral disks may be written over on server state
     changes. So should only be used as a scratch space for
     applications that are aware of its limitations. Defaults to 0.
+flavor_ephem_disk_2_47:
+  min_version: 2.47
+  in: body
+  required: true
+  type: integer
+  description: |
+    The size of the ephemeral disk that was created, in GiB.
 flavor_ephem_disk_in:
   in: body
   required: false
@@ -2136,6 +2166,13 @@ flavor_extra_spec_key2:
   in: body
   required: true
   type: string
+flavor_extra_spec_key_2_47:
+  description: |
+    The extra spec key of a flavor.
+  in: body
+  required: true
+  type: string
+  min_version: 2.47
 flavor_extra_spec_value:
   description: |
     The extra spec value of a flavor. It appears in the os-extra-specs'
@@ -2144,6 +2181,13 @@ flavor_extra_spec_value:
   in: body
   required: true
   type: string
+flavor_extra_spec_value_2_47:
+  description: |
+    The extra spec value of a flavor.
+  in: body
+  required: true
+  type: string
+  min_version: 2.47
 flavor_id_body:
   description: |
     The ID of the flavor. While people often make this look like
@@ -2151,6 +2195,14 @@ flavor_id_body:
   in: body
   required: true
   type: string
+flavor_id_body_2_46:
+  description: |
+    The ID of the flavor. While people often make this look like
+    an int, this is really a string.
+  in: body
+  required: true
+  type: string
+  max_version: 2.46
 flavor_id_body_create:
   description: |
     The ID of the flavor. While people often make this look like an int, this
@@ -2172,6 +2224,16 @@ flavor_is_public_in:
   in: body
   required: false
   type: boolean
+flavor_links_2_46:
+  description: |
+    Links to the flavor resource. See `API Guide / Links and
+    References
+    <http://developer.openstack.org/api-guide/compute/links_and_references.html>`_
+    for more info.
+  in: body
+  required: true
+  type: array
+  max_version: 2.46
 flavor_name:
   description: |
     The display name of a flavor.
@@ -2184,12 +2246,26 @@ flavor_name_optional:
   in: body
   required: false
   type: string
+flavor_original_name:
+  description: |
+    The display name of a flavor.
+  in: body
+  required: true
+  type: string
+  min_version: 2.47
 flavor_ram:
   description: |
     The amount of RAM a flavor has, in MiB.
   in: body
   required: true
   type: integer
+flavor_ram_2_47:
+  description: |
+    The amount of RAM a flavor has, in MiB.
+  in: body
+  required: true
+  type: integer
+  min_version: 2.47
 flavor_rxtx_factor:
   description: |
     The receive / transmit factor (as a float) that will be set on
@@ -2208,9 +2284,13 @@ flavor_rxtx_factor_in:
   type: float
 flavor_server:
   description: |
-    The ID and links for the flavor for your server instance. A flavor is a combination
-    of memory, disk size, and CPUs. This can be empty object in case flavor information
-    is not present in the system.
+    Before microversion 2.47 this contains the ID and links for the flavor
+    used to boot the server instance. This can be an empty object in case
+    flavor information is no longer present in the system.
+
+    As of microversion 2.47 this contains a subset of the actual flavor
+    information used to create the server instance, represented as a nested
+    dictionary.
   in: body
   required: true
   type: object
@@ -2221,6 +2301,13 @@ flavor_swap:
   in: body
   required: true
   type: integer
+flavor_swap_2_47:
+  description: |
+    The size of a dedicated swap disk that was allocated, in MiB.
+  in: body
+  required: true
+  type: integer
+  min_version: 2.47
 flavor_swap_in:
   description: |
     The size of a dedicated swap disk that will be allocated, in

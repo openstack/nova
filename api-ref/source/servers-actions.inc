@@ -486,9 +486,9 @@ Request
   - preserve_ephemeral: preserve_ephemeral
   - description: server_description
 
-**Example Rebuild Server (rebuild Action) (v2.26)**
+**Example Rebuild Server (rebuild Action) (v2.47)**
 
-.. literalinclude:: ../../doc/api_samples/servers/v2.26/server-action-rebuild.json
+.. literalinclude:: ../../doc/api_samples/servers/v2.47/server-action-rebuild.json
    :language: javascript
 
 Response
@@ -503,9 +503,18 @@ Response
   - addresses: addresses_obj
   - adminPass: adminPass_response
   - created: created
-  - flavor: flavor
-  - flavor.id: flavor_id_body
-  - flavor.links: links
+  - flavor: flavor_server
+  - flavor.id: flavor_id_body_2_46
+  - flavor.links: flavor_links_2_46
+  - flavor.vcpus: flavor_cpus_2_47
+  - flavor.ram: flavor_ram_2_47
+  - flavor.disk: flavor_disk_2_47
+  - flavor.ephemeral: flavor_ephem_disk_2_47
+  - flavor.swap: flavor_swap_2_47
+  - flavor.original_name: flavor_original_name
+  - flavor.extra_specs: extra_specs_2_47
+  - flavor.extra_specs.key: flavor_extra_spec_key_2_47
+  - flavor.extra_specs.value: flavor_extra_spec_value_2_47
   - hostId: hostId
   - id: server_id
   - image: image
@@ -524,9 +533,9 @@ Response
   - description: server_description_resp
   - tags: tags
 
-**Example Rebuild Server (rebuild Action) (v2.26)**
+**Example Rebuild Server (rebuild Action) (v2.47)**
 
-.. literalinclude:: ../../doc/api_samples/servers/v2.26/server-action-rebuild-resp.json
+.. literalinclude:: ../../doc/api_samples/servers/v2.47/server-action-rebuild-resp.json
    :language: javascript
 
 Remove (Disassociate) Floating Ip (removeFloatingIp Action) (DEPRECATED)

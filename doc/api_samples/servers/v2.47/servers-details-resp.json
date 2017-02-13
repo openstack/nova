@@ -1,0 +1,100 @@
+{
+    "servers": [
+        {
+            "OS-DCF:diskConfig": "AUTO",
+            "OS-EXT-AZ:availability_zone": "nova",
+            "OS-EXT-SRV-ATTR:host": "compute",
+            "OS-EXT-SRV-ATTR:hostname": "new-server-test",
+            "OS-EXT-SRV-ATTR:hypervisor_hostname": "fake-mini",
+            "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
+            "OS-EXT-SRV-ATTR:kernel_id": "",
+            "OS-EXT-SRV-ATTR:launch_index": 0,
+            "OS-EXT-SRV-ATTR:ramdisk_id": "",
+            "OS-EXT-SRV-ATTR:reservation_id": "r-iffothgx",
+            "OS-EXT-SRV-ATTR:root_device_name": "/dev/sda",
+            "OS-EXT-SRV-ATTR:user_data": "IyEvYmluL2Jhc2gKL2Jpbi9zdQplY2hvICJJIGFtIGluIHlvdSEiCg==",
+            "OS-EXT-STS:power_state": 1,
+            "OS-EXT-STS:task_state": null,
+            "OS-EXT-STS:vm_state": "active",
+            "OS-SRV-USG:launched_at": "2017-02-14T19:24:43.891568",
+            "OS-SRV-USG:terminated_at": null,
+            "accessIPv4": "1.2.3.4",
+            "accessIPv6": "80fe::",
+            "addresses": {
+                "private": [
+                    {
+                        "OS-EXT-IPS-MAC:mac_addr": "aa:bb:cc:dd:ee:ff",
+                        "OS-EXT-IPS:type": "fixed",
+                        "addr": "192.168.0.3",
+                        "version": 4
+                    }
+                ]
+            },
+            "config_drive": "",
+            "created": "2017-02-14T19:24:42Z",
+            "description": null,
+            "flavor": {
+                "disk": 1,
+                "ephemeral": 0,
+                "extra_specs": {
+                    "hw:cpu_model": "SandyBridge",
+                    "hw:mem_page_size": "2048",
+                    "hw:cpu_policy": "dedicated"
+                },
+                "original_name": "m1.tiny.specs",
+                "ram": 512,
+                "swap": 0,
+                "vcpus": 1
+            },
+            "hostId": "2091634baaccdc4c5a1d57069c833e402921df696b7f970791b12ec6",
+            "host_status": "UP",
+            "id": "764e369e-a874-4401-b7ce-43e4760888da",
+            "image": {
+                "id": "70a599e0-31e7-49b7-b260-868f441e862b",
+                "links": [
+                    {
+                        "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                        "rel": "bookmark"
+                    }
+                ]
+            },
+            "key_name": null,
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/servers/764e369e-a874-4401-b7ce-43e4760888da",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/servers/764e369e-a874-4401-b7ce-43e4760888da",
+                    "rel": "bookmark"
+                }
+            ],
+            "locked": false,
+            "metadata": {
+                "My Server Name": "Apache1"
+            },
+            "name": "new-server-test",
+            "os-extended-volumes:volumes_attached": [
+                {
+                    "delete_on_termination": false,
+                    "id": "volume_id1"
+                },
+                {
+                    "delete_on_termination": false,
+                    "id": "volume_id2"
+                }
+            ],
+            "progress": 0,
+            "security_groups": [
+                {
+                    "name": "default"
+                }
+            ],
+            "status": "ACTIVE",
+            "tags": [],
+            "tenant_id": "6f70656e737461636b20342065766572",
+            "updated": "2017-02-14T19:24:43Z",
+            "user_id": "fake"
+        }
+    ]
+}

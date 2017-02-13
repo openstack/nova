@@ -545,3 +545,14 @@ user documentation.
   to be consistent with the rest of OpenStack. This is a signaling
   only microversion, as these header settings happen well before
   microversion processing.
+
+2.47
+----
+
+  Replace the ``flavor`` name/ref with the actual flavor details from the embedded
+  flavor object when displaying server details.  Requests made with microversion
+  >= 2.47 will no longer return the flavor ID/link but instead will return a
+  subset of the flavor details.  If the user is prevented by policy from
+  indexing extra-specs, then the ``extra_specs`` field will not be included in the
+  flavor information.
+

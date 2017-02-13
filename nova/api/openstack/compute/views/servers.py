@@ -27,6 +27,7 @@ from nova import context as nova_context
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
+from nova.policies import flavor_extra_specs as fes_policies
 from nova import utils
 
 
@@ -244,12 +245,30 @@ class ViewBuilder(common.ViewBuilder):
         else:
             return ""
 
+    def _get_flavor_dict(self, request, instance_type):
+        flavordict = {
+            "vcpus": instance_type.vcpus,
+            "ram": instance_type.memory_mb,
+            "disk": instance_type.root_gb,
+            "ephemeral": instance_type.ephemeral_gb,
+            "swap": instance_type.swap,
+            "original_name": instance_type.name
+        }
+        context = request.environ['nova.context']
+        if context.can(fes_policies.POLICY_ROOT % 'index', fatal=False):
+            flavordict['extra_specs'] = instance_type.extra_specs
+        return flavordict
+
     def _get_flavor(self, request, instance):
         instance_type = instance.get_flavor()
         if not instance_type:
             LOG.warning("Instance has had its instance_type removed "
                         "from the DB", instance=instance)
             return {}
+
+        if api_version_request.is_supported(request, min_version="2.47"):
+            return self._get_flavor_dict(request, instance_type)
+
         flavor_id = instance_type["flavorid"]
         flavor_bookmark = self._flavor_builder._get_bookmark_link(request,
                                                                   flavor_id,

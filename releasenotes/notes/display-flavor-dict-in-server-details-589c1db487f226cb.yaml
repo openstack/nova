@@ -1,0 +1,7 @@
+---
+features:
+  - A new 2.47 microversion was added to the Compute API.  Users specifying
+    this microversion or later will see the "flavor" information displayed as
+    a dict when displaying server details via the `servers` REST API endpoint.
+    If the user is prevented by policy from indexing extra-specs, then the
+    "extra_specs" field will not be included in the flavor information.
