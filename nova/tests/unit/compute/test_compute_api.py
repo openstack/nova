@@ -3199,6 +3199,9 @@ class _ComputeAPIUnitTestMixIn(object):
             objects.Instance(uuid=uuids.instance_3, host='host2',
                              migration_context=None),
             ]
+        mappings = {inst.uuid: objects.InstanceMapping.get_by_instance_uuid(
+            self.context, inst.uuid)
+                    for inst in instances}
         events = [
             objects.InstanceExternalEvent(
                 instance_uuid=uuids.instance_1),
@@ -3209,7 +3212,7 @@ class _ComputeAPIUnitTestMixIn(object):
             ]
         self.compute_api.compute_rpcapi = mock.MagicMock()
         self.compute_api.external_instance_event(self.context,
-                                                 instances, events)
+                                                 instances, mappings, events)
         method = self.compute_api.compute_rpcapi.external_instance_event
         method.assert_any_call(self.context, instances[0:2], events[0:2],
                                host='host1')
@@ -3246,6 +3249,8 @@ class _ComputeAPIUnitTestMixIn(object):
             objects.Instance(uuid=uuids.instance_3, host='host2',
                              migration_context=None)
             ]
+        mappings = {inst.uuid: objects.InstanceMapping.get_by_instance_uuid(
+            self.context, inst.uuid) for inst in instances}
         events = [
             objects.InstanceExternalEvent(
                 instance_uuid=uuids.instance_1),
@@ -3258,7 +3263,8 @@ class _ComputeAPIUnitTestMixIn(object):
         with mock.patch('nova.db.sqlalchemy.api.migration_get', migration_get):
             self.compute_api.compute_rpcapi = mock.MagicMock()
             self.compute_api.external_instance_event(self.context,
-                                                     instances, events)
+                                                     instances, mappings,
+                                                     events)
             method = self.compute_api.compute_rpcapi.external_instance_event
             method.assert_any_call(self.context, instances[0:2], events[0:2],
                                    host='host1')

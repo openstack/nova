@@ -20,6 +20,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LI
@@ -49,6 +50,7 @@ class ServerExternalEventsController(wsgi.Controller):
         accepted_events = []
         accepted_instances = set()
         instances = {}
+        mappings = {}
         result = 200
 
         body_events = body['events']
@@ -65,13 +67,20 @@ class ServerExternalEventsController(wsgi.Controller):
             instance = instances.get(event.instance_uuid)
             if not instance:
                 try:
+                    mapping = objects.InstanceMapping.get_by_instance_uuid(
+                        context, event.instance_uuid)
+                    cell_mapping = mapping.cell_mapping
+                    mappings[event.instance_uuid] = cell_mapping
+
                     # Load migration_context and info_cache here in a single DB
                     # operation because we need them later on
-                    instance = objects.Instance.get_by_uuid(
-                        context, event.instance_uuid,
-                        expected_attrs=['migration_context', 'info_cache'])
+                    with nova_context.target_cell(context, cell_mapping):
+                        instance = objects.Instance.get_by_uuid(
+                            context, event.instance_uuid,
+                            expected_attrs=['migration_context', 'info_cache'])
                     instances[event.instance_uuid] = instance
-                except exception.InstanceNotFound:
+                except (exception.InstanceNotFound,
+                        exception.InstanceMappingNotFound):
                     LOG.debug('Dropping event %(name)s:%(tag)s for unknown '
                               'instance %(instance_uuid)s',
                               {'name': event.name, 'tag': event.tag,
@@ -109,7 +118,7 @@ class ServerExternalEventsController(wsgi.Controller):
 
         if accepted_events:
             self.compute_api.external_instance_event(
-                context, accepted_instances, accepted_events)
+                context, accepted_instances, mappings, accepted_events)
         else:
             msg = _('No instances found for any event')
             raise webob.exc.HTTPNotFound(explanation=msg)
