@@ -16,6 +16,7 @@ from oslo_utils import encodeutils
 import webob
 
 from nova.api.openstack.placement import util
+from nova.api.openstack.placement import wsgi_wrapper
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -28,7 +29,7 @@ def _serialize_usages(resource_provider, usage):
             'usages': usage_dict}
 
 
-@webob.dec.wsgify
+@wsgi_wrapper.PlacementWsgify
 @util.check_accept('application/json')
 def list_usages(req):
     """GET a dictionary of resource provider usage by resource class.
@@ -52,8 +53,7 @@ def list_usages(req):
     except exception.NotFound as exc:
         raise webob.exc.HTTPNotFound(
             _("No resource provider with uuid %(uuid)s found: %(error)s") %
-             {'uuid': uuid, 'error': exc},
-             json_formatter=util.json_error_formatter)
+             {'uuid': uuid, 'error': exc})
 
     usage = objects.UsageList.get_all_by_resource_provider_uuid(
         context, uuid)
