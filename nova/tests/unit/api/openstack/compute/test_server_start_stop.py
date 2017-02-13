@@ -25,6 +25,7 @@ from nova import db
 from nova import exception
 from nova import policy
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit.api.openstack import fakes
 from nova.tests import uuidsentinel as uuids
 
@@ -35,6 +36,7 @@ class ServerStartStopTestV21(test.TestCase):
         super(ServerStartStopTestV21, self).setUp()
         self._setup_controller()
         self.req = fakes.HTTPRequest.blank('')
+        self.useFixture(nova_fixtures.SingleCellSimple())
         self.stub_out('nova.db.instance_get_by_uuid',
                       fakes.fake_instance_get())
 
@@ -132,6 +134,7 @@ class ServerStartStopPolicyEnforcementV21(test.TestCase):
         self.controller = server_v21.ServersController(
                           extension_info=ext_info)
         self.req = fakes.HTTPRequest.blank('')
+        self.useFixture(nova_fixtures.SingleCellSimple())
         self.stub_out(
             'nova.db.instance_get_by_uuid',
             fakes.fake_instance_get(

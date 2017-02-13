@@ -291,6 +291,9 @@ class SingleCellSimple(fixtures.Fixture):
         self.useFixture(fixtures.MonkeyPatch(
             'nova.context.target_cell',
             self._fake_target_cell))
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.context.set_target_cell',
+            lambda c, m: None))
 
     def _fake_hostmapping_get(self, *args):
         return {'id': 1,

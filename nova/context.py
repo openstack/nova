@@ -358,19 +358,35 @@ def authorize_quota_class_context(context, class_name):
             raise exception.Forbidden()
 
 
+def set_target_cell(context, cell_mapping):
+    """Adds database connection information to the context
+    for communicating with the given target_cell.
+
+    This is used for permanently targeting a cell in a context.
+    Use this when you want all subsequent code to target a cell.
+
+    :param context: The RequestContext to add connection information
+    :param cell_mapping: An objects.CellMapping object
+    """
+    # avoid circular import
+    from nova import db
+    db_connection_string = cell_mapping.database_connection
+    context.db_connection = db.create_context_manager(db_connection_string)
+
+
 @contextmanager
 def target_cell(context, cell_mapping):
-    """Adds database connection information to the context
+    """Temporarily adds database connection information to the context
     for communicating with the given target cell.
+
+    This context manager makes a temporary change to the context
+    and restores it when complete.
 
     :param context: The RequestContext to add connection information
     :param cell_mapping: A objects.CellMapping object
     """
     original_db_connection = context.db_connection
-    # avoid circular import
-    from nova import db
-    db_connection_string = cell_mapping.database_connection
-    context.db_connection = db.create_context_manager(db_connection_string)
+    set_target_cell(context, cell_mapping)
     try:
         yield context
     finally:
