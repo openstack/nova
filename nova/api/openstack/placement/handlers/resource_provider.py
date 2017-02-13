@@ -93,7 +93,7 @@ def _normalize_resources_qs_param(qs):
     instance that will consume 2 vCPUs, 1024 MB of RAM and 50GB of disk space,
     they would use the following query string:
 
-        ?resources=VCPU:2,MEMORY_MB:1024:DISK_GB:50
+        ?resources=VCPU:2,MEMORY_MB:1024,DISK_GB:50
 
     The returned value would be:
 
