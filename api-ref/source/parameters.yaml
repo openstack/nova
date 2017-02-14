@@ -1505,6 +1505,9 @@ device:
 device_name:
   description: |
     A path to the device for the volume that you want to use to boot the server.
+    Note that as of the 12.0.0 Liberty release, the Nova libvirt driver no
+    longer honors a user-supplied device name. This is the same behavior as if
+    the device name parameter is not supplied on the request.
   in: body
   required: true
   type: string
