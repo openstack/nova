@@ -86,6 +86,9 @@ r="$r|(?:tempest\.thirdparty\.boto\.test_ec2_instance_run\.InstanceRunTest\.test
 r="$r|(?:tempest\.api\.compute\.servers\.test_server_actions\.ServerActionsTestJSON\.test_lock_unlock_server)"
 # scheduler hints apparently don't work in devstack cells
 r="$r|(?:tempest\.scenario\.test_server_multinode\.TestServerMultinode\.test_schedule_to_all_nodes)"
+# test_stamp_pattern uses security groups which aren't supported in cells v1
+# tempest.scenario.test_stamp_pattern.TestStampPattern.test_stamp_pattern
+r="$r|(?:.*id\-10fd234a\-515c\-41e5\-b092\-8323060598c5.*)"
 r="$r).*$"
 
 export DEVSTACK_GATE_TEMPEST_REGEX="$r"
