@@ -57,11 +57,11 @@ class _TestInstanceDeviceMetadata(object):
         if isinstance(obj_meta, objects.NetworkInterfaceMetadata):
             self.assertEqual(obj_meta.mac, '52:54:00:f6:35:8f')
             self.assertEqual(obj_meta.tags, ['mytag1'])
-            self.assertTrue(obj_meta.bus, objects.PCIDeviceBus)
+            self.assertIsInstance(obj_meta.bus, objects.PCIDeviceBus)
             self.assertEqual(obj_meta.bus.address, '0000:00:03.0')
             self.assertEqual(obj_meta.vlan, 1000)
         elif isinstance(obj_meta, objects.DiskMetadata):
-            self.assertTrue(obj_meta.bus, objects.PCIDeviceBus)
+            self.assertIsInstance(obj_meta.bus, objects.PCIDeviceBus)
             self.assertEqual(obj_meta.bus.address, '0000:00:09.0')
             self.assertEqual(obj_meta.tags, ['nfvfunc3'])
 
