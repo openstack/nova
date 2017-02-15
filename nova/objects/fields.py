@@ -63,6 +63,7 @@ IPV6NetworkField = fields.IPV6NetworkField
 AutoTypedField = fields.AutoTypedField
 BaseEnumField = fields.BaseEnumField
 MACAddressField = fields.MACAddressField
+ListOfIntegersField = fields.ListOfIntegersField
 
 
 # NOTE(danms): These are things we need to import for some of our
@@ -1156,7 +1157,3 @@ class InstanceTaskStateField(BaseEnumField):
 
 class InstancePowerStateField(BaseEnumField):
     AUTO_TYPE = InstancePowerState()
-
-
-class ListOfIntegersField(AutoTypedField):
-    AUTO_TYPE = List(fields.Integer())
