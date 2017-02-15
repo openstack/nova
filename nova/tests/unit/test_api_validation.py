@@ -139,7 +139,10 @@ class APIValidationTestCase(test.NoDBTestCase):
             method(body=body, req=req)
         except exception.ValidationError as ex:
             self.assertEqual(400, ex.kwargs['code'])
-            if not re.match(expected_detail, ex.kwargs['detail']):
+            if isinstance(expected_detail, list):
+                self.assertIn(ex.kwargs['detail'], expected_detail,
+                              'Exception details did not match expected')
+            elif not re.match(expected_detail, ex.kwargs['detail']):
                 self.assertEqual(expected_detail, ex.kwargs['detail'],
                                  'Exception details did not match expected')
         except Exception as ex:
@@ -437,18 +440,28 @@ class PatternPropertiesTestCase(APIValidationTestCase):
                          self.post(body={'foo': 'bar'}, req=FakeRequest()))
 
     def test_validate_patternProperties_fails(self):
-        detail = "Additional properties are not allowed ('__' was unexpected)"
+        details = [
+            "Additional properties are not allowed ('__' was unexpected)",
+            "'__' does not match any of the regexes: '^[a-zA-Z0-9]{1,10}$'"
+        ]
         self.check_validation_error(self.post, body={'__': 'bar'},
-                                    expected_detail=detail)
+                                    expected_detail=details)
 
-        detail = "Additional properties are not allowed ('' was unexpected)"
+        details = [
+            "'' does not match any of the regexes: '^[a-zA-Z0-9]{1,10}$'",
+            "Additional properties are not allowed ('' was unexpected)"
+        ]
         self.check_validation_error(self.post, body={'': 'bar'},
-                                    expected_detail=detail)
+                                    expected_detail=details)
 
-        detail = ("Additional properties are not allowed ('0123456789a' was"
-                  " unexpected)")
+        details = [
+            ("'0123456789a' does not match any of the regexes: "
+                  "'^[a-zA-Z0-9]{1,10}$'"),
+            ("Additional properties are not allowed ('0123456789a' was"
+             " unexpected)")
+        ]
         self.check_validation_error(self.post, body={'0123456789a': 'bar'},
-                                    expected_detail=detail)
+                                    expected_detail=details)
 
         # Note(jrosenboom): This is referencing an internal python error
         # string, which is no stable interface. We need a patch in the
