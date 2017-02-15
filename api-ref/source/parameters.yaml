@@ -3182,10 +3182,12 @@ net_id_resp_2_12:
   min_version: 2.12
 network_label_body:
   description: |
-    The network label, such as ``public`` or ``private``.
+    List of IP address and IP version pairs.
+    The ``network_label`` stands for the name of a network,
+    such as ``public`` or ``private``.
   in: body
   required: true
-  type: string
+  type: array
 network_uuid:
   description: |
     To provision the server instance with a NIC for a network, specify the UUID of
