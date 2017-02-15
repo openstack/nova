@@ -313,7 +313,7 @@ class HypervisorsTestV21(test.NoDBTestCase):
         def _test(self, compute_node_get_all):
             req = self._get_request(True)
             result = self.controller.index(req)
-            self.assertTrue(1, len(result['hypervisors']))
+            self.assertEqual(1, len(result['hypervisors']))
             expected = {
                 'id': compute_nodes[0].id,
                 'hypervisor_hostname': compute_nodes[0].hypervisor_hostname,
@@ -359,7 +359,7 @@ class HypervisorsTestV21(test.NoDBTestCase):
         def _test(self, compute_node_get_all):
             req = self._get_request(True)
             result = self.controller.detail(req)
-            self.assertTrue(1, len(result['hypervisors']))
+            self.assertEqual(1, len(result['hypervisors']))
             expected = {
                 'id': compute_nodes[0].id,
                 'hypervisor_hostname': compute_nodes[0].hypervisor_hostname,
