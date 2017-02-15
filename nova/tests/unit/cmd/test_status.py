@@ -22,6 +22,7 @@ from six.moves import StringIO
 
 from keystoneauth1 import exceptions as ks_exc
 from keystoneauth1 import loading as keystone
+from keystoneauth1 import session
 from oslo_utils import uuidutils
 
 from nova.cmd import status
@@ -119,6 +120,36 @@ class TestPlacementCheck(test.NoDBTestCase):
         res = self.cmd._check_placement()
         self.assertEqual(status.UpgradeCheckCode.FAILURE, res.code)
         self.assertIn('No credentials specified', res.details)
+
+    @mock.patch.object(keystone, "load_auth_from_conf_options")
+    @mock.patch.object(session.Session, 'get')
+    def _test_placement_get_interface(
+            self, expected_interface, mock_get, mock_auth):
+
+        def fake_get(path, *a, **kw):
+            self.assertEqual(mock.sentinel.path, path)
+            self.assertIn('endpoint_filter', kw)
+            self.assertEqual(expected_interface,
+                             kw['endpoint_filter']['interface'])
+            return mock.Mock(autospec='requests.models.Response')
+
+        mock_get.side_effect = fake_get
+        self.cmd._placement_get(mock.sentinel.path)
+        mock_auth.assert_called_once_with(status.CONF, 'placement')
+        self.assertTrue(mock_get.called)
+
+    @mock.patch.object(keystone, "load_auth_from_conf_options")
+    @mock.patch.object(session.Session, 'get')
+    def test_placement_get_interface_default(self, mock_get, mock_auth):
+        """Tests that None is specified for interface by default."""
+        self._test_placement_get_interface(None)
+
+    @mock.patch.object(keystone, "load_auth_from_conf_options")
+    @mock.patch.object(session.Session, 'get')
+    def test_placement_get_interface_internal(self, mock_get, mock_auth):
+        """Tests that "internal" is specified for interface when configured."""
+        self.flags(os_interface='internal', group='placement')
+        self._test_placement_get_interface('internal')
 
     @mock.patch.object(status.UpgradeCommands, "_placement_get")
     def test_invalid_auth(self, get):
