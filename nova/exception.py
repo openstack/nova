@@ -352,10 +352,6 @@ class InvalidAggregateActionUpdateMeta(InvalidAggregateAction):
                 "%(aggregate_id)s. Reason: %(reason)s.")
 
 
-class InvalidGroup(Invalid):
-    msg_fmt = _("Group not valid. Reason: %(reason)s")
-
-
 class InvalidSortKey(Invalid):
     msg_fmt = _("Sort key supplied was not valid.")
 
@@ -962,11 +958,6 @@ class ComputeHostNotFound(HostNotFound):
     msg_fmt = _("Compute host %(host)s could not be found.")
 
 
-class ComputeHostNotCreated(HostNotFound):
-    msg_fmt = _("Compute host %(name)s needs to be created first"
-                " before updating.")
-
-
 class HostBinaryNotFound(NotFound):
     msg_fmt = _("Could not find binary %(binary)s on host %(host)s.")
 
@@ -1065,10 +1056,6 @@ class SecurityGroupCannotBeApplied(Invalid):
                 " in order to apply security groups.")
 
 
-class SecurityGroupRuleExists(Invalid):
-    msg_fmt = _("Rule already exists in group: %(rule)s")
-
-
 class NoUniqueMatch(NovaException):
     msg_fmt = _("No Unique Match Found.")
     code = 409
@@ -1101,10 +1088,6 @@ class InvalidMigrationState(Invalid):
 class ConsoleLogOutputException(NovaException):
     msg_fmt = _("Console log output could not be retrieved for instance "
                 "%(instance_id)s. Reason: %(reason)s")
-
-
-class ConsolePoolNotFound(NotFound):
-    msg_fmt = _("Console pool %(pool_id)s could not be found.")
 
 
 class ConsolePoolExists(NovaException):
@@ -1236,10 +1219,6 @@ class ClassNotFound(NotFound):
 
 class InstanceTagNotFound(NotFound):
     msg_fmt = _("Instance %(instance_id)s has no tag '%(tag)s'")
-
-
-class RotationRequiredForBackup(NovaException):
-    msg_fmt = _("Rotation param is required for backup image_type")
 
 
 class KeyPairExists(NovaException):
@@ -1449,20 +1428,8 @@ class InstanceInfoCacheNotFound(NotFound):
                 "found.")
 
 
-class InvalidAssociation(NotFound):
-    msg_fmt = _("Invalid association.")
-
-
 class MarkerNotFound(NotFound):
     msg_fmt = _("Marker %(marker)s could not be found.")
-
-
-class InvalidInstanceIDMalformed(Invalid):
-    msg_fmt = _("Invalid id: %(instance_id)s (expecting \"i-...\")")
-
-
-class InvalidVolumeIDMalformed(Invalid):
-    msg_fmt = _("Invalid id: %(volume_id)s (expecting \"i-...\")")
 
 
 class CouldNotFetchImage(NovaException):
@@ -1619,10 +1586,6 @@ class ObjectActionError(NovaException):
     msg_fmt = _('Object action %(action)s failed because: %(reason)s')
 
 
-class CoreAPIMissing(NovaException):
-    msg_fmt = _("Core API extensions are missing: %(missing_apis)s")
-
-
 class AgentError(NovaException):
     msg_fmt = _('Error during following call to agent: %(method)s')
 
@@ -1651,10 +1614,6 @@ class InstanceGroupMemberNotFound(NotFound):
 
 class InstanceGroupSaveException(NovaException):
     msg_fmt = _("%(field)s should not be part of the updates.")
-
-
-class PluginRetriesExceeded(NovaException):
-    msg_fmt = _("Number of retries to plugin (%(num_retries)d) exceeded.")
 
 
 class ImageDownloadModuleError(NovaException):
@@ -1686,11 +1645,6 @@ class ResourceMonitorError(NovaException):
 
 class PciDeviceWrongAddressFormat(NovaException):
     msg_fmt = _("The PCI address %(address)s has an incorrect format.")
-
-
-class PciDeviceInvalidAddressField(NovaException):
-    msg_fmt = _("Invalid PCI Whitelist: "
-                "The PCI address %(address)s has an invalid %(field)s.")
 
 
 class PciDeviceInvalidDeviceName(NovaException):
@@ -1751,11 +1705,6 @@ class PciRequestAliasNotDefined(NovaException):
     msg_fmt = _("PCI alias %(alias)s is not defined")
 
 
-class MissingParameter(NovaException):
-    msg_fmt = _("Not enough parameters: %(reason)s")
-    code = 400
-
-
 class PciConfigInvalidWhitelist(Invalid):
     msg_fmt = _("Invalid PCI devices Whitelist config %(reason)s")
 
@@ -1806,12 +1755,6 @@ class RequestedVRamTooHigh(NovaException):
 
 class InvalidWatchdogAction(Invalid):
     msg_fmt = _("Provided watchdog action (%(action)s) is not supported.")
-
-
-class NoLiveMigrationForConfigDriveInLibVirt(NovaException):
-    msg_fmt = _("Live migration of instances with config drives is not "
-                "supported in libvirt unless libvirt instance path and "
-                "drive data is shared across compute nodes.")
 
 
 class LiveMigrationWithOldNovaNotSupported(NovaException):
@@ -2015,14 +1958,6 @@ class NUMATopologyUnsupported(Invalid):
 
 class MemoryPagesUnsupported(Invalid):
     msg_fmt = _("Host does not support guests with custom memory page sizes")
-
-
-class EnumFieldInvalid(Invalid):
-    msg_fmt = _('%(typename)s in %(fieldname)s is not an instance of Enum')
-
-
-class EnumFieldUnset(Invalid):
-    msg_fmt = _('%(fieldname)s missing field type')
 
 
 class InvalidImageFormat(Invalid):
