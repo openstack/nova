@@ -32,7 +32,7 @@ def upgrade(migrate_engine):
 
     base_msg = _('Migration cannot continue until all these have '
                  'been migrated to the api database. Please run '
-                 '`nova-manage db online_migrations\' on Newton '
+                 '`nova-manage db online_data_migrations\' on Newton '
                  'code before continuing.')
 
     count = select([func.count()]).select_from(instance_types).where(
