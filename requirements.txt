@@ -29,7 +29,7 @@ python-cinderclient!=1.7.0,!=1.7.1,>=1.6.0 # Apache-2.0
 keystoneauth1>=2.18.0 # Apache-2.0
 python-neutronclient>=5.1.0 # Apache-2.0
 python-glanceclient>=2.5.0 # Apache-2.0
-requests!=2.12.2,>=2.10.0 # Apache-2.0
+requests!=2.12.2,!=2.13.0,>=2.10.0 # Apache-2.0
 six>=1.9.0 # MIT
 stevedore>=1.17.1 # Apache-2.0
 setuptools!=24.0.0,>=16.0 # PSF/ZPL
@@ -37,7 +37,7 @@ websockify>=0.8.0 # LGPLv3
 oslo.cache>=1.5.0 # Apache-2.0
 oslo.concurrency>=3.8.0 # Apache-2.0
 oslo.config!=3.18.0,>=3.14.0 # Apache-2.0
-oslo.context>=2.9.0 # Apache-2.0
+oslo.context>=2.12.0 # Apache-2.0
 oslo.log>=3.11.0 # Apache-2.0
 oslo.reports>=0.6.0 # Apache-2.0
 oslo.serialization>=1.10.0 # Apache-2.0
@@ -51,7 +51,7 @@ oslo.i18n>=2.1.0 # Apache-2.0
 oslo.service>=1.10.0 # Apache-2.0
 rfc3986>=0.3.1 # Apache-2.0
 oslo.middleware>=3.0.0 # Apache-2.0
-psutil>=3.0.1 # BSD
+psutil>=3.2.2 # BSD
 oslo.versionedobjects>=1.17.0 # Apache-2.0
 os-brick>=1.8.0 # Apache-2.0
 os-vif>=1.4.0 # Apache-2.0
