@@ -185,10 +185,6 @@ def get_placement_request_id(response):
 class SchedulerReportClient(object):
     """Client class for updating the scheduler."""
 
-    ks_filter = {'service_type': 'placement',
-                 'region_name': CONF.placement.os_region_name,
-                 'interface': CONF.placement.os_interface}
-
     def __init__(self):
         # A dict, keyed by the resource provider UUID, of ResourceProvider
         # objects that will have their inventories and allocations tracked by
@@ -202,6 +198,9 @@ class SchedulerReportClient(object):
         self._client = session.Session(auth=auth_plugin)
         # NOTE(danms): Keep track of how naggy we've been
         self._warn_count = 0
+        self.ks_filter = {'service_type': 'placement',
+                          'region_name': CONF.placement.os_region_name,
+                          'interface': CONF.placement.os_interface}
 
     def get(self, url, version=None):
         kwargs = {}

@@ -31,9 +31,7 @@ class NoAuthReportClient(report.SchedulerReportClient):
     """A SchedulerReportClient that avoids keystone."""
 
     def __init__(self):
-        self._resource_providers = {}
-        self._provider_aggregate_map = {}
-        self._disabled = False
+        super(NoAuthReportClient, self).__init__()
         # Supply our own session so the wsgi-intercept can intercept
         # the right thing. Another option would be to use the direct
         # urllib3 interceptor.
