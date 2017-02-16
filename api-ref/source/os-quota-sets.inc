@@ -15,11 +15,12 @@ Show A Quota
 
 Show the quota for a project or a project and a user.
 
-To show a quota for a project and a user, specify the ``user_id`` query parameter.
-
 Normal response codes: 200
 
-Error response codes: unauthorized(401), forbidden(403)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403)
+
+- 400 - BadRequest - the tenant_id is not valid in your cloud, perhaps
+  because it was typoed.
 
 Request
 -------
@@ -63,21 +64,17 @@ Update Quotas
 
 Update the quotas for a project or a project and a user.
 
-Users can force the update even if the quota has already been used and the
-
-reserved quota exceeds the new quota.
-
-To force the update, specify the ``"force": True`` attribute in the request
-
-body, the default value is ``false``.
-
-To update a quota for a project and a user, specify the ``user_id`` query
-
-parameter.
+Users can force the update even if the quota has already been used and
+the reserved quota exceeds the new quota. To force the update, specify
+the ``"force": True`` attribute in the request body, the default value
+is ``false``.
 
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403)
+
+- 400 - BadRequest - the tenant_id is not valid in your cloud, perhaps
+  because it was typoed.
 
 Request
 -------
@@ -158,7 +155,6 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
-
   - user_id: user_id_query_quota_delete
 
 Response
@@ -175,7 +171,7 @@ Lists the default quotas for a project.
 
 Normal response codes: 200
 
-Error response codes: unauthorized(401), forbidden(403)
+Error response codes: badrequest(400), unauthorized(401), forbidden(403)
 
 Request
 -------
@@ -222,7 +218,10 @@ To show a quota for a project and a user, specify the ``user_id`` query paramete
 
 Normal response codes: 200
 
-Error response codes: unauthorized(401), forbidden(403)
+Error response codes: badrequest(400), unauthorized(401), forbidden(403)
+
+- 400 - BadRequest - the {tenant_id} is not valid in your cloud, perhaps
+  because it was typoed.
 
 Request
 -------
