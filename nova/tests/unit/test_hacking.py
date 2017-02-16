@@ -82,30 +82,6 @@ class HackingTestCase(test.NoDBTestCase):
             "'nova.virt.libvirt.driver', group='libvirt')",
             "./nova/virt/libvirt/volume.py"))
 
-    def test_no_vi_headers(self):
-
-        lines = ['Line 1\n', 'Line 2\n', 'Line 3\n', 'Line 4\n', 'Line 5\n',
-                 'Line 6\n', 'Line 7\n', 'Line 8\n', 'Line 9\n', 'Line 10\n',
-                 'Line 11\n', 'Line 12\n', 'Line 13\n', 'Line14\n', 'Line15\n']
-
-        self.assertIsNone(checks.no_vi_headers(
-            "Test string foo", 1, lines))
-        self.assertEqual(len(list(checks.no_vi_headers(
-            "# vim: et tabstop=4 shiftwidth=4 softtabstop=4",
-            2, lines))), 2)
-        self.assertIsNone(checks.no_vi_headers(
-            "# vim: et tabstop=4 shiftwidth=4 softtabstop=4",
-            6, lines))
-        self.assertIsNone(checks.no_vi_headers(
-            "# vim: et tabstop=4 shiftwidth=4 softtabstop=4",
-            9, lines))
-        self.assertEqual(len(list(checks.no_vi_headers(
-            "# vim: et tabstop=4 shiftwidth=4 softtabstop=4",
-            14, lines))), 2)
-        self.assertIsNone(checks.no_vi_headers(
-            "Test end string for vi",
-            15, lines))
-
     def test_assert_true_instance(self):
         self.assertEqual(len(list(checks.assert_true_instance(
             "self.assertTrue(isinstance(e, "
@@ -157,28 +133,6 @@ class HackingTestCase(test.NoDBTestCase):
 
         self.assertEqual(len(list(checks.assert_equal_in(
             "self.assertEqual(False, any(a==1 for a in b))"))), 0)
-
-    def test_assert_equal_none(self):
-        self.assertEqual(len(list(checks.assert_equal_none(
-            "self.assertEqual(A, None)"))), 1)
-
-        self.assertEqual(len(list(checks.assert_equal_none(
-            "self.assertEqual(None, A)"))), 1)
-
-        self.assertEqual(
-            len(list(checks.assert_equal_none("self.assertIsNone()"))), 0)
-
-        self.assertEqual(len(list(checks.assert_equal_none(
-            "self.assertIs(A, None)"))), 1)
-
-        self.assertEqual(len(list(checks.assert_equal_none(
-            "self.assertIsNot(A, None)"))), 1)
-
-        self.assertEqual(len(list(checks.assert_equal_none(
-            "self.assertIs(None, A)"))), 1)
-
-        self.assertEqual(len(list(checks.assert_equal_none(
-            "self.assertIsNot(None, A)"))), 1)
 
     def test_assert_true_or_false_with_in_or_not_in(self):
         self.assertEqual(len(list(checks.assert_true_or_false_with_in(
@@ -792,57 +746,6 @@ class HackingTestCase(test.NoDBTestCase):
                             instance=instance)
                """
         self._assert_has_no_errors(code, checks.check_context_log)
-
-    def test_check_delayed_string_interpolation(self):
-        checker = checks.check_delayed_string_interpolation
-        code = """
-               msg_w = _LW('Test string (%s)')
-               msg_i = _LI('Test string (%s)')
-               value = 'test'
-
-               LOG.error(_LE("Test string (%s)") % value)
-               LOG.warning(msg_w % 'test%string')
-               LOG.info(msg_i %
-                        "test%string%info")
-               LOG.critical(
-                   _LC('Test string (%s)') % value,
-                   instance=instance)
-               LOG.exception(_LE(" 'Test quotation %s' \"Test\"") % 'test')
-               LOG.debug(' "Test quotation %s" \'Test\'' % "test")
-               LOG.debug('Tesing %(test)s' %
-                         {'test': ','.join(
-                             ['%s=%s' % (name, value)
-                              for name, value in test.items()])})
-               """
-
-        expected_errors = [(5, 34, 'N354'), (6, 18, 'N354'), (7, 15, 'N354'),
-                           (10, 28, 'N354'), (12, 49, 'N354'),
-                           (13, 40, 'N354'), (14, 28, 'N354')]
-        self._assert_has_errors(code, checker, expected_errors=expected_errors)
-        self._assert_has_no_errors(code, checker,
-                                   filename='nova/tests/unit/test_hacking.py')
-
-        code = """
-               msg_w = _LW('Test string (%s)')
-               msg_i = _LI('Test string (%s)')
-               value = 'test'
-
-               LOG.error(_LE("Test string (%s)"), value)
-               LOG.error(_LE("Test string (%s)") % value) # noqa
-               LOG.warning(msg_w, 'test%string')
-               LOG.info(msg_i,
-                        "test%string%info")
-               LOG.critical(
-                   _LC('Test string (%s)'), value,
-                   instance=instance)
-               LOG.exception(_LE(" 'Test quotation %s' \"Test\""), 'test')
-               LOG.debug(' "Test quotation %s" \'Test\'', "test")
-               LOG.debug('Tesing %(test)s',
-                         {'test': ','.join(
-                             ['%s=%s' % (name, value)
-                              for name, value in test.items()])})
-               """
-        self._assert_has_no_errors(code, checker)
 
     def test_no_assert_equal_true_false(self):
         code = """

@@ -82,7 +82,7 @@ class FakeLibvirtTests(test.NoDBTestCase):
     def test_openAuth_accepts_None_uri_by_default(self):
         conn_method = self.get_openAuth_curry_func()
         conn = conn_method(None)
-        self.assertNotEqual(conn, None, "Connecting to fake libvirt failed")
+        self.assertIsNotNone(conn, "Connecting to fake libvirt failed")
 
     def test_openAuth_can_refuse_None_uri(self):
         conn_method = self.get_openAuth_curry_func()

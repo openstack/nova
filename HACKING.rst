@@ -21,13 +21,10 @@ Nova Specific Commandments
   should be moved into a common module
 - [N313] capitalize help string
   Config parameter help strings should have a capitalized first letter
-- [N314] vim configuration should not be kept in source files.
 - [N316] Change assertTrue(isinstance(A, B)) by optimal assert like
   assertIsInstance(A, B).
 - [N317] Change assertEqual(type(A), B) by optimal assert like
   assertIsInstance(A, B)
-- [N318] Change assertEqual(A, None) or assertIs(A, None) to optimal assert
-  like assertIsNone(A)
 - [N319] Validate that debug level logs are not translated.
 - [N320] Setting CONF.* attributes directly in tests is forbidden. Use
   self.flags(option=value) instead.
@@ -64,7 +61,6 @@ Nova Specific Commandments
 - [N351] Do not use the oslo_policy.policy.Enforcer.enforce() method.
 - [N352] LOG.warn is deprecated. Enforce use of LOG.warning.
 - [N353] Validate that context objects is not passed in logging calls.
-- [N354] String interpolation should be delayed at logging calls.
 - [N355] Enforce use of assertTrue/assertFalse
 - [N356] Enforce use of assertIs/assertIsNot
 - [N357] Use oslo_utils.uuidutils or uuidsentinel(in case of test cases) to

@@ -3510,7 +3510,7 @@ class LdapDNSTestCase(test.NoDBTestCase):
 
         self.driver.delete_entry(name1, domain1)
         entries = self.driver.get_entries_by_address(address1, domain1)
-        LOG.debug("entries: %s" % entries)
+        LOG.debug("entries: %s", entries)
         self.assertEqual(1, len(entries))
         self.assertEqual(name2, entries[0])
 

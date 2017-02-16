@@ -105,7 +105,7 @@ class SRIOVServersTest(ServersTestBase):
         post = {'server': good_server}
 
         created_server = self.api.post_server(post)
-        LOG.debug("created_server: %s" % created_server)
+        LOG.debug("created_server: %s", created_server)
         self.assertTrue(created_server['id'])
         created_server_id = created_server['id']
 
