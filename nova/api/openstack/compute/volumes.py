@@ -435,7 +435,8 @@ class VolumeAttachmentController(wsgi.Controller):
 
         volume_id = id
 
-        instance = common.get_instance(self.compute_api, context, server_id)
+        instance = common.get_instance(self.compute_api, context, server_id,
+                                       expected_attrs=['device_metadata'])
         if instance.vm_state in (vm_states.SHELVED,
                                  vm_states.SHELVED_OFFLOADED):
             _check_request_version(req, '2.20', 'detach_volume',
