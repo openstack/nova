@@ -199,52 +199,59 @@ class XenAPIOpenVswitchDriverTestCase(XenVIFDriverTestBase):
         mock_hot_plug.assert_called_once_with(fake_vif, instance,
                                               'fake_vm_ref', 'fake_vif_ref')
 
-    @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_delete_linux_bridge')
-    @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_delete_linux_port')
-    @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_device_exists',
-                       return_value=True)
-    @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_ovs_del_br')
-    @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_ovs_del_port')
+    @mock.patch.object(vif.XenAPIOpenVswitchDriver,
+                       'delete_network_and_bridge')
     @mock.patch.object(network_utils, 'find_network_with_name_label',
                        return_value='fake_network')
     @mock.patch.object(vif.XenVIFDriver, 'unplug')
     def test_unplug(self, mock_super_unplug,
                     mock_find_network_with_name_label,
-                    mock_ovs_del_port,
-                    mock_ovs_del_br,
-                    mock_device_exists,
-                    mock_delete_linux_port,
-                    mock_delete_linux_bridge):
+                    mock_delete_network_bridge):
         instance = {'name': "fake_instance"}
         vm_ref = "fake_vm_ref"
 
         mock_network_get_VIFs = self.mock_patch_object(
             self._session.network, 'get_VIFs', return_val=None)
-        mock_network_get_bridge = self.mock_patch_object(
-            self._session.network, 'get_bridge', return_val='fake_bridge')
-        mock_network_destroy = self.mock_patch_object(
-            self._session.network, 'destroy')
         self.ovs_driver.unplug(instance, fake_vif, vm_ref)
 
         self.assertTrue(mock_super_unplug.called)
         self.assertTrue(mock_find_network_with_name_label.called)
         self.assertTrue(mock_network_get_VIFs.called)
-        self.assertTrue(mock_network_get_bridge.called)
-        self.assertEqual(mock_ovs_del_port.call_count, 2)
-        self.assertTrue(mock_network_destroy.called)
+        self.assertTrue(mock_delete_network_bridge.called)
 
+    @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_delete_linux_bridge')
+    @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_delete_linux_port')
+    @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_device_exists')
     @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_ovs_del_br')
+    @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_ovs_del_port')
+    @mock.patch.object(network_utils, 'find_network_with_name_label')
+    def test_delete_network_and_bridge(self, mock_find_network,
+                                       mock_ovs_del_port, mock_ovs_del_br,
+                                       mock_device_exists,
+                                       mock_delete_linux_port,
+                                       mock_delete_linux_bridge):
+        mock_find_network.return_value = 'fake_network'
+        mock_device_exists.return_value = True
+        instance = {'name': 'fake_instance'}
+        vif = {'id': 'fake_vif'}
+        self._session.network = mock.Mock()
+        self.ovs_driver.delete_network_and_bridge(instance, vif)
+        self._session.network.get_bridge.assert_called_once_with(
+            'fake_network')
+        self._session.network.destroy.assert_called_once_with('fake_network')
+        self.assertTrue(mock_find_network.called)
+        self.assertEqual(mock_ovs_del_port.call_count, 2)
+        self.assertEqual(mock_delete_linux_port.call_count, 2)
+        self.assertTrue(mock_delete_linux_bridge.called)
+        self.assertTrue(mock_ovs_del_br.called)
+
     @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_ovs_del_port')
     @mock.patch.object(network_utils, 'find_network_with_name_label',
                        return_value='fake_network')
-    @mock.patch.object(vif.XenVIFDriver, 'unplug')
-    def test_unplug_exception(self, mock_super_unplug,
-                    mock_find_network_with_name_label,
-                    mock_ovs_del_port,
-                    mock_ovs_del_br):
+    def test_delete_network_and_bridge_destroy_exception(self,
+                                                         mock_find_network,
+                                                         mock_ovs_del_port):
         instance = {'name': "fake_instance"}
-        vm_ref = "fake_vm_ref"
-
         self.mock_patch_object(
             self._session.network, 'get_VIFs', return_val=None)
         self.mock_patch_object(
@@ -254,8 +261,10 @@ class XenAPIOpenVswitchDriverTestCase(XenVIFDriverTestBase):
             side_effect=test.TestingException)
 
         self.assertRaises(exception.VirtualInterfaceUnplugException,
-                          self.ovs_driver.unplug, instance, fake_vif,
-                          vm_ref)
+                          self.ovs_driver.delete_network_and_bridge, instance,
+                          fake_vif)
+        self.assertTrue(mock_find_network.called)
+        self.assertTrue(mock_ovs_del_port.called)
 
     @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_device_exists')
     @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_brctl_add_if')

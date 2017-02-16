@@ -542,6 +542,7 @@ class XenAPIDriver(driver.ComputeDriver):
         # any volume that was attached to the destination during
         # live migration. XAPI should take care of all other cleanup.
         self._vmops.rollback_live_migration_at_destination(instance,
+                                                           network_info,
                                                            block_device_info)
 
     def pre_live_migration(self, context, instance, block_device_info,
@@ -566,6 +567,16 @@ class XenAPIDriver(driver.ComputeDriver):
         :param migrate_data: a XenapiLiveMigrateData object
         """
         self._vmops.post_live_migration(context, instance, migrate_data)
+
+    def post_live_migration_at_source(self, context, instance, network_info):
+        """Unplug VIFs from networks at source.
+
+        :param context: security context
+        :param instance: instance object reference
+        :param network_info: instance network information
+        """
+        self._vmops.post_live_migration_at_source(context, instance,
+                                                  network_info)
 
     def post_live_migration_at_destination(self, context, instance,
                                            network_info,

@@ -2355,15 +2355,50 @@ class VMOps(object):
                     self._generate_vdi_map(
                         sr_uuid_map[sr_uuid], vm_ref, sr_ref))
         vif_map = {}
+        vif_uuid_map = None
+        if 'vif_uuid_map' in migrate_data:
+            vif_uuid_map = migrate_data.vif_uuid_map
+        if vif_uuid_map:
+            vif_map = self._generate_vif_network_map(vm_ref, vif_uuid_map)
+            LOG.debug("Generated vif_map for live migration: %s", vif_map)
         options = {}
         self._session.call_xenapi(command_name, vm_ref,
                                   migrate_send_data, True,
                                   vdi_map, vif_map, options)
 
+    def _generate_vif_network_map(self, vm_ref, vif_uuid_map):
+        # Generate a mapping dictionary of src_vif_ref: dest_network_ref
+        vif_map = {}
+        # vif_uuid_map is dictionary of neutron_vif_uuid: dest_network_ref
+        vifs = self._session.VM.get_VIFs(vm_ref)
+        for vif in vifs:
+            other_config = self._session.VIF.get_other_config(vif)
+            neutron_id = other_config.get('nicira-iface-id')
+            if neutron_id is None or neutron_id not in vif_uuid_map.keys():
+                raise exception.MigrationError(
+                    reason=_('No mapping for source network %s') % (
+                           neutron_id))
+            network_ref = vif_uuid_map[neutron_id]
+            vif_map[vif] = network_ref
+        return vif_map
+
+    def create_interim_networks(self, network_info):
+        # Creating an interim bridge in destination host before live_migration
+        vif_map = {}
+        for vif in network_info:
+            network_ref = self.vif_driver.create_vif_interim_network(vif)
+            vif_map.update({vif['id']: network_ref})
+        return vif_map
+
     def pre_live_migration(self, context, instance, block_device_info,
                            network_info, disk_info, migrate_data):
         migrate_data.sr_uuid_map = self.connect_block_device_volumes(
                 block_device_info)
+        migrate_data.vif_uuid_map = self.create_interim_networks(network_info)
+        LOG.debug("pre_live_migration, vif_uuid_map: %(vif_map)s, "
+                  "sr_uuid_map: %(sr_map)s",
+                  {'vif_map': migrate_data.vif_uuid_map,
+                   'sr_map': migrate_data.sr_uuid_map}, instance=instance)
         return migrate_data
 
     def live_migrate(self, context, instance, destination_hostname,
@@ -2419,6 +2454,11 @@ class VMOps(object):
                                             migrate_data.kernel_file,
                                             migrate_data.ramdisk_file)
 
+    def post_live_migration_at_source(self, context, instance, network_info):
+        LOG.debug('post_live_migration_at_source, delete networks and bridges',
+                  instance=instance)
+        self._delete_networks_and_bridges(instance, network_info)
+
     def post_live_migration_at_destination(self, context, instance,
                                            network_info, block_migration,
                                            block_device_info):
@@ -2433,7 +2473,7 @@ class VMOps(object):
         vm_ref = self._get_vm_opaque_ref(instance)
         vm_utils.strip_base_mirror_from_vdis(self._session, vm_ref)
 
-    def rollback_live_migration_at_destination(self, instance,
+    def rollback_live_migration_at_destination(self, instance, network_info,
                                                block_device_info):
         bdms = block_device_info['block_device_mapping'] or []
 
@@ -2449,6 +2489,20 @@ class VMOps(object):
             except Exception:
                 LOG.exception(_LE('Failed to forget the SR for volume %s'),
                               params['id'], instance=instance)
+
+        # delete VIF and network in destination host
+        LOG.debug('rollback_live_migration_at_destination, delete networks '
+                  'and bridges', instance=instance)
+        self._delete_networks_and_bridges(instance, network_info)
+
+    def _delete_networks_and_bridges(self, instance, network_info):
+        # Unplug VIFs and delete networks
+        for vif in network_info:
+            try:
+                self.vif_driver.delete_network_and_bridge(instance, vif)
+            except Exception:
+                LOG.exception(_LE('Failed to delete networks and bridges with '
+                                  'VIF %s'), vif['id'], instance=instance)
 
     def get_per_instance_usage(self):
         """Get usage info about each active instance."""

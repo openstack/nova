@@ -240,7 +240,8 @@ class _TestXenapiLiveMigrateData(object):
             block_migration=False,
             destination_sr_ref='foo',
             migrate_send_data={'key': 'val'},
-            sr_uuid_map={'apple': 'banana'})
+            sr_uuid_map={'apple': 'banana'},
+            vif_uuid_map={'orange': 'lemon'})
         expected = {
             'is_volume_backed': False,
             'block_migration': False,
@@ -257,7 +258,8 @@ class _TestXenapiLiveMigrateData(object):
             block_migration=False,
             destination_sr_ref='foo',
             migrate_send_data={'key': 'val'},
-            sr_uuid_map={'apple': 'banana'})
+            sr_uuid_map={'apple': 'banana'},
+            vif_uuid_map={'orange': 'lemon'})
         legacy = obj.to_legacy_dict()
         legacy['ignore_this_thing'] = True
         obj2 = migrate_data.XenapiLiveMigrateData()
@@ -268,7 +270,8 @@ class _TestXenapiLiveMigrateData(object):
         obj = migrate_data.XenapiLiveMigrateData(
             is_volume_backed=False,
             destination_sr_ref='foo',
-            sr_uuid_map={'apple': 'banana'})
+            sr_uuid_map={'apple': 'banana'},
+            vif_uuid_map={'orange': 'lemon'})
         expected = {
             'is_volume_backed': False,
         }
@@ -280,6 +283,7 @@ class _TestXenapiLiveMigrateData(object):
             'is_volume_backed': False,
             'pre_live_migration_result': {
                 'sr_uuid_map': {},
+                'vif_uuid_map': {},
             },
         }
         self.assertEqual(expected, obj.to_legacy_dict(True))
@@ -288,25 +292,47 @@ class _TestXenapiLiveMigrateData(object):
         obj = migrate_data.XenapiLiveMigrateData(
             is_volume_backed=False,
             destination_sr_ref='foo',
-            sr_uuid_map={'apple': 'banana'})
+            sr_uuid_map={'apple': 'banana'},
+            vif_uuid_map={'orange': 'lemon'})
         legacy = obj.to_legacy_dict()
         obj2 = migrate_data.XenapiLiveMigrateData()
         obj2.from_legacy_dict(legacy)
         self.assertFalse(obj2.block_migration)
         self.assertNotIn('migrate_send_data', obj2)
         self.assertNotIn('sr_uuid_map', obj2)
+        self.assertNotIn('vif_uuid_map', obj2)
 
     def test_to_legacy_with_pre_result(self):
         obj = migrate_data.XenapiLiveMigrateData(
-            sr_uuid_map={'a': 'b'})
+            sr_uuid_map={'a': 'b'},
+            vif_uuid_map={'c': 'd'})
         self.assertNotIn('sr_uuid_map', obj.to_legacy_dict())
+        self.assertNotIn('vi_uuid_map', obj.to_legacy_dict())
         legacy = obj.to_legacy_dict(True)
         self.assertEqual(
             {'a': 'b'},
             legacy['pre_live_migration_result']['sr_uuid_map'])
+        self.assertEqual(
+            {'c': 'd'},
+            legacy['pre_live_migration_result']['vif_uuid_map']
+        )
         obj2 = migrate_data.XenapiLiveMigrateData()
         obj2.from_legacy_dict(legacy)
         self.assertEqual({'a': 'b'}, obj2.sr_uuid_map)
+        self.assertEqual({'c': 'd'}, obj2.vif_uuid_map)
+
+    def test_obj_make_compatible(self):
+        obj = migrate_data.XenapiLiveMigrateData(
+            is_volume_backed=False,
+            block_migration=False,
+            destination_sr_ref='foo',
+            migrate_send_data={'key': 'val'},
+            sr_uuid_map={'apple': 'banana'},
+            vif_uuid_map={'orange': 'lemon'})
+        primitive = obj.obj_to_primitive('1.0')
+        self.assertNotIn('vif_uuid_map', primitive['nova_object.data'])
+        primitive2 = obj.obj_to_primitive('1.1')
+        self.assertIn('vif_uuid_map', primitive2['nova_object.data'])
 
 
 class TestXenapiLiveMigrateData(test_objects._LocalTest,

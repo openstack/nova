@@ -1172,7 +1172,7 @@ object_data = {
     'VirtualInterface': '1.3-efd3ca8ebcc5ce65fff5a25f31754c54',
     'VirtualInterfaceList': '1.0-9750e2074437b3077e46359102779fc6',
     'VolumeUsage': '1.0-6c8190c46ce1469bb3286a1f21c2e475',
-    'XenapiLiveMigrateData': '1.0-5f982bec68f066e194cd9ce53a24ac4c',
+    'XenapiLiveMigrateData': '1.1-79e69f5ac9abfbcfcbaec18e8280bec6',
 }
 
 
