@@ -1564,6 +1564,22 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         output = self.output.getvalue().strip()
         self.assertEqual('', output)
 
+    def test_update_cell_success_defaults(self):
+        ctxt = context.get_admin_context()
+        objects.CellMapping(context=ctxt, uuid=uuidsentinel.cell1,
+                            name='cell1',
+                            transport_url='fake://mq',
+                            database_connection='fake:///db').create()
+        self.assertEqual(0, self.commands.update_cell(uuidsentinel.cell1))
+        cm = objects.CellMapping.get_by_uuid(ctxt, uuidsentinel.cell1)
+        self.assertEqual('cell1', cm.name)
+        expected_transport_url = CONF.transport_url or 'fake://mq'
+        self.assertEqual(expected_transport_url, cm.transport_url)
+        expected_db_connection = CONF.database.connection or 'fake:///db'
+        self.assertEqual(expected_db_connection, cm.database_connection)
+        output = self.output.getvalue().strip()
+        self.assertEqual('', output)
+
 
 class TestNovaManageMain(test.NoDBTestCase):
     """Tests the nova-manage:main() setup code."""
