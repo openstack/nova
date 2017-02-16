@@ -6599,7 +6599,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 instance_dir = libvirt_utils.get_instance_path_at_destination(
                     instance, migrate_data)
                 if os.path.exists(instance_dir):
-                        shutil.rmtree(instance_dir)
+                    shutil.rmtree(instance_dir)
 
     def pre_live_migration(self, context, instance, block_device_info,
                            network_info, disk_info, migrate_data):
