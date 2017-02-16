@@ -547,12 +547,21 @@ time, the launch expires and the instance(s) are set to 'error'
 state.
 """),
     cfg.StrOpt('vif_driver',
-        default='nova.virt.xenapi.vif.XenAPIBridgeDriver',
+        default='nova.virt.xenapi.vif.XenAPIOpenVswitchDriver',
+        deprecated_for_removal=True,
+        deprecated_since='15.0.0',
+        deprecated_reason="""
+There are only two in-tree vif drivers for XenServer. XenAPIBridgeDriver is for
+nova-network which is deprecated and XenAPIOpenVswitchDriver is for Neutron
+which is the default configuration for Nova since the 15.0.0 Ocata release. In
+the future the "use_neutron" configuration option will be used to determine
+which vif driver to use.
+""",
         help="""
 The XenAPI VIF driver using XenServer Network APIs.
 
-Provide a string value representing the VIF XenAPI bridge driver to
-use for bridging.
+Provide a string value representing the VIF XenAPI vif driver to use for
+plugging virtual network interfaces.
 
 Xen configuration uses bridging within the backend domain to allow
 all VMs to appear on the network as individual hosts. Bridge
@@ -561,9 +570,15 @@ the VIFs for the VM instances are plugged. If no VIF bridge driver
 is plugged, the bridge is not made available. This configuration
 option takes in a value for the VIF driver.
 
-NOTE:
-The XenAPIBridgeDriver should be used for running OVS or Bridge in
-XenServer.
+Possible values:
+
+* nova.virt.xenapi.vif.XenAPIOpenVswitchDriver (default)
+* nova.virt.xenapi.vif.XenAPIBridgeDriver (deprecated)
+
+Related options:
+
+* ``vlan_interface``
+* ``ovs_integration_bridge``
 """),
     # TODO(dharinic): Make this, a stevedore plugin
     cfg.StrOpt('image_upload_handler',
