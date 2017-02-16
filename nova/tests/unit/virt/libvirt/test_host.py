@@ -192,6 +192,46 @@ class HostTestCase(test.NoDBTestCase):
         self.assertEqual(got_events[0].transition,
                          event.EVENT_LIFECYCLE_STOPPED)
 
+    def test_event_lifecycle_callback_suspended_old_libvirt(self):
+        """Tests the suspended lifecycle event with libvirt before post-copy
+        """
+        hostimpl = mock.MagicMock()
+        conn = mock.MagicMock()
+        fake_dom_xml = """
+                <domain type='kvm'>
+                  <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+                </domain>
+            """
+        dom = fakelibvirt.Domain(conn, fake_dom_xml, running=True)
+        VIR_DOMAIN_EVENT_SUSPENDED_PAUSED = 0
+        host.Host._event_lifecycle_callback(
+            conn, dom, fakelibvirt.VIR_DOMAIN_EVENT_SUSPENDED,
+            detail=VIR_DOMAIN_EVENT_SUSPENDED_PAUSED, opaque=hostimpl)
+        expected_event = hostimpl._queue_event.call_args[0][0]
+        self.assertEqual(event.EVENT_LIFECYCLE_PAUSED,
+                         expected_event.transition)
+
+    def test_event_lifecycle_callback_suspended_postcopy(self):
+        """Tests the suspended lifecycle event with libvirt with post-copy"""
+        hostimpl = mock.MagicMock()
+        conn = mock.MagicMock()
+        fake_dom_xml = """
+                <domain type='kvm'>
+                  <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+                </domain>
+            """
+        dom = fakelibvirt.Domain(conn, fake_dom_xml, running=True)
+        VIR_DOMAIN_EVENT_SUSPENDED_POSTCOPY = 7
+        with mock.patch.object(host.libvirt,
+                               'VIR_DOMAIN_EVENT_SUSPENDED_POSTCOPY', new=7,
+                               create=True):
+            host.Host._event_lifecycle_callback(
+                conn, dom, fakelibvirt.VIR_DOMAIN_EVENT_SUSPENDED,
+                detail=VIR_DOMAIN_EVENT_SUSPENDED_POSTCOPY, opaque=hostimpl)
+        expected_event = hostimpl._queue_event.call_args[0][0]
+        self.assertEqual(event.EVENT_LIFECYCLE_POSTCOPY_STARTED,
+                         expected_event.transition)
+
     def test_event_emit_delayed_call_delayed(self):
         ev = event.LifecycleEvent(
             "cef19ce0-0ca2-11df-855d-b19fbce37686",
