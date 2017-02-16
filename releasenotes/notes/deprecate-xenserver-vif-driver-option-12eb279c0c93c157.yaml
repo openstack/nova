@@ -1,0 +1,13 @@
+---
+upgrade:
+  - |
+    The default value for the ``[xenserver]/vif_driver`` configuration option
+    has been changed to ``nova.virt.xenapi.vif.XenAPIOpenVswitchDriver`` to
+    match the default configuration of ``[DEFAULT]/use_neutron=True``.
+deprecations:
+  - |
+    The ``[xenserver]/vif_driver`` configuration option is deprecated for
+    removal. The ``XenAPIOpenVswitchDriver`` vif driver is used for Neutron and
+    the ``XenAPIBridgeDriver`` vif driver is used for nova-network, which
+    itself is deprecated. In the future, the ``use_neutron`` configuration
+    option will be used to determine which vif driver to load.
