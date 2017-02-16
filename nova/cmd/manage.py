@@ -1506,7 +1506,8 @@ class CellV2Commands(object):
     @args('--database_connection', metavar='<database>', dest='db_connection',
           help=_('Set the cell database_connection. NOTE that running nodes '
                  'will not see the change until restart!'))
-    def update_cell(self, cell_uuid, name, transport_url, db_connection):
+    def update_cell(self, cell_uuid, name=None, transport_url=None,
+                    db_connection=None):
         """Updates the properties of a cell by the given uuid.
 
         If the cell is not found by uuid, this command will return an exit
@@ -1526,8 +1527,12 @@ class CellV2Commands(object):
 
         if name:
             cell_mapping.name = name
+
+        transport_url = transport_url or CONF.transport_url
         if transport_url:
             cell_mapping.transport_url = transport_url
+
+        db_connection = db_connection or CONF.database.connection
         if db_connection:
             cell_mapping.database_connection = db_connection
 
