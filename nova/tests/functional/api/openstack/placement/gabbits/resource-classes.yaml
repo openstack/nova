@@ -151,6 +151,7 @@ tests:
   status: 409
   response_strings:
       - Resource class already exists
+      - $ENVIRON['CUSTOM_RES_CLASS']
 
 - name: update custom resource class
   PUT: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
