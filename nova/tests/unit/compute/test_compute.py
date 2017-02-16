@@ -72,6 +72,7 @@ from nova.tests import fixtures
 from nova.tests.unit.compute import eventlet_utils
 from nova.tests.unit.compute import fake_resource_tracker
 from nova.tests.unit import fake_block_device
+from nova.tests.unit import fake_diagnostics
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_network_cache_model
@@ -79,6 +80,7 @@ from nova.tests.unit import fake_notifier
 from nova.tests.unit import fake_server_actions
 from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import matchers
+from nova.tests.unit.objects import test_diagnostics
 from nova.tests.unit.objects import test_flavor
 from nova.tests.unit.objects import test_instance_numa_topology
 from nova.tests.unit.objects import test_migration
@@ -1430,7 +1432,8 @@ class ComputeVolumeTestCase(BaseTestCase):
         get_swap.assert_called_once_with([])
 
 
-class ComputeTestCase(BaseTestCase):
+class ComputeTestCase(BaseTestCase,
+                      test_diagnostics.DiagnosticsComparisonMixin):
     def setUp(self):
         super(ComputeTestCase, self).setUp()
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
@@ -4028,30 +4031,33 @@ class ComputeTestCase(BaseTestCase):
 
         diagnostics = self.compute.get_instance_diagnostics(self.context,
                 instance=instance)
-        expected = {'config_drive': True,
-                    'cpu_details': [{'time': 17300000000}],
-                    'disk_details': [{'errors_count': 0,
-                                      'id': 'fake-disk-id',
-                                      'read_bytes': 262144,
-                                      'read_requests': 112,
-                                      'write_bytes': 5778432,
-                                      'write_requests': 488}],
-                    'driver': 'fake',
-                    'hypervisor_os': 'fake-os',
-                    'memory_details': {'maximum': 524288, 'used': 0},
-                    'nic_details': [{'mac_address': '01:23:45:67:89:ab',
-                                     'rx_drop': 0,
-                                     'rx_errors': 0,
-                                     'rx_octets': 2070139,
-                                     'rx_packets': 26701,
-                                     'tx_drop': 0,
-                                     'tx_errors': 0,
-                                     'tx_octets': 140208,
-                                     'tx_packets': 662}],
-                    'state': 'running',
-                    'uptime': 46664,
-                    'version': '1.0'}
-        self.assertEqual(expected, diagnostics)
+        expected = fake_diagnostics.fake_diagnostics_obj(
+            config_drive=True,
+            cpu_details=[{'id': 0, 'time': 17300000000, 'utilisation': 15}],
+            disk_details=[{'errors_count': 1,
+                           'read_bytes': 262144,
+                           'read_requests': 112,
+                           'write_bytes': 5778432,
+                           'write_requests': 488}],
+            driver='libvirt',
+            hypervisor='fake-hypervisor',
+            hypervisor_os='fake-os',
+            memory_details={'maximum': 524288, 'used': 0},
+            nic_details=[{'mac_address': '01:23:45:67:89:ab',
+                          'rx_octets': 2070139,
+                          'rx_errors': 100,
+                          'rx_drop': 200,
+                          'rx_packets': 26701,
+                          'rx_rate': 300,
+                          'tx_octets': 140208,
+                          'tx_errors': 400,
+                          'tx_drop': 500,
+                          'tx_packets': 662,
+                          'tx_rate': 600}],
+            state='running',
+            uptime=46664)
+
+        self.assertDiagnosticsEqual(expected, diagnostics)
         self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_add_fixed_ip_usage_notification(self):

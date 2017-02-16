@@ -49,7 +49,6 @@ from nova import objects
 from nova import utils
 from nova import version
 from nova.virt import configdrive
-from nova.virt import diagnostics
 from nova.virt import driver
 from nova.virt import hardware
 from nova.virt.vmwareapi import constants
@@ -1549,13 +1548,14 @@ class VMwareVMOps(object):
             state = power_state.STATE_MAP[constants.POWER_STATES[state]]
         uptime = data.get('uptimeSeconds', 0)
         config_drive = configdrive.required_by(instance)
-        diags = diagnostics.Diagnostics(state=state,
-                                        driver='vmwareapi',
-                                        config_drive=config_drive,
-                                        hypervisor_os='esxi',
-                                        uptime=uptime)
-        diags.memory_details.maximum = data.get('memorySizeMB', 0)
-        diags.memory_details.used = data.get('guestMemoryUsage', 0)
+        diags = objects.Diagnostics(state=state,
+                                    driver='vmwareapi',
+                                    config_drive=config_drive,
+                                    hypervisor_os='esxi',
+                                    uptime=uptime)
+        diags.memory_details = objects.MemoryDiagnostics(
+            maximum = data.get('memorySizeMB', 0),
+            used=data.get('guestMemoryUsage', 0))
         # TODO(garyk): add in cpu, nic and disk stats
         return diags
 

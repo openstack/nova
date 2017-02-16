@@ -52,6 +52,7 @@ from nova import test
 from nova.tests import fixtures
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.db import fakes as db_fakes
+from nova.tests.unit import fake_diagnostics
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network
@@ -59,6 +60,7 @@ from nova.tests.unit import fake_processutils
 import nova.tests.unit.image.fake as fake_image
 from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_aggregate
+from nova.tests.unit.objects import test_diagnostics
 from nova.tests.unit import utils as test_utils
 from nova.tests.unit.virt.xenapi import stubs
 from nova.tests import uuidsentinel as uuids
@@ -278,7 +280,8 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBaseNoDB):
 
 
 # FIXME(sirp): convert this to use XenAPITestBaseNoDB
-class XenAPIVMTestCase(stubs.XenAPITestBase):
+class XenAPIVMTestCase(stubs.XenAPITestBase,
+                       test_diagnostics.DiagnosticsComparisonMixin):
     """Unit tests for VM operations."""
     def setUp(self):
         super(XenAPIVMTestCase, self).setUp()
@@ -423,35 +426,19 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                 return re.sub(r'\s', '', f.read())
         self.stubs.Set(vm_utils, '_get_rrd', fake_get_rrd)
 
-        expected = {
-            'config_drive': False,
-            'state': 'running',
-            'driver': 'xenapi',
-            'version': '1.0',
-            'uptime': 0,
-            'hypervisor_os': None,
-            'cpu_details': [{'time': 0}, {'time': 0},
-                            {'time': 0}, {'time': 0}],
-            'nic_details': [{'mac_address': '00:00:00:00:00:00',
-                             'rx_drop': 0,
-                             'rx_errors': 0,
-                             'rx_octets': 0,
-                             'rx_packets': 0,
-                             'tx_drop': 0,
-                             'tx_errors': 0,
-                             'tx_octets': 0,
-                             'tx_packets': 0}],
-            'disk_details': [{'errors_count': 0,
-                              'id': '',
-                              'read_bytes': 0,
-                              'read_requests': 0,
-                              'write_bytes': 0,
-                              'write_requests': 0}],
-            'memory_details': {'maximum': 8192, 'used': 0}}
+        expected = fake_diagnostics.fake_diagnostics_obj(
+            config_drive=False,
+            state='running',
+            driver='xenapi',
+            cpu_details=[{}, {}, {}, {}],  # 4 CPUs with 'None' values
+            nic_details=[{}],              # 1 NIC with 'None' values
+            disk_details=[{}],             # 1 disk with 'None' values
+            memory_details={'maximum': 8192})
 
         instance = self._create_instance(obj=True)
         actual = self.conn.get_instance_diagnostics(instance)
-        self.assertEqual(expected, actual.serialize())
+
+        self.assertDiagnosticsEqual(expected, actual)
 
     def test_get_vnc_console(self):
         instance = self._create_instance(obj=True)

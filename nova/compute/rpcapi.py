@@ -319,6 +319,11 @@ class ComputeAPI(object):
         ... Newton and Ocata support messaging version 4.13. So, any changes to
         existing methods in 4.x after that point should be done so that they
         can handle the version_cap being set to 4.13
+
+        * 4.14 - Make get_instance_diagnostics return a diagnostics object
+                 instead of dictionary. Strictly speaking we don't need to bump
+                 the version because this method was unused before. The version
+                 was bumped to signal the availability of the corrected RPC API
     '''
 
     VERSION_ALIASES = {
@@ -566,13 +571,17 @@ class ComputeAPI(object):
         return cctxt.call(ctxt, 'get_diagnostics', instance=instance)
 
     def get_instance_diagnostics(self, ctxt, instance):
-        version = '4.13'
+        version = '4.14'
         client = self.router.client(ctxt)
         if not client.can_send_version(version):
-            version = '4.0'
-            instance = objects_base.obj_to_primitive(instance)
+            # NOTE(snikitin): Since version 4.14 method
+            # get_instance_diagnostics() returns Diagnostics object instead of
+            # dictionary. But this method was unused before version 4.14. That
+            # is why we can raise an exception if RPC API version is too old.
+            raise exception.InstanceDiagnosticsNotSupported()
+
         cctxt = client.prepare(server=_compute_host(None, instance),
-                                    version=version)
+                               version=version)
         return cctxt.call(ctxt, 'get_instance_diagnostics', instance=instance)
 
     def get_vnc_console(self, ctxt, instance, console_type):

@@ -73,10 +73,12 @@ from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
 from nova import test
 from nova.tests.unit import fake_block_device
+from nova.tests.unit import fake_diagnostics
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network
 import nova.tests.unit.image.fake
 from nova.tests.unit import matchers
+from nova.tests.unit.objects import test_diagnostics
 from nova.tests.unit.objects import test_pci_device
 from nova.tests.unit.objects import test_vcpu_model
 from nova.tests.unit.virt.libvirt import fake_imagebackend
@@ -368,6 +370,46 @@ def fake_disk_info_byname(instance, type='qcow2'):
             'over_committed_disk_size': 0}
 
     return disk_info
+
+
+def fake_diagnostics_object(with_cpus=False, with_disks=False, with_nic=False):
+    diag_dict = {'config_drive': False,
+                 'driver': 'libvirt',
+                 'hypervisor': 'kvm',
+                 'hypervisor_os': 'linux',
+                 'memory_details': {'maximum': 2048, 'used': 1234},
+                 'state': 'running',
+                 'uptime': 10}
+
+    if with_cpus:
+        diag_dict['cpu_details'] = []
+        for id, t in enumerate([15340000000, 1640000000,
+                                3040000000, 1420000000]):
+            diag_dict['cpu_details'].append({'id': id, 'time': t})
+
+    if with_disks:
+        diag_dict['disk_details'] = []
+        for i in range(2):
+            diag_dict['disk_details'].append(
+                {'read_bytes': 688640,
+                 'read_requests': 169,
+                 'write_bytes': 0,
+                 'write_requests': 0,
+                 'errors_count': 1})
+
+    if with_nic:
+        diag_dict['nic_details'] = [
+            {'mac_address': '52:54:00:a4:38:38',
+             'rx_drop': 0,
+             'rx_errors': 0,
+             'rx_octets': 4408,
+             'rx_packets': 82,
+             'tx_drop': 0,
+             'tx_errors': 0,
+             'tx_octets': 0,
+             'tx_packets': 0}]
+
+    return fake_diagnostics.fake_diagnostics_obj(**diag_dict)
 
 
 def fake_disk_info_json(instance, type='qcow2'):
@@ -674,7 +716,8 @@ def _create_test_instance():
 
 
 @ddt.ddt
-class LibvirtConnTestCase(test.NoDBTestCase):
+class LibvirtConnTestCase(test.NoDBTestCase,
+                          test_diagnostics.DiagnosticsComparisonMixin):
 
     REQUIRES_LOCKING = True
 
@@ -12956,7 +12999,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 raise fakelibvirt.libvirtError('vcpus missing')
 
             def blockStats(self, path):
-                return (169, 688640, 0, 0, -1)
+                return (169, 688640, 0, 0, 1)
 
             def interfaceStats(self, path):
                 return (4408, 82, 0, 0, 0, 0, 0, 0)
@@ -12979,12 +13022,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                   'vda_read_req': 169,
                   'vda_write': 0,
                   'vda_write_req': 0,
-                  'vda_errors': -1,
+                  'vda_errors': 1,
                   'vdb_read': 688640,
                   'vdb_read_req': 169,
                   'vdb_write': 0,
                   'vdb_write_req': 0,
-                  'vdb_errors': -1,
+                  'vdb_errors': 1,
                   'memory': 280160,
                   'memory-actual': 220160,
                   'memory-rss': 200164,
@@ -13005,36 +13048,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         instance.launched_at = lt
         actual = drvr.get_instance_diagnostics(instance)
-        expected = {'config_drive': False,
-                    'cpu_details': [],
-                    'disk_details': [{'errors_count': 0,
-                                      'id': '',
-                                      'read_bytes': 688640,
-                                      'read_requests': 169,
-                                      'write_bytes': 0,
-                                      'write_requests': 0},
-                                     {'errors_count': 0,
-                                      'id': '',
-                                      'read_bytes': 688640,
-                                      'read_requests': 169,
-                                      'write_bytes': 0,
-                                      'write_requests': 0}],
-                    'driver': 'libvirt',
-                    'hypervisor_os': 'linux',
-                    'memory_details': {'maximum': 2048, 'used': 1234},
-                    'nic_details': [{'mac_address': '52:54:00:a4:38:38',
-                                     'rx_drop': 0,
-                                     'rx_errors': 0,
-                                     'rx_octets': 4408,
-                                     'rx_packets': 82,
-                                     'tx_drop': 0,
-                                     'tx_errors': 0,
-                                     'tx_octets': 0,
-                                     'tx_packets': 0}],
-                    'state': 'running',
-                    'uptime': 10,
-                    'version': '1.0'}
-        self.assertEqual(expected, actual.serialize())
+        expected = fake_diagnostics_object(with_disks=True, with_nic=True)
+        self.assertDiagnosticsEqual(expected, actual)
 
     def test_diagnostic_blockstats_exception(self):
         xml = """
@@ -13116,28 +13131,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         instance.launched_at = lt
         actual = drvr.get_instance_diagnostics(instance)
-        expected = {'config_drive': False,
-                    'cpu_details': [{'time': 15340000000},
-                                    {'time': 1640000000},
-                                    {'time': 3040000000},
-                                    {'time': 1420000000}],
-                    'disk_details': [],
-                    'driver': 'libvirt',
-                    'hypervisor_os': 'linux',
-                    'memory_details': {'maximum': 2048, 'used': 1234},
-                    'nic_details': [{'mac_address': '52:54:00:a4:38:38',
-                                     'rx_drop': 0,
-                                     'rx_errors': 0,
-                                     'rx_octets': 4408,
-                                     'rx_packets': 82,
-                                     'tx_drop': 0,
-                                     'tx_errors': 0,
-                                     'tx_octets': 0,
-                                     'tx_packets': 0}],
-                    'state': 'running',
-                    'uptime': 10,
-                    'version': '1.0'}
-        self.assertEqual(expected, actual.serialize())
+        expected = fake_diagnostics_object(with_cpus=True, with_nic=True)
+        self.assertDiagnosticsEqual(expected, actual)
 
     def test_diagnostic_interfacestats_exception(self):
         xml = """
@@ -13176,7 +13171,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                          (True, False)])
 
             def blockStats(self, path):
-                return (169, 688640, 0, 0, -1)
+                return (169, 688640, 0, 0, 1)
 
             def interfaceStats(self, path):
                 raise fakelibvirt.libvirtError('interfaceStat missing')
@@ -13203,12 +13198,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                   'vda_read_req': 169,
                   'vda_write': 0,
                   'vda_write_req': 0,
-                  'vda_errors': -1,
+                  'vda_errors': 1,
                   'vdb_read': 688640,
                   'vdb_read_req': 169,
                   'vdb_write': 0,
                   'vdb_write_req': 0,
-                  'vdb_errors': -1,
+                  'vdb_errors': 1,
                   'memory': 280160,
                   'memory-actual': 220160,
                   'memory-rss': 200164,
@@ -13221,31 +13216,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         instance.launched_at = lt
         actual = drvr.get_instance_diagnostics(instance)
-        expected = {'config_drive': False,
-                    'cpu_details': [{'time': 15340000000},
-                                    {'time': 1640000000},
-                                    {'time': 3040000000},
-                                    {'time': 1420000000}],
-                    'disk_details': [{'errors_count': 0,
-                                      'id': '',
-                                      'read_bytes': 688640,
-                                      'read_requests': 169,
-                                      'write_bytes': 0,
-                                      'write_requests': 0},
-                                     {'errors_count': 0,
-                                      'id': '',
-                                      'read_bytes': 688640,
-                                      'read_requests': 169,
-                                      'write_bytes': 0,
-                                      'write_requests': 0}],
-                    'driver': 'libvirt',
-                    'hypervisor_os': 'linux',
-                    'memory_details': {'maximum': 2048, 'used': 1234},
-                    'nic_details': [],
-                    'state': 'running',
-                    'uptime': 10,
-                    'version': '1.0'}
-        self.assertEqual(expected, actual.serialize())
+        expected = fake_diagnostics_object(with_cpus=True, with_disks=True)
+        self.assertDiagnosticsEqual(expected, actual)
 
     def test_diagnostic_memorystats_exception(self):
         xml = """
@@ -13284,7 +13256,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                          (True, False)])
 
             def blockStats(self, path):
-                return (169, 688640, 0, 0, -1)
+                return (169, 688640, 0, 0, 1)
 
             def interfaceStats(self, path):
                 return (4408, 82, 0, 0, 0, 0, 0, 0)
@@ -13311,12 +13283,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                   'vda_read_req': 169,
                   'vda_write': 0,
                   'vda_write_req': 0,
-                  'vda_errors': -1,
+                  'vda_errors': 1,
                   'vdb_read': 688640,
                   'vdb_read_req': 169,
                   'vdb_write': 0,
                   'vdb_write_req': 0,
-                  'vdb_errors': -1,
+                  'vdb_errors': 1,
                   'memory': 280160,
                   'vnet0_rx': 4408,
                   'vnet0_rx_drop': 0,
@@ -13335,39 +13307,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         instance.launched_at = lt
         actual = drvr.get_instance_diagnostics(instance)
-        expected = {'config_drive': False,
-                    'cpu_details': [{'time': 15340000000},
-                                    {'time': 1640000000},
-                                    {'time': 3040000000},
-                                    {'time': 1420000000}],
-                    'disk_details': [{'errors_count': 0,
-                                      'id': '',
-                                      'read_bytes': 688640,
-                                      'read_requests': 169,
-                                      'write_bytes': 0,
-                                      'write_requests': 0},
-                                     {'errors_count': 0,
-                                      'id': '',
-                                      'read_bytes': 688640,
-                                      'read_requests': 169,
-                                      'write_bytes': 0,
-                                      'write_requests': 0}],
-                    'driver': 'libvirt',
-                    'hypervisor_os': 'linux',
-                    'memory_details': {'maximum': 2048, 'used': 1234},
-                    'nic_details': [{'mac_address': '52:54:00:a4:38:38',
-                                     'rx_drop': 0,
-                                     'rx_errors': 0,
-                                     'rx_octets': 4408,
-                                     'rx_packets': 82,
-                                     'tx_drop': 0,
-                                     'tx_errors': 0,
-                                     'tx_octets': 0,
-                                     'tx_packets': 0}],
-                    'state': 'running',
-                    'uptime': 10,
-                    'version': '1.0'}
-        self.assertEqual(expected, actual.serialize())
+        expected = fake_diagnostics_object(with_cpus=True, with_disks=True,
+                                           with_nic=True)
+        self.assertDiagnosticsEqual(expected, actual)
 
     def test_diagnostic_full(self):
         xml = """
@@ -13406,7 +13348,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                          (True, False)])
 
             def blockStats(self, path):
-                return (169, 688640, 0, 0, -1)
+                return (169, 688640, 0, 0, 1)
 
             def interfaceStats(self, path):
                 return (4408, 82, 0, 0, 0, 0, 0, 0)
@@ -13433,12 +13375,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                   'vda_read_req': 169,
                   'vda_write': 0,
                   'vda_write_req': 0,
-                  'vda_errors': -1,
+                  'vda_errors': 1,
                   'vdb_read': 688640,
                   'vdb_read_req': 169,
                   'vdb_write': 0,
                   'vdb_write_req': 0,
-                  'vdb_errors': -1,
+                  'vdb_errors': 1,
                   'memory': 280160,
                   'memory-actual': 220160,
                   'memory-rss': 200164,
@@ -13459,39 +13401,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         instance.launched_at = lt
         actual = drvr.get_instance_diagnostics(instance)
-        expected = {'config_drive': False,
-                    'cpu_details': [{'time': 15340000000},
-                                    {'time': 1640000000},
-                                    {'time': 3040000000},
-                                    {'time': 1420000000}],
-                    'disk_details': [{'errors_count': 0,
-                                      'id': '',
-                                      'read_bytes': 688640,
-                                      'read_requests': 169,
-                                      'write_bytes': 0,
-                                      'write_requests': 0},
-                                     {'errors_count': 0,
-                                      'id': '',
-                                      'read_bytes': 688640,
-                                      'read_requests': 169,
-                                      'write_bytes': 0,
-                                      'write_requests': 0}],
-                    'driver': 'libvirt',
-                    'hypervisor_os': 'linux',
-                    'memory_details': {'maximum': 2048, 'used': 1234},
-                    'nic_details': [{'mac_address': '52:54:00:a4:38:38',
-                                     'rx_drop': 0,
-                                     'rx_errors': 0,
-                                     'rx_octets': 4408,
-                                     'rx_packets': 82,
-                                     'tx_drop': 0,
-                                     'tx_errors': 0,
-                                     'tx_octets': 0,
-                                     'tx_packets': 0}],
-                    'state': 'running',
-                    'uptime': 10,
-                    'version': '1.0'}
-        self.assertEqual(expected, actual.serialize())
+        expected = fake_diagnostics_object(with_cpus=True, with_disks=True,
+                                           with_nic=True)
+        self.assertDiagnosticsEqual(expected, actual)
 
     @mock.patch.object(host.Host, 'get_domain')
     def test_diagnostic_full_with_multiple_interfaces(self, mock_get_domain):
@@ -13536,7 +13448,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                          (True, False)])
 
             def blockStats(self, path):
-                return (169, 688640, 0, 0, -1)
+                return (169, 688640, 0, 0, 1)
 
             def interfaceStats(self, path):
                 return (4408, 82, 0, 0, 0, 0, 0, 0)
@@ -13563,12 +13475,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                   'vda_read_req': 169,
                   'vda_write': 0,
                   'vda_write_req': 0,
-                  'vda_errors': -1,
+                  'vda_errors': 1,
                   'vdb_read': 688640,
                   'vdb_read_req': 169,
                   'vdb_write': 0,
                   'vdb_write_req': 0,
-                  'vdb_errors': -1,
+                  'vdb_errors': 1,
                   'memory': 280160,
                   'memory-actual': 220160,
                   'memory-rss': 200164,
@@ -13597,48 +13509,18 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         instance.launched_at = lt
         actual = drvr.get_instance_diagnostics(instance)
-        expected = {'config_drive': False,
-                    'cpu_details': [{'time': 15340000000},
-                                    {'time': 1640000000},
-                                    {'time': 3040000000},
-                                    {'time': 1420000000}],
-                    'disk_details': [{'errors_count': 0,
-                                      'id': '',
-                                      'read_bytes': 688640,
-                                      'read_requests': 169,
-                                      'write_bytes': 0,
-                                      'write_requests': 0},
-                                     {'errors_count': 0,
-                                      'id': '',
-                                      'read_bytes': 688640,
-                                      'read_requests': 169,
-                                      'write_bytes': 0,
-                                      'write_requests': 0}],
-                    'driver': 'libvirt',
-                    'hypervisor_os': 'linux',
-                    'memory_details': {'maximum': 2048, 'used': 1234},
-                    'nic_details': [{'mac_address': '52:54:00:a4:38:38',
-                                     'rx_drop': 0,
-                                     'rx_errors': 0,
-                                     'rx_octets': 4408,
-                                     'rx_packets': 82,
-                                     'tx_drop': 0,
-                                     'tx_errors': 0,
-                                     'tx_octets': 0,
-                                     'tx_packets': 0},
-                                    {'mac_address': '53:55:00:a5:39:39',
-                                     'rx_drop': 0,
-                                     'rx_errors': 0,
-                                     'rx_octets': 4408,
-                                     'rx_packets': 82,
-                                     'tx_drop': 0,
-                                     'tx_errors': 0,
-                                     'tx_octets': 0,
-                                     'tx_packets': 0}],
-                    'state': 'running',
-                    'uptime': 10.,
-                    'version': '1.0'}
-        self.assertEqual(expected, actual.serialize())
+        expected = fake_diagnostics_object(with_cpus=True, with_disks=True,
+                                           with_nic=True)
+        expected.add_nic(mac_address='53:55:00:a5:39:39',
+                         rx_drop=0,
+                         rx_errors=0,
+                         rx_octets=4408,
+                         rx_packets=82,
+                         tx_drop=0,
+                         tx_errors=0,
+                         tx_octets=0,
+                         tx_packets=0)
+        self.assertDiagnosticsEqual(expected, actual)
 
     @mock.patch.object(host.Host, "list_instance_domains")
     def test_failing_vcpu_count(self, mock_list):

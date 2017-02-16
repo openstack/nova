@@ -36,8 +36,8 @@ import nova.conf
 from nova.console import type as ctype
 from nova import exception
 from nova.i18n import _LW
+from nova.objects import diagnostics as diagnostics_obj
 from nova.objects import fields as obj_fields
-from nova.virt import diagnostics
 from nova.virt import driver
 from nova.virt import hardware
 from nova.virt import virtapi
@@ -348,20 +348,28 @@ class FakeDriver(driver.ComputeDriver):
         }
 
     def get_instance_diagnostics(self, instance):
-        diags = diagnostics.Diagnostics(state='running', driver='fake',
-                hypervisor_os='fake-os', uptime=46664, config_drive=True)
-        diags.add_cpu(time=17300000000)
+        diags = diagnostics_obj.Diagnostics(
+            state='running', driver='libvirt', hypervisor='fake-hypervisor',
+            hypervisor_os='fake-os', uptime=46664, config_drive=True)
+        diags.add_cpu(id=0, time=17300000000, utilisation=15)
         diags.add_nic(mac_address='01:23:45:67:89:ab',
-                      rx_packets=26701,
                       rx_octets=2070139,
+                      rx_errors=100,
+                      rx_drop=200,
+                      rx_packets=26701,
+                      rx_rate=300,
                       tx_octets=140208,
-                      tx_packets = 662)
-        diags.add_disk(id='fake-disk-id',
-                       read_bytes=262144,
+                      tx_errors=400,
+                      tx_drop=500,
+                      tx_packets = 662,
+                      tx_rate=600)
+        diags.add_disk(read_bytes=262144,
                        read_requests=112,
                        write_bytes=5778432,
-                       write_requests=488)
-        diags.memory_details.maximum = 524288
+                       write_requests=488,
+                       errors_count=1)
+        diags.memory_details = diagnostics_obj.MemoryDiagnostics(
+            maximum=524288, used=0)
         return diags
 
     def get_all_bw_counters(self, instances):

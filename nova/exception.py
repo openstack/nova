@@ -2042,6 +2042,10 @@ class AttachInterfaceNotSupported(Invalid):
                 "instance %(instance_uuid)s.")
 
 
+class InstanceDiagnosticsNotSupported(Invalid):
+    msg_fmt = _("Instance diagnostics is not supported by compute node.")
+
+
 class InvalidReservedMemoryPagesOption(Invalid):
     msg_fmt = _("The format of the option 'reserved_huge_pages' is invalid. "
                 "(found '%(conf)s') Please refer to the nova "
