@@ -330,6 +330,32 @@ class SingleCellSimple(fixtures.Fixture):
         yield context
 
 
+class CheatingSerializer(rpc.RequestContextSerializer):
+    """A messaging.RequestContextSerializer that helps with cells.
+
+    Our normal serializer does not pass in the context like db_connection
+    and mq_connection, for good reason. We don't really want/need to
+    force a remote RPC server to use our values for this. However,
+    during unit and functional tests, since we're all in the same
+    process, we want cell-targeted RPC calls to preserve these values.
+    Unless we had per-service config and database layer state for
+    the fake services we start, this is a reasonable cheat.
+    """
+    def serialize_context(self, context):
+        """Serialize context with the db_connection inside."""
+        values = super(CheatingSerializer, self).serialize_context(context)
+        values['db_connection'] = context.db_connection
+        values['mq_connection'] = context.mq_connection
+        return values
+
+    def deserialize_context(self, values):
+        """Deserialize context and honor db_connection if present."""
+        ctxt = super(CheatingSerializer, self).deserialize_context(values)
+        ctxt.db_connection = values.pop('db_connection', None)
+        ctxt.mq_connection = values.pop('mq_connection', None)
+        return ctxt
+
+
 class CellDatabases(fixtures.Fixture):
     """Create per-cell databases for testing.
 
@@ -389,10 +415,35 @@ class CellDatabases(fixtures.Fixture):
         return ctxt_mgr
 
     def _wrap_get_context_manager(self, context):
+        try:
+            # If already targeted, we can proceed without a lock
+            if context.db_connection:
+                return context.db_connection
+        except AttributeError:
+            # Unit tests with None, FakeContext, etc
+            pass
+
         # NOTE(melwitt): This is a hack to try to deal with
         # local accesses i.e. non target_cell accesses.
         with self._cell_lock.read_lock():
             return self._last_ctxt_mgr
+
+    def _wrap_get_server(self, target, endpoints, serializer=None):
+        """Mirror rpc.get_server() but with our special sauce."""
+        serializer = CheatingSerializer(serializer)
+        return messaging.get_rpc_server(rpc.TRANSPORT,
+                                        target,
+                                        endpoints,
+                                        executor='eventlet',
+                                        serializer=serializer)
+
+    def _wrap_get_client(self, target, version_cap=None, serializer=None):
+        """Mirror rpc.get_client() but with our special sauce."""
+        serializer = CheatingSerializer(serializer)
+        return messaging.RPCClient(rpc.TRANSPORT,
+                                   target,
+                                   version_cap=version_cap,
+                                   serializer=serializer)
 
     def add_cell_database(self, connection_str, default=False):
         """Add a cell database to the fixture.
@@ -453,6 +504,13 @@ class CellDatabases(fixtures.Fixture):
         self.useFixture(fixtures.MonkeyPatch(
             'nova.context.target_cell',
             self._wrap_target_cell))
+
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.rpc.get_server',
+            self._wrap_get_server))
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.rpc.get_client',
+            self._wrap_get_client))
 
     def cleanup(self):
         for ctxt_mgr in self._ctxt_mgrs.values():
