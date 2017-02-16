@@ -22,24 +22,70 @@ POLICY_ROOT = 'os_compute_api:os-server-tags:%s'
 
 
 server_tags_policies = [
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'delete_all',
-        check_str=base.RULE_ANY),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'index',
-        check_str=base.RULE_ANY),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'update_all',
-        check_str=base.RULE_ANY),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'delete',
-        check_str=base.RULE_ANY),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'update',
-        check_str=base.RULE_ANY),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'show',
-        check_str=base.RULE_ANY),
+    base.create_rule_default(
+        POLICY_ROOT % 'delete_all',
+        base.RULE_ANY,
+        "Delete all the server tags",
+        [
+            {
+                'method': 'DELETE',
+                'path': '/servers/{server_id}/tags'
+            }
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'index',
+        base.RULE_ANY,
+        "List all tags for given server",
+        [
+            {
+                'method': 'GET',
+                'path': '/servers/{server_id}/tags'
+            }
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'update_all',
+        base.RULE_ANY,
+        "Replace all tags on specified server with the new set of tags.",
+        [
+            {
+                'method': 'PUT',
+                'path': '/servers/{server_id}/tags'
+
+            }
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'delete',
+        base.RULE_ANY,
+        "Delete a single tag from the specified server",
+        [
+            {
+                'method': 'DELETE',
+                'path': '/servers/{server_id}/tags/{tag}'
+            }
+        ]
+    ),
+    base.create_rule_default(
+        POLICY_ROOT % 'update',
+        base.RULE_ANY,
+        "Add a single tag to the server if server has no specified tag",
+        [
+            {
+                'method': 'PUT',
+                'path': '/servers/{server_id}/tags/{tag}'
+            }
+        ]
+    ),
+    base.create_rule_default(
+        POLICY_ROOT % 'show',
+        base.RULE_ANY,
+        "Check tag existence on the server.",
+        [
+            {
+                'method': 'GET',
+                'path': '/servers/{server_id}/tags/{tag}'
+            }
+        ]
+    ),
     policy.RuleDefault(
         name=POLICY_ROOT % 'discoverable',
         check_str=base.RULE_ANY),
