@@ -383,6 +383,34 @@ class FlavorAccessTestV21(test.NoDBTestCase):
         self.assertRaises(self.validation_ex,
                           remove_access, req, '2', body=body)
 
+    @mock.patch('nova.api.openstack.identity.verify_project_id',
+                side_effect=exc.HTTPBadRequest(
+                    explanation="Project ID proj2 is not a valid project."))
+    def test_add_tenant_access_with_invalid_tenant(self, mock_verify):
+        """Tests the case that the tenant does not exist in Keystone."""
+        req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
+                                      use_admin_context=True)
+        body = {'addTenantAccess': {'tenant': 'proj2'}}
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.flavor_action_controller._add_tenant_access,
+                          req, '2', body=body)
+        mock_verify.assert_called_once_with(
+            req.environ['nova.context'], 'proj2')
+
+    @mock.patch('nova.api.openstack.identity.verify_project_id',
+                side_effect=exc.HTTPBadRequest(
+                    explanation="Project ID proj2 is not a valid project."))
+    def test_remove_tenant_access_with_invalid_tenant(self, mock_verify):
+        """Tests the case that the tenant does not exist in Keystone."""
+        req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
+                                      use_admin_context=True)
+        body = {'removeTenantAccess': {'tenant': 'proj2'}}
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.flavor_action_controller._remove_tenant_access,
+                          req, '2', body=body)
+        mock_verify.assert_called_once_with(
+            req.environ['nova.context'], 'proj2')
+
 
 class FlavorAccessPolicyEnforcementV21(test.NoDBTestCase):
 
