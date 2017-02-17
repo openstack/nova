@@ -13,8 +13,9 @@
 """Tests for placement microversion handling."""
 
 import collections
-import mock
 import operator
+
+import mock
 
 # import the handlers to load up handler decorators
 import nova.api.openstack.placement.handler  # noqa

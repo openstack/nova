@@ -14,11 +14,11 @@
 
 import copy
 import re
+import sys
 
 import fixtures
 from jsonschema import exceptions as jsonschema_exc
 import six
-import sys
 
 from nova.api.openstack import api_version_request as api_version
 from nova.api import validation

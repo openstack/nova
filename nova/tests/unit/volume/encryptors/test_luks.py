@@ -15,10 +15,11 @@
 
 
 import binascii
+import uuid
+
 from castellan.common.objects import symmetric_key as key
 import mock
 from oslo_concurrency import processutils
-import uuid
 
 from nova.tests.unit.volume.encryptors import test_cryptsetup
 from nova.volume.encryptors import luks

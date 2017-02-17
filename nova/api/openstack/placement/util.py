@@ -12,6 +12,7 @@
 """Utility methods for placement API."""
 
 import functools
+
 import jsonschema
 from oslo_middleware import request_id
 from oslo_serialization import jsonutils

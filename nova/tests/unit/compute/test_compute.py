@@ -18,13 +18,13 @@
 """Tests for compute service."""
 
 import datetime
+from itertools import chain
 import operator
 import sys
 import time
 import traceback
 import uuid
 
-from itertools import chain
 import mock
 from neutronclient.common import exceptions as neutron_exceptions
 from oslo_log import log as logging

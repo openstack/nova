@@ -21,7 +21,6 @@ import hashlib
 import hmac
 import os
 import re
-import requests
 
 try:
     import cPickle as pickle
@@ -35,6 +34,7 @@ from oslo_config import cfg
 from oslo_serialization import base64
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
+import requests
 import six
 import webob
 

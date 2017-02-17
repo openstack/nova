@@ -13,10 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import socket
 
 from oslo_config import cfg
 from oslo_utils import units
-import socket
 
 xenserver_group = cfg.OptGroup('xenserver',
                                title='Xenserver Options',

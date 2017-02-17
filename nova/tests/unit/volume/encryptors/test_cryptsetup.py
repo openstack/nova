@@ -16,12 +16,12 @@
 
 import binascii
 import copy
+import uuid
 
 from castellan.common.objects import symmetric_key as key
 import mock
 from oslo_concurrency import processutils
 import six
-import uuid
 
 from nova import exception
 from nova.tests.unit.volume.encryptors import test_base

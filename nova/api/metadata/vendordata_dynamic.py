@@ -15,13 +15,13 @@
 
 """Render vendordata as stored fetched from REST microservices."""
 
-import six
 import sys
 
 from keystoneauth1 import exceptions as ks_exceptions
 from keystoneauth1 import loading as ks_loading
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+import six
 
 from nova.api.metadata import vendordata
 import nova.conf

@@ -15,6 +15,7 @@
 #    under the License.
 
 import copy
+
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import strutils
