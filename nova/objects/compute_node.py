@@ -13,7 +13,6 @@
 #    under the License.
 
 
-from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 from oslo_utils import versionutils
@@ -28,7 +27,6 @@ from nova.objects import fields
 from nova.objects import pci_device_pool
 
 CONF = nova.conf.CONF
-LOG = logging.getLogger(__name__)
 
 
 @base.NovaObjectRegistry.register
