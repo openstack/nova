@@ -10,7 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from sqlalchemy import MetaData, Table, func, select
+from sqlalchemy import MetaData, Table, and_, func, select
 
 from nova import exception
 from nova.i18n import _
@@ -27,8 +27,9 @@ def upgrade(migrate_engine):
     aggregates = Table('aggregates', meta, autoload=True)
 
     for table in (compute_nodes, aggregates):
-        count = select([func.count()]).select_from(table).where(
-            table.c.uuid == None).execute().scalar()  # NOQA
+        count = select([func.count()]).select_from(table).where(and_(
+            table.c.deleted == 0,
+            table.c.uuid == None)).execute().scalar()  # NOQA
         if count > 0:
             msg = WARNING_MSG % {
                 'count': count,
@@ -37,8 +38,9 @@ def upgrade(migrate_engine):
             raise exception.ValidationError(detail=msg)
 
     pci_devices = Table('pci_devices', meta, autoload=True)
-    count = select([func.count()]).select_from(pci_devices).where(
-        pci_devices.c.parent_addr == None).execute().scalar()  # NOQA
+    count = select([func.count()]).select_from(pci_devices).where(and_(
+        pci_devices.c.deleted == 0,
+        pci_devices.c.parent_addr == None)).execute().scalar()  # NOQA
     if count > 0:
         msg = WARNING_MSG % {
             'count': count,
