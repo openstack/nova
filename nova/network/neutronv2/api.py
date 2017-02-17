@@ -1224,12 +1224,22 @@ class API(base_api.NetworkAPI):
         # Delete the VirtualInterface for the given port_id.
         vif = objects.VirtualInterface.get_by_uuid(context, port_id)
         if vif:
+            if 'tag' in vif and vif.tag:
+                self._delete_nic_metadata(self, instance, vif)
             vif.destroy()
         else:
             LOG.debug('VirtualInterface not found for port: %s',
                       port_id, instance=instance)
 
         return self.get_instance_nw_info(context, instance)
+
+    def _delete_nic_metadata(self, instance, vif):
+        for device in instance.device_metadata.devices:
+            if (isinstance(device, objects.NetworkInterfaceMetadata)
+                    and device.mac == vif.address):
+                instance.device_metadata.devices.remove(device)
+                instance.save()
+                break
 
     def list_ports(self, context, **search_opts):
         """List ports for the client based on search options."""

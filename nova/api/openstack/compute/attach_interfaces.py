@@ -162,7 +162,8 @@ class InterfaceAttachmentController(wsgi.Controller):
         context.can(ai_policies.POLICY_ROOT % 'delete')
         port_id = id
 
-        instance = common.get_instance(self.compute_api, context, server_id)
+        instance = common.get_instance(self.compute_api, context, server_id,
+                                       expected_attrs=['device_metadata'])
         try:
             self.compute_api.detach_interface(context,
                 instance, port_id=port_id)
