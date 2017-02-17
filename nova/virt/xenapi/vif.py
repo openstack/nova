@@ -83,6 +83,9 @@ class XenVIFDriver(object):
             raise exception.NovaException(
                 reason=_("Failed to unplug vif %s") % vif)
 
+    def get_vif_interim_net_name(self, vif_id):
+        return ("net-" + vif_id)[:network_model.NIC_NAME_LEN]
+
     def hot_plug(self, vif, instance, vm_ref, vif_ref):
         """hotplug virtual interface to running instance.
         :param nova.network.model.VIF vif:
@@ -121,9 +124,19 @@ class XenVIFDriver(object):
         """
         pass
 
+    def create_vif_interim_network(self, vif):
+        pass
+
+    def delete_network_and_bridge(self, instance, vif):
+        pass
+
 
 class XenAPIBridgeDriver(XenVIFDriver):
     """VIF Driver for XenAPI that uses XenAPI to create Networks."""
+
+    # NOTE(huanxie): This driver uses linux bridge as backend for XenServer,
+    # it only supports nova network, for using neutron, you should use
+    # XenAPIOpenVswitchDriver
 
     def plug(self, instance, vif, vm_ref=None, device=None):
         if not vm_ref:
@@ -274,8 +287,7 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
         4. delete linux bridge qbr and related ports if exist
         """
         super(XenAPIOpenVswitchDriver, self).unplug(instance, vif, vm_ref)
-
-        net_name = self.get_vif_interim_net_name(vif)
+        net_name = self.get_vif_interim_net_name(vif['id'])
         network = network_utils.find_network_with_name_label(
             self._session, net_name)
         if network is None:
@@ -286,6 +298,16 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
             # for resize/migrate on local host, vifs on both of the
             # source and target VM will be connected to the same
             # interim network.
+            return
+        self.delete_network_and_bridge(instance, vif)
+
+    def delete_network_and_bridge(self, instance, vif):
+        net_name = self.get_vif_interim_net_name(vif['id'])
+        network = network_utils.find_network_with_name_label(
+            self._session, net_name)
+        if network is None:
+            LOG.debug("Didn't find network by name %s", net_name,
+                      instance=instance)
             return
         LOG.debug('destroying patch port pair for vif: vif_id=%(vif_id)s',
                   {'vif_id': vif['id']})
@@ -468,11 +490,8 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
             # Add port to interim bridge
             self._ovs_add_port(bridge_name, patch_port1)
 
-    def get_vif_interim_net_name(self, vif):
-        return ("net-" + vif['id'])[:network_model.NIC_NAME_LEN]
-
     def create_vif_interim_network(self, vif):
-        net_name = self.get_vif_interim_net_name(vif)
+        net_name = self.get_vif_interim_net_name(vif['id'])
         network_rec = {'name_label': net_name,
                    'name_description': "interim network for vif",
                    'other_config': {}}

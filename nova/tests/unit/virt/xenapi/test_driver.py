@@ -215,3 +215,23 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
         driver.detach_interface('fake_context', 'fake_instance', 'fake_vif')
         mock_detach_interface.assert_called_once_with('fake_instance',
                                                       'fake_vif')
+
+    @mock.patch.object(xenapi_driver.vmops.VMOps,
+                       'post_live_migration_at_source')
+    def test_post_live_migration_at_source(self, mock_post_live_migration):
+        driver = self._get_driver()
+        driver.post_live_migration_at_source('fake_context', 'fake_instance',
+                                             'fake_network_info')
+        mock_post_live_migration.assert_called_once_with(
+            'fake_context', 'fake_instance', 'fake_network_info')
+
+    @mock.patch.object(xenapi_driver.vmops.VMOps,
+                       'rollback_live_migration_at_destination')
+    def test_rollback_live_migration_at_destination(self, mock_rollback):
+        driver = self._get_driver()
+        driver.rollback_live_migration_at_destination(
+            'fake_context', 'fake_instance', 'fake_network_info',
+            'fake_block_device')
+        mock_rollback.assert_called_once_with('fake_instance',
+                                              'fake_network_info',
+                                              'fake_block_device')
