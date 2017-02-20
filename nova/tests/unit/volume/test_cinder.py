@@ -308,17 +308,6 @@ class CinderApiTestCase(test.NoDBTestCase):
                                                     mode='ro')
 
     @mock.patch('nova.volume.cinder.cinderclient')
-    def test_detach_v1(self, mock_cinderclient):
-        mock_volumes = mock.MagicMock()
-        mock_cinderclient.return_value = mock.MagicMock(version='1',
-                                                        volumes=mock_volumes)
-
-        self.api.detach(self.ctx, 'id1', instance_uuid='fake_uuid')
-
-        mock_cinderclient.assert_called_with(self.ctx)
-        mock_volumes.detach.assert_called_once_with('id1')
-
-    @mock.patch('nova.volume.cinder.cinderclient')
     def test_detach(self, mock_cinderclient):
         mock_volumes = mock.MagicMock()
         mock_cinderclient.return_value = mock.MagicMock(version='2',

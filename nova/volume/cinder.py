@@ -327,10 +327,6 @@ class API(object):
     def detach(self, context, volume_id, instance_uuid=None,
                attachment_id=None):
         client = cinderclient(context)
-        if client.version == '1':
-            client.volumes.detach(volume_id)
-            return
-
         if attachment_id is None:
             volume = self.get(context, volume_id)
             if volume['multiattach']:
