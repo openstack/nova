@@ -28,7 +28,7 @@ from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models as models
 from nova.db.sqlalchemy import resource_class_cache as rc_cache
 from nova import exception
-from nova.i18n import _LW
+from nova.i18n import _, _LW
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -1365,7 +1365,8 @@ class ResourceClass(base.NovaObject):
             LOG.warning(_LW("Exceeded retry limit on ID generation while "
                             "creating ResourceClass %(name)s"),
                         {'name': self.name})
-            raise exception.ResourceClassExists(resource_class=self.name)
+            msg = _("creating resource class %s") % self.name
+            raise exception.MaxDBRetriesExceeded(action=msg)
 
     @staticmethod
     @db_api.api_context_manager.writer

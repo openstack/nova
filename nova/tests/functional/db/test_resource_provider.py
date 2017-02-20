@@ -1402,7 +1402,7 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
             name='CUSTOM_TWO',
         )
         rc2.RESOURCE_CREATE_RETRY_COUNT = 3
-        self.assertRaises(exception.ResourceClassExists, rc2.create)
+        self.assertRaises(exception.MaxDBRetriesExceeded, rc2.create)
 
     def test_create_duplicate_custom(self):
         rc = objects.ResourceClass(

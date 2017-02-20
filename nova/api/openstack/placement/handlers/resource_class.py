@@ -83,6 +83,13 @@ def create_resource_class(req):
             _('Conflicting resource class already exists: %(name)s') %
             {'name': data['name']},
             json_formatter=util.json_error_formatter)
+    except exception.MaxDBRetriesExceeded:
+        raise webob.exc.HTTPConflict(
+            _('Max retries of DB transaction exceeded attempting '
+              'to create resource class: %(name)s, please'
+              'try again.') %
+            {'name': data['name']},
+            json_formatter=util.json_error_formatter)
 
     req.response.location = util.resource_class_url(req.environ, rc)
     req.response.status = 201

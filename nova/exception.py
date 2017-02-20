@@ -2002,6 +2002,11 @@ class LibguestfsCannotReadKernel(Invalid):
     msg_fmt = _("Libguestfs does not have permission to read host kernel.")
 
 
+class MaxDBRetriesExceeded(NovaException):
+    msg_fmt = _("Max retries of DB transaction exceeded attempting to "
+                "perform %(action)s.")
+
+
 class RealtimePolicyNotSupported(Invalid):
     msg_fmt = _("Realtime policy not supported by hypervisor")
 
