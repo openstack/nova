@@ -18,6 +18,7 @@ from oslo_utils import units
 from nova.objects import fields as obj_fields
 from nova import test
 from nova.tests.unit import matchers
+from nova.tests import uuidsentinel as uuids
 from nova.virt.libvirt import config
 
 
@@ -789,6 +790,62 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
         obj = config.LibvirtConfigGuestDisk()
         obj.parse_dom(xmldoc)
         self.assertEqual(obj.mirror.ready, "yes")
+
+    def test_config_disk_encryption_format(self):
+        d = config.LibvirtConfigGuestDisk()
+        e = config.LibvirtConfigGuestDiskEncryption()
+        s = config.LibvirtConfigGuestDiskEncryptionSecret()
+
+        d.driver_name = "qemu"
+        d.driver_format = "qcow2"
+        d.driver_cache = "none"
+        d.driver_io = "native"
+        d.source_type = "file"
+        d.source_path = "/tmp/hello.qcow2"
+        d.target_dev = "/dev/hda"
+        d.target_bus = "ide"
+        d.serial = uuids.serial
+        d.boot_order = "1"
+        e.format = "luks"
+        s.type = "passphrase"
+        s.uuid = uuids.secret
+        e.secret = s
+        d.encryption = e
+
+        xml = d.to_xml()
+        expected_xml = """
+            <disk type="file" device="disk">
+              <driver name="qemu" type="qcow2" cache="none" io="native"/>
+              <source file="/tmp/hello.qcow2"/>
+              <target bus="ide" dev="/dev/hda"/>
+              <serial>%s</serial>
+              <boot order="1"/>
+              <encryption format='luks'>
+                <secret type='passphrase' uuid='%s'/>
+              </encryption>
+            </disk>""" % (uuids.serial, uuids.secret)
+        self.assertXmlEqual(expected_xml, xml)
+
+    def test_config_disk_encryption_parse(self):
+        xml = """
+<disk type="file" device="disk">
+  <driver name="qemu" type="qcow2" cache="none" io="native"/>
+  <source file="/tmp/hello.qcow2"/>
+  <target bus="ide" dev="/dev/hda"/>
+  <serial>%s</serial>
+  <boot order="1"/>
+  <encryption format='luks'>
+    <secret type='passphrase' uuid='%s'/>
+  </encryption>
+</disk>""" % (uuids.serial, uuids.secret)
+
+        xmldoc = etree.fromstring(xml)
+        d = config.LibvirtConfigGuestDisk()
+        d.parse_dom(xmldoc)
+
+        self.assertEqual(d.encryption.format, "luks")
+        self.assertEqual(d.encryption.secret.type, "passphrase")
+        self.assertEqual(d.encryption.secret.uuid, uuids.secret)
 
     def test_config_boot_order_parse(self):
         xml = """
