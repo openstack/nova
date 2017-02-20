@@ -1,0 +1,6 @@
+---
+upgrade:
+  - In Ocata, the nova-scheduler would fall back to not calling the
+    placement service during instance boot if old computes were
+    running. That compatibility mode is no longer present in Pike, and
+    as such, the scheduler fully depends on the placement service.
