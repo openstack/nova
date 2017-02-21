@@ -345,7 +345,7 @@ Possible values:
 
 * `all`: will download all images.
 * `some`: will only download images that have the image_property
-          `bittorrent=true'.
+          `bittorrent=true`.
 * `none`: will turnoff downloading images via Bit Torrent.
 """),
     cfg.StrOpt('ipxe_network_name',
