@@ -52,93 +52,114 @@ class VMwareVifTestCase(test.NoDBTestCase):
         self.session = fake.FakeSession()
         self.cluster = None
 
-    def test_ensure_vlan_bridge(self):
-        self.mox.StubOutWithMock(network_util, 'get_network_with_the_name')
-        self.mox.StubOutWithMock(network_util,
-            'get_vswitch_for_vlan_interface')
-        self.mox.StubOutWithMock(network_util,
-            'check_if_vlan_interface_exists')
-        self.mox.StubOutWithMock(network_util, 'create_port_group')
-        network_util.get_network_with_the_name(self.session, 'fa0',
-            self.cluster).AndReturn(None)
-        network_util.get_vswitch_for_vlan_interface(self.session, 'vmnet0',
-            self.cluster).AndReturn('vmnet0')
-        network_util.check_if_vlan_interface_exists(self.session, 'vmnet0',
-            self.cluster).AndReturn(True)
-        network_util.create_port_group(self.session, 'fa0', 'vmnet0', 3,
-            self.cluster)
-        network_util.get_network_with_the_name(self.session, 'fa0', None)
+    @mock.patch.object(network_util, 'get_network_with_the_name',
+                       return_value=None)
+    @mock.patch.object(network_util, 'get_vswitch_for_vlan_interface',
+                       return_value='vmnet0')
+    @mock.patch.object(network_util, 'check_if_vlan_interface_exists',
+                       return_value=True)
+    @mock.patch.object(network_util, 'create_port_group')
+    def test_ensure_vlan_bridge(self,
+                                mock_create_port_group,
+                                mock_check_if_vlan_exists,
+                                mock_get_vswitch_for_vlan,
+                                mock_get_network_with_name):
 
-        self.mox.ReplayAll()
         vif.ensure_vlan_bridge(self.session, self.vif, create_vlan=True)
 
-    # FlatDHCP network mode without vlan - network doesn't exist with the host
-    def test_ensure_vlan_bridge_without_vlan(self):
-        self.mox.StubOutWithMock(network_util, 'get_network_with_the_name')
-        self.mox.StubOutWithMock(network_util,
-            'get_vswitch_for_vlan_interface')
-        self.mox.StubOutWithMock(network_util,
-            'check_if_vlan_interface_exists')
-        self.mox.StubOutWithMock(network_util, 'create_port_group')
+        expected_calls = [mock.call(self.session, 'fa0', self.cluster),
+                          mock.call(self.session, 'fa0', None)]
+        mock_get_network_with_name.assert_has_calls(expected_calls)
+        self.assertEqual(2, mock_get_network_with_name.call_count)
+        mock_get_vswitch_for_vlan.assert_called_once_with(
+            self.session, 'vmnet0', self.cluster)
+        mock_check_if_vlan_exists.assert_called_once_with(
+            self.session, 'vmnet0', self.cluster)
+        mock_create_port_group.assert_called_once_with(
+            self.session, 'fa0', 'vmnet0', 3, self.cluster)
 
-        network_util.get_network_with_the_name(self.session, 'fa0',
-            self.cluster).AndReturn(None)
-        network_util.get_vswitch_for_vlan_interface(self.session, 'vmnet0',
-            self.cluster).AndReturn('vmnet0')
-        network_util.check_if_vlan_interface_exists(self.session, 'vmnet0',
-        self.cluster).AndReturn(True)
-        network_util.create_port_group(self.session, 'fa0', 'vmnet0', 0,
-            self.cluster)
-        network_util.get_network_with_the_name(self.session, 'fa0', None)
-        self.mox.ReplayAll()
+    # FlatDHCP network mode without vlan - network doesn't exist with the host
+    @mock.patch.object(network_util, 'get_network_with_the_name',
+                       return_value=None)
+    @mock.patch.object(network_util, 'get_vswitch_for_vlan_interface',
+                       return_value='vmnet0')
+    @mock.patch.object(network_util, 'check_if_vlan_interface_exists',
+                       return_value=True)
+    @mock.patch.object(network_util, 'create_port_group')
+    def test_ensure_vlan_bridge_without_vlan(self,
+                                             mock_create_port_group,
+                                             mock_check_if_vlan_exists,
+                                             mock_get_vswitch_for_vlan,
+                                             mock_get_network_with_name):
         vif.ensure_vlan_bridge(self.session, self.vif, create_vlan=False)
+
+        expected_calls = [mock.call(self.session, 'fa0', self.cluster),
+                          mock.call(self.session, 'fa0', None)]
+        mock_get_network_with_name.assert_has_calls(expected_calls)
+        self.assertEqual(2, mock_get_network_with_name.call_count)
+        mock_get_vswitch_for_vlan.assert_called_once_with(
+            self.session, 'vmnet0', self.cluster)
+        mock_check_if_vlan_exists.assert_called_once_with(
+            self.session, 'vmnet0', self.cluster)
+        mock_create_port_group.assert_called_once_with(
+            self.session, 'fa0', 'vmnet0', 0, self.cluster)
 
     # FlatDHCP network mode without vlan - network exists with the host
     # Get vswitch and check vlan interface should not be called
-    def test_ensure_vlan_bridge_with_network(self):
-        self.mox.StubOutWithMock(network_util, 'get_network_with_the_name')
-        self.mox.StubOutWithMock(network_util,
-            'get_vswitch_for_vlan_interface')
-        self.mox.StubOutWithMock(network_util,
-            'check_if_vlan_interface_exists')
-        self.mox.StubOutWithMock(network_util, 'create_port_group')
+    @mock.patch.object(network_util, 'get_network_with_the_name')
+    @mock.patch.object(network_util, 'get_vswitch_for_vlan_interface')
+    @mock.patch.object(network_util, 'check_if_vlan_interface_exists')
+    @mock.patch.object(network_util, 'create_port_group')
+    def test_ensure_vlan_bridge_with_network(self,
+                                             mock_create_port_group,
+                                             mock_check_if_vlan_exists,
+                                             mock_get_vswitch_for_vlan,
+                                             mock_get_network_with_name
+                                             ):
         vm_network = {'name': 'VM Network', 'type': 'Network'}
-        network_util.get_network_with_the_name(self.session, 'fa0',
-            self.cluster).AndReturn(vm_network)
-        self.mox.ReplayAll()
+        mock_get_network_with_name.return_value = vm_network
         vif.ensure_vlan_bridge(self.session, self.vif, create_vlan=False)
+        mock_get_network_with_name.assert_called_once_with(self.session,
+                                                           'fa0',
+                                                           self.cluster)
+        mock_check_if_vlan_exists.assert_not_called()
+        mock_get_vswitch_for_vlan.assert_not_called()
+        mock_create_port_group.assert_not_called()
 
     # Flat network mode with DVS
-    def test_ensure_vlan_bridge_with_existing_dvs(self):
+    @mock.patch.object(network_util, 'get_network_with_the_name')
+    @mock.patch.object(network_util, 'get_vswitch_for_vlan_interface')
+    @mock.patch.object(network_util, 'check_if_vlan_interface_exists')
+    @mock.patch.object(network_util, 'create_port_group')
+    def test_ensure_vlan_bridge_with_existing_dvs(self,
+                                             mock_create_port_group,
+                                             mock_check_if_vlan_exists,
+                                             mock_get_vswitch_for_vlan,
+                                             mock_get_network_with_name
+                                             ):
         network_ref = {'dvpg': 'dvportgroup-2062',
                        'type': 'DistributedVirtualPortgroup'}
-        self.mox.StubOutWithMock(network_util, 'get_network_with_the_name')
-        self.mox.StubOutWithMock(network_util,
-            'get_vswitch_for_vlan_interface')
-        self.mox.StubOutWithMock(network_util,
-            'check_if_vlan_interface_exists')
-        self.mox.StubOutWithMock(network_util, 'create_port_group')
-
-        network_util.get_network_with_the_name(self.session, 'fa0',
-            self.cluster).AndReturn(network_ref)
-        self.mox.ReplayAll()
+        mock_get_network_with_name.return_value = network_ref
         ref = vif.ensure_vlan_bridge(self.session,
                                      self.vif,
                                      create_vlan=False)
+
         self.assertThat(ref, matchers.DictMatches(network_ref))
+        mock_get_network_with_name.assert_called_once_with(self.session,
+                                                           'fa0',
+                                                           self.cluster)
+        mock_check_if_vlan_exists.assert_not_called()
+        mock_get_vswitch_for_vlan.assert_not_called()
+        mock_create_port_group.assert_not_called()
 
-    def test_get_network_ref_flat_dhcp(self):
-        self.mox.StubOutWithMock(vif, 'ensure_vlan_bridge')
-        vif.ensure_vlan_bridge(self.session, self.vif, cluster=self.cluster,
-                               create_vlan=False)
-        self.mox.ReplayAll()
+    @mock.patch.object(vif, 'ensure_vlan_bridge')
+    def test_get_network_ref_flat_dhcp(self, mock_ensure_vlan_bridge):
         vif.get_network_ref(self.session, self.cluster, self.vif, False)
+        mock_ensure_vlan_bridge.assert_called_once_with(
+            self.session, self.vif, cluster=self.cluster, create_vlan=False)
 
-    def test_get_network_ref_bridge(self):
-        self.mox.StubOutWithMock(vif, 'ensure_vlan_bridge')
-        vif.ensure_vlan_bridge(self.session, self.vif, cluster=self.cluster,
-                               create_vlan=True)
-        self.mox.ReplayAll()
+    @mock.patch.object(vif, 'ensure_vlan_bridge')
+    def test_get_network_ref_bridge(self, mock_ensure_vlan_bridge):
         network = network_model.Network(id=0,
                                         bridge='fa0',
                                         label='fake',
@@ -156,6 +177,8 @@ class VMwareVifTestCase(test.NoDBTestCase):
                                   rxtx_cap=3)
         ])[0]
         vif.get_network_ref(self.session, self.cluster, self.vif, False)
+        mock_ensure_vlan_bridge.assert_called_once_with(
+            self.session, self.vif, cluster=self.cluster, create_vlan=True)
 
     def test_create_port_group_already_exists(self):
         def fake_call_method(module, method, *args, **kwargs):
