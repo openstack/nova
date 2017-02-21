@@ -262,18 +262,6 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.assertEqual(50, hosts[0].weight)
 
-    # TODO(sbauza): Remove that unit test in Pike
-    @mock.patch('nova.objects.Service.get_minimum_version',
-                return_value=15)
-    def test_get_all_host_states_with_newton_computes(self, mock_get_mv):
-        """If at least one compute node is older than Ocata, then we should
-        not call the placement API.
-        """
-        with mock.patch.object(self.driver.host_manager,
-                               'get_all_host_states') as mock_get_hosts:
-            self.driver._get_all_host_states(self.context, mock.sentinel.spec)
-        mock_get_hosts.assert_called_once_with(self.context)
-
     @mock.patch('nova.objects.ServiceList.get_by_binary',
                 return_value=fakes.SERVICES)
     @mock.patch('nova.objects.InstanceList.get_by_host')
@@ -282,12 +270,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get_filtered_resource_providers',
                 return_value=fakes.RESOURCE_PROVIDERS)
-    @mock.patch('nova.objects.Service.get_minimum_version',
-                return_value=objects.service.SERVICE_VERSION)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
-    def test_select_destinations(self, mock_get_extra, mock_get_mv,
+    def test_select_destinations(self, mock_get_extra,
                                  mock_get_rps, mock_get_all,
                                  mock_by_host, mock_get_by_binary):
         """select_destinations is basically a wrapper around _schedule().
@@ -333,7 +319,6 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         (host, node) = (dests[0]['host'], dests[0]['nodename'])
         self.assertEqual(host, selected_hosts[0])
         self.assertEqual(node, selected_nodes[0])
-        mock_get_mv.assert_called_once_with(mock.ANY, 'nova-compute')
 
     @mock.patch.object(filter_scheduler.FilterScheduler, '_schedule')
     def test_select_destinations_notifications(self, mock_schedule):

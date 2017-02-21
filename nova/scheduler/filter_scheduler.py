@@ -27,7 +27,6 @@ from six.moves import range
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova import objects
 from nova.objects import fields
 from nova import rpc
 from nova.scheduler import client as scheduler_client
@@ -166,18 +165,6 @@ class FilterScheduler(driver.Scheduler):
 
     def _get_all_host_states(self, context, spec_obj):
         """Template method, so a subclass can implement caching."""
-        # NOTE(sbauza): Since Newton compute nodes require a configuration
-        # change to request the Placement API, and given it goes against
-        # our rolling upgrade process, we define a graceful period for allowing
-        # clouds that are not fully upgraded to Ocata to still be able to
-        # have instances being scheduled on old nodes.
-        service_version = objects.Service.get_minimum_version(
-            context, 'nova-compute')
-        # TODO(sbauza): Remove that version check in Pike so we fully call
-        # the placement API anyway.
-        if service_version < 16:
-            LOG.debug("Skipping call to placement, as upgrade in progress.")
-            return self.host_manager.get_all_host_states(context)
         filters = {'resources': self._get_resources_per_request_spec(spec_obj)}
         reportclient = self.scheduler_client.reportclient
         rps = reportclient.get_filtered_resource_providers(filters)
