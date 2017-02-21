@@ -921,11 +921,10 @@ class ComputeTaskManager(base.Base):
             notifications.send_update_with_states(context, instance, None,
                     vm_states.BUILDING, None, None, service="conductor")
 
-            objects.InstanceAction.action_start(
-                context, instance.uuid, instance_actions.CREATE,
-                want_result=False)
-
             with obj_target_cell(instance, cell):
+                objects.InstanceAction.action_start(
+                    context, instance.uuid, instance_actions.CREATE,
+                    want_result=False)
                 instance_bdms = self._create_block_device_mapping(
                     instance.flavor, instance.uuid, block_device_mapping)
 
