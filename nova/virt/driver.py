@@ -41,8 +41,15 @@ def driver_dict_from_config(named_driver_config, *args, **kwargs):
     for driver_str in named_driver_config:
         driver_type, _sep, driver = driver_str.partition('=')
         driver_class = importutils.import_class(driver)
-        driver_registry[driver_type] = driver_class(*args, **kwargs)
-
+        try:
+            driver_registry[driver_type] = driver_class(*args, **kwargs)
+        except ValueError:
+            # NOTE(arne_r):
+            # stable/newton can not enforce os_brick versions that include
+            # the InvalidConnectorProtocol exception. Since it inherits from
+            # ValueError, this fix is still compatible with it.
+            LOG.debug('Unable to load volume driver %s. It is not '
+                      'supported on this host.', driver_type)
     return driver_registry
 
 
