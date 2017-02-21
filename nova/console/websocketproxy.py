@@ -86,7 +86,7 @@ class NovaProxyRequestHandlerBase(object):
             # NoVNC uses it's own convention that forward token
             # from the request to a cookie header, we should check
             # also for this behavior
-            hcookie = self.headers.getheader('cookie')
+            hcookie = self.headers.get('cookie')
             if hcookie:
                 cookie = Cookie.SimpleCookie()
                 for hcookie_part in hcookie.split(';'):
@@ -109,7 +109,7 @@ class NovaProxyRequestHandlerBase(object):
             raise exception.InvalidToken(token=token)
 
         # Verify Origin
-        expected_origin_hostname = self.headers.getheader('Host')
+        expected_origin_hostname = self.headers.get('Host')
         if ':' in expected_origin_hostname:
             e = expected_origin_hostname
             if '[' in e and ']' in e:
@@ -118,7 +118,7 @@ class NovaProxyRequestHandlerBase(object):
                 expected_origin_hostname = e.split(':')[0]
         expected_origin_hostnames = CONF.console.allowed_origins
         expected_origin_hostnames.append(expected_origin_hostname)
-        origin_url = self.headers.getheader('Origin')
+        origin_url = self.headers.get('Origin')
         # missing origin header indicates non-browser client which is OK
         if origin_url is not None:
             origin = urlparse.urlparse(origin_url)
