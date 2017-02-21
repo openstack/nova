@@ -4043,7 +4043,7 @@ class API(base.Base):
         self.compute_rpcapi.volume_snapshot_delete(context, bdm.instance,
                 volume_id, snapshot_id, delete_info)
 
-    def external_instance_event(self, context, instances, events):
+    def external_instance_event(self, context, instances, mappings, events):
         # NOTE(danms): The external API consumer just provides events,
         # but doesn't know where they go. We need to collate lists
         # by the host the affected instance is on and dispatch them
@@ -4061,12 +4061,17 @@ class API(base.Base):
                 events_by_host[host].append(event)
 
         for host in instances_by_host:
+            # NOTE(danms): All instances on a host must have the same
+            # mapping, so just use that
+            cell_mapping = mappings[instances_by_host[host][0].uuid]
+
             # TODO(salv-orlando): Handle exceptions raised by the rpc api layer
             # in order to ensure that a failure in processing events on a host
             # will not prevent processing events on other hosts
-            self.compute_rpcapi.external_instance_event(
-                context, instances_by_host[host], events_by_host[host],
-                host=host)
+            with nova_context.target_cell(context, cell_mapping):
+                self.compute_rpcapi.external_instance_event(
+                    context, instances_by_host[host], events_by_host[host],
+                    host=host)
 
     def _get_relevant_hosts(self, context, instance):
         hosts = set()

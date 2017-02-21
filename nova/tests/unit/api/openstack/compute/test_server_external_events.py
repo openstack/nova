@@ -88,7 +88,7 @@ class ServerExternalEventsTestV21(test.NoDBTestCase):
         for inst in api_method.call_args_list[0][0][1]:
             expected_uuids.remove(inst.uuid)
         self.assertEqual([], expected_uuids)
-        for event in api_method.call_args_list[0][0][2]:
+        for event in api_method.call_args_list[0][0][3]:
             expected_events.remove(event.name)
         self.assertEqual([], expected_events)
         return result, code
