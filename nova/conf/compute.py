@@ -804,8 +804,7 @@ Possible values:
 
 Related options:
 
-* ``block_device_allocate_retries'' in compute_manager_opts
-      group.
+* ``block_device_allocate_retries`` in compute_manager_opts group.
 """),
     cfg.IntOpt('scheduler_instance_sync_interval',
         default=120,
