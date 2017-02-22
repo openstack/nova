@@ -26,7 +26,6 @@ import traceback
 import enum
 from keystoneauth1 import exceptions as ks_exc
 from keystoneauth1 import loading as keystone
-from keystoneauth1 import session
 from oslo_config import cfg
 import prettytable
 from sqlalchemy import func as sqlfunc
@@ -184,7 +183,9 @@ class UpgradeCommands(object):
                      'interface': CONF.placement.os_interface}
         auth = keystone.load_auth_from_conf_options(
             CONF, 'placement')
-        client = session.Session(auth=auth)
+        client = keystone.load_session_from_conf_options(
+            CONF, 'placement', auth=auth)
+
         return client.get(path, endpoint_filter=ks_filter).json()
 
     def _check_placement(self):
