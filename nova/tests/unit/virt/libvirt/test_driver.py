@@ -5956,6 +5956,17 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                       ("disk", "virtio", "vdb"),
                                       ("disk", "virtio", "vdc")))
 
+    @mock.patch.object(host.Host, 'get_guest')
+    def test_instance_exists(self, mock_get_guest):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertTrue(drvr.instance_exists(None))
+
+        mock_get_guest.side_effect = exception.InstanceNotFound
+        self.assertFalse(drvr.instance_exists(None))
+
+        mock_get_guest.side_effect = exception.InternalError
+        self.assertFalse(drvr.instance_exists(None))
+
     @mock.patch.object(host.Host, "list_instance_domains")
     def test_list_instances(self, mock_list):
         vm1 = FakeVirtDomain(id=3, name="instance00000001")
