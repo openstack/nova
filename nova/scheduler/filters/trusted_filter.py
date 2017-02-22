@@ -154,14 +154,6 @@ class ComputeAttestationCache(object):
             host = compute.hypervisor_hostname
             self._init_cache_entry(host)
 
-        # TODO(sfinucan): Remove this warning when the named config options
-        # gains a 'min' parameter.
-        if CONF.trusted_computing.attestation_auth_timeout < 0:
-            LOG.warning(_LW('Future versions of nova will restrict the '
-                '"trusted_computing.attestation_auth_timeout" config option '
-                'to values >=0. Update your configuration file to mitigate '
-                'future upgrade issues.'))
-
     def _cache_valid(self, host):
         cachevalid = False
         if host in self.compute_nodes:
