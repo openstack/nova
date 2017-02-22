@@ -54,7 +54,7 @@ tests:
       uuid: $ENVIRON['RP_UUID']
   status: 409
   response_strings:
-      - Conflicting resource provider already exists
+      - Conflicting resource provider $ENVIRON['RP_NAME'] already exists
   response_json_paths:
       $.errors[0].title: Conflict
 
@@ -67,7 +67,7 @@ tests:
       uuid: ada30fb5-566d-4fe1-b43b-28a9e988790c
   status: 409
   response_strings:
-      - Conflicting resource provider already exists
+      - Conflicting resource provider $ENVIRON['RP_NAME'] already exists
   response_json_paths:
       $.errors[0].title: Conflict
 

@@ -185,8 +185,8 @@ def create_resource_provider(req):
         resource_provider.create()
     except db_exc.DBDuplicateEntry as exc:
         raise webob.exc.HTTPConflict(
-            _('Conflicting resource provider already exists: %(error)s') %
-            {'error': exc})
+            _('Conflicting resource provider %(name)s already exists.') %
+            {'name': data['name']})
     except exception.ObjectActionError as exc:
         raise webob.exc.HTTPBadRequest(
             _('Unable to create resource provider %(rp_uuid)s: %(error)s') %
@@ -331,8 +331,8 @@ def update_resource_provider(req):
         resource_provider.save()
     except db_exc.DBDuplicateEntry as exc:
         raise webob.exc.HTTPConflict(
-            _('Conflicting resource provider already exists: %(error)s') %
-            {'error': exc})
+            _('Conflicting resource provider %(name)s already exists.') %
+            {'name': data['name']})
     except exception.ObjectActionError as exc:
         raise webob.exc.HTTPBadRequest(
             _('Unable to save resource provider %(rp_uuid)s: %(error)s') %
