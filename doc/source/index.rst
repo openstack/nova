@@ -139,10 +139,10 @@ decisions, so its easier for people to engage in the debates about
 the future of Nova's architecture. This is all part of Open Design and
 Open Development.
 
+.. NOTE: keep this list sorted by title
+
 .. toctree::
    :maxdepth: 1
-
-   .. NOTE: keep this list sorted by title
 
    addmethod.openstackapi
    rpc
