@@ -2968,7 +2968,7 @@ memory_mb_used:
   type: integer
 message:
   description: |
-    The error message message about this action when error occurred.
+    The related error message for when an action fails.
   in: body
   required: true
   type: string
