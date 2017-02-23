@@ -142,18 +142,20 @@ Open Development.
 .. toctree::
    :maxdepth: 1
 
-   aggregates
-   threading
-   vmstates
-   i18n
-   filter_scheduler
+   .. NOTE: keep this list sorted by title
+
+   addmethod.openstackapi
    rpc
    block_device_mapping
-   addmethod.openstackapi
    conductor
+   filter_scheduler
+   aggregates
+   i18n
    notifications
    placement
    placement_dev
+   threading
+   vmstates
 
 Architecture Evolution Plans
 -----------------------------
