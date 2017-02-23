@@ -2252,7 +2252,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             versionutils.convert_version_to_int(
                 libvirt_driver.MIN_LIBVIRT_NUMA_VERSION) - 1,
             versionutils.convert_version_to_int(
-                libvirt_driver.MIN_QEMU_NUMA_HUGEPAGE_VERSION),
+                libvirt_driver.MIN_QEMU_VERSION),
             host.HV_DRIVER_QEMU,
             fields.Architecture.X86_64,
             exception.NUMATopologyUnsupported,
@@ -2265,7 +2265,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             versionutils.convert_version_to_int(
                 libvirt_driver.MIN_LIBVIRT_NUMA_VERSION_PPC) - 1,
             versionutils.convert_version_to_int(
-                libvirt_driver.MIN_QEMU_NUMA_HUGEPAGE_VERSION),
+                libvirt_driver.MIN_QEMU_VERSION),
             host.HV_DRIVER_QEMU,
             fields.Architecture.PPC64LE,
             exception.NUMATopologyUnsupported,
@@ -2278,7 +2278,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             versionutils.convert_version_to_int(
                 libvirt_driver.BAD_LIBVIRT_NUMA_VERSIONS[0]),
             versionutils.convert_version_to_int(
-                libvirt_driver.MIN_QEMU_NUMA_HUGEPAGE_VERSION),
+                libvirt_driver.MIN_QEMU_VERSION),
             host.HV_DRIVER_QEMU,
             fields.Architecture.X86_64,
             exception.NUMATopologyUnsupported,
@@ -2298,19 +2298,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # assert the version is logged properly
         self.assertEqual('1.2.9.2', mock_warn.call_args[0][1])
 
-    def test_get_guest_config_numa_old_version_qemu(self):
-        self.flags(virt_type='kvm', group='libvirt')
-
-        self._test_get_guest_config_numa_unsupported(
-            versionutils.convert_version_to_int(
-                libvirt_driver.MIN_LIBVIRT_NUMA_VERSION),
-            versionutils.convert_version_to_int(
-                libvirt_driver.MIN_QEMU_NUMA_HUGEPAGE_VERSION) - 1,
-            host.HV_DRIVER_QEMU,
-            fields.Architecture.X86_64,
-            exception.NUMATopologyUnsupported,
-            None)
-
     def test_get_guest_config_numa_other_arch_qemu(self):
         self.flags(virt_type='kvm', group='libvirt')
 
@@ -2318,7 +2305,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             versionutils.convert_version_to_int(
                 libvirt_driver.MIN_LIBVIRT_NUMA_VERSION),
             versionutils.convert_version_to_int(
-                libvirt_driver.MIN_QEMU_NUMA_HUGEPAGE_VERSION),
+                libvirt_driver.MIN_QEMU_VERSION),
             host.HV_DRIVER_QEMU,
             fields.Architecture.S390,
             exception.NUMATopologyUnsupported,
@@ -2342,23 +2329,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             versionutils.convert_version_to_int(
                 libvirt_driver.MIN_LIBVIRT_HUGEPAGE_VERSION) - 1,
             versionutils.convert_version_to_int(
-                libvirt_driver.MIN_QEMU_NUMA_HUGEPAGE_VERSION),
+                libvirt_driver.MIN_QEMU_VERSION),
             host.HV_DRIVER_QEMU,
             fields.Architecture.X86_64,
             exception.MemoryPagesUnsupported,
-            2048)
-
-    def test_get_guest_config_numa_old_pages_qemu(self):
-        self.flags(virt_type='kvm', group='libvirt')
-
-        self._test_get_guest_config_numa_unsupported(
-            versionutils.convert_version_to_int(
-                libvirt_driver.MIN_LIBVIRT_HUGEPAGE_VERSION),
-            versionutils.convert_version_to_int(
-                libvirt_driver.MIN_QEMU_NUMA_HUGEPAGE_VERSION) - 1,
-            host.HV_DRIVER_QEMU,
-            fields.Architecture.X86_64,
-            exception.NUMATopologyUnsupported,
             2048)
 
     @mock.patch.object(
@@ -12698,7 +12672,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_lib_version.return_value = versionutils.convert_version_to_int(
                 libvirt_driver.MIN_LIBVIRT_HUGEPAGE_VERSION) - 1
         mock_version.return_value = versionutils.convert_version_to_int(
-                libvirt_driver.MIN_QEMU_NUMA_HUGEPAGE_VERSION)
+                libvirt_driver.MIN_QEMU_VERSION)
         mock_type.return_value = host.HV_DRIVER_QEMU
         self._test_get_host_numa_topology(mempages=False)
 
@@ -12729,7 +12703,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_lib_version.return_value = versionutils.convert_version_to_int(
                 libvirt_driver.MIN_LIBVIRT_NUMA_VERSION) - 1
         mock_version.return_value = versionutils.convert_version_to_int(
-                libvirt_driver.MIN_QEMU_NUMA_HUGEPAGE_VERSION)
+                libvirt_driver.MIN_QEMU_VERSION)
         mock_type.return_value = host.HV_DRIVER_QEMU
         self.assertIsNone(drvr._get_host_numa_topology())
 
@@ -12744,7 +12718,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_lib_version.return_value = versionutils.convert_version_to_int(
                 libvirt_driver.MIN_LIBVIRT_NUMA_VERSION)
         mock_version.return_value = versionutils.convert_version_to_int(
-                libvirt_driver.MIN_QEMU_NUMA_HUGEPAGE_VERSION)
+                libvirt_driver.MIN_QEMU_VERSION)
         mock_type.return_value = host.HV_DRIVER_XEN
         self.assertIsNone(drvr._get_host_numa_topology())
 

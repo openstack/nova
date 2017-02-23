@@ -234,10 +234,6 @@ MIN_LIBVIRT_HUGEPAGE_VERSION = (1, 2, 8)
 # NUMA
 # See bug #1438226
 BAD_LIBVIRT_CPU_POLICY_VERSIONS = [(1, 2, 10)]
-# qemu 2.1 introduces support for pinning memory on host
-# NUMA nodes, along with the ability to specify hugepage
-# sizes per guest NUMA node
-MIN_QEMU_NUMA_HUGEPAGE_VERSION = (2, 1, 0)
 
 # Virtuozzo driver support
 MIN_VIRTUOZZO_VERSION = (7, 0, 0)
@@ -5343,8 +5339,7 @@ class LibvirtDriver(driver.ComputeDriver):
         for archs, libvirt_ver in support_matrix.items():
             if ((caps.host.cpu.arch in archs) and
                     self._host.has_min_version(libvirt_ver,
-                                               MIN_QEMU_NUMA_HUGEPAGE_VERSION,
-                                               host.HV_DRIVER_QEMU)):
+                                               hv_type=host.HV_DRIVER_QEMU)):
                 is_supported = True
         return is_supported
 
@@ -5359,8 +5354,7 @@ class LibvirtDriver(driver.ComputeDriver):
         caps = self._host.get_capabilities()
         return ((caps.host.cpu.arch in supported_archs) and
                 self._host.has_min_version(MIN_LIBVIRT_HUGEPAGE_VERSION,
-                                           MIN_QEMU_NUMA_HUGEPAGE_VERSION,
-                                           host.HV_DRIVER_QEMU))
+                                           hv_type=host.HV_DRIVER_QEMU))
 
     def _get_host_numa_topology(self):
         if not self._has_numa_support():
