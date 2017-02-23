@@ -357,6 +357,7 @@ class HostManager(object):
         self._instance_info = {}
         if self.track_instance_changes:
             self._init_instance_info()
+        self.cells = None
 
     def _load_filters(self):
         return CONF.filter_scheduler.enabled_filters
@@ -576,31 +577,55 @@ class HostManager(object):
         return self.weight_handler.get_weighed_objects(self.weighers,
                 hosts, spec_obj)
 
+    def _get_computes_all_cells(self, context, compute_uuids=None):
+        if not self.cells:
+            # NOTE(danms): global list of cells cached forever right now
+            self.cells = objects.CellMappingList.get_all(context)
+            LOG.debug('Found %(count)i cells: %(cells)s',
+                      {'count': len(self.cells),
+                       'cells': ', '.join([c.uuid for c in self.cells])})
+        compute_nodes = []
+        services = {}
+        for cell in self.cells:
+            LOG.debug('Getting compute nodes and services for cell %(cell)s',
+                      {'cell': cell})
+            with context_module.target_cell(context, cell):
+                if compute_uuids is None:
+                    compute_nodes.extend(objects.ComputeNodeList.get_all(
+                        context))
+                else:
+                    compute_nodes.extend(
+                        objects.ComputeNodeList.get_all_by_uuids(
+                            context, compute_uuids))
+                services.update(
+                    {service.host: service
+                     for service in objects.ServiceList.get_by_binary(
+                             context, 'nova-compute',
+                             include_disabled=True)})
+        return compute_nodes, services
+
     def get_host_states_by_uuids(self, context, compute_uuids):
-        compute_nodes = objects.ComputeNodeList.get_all_by_uuids(context,
-                                                                 compute_uuids)
-        return self._get_host_states(context, compute_nodes)
+        compute_nodes, services = self._get_computes_all_cells(context,
+                                                               compute_uuids)
+        return self._get_host_states(context, compute_nodes, services)
 
     def get_all_host_states(self, context):
         """Returns a list of HostStates that represents all the hosts
         the HostManager knows about. Also, each of the consumable resources
         in HostState are pre-populated and adjusted based on data in the db.
         """
-        compute_nodes = objects.ComputeNodeList.get_all(context)
-        return self._get_host_states(context, compute_nodes)
+        compute_nodes, services = self._get_computes_all_cells(context)
+        return self._get_host_states(context, compute_nodes, services)
 
-    def _get_host_states(self, context, compute_nodes):
+    def _get_host_states(self, context, compute_nodes, services):
         """Returns a tuple of HostStates given a list of computes.
 
         Also updates the HostStates internal mapping for the HostManager.
         """
-        service_refs = {service.host: service
-                        for service in objects.ServiceList.get_by_binary(
-                            context, 'nova-compute', include_disabled=True)}
         # Get resource usage across the available compute nodes:
         seen_nodes = set()
         for compute in compute_nodes:
-            service = service_refs.get(compute.host)
+            service = services.get(compute.host)
 
             if not service:
                 LOG.warning(_LW(

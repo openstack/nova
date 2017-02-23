@@ -27,6 +27,7 @@ import six
 import nova
 from nova.compute import task_states
 from nova.compute import vm_states
+from nova import context as nova_context
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
@@ -852,6 +853,58 @@ class HostManagerTestCase(test.NoDBTestCase):
         self.host_manager._recreate_instance_info.assert_called_once_with(
                 'fake_context', host_name)
         self.assertFalse(new_info['updated'])
+
+    @mock.patch('nova.objects.CellMappingList.get_all')
+    @mock.patch('nova.objects.ComputeNodeList.get_all')
+    @mock.patch('nova.objects.ServiceList.get_by_binary')
+    def test_get_computes_all_cells(self, mock_sl, mock_cn, mock_cm):
+        mock_cm.return_value = [
+            objects.CellMapping(uuid=uuids.cell1,
+                                db_connection='none://1',
+                                transport_url='none://'),
+            objects.CellMapping(uuid=uuids.cell2,
+                                db_connection='none://2',
+                                transport_url='none://'),
+        ]
+        mock_sl.side_effect = [
+            [objects.ServiceList(host='foo')],
+            [objects.ServiceList(host='bar')],
+        ]
+        mock_cn.side_effect = [
+            [objects.ComputeNode(host='foo')],
+            [objects.ComputeNode(host='bar')],
+        ]
+        context = nova_context.RequestContext('fake', 'fake')
+        cns, srv = self.host_manager._get_computes_all_cells(context)
+        self.assertEqual(['bar', 'foo'],
+                         sorted([cn.host for cn in cns]))
+        self.assertEqual(['bar', 'foo'], sorted(list(srv.keys())))
+
+    @mock.patch('nova.objects.CellMappingList.get_all')
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids')
+    @mock.patch('nova.objects.ServiceList.get_by_binary')
+    def test_get_computes_all_cells_uuid(self, mock_sl, mock_cn, mock_cm):
+        mock_cm.return_value = [
+            objects.CellMapping(uuid=uuids.cell1,
+                                db_connection='none://1',
+                                transport_url='none://'),
+            objects.CellMapping(uuid=uuids.cell2,
+                                db_connection='none://2',
+                                transport_url='none://'),
+        ]
+        mock_sl.side_effect = [
+            [objects.ServiceList(host='foo')],
+            [objects.ServiceList(host='bar')],
+        ]
+        mock_cn.side_effect = [
+            [objects.ComputeNode(host='foo')],
+            [objects.ComputeNode(host='bar')],
+        ]
+        context = nova_context.RequestContext('fake', 'fake')
+        cns, srv = self.host_manager._get_computes_all_cells(context, [])
+        self.assertEqual(['bar', 'foo'],
+                         sorted([cn.host for cn in cns]))
+        self.assertEqual(['bar', 'foo'], sorted(list(srv.keys())))
 
 
 class HostManagerChangedNodesTestCase(test.NoDBTestCase):
