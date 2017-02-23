@@ -16,6 +16,7 @@
 
 import contextlib
 import copy
+import functools
 
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -51,6 +52,35 @@ from nova import utils
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
+
+
+def targets_cell(fn):
+    """Wrap a method and automatically target the instance's cell.
+
+    This decorates a method with signature func(self, context, instance, ...)
+    and automatically targets the context with the instance's cell
+    mapping. It does this by looking up the InstanceMapping.
+    """
+    @functools.wraps(fn)
+    def wrapper(self, context, *args, **kwargs):
+        instance = kwargs.get('instance') or args[0]
+        try:
+            im = objects.InstanceMapping.get_by_instance_uuid(
+                context, instance.uuid)
+        except exception.InstanceMappingNotFound:
+            LOG.error(_LE('InstanceMapping not found, unable to target cell'),
+                      instance=instance)
+            im = None
+        else:
+            LOG.debug('Targeting cell %(cell)s for conductor method %(meth)s',
+                      {'cell': im.cell_mapping,
+                       'meth': fn.__name__})
+            # NOTE(danms): Target our context to the cell for the rest of
+            # this request, so that none of the subsequent code needs to
+            # care about it.
+            nova_context.set_target_cell(context, im.cell_mapping)
+        return fn(self, context, *args, **kwargs)
+    return wrapper
 
 
 class ConductorManager(manager.Manager):
@@ -221,6 +251,7 @@ class ComputeTaskManager(base.Base):
         exception.MigrationPreCheckClientException,
         exception.LiveMigrationWithOldNovaNotSupported,
         exception.UnsupportedPolicyException)
+    @targets_cell
     @wrap_instance_event(prefix='conductor')
     def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
             flavor, block_migration, disk_over_commit, reservations=None,
@@ -494,6 +525,9 @@ class ComputeTaskManager(base.Base):
                 inst_mapping.save()
         return inst_mapping
 
+    # NOTE(danms): This is never cell-targeted because it is only used for
+    # cellsv1 (which does not target cells directly) and n-cpu reschedules
+    # (which go to the cell conductor and thus are always cell-specific).
     def build_instances(self, context, instances, image, filter_properties,
             admin_password, injected_files, requested_networks,
             security_groups, block_device_mapping=None, legacy_bdm=True):
@@ -597,6 +631,7 @@ class ComputeTaskManager(base.Base):
         hosts = self.scheduler_client.select_destinations(context, spec_obj)
         return hosts
 
+    @targets_cell
     def unshelve_instance(self, context, instance, request_spec=None):
         sys_meta = instance.system_metadata
 
@@ -686,6 +721,7 @@ class ComputeTaskManager(base.Base):
             instance.save()
             return
 
+    @targets_cell
     def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
                          injected_files, new_pass, orig_sys_metadata,
                          bdms, recreate, on_shared_storage,
