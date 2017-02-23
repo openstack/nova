@@ -3558,11 +3558,20 @@ personality:
   type: string
 policies:
   description: |
-    A list of one or more policy names to associate with the server group. The list
-    must contain at least one policy name. The current valid policy names are ``anti-affinity``
-    , ``affinity``, ``soft-anti-affinity`` and ``soft-affinity``, the latter two were
-    added in microversion 2.15.  Each policy name must be a non-empty string with
-    no leading or trailing spaces. Maximum length is 255 characters.
+    A list of exactly one policy name to associate with the server group. The
+    current valid policy names are:
+
+    - ``anti-affinity`` - servers in this group must be scheduled to
+      different hosts.
+    - ``affinity`` - servers in this group must be scheduled to the same host.
+    - ``soft-anti-affinity`` - servers in this group should be scheduled to
+      different hosts if possible, but if not possible then they should still
+      be scheduled instead of resulting in a build failure. This policy was
+      added in microversion 2.15.
+    - ``soft-affinity`` - servers in this group should be scheduled to the same
+      host if possible, but if not possible then they should still be scheduled
+      instead of resulting in a build failure. This policy was added in
+      microversion 2.15.
   in: body
   required: true
   type: array
