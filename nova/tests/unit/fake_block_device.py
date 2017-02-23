@@ -48,6 +48,7 @@ class FakeDbBlockDeviceDict(block_device.BlockDeviceDict):
                           'deleted': 0}
         if not anon:
             fake_db_fields['id'] = db_id
+            fake_db_fields['attachment_id'] = None
             fake_db_fields['created_at'] = timeutils.utcnow()
             fake_db_fields['updated_at'] = timeutils.utcnow()
         self.update(fake_db_fields)
