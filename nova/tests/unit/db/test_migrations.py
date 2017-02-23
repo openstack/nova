@@ -943,6 +943,10 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
                                 'instances_updated_at_project_id_idx',
                                 ['updated_at', 'project_id'])
 
+    def _check_358(self, engine, data):
+        self.assertColumnExists(engine, 'block_device_mapping',
+                                'attachment_id')
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,
