@@ -189,6 +189,25 @@ class ServersControllerTest(ControllerTest):
                                        use_admin_context=use_admin_context,
                                        version=self.wsgi_api_version)
 
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
+    def test_cellsv1_instance_lookup_no_target(self, mock_get_im,
+                                               mock_get_inst):
+        self.flags(enable=True, group='cells')
+        ctxt = context.RequestContext('fake', 'fake')
+        self.controller._get_instance(ctxt, 'foo')
+        self.assertFalse(mock_get_im.called)
+        self.assertIsNone(ctxt.db_connection)
+
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
+    def test_instance_lookup_targets(self, mock_get_im, mock_get_inst):
+        ctxt = context.RequestContext('fake', 'fake')
+        mock_get_im.return_value.cell_mapping.database_connection = uuids.cell1
+        self.controller._get_instance(ctxt, 'foo')
+        mock_get_im.assert_called_once_with(ctxt, 'foo')
+        self.assertIsNotNone(ctxt.db_connection)
+
     def test_requested_networks_prefix(self):
         self.flags(use_neutron=True)
         uuid = 'br-00000000-0000-0000-0000-000000000000'
@@ -1761,6 +1780,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
         self.req.headers["content-type"] = "application/json"
         self.req_user_id = self.req.environ['nova.context'].user_id
         self.req_project_id = self.req.environ['nova.context'].project_id
+        self.useFixture(nova_fixtures.SingleCellSimple())
 
         def fake_get(ctrl, ctxt, uuid):
             if uuid == 'test_inst':
