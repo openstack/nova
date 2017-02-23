@@ -217,12 +217,6 @@ MIN_LIBVIRT_NUMA_VERSION_PPC = (1, 2, 19)
 # Versions of libvirt with known NUMA topology issues
 # See bug #1449028
 BAD_LIBVIRT_NUMA_VERSIONS = [(1, 2, 9, 2)]
-# While earlier versions could support hugepage backed
-# guests, not until 1.2.8 was there the ability to request
-# a particular huge page size. Without this the scheduler
-# cannot make guaranteed decisions, as the huge page size
-# used by the guest may not match what was requested
-MIN_LIBVIRT_HUGEPAGE_VERSION = (1, 2, 8)
 # Versions of libvirt with broken cpu pinning support. This excludes
 # versions of libvirt with broken NUMA support since pinning needs
 # NUMA
@@ -4225,7 +4219,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return membacking
 
     def _get_memory_backing_hugepages_support(self, inst_topology, numatune):
-        if not self._has_hugepage_support():
+        if not self._has_numa_support():
             # We should not get here, since we should have avoided
             # reporting NUMA topology from _get_host_numa_topology
             # in the first place. Just in case of a scheduler
@@ -5337,19 +5331,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return False
 
-    def _has_hugepage_support(self):
-        # This means that the host can support multiple values for the size
-        # field in LibvirtConfigGuestMemoryBackingPage
-        supported_archs = [fields.Architecture.I686,
-                           fields.Architecture.X86_64,
-                           fields.Architecture.AARCH64,
-                           fields.Architecture.PPC64LE,
-                           fields.Architecture.PPC64]
-        caps = self._host.get_capabilities()
-        return ((caps.host.cpu.arch in supported_archs) and
-                self._host.has_min_version(MIN_LIBVIRT_HUGEPAGE_VERSION,
-                                           hv_type=host.HV_DRIVER_QEMU))
-
     def _get_host_numa_topology(self):
         if not self._has_numa_support():
             return
@@ -5384,16 +5365,14 @@ class LibvirtDriver(driver.ComputeDriver):
             # Filter out singles and empty sibling sets that may be left
             siblings = [sib for sib in siblings if len(sib) > 1]
 
-            mempages = []
-            if self._has_hugepage_support():
-                mempages = [
-                    objects.NUMAPagesTopology(
-                        size_kb=pages.size,
-                        total=pages.total,
-                        used=0,
-                        reserved=_get_reserved_memory_for_cell(
-                            self, cell.id, pages.size))
-                    for pages in cell.mempages]
+            mempages = [
+                objects.NUMAPagesTopology(
+                    size_kb=pages.size,
+                    total=pages.total,
+                    used=0,
+                    reserved=_get_reserved_memory_for_cell(
+                        self, cell.id, pages.size))
+                for pages in cell.mempages]
 
             cell = objects.NUMACell(id=cell.id, cpuset=cpuset,
                                     memory=cell.memory / units.Ki,
