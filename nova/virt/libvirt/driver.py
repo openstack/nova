@@ -268,10 +268,6 @@ MIN_QEMU_VIRTLOGD = (2, 7, 0)
 MIN_LIBVIRT_KVM_PPC64_VERSION = (1, 2, 12)
 MIN_QEMU_PPC64_VERSION = (2, 1, 0)
 
-# Auto converge support
-MIN_LIBVIRT_AUTO_CONVERGE_VERSION = (1, 2, 3)
-MIN_QEMU_AUTO_CONVERGE = (1, 6, 0)
-
 # Names of the types that do not get compressed during migration
 NO_COMPRESSION_TYPES = ('qcow2',)
 
@@ -602,18 +598,13 @@ class LibvirtDriver(driver.ComputeDriver):
         return migration_flags
 
     def _handle_live_migration_auto_converge(self, migration_flags):
-        if self._host.has_min_version(lv_ver=MIN_LIBVIRT_AUTO_CONVERGE_VERSION,
-                                      hv_ver=MIN_QEMU_AUTO_CONVERGE):
-            if (self._is_post_copy_available() and
-                    (migration_flags & libvirt.VIR_MIGRATE_POSTCOPY) != 0):
-                LOG.info(_LI('The live_migration_permit_post_copy is set to '
-                             'True and post copy live migration is available '
-                             'so auto-converge will not be in use.'))
-            elif CONF.libvirt.live_migration_permit_auto_converge:
-                migration_flags |= libvirt.VIR_MIGRATE_AUTO_CONVERGE
+        if (self._is_post_copy_available() and
+                (migration_flags & libvirt.VIR_MIGRATE_POSTCOPY) != 0):
+            LOG.info(_LI('The live_migration_permit_post_copy is set to '
+                         'True and post copy live migration is available '
+                         'so auto-converge will not be in use.'))
         elif CONF.libvirt.live_migration_permit_auto_converge:
-            LOG.info(_LI('The live_migration_permit_auto_converge is set '
-                            'to True, but it is not supported.'))
+            migration_flags |= libvirt.VIR_MIGRATE_AUTO_CONVERGE
         return migration_flags
 
     def _parse_migration_flags(self):

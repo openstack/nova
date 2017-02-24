@@ -422,8 +422,7 @@ This option allows nova to start live migration with auto converge on.
 Auto converge throttles down CPU if a progress of on-going live migration
 is slow. Auto converge will only be used if this flag is set to True and
 post copy is not permitted or post copy is unavailable due to the version
-of libvirt and QEMU in use. Auto converge requires libvirt>=1.2.3 and
-QEMU>=1.6.0.
+of libvirt and QEMU in use.
 
 Related options:
 
