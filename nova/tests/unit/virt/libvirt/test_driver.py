@@ -6080,13 +6080,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.assertIsNone(drvr.quiesce(self.context, instance, image_meta))
             mock_fsfreeze.assert_called_once_with()
 
-    def test_quiesce_not_supported(self):
-        self.create_fake_libvirt_mock()
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
-        instance = objects.Instance(**self.test_instance)
-        self.assertRaises(exception.InstanceQuiesceNotSupported,
-                      drvr.quiesce, self.context, instance, None)
-
     @mock.patch.object(host.Host, "has_min_version", return_value=True)
     def test_unquiesce(self, mock_has_min_version):
         self.create_fake_libvirt_mock(getLibVersion=lambda: 1002005,
@@ -17830,16 +17823,6 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         image_meta = objects.ImageMeta.from_dict(
             {"properties": {
                 "hw_qemu_guest_agent": "yes"}})
-        self.assertRaises(exception.InstanceQuiesceNotSupported,
-                          self.drvr._can_quiesce, instance, image_meta)
-
-    @mock.patch.object(host.Host,
-                       'has_min_version', return_value=False)
-    def test_can_quiesce_bad_ver(self, ver):
-        self.flags(virt_type='kvm', group='libvirt')
-        instance = objects.Instance(**self.inst)
-        image_meta = {"properties": {
-            "hw_qemu_guest_agent": "yes"}}
         self.assertRaises(exception.InstanceQuiesceNotSupported,
                           self.drvr._can_quiesce, instance, image_meta)
 

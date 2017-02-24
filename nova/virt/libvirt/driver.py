@@ -240,8 +240,6 @@ BAD_LIBVIRT_CPU_POLICY_VERSIONS = [(1, 2, 10)]
 # NUMA nodes, along with the ability to specify hugepage
 # sizes per guest NUMA node
 MIN_QEMU_NUMA_HUGEPAGE_VERSION = (2, 1, 0)
-# fsFreeze/fsThaw requirement
-MIN_LIBVIRT_FSFREEZE_VERSION = (1, 2, 5)
 
 # UEFI booting support
 MIN_LIBVIRT_UEFI_VERSION = (1, 2, 9)
@@ -1689,8 +1687,7 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.InternalError(msg)
 
     def _can_quiesce(self, instance, image_meta):
-        if (CONF.libvirt.virt_type not in ('kvm', 'qemu') or
-            not self._host.has_min_version(MIN_LIBVIRT_FSFREEZE_VERSION)):
+        if CONF.libvirt.virt_type not in ('kvm', 'qemu'):
             raise exception.InstanceQuiesceNotSupported(
                 instance_id=instance.uuid)
 
