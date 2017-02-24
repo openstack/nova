@@ -370,8 +370,12 @@ def set_target_cell(context, cell_mapping):
     """
     # avoid circular import
     from nova import db
+    from nova import rpc
     db_connection_string = cell_mapping.database_connection
     context.db_connection = db.create_context_manager(db_connection_string)
+    if not cell_mapping.transport_url.startswith('none'):
+        context.mq_connection = rpc.create_transport(
+            cell_mapping.transport_url)
 
 
 @contextmanager
@@ -386,8 +390,10 @@ def target_cell(context, cell_mapping):
     :param cell_mapping: A objects.CellMapping object
     """
     original_db_connection = context.db_connection
+    original_mq_connection = context.mq_connection
     set_target_cell(context, cell_mapping)
     try:
         yield context
     finally:
         context.db_connection = original_db_connection
+        context.mq_connection = original_mq_connection

@@ -290,18 +290,24 @@ class ContextTestCase(test.NoDBTestCase):
         mock_authorize.assert_called_once_with(ctxt, mock.sentinel.rule,
                                                mock.sentinel.target)
 
+    @mock.patch('nova.rpc.create_transport')
     @mock.patch('nova.db.create_context_manager')
-    def test_target_cell(self, mock_create_ctxt_mgr):
-        mock_create_ctxt_mgr.return_value = mock.sentinel.cm
+    def test_target_cell(self, mock_create_ctxt_mgr, mock_rpc):
+        mock_create_ctxt_mgr.return_value = mock.sentinel.cdb
+        mock_rpc.return_value = mock.sentinel.cmq
         ctxt = context.RequestContext('111',
                                       '222',
                                       roles=['admin', 'weasel'])
         # Verify the existing db_connection, if any, is restored
         ctxt.db_connection = mock.sentinel.db_conn
-        mapping = objects.CellMapping(database_connection='fake://')
+        ctxt.mq_connection = mock.sentinel.mq_conn
+        mapping = objects.CellMapping(database_connection='fake://',
+                                      transport_url='fake://')
         with context.target_cell(ctxt, mapping):
-            self.assertEqual(ctxt.db_connection, mock.sentinel.cm)
+            self.assertEqual(ctxt.db_connection, mock.sentinel.cdb)
+            self.assertEqual(ctxt.mq_connection, mock.sentinel.cmq)
         self.assertEqual(mock.sentinel.db_conn, ctxt.db_connection)
+        self.assertEqual(mock.sentinel.mq_conn, ctxt.mq_connection)
 
     def test_get_context(self):
         ctxt = context.get_context()

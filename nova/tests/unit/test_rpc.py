@@ -12,18 +12,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 import copy
-import datetime
 
 import fixtures
 import mock
 import oslo_messaging as messaging
 from oslo_messaging.rpc import dispatcher
 from oslo_serialization import jsonutils
-from oslo_utils import fixture as utils_fixture
 import testtools
 
 from nova import context
-from nova import exception
 from nova import objects
 from nova import rpc
 from nova import test
@@ -445,179 +442,72 @@ class TestProfilerRequestContextSerializer(test.NoDBTestCase):
 
 
 class TestClientRouter(test.NoDBTestCase):
-    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
-    @mock.patch('nova.rpc.create_transport')
     @mock.patch('oslo_messaging.RPCClient')
-    def test_by_instance(self, mock_rpcclient, mock_create, mock_get):
+    def test_by_instance(self, mock_rpcclient):
         default_client = mock.Mock()
         cell_client = mock.Mock()
         mock_rpcclient.return_value = cell_client
         ctxt = mock.Mock()
-        cm = objects.CellMapping(uuid=uuids.cell_mapping,
-                                 transport_url='fake:///')
-        mock_get.return_value = objects.InstanceMapping(cell_mapping=cm)
+        ctxt.mq_connection = mock.sentinel.transport
         instance = objects.Instance(uuid=uuids.instance)
 
         router = rpc.ClientRouter(default_client)
         client = router.by_instance(ctxt, instance)
 
-        mock_get.assert_called_once_with(ctxt, instance.uuid)
         # verify a client was created by ClientRouter
         mock_rpcclient.assert_called_once_with(
-                mock_create.return_value, default_client.target,
+                mock.sentinel.transport, default_client.target,
                 version_cap=default_client.version_cap,
                 serializer=default_client.serializer)
         # verify cell client was returned
         self.assertEqual(cell_client, client)
 
-        # reset and check that cached client is returned the second time
-        mock_rpcclient.reset_mock()
-        mock_create.reset_mock()
-        mock_get.reset_mock()
-
-        client = router.by_instance(ctxt, instance)
-        mock_get.assert_called_once_with(ctxt, instance.uuid)
-        mock_rpcclient.assert_not_called()
-        mock_create.assert_not_called()
-        self.assertEqual(cell_client, client)
-
-    @mock.patch('nova.objects.HostMapping.get_by_host')
-    @mock.patch('nova.rpc.create_transport')
     @mock.patch('oslo_messaging.RPCClient')
-    def test_by_host(self, mock_rpcclient, mock_create, mock_get):
+    def test_by_instance_untargeted(self, mock_rpcclient):
         default_client = mock.Mock()
         cell_client = mock.Mock()
         mock_rpcclient.return_value = cell_client
         ctxt = mock.Mock()
-        cm = objects.CellMapping(uuid=uuids.cell_mapping,
-                                 transport_url='fake:///')
-        mock_get.return_value = objects.HostMapping(cell_mapping=cm)
-        host = 'fake-host'
-
-        router = rpc.ClientRouter(default_client)
-        client = router.by_host(ctxt, host)
-
-        mock_get.assert_called_once_with(ctxt, host)
-        # verify a client was created by ClientRouter
-        mock_rpcclient.assert_called_once_with(
-                mock_create.return_value, default_client.target,
-                version_cap=default_client.version_cap,
-                serializer=default_client.serializer)
-        # verify cell client was returned
-        self.assertEqual(cell_client, client)
-
-        # reset and check that cached client is returned the second time
-        mock_rpcclient.reset_mock()
-        mock_create.reset_mock()
-        mock_get.reset_mock()
-
-        client = router.by_host(ctxt, host)
-        mock_get.assert_called_once_with(ctxt, host)
-        mock_rpcclient.assert_not_called()
-        mock_create.assert_not_called()
-        self.assertEqual(cell_client, client)
-
-    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid',
-            side_effect=exception.InstanceMappingNotFound(uuid=uuids.instance))
-    @mock.patch('nova.rpc.create_transport')
-    @mock.patch('oslo_messaging.RPCClient')
-    def test_by_instance_not_found(self, mock_rpcclient, mock_create,
-                                   mock_get):
-        default_client = mock.Mock()
-        cell_client = mock.Mock()
-        mock_rpcclient.return_value = cell_client
-        ctxt = mock.Mock()
+        ctxt.mq_connection = None
         instance = objects.Instance(uuid=uuids.instance)
 
         router = rpc.ClientRouter(default_client)
         client = router.by_instance(ctxt, instance)
 
-        mock_get.assert_called_once_with(ctxt, instance.uuid)
-        mock_rpcclient.assert_not_called()
-        mock_create.assert_not_called()
-        # verify default client was returned
-        self.assertEqual(default_client, client)
+        self.assertEqual(router.default_client, client)
+        self.assertFalse(mock_rpcclient.called)
 
-    @mock.patch('nova.objects.HostMapping.get_by_host',
-            side_effect=exception.HostMappingNotFound(name='fake-host'))
-    @mock.patch('nova.rpc.create_transport')
     @mock.patch('oslo_messaging.RPCClient')
-    def test_by_host_not_found(self, mock_rpcclient, mock_create, mock_get):
+    def test_by_host(self, mock_rpcclient):
         default_client = mock.Mock()
         cell_client = mock.Mock()
         mock_rpcclient.return_value = cell_client
         ctxt = mock.Mock()
+        ctxt.mq_connection = mock.sentinel.transport
         host = 'fake-host'
 
         router = rpc.ClientRouter(default_client)
         client = router.by_host(ctxt, host)
 
-        mock_get.assert_called_once_with(ctxt, host)
-        mock_rpcclient.assert_not_called()
-        mock_create.assert_not_called()
-        # verify default client was returned
-        self.assertEqual(default_client, client)
+        # verify a client was created by ClientRouter
+        mock_rpcclient.assert_called_once_with(
+                mock.sentinel.transport, default_client.target,
+                version_cap=default_client.version_cap,
+                serializer=default_client.serializer)
+        # verify cell client was returned
+        self.assertEqual(cell_client, client)
 
-    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
-    @mock.patch('nova.rpc.create_transport')
     @mock.patch('oslo_messaging.RPCClient')
-    def test_remove_stale_clients(self, mock_rpcclient, mock_create, mock_get):
-        t0 = datetime.datetime(2016, 8, 9, 0, 0, 0)
-        time_fixture = self.useFixture(utils_fixture.TimeFixture(t0))
-
+    def test_by_host_untargeted(self, mock_rpcclient):
         default_client = mock.Mock()
+        cell_client = mock.Mock()
+        mock_rpcclient.return_value = cell_client
         ctxt = mock.Mock()
-
-        cm1 = objects.CellMapping(uuid=uuids.cell_mapping1,
-                                  transport_url='fake:///')
-        cm2 = objects.CellMapping(uuid=uuids.cell_mapping2,
-                                  transport_url='fake:///')
-        cm3 = objects.CellMapping(uuid=uuids.cell_mapping3,
-                                  transport_url='fake:///')
-        mock_get.side_effect = [objects.InstanceMapping(cell_mapping=cm1),
-                                objects.InstanceMapping(cell_mapping=cm2),
-                                objects.InstanceMapping(cell_mapping=cm3),
-                                objects.InstanceMapping(cell_mapping=cm3)]
-        instance1 = objects.Instance(uuid=uuids.instance1)
-        instance2 = objects.Instance(uuid=uuids.instance2)
-        instance3 = objects.Instance(uuid=uuids.instance3)
+        ctxt.mq_connection = None
+        host = 'fake-host'
 
         router = rpc.ClientRouter(default_client)
-        cell1_client = router.by_instance(ctxt, instance1)
-        cell2_client = router.by_instance(ctxt, instance2)
+        client = router.by_host(ctxt, host)
 
-        # default client, cell1 client, cell2 client
-        self.assertEqual(3, len(router.clients))
-        expected = {'default': default_client,
-                    uuids.cell_mapping1: cell1_client,
-                    uuids.cell_mapping2: cell2_client}
-        for client_id, client in expected.items():
-            self.assertEqual(client, router.clients[client_id].client)
-
-        # expire cell1 client and cell2 client
-        time_fixture.advance_time_seconds(80)
-
-        # add cell3 client
-        cell3_client = router.by_instance(ctxt, instance3)
-
-        router._remove_stale_clients(ctxt)
-
-        # default client, cell3 client
-        expected = {'default': default_client,
-                    uuids.cell_mapping3: cell3_client}
-        self.assertEqual(2, len(router.clients))
-        for client_id, client in expected.items():
-            self.assertEqual(client, router.clients[client_id].client)
-
-        # expire cell3 client
-        time_fixture.advance_time_seconds(80)
-
-        # access cell3 client to refresh it
-        cell3_client = router.by_instance(ctxt, instance3)
-
-        router._remove_stale_clients(ctxt)
-
-        # default client and cell3 client should be there
-        self.assertEqual(2, len(router.clients))
-        for client_id, client in expected.items():
-            self.assertEqual(client, router.clients[client_id].client)
+        self.assertEqual(router.default_client, client)
+        self.assertFalse(mock_rpcclient.called)
