@@ -266,7 +266,6 @@ MIN_QEMU_VIRTLOGD = (2, 7, 0)
 # NOTE(rfolco): Same levels for Libvirt/Qemu on Big Endian and Little
 # Endian giving the nuance around guest vs host architectures
 MIN_LIBVIRT_KVM_PPC64_VERSION = (1, 2, 12)
-MIN_QEMU_PPC64_VERSION = (2, 1, 0)
 
 # Names of the types that do not get compressed during migration
 NO_COMPRESSION_TYPES = ('qcow2',)
@@ -297,9 +296,6 @@ MIN_LIBVIRT_OTHER_ARCH = {
 MIN_QEMU_OTHER_ARCH = {
     fields.Architecture.S390: MIN_QEMU_S390_VERSION,
     fields.Architecture.S390X: MIN_QEMU_S390_VERSION,
-    fields.Architecture.PPC: MIN_QEMU_PPC64_VERSION,
-    fields.Architecture.PPC64: MIN_QEMU_PPC64_VERSION,
-    fields.Architecture.PPC64LE: MIN_QEMU_PPC64_VERSION,
 }
 
 # perf events support
@@ -536,15 +532,23 @@ class LibvirtDriver(driver.ComputeDriver):
                 not self._host.has_min_version(
                                         MIN_LIBVIRT_OTHER_ARCH.get(kvm_arch),
                                         MIN_QEMU_OTHER_ARCH.get(kvm_arch))):
+            if MIN_QEMU_OTHER_ARCH.get(kvm_arch):
+                raise exception.InternalError(
+                    _('Running Nova with qemu/kvm virt_type on %(arch)s '
+                      'requires libvirt version %(libvirt_ver)s and '
+                      'qemu version %(qemu_ver)s, or greater') %
+                    {'arch': kvm_arch,
+                     'libvirt_ver': self._version_to_string(
+                         MIN_LIBVIRT_OTHER_ARCH.get(kvm_arch)),
+                     'qemu_ver': self._version_to_string(
+                         MIN_QEMU_OTHER_ARCH.get(kvm_arch))})
+            # no qemu version in the error message
             raise exception.InternalError(
                 _('Running Nova with qemu/kvm virt_type on %(arch)s '
-                  'requires libvirt version %(libvirt_ver)s and '
-                  'qemu version %(qemu_ver)s, or greater') %
+                  'requires libvirt version %(libvirt_ver)s or greater') %
                 {'arch': kvm_arch,
                  'libvirt_ver': self._version_to_string(
-                     MIN_LIBVIRT_OTHER_ARCH.get(kvm_arch)),
-                 'qemu_ver': self._version_to_string(
-                     MIN_QEMU_OTHER_ARCH.get(kvm_arch))})
+                     MIN_LIBVIRT_OTHER_ARCH.get(kvm_arch))})
 
     def _prepare_migration_flags(self):
         migration_flags = 0
