@@ -1917,6 +1917,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.conductor._set_vm_state_and_notify(
                 self.context, 1, 'method', 'updates', 'ex', 'request_spec')
 
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(objects.RequestSpec, 'from_components')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(utils, 'get_image_from_system_metadata')
@@ -1927,7 +1928,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch.object(migrate.MigrationTask, 'rollback')
     def test_cold_migrate_no_valid_host_back_in_active_state(
             self, rollback_mock, notify_mock, select_dest_mock, quotas_mock,
-            metadata_mock, sig_mock, spec_fc_mock):
+            metadata_mock, sig_mock, spec_fc_mock, im_mock):
         flavor = flavors.get_flavor_by_name('m1.tiny')
         inst_obj = objects.Instance(
             image_ref='fake-image_ref',
@@ -1951,6 +1952,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         updates = {'vm_state': vm_states.ACTIVE,
                    'task_state': None}
 
+        im_mock.return_value = objects.InstanceMapping(
+            cell_mapping=objects.CellMapping.get_by_uuid(self.context,
+                                                         uuids.cell1))
+
         # Filter properties are populated during code execution
         legacy_filter_props = {'retry': {'num_attempts': 1,
                                          'hosts': []}}
@@ -1970,6 +1975,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                               exc_info, legacy_request_spec)
         rollback_mock.assert_called_once_with()
 
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(objects.RequestSpec, 'from_components')
     @mock.patch.object(utils, 'get_image_from_system_metadata')
@@ -1980,7 +1986,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch.object(migrate.MigrationTask, 'rollback')
     def test_cold_migrate_no_valid_host_back_in_stopped_state(
             self, rollback_mock, notify_mock, select_dest_mock, quotas_mock,
-            metadata_mock, spec_fc_mock, sig_mock):
+            metadata_mock, spec_fc_mock, sig_mock, im_mock):
         flavor = flavors.get_flavor_by_name('m1.tiny')
         inst_obj = objects.Instance(
             image_ref='fake-image_ref',
@@ -2003,6 +2009,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         # Filter properties are populated during code execution
         legacy_filter_props = {'retry': {'num_attempts': 1,
                                          'hosts': []}}
+
+        im_mock.return_value = objects.InstanceMapping(
+            cell_mapping=objects.CellMapping.get_by_uuid(self.context,
+                                                         uuids.cell1))
 
         metadata_mock.return_value = image
         exc_info = exc.NoValidHost(reason="")
@@ -2096,6 +2106,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                             'migrate_server', updates,
                                             exception, legacy_request_spec)
 
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(objects.RequestSpec, 'from_components')
     @mock.patch.object(utils, 'get_image_from_system_metadata')
@@ -2108,7 +2119,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     def test_cold_migrate_exception_host_in_error_state_and_raise(
             self, prep_resize_mock, rollback_mock, notify_mock,
             select_dest_mock, quotas_mock, metadata_mock, spec_fc_mock,
-            sig_mock):
+            sig_mock, im_mock):
         flavor = flavors.get_flavor_by_name('m1.tiny')
         inst_obj = objects.Instance(
             image_ref='fake-image_ref',
@@ -2126,6 +2137,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         fake_spec = objects.RequestSpec(image=objects.ImageMeta())
         legacy_request_spec = fake_spec.to_legacy_request_spec_dict()
         spec_fc_mock.return_value = fake_spec
+
+        im_mock.return_value = objects.InstanceMapping(
+            cell_mapping=objects.CellMapping.get_by_uuid(self.context,
+                                                         uuids.cell1))
 
         hosts = [dict(host='host1', nodename=None, limits={})]
         metadata_mock.return_value = image

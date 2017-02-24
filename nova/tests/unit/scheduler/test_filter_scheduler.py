@@ -109,7 +109,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         retry = {'hosts': [], 'num_attempts': 1}
         filter_properties = {'retry': retry}
 
-        host_state = host_manager.HostState('host', 'node')
+        host_state = host_manager.HostState('host', 'node', uuids.cell)
         host_state.limits['vcpu'] = 5
         scheduler_utils.populate_filter_properties(filter_properties,
                 host_state)

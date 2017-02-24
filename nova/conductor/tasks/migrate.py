@@ -10,12 +10,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
 from nova import availability_zones
 from nova.conductor.tasks import base
 from nova import objects
 from nova.scheduler import utils as scheduler_utils
+
+LOG = logging.getLogger(__name__)
 
 
 class MigrationTask(base.TaskBase):
@@ -49,6 +52,23 @@ class MigrationTask(base.TaskBase):
         # if we want to make sure that the next destination
         # is not forced to be the original host
         self.request_spec.reset_forced_destinations()
+
+        # NOTE(danms): Right now we only support migrate to the same
+        # cell as the current instance, so request that the scheduler
+        # limit thusly.
+        instance_mapping = objects.InstanceMapping.get_by_instance_uuid(
+            self.context, self.instance.uuid)
+        LOG.debug('Requesting cell %(cell)s while migrating',
+                  {'cell': instance_mapping.cell_mapping.identity},
+                  instance=self.instance)
+        if ('requested_destination' in self.request_spec and
+                self.request_spec.requested_destination):
+            self.request_spec.requested_destination.cell = (
+                instance_mapping.cell_mapping)
+        else:
+            self.request_spec.requested_destination = objects.Destination(
+                cell=instance_mapping.cell_mapping)
+
         hosts = self.scheduler_client.select_destinations(
             self.context, self.request_spec)
         host_state = hosts[0]
