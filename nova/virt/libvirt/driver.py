@@ -241,10 +241,6 @@ BAD_LIBVIRT_CPU_POLICY_VERSIONS = [(1, 2, 10)]
 # sizes per guest NUMA node
 MIN_QEMU_NUMA_HUGEPAGE_VERSION = (2, 1, 0)
 
-# Hyper-V paravirtualized time source
-MIN_LIBVIRT_HYPERV_TIMER_VERSION = (1, 2, 2)
-MIN_QEMU_HYPERV_TIMER_VERSION = (2, 0, 0)
-
 # Virtuozzo driver support
 MIN_VIRTUOZZO_VERSION = (7, 0, 0)
 MIN_LIBVIRT_VIRTUOZZO_VERSION = (1, 2, 12)
@@ -4117,13 +4113,10 @@ class LibvirtDriver(driver.ComputeDriver):
             tmhpet.present = False
             clk.add_timer(tmhpet)
 
-        # With new enough QEMU we can provide Windows guests
-        # with the paravirtualized hyperv timer source. This
-        # is the windows equiv of kvm-clock, allowing Windows
+        # Provide Windows guests with the paravirtualized hyperv timer source.
+        # This is the windows equiv of kvm-clock, allowing Windows
         # guests to accurately keep time.
-        if (os_type == 'windows' and
-            self._host.has_min_version(MIN_LIBVIRT_HYPERV_TIMER_VERSION,
-                                       MIN_QEMU_HYPERV_TIMER_VERSION)):
+        if os_type == 'windows':
             tmhyperv = vconfig.LibvirtConfigGuestTimer()
             tmhyperv.name = "hypervclock"
             tmhyperv.present = True
