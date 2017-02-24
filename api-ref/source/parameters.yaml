@@ -1,4 +1,11 @@
 # variables in header
+image_location:
+  description: |
+    The image location URL of the image or backup created, HTTP header
+    "Location: <image location URL>" will be returned.
+  in: header
+  required: true
+  type: string
 tag_location:
   description: |
     The location of the tag. It's individual tag URL which can be used for
