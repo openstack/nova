@@ -73,7 +73,7 @@ class RealTimeServersTest(ServersTestBase):
                                              cpu_cores=2, cpu_threads=2,
                                              kB_mem=15740000)
         fake_connection = fakelibvirt.Connection('qemu:///system',
-                                                 version=1002007,
+                                                 version=1002009,
                                                  hv_version=2001000,
                                                  host_info=host_info)
         with mock.patch('nova.virt.libvirt.host.Host.get_connection',

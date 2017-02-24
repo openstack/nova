@@ -2051,9 +2051,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                   return_value=caps),
                 mock.patch.object(
                     hardware, 'get_vcpu_pin_set', return_value=set([3])),
-                mock.patch.object(random, 'choice')
+                mock.patch.object(random, 'choice'),
+                mock.patch.object(drvr, '_has_numa_support',
+                                  return_value=False)
             ) as (get_host_cap_mock,
-                  get_vcpu_pin_set_mock, choice_mock):
+                  get_vcpu_pin_set_mock, choice_mock,
+                  _has_numa_support_mock):
             cfg = drvr._get_guest_config(instance_ref, [],
                                          image_meta, disk_info)
             self.assertFalse(choice_mock.called)
@@ -2225,9 +2228,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                     hardware, 'get_vcpu_pin_set', return_value=set([3])),
                 mock.patch.object(random, 'choice'),
                 mock.patch.object(pci_manager, "get_instance_pci_devs",
-                                  return_value=[pci_device, pci_device2])
+                                  return_value=[pci_device, pci_device2]),
+                mock.patch.object(conn, '_has_numa_support',
+                                  return_value=False)
             ) as (get_host_cap_mock,
-                  get_vcpu_pin_set_mock, choice_mock, pci_mock):
+                  get_vcpu_pin_set_mock, choice_mock, pci_mock,
+                  _has_numa_support_mock):
             cfg = conn._get_guest_config(instance_ref, [],
                                          image_meta, disk_info)
             self.assertFalse(choice_mock.called)
