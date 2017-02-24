@@ -1098,7 +1098,8 @@ class LibvirtDriver(driver.ComputeDriver):
             host=CONF.host)
 
     def _cleanup_resize(self, instance, network_info):
-        target = libvirt_utils.get_instance_path(instance) + '_resize'
+        inst_base = libvirt_utils.get_instance_path(instance)
+        target = inst_base + '_resize'
 
         if os.path.exists(target):
             # Deletion can fail over NFS, so retry the deletion as required.
@@ -1118,6 +1119,16 @@ class LibvirtDriver(driver.ComputeDriver):
         if root_disk.exists():
             root_disk.remove_snap(libvirt_utils.RESIZE_SNAPSHOT_NAME,
                                   ignore_errors=True)
+
+        # NOTE(mjozefcz):
+        # self.image_backend.image for some backends recreates instance
+        # directory and image disk.info - remove it here if exists
+        if os.path.exists(inst_base) and not root_disk.exists():
+            try:
+                shutil.rmtree(inst_base)
+            except OSError as e:
+                if e.errno != errno.ENOENT:
+                    raise
 
         if instance.host != CONF.host:
             self._undefine_domain(instance)
