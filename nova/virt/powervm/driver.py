@@ -15,15 +15,17 @@
 
 from oslo_log import log as logging
 from pypowervm import adapter as pvm_apt
+from pypowervm import exceptions as pvm_exc
 from pypowervm.helpers import log_helper as log_hlp
 from pypowervm.helpers import vios_busy as vio_hlp
 from pypowervm.tasks import partition as pvm_par
 from pypowervm.wrappers import managed_system as pvm_ms
+import six
 
-from nova.compute import power_state
+from nova import exception as exc
 from nova.virt import driver
-from nova.virt import hardware
 from nova.virt.powervm import host
+from nova.virt.powervm import vm
 
 LOG = logging.getLogger(__name__)
 
@@ -76,16 +78,14 @@ class PowerVMDriver(driver.ComputeDriver):
         :cpu_time_ns:     (int) the CPU time used in nanoseconds
         :id:              a unique ID for the instance
         """
-        # TODO(efried): Implement
-        return hardware.InstanceInfo(state=power_state.NOSTATE)
+        return vm.InstanceInfo(self.adapter, instance)
 
     def list_instances(self):
         """Return the names of all the instances known to the virt host.
 
         :return: VM Names as a list.
         """
-        # TODO(efried): Get the LPAR names
-        return []
+        return vm.get_lpar_names(self.adapter)
 
     def get_available_nodes(self, refresh=False):
         """Returns nodenames of all nodes managed by the compute service.
@@ -145,14 +145,14 @@ class PowerVMDriver(driver.ComputeDriver):
                                   attached to the instance.
         """
         self._log_operation('spawn', instance)
-        # TODO(efried): Take flavor extra specs into account
+
         # TODO(efried): Use TaskFlow
-        # TODO(efried): Create the LPAR
+        vm.create_lpar(self.adapter, self.host_wrapper, instance)
         # TODO(thorst, efried) Plug the VIFs
         # TODO(thorst, efried) Create/Connect the disk
         # TODO(thorst, efried) Add the config drive
         # Last step is to power on the system.
-        # TODO(efried): Power on the LPAR
+        vm.power_on(self.adapter, instance)
 
     def destroy(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True, migrate_data=None):
@@ -172,11 +172,20 @@ class PowerVMDriver(driver.ComputeDriver):
         """
         # TODO(thorst, efried) Add resize checks for destroy
         self._log_operation('destroy', instance)
-        # TODO(efried): Use TaskFlow
-        # TODO(efried): Power off the LPAR
-        # TODO(thorst, efried) Add unplug vifs task
-        # TODO(thorst, efried) Add config drive tasks
-        # TODO(thorst, efried) Add volume disconnect tasks
-        # TODO(thorst, efried) Add disk disconnect/destroy tasks
-        # TODO(thorst, efried) Add LPAR id based scsi map clean up task
-        # TODO(efried): Delete the LPAR
+        try:
+            # TODO(efried): Use TaskFlow
+            vm.power_off(self.adapter, instance, force_immediate=destroy_disks)
+            # TODO(thorst, efried) Add unplug vifs task
+            # TODO(thorst, efried) Add config drive tasks
+            # TODO(thorst, efried) Add volume disconnect tasks
+            # TODO(thorst, efried) Add disk disconnect/destroy tasks
+            # TODO(thorst, efried) Add LPAR id based scsi map clean up task
+            vm.delete_lpar(self.adapter, instance)
+        except exc.InstanceNotFound:
+            LOG.debug('VM was not found during destroy operation.',
+                      instance=instance)
+            return
+        except pvm_exc.Error as e:
+            LOG.exception("PowerVM error during destroy.", instance=instance)
+            # Convert to a Nova exception
+            raise exc.InstanceTerminationFailure(reason=six.text_type(e))

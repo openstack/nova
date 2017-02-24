@@ -2134,6 +2134,11 @@ class BadRequirementEmulatorThreadsPolicy(Invalid):
                 "CPU policy option.")
 
 
+class PowerVMAPIFailed(NovaException):
+    msg_fmt = _("PowerVM API failed to complete for instance=%(inst_name)s.  "
+                "%(reason)s")
+
+
 class TraitNotFound(NotFound):
     msg_fmt = _("No such trait %(name)s.")
 
