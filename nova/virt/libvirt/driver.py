@@ -209,9 +209,6 @@ NEXT_MIN_QEMU_VERSION = (2, 5, 0)
 
 # When the above version matches/exceeds this version
 # delete it & corresponding code using it
-# Relative block commit & rebase (feature is detected,
-# this version is only used for messaging)
-MIN_LIBVIRT_BLOCKJOB_RELATIVE_VERSION = (1, 2, 7)
 # Libvirt version 1.2.17 is required for successful block live migration
 # of vm booted from image with attached devices
 MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION = (1, 2, 17)
@@ -2202,25 +2199,6 @@ class LibvirtDriver(driver.ComputeDriver):
             my_snap_base = None
             my_snap_top = None
             commit_disk = my_dev
-
-            # NOTE(deepakcs): libvirt added support for _RELATIVE in v1.2.7,
-            # and when available this flag _must_ be used to ensure backing
-            # paths are maintained relative by qemu.
-            #
-            # If _RELATIVE flag not found, raise exception as relative backing
-            # path may not be maintained and Cinder flow is broken if allowed
-            # to continue.
-            try:
-                libvirt.VIR_DOMAIN_BLOCK_COMMIT_RELATIVE
-            except AttributeError:
-                ver = '.'.join(
-                    [str(x) for x in
-                     MIN_LIBVIRT_BLOCKJOB_RELATIVE_VERSION])
-                msg = _("Relative blockcommit support was not detected. "
-                        "Libvirt '%s' or later is required for online "
-                        "deletion of file/network storage-backed volume "
-                        "snapshots.") % ver
-                raise exception.Invalid(msg)
 
             if active_protocol is not None:
                 my_snap_base = _get_snap_dev(delete_info['merge_target_file'],
