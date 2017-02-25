@@ -102,7 +102,7 @@ class ClientWrapper(clientv20.Client):
                     # Token is expired so Neutron is raising a
                     # unauthorized exception, we should convert it to
                     # raise a 401 to make client to handle a retry by
-                    # renegerating a valid token and trying a new
+                    # regenerating a valid token and trying a new
                     # attempt.
                     raise exception.Unauthorized()
                 # In admin context if token is invalid Neutron client
