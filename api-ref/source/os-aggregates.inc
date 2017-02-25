@@ -322,7 +322,7 @@ Request
 
   - aggregate_id: aggregate_id
   - set_metadata: set_metadata
-  - metadata: metadata_set_required
+  - metadata: metadata_object 
 
 **Example Create Or Update Aggregate Metadata: JSON request**
 
