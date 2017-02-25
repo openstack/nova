@@ -1118,30 +1118,6 @@ class API(base.Base):
 
         return objects.InstanceGroup.get_by_uuid(context, group_hint)
 
-    def _safe_destroy_instance_residue(self, instances, instances_to_build):
-        """Delete residue left over from a failed instance build with
-           reckless abandon.
-
-        :param instances: List of Instance objects to destroy
-        :param instances_to_build: List of tuples, output from
-            _provision_instances, which is:
-             request_spec, build_request, instance_mapping
-        """
-        for instance in instances:
-            try:
-                instance.destroy()
-            except Exception as e:
-                LOG.debug('Failed to destroy instance residue: %s', e,
-                          instance=instance)
-        for to_destroy in instances_to_build:
-            for thing in to_destroy:
-                try:
-                    thing.destroy()
-                except Exception as e:
-                    LOG.debug(
-                        'Failed to destroy %s during residue cleanup: %s',
-                        thing, e)
-
     def _create_instance(self, context, instance_type,
                image_href, kernel_id, ramdisk_id,
                min_count, max_count,
