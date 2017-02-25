@@ -121,7 +121,7 @@ same time.
      updating, we must get all the data transformed into the current version
      before the next upgrade. Additionally, some data may not be transformed
      automatically so performing the data migration is necessary to avoid
-     performance degredation due to compatibility routines.
+     performance degradation due to compatibility routines.
 
    * This process can put significant extra write load on the
      database.  Complete all online data migrations using:
