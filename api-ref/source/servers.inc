@@ -738,7 +738,7 @@ system.
 
 **Asynchronous postconditions**
 
-- With correct permissions, you can see the server status as
+- With correct permissions, you can see the server status as ``deleting``.
 - The ports attached to the server, which Nova created during the server
   create process or when attaching interfaces later, are deleted.
 - The server does not appear in the list servers response.
