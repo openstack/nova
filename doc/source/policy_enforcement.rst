@@ -151,22 +151,6 @@ The prefix '00-' is used to order the configure file. All the files in
 policy.d will be loaded by alphabetical order. '00-' means those files will
 be loaded very early.
 
-Add separated rule for each API in extension
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This is for provider better granularity for policy rules. Not just provide
-policy rule for extension as unit.
-
-This need user to move the policy rule into separated rule for each API.
-
-Enable action level rule override extension level rule
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-After separated rule for each API in extension, that will increase the work
-for deployer. So enable extension level rule as default for each API in that
-extension will ease that a lot. Deployer also can specify one rule for each
-API to override the extension level rule.
-
 Existed Nova API being restricted
 ---------------------------------
 
