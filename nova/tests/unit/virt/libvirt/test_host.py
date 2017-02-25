@@ -65,6 +65,12 @@ class HostTestCase(test.NoDBTestCase):
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
         self.host = host.Host("qemu:///system")
 
+    @mock.patch("nova.virt.libvirt.host.Host._init_events")
+    def test_repeat_initialization(self, mock_init_events):
+        for i in range(3):
+            self.host.initialize()
+        mock_init_events.assert_called_once_with()
+
     @mock.patch.object(fakelibvirt.virConnect, "registerCloseCallback")
     def test_close_callback(self, mock_close):
         self.close_callback = None
