@@ -704,8 +704,6 @@ start_simple_tenant_usage:
   in: query
   required: false
   type: string
-# TODO(sdague): when server-tags actually get documented, these should
-# be updated.
 tags_any_query:
   in: query
   required: false
