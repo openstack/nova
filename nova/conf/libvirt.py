@@ -283,7 +283,7 @@ Related options:
                help="""
 Schema used for live migration.
 
-Override the default libvirt live migration scheme (which is dependant on
+Override the default libvirt live migration scheme (which is dependent on
 virt_type). If this option is set to None, nova will automatically choose a
 sensible default based on the hypervisor. It is not recommended that you change
 this unless you are very sure that hypervisor supports a particular scheme.

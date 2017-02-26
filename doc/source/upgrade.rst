@@ -174,7 +174,7 @@ Online data migrations occur in two places:
    new format
 #. Background online migrations that are performed using
    ``nova-manage`` to complete transformations that will not occur
-   incidentially due to normal runtime activity.
+   incidentally due to normal runtime activity.
 
 An example of online data migrations are the flavor migrations done as part
 of Nova object version 1.18. This included a transient migration of flavor
