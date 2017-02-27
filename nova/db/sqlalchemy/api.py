@@ -512,6 +512,7 @@ def service_get_minimum_version(context, binary):
     min_version = context.session.query(
         func.min(models.Service.version)).\
                          filter(models.Service.binary == binary).\
+                         filter(models.Service.deleted == 0).\
                          filter(models.Service.forced_down == false()).\
                          scalar()
     return min_version
