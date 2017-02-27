@@ -846,7 +846,8 @@ class OpenStackMetadataTestCase(test.TestCase):
     def _test_vendordata2_response_inner(self, request_mock, response_code,
                                          include_rest_result=True):
         request_mock.return_value.status_code = response_code
-        request_mock.return_value.text = '{"color": "blue"}'
+        if include_rest_result:
+            request_mock.return_value.text = '{"color": "blue"}'
 
         with utils.tempdir() as tmpdir:
             jsonfile = os.path.join(tmpdir, 'test.json')
