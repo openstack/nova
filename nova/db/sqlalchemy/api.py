@@ -453,6 +453,7 @@ def service_get_minimum_version(context, binaries):
         models.Service.binary,
         func.min(models.Service.version)).\
                          filter(models.Service.binary.in_(binaries)).\
+                         filter(models.Service.deleted == 0).\
                          filter(models.Service.forced_down == false()).\
                          group_by(models.Service.binary)
     return dict(min_versions)

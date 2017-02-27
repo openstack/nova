@@ -3481,6 +3481,10 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._create_service({'version': 3,
                               'host': 'host2',
                               'binary': 'compute'})
+        self._create_service({'version': 0,
+                              'host': 'host0',
+                              'binary': 'compute',
+                              'deleted': 1})
         self.assertEqual({'compute': 2},
                          db.service_get_minimum_version(self.ctxt,
                                                         ['compute']))
