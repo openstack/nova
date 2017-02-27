@@ -1,0 +1,13 @@
+---
+issues:
+  - |
+    The live-migration progress timeout controlled by the configuration option
+    ``[libvirt]/live_migration_progress_timeout`` has been discovered to
+    frequently cause live-migrations to fail with a progress timeout error,
+    even though the live-migration is still making good progress.
+    To minimize problems caused by these checks we recommend setting the value
+    to 0, which means do not trigger a timeout.  (This has been made the
+    default in Ocata and Pike.)
+    To modify when a live-migration will fail with a timeout error, please now
+    look at ``[libvirt]/live_migration_completion_timeout`` and
+    ``[libvirt]/live_migration_downtime``.
