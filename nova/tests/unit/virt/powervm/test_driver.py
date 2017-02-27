@@ -16,6 +16,7 @@ from __future__ import absolute_import
 
 import fixtures
 import mock
+from pypowervm import const as pvm_const
 from pypowervm import exceptions as pvm_exc
 from pypowervm.helpers import log_helper as pvm_hlp_log
 from pypowervm.helpers import vios_busy as pvm_hlp_vbusy
@@ -87,12 +88,22 @@ class TestPowerVMDriver(test.NoDBTestCase):
         self.assertEqual('sys', self.drv.host_wrapper)
 
     @mock.patch('nova.virt.powervm.vm.create_lpar')
+    @mock.patch('pypowervm.tasks.partition.build_active_vio_feed_task',
+                autospec=True)
+    @mock.patch('pypowervm.tasks.storage.add_lpar_storage_scrub_tasks',
+                autospec=True)
     @mock.patch('nova.virt.powervm.vm.power_on')
-    def test_spawn_ops(self, mock_pwron, mock_crt_lpar):
+    def test_spawn_ops(self, mock_pwron, mock_scrub, mock_ftsk, mock_crt_lpar):
         """Validates the 'typical' spawn flow of the spawn of an instance. """
         self.drv.host_wrapper = 'sys'
         self.drv.spawn('context', self.inst, 'img_meta', 'files', 'password')
         mock_crt_lpar.assert_called_once_with(self.adp, 'sys', self.inst)
+        mock_ftsk.assert_called_once_with(
+            self.adp, name='create_scrubber', xag={pvm_const.XAG.VIO_SMAP,
+                                                   pvm_const.XAG.VIO_FMAP})
+        mock_scrub.assert_called_once_with(
+            [mock_crt_lpar.return_value.id], mock_ftsk.return_value,
+            lpars_exist=True)
         mock_pwron.assert_called_once_with(self.adp, self.inst)
 
     @mock.patch('nova.virt.powervm.vm.delete_lpar')
