@@ -16,7 +16,6 @@
 import fixtures
 import requests
 
-from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 
@@ -24,9 +23,6 @@ from nova import context
 from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-
-
-LOG = logging.getLogger(__name__)
 
 
 class fake_result(object):
