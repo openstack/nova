@@ -286,6 +286,7 @@ class LegacyMicroversionsTest(test.NoDBTestCase):
         req.headers = self._make_header(version)
         req.environ['CONTENT_TYPE'] = "application/json"
         req.method = 'POST'
+        req.body = b''
 
         res = req.get_response(app)
         self.assertEqual(200, res.status_int)
