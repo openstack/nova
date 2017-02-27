@@ -237,25 +237,21 @@ class GetConsoleOutputTestCase(VMOpsTestBase):
     def test_get_console_output_works(self):
         ctxt = context.RequestContext('user', 'project')
         instance = fake_instance.fake_instance_obj(ctxt)
-        self.mox.StubOutWithMock(self.vmops, '_get_last_dom_id')
-
-        self.vmops._get_last_dom_id(instance, check_rescue=True).AndReturn(42)
-        self.mox.ReplayAll()
-
-        self.assertEqual(b"dom_id: 42",
-                         self.vmops.get_console_output(instance))
+        with mock.patch.object(self.vmops, '_get_last_dom_id',
+                               return_value=42) as mock_last_dom:
+            self.assertEqual(b"dom_id: 42",
+                             self.vmops.get_console_output(instance))
+            mock_last_dom.assert_called_once_with(instance, check_rescue=True)
 
     def test_get_console_output_not_available(self):
-        self.mox.StubOutWithMock(self.vmops, '_get_last_dom_id')
-
         ctxt = context.RequestContext('user', 'project')
         instance = fake_instance.fake_instance_obj(ctxt)
         # dom_id=0 used to trigger exception in fake XenAPI
-        self.vmops._get_last_dom_id(instance, check_rescue=True).AndReturn(0)
-        self.mox.ReplayAll()
-
-        self.assertRaises(exception.ConsoleNotAvailable,
-                self.vmops.get_console_output, instance)
+        with mock.patch.object(self.vmops, '_get_last_dom_id',
+                               return_value=0) as mock_last_dom:
+            self.assertRaises(exception.ConsoleNotAvailable,
+                              self.vmops.get_console_output, instance)
+            mock_last_dom.assert_called_once_with(instance, check_rescue=True)
 
     def test_get_dom_id_works(self):
         instance = {"name": "dummy"}
