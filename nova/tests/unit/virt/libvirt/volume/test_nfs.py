@@ -39,8 +39,10 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
 
         connection_info = {'data': {'export': export_string,
                                     'name': self.name}}
-        libvirt_driver.connect_volume(connection_info, self.disk_info)
-        libvirt_driver.disconnect_volume(connection_info, "vde")
+        libvirt_driver.connect_volume(connection_info, self.disk_info,
+                                      mock.sentinel.instance)
+        libvirt_driver.disconnect_volume(connection_info, "vde",
+                                         mock.sentinel.instance)
 
         device_path = os.path.join(export_mnt_base,
                                    connection_info['data']['name'])
@@ -63,19 +65,23 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_host)
         mock_utils_exe.side_effect = processutils.ProcessExecutionError(
             None, None, None, 'umount', 'umount: device is busy.')
-        libvirt_driver.disconnect_volume(connection_info, "vde")
+        libvirt_driver.disconnect_volume(connection_info, "vde",
+                                         mock.sentinel.instance)
         self.assertTrue(mock_LOG_debug.called)
         mock_utils_exe.side_effect = processutils.ProcessExecutionError(
             None, None, None, 'umount', 'umount: target is busy.')
-        libvirt_driver.disconnect_volume(connection_info, "vde")
+        libvirt_driver.disconnect_volume(connection_info, "vde",
+                                         mock.sentinel.instance)
         self.assertTrue(mock_LOG_debug.called)
         mock_utils_exe.side_effect = processutils.ProcessExecutionError(
             None, None, None, 'umount', 'umount: not mounted.')
-        libvirt_driver.disconnect_volume(connection_info, "vde")
+        libvirt_driver.disconnect_volume(connection_info, "vde",
+                                         mock.sentinel.instance)
         self.assertTrue(mock_LOG_debug.called)
         mock_utils_exe.side_effect = processutils.ProcessExecutionError(
             None, None, None, 'umount', 'umount: Other error.')
-        libvirt_driver.disconnect_volume(connection_info, "vde")
+        libvirt_driver.disconnect_volume(connection_info, "vde",
+                                         mock.sentinel.instance)
         self.assertTrue(mock_LOG_exception.called)
 
     def test_libvirt_nfs_driver_get_config(self):
@@ -104,8 +110,10 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
 
         connection_info = {'data': {'export': export_string,
                                     'name': self.name}}
-        libvirt_driver.connect_volume(connection_info, self.disk_info)
-        libvirt_driver.disconnect_volume(connection_info, "vde")
+        libvirt_driver.connect_volume(connection_info, self.disk_info,
+                                      mock.sentinel.instance)
+        libvirt_driver.disconnect_volume(connection_info, "vde",
+                                         mock.sentinel.instance)
 
         expected_commands = [
             ('umount', export_mnt_base)]
@@ -122,8 +130,10 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         connection_info = {'data': {'export': export_string,
                                     'name': self.name,
                                     'options': options}}
-        libvirt_driver.connect_volume(connection_info, self.disk_info)
-        libvirt_driver.disconnect_volume(connection_info, "vde")
+        libvirt_driver.connect_volume(connection_info, self.disk_info,
+                                      mock.sentinel.instance)
+        libvirt_driver.disconnect_volume(connection_info, "vde",
+                                         mock.sentinel.instance)
 
         expected_commands = [
             ('mkdir', '-p', export_mnt_base),

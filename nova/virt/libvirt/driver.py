@@ -986,7 +986,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     encryptor.detach_volume(**encryption)
 
             try:
-                self._disconnect_volume(connection_info, disk_dev)
+                self._disconnect_volume(connection_info, disk_dev, instance)
             except Exception as exc:
                 with excutils.save_and_reraise_exception() as ctxt:
                     if destroy_disks:
@@ -1152,13 +1152,13 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.VolumeDriverNotFound(driver_type=driver_type)
         return self.volume_drivers[driver_type]
 
-    def _connect_volume(self, connection_info, disk_info):
+    def _connect_volume(self, connection_info, disk_info, instance):
         vol_driver = self._get_volume_driver(connection_info)
-        vol_driver.connect_volume(connection_info, disk_info)
+        vol_driver.connect_volume(connection_info, disk_info, instance)
 
-    def _disconnect_volume(self, connection_info, disk_dev):
+    def _disconnect_volume(self, connection_info, disk_dev, instance):
         vol_driver = self._get_volume_driver(connection_info)
-        vol_driver.disconnect_volume(connection_info, disk_dev)
+        vol_driver.disconnect_volume(connection_info, disk_dev, instance)
 
     def _get_volume_config(self, connection_info, disk_info):
         vol_driver = self._get_volume_driver(connection_info)
@@ -1216,7 +1216,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         disk_info = blockinfo.get_info_from_bdm(
             instance, CONF.libvirt.virt_type, instance.image_meta, bdm)
-        self._connect_volume(connection_info, disk_info)
+        self._connect_volume(connection_info, disk_info, instance)
         conf = self._get_volume_config(connection_info, disk_info)
         self._set_cache_mode(conf)
 
@@ -1238,11 +1238,12 @@ class LibvirtDriver(driver.ComputeDriver):
             if isinstance(ex, libvirt.libvirtError):
                 errcode = ex.get_error_code()
                 if errcode == libvirt.VIR_ERR_OPERATION_FAILED:
-                    self._disconnect_volume(connection_info, disk_dev)
+                    self._disconnect_volume(connection_info, disk_dev,
+                                            instance)
                     raise exception.DeviceIsBusy(device=disk_dev)
 
             with excutils.save_and_reraise_exception():
-                self._disconnect_volume(connection_info, disk_dev)
+                self._disconnect_volume(connection_info, disk_dev, instance)
 
     def _swap_volume(self, guest, disk_path, new_path, resize_to):
         """Swap existing disk with a new block device."""
@@ -1308,19 +1309,20 @@ class LibvirtDriver(driver.ComputeDriver):
         # LibvirtConfigGuestDisk object it returns. We do not explicitly save
         # this to the BDM here as the upper compute swap_volume method will
         # eventually do this for us.
-        self._connect_volume(new_connection_info, disk_info)
+        self._connect_volume(new_connection_info, disk_info, instance)
         conf = self._get_volume_config(new_connection_info, disk_info)
         if not conf.source_path:
-            self._disconnect_volume(new_connection_info, disk_dev)
+            self._disconnect_volume(new_connection_info, disk_dev, instance)
             raise NotImplementedError(_("Swap only supports host devices"))
 
         try:
             self._swap_volume(guest, disk_dev, conf.source_path, resize_to)
         except exception.VolumeRebaseFailed:
             with excutils.save_and_reraise_exception():
-                self._disconnect_volume(new_connection_info, disk_dev)
+                self._disconnect_volume(new_connection_info, disk_dev,
+                                        instance)
 
-        self._disconnect_volume(old_connection_info, disk_dev)
+        self._disconnect_volume(old_connection_info, disk_dev, instance)
 
     def _get_existing_domain_xml(self, instance, network_info,
                                  block_device_info=None):
@@ -1381,7 +1383,7 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 raise
 
-        self._disconnect_volume(connection_info, disk_dev)
+        self._disconnect_volume(connection_info, disk_dev, instance)
 
     def attach_interface(self, context, instance, image_meta, vif):
         guest = self._host.get_guest(instance)
@@ -3641,7 +3643,7 @@ class LibvirtDriver(driver.ComputeDriver):
             connection_info = vol['connection_info']
             vol_dev = block_device.prepend_dev(vol['mount_device'])
             info = disk_mapping[vol_dev]
-            self._connect_volume(connection_info, info)
+            self._connect_volume(connection_info, info, instance)
             cfg = self._get_volume_config(connection_info, info)
             devices.append(cfg)
             vol['connection_info'] = connection_info
@@ -4912,7 +4914,8 @@ class LibvirtDriver(driver.ComputeDriver):
         if root_disk:
             disk_info = blockinfo.get_info_from_bdm(
                 instance, CONF.libvirt.virt_type, image_meta, root_disk)
-            self._connect_volume(root_disk['connection_info'], disk_info)
+            self._connect_volume(root_disk['connection_info'], disk_info,
+                                 instance)
             disk_path = root_disk['connection_info']['data']['device_path']
 
             # NOTE(apmelton) - Even though the instance is being booted from a
@@ -6708,7 +6711,7 @@ class LibvirtDriver(driver.ComputeDriver):
             disk_info = blockinfo.get_info_from_bdm(
                 instance, CONF.libvirt.virt_type,
                 instance.image_meta, bdm)
-            self._connect_volume(connection_info, disk_info)
+            self._connect_volume(connection_info, disk_info, instance)
 
         # We call plug_vifs before the compute manager calls
         # ensure_filtering_rules_for_instance, to ensure bridge is set up
@@ -6900,7 +6903,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 connection_info['data']['multipath_id'] = multipath_id
 
             disk_dev = vol['mount_device'].rpartition("/")[2]
-            self._disconnect_volume(connection_info, disk_dev)
+            self._disconnect_volume(connection_info, disk_dev, instance)
 
     def post_live_migration_at_source(self, context, instance, network_info):
         """Unplug VIFs from networks at source.
@@ -7266,7 +7269,7 @@ class LibvirtDriver(driver.ComputeDriver):
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
             disk_dev = vol['mount_device'].rpartition("/")[2]
-            self._disconnect_volume(connection_info, disk_dev)
+            self._disconnect_volume(connection_info, disk_dev, instance)
 
         disk_info = self._get_instance_disk_info(instance, block_device_info)
 

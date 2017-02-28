@@ -39,7 +39,7 @@ class LibvirtDISCOVolumeDriverTestCase(
         with mock.patch.object(dcon.connector,
                                'connect_volume',
                                return_value={'path': '/dev/dms1234567'}):
-            dcon.connect_volume(conn, None)
+            dcon.connect_volume(conn, None, mock.sentinel.instance)
             self.assertEqual('/dev/dms1234567',
                              conn['data']['device_path'])
 
@@ -62,6 +62,6 @@ class LibvirtDISCOVolumeDriverTestCase(
                      'type': 'raw', 'dev': 'vda1', 'bus': 'pci0',
                      'device_path': '/dev/dms123456'}
         conn = {'data': disk_info}
-        dcon.disconnect_volume(conn, disk_info)
+        dcon.disconnect_volume(conn, disk_info, mock.sentinel.instance)
         dcon.connector.disconnect_volume.assert_called_once_with(
             disk_info, None)

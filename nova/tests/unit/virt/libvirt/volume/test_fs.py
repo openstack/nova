@@ -17,7 +17,10 @@ import os
 import mock
 
 from nova import test
+from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova import utils
+from nova.virt import fake
+from nova.virt.libvirt import driver
 from nova.virt.libvirt.volume import fs
 
 FAKE_MOUNT_POINT = '/var/lib/nova/fake-mount'
@@ -25,6 +28,16 @@ FAKE_SHARE = 'fake-share'
 NORMALIZED_SHARE = FAKE_SHARE + '-normalized'
 HASHED_SHARE = utils.get_hash_str(NORMALIZED_SHARE)
 FAKE_DEVICE_NAME = 'fake-device'
+
+
+class FSVolumeDriverSubclassSignatureTestCase(test.SubclassSignatureTestCase):
+    def _get_base_class(self):
+        # We do this because it has the side-effect of loading all the
+        # volume drivers
+        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        return fs.LibvirtBaseFileSystemVolumeDriver
 
 
 class FakeFileSystemVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):

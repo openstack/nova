@@ -36,8 +36,10 @@ class LibvirtGlusterfsVolumeDriverTestCase(
 
         connection_info = {'data': {'export': export_string,
                                     'name': self.name}}
-        libvirt_driver.connect_volume(connection_info, self.disk_info)
-        libvirt_driver.disconnect_volume(connection_info, "vde")
+        libvirt_driver.connect_volume(connection_info, self.disk_info,
+                                      mock.sentinel.instance)
+        libvirt_driver.disconnect_volume(connection_info, "vde",
+                                         mock.sentinel.instance)
 
         device_path = os.path.join(export_mnt_base,
                                    connection_info['data']['name'])
@@ -90,8 +92,10 @@ class LibvirtGlusterfsVolumeDriverTestCase(
 
         connection_info = {'data': {'export': export_string,
                                     'name': self.name}}
-        libvirt_driver.connect_volume(connection_info, self.disk_info)
-        libvirt_driver.disconnect_volume(connection_info, "vde")
+        libvirt_driver.connect_volume(connection_info, self.disk_info,
+                                      mock.sentinel.instance)
+        libvirt_driver.disconnect_volume(connection_info, "vde",
+                                         mock.sentinel.instance)
 
         expected_commands = [
             ('umount', export_mnt_base)]
@@ -108,7 +112,8 @@ class LibvirtGlusterfsVolumeDriverTestCase(
         libvirt_driver = glusterfs.LibvirtGlusterfsVolumeDriver(self.fake_host)
         mock_utils_exe.side_effect = processutils.ProcessExecutionError(
             None, None, None, 'umount', 'umount: target is busy.')
-        libvirt_driver.disconnect_volume(connection_info, "vde")
+        libvirt_driver.disconnect_volume(connection_info, "vde",
+                                         mock.sentinel.instance)
         self.assertTrue(mock_LOG_debug.called)
 
     @mock.patch.object(libvirt_utils, 'is_mounted', return_value=False)
@@ -125,8 +130,10 @@ class LibvirtGlusterfsVolumeDriverTestCase(
         connection_info = {'data': {'export': export_string,
                                     'name': self.name,
                                     'options': options}}
-        libvirt_driver.connect_volume(connection_info, self.disk_info)
-        libvirt_driver.disconnect_volume(connection_info, "vde")
+        libvirt_driver.connect_volume(connection_info, self.disk_info,
+                                      mock.sentinel.instance)
+        libvirt_driver.disconnect_volume(connection_info, "vde",
+                                         mock.sentinel.instance)
 
         expected_commands = [
             ('mkdir', '-p', export_mnt_base),
@@ -153,7 +160,8 @@ class LibvirtGlusterfsVolumeDriverTestCase(
             "bus": "virtio",
         }
 
-        libvirt_driver.connect_volume(connection_info, disk_info)
+        libvirt_driver.connect_volume(connection_info, disk_info,
+                                      mock.sentinel.instance)
         conf = libvirt_driver.get_config(connection_info, disk_info)
         tree = conf.format_dom()
         self.assertEqual('network', tree.get('type'))
@@ -166,4 +174,5 @@ class LibvirtGlusterfsVolumeDriverTestCase(
         self.assertEqual('24007', source.find('./host').get('port'))
         self.assertFalse(mock_is_mounted.called)
 
-        libvirt_driver.disconnect_volume(connection_info, "vde")
+        libvirt_driver.disconnect_volume(connection_info, "vde",
+                                         mock.sentinel.instance)

@@ -55,7 +55,8 @@ class LibvirtScalityVolumeDriverTestCase(
         self.stub_out('os.access', _access_wrapper)
 
         with mock.patch.object(self.drv, '_mount_sofs'):
-            self.drv.connect_volume(TEST_CONN_INFO, self.disk_info)
+            self.drv.connect_volume(TEST_CONN_INFO, self.disk_info,
+                                    mock.sentinel.instance)
 
         device_path = os.path.join(self.scality_sofs_mount_point,
                                    TEST_CONN_INFO['data']['sofs_path'])

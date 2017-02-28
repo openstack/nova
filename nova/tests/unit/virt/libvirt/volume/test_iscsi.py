@@ -50,7 +50,8 @@ class LibvirtISCSIVolumeDriverTestCase(
         libvirt_driver.connector.disconnect_volume = mock.MagicMock(
             side_effect=os_brick_exception.VolumeDeviceNotFound(
                 device=device_path))
-        libvirt_driver.disconnect_volume(connection_info, device_path)
+        libvirt_driver.disconnect_volume(connection_info, device_path,
+                                         mock.sentinel.instance)
 
         msg = mock_LOG_warning.call_args_list[0]
         self.assertIn('Ignoring VolumeDeviceNotFound', msg[0][0])
