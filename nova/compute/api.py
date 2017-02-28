@@ -2279,9 +2279,9 @@ class API(base.Base):
                                                 expected_attrs=expected_attrs)
         inst_map = self._get_instance_map_or_none(context, instance_uuid)
         if inst_map and (inst_map.cell_mapping is not None):
-            with nova_context.target_cell(context, inst_map.cell_mapping):
-                instance = objects.Instance.get_by_uuid(
-                    context, instance_uuid, expected_attrs=expected_attrs)
+            nova_context.set_target_cell(context, inst_map.cell_mapping)
+            instance = objects.Instance.get_by_uuid(
+                context, instance_uuid, expected_attrs=expected_attrs)
         elif inst_map and (inst_map.cell_mapping is None):
             # This means the instance has not been scheduled and put in
             # a cell yet. For now it also may mean that the deployer
@@ -2296,11 +2296,11 @@ class API(base.Base):
                 inst_map = self._get_instance_map_or_none(context,
                                                           instance_uuid)
                 if inst_map and (inst_map.cell_mapping is not None):
-                    with nova_context.target_cell(context,
-                                                  inst_map.cell_mapping):
-                        instance = objects.Instance.get_by_uuid(
-                            context, instance_uuid,
-                            expected_attrs=expected_attrs)
+                    nova_context.set_target_cell(context,
+                                                 inst_map.cell_mapping)
+                    instance = objects.Instance.get_by_uuid(
+                        context, instance_uuid,
+                        expected_attrs=expected_attrs)
                 else:
                     raise exception.InstanceNotFound(instance_id=instance_uuid)
         else:

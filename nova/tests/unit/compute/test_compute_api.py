@@ -4298,7 +4298,7 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_get_min_service.assert_called_once_with(self.context,
                                                      'nova-osapi_compute')
 
-    @mock.patch.object(context, 'target_cell')
+    @mock.patch.object(context, 'set_target_cell')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'get_by_uuid')
@@ -4385,7 +4385,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                                       'info_cache'])
             self.assertEqual(instance, inst_from_get)
 
-    @mock.patch.object(context, 'target_cell')
+    @mock.patch.object(context, 'set_target_cell')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'get_by_uuid')
