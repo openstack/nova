@@ -1,13 +1,13 @@
 .. -*- rst -*-
-.. needs:body_verification
 
 ==============================
  Hypervisors (os-hypervisors)
 ==============================
 
 Lists all hypervisors, shows summary statistics for all hypervisors over
-all compute nodes, shows details for a hypervisor, and shows the uptime
-for a hypervisor.
+all compute nodes, shows details for a hypervisor, shows the uptime
+for a hypervisor, list all servers on a given hypervisor or search
+hypervisor by given id.
 
 List Hypervisors
 ================
@@ -152,7 +152,7 @@ Show Hypervisor Details
 
 .. rest_method:: GET /os-hypervisors/{hypervisor_id}
 
-Shows details for a hypervisor.
+Shows details for a given hypervisor.
 
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through
@@ -209,7 +209,7 @@ Show Hypervisor Uptime
 
 .. rest_method:: GET /os-hypervisors/{hypervisor_id}/uptime
 
-Shows the uptime for a hypervisor.
+Shows the uptime for a given hypervisor.
 
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through
