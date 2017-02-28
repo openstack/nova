@@ -711,7 +711,8 @@ class TestNeutronv2Base(test.TestCase):
                 if network is None:
                     continue
 
-                port_req_body_create = {'port': {}}
+                port_req_body_create = {'port': {'device_id':
+                                                 self.instance.uuid}}
                 request.address = fixed_ips.get(request.network_id)
                 if request.address:
                     port_req_body_create['port']['fixed_ips'] = [
@@ -5269,7 +5270,7 @@ class TestAllocateForInstance(test.NoDBTestCase):
         mock_client.create_port.assert_called_once_with(
             {'port': {
                 'network_id': uuids.net, 'tenant_id': uuids.tenant_id,
-                'admin_state_up': True}})
+                'admin_state_up': True, 'device_id': self.instance.uuid}})
 
     def test_create_ports_for_instance_with_security_groups(self):
         api = neutronapi.API()
@@ -5286,7 +5287,8 @@ class TestAllocateForInstance(test.NoDBTestCase):
         mock_client.create_port.assert_called_once_with(
             {'port': {
                 'network_id': uuids.net, 'tenant_id': uuids.tenant_id,
-                'admin_state_up': True, 'security_groups': security_groups}})
+                'admin_state_up': True, 'security_groups': security_groups,
+                'device_id': self.instance.uuid}})
 
     def test_create_ports_for_instance_with_cleanup_after_pc_failure(self):
         api = neutronapi.API()
