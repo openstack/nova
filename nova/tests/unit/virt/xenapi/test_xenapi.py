@@ -1665,12 +1665,12 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
         def fake_inject_instance_metadata(self, instance, vm):
             pass
-        self.stubs.Set(vmops.VMOps, '_inject_instance_metadata',
+        self.stub_out('nova.virt.xenapi.vmops.VMOps._inject_instance_metadata',
                        fake_inject_instance_metadata)
 
         def fake_unpause_and_wait(self, vm_ref, instance, power_on):
             pass
-        self.stubs.Set(vmops.VMOps, '_unpause_and_wait',
+        self.stub_out('nova.virt.xenapi.vmops.VMOps._unpause_and_wait',
                        fake_unpause_and_wait)
 
     def _create_instance(self, **kw):
@@ -1682,18 +1682,18 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         instance.create()
         return instance
 
-    def test_migrate_disk_and_power_off(self):
+    @mock.patch.object(volume_utils, 'is_booted_from_volume')
+    def test_migrate_disk_and_power_off(self, mock_boot):
         instance = self._create_instance()
         xenapi_fake.create_vm(instance['name'], 'Running')
         flavor = fake_flavor.fake_flavor_obj(self.context, root_gb=80,
                                              ephemeral_gb=0)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         vm_ref = vm_utils.lookup(conn._session, instance['name'])
-        self.mox.StubOutWithMock(volume_utils, 'is_booted_from_volume')
         volume_utils.is_booted_from_volume(conn._session, vm_ref)
-        self.mox.ReplayAll()
         conn.migrate_disk_and_power_off(self.context, instance,
                                         '127.0.0.1', flavor, None)
+        mock_boot.assert_any_call(conn._session, vm_ref)
 
     def test_migrate_disk_and_power_off_passes_exceptions(self):
         instance = self._create_instance()
@@ -1703,7 +1703,9 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
         def fake_raise(*args, **kwargs):
             raise exception.MigrationError(reason='test failure')
-        self.stubs.Set(vmops.VMOps, "_migrate_disk_resizing_up", fake_raise)
+        self.stub_out(
+            'nova.virt.xenapi.vmops.VMOps._migrate_disk_resizing_up',
+            fake_raise)
 
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(exception.MigrationError,
@@ -1721,7 +1723,9 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
                           self.context, instance,
                           'fake_dest', flavor, None)
 
-    def test_migrate_disk_and_power_off_with_zero_gb_old_and_new_works(self):
+    @mock.patch.object(volume_utils, 'is_booted_from_volume')
+    def test_migrate_disk_and_power_off_with_zero_gb_old_and_new_works(self,
+                                                                 mock_boot):
         flavor = fake_flavor.fake_flavor_obj(self.context, root_gb=0,
                                              ephemeral_gb=0)
         instance = self._create_instance(root_gb=0, ephemeral_gb=0)
@@ -1730,11 +1734,9 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         xenapi_fake.create_vm(instance['name'], 'Running')
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         vm_ref = vm_utils.lookup(conn._session, instance['name'])
-        self.mox.StubOutWithMock(volume_utils, 'is_booted_from_volume')
-        volume_utils.is_booted_from_volume(conn._session, vm_ref)
-        self.mox.ReplayAll()
         conn.migrate_disk_and_power_off(self.context, instance,
                                         '127.0.0.1', flavor, None)
+        mock_boot.assert_any_call(conn._session, vm_ref)
 
     def _test_revert_migrate(self, power_on):
         instance = create_instance_with_system_metadata(self.context,
@@ -1753,15 +1755,15 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         def fake_finish_revert_migration(*args, **kwargs):
             self.fake_finish_revert_migration_called = True
 
-        self.stubs.Set(stubs.FakeSessionForVMTests,
-                       "VDI_resize_online", fake_vdi_resize)
-        self.stubs.Set(vmops.VMOps, '_start', fake_vm_start)
-        self.stubs.Set(vmops.VMOps, 'finish_revert_migration',
-                       fake_finish_revert_migration)
+        self.stub_out(
+            'nova.tests.unit.virt.xenapi.stubs.FakeSessionForVMTests'
+            '.VDI_resize_online', fake_vdi_resize)
+        self.stub_out('nova.virt.xenapi.vmops.VMOps._start', fake_vm_start)
+        self.stub_out('nova.virt.xenapi.vmops.VMOps.finish_revert_migration',
+                      fake_finish_revert_migration)
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests,
                               product_version=(4, 0, 0),
                               product_brand='XenServer')
-        self.mox.StubOutWithMock(volume_utils, 'is_booted_from_volume')
 
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         network_info = fake_network.fake_get_instance_nw_info(self)
@@ -1799,9 +1801,10 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         def fake_vdi_resize(*args, **kwargs):
             self.called = True
 
-        self.stubs.Set(vmops.VMOps, '_start', fake_vm_start)
-        self.stubs.Set(stubs.FakeSessionForVMTests,
-                       "VDI_resize_online", fake_vdi_resize)
+        self.stub_out('nova.virt.xenapi.vmops.VMOps._start', fake_vm_start)
+        self.stub_out('nova.tests.unit.virt.xenapi.stubs'
+                      '.FakeSessionForVMTests.VDI_resize_online',
+                      fake_vdi_resize)
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests,
                               product_version=(4, 0, 0),
                               product_brand='XenServer')
@@ -1834,8 +1837,9 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         def fake_vdi_resize(*args, **kwargs):
             raise Exception("This shouldn't be called")
 
-        self.stubs.Set(stubs.FakeSessionForVMTests,
-                       "VDI_resize_online", fake_vdi_resize)
+        self.stub_out('nova.tests.unit.virt.xenapi.stubs'
+                      '.FakeSessionForVMTests.VDI_resize_online',
+                      fake_vdi_resize)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         network_info = fake_network.fake_get_instance_nw_info(self)
         image_meta = objects.ImageMeta.from_dict(
@@ -1851,8 +1855,9 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         def fake_vdi_resize(*args, **kwargs):
             raise Exception("This shouldn't be called")
 
-        self.stubs.Set(stubs.FakeSessionForVMTests,
-                       "VDI_resize_online", fake_vdi_resize)
+        self.stub_out('nova.tests.unit.virt.xenapi.stubs'
+                      '.FakeSessionForVMTests.VDI_resize_online',
+                      fake_vdi_resize)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         network_info = fake_network.fake_get_instance_nw_info(self)
         # Resize instance would be determined by the compute call
@@ -1872,9 +1877,9 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         def fake_get_partitions(partition):
             return [(1, 2, 3, 4, "", ""), (1, 2, 3, 4, "", "")]
 
-        self.stubs.Set(vm_utils, '_get_partitions', fake_get_partitions)
+        self.stub_out('nova.virt.xenapi.vm_utils._get_partitions',
+                      fake_get_partitions)
 
-        self.mox.ReplayAll()
         self.assertRaises(exception.InstanceFaultRollback,
                           conn.migrate_disk_and_power_off,
                           self.context, instance,
@@ -1890,26 +1895,30 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         def fake_get_partitions(partition):
             return [(1, 2, 3, "ext2", "", "boot")]
 
-        self.stubs.Set(vm_utils, '_get_partitions', fake_get_partitions)
+        self.stub_out('nova.virt.xenapi.vm_utils._get_partitions',
+                      fake_get_partitions)
 
-        self.mox.ReplayAll()
         self.assertRaises(exception.InstanceFaultRollback,
                           conn.migrate_disk_and_power_off,
                           self.context, instance,
                           '127.0.0.1', flavor, None)
 
-    def test_migrate_rollback_when_resize_down_fs_fails(self):
+    @mock.patch.object(vmops.VMOps, '_resize_ensure_vm_is_shutdown')
+    @mock.patch.object(vmops.VMOps, '_apply_orig_vm_name_label')
+    @mock.patch.object(vm_utils, 'resize_disk')
+    @mock.patch.object(vm_utils, 'migrate_vhd')
+    @mock.patch.object(vm_utils, 'destroy_vdi')
+    @mock.patch.object(vm_utils, 'get_vdi_for_vm_safely')
+    @mock.patch.object(vmops.VMOps, '_restore_orig_vm_and_cleanup_orphan')
+    def test_migrate_rollback_when_resize_down_fs_fails(self, mock_restore,
+                                                        mock_get_vdi,
+                                                        mock_destroy,
+                                                        mock_migrate,
+                                                        mock_disk,
+                                                        mock_label,
+                                                        mock_resize):
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         vmops = conn._vmops
-
-        self.mox.StubOutWithMock(vmops, '_resize_ensure_vm_is_shutdown')
-        self.mox.StubOutWithMock(vmops, '_apply_orig_vm_name_label')
-        self.mox.StubOutWithMock(vm_utils, 'resize_disk')
-        self.mox.StubOutWithMock(vm_utils, 'migrate_vhd')
-        self.mox.StubOutWithMock(vm_utils, 'destroy_vdi')
-        self.mox.StubOutWithMock(vm_utils, 'get_vdi_for_vm_safely')
-        self.mox.StubOutWithMock(vmops, '_restore_orig_vm_and_cleanup_orphan')
-
         instance = objects.Instance(context=self.context,
                                     auto_disk_config=True,
                                     uuid=uuids.instance)
@@ -1922,20 +1931,13 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         vmops._resize_ensure_vm_is_shutdown(instance, vm_ref)
         vmops._apply_orig_vm_name_label(instance, vm_ref)
         old_vdi_ref = "old_ref"
-        vm_utils.get_vdi_for_vm_safely(vmops._session, vm_ref).AndReturn(
-            (old_vdi_ref, None))
+        mock_get_vdi.return_value = (old_vdi_ref, None)
         new_vdi_ref = "new_ref"
         new_vdi_uuid = "new_uuid"
-        vm_utils.resize_disk(vmops._session, instance, old_vdi_ref,
-            flavor).AndReturn((new_vdi_ref, new_vdi_uuid))
-        vm_utils.migrate_vhd(vmops._session, instance, new_vdi_uuid, dest,
-                             sr_path, 0).AndRaise(
-                                exception.ResizeError(reason="asdf"))
-
+        mock_disk.return_value = (new_vdi_ref, new_vdi_uuid)
+        mock_migrate.side_effect = exception.ResizeError(reason="asdf")
         vm_utils.destroy_vdi(vmops._session, new_vdi_ref)
         vmops._restore_orig_vm_and_cleanup_orphan(instance)
-
-        self.mox.ReplayAll()
 
         with mock.patch.object(instance, 'save') as mock_save:
             self.assertRaises(exception.InstanceFaultRollback,
@@ -1944,76 +1946,88 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
             self.assertEqual(3, mock_save.call_count)
             self.assertEqual(60.0, instance.progress)
 
-    def test_resize_ensure_vm_is_shutdown_cleanly(self):
+        mock_resize.assert_any_call(instance, vm_ref)
+        mock_label.assert_any_call(instance, vm_ref)
+        mock_get_vdi.assert_called_once_with(vmops._session, vm_ref)
+        mock_disk.assert_called_once_with(vmops._session, instance,
+                                          old_vdi_ref, flavor)
+        mock_migrate.assert_called_once_with(vmops._session, instance,
+                                             new_vdi_uuid, dest, sr_path, 0)
+        mock_destroy.assert_any_call(vmops._session, new_vdi_ref)
+        mock_restore.assert_any_call(instance)
+
+    @mock.patch.object(vm_utils, 'is_vm_shutdown')
+    @mock.patch.object(vm_utils, 'clean_shutdown_vm')
+    @mock.patch.object(vm_utils, 'hard_shutdown_vm')
+    def test_resize_ensure_vm_is_shutdown_cleanly(self, mock_hard, mock_clean,
+                                                  mock_shutdown):
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         vmops = conn._vmops
         fake_instance = {'uuid': 'uuid'}
 
-        self.mox.StubOutWithMock(vm_utils, 'is_vm_shutdown')
-        self.mox.StubOutWithMock(vm_utils, 'clean_shutdown_vm')
-        self.mox.StubOutWithMock(vm_utils, 'hard_shutdown_vm')
-
-        vm_utils.is_vm_shutdown(vmops._session, "ref").AndReturn(False)
-        vm_utils.clean_shutdown_vm(vmops._session, fake_instance,
-            "ref").AndReturn(True)
-
-        self.mox.ReplayAll()
+        mock_shutdown.return_value = False
+        mock_clean.return_value = False
 
         vmops._resize_ensure_vm_is_shutdown(fake_instance, "ref")
+        mock_shutdown.assert_called_once_with(vmops._session, "ref")
+        mock_clean.assert_called_once_with(vmops._session, fake_instance,
+                                           "ref")
 
-    def test_resize_ensure_vm_is_shutdown_forced(self):
+    @mock.patch.object(vm_utils, 'is_vm_shutdown')
+    @mock.patch.object(vm_utils, 'clean_shutdown_vm')
+    @mock.patch.object(vm_utils, 'hard_shutdown_vm')
+    def test_resize_ensure_vm_is_shutdown_forced(self, mock_hard, mock_clean,
+                                                 mock_shutdown):
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         vmops = conn._vmops
         fake_instance = {'uuid': 'uuid'}
 
-        self.mox.StubOutWithMock(vm_utils, 'is_vm_shutdown')
-        self.mox.StubOutWithMock(vm_utils, 'clean_shutdown_vm')
-        self.mox.StubOutWithMock(vm_utils, 'hard_shutdown_vm')
-
-        vm_utils.is_vm_shutdown(vmops._session, "ref").AndReturn(False)
-        vm_utils.clean_shutdown_vm(vmops._session, fake_instance,
-            "ref").AndReturn(False)
-        vm_utils.hard_shutdown_vm(vmops._session, fake_instance,
-            "ref").AndReturn(True)
-
-        self.mox.ReplayAll()
+        mock_shutdown.return_value = False
+        mock_clean.return_value = False
+        mock_hard.return_value = True
 
         vmops._resize_ensure_vm_is_shutdown(fake_instance, "ref")
+        mock_shutdown.assert_called_once_with(vmops._session, "ref")
+        mock_clean.assert_called_once_with(vmops._session, fake_instance,
+                                           "ref")
+        mock_hard.assert_called_once_with(vmops._session, fake_instance,
+                                          "ref")
 
-    def test_resize_ensure_vm_is_shutdown_fails(self):
+    @mock.patch.object(vm_utils, 'is_vm_shutdown')
+    @mock.patch.object(vm_utils, 'clean_shutdown_vm')
+    @mock.patch.object(vm_utils, 'hard_shutdown_vm')
+    def test_resize_ensure_vm_is_shutdown_fails(self, mock_hard, mock_clean,
+                                                 mock_shutdown):
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         vmops = conn._vmops
         fake_instance = {'uuid': 'uuid'}
 
-        self.mox.StubOutWithMock(vm_utils, 'is_vm_shutdown')
-        self.mox.StubOutWithMock(vm_utils, 'clean_shutdown_vm')
-        self.mox.StubOutWithMock(vm_utils, 'hard_shutdown_vm')
-
-        vm_utils.is_vm_shutdown(vmops._session, "ref").AndReturn(False)
-        vm_utils.clean_shutdown_vm(vmops._session, fake_instance,
-            "ref").AndReturn(False)
-        vm_utils.hard_shutdown_vm(vmops._session, fake_instance,
-            "ref").AndReturn(False)
-
-        self.mox.ReplayAll()
+        mock_shutdown.return_value = False
+        mock_clean.return_value = False
+        mock_hard.return_value = False
 
         self.assertRaises(exception.ResizeError,
             vmops._resize_ensure_vm_is_shutdown, fake_instance, "ref")
+        mock_shutdown.assert_called_once_with(vmops._session, "ref")
+        mock_clean.assert_called_once_with(vmops._session, fake_instance,
+                                           "ref")
+        mock_hard.assert_called_once_with(vmops._session, fake_instance,
+                                          "ref")
 
-    def test_resize_ensure_vm_is_shutdown_already_shutdown(self):
+    @mock.patch.object(vm_utils, 'is_vm_shutdown')
+    @mock.patch.object(vm_utils, 'clean_shutdown_vm')
+    @mock.patch.object(vm_utils, 'hard_shutdown_vm')
+    def test_resize_ensure_vm_is_shutdown_already_shutdown(self, mock_hard,
+                                                           mock_clean,
+                                                           mock_shutdown):
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         vmops = conn._vmops
         fake_instance = {'uuid': 'uuid'}
 
-        self.mox.StubOutWithMock(vm_utils, 'is_vm_shutdown')
-        self.mox.StubOutWithMock(vm_utils, 'clean_shutdown_vm')
-        self.mox.StubOutWithMock(vm_utils, 'hard_shutdown_vm')
-
-        vm_utils.is_vm_shutdown(vmops._session, "ref").AndReturn(True)
-
-        self.mox.ReplayAll()
+        mock_shutdown.return_value = True
 
         vmops._resize_ensure_vm_is_shutdown(fake_instance, "ref")
+        mock_shutdown.assert_called_once_with(vmops._session, "ref")
 
 
 class XenAPIImageTypeTestCase(test.NoDBTestCase):
