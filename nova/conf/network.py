@@ -928,15 +928,13 @@ Related options:
         deprecated_reason="""
 nova-network is deprecated, as are any related configuration options.
 """,
+        default='nova.virt.firewall.NoopFirewallDriver',
         help="""
 Firewall driver to use with ``nova-network`` service.
 
 This option only applies when using the ``nova-network`` service. When using
 another networking services, such as Neutron, this should be to set to the
 ``nova.virt.firewall.NoopFirewallDriver``.
-
-If unset (the default), this will default to the hypervisor-specified
-default driver.
 
 Possible values:
 

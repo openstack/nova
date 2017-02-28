@@ -663,7 +663,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.project_id = 'fake'
         self.context = context.get_admin_context()
         temp_dir = self.useFixture(fixtures.TempDir()).path
-        self.flags(instances_path=temp_dir)
+        self.flags(instances_path=temp_dir,
+                   firewall_driver=None)
         self.flags(snapshots_directory=temp_dir, group='libvirt')
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.driver.libvirt_utils',
