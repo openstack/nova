@@ -30,16 +30,17 @@
 # English translations for nova.
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 # zzxwill <zzxwill@gmail.com>, 2016. #zanata
+# TigerFang <tigerfun@126.com>, 2017. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.2.dev16\n"
+"Project-Id-Version: nova 14.0.4.dev59\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-10-23 09:20+0000\n"
+"POT-Creation-Date: 2017-02-18 03:18+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-08-23 02:11+0000\n"
-"Last-Translator: zzxwill <zzxwill@gmail.com>\n"
+"PO-Revision-Date: 2017-02-27 03:31+0000\n"
+"Last-Translator: TigerFang <tigerfun@126.com>\n"
 "Language: zh-CN\n"
 "Language-Team: Chinese (China)\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -124,6 +125,13 @@ msgstr "%(name)s最小字符串长度%(min_length)s。"
 #, python-format
 msgid "%(name)s has more than %(max_length)s characters."
 msgstr "%(name)s 包含的字符超过 %(max_length)s 个。"
+
+#, python-format
+msgid ""
+"%(operation)s is not supported in conjunction with the current %(option)s "
+"setting.  Please refer to the nova config-reference."
+msgstr ""
+"在设置了当前的配置项%(option)s时不支持%(operation)s。请参考nova配置手册。"
 
 #, python-format
 msgid "%(path)s is not on local storage: %(reason)s"
@@ -246,6 +254,10 @@ msgid "Action: '%(action)s', calling method: %(meth)s, body: %(body)s"
 msgstr "操作：“%(action)s”，调用方法：%(meth)s，主体：%(body)s"
 
 #, python-format
+msgid "Active live migration for instance %(instance_id)s not found"
+msgstr "无法找到针对实例%(instance_id)s的正在进行的实时迁移"
+
+#, python-format
 msgid "Add metadata failed for aggregate %(id)s after %(retries)s retries"
 msgstr "在%(retries)s尝试后，为聚合%(id)s 添加元数据"
 
@@ -304,6 +316,16 @@ msgid "All hosts are already mapped to cell(s), exiting."
 msgstr "所有主机已映射至单元，正在退出。"
 
 #, python-format
+msgid "Allocation for resource provider '%(rp_uuid)s' that does not exist."
+msgstr "分配给不存在的资源提供者 '%(rp_uuid)s' 。"
+
+#, python-format
+msgid ""
+"Allocation of class '%(class)s' for resource provider '%(rp_uuid)s' invalid: "
+"%(error)s"
+msgstr "为资源提供者'%(rp_uuid)s' 分配类型'%(class)s'失败，详情如下：%(error)s"
+
+#, python-format
 msgid "An invalid 'name' value was provided. The name must be: %(reason)s"
 msgstr "提供了无效“name”值。name 必须为：%(reason)s"
 
@@ -312,6 +334,9 @@ msgstr "发生了一个未知的错误. 请重试你的请求."
 
 msgid "An unknown exception occurred."
 msgstr "发生未知异常。"
+
+msgid "Another thread concurrently updated the data. Please retry your update"
+msgstr "另外一个进程也在同时更新数据。请您重试"
 
 msgid "Anti-affinity instance group policy was violated."
 msgstr "违反反亲和力实例组策略。"
@@ -332,6 +357,10 @@ msgstr ""
 "和内存。"
 
 #, python-format
+msgid "Attaching interfaces is not supported for instance %(instance)s."
+msgstr "无法向实例%(instance)s挂载接口。"
+
+#, python-format
 msgid ""
 "Attempt to consume PCI device %(compute_node_id)s:%(address)s from empty pool"
 msgstr "尝试从空池子中消费PCI设备%(compute_node_id)s:%(address)s"
@@ -345,6 +374,10 @@ msgstr "属性不受支持: %(attr)s"
 
 msgid "Bad Request - Invalid Parameters"
 msgstr "错误请求——参数无效"
+
+#, python-format
+msgid "Bad inventory %(class)s for resource provider %(rp_uuid)s: %(error)s"
+msgstr "资源提供者%(rp_uuid)s的存量%(class)s无效，详情如下：%(error)s"
 
 #, python-format
 msgid "Bad mac for to_global_ipv6: %s"
@@ -428,6 +461,9 @@ msgstr "块设备映射无效：未能获取快照 %(id)s。"
 msgid "Block Device Mapping is Invalid: failed to get volume %(id)s."
 msgstr "块设备映射无效：未能获取卷 %(id)s。"
 
+msgid "Block device tags are not yet supported."
+msgstr "暂不支持块设备标签。"
+
 msgid "Block migration can not be used with shared storage."
 msgstr "块存储迁移无法在共享存储使用"
 
@@ -479,6 +515,25 @@ msgstr "CPU 编号 %(cpuset)s 未分配为任何节点"
 msgid "CPU pinning is not supported by the host: %(reason)s"
 msgstr "主机不支持CPU 绑定：%(reason)s"
 
+#, python-format
+msgid "CPU set to pin %(requested)s must be a subset of free CPU set %(free)s"
+msgstr "要绑定的CPU值%(requested)s必须是可用CPU值%(free)s的子集"
+
+#, python-format
+msgid ""
+"CPU set to pin %(requested)s must be a subset of known CPU set %(cpuset)s"
+msgstr "要绑定的CPU值%(requested)s必须是已知CPU值%(cpuset)s的子集"
+
+#, python-format
+msgid ""
+"CPU set to unpin %(requested)s must be a subset of known CPU set %(cpuset)s"
+msgstr "取消绑定的CPU值%(requested)s必须是已知的CPU值%(cpuset)s的子集"
+
+#, python-format
+msgid ""
+"CPU set to unpin %(requested)s must be a subset of pinned CPU set %(pinned)s"
+msgstr "取消绑定的CPU值%(requested)s必须是已经绑定的CPU值%(pinned)s的子集"
+
 msgid "Can not add access to a public flavor."
 msgstr "不能添加访问到公共云主机类型。"
 
@@ -495,6 +550,9 @@ msgstr "只能再多运行 %s 个此类型的实例。"
 
 msgid "Can't detach root device volume"
 msgstr "不能断开root设备卷"
+
+msgid "Can't force to a non-provided destination"
+msgstr "无法强制到一个未指定的目标"
 
 msgid "Can't resize a disk to 0 GB."
 msgstr "不能调整磁盘到0GB."
@@ -664,6 +722,10 @@ msgstr "声明pci失败。"
 #, python-format
 msgid "Class %(class_name)s could not be found: %(exception)s"
 msgstr "找不到类 %(class_name)s ：异常 %(exception)s"
+
+#, python-format
+msgid "Client exception during Migration Pre check: %(reason)s"
+msgstr "在迁移预检查的过程中出现客户端错误，原因是：%(reason)s"
 
 #, python-format
 msgid ""
@@ -949,6 +1011,14 @@ msgid ""
 "the project %(project_id)s."
 msgstr "网络uuid %(network_uuid)s不存在或者没有分配到项目%(project_id)s。"
 
+msgid ""
+"Ephemeral disks requested are larger than the instance type allows. If no "
+"size is given in one block device mapping, flavor ephemeral size will be "
+"used."
+msgstr ""
+"请求的临时磁盘大小比实例类型允许值要大。在一个块存储设备进行映射时，如果磁盘"
+"的大小没有给出，则会使用配置类型中的大小值。"
+
 #, python-format
 msgid "Error attempting to run %(method)s"
 msgstr "尝试运行 %(method)s 时出错"
@@ -1213,6 +1283,10 @@ msgstr "无法终止云主机：%(reason)s"
 msgid "Failed to unplug vif %s"
 msgstr "拔除 vif %s 失败"
 
+#, python-format
+msgid "Failed to unplug virtual interface: %(reason)s"
+msgstr "移除虚拟接口失败:%(reason)s"
+
 msgid "Failure prepping block device."
 msgstr "准备块设备失败。"
 
@@ -1421,6 +1495,9 @@ msgstr "剩余%(type)s %(free).02f %(unit)s<请求%(requested)d %(unit)s"
 #, python-format
 msgid "Group not valid. Reason: %(reason)s"
 msgstr "组无效。原因：%(reason)s"
+
+msgid "Guest agent is not enabled for the instance"
+msgstr "实例中的客户代理没有启用"
 
 msgid "Guest does not have a console available."
 msgstr "访客没有可用控制台。"
@@ -1736,6 +1813,9 @@ msgstr "实例已处于救援模式：%s"
 msgid "Instance is not a member of specified network"
 msgstr "实例并不是指定网络的成员"
 
+msgid "Instance network is not ready yet"
+msgstr "实例的网络尚未就绪"
+
 msgid "Instance recreate is not supported."
 msgstr "不支持实例重创建"
 
@@ -1840,6 +1920,9 @@ msgstr "控制台类型 %(console_type)s 无效"
 msgid "Invalid content type %(content_type)s."
 msgstr "无效的内容类型 %(content_type)s。"
 
+msgid "Invalid data supplied to HashRing.get_hosts."
+msgstr "对 HashRing.get_hosts 提供的数据无效。"
+
 #, python-format
 msgid "Invalid datetime string: %(reason)s"
 msgstr "日期字符串无效：  %(reason)s"
@@ -1874,6 +1957,9 @@ msgstr "请求中无效固定IP地址%s"
 #, python-format
 msgid "Invalid floating IP %s in request"
 msgstr "请求中无效浮动IP %s"
+
+msgid "Invalid hosts supplied when building HashRing."
+msgstr "在创建HashRing时提供的主机不正确。"
 
 #, python-format
 msgid "Invalid id: %(instance_id)s (expecting \"i-...\")"
@@ -1911,6 +1997,15 @@ msgid "Invalid instance image."
 msgstr "无效实例镜像。"
 
 #, python-format
+msgid ""
+"Invalid inventory for '%(resource_class)s' on resource provider "
+"'%(resource_provider)s'. The reserved value is greater than or equal to "
+"total."
+msgstr ""
+"资源提供者'%(resource_provider)s'上的'%(resource_class)s'清单无效。预留值大于"
+"或者等于总值。"
+
+#, python-format
 msgid "Invalid is_public filter [%s]"
 msgstr "is_public 过滤器 [%s] 无效"
 
@@ -1935,6 +2030,10 @@ msgstr "元数据大小无效：  %(reason)s"
 #, python-format
 msgid "Invalid metadata: %(reason)s"
 msgstr "元数据无效：  %(reason)s"
+
+#, python-format
+msgid "Invalid microversion: %(error)s"
+msgstr "微转化无效详情如下：%(error)s"
 
 #, python-format
 msgid "Invalid minDisk filter [%s]"
@@ -1998,6 +2097,9 @@ msgstr "开始时间无效。开始时间不能出现在结束时间之后。"
 msgid "Invalid state of instance files on shared storage"
 msgstr "共享存储器上实例文件的状态无效"
 
+msgid "Invalid status value"
+msgstr "状态值无效"
+
 msgid "Invalid target_lun"
 msgstr "无效 target_lun"
 
@@ -2051,6 +2153,23 @@ msgid "Invalid volume_size."
 msgstr "无效volume_size."
 
 #, python-format
+msgid "Inventory changed while attempting to allocate: %(error)s"
+msgstr "在进行分配时存量发现改变，详情如下：%(error)s"
+
+#, python-format
+msgid ""
+"Inventory for '%(resource_class)s' on resource provider "
+"'%(resource_provider)s' invalid."
+msgstr "资源提供者'%(resource_provider)s'上的'%(resource_class)s'清单无效。"
+
+#, python-format
+msgid ""
+"Inventory for '%(resource_classes)s' on resource provider "
+"'%(resource_provider)s' in use."
+msgstr ""
+"资源提供者'%(resource_provider)s'上的'%(resource_classes)s'清单正在使用中。"
+
+#, python-format
 msgid "Ironic node uuid not supplied to driver for instance %s."
 msgstr "Ironic节点uuid不提供实例 %s的驱动。"
 
@@ -2067,6 +2186,10 @@ msgstr "正确的服务在运行吗？"
 msgid ""
 "It is not allowed to create an interface on external network %(network_uuid)s"
 msgstr "在外部网络%(network_uuid)s创建一个接口是不允许的"
+
+#, python-format
+msgid "JSON does not validate: %(error)s"
+msgstr "未验证的JSON文件，详情如下：%(error)s"
 
 #, python-format
 msgid ""
@@ -2103,6 +2226,9 @@ msgstr "密钥对必须是字符串，并且长度在1到255个字符"
 #, python-format
 msgid "Last %s nova syslog entries:-"
 msgstr "最近的nova 系统日志nova syslog 输出 %s:-"
+
+msgid "Libguestfs does not have permission to read host kernel."
+msgstr "Libguestfs没有权限读取主机内核"
 
 msgid "Limit"
 msgstr "限制"
@@ -2141,6 +2267,10 @@ msgid ""
 "Live migration with API v2.25 requires all the Mitaka upgrade to be complete "
 "before it is available."
 msgstr "使用 API V2.25 进行的实时迁移要求所有 Mitaka 升级完成才可用。"
+
+#, python-format
+msgid "Malformed JSON: %(error)s"
+msgstr "JSON格式错误，详情如下：%(error)s"
 
 #, python-format
 msgid "Malformed message body: %(reason)s"
@@ -2185,6 +2315,10 @@ msgstr "超过端口的最大数"
 
 msgid "Maximum number of security groups or rules exceeded"
 msgstr "已超过最大安全组数或最大规则数"
+
+#, python-format
+msgid "Maximum number of serial port exceeds %(allowed)d for %(virt_type)s"
+msgstr "超出最大串行端口限制，允许值为%(allowed)d，请求值为%(virt_type)s"
 
 msgid "Metadata item was not found"
 msgstr "元数据项目未找到"
@@ -2400,6 +2534,9 @@ msgstr "网络驱动程序不支持此功能。"
 msgid "Network host %(host)s has zero fixed IPs in network %(network_id)s."
 msgstr "网络主机 %(host)s 在网络 %(network_id)s 中没有固定 IP。"
 
+msgid "Network interface tags are not yet supported."
+msgstr "暂不支持网络接口标签。"
+
 #, python-format
 msgid ""
 "Network must be disassociated from project %(project_id)s before it can be "
@@ -2417,6 +2554,9 @@ msgstr "网络需要关联的 port_security_enabled 和子网，以便应用安�
 #, python-format
 msgid "Network set host failed for network %(network_id)s."
 msgstr "网络为网络%(network_id)s设置主机失败。"
+
+msgid "Networking client is experiencing an unauthorized exception."
+msgstr "网络客户端正在发生一项非授权的异常。"
 
 msgid "New volume must be detached in order to swap."
 msgstr "为了进行交换，新卷必须断开。"
@@ -2441,6 +2581,10 @@ msgstr "在协议nnection_info中没有access_url。不能验证协议"
 #, python-format
 msgid "No agent-build associated with id %(id)s."
 msgstr "不存在任何与标识 %(id)s 关联的代理构建。"
+
+#, python-format
+msgid "No allocations for consumer '%(consumer_uuid)s'"
+msgstr "消耗者'%(consumer_uuid)s'没有被分配的资源"
 
 msgid "No cell given in routing path."
 msgstr "在路由路径中未给定单元。"
@@ -2604,6 +2748,12 @@ msgid ""
 "Not all Virtual Functions of PF %(compute_node_id)s:%(address)s are free."
 msgstr "并非 PF %(compute_node_id)s:%(address)s 的所有虚拟功能都可用。"
 
+msgid "Not all aggregates have been migrated to the API database"
+msgstr "迁移到API数据库的主机组不完整"
+
+msgid "Not all flavors have been migrated to the API database"
+msgstr "迁移到API数据库的配置信息不完整"
+
 msgid "Not an rbd snapshot"
 msgstr "不是 rbd 快照"
 
@@ -2661,6 +2811,10 @@ msgstr "旧卷绑定到一个不同的实例。"
 #, python-format
 msgid "One or more hosts already in availability zone(s) %s"
 msgstr "在可用区域%s中，已经有一个或多个主机"
+
+#, python-format
+msgid "Only %(type)s is provided"
+msgstr "只提供了%(type)s"
 
 msgid "Only administrators may list deleted instances"
 msgstr "仅管理员可列示已删除的实例"
@@ -2793,6 +2947,10 @@ msgid "Plugin version mismatch (Expected %(exp)s, got %(got)s)"
 msgstr "插件版本不匹配 (预期 %(exp)s，获取 %(got)s)"
 
 #, python-format
+msgid "Pointer model '%(model)s' requested is not supported by host."
+msgstr "主机不支持请求的指针模型'%(model)s'"
+
+#, python-format
 msgid "Policy doesn't allow %(action)s to be performed."
 msgstr "政策不允许 %(action)s 被执行。"
 
@@ -2824,6 +2982,10 @@ msgstr "端口%s没有连接"
 #, python-format
 msgid "Port id %(port_id)s could not be found."
 msgstr "找不到端口标识 %(port_id)s。"
+
+#, python-format
+msgid "Port update failed for port %(port_id)s: %(reason)s"
+msgstr "对端口%(port_id)s的更新失败，原因是：%(reason)s"
 
 #, python-format
 msgid "Project %(project_id)s could not be found."
@@ -2934,6 +3096,17 @@ msgid "Quota usage for project %(project_id)s could not be found."
 msgstr "找不到项目 %(project_id)s 的配额使用量。"
 
 #, python-format
+msgid ""
+"Quota usage refresh of resource %(resource)s for project %(project_id)s, "
+"user %(user_id)s, is not allowed. The allowed resources are %(syncable)s."
+msgstr ""
+"不允许对项目%(project_id)s中用户%(user_id)s的资源%(resource)s配额使用率进行刷"
+"新。允许使用的资源是%(syncable)s。"
+
+msgid "RPC is pinned to old version"
+msgstr "RPC版本过老"
+
+#, python-format
 msgid "Reached maximum number of retries trying to unplug VBD %s"
 msgstr "已达到尝试拔出 VBD %s 的最大重试次数"
 
@@ -3031,6 +3204,13 @@ msgstr "不允许将云主机类型的磁盘大小缩减为零。"
 
 msgid "Resource could not be found."
 msgstr "资源没有找到。"
+
+#, python-format
+msgid "Resource provider '%(rp_uuid)s' not found: %(error)s"
+msgstr "无法找到资源提供者 '%(rp_uuid)s' ,详情如下：%(error)s"
+
+msgid "Resource provider has allocations."
+msgstr "资源提供者已经分配。"
 
 msgid "Resumed"
 msgstr "已恢复"
@@ -3143,6 +3323,10 @@ msgid "Security group with rule %(rule_id)s not found."
 msgstr "带有规则 %(rule_id)s 的安全组没有找到。"
 
 #, python-format
+msgid "Server %(server_id)s has no tag '%(tag)s'"
+msgstr "服务器%(server_id)s上未发现标签'%(tag)s'"
+
+#, python-format
 msgid "Server disk was unable to be resized because: %(reason)s"
 msgstr "由于: %(reason)s，实例磁盘空间不能修改"
 
@@ -3237,6 +3421,14 @@ msgstr "分类大小超过分类关键值大小"
 msgid "Sort key supplied was not valid."
 msgstr "提供的排序键无效。"
 
+#, python-format
+msgid ""
+"Specified Fixed IP '%(addr)s' cannot be used with port '%(port)s': the two "
+"cannot be specified together."
+msgstr ""
+"指定的固定IP地址'%(addr)s'无法使用在接口'%(port)s'上，原因是：这两者无法同时"
+"指定。"
+
 msgid "Specified fixed address not assigned to instance"
 msgstr "指定的固定IP地址没有分配给实例"
 
@@ -3274,6 +3466,28 @@ msgstr "Swap 只支持主机设备"
 
 msgid "Table"
 msgstr "表"
+
+#, python-format
+msgid ""
+"Tag '%(tag)s' is invalid. It must be a string without characters '/' and "
+"','. Validation error message: %(err)s"
+msgstr ""
+"标签 '%(tag)s' 无效。它必须是字符串，且不能包含‘/’和‘,’。验证错误相关的情况"
+"为：%(err)s"
+
+#, python-format
+msgid "Tag '%(tag)s' is too long. Maximum length of a tag is %(length)d"
+msgstr "标签'%(tag)s'过长。最大的标签长度是%(length)d"
+
+#, python-format
+msgid "Tags %(tags)s are too long. Maximum length of a tag is %(length)d"
+msgstr "标签%(tags)s过长。标签的最大长度为%(length)d"
+
+#, python-format
+msgid ""
+"Tags '%s' are invalid. Each tag must be a string without characters '/' and "
+"','."
+msgstr "标签 '%s'无效。标签必须是不包含‘/’和‘,’的字符串。"
 
 #, python-format
 msgid "Task %(task_name)s is already running on host %(host)s"
@@ -3327,8 +3541,22 @@ msgstr "在后台，缺省的PBM策略不存在。"
 msgid "The firewall filter for %s does not exist"
 msgstr "%s 的防火墙过滤器不存在"
 
+#, python-format
+msgid ""
+"The fixed IP associated with port %(port_id)s is not compatible with the "
+"host."
+msgstr "端口%(port_id)s对应的固定IP地址无法与主机适配。"
+
 msgid "The floating IP request failed with a BadRequest"
 msgstr "由于坏的请求，浮动IP请求失败"
+
+#, python-format
+msgid ""
+"The format of the option 'reserved_huge_pages' is invalid. (found "
+"'%(conf)s') Please refer to the nova config-reference."
+msgstr ""
+"配置项'reserved_huge_pages'的格式不正确。（配置内容为'%(conf)s'）请参照nova配"
+"置说明手册。"
 
 #, python-format
 msgid "The group %(group_name)s must be configured with an id."
@@ -3351,6 +3579,10 @@ msgid "The key %s is required in all file system descriptions."
 msgstr "在所有文件系统描述中，关键字%s是必须的。"
 
 #, python-format
+msgid "The media type %(bad_type)s is not supported, use %(good_type)s"
+msgstr "不支持%(bad_type)s这个媒体类型，请使用%(good_type)s"
+
+#, python-format
 msgid ""
 "The metadata for this location will not work with this module %(module)s.  "
 "%(reason)s."
@@ -3359,6 +3591,9 @@ msgstr "这个定位的元数据与模块%(module)s不能正常工作。%(reason
 #, python-format
 msgid "The method %(method_name)s is not implemented."
 msgstr "方法%(method_name)s没有实现。"
+
+msgid "The method specified is not allowed for this resource."
+msgstr "指定的方法无权使用在这个资源上。"
 
 #, python-format
 msgid "The module %(module)s is misconfigured: %(reason)s."
@@ -3381,16 +3616,38 @@ msgid ""
 msgstr ""
 "网络范围不够大，无法容纳 %(num_networks)s 个网络。网络大小为 %(network_size)s"
 
+msgid "The networks quota is disabled"
+msgstr "网络配额被禁用"
+
 #, python-format
 msgid "The number of defined ports: %(ports)d is over the limit: %(quota)d"
 msgstr "定义的端口数量：%(ports)d 超过限制：%(quota)d"
+
+#, python-format
+msgid ""
+"The number of tags exceeded the per-server limit %(max)d. The number of tags "
+"in request is %(count)d."
+msgstr "标签数量超过了保护限制%(max)d。请求的标签数量是%(count)d。"
+
+#, python-format
+msgid "The number of tags exceeded the per-server limit %d"
+msgstr "标签数量超过了保护限制，上限数量为%d"
 
 msgid "The only partition should be partition 1."
 msgstr "唯一的分区应该是分区1。"
 
 #, python-format
+msgid ""
+"The property 'numa_nodes' cannot be '%(nodes)s'. It must be a number greater "
+"than 0"
+msgstr " 'numa_nodes' 的属性不能是'%(nodes)s'。它必须是一个比0大的数"
+
+#, python-format
 msgid "The provided RNG device path: (%(path)s) is not present on the host."
 msgstr "主机上不存在提供的RNG设备路径：(%(path)s)。"
+
+msgid "The regex for server name is incorrect"
+msgstr "服务器名称的正则表达式不正确"
 
 msgid "The request body can't be empty"
 msgstr "请求题不能为空"
@@ -3583,6 +3840,10 @@ msgid "UUID is required to delete Neutron Networks"
 msgstr "删除Neutron网络需要UUID"
 
 #, python-format
+msgid "Unable to allocate inventory: %(error)s"
+msgstr "无法确定存量，详情如下： %(error)s"
+
+#, python-format
 msgid ""
 "Unable to associate floating IP %(address)s to any fixed IPs for instance "
 "%(id)s. Instance has no fixed IPv4 addresses to associate."
@@ -3601,6 +3862,10 @@ msgstr ""
 msgid "Unable to authenticate Ironic client."
 msgstr "不能认证Ironic客户端。"
 
+#, python-format
+msgid "Unable to automatically allocate a network for project %(project_id)s"
+msgstr "无法为项目%(project_id)s自动分配一个网络"
+
 msgid ""
 "Unable to claim IP for VPN instances, ensure it isn't running, and try again "
 "in a few minutes"
@@ -3617,6 +3882,14 @@ msgstr "无法将镜像转换为 %(format)s：%(exp)s"
 #, python-format
 msgid "Unable to convert image to raw: %(exp)s"
 msgstr "无法将镜像转换为原始格式：%(exp)s"
+
+#, python-format
+msgid ""
+"Unable to create allocation for '%(resource_class)s' on resource provider "
+"'%(resource_provider)s'. The requested amount would exceed the capacity."
+msgstr ""
+"无法在资源提供者'%(resource_provider)s'上分配'%(resource_class)s'。请求的数量"
+"已经超过可用的总量。"
 
 #, python-format
 msgid "Unable to delete system group '%s'"
@@ -3972,6 +4245,11 @@ msgid ""
 msgstr ""
 "API不支持版本%(req_ver)s。小版本号是%(min_ver)s，大版本号是%(max_ver)s。"
 
+#, python-format
+msgid ""
+"Version of %(name)s %(min_ver)s %(max_ver)s intersects with another versions."
+msgstr "%(name)s %(min_ver)s %(max_ver)s的版本会取代其它版本。"
+
 msgid "Virtual Interface creation failed"
 msgstr "虚拟接口创建失败"
 
@@ -4140,6 +4418,9 @@ msgstr "没有浮动 IP。"
 msgid "admin password can't be changed on existing disk"
 msgstr "无法在现有磁盘上更改管理员密码"
 
+msgid "admin required"
+msgstr "需要管理员身份"
+
 msgid "aggregate deleted"
 msgstr "删除的聚合"
 
@@ -4163,6 +4444,9 @@ msgstr "连接信息：%s"
 #, python-format
 msgid "connecting to: %(host)s:%(port)s"
 msgstr "连接到：%(host)s:%(port)s"
+
+msgid "content-type header required"
+msgstr "需要content-type头文件信息"
 
 #, python-format
 msgid "destination is %(target_cell)s but routing_path is %(routing_path)s"
@@ -4292,9 +4576,6 @@ msgstr "libguestfs安装了，但是不可用(%s)"
 #, python-format
 msgid "libguestfs is not installed (%s)"
 msgstr "libguestfs没有安装 (%s)"
-
-msgid "libvirt error while requesting blockjob info."
-msgstr "当请求blockjob 信息时，libvirt出错"
 
 #, python-format
 msgid "marker [%s] not found"
