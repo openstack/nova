@@ -99,7 +99,6 @@ from nova.virt import event as virtevent
 from nova.virt import storage_users
 from nova.virt import virtapi
 from nova.volume import cinder
-from nova.volume import encryptors
 
 CONF = nova.conf.CONF
 
@@ -4826,39 +4825,35 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(
             context, instance, "volume.attach", extra_usage_info=info)
 
-    def _driver_detach_volume(self, context, instance, bdm, connection_info):
-        """Do the actual driver detach using block device mapping."""
+    def _notify_volume_usage_detach(self, context, instance, bdm):
+        if CONF.volume_usage_poll_interval <= 0:
+            return
+
+        vol_stats = []
         mp = bdm.device_name
-        volume_id = bdm.volume_id
-
-        LOG.info(_LI('Detach volume %(volume_id)s from mountpoint %(mp)s'),
-                  {'volume_id': volume_id, 'mp': mp},
-                  instance=instance)
-
+        # Handle bootable volumes which will not contain /dev/
+        if '/dev/' in mp:
+            mp = mp[5:]
         try:
-            if not self.driver.instance_exists(instance):
-                LOG.warning(_LW('Detaching volume from unknown instance'),
-                            instance=instance)
+            vol_stats = self.driver.block_stats(instance, mp)
+        except NotImplementedError:
+            return
 
-            encryption = encryptors.get_encryption_metadata(
-                context, self.volume_api, volume_id, connection_info)
-
-            self.driver.detach_volume(connection_info,
-                                      instance,
-                                      mp,
-                                      encryption=encryption)
-        except exception.DiskNotFound as err:
-            LOG.warning(_LW('Ignoring DiskNotFound exception while detaching '
-                            'volume %(volume_id)s from %(mp)s: %(err)s'),
-                        {'volume_id': volume_id, 'mp': mp, 'err': err},
-                        instance=instance)
-        except Exception:
-            with excutils.save_and_reraise_exception():
-                LOG.exception(_LE('Failed to detach volume %(volume_id)s '
-                                  'from %(mp)s'),
-                              {'volume_id': volume_id, 'mp': mp},
-                              instance=instance)
-                self.volume_api.roll_detaching(context, volume_id)
+        LOG.debug("Updating volume usage cache with totals", instance=instance)
+        rd_req, rd_bytes, wr_req, wr_bytes, flush_ops = vol_stats
+        vol_usage = objects.VolumeUsage(context)
+        vol_usage.volume_id = bdm.volume_id
+        vol_usage.instance_uuid = instance.uuid
+        vol_usage.project_id = instance.project_id
+        vol_usage.user_id = instance.user_id
+        vol_usage.availability_zone = instance.availability_zone
+        vol_usage.curr_reads = rd_req
+        vol_usage.curr_read_bytes = rd_bytes
+        vol_usage.curr_writes = wr_req
+        vol_usage.curr_write_bytes = wr_bytes
+        vol_usage.save(update_totals=True)
+        self.notifier.info(context, 'volume.usage',
+                           compute_utils.usage_volume_info(vol_usage))
 
     def _detach_volume(self, context, volume_id, instance, destroy_bdm=True,
                        attachment_id=None):
@@ -4872,94 +4867,18 @@ class ComputeManager(manager.Manager):
                             like rebuild, when we don't want to destroy BDM
 
         """
-
         bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
                 context, volume_id, instance.uuid)
-        if CONF.volume_usage_poll_interval > 0:
-            vol_stats = []
-            mp = bdm.device_name
-            # Handle bootable volumes which will not contain /dev/
-            if '/dev/' in mp:
-                mp = mp[5:]
-            try:
-                vol_stats = self.driver.block_stats(instance, mp)
-            except NotImplementedError:
-                pass
 
-            if vol_stats:
-                LOG.debug("Updating volume usage cache with totals",
-                          instance=instance)
-                rd_req, rd_bytes, wr_req, wr_bytes, flush_ops = vol_stats
-                vol_usage = objects.VolumeUsage(context)
-                vol_usage.volume_id = volume_id
-                vol_usage.instance_uuid = instance.uuid
-                vol_usage.project_id = instance.project_id
-                vol_usage.user_id = instance.user_id
-                vol_usage.availability_zone = instance.availability_zone
-                vol_usage.curr_reads = rd_req
-                vol_usage.curr_read_bytes = rd_bytes
-                vol_usage.curr_writes = wr_req
-                vol_usage.curr_write_bytes = wr_bytes
-                vol_usage.save(update_totals=True)
-                self.notifier.info(context, 'volume.usage',
-                                   compute_utils.usage_volume_info(vol_usage))
+        self._notify_volume_usage_detach(context, instance, bdm)
 
-        connection_info = jsonutils.loads(bdm.connection_info)
-        connector = self.driver.get_volume_connector(instance)
-        if CONF.host == instance.host:
-            # Only attempt to detach and disconnect from the volume if the
-            # instance is currently associated with the local compute host.
-            self._driver_detach_volume(context, instance, bdm, connection_info)
-        elif not destroy_bdm:
-            LOG.debug("Skipping _driver_detach_volume during remote rebuild.",
-                      instance=instance)
-        elif destroy_bdm:
-            LOG.error(_LE("Unable to call for a driver detach of volume "
-                          "%(vol_id)s due to the instance being registered to "
-                          "the remote host %(inst_host)s."),
-                      {'vol_id': volume_id, 'inst_host': instance.host},
-                      instance=instance)
+        LOG.info(_LI('Detaching volume %(volume_id)s'),
+                 {'volume_id': volume_id}, instance=instance)
 
-        if connection_info and not destroy_bdm and (
-           connector.get('host') != instance.host):
-            # If the volume is attached to another host (evacuate) then
-            # this connector is for the wrong host. Use the connector that
-            # was stored in connection_info instead (if we have one, and it
-            # is for the expected host).
-            stashed_connector = connection_info.get('connector')
-            if not stashed_connector:
-                # Volume was attached before we began stashing connectors
-                LOG.warning(_LW("Host mismatch detected, but stashed "
-                                "volume connector not found. Instance host is "
-                                "%(ihost)s, but volume connector host is "
-                                "%(chost)s."),
-                            {'ihost': instance.host,
-                             'chost': connector.get('host')})
-            elif stashed_connector.get('host') != instance.host:
-                # Unexpected error. The stashed connector is also not matching
-                # the needed instance host.
-                LOG.error(_LE("Host mismatch detected in stashed volume "
-                              "connector. Will use local volume connector. "
-                              "Instance host is %(ihost)s. Local volume "
-                              "connector host is %(chost)s. Stashed volume "
-                              "connector host is %(schost)s."),
-                          {'ihost': instance.host,
-                           'chost': connector.get('host'),
-                           'schost': stashed_connector.get('host')})
-            else:
-                # Fix found. Use stashed connector.
-                LOG.debug("Host mismatch detected. Found usable stashed "
-                          "volume connector. Instance host is %(ihost)s. "
-                          "Local volume connector host was %(chost)s. "
-                          "Stashed volume connector host is %(schost)s.",
-                          {'ihost': instance.host,
-                           'chost': connector.get('host'),
-                           'schost': stashed_connector.get('host')})
-                connector = stashed_connector
+        driver_bdm = driver_block_device.convert_volume(bdm)
+        driver_bdm.detach(context, instance, self.volume_api, self.driver,
+                          attachment_id=attachment_id, destroy_bdm=destroy_bdm)
 
-        self.volume_api.terminate_connection(context, volume_id, connector)
-        self.volume_api.detach(context.elevated(), volume_id, instance.uuid,
-                               attachment_id)
         info = dict(volume_id=volume_id)
         self._notify_about_instance_usage(
             context, instance, "volume.detach", extra_usage_info=info)
@@ -5137,9 +5056,10 @@ class ComputeManager(manager.Manager):
         try:
             bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
                     context, volume_id, instance.uuid)
-            connection_info = jsonutils.loads(bdm.connection_info)
-            self._driver_detach_volume(context, instance, bdm, connection_info)
             connector = self.driver.get_volume_connector(instance)
+            driver_bdm = driver_block_device.convert_volume(bdm)
+            driver_bdm.driver_detach(context, instance, connector,
+                                     self.volume_api, self.driver)
             self.volume_api.terminate_connection(context, volume_id, connector)
         except exception.NotFound:
             pass

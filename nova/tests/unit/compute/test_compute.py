@@ -86,6 +86,7 @@ from nova.tests.unit import utils as test_utils
 from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.virt import block_device as driver_block_device
+from nova.virt.block_device import DriverVolumeBlockDevice as driver_bdm_volume
 from nova.virt import event
 from nova.virt import fake
 from nova.virt import hardware
@@ -421,7 +422,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         instance = self._create_fake_instance_obj()
 
         with test.nested(
-            mock.patch.object(self.compute, '_driver_detach_volume'),
+            mock.patch.object(driver_bdm_volume, 'driver_detach'),
             mock.patch.object(self.compute.volume_api, 'detach'),
             mock.patch.object(objects.BlockDeviceMapping,
                               'get_by_volume_and_instance'),
@@ -441,7 +442,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         instance = self._create_fake_instance_obj()
 
         with test.nested(
-            mock.patch.object(self.compute, '_driver_detach_volume'),
+            mock.patch.object(driver_bdm_volume, 'driver_detach'),
             mock.patch.object(self.compute.volume_api, 'detach'),
             mock.patch.object(objects.BlockDeviceMapping,
                               'get_by_volume_and_instance'),
@@ -10148,7 +10149,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_detach_volume_not_found(self):
         # Ensure that a volume can be detached even when it is removed
         # from an instance but remaining in bdm. See bug #1367964.
-
+        # TODO(lyarwood): Move into ../virt/test_block_device.py
         instance = self._create_fake_instance_obj()
         fake_bdm = fake_block_device.FakeDbBlockDeviceDict(
                 {'source_type': 'volume', 'destination_type': 'volume',
@@ -11911,7 +11912,7 @@ class EvacuateHostTestCase(BaseTestCase):
 
     @mock.patch.object(cinder.API, 'detach')
     @mock.patch.object(compute_manager.ComputeManager, '_prep_block_device')
-    @mock.patch.object(compute_manager.ComputeManager, '_driver_detach_volume')
+    @mock.patch.object(driver_bdm_volume, 'driver_detach')
     def test_rebuild_on_remote_host_with_volumes(self, mock_drv_detach,
                                                  mock_prep, mock_detach):
         """Confirm that the evacuate scenario does not attempt a driver detach
