@@ -553,3 +553,32 @@ class Reservation(API_BASE):
         "QuotaUsage",
         foreign_keys=usage_id,
         primaryjoin='Reservation.usage_id == QuotaUsage.id')
+
+
+class Trait(API_BASE):
+    """Represents a trait."""
+
+    __tablename__ = "traits"
+    __table_args__ = (
+        schema.UniqueConstraint('name', name='uniq_traits0name'),
+    )
+
+    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
+    name = Column(Unicode(255), nullable=False)
+
+
+class ResourceProviderTraits(API_BASE):
+    """Represents the relationship between traits and resource provider"""
+
+    __tablename__ = "resource_provider_traits"
+    __table_args__ = (
+        Index('resource_provider_traits_resource_provider_trait_idx',
+              'resource_provider_id', 'trait_id'),
+    )
+
+    trait_id = Column(Integer, ForeignKey('traits.id'), primary_key=True,
+                      nullable=False)
+    resource_provider_id = Column(Integer,
+                                  ForeignKey('resource_providers.id'),
+                                  primary_key=True,
+                                  nullable=False)

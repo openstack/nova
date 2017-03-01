@@ -582,6 +582,29 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         for column in ['created_at', 'updated_at', 'id', 'uuid']:
             self.assertColumnExists(engine, 'placement_aggregates', column)
 
+    def _check_041(self, engine, data):
+        self.assertColumnExists(engine, 'traits', 'id')
+        self.assertUniqueConstraintExists(engine, 'traits', ['name'])
+
+        self.assertColumnExists(engine, 'resource_provider_traits', 'trait_id')
+        self.assertColumnExists(engine, 'resource_provider_traits',
+                                'resource_provider_id')
+        self.assertIndexExists(
+            engine, 'resource_provider_traits',
+            'resource_provider_traits_resource_provider_trait_idx')
+
+        inspector = reflection.Inspector.from_engine(engine)
+        self.assertEqual(
+            2, len(inspector.get_foreign_keys('resource_provider_traits')))
+        for fk in inspector.get_foreign_keys('resource_provider_traits'):
+            if 'traits' == fk['referred_table']:
+                self.assertEqual(['id'], fk['referred_columns'])
+                self.assertEqual(['trait_id'], fk['constrained_columns'])
+            elif 'resource_providers' == fk['referred_table']:
+                self.assertEqual(['id'], fk['referred_columns'])
+                self.assertEqual(['resource_provider_id'],
+                                 fk['constrained_columns'])
+
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
                                       test_base.DbTestCase,
