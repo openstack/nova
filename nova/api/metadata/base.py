@@ -310,6 +310,11 @@ class InstanceMetadata(object):
         if self.userdata_raw is not None:
             data['user-data'] = self.userdata_raw
 
+        # TODO(kevinbenton): remove after bug/1668958 is resolved
+        LOG.debug("Instance %s metadata: %s",
+                  self.instance.ec2_ids.instance_id, data,
+                  instance=self.instance)
+
         return data
 
     def get_ec2_item(self, path_tokens):

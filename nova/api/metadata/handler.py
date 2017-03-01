@@ -125,6 +125,8 @@ class MetadataRequestHandler(wsgi.Application):
         resp = base.ec2_md_print(data)
         req.response.body = encodeutils.to_utf8(resp)
 
+        # TODO(kevinbenton): remove after bug/1668958 is resolved
+        LOG.debug("Metadata response body %s", req.response.body)
         req.response.content_type = meta_data.get_mimetype()
         return req.response
 
