@@ -31,7 +31,6 @@ from nova.api.metadata import password
 from nova.api.metadata import vendordata
 from nova.api.metadata import vendordata_dynamic
 from nova.api.metadata import vendordata_json
-from nova import availability_zones as az
 from nova import block_device
 from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
@@ -130,8 +129,7 @@ class InstanceMetadata(object):
         self.instance = instance
         self.extra_md = extra_md
 
-        self.availability_zone = az.get_instance_availability_zone(ctxt,
-                                                                   instance)
+        self.availability_zone = instance.get('availability_zone')
 
         secgroup_api = openstack_driver.get_openstack_security_group_driver()
         self.security_groups = secgroup_api.get_instance_security_groups(

@@ -94,7 +94,7 @@ def fake_inst_obj(context):
         default_swap_device=None,
         system_metadata={},
         security_groups=objects.SecurityGroupList(),
-        availability_zone=None)
+        availability_zone='fake-az')
     inst.keypairs = objects.KeyPairList(objects=[
             fake_keypair_obj(inst.key_name, inst.key_data)])
 
