@@ -1,0 +1,15 @@
+---
+upgrade:
+  - |
+    The old deprecated ``keymgr`` options have been removed.
+    Configuration options using the ``[keymgr]`` group will not be
+    applied anymore. Use the ``[key_manager]`` group from Castellan instead.
+    The Castellan ``api_class`` options should also be used instead, as most
+    of the options that lived in Nova have migrated to Castellan.
+
+    - Instead of ``api_class`` option ``nova.keymgr.barbican.BarbicanKeyManager``,
+      use ``castellan.key_manager.barbican_key_manager.BarbicanKeyManager``
+    - Instead of ``api_class`` option ``nova.tests.unit.keymgr.mock_key_mgr.MockKeyManager``,
+      use ``castellan.tests.unit.key_manager.mock_key_manager.MockKeyManager``
+    - ``nova.keymgr.conf_key_mgr.ConfKeyManager`` still remains, but the ``fixed_key``
+      configuration options should be moved to the ``[key_manager]`` section

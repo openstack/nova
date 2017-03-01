@@ -41,6 +41,7 @@ import tempfile
 import time
 import uuid
 
+from castellan import key_manager
 import eventlet
 from eventlet import greenthread
 from eventlet import tpool
@@ -74,7 +75,6 @@ from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova import image
-from nova import keymgr
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import diagnostics as diagnostics_obj
@@ -1184,9 +1184,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _get_volume_encryptor(self, connection_info, encryption):
         root_helper = utils.get_root_helper()
-        key_manager = keymgr.API(CONF)
         return encryptors.get_volume_encryptor(root_helper=root_helper,
-                                               keymgr=key_manager,
+                                               keymgr=key_manager.API(CONF),
                                                connection_info=connection_info,
                                                **encryption)
 

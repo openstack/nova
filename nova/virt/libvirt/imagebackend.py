@@ -20,6 +20,7 @@ import functools
 import os
 import shutil
 
+from castellan import key_manager
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
@@ -32,7 +33,6 @@ import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import image
-from nova import keymgr
 from nova.privsep import dac_admin
 from nova import utils
 from nova.virt.disk import api as disk
@@ -657,7 +657,7 @@ class Lvm(Image):
         self.ephemeral_key_uuid = instance.get('ephemeral_key_uuid')
 
         if self.ephemeral_key_uuid is not None:
-            self.key_manager = keymgr.API(CONF)
+            self.key_manager = key_manager.API(CONF)
         else:
             self.key_manager = None
 

@@ -22,6 +22,8 @@ key_manager_group = cfg.OptGroup(
 
 key_manager_opts = [
     # TODO(raj_singh): Deprecate or move this option to The Castellan library
+    # NOTE(kfarr): The ability to use fixed_key should be deprecated and
+    # removed and Barbican should be tested in the gate instead
     cfg.StrOpt(
         'fixed_key',
         deprecated_group='keymgr',
