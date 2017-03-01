@@ -54,6 +54,7 @@ class AssistedVolumeSnapshotsController(wsgi.Controller):
             return self.compute_api.volume_snapshot_create(context, volume_id,
                                                            create_info)
         except (exception.VolumeBDMNotFound,
+                exception.VolumeBDMIsMultiAttach,
                 exception.InvalidVolume) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
 
