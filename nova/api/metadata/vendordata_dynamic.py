@@ -96,7 +96,7 @@ class DynamicVendorData(vendordata.VendorDataDriver):
             res = self.session.request(url, 'POST', data=jsonutils.dumps(body),
                                        verify=verify, headers=headers,
                                        timeout=timeout)
-            if res:
+            if res and res.text:
                 # TODO(mikal): Use the Cache-Control response header to do some
                 # sensible form of caching here.
                 return jsonutils.loads(res.text)
