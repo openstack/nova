@@ -351,17 +351,20 @@ class TestCase(testtools.TestCase):
             CONF.set_override(k, v, group, enforce_type=True)
 
     def start_service(self, name, host=None, **kwargs):
-        svc = self.useFixture(
-            nova_fixtures.ServiceFixture(name, host, **kwargs))
-
         if name == 'compute' and self.USES_DB:
+            # NOTE(danms): We need to create the HostMapping first, because
+            # otherwise we'll fail to update the scheduler while running
+            # the compute node startup routines below.
             ctxt = context.get_context()
             cell = self.cell_mappings[kwargs.pop('cell', CELL1_NAME)]
             hm = objects.HostMapping(context=ctxt,
-                                     host=svc.service.host,
+                                     host=host or name,
                                      cell_mapping=cell)
             hm.create()
             self.host_mappings[hm.host] = hm
+
+        svc = self.useFixture(
+            nova_fixtures.ServiceFixture(name, host, **kwargs))
 
         return svc.service
 

@@ -122,11 +122,13 @@ class HostManagerTestCase(test.NoDBTestCase):
         inst1 = objects.Instance(host='host1', uuid=uuids.instance_1)
         inst2 = objects.Instance(host='host1', uuid=uuids.instance_2)
         inst3 = objects.Instance(host='host2', uuid=uuids.instance_3)
+        cell = objects.CellMapping(database_connection='',
+                                   target_url='')
         mock_get_by_filters.return_value = objects.InstanceList(
                 objects=[inst1, inst2, inst3])
         hm = self.host_manager
         hm._instance_info = {}
-        hm._init_instance_info([cn1, cn2])
+        hm._init_instance_info({cell: [cn1, cn2]})
         self.assertEqual(len(hm._instance_info), 2)
         fake_info = hm._instance_info['host1']
         self.assertIn(uuids.instance_1, fake_info['instances'])
