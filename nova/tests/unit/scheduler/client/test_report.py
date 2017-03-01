@@ -514,7 +514,7 @@ class TestAggregates(SchedulerReportClientTestCase):
         self.ks_sess_mock.get.assert_called_once_with(
             expected_url, endpoint_filter=mock.ANY, raise_exc=False,
             headers={'OpenStack-API-Version': 'placement 1.1'})
-        self.assertTrue(expected, result)
+        self.assertEqual(expected, result)
 
     @mock.patch.object(report.LOG, 'warning')
     def test_get_provider_aggregates_not_found(self, log_mock):
