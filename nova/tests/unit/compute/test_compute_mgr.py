@@ -2147,7 +2147,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             objects.Instance(id=1, uuid=uuids.instance_1),
             objects.Instance(id=2, uuid=uuids.instance_2,
                              info_cache=info_cache),
-            objects.Instance(id=3, uuid=uuids.instance_3)]
+            objects.Instance(id=3, uuid=uuids.instance_3),
+            # instance_4 doesn't have info_cache set so it will be lazy-loaded
+            # and blow up with an InstanceNotFound error.
+            objects.Instance(id=4, uuid=uuids.instance_4)]
         events = [
             objects.InstanceExternalEvent(name='network-changed',
                                           tag='tag1',
@@ -2157,10 +2160,17 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                           tag='2'),
             objects.InstanceExternalEvent(name='network-vif-plugged',
                                           instance_uuid=uuids.instance_3,
-                                          tag='tag3')]
+                                          tag='tag3'),
+            objects.InstanceExternalEvent(name='network-vif-deleted',
+                                          instance_uuid=uuids.instance_4,
+                                          tag='tag4'),
+        ]
 
-        # Make sure all the three events are handled despite the exceptions in
-        # processing events 1 and 2
+        # Make sure all the four events are handled despite the exceptions in
+        # processing events 1, 2, and 4.
+        @mock.patch.object(instances[3], 'obj_load_attr',
+                           side_effect=exception.InstanceNotFound(
+                               instance_id=uuids.instance_4))
         @mock.patch.object(manager.base_net_api,
                            'update_instance_cache_with_nw_info')
         @mock.patch.object(self.compute.driver, 'detach_interface',
@@ -2170,7 +2180,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                          instance_uuid=uuids.instance_1))
         @mock.patch.object(self.compute, '_process_instance_event')
         def do_test(_process_instance_event, get_instance_nw_info,
-                    detach_interface, update_instance_cache_with_nw_info):
+                    detach_interface, update_instance_cache_with_nw_info,
+                    obj_load_attr):
             self.compute.external_instance_event(self.context,
                                                  instances, events)
             get_instance_nw_info.assert_called_once_with(self.context,
@@ -2183,6 +2194,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             detach_interface.assert_called_once_with(instances[1], vif2)
             _process_instance_event.assert_called_once_with(instances[2],
                                                             events[2])
+            obj_load_attr.assert_called_once_with('info_cache')
         do_test()
 
     def test_cancel_all_events(self):
