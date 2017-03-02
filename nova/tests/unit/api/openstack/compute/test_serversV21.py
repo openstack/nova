@@ -21,7 +21,6 @@ import uuid
 import fixtures
 import iso8601
 import mock
-from mox3 import mox
 from oslo_policy import policy as oslo_policy
 from oslo_serialization import base64
 from oslo_serialization import jsonutils
@@ -2008,79 +2007,75 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
 
         self.assertNotIn('personality', body['server'])
 
-    def test_start(self):
-        self.mox.StubOutWithMock(compute_api.API, 'start')
-        compute_api.API.start(mox.IgnoreArg(), mox.IgnoreArg())
-        self.mox.ReplayAll()
-
+    @mock.patch.object(compute_api.API, 'start')
+    def test_start(self, mock_start):
         req = fakes.HTTPRequestV21.blank('/fake/servers/%s/action' % FAKE_UUID)
         body = dict(start="")
         self.controller._start_server(req, FAKE_UUID, body)
+        mock_start.assert_called_once_with(mock.ANY, mock.ANY)
 
+    @mock.patch.object(compute_api.API, 'start', fake_start_stop_not_ready)
     def test_start_not_ready(self):
-        self.stubs.Set(compute_api.API, 'start', fake_start_stop_not_ready)
         req = fakes.HTTPRequestV21.blank('/fake/servers/%s/action' % FAKE_UUID)
         body = dict(start="")
         self.assertRaises(webob.exc.HTTPConflict,
             self.controller._start_server, req, FAKE_UUID, body)
 
+    @mock.patch.object(
+        compute_api.API, 'start', fakes.fake_actions_to_locked_server)
     def test_start_locked_server(self):
-        self.stubs.Set(compute_api.API, 'start',
-                       fakes.fake_actions_to_locked_server)
         req = fakes.HTTPRequestV21.blank('/fake/servers/%s/action' % FAKE_UUID)
         body = dict(start="")
         self.assertRaises(webob.exc.HTTPConflict,
             self.controller._start_server, req, FAKE_UUID, body)
 
+    @mock.patch.object(compute_api.API, 'start', fake_start_stop_invalid_state)
     def test_start_invalid(self):
-        self.stubs.Set(compute_api.API, 'start', fake_start_stop_invalid_state)
         req = fakes.HTTPRequestV21.blank('/fake/servers/%s/action' % FAKE_UUID)
         body = dict(start="")
         self.assertRaises(webob.exc.HTTPConflict,
             self.controller._start_server, req, FAKE_UUID, body)
 
-    def test_stop(self):
-        self.mox.StubOutWithMock(compute_api.API, 'stop')
-        compute_api.API.stop(mox.IgnoreArg(), mox.IgnoreArg())
-        self.mox.ReplayAll()
-
+    @mock.patch.object(compute_api.API, 'stop')
+    def test_stop(self, mock_stop):
         req = fakes.HTTPRequestV21.blank('/fake/servers/%s/action' % FAKE_UUID)
         body = dict(stop="")
         self.controller._stop_server(req, FAKE_UUID, body)
+        mock_stop.assert_called_once_with(mock.ANY, mock.ANY)
 
+    @mock.patch.object(compute_api.API, 'stop', fake_start_stop_not_ready)
     def test_stop_not_ready(self):
-        self.stubs.Set(compute_api.API, 'stop', fake_start_stop_not_ready)
         req = fakes.HTTPRequestV21.blank('/fake/servers/%s/action' % FAKE_UUID)
         body = dict(stop="")
         self.assertRaises(webob.exc.HTTPConflict,
             self.controller._stop_server, req, FAKE_UUID, body)
 
+    @mock.patch.object(
+        compute_api.API, 'stop', fakes.fake_actions_to_locked_server)
     def test_stop_locked_server(self):
-        self.stubs.Set(compute_api.API, 'stop',
-                       fakes.fake_actions_to_locked_server)
         req = fakes.HTTPRequestV21.blank('/fake/servers/%s/action' % FAKE_UUID)
         body = dict(stop="")
         self.assertRaises(webob.exc.HTTPConflict,
             self.controller._stop_server, req, FAKE_UUID, body)
 
+    @mock.patch.object(compute_api.API, 'stop', fake_start_stop_invalid_state)
     def test_stop_invalid_state(self):
-        self.stubs.Set(compute_api.API, 'stop', fake_start_stop_invalid_state)
         req = fakes.HTTPRequestV21.blank('/fake/servers/%s/action' % FAKE_UUID)
         body = dict(start="")
         self.assertRaises(webob.exc.HTTPConflict,
             self.controller._stop_server, req, FAKE_UUID, body)
 
+    @mock.patch(
+        'nova.db.instance_get_by_uuid', fake_instance_get_by_uuid_not_found)
     def test_start_with_bogus_id(self):
-        self.stub_out('nova.db.instance_get_by_uuid',
-                      fake_instance_get_by_uuid_not_found)
         req = fakes.HTTPRequestV21.blank('/fake/servers/test_inst/action')
         body = dict(start="")
         self.assertRaises(webob.exc.HTTPNotFound,
             self.controller._start_server, req, 'test_inst', body)
 
+    @mock.patch(
+        'nova.db.instance_get_by_uuid', fake_instance_get_by_uuid_not_found)
     def test_stop_with_bogus_id(self):
-        self.stub_out('nova.db.instance_get_by_uuid',
-                      fake_instance_get_by_uuid_not_found)
         req = fakes.HTTPRequestV21.blank('/fake/servers/test_inst/action')
         body = dict(stop="")
         self.assertRaises(webob.exc.HTTPNotFound,
