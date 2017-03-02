@@ -17,8 +17,10 @@ from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute import server_tags
 from nova.api.openstack.compute import servers
 from nova.compute import vm_states
+from nova import context
 from nova.db.sqlalchemy import models
 from nova import exception
+from nova import objects
 from nova.objects import instance
 from nova.objects import tag as tag_obj
 from nova import test
@@ -49,6 +51,11 @@ class ServerTagsTest(test.TestCase):
     def setUp(self):
         super(ServerTagsTest, self).setUp()
         self.controller = server_tags.ServerTagsController()
+        inst_map = objects.InstanceMapping(
+            cell_mapping=objects.CellMappingList.get_all(
+                context.get_admin_context())[1])
+        self.stub_out('nova.objects.InstanceMapping.get_by_instance_uuid',
+                      lambda s, c, u: inst_map)
 
     def _get_tag(self, tag_name):
         tag = models.Tag()
