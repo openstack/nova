@@ -929,8 +929,8 @@ class AggregateDBApiTestCase(test.TestCase):
             return get_query
 
         get_query = counted()
-        self.stubs.Set(sqlalchemy_api,
-                       '_aggregate_metadata_get_query', get_query)
+        self.stub_out('nova.db.sqlalchemy.api._aggregate_metadata_get_query',
+                     get_query)
         self.assertRaises(db_exc.DBDuplicateEntry, sqlalchemy_api.
                           aggregate_metadata_add, ctxt, result['id'], {},
                           max_retries=5)
@@ -2521,11 +2521,11 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         for row in meta:
             self.assertIn(row['instance_uuid'], uuids)
 
-    def test_instance_metadata_get_multi_no_uuids(self):
-        self.mox.StubOutWithMock(query.Query, 'filter')
-        self.mox.ReplayAll()
+    @mock.patch.object(query.Query, 'filter')
+    def test_instance_metadata_get_multi_no_uuids(self, mock_query_filter):
         with sqlalchemy_api.main_context_manager.reader.using(self.ctxt):
             sqlalchemy_api._instance_metadata_get_multi(self.ctxt, [])
+        self.assertFalse(mock_query_filter.called)
 
     def test_instance_system_system_metadata_get_multi(self):
         uuids = [self.create_instance_with_args()['uuid'] for i in range(3)]
@@ -2539,10 +2539,11 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         for row in sys_meta:
             self.assertIn(row['instance_uuid'], uuids)
 
-    def test_instance_system_metadata_get_multi_no_uuids(self):
-        self.mox.StubOutWithMock(query.Query, 'filter')
-        self.mox.ReplayAll()
+    @mock.patch.object(query.Query, 'filter')
+    def test_instance_system_metadata_get_multi_no_uuids(self,
+                                               mock_query_filter):
         sqlalchemy_api._instance_system_metadata_get_multi(self.ctxt, [])
+        self.assertFalse(mock_query_filter.called)
 
     def test_instance_get_all_by_filters_regex(self):
         i1 = self.create_instance_with_args(display_name='test1')
@@ -4263,11 +4264,11 @@ class InstanceFaultTestCase(test.TestCase, ModelsObjectComparatorMixin):
         expected = {uuid: []}
         self.assertEqual(expected, faults)
 
-    def test_instance_faults_get_by_instance_uuids_no_uuids(self):
-        self.mox.StubOutWithMock(query.Query, 'filter')
-        self.mox.ReplayAll()
+    @mock.patch.object(query.Query, 'filter')
+    def test_instance_faults_get_by_instance_uuids_no_uuids(self, mock_filter):
         faults = db.instance_fault_get_by_instance_uuids(self.ctxt, [])
         self.assertEqual({}, faults)
+        self.assertFalse(mock_filter.called)
 
 
 class InstanceTypeTestCase(BaseInstanceTypeTestCase):
@@ -4651,7 +4652,8 @@ class InstanceTypeExtraSpecsTestCase(BaseInstanceTypeTestCase):
             return get_id
 
         get_id = counted()
-        self.stubs.Set(sqlalchemy_api, '_flavor_get_id_from_flavor', get_id)
+        self.stub_out('nova.db.sqlalchemy.api._flavor_get_id_from_flavor',
+                      get_id)
         self.assertRaises(exception.FlavorExtraSpecUpdateCreateFailed,
                           sqlalchemy_api.flavor_extra_specs_update_or_create,
                           self.ctxt, 1, {}, 5)
@@ -4788,11 +4790,6 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
                                       instance_uuid=instance['uuid'],
                                       network_id=None,
                                       updated_at=new))
-
-    def mock_db_query_first_to_raise_data_error_exception(self):
-        self.mox.StubOutWithMock(query.Query, 'first')
-        query.Query.first().AndRaise(db_exc.DBError())
-        self.mox.ReplayAll()
 
     def test_fixed_ip_disassociate_all_by_timeout_single_host(self):
         now = timeutils.utcnow()
@@ -5441,11 +5438,6 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
             'interface': 'fake_interface',
         }
 
-    def mock_db_query_first_to_raise_data_error_exception(self):
-        self.mox.StubOutWithMock(query.Query, 'first')
-        query.Query.first().AndRaise(db_exc.DBError())
-        self.mox.ReplayAll()
-
     def _create_floating_ip(self, values):
         if not values:
             values = {}
@@ -5466,10 +5458,11 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertRaises(exception.FloatingIpNotFound,
                           db.floating_ip_get, self.ctxt, 100500)
 
-    def test_floating_ip_get_with_long_id_not_found(self):
-        self.mock_db_query_first_to_raise_data_error_exception()
+    @mock.patch.object(query.Query, 'first', side_effect=db_exc.DBError())
+    def test_floating_ip_get_with_long_id_not_found(self, mock_query):
         self.assertRaises(exception.InvalidID,
                           db.floating_ip_get, self.ctxt, 123456789101112)
+        mock_query.assert_called_once_with()
 
     def test_floating_ip_get_pools(self):
         values = [
@@ -5890,11 +5883,12 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           db.floating_ip_get_by_address,
                           self.ctxt, '20.20.20.20')
 
-    def test_floating_ip_get_by_invalid_address(self):
-        self.mock_db_query_first_to_raise_data_error_exception()
+    @mock.patch.object(query.Query, 'first', side_effect=db_exc.DBError())
+    def test_floating_ip_get_by_invalid_address(self, mock_query):
         self.assertRaises(exception.InvalidIpAddressError,
                           db.floating_ip_get_by_address,
                           self.ctxt, 'non_exists_host')
+        mock_query.assert_called_once_with()
 
     def test_floating_ip_get_by_fixed_address(self):
         fixed_float = [
@@ -6693,11 +6687,6 @@ class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             'tag': 'fake-tag',
         }
 
-    def mock_db_query_first_to_raise_data_error_exception(self):
-        self.mox.StubOutWithMock(query.Query, 'first')
-        query.Query.first().AndRaise(db_exc.DBError())
-        self.mox.ReplayAll()
-
     def _create_virt_interface(self, values):
         v = self._get_base_values()
         v.update(values)
@@ -6735,12 +6724,14 @@ class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertIsNone(db.virtual_interface_get_by_address(self.ctxt,
                           "i.nv.ali.ip"))
 
-    def test_virtual_interface_get_by_address_data_error_exception(self):
-        self.mock_db_query_first_to_raise_data_error_exception()
+    @mock.patch.object(query.Query, 'first', side_effect=db_exc.DBError())
+    def test_virtual_interface_get_by_address_data_error_exception(self,
+                                                mock_query):
         self.assertRaises(exception.InvalidIpAddressError,
                           db.virtual_interface_get_by_address,
                           self.ctxt,
                           "i.nv.ali.ip")
+        mock_query.assert_called_once_with()
 
     def test_virtual_interface_get_by_uuid(self):
         vifs = [self._create_virt_interface({"address": "address_1"}),
