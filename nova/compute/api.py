@@ -2538,7 +2538,7 @@ class API(base.Base):
                 LOG.debug('Skipping already-collected cell0 list')
                 continue
             LOG.debug('Listing %s instances in cell %s',
-                      limit or 'all', cell.name)
+                      limit or 'all', cell.name or cell.uuid)
             with nova_context.target_cell(context, cell) as ccontext:
                 try:
                     cell_insts = self._get_instances_by_filters(ccontext,
