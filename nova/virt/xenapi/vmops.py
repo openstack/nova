@@ -2129,8 +2129,7 @@ class VMOps(object):
         host_uuid = self._get_host_uuid_from_aggregate(context, hostname)
         return self._session.call_xenapi("host.get_by_uuid", host_uuid)
 
-    def _migrate_receive(self, ctxt):
-        destref = self._session.host_ref
+    def _get_network_ref(self):
         # Get the network to for migrate.
         # This is the one associated with the pif marked management. From cli:
         # uuid=`xe pif-list --minimal management=true`
@@ -2150,6 +2149,12 @@ class VMOps(object):
             raise exception.MigrationPreCheckError(reason=msg)
 
         nwref = pifs[list(pifs.keys())[0]]['network']
+        return nwref
+
+    def _migrate_receive(self, ctxt):
+        destref = self._session.host_ref
+        # Get the network to for migrate.
+        nwref = self._get_network_ref()
         try:
             options = {}
             migrate_data = self._session.call_xenapi("host.migrate_receive",
@@ -2219,6 +2224,10 @@ class VMOps(object):
             # TODO(johngarbutt) we currently assume
             # instance is on a SR shared with other destination
             # block migration work will be able to resolve this
+
+        # Set the default net_ref for use in generate_vif_mapping
+        net_ref = self._get_network_ref()
+        dest_check_data.vif_uuid_map = {'': net_ref}
         return dest_check_data
 
     def check_can_live_migrate_source(self, ctxt, instance_ref,
@@ -2371,14 +2380,15 @@ class VMOps(object):
         vif_map = {}
         # vif_uuid_map is dictionary of neutron_vif_uuid: dest_network_ref
         vifs = self._session.VM.get_VIFs(vm_ref)
+        default_net_ref = vif_uuid_map.get('')
         for vif in vifs:
             other_config = self._session.VIF.get_other_config(vif)
             neutron_id = other_config.get('nicira-iface-id')
-            if neutron_id is None or neutron_id not in vif_uuid_map.keys():
+            network_ref = vif_uuid_map.get(neutron_id, default_net_ref)
+            if network_ref is None:
                 raise exception.MigrationError(
                     reason=_('No mapping for source network %s') % (
                            neutron_id))
-            network_ref = vif_uuid_map[neutron_id]
             vif_map[vif] = network_ref
         return vif_map
 
