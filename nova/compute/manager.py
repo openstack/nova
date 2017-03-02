@@ -4929,15 +4929,14 @@ class ComputeManager(manager.Manager):
                 connector = stashed_connector
 
         self.volume_api.terminate_connection(context, volume_id, connector)
-
-        if destroy_bdm:
-            bdm.destroy()
-
+        self.volume_api.detach(context.elevated(), volume_id, instance.uuid,
+                               attachment_id)
         info = dict(volume_id=volume_id)
         self._notify_about_instance_usage(
             context, instance, "volume.detach", extra_usage_info=info)
-        self.volume_api.detach(context.elevated(), volume_id, instance.uuid,
-                               attachment_id)
+
+        if destroy_bdm:
+            bdm.destroy()
 
     @wrap_exception()
     @wrap_instance_fault
