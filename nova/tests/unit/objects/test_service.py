@@ -76,21 +76,23 @@ class _TestServiceObject(object):
                 'pci_device_pools': 'pci_stats'}
 
     def _test_query(self, db_method, obj_method, *args, **kwargs):
-        self.mox.StubOutWithMock(db, db_method)
         db_exception = kwargs.pop('db_exception', None)
         if db_exception:
-            getattr(db, db_method)(self.context, *args, **kwargs).AndRaise(
-                db_exception)
+            with mock.patch.object(db, db_method, side_effect=db_exception) \
+                    as mock_db_method:
+                obj = getattr(service.Service, obj_method)(self.context, *args,
+                                                           **kwargs)
+                self.assertIsNone(obj)
+                mock_db_method.assert_called_once_with(self.context, *args,
+                                                       **kwargs)
         else:
-            getattr(db, db_method)(self.context, *args, **kwargs).AndReturn(
-                fake_service)
-        self.mox.ReplayAll()
-        obj = getattr(service.Service, obj_method)(self.context, *args,
-                                                   **kwargs)
-        if db_exception:
-            self.assertIsNone(obj)
-        else:
-            self.compare_obj(obj, fake_service, allow_missing=OPTIONAL)
+            with mock.patch.object(db, db_method, return_value=fake_service) \
+                    as mock_db_method:
+                obj = getattr(service.Service, obj_method)(self.context, *args,
+                                                           **kwargs)
+                self.compare_obj(obj, fake_service, allow_missing=OPTIONAL)
+                mock_db_method.assert_called_once_with(self.context, *args,
+                                                       **kwargs)
 
     def test_get_by_id(self):
         self._test_query('service_get', 'get_by_id', 123)
@@ -117,41 +119,36 @@ class _TestServiceObject(object):
         self._test_query('service_get_by_host_and_binary', 'get_by_args',
                          'fake-host', 'fake-binary')
 
-    def test_create(self):
-        self.mox.StubOutWithMock(db, 'service_create')
-        db.service_create(self.context, {'host': 'fake-host',
-                                         'version': fake_service['version']}
-                          ).AndReturn(fake_service)
-        self.mox.ReplayAll()
+    @mock.patch.object(db, 'service_create', return_value=fake_service)
+    def test_create(self, mock_service_create):
         service_obj = service.Service(context=self.context)
         service_obj.host = 'fake-host'
         service_obj.create()
         self.assertEqual(fake_service['id'], service_obj.id)
         self.assertEqual(service.SERVICE_VERSION, service_obj.version)
+        mock_service_create.assert_called_once_with(
+                       self.context, {'host': 'fake-host',
+                                      'version': fake_service['version']})
 
-    def test_recreate_fails(self):
-        self.mox.StubOutWithMock(db, 'service_create')
-        db.service_create(self.context, {'host': 'fake-host',
-                                         'version': fake_service['version']}
-                          ).AndReturn(fake_service)
-        self.mox.ReplayAll()
+    @mock.patch.object(db, 'service_create', return_value=fake_service)
+    def test_recreate_fails(self, mock_service_create):
         service_obj = service.Service(context=self.context)
         service_obj.host = 'fake-host'
         service_obj.create()
         self.assertRaises(exception.ObjectActionError, service_obj.create)
+        mock_service_create(self.context, {'host': 'fake-host',
+                                         'version': fake_service['version']})
 
-    def test_save(self):
-        self.mox.StubOutWithMock(db, 'service_update')
-        db.service_update(self.context, 123,
-                          {'host': 'fake-host',
-                           'version': fake_service['version']}
-                          ).AndReturn(fake_service)
-        self.mox.ReplayAll()
+    @mock.patch.object(db, 'service_update', return_value=fake_service)
+    def test_save(self, mock_service_update):
         service_obj = service.Service(context=self.context)
         service_obj.id = 123
         service_obj.host = 'fake-host'
         service_obj.save()
         self.assertEqual(service.SERVICE_VERSION, service_obj.version)
+        mock_service_update.assert_called_once_with(
+            self.context, 123, {'host': 'fake-host',
+                                'version': fake_service['version']})
 
     @mock.patch.object(db, 'service_create',
                        return_value=fake_service)
@@ -162,13 +159,12 @@ class _TestServiceObject(object):
         self.assertRaises(ovo_exc.ReadOnlyFieldError, setattr,
                           service_obj, 'id', 124)
 
-    def _test_destroy(self):
-        self.mox.StubOutWithMock(db, 'service_destroy')
-        db.service_destroy(self.context, 123)
-        self.mox.ReplayAll()
+    @mock.patch.object(db, 'service_destroy')
+    def _test_destroy(self, mock_service_destroy):
         service_obj = service.Service(context=self.context)
         service_obj.id = 123
         service_obj.destroy()
+        mock_service_destroy.assert_called_once_with(self.context, 123)
 
     def test_destroy(self):
         # The test harness needs db.service_destroy to work,
@@ -179,14 +175,13 @@ class _TestServiceObject(object):
         finally:
             db.service_destroy = orig_service_destroy
 
-    def test_get_by_topic(self):
-        self.mox.StubOutWithMock(db, 'service_get_all_by_topic')
-        db.service_get_all_by_topic(self.context, 'fake-topic').AndReturn(
-            [fake_service])
-        self.mox.ReplayAll()
+    @mock.patch.object(db, 'service_get_all_by_topic',
+                       return_value=[fake_service])
+    def test_get_by_topic(self, mock_service_get):
         services = service.ServiceList.get_by_topic(self.context, 'fake-topic')
         self.assertEqual(1, len(services))
         self.compare_obj(services[0], fake_service, allow_missing=OPTIONAL)
+        mock_service_get.assert_called_once_with(self.context, 'fake-topic')
 
     @mock.patch('nova.db.service_get_all_by_binary')
     def test_get_by_binary(self, mock_get):
@@ -221,51 +216,44 @@ class _TestServiceObject(object):
                                          'fake-binary',
                                          include_disabled=True)
 
-    def test_get_by_host(self):
-        self.mox.StubOutWithMock(db, 'service_get_all_by_host')
-        db.service_get_all_by_host(self.context, 'fake-host').AndReturn(
-            [fake_service])
-        self.mox.ReplayAll()
+    @mock.patch.object(db, 'service_get_all_by_host',
+                       return_value=[fake_service])
+    def test_get_by_host(self, mock_service_get):
         services = service.ServiceList.get_by_host(self.context, 'fake-host')
         self.assertEqual(1, len(services))
         self.compare_obj(services[0], fake_service, allow_missing=OPTIONAL)
+        mock_service_get.assert_called_once_with(self.context, 'fake-host')
 
-    def test_get_all(self):
-        self.mox.StubOutWithMock(db, 'service_get_all')
-        db.service_get_all(self.context, disabled=False).AndReturn(
-            [fake_service])
-        self.mox.ReplayAll()
+    @mock.patch.object(db, 'service_get_all', return_value=[fake_service])
+    def test_get_all(self, mock_get_all):
         services = service.ServiceList.get_all(self.context, disabled=False)
         self.assertEqual(1, len(services))
         self.compare_obj(services[0], fake_service, allow_missing=OPTIONAL)
+        mock_get_all.assert_called_once_with(self.context, disabled=False)
 
-    def test_get_all_with_az(self):
-        self.mox.StubOutWithMock(db, 'service_get_all')
-        self.mox.StubOutWithMock(aggregate.AggregateList,
-                                 'get_by_metadata_key')
-        db.service_get_all(self.context, disabled=None).AndReturn(
-            [dict(fake_service, topic='compute')])
+    @mock.patch.object(db, 'service_get_all')
+    @mock.patch.object(aggregate.AggregateList, 'get_by_metadata_key')
+    def test_get_all_with_az(self, mock_get_by_key, mock_get_all):
         agg = aggregate.Aggregate(context=self.context)
         agg.name = 'foo'
         agg.metadata = {'availability_zone': 'test-az'}
         agg.create()
         agg.hosts = [fake_service['host']]
-        aggregate.AggregateList.get_by_metadata_key(self.context,
-            'availability_zone', hosts=set(agg.hosts)).AndReturn([agg])
-        self.mox.ReplayAll()
+        mock_get_by_key.return_value = [agg]
+        mock_get_all.return_value = [dict(fake_service, topic='compute')]
         services = service.ServiceList.get_all(self.context, set_zones=True)
         self.assertEqual(1, len(services))
         self.assertEqual('test-az', services[0].availability_zone)
+        mock_get_all.assert_called_once_with(self.context, disabled=None)
+        mock_get_by_key.assert_called_once_with(self.context,
+                         'availability_zone', hosts=set(agg.hosts))
 
-    def test_compute_node(self):
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
+    def test_compute_node(self, mock_get):
         fake_compute_node = objects.ComputeNode._from_db_object(
             self.context, objects.ComputeNode(),
             test_compute_node.fake_compute_node)
-        self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all_by_host')
-        objects.ComputeNodeList.get_all_by_host(
-            self.context, 'fake-host').AndReturn(
-                [fake_compute_node])
-        self.mox.ReplayAll()
+        mock_get.return_value = [fake_compute_node]
         service_obj = service.Service(id=123, host="fake-host",
                                       binary="nova-compute")
         service_obj._context = self.context
@@ -273,6 +261,7 @@ class _TestServiceObject(object):
                          fake_compute_node)
         # Make sure it doesn't re-fetch this
         service_obj.compute_node
+        mock_get.assert_called_once_with(self.context, 'fake-host')
 
     @mock.patch.object(db, 'service_get_all_computes_by_hv_type')
     def test_get_all_computes_by_hv_type(self, mock_get_all):
