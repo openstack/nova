@@ -39,7 +39,11 @@ class FakeResponse(object):
 
     def __nonzero__(self):
         # python 2
-        return self.status_code == 200
+        return self.status_code < 400
+
+    @property
+    def text(self):
+        return self.content
 
 
 class IdentityValidationTest(test.NoDBTestCase):

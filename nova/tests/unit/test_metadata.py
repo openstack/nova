@@ -54,6 +54,7 @@ from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_network
+from nova.tests.unit import test_identity
 from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.virt import netutils
@@ -845,9 +846,10 @@ class OpenStackMetadataTestCase(test.TestCase):
 
     def _test_vendordata2_response_inner(self, request_mock, response_code,
                                          include_rest_result=True):
-        request_mock.return_value.status_code = response_code
+        fake_response = test_identity.FakeResponse(response_code)
         if include_rest_result:
-            request_mock.return_value.text = '{"color": "blue"}'
+            fake_response.content = '{"color": "blue"}'
+        request_mock.return_value = fake_response
 
         with utils.tempdir() as tmpdir:
             jsonfile = os.path.join(tmpdir, 'test.json')
@@ -905,6 +907,8 @@ class OpenStackMetadataTestCase(test.TestCase):
 
     @mock.patch.object(session.Session, 'request')
     def test_vendor_data_response_vendordata2_no_content(self, request_mock):
+        # Make it a failure if no content was returned and we don't handle it.
+        self.flags(vendordata_dynamic_failure_fatal=True, group='api')
         self._test_vendordata2_response_inner(request_mock,
                                               requests.codes.NO_CONTENT,
                                               include_rest_result=False)
