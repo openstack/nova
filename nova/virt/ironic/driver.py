@@ -609,6 +609,66 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         return node_uuids
 
+    def get_inventory(self, nodename):
+        """Return a dict, keyed by resource class, of inventory information for
+        the supplied node.
+        """
+        node = self._node_from_cache(nodename)
+        info = self._node_resource(node)
+        # TODO(jaypipes): Completely remove the reporting of VCPU, MEMORY_MB,
+        # and DISK_GB resource classes in early Queens when Ironic nodes will
+        # *always* return the custom resource class that represents the
+        # baremetal node class in an atomic, singular unit.
+        if info['vcpus'] == 0:
+            # NOTE(jaypipes): The driver can return 0-valued vcpus when the
+            # node is "disabled".  In the future, we should detach inventory
+            # accounting from the concept of a node being disabled or not. The
+            # two things don't really have anything to do with each other.
+            return {}
+
+        result = {
+            obj_fields.ResourceClass.VCPU: {
+                'total': info['vcpus'],
+                'reserved': 0,
+                'min_unit': info['vcpus'],
+                'max_unit': info['vcpus'],
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+            obj_fields.ResourceClass.MEMORY_MB: {
+                'total': info['memory_mb'],
+                'reserved': 0,
+                'min_unit': info['memory_mb'],
+                'max_unit': info['memory_mb'],
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+            obj_fields.ResourceClass.DISK_GB: {
+                'total': info['local_gb'],
+                'reserved': 0,
+                'min_unit': info['local_gb'],
+                'max_unit': info['local_gb'],
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+        }
+        rc_name = info.get('resource_class')
+        if rc_name is not None:
+            # TODO(jaypipes): Raise an exception in Queens if Ironic doesn't
+            # report a resource class for the node
+            norm_name = obj_fields.ResourceClass.normalize_name(rc_name)
+            if norm_name is not None:
+                result[norm_name] = {
+                    'total': 1,
+                    'reserved': 0,
+                    'min_unit': 1,
+                    'max_unit': 1,
+                    'step_size': 1,
+                    'allocation_ratio': 1.0,
+                }
+
+        return result
+
     def get_available_resource(self, nodename):
         """Retrieve resource information.
 
@@ -627,16 +687,24 @@ class IronicDriver(virt_driver.ComputeDriver):
             # cache, let's try to populate it.
             self._refresh_cache()
 
+        node = self._node_from_cache(nodename)
+        return self._node_resource(node)
+
+    def _node_from_cache(self, nodename):
+        """Returns a node from the cache, retrieving the node from Ironic API
+        if the node doesn't yet exist in the cache.
+        """
         cache_age = time.time() - self.node_cache_time
         if nodename in self.node_cache:
             LOG.debug("Using cache for node %(node)s, age: %(age)s",
                       {'node': nodename, 'age': cache_age})
-            node = self.node_cache[nodename]
+            return self.node_cache[nodename]
         else:
             LOG.debug("Node %(node)s not found in cache, age: %(age)s",
                       {'node': nodename, 'age': cache_age})
             node = self._get_node(nodename)
-        return self._node_resource(node)
+            self.node_cache[nodename] = node
+            return node
 
     def get_info(self, instance):
         """Get the current state and resource usage for this instance.

@@ -32,6 +32,7 @@ from nova import context as nova_context
 from nova import exception
 from nova import hash_ring
 from nova import objects
+from nova.objects import fields
 from nova import servicegroup
 from nova import test
 from nova.tests.unit import fake_instance
@@ -751,6 +752,123 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_gi.assert_called_once_with(mock.ANY, CONF.host)
         expected_uuids = [n['uuid'] for n in node_dicts if n['expected']]
         self.assertEqual(sorted(expected_uuids), sorted(available_nodes))
+
+    @mock.patch.object(ironic_driver.IronicDriver, '_node_resource')
+    @mock.patch.object(ironic_driver.IronicDriver, '_node_from_cache')
+    def test_get_inventory_no_rc(self, mock_nfc, mock_nr):
+        """Ensure that when node.resource_class is missing, that we return the
+        legacy VCPU, MEMORY_MB and DISK_GB resources for inventory.
+        """
+        mock_nr.return_value = {
+            'vcpus': 24,
+            'memory_mb': 1024,
+            'local_gb': 100,
+            'resource_class': None,
+        }
+
+        result = self.driver.get_inventory(mock.sentinel.nodename)
+
+        expected = {
+            fields.ResourceClass.VCPU: {
+                'total': 24,
+                'reserved': 0,
+                'min_unit': 24,
+                'max_unit': 24,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+            fields.ResourceClass.MEMORY_MB: {
+                'total': 1024,
+                'reserved': 0,
+                'min_unit': 1024,
+                'max_unit': 1024,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+            fields.ResourceClass.DISK_GB: {
+                'total': 100,
+                'reserved': 0,
+                'min_unit': 100,
+                'max_unit': 100,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+        }
+        mock_nfc.assert_called_once_with(mock.sentinel.nodename)
+        mock_nr.assert_called_once_with(mock_nfc.return_value)
+        self.assertEqual(expected, result)
+
+    @mock.patch.object(ironic_driver.IronicDriver, '_node_resource')
+    @mock.patch.object(ironic_driver.IronicDriver, '_node_from_cache')
+    def test_get_inventory_with_rc(self, mock_nfc, mock_nr):
+        """Ensure that when node.resource_class is present, that we return the
+        legacy VCPU, MEMORY_MB and DISK_GB resources for inventory in addition
+        to the custom resource class inventory record.
+        """
+        mock_nr.return_value = {
+            'vcpus': 24,
+            'memory_mb': 1024,
+            'local_gb': 100,
+            'resource_class': 'iron-nfv',
+        }
+
+        result = self.driver.get_inventory(mock.sentinel.nodename)
+
+        expected = {
+            fields.ResourceClass.VCPU: {
+                'total': 24,
+                'reserved': 0,
+                'min_unit': 24,
+                'max_unit': 24,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+            fields.ResourceClass.MEMORY_MB: {
+                'total': 1024,
+                'reserved': 0,
+                'min_unit': 1024,
+                'max_unit': 1024,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+            fields.ResourceClass.DISK_GB: {
+                'total': 100,
+                'reserved': 0,
+                'min_unit': 100,
+                'max_unit': 100,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+            'CUSTOM_IRON_NFV': {
+                'total': 1,
+                'reserved': 0,
+                'min_unit': 1,
+                'max_unit': 1,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+        }
+        mock_nfc.assert_called_once_with(mock.sentinel.nodename)
+        mock_nr.assert_called_once_with(mock_nfc.return_value)
+        self.assertEqual(expected, result)
+
+    @mock.patch.object(ironic_driver.IronicDriver, '_node_resource')
+    @mock.patch.object(ironic_driver.IronicDriver, '_node_from_cache')
+    def test_get_inventory_disabled_node(self, mock_nfc, mock_nr):
+        """Ensure that when vcpus == 0 (which happens when a node is disabled),
+        that get_inventory() returns an empty dict.
+        """
+        mock_nr.return_value = {
+            'vcpus': 0,
+            'memory_mb': 0,
+            'local_gb': 0,
+            'resource_class': None,
+        }
+
+        result = self.driver.get_inventory(mock.sentinel.nodename)
+        mock_nfc.assert_called_once_with(mock.sentinel.nodename)
+        mock_nr.assert_called_once_with(mock_nfc.return_value)
+        self.assertEqual({}, result)
 
     @mock.patch.object(FAKE_CLIENT.node, 'get')
     @mock.patch.object(FAKE_CLIENT.node, 'list')
