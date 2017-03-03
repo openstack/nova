@@ -20,6 +20,7 @@ from __future__ import absolute_import
 import copy
 import inspect
 import itertools
+import os
 import random
 import sys
 import time
@@ -366,6 +367,11 @@ class GlanceImageServiceV2(object):
                               {'path': dst_path, 'exception': ex})
             finally:
                 if close_file:
+                    # Ensure that the data is pushed all the way down to
+                    # persistent storage. This ensures that in the event of a
+                    # subsequent host crash we don't have running instances
+                    # using a corrupt backing file.
+                    os.fdatasync(data.fileno())
                     data.close()
 
     def create(self, context, image_meta, data=None):
