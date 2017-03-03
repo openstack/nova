@@ -21,6 +21,11 @@ IPV6_OPTS = [
     cfg.StrOpt('ipv6_backend',
         default='rfc2462',
         choices=('rfc2462', 'account_identifier'),
+        deprecated_for_removal=True,
+        deprecated_since='16.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 Abstracts out IPv6 address generation to pluggable backends.
 
