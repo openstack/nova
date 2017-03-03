@@ -923,6 +923,11 @@ Related options:
 * use_neutron
 """),
     cfg.StrOpt('firewall_driver',
+        deprecated_for_removal=True,
+        deprecated_since='16.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 Firewall driver to use with ``nova-network`` service.
 
