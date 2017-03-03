@@ -14,18 +14,18 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0rc2.dev504\n"
+"Project-Id-Version: nova 15.0.0.0rc2.dev255\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-10-26 19:51+0000\n"
+"POT-Creation-Date: 2017-03-02 18:28+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-04-04 06:24+0000\n"
-"Last-Translator: Eugènia Torrella <tester03@es.ibm.com>\n"
+"PO-Revision-Date: 2016-04-12 06:05+0000\n"
+"Last-Translator: Copied by Zanata <copied-by-zanata@zanata.org>\n"
 "Language: es\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "Generated-By: Babel 2.0\n"
-"X-Generator: Zanata 3.7.3\n"
+"X-Generator: Zanata 3.9.6\n"
 "Language-Team: Spanish\n"
 
 #, python-format
@@ -66,10 +66,6 @@ msgstr ""
 "stderr: %(stderr)r"
 
 #, python-format
-msgid "%(err)s"
-msgstr "%(err)s"
-
-#, python-format
 msgid ""
 "%(event_type)s is not a versioned notification and not whitelisted. See ./"
 "doc/source/notification.rst"
@@ -80,10 +76,6 @@ msgstr ""
 #, python-format
 msgid "%(field)s should not be part of the updates."
 msgstr "%(field)s on debería formar parte de las actualizaciones."
-
-#, python-format
-msgid "%(fieldname)s missing field type"
-msgstr "%(fieldname)s tipo de campo faltante"
 
 #, python-format
 msgid "%(key)s is not a valid quota key. Valid options are: %(options)s."
@@ -130,10 +122,6 @@ msgid "%(type)s hypervisor does not support PCI devices"
 msgstr "El hipervisor %(type)s no soporta dispositivos PCI"
 
 #, python-format
-msgid "%(typename)s in %(fieldname)s is not an instance of Enum"
-msgstr "%(typename)s en %(fieldname)s no es una instancia de Enum"
-
-#, python-format
 msgid "%(value_name)s must be <= %(max_value)d"
 msgstr "%(value_name)s debe ser <= %(max_value)d"
 
@@ -169,10 +157,6 @@ msgstr "No se soporta formato %s"
 #, python-format
 msgid "%s is not a string or unicode"
 msgstr "%s no es una serie o unicode"
-
-#, python-format
-msgid "%s is not a valid node managed by this compute host."
-msgstr "%s no es un nodo válido administrado por este anfitrión de cómputo."
 
 #, python-format
 msgid "%s is not supported."
@@ -409,12 +393,6 @@ msgstr ""
 
 msgid "Block Device Mapping is Invalid."
 msgstr "La correlación de dispositivo de bloque no es válida."
-
-#, python-format
-msgid "Block Device Mapping is Invalid: %(auth_method)s is unsupported."
-msgstr ""
-"La correlación de dispositivo de bloque es inválida: %(auth_method)s no está "
-"soportado."
 
 #, python-format
 msgid "Block Device Mapping is Invalid: %(details)s"
@@ -722,10 +700,6 @@ msgid "Compute host %(host)s could not be found."
 msgstr "No se ha podido encontrar el host de Compute %(host)s."
 
 #, python-format
-msgid "Compute host %(name)s needs to be created first before updating."
-msgstr "Primero debe crear el host compute %(name)s antes de actualizarlo."
-
-#, python-format
 msgid "Compute host %s not found."
 msgstr "No se ha encontrado Compute host %s."
 
@@ -812,10 +786,6 @@ msgstr ""
 "instancia %(instance_id)s. Motivo: %(reason)s"
 
 #, python-format
-msgid "Console pool %(pool_id)s could not be found."
-msgstr "No se ha podido encontrar la agrupación de consolas %(pool_id)s. "
-
-#, python-format
 msgid ""
 "Console pool of type %(console_type)s for compute host %(compute_host)s on "
 "proxy host %(host)s not found."
@@ -837,10 +807,6 @@ msgstr "Restricción no cumplida."
 #, python-format
 msgid "Converted to raw, but format is now %s"
 msgstr "Convertido a sin formato, pero el formato es ahora %s"
-
-#, python-format
-msgid "Core API extensions are missing: %(missing_apis)s"
-msgstr "Faltan las extensiones Core API : %(missing_apis)s"
 
 #, python-format
 msgid "Could not attach image to loopback: %s"
@@ -1050,14 +1016,6 @@ msgid ""
 msgstr ""
 "Error de libvirt al obtener la información de dominio para "
 "%(instance_name)s: [Código de error %(error_code)s] %(ex)s"
-
-#, python-format
-msgid ""
-"Error from libvirt while looking up %(instance_id)s: [Error Code "
-"%(error_code)s] %(ex)s"
-msgstr ""
-"Error de libvirt durante la búsqueda de %(instance_id)s: [Código de Error "
-"%(error_code)s] %(ex)s"
 
 #, python-format
 msgid ""
@@ -1524,10 +1482,6 @@ msgid "Free %(type)s %(free).02f %(unit)s < requested %(requested)d %(unit)s"
 msgstr ""
 "Libres %(type)s %(free).02f %(unit)s < solicitados %(requested)d %(unit)s"
 
-#, python-format
-msgid "Group not valid. Reason: %(reason)s"
-msgstr "Grupo no válido. Razón: %(reason)s"
-
 msgid "Guest does not have a console available."
 msgstr "El invitado no tiene una consola disponible."
 
@@ -1578,9 +1532,6 @@ msgstr "El hipervisor con el ID '%s' no se ha podido encontrar. "
 #, python-format
 msgid "Hypervisor: %s"
 msgstr "Hipervisor: %s"
-
-msgid "IP address"
-msgstr "Dirección IP"
 
 #, python-format
 msgid "IP allocation over quota in pool %s."
@@ -1839,10 +1790,6 @@ msgstr ""
 "El grupo de instancias %(group_uuid)s no tiene miembro con identificador "
 "%(instance_id)s."
 
-#, python-format
-msgid "Instance group %(group_uuid)s has no policy %(policy)s."
-msgstr "El grupo de instancias %(group_uuid)s no tiene política %(policy)s"
-
 msgid "Instance has no source host"
 msgstr "La instancia no tiene ningún host de origen"
 
@@ -1910,13 +1857,6 @@ msgstr "Formato IP inválido %s"
 msgid "Invalid IP protocol %(protocol)s."
 msgstr "Protocolo IP invalido %(protocol)s"
 
-#, python-format
-msgid ""
-"Invalid PCI Whitelist: The PCI address %(address)s has an invalid %(field)s."
-msgstr ""
-"Lista blanca de PCI no válida. La dirección PCI  %(address)s tiene un "
-"%(field)s no válido."
-
 msgid ""
 "Invalid PCI Whitelist: The PCI whitelist can specify devname or address, but "
 "not both"
@@ -1937,9 +1877,6 @@ msgstr ""
 msgid "Invalid Regular Expression %s"
 msgstr "La expresión regular %s es inválida"
 
-msgid "Invalid association."
-msgstr "Asociación invalida."
-
 #, python-format
 msgid "Invalid broker_hosts value: %s. It should be in hostname:port format"
 msgstr "Valor broker_hosts no válido: %s. Debe estar en formato hostname:port"
@@ -1947,9 +1884,6 @@ msgstr "Valor broker_hosts no válido: %s. Debe estar en formato hostname:port"
 #, python-format
 msgid "Invalid certificate format: %s"
 msgstr "Formato de certificado no válido: %s"
-
-msgid "Invalid changes-since value"
-msgstr "Valor de changes-since no válido"
 
 #, python-format
 msgid "Invalid characters in hostname '%(hostname)s'"
@@ -2004,14 +1938,6 @@ msgstr "Dirección IP fija inválida %s en la solicitud"
 #, python-format
 msgid "Invalid floating IP %s in request"
 msgstr "Dirección IP flotante inválida %s en la solicitud"
-
-#, python-format
-msgid "Invalid id: %(instance_id)s (expecting \"i-...\")"
-msgstr "Id no valido: %(instance_id)s (esperando \"i-...\")"
-
-#, python-format
-msgid "Invalid id: %(volume_id)s (expecting \"i-...\")"
-msgstr "Id no valido: %(volume_id)s (esperando \"i-...\")"
 
 #, python-format
 msgid "Invalid image format '%(format)s'"
@@ -2117,9 +2043,6 @@ msgstr "Método hash de firma no válido: %s"
 #, python-format
 msgid "Invalid signature key type: %s"
 msgstr "Tipo de clave de firma no válido: %s"
-
-msgid "Invalid source_type field."
-msgstr "Campo source_type inválido."
 
 msgid "Invalid start time. The start time cannot occur after the end time."
 msgstr ""
@@ -2277,14 +2200,6 @@ msgstr ""
 "No se puede utilizar la migración en directo sin el almacenamiento "
 "compartido excepto si arranca desde VM de volumen que no tiene un disco "
 "local."
-
-msgid ""
-"Live migration of instances with config drives is not supported in libvirt "
-"unless libvirt instance path and drive data is shared across compute nodes."
-msgstr ""
-"libvirt no soporta una migración en vivo de instancias con controladores "
-"configurados, a menos que la ruta de instancia libvirt y el controlador de "
-"datos se comparta a través de nodos de computación."
 
 msgid ""
 "Live migration with API v2.25 requires all the Mitaka upgrade to be complete "
@@ -2524,16 +2439,8 @@ msgid "Must supply a positive value for max_rows"
 msgstr "Se debe proporcionar un valor positivo para max_rows"
 
 #, python-format
-msgid "Network \"%(val)s\" is not valid in field %(attr)s"
-msgstr "Red \"%(val)s\" no es válida en el campo %(attr)s"
-
-#, python-format
 msgid "Network %(network_id)s could not be found."
 msgstr "No se ha podido encontrar la red %(network_id)s."
-
-#, python-format
-msgid "Network %(network_id)s is duplicated."
-msgstr "La red %(network_id)s está duplicada."
 
 #, python-format
 msgid "Network %(network_id)s is still in use."
@@ -2661,9 +2568,6 @@ msgstr "No hay dirección IP fija  disponibles para red: %(net)s. "
 msgid "No fixed IP associated with id %(id)s."
 msgstr "No hay ninguna dirección IP fija asociada con el id %(id)s."
 
-msgid "No fixed IP found."
-msgstr "Dirección IP fija no encontrada."
-
 msgid "No fixed IPs associated to instance"
 msgstr "No hay IP fijas asociadas a la instancia "
 
@@ -2706,10 +2610,6 @@ msgstr ""
 "No se ha configurado ninguna URI de migración en vivo ni hay ninguna "
 "predeterminada disponible para el tipo de virtualización de hipervisor "
 "\"%(virt_type)s\"."
-
-#, python-format
-msgid "No matching ID for the URL %s was found."
-msgstr "No se ha encontrado un identificador válido para la URL %s"
 
 msgid "No more available networks."
 msgstr "No se encuentran más redes disponibles."
@@ -2807,10 +2707,6 @@ msgstr "No Autorizado"
 msgid "Not enough parameters to build a valid rule."
 msgstr "No hay suficientes parámetros para crear una regla válida."
 
-#, python-format
-msgid "Not enough parameters: %(reason)s"
-msgstr "No hay suficientes parámetros: %(reason)s"
-
 msgid "Not implemented on Windows"
 msgstr "No implementado en Windows"
 
@@ -2826,11 +2722,6 @@ msgstr "Nova requiere versión libvirt %s o mayor."
 
 msgid "Number of Rows Archived"
 msgstr "Número de filas archivado"
-
-#, python-format
-msgid "Number of retries to plugin (%(num_retries)d) exceeded."
-msgstr ""
-"Se ha excedido el número de reintentos para el plugin (%(num_retries)d)."
 
 #, python-format
 msgid ""
@@ -2916,14 +2807,6 @@ msgstr "La solicitud de dispositivo PCI %(requests)s ha fallado"
 
 #, python-format
 msgid ""
-"PCS doesn't support images in %s format. You should either set "
-"force_raw_images=True in config or upload an image in ploop or raw format."
-msgstr ""
-"PCS no soporta imágenes en formato %s. Debe establecer en la configuración "
-"force_raw_images=True o subir una imagen en formato ploop o de origen."
-
-#, python-format
-msgid ""
 "PIF %(pif_uuid)s for network %(bridge)s has VLAN id %(pif_vlan)d. Expected "
 "%(vlan_num)d"
 msgstr ""
@@ -2987,11 +2870,6 @@ msgstr "Por favor especifique fixed_range o uuid"
 #, python-format
 msgid "Plug vif failed because of unexpected vif_type=%s"
 msgstr "Conexión vif falló a causa de un vif_type=%s inesperado"
-
-#, python-format
-msgid "Plugin version mismatch (Expected %(exp)s, got %(got)s)"
-msgstr ""
-"Discordancia en la versión del plugin (Se esperaba %(exp)s, se tiene %(got)s)"
 
 #, python-format
 msgid "Policy doesn't allow %(action)s to be performed."
@@ -3155,15 +3033,6 @@ msgstr ""
 msgid "Realtime policy not supported by hypervisor"
 msgstr "El hipervisor no da soporte a la política en tiempo real"
 
-#, python-format
-msgid ""
-"Relative blockcommit support was not detected. Libvirt '%s' or later is "
-"required for online deletion of file/network storage-backed volume snapshots."
-msgstr ""
-"No se detectó soporte relativo de confirmación en bloque. Se requiere "
-"Libvirt '%s' o mayor para eliminar en línea instantáneas de volumen de "
-"fichero/red en almacenamiento de respaldo."
-
 msgid "Request body and URI mismatch"
 msgstr "Discrepancia de URI y cuerpo de solicitud"
 
@@ -3265,18 +3134,9 @@ msgstr "Reanudada"
 msgid "Root element name should be '%(name)s' not '%(tag)s'"
 msgstr "El nombre de elemento raíz debe ser '%(name)s' no '%(tag)s'"
 
-msgid "Rotation param is required for backup image_type"
-msgstr ""
-"El parámetro de rotación es necesario para el tipo de imagen de copia de "
-"seguridad "
-
 #, python-format
 msgid "Rule (%s) not found"
 msgstr "No se ha encontrado la regla (%s)"
-
-#, python-format
-msgid "Rule already exists in group: %(rule)s"
-msgstr "La regla ya existe en el grupo: %(rule)s"
 
 #, python-format
 msgid "Running Nova with parallels virt_type requires libvirt version %s"
@@ -3585,10 +3445,6 @@ msgstr ""
 "La solicitud de la IP flotante ha fallado con BadRequest (Solicitud "
 "incorrecta)"
 
-#, python-format
-msgid "The group %(group_name)s must be configured with an id."
-msgstr "El grupo %(group_name)s debe ser configurado con un id."
-
 msgid "The input is not a string or unicode"
 msgstr "La entrada no es una serie o unicode"
 
@@ -3597,18 +3453,6 @@ msgid ""
 msgstr ""
 "La instancia necesita una versión de hipervisor más reciente que la "
 "proporcionada."
-
-#, python-format
-msgid ""
-"The key %(r)s is required in the location metadata to access the url %(url)s."
-msgstr ""
-"La clave %(r)s se requiere en los metadatos de ubicación para acceder a la "
-"url %(url)s."
-
-#, python-format
-msgid "The key %s is required in all file system descriptions."
-msgstr ""
-"La clave %s se requiere en todas las descripciones de sistemas de archivo."
 
 #, python-format
 msgid ""
@@ -3630,14 +3474,6 @@ msgstr "El módulo %(module)s está mal configurado: %(reason)s"
 msgid "The mount %(mount_path)s is not a valid Quobyte volume. Error: %(exc)s"
 msgstr ""
 "El montaje %(mount_path)s  no es un volumen Quobyte válido. Error: %(exc)s"
-
-#, python-format
-msgid ""
-"The mount point advertised by glance: %(glance_mount)s, does not match the "
-"URL path: %(path)s"
-msgstr ""
-"El punto de montaje anunciado por glance: %(glance_mount)s, no coincide con "
-"la ruta del URL: %(path)s"
 
 #, python-format
 msgid ""
@@ -3952,19 +3788,6 @@ msgid "Unable to find SR from VDI %s"
 msgstr "No ha sido posible encontrar SR desde VDI %s"
 
 #, python-format
-msgid "Unable to find a mounted disk for target_iqn: %s"
-msgstr "No se ha podido encontrar un disco montado para target_iqn: %s "
-
-#, python-format
-msgid ""
-"Unable to find a mounted disk for target_iqn: %s. Please ensure that the "
-"host's SAN policy is set to \"OfflineAll\" or \"OfflineShared\""
-msgstr ""
-"No es posible encontrar un disco montado para target_iqn: %s. Por favor "
-"asegúrese de que la política SAM del host está configurada como  \"OfflineAll"
-"\" u \"OfflineShared\""
-
-#, python-format
 msgid "Unable to find ca_file : %s"
 msgstr "No se puede encontrar ca_file: %s"
 
@@ -4020,9 +3843,6 @@ msgid ""
 msgstr ""
 "Incapaz de lanzar múltiples instancias con un solo identificador de puerto "
 "configurado. Por favor lanza tu instancia una por una con puertos diferentes."
-
-msgid "Unable to log in to XenAPI (is the Dom0 disk full?)"
-msgstr "No se puede iniciar la sesión en XenAPI (¿está el disco Dom0 lleno?) "
 
 #, python-format
 msgid ""
@@ -4243,12 +4063,6 @@ msgid "VHD coalesce attempts exceeded (%d), giving up..."
 msgstr ""
 "Intentos de incorporación de VHD excedidos (%d), dejando de intentar..."
 
-msgid "VIF plugging is not supported by the Hyper-V driver."
-msgstr "Conexión de VIF no está soportado por el driver de Hyper-V."
-
-msgid "VIF unplugging is not supported by the Hyper-V driver."
-msgstr "Desconexión de VIF no está soportado por el driver de Hyper-V."
-
 #, python-format
 msgid ""
 "VLAN tag is not appropriate for the port group %(bridge)s. Expected VLAN tag "
@@ -4265,10 +4079,6 @@ msgid ""
 msgstr ""
 "El valor (%(value)s) para el parámetro Group%(property)s es inválido. El "
 "contenido se limita a '%(allowed)s'."
-
-#, python-format
-msgid "Value must be >= 0 for field %s"
-msgstr "El valor debe ser >= 0 para el campo %s"
 
 msgid "Value required for 'scality_sofs_config'"
 msgstr "Valor necesario para 'scality_sofs_config'"
@@ -4365,12 +4175,6 @@ msgid ""
 msgstr ""
 "El volúmen establece el tamaño de bloque, pero el hipervisor libvirt actual "
 "'%s' no soporta tamaño de bloque personalizado."
-
-#, python-format
-msgid "WARNING: fixed IP %s allocated to missing instance"
-msgstr ""
-"ADVERTENCIA: la direción IP fija %s se ha asociado a una instancia "
-"inexistente"
 
 #, python-format
 msgid ""
@@ -4526,9 +4330,6 @@ msgstr "No se encuentra el programa de utilidad fping."
 msgid "host"
 msgstr "host"
 
-msgid "hostname"
-msgstr "hostname"
-
 #, python-format
 msgid "href %s does not contain version"
 msgstr "href %s no contiene la versión"
@@ -4613,9 +4414,6 @@ msgstr "el dispositivo nbd %s no se ha mostrado"
 
 msgid "nbd unavailable: module not loaded"
 msgstr "nbd no disponible: módulo no cargado"
-
-msgid "network"
-msgstr "red"
 
 msgid "no hosts to remove"
 msgstr "no hay hosts que eliminar"

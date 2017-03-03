@@ -8,18 +8,18 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0rc2.dev504\n"
+"Project-Id-Version: nova 15.0.0.0rc2.dev255\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-10-26 19:51+0000\n"
+"POT-Creation-Date: 2017-03-02 18:28+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-01-20 01:45+0000\n"
-"Last-Translator: Andreas Jaeger <jaegerandi@gmail.com>\n"
+"PO-Revision-Date: 2016-04-12 06:09+0000\n"
+"Last-Translator: Copied by Zanata <copied-by-zanata@zanata.org>\n"
 "Language: tr-TR\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
-"X-Generator: Zanata 3.7.3\n"
+"X-Generator: Zanata 3.9.6\n"
 "Language-Team: Turkish (Turkey)\n"
 
 #, python-format
@@ -36,14 +36,6 @@ msgid ""
 msgstr ""
 "%(binary)s ilkesel olarak izin verilmeyen şekilde doğrudan veri tabanı "
 "erişimine kalkıştı"
-
-#, python-format
-msgid "%(err)s"
-msgstr "Hatalar: %(err)s"
-
-#, python-format
-msgid "%(fieldname)s missing field type"
-msgstr "%(fieldname)s alan türü eksik"
 
 #, python-format
 msgid "%(key)s is not a valid quota key. Valid options are: %(options)s."
@@ -83,10 +75,6 @@ msgid "%(type)s hypervisor does not support PCI devices"
 msgstr "%(type)s hipervizörü PCI aygıtlarını desteklemiyor"
 
 #, python-format
-msgid "%(typename)s in %(fieldname)s is not an instance of Enum"
-msgstr "%(fieldname)s içindeki %(typename)s Enum örneği değil"
-
-#, python-format
 msgid "%(value_name)s must be <= %(max_value)d"
 msgstr "%(value_name)s <= %(max_value)d olmalı"
 
@@ -117,10 +105,6 @@ msgstr "%s biçimi desteklenmiyor"
 #, python-format
 msgid "%s is not a string or unicode"
 msgstr "%s bir karakter dizisi veya evrensel kodda değil"
-
-#, python-format
-msgid "%s is not a valid node managed by this compute host."
-msgstr "%s bu hesap istemcisi tarafından yönetilen geçerli bir düğüm değil."
 
 #, python-format
 msgid "%s is not supported."
@@ -533,11 +517,6 @@ msgid "Compute host %(host)s could not be found."
 msgstr "%(host)s hesaplama sunucusu bulunamadı."
 
 #, python-format
-msgid "Compute host %(name)s needs to be created first before updating."
-msgstr ""
-"Güncellemeden önce hesaplama istemcisinin %(name)s oluşturulması gerekiyor."
-
-#, python-format
 msgid "Compute host %s not found."
 msgstr "Hesap istemcisi %s bulunamadı."
 
@@ -588,10 +567,6 @@ msgstr ""
 "%(instance_uuid)s sunucusu için %(pool_id)s havuzunda konsol bulunamadı."
 
 #, python-format
-msgid "Console pool %(pool_id)s could not be found."
-msgstr "%(pool_id)s konsol havuzu bulunamadı."
-
-#, python-format
 msgid ""
 "Console pool of type %(console_type)s for compute host %(compute_host)s on "
 "proxy host %(host)s not found."
@@ -613,10 +588,6 @@ msgstr "Kısıtlama karşılanmadı."
 #, python-format
 msgid "Converted to raw, but format is now %s"
 msgstr "Ham şekle dönüştürüldü, ama biçim artık %s"
-
-#, python-format
-msgid "Core API extensions are missing: %(missing_apis)s"
-msgstr "Çekirdek API eklentileri eksik: %(missing_apis)s"
 
 #, python-format
 msgid "Could not attach image to loopback: %s"
@@ -803,13 +774,6 @@ msgid ""
 msgstr ""
 "%(instance_name)s için alan bilgisi alınırken libvirt hatası: [Hata Kodu "
 "%(error_code)s] %(ex)s"
-
-#, python-format
-msgid ""
-"Error from libvirt while looking up %(instance_id)s: [Error Code "
-"%(error_code)s] %(ex)s"
-msgstr ""
-"%(instance_id)s aranırken libvirt hatası: [Hata Kodu %(error_code)s] %(ex)s"
 
 #, python-format
 msgid ""
@@ -1158,10 +1122,6 @@ msgid "Free %(type)s %(free).02f %(unit)s < requested %(requested)d %(unit)s"
 msgstr "Boş %(type)s %(free).02f %(unit)s < istenen %(requested)d %(unit)s"
 
 #, python-format
-msgid "Group not valid. Reason: %(reason)s"
-msgstr "Grup geçerli değil. Sebep: %(reason)s"
-
-#, python-format
 msgid "Host %(host)s could not be found."
 msgstr "%(host)s sunucusu bulunamadı."
 
@@ -1199,9 +1159,6 @@ msgstr "'%s' kimlikli hipervizör bulunamadı."
 #, python-format
 msgid "Hypervisor: %s"
 msgstr "Hipervizör: %s"
-
-msgid "IP address"
-msgstr "IP adresi"
 
 #, python-format
 msgid "IP allocation over quota in pool %s."
@@ -1421,10 +1378,6 @@ msgid "Instance group %(group_uuid)s has no member with id %(instance_id)s."
 msgstr ""
 "Sunucu grubu %(group_uuid)s %(instance_id)s kimliğinde bir üyeye sahip değil."
 
-#, python-format
-msgid "Instance group %(group_uuid)s has no policy %(policy)s."
-msgstr "%(group_uuid)s sunucu grubunun %(policy)s ilkesi yok."
-
 msgid "Instance has no source host"
 msgstr "Sunucunun kaynak istemcisi yok"
 
@@ -1479,13 +1432,6 @@ msgstr "Geçersiz IP biçimi %s"
 msgid "Invalid IP protocol %(protocol)s."
 msgstr "Geçersiz IP %(protocol)s."
 
-#, python-format
-msgid ""
-"Invalid PCI Whitelist: The PCI address %(address)s has an invalid %(field)s."
-msgstr ""
-"Geçersiz PCI Beyaz listesi: PCI adresi %(address)s geçersiz bir %(field)s "
-"alanına sahip."
-
 msgid ""
 "Invalid PCI Whitelist: The PCI whitelist can specify devname or address, but "
 "not both"
@@ -1505,16 +1451,10 @@ msgstr "Geçersiz PCI aygıtı Beyazlistesi yapılandırması %(reason)s"
 msgid "Invalid Regular Expression %s"
 msgstr "Geçersiz Düzenli İfade %s"
 
-msgid "Invalid association."
-msgstr "Geçersiz ilişkilendirme."
-
 #, python-format
 msgid "Invalid broker_hosts value: %s. It should be in hostname:port format"
 msgstr ""
 "Geçersiz broker_hosts değeri: %s. makineadı:bağlantınoktası biçiminde olmalı"
-
-msgid "Invalid changes-since value"
-msgstr "Geçersiz değişiklik-oluşturma değeri"
 
 #, python-format
 msgid "Invalid characters in hostname '%(hostname)s'"
@@ -1569,14 +1509,6 @@ msgstr "İstekte %s geçersiz sabit IP Adresi"
 #, python-format
 msgid "Invalid floating IP %s in request"
 msgstr "İstekte geçersiz değişken IP %s"
-
-#, python-format
-msgid "Invalid id: %(instance_id)s (expecting \"i-...\")"
-msgstr "Geçersiz kimlik: %(instance_id)s (\"i-...\" bekleniyor)"
-
-#, python-format
-msgid "Invalid id: %(volume_id)s (expecting \"i-...\")"
-msgstr "Geçersiz kimlik: %(volume_id)s (\"i-...\" bekleniyor)"
 
 #, python-format
 msgid "Invalid image format '%(format)s'"
@@ -1669,9 +1601,6 @@ msgstr "Geçersiz güvenlik grubu ismi: %(name)s."
 
 msgid "Invalid service catalog json."
 msgstr "Geçersiz servis kataloğu json'u."
-
-msgid "Invalid source_type field."
-msgstr "Geçersiz source_type alanı."
 
 msgid "Invalid start time. The start time cannot occur after the end time."
 msgstr ""
@@ -1803,14 +1732,6 @@ msgstr "Satır %(linenum)d : %(line)s"
 #, python-format
 msgid "Link Local address is not found.:%s"
 msgstr "Yerel adres bağlantısı bulunamadı.:%s"
-
-msgid ""
-"Live migration of instances with config drives is not supported in libvirt "
-"unless libvirt instance path and drive data is shared across compute nodes."
-msgstr ""
-"libvirt sunucu yolu ve sürücü verisi hesaplama düğümleri arasında "
-"paylaşılmadığı sürece sunucuların yapılandırma aygıtlarıyla göçü libvirt'de "
-"desteklenmez."
 
 #, python-format
 msgid "Malformed message body: %(reason)s"
@@ -1989,16 +1910,8 @@ msgid "Must supply a positive value for max_rows"
 msgstr "max_rows için pozitif bir değer verilmeli"
 
 #, python-format
-msgid "Network \"%(val)s\" is not valid in field %(attr)s"
-msgstr "Ağ \"%(val)s\" %(attr)s alanında geçerli değil"
-
-#, python-format
 msgid "Network %(network_id)s could not be found."
 msgstr "%(network_id)s ağı bulunamadı."
-
-#, python-format
-msgid "Network %(network_id)s is duplicated."
-msgstr "Ağ %(network_id)s tekrar edilmiş."
 
 #, python-format
 msgid "Network %(network_id)s is still in use."
@@ -2112,9 +2025,6 @@ msgstr "Şu ağ için kullanılabilir sabit UP adresleri yok: %(net)s"
 msgid "No fixed IP associated with id %(id)s."
 msgstr "%(id)s ile ilişkilendirilmiş bir dinamik IP yok."
 
-msgid "No fixed IP found."
-msgstr "Sabit IP bulunmadı."
-
 msgid "No floating IP addresses have been defined."
 msgstr "Hiçbir değişken IP adresi tanımlanmamış."
 
@@ -2141,10 +2051,6 @@ msgstr "İmaj konumları erişilebilir değil"
 
 msgid "No instances found for any event"
 msgstr "Herhangi bir olay için sunucu bulunamadı"
-
-#, python-format
-msgid "No matching ID for the URL %s was found."
-msgstr "URL %s ile eşleşen Kimlik bulunamadı."
 
 msgid "No more available networks."
 msgstr "Daha fazla kullanılabilir ağ yok."
@@ -2220,10 +2126,6 @@ msgstr "Yetkiniz yok."
 msgid "Not enough parameters to build a valid rule."
 msgstr "Geçerli bir kuralı oluşturmak için yeterli parametre yok."
 
-#, python-format
-msgid "Not enough parameters: %(reason)s"
-msgstr "Yeterli parametre yok: %(reason)s"
-
 msgid "Not implemented on Windows"
 msgstr "Windows'da uygulanmamış"
 
@@ -2233,10 +2135,6 @@ msgstr "Rbd'de depolanmadı"
 #, python-format
 msgid "Nova requires libvirt version %s or greater."
 msgstr "Nova libvirt sürüm %s ya da daha yenisine ihtiyaç duyar."
-
-#, python-format
-msgid "Number of retries to plugin (%(num_retries)d) exceeded."
-msgstr "Eklentiye azami yeniden deneme sayısı (%(num_retries)d) aşıldı."
 
 #, python-format
 msgid ""
@@ -2314,15 +2212,6 @@ msgstr "PCI aygıtı %(id)s bulunamadı"
 
 #, python-format
 msgid ""
-"PCS doesn't support images in %s format. You should either set "
-"force_raw_images=True in config or upload an image in ploop or raw format."
-msgstr ""
-"PCS %s biçimindeki imajları desteklemiyor. Ya yapılandırmanızda "
-"force_raw_images=True ayarlamalısınız ya da imajı ploop veya ham biçimde "
-"yüklemelisiniz."
-
-#, python-format
-msgid ""
 "PIF %(pif_uuid)s for network %(bridge)s has VLAN id %(pif_vlan)d. Expected "
 "%(vlan_num)d"
 msgstr ""
@@ -2363,10 +2252,6 @@ msgstr "Lütfen fixed_range veya uuid belirtin"
 #, python-format
 msgid "Plug vif failed because of unexpected vif_type=%s"
 msgstr "Beklenmedik vif_type=%s sebebiyle vif takma başarısız"
-
-#, python-format
-msgid "Plugin version mismatch (Expected %(exp)s, got %(got)s)"
-msgstr "Eklenti sürümü uyuşmuyor (Beklenen %(exp)s, alınan %(got)s)"
 
 #, python-format
 msgid "Policy doesn't allow %(action)s to be performed."
@@ -2499,15 +2384,6 @@ msgstr "%(project_id)s projesi için kota kullanımı bulunamadı."
 msgid "Reached maximum number of retries trying to unplug VBD %s"
 msgstr "VBD %s çıkarılmaya çalışılırken azami deneme sayısına ulaşıldı"
 
-#, python-format
-msgid ""
-"Relative blockcommit support was not detected. Libvirt '%s' or later is "
-"required for online deletion of file/network storage-backed volume snapshots."
-msgstr ""
-"Göreli blockcommit desteği algılanamadı. Dosya/ağ depolama-destekli "
-"mantıksal sürücü anlık görüntüsünün çevrimiçi silinebilmesi için libvirt "
-"'%s' ya da daha sonrası gerekir."
-
 msgid "Request body and URI mismatch"
 msgstr "URI ve gövde isteği uyumsuz"
 
@@ -2582,16 +2458,9 @@ msgstr "Devam Edildi"
 msgid "Root element name should be '%(name)s' not '%(tag)s'"
 msgstr "Kök öğe ismi '%(name)s' olmalı '%(tag)s' değil"
 
-msgid "Rotation param is required for backup image_type"
-msgstr "Yedek imajı geri dönüş parametresi gerekli"
-
 #, python-format
 msgid "Rule (%s) not found"
 msgstr "Kural (%s) bulunamadı"
-
-#, python-format
-msgid "Rule already exists in group: %(rule)s"
-msgstr "Kural zaten grupta mevcut: %(rule)s"
 
 #, python-format
 msgid "Running Nova with parallels virt_type requires libvirt version %s"
@@ -2849,16 +2718,6 @@ msgstr "Örnek şu ankinden daha yeni hypervisor versiyonu gerektirir."
 
 #, python-format
 msgid ""
-"The key %(r)s is required in the location metadata to access the url %(url)s."
-msgstr ""
-"%(r)s anahtarı %(url)s url'sine erişmek için konum metadata'sında olmalı."
-
-#, python-format
-msgid "The key %s is required in all file system descriptions."
-msgstr "%s anahtarı tüm dosya sistemi tanımlamalarında gerekli."
-
-#, python-format
-msgid ""
 "The metadata for this location will not work with this module %(module)s.  "
 "%(reason)s."
 msgstr ""
@@ -2877,14 +2736,6 @@ msgid "The mount %(mount_path)s is not a valid Quobyte volume. Error: %(exc)s"
 msgstr ""
 "%(mount_path)s bağı geçerli bir Qubyte mantıksal sürücüsü değil. Hata: "
 "%(exc)s"
-
-#, python-format
-msgid ""
-"The mount point advertised by glance: %(glance_mount)s, does not match the "
-"URL path: %(path)s"
-msgstr ""
-"Glance tarafından duyrulan bağlantı noktası: %(glance_mount)s, URL yoluyla "
-"eşleşmiyor: %(path)s"
 
 #, python-format
 msgid ""
@@ -3113,19 +2964,6 @@ msgid "Unable to find SR from VDI %s"
 msgstr "VDI %s'den SR bulunamadı"
 
 #, python-format
-msgid "Unable to find a mounted disk for target_iqn: %s"
-msgstr "target_iqn için bağlı bir disk bulunamıyor: %s"
-
-#, python-format
-msgid ""
-"Unable to find a mounted disk for target_iqn: %s. Please ensure that the "
-"host's SAN policy is set to \"OfflineAll\" or \"OfflineShared\""
-msgstr ""
-"target_iqn: %s için bağlı bir disk bulunamadı. Lütfen istemcinin SAN "
-"ilkesinin \"ÇevrimDışıHepsi\" ya da \"ÇevrimdışıPaylaşımlı\" olduğundan emin "
-"olun"
-
-#, python-format
 msgid "Unable to find ca_file : %s"
 msgstr "ca_file bulunamadı: %s"
 
@@ -3176,9 +3014,6 @@ msgstr ""
 "Birden fazla sunucu tekil yapılandırılan bağlantı noktası ID'si ile "
 "başlatılamadı. Lütfen sunucunuzu tek tek değişik bağlantı noktalarıyla "
 "başlatın."
-
-msgid "Unable to log in to XenAPI (is the Dom0 disk full?)"
-msgstr "XenAPI'ye giriş yapılamadı (Dom0 diski dolu mu?)"
 
 #, python-format
 msgid ""
@@ -3373,12 +3208,6 @@ msgstr ""
 #, python-format
 msgid "VHD coalesce attempts exceeded (%d), giving up..."
 msgstr "VHD ergitme girişimi aşıldı (%d), vaz geçiliyor..."
-
-msgid "VIF plugging is not supported by the Hyper-V driver."
-msgstr "VIF takma Hiper-V sürücüs tarafından desteklenmiyor."
-
-msgid "VIF unplugging is not supported by the Hyper-V driver."
-msgstr "VIF çıkarma Hiper-V sürücüsü tarafından desteklenmiyor."
 
 #, python-format
 msgid ""
@@ -3586,9 +3415,6 @@ msgstr "fping aracı bulunamadı."
 msgid "host"
 msgstr "Host"
 
-msgid "hostname"
-msgstr "makine adı"
-
 #, python-format
 msgid "href %s does not contain version"
 msgstr "%s referansı versiyon içermiyor"
@@ -3663,9 +3489,6 @@ msgstr "nbd aygıtı %s ortaya çıkmadı"
 
 msgid "nbd unavailable: module not loaded"
 msgstr "nbd kullanılabilir değil: modül yüklenmemiş"
-
-msgid "network"
-msgstr "ağ"
 
 msgid "no hosts to remove"
 msgstr "silinecek istemci yok"

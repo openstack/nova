@@ -9,20 +9,21 @@
 # Sungjin Kang <potopro@gmail.com>, 2013
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 # Jongwon Lee <tothebinaryworld@gmail.com>, 2016. #zanata
+# Ian Y. Choi <ianyrchoi@gmail.com>, 2017. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0rc2.dev504\n"
+"Project-Id-Version: nova 15.0.0.0rc2.dev255\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-10-26 19:51+0000\n"
+"POT-Creation-Date: 2017-03-02 18:28+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-10-23 03:27+0000\n"
-"Last-Translator: Jongwon Lee <tothebinaryworld@gmail.com>\n"
+"PO-Revision-Date: 2017-03-02 12:00+0000\n"
+"Last-Translator: Ian Y. Choi <ianyrchoi@gmail.com>\n"
 "Language: ko-KR\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
-"X-Generator: Zanata 3.7.3\n"
+"X-Generator: Zanata 3.9.6\n"
 "Language-Team: Korean (South Korea)\n"
 
 #, python-format
@@ -62,10 +63,6 @@ msgstr ""
 "stderr: %(stderr)r"
 
 #, python-format
-msgid "%(err)s"
-msgstr "%(err)s"
-
-#, python-format
 msgid ""
 "%(event_type)s is not a versioned notification and not whitelisted. See ./"
 "doc/source/notification.rst"
@@ -76,10 +73,6 @@ msgstr ""
 #, python-format
 msgid "%(field)s should not be part of the updates."
 msgstr "%(field)s은(는) 업데이트의 일부여서는 안 됩니다. "
-
-#, python-format
-msgid "%(fieldname)s missing field type"
-msgstr "%(fieldname)s에 필드 유형이 누락됨"
 
 #, python-format
 msgid "%(key)s is not a valid quota key. Valid options are: %(options)s."
@@ -122,10 +115,6 @@ msgid "%(type)s hypervisor does not support PCI devices"
 msgstr "%(type)s 하이퍼바이저가 PCI 디바이스를 지원하지 않음"
 
 #, python-format
-msgid "%(typename)s in %(fieldname)s is not an instance of Enum"
-msgstr "%(fieldname)s에 있는 %(typename)s이(가) 열거의 인스턴스가 아님"
-
-#, python-format
 msgid "%(value_name)s must be <= %(max_value)d"
 msgstr "%(value_name)s은(는) %(max_value)d보다 작거나 같아야 함"
 
@@ -162,10 +151,6 @@ msgstr "%s 형식이 지원되지 않음"
 #, python-format
 msgid "%s is not a string or unicode"
 msgstr "%s이(가) 문자열 또는 Unicode가 아님"
-
-#, python-format
-msgid "%s is not a valid node managed by this compute host."
-msgstr "%s이(가) 이 계산 호스트가 관리하는 유효한 노드가 아닙니다. "
 
 #, python-format
 msgid "%s is not supported."
@@ -226,6 +211,11 @@ msgstr ""
 #, python-format
 msgid "Action: '%(action)s', calling method: %(meth)s, body: %(body)s"
 msgstr "조치: '%(action)s', 호출 메소드: %(meth)s, 본문: %(body)s"
+
+#, python-format
+msgid "Active live migration for instance %(instance_id)s not found"
+msgstr ""
+"인스턴스 %(instance_id)s에 대한 활성화 상태의 마이그레이션을 찾을 수 없음"
 
 #, python-format
 msgid "Add metadata failed for aggregate %(id)s after %(retries)s retries"
@@ -389,11 +379,6 @@ msgstr "블록 디바이스 맵핑을 레거시 형식으로 전환할 수 없�
 
 msgid "Block Device Mapping is Invalid."
 msgstr "블록 디바이스 맵핑이 올바르지 않습니다. "
-
-#, python-format
-msgid "Block Device Mapping is Invalid: %(auth_method)s is unsupported."
-msgstr ""
-"블록 디바이스 맵핑이 올바르지 않음: %(auth_method)s이(가) 지원되지 않습니다."
 
 #, python-format
 msgid "Block Device Mapping is Invalid: %(details)s"
@@ -668,6 +653,10 @@ msgid "Class %(class_name)s could not be found: %(exception)s"
 msgstr "%(class_name)s 클래스를 찾을 수 없음: %(exception)s"
 
 #, python-format
+msgid "Client exception during Migration Pre check: %(reason)s"
+msgstr "마이그레이션 사전 점검 동안의 클라이언트 예외: %(reason)s"
+
+#, python-format
 msgid ""
 "Command Not supported. Please use Ironic command %(cmd)s to perform this "
 "action."
@@ -678,10 +667,6 @@ msgstr ""
 #, python-format
 msgid "Compute host %(host)s could not be found."
 msgstr "%(host)s 계산 호스트를 찾을 수 없습니다. "
-
-#, python-format
-msgid "Compute host %(name)s needs to be created first before updating."
-msgstr "업데이트하기 전에 계산 호스트 %(name)s을(를) 먼저 작성해야 합니다."
 
 #, python-format
 msgid "Compute host %s not found."
@@ -766,10 +751,6 @@ msgstr ""
 "%(reason)s"
 
 #, python-format
-msgid "Console pool %(pool_id)s could not be found."
-msgstr "%(pool_id)s 콘솔 풀을 찾을 수 없습니다. "
-
-#, python-format
 msgid ""
 "Console pool of type %(console_type)s for compute host %(compute_host)s on "
 "proxy host %(host)s not found."
@@ -791,10 +772,6 @@ msgstr "제한조건이 만족되지 않았습니다. "
 #, python-format
 msgid "Converted to raw, but format is now %s"
 msgstr "원시로 변환되었지만 형식은 지금 %s임"
-
-#, python-format
-msgid "Core API extensions are missing: %(missing_apis)s"
-msgstr "코어 API 확장기능이 누락되어 있음: %(missing_apis)s"
 
 #, python-format
 msgid "Could not attach image to loopback: %s"
@@ -890,6 +867,10 @@ msgid "Device '%(device)s' not found."
 msgstr "'%(device)s' 디바이스를 찾을 수 없습니다."
 
 #, python-format
+msgid "Device detach failed for %(device)s: %(reason)s"
+msgstr "장치 해제가 %(device)s: %(reason)s  때문에 실패했습니다."
+
+#, python-format
 msgid ""
 "Device id %(id)s specified is not supported by hypervisor version %(version)s"
 msgstr "지정된 디바이스 ID %(id)s은(는) 하이퍼바이저 버전 %(version)s임"
@@ -964,6 +945,15 @@ msgstr ""
 "네트워크 UUID %(network_uuid)s이(가) 존재하지 않거나%(project_id)s 프로젝트"
 "에 지정되지 않았습니다. "
 
+msgid ""
+"Ephemeral disks requested are larger than the instance type allows. If no "
+"size is given in one block device mapping, flavor ephemeral size will be "
+"used."
+msgstr ""
+"임시 디스크는 인스턴스 유형이 허용하는 것 이상으로 요청 될 수 있습니다. 하나"
+"의 블록 장치 매핑에서 크기가 주어지지 않는다면, 선호하는 임시 크기로 사용 됩"
+"니다."
+
 #, python-format
 msgid "Error attempting to run %(method)s"
 msgstr "%(method)s을(를) 실행하는 중에 오류 발생"
@@ -991,14 +981,6 @@ msgid ""
 msgstr ""
 "%(instance_name)s의 도메인 정보를 가져오는 중 libvirt에서 오류 발생: [오류 코"
 "드 %(error_code)s] %(ex)s"
-
-#, python-format
-msgid ""
-"Error from libvirt while looking up %(instance_id)s: [Error Code "
-"%(error_code)s] %(ex)s"
-msgstr ""
-"%(instance_id)s 검색 중 libvirt에서 오류 발생: [오류 코드 %(error_code)s] "
-"%(ex)s"
 
 #, python-format
 msgid ""
@@ -1119,6 +1101,9 @@ msgstr "네트워크 할당 실패. 다시 스케줄하지 않음"
 msgid "Failed to attach network adapter device to %(instance_uuid)s"
 msgstr "네트워크 어댑터 디바이스를 %(instance_uuid)s에 접속하는 데 실패함"
 
+msgid "Failed to create the interim network for vif"
+msgstr "vif에 대한 임시 네트워크 구성에 실패함"
+
 #, python-format
 msgid "Failed to create vif %s"
 msgstr "vif %s을(를) 생성하는 데 실패"
@@ -1126,6 +1111,9 @@ msgstr "vif %s을(를) 생성하는 데 실패"
 #, python-format
 msgid "Failed to decrypt text: %(reason)s"
 msgstr "텍스트를 복호화하지 못했습니다: %(reason)s"
+
+msgid "Failed to delete bridge"
+msgstr "브릿지 제거에 실패함"
 
 #, python-format
 msgid "Failed to deploy instance: %(reason)s"
@@ -1142,6 +1130,9 @@ msgstr "네트워크 어댑터 디바이스를 %(instance_uuid)s에서 분리하
 #, python-format
 msgid "Failed to encrypt text: %(reason)s"
 msgstr "텍스트를 암호화하지 못했습니다: %(reason)s"
+
+msgid "Failed to find bridge for vif"
+msgstr "vif 브릿지 검색에 실패함"
 
 #, python-format
 msgid "Failed to launch instances: %(reason)s"
@@ -1458,9 +1449,8 @@ msgstr "name_label %s에 대한 고유하지 않은 네트워크 발견"
 msgid "Free %(type)s %(free).02f %(unit)s < requested %(requested)d %(unit)s"
 msgstr "여유 %(type)s %(free).02f %(unit)s < 요청된 %(requested)d %(unit)s"
 
-#, python-format
-msgid "Group not valid. Reason: %(reason)s"
-msgstr "그룹이 올바르지 않습니다. 이유: %(reason)s"
+msgid "Guest agent is not enabled for the instance"
+msgstr "게스트 에이전트는 해당 인스터스에 활성화 되지 않습니다."
 
 msgid "Guest does not have a console available."
 msgstr "게스트에 사용할 수 있는 콘솔이 없습니다."
@@ -1512,9 +1502,6 @@ msgstr "ID가 '%s'인 하이퍼바이저를 찾을 수 없습니다. "
 #, python-format
 msgid "Hypervisor: %s"
 msgstr "하이퍼바이저: %s"
-
-msgid "IP address"
-msgstr "IP 주소"
 
 #, python-format
 msgid "IP allocation over quota in pool %s."
@@ -1759,10 +1746,6 @@ msgstr "인스턴스 그룹 %(group_uuid)s을(를) 찾을 수 없습니다. "
 msgid "Instance group %(group_uuid)s has no member with id %(instance_id)s."
 msgstr "%(group_uuid)s 인스턴스 그룹에 ID가 %(instance_id)s인 멤버가 없습니다."
 
-#, python-format
-msgid "Instance group %(group_uuid)s has no policy %(policy)s."
-msgstr "%(group_uuid)s 인스턴스 그룹에 정책 %(policy)s이(가) 없습니다. "
-
 msgid "Instance has no source host"
 msgstr "인스턴스에 소스 호스트가 없음"
 
@@ -1779,6 +1762,9 @@ msgstr "인스턴스가 이미 복구 모드에 있음: %s"
 
 msgid "Instance is not a member of specified network"
 msgstr "인스턴스가 지정된 네트워크의 멤버가 아님"
+
+msgid "Instance network is not ready yet"
+msgstr "인스턴스 네트워크가 아직 준비 되지 않았습니다."
 
 msgid "Instance recreate is not supported."
 msgstr "인스턴스 재작성이 지원되지 않습니다."
@@ -1830,13 +1816,6 @@ msgstr "올바르지 않은 IP 형식 %s"
 msgid "Invalid IP protocol %(protocol)s."
 msgstr "올바르지 않은 IP 프로토콜 %(protocol)s."
 
-#, python-format
-msgid ""
-"Invalid PCI Whitelist: The PCI address %(address)s has an invalid %(field)s."
-msgstr ""
-"올바르지 않은 PCI 화이트리스트: PCI 주소 %(address)s에 올바르지 않은 "
-"%(field)s이(가) 있습니다."
-
 msgid ""
 "Invalid PCI Whitelist: The PCI whitelist can specify devname or address, but "
 "not both"
@@ -1856,9 +1835,6 @@ msgstr "올바르지 않은 PCI 디바이스 화이트리스트 구성: %(reason
 msgid "Invalid Regular Expression %s"
 msgstr "올바르지 않은 정규식 %s"
 
-msgid "Invalid association."
-msgstr "연관이 올바르지 않습니다. "
-
 #, python-format
 msgid "Invalid broker_hosts value: %s. It should be in hostname:port format"
 msgstr "Invalid broker_hosts 값: %s. hostname:port 형식을 사용해야 함"
@@ -1866,9 +1842,6 @@ msgstr "Invalid broker_hosts 값: %s. hostname:port 형식을 사용해야 함"
 #, python-format
 msgid "Invalid certificate format: %s"
 msgstr "올바르지 않은 인증서 형식: %s"
-
-msgid "Invalid changes-since value"
-msgstr "올바르지 않은 changes-since 값"
 
 #, python-format
 msgid "Invalid characters in hostname '%(hostname)s'"
@@ -1923,14 +1896,6 @@ msgstr "요청에서 올바르지 않은 고정 IP 주소 %s"
 #, python-format
 msgid "Invalid floating IP %s in request"
 msgstr "요청에서 올바르지 않은 부동 IP %s"
-
-#, python-format
-msgid "Invalid id: %(instance_id)s (expecting \"i-...\")"
-msgstr "올바르지 않은 ID: %(instance_id)s (\"i-...\" 예상)"
-
-#, python-format
-msgid "Invalid id: %(volume_id)s (expecting \"i-...\")"
-msgstr "올바르지 않은 ID: %(volume_id)s (\"i-...\" 예상)"
 
 #, python-format
 msgid "Invalid image format '%(format)s'"
@@ -2035,9 +2000,6 @@ msgstr "올바르지 않은 서명 해시 메소드: %s"
 #, python-format
 msgid "Invalid signature key type: %s"
 msgstr "올바르지 않은 서명 키 유형: %s"
-
-msgid "Invalid source_type field."
-msgstr "source_type 필드가 올바르지 않습니다."
 
 msgid "Invalid start time. The start time cannot occur after the end time."
 msgstr ""
@@ -2185,13 +2147,6 @@ msgstr ""
 "가 없는 볼륨에서 부팅된 VM은 제외). "
 
 msgid ""
-"Live migration of instances with config drives is not supported in libvirt "
-"unless libvirt instance path and drive data is shared across compute nodes."
-msgstr ""
-"구성 드라이브가 포함된 인스턴스의 실시간 마이그레이션은 libvirt 인스턴스 경로"
-"와 드라이브 데이터를 계산 노드에서 공유하는 경우에만 libvirt에서 지원됩니다."
-
-msgid ""
 "Live migration with API v2.25 requires all the Mitaka upgrade to be complete "
 "before it is available."
 msgstr ""
@@ -2241,6 +2196,12 @@ msgstr "최대 포트 수를 초과함"
 
 msgid "Maximum number of security groups or rules exceeded"
 msgstr "보안 그룹 또는 규칙의 최대 수 초과"
+
+#, python-format
+msgid "Maximum number of serial port exceeds %(allowed)d for %(virt_type)s"
+msgstr ""
+" 시리얼 포트에 대한 최대 허용 개수가 %(allowed)d for %(virt_type)s 를 초과했"
+"습니다."
 
 msgid "Metadata item was not found"
 msgstr "메타데이터 항목이 없음"
@@ -2422,16 +2383,8 @@ msgid "Must supply a positive value for max_rows"
 msgstr "최대 행 값으로 양수를 제공해야 합니다. "
 
 #, python-format
-msgid "Network \"%(val)s\" is not valid in field %(attr)s"
-msgstr "네트워크 \"%(val)s\"이(가) 필드 %(attr)s에서 올바르지 않음"
-
-#, python-format
 msgid "Network %(network_id)s could not be found."
 msgstr "%(network_id)s 네트워크를 찾을 수 없습니다. "
-
-#, python-format
-msgid "Network %(network_id)s is duplicated."
-msgstr "%(network_id)s 네트워크가 중복입니다. "
 
 #, python-format
 msgid "Network %(network_id)s is still in use."
@@ -2554,9 +2507,6 @@ msgstr "네트워크에 사용 가능한 고정 IP 주소가 없음: %(net)s"
 msgid "No fixed IP associated with id %(id)s."
 msgstr "ID %(id)s과(와) 연관된 고정 IP가 없습니다. "
 
-msgid "No fixed IP found."
-msgstr "고정 IP를 찾을 수 없음."
-
 msgid "No fixed IPs associated to instance"
 msgstr "인스턴스와 연관된 Fixed IP가 없음"
 
@@ -2597,10 +2547,6 @@ msgid ""
 msgstr ""
 "라이브 마이그레이션 URI가 구성되지 않았으며 \"%(virt_type)s\" 하이퍼바이저 가"
 "상화 유형에 사용 가능한 기본값이 없습니다."
-
-#, python-format
-msgid "No matching ID for the URL %s was found."
-msgstr "%s URL에 대해 일치하는 ID를 찾을 수 없습니다."
 
 msgid "No more available networks."
 msgstr "더 이상 사용 가능한 네트워크가 없습니다."
@@ -2696,10 +2642,6 @@ msgstr "권한이 없습니다. "
 msgid "Not enough parameters to build a valid rule."
 msgstr "유효한 규칙을 빌드하기엔 매개변수가 부족합니다. "
 
-#, python-format
-msgid "Not enough parameters: %(reason)s"
-msgstr "매개변수가 충분하지 않음: %(reason)s"
-
 msgid "Not implemented on Windows"
 msgstr "Windows에서 구현되지 않음"
 
@@ -2710,15 +2652,15 @@ msgid "Nothing was archived."
 msgstr "보관된 사항이 없습니다."
 
 #, python-format
+msgid "Nova does not support Cinder API version %(version)s"
+msgstr "Nova는 Cinder API 버전 %(version)s 를 지원하지 않습니다"
+
+#, python-format
 msgid "Nova requires libvirt version %s or greater."
 msgstr "Nova에 libvirt 버전 %s 이상이 필요합니다."
 
 msgid "Number of Rows Archived"
 msgstr "보관된 행 수"
-
-#, python-format
-msgid "Number of retries to plugin (%(num_retries)d) exceeded."
-msgstr "플러그인에 대한 재시도 횟수 %(num_retries)d)이(가) 초과됨."
 
 #, python-format
 msgid ""
@@ -2804,14 +2746,6 @@ msgstr "PCI 디바이스 요청 %(requests)s에 실패함"
 
 #, python-format
 msgid ""
-"PCS doesn't support images in %s format. You should either set "
-"force_raw_images=True in config or upload an image in ploop or raw format."
-msgstr ""
-"PCS에서 %s 형식의 이미지를 지원하지 않습니다. 구성에 force_raw_images=True를 "
-"설정하거나 ploop 또는 원시 형식으로 이미지를 업로드하십시오."
-
-#, python-format
-msgid ""
 "PIF %(pif_uuid)s for network %(bridge)s has VLAN id %(pif_vlan)d. Expected "
 "%(vlan_num)d"
 msgstr ""
@@ -2876,10 +2810,6 @@ msgid "Plug vif failed because of unexpected vif_type=%s"
 msgstr "예상치 않은 vif_type=%s(으)로 인해 vif 플러그 실패"
 
 #, python-format
-msgid "Plugin version mismatch (Expected %(exp)s, got %(got)s)"
-msgstr "플러그인 버전 불일치(예상: %(exp)s, 결과: %(got)s)"
-
-#, python-format
 msgid "Policy doesn't allow %(action)s to be performed."
 msgstr "%(action)s 정책이 수행되도록 허용되지 않았습니다."
 
@@ -2911,6 +2841,10 @@ msgstr "%s 포트가 접속되지 않음"
 #, python-format
 msgid "Port id %(port_id)s could not be found."
 msgstr "포트 ID %(port_id)s을(를) 찾을 수 없습니다."
+
+#, python-format
+msgid "Port update failed for port %(port_id)s: %(reason)s"
+msgstr "포트 %(port_id)s: %(reason)s 때문에 포트 업데이트가 실패했습니다."
 
 #, python-format
 msgid "Project %(project_id)s could not be found."
@@ -3026,6 +2960,17 @@ msgid "Quota usage for project %(project_id)s could not be found."
 msgstr "%(project_id)s 프로젝트에 대한 할당 사용량을 찾을 수 없습니다. "
 
 #, python-format
+msgid ""
+"Quota usage refresh of resource %(resource)s for project %(project_id)s, "
+"user %(user_id)s, is not allowed. The allowed resources are %(syncable)s."
+msgstr ""
+"프로젝트 %(project_id)s,  사용자 %(user_id)s 에 대한 자원 %(resource)s의 할당"
+"량 갱신은 허용 되지 않습니다. 허용 되는 자원은 %(syncable)s입니다."
+
+msgid "RPC is pinned to old version"
+msgstr "RPC는 구 버전에만 적용 됩니다."
+
+#, python-format
 msgid "Reached maximum number of retries trying to unplug VBD %s"
 msgstr "VBD %s을(를) 언플러그하려는 최대 재시도 횟수에 도달했음"
 
@@ -3038,14 +2983,6 @@ msgstr ""
 
 msgid "Realtime policy not supported by hypervisor"
 msgstr "실시간 정책은 하이퍼바이저에서 지원되지 않음"
-
-#, python-format
-msgid ""
-"Relative blockcommit support was not detected. Libvirt '%s' or later is "
-"required for online deletion of file/network storage-backed volume snapshots."
-msgstr ""
-"상대 blockcommit 지원이 발견되지 않았습니다. 온라인으로 파일/네트워크 스토리"
-"지 백업 볼륨 스냅샷을 삭제하려면 Libvirt '%s' 이상이 필요합니다. "
 
 msgid "Request body and URI mismatch"
 msgstr "요청 본문 및 URI 불일치"
@@ -3133,6 +3070,9 @@ msgstr "0 디스크 플레이버로의 크기 조정은 허용되지 않습니�
 msgid "Resource could not be found."
 msgstr "자원을 찾을 수 없습니다. "
 
+msgid "Resource provider has allocations."
+msgstr "자원 제공자는 할당량을 갖고 있습니다."
+
 msgid "Resumed"
 msgstr "재시작함"
 
@@ -3140,16 +3080,9 @@ msgstr "재시작함"
 msgid "Root element name should be '%(name)s' not '%(tag)s'"
 msgstr "루트 요소 이름은 '%(tag)s'이(가) 아닌 '%(name)s'이어야 함"
 
-msgid "Rotation param is required for backup image_type"
-msgstr "백업 image_type에 대해 회전 매개변수가 필요함"
-
 #, python-format
 msgid "Rule (%s) not found"
 msgstr "규칙(%s)을 찾을 수 없음"
-
-#, python-format
-msgid "Rule already exists in group: %(rule)s"
-msgstr "그룹에 규칙이 이미 존재함: %(rule)s"
 
 #, python-format
 msgid "Running Nova with parallels virt_type requires libvirt version %s"
@@ -3250,6 +3183,10 @@ msgstr "보안 그룹이 지정되지 않음"
 #, python-format
 msgid "Security group with rule %(rule_id)s not found."
 msgstr "%(rule_id)s 규칙을 갖는 보안 그룹을 찾을 수 없습니다. "
+
+#, python-format
+msgid "Server %(server_id)s has no tag '%(tag)s'"
+msgstr "서버 %(server_id)s는 '%(tag)s' 태그가 없습니다."
 
 #, python-format
 msgid "Server disk was unable to be resized because: %(reason)s"
@@ -3438,12 +3375,15 @@ msgstr "백엔드에 기본 PBM 정책이 없습니다."
 msgid "The firewall filter for %s does not exist"
 msgstr "%s의 방화벽 필터가 없음"
 
+#, python-format
+msgid ""
+"The fixed IP associated with port %(port_id)s is not compatible with the "
+"host."
+msgstr ""
+" %(port_id)s와 연관되어 있는 고정 IP주소는 해당 호스트와 호환되지 않습니다."
+
 msgid "The floating IP request failed with a BadRequest"
 msgstr "부동 IP 요청이 실패하여 BadRequest가 생성됨"
-
-#, python-format
-msgid "The group %(group_name)s must be configured with an id."
-msgstr "%(group_name)s 그룹은 ID와 함께 구성해야 합니다. "
 
 msgid "The input is not a string or unicode"
 msgstr "입력이 문자열 또는 Unicode가 아님"
@@ -3451,15 +3391,6 @@ msgstr "입력이 문자열 또는 Unicode가 아님"
 msgid ""
 "The instance requires a newer hypervisor version than has been provided."
 msgstr "인스턴스는 제공된 것보다 최신 하이퍼바이저 버전이 필요합니다. "
-
-#, python-format
-msgid ""
-"The key %(r)s is required in the location metadata to access the url %(url)s."
-msgstr "위치 메타데이터가 URL에 액세스하려면 %(r)s 키가 %(url)s."
-
-#, python-format
-msgid "The key %s is required in all file system descriptions."
-msgstr "모든 파일 시스템 설명에는 %s 키가 필요합니다."
 
 #, python-format
 msgid ""
@@ -3484,19 +3415,14 @@ msgstr ""
 
 #, python-format
 msgid ""
-"The mount point advertised by glance: %(glance_mount)s, does not match the "
-"URL path: %(path)s"
-msgstr ""
-"글랜스가 광고한 마운트 지점: %(glance_mount)s, URL 경로와 일치하지 않음: "
-"%(path)s"
-
-#, python-format
-msgid ""
 "The network range is not big enough to fit %(num_networks)s networks. "
 "Network size is %(network_size)s"
 msgstr ""
 "네트워크 범위가 %(num_networks)s에 맞추기에는 충분히 크지 않습니다. 네트워크 "
 "크기는 %(network_size)s입니다."
+
+msgid "The networks quota is disabled"
+msgstr "네트워크 할당이 비활성화 되어 있습니다."
 
 #, python-format
 msgid "The number of defined ports: %(ports)d is over the limit: %(quota)d"
@@ -3504,6 +3430,14 @@ msgstr "정의된 포트 수 %(ports)d이(가) 한계를 초과함: %(quota)d"
 
 msgid "The only partition should be partition 1."
 msgstr "유일한 파티션은 파티션 1이어야 합니다."
+
+#, python-format
+msgid ""
+"The property 'numa_nodes' cannot be '%(nodes)s'. It must be a number greater "
+"than 0"
+msgstr ""
+"속성 'numa_nodes'가  '%(nodes)s'이 될 순 없습니다. 반드시 숫자 0보다 커야 합"
+"니다. "
 
 #, python-format
 msgid "The provided RNG device path: (%(path)s) is not present on the host."
@@ -3727,6 +3661,10 @@ msgstr ""
 msgid "Unable to authenticate Ironic client."
 msgstr "아이로닉 클라이언트를 인증할 수 없습니다."
 
+#, python-format
+msgid "Unable to automatically allocate a network for project %(project_id)s"
+msgstr "%(project_id)s 때문에 자동으로 네트워크를 할당할 수 없습니다."
+
 msgid ""
 "Unable to claim IP for VPN instances, ensure it isn't running, and try again "
 "in a few minutes"
@@ -3787,18 +3725,6 @@ msgid "Unable to find SR from VDI %s"
 msgstr "VDI %s에서 SR을 찾을 수 없음"
 
 #, python-format
-msgid "Unable to find a mounted disk for target_iqn: %s"
-msgstr "target_iqn에 대해 마운트된 디스크를 찾을 수 없음: %s"
-
-#, python-format
-msgid ""
-"Unable to find a mounted disk for target_iqn: %s. Please ensure that the "
-"host's SAN policy is set to \"OfflineAll\" or \"OfflineShared\""
-msgstr ""
-"target_iqn의 마운트된 디스크를 찾을 수 없음: %s. 호스트의 SAN 정책이 "
-"\"OfflineAll\" 또는 \"OfflineShared\" 로 설정되었는지 확인하십시오."
-
-#, python-format
 msgid "Unable to find ca_file : %s"
 msgstr "ca_file을 찾을 수 없음: %s"
 
@@ -3854,9 +3780,6 @@ msgid ""
 msgstr ""
 "단일 포트 ID가 구성된 다중 인스턴스를 실행할 수 없습니다.인스턴스를 다른 포트"
 "와 함께 하나씩 실행하십시오."
-
-msgid "Unable to log in to XenAPI (is the Dom0 disk full?)"
-msgstr "XenAPI에 로그인할 수 없음(Dom0 디스크가 가득 찼습니까?)"
 
 #, python-format
 msgid ""
@@ -4070,12 +3993,6 @@ msgstr ""
 msgid "VHD coalesce attempts exceeded (%d), giving up..."
 msgstr "VHD 합병 시도가 (%d)을(를) 초과했음, 포기하는 중..."
 
-msgid "VIF plugging is not supported by the Hyper-V driver."
-msgstr "Hyper-V 드라이버에서 VIF 연결을 지원하지 않습니다."
-
-msgid "VIF unplugging is not supported by the Hyper-V driver."
-msgstr "Hyper-V 드라이버에서 VIF 언플러그를 지원하지 않습니다."
-
 #, python-format
 msgid ""
 "VLAN tag is not appropriate for the port group %(bridge)s. Expected VLAN tag "
@@ -4092,10 +4009,6 @@ msgstr ""
 "%(property)s 매개변수 그룹에 대한 값(%(value)s)이 올바르지 않습니다. 컨텐츠"
 "는 '%(allowed)s'(으)로 제한됩니다. "
 
-#, python-format
-msgid "Value must be >= 0 for field %s"
-msgstr "값은 필드 %s에 대해 0 이상이어야 함"
-
 msgid "Value required for 'scality_sofs_config'"
 msgstr "'scality_sofs_config'에 필요한 값"
 
@@ -4106,6 +4019,11 @@ msgid ""
 msgstr ""
 "API에서 %(req_ver)s 버전을 지원하지 않습니다. 최소 %(min_ver)s 이상, 최대 "
 "%(max_ver)s 이하여야 합니다."
+
+#, python-format
+msgid ""
+"Version of %(name)s %(min_ver)s %(max_ver)s intersects with another versions."
+msgstr "%(name)s %(min_ver)s %(max_ver)s의 버전이 다른 버전과 겹칩니다."
 
 msgid "Virtual Interface creation failed"
 msgstr "가상 인터페이스 생성 실패하였습니다"
@@ -4185,10 +4103,6 @@ msgstr ""
 "정의 블록 크기를 지원하지 않음"
 
 #, python-format
-msgid "WARNING: fixed IP %s allocated to missing instance"
-msgstr "경고: 누락된 인스턴스에 할당된 Fixed IP %s"
-
-#, python-format
 msgid ""
 "We do not support scheme '%s' under Python < 2.7.4, please use http or https"
 msgstr ""
@@ -4236,6 +4150,11 @@ msgstr "이미지를 삭제할 수 없습니다."
 msgid ""
 "You are not authorized to access the image the instance was started with."
 msgstr "인스턴스가 시작되는 해당 이미지에 액세스할 권한이 없습니다. "
+
+#, python-format
+msgid ""
+"You can't use %s options in vzstorage_mount_opts configuration parameter."
+msgstr "vzstorage_mount_opts 구성 매개변수에서 %s 옵션을 사용할 수 없습니다."
 
 msgid "You must implement __call__"
 msgstr "__call__을 구현해야 합니다. "
@@ -4333,9 +4252,6 @@ msgstr "fping 유틸리티를 찾을 수 없습니다. "
 msgid "host"
 msgstr "호스트"
 
-msgid "hostname"
-msgstr "호스트 이름"
-
 #, python-format
 msgid "href %s does not contain version"
 msgstr "href %s에 버전이 없음"
@@ -4419,9 +4335,6 @@ msgstr "nbd 디바이스 %s이(가) 표시되지 않음"
 
 msgid "nbd unavailable: module not loaded"
 msgstr "nbd 사용 불가능: 모듈이 로드되지 않았음"
-
-msgid "network"
-msgstr "네트워크"
 
 msgid "no hosts to remove"
 msgstr "제거할 호스트가 없음"
