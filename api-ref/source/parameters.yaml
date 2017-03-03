@@ -340,7 +340,7 @@ delete_info:
     Information for snapshot deletion. Include the ID of the associated volume. For
     example:
 
-    .. code-block:: json
+    .. code-block:: javascript
 
        DELETE /os-assisted-volume-snapshots?delete_info='{"volume_id": "521752a6-acf6-4b2d-bc7a-119f9148cd8c"}'
   in: query
