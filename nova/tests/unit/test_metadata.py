@@ -35,6 +35,7 @@ from oslo_config import cfg
 from oslo_serialization import base64
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
+import six
 import webob
 
 from nova.api.metadata import base
@@ -813,6 +814,9 @@ class OpenStackMetadataTestCase(test.TestCase):
         # verify that 2016-10-06 has the vendor_data2.json file
         result = mdinst.lookup("/openstack/2016-10-06")
         self.assertIn('vendor_data2.json', result)
+        # assert that we never created a ksa session for dynamic vendordata if
+        # we didn't make a request
+        self.assertIsNone(mdinst.vendordata_providers['DynamicJSON'].session)
 
     def test_vendor_data_response(self):
         inst = self.instance.obj_clone()
@@ -881,7 +885,18 @@ class OpenStackMetadataTestCase(test.TestCase):
 
             # verify the new format as well
             vdpath = "/openstack/2016-10-06/vendor_data2.json"
-            vd = jsonutils.loads(mdinst.lookup(vdpath))
+            with mock.patch(
+                    'nova.api.metadata.vendordata_dynamic.LOG.warning') as wrn:
+                vd = jsonutils.loads(mdinst.lookup(vdpath))
+                # We don't have vendordata_dynamic_auth credentials configured
+                # so we expect to see a warning logged about making an insecure
+                # connection.
+                warning_calls = wrn.call_args_list
+                self.assertEqual(1, len(warning_calls))
+                # Verify the warning message is the one we expect which is the
+                # first and only arg to the first and only call to the warning.
+                self.assertIn('Passing insecure dynamic vendordata requests',
+                              six.text_type(warning_calls[0][0]))
             self.assertEqual('10.0.0.1', vd['static'].get('ldap'))
             self.assertEqual('10.0.0.2', vd['static'].get('ad'))
 

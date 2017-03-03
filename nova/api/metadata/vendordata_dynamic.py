@@ -68,9 +68,12 @@ class DynamicVendorData(vendordata.VendorDataDriver):
         # JSON plugin.
         self.context = context
         self.instance = instance
-        self.session = _load_ks_session(CONF)
+        # We only create the session if we make a request.
+        self.session = None
 
     def _do_request(self, service_name, url):
+        if self.session is None:
+            self.session = _load_ks_session(CONF)
         try:
             body = {'project-id': self.instance.project_id,
                     'instance-id': self.instance.uuid,
