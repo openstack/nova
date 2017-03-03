@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    The model name vhostuser_vrouter_plug is set by the neutron contrail
+    plugin during a VM (network port) creation.
+    The libvirt compute driver now supports plugging virtual interfaces
+    of type "contrail_vrouter" which are provided by
+    the contrail-nova-vif-driver plugin [1].
+    [1] https://github.com/Juniper/contrail-nova-vif-driver

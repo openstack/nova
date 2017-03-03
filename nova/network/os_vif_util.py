@@ -333,6 +333,12 @@ def _nova_to_osvif_vif_vhostuser(vif):
             obj.bridge_name = vif["network"]["bridge"]
         _set_vhostuser_settings(vif, obj)
         return obj
+    elif vif['details'].get(model.VIF_DETAILS_VHOSTUSER_VROUTER_PLUG, False):
+        obj = _get_vif_instance(vif, objects.vif.VIFVHostUser,
+                                plugin="contrail_vrouter",
+                                vif_name=_get_vif_name(vif))
+        _set_vhostuser_settings(vif, obj)
+        return obj
     else:
         raise NotImplementedError()
 
