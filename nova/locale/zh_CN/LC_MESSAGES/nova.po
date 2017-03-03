@@ -32,9 +32,9 @@
 # zzxwill <zzxwill@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0rc2.dev504\n"
+"Project-Id-Version: nova 15.0.0.0rc2.dev255\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-10-26 19:51+0000\n"
+"POT-Creation-Date: 2017-03-02 18:28+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -44,7 +44,7 @@ msgstr ""
 "Language-Team: Chinese (China)\n"
 "Plural-Forms: nplurals=1; plural=0\n"
 "Generated-By: Babel 2.2.0\n"
-"X-Generator: Zanata 3.7.3\n"
+"X-Generator: Zanata 3.9.6\n"
 
 #, python-format
 msgid "%(address)s is not a valid IP address."
@@ -82,10 +82,6 @@ msgstr ""
 "标准错误输出: %(stderr)r"
 
 #, python-format
-msgid "%(err)s"
-msgstr "%(err)s"
-
-#, python-format
 msgid ""
 "%(event_type)s is not a versioned notification and not whitelisted. See ./"
 "doc/source/notification.rst"
@@ -96,10 +92,6 @@ msgstr ""
 #, python-format
 msgid "%(field)s should not be part of the updates."
 msgstr "%(field)s应该是更新的部分。"
-
-#, python-format
-msgid "%(fieldname)s missing field type"
-msgstr "%(fieldname)s缺省域类型"
 
 #, python-format
 msgid "%(key)s is not a valid quota key. Valid options are: %(options)s."
@@ -142,10 +134,6 @@ msgid "%(type)s hypervisor does not support PCI devices"
 msgstr "%(type)s监测器不支持PCI设备"
 
 #, python-format
-msgid "%(typename)s in %(fieldname)s is not an instance of Enum"
-msgstr "%(fieldname)s中的%(typename)s不是枚举类型实例"
-
-#, python-format
 msgid "%(value_name)s must be <= %(max_value)d"
 msgstr "%(value_name)s 必须小于或等于 %(max_value)d"
 
@@ -180,10 +168,6 @@ msgstr "不支持格式%s"
 #, python-format
 msgid "%s is not a string or unicode"
 msgstr "%s 不是字符串或 Unicode"
-
-#, python-format
-msgid "%s is not a valid node managed by this compute host."
-msgstr "%s不是这台计算主机管理的有效节点。"
 
 #, python-format
 msgid "%s is not supported."
@@ -393,10 +377,6 @@ msgstr "块设备映射不能被转换为旧格式。"
 
 msgid "Block Device Mapping is Invalid."
 msgstr "块设备映射无效。"
-
-#, python-format
-msgid "Block Device Mapping is Invalid: %(auth_method)s is unsupported."
-msgstr "块设备映射无效：%(auth_method)s 不受支持。"
 
 #, python-format
 msgid "Block Device Mapping is Invalid: %(details)s"
@@ -668,10 +648,6 @@ msgid "Compute host %(host)s could not be found."
 msgstr "计算主机 %(host)s 没有找到。"
 
 #, python-format
-msgid "Compute host %(name)s needs to be created first before updating."
-msgstr "计算主机%(name)s 在更新前应该先创建。"
-
-#, python-format
 msgid "Compute host %s not found."
 msgstr "计算主机 %s 未找到。"
 
@@ -746,10 +722,6 @@ msgid ""
 msgstr "无法检索实例 %(instance_id)s 控制台日志输出。原因：%(reason)s"
 
 #, python-format
-msgid "Console pool %(pool_id)s could not be found."
-msgstr "控制台池 %(pool_id)s 没有找到。"
-
-#, python-format
 msgid ""
 "Console pool of type %(console_type)s for compute host %(compute_host)s on "
 "proxy host %(host)s not found."
@@ -771,10 +743,6 @@ msgstr "未符合约束。"
 #, python-format
 msgid "Converted to raw, but format is now %s"
 msgstr "转化为裸格式，但目前格式是 %s"
-
-#, python-format
-msgid "Core API extensions are missing: %(missing_apis)s"
-msgstr "核心API扩展 %(missing_apis)s 未找到"
 
 #, python-format
 msgid "Could not attach image to loopback: %s"
@@ -965,13 +933,6 @@ msgid ""
 "Code %(error_code)s] %(ex)s"
 msgstr ""
 "获取%(instance_name)s域信息时libvirt报错：[错误号 %(error_code)s] %(ex)s"
-
-#, python-format
-msgid ""
-"Error from libvirt while looking up %(instance_id)s: [Error Code "
-"%(error_code)s] %(ex)s"
-msgstr ""
-"查找实例%(instance_id)s时，libvirt出错： [错误号 %(error_code)s] %(ex)s"
 
 #, python-format
 msgid ""
@@ -1398,10 +1359,6 @@ msgstr "发现不唯一的网络 name_label %s"
 msgid "Free %(type)s %(free).02f %(unit)s < requested %(requested)d %(unit)s"
 msgstr "剩余%(type)s %(free).02f %(unit)s<请求%(requested)d %(unit)s"
 
-#, python-format
-msgid "Group not valid. Reason: %(reason)s"
-msgstr "组无效。原因：%(reason)s"
-
 msgid "Guest does not have a console available."
 msgstr "访客没有可用控制台。"
 
@@ -1450,9 +1407,6 @@ msgstr "找不到具有标识“%s”的管理程序。"
 #, python-format
 msgid "Hypervisor: %s"
 msgstr "监测器：%s"
-
-msgid "IP address"
-msgstr "IP地址:"
 
 #, python-format
 msgid "IP allocation over quota in pool %s."
@@ -1689,10 +1643,6 @@ msgstr "找不到实例组 %(group_uuid)s"
 msgid "Instance group %(group_uuid)s has no member with id %(instance_id)s."
 msgstr "实例组%(group_uuid)s没有实例%(instance_id)s。"
 
-#, python-format
-msgid "Instance group %(group_uuid)s has no policy %(policy)s."
-msgstr "实例组%(group_uuid)s没有策略%(policy)s。"
-
 msgid "Instance has no source host"
 msgstr "实例没有任何源主机"
 
@@ -1759,11 +1709,6 @@ msgstr "无效IP格式%s"
 msgid "Invalid IP protocol %(protocol)s."
 msgstr "无效的IP协议 %(protocol)s。"
 
-#, python-format
-msgid ""
-"Invalid PCI Whitelist: The PCI address %(address)s has an invalid %(field)s."
-msgstr "无效PCI白名单：PCI地址%(address)s有不正确的字段%(field)s。"
-
 msgid ""
 "Invalid PCI Whitelist: The PCI whitelist can specify devname or address, but "
 "not both"
@@ -1781,9 +1726,6 @@ msgstr "无效PCI设备白名单配置%(reason)s"
 msgid "Invalid Regular Expression %s"
 msgstr "无效的正则表达式%s"
 
-msgid "Invalid association."
-msgstr "无效绑定。"
-
 #, python-format
 msgid "Invalid broker_hosts value: %s. It should be in hostname:port format"
 msgstr "无效 broker_hosts值：%s。它应该是主机：端口格式。"
@@ -1791,9 +1733,6 @@ msgstr "无效 broker_hosts值：%s。它应该是主机：端口格式。"
 #, python-format
 msgid "Invalid certificate format: %s"
 msgstr "无效证书格式：%s"
-
-msgid "Invalid changes-since value"
-msgstr "无效的changes-since值"
 
 #, python-format
 msgid "Invalid characters in hostname '%(hostname)s'"
@@ -1848,14 +1787,6 @@ msgstr "请求中无效固定IP地址%s"
 #, python-format
 msgid "Invalid floating IP %s in request"
 msgstr "请求中无效浮动IP %s"
-
-#, python-format
-msgid "Invalid id: %(instance_id)s (expecting \"i-...\")"
-msgstr "无效id：%(instance_id)s (期望 \"i-...\")"
-
-#, python-format
-msgid "Invalid id: %(volume_id)s (expecting \"i-...\")"
-msgstr "无效id：%(volume_id)s (期望 \"i-...\")"
 
 #, python-format
 msgid "Invalid image format '%(format)s'"
@@ -1959,9 +1890,6 @@ msgstr "无效签名散列方法：%s"
 #, python-format
 msgid "Invalid signature key type: %s"
 msgstr "无效签名密钥类型：%s"
-
-msgid "Invalid source_type field."
-msgstr "无效source_type字段"
 
 msgid "Invalid start time. The start time cannot occur after the end time."
 msgstr "开始时间无效。开始时间不能出现在结束时间之后。"
@@ -2100,13 +2028,6 @@ msgid ""
 "Live migration can not be used without shared storage except a booted from "
 "volume VM which does not have a local disk."
 msgstr "热迁移离开共享存储不能使用，除非从卷启动的虚拟机没有本地磁盘。"
-
-msgid ""
-"Live migration of instances with config drives is not supported in libvirt "
-"unless libvirt instance path and drive data is shared across compute nodes."
-msgstr ""
-"除非计算节点上共享 libvirt 实例路径和驱动器数据，否则，在 libvirt 中不支持实"
-"时迁移具有配置驱动器的实例。"
 
 msgid ""
 "Live migration with API v2.25 requires all the Mitaka upgrade to be complete "
@@ -2324,16 +2245,8 @@ msgid "Must supply a positive value for max_rows"
 msgstr "必须为最大行max_rows提供一个正数"
 
 #, python-format
-msgid "Network \"%(val)s\" is not valid in field %(attr)s"
-msgstr "在字段%(attr)s中网络\"%(val)s\"不是一个有效值"
-
-#, python-format
 msgid "Network %(network_id)s could not be found."
 msgstr "网络 %(network_id)s 没有找到。"
-
-#, python-format
-msgid "Network %(network_id)s is duplicated."
-msgstr "网络 %(network_id)s 重复。"
 
 #, python-format
 msgid "Network %(network_id)s is still in use."
@@ -2449,9 +2362,6 @@ msgstr "没有可用的固定IP给网络：%(net)s"
 msgid "No fixed IP associated with id %(id)s."
 msgstr "没有固定IP与id %(id)s 关联。"
 
-msgid "No fixed IP found."
-msgstr "没有发现固定IP"
-
 msgid "No fixed IPs associated to instance"
 msgstr "没有固定 IP 与实例相关联"
 
@@ -2492,10 +2402,6 @@ msgid ""
 msgstr ""
 "未配置任何实时迁移 URI，并且未提供对应 “%(virt_type)s” hypervisor 虚拟化类型"
 "的缺省值。"
-
-#, python-format
-msgid "No matching ID for the URL %s was found."
-msgstr " URL %s 中没有找到匹配的ID。"
 
 msgid "No more available networks."
 msgstr "没有更多可用的网络"
@@ -2588,10 +2494,6 @@ msgstr "未授权。"
 msgid "Not enough parameters to build a valid rule."
 msgstr "参数不够创建有效规则。"
 
-#, python-format
-msgid "Not enough parameters: %(reason)s"
-msgstr "没有足够参数：%(reason)s"
-
 msgid "Not implemented on Windows"
 msgstr "未在 Windows 上实现"
 
@@ -2607,10 +2509,6 @@ msgstr "Nova请求的 libvirt 版本%s 或更高。"
 
 msgid "Number of Rows Archived"
 msgstr "已归档行数"
-
-#, python-format
-msgid "Number of retries to plugin (%(num_retries)d) exceeded."
-msgstr "到插件(%(num_retries)d)的尝试次数超过最大值。"
 
 #, python-format
 msgid ""
@@ -2690,14 +2588,6 @@ msgstr "PCI 设备请求 %(requests)s 失败"
 
 #, python-format
 msgid ""
-"PCS doesn't support images in %s format. You should either set "
-"force_raw_images=True in config or upload an image in ploop or raw format."
-msgstr ""
-"PCS不支持%s 格式的镜像。您应该在配置中设置force_raw_images=True，或者上传一个"
-"ploop或裸磁盘格式 镜像。"
-
-#, python-format
-msgid ""
 "PIF %(pif_uuid)s for network %(bridge)s has VLAN id %(pif_vlan)d. Expected "
 "%(vlan_num)d"
 msgstr ""
@@ -2758,10 +2648,6 @@ msgstr "请指定fixed_range或uuid"
 #, python-format
 msgid "Plug vif failed because of unexpected vif_type=%s"
 msgstr "以为未预期的vif_type=%s，插入vif失败"
-
-#, python-format
-msgid "Plugin version mismatch (Expected %(exp)s, got %(got)s)"
-msgstr "插件版本不匹配 (预期 %(exp)s，获取 %(got)s)"
 
 #, python-format
 msgid "Policy doesn't allow %(action)s to be performed."
@@ -2918,14 +2804,6 @@ msgstr ""
 msgid "Realtime policy not supported by hypervisor"
 msgstr "hypervisor 不支持实时策略"
 
-#, python-format
-msgid ""
-"Relative blockcommit support was not detected. Libvirt '%s' or later is "
-"required for online deletion of file/network storage-backed volume snapshots."
-msgstr ""
-"没有检测到相对的块提交支持。对于文件/网络作为后台的卷快照的在线删除，必须"
-"Libvirt '%s' 或更高。"
-
 msgid "Request body and URI mismatch"
 msgstr "请求主体和URI不匹配"
 
@@ -3010,16 +2888,9 @@ msgstr "已恢复"
 msgid "Root element name should be '%(name)s' not '%(tag)s'"
 msgstr "根元素名应该是 '%(name)s' 而不是'%(tag)s'"
 
-msgid "Rotation param is required for backup image_type"
-msgstr "备份 image_type 要求循环参数。"
-
 #, python-format
 msgid "Rule (%s) not found"
 msgstr "没有找到规则 (%s)"
-
-#, python-format
-msgid "Rule already exists in group: %(rule)s"
-msgstr "组中已有此规则：%(rule)s"
 
 #, python-format
 msgid "Running Nova with parallels virt_type requires libvirt version %s"
@@ -3301,25 +3172,12 @@ msgstr "%s 的防火墙过滤器不存在"
 msgid "The floating IP request failed with a BadRequest"
 msgstr "由于坏的请求，浮动IP请求失败"
 
-#, python-format
-msgid "The group %(group_name)s must be configured with an id."
-msgstr "组%(group_name)s必须配置一个id。"
-
 msgid "The input is not a string or unicode"
 msgstr "输入不是字符串或unicode"
 
 msgid ""
 "The instance requires a newer hypervisor version than has been provided."
 msgstr "该实例需要比当前版本更新的虚拟机管理程序。"
-
-#, python-format
-msgid ""
-"The key %(r)s is required in the location metadata to access the url %(url)s."
-msgstr "在访问url %(url)s 的定位元数据中，关键字%(r)s 是必须的。"
-
-#, python-format
-msgid "The key %s is required in all file system descriptions."
-msgstr "在所有文件系统描述中，关键字%s是必须的。"
 
 #, python-format
 msgid ""
@@ -3338,12 +3196,6 @@ msgstr "模块%(module)s配置错误：%(reason)s。"
 #, python-format
 msgid "The mount %(mount_path)s is not a valid Quobyte volume. Error: %(exc)s"
 msgstr "挂载的 %(mount_path)s 不是一个有效的Quobyte 卷。错误：%(exc)s"
-
-#, python-format
-msgid ""
-"The mount point advertised by glance: %(glance_mount)s, does not match the "
-"URL path: %(path)s"
-msgstr "Glance建议的挂载点：%(glance_mount)s，与URL路径： %(path)s 不匹配"
 
 #, python-format
 msgid ""
@@ -3629,18 +3481,6 @@ msgid "Unable to find SR from VDI %s"
 msgstr "从VDI %s 不能找到SR"
 
 #, python-format
-msgid "Unable to find a mounted disk for target_iqn: %s"
-msgstr "对于 target_iqn，找不到已安装的磁盘：%s"
-
-#, python-format
-msgid ""
-"Unable to find a mounted disk for target_iqn: %s. Please ensure that the "
-"host's SAN policy is set to \"OfflineAll\" or \"OfflineShared\""
-msgstr ""
-"不能为target_iqn: %s找到一个挂载磁盘。请确保主机SAN策略设置为\"OfflineAll\" "
-"或 \"OfflineShared\""
-
-#, python-format
 msgid "Unable to find ca_file : %s"
 msgstr "找不到 ca_file：%s"
 
@@ -3696,9 +3536,6 @@ msgid ""
 msgstr ""
 "无法启动多个实例，这些实例配置使用同一个端口ID。请一个一个启动您的实例，并且"
 "实例间使用不同的端口。"
-
-msgid "Unable to log in to XenAPI (is the Dom0 disk full?)"
-msgstr "无法登录到XenAPI(Dom0磁盘是空么？)"
 
 #, python-format
 msgid ""
@@ -3906,12 +3743,6 @@ msgstr ""
 msgid "VHD coalesce attempts exceeded (%d), giving up..."
 msgstr "VHD coalesce 尝试超过(%d)，放弃。。。"
 
-msgid "VIF plugging is not supported by the Hyper-V driver."
-msgstr "Hyper-V驱动不支持VIF热插"
-
-msgid "VIF unplugging is not supported by the Hyper-V driver."
-msgstr "Hyper-V驱动不支持VIF热拔"
-
 #, python-format
 msgid ""
 "VLAN tag is not appropriate for the port group %(bridge)s. Expected VLAN tag "
@@ -3925,10 +3756,6 @@ msgid ""
 "Value (%(value)s) for parameter Group%(property)s is invalid. Content "
 "limited to '%(allowed)s'."
 msgstr "参数组%(property)s的值 (%(value)s)无效。内容限制为 '%(allowed)s'。"
-
-#, python-format
-msgid "Value must be >= 0 for field %s"
-msgstr "对于字段%s，值必须>=0"
 
 msgid "Value required for 'scality_sofs_config'"
 msgstr "“scality_sofs_config”的必需值"
@@ -4014,10 +3841,6 @@ msgid ""
 "Volume sets block size, but the current libvirt hypervisor '%s' does not "
 "support custom block size"
 msgstr "卷设置块大小，但是当前libvirt监测器 '%s'不支持定制化块大小"
-
-#, python-format
-msgid "WARNING: fixed IP %s allocated to missing instance"
-msgstr "警告：固定 IP %s 被分配给缺失实例"
 
 #, python-format
 msgid ""
@@ -4162,9 +3985,6 @@ msgstr "找不到 fping 实用程序。"
 msgid "host"
 msgstr "主机"
 
-msgid "hostname"
-msgstr "主机名字"
-
 #, python-format
 msgid "href %s does not contain version"
 msgstr "href %s 不包含版本"
@@ -4248,9 +4068,6 @@ msgstr "nbd 设备 %s 没有出现"
 
 msgid "nbd unavailable: module not loaded"
 msgstr "NBD不可用：模块没有加载"
-
-msgid "network"
-msgstr "网络"
 
 msgid "no hosts to remove"
 msgstr "没有主见可移除"

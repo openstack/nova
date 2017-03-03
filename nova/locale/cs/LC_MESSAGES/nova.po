@@ -10,18 +10,18 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0rc2.dev504\n"
+"Project-Id-Version: nova 15.0.0.0rc2.dev255\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-10-26 19:51+0000\n"
+"POT-Creation-Date: 2017-03-02 18:28+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-01-08 01:32+0000\n"
-"Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
+"PO-Revision-Date: 2016-04-12 06:05+0000\n"
+"Last-Translator: Copied by Zanata <copied-by-zanata@zanata.org>\n"
 "Language: cs\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 "Generated-By: Babel 2.0\n"
-"X-Generator: Zanata 3.7.3\n"
+"X-Generator: Zanata 3.9.6\n"
 "Language-Team: Czech\n"
 
 #, python-format
@@ -61,16 +61,8 @@ msgstr ""
 "chybový výstup: %(stderr)r"
 
 #, python-format
-msgid "%(err)s"
-msgstr "%(err)s"
-
-#, python-format
 msgid "%(field)s should not be part of the updates."
 msgstr "%(field)s by nemělo být součástí aktualizací."
-
-#, python-format
-msgid "%(fieldname)s missing field type"
-msgstr "Ve %(fieldname)s chybí typ pole"
 
 #, python-format
 msgid "%(key)s is not a valid quota key. Valid options are: %(options)s."
@@ -109,10 +101,6 @@ msgid "%(type)s hypervisor does not support PCI devices"
 msgstr "Hypervizor %(type)s nepodporuje zařízení PCI"
 
 #, python-format
-msgid "%(typename)s in %(fieldname)s is not an instance of Enum"
-msgstr "%(typename)s v %(fieldname)s není instancí Enum"
-
-#, python-format
 msgid "%(value_name)s must be <= %(max_value)d"
 msgstr "%(value_name)s musí být <= %(max_value)d"
 
@@ -148,10 +136,6 @@ msgstr "formát %s není podporován"
 #, python-format
 msgid "%s is not a string or unicode"
 msgstr "%s není řetězec nebo unicode"
-
-#, python-format
-msgid "%s is not a valid node managed by this compute host."
-msgstr "%s není platný uzrl spravovaný tímto výpočetním hostitelem."
 
 #, python-format
 msgid "%s is not supported."
@@ -355,11 +339,6 @@ msgstr "Mapování blokového zařízení nemůže být převedeny na zastaralý
 
 msgid "Block Device Mapping is Invalid."
 msgstr "Mapování blokového zařízení je neplatné."
-
-#, python-format
-msgid "Block Device Mapping is Invalid: %(auth_method)s is unsupported."
-msgstr ""
-"Mapování blokového zařízení je neplatné: %(auth_method)s není podporována."
 
 #, python-format
 msgid "Block Device Mapping is Invalid: %(details)s"
@@ -625,10 +604,6 @@ msgid "Compute host %(host)s could not be found."
 msgstr "Výpočetní hostitel %(host)s nemohl být nalezen."
 
 #, python-format
-msgid "Compute host %(name)s needs to be created first before updating."
-msgstr "Výpočetní hostitel %(name)s je třeba být před aktualizací vytvořen."
-
-#, python-format
 msgid "Compute host %s not found."
 msgstr "Výpočetní hostitel %s nenalezen."
 
@@ -712,10 +687,6 @@ msgstr ""
 "%(reason)s"
 
 #, python-format
-msgid "Console pool %(pool_id)s could not be found."
-msgstr "Zásoba konzole %(pool_id)s nemohla být nalezena."
-
-#, python-format
 msgid ""
 "Console pool of type %(console_type)s for compute host %(compute_host)s on "
 "proxy host %(host)s not found."
@@ -737,10 +708,6 @@ msgstr "Omezení nesplněna."
 #, python-format
 msgid "Converted to raw, but format is now %s"
 msgstr "Převedeno na prosté, ale formát je nyní %s"
-
-#, python-format
-msgid "Core API extensions are missing: %(missing_apis)s"
-msgstr "Rozšíření hlavního API chybí: %(missing_apis)s"
 
 #, python-format
 msgid "Could not attach image to loopback: %s"
@@ -932,14 +899,6 @@ msgid ""
 msgstr ""
 "Chyba od libvirt při získávání informací o doméně pro %(instance_name)s: "
 "[Kód chyby %(error_code)s] %(ex)s"
-
-#, python-format
-msgid ""
-"Error from libvirt while looking up %(instance_id)s: [Error Code "
-"%(error_code)s] %(ex)s"
-msgstr ""
-"Chyba od libvirt při hledání %(instance_id)s: [Kód chyby %(error_code)s] "
-"%(ex)s"
 
 #, python-format
 msgid ""
@@ -1378,10 +1337,6 @@ msgstr ""
 "Volných %(type)s %(free).02f %(unit)s < požadovaných %(requested)d %(unit)s"
 
 #, python-format
-msgid "Group not valid. Reason: %(reason)s"
-msgstr "Skupina není platná. Důvod: %(reason)s"
-
-#, python-format
 msgid "Host %(host)s could not be found."
 msgstr "Hostitel %(host)s nemohl být nalezen."
 
@@ -1423,9 +1378,6 @@ msgstr "Hypervizor s ID !%s! nemohl být nalezen."
 #, python-format
 msgid "Hypervisor: %s"
 msgstr "Hypervizor: %s"
-
-msgid "IP address"
-msgstr "IP adresa:"
 
 #, python-format
 msgid "IP allocation over quota in pool %s."
@@ -1659,10 +1611,6 @@ msgid "Instance group %(group_uuid)s has no member with id %(instance_id)s."
 msgstr ""
 "Skupina instance %(group_uuid)s nemá žádného člena s id %(instance_id)s."
 
-#, python-format
-msgid "Instance group %(group_uuid)s has no policy %(policy)s."
-msgstr "Skupina instance %(group_uuid)s nemá žádnou zásadu %(policy)s."
-
 msgid "Instance has no source host"
 msgstr "Instance nemá žádného zdrojového hostitele"
 
@@ -1725,12 +1673,6 @@ msgstr "Neplatný formát IP adresy %s"
 msgid "Invalid IP protocol %(protocol)s."
 msgstr "Neplatný protokol IP %(protocol)s."
 
-#, python-format
-msgid ""
-"Invalid PCI Whitelist: The PCI address %(address)s has an invalid %(field)s."
-msgstr ""
-"Neplatný seznam povolených PCI: Adresa PCI %(address)s má neplatné %(field)s."
-
 msgid ""
 "Invalid PCI Whitelist: The PCI whitelist can specify devname or address, but "
 "not both"
@@ -1750,9 +1692,6 @@ msgstr "Neplatné nastavení seznamu povolených zařízení PCI: %(reason)s"
 msgid "Invalid Regular Expression %s"
 msgstr "Neplatný regulární výraz %s"
 
-msgid "Invalid association."
-msgstr "Neplatné přidružení."
-
 #, python-format
 msgid "Invalid broker_hosts value: %s. It should be in hostname:port format"
 msgstr ""
@@ -1762,9 +1701,6 @@ msgstr ""
 #, python-format
 msgid "Invalid certificate format: %s"
 msgstr "Neplatný formát certifikátu: %s"
-
-msgid "Invalid changes-since value"
-msgstr "Neplatná hodnota changes-since"
 
 #, python-format
 msgid "Invalid characters in hostname '%(hostname)s'"
@@ -1819,14 +1755,6 @@ msgstr "Neplatná pevná IP adresa %s v požadavku"
 #, python-format
 msgid "Invalid floating IP %s in request"
 msgstr "Neplatná plovoucí IP adresa %s v požadavku"
-
-#, python-format
-msgid "Invalid id: %(instance_id)s (expecting \"i-...\")"
-msgstr "Neplatné id: %(instance_id)s (očekáváno \"i-...\")"
-
-#, python-format
-msgid "Invalid id: %(volume_id)s (expecting \"i-...\")"
-msgstr "Neplatné id: %(volume_id)s (očekáváno \"i-...\")"
 
 #, python-format
 msgid "Invalid image format '%(format)s'"
@@ -1931,9 +1859,6 @@ msgstr "Neplatná metoda hashování podpisu: %s"
 #, python-format
 msgid "Invalid signature key type: %s"
 msgstr "Neplatný typ klíče podpisu: %s"
-
-msgid "Invalid source_type field."
-msgstr "Neplatné pole typ zdroje."
 
 msgid "Invalid start time. The start time cannot occur after the end time."
 msgstr "Neplatný čas spuštění. Čas spuštění nemůže nastat po čase ukončení."
@@ -2072,14 +1997,6 @@ msgid ""
 msgstr ""
 "Přesunutí za provozu nemůže být použito bez sdíleného úložiště, kromě "
 "zavedení ze svazku VM, který nemá místní disk."
-
-msgid ""
-"Live migration of instances with config drives is not supported in libvirt "
-"unless libvirt instance path and drive data is shared across compute nodes."
-msgstr ""
-"Přesun instancí s konfiguračními jednotkami za provozu není v libvirt "
-"podporováno, pokud cesta instance libvirt a data jednotky nejsou sdílena "
-"napříč výpočtovými uzly."
 
 #, python-format
 msgid "Malformed message body: %(reason)s"
@@ -2278,16 +2195,8 @@ msgid "Must supply a positive value for max_rows"
 msgstr "Musíte zadat kladnou hodnotu pro maximum řádků"
 
 #, python-format
-msgid "Network \"%(val)s\" is not valid in field %(attr)s"
-msgstr "Síť \"%(val)s\" není v poli %(attr)s platná"
-
-#, python-format
 msgid "Network %(network_id)s could not be found."
 msgstr "Síť %(network_id)s nemohla být nalezena."
-
-#, python-format
-msgid "Network %(network_id)s is duplicated."
-msgstr "Síť %(network_id)s je zdvojena."
 
 #, python-format
 msgid "Network %(network_id)s is still in use."
@@ -2402,9 +2311,6 @@ msgstr "Nejsou dostupné žádné pevné IP adresy pro síť: %(net)s"
 msgid "No fixed IP associated with id %(id)s."
 msgstr "Žádná pevná IP není přidružena k %(id)s."
 
-msgid "No fixed IP found."
-msgstr "Nenalezeny žádné pevné IP adresy."
-
 msgid "No fixed IPs associated to instance"
 msgstr "K instanci nejsou přidruženy žádné pevné IP adresy"
 
@@ -2434,10 +2340,6 @@ msgstr "Nejsou přístupné žádná umístění obrazu"
 
 msgid "No instances found for any event"
 msgstr "Instance nenalezeny pro žádnou událost"
-
-#, python-format
-msgid "No matching ID for the URL %s was found."
-msgstr "Nebyla nalezena žádná shodující se ID pro URL %s."
 
 msgid "No more available networks."
 msgstr "Žádné další dostupné sítě."
@@ -2519,10 +2421,6 @@ msgstr "Neschváleno."
 msgid "Not enough parameters to build a valid rule."
 msgstr "Není dostatek parametrů k sestavení platného pravidla."
 
-#, python-format
-msgid "Not enough parameters: %(reason)s"
-msgstr "Nedostatek parametrů: %(reason)s"
-
 msgid "Not implemented on Windows"
 msgstr "Nezavedeno ve Windows"
 
@@ -2538,10 +2436,6 @@ msgstr "Nova vyžaduje verzi libvirt %s nebo novější"
 
 msgid "Number of Rows Archived"
 msgstr "Počet archivovaných řádků"
-
-#, python-format
-msgid "Number of retries to plugin (%(num_retries)d) exceeded."
-msgstr "Počet pokusů (%(num_retries)d) byl překročen pro zásuvný modul."
 
 #, python-format
 msgid ""
@@ -2622,15 +2516,6 @@ msgstr "Žádost zařízení PCI %(requests)s selhala"
 
 #, python-format
 msgid ""
-"PCS doesn't support images in %s format. You should either set "
-"force_raw_images=True in config or upload an image in ploop or raw format."
-msgstr ""
-"PCS nepodporuje obrazy ve formátu %s. Buď nastavte v nastavení "
-"force_raw_images=True nebo nahrajte obraz v prostém formátu nebo ve formátu "
-"ploop."
-
-#, python-format
-msgid ""
 "PIF %(pif_uuid)s for network %(bridge)s has VLAN id %(pif_vlan)d. Expected "
 "%(vlan_num)d"
 msgstr ""
@@ -2684,10 +2569,6 @@ msgstr "Zadejte prosím rozsah pevných IP adres nebo uuid"
 #, python-format
 msgid "Plug vif failed because of unexpected vif_type=%s"
 msgstr "Zapojení vif selhalo kvůli neočekávanému typu vif=%s"
-
-#, python-format
-msgid "Plugin version mismatch (Expected %(exp)s, got %(got)s)"
-msgstr "Nesoulad verzí zásuvného modulu (Očekáváno %(exp)s, obdrženo %(got)s)"
 
 #, python-format
 msgid "Policy doesn't allow %(action)s to be performed."
@@ -2829,15 +2710,6 @@ msgstr "Využití kvóty pro projekt %(project_id)s nemohla být nalezena."
 msgid "Reached maximum number of retries trying to unplug VBD %s"
 msgstr "Dosaženo maximálního počtu nových pokusů o odpojení VBD %s"
 
-#, python-format
-msgid ""
-"Relative blockcommit support was not detected. Libvirt '%s' or later is "
-"required for online deletion of file/network storage-backed volume snapshots."
-msgstr ""
-"Podpora relativního odevzdání bloku nebyla zjištěna. Pro online smazání "
-"souborových/síťových snímků svazku zálohovaných na úložištích je třeba mít "
-"libvirt verze '%s' nebo novější."
-
 msgid "Request body and URI mismatch"
 msgstr "Neshoda s tělem požadavku a URI"
 
@@ -2935,16 +2807,9 @@ msgstr "Obnoveno"
 msgid "Root element name should be '%(name)s' not '%(tag)s'"
 msgstr "Název kořenového prvku by měl být '%(name)s' ne '%(tag)s'"
 
-msgid "Rotation param is required for backup image_type"
-msgstr "Parametr rotation je vyžadován pro zálohu typu obrazu"
-
 #, python-format
 msgid "Rule (%s) not found"
 msgstr "Pravidlo (%s) nenalezeno"
-
-#, python-format
-msgid "Rule already exists in group: %(rule)s"
-msgstr "Pravidlo již existuje ve skupině: %(rule)s"
 
 #, python-format
 msgid "Running Nova with parallels virt_type requires libvirt version %s"
@@ -3221,27 +3086,12 @@ msgstr "Filtr brány firewall pro %s neexistuje"
 msgid "The floating IP request failed with a BadRequest"
 msgstr "Žádost o plovoucí IP selhala s chybou Špatný požadavek."
 
-#, python-format
-msgid "The group %(group_name)s must be configured with an id."
-msgstr "Skupina %(group_name)s musí být nastavena s id."
-
 msgid "The input is not a string or unicode"
 msgstr "Vstup není řetězec nebo unicode"
 
 msgid ""
 "The instance requires a newer hypervisor version than has been provided."
 msgstr "Instance vyžaduje novější verzi hypervizoru, než byla poskytnuta."
-
-#, python-format
-msgid ""
-"The key %(r)s is required in the location metadata to access the url %(url)s."
-msgstr ""
-"Klíč %(r)s je v popisných datech umístění vyžadován pro přístup k url "
-"%(url)s."
-
-#, python-format
-msgid "The key %s is required in all file system descriptions."
-msgstr "Klíč %s je vyžadován ve všech popisech souborových systémů."
 
 #, python-format
 msgid ""
@@ -3262,14 +3112,6 @@ msgstr "Modul %(module)s je špatně nastavena: %(reason)s."
 #, python-format
 msgid "The mount %(mount_path)s is not a valid Quobyte volume. Error: %(exc)s"
 msgstr "Připojení %(mount_path)s není platný svazek Quobyte. Chyba %(exc)s"
-
-#, python-format
-msgid ""
-"The mount point advertised by glance: %(glance_mount)s, does not match the "
-"URL path: %(path)s"
-msgstr ""
-"Bod připojení udávaný v glance: %(glance_mount)s, se neshoduje s cestou URL: "
-"%(path)s"
 
 #, python-format
 msgid ""
@@ -3558,18 +3400,6 @@ msgid "Unable to find SR from VDI %s"
 msgstr "Nelze najít SR z VDI %s"
 
 #, python-format
-msgid "Unable to find a mounted disk for target_iqn: %s"
-msgstr "Nelze najít připojený disk pro cílové iqn: %s"
-
-#, python-format
-msgid ""
-"Unable to find a mounted disk for target_iqn: %s. Please ensure that the "
-"host's SAN policy is set to \"OfflineAll\" or \"OfflineShared\""
-msgstr ""
-"Nelze najít připojený disk pro cílové iqn: %s. Ujistěte se prosím, že SAN "
-"zásada hostitele je nastavena na \"OfflineAll\" nebo \"OfflineShared\""
-
-#, python-format
 msgid "Unable to find ca_file : %s"
 msgstr "Nelze najít soubor certifikační autority : %s"
 
@@ -3625,9 +3455,6 @@ msgid ""
 msgstr ""
 "Nelze spustit více instancí s jedním nastaveným ID portu. Prosím spusťte "
 "vaše instance jednotlivě s odlišnými porty."
-
-msgid "Unable to log in to XenAPI (is the Dom0 disk full?)"
-msgstr "Nelze se přihlásit do XenAPI (je disk Dom0 plný?)"
 
 #, python-format
 msgid ""
@@ -3841,12 +3668,6 @@ msgstr ""
 msgid "VHD coalesce attempts exceeded (%d), giving up..."
 msgstr "Překročen počet pokusů (%d) o splynutí VHD, operace zrušena..."
 
-msgid "VIF plugging is not supported by the Hyper-V driver."
-msgstr "Zapojení VIF není podporováno ovladačem Hyper-V."
-
-msgid "VIF unplugging is not supported by the Hyper-V driver."
-msgstr "Odpojení VIF není podporováno ovladačem Hyper-V."
-
 #, python-format
 msgid ""
 "VLAN tag is not appropriate for the port group %(bridge)s. Expected VLAN tag "
@@ -3862,10 +3683,6 @@ msgid ""
 msgstr ""
 "Hodnota (%(value)s) pro parametr Skupiny %(property)s je neplatný. Obsah je "
 "omezen na '%(allowed)s'."
-
-#, python-format
-msgid "Value must be >= 0 for field %s"
-msgstr "Hodnota musí být pro pole %s >= 0"
 
 msgid "Value required for 'scality_sofs_config'"
 msgstr "Je třeba zadat hodnotu pro 'scality_sofs_config'"
@@ -3958,10 +3775,6 @@ msgid ""
 msgstr ""
 "Svazek nastavuje velikost bloku, ale současný hypervizor libvirt '%s' "
 "nepodporuje vlastní velikost bloku"
-
-#, python-format
-msgid "WARNING: fixed IP %s allocated to missing instance"
-msgstr "VAROVÁNÍ: pevná IP adresa %s přidělena k chybějící instanci"
 
 #, python-format
 msgid ""
@@ -4106,9 +3919,6 @@ msgstr "nástroj fping nenalezen."
 msgid "host"
 msgstr "Hostitel"
 
-msgid "hostname"
-msgstr "název hostitele"
-
 #, python-format
 msgid "href %s does not contain version"
 msgstr "href %s neobsahuje verzi"
@@ -4186,9 +3996,6 @@ msgstr "zařízení nbd %s se nezobrazilo"
 
 msgid "nbd unavailable: module not loaded"
 msgstr "nbd nedostupné: modul nenačten"
-
-msgid "network"
-msgstr "síť"
 
 msgid "no hosts to remove"
 msgstr "žádní hostitelé pro odstranění"
