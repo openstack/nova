@@ -1885,6 +1885,11 @@ def instance_destroy(context, instance_uuid, constraint=None):
         resource_id=instance_uuid).delete()
     context.session.query(models.ConsoleAuthToken).filter_by(
         instance_uuid=instance_uuid).delete()
+    # NOTE(cfriesen): We intentionally do not soft-delete entries in the
+    # instance_actions or instance_actions_events tables because they
+    # can be used by operators to find out what actions were performed on a
+    # deleted instance.  Both of these tables are special-cased in
+    # _archive_deleted_rows_for_table().
 
     return instance_ref
 
