@@ -774,6 +774,12 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def get_inventory(self, nodename):
+        """Return a dict, keyed by resource class, of inventory information for
+        the supplied node.
+        """
+        raise NotImplementedError()
+
     def get_available_resource(self, nodename):
         """Retrieve resource information.
 

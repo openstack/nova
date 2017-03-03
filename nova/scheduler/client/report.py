@@ -215,14 +215,22 @@ class SchedulerReportClient(object):
             url,
             endpoint_filter=self.ks_filter, raise_exc=False, **kwargs)
 
-    def post(self, url, data):
+    def post(self, url, data, version=None):
         # NOTE(sdague): using json= instead of data= sets the
         # media type to application/json for us. Placement API is
         # more sensitive to this than other APIs in the OpenStack
         # ecosystem.
+        kwargs = {}
+        if version is not None:
+            # TODO(mriedem): Perform some version discovery at some point.
+            kwargs = {
+                'headers': {
+                    'OpenStack-API-Version': 'placement %s' % version
+                },
+            }
         return self._client.post(
             url, json=data,
-            endpoint_filter=self.ks_filter, raise_exc=False)
+            endpoint_filter=self.ks_filter, raise_exc=False, **kwargs)
 
     def put(self, url, data):
         # NOTE(sdague): using json= instead of data= sets the
@@ -664,7 +672,96 @@ class SchedulerReportClient(object):
         }
         LOG.error(msg, msg_args)
 
-    def update_resource_stats(self, compute_node):
+    def set_inventory_for_provider(self, rp_uuid, rp_name, inv_data):
+        """Given the UUID of a provider, set the inventory records for the
+        provider to the supplied dict of resources.
+
+        :param rp_uuid: UUID of the resource provider to set inventory for
+        :param rp_name: Name of the resource provider in case we need to create
+                        a record for it in the placement API
+        :param inv_data: Dict, keyed by resource class name, of inventory data
+                         to set against the provider
+
+        :raises: exc.InvalidResourceClass if a supplied custom resource class
+                 name does not meet the placement API's format requirements.
+        """
+        self._ensure_resource_provider(rp_uuid, rp_name)
+
+        new_inv = {}
+        for rc_name, inv in inv_data.items():
+            if rc_name not in fields.ResourceClass.STANDARD:
+                # Auto-create custom resource classes coming from a virt driver
+                self._get_or_create_resource_class(rc_name)
+
+            new_inv[rc_name] = inv
+
+        if new_inv:
+            self._update_inventory(rp_uuid, new_inv)
+        else:
+            self._delete_inventory(rp_uuid)
+
+    @safe_connect
+    def _get_or_create_resource_class(self, name):
+        """Queries the placement API for a resource class supplied resource
+        class string name. If the resource class does not exist, creates it.
+
+        Returns the resource class name if exists or was created, else None.
+
+        :param name: String name of the resource class to check/create.
+        """
+        resp = self.get("/resource_classes/%s" % name, version="1.2")
+        if 200 <= resp.status_code < 300:
+            return name
+        elif resp.status_code == 404:
+            self._create_resource_class(name)
+            return name
+        else:
+            msg = _LE("Failed to retrieve resource class record from "
+                      "placement API for resource class %(rc_name)s. "
+                      "Got %(status_code)d: %(err_text)s.")
+            args = {
+                'rc_name': name,
+                'status_code': resp.status_code,
+                'err_text': resp.text,
+            }
+            LOG.error(msg, args)
+            return None
+
+    def _create_resource_class(self, name):
+        """Calls the placement API to create a new resource class.
+
+        :param name: String name of the resource class to create.
+
+        :returns: None on successful creation.
+        :raises: `exception.InvalidResourceClass` upon error.
+        """
+        url = "/resource_classes"
+        payload = {
+            'name': name,
+        }
+        resp = self.post(url, payload, version="1.2")
+        if 200 <= resp.status_code < 300:
+            msg = _LI("Created resource class record via placement API "
+                      "for resource class %s.")
+            LOG.info(msg, name)
+        elif resp.status_code == 409:
+            # Another thread concurrently created a resource class with the
+            # same name. Log a warning and then just return
+            msg = _LI("Another thread already created a resource class "
+                      "with the name %s. Returning.")
+            LOG.info(msg, name)
+        else:
+            msg = _LE("Failed to create resource class %(resource_class)s in "
+                      "placement API. Got %(status_code)d: %(err_text)s.")
+            args = {
+                'resource_class': name,
+                'status_code': resp.status_code,
+                'err_text': resp.text,
+            }
+            LOG.error(msg, args)
+            raise exception.InvalidResourceClass(resource_class=name)
+
+    def update_compute_node(self, compute_node):
         """Creates or updates stats for the supplied compute node.
 
         :param compute_node: updated nova.objects.ComputeNode to report
@@ -673,7 +770,6 @@ class SchedulerReportClient(object):
                 resource classes that would be deleted by an update to the
                 placement API.
         """
-        compute_node.save()
         self._ensure_resource_provider(compute_node.uuid,
                                        compute_node.hypervisor_hostname)
         inv_data = _compute_node_to_inventory_dict(compute_node)

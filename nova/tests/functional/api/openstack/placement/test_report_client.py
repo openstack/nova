@@ -102,7 +102,7 @@ class SchedulerReportClientTests(test.TestCase):
             self.assertIsNone(rp)
 
             # Now let's update status for our compute node.
-            self.client.update_resource_stats(self.compute_node)
+            self.client.update_compute_node(self.compute_node)
 
             # So now we have a resource provider
             rp = self.client._get_resource_provider(self.compute_uuid)
@@ -156,7 +156,7 @@ class SchedulerReportClientTests(test.TestCase):
             self.compute_node.vcpus = 0
             self.compute_node.memory_mb = 0
             self.compute_node.local_gb = 0
-            self.client.update_resource_stats(self.compute_node)
+            self.client.update_compute_node(self.compute_node)
 
             # Check there's no more inventory records
             resp = self.client.get(inventory_url)

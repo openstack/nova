@@ -56,8 +56,15 @@ class SchedulerClient(object):
     def delete_aggregate(self, context, aggregate):
         self.queryclient.delete_aggregate(context, aggregate)
 
-    def update_resource_stats(self, compute_node):
-        self.reportclient.update_resource_stats(compute_node)
+    def set_inventory_for_provider(self, rp_uuid, rp_name, inv_data):
+        self.reportclient.set_inventory_for_provider(
+            rp_uuid,
+            rp_name,
+            inv_data,
+        )
+
+    def update_compute_node(self, compute_node):
+        self.reportclient.update_compute_node(compute_node)
 
     def update_instance_info(self, context, host_name, instance_info):
         self.queryclient.update_instance_info(context, host_name,
