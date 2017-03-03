@@ -707,7 +707,7 @@ class LibvirtDriver(driver.ComputeDriver):
         try:
             self._host.get_guest(instance)
             return True
-        except exception.InternalError:
+        except (exception.InternalError, exception.InstanceNotFound):
             return False
 
     def list_instances(self):
