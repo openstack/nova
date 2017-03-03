@@ -476,7 +476,7 @@ Possible values:
 compute_manager_opts = [
     cfg.StrOpt('console_host',
         default=socket.gethostname(),
-        sample_default="socket.gethostname()",
+        sample_default="<current_hostname>",
         help="""
 Console proxy host to be used to connect to instances on this host. It is the
 publicly visible name for the console host.
