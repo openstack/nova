@@ -302,10 +302,11 @@ AccountCommands = ProjectCommands
 class FloatingIpCommands(object):
     """Class for managing floating IP."""
 
+    # TODO(stephenfin): Remove these when we remove cells v1
     description = ('DEPRECATED: Floating IP commands are deprecated since '
                    'nova-network is deprecated in favor of Neutron. The '
-                   'floating IP commands will be removed in the Nova 15.0.0 '
-                   'Ocata release.')
+                   'floating IP commands will be removed in an upcoming '
+                   'release.')
 
     @staticmethod
     def address_to_hosts(addresses):
@@ -405,10 +406,10 @@ def validate_network_plugin(f, *args, **kwargs):
 class NetworkCommands(object):
     """Class for managing networks."""
 
+    # TODO(stephenfin): Remove these when we remove cells v1
     description = ('DEPRECATED: Network commands are deprecated since '
                    'nova-network is deprecated in favor of Neutron. The '
-                   'network commands will be removed in the Nova 15.0.0 Ocata '
-                   'release.')
+                   'network commands will be removed in an upcoming release.')
 
     @validate_network_plugin
     @args('--label', metavar='<label>', help='Label for network (ex: public)')
