@@ -1,0 +1,5 @@
+---
+upgrade:
+  - |
+    Configuration option ``console_driver`` in the ``DEFAULT`` group has
+    been deprecated since the Ocata release and is now removed.
