@@ -1,0 +1,12 @@
+features:
+  - |
+    The fields ``locked`` and ``display_description`` have been added to
+    InstancePayload. Versioned notifications for instance actions
+    will include these fields.
+
+    A few examples of versioned notifications that use InstancePayload::
+
+    * ``instance.create``
+    * ``instance.delete``
+    * ``instance.resize``
+    * ``instance.pause``
