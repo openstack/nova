@@ -25,6 +25,7 @@ import six
 
 from nova.consoleauth import manager
 from nova import context
+from nova import objects
 from nova import test
 
 
@@ -36,6 +37,7 @@ class ConsoleauthTestCase(test.NoDBTestCase):
         self.manager_api = self.manager = manager.ConsoleAuthManager()
         self.context = context.get_admin_context()
         self.instance_uuid = '00000000-0000-0000-0000-000000000000'
+        self.is_cells = False
 
     def test_reset(self):
         with mock.patch('nova.compute.rpcapi.ComputeAPI') as mock_rpc:
@@ -48,6 +50,11 @@ class ConsoleauthTestCase(test.NoDBTestCase):
     @mock.patch('nova.objects.instance.Instance.get_by_uuid')
     def test_tokens_expire(self, mock_get):
         mock_get.return_value = None
+        # NOTE(danms): Get the faked InstanceMapping from the SingleCellSimple
+        # fixture so we can return it from our own mock to verify
+        # that it was called
+        fake_im = objects.InstanceMapping.get_by_instance_uuid(self.context,
+                                                               'fake')
 
         # Test that tokens expire correctly.
         self.useFixture(test.TimeOverride())
@@ -59,9 +66,17 @@ class ConsoleauthTestCase(test.NoDBTestCase):
         self.manager_api.authorize_console(self.context, token, 'novnc',
                                          '127.0.0.1', '8080', 'host',
                                          self.instance_uuid)
-        self.assertIsNotNone(self.manager_api.check_token(self.context, token))
-        timeutils.advance_time_seconds(1)
-        self.assertIsNone(self.manager_api.check_token(self.context, token))
+        with mock.patch('nova.objects.InstanceMapping.'
+                        'get_by_instance_uuid') as mock_get:
+            mock_get.return_value = fake_im
+            self.assertIsNotNone(self.manager_api.check_token(self.context,
+                                                              token))
+            timeutils.advance_time_seconds(1)
+            self.assertIsNone(self.manager_api.check_token(self.context,
+                                                           token))
+            if not self.is_cells:
+                mock_get.assert_called_once_with(self.context,
+                                                 self.instance_uuid)
 
     def _stub_validate_console_port(self, result):
         def fake_validate_console_port(ctxt, instance, port, console_type):
@@ -213,6 +228,7 @@ class CellsConsoleauthTestCase(ConsoleauthTestCase):
     def setUp(self):
         super(CellsConsoleauthTestCase, self).setUp()
         self.flags(enable=True, group='cells')
+        self.is_cells = True
 
     def _stub_validate_console_port(self, result):
         def fake_validate_console_port(ctxt, instance_uuid, console_port,
