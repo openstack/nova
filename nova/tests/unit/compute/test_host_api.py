@@ -27,6 +27,7 @@ from nova import context
 from nova import exception
 from nova import objects
 from nova import test
+from nova.tests import fixtures
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_objects
@@ -44,6 +45,7 @@ class ComputeHostAPITestCase(test.TestCase):
         self.addCleanup(fake_notifier.reset)
         self.req = fakes.HTTPRequest.blank('')
         self.controller = services.ServiceController()
+        self.useFixture(fixtures.SingleCellSimple())
 
     def _compare_obj(self, obj, db_obj):
         test_objects.compare_obj(self, obj, db_obj,

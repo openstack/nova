@@ -150,6 +150,7 @@ class AggregateController(wsgi.Controller):
         try:
             aggregate = self.api.add_host_to_aggregate(context, id, host)
         except (exception.AggregateNotFound,
+                exception.HostMappingNotFound,
                 exception.ComputeHostNotFound) as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except (exception.AggregateHostExists,
@@ -172,7 +173,7 @@ class AggregateController(wsgi.Controller):
         try:
             aggregate = self.api.remove_host_from_aggregate(context, id, host)
         except (exception.AggregateNotFound, exception.AggregateHostNotFound,
-                exception.ComputeHostNotFound):
+                exception.HostMappingNotFound, exception.ComputeHostNotFound):
             msg = _('Cannot remove host %(host)s in aggregate %(id)s') % {
                         'host': host, 'id': id}
             raise exc.HTTPNotFound(explanation=msg)

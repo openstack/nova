@@ -10290,6 +10290,7 @@ class ComputeAPITestCase(BaseTestCase):
             instance.host = kwargs['host'] or 'fake_dest_host'
             instance.save()
 
+        @mock.patch.object(objects.Service, 'get_by_compute_host')
         @mock.patch.object(self.compute_api.compute_task_api,
                            'rebuild_instance')
         @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
@@ -10297,7 +10298,7 @@ class ComputeAPITestCase(BaseTestCase):
                            'get_by_instance_uuid')
         @mock.patch.object(self.compute_api.servicegroup_api, 'service_is_up')
         def do_test(service_is_up, get_by_instance_uuid, get_all_by_host,
-                    rebuild_instance):
+                    rebuild_instance, get_service):
             service_is_up.return_value = False
             get_by_instance_uuid.return_value = fake_spec
             rebuild_instance.side_effect = fake_rebuild_instance
@@ -10305,6 +10306,8 @@ class ComputeAPITestCase(BaseTestCase):
                 objects=[objects.ComputeNode(
                     host='fake_dest_host',
                     hypervisor_hostname='fake_dest_node')])
+            get_service.return_value = objects.Service(
+                host='fake_dest_host')
 
             self.compute_api.evacuate(ctxt,
                                       instance,
@@ -10395,7 +10398,8 @@ class ComputeAPITestCase(BaseTestCase):
                 host='fake_dest_host', on_shared_storage=True,
                 admin_password=None)
 
-    def test_fail_evacuate_from_running_host(self):
+    @mock.patch('nova.objects.Service.get_by_compute_host')
+    def test_fail_evacuate_from_running_host(self, mock_service):
         instance = self._create_fake_instance_obj(services=True)
         self.assertIsNone(instance.task_state)
 
@@ -10583,16 +10587,27 @@ def fake_rpc_method(self, context, method, **kwargs):
     pass
 
 
-def _create_service_entries(context, values=[['avail_zone1', ['fake_host1',
-                                                             'fake_host2']],
-                                             ['avail_zone2', ['fake_host3']]]):
+def _create_service_entries(ctxt, values=[['avail_zone1', ['fake_host1',
+                                                           'fake_host2']],
+                                          ['avail_zone2', ['fake_host3']]]):
+    cells = objects.CellMappingList.get_all(ctxt)
+    index = 0
     for (avail_zone, hosts) in values:
         for host in hosts:
-            db.service_create(context,
-                              {'host': host,
-                               'binary': 'nova-compute',
-                               'topic': 'compute',
-                               'report_count': 0})
+            # NOTE(danms): spread these services across cells
+            cell = cells[index % len(cells)]
+            index += 1
+            with context.target_cell(ctxt, cell):
+                s = objects.Service(context=ctxt,
+                                    host=host,
+                                    binary='nova-compute',
+                                    topic='compute',
+                                    report_count=0)
+                s.create()
+            hm = objects.HostMapping(context=ctxt,
+                                     cell_mapping=cell,
+                                     host=host)
+            hm.create()
     return values
 
 
@@ -11032,6 +11047,21 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertEqual(len(aggr.hosts), len(values[0][1]))
 
     def test_add_host_to_aggregate_raise_not_found(self):
+        # Ensure HostMappingNotFound is raised when adding invalid host.
+        aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
+                                         'fake_zone')
+        fake_notifier.NOTIFICATIONS = []
+        self.assertRaises(exception.HostMappingNotFound,
+                          self.api.add_host_to_aggregate,
+                          self.context, aggr.id, 'invalid_host')
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
+        self.assertEqual(fake_notifier.NOTIFICATIONS[1].publisher_id,
+                         'compute.fake-mini')
+
+    @mock.patch('nova.objects.HostMapping.get_by_host')
+    @mock.patch('nova.context.set_target_cell')
+    def test_add_host_to_aggregate_raise_cn_not_found(self, mock_st,
+                                                      mock_hm):
         # Ensure ComputeHostNotFound is raised when adding invalid host.
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_zone')
@@ -11039,9 +11069,6 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertRaises(exception.ComputeHostNotFound,
                           self.api.add_host_to_aggregate,
                           self.context, aggr.id, 'invalid_host')
-        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
-        self.assertEqual(fake_notifier.NOTIFICATIONS[1].publisher_id,
-                         'compute.fake-mini')
 
     @mock.patch.object(availability_zones,
                        'update_host_availability_zone_cache')
@@ -11078,6 +11105,19 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         mock_az.assert_called_with(self.context, host_to_remove)
 
     def test_remove_host_from_aggregate_raise_not_found(self):
+        # Ensure HostMappingNotFound is raised when removing invalid host.
+        _create_service_entries(self.context, [['fake_zone', ['fake_host']]])
+        aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
+                                         'fake_zone')
+        self.assertRaises(exception.HostMappingNotFound,
+                          self.api.remove_host_from_aggregate,
+                          self.context, aggr.id, 'invalid_host')
+
+    @mock.patch('nova.objects.HostMapping.get_by_host')
+    @mock.patch('nova.context.set_target_cell')
+    def test_remove_host_from_aggregate_raise_cn_not_found(self,
+                                                           mock_st,
+                                                           mock_hm):
         # Ensure ComputeHostNotFound is raised when removing invalid host.
         _create_service_entries(self.context, [['fake_zone', ['fake_host']]])
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',

@@ -4471,7 +4471,10 @@ class AggregateAPI(base.Base):
         compute_utils.notify_about_aggregate_update(context,
                                                     "addhost.start",
                                                     aggregate_payload)
-        # validates the host; ComputeHostNotFound is raised if invalid
+        # validates the host; HostMappingNotFound or ComputeHostNotFound
+        # is raised if invalid
+        mapping = objects.HostMapping.get_by_host(context, host_name)
+        nova_context.set_target_cell(context, mapping.cell_mapping)
         objects.Service.get_by_compute_host(context, host_name)
 
         aggregate = objects.Aggregate.get_by_id(context, aggregate_id)
@@ -4498,7 +4501,10 @@ class AggregateAPI(base.Base):
         compute_utils.notify_about_aggregate_update(context,
                                                     "removehost.start",
                                                     aggregate_payload)
-        # validates the host; ComputeHostNotFound is raised if invalid
+        # validates the host; HostMappingNotFound or ComputeHostNotFound
+        # is raised if invalid
+        mapping = objects.HostMapping.get_by_host(context, host_name)
+        nova_context.set_target_cell(context, mapping.cell_mapping)
         objects.Service.get_by_compute_host(context, host_name)
         aggregate = objects.Aggregate.get_by_id(context, aggregate_id)
         aggregate.delete_host(host_name)

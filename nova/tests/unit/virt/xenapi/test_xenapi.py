@@ -49,6 +49,7 @@ from nova import objects
 from nova.objects import base
 from nova.objects import fields as obj_fields
 from nova import test
+from nova.tests import fixtures
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.db import fakes as db_fakes
 from nova.tests.unit import fake_flavor
@@ -2082,6 +2083,7 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
         self.context = context.get_admin_context()
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         self.instance = fake_instance.fake_db_instance(name='foo')
+        self.useFixture(fixtures.SingleCellSimple())
 
     def test_host_state(self):
         stats = self.conn.host_state.get_host_stats(False)
@@ -2964,6 +2966,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                               pool_states.KEY: pool_states.ACTIVE,
                               'host': xenapi_fake.get_record('host',
                                                              host_ref)['uuid']}
+        self.useFixture(fixtures.SingleCellSimple())
 
     def test_pool_add_to_aggregate_called_by_driver(self):
 
