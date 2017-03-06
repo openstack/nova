@@ -74,10 +74,13 @@ module. Dispatch or routing is handled declaratively via the
 `nova.api.openstack.placement.handler` module.
 
 Mapping is by URL plus request method. The destination is a complete WSGI
-application, using the `wsgify`_  method from `WebOb`_ to provide a
-`Request`_ object that provides convenience methods for accessing request
+application, using a subclass of the `wsgify`_  method from `WebOb`_ to provide
+a `Request`_ object that provides convenience methods for accessing request
 headers, bodies, and query parameters and for generating responses. In the
-placement API these mini-applications are called `handlers`.
+placement API these mini-applications are called `handlers`. The `wsgify`
+subclass is provided in `nova.api.openstack.placement.wsgi_wrapper` as
+`PlacementWsgify`. It is used to make sure that JSON formatted error responses
+are structured according to the API-WG `errors`_ guideline.
 
 This division between middleware, dispatch and handlers is supposed to
 provide clues on where a particular behavior or functionality should be
@@ -109,13 +112,13 @@ surprising or unexpected.
   this can be a `404` (which is wrong, but understandable given the constraints
   of the code).
 
-* Because each handler is individually wrapped by the `wsgify`_ decorator any
-  exception that is a subclass of `webob.exc.WSGIHTTPException` that is raised
-  from within the handler, such as `webob.exc.HTTPBadRequest`, will be caught
-  by WebOb and turned into a valid `Response`_ containing headers and body set
-  by WebOb based on the information given when the exception was raised. It
-  will not be seen as an exception by any of the middleware in the placement
-  stack.
+* Because each handler is individually wrapped by the `PlacementWsgify`
+  decorator any exception that is a subclass of `webob.exc.WSGIHTTPException`
+  that is raised from within the handler, such as `webob.exc.HTTPBadRequest`,
+  will be caught by WebOb and turned into a valid `Response`_ containing
+  headers and body set by WebOb based on the information given when the
+  exception was raised. It will not be seen as an exception by any of the
+  middleware in the placement stack.
 
   In general this is a good thing, but it can lead to some confusion if, for
   example, you are trying to add some middleware that operates on exceptions.
@@ -191,8 +194,8 @@ identified by the URL. Collection and individual entity handlers of the same
 type should be in the same module.
 
 As mentioned above, the handler function should be decorated with
-``@webob.dec.wsgify``, take a single argument ``req`` which is a WebOb
-`Request`_ object, and return a WebOb `Response`_.
+``@wsgi_wrapper.PlacementWsgify``, take a single argument ``req`` which is a
+WebOb `Request`_ object, and return a WebOb `Response`_.
 
 For ``PUT`` and ``POST`` methods, request bodies are expected to be JSON
 based on a content-type of ``application/json``. This may be enforced by using
@@ -370,3 +373,4 @@ for an eventual extraction and avoid creating unnecessary interdependencies.
 .. _fixtures: http://gabbi.readthedocs.io/en/latest/fixtures.html
 .. _JSONPath: http://goessner.net/articles/JsonPath/
 .. _gabbi-run: http://gabbi.readthedocs.io/en/latest/runner.html
+.. _errors: http://specs.openstack.org/openstack/api-wg/guidelines/errors.html
