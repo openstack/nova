@@ -201,10 +201,9 @@ class UpgradeCommands(object):
         try:
             versions = self._placement_get("/")
             max_version = float(versions["versions"][0]["max_version"])
-            # The required version is a bit tricky but we know that we at least
-            # need 1.0 for Newton computes. This minimum might change in the
-            # future.
-            needs_version = 1.0
+            # NOTE(rpodolyaka): 1.4 is needed in Pike and further as
+            # FilterScheduler will no longer fall back to not using placement
+            needs_version = 1.4
             if max_version < needs_version:
                 msg = (_('Placement API version %(needed)s needed, '
                          'you have %(current)s.') %
