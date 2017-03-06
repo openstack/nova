@@ -1100,6 +1100,9 @@ class Ploop(Image):
                                        target,
                                        out_format)
 
+    def get_model(self, connection):
+        return imgmodel.LocalFileImage(self.path, imgmodel.FORMAT_PLOOP)
+
 
 class Backend(object):
     def __init__(self, use_cow):
