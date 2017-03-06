@@ -16,8 +16,8 @@ from nova.api.openstack.compute.schemas import availability_zone as schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import availability_zones
+from nova import compute
 import nova.conf
-from nova import objects
 from nova.policies import availability_zone as az_policies
 from nova import servicegroup
 
@@ -32,6 +32,7 @@ class AvailabilityZoneController(wsgi.Controller):
     def __init__(self):
         super(AvailabilityZoneController, self).__init__()
         self.servicegroup_api = servicegroup.API()
+        self.host_api = compute.HostAPI()
 
     def _get_filtered_availability_zones(self, zones, is_available):
         result = []
@@ -62,8 +63,9 @@ class AvailabilityZoneController(wsgi.Controller):
             availability_zones.get_availability_zones(ctxt)
 
         # Available services
-        enabled_services = objects.ServiceList.get_all(context, disabled=False,
-                                                       set_zones=True)
+        enabled_services = self.host_api.service_get_all(
+            context, {'disabled': False}, set_zones=True, all_cells=True)
+
         zone_hosts = {}
         host_services = {}
         api_services = ('nova-osapi_compute', 'nova-ec2', 'nova-metadata')

@@ -4325,20 +4325,36 @@ class HostAPI(base.Base):
                                                payload)
         return result
 
-    def service_get_all(self, context, filters=None, set_zones=False):
+    def service_get_all(self, context, filters=None, set_zones=False,
+                        all_cells=False):
         """Returns a list of services, optionally filtering the results.
 
         If specified, 'filters' should be a dictionary containing services
         attributes and matching values.  Ie, to get a list of services for
         the 'compute' topic, use filters={'topic': 'compute'}.
+
+        If all_cells=True, then scan all cells and merge the results.
         """
         if filters is None:
             filters = {}
         disabled = filters.pop('disabled', None)
         if 'availability_zone' in filters:
             set_zones = True
-        services = objects.ServiceList.get_all(context, disabled,
-                                               set_zones=set_zones)
+
+        # NOTE(danms): Eventually this all_cells nonsense should go away
+        # and we should always iterate over the cells. However, certain
+        # callers need the legacy behavior for now.
+        if all_cells:
+            load_cells()
+            services = []
+            for cell in CELLS:
+                with nova_context.target_cell(context, cell):
+                    cell_services = objects.ServiceList.get_all(
+                        context, disabled, set_zones=set_zones)
+                services.extend(cell_services)
+        else:
+            services = objects.ServiceList.get_all(context, disabled,
+                                                   set_zones=set_zones)
         ret_services = []
         for service in services:
             for key, val in filters.items():

@@ -173,6 +173,17 @@ class ComputeHostAPITestCase(test.TestCase):
 
         _do_test()
 
+    def test_service_get_all_cells(self):
+        cells = objects.CellMappingList.get_all(self.ctxt)
+        for cell in cells:
+            with context.target_cell(self.ctxt, cell):
+                objects.Service(context=self.ctxt,
+                                binary='nova-compute',
+                                host='host-%s' % cell.uuid).create()
+        services = self.host_api.service_get_all(self.ctxt, all_cells=True)
+        self.assertEqual(sorted(['host-%s' % cell.uuid for cell in cells]),
+                         sorted([svc.host for svc in services]))
+
     def test_service_get_all_no_zones(self):
         services = [dict(test_service.fake_service,
                          id=1, topic='compute', host='host1'),
@@ -337,6 +348,10 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
         self.flags(enable=True, group='cells')
         self.flags(cell_type='api', group='cells')
         super(ComputeHostAPICellsTestCase, self).setUp()
+
+    @testtools.skip('cellsv1 does not use this')
+    def test_service_get_all_cells(self):
+        pass
 
     def test_service_get_all_no_zones(self):
         services = [

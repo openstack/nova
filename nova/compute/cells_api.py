@@ -546,7 +546,13 @@ class HostAPI(compute_api.HostAPI):
         """Returns the result of calling "uptime" on the target host."""
         return self.cells_rpcapi.get_host_uptime(context, host_name)
 
-    def service_get_all(self, context, filters=None, set_zones=False):
+    def service_get_all(self, context, filters=None, set_zones=False,
+                        all_cells=False):
+        """Get all services.
+
+        Note that this is the cellsv1 variant, which means we ignore the
+        "all_cells" parameter.
+        """
         if filters is None:
             filters = {}
         if 'availability_zone' in filters:
