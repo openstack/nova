@@ -657,9 +657,14 @@ def _check_capacity_exceeded(conn, allocs):
     the inventories involved having their capacity exceeded.
 
     Raises an InvalidAllocationCapacityExceeded exception if any inventory
-    would be exhausted by the allocation. If no inventories would be exceeded
-    by the allocation, the function returns a list of `ResourceProvider`
-    objects that contain the generation at the time of the check.
+    would be exhausted by the allocation. Raises an
+    InvalidAllocationConstraintsViolated exception if any of the `step_size`,
+    `min_unit` or `max_unit` constraints in an inventory will be violated
+    by any one of the allocations.
+
+    If no inventories would be exceeded or violated by the allocations, the
+    function returns a list of `ResourceProvider` objects that contain the
+    generation at the time of the check.
 
     :param conn: SQLalchemy Connection object to use
     :param allocs: List of `Allocation` objects to check
@@ -718,6 +723,9 @@ def _check_capacity_exceeded(conn, allocs):
         _INV_TBL.c.total,
         _INV_TBL.c.reserved,
         _INV_TBL.c.allocation_ratio,
+        _INV_TBL.c.min_unit,
+        _INV_TBL.c.max_unit,
+        _INV_TBL.c.step_size,
         usage.c.used,
     ]
 
@@ -749,6 +757,28 @@ def _check_capacity_exceeded(conn, allocs):
         usage = usage_map[key]
         amount_needed = alloc.used
         allocation_ratio = usage['allocation_ratio']
+        min_unit = usage['min_unit']
+        max_unit = usage['max_unit']
+        step_size = usage['step_size']
+
+        # check min_unit, max_unit, step_size
+        if (amount_needed < min_unit or amount_needed > max_unit or
+                amount_needed % step_size != 0):
+            LOG.warning(
+                _LW("Allocation for %(rc)s on resource provider %(rp)s "
+                    "violates min_unit, max_unit, or step_size. "
+                    "Requested: %(requested)s, min_unit: %(min_unit)s, "
+                    "max_unit: %(max_unit)s, step_size: %(step_size)s"),
+                {'rc': alloc.resource_class,
+                 'rp': rp_uuid,
+                 'requested': amount_needed,
+                 'min_unit': min_unit,
+                 'max_unit': max_unit,
+                 'step_size': step_size})
+            raise exception.InvalidAllocationConstraintsViolated(
+                resource_class=alloc.resource_class,
+                resource_provider=rp_uuid)
+
         # usage["used"] can be returned as None
         used = usage['used'] or 0
         capacity = (usage['total'] - usage['reserved']) * allocation_ratio
