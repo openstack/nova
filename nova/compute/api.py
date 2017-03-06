@@ -4281,6 +4281,22 @@ class API(base.Base):
         return host_statuses
 
 
+def target_host_cell(fn):
+    """Target a host-based function to a cell.
+
+    Expects to wrap a function of signature:
+
+       func(self, context, host, ...)
+    """
+
+    @functools.wraps(fn)
+    def targeted(self, context, host, *args, **kwargs):
+        mapping = objects.HostMapping.get_by_host(context, host)
+        nova_context.set_target_cell(context, mapping.cell_mapping)
+        return fn(self, context, host, *args, **kwargs)
+    return targeted
+
+
 class HostAPI(base.Base):
     """Sub-set of the Compute Manager API for managing host operations."""
 
@@ -4299,6 +4315,7 @@ class HostAPI(base.Base):
         return service['host']
 
     @wrap_exception()
+    @target_host_cell
     def set_host_enabled(self, context, host_name, enabled):
         """Sets the specified host's ability to accept new instances."""
         host_name = self._assert_host_exists(context, host_name)
@@ -4313,6 +4330,7 @@ class HostAPI(base.Base):
                                                payload)
         return result
 
+    @target_host_cell
     def get_host_uptime(self, context, host_name):
         """Returns the result of calling "uptime" on the target host."""
         host_name = self._assert_host_exists(context, host_name,
@@ -4320,6 +4338,7 @@ class HostAPI(base.Base):
         return self.rpcapi.get_host_uptime(context, host=host_name)
 
     @wrap_exception()
+    @target_host_cell
     def host_power_action(self, context, host_name, action):
         """Reboots, shuts down or powers up the host."""
         host_name = self._assert_host_exists(context, host_name)
@@ -4335,6 +4354,7 @@ class HostAPI(base.Base):
         return result
 
     @wrap_exception()
+    @target_host_cell
     def set_host_maintenance(self, context, host_name, mode):
         """Start/Stop host maintenance window. On start, it triggers
         guest VMs evacuation.
@@ -4391,10 +4411,51 @@ class HostAPI(base.Base):
                 ret_services.append(service)
         return ret_services
 
+    def _find_service(self, context, service_id):
+        """Find a service by id by searching all cells.
+
+        If one matching service is found, return it. If none or multiple
+        are found, raise an exception.
+
+        :param context: A context.RequestContext
+        :param service_id: The DB ID of the service to find
+        :returns: An objects.Service
+        :raises: ServiceNotUnique if multiple matches are found
+        :raises: ServiceNotFound if no matches are found
+        """
+
+        load_cells()
+        # NOTE(danms): Unfortunately this API exposes database identifiers
+        # which means we really can't do something efficient here
+        service = None
+        found_in_cell = None
+        for cell in CELLS:
+            # NOTE(danms): Services can be in cell0, so don't skip it here
+            try:
+                with nova_context.target_cell(context, cell):
+                    cell_service = objects.Service.get_by_id(context,
+                                                             service_id)
+            except exception.ServiceNotFound:
+                # NOTE(danms): Keep looking in other cells
+                continue
+            if service and cell_service:
+                raise exception.ServiceNotUnique()
+            service = cell_service
+            found_in_cell = cell
+
+        if service:
+            # NOTE(danms): Set the cell on the context so it remains
+            # when we return to our caller
+            nova_context.set_target_cell(context, found_in_cell)
+            return service
+        else:
+            raise exception.ServiceNotFound(service_id=service_id)
+
     def service_get_by_id(self, context, service_id):
         """Get service entry for the given service id."""
-        return objects.Service.get_by_id(context, service_id)
+        return self._find_service(context, service_id)
 
+    @target_host_cell
     def service_get_by_compute_host(self, context, host_name):
         """Get service entry for the given compute hostname."""
         return objects.Service.get_by_compute_host(context, host_name)
@@ -4406,6 +4467,7 @@ class HostAPI(base.Base):
         service.save()
         return service
 
+    @target_host_cell
     def service_update(self, context, host_name, binary, params_to_update):
         """Enable / Disable a service.
 
@@ -4417,12 +4479,14 @@ class HostAPI(base.Base):
 
     def _service_delete(self, context, service_id):
         """Performs the actual Service deletion operation."""
-        objects.Service.get_by_id(context, service_id).destroy()
+        service = self._find_service(context, service_id)
+        service.destroy()
 
     def service_delete(self, context, service_id):
         """Deletes the specified service."""
         self._service_delete(context, service_id)
 
+    @target_host_cell
     def instance_get_all_by_host(self, context, host_name):
         """Return all instances on the given host."""
         return objects.InstanceList.get_by_host(context, host_name)
@@ -4440,15 +4504,65 @@ class HostAPI(base.Base):
 
     def compute_node_get(self, context, compute_id):
         """Return compute node entry for particular integer ID."""
-        return objects.ComputeNode.get_by_id(context, int(compute_id))
+        load_cells()
+
+        # NOTE(danms): Unfortunately this API exposes database identifiers
+        # which means we really can't do something efficient here
+        for cell in CELLS:
+            if cell.uuid == objects.CellMapping.CELL0_UUID:
+                continue
+            with nova_context.target_cell(context, cell):
+                try:
+                    return objects.ComputeNode.get_by_id(context,
+                                                         int(compute_id))
+                except exception.ComputeHostNotFound:
+                    # NOTE(danms): Keep looking in other cells
+                    continue
+
+        raise exception.ComputeHostNotFound(host=compute_id)
 
     def compute_node_get_all(self, context, limit=None, marker=None):
-        return objects.ComputeNodeList.get_by_pagination(
-            context, limit=limit, marker=marker)
+        load_cells()
+
+        computes = []
+        for cell in CELLS:
+            if cell.uuid == objects.CellMapping.CELL0_UUID:
+                continue
+            with nova_context.target_cell(context, cell):
+                try:
+                    cell_computes = objects.ComputeNodeList.get_by_pagination(
+                        context, limit=limit, marker=marker)
+                except exception.MarkerNotFound:
+                    # NOTE(danms): Keep looking through cells
+                    continue
+                computes.extend(cell_computes)
+                # NOTE(danms): We must have found the marker, so continue on
+                # without one
+                marker = None
+                if limit:
+                    limit -= len(cell_computes)
+                    if limit <= 0:
+                        break
+
+        if marker is not None and len(computes) == 0:
+            # NOTE(danms): If we did not find the marker in any cell,
+            # mimic the db_api behavior here.
+            raise exception.MarkerNotFound(marker=marker)
+
+        return objects.ComputeNodeList(objects=computes)
 
     def compute_node_search_by_hypervisor(self, context, hypervisor_match):
-        return objects.ComputeNodeList.get_by_hypervisor(context,
-                                                         hypervisor_match)
+        load_cells()
+
+        computes = []
+        for cell in CELLS:
+            if cell.uuid == objects.CellMapping.CELL0_UUID:
+                continue
+            with nova_context.target_cell(context, cell):
+                cell_computes = objects.ComputeNodeList.get_by_hypervisor(
+                    context, hypervisor_match)
+            computes.extend(cell_computes)
+        return objects.ComputeNodeList(objects=computes)
 
     def compute_node_statistics(self, context):
         return self.db.compute_node_statistics(context)

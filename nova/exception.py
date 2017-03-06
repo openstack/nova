@@ -431,6 +431,10 @@ class ServiceUnavailable(Invalid):
     msg_fmt = _("Service is unavailable at this time.")
 
 
+class ServiceNotUnique(Invalid):
+    msg_fmt = _("More than one possible service found.")
+
+
 class ComputeResourcesUnavailable(ServiceUnavailable):
     msg_fmt = _("Insufficient compute resources: %(reason)s.")
 

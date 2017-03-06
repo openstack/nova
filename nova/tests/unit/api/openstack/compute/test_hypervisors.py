@@ -447,6 +447,17 @@ class HypervisorsTestV21(test.NoDBTestCase):
             mock_get_uptime.assert_called_once_with(
                 mock.ANY, self.TEST_HYPERS_OBJ[0].host)
 
+    def test_uptime_hypervisor_not_mapped(self):
+        with mock.patch.object(self.controller.host_api, 'get_host_uptime',
+                side_effect=exception.HostMappingNotFound(name='dummy')
+                ) as mock_get_uptime:
+            req = self._get_request(True)
+            self.assertRaises(exc.HTTPBadRequest,
+                              self.controller.uptime, req,
+                              self.TEST_HYPERS_OBJ[0].id)
+            mock_get_uptime.assert_called_once_with(
+                mock.ANY, self.TEST_HYPERS_OBJ[0].host)
+
     def test_search(self):
         req = self._get_request(True)
         result = self.controller.search(req, 'hyper')
@@ -487,6 +498,14 @@ class HypervisorsTestV21(test.NoDBTestCase):
             for server in servers:
                 del server['name']
         self.assertEqual(dict(hypervisors=expected_dict), result)
+
+    def test_servers_not_mapped(self):
+        req = self._get_request(True)
+        with mock.patch.object(self.controller.host_api,
+                               'instance_get_all_by_host') as m:
+            m.side_effect = exception.HostMappingNotFound
+            self.assertRaises(exc.HTTPNotFound,
+                              self.controller.servers, req, 'hyper')
 
     def test_servers_non_id(self):
         with mock.patch.object(self.controller.host_api,

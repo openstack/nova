@@ -313,17 +313,47 @@ class ComputeHostAPITestCase(test.TestCase):
 
         _do_test()
 
-    def test_service_delete(self):
-        with test.nested(
-            mock.patch.object(objects.Service, 'get_by_id',
-                              return_value=objects.Service()),
-            mock.patch.object(objects.Service, 'destroy')
-        ) as (
-            get_by_id, destroy
-        ):
-            self.host_api.service_delete(self.ctxt, 1)
-            get_by_id.assert_called_once_with(self.ctxt, 1)
-            destroy.assert_called_once_with()
+    @mock.patch('nova.context.set_target_cell')
+    @mock.patch('nova.compute.api.load_cells')
+    @mock.patch('nova.objects.Service.get_by_id')
+    def test_service_delete(self, get_by_id, load_cells, set_target):
+        compute_api.CELLS = [
+            objects.CellMapping(),
+            objects.CellMapping(),
+            objects.CellMapping(),
+        ]
+
+        service = mock.MagicMock()
+        get_by_id.side_effect = [exception.ServiceNotFound(service_id=1),
+                                 service,
+                                 exception.ServiceNotFound(service_id=1)]
+        self.host_api.service_delete(self.ctxt, 1)
+        get_by_id.assert_has_calls([mock.call(self.ctxt, 1),
+                                    mock.call(self.ctxt, 1),
+                                    mock.call(self.ctxt, 1)])
+        service.destroy.assert_called_once_with()
+        set_target.assert_called_once_with(self.ctxt, compute_api.CELLS[1])
+
+    @mock.patch('nova.context.set_target_cell')
+    @mock.patch('nova.compute.api.load_cells')
+    @mock.patch('nova.objects.Service.get_by_id')
+    def test_service_delete_ambiguous(self, get_by_id, load_cells, set_target):
+        compute_api.CELLS = [
+            objects.CellMapping(),
+            objects.CellMapping(),
+            objects.CellMapping(),
+        ]
+
+        service1 = mock.MagicMock()
+        service2 = mock.MagicMock()
+        get_by_id.side_effect = [exception.ServiceNotFound(service_id=1),
+                                 service1,
+                                 service2]
+        self.assertRaises(exception.ServiceNotUnique,
+                          self.host_api.service_delete, self.ctxt, 1)
+        self.assertFalse(service1.destroy.called)
+        self.assertFalse(service2.destroy.called)
+        self.assertFalse(set_target.called)
 
     def test_service_delete_compute_in_aggregate(self):
         compute = self.host_api.db.service_create(self.ctxt,
@@ -351,6 +381,10 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
 
     @testtools.skip('cellsv1 does not use this')
     def test_service_get_all_cells(self):
+        pass
+
+    @testtools.skip('cellsv1 does not use this')
+    def test_service_delete_ambiguous(self):
         pass
 
     def test_service_get_all_no_zones(self):

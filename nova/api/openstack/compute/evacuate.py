@@ -108,7 +108,8 @@ class EvacuateController(wsgi.Controller):
         if host is not None:
             try:
                 self.host_api.service_get_by_compute_host(context, host)
-            except exception.ComputeHostNotFound:
+            except (exception.ComputeHostNotFound,
+                    exception.HostMappingNotFound):
                 msg = _("Compute host %s not found.") % host
                 raise exc.HTTPNotFound(explanation=msg)
 

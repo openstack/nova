@@ -47,6 +47,8 @@ def fake_compute_api_get(self, context, instance_id, **kwargs):
 def fake_service_get_by_compute_host(self, context, host):
     if host == 'bad-host':
         raise exception.ComputeHostNotFound(host=host)
+    elif host == 'unmapped-host':
+        raise exception.HostMappingNotFound(name=host)
     else:
         return {
             'host_name': host,
@@ -151,6 +153,12 @@ class EvacuateTestV21(test.NoDBTestCase):
     def test_evacuate_instance_with_bad_target(self):
         self._check_evacuate_failure(webob.exc.HTTPNotFound,
                                      {'host': 'bad-host',
+                                      'onSharedStorage': 'False',
+                                      'adminPass': 'MyNewPass'})
+
+    def test_evacuate_instance_with_unmapped_target(self):
+        self._check_evacuate_failure(webob.exc.HTTPNotFound,
+                                     {'host': 'unmapped-host',
                                       'onSharedStorage': 'False',
                                       'adminPass': 'MyNewPass'})
 

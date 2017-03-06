@@ -211,7 +211,8 @@ class HypervisorsController(wsgi.Controller):
             uptime = self.host_api.get_host_uptime(context, host)
         except NotImplementedError:
             common.raise_feature_not_supported()
-        except exception.ComputeServiceUnavailable as e:
+        except (exception.ComputeServiceUnavailable,
+                exception.HostMappingNotFound) as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
 
         service = self.host_api.service_get_by_compute_host(context, host)
@@ -246,10 +247,13 @@ class HypervisorsController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=msg)
         hypervisors = []
         for compute_node in compute_nodes:
-            instances = self.host_api.instance_get_all_by_host(context,
+            try:
+                instances = self.host_api.instance_get_all_by_host(context,
                     compute_node.host)
-            service = self.host_api.service_get_by_compute_host(
-                context, compute_node.host)
+                service = self.host_api.service_get_by_compute_host(
+                    context, compute_node.host)
+            except exception.HostMappingNotFound as e:
+                raise webob.exc.HTTPNotFound(explanation=e.format_message())
             hyp = self._view_hypervisor(compute_node, service, False, req,
                                         instances)
             hypervisors.append(hyp)
