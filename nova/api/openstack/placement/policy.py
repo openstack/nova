@@ -60,8 +60,8 @@ def placement_authorize(context, action, target=None):
     """
     placement_init()
     if target is None:
-        target = {'project_id': context.tenant,
-                  'user_id': context.user}
+        target = {'project_id': context.project_id,
+                  'user_id': context.user_id}
     credentials = context.to_policy_values()
     # TODO(alaski): Change this to use authorize() when rules are registered.
     # noqa the following line because a hacking check disallows using enforce.
