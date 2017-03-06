@@ -52,6 +52,16 @@ tests:
   response_strings:
     - The method DELETE is not allowed for this resource.
 
+- name: 405 on bad options method on app
+  OPTIONS: /resource_providers
+  status: 405
+  response_headers:
+      allow: /(GET|POST), (POST|GET)/
+  response_json_paths:
+      $.errors[0].title: Method Not Allowed
+  response_strings:
+    - The method OPTIONS is not allowed for this resource.
+
 - name: bad accept resource providers
   GET: /resource_providers
   request_headers:

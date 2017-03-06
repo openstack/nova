@@ -12,7 +12,8 @@
 """Deployment handling for Placmenent API."""
 
 from keystonemiddleware import auth_token
-from oslo_middleware import request_id
+import oslo_middleware
+from oslo_middleware import cors
 
 from nova.api import openstack as common_api
 from nova.api.openstack.placement import auth
@@ -41,8 +42,18 @@ def deploy(conf, project_name):
         auth_middleware = auth_token.filter_factory(
             {}, oslo_config_project=project_name)
 
+    # Pass in our CORS config, if any, manually as that's a)
+    # explicit, b) makes testing more straightfoward, c) let's
+    # us control the use of cors by the presence of its config.
+    conf.register_opts(cors.CORS_OPTS, 'cors')
+    if conf.cors.allowed_origin:
+        cors_middleware = oslo_middleware.CORS.factory(
+            {}, **conf.cors)
+    else:
+        cors_middleware = None
+
     context_middleware = auth.PlacementKeystoneContext
-    req_id_middleware = request_id.RequestId
+    req_id_middleware = oslo_middleware.RequestId
     microversion_middleware = microversion.MicroversionMiddleware
     fault_wrap = common_api.FaultWrapper
     request_log = requestlog.RequestLog
@@ -62,9 +73,11 @@ def deploy(conf, project_name):
                        request_log,
                        context_middleware,
                        auth_middleware,
+                       cors_middleware,
                        req_id_middleware,
                        ):
-        application = middleware(application)
+        if middleware:
+            application = middleware(application)
 
     return application
 
