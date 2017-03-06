@@ -355,8 +355,8 @@ class TestCreateGlanceClient(test.NoDBTestCase):
                 'X-Identity-Status': 'Confirmed'
             }
         }
-        glance._glanceclient_from_endpoint(ctx, expected_endpoint)
-        init_mock.assert_called_once_with('1', expected_endpoint,
+        glance._glanceclient_from_endpoint(ctx, expected_endpoint, 2)
+        init_mock.assert_called_once_with('2', expected_endpoint,
                                           **expected_params)
 
         # Test the version is properly passed to glanceclient.
@@ -372,7 +372,7 @@ class TestCreateGlanceClient(test.NoDBTestCase):
                 'X-Identity-Status': 'Confirmed'
             }
         }
-        glance._glanceclient_from_endpoint(ctx, expected_endpoint, version=2)
+        glance._glanceclient_from_endpoint(ctx, expected_endpoint, 2)
         init_mock.assert_called_once_with('2', expected_endpoint,
                                           **expected_params)
 
@@ -380,8 +380,8 @@ class TestCreateGlanceClient(test.NoDBTestCase):
         init_mock.reset_mock()
 
         expected_endpoint = 'http://[host4]:9295'
-        glance._glanceclient_from_endpoint(ctx, expected_endpoint)
-        init_mock.assert_called_once_with('1', expected_endpoint,
+        glance._glanceclient_from_endpoint(ctx, expected_endpoint, 2)
+        init_mock.assert_called_once_with('2', expected_endpoint,
                                           **expected_params)
 
 
@@ -511,16 +511,16 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
         self.flags(ca_file='foo.cert', cert_file='bar.cert',
                    key_file='wut.key', group='ssl')
         ctxt = mock.sentinel.ctx
-        glance._glanceclient_from_endpoint(ctxt, 'https://host4:9295')
+        glance._glanceclient_from_endpoint(ctxt, 'https://host4:9295', 2)
         client_mock.assert_called_once_with(
-            '1', 'https://host4:9295', insecure=False, ssl_compression=False,
+            '2', 'https://host4:9295', insecure=False, ssl_compression=False,
             cert_file='bar.cert', key_file='wut.key', cacert='foo.cert',
             identity_headers=mock.ANY)
 
 
 class TestDownloadNoDirectUri(test.NoDBTestCase):
 
-    """Tests the download method of the GlanceImageService when the
+    """Tests the download method of the GlanceImageServiceV2 when the
     default of not allowing direct URI transfers is set.
     """
 
@@ -593,7 +593,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
     def test_download_data_dest_path_v2(self, show_mock, open_mock):
         # NOTE(jaypipes): This really shouldn't be allowed, but because of the
-        # horrible design of the download() method in GlanceImageService, no
+        # horrible design of the download() method in GlanceImageServiceV2, no
         # error is raised, and the dst_path is ignored...
         # #TODO(jaypipes): Fix the aforementioned horrible design of
         # the download() method.
@@ -1005,7 +1005,7 @@ class TestIsImageAvailable(test.NoDBTestCase):
 
 class TestShow(test.NoDBTestCase):
 
-    """Tests the show method of the GlanceImageService."""
+    """Tests the show method of the GlanceImageServiceV2."""
     @mock.patch('nova.image.glance._translate_from_glance')
     @mock.patch('nova.image.glance._is_image_available')
     def test_show_success_v2(self, is_avail_mock, trans_from_mock):
@@ -1170,7 +1170,7 @@ class TestShow(test.NoDBTestCase):
 
 class TestDetail(test.NoDBTestCase):
 
-    """Tests the detail method of the GlanceImageService."""
+    """Tests the detail method of the GlanceImageServiceV2."""
 
     @mock.patch('nova.image.glance._extract_query_params_v2')
     @mock.patch('nova.image.glance._translate_from_glance')
@@ -1252,7 +1252,7 @@ class TestDetail(test.NoDBTestCase):
 
 class TestCreate(test.NoDBTestCase):
 
-    """Tests the create method of the GlanceImageService."""
+    """Tests the create method of the GlanceImageServiceV2."""
 
     @mock.patch('nova.image.glance._translate_from_glance')
     @mock.patch('nova.image.glance._translate_to_glance')
@@ -1421,7 +1421,7 @@ class TestCreate(test.NoDBTestCase):
 
 class TestUpdate(test.NoDBTestCase):
 
-    """Tests the update method of the GlanceImageService."""
+    """Tests the update method of the GlanceImageServiceV2."""
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
     @mock.patch('nova.image.glance._translate_from_glance')
     @mock.patch('nova.image.glance._translate_to_glance')
@@ -1545,7 +1545,7 @@ class TestUpdate(test.NoDBTestCase):
 
 class TestDelete(test.NoDBTestCase):
 
-    """Tests the delete method of the GlanceImageService."""
+    """Tests the delete method of the GlanceImageServiceV2."""
 
     def test_delete_success_v2(self):
         client = mock.MagicMock()
@@ -1585,7 +1585,7 @@ class TestGlanceApiServers(test.NoDBTestCase):
 
 
 class TestUpdateGlanceImage(test.NoDBTestCase):
-    @mock.patch('nova.image.glance.GlanceImageService')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2')
     def test_start(self, mock_glance_image_service):
         consumer = glance.UpdateGlanceImage(
             'context', 'id', 'metadata', 'stream')

@@ -75,10 +75,6 @@ class ImageSizeTestV21(test.NoDBTestCase):
     def setUp(self):
         super(ImageSizeTestV21, self).setUp()
 
-        self.stub_out('nova.image.glance.GlanceImageService.show',
-                      fake_show)
-        self.stub_out('nova.image.glance.GlanceImageService.detail',
-                      fake_detail)
         self.stub_out('nova.image.glance.GlanceImageServiceV2.show',
                       fake_show)
         self.stub_out('nova.image.glance.GlanceImageServiceV2.detail',
