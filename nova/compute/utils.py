@@ -251,8 +251,8 @@ def get_value_from_system_metadata(instance, key, type, default):
 def notify_usage_exists(notifier, context, instance_ref, current_period=False,
                         ignore_missing_network_data=True,
                         system_metadata=None, extra_usage_info=None):
-    """Generates 'exists' notification for an instance for usage auditing
-    purposes.
+    """Generates 'exists' unversioned legacy notification for an instance for
+    usage auditing purposes.
 
     :param notifier: a messaging.Notifier
 
@@ -294,7 +294,10 @@ def notify_usage_exists(notifier, context, instance_ref, current_period=False,
 def notify_about_instance_usage(notifier, context, instance, event_suffix,
                                 network_info=None, system_metadata=None,
                                 extra_usage_info=None, fault=None):
-    """Send a notification about an instance.
+    """Send an unversioned legacy notification about an instance.
+
+    All new notifications should use notify_about_instance_action which sends
+    a versioned notification.
 
     :param notifier: a messaging.Notifier
     :param event_suffix: Event type like "delete.start" or "exists"
