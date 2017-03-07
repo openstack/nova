@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    Fixes `bug 1670522`_ which was a regression in the 15.0.0 Ocata release.
+    For compute nodes running the libvirt driver with ``virt_type`` not set to
+    "kvm" or "qemu", i.e. "xen", creating servers will fail by default if
+    libvirt >= 1.3.3 and QEMU >= 2.7.0 without this fix.
+
+    .. _bug 1670522: https://bugs.launchpad.net/nova/+bug/1670522

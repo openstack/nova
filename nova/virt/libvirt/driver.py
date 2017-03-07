@@ -4401,8 +4401,10 @@ class LibvirtDriver(driver.ComputeDriver):
         if virt_type == 'parallels':
             pass
         elif virt_type not in ("qemu", "kvm"):
+            log_path = self._get_console_log_path(instance)
             self._create_pty_device(guest_cfg,
-                                    vconfig.LibvirtConfigGuestConsole)
+                                    vconfig.LibvirtConfigGuestConsole,
+                                    log_path=log_path)
         elif (virt_type in ("qemu", "kvm") and
                   self._is_s390x_guest(image_meta)):
             self._create_consoles_s390x(guest_cfg, instance,
