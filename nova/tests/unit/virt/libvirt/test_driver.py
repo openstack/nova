@@ -17527,6 +17527,8 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         self.inst = {}
         self.inst['uuid'] = uuids.fake
         self.inst['id'] = '1'
+        # system_metadata is needed for objects.Instance.image_meta conversion
+        self.inst['system_metadata'] = {}
 
         # create domain info
         self.dom_xml = """
@@ -17664,12 +17666,15 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         mock_refresh_connection_info.assert_called_once_with(self.c, instance,
             self.drvr._volume_api, self.drvr)
 
-    def test_volume_snapshot_create(self, quiesce=True):
+    def _test_volume_snapshot_create(self, quiesce=True, can_quiesce=True,
+                                     quiesce_required=False):
         """Test snapshot creation with file-based disk."""
         self.flags(instance_name_template='instance-%s')
         self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
         self.mox.StubOutWithMock(self.drvr, '_volume_api')
 
+        if quiesce_required:
+            self.inst['system_metadata']['image_os_require_quiesce'] = True
         instance = objects.Instance(**self.inst)
 
         new_file = 'new-file'
@@ -17700,23 +17705,54 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         snap_flags_q = (snap_flags |
                         fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE)
 
-        if quiesce:
-            domain.snapshotCreateXML(snap_xml_src, flags=snap_flags_q)
+        can_quiesce_mock = mock.Mock()
+        if can_quiesce:
+            can_quiesce_mock.return_value = None
+            if quiesce:
+                domain.snapshotCreateXML(snap_xml_src, flags=snap_flags_q)
+            else:
+                # we can quiesce but snapshot with quiesce fails
+                domain.snapshotCreateXML(snap_xml_src, flags=snap_flags_q).\
+                    AndRaise(fakelibvirt.libvirtError(
+                                'quiescing failed, no qemu-ga'))
+                if not quiesce_required:
+                    # quiesce is not required so try snapshot again without it
+                    domain.snapshotCreateXML(snap_xml_src, flags=snap_flags)
         else:
-            domain.snapshotCreateXML(snap_xml_src, flags=snap_flags_q).\
-                AndRaise(fakelibvirt.libvirtError(
-                            'quiescing failed, no qemu-ga'))
-            domain.snapshotCreateXML(snap_xml_src, flags=snap_flags)
+            can_quiesce_mock.side_effect = exception.QemuGuestAgentNotEnabled
+            if not quiesce_required:
+                # quiesce is not required so try snapshot again without it
+                domain.snapshotCreateXML(snap_xml_src, flags=snap_flags)
+
+        self.drvr._can_quiesce = can_quiesce_mock
 
         self.mox.ReplayAll()
 
         guest = libvirt_guest.Guest(domain)
-        self.drvr._volume_snapshot_create(self.c, instance, guest,
-                                          self.volume_uuid, new_file)
+        if quiesce_required and (not quiesce or not can_quiesce):
+            # If we can't quiesce but it's required by the image then we should
+            # fail.
+            if not quiesce:
+                # snapshot + quiesce failed which is a libvirtError
+                expected_error = fakelibvirt.libvirtError
+            else:
+                # quiesce is required but we can't do it
+                expected_error = exception.QemuGuestAgentNotEnabled
+            self.assertRaises(expected_error,
+                              self.drvr._volume_snapshot_create,
+                              self.c, instance, guest, self.volume_uuid,
+                              new_file)
+        else:
+            self.drvr._volume_snapshot_create(self.c, instance, guest,
+                                              self.volume_uuid, new_file)
+
+        # instance.image_meta generates a new objects.ImageMeta object each
+        # time it's called so just use a mock.ANY for the image_meta arg.
+        can_quiesce_mock.assert_called_once_with(instance, mock.ANY)
 
         self.mox.VerifyAll()
 
-    def test_volume_snapshot_create_libgfapi(self, quiesce=True):
+    def test_volume_snapshot_create_libgfapi(self):
         """Test snapshot creation with libgfapi network disk."""
         self.flags(instance_name_template = 'instance-%s')
         self.flags(qemu_allowed_storage_drivers = ['gluster'], group='libvirt')
@@ -17770,24 +17806,38 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         snap_flags_q = (snap_flags |
                         fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE)
 
-        if quiesce:
-            domain.snapshotCreateXML(snap_xml_src, flags=snap_flags_q)
-        else:
-            domain.snapshotCreateXML(snap_xml_src, flags=snap_flags_q).\
-                AndRaise(fakelibvirt.libvirtError(
-                    'quiescing failed, no qemu-ga'))
-            domain.snapshotCreateXML(snap_xml_src, flags=snap_flags)
+        domain.snapshotCreateXML(snap_xml_src, flags=snap_flags_q)
 
         self.mox.ReplayAll()
 
         guest = libvirt_guest.Guest(domain)
-        self.drvr._volume_snapshot_create(self.c, instance, guest,
-                                          self.volume_uuid, new_file)
+        with mock.patch.object(self.drvr, '_can_quiesce', return_value=None):
+            self.drvr._volume_snapshot_create(self.c, instance, guest,
+                                              self.volume_uuid, new_file)
 
         self.mox.VerifyAll()
 
+    def test_volume_snapshot_create_cannot_quiesce(self):
+        # We can't quiesce so we don't try.
+        self._test_volume_snapshot_create(can_quiesce=False)
+
+    def test_volume_snapshot_create_cannot_quiesce_quiesce_required(self):
+        # We can't quiesce but it's required so we fail.
+        self._test_volume_snapshot_create(can_quiesce=False,
+                                          quiesce_required=True)
+
+    def test_volume_snapshot_create_can_quiesce_quiesce_required_fails(self):
+        # We can quiesce but it fails and it's required so we fail.
+        self._test_volume_snapshot_create(
+            quiesce=False, can_quiesce=True, quiesce_required=True)
+
     def test_volume_snapshot_create_noquiesce(self):
-        self.test_volume_snapshot_create(quiesce=False)
+        # We can quiesce but it fails but it's not required so we don't fail.
+        self._test_volume_snapshot_create(quiesce=False)
+
+    def test_volume_snapshot_create_noquiesce_cannot_quiesce(self):
+        # We can't quiesce so we don't try, and if we did we'd fail.
+        self._test_volume_snapshot_create(quiesce=False, can_quiesce=False)
 
     @mock.patch.object(host.Host,
                        'has_min_version', return_value=True)
