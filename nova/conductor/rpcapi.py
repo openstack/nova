@@ -190,8 +190,8 @@ class ConductorAPI(object):
 
     * 3.0  - Drop backwards compatibility
 
-    ... Liberty, Mitaka, and Newton support message version 3.0.  So, any
-    changes to existing methods in 3.x after that point should be done such
+    ... Liberty, Mitaka, Newton, and Ocata support message version 3.0.  So,
+    any changes to existing methods in 3.x after that point should be done such
     that they can handle the version_cap being set to 3.0.
 
     * Remove provider_fw_rule_get_all()
@@ -206,6 +206,7 @@ class ConductorAPI(object):
         'liberty': '3.0',
         'mitaka': '3.0',
         'newton': '3.0',
+        'ocata': '3.0',
     }
 
     def __init__(self):
