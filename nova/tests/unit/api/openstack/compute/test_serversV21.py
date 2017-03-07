@@ -3806,20 +3806,6 @@ class ServersControllerCreateTestV237(test.NoDBTestCase):
         self.assertRaises(exception.ValidationError, self._create_server,
                           [{'uuid': uuid}])
 
-    @mock.patch.object(objects.Service, 'get_minimum_version',
-                       return_value=11)
-    def test_validate_auto_or_none_network_request_old_computes(self,
-                                                                mock_get_ver):
-        """Tests that the network request is nulled out when the minimum
-           nova-compute is not running new enough code to support 'auto'.
-        """
-        req_nets = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(network_id='auto')])
-        self.assertIsNone(
-            self.controller._validate_auto_or_none_network_request(
-                req_nets))
-        mock_get_ver.assert_called_once_with(mock.ANY, 'nova-compute')
-
 
 class ServersControllerCreateTestWithMock(test.TestCase):
     image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
