@@ -6,6 +6,7 @@ hacking!=0.13.0,<0.14,>=0.12.0 # Apache-2.0
 coverage>=4.0 # Apache-2.0
 ddt>=1.0.1 # MIT
 fixtures>=3.0.0 # Apache-2.0/BSD
+flake8-import-order==0.11 # LGPLv3
 mock>=2.0 # BSD
 mox3!=0.19.0,>=0.7.0 # Apache-2.0
 psycopg2>=2.5 # LGPL/ZPL

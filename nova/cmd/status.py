@@ -17,13 +17,14 @@ CLI interface for nova status commands.
 """
 
 from __future__ import print_function
+
+# enum comes from the enum34 package if python < 3.4, else it's stdlib
+import enum
 import functools
 import sys
 import textwrap
 import traceback
 
-# enum comes from the enum34 package if python < 3.4, else it's stdlib
-import enum
 from keystoneauth1 import exceptions as ks_exc
 from keystoneauth1 import loading as keystone
 from oslo_config import cfg

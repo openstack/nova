@@ -16,12 +16,12 @@
 import functools
 import math
 import re
-from six.moves.urllib import parse
 import time
 
 from keystoneauth1 import exceptions as ks_exc
 from keystoneauth1 import loading as keystone
 from oslo_log import log as logging
+from six.moves.urllib import parse
 
 from nova.compute import utils as compute_utils
 import nova.conf

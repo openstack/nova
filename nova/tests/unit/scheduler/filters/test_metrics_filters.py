@@ -11,6 +11,7 @@
 #    under the License.
 
 import datetime
+
 from nova import objects
 from nova.scheduler.filters import metrics_filter
 from nova import test

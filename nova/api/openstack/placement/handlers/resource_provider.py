@@ -12,8 +12,8 @@
 """Placement API handlers for resource providers."""
 
 import copy
-import jsonschema
 
+import jsonschema
 from oslo_db import exception as db_exc
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils

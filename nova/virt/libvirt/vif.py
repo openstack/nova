@@ -19,8 +19,8 @@
 """VIF drivers for libvirt."""
 
 import copy
-
 import os
+
 import os_vif
 from os_vif import exception as osv_exception
 from oslo_concurrency import processutils

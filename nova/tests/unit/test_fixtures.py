@@ -14,7 +14,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import sqlalchemy
 import sys
 
 import fixtures as fx
@@ -22,6 +21,7 @@ import mock
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import uuidutils
+import sqlalchemy
 import testtools
 
 from nova.compute import rpcapi as compute_rpcapi

@@ -18,7 +18,6 @@ from collections import OrderedDict
 import contextlib
 import copy
 import datetime
-import ddt
 import errno
 import glob
 import os
@@ -29,6 +28,7 @@ import signal
 import threading
 import time
 
+import ddt
 import eventlet
 from eventlet import greenthread
 import fixtures

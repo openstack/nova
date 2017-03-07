@@ -18,6 +18,7 @@
 """
 
 from collections import deque
+
 from lxml import etree
 from oslo_log import log as logging
 

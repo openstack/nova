@@ -20,19 +20,19 @@ Allows overriding of flags for use of fakes, and some black magic for
 inline callbacks.
 
 """
-import contextlib
 
-import datetime
-import eventlet
+import eventlet  # noqa
 eventlet.monkey_patch(os=False)
 
+import contextlib
 import copy
+import datetime
 import inspect
-import mock
 import os
 import pprint
 
 import fixtures
+import mock
 from oslo_cache import core as cache
 from oslo_concurrency import lockutils
 from oslo_config import cfg

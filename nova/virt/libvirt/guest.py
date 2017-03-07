@@ -27,6 +27,8 @@ higher level APIs around the raw libvirt API. These APIs are
 then used by all the other libvirt related classes
 """
 
+import time
+
 from lxml import etree
 from oslo_log import log as logging
 from oslo_service import loopingcall
@@ -34,7 +36,6 @@ from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import importutils
 import six
-import time
 
 from nova.compute import power_state
 from nova import exception
