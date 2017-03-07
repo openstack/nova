@@ -18,6 +18,7 @@ from wsgi_intercept import interceptor
 
 from nova.api.openstack.placement import deploy
 from nova import conf
+from nova import exception
 from nova import objects
 from nova.objects import fields
 from nova.scheduler.client import report
@@ -162,3 +163,19 @@ class SchedulerReportClientTests(test.TestCase):
             resp = self.client.get(inventory_url)
             inventory_data = resp.json()['inventories']
             self.assertEqual({}, inventory_data)
+
+            # Try setting some invalid inventory and make sure the report
+            # client raises the expected error.
+            inv_data = {
+                'BAD_FOO': {
+                    'total': 100,
+                    'reserved': 0,
+                    'min_unit': 1,
+                    'max_unit': 100,
+                    'step_size': 1,
+                    'allocation_ratio': 1.0,
+                },
+            }
+            self.assertRaises(exception.InvalidResourceClass,
+                              self.client.set_inventory_for_provider,
+                              self.compute_uuid, self.compute_name, inv_data)
