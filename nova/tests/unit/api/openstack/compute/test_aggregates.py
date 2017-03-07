@@ -27,7 +27,6 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-from nova.tests.unit import matchers
 from nova.tests import uuidsentinel
 
 
@@ -105,16 +104,17 @@ class AggregateTestCaseV21(test.NoDBTestCase):
         self._set_up()
 
     def test_index(self):
-        def stub_list_aggregates(context):
+        def _list_aggregates(context):
             if context is None:
                 raise Exception()
             return AGGREGATE_LIST
-        self.stubs.Set(self.controller.api, 'get_aggregate_list',
-                       stub_list_aggregates)
 
-        result = self.controller.index(self.req)
-        result = _transform_aggregate_list_azs(result['aggregates'])
-        self._assert_agg_data(AGGREGATE_LIST, _make_agg_list(result))
+        with mock.patch.object(self.controller.api, 'get_aggregate_list',
+                               side_effect=_list_aggregates) as mock_list:
+            result = self.controller.index(self.req)
+            result = _transform_aggregate_list_azs(result['aggregates'])
+            self._assert_agg_data(AGGREGATE_LIST, _make_agg_list(result))
+            self.assertTrue(mock_list.called)
 
     def test_index_no_admin(self):
         self.assertRaises(exception.PolicyNotAuthorized,
@@ -122,37 +122,29 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                           self.user_req)
 
     def test_create(self):
-        def stub_create_aggregate(context, name, availability_zone):
-            self.assertEqual(context, self.context, "context")
-            self.assertEqual("test", name, "name")
-            self.assertEqual("nova1", availability_zone, "availability_zone")
-            return AGGREGATE
-        self.stubs.Set(self.controller.api, "create_aggregate",
-                       stub_create_aggregate)
-
-        result = self.controller.create(self.req, body={"aggregate":
-                                          {"name": "test",
-                                           "availability_zone": "nova1"}})
-        result = _transform_aggregate_az(result['aggregate'])
-        self._assert_agg_data(FORMATTED_AGGREGATE, _make_agg_obj(result))
+        with mock.patch.object(self.controller.api, 'create_aggregate',
+                               return_value=AGGREGATE) as mock_create:
+            result = self.controller.create(self.req,
+                body={"aggregate": {"name": "test",
+                                    "availability_zone": "nova1"}})
+            result = _transform_aggregate_az(result['aggregate'])
+            self._assert_agg_data(FORMATTED_AGGREGATE, _make_agg_obj(result))
+            mock_create.assert_called_once_with(self.context, 'test', 'nova1')
 
     def test_create_no_admin(self):
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.controller.create, self.user_req,
-                          body={"aggregate":
-                              {"name": "test",
-                               "availability_zone": "nova1"}})
+                          body={"aggregate": {"name": "test",
+                                              "availability_zone": "nova1"}})
 
     def test_create_with_duplicate_aggregate_name(self):
-        def stub_create_aggregate(context, name, availability_zone):
-            raise exception.AggregateNameExists(aggregate_name=name)
-        self.stubs.Set(self.controller.api, "create_aggregate",
-                       stub_create_aggregate)
-
-        self.assertRaises(exc.HTTPConflict, self.controller.create,
-                          self.req, body={"aggregate":
-                                     {"name": "test",
-                                      "availability_zone": "nova1"}})
+        side_effect = exception.AggregateNameExists(aggregate_name="test")
+        with mock.patch.object(self.controller.api, 'create_aggregate',
+                               side_effect=side_effect) as mock_create:
+            self.assertRaises(exc.HTTPConflict, self.controller.create,
+                self.req, body={"aggregate": {"name": "test",
+                                              "availability_zone": "nova1"}})
+            mock_create.assert_called_once_with(self.context, 'test', 'nova1')
 
     @mock.patch.object(compute_api.AggregateAPI, 'create_aggregate')
     def test_create_with_unmigrated_aggregates(self, mock_create_aggregate):
@@ -166,19 +158,18 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                                       "availability_zone": "nova1"}})
 
     def test_create_with_incorrect_availability_zone(self):
-        def stub_create_aggregate(context, name, availability_zone):
-            raise exception.InvalidAggregateAction(action='create_aggregate',
-                                                   aggregate_id="'N/A'",
-                                                   reason='invalid zone')
-
-        self.stubs.Set(self.controller.api, "create_aggregate",
-                       stub_create_aggregate)
-
-        self.assertRaises(exc.HTTPBadRequest,
-                          self.controller.create,
-                          self.req, body={"aggregate":
-                                     {"name": "test",
-                                      "availability_zone": "nova_bad"}})
+        side_effect = exception.InvalidAggregateAction(
+                        action='create_aggregate',
+                        aggregate_id="'N/A'",
+                        reason='invalid zone')
+        with mock.patch.object(self.controller.api, 'create_aggregate',
+                               side_effect=side_effect) as mock_create:
+            self.assertRaises(exc.HTTPBadRequest, self.controller.create,
+                self.req,
+                body={"aggregate": {"name": "test",
+                                    "availability_zone": "nova_bad"}})
+            mock_create.assert_called_once_with(self.context, 'test',
+                                                'nova_bad')
 
     def test_create_with_no_aggregate(self):
         self.assertRaises(self.bad_request, self.controller.create,
@@ -214,19 +205,14 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                                           "availability_zone": "nova1"}})
 
     def test_create_with_no_availability_zone(self):
-        def stub_create_aggregate(context, name, availability_zone):
-            self.assertEqual(context, self.context, "context")
-            self.assertEqual("test", name, "name")
-            self.assertIsNone(availability_zone, "availability_zone")
-            return AGGREGATE
-        self.stubs.Set(self.controller.api, "create_aggregate",
-                       stub_create_aggregate)
+        with mock.patch.object(self.controller.api, 'create_aggregate',
+                               return_value=AGGREGATE) as mock_create:
+            result = self.controller.create(self.req,
+                body={"aggregate": {"name": "test"}})
 
-        result = self.controller.create(self.req,
-                                        body={"aggregate": {"name": "test"}})
-
-        result = _transform_aggregate_az(result['aggregate'])
-        self._assert_agg_data(FORMATTED_AGGREGATE, _make_agg_obj(result))
+            result = _transform_aggregate_az(result['aggregate'])
+            self._assert_agg_data(FORMATTED_AGGREGATE, _make_agg_obj(result))
+            mock_create.assert_called_once_with(self.context, 'test', None)
 
     def test_create_with_null_name(self):
         self.assertRaises(self.bad_request, self.controller.create,
@@ -295,16 +281,12 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                                           "foo": 'bar'})
 
     def test_show(self):
-        def stub_get_aggregate(context, id):
-            self.assertEqual(context, self.context, "context")
-            self.assertEqual("1", id, "id")
-            return AGGREGATE
-        self.stubs.Set(self.controller.api, 'get_aggregate',
-                       stub_get_aggregate)
-
-        aggregate = self.controller.show(self.req, "1")
-        aggregate = _transform_aggregate_az(aggregate['aggregate'])
-        self._assert_agg_data(AGGREGATE, _make_agg_obj(aggregate))
+        with mock.patch.object(self.controller.api, 'get_aggregate',
+                               return_value=AGGREGATE) as mock_get:
+            aggregate = self.controller.show(self.req, "1")
+            aggregate = _transform_aggregate_az(aggregate['aggregate'])
+            self._assert_agg_data(AGGREGATE, _make_agg_obj(aggregate))
+            mock_get.assert_called_once_with(self.context, '1')
 
     def test_show_no_admin(self):
         self.assertRaises(exception.PolicyNotAuthorized,
@@ -312,31 +294,24 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                           self.user_req, "1")
 
     def test_show_with_invalid_id(self):
-        def stub_get_aggregate(context, id):
-            raise exception.AggregateNotFound(aggregate_id=2)
-
-        self.stubs.Set(self.controller.api, 'get_aggregate',
-                       stub_get_aggregate)
-
-        self.assertRaises(exc.HTTPNotFound,
-                          self.controller.show, self.req, "2")
+        side_effect = exception.AggregateNotFound(aggregate_id='2')
+        with mock.patch.object(self.controller.api, 'get_aggregate',
+                               side_effect=side_effect) as mock_get:
+            self.assertRaises(exc.HTTPNotFound, self.controller.show,
+                              self.req, "2")
+            mock_get.assert_called_once_with(self.context, '2')
 
     def test_update(self):
         body = {"aggregate": {"name": "new_name",
                               "availability_zone": "nova1"}}
+        with mock.patch.object(self.controller.api, 'update_aggregate',
+                               return_value=AGGREGATE) as mock_update:
+            result = self.controller.update(self.req, "1", body=body)
 
-        def stub_update_aggregate(context, aggregate, values):
-            self.assertEqual(context, self.context, "context")
-            self.assertEqual("1", aggregate, "aggregate")
-            self.assertEqual(body["aggregate"], values, "values")
-            return AGGREGATE
-        self.stubs.Set(self.controller.api, "update_aggregate",
-                       stub_update_aggregate)
-
-        result = self.controller.update(self.req, "1", body=body)
-
-        result = _transform_aggregate_az(result['aggregate'])
-        self._assert_agg_data(AGGREGATE, _make_agg_obj(result))
+            result = _transform_aggregate_az(result['aggregate'])
+            self._assert_agg_data(AGGREGATE, _make_agg_obj(result))
+            mock_update.assert_called_once_with(self.context, '1',
+                                                body["aggregate"])
 
     def test_update_no_admin(self):
         body = {"aggregate": {"availability_zone": "nova"}}
@@ -346,28 +321,25 @@ class AggregateTestCaseV21(test.NoDBTestCase):
 
     def test_update_with_only_name(self):
         body = {"aggregate": {"name": "new_name"}}
+        with mock.patch.object(self.controller.api, 'update_aggregate',
+                               return_value=AGGREGATE) as mock_update:
+            result = self.controller.update(self.req, "1", body=body)
 
-        def stub_update_aggregate(context, aggregate, values):
-            return AGGREGATE
-        self.stubs.Set(self.controller.api, "update_aggregate",
-                       stub_update_aggregate)
-
-        result = self.controller.update(self.req, "1", body=body)
-
-        result = _transform_aggregate_az(result['aggregate'])
-        self._assert_agg_data(AGGREGATE, _make_agg_obj(result))
+            result = _transform_aggregate_az(result['aggregate'])
+            self._assert_agg_data(AGGREGATE, _make_agg_obj(result))
+            mock_update.assert_called_once_with(self.context, '1',
+                                                body["aggregate"])
 
     def test_update_with_only_availability_zone(self):
         body = {"aggregate": {"availability_zone": "nova1"}}
+        with mock.patch.object(self.controller.api, 'update_aggregate',
+                               return_value=AGGREGATE) as mock_update:
+            result = self.controller.update(self.req, "1", body=body)
 
-        def stub_update_aggregate(context, aggregate, values):
-            return AGGREGATE
-        self.stubs.Set(self.controller.api, "update_aggregate",
-                       stub_update_aggregate)
-        result = self.controller.update(self.req, "1", body=body)
-
-        result = _transform_aggregate_az(result['aggregate'])
-        self._assert_agg_data(AGGREGATE, _make_agg_obj(result))
+            result = _transform_aggregate_az(result['aggregate'])
+            self._assert_agg_data(AGGREGATE, _make_agg_obj(result))
+            mock_update.assert_called_once_with(self.context, '1',
+                                                body["aggregate"])
 
     def test_update_with_no_updates(self):
         test_metadata = {"aggregate": {}}
@@ -421,26 +393,26 @@ class AggregateTestCaseV21(test.NoDBTestCase):
         self.assertEqual(result['aggregate']['name'], 'test')
 
     def test_update_with_bad_aggregate(self):
-        test_metadata = {"aggregate": {"name": "test_name"}}
+        body = {"aggregate": {"name": "test_name"}}
+        side_effect = exception.AggregateNotFound(aggregate_id=2)
 
-        def stub_update_aggregate(context, aggregate, metadata):
-            raise exception.AggregateNotFound(aggregate_id=2)
-        self.stubs.Set(self.controller.api, "update_aggregate",
-                       stub_update_aggregate)
-
-        self.assertRaises(exc.HTTPNotFound, self.controller.update,
-                self.req, "2", body=test_metadata)
+        with mock.patch.object(self.controller.api, 'update_aggregate',
+                               side_effect=side_effect) as mock_update:
+            self.assertRaises(exc.HTTPNotFound, self.controller.update,
+                self.req, "2", body=body)
+            mock_update.assert_called_once_with(self.context, '2',
+                                                body["aggregate"])
 
     def test_update_with_duplicated_name(self):
-        test_metadata = {"aggregate": {"name": "test_name"}}
+        body = {"aggregate": {"name": "test_name"}}
+        side_effect = exception.AggregateNameExists(aggregate_name="test_name")
 
-        def stub_update_aggregate(context, aggregate, metadata):
-            raise exception.AggregateNameExists(aggregate_name="test_name")
-
-        self.stubs.Set(self.controller.api, "update_aggregate",
-                       stub_update_aggregate)
-        self.assertRaises(exc.HTTPConflict, self.controller.update,
-                self.req, "2", body=test_metadata)
+        with mock.patch.object(self.controller.api, 'update_aggregate',
+                               side_effect=side_effect) as mock_update:
+            self.assertRaises(exc.HTTPConflict, self.controller.update,
+                self.req, "2", body=body)
+            mock_update.assert_called_once_with(self.context, '2',
+                                                body["aggregate"])
 
     def test_invalid_action(self):
         body = {"append_host": {"host": "host1"}}
@@ -456,20 +428,15 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                               self.req, "1", body=body)
 
     def test_add_host(self):
-        def stub_add_host_to_aggregate(context, aggregate, host):
-            self.assertEqual(context, self.context, "context")
-            self.assertEqual("1", aggregate, "aggregate")
-            self.assertEqual("host1", host, "host")
-            return AGGREGATE
-        self.stubs.Set(self.controller.api, "add_host_to_aggregate",
-                       stub_add_host_to_aggregate)
+        with mock.patch.object(self.controller.api, 'add_host_to_aggregate',
+                               return_value=AGGREGATE) as mock_add:
+            aggregate = eval(self.add_host)(self.req, "1",
+                                            body={"add_host": {"host":
+                                                               "host1"}})
 
-        aggregate = eval(self.add_host)(self.req, "1",
-                                        body={"add_host": {"host":
-                                                           "host1"}})
-
-        aggregate = _transform_aggregate_az(aggregate['aggregate'])
-        self._assert_agg_data(AGGREGATE, _make_agg_obj(aggregate))
+            aggregate = _transform_aggregate_az(aggregate['aggregate'])
+            self._assert_agg_data(AGGREGATE, _make_agg_obj(aggregate))
+            mock_add.assert_called_once_with(self.context, "1", "host1")
 
     def test_add_host_no_admin(self):
         self.assertRaises(exception.PolicyNotAuthorized,
@@ -478,35 +445,34 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                           body={"add_host": {"host": "host1"}})
 
     def test_add_host_with_already_added_host(self):
-        def stub_add_host_to_aggregate(context, aggregate, host):
-            raise exception.AggregateHostExists(aggregate_id=aggregate,
-                                                host=host)
-        self.stubs.Set(self.controller.api, "add_host_to_aggregate",
-                       stub_add_host_to_aggregate)
-
-        self.assertRaises(exc.HTTPConflict, eval(self.add_host),
-                          self.req, "1",
-                          body={"add_host": {"host": "host1"}})
+        side_effect = exception.AggregateHostExists(aggregate_id="1",
+                                                    host="host1")
+        with mock.patch.object(self.controller.api, 'add_host_to_aggregate',
+                               side_effect=side_effect) as mock_add:
+            self.assertRaises(exc.HTTPConflict, eval(self.add_host),
+                              self.req, "1",
+                              body={"add_host": {"host": "host1"}})
+            mock_add.assert_called_once_with(self.context, "1", "host1")
 
     def test_add_host_with_bad_aggregate(self):
-        def stub_add_host_to_aggregate(context, aggregate, host):
-            raise exception.AggregateNotFound(aggregate_id=aggregate)
-        self.stubs.Set(self.controller.api, "add_host_to_aggregate",
-                       stub_add_host_to_aggregate)
-
-        self.assertRaises(exc.HTTPNotFound, eval(self.add_host),
-                          self.req, "bogus_aggregate",
-                          body={"add_host": {"host": "host1"}})
+        side_effect = exception.AggregateNotFound(
+            aggregate_id="bogus_aggregate")
+        with mock.patch.object(self.controller.api, 'add_host_to_aggregate',
+                               side_effect=side_effect) as mock_add:
+            self.assertRaises(exc.HTTPNotFound, eval(self.add_host),
+                              self.req, "bogus_aggregate",
+                              body={"add_host": {"host": "host1"}})
+            mock_add.assert_called_once_with(self.context, "bogus_aggregate",
+                                             "host1")
 
     def test_add_host_with_bad_host(self):
-        def stub_add_host_to_aggregate(context, aggregate, host):
-            raise exception.ComputeHostNotFound(host=host)
-        self.stubs.Set(self.controller.api, "add_host_to_aggregate",
-                       stub_add_host_to_aggregate)
-
-        self.assertRaises(exc.HTTPNotFound, eval(self.add_host),
-                          self.req, "1",
-                          body={"add_host": {"host": "bogus_host"}})
+        side_effect = exception.ComputeHostNotFound(host="bogus_host")
+        with mock.patch.object(self.controller.api, 'add_host_to_aggregate',
+                               side_effect=side_effect) as mock_add:
+            self.assertRaises(exc.HTTPNotFound, eval(self.add_host),
+                              self.req, "1",
+                              body={"add_host": {"host": "bogus_host"}})
+            mock_add.assert_called_once_with(self.context, "1", "bogus_host")
 
     def test_add_host_with_missing_host(self):
         self.assertRaises(self.bad_request, eval(self.add_host),
@@ -521,13 +487,12 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                 self.req, "1", body={"add_host": {"host": ["host1", "host2"]}})
 
     def test_add_host_raises_key_error(self):
-        def stub_add_host_to_aggregate(context, aggregate, host):
-            raise KeyError
-        self.stubs.Set(self.controller.api, "add_host_to_aggregate",
-                       stub_add_host_to_aggregate)
-        self.assertRaises(exc.HTTPInternalServerError,
-                          eval(self.add_host), self.req, "1",
-                          body={"add_host": {"host": "host1"}})
+        with mock.patch.object(self.controller.api, 'add_host_to_aggregate',
+                               side_effect=KeyError) as mock_add:
+            self.assertRaises(exc.HTTPInternalServerError,
+                              eval(self.add_host), self.req, "1",
+                              body={"add_host": {"host": "host1"}})
+            mock_add.assert_called_once_with(self.context, "1", "host1")
 
     def test_add_host_with_invalid_request(self):
         self.assertRaises(self.bad_request, eval(self.add_host),
@@ -538,20 +503,13 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                 self.req, "1", body={"add_host": {"host": 1}})
 
     def test_remove_host(self):
-        def stub_remove_host_from_aggregate(context, aggregate, host):
-            self.assertEqual(context, self.context, "context")
-            self.assertEqual("1", aggregate, "aggregate")
-            self.assertEqual("host1", host, "host")
-            stub_remove_host_from_aggregate.called = True
-            # at minimum, metadata is always set to {} in the api
-            return _make_agg_obj({'metadata': {}})
-        self.stubs.Set(self.controller.api,
-                       "remove_host_from_aggregate",
-                       stub_remove_host_from_aggregate)
-        eval(self.remove_host)(self.req, "1",
-                                  body={"remove_host": {"host": "host1"}})
-
-        self.assertTrue(stub_remove_host_from_aggregate.called)
+        return_value = _make_agg_obj({'metadata': {}})
+        with mock.patch.object(self.controller.api,
+                               'remove_host_from_aggregate',
+                               return_value=return_value) as mock_rem:
+            eval(self.remove_host)(self.req, "1",
+                                   body={"remove_host": {"host": "host1"}})
+            mock_rem.assert_called_once_with(self.context, "1", "host1")
 
     def test_remove_host_no_admin(self):
         self.assertRaises(exception.PolicyNotAuthorized,
@@ -560,37 +518,36 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                           body={"remove_host": {"host": "host1"}})
 
     def test_remove_host_with_bad_aggregate(self):
-        def stub_remove_host_from_aggregate(context, aggregate, host):
-            raise exception.AggregateNotFound(aggregate_id=aggregate)
-        self.stubs.Set(self.controller.api,
-                       "remove_host_from_aggregate",
-                       stub_remove_host_from_aggregate)
-
-        self.assertRaises(exc.HTTPNotFound, eval(self.remove_host),
-                          self.req, "bogus_aggregate",
-                          body={"remove_host": {"host": "host1"}})
+        side_effect = exception.AggregateNotFound(
+            aggregate_id="bogus_aggregate")
+        with mock.patch.object(self.controller.api,
+                               'remove_host_from_aggregate',
+                               side_effect=side_effect) as mock_rem:
+            self.assertRaises(exc.HTTPNotFound, eval(self.remove_host),
+                              self.req, "bogus_aggregate",
+                              body={"remove_host": {"host": "host1"}})
+            mock_rem.assert_called_once_with(self.context, "bogus_aggregate",
+                                             "host1")
 
     def test_remove_host_with_host_not_in_aggregate(self):
-        def stub_remove_host_from_aggregate(context, aggregate, host):
-            raise exception.AggregateHostNotFound(aggregate_id=aggregate,
-                                                  host=host)
-        self.stubs.Set(self.controller.api,
-                       "remove_host_from_aggregate",
-                       stub_remove_host_from_aggregate)
-
-        self.assertRaises(exc.HTTPNotFound, eval(self.remove_host),
-                          self.req, "1",
-                          body={"remove_host": {"host": "host1"}})
+        side_effect = exception.AggregateHostNotFound(aggregate_id="1",
+                                                      host="host1")
+        with mock.patch.object(self.controller.api,
+                               'remove_host_from_aggregate',
+                               side_effect=side_effect) as mock_rem:
+            self.assertRaises(exc.HTTPNotFound, eval(self.remove_host),
+                              self.req, "1",
+                              body={"remove_host": {"host": "host1"}})
+            mock_rem.assert_called_once_with(self.context, "1", "host1")
 
     def test_remove_host_with_bad_host(self):
-        def stub_remove_host_from_aggregate(context, aggregate, host):
-            raise exception.ComputeHostNotFound(host=host)
-        self.stubs.Set(self.controller.api,
-                       "remove_host_from_aggregate",
-                       stub_remove_host_from_aggregate)
-
-        self.assertRaises(exc.HTTPNotFound, eval(self.remove_host),
+        side_effect = exception.ComputeHostNotFound(host="bogushost")
+        with mock.patch.object(self.controller.api,
+                               'remove_host_from_aggregate',
+                               side_effect=side_effect) as mock_rem:
+            self.assertRaises(exc.HTTPNotFound, eval(self.remove_host),
                 self.req, "1", body={"remove_host": {"host": "bogushost"}})
+            mock_rem.assert_called_once_with(self.context, "1", "bogushost")
 
     def test_remove_host_with_missing_host(self):
         self.assertRaises(self.bad_request, eval(self.remove_host),
@@ -618,21 +575,14 @@ class AggregateTestCaseV21(test.NoDBTestCase):
 
     def test_set_metadata(self):
         body = {"set_metadata": {"metadata": {"foo": "bar"}}}
-
-        def stub_update_aggregate(context, aggregate, values):
-            self.assertEqual(context, self.context, "context")
-            self.assertEqual("1", aggregate, "aggregate")
-            self.assertThat(body["set_metadata"]['metadata'],
-                            matchers.DictMatches(values))
-            return AGGREGATE
-        self.stubs.Set(self.controller.api,
-                       "update_aggregate_metadata",
-                       stub_update_aggregate)
-
-        result = eval(self.set_metadata)(self.req, "1", body=body)
-
-        result = _transform_aggregate_az(result['aggregate'])
-        self._assert_agg_data(AGGREGATE, _make_agg_obj(result))
+        with mock.patch.object(self.controller.api,
+                               'update_aggregate_metadata',
+                               return_value=AGGREGATE) as mock_update:
+            result = eval(self.set_metadata)(self.req, "1", body=body)
+            result = _transform_aggregate_az(result['aggregate'])
+            self._assert_agg_data(AGGREGATE, _make_agg_obj(result))
+            mock_update.assert_called_once_with(self.context, "1",
+                body["set_metadata"]['metadata'])
 
     def test_set_metadata_delete(self):
         body = {"set_metadata": {"metadata": {"foo": None}}}
@@ -656,14 +606,15 @@ class AggregateTestCaseV21(test.NoDBTestCase):
 
     def test_set_metadata_with_bad_aggregate(self):
         body = {"set_metadata": {"metadata": {"foo": "bar"}}}
+        side_effect = exception.AggregateNotFound(aggregate_id="bad_aggregate")
 
-        def stub_update_aggregate(context, aggregate, metadata):
-            raise exception.AggregateNotFound(aggregate_id=aggregate)
-        self.stubs.Set(self.controller.api,
-                       "update_aggregate_metadata",
-                       stub_update_aggregate)
-        self.assertRaises(exc.HTTPNotFound, eval(self.set_metadata),
+        with mock.patch.object(self.controller.api,
+                               'update_aggregate_metadata',
+                               side_effect=side_effect) as mock_update:
+            self.assertRaises(exc.HTTPNotFound, eval(self.set_metadata),
                 self.req, "bad_aggregate", body=body)
+            mock_update.assert_called_once_with(self.context, "bad_aggregate",
+                body["set_metadata"]['metadata'])
 
     def test_set_metadata_with_missing_metadata(self):
         body = {"asdf": {"foo": "bar"}}
@@ -701,15 +652,10 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                           self.req, "1", body=body)
 
     def test_delete_aggregate(self):
-        def stub_delete_aggregate(context, aggregate):
-            self.assertEqual(context, self.context, "context")
-            self.assertEqual("1", aggregate, "aggregate")
-            stub_delete_aggregate.called = True
-        self.stubs.Set(self.controller.api, "delete_aggregate",
-                       stub_delete_aggregate)
-
-        self.controller.delete(self.req, "1")
-        self.assertTrue(stub_delete_aggregate.called)
+        with mock.patch.object(self.controller.api,
+                               'delete_aggregate') as mock_del:
+            self.controller.delete(self.req, "1")
+            mock_del.assert_called_once_with(self.context, "1")
 
     def test_delete_aggregate_no_admin(self):
         self.assertRaises(exception.PolicyNotAuthorized,
@@ -717,13 +663,13 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                           self.user_req, "1")
 
     def test_delete_aggregate_with_bad_aggregate(self):
-        def stub_delete_aggregate(context, aggregate):
-            raise exception.AggregateNotFound(aggregate_id=aggregate)
-        self.stubs.Set(self.controller.api, "delete_aggregate",
-                       stub_delete_aggregate)
-
-        self.assertRaises(exc.HTTPNotFound, self.controller.delete,
+        side_effect = exception.AggregateNotFound(
+            aggregate_id="bogus_aggregate")
+        with mock.patch.object(self.controller.api, 'delete_aggregate',
+                               side_effect=side_effect) as mock_del:
+            self.assertRaises(exc.HTTPNotFound, self.controller.delete,
                 self.req, "bogus_aggregate")
+            mock_del.assert_called_once_with(self.context, "bogus_aggregate")
 
     def test_delete_aggregate_with_host(self):
         with mock.patch.object(self.controller.api, "delete_aggregate",
