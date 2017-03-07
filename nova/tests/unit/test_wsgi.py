@@ -25,6 +25,7 @@ import eventlet.wsgi
 import mock
 from oslo_config import cfg
 import requests
+import six
 import testtools
 import webob
 
@@ -224,6 +225,7 @@ class TestWSGIServer(test.NoDBTestCase):
             server.stop()
 
 
+@testtools.skipIf(six.PY3, "bug/1482633: test hangs on Python 3")
 class TestWSGIServerWithSSL(test.NoDBTestCase):
     """WSGI server with SSL tests."""
 
