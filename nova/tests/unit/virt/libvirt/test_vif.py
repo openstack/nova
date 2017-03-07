@@ -108,6 +108,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         address='ca:fe:de:ad:be:ef',
         network=network_ovs,
         type=network_model.VIF_TYPE_OVS,
+        details={'port_filter': False},
         devname='tap-xxx-yyy-zzz',
         ovs_interfaceid='aaa-bbb-ccc')
 
@@ -142,14 +143,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         devname='tap-xxx-yyy-zzz',
         ovs_interfaceid='aaa-bbb-ccc')
 
-    vif_ivs_legacy = network_model.VIF(id='vif-xxx-yyy-zzz',
-        address='ca:fe:de:ad:be:ef',
-        network=network_ovs,
-        type=None,
-        devname=None,
-        ovs_interfaceid='aaa')
-
-    vif_ivs_filter_direct = network_model.VIF(id='vif-xxx-yyy-zzz',
+    vif_ivs_filter_cap = network_model.VIF(id='vif-xxx-yyy-zzz',
         address='ca:fe:de:ad:be:ef',
         network=network_ivs,
         type=network_model.VIF_TYPE_IVS,
@@ -157,7 +151,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         devname='tap-xxx-yyy-zzz',
         ovs_interfaceid='aaa-bbb-ccc')
 
-    vif_ivs_filter_hybrid = network_model.VIF(id='vif-xxx-yyy-zzz',
+    vif_ivs_hybrid = network_model.VIF(id='vif-xxx-yyy-zzz',
         address='ca:fe:de:ad:be:ef',
         network=network_ivs,
         type=network_model.VIF_TYPE_IVS,
@@ -166,6 +160,13 @@ class LibvirtVifTestCase(test.NoDBTestCase):
             'ovs_hybrid_plug': True},
         devname='tap-xxx-yyy-zzz',
         ovs_interfaceid='aaa-bbb-ccc')
+
+    vif_ivs_legacy = network_model.VIF(id='vif-xxx-yyy-zzz',
+        address='ca:fe:de:ad:be:ef',
+        network=network_ovs,
+        type=None,
+        devname=None,
+        ovs_interfaceid='aaa')
 
     vif_none = network_model.VIF(id='vif-xxx-yyy-zzz',
         address='ca:fe:de:ad:be:ef',
@@ -1070,22 +1071,22 @@ class LibvirtVifTestCase(test.NoDBTestCase):
 
     def test_ivs_plug_with_port_filter_direct_no_nova_firewall(self):
         d = vif.LibvirtGenericVIFDriver()
-        br_want = "qbr" + self.vif_ivs_filter_hybrid['id']
+        br_want = "qbr" + self.vif_ivs_hybrid['id']
         br_want = br_want[:network_model.NIC_NAME_LEN]
         self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")
-        xml = self._get_instance_xml(d, self.vif_ivs_filter_hybrid)
+        xml = self._get_instance_xml(d, self.vif_ivs_hybrid)
         node = self._get_node(xml)
         self._assertTypeAndMacEquals(node, "bridge", "source", "bridge",
-                                     self.vif_ivs_filter_hybrid, br_want, 0)
+                                     self.vif_ivs_hybrid, br_want, 0)
 
-    def test_ivs_plug_with_port_filter_hybrid_no_nova_firewall(self):
+    def test_ivs_plug_with_port_hybrid_no_nova_firewall(self):
         d = vif.LibvirtGenericVIFDriver()
-        br_want = self.vif_ivs_filter_direct['devname']
+        br_want = self.vif_ivs_filter_cap['devname']
         self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")
-        xml = self._get_instance_xml(d, self.vif_ivs_filter_direct)
+        xml = self._get_instance_xml(d, self.vif_ivs_filter_cap)
         node = self._get_node(xml)
         self._assertTypeAndMacEquals(node, "ethernet", "target", "dev",
-                                     self.vif_ivs_filter_direct, br_want, 0)
+                                     self.vif_ivs_filter_cap, br_want, 0)
 
     def test_hybrid_plug_without_nova_firewall(self):
         d = vif.LibvirtGenericVIFDriver()
