@@ -122,66 +122,12 @@ def enrich_help_text(alt_db_opts):
                 # texts here if needed.
                 alt_db_opt.help = db_opt.help + alt_db_opt.help
 
-# NOTE(cdent): See the note above on api_db_opts. The same issues
-# apply here.
-
-placement_db_group = cfg.OptGroup('placement_database',
-                                  title='Placement API database options',
-                                  help="""
-The *Placement API Database* is a separate database which is used for the new
-placement-api service. In Ocata release (14.0.0) this database is optional: if
-connection option is not set, api database will be used instead.  However, this
-is not recommended, as it implies a potentially lengthy data migration in the
-future. Operators are advised to use a separate database for Placement API from
-the start.
-""")
-
-# TODO(rpodolyaka): see the notes on help messages on api_db_opts above, those
-# also apply here
-placement_db_opts = [
-    cfg.StrOpt('connection',
-               default=None,
-               help='',
-               secret=True),
-    cfg.BoolOpt('sqlite_synchronous',
-                default=True,
-                help=''),
-    cfg.StrOpt('slave_connection',
-               secret=True,
-               help=''),
-    cfg.StrOpt('mysql_sql_mode',
-               default='TRADITIONAL',
-               help=''),
-    cfg.IntOpt('idle_timeout',
-               default=3600,
-               help=''),
-    cfg.IntOpt('max_pool_size',
-               help=''),
-    cfg.IntOpt('max_retries',
-               default=10,
-               help=''),
-    cfg.IntOpt('retry_interval',
-               default=10,
-               help=''),
-    cfg.IntOpt('max_overflow',
-               help=''),
-    cfg.IntOpt('connection_debug',
-               default=0,
-               help=''),
-    cfg.BoolOpt('connection_trace',
-                default=False,
-                help=''),
-    cfg.IntOpt('pool_timeout',
-               help=''),
-]  # noqa
-
 
 def register_opts(conf):
     oslo_db_options.set_defaults(conf, connection=_DEFAULT_SQL_CONNECTION,
                                  sqlite_db='nova.sqlite')
     conf.register_opt(db_driver_opt)
     conf.register_opts(api_db_opts, group=api_db_group)
-    conf.register_opts(placement_db_opts, group=placement_db_group)
 
 
 def list_opts():
@@ -193,8 +139,6 @@ def list_opts():
     # in the "sample.conf" file, I omit the listing of the "oslo_db_options"
     # here.
     enrich_help_text(api_db_opts)
-    enrich_help_text(placement_db_opts)
     return {'DEFAULT': [db_driver_opt],
             api_db_group: api_db_opts,
-            placement_db_group: placement_db_opts,
             }

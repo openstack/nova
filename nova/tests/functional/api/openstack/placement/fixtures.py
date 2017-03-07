@@ -44,8 +44,6 @@ class APIFixture(fixture.GabbiFixture):
         self.conf.set_override('connection', "sqlite://", group='database')
         self.conf.set_override('connection', "sqlite://",
                                group='api_database')
-        self.conf.set_override('connection', "sqlite://",
-                               group='placement_database')
         config.parse_args([], default_config_files=None, configure_db=False,
                           init_rpc=False)
 
