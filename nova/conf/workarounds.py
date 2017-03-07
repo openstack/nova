@@ -124,6 +124,24 @@ Interdependencies to other options:
   then instances that get out of sync between the hypervisor and the Nova
   database will have to be synchronized manually.
 """),
+
+    cfg.BoolOpt(
+        'disable_group_policy_check_upcall',
+        default=False,
+        help="""
+Disable the server group policy check upcall in compute.
+
+In order to detect races with server group affinity policy, the compute
+service attempts to validate that the policy was not violated by the
+scheduler. It does this by making an upcall to the API database to list
+the instances in the server group for one that it is booting, which violates
+our api/cell isolation goals. Eventually this will be solved by proper affinity
+guarantees in the scheduler and placement service, but until then, this late
+check is needed to ensure proper affinity policy.
+
+Operators that desire api/cell isolation over this check should
+enable this flag, which will avoid making that upcall from compute.
+"""),
 ]
 
 

@@ -1,0 +1,10 @@
+---
+issues:
+  - |
+    In deployments with multiple (v2) cells, upcalls from the computes to the scheduler
+    (or other control services) cannot occur. This prevents certain things from happening,
+    such as the track_instance_changes updates, as well as the late affinity checks for
+    server groups. See the related documentation on the `scheduler.track_instance_changes`
+    and `workarounds.disable_group_policy_check_upcall` configuration options for more
+    details. Single-cell deployments without any MQ isolation will continue to operate as
+    they have for the time being.

@@ -230,6 +230,11 @@ usage data to query the database on each request instead.
 
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
+
+NOTE: In a multi-cell (v2) setup where the cell MQ is separated from the
+top-level, computes cannot directly communicate with the scheduler. Thus,
+this option cannot be enabled in that scenario. See also the
+[workarounds]/disable_group_policy_check_upcall option.
 """),
     cfg.MultiStrOpt("available_filters",
         default=["nova.scheduler.filters.all_filters"],

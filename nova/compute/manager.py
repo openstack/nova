@@ -1304,7 +1304,8 @@ class ComputeManager(manager.Manager):
                             instance_uuid=instance.uuid,
                             reason=msg)
 
-        _do_validation(context, instance, group_hint)
+        if not CONF.workarounds.disable_group_policy_check_upcall:
+            _do_validation(context, instance, group_hint)
 
     def _log_original_error(self, exc_info, instance_uuid):
         LOG.error(_LE('Error: %s'), exc_info[1], instance_uuid=instance_uuid,

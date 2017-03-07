@@ -4317,6 +4317,26 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_prep.assert_called_once_with(self.context, self.instance,
                 self.block_device_mapping)
 
+    @mock.patch('nova.objects.InstanceGroup.get_by_hint')
+    def test_validate_policy_honors_workaround_disabled(self, mock_get):
+        instance = objects.Instance(uuid=uuids.instance)
+        filter_props = {'scheduler_hints': {'group': 'foo'}}
+        mock_get.return_value = objects.InstanceGroup(policies=[])
+        self.compute._validate_instance_group_policy(self.context,
+                                                     instance,
+                                                     filter_props)
+        mock_get.assert_called_once_with(self.context, 'foo')
+
+    @mock.patch('nova.objects.InstanceGroup.get_by_hint')
+    def test_validate_policy_honors_workaround_enabled(self, mock_get):
+        self.flags(disable_group_policy_check_upcall=True, group='workarounds')
+        instance = objects.Instance(uuid=uuids.instance)
+        filter_props = {'scheduler_hints': {'group': 'foo'}}
+        self.compute._validate_instance_group_policy(self.context,
+                                                     instance,
+                                                     filter_props)
+        self.assertFalse(mock_get.called)
+
     def test_failed_bdm_prep_from_delete_raises_unexpected(self):
         with test.nested(
                 mock.patch.object(self.compute,
