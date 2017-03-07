@@ -3856,13 +3856,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
         def _test_consoles(arch_to_mock, serial_enabled,
-                           expected_device_type, expected_device_cls):
+                           expected_device_type, expected_device_cls,
+                           virt_type='qemu'):
             guest_cfg = vconfig.LibvirtConfigGuest()
             mock_get_arch.return_value = arch_to_mock
             self.flags(enabled=serial_enabled, group='serial_console')
             instance = objects.Instance(**self.test_instance)
 
-            drvr._create_consoles("qemu", guest_cfg, instance=instance,
+            drvr._create_consoles(virt_type, guest_cfg, instance=instance,
                                   flavor=None, image_meta=None)
 
             self.assertEqual(1, len(guest_cfg.devices))
@@ -3872,6 +3873,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.assertIsInstance(device.log,
                                   vconfig.LibvirtConfigGuestCharDeviceLog)
             self.assertEqual("off", device.log.append)
+            self.assertIsNotNone(device.log.file)
             self.assertTrue(device.log.file.endswith("console.log"))
 
         _test_consoles(fields.Architecture.X86_64, True,
@@ -3882,6 +3884,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                        "tcp", vconfig.LibvirtConfigGuestConsole)
         _test_consoles(fields.Architecture.S390X, False,
                        "pty", vconfig.LibvirtConfigGuestConsole)
+        _test_consoles(fields.Architecture.X86_64, False,
+                       "pty", vconfig.LibvirtConfigGuestConsole, 'xen')
 
     @mock.patch('nova.console.serial.acquire_port')
     def test_get_guest_config_serial_console_through_port_rng_exhausted(
