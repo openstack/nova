@@ -17,7 +17,6 @@ import random
 import time
 
 import mock
-from mox3 import mox
 from os_xenapi.client import XenAPI
 
 from nova.compute import utils as compute_utils
@@ -48,8 +47,8 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         driver = xenapi_conn.XenAPIDriver(False)
         self.session = driver._session
 
-        self.stubs.Set(
-                vm_utils, 'get_sr_path', lambda *a, **kw: '/fake/sr/path')
+        self.stub_out('nova.virt.xenapi.vm_utils.get_sr_path',
+                      lambda *a, **kw: '/fake/sr/path')
 
         self.instance = {'uuid': 'blah',
                          'system_metadata': [],
@@ -73,21 +72,18 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         params['uuid_stack'] = ['uuid1']
         return params
 
-    def test_download_image(self):
+    @mock.patch.object(vm_utils, '_make_uuid_stack', return_value=['uuid1'])
+    def test_download_image(self, mock_make_uuid_stack):
         params = self._get_download_params()
+        with mock.patch.object(self.session, 'call_plugin_serialized'
+                               ) as mock_call_plugin:
+            self.store.download_image(self.context, self.session,
+                                      self.instance, 'fake_image_uuid')
 
-        self.stubs.Set(vm_utils, '_make_uuid_stack',
-                       lambda *a, **kw: ['uuid1'])
-
-        self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')
-        self.session.call_plugin_serialized('glance.py', 'download_vhd2',
-                                            **params)
-        self.mox.ReplayAll()
-
-        self.store.download_image(self.context, self.session,
-                                  self.instance, 'fake_image_uuid')
-
-        self.mox.VerifyAll()
+            mock_call_plugin.assert_called_once_with('glance.py',
+                                                     'download_vhd2',
+                                                     **params)
+            mock_make_uuid_stack.assert_called_once_with()
 
     @mock.patch.object(vm_utils, '_make_uuid_stack', return_value=['uuid1'])
     @mock.patch.object(random, 'shuffle')
@@ -133,15 +129,14 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
 
     def _test_upload_image(self, auto_disk_config, expected_os_type='default'):
         params = self._get_upload_params(auto_disk_config, expected_os_type)
+        with mock.patch.object(self.session, 'call_plugin_serialized'
+                               ) as mock_call_plugin:
+            self.store.upload_image(self.context, self.session, self.instance,
+                                    'fake_image_uuid', ['fake_vdi_uuid'])
 
-        self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')
-        self.session.call_plugin_serialized('glance.py', 'upload_vhd2',
-                                            **params)
-
-        self.mox.ReplayAll()
-        self.store.upload_image(self.context, self.session, self.instance,
-                                'fake_image_uuid', ['fake_vdi_uuid'])
-        self.mox.VerifyAll()
+            mock_call_plugin.assert_called_once_with('glance.py',
+                                                     'upload_vhd2',
+                                                     **params)
 
     def test_upload_image(self):
         self._test_upload_image(True)
@@ -161,84 +156,81 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
 
     def test_upload_image_raises_exception(self):
         params = self._get_upload_params()
+        with mock.patch.object(self.session, 'call_plugin_serialized',
+                               side_effect=RuntimeError) as mock_call_plugin:
+            self.assertRaises(RuntimeError, self.store.upload_image,
+                              self.context, self.session, self.instance,
+                              'fake_image_uuid', ['fake_vdi_uuid'])
 
-        self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')
-        self.session.call_plugin_serialized('glance.py', 'upload_vhd2',
-                                            **params).AndRaise(RuntimeError)
-        self.mox.ReplayAll()
+            mock_call_plugin.assert_called_once_with('glance.py',
+                                                     'upload_vhd2',
+                                                     **params)
 
-        self.assertRaises(RuntimeError, self.store.upload_image,
-                          self.context, self.session, self.instance,
-                          'fake_image_uuid', ['fake_vdi_uuid'])
-        self.mox.VerifyAll()
-
-    def test_upload_image_retries_then_raises_exception(self):
+    @mock.patch.object(time, 'sleep')
+    @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+    def test_upload_image_retries_then_raises_exception(self,
+                                                        mock_add_inst,
+                                                        mock_time_sleep):
         self.flags(num_retries=2, group='glance')
         params = self._get_upload_params()
 
-        self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')
-        self.mox.StubOutWithMock(time, 'sleep')
-        self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
         error_details = ["", "", "RetryableError", ""]
         error = self.session.XenAPI.Failure(details=error_details)
-        self.session.call_plugin_serialized('glance.py', 'upload_vhd2',
-                                            **params).AndRaise(error)
-        compute_utils.add_instance_fault_from_exc(self.context, self.instance,
-                                                  error, (XenAPI.Failure,
-                                                          error,
-                                                          mox.IgnoreArg()))
-        time.sleep(0.5)
-        self.session.call_plugin_serialized('glance.py', 'upload_vhd2',
-                                            **params).AndRaise(error)
-        compute_utils.add_instance_fault_from_exc(self.context, self.instance,
-                                                  error, (XenAPI.Failure,
-                                                          error,
-                                                          mox.IgnoreArg()))
-        time.sleep(1)
-        self.session.call_plugin_serialized('glance.py', 'upload_vhd2',
-                                            **params).AndRaise(error)
-        compute_utils.add_instance_fault_from_exc(self.context, self.instance,
-                                                  error, (XenAPI.Failure,
-                                                          error,
-                                                          mox.IgnoreArg()))
-        self.mox.ReplayAll()
 
-        self.assertRaises(exception.CouldNotUploadImage,
-                          self.store.upload_image,
-                          self.context, self.session, self.instance,
-                          'fake_image_uuid', ['fake_vdi_uuid'])
-        self.mox.VerifyAll()
+        with mock.patch.object(self.session, 'call_plugin_serialized',
+                               side_effect=error) as mock_call_plugin:
+            self.assertRaises(exception.CouldNotUploadImage,
+                              self.store.upload_image,
+                              self.context, self.session, self.instance,
+                              'fake_image_uuid', ['fake_vdi_uuid'])
 
-    def test_upload_image_retries_on_signal_exception(self):
+            time_sleep_args = [mock.call(0.5), mock.call(1)]
+            call_plugin_args = [
+                mock.call('glance.py', 'upload_vhd2', **params),
+                mock.call('glance.py', 'upload_vhd2', **params),
+                mock.call('glance.py', 'upload_vhd2', **params)]
+            add_inst_args = [
+                mock.call(self.context, self.instance, error,
+                          (XenAPI.Failure, error, mock.ANY)),
+                mock.call(self.context, self.instance, error,
+                          (XenAPI.Failure, error, mock.ANY)),
+                mock.call(self.context, self.instance, error,
+                          (XenAPI.Failure, error, mock.ANY))]
+            mock_time_sleep.assert_has_calls(time_sleep_args)
+            mock_call_plugin.assert_has_calls(call_plugin_args)
+            mock_add_inst.assert_has_calls(add_inst_args)
+
+    @mock.patch.object(time, 'sleep')
+    @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+    def test_upload_image_retries_on_signal_exception(self,
+                                                      mock_add_inst,
+                                                      mock_time_sleep):
         self.flags(num_retries=2, group='glance')
         params = self._get_upload_params()
 
-        self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')
-        self.mox.StubOutWithMock(time, 'sleep')
-        self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
         error_details = ["", "task signaled", "", ""]
         error = self.session.XenAPI.Failure(details=error_details)
-        self.session.call_plugin_serialized('glance.py', 'upload_vhd2',
-                                            **params).AndRaise(error)
-        compute_utils.add_instance_fault_from_exc(self.context, self.instance,
-                                                  error, (XenAPI.Failure,
-                                                          error,
-                                                          mox.IgnoreArg()))
-        time.sleep(0.5)
-        # Note(johngarbutt) XenServer 6.1 and later has this error
-        error_details = ["", "signal: SIGTERM", "", ""]
-        error = self.session.XenAPI.Failure(details=error_details)
-        self.session.call_plugin_serialized('glance.py', 'upload_vhd2',
-                                            **params).AndRaise(error)
-        compute_utils.add_instance_fault_from_exc(self.context, self.instance,
-                                                  error, (XenAPI.Failure,
-                                                          error,
-                                                          mox.IgnoreArg()))
-        time.sleep(1)
-        self.session.call_plugin_serialized('glance.py', 'upload_vhd2',
-                                            **params)
-        self.mox.ReplayAll()
 
-        self.store.upload_image(self.context, self.session, self.instance,
-                                'fake_image_uuid', ['fake_vdi_uuid'])
-        self.mox.VerifyAll()
+        # Note(johngarbutt) XenServer 6.1 and later has this error
+        error_details_v61 = ["", "signal: SIGTERM", "", ""]
+        error_v61 = self.session.XenAPI.Failure(details=error_details_v61)
+
+        with mock.patch.object(self.session, 'call_plugin_serialized',
+                               side_effect=[error, error_v61, None]
+                               ) as mock_call_plugin:
+            self.store.upload_image(self.context, self.session, self.instance,
+                                    'fake_image_uuid', ['fake_vdi_uuid'])
+
+            time_sleep_args = [mock.call(0.5), mock.call(1)]
+            call_plugin_args = [
+                mock.call('glance.py', 'upload_vhd2', **params),
+                mock.call('glance.py', 'upload_vhd2', **params),
+                mock.call('glance.py', 'upload_vhd2', **params)]
+            add_inst_args = [
+                mock.call(self.context, self.instance, error,
+                          (XenAPI.Failure, error, mock.ANY)),
+                mock.call(self.context, self.instance, error_v61,
+                          (XenAPI.Failure, error_v61, mock.ANY))]
+            mock_time_sleep.assert_has_calls(time_sleep_args)
+            mock_call_plugin.assert_has_calls(call_plugin_args)
+            mock_add_inst.assert_has_calls(add_inst_args)
