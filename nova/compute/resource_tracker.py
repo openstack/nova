@@ -453,7 +453,7 @@ class ResourceTracker(object):
             cn = self.compute_nodes[nodename]
             self._copy_resources(cn, resources)
             self._setup_pci_tracker(context, cn, resources)
-            self.scheduler_client.update_resource_stats(cn)
+            self._update(context, cn)
             return
 
         # now try to get the compute node record from the
@@ -463,7 +463,7 @@ class ResourceTracker(object):
             self.compute_nodes[nodename] = cn
             self._copy_resources(cn, resources)
             self._setup_pci_tracker(context, cn, resources)
-            self.scheduler_client.update_resource_stats(cn)
+            self._update(context, cn)
             return
 
         # there was no local copy and none in the database
@@ -479,7 +479,7 @@ class ResourceTracker(object):
                  {'host': self.host, 'node': nodename})
 
         self._setup_pci_tracker(context, cn, resources)
-        self.scheduler_client.update_resource_stats(cn)
+        self._update(context, cn)
 
     def _setup_pci_tracker(self, context, compute_node, resources):
         if not self.pci_tracker:
@@ -741,8 +741,22 @@ class ResourceTracker(object):
         """Update partial stats locally and populate them to Scheduler."""
         if not self._resource_change(compute_node):
             return
+        nodename = compute_node.hypervisor_hostname
+        compute_node.save()
         # Persist the stats to the Scheduler
-        self.scheduler_client.update_resource_stats(compute_node)
+        try:
+            inv_data = self.driver.get_inventory(nodename)
+            self.scheduler_client.set_inventory_for_provider(
+                compute_node.uuid,
+                compute_node.hypervisor_hostname,
+                inv_data,
+            )
+        except NotImplementedError:
+            # Eventually all virt drivers will return an inventory dict in the
+            # format that the placement API expects and we'll be able to remove
+            # this code branch
+            self.scheduler_client.update_compute_node(compute_node)
+
         if self.pci_tracker:
             self.pci_tracker.save(context)
 

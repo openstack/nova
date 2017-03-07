@@ -2054,6 +2054,10 @@ class InventoryWithResourceClassNotFound(NotFound):
     msg_fmt = _("No inventory of class %(resource_class)s found.")
 
 
+class InvalidResourceClass(Invalid):
+    msg_fmt = _("Resource class '%(resource_class)s' invalid.")
+
+
 class ResourceClassExists(NovaException):
     msg_fmt = _("Resource class %(resource_class)s already exists.")
 

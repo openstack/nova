@@ -87,11 +87,25 @@ class SchedulerClientTestCase(test.NoDBTestCase):
             'context', aggregate)
 
     @mock.patch.object(scheduler_report_client.SchedulerReportClient,
-                       'update_resource_stats')
-    def test_update_resource_stats(self, mock_update_resource_stats):
+                       'update_compute_node')
+    def test_update_compute_node(self, mock_update_compute_node):
         self.assertIsNone(self.client.reportclient.instance)
 
-        self.client.update_resource_stats(mock.sentinel.cn)
+        self.client.update_compute_node(mock.sentinel.cn)
 
         self.assertIsNotNone(self.client.reportclient.instance)
-        mock_update_resource_stats.assert_called_once_with(mock.sentinel.cn)
+        mock_update_compute_node.assert_called_once_with(mock.sentinel.cn)
+
+    @mock.patch.object(scheduler_report_client.SchedulerReportClient,
+                       'set_inventory_for_provider')
+    def test_set_inventory_for_provider(self, mock_set):
+        self.client.set_inventory_for_provider(
+            mock.sentinel.rp_uuid,
+            mock.sentinel.rp_name,
+            mock.sentinel.inv_data,
+        )
+        mock_set.assert_called_once_with(
+            mock.sentinel.rp_uuid,
+            mock.sentinel.rp_name,
+            mock.sentinel.inv_data,
+        )
