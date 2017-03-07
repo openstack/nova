@@ -511,6 +511,7 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
         self.assertObjEqual(expect, actual)
 
     def test_nova_to_osvif_vif_ovs_hybrid(self):
+        self.flags(firewall_driver=None)
         vif = model.VIF(
             id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
             type=model.VIF_TYPE_OVS,

@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    The default value of the ``[DEFAULT]/firewall_driver`` configuration option
+    has been changed to ``nova.virt.firewall.NoopFirewallDriver`` to coincide
+    with the default value of ``[DEFAULT]/use_neutron=True``.
