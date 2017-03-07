@@ -54,8 +54,6 @@ class APIFixture(fixture.GabbiFixture):
         self.conf.set_override('connection', "sqlite://", group='database')
         self.conf.set_override('connection', "sqlite://",
                                group='api_database')
-        self.conf.set_override('connection', "sqlite://",
-                               group='placement_database')
 
         # Register CORS opts, but do not set config. This has the
         # effect of exercising the "don't use cors" path in
