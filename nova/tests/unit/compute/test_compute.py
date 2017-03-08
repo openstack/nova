@@ -3303,6 +3303,52 @@ class ComputeTestCase(BaseTestCase):
             self.assertEqual(state_dict['power_state'],
                              instances[0]['power_state'])
 
+    @mock.patch('nova.image.api.API.get_all')
+    @mock.patch('nova.image.api.API.delete')
+    def test_rotate_backups(self, mock_delete, mock_get_all_images):
+        instance = self._create_fake_instance_obj()
+        instance_uuid = instance['uuid']
+        fake_images = [{
+            'id': uuids.image_id_1,
+            'name': 'fake_name_1',
+            'status': 'active',
+            'properties': {'kernel_id': uuids.kernel_id_1,
+                           'ramdisk_id': uuids.ramdisk_id_1,
+                           'image_type': 'backup',
+                           'backup_type': 'daily',
+                           'instance_uuid': instance_uuid},
+        },
+        {
+            'id': uuids.image_id_2,
+            'name': 'fake_name_2',
+            'status': 'active',
+            'properties': {'kernel_id': uuids.kernel_id_2,
+                           'ramdisk_id': uuids.ramdisk_id_2,
+                           'image_type': 'backup',
+                           'backup_type': 'daily',
+                           'instance_uuid': instance_uuid},
+        },
+        {
+            'id': uuids.image_id_3,
+            'name': 'fake_name_3',
+            'status': 'active',
+            'properties': {'kernel_id': uuids.kernel_id_3,
+                           'ramdisk_id': uuids.ramdisk_id_3,
+                           'image_type': 'backup',
+                           'backup_type': 'daily',
+                           'instance_uuid': instance_uuid},
+        }]
+
+        mock_get_all_images.return_value = fake_images
+
+        mock_delete.side_effect = (exception.ImageNotFound(
+                                   image_id=uuids.image_id_1), None)
+
+        self.compute._rotate_backups(self.context, instance=instance,
+                                     backup_type='daily',
+                                     rotation=1)
+        self.assertEqual(2, mock_delete.call_count)
+
     def test_console_output(self):
         # Make sure we can get console output from instance.
         instance = self._create_fake_instance_obj()
