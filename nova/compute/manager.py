@@ -1968,7 +1968,8 @@ class ComputeManager(manager.Manager):
                 exception.ImageUnacceptable,
                 exception.InvalidDiskInfo,
                 exception.InvalidDiskFormat,
-                exception.SignatureVerificationError) as e:
+                exception.SignatureVerificationError,
+                exception.VolumeEncryptionNotSupported) as e:
             self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
             raise exception.BuildAbortException(instance_uuid=instance.uuid,

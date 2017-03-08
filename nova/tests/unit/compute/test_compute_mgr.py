@@ -3982,6 +3982,11 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self._test_build_and_run_spawn_exceptions(
             exception.SignatureVerificationError(reason=""))
 
+    def test_build_and_run_volume_encryption_not_supported(self):
+        self._test_build_and_run_spawn_exceptions(
+            exception.VolumeEncryptionNotSupported(volume_type="fake",
+                                                   volume_id=uuids.volume_id))
+
     def _test_build_and_run_spawn_exceptions(self, exc):
         with test.nested(
                 mock.patch.object(self.compute.driver, 'spawn',
