@@ -18,6 +18,7 @@ from nova.objects import cell_mapping
 from nova.objects import instance_mapping
 from nova import test
 from nova.tests import fixtures
+from nova.tests import uuidsentinel
 
 
 sample_mapping = {'instance_uuid': '',
@@ -170,3 +171,15 @@ class InstanceMappingListTestCase(test.NoDBTestCase):
         )
         self.assertEqual(1, len(inst_mapping_list))
         self.assertEqual(db_inst_mapping1['id'], inst_mapping_list[0].id)
+
+    def test_instance_mapping_get_by_instance_uuids(self):
+        db_inst_mapping1 = create_mapping()
+        db_inst_mapping2 = create_mapping(cell_id=None)
+        # Create a third that we won't include
+        create_mapping()
+        uuids = [db_inst_mapping1.instance_uuid,
+                 db_inst_mapping2.instance_uuid]
+        mappings = instance_mapping.InstanceMappingList.get_by_instance_uuids(
+            self.context, uuids + [uuidsentinel.deleted_instance])
+        self.assertEqual(sorted(uuids),
+                         sorted([m.instance_uuid for m in mappings]))
