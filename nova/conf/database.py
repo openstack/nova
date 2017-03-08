@@ -25,12 +25,11 @@ _DEFAULT_SQL_CONNECTION = 'sqlite:///' + paths.state_path_def('nova.sqlite')
 # for this config in RAX. They used this because of performance issues
 # with some queries. We think the right path forward is fixing the
 # SQLA queries to be more performant for everyone.
-db_driver_opt = cfg.StrOpt(
-        'db_driver',
-        default='nova.db',
-        deprecated_for_removal=True,
-        deprecated_since='13.0.0',
-        help='The driver to use for database access')
+db_driver_opt = cfg.StrOpt('db_driver',
+    default='nova.db',
+    deprecated_for_removal=True,
+    deprecated_since='13.0.0',
+    help='The driver to use for database access')
 
 
 # NOTE(markus_z): We cannot simply do:
@@ -42,8 +41,8 @@ db_driver_opt = cfg.StrOpt(
 # group here. See commit ba407e3 ("Add support for multiple database engines")
 # for more details.
 api_db_group = cfg.OptGroup('api_database',
-                            title='API Database Options',
-                            help="""
+    title='API Database Options',
+    help="""
 The *Nova API Database* is a separate database which is used for information
 which is used across *cells*. This database is mandatory since the Mitaka
 release (13.0.0).
@@ -52,49 +51,49 @@ release (13.0.0).
 api_db_opts = [
     # TODO(markus_z): This should probably have a required=True attribute
     cfg.StrOpt('connection',
-               secret=True,
-               help=''),
+        secret=True,
+        help=''),
     cfg.BoolOpt('sqlite_synchronous',
-                default=True,
-                help=''),
+        default=True,
+        help=''),
     cfg.StrOpt('slave_connection',
-               secret=True,
-               help=''),
+        secret=True,
+        help=''),
     cfg.StrOpt('mysql_sql_mode',
-               default='TRADITIONAL',
-               help=''),
+        default='TRADITIONAL',
+        help=''),
     cfg.IntOpt('connection_recycle_time',
-               default=3600,
-               deprecated_name='idle_timeout',
-               help=''),
+        default=3600,
+        deprecated_name='idle_timeout',
+        help=''),
     # TODO(markus_z): We should probably default this to 5 to not rely on the
     # SQLAlchemy default. Otherwise we wouldn't provide a stable default.
     cfg.IntOpt('max_pool_size',
-               help=''),
+        help=''),
     cfg.IntOpt('max_retries',
-               default=10,
-               help=''),
+        default=10,
+        help=''),
     # TODO(markus_z): This should have a minimum attribute of 0
     cfg.IntOpt('retry_interval',
-               default=10,
-               help=''),
+        default=10,
+        help=''),
     # TODO(markus_z): We should probably default this to 10 to not rely on the
     # SQLAlchemy default. Otherwise we wouldn't provide a stable default.
     cfg.IntOpt('max_overflow',
-               help=''),
+        help=''),
     # TODO(markus_z): This should probably make use of the "choices" attribute.
     # "oslo.db" uses only the values [<0, 0, 50, 100] see module
     # /oslo_db/sqlalchemy/engines.py method "_setup_logging"
     cfg.IntOpt('connection_debug',
-               default=0,
-               help=''),
+        default=0,
+        help=''),
     cfg.BoolOpt('connection_trace',
-                default=False,
-                help=''),
+        default=False,
+        help=''),
     # TODO(markus_z): We should probably default this to 30 to not rely on the
     # SQLAlchemy default. Otherwise we wouldn't provide a stable default.
     cfg.IntOpt('pool_timeout',
-               help='')
+        help='')
 ]  # noqa
 
 
