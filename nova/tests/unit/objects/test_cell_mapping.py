@@ -138,6 +138,20 @@ class _TestCellMappingListObject(object):
         get_all_from_db.assert_called_once_with(self.context)
         self.compare_obj(mapping_obj.objects[0], db_mapping)
 
+    def test_get_all_sorted(self):
+        for ident in (10, 3):
+            cm = objects.CellMapping(context=self.context,
+                                     id=ident,
+                                     uuid=getattr(uuids, 'cell%i' % ident),
+                                     transport_url='fake://%i' % ident,
+                                     database_connection='fake://%i' % ident)
+            cm.create()
+        obj = objects.CellMappingList.get_all(self.context)
+        ids = [c.id for c in obj]
+        # Find the two normal cells, plus the two we created, but in the right
+        # order
+        self.assertEqual([1, 2, 3, 10], ids)
+
 
 class TestCellMappingListObject(test_objects._LocalTest,
                                 _TestCellMappingListObject):
