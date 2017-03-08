@@ -41,7 +41,7 @@ FILES
 SEE ALSO
 ========
 
-* `OpenStack Nova <http://nova.openstack.org>`__
+* `OpenStack Nova <https://docs.openstack.org/developer/nova>`__
 
 BUGS
 ====

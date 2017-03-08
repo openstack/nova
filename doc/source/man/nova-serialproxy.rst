@@ -40,9 +40,9 @@ FILES
 SEE ALSO
 ========
 
-* `OpenStack Nova <http://nova.openstack.org>`__
+* `OpenStack Nova <https://docs.openstack.org/developer/nova>`__
 
 BUGS
 ====
 
-* Nova is sourced in Launchpad so you can view current bugs at `OpenStack Nova <http://nova.openstack.org>`__
+* Nova bugs are managed at Launchpad `Bugs : Nova <https://bugs.launchpad.net/nova>`__
