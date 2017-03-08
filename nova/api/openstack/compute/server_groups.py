@@ -59,10 +59,9 @@ class ServerGroupController(wsgi.Controller):
         members = []
         if group.members:
             # Display the instances that are not deleted.
-            filters = {'uuid': group.members, 'deleted': False}
-            instances = objects.InstanceList.get_by_filters(
-                context, filters=filters)
-            members = [instance.uuid for instance in instances]
+            mappings = objects.InstanceMappingList.get_by_instance_uuids(
+                context, group.members)
+            members = [mapping.instance_uuid for mapping in mappings]
         server_group['members'] = members
         # Add project id information to the response data for
         # API version v2.13
