@@ -43,11 +43,11 @@ Neutron in your deployment.
 
 Possible values:
 
-    Any string representing a valid network bridge, such as 'br100'
+* Any string representing a valid network bridge, such as 'br100'
 
 Related options:
 
-    ``use_neutron``
+* ``use_neutron``
 """),
     cfg.StrOpt("flat_network_dns",
         default="8.8.4.4",
@@ -65,11 +65,11 @@ Neutron in your deployment.
 
 Possible values:
 
-    Any valid IP address.
+* Any valid IP address.
 
 Related options:
 
-    ``use_neutron``
+* ``use_neutron``
 """),
     cfg.StrOpt("flat_interface",
         deprecated_for_removal=True,
@@ -84,7 +84,7 @@ nova-network, it is also used by libvirt for the bridge interface name.
 
 Possible values:
 
-    Any valid virtual interface name, such as 'eth0'
+* Any valid virtual interface name, such as 'eth0'
 """),
     cfg.IntOpt("vlan_start",
         default=100,
@@ -107,12 +107,13 @@ for `network_manager` is not set to the default of
 
 Possible values:
 
-    Any integer between 1 and 4094. Values outside of that range will raise a
-    ValueError exception. Default = 100.
+* Any integer between 1 and 4094. Values outside of that range will raise a
+  ValueError exception.
 
 Related options:
 
-    ``network_manager``, ``use_neutron``
+* ``network_manager``
+* ``use_neutron``
 """),
     cfg.StrOpt("vlan_interface",
         deprecated_for_removal=True,
@@ -134,7 +135,7 @@ configuration option for `network_manager` is not set to the default of
 
 Possible values:
 
-    Any valid virtual interface name, such as 'eth0'
+* Any valid virtual interface name, such as 'eth0'
 """),
     cfg.IntOpt("num_networks",
         deprecated_for_removal=True,
@@ -158,13 +159,13 @@ Neutron in your deployment.
 
 Possible values:
 
-    Any positive integer is technically valid, although there are practical
-    limits based upon available IP address space and virtual interfaces. The
-    default is 1.
+* Any positive integer is technically valid, although there are practical
+  limits based upon available IP address space and virtual interfaces.
 
 Related options:
 
-    ``use_neutron``, ``network_size``
+* ``use_neutron``
+* ``network_size``
 """),
     cfg.StrOpt("vpn_ip",
         default="$my_ip",
@@ -184,11 +185,13 @@ for `network_manager` is not set to the default of
 
 Possible values:
 
-    Any valid IP address. The default is $my_ip, the IP address of the VM.
+* Any valid IP address. The default is ``$my_ip``, the IP address of the VM.
 
 Related options:
 
-    ``network_manager``, ``use_neutron``, ``vpn_start``
+* ``network_manager``
+* ``use_neutron``
+* ``vpn_start``
 """),
     cfg.PortOpt("vpn_start",
         default=1000,
@@ -208,11 +211,13 @@ parameter when creating a network.
 
 Possible values:
 
-    Any integer representing a valid port number. The default is 1000.
+* Any integer representing a valid port number. The default is 1000.
 
 Related options:
 
-    ``use_neutron``, ``vpn_ip``, ``network_manager``
+* ``use_neutron``
+* ``vpn_ip``
+* ``network_manager``
 """),
     cfg.IntOpt("network_size",
         default=256,
@@ -230,13 +235,14 @@ Neutron in your deployment.
 
 Possible values:
 
-    Any positive integer that is less than or equal to the available network
-    size. Note that if you are creating multiple networks, they must all fit in
-    the available IP address space. The default is 256.
+* Any positive integer that is less than or equal to the available network
+  size. Note that if you are creating multiple networks, they must all fit in
+  the available IP address space. The default is 256.
 
 Related options:
 
-    ``use_neutron``, ``num_networks``
+* ``use_neutron``
+* ``num_networks``
 """),
     cfg.StrOpt("fixed_range_v6",
         default="fd00::/48",
@@ -253,11 +259,11 @@ Neutron in your deployment.
 
 Possible values:
 
-    Any valid IPv6 CIDR. The default value is "fd00::/48".
+* Any valid IPv6 CIDR
 
 Related options:
 
-    ``use_neutron``
+* ``use_neutron``
 """),
     cfg.StrOpt("gateway",
         deprecated_for_removal=True,
@@ -273,11 +279,12 @@ Neutron in your deployment.
 
 Possible values:
 
-    Any valid IP address.
+* Any valid IP address.
 
 Related options:
 
-    ``use_neutron``, ``gateway_v6``
+* ``use_neutron``
+* ``gateway_v6``
 """),
     cfg.StrOpt("gateway_v6",
         deprecated_for_removal=True,
@@ -293,11 +300,12 @@ Neutron in your deployment.
 
 Possible values:
 
-    Any valid IP address.
+* Any valid IP address.
 
 Related options:
 
-    ``use_neutron``, ``gateway``
+* ``use_neutron``
+* ``gateway``
 """),
     cfg.IntOpt("cnt_vpn_clients",
         default=0,
@@ -315,11 +323,12 @@ option for `network_manager` is not set to the default of
 
 Possible values:
 
-    Any integer, 0 or greater. The default is 0.
+* Any integer, 0 or greater.
 
 Related options:
 
-    ``use_neutron``, ``network_manager``
+* ``use_neutron``
+* ``network_manager``
 """),
     cfg.IntOpt("fixed_ip_disassociate_timeout",
         default=600,
@@ -336,11 +345,11 @@ when using neutron for networking.
 
 Possible values:
 
-    Any integer, zero or greater. The default is 600 (10 minutes).
+* Any integer, zero or greater.
 
 Related options:
 
-    ``use_neutron``
+* ``use_neutron``
 """),
     cfg.IntOpt("create_unique_mac_address_attempts",
         default=5,
@@ -357,11 +366,11 @@ unique MAC address before giving up and raising a
 
 Possible values:
 
-    Any positive integer. The default is 5.
+* Any positive integer. The default is 5.
 
 Related options:
 
-    ``use_neutron``
+* ``use_neutron``
 """),
     cfg.BoolOpt("teardown_unused_network_gateway",
         default=False,
@@ -376,7 +385,9 @@ the network is in nova-network VLAN mode and is multi-hosted.
 
 Related options:
 
-    ``use_neutron``, ``vpn_ip``, ``fake_network``
+* ``use_neutron``
+* ``vpn_ip``
+* ``fake_network``
 """),
     cfg.BoolOpt("force_dhcp_release",
         default=True,
@@ -391,7 +402,7 @@ when that instance is terminated.
 
 Related options:
 
-    ``use_neutron``
+* ``use_neutron``
 """),
     cfg.BoolOpt("update_dns_entries",
         default=False,
@@ -407,7 +418,7 @@ mode.
 
 Related options:
 
-    ``use_neutron``
+* ``use_neutron``
 """),
     cfg.IntOpt("dns_update_periodic_interval",
         default=-1,
@@ -423,12 +434,12 @@ entries for the network.
 
 Possible values:
 
-    Either -1 (default), or any positive integer. A negative value will disable
-    the updates.
+* A positive integer
+* -1 to disable updates
 
 Related options:
 
-    ``use_neutron``
+* ``use_neutron``
 """),
     cfg.StrOpt("dhcp_domain",
         default="novalocal",
@@ -442,11 +453,11 @@ This option allows you to specify the domain for the DHCP server.
 
 Possible values:
 
-    Any string that is a valid domain name.
+* Any string that is a valid domain name.
 
 Related options:
 
-    ``use_neutron``
+* ``use_neutron``
 """),
     cfg.StrOpt("l3_lib",
         default="nova.network.l3.LinuxNetL3",
@@ -460,12 +471,12 @@ This option allows you to specify the L3 management library to be used.
 
 Possible values:
 
-    Any dot-separated string that represents the import path to an L3
-    networking library.
+* Any dot-separated string that represents the import path to an L3 networking
+  library.
 
 Related options:
 
-    ``use_neutron``
+* ``use_neutron``
 """),
     cfg.BoolOpt("share_dhcp_address",
         default=False,
@@ -508,8 +519,8 @@ you can change or add to this list.
 
 Possible values
 
-    A list of strings, where each string is the full path to a dhcpbridge
-    configuration file.
+* A list of strings, where each string is the full path to a dhcpbridge
+  configuration file.
 """),
     cfg.StrOpt('networks_path',
         default=paths.state_path_def('networks'),
@@ -520,7 +531,7 @@ installed.
 
 Possible values
 
-    A string containing the full path to the desired configuration directory
+* A string containing the full path to the desired configuration directory
 """),
     cfg.StrOpt('public_interface',
         default='eth0',
@@ -530,7 +541,7 @@ is 'eth0'.
 
 Possible values:
 
-    Any string representing a network interface name
+* Any string representing a network interface name
 """),
     cfg.StrOpt('dhcpbridge',
         default=paths.bindir_def('nova-dhcpbridge'),
@@ -540,21 +551,22 @@ The location of the binary nova-dhcpbridge. By default it is the binary named
 
 Possible values:
 
-    Any string representing the full path to the binary for dhcpbridge
+* Any string representing the full path to the binary for dhcpbridge
 """),
     cfg.StrOpt('routing_source_ip',
         default='$my_ip',
         help="""
-This is the public IP address of the network host. It is used when creating a
-SNAT rule.
+The public IP address of the network host.
+
+This is used when creating an SNAT rule.
 
 Possible values:
 
-    Any valid IP address
+* Any valid IP address
 
 Related options:
 
-    force_snat_range
+* ``force_snat_range``
 """),
     cfg.IntOpt('dhcp_lease_time',
         default=86400,
@@ -564,7 +576,7 @@ The lifetime of a DHCP lease, in seconds. The default is 86400 (one day).
 
 Possible values:
 
-    Any positive integer value.
+* Any positive integer value.
 """),
     cfg.MultiStrOpt("dns_server",
             default=[],
@@ -578,11 +590,11 @@ and will be used as DNS servers, too.
 
 Possible values:
 
-    A list of strings, where each string is either an IP address or a FQDN.
+* A list of strings, where each string is either an IP address or a FQDN.
 
 Related options:
 
-    use_network_dns_servers
+* ``use_network_dns_servers``
 """),
     cfg.BoolOpt("use_network_dns_servers",
         default=False,
@@ -593,7 +605,7 @@ the `dns_server` option.
 
 Related options:
 
-    dns_server
+* ``dns_server``
 """),
     cfg.ListOpt("dmz_cidr",
         default=[],
@@ -603,7 +615,7 @@ that should be accepted.
 
 Possible values:
 
-    A list of strings, each of which should be a valid CIDR.
+* A list of strings, each of which should be a valid CIDR.
 """),
     cfg.MultiStrOpt("force_snat_range",
         default=[],
@@ -614,11 +626,11 @@ rules are created.
 
 Possible values:
 
-    A list of strings, each of which should be a valid CIDR.
+* A list of strings, each of which should be a valid CIDR.
 
 Related options:
 
-    routing_source_ip
+* ``routing_source_ip``
 """),
     cfg.StrOpt("dnsmasq_config_file",
         default="",
@@ -627,8 +639,8 @@ The path to the custom dnsmasq configuration file, if any.
 
 Possible values:
 
-    The full path to the configuration file, or an empty string if there is no
-    custom dnsmasq configuration file.
+* The full path to the configuration file, or an empty string if there is no
+  custom dnsmasq configuration file.
 """),
     cfg.StrOpt("linuxnet_interface_driver",
         default="nova.network.linux_net.LinuxBridgeInterfaceDriver",
@@ -640,7 +652,7 @@ import path for that class.
 
 Possible values:
 
-    Any string representing a dot-separated class path that Nova can import.
+* Any string representing a dot-separated class path that Nova can import.
 """),
     cfg.StrOpt("linuxnet_ovs_integration_bridge",
         default="br-int",
@@ -650,7 +662,7 @@ with Open vSwitch."
 
 Possible values:
 
-    Any string representing a valid bridge name.
+* Any string representing a valid bridge name.
 """),
     cfg.BoolOpt("send_arp_for_ha",
         default=False,
@@ -661,7 +673,7 @@ up-to-date.
 
 Related options:
 
-    send_arp_for_ha_count
+* ``send_arp_for_ha_count``
 """),
     cfg.IntOpt("send_arp_for_ha_count",
         default=3,
@@ -672,11 +684,11 @@ messages will be sent.
 
 Possible values:
 
-    Any integer greater than or equal to 0
+* Any integer greater than or equal to 0
 
 Related options:
 
-    send_arp_for_ha
+* ``send_arp_for_ha``
 """),
     cfg.BoolOpt("use_single_default_gateway",
         default=False,
@@ -692,7 +704,7 @@ in this list is the special keyword 'all', then all traffic will be forwarded.
 
 Possible values:
 
-    A list of zero or more interface names, or the word 'all'.
+* A list of zero or more interface names, or the word 'all'.
 """),
     cfg.StrOpt("metadata_host",
         default="$my_ip",
@@ -701,11 +713,11 @@ This option determines the IP address for the network metadata API server.
 
 Possible values:
 
-   * Any valid IP address. The default is the address of the Nova API server.
+* Any valid IP address. The default is the address of the Nova API server.
 
 Related options:
 
-    * metadata_port
+* ``metadata_port``
 """),
     cfg.PortOpt("metadata_port",
         default=8775,
@@ -714,7 +726,7 @@ This option determines the port used for the metadata API server.
 
 Related options:
 
-    * metadata_host
+* ``metadata_host``
 """),
     cfg.StrOpt("iptables_top_regex",
         default="",
@@ -724,11 +736,11 @@ them at the top when applying metadata changes to the rules.
 
 Possible values:
 
-    * Any string representing a valid regular expression, or an empty string
+* Any string representing a valid regular expression, or an empty string
 
 Related options:
 
-    * iptables_bottom_regex
+* ``iptables_bottom_regex``
 """),
     cfg.StrOpt("iptables_bottom_regex",
         default="",
@@ -738,11 +750,11 @@ them at the bottom when applying metadata changes to the rules.
 
 Possible values:
 
-    * Any string representing a valid regular expression, or an empty string
+* Any string representing a valid regular expression, or an empty string
 
 Related options:
 
-    * iptables_top_regex
+* iptables_top_regex
 """),
     cfg.StrOpt("iptables_drop_action",
         default="DROP",
@@ -754,7 +766,7 @@ going on, or LOGDROP in order to record the blocked traffic before DROPping.
 
 Possible values:
 
-    * A string representing an iptables chain. The default is DROP.
+* A string representing an iptables chain. The default is DROP.
 """),
     cfg.IntOpt("ovs_vsctl_timeout",
         default=120,
@@ -766,8 +778,8 @@ means that the utility should wait forever for a response.
 
 Possible values:
 
-    * Any positive integer if a limited timeout is desired, or zero if the
-    calls should wait forever for a response.
+* Any positive integer if a limited timeout is desired, or zero if the calls
+  should wait forever for a response.
 """),
     cfg.BoolOpt("fake_network",
         default=False,
@@ -784,11 +796,11 @@ giving up. The minimum number of retries is 1.
 
 Possible values:
 
-    * Any positive integer
+* Any positive integer
 
 Related options:
 
-    * ebtables_retry_interval
+* ``ebtables_retry_interval``
 """),
     cfg.FloatOpt("ebtables_retry_interval",
         default=1.0,
@@ -802,12 +814,12 @@ after the third failure it will sleep 3 * 1.0 seconds.
 
 Possible values:
 
-    * Any non-negative float or integer. Setting this to zero will result in no
-    waiting between attempts.
+* Any non-negative float or integer. Setting this to zero will result in no
+  waiting between attempts.
 
 Related options:
 
-    * ebtables_exec_attempts
+* ebtables_exec_attempts
 """),
 ]
 
@@ -920,7 +932,7 @@ of Neutron in your deployment.
 
 Related options:
 
-* use_neutron
+* ``use_neutron``
 """),
     cfg.StrOpt('firewall_driver',
         deprecated_for_removal=True,
@@ -938,9 +950,9 @@ another networking services, such as Neutron, this should be to set to the
 
 Possible values:
 
-* nova.virt.firewall.IptablesFirewallDriver
-* nova.virt.firewall.NoopFirewallDriver
-* nova.virt.libvirt.firewall.IptablesFirewallDriver
+* ``nova.virt.firewall.IptablesFirewallDriver``
+* ``nova.virt.firewall.NoopFirewallDriver``
+* ``nova.virt.libvirt.firewall.IptablesFirewallDriver``
 * [...]
 
 Related options:
@@ -1015,7 +1027,7 @@ Neutron in your deployment.
 
 Related options:
 
-* use_neutron
+* ``use_neutron``
 """)
 ]
 
