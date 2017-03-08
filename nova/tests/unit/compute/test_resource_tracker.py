@@ -420,7 +420,7 @@ def setup_rt(hostname, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES,
     """
     sched_client_mock = mock.MagicMock()
     notifier_mock = mock.MagicMock()
-    vd = mock.MagicMock()
+    vd = mock.MagicMock(autospec='nova.virt.driver.ComputeDriver')
     # Make sure we don't change any global fixtures during tests
     virt_resources = copy.deepcopy(virt_resources)
     vd.get_available_resource.return_value = virt_resources
