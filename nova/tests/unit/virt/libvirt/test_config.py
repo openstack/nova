@@ -2688,6 +2688,40 @@ class LibvirtConfigNodeDeviceTest(LibvirtConfigBaseTest):
         self.assertEqual(obj.pci_capability.fun_capability[1].type,
                           "virt_functions")
 
+    def test_config_net_device(self):
+        xmlin = """
+        <device>
+          <name>net_enp2s2_02_9a_a1_37_be_54</name>
+          <path>/sys/devices/pci0000:00/0000:00:02.0/net/enp2s2</path>
+          <parent>pci_0000_00_02_0</parent>
+          <capability type='net'>
+            <interface>enp2s2</interface>
+            <address>02:9a:a1:37:be:54</address>
+            <link state='down'/>
+            <feature name='rx'/>
+            <feature name='tx'/>
+            <feature name='sg'/>
+            <feature name='tso'/>
+            <feature name='gso'/>
+            <feature name='gro'/>
+            <feature name='rxvlan'/>
+            <feature name='txvlan'/>
+            <capability type='80203'/>
+          </capability>
+        </device>"""
+
+        obj = config.LibvirtConfigNodeDevice()
+        obj.parse_str(xmlin)
+
+        self.assertIsInstance(obj.pci_capability,
+                              config.LibvirtConfigNodeDevicePciCap)
+        self.assertEqual(obj.pci_capability.interface, "enp2s2")
+        self.assertEqual(obj.pci_capability.address, "02:9a:a1:37:be:54")
+        self.assertEqual(obj.pci_capability.link_state, "down")
+        self.assertEqual(obj.pci_capability.features,
+                         ['rx', 'tx', 'sg', 'tso', 'gso', 'gro', 'rxvlan',
+                          'txvlan'])
+
 
 class LibvirtConfigNodeDevicePciCapTest(LibvirtConfigBaseTest):
 

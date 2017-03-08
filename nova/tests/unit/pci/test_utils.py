@@ -246,3 +246,46 @@ class GetVfNumByPciAddressTestCase(test.NoDBTestCase):
             utils.get_vf_num_by_pci_address,
             self.pci_address
         )
+
+
+class GetNetNameByVfPciAddressTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super(GetNetNameByVfPciAddressTestCase, self).setUp()
+        self._get_mac = mock.patch.object(utils, 'get_mac_by_pci_address')
+        self.mock_get_mac = self._get_mac.start()
+        self._get_ifname = mock.patch.object(
+            utils, 'get_ifname_by_pci_address')
+        self.mock_get_ifname = self._get_ifname.start()
+        self.addCleanup(self._get_mac.stop)
+        self.addCleanup(self._get_ifname.stop)
+
+        self.mac = 'ca:fe:ca:fe:ca:fe'
+        self.if_name = 'enp7s0f0'
+        self.pci_address = '0000:07:02.1'
+
+    def test_correct_behaviour(self):
+        ref_net_name = 'net_enp7s0f0_ca_fe_ca_fe_ca_fe'
+        self.mock_get_mac.return_value = self.mac
+        self.mock_get_ifname.return_value = self.if_name
+        net_name = utils.get_net_name_by_vf_pci_address(self.pci_address)
+        self.assertEqual(ref_net_name, net_name)
+        self.mock_get_mac.called_once_with(self.pci_address)
+        self.mock_get_ifname.called_once_with(self.pci_address)
+
+    def test_wrong_mac(self):
+        self.mock_get_mac.side_effect = (
+            exception.PciDeviceNotFoundById(self.pci_address))
+        net_name = utils.get_net_name_by_vf_pci_address(self.pci_address)
+        self.assertIsNone(net_name)
+        self.mock_get_mac.called_once_with(self.pci_address)
+        self.mock_get_ifname.assert_not_called()
+
+    def test_wrong_ifname(self):
+        self.mock_get_mac.return_value = self.mac
+        self.mock_get_ifname.side_effect = (
+            exception.PciDeviceNotFoundById(self.pci_address))
+        net_name = utils.get_net_name_by_vf_pci_address(self.pci_address)
+        self.assertIsNone(net_name)
+        self.mock_get_mac.called_once_with(self.pci_address)
+        self.mock_get_ifname.called_once_with(self.pci_address)

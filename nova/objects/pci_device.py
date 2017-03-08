@@ -18,6 +18,7 @@ import copy
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
+import six
 
 from nova import db
 from nova import exception
@@ -154,10 +155,15 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
             if k in self.fields.keys():
                 setattr(self, k, v)
             else:
-                # Note (yjiang5) extra_info.update does not update
+                # NOTE(yjiang5): extra_info.update does not update
                 # obj_what_changed, set it explicitly
+                # NOTE(ralonsoh): list of parameters currently added to
+                # "extra_info" dict:
+                #     - "capabilities": dict of (strings/list of strings)
                 extra_info = self.extra_info
-                extra_info.update({k: v})
+                data = (v if isinstance(v, six.string_types) else
+                        jsonutils.dumps(v))
+                extra_info.update({k: data})
                 self.extra_info = extra_info
 
     def __init__(self, *args, **kwargs):
