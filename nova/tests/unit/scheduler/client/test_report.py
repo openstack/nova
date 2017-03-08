@@ -1233,42 +1233,6 @@ There was a conflict when trying to complete your request.
                 '_get_or_create_resource_class')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
-    def test_set_inventory_for_provider_bad_custom(self, mock_erp, mock_gocr,
-            mock_del, mock_upd):
-        """Tests that inventory record containing a badly-formatted resource
-        class results in raising an appropriate exception.
-        """
-        exc = exception.InvalidResourceClass(resource_class='BAD_FOO')
-        mock_gocr.side_effect = exc
-        inv_data = {
-            'BAD_FOO': {
-                'total': 100,
-                'reserved': 0,
-                'min_unit': 1,
-                'max_unit': 100,
-                'step_size': 1,
-                'allocation_ratio': 1.0,
-            },
-        }
-        self.assertRaises(
-            exception.InvalidResourceClass,
-            self.client.set_inventory_for_provider,
-            mock.sentinel.rp_uuid,
-            mock.sentinel.rp_name,
-            inv_data,
-        )
-
-        self.assertFalse(mock_upd.called)
-        self.assertFalse(mock_del.called)
-
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_update_inventory')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_delete_inventory')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_or_create_resource_class')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_ensure_resource_provider')
     def test_set_inventory_for_provider_no_inv(self, mock_erp, mock_gocr,
             mock_del, mock_upd):
         """Tests that passing empty set of inventory records triggers a delete
@@ -1713,21 +1677,3 @@ class TestResourceClass(SchedulerReportClientTestCase):
         )
         self.assertIsNone(result)
         self.assertIn('Another thread already', mock_log.call_args[0][0])
-
-    @mock.patch('nova.scheduler.client.report.LOG.error')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.post')
-    def test_create_resource_class_bad_name(self, mock_post, mock_log):
-        resp_mock = mock.Mock(status_code=400, text='errortext')
-        mock_post.return_value = resp_mock
-        rc_name = 'FOO'
-        self.assertRaises(
-            exception.InvalidResourceClass,
-            self.client._create_resource_class,
-            rc_name,
-        )
-        mock_post.assert_called_once_with(
-            '/resource_classes',
-            {'name': rc_name},
-            version="1.2",
-        )
-        self.assertIn('Failed to create', mock_log.call_args[0][0])
