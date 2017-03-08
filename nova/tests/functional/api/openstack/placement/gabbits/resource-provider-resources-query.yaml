@@ -6,6 +6,7 @@ defaults:
     request_headers:
         x-auth-token: admin
         content-type: application/json
+        accept: application/json
         OpenStack-API-Version: placement latest
 
 tests:
@@ -44,6 +45,8 @@ tests:
   status: 400
   response_strings:
       - 'Invalid query string parameters'
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: list resource providers providing a badly-formatted resources filter
   GET: /resource_providers?resources=VCPU
@@ -51,6 +54,8 @@ tests:
   response_strings:
       - 'Badly formed resources parameter. Expected resources query string parameter in form:'
       - 'Got: VCPU.'
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: list resource providers providing a resources filter with non-integer amount
   GET: /resource_providers?resources=VCPU:fred
@@ -58,6 +63,8 @@ tests:
   response_strings:
       - 'Requested resource VCPU expected positive integer amount.'
       - 'Got: fred.'
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: list resource providers providing a resources filter with negative amount
   GET: /resource_providers?resources=VCPU:-2
@@ -65,12 +72,16 @@ tests:
   response_strings:
       - 'Requested resource VCPU requires amount >= 1.'
       - 'Got: -2.'
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: list resource providers providing a resource class not existing
   GET: /resource_providers?resources=MYMISSINGCLASS:1
   status: 400
   response_strings:
       - 'Invalid resource class in resources parameter'
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: list resource providers providing a bad trailing comma
   GET: /resource_providers?resources=DISK_GB:500,
@@ -80,6 +91,8 @@ tests:
       # NOTE(mriedem): The value is empty because splitting on the trailing
       # comma results in an empty string.
       - 'Got: .'
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: list resource providers providing disk resources
   GET: /resource_providers?resources=DISK_GB:500
