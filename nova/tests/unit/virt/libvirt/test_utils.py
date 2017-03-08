@@ -685,8 +685,8 @@ disk size: 4.4M
 
         target = 't.qcow2'
         self.executes = []
-        expected_commands = [('qemu-img', 'convert', '-O', 'raw',
-                              '-f', 'qcow2',
+        expected_commands = [('qemu-img', 'convert', '-t', 'none',
+                              '-O', 'raw', '-f', 'qcow2',
                               't.qcow2.part', 't.qcow2.converted'),
                              ('rm', 't.qcow2.part'),
                              ('mv', 't.qcow2.converted', 't.qcow2')]

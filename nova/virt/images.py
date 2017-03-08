@@ -101,7 +101,14 @@ def convert_image_unsafe(source, dest, out_format, run_as_root=False):
 
 
 def _convert_image(source, dest, in_format, out_format, run_as_root):
-    cmd = ('qemu-img', 'convert', '-O', out_format)
+    # NOTE(mdbooth): qemu-img convert defaults to cache=unsafe, which means
+    # that data is not synced to disk at completion. We explicitly use
+    # cache=none here to (1) ensure that we don't interfere with other
+    # applications using the host's io cache, and (2) ensure that the data is
+    # on persistent storage when the command exits. Without (2), a host crash
+    # may leave a corrupt image in the image cache, which Nova cannot recover
+    # automatically.
+    cmd = ('qemu-img', 'convert', '-t', 'none', '-O', out_format)
     if in_format is not None:
         cmd = cmd + ('-f', in_format)
     cmd = cmd + (source, dest)
