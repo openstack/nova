@@ -1,4 +1,4 @@
-# Copyright 2016 NTT Corporation.
+# Copyright 2017 NTT Corporation.
 #
 # All Rights Reserved.
 #
@@ -15,7 +15,9 @@
 # under the License.
 
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
+from nova.tests.functional import test_servers
 from nova.tests.unit import policy_fixture
 from nova.tests import uuidsentinel as uuids
 
@@ -93,3 +95,50 @@ class InterfaceFullstack(integrated_helpers._IntegratedTestBase):
         resp = self.api.api_post(os_interface_url, body,
                                  check_response_status=False)
         self.assertEqual(400, resp.status)
+
+
+class InterfaceFullstackWithNeutron(test_servers.ServersTestBase):
+    """Tests for port interfaces command.
+
+    Functional Test Scope:
+
+    This test uses Neutron.
+    os-interface API specifies a port ID created by Neutron.
+
+    """
+    api_major_version = 'v2.1'
+    USE_NEUTRON = True
+
+    def setUp(self):
+        super(InterfaceFullstackWithNeutron, self).setUp()
+        self.useFixture(nova_fixtures.NeutronFixture(self))
+
+    def test_detach_interface_negative_invalid_state(self):
+        # Create server with network
+        image = self.api.get_images()[0]['id']
+        post = {"server": {"name": "test", "flavorRef": "1",
+            "imageRef": image,
+            "networks": [{"uuid": "3cb9bc59-5699-4588-a4b1-b87f96708bc6"}]}}
+        created_server = self.api.post_server(post)
+        created_server_id = created_server['id']
+        found_server = self._wait_for_state_change(created_server, 'BUILD')
+        self.assertEqual('ACTIVE', found_server['status'])
+
+        response = self.api.get_port_interfaces(created_server_id)[0]
+        port_id = response['port_id']
+
+        # Change status from ACTIVE to SUSPENDED for negative test
+        post = {'suspend': {}}
+        self.api.post_server_action(created_server_id, post)
+        found_server = self._wait_for_state_change(found_server, 'ACTIVE')
+        self.assertEqual('SUSPENDED', found_server['status'])
+
+        # Detach port interface in SUSPENDED (not ACTIVE, etc.)
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self.api.detach_interface,
+                               created_server_id, port_id)
+        self.assertEqual(409, ex.response.status_code)
+        self.assertEqual('SUSPENDED', found_server['status'])
+
+        # Cleanup
+        self._delete_server(created_server_id)

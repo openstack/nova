@@ -408,3 +408,11 @@ class TestOpenStackClient(object):
         """
         return self.api_put('/servers/%s/tags' % server_id,
                             {'tags': tags}).body['tags']
+
+    def get_port_interfaces(self, server_id):
+        return self.api_get('/servers/%s/os-interface' %
+                            (server_id)).body['interfaceAttachments']
+
+    def detach_interface(self, server_id, port_id):
+        return self.api_delete('/servers/%s/os-interface/%s' %
+                               (server_id, port_id))
