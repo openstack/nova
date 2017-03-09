@@ -1843,11 +1843,24 @@ class API(base.Base):
                 # acceptable to skip the rest of the delete processing.
                 cell, instance = self._lookup_instance(context, instance.uuid)
                 if cell and instance:
-                    with nova_context.target_cell(context, cell):
-                        with compute_utils.notify_about_instance_delete(
-                                self.notifier, context, instance):
-                            instance.destroy()
-                        return
+                    # Conductor may have buried the instance in cell0 but
+                    # quotas must still be decremented in the main cell DB.
+                    project_id, user_id = quotas_obj.ids_from_instance(
+                        context, instance)
+                    # This is confusing but actually decrements quota usage.
+                    quotas = self._create_reservations(context,
+                                                       instance,
+                                                       instance.task_state,
+                                                       project_id, user_id)
+                    quotas.commit()
+                    try:
+                        with nova_context.target_cell(context, cell):
+                            with compute_utils.notify_about_instance_delete(
+                                    self.notifier, context, instance):
+                                instance.destroy()
+                            return
+                    except exception.InstanceNotFound:
+                        quotas.rollback()
                 if not instance:
                     # Instance is already deleted.
                     return

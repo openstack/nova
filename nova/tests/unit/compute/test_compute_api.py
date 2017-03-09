@@ -1487,6 +1487,93 @@ class _ComputeAPIUnitTestMixIn(object):
 
         test()
 
+    @mock.patch('nova.context.target_cell')
+    @mock.patch('nova.compute.utils.notify_about_instance_delete')
+    @mock.patch('nova.objects.Instance.destroy')
+    def test_delete_instance_from_cell0(self, destroy_mock, notify_mock,
+                                        target_cell_mock):
+        """Tests the case that the instance does not have a host and was not
+        deleted while building, so conductor put it into cell0 so the API has
+        to delete the instance from cell0 and decrement the quota from the
+        main cell.
+        """
+        instance = self._create_instance_obj({'host': None})
+        cell0 = objects.CellMapping(uuid=objects.CellMapping.CELL0_UUID)
+        quota_mock = mock.MagicMock()
+
+        with test.nested(
+            mock.patch.object(self.compute_api, '_delete_while_booting',
+                              return_value=False),
+            mock.patch.object(self.compute_api, '_lookup_instance',
+                              return_value=(cell0, instance)),
+            mock.patch.object(self.compute_api, '_create_reservations',
+                              return_value=quota_mock)
+        ) as (
+            _delete_while_booting, _lookup_instance, _create_reservations
+        ):
+            self.compute_api._delete(
+                self.context, instance, 'delete', mock.NonCallableMock())
+            _delete_while_booting.assert_called_once_with(
+                self.context, instance)
+            _lookup_instance.assert_called_once_with(
+                self.context, instance.uuid)
+            _create_reservations.assert_called_once_with(
+                self.context, instance, instance.task_state,
+                self.context.project_id, instance.user_id)
+            quota_mock.commit.assert_called_once_with()
+            target_cell_mock.assert_called_once_with(self.context, cell0)
+            notify_mock.assert_called_once_with(
+                self.compute_api.notifier, self.context, instance)
+            destroy_mock.assert_called_once_with()
+
+    @mock.patch('nova.context.target_cell')
+    @mock.patch('nova.compute.utils.notify_about_instance_delete')
+    @mock.patch('nova.objects.Instance.destroy')
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid',
+                # This just lets us exit the test early.
+                side_effect=test.TestingException)
+    def test_delete_instance_from_cell0_rollback_quota(
+            self, bdms_get_by_instance_uuid, destroy_mock, notify_mock,
+            target_cell_mock):
+        """Tests the case that the instance does not have a host and was not
+        deleted while building, so conductor put it into cell0 so the API has
+        to delete the instance from cell0 and decrement the quota from the
+        main cell. When we go to delete the instance, it's already gone so we
+        rollback the quota change.
+        """
+        instance = self._create_instance_obj({'host': None})
+        cell0 = objects.CellMapping(uuid=objects.CellMapping.CELL0_UUID)
+        quota_mock = mock.MagicMock()
+        destroy_mock.side_effect = exception.InstanceNotFound(
+            instance_id=instance.uuid)
+
+        with test.nested(
+            mock.patch.object(self.compute_api, '_delete_while_booting',
+                              return_value=False),
+            mock.patch.object(self.compute_api, '_lookup_instance',
+                              return_value=(cell0, instance)),
+            mock.patch.object(self.compute_api, '_create_reservations',
+                              return_value=quota_mock)
+        ) as (
+            _delete_while_booting, _lookup_instance, _create_reservations
+        ):
+            self.assertRaises(
+                test.TestingException, self.compute_api._delete,
+                self.context, instance, 'delete', mock.NonCallableMock())
+            _delete_while_booting.assert_called_once_with(
+                self.context, instance)
+            _lookup_instance.assert_called_once_with(
+                self.context, instance.uuid)
+            _create_reservations.assert_called_once_with(
+                self.context, instance, instance.task_state,
+                self.context.project_id, instance.user_id)
+            quota_mock.commit.assert_called_once_with()
+            target_cell_mock.assert_called_once_with(self.context, cell0)
+            notify_mock.assert_called_once_with(
+                self.compute_api.notifier, self.context, instance)
+            destroy_mock.assert_called_once_with()
+            quota_mock.rollback.assert_called_once_with()
+
     @mock.patch.object(context, 'target_cell')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid',
                        side_effect=exception.InstanceMappingNotFound(
