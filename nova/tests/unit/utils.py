@@ -17,6 +17,7 @@ import platform
 import socket
 import sys
 
+import mock
 from six.moves import range
 
 from nova.compute import flavors
@@ -291,3 +292,31 @@ def obj_called_with(the_mock, *args, **kwargs):
 
 def obj_called_once_with(the_mock, *args, **kwargs):
     return _obj_called_with(the_mock, *args, **kwargs) == 1
+
+
+class CustomMockCallMatcher(object):
+    def __init__(self, comparator):
+        self.comparator = comparator
+
+    def __eq__(self, other):
+        return self.comparator(other)
+
+
+def assert_instance_delete_notification_by_uuid(
+        mock_notify, expected_instance_uuid, expected_notifier,
+        expected_context):
+
+    match_by_instance_uuid = CustomMockCallMatcher(
+        lambda instance:
+        instance.uuid == expected_instance_uuid)
+
+    mock_notify.assert_has_calls([
+        mock.call(expected_notifier,
+                  expected_context,
+                  match_by_instance_uuid,
+                  'delete.start'),
+        mock.call(expected_notifier,
+                  expected_context,
+                  match_by_instance_uuid,
+                  'delete.end',
+                  system_metadata={})])

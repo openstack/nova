@@ -1209,8 +1209,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                 constraint='constraint').AndReturn(fake_inst)
             compute_utils.notify_about_instance_usage(
                     self.compute_api.notifier, self.context,
-                    inst, 'delete.end',
-                    system_metadata=inst.system_metadata)
+                    inst, 'delete.end', system_metadata={})
 
         self.mox.ReplayAll()
 
