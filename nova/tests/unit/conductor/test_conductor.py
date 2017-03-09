@@ -331,13 +331,16 @@ class _BaseTaskTestCase(object):
 
         return rebuild_args, compute_rebuild_args
 
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(objects.RequestSpec, 'save')
     @mock.patch.object(migrate.MigrationTask, 'execute')
     @mock.patch.object(utils, 'get_image_from_system_metadata')
     @mock.patch.object(objects.RequestSpec, 'from_components')
     def _test_cold_migrate(self, spec_from_components, get_image_from_metadata,
-                           migration_task_execute, spec_save,
+                           migration_task_execute, spec_save, get_im,
                            clean_shutdown=True):
+        get_im.return_value.cell_mapping = (
+            objects.CellMappingList.get_all(self.context)[0])
         get_image_from_metadata.return_value = 'image'
         inst = fake_instance.fake_db_instance(image_ref='image_ref')
         inst_obj = objects.Instance._from_db_object(
@@ -1687,13 +1690,20 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             self.assertNotEqual(old_rpcapi,
                                 self.conductor_manager.compute_rpcapi)
 
-    def test_migrate_server_fails_with_rebuild(self):
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
+    def test_migrate_server_fails_with_rebuild(self, get_im):
+        get_im.return_value.cell_mapping = (
+            objects.CellMappingList.get_all(self.context)[0])
+
         instance = fake_instance.fake_instance_obj(self.context,
                                                    vm_state=vm_states.ACTIVE)
         self.assertRaises(NotImplementedError, self.conductor.migrate_server,
             self.context, instance, None, True, True, None, None, None)
 
-    def test_migrate_server_fails_with_flavor(self):
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
+    def test_migrate_server_fails_with_flavor(self, get_im):
+        get_im.return_value.cell_mapping = (
+            objects.CellMappingList.get_all(self.context)[0])
         flavor = flavors.get_flavor_by_name('m1.tiny')
         instance = fake_instance.fake_instance_obj(self.context,
                                                    vm_state=vm_states.ACTIVE,
@@ -1707,10 +1717,13 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 'uuid': instance['uuid'], },
         }
 
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(scheduler_utils, 'set_vm_state_and_notify')
     @mock.patch.object(live_migrate.LiveMigrationTask, 'execute')
     def _test_migrate_server_deals_with_expected_exceptions(self, ex,
-        mock_execute, mock_set):
+            mock_execute, mock_set, get_im):
+        get_im.return_value.cell_mapping = (
+            objects.CellMappingList.get_all(self.context)[0])
         instance = fake_instance.fake_db_instance(uuid=uuids.instance,
                                                   vm_state=vm_states.ACTIVE)
         inst_obj = objects.Instance._from_db_object(
@@ -1731,7 +1744,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                  'expected_task_state': task_states.MIGRATING},
                 ex, self._build_request_spec(inst_obj))
 
-    def test_migrate_server_deals_with_invalidcpuinfo_exception(self):
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
+    def test_migrate_server_deals_with_invalidcpuinfo_exception(self, get_im):
+        get_im.return_value.cell_mapping = (
+            objects.CellMappingList.get_all(self.context)[0])
         instance = fake_instance.fake_db_instance(uuid=uuids.instance,
                                                   vm_state=vm_states.ACTIVE)
         inst_obj = objects.Instance._from_db_object(
@@ -1783,10 +1799,13 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         for ex in exs:
             self._test_migrate_server_deals_with_expected_exceptions(ex)
 
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(scheduler_utils, 'set_vm_state_and_notify')
     @mock.patch.object(live_migrate.LiveMigrationTask, 'execute')
     def test_migrate_server_deals_with_unexpected_exceptions(self,
-            mock_live_migrate, mock_set_state):
+            mock_live_migrate, mock_set_state, get_im):
+        get_im.return_value.cell_mapping = (
+            objects.CellMappingList.get_all(self.context)[0])
         expected_ex = IOError('fake error')
         mock_live_migrate.side_effect = expected_ex
         instance = fake_instance.fake_db_instance()
@@ -2322,6 +2341,20 @@ class ConductorTaskRPCAPITestCase(_BaseTaskTestCase,
             cctxt_mock.cast.assert_called_once_with(
                 self.context, 'live_migrate_instance', **kw)
         _test()
+
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
+    def test_targets_cell_no_instance_mapping(self, mock_im):
+
+        @conductor_manager.targets_cell
+        def test(self, context, instance):
+            return mock.sentinel.iransofaraway
+
+        mock_im.side_effect = exc.InstanceMappingNotFound
+        ctxt = mock.MagicMock()
+        inst = mock.MagicMock()
+        self.assertEqual(mock.sentinel.iransofaraway,
+                         test(None, ctxt, inst))
+        mock_im.assert_called_once_with(ctxt, inst.uuid)
 
 
 class ConductorTaskAPITestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
