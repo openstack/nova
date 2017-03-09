@@ -565,8 +565,8 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
 
     @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
-    @mock.patch('os.fdatasync')
-    def test_download_no_data_dest_path_v2(self, fdatasync_mock, show_mock,
+    @mock.patch('os.fsync')
+    def test_download_no_data_dest_path_v2(self, fsync_mock, show_mock,
                                            open_mock):
         client = mock.MagicMock()
         client.call.return_value = [1, 2, 3]
@@ -581,7 +581,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         client.call.assert_called_once_with(ctx, 2, 'data',
                                             mock.sentinel.image_id)
         open_mock.assert_called_once_with(mock.sentinel.dst_path, 'wb')
-        fdatasync_mock.assert_called_once_with(
+        fsync_mock.assert_called_once_with(
                 writer.fileno.return_value)
         self.assertIsNone(res)
         writer.write.assert_has_calls(
@@ -676,9 +676,9 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
     @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_module')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
-    @mock.patch('os.fdatasync')
+    @mock.patch('os.fsync')
     def test_download_direct_exception_fallback_v2(
-            self, fdatasync_mock, show_mock, get_tran_mock, open_mock):
+            self, fsync_mock, show_mock, get_tran_mock, open_mock):
         # Test that we fall back to downloading to the dst_path
         # if the download method of the transfer module raised
         # an exception.
@@ -713,7 +713,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
                                                   mock.sentinel.loc_meta)
         client.call.assert_called_once_with(ctx, 2, 'data',
                                             mock.sentinel.image_id)
-        fdatasync_mock.assert_called_once_with(
+        fsync_mock.assert_called_once_with(
                 open_mock.return_value.fileno.return_value)
         # NOTE(jaypipes): log messages call open() in part of the
         # download path, so here, we just check that the last open()
@@ -731,9 +731,9 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
     @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_module')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
-    @mock.patch('os.fdatasync')
+    @mock.patch('os.fsync')
     def test_download_direct_no_mod_fallback(
-            self, fdatasync_mock, show_mock, get_tran_mock, open_mock):
+            self, fsync_mock, show_mock, get_tran_mock, open_mock):
         # Test that we fall back to downloading to the dst_path
         # if no appropriate transfer module is found...
         # an exception.
@@ -763,7 +763,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         get_tran_mock.assert_called_once_with('file')
         client.call.assert_called_once_with(ctx, 2, 'data',
                                             mock.sentinel.image_id)
-        fdatasync_mock.assert_called_once_with(
+        fsync_mock.assert_called_once_with(
                 open_mock.return_value.fileno.return_value)
         # NOTE(jaypipes): log messages call open() in part of the
         # download path, so here, we just check that the last open()
@@ -836,9 +836,9 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
     @mock.patch('nova.signature_utils.get_verifier')
-    @mock.patch('os.fdatasync')
+    @mock.patch('os.fsync')
     def test_download_dst_path_signature_verification_v2(self,
-                                                         mock_fdatasync,
+                                                         mock_fsync,
                                                          mock_get_verifier,
                                                          mock_show,
                                                          mock_log,
@@ -858,7 +858,7 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
         mock_log.info.assert_called_once_with(mock.ANY, mock.ANY)
         self.assertEqual(len(self.fake_img_data), mock_dest.write.call_count)
         self.assertTrue(mock_dest.close.called)
-        mock_fdatasync.assert_called_once_with(
+        mock_fsync.assert_called_once_with(
                 mock_dest.fileno.return_value)
 
     @mock.patch('nova.image.glance.LOG')
@@ -915,8 +915,8 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
     @mock.patch('nova.signature_utils.get_verifier')
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
-    @mock.patch('os.fdatasync')
-    def test_download_dst_path_signature_fail_v2(self, mock_fdatasync,
+    @mock.patch('os.fsync')
+    def test_download_dst_path_signature_fail_v2(self, mock_fsync,
                                                  mock_show, mock_log,
                                                  mock_get_verifier,
                                                  mock_open):
@@ -932,7 +932,7 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
                           data=None, dst_path=fake_path)
         mock_log.error.assert_called_once_with(mock.ANY, mock.ANY)
         mock_open.assert_called_once_with(fake_path, 'wb')
-        mock_fdatasync.assert_called_once_with(
+        mock_fsync.assert_called_once_with(
                 mock_open.return_value.fileno.return_value)
         mock_dest.truncate.assert_called_once_with(0)
         self.assertTrue(mock_dest.close.called)
