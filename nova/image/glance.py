@@ -371,7 +371,8 @@ class GlanceImageServiceV2(object):
                     # persistent storage. This ensures that in the event of a
                     # subsequent host crash we don't have running instances
                     # using a corrupt backing file.
-                    os.fdatasync(data.fileno())
+                    data.flush()
+                    os.fsync(data.fileno())
                     data.close()
 
     def create(self, context, image_meta, data=None):
