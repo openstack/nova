@@ -10427,11 +10427,17 @@ class ComputeAPITestCase(BaseTestCase):
                 host='fake_dest_host', on_shared_storage=True,
                 admin_password=None)
 
-    @mock.patch.object(db, "migration_get_all_by_filters")
+    @mock.patch('nova.objects.MigrationList.get_by_filters')
     def test_get_migrations(self, mock_migration):
         migration = test_migration.fake_db_migration()
         filters = {'host': 'host1'}
-        mock_migration.return_value = [migration]
+
+        def fake_migrations(context, filters):
+            self.assertIsNotNone(context.db_connection)
+            return objects.MigrationList(
+                objects=[objects.Migration(**migration)])
+
+        mock_migration.side_effect = fake_migrations
 
         migrations = self.compute_api.get_migrations(self.context,
                                                              filters)

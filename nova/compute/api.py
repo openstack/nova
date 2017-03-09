@@ -4025,7 +4025,16 @@ class API(base.Base):
 
     def get_migrations(self, context, filters):
         """Get all migrations for the given filters."""
-        return objects.MigrationList.get_by_filters(context, filters)
+        load_cells()
+
+        migrations = []
+        for cell in CELLS:
+            if cell.uuid == objects.CellMapping.CELL0_UUID:
+                continue
+            with nova_context.target_cell(context, cell):
+                migrations.extend(objects.MigrationList.get_by_filters(
+                    context, filters).objects)
+        return objects.MigrationList(objects=migrations)
 
     def get_migrations_in_progress_by_instance(self, context, instance_uuid,
                                                migration_type=None):
