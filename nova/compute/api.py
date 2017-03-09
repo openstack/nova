@@ -1761,7 +1761,9 @@ class API(base.Base):
                     # If instance is None it has already been deleted.
                     if cell:
                         with nova_context.target_cell(context, cell):
-                            instance.destroy()
+                            with compute_utils.notify_about_instance_delete(
+                                    self.notifier, context, instance):
+                                instance.destroy()
                     else:
                         instance.destroy()
             except exception.InstanceNotFound:
@@ -1808,7 +1810,9 @@ class API(base.Base):
                 cell, instance = self._lookup_instance(context, instance.uuid)
                 if cell and instance:
                     with nova_context.target_cell(context, cell):
-                        instance.destroy()
+                        with compute_utils.notify_about_instance_delete(
+                                self.notifier, context, instance):
+                            instance.destroy()
                         return
                 if not instance:
                     # Instance is already deleted.

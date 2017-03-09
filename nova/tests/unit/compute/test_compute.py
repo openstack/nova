@@ -7823,6 +7823,100 @@ class ComputeTestCase(BaseTestCase):
                     block_device_mapping=[])
         self.assertEqual('Preserve this', instance.fault.message)
 
+    @mock.patch('nova.objects.Instance.destroy')
+    @mock.patch('nova.context.target_cell')
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
+    @mock.patch('nova.objects.Service.get_minimum_version')
+    @mock.patch('nova.compute.utils.notify_about_instance_usage')
+    @mock.patch('nova.objects.BuildRequest.get_by_instance_uuid')
+    def test_delete_while_booting_instance_not_in_cell_db_cellsv2(
+            self, br_get_by_instance, notify, minimum_server_version,
+            im_get_by_instance, target_cell, instance_destroy):
+
+        minimum_server_version.return_value = 15
+        im_get_by_instance.return_value = mock.Mock()
+
+        instance = self._create_fake_instance_obj()
+        instance.host = None
+        instance.save()
+
+        self.compute_api._delete_instance(self.context, instance)
+
+        instance_destroy.assert_called_once_with()
+
+        # the instance is updated during the delete so we only match by uuid
+        test_utils.assert_instance_delete_notification_by_uuid(
+            notify, instance.uuid, self.compute_api.notifier, self.context)
+
+    @mock.patch('nova.objects.Instance.destroy')
+    @mock.patch('nova.objects.Service.get_minimum_version')
+    @mock.patch('nova.compute.utils.notify_about_instance_usage')
+    @mock.patch('nova.objects.BuildRequest.get_by_instance_uuid')
+    def test_delete_while_booting_instance_not_in_cell_db_cellsv1(
+            self, br_get_by_instance, notify, minimum_server_version,
+            instance_destroy):
+
+        minimum_server_version.return_value = 14
+
+        instance = self._create_fake_instance_obj()
+        instance.host = None
+        instance.save()
+
+        self.compute_api._delete_instance(self.context, instance)
+
+        test_utils.assert_instance_delete_notification_by_uuid(
+            notify, instance.uuid, self.compute_api.notifier, self.context)
+
+    @mock.patch('nova.objects.Instance.destroy')
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
+    @mock.patch('nova.compute.utils.notify_about_instance_usage')
+    @mock.patch('nova.objects.BuildRequest.get_by_instance_uuid')
+    def test_delete_while_booting_instance_not_scheduled_cellv1(
+            self, br_get_by_instance, notify, im_get_by_instance,
+            instance_destroy):
+
+        instance = self._create_fake_instance_obj()
+        instance.host = None
+        instance.save()
+
+        # This means compute api looks for an instance to destroy
+        br_get_by_instance.side_effect = exception.BuildRequestNotFound(
+            uuid=instance.uuid)
+
+        # no mapping means cellv1
+        im_get_by_instance.return_value = None
+
+        self.compute_api._delete_instance(self.context, instance)
+
+        test_utils.assert_instance_delete_notification_by_uuid(
+            notify, instance.uuid, self.compute_api.notifier, self.context)
+
+    @mock.patch('nova.objects.Instance.destroy')
+    @mock.patch('nova.context.target_cell')
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
+    @mock.patch('nova.compute.utils.notify_about_instance_usage')
+    @mock.patch('nova.objects.BuildRequest.get_by_instance_uuid')
+    def test_delete_while_booting_instance_not_scheduled_cellv2(
+            self, br_get_by_instance, notify, im_get_by_instance, target_cell,
+            instance_destroy):
+
+        instance = self._create_fake_instance_obj()
+        instance.host = None
+        instance.save()
+
+        # This means compute api looks for an instance to destroy
+        br_get_by_instance.side_effect = exception.BuildRequestNotFound(
+            uuid=instance.uuid)
+
+        # having a mapping means cellsv2
+        im_get_by_instance.return_value = mock.Mock()
+
+        self.compute_api._delete_instance(self.context, instance)
+
+        instance_destroy.assert_called_once_with()
+        test_utils.assert_instance_delete_notification_by_uuid(
+            notify, instance.uuid, self.compute_api.notifier, self.context)
+
 
 class ComputeAPITestCase(BaseTestCase):
     def setUp(self):

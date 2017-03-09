@@ -970,7 +970,7 @@ class ComputeTaskManager(base.Base):
             inst_mapping.save()
 
             if not self._delete_build_request(
-                    build_request, instance, cell, instance_bdms):
+                    context, build_request, instance, cell, instance_bdms):
                 # The build request was deleted before/during scheduling so
                 # the instance is gone and we don't have anything to build for
                 # this one.
@@ -995,13 +995,15 @@ class ComputeTaskManager(base.Base):
                     host=host['host'], node=host['nodename'],
                     limits=host['limits'])
 
-    def _delete_build_request(self, build_request, instance, cell,
+    def _delete_build_request(self, context, build_request, instance, cell,
                               instance_bdms):
         """Delete a build request after creating the instance in the cell.
 
         This method handles cleaning up the instance in case the build request
         is already deleted by the time we try to delete it.
 
+        :param context: the context of the request being handled
+        :type context: nova.context.RequestContext'
         :param build_request: the build request to delete
         :type build_request: nova.objects.BuildRequest
         :param instance: the instance created from the build_request
@@ -1020,18 +1022,20 @@ class ComputeTaskManager(base.Base):
             # processed, and the build should halt here. Clean up the
             # bdm and instance record.
             with obj_target_cell(instance, cell):
-                try:
-                    instance.destroy()
-                except exception.InstanceNotFound:
-                    pass
-                except exception.ObjectActionError:
-                    # NOTE(melwitt): Instance became scheduled during
-                    # the destroy, "host changed". Refresh and re-destroy.
+                with compute_utils.notify_about_instance_delete(
+                        self.notifier, context, instance):
                     try:
-                        instance.refresh()
                         instance.destroy()
                     except exception.InstanceNotFound:
                         pass
+                    except exception.ObjectActionError:
+                        # NOTE(melwitt): Instance became scheduled during
+                        # the destroy, "host changed". Refresh and re-destroy.
+                        try:
+                            instance.refresh()
+                            instance.destroy()
+                        except exception.InstanceNotFound:
+                            pass
             for bdm in instance_bdms:
                 with obj_target_cell(bdm, cell):
                     try:

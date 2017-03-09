@@ -14,6 +14,7 @@
 
 """Compute-related Utilities and helpers."""
 
+import contextlib
 import functools
 import inspect
 import itertools
@@ -700,3 +701,18 @@ class UnlimitedSemaphore(object):
     @property
     def balance(self):
         return 0
+
+
+@contextlib.contextmanager
+def notify_about_instance_delete(notifier, context, instance):
+    # Pre-load system_metadata because if this context is around an
+    # instance.destroy(), lazy-loading it later would result in an
+    # InstanceNotFound error.
+    system_metadata = instance.system_metadata
+    try:
+        notify_about_instance_usage(notifier, context, instance,
+                                    "delete.start")
+        yield
+    finally:
+        notify_about_instance_usage(notifier, context, instance, "delete.end",
+                                    system_metadata=system_metadata)
