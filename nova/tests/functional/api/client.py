@@ -393,3 +393,6 @@ class TestOpenStackClient(object):
 
     def delete_aggregate(self, aggregate_id):
         self.api_delete('/os-aggregates/%s' % aggregate_id)
+
+    def get_limits(self):
+        return self.api_get('/limits').body['limits']
