@@ -197,6 +197,18 @@ def _diff_dict(orig, new):
     return result
 
 
+def load_cells():
+    global CELLS
+    if not CELLS:
+        CELLS = objects.CellMappingList.get_all(
+            nova_context.get_admin_context())
+        LOG.debug('Found %(count)i cells: %(cells)s',
+                  dict(count=len(CELLS), cells=CELLS))
+
+    if not CELLS:
+        LOG.error(_LE('No cells are configured, unable to continue'))
+
+
 @profiler.trace_cls("compute_api")
 class API(base.Base):
     """API for interacting with the compute manager."""
@@ -2520,15 +2532,7 @@ class API(base.Base):
 
     def _get_instances_by_filters_all_cells(self, context, *args, **kwargs):
         """This is just a wrapper that iterates (non-zero) cells."""
-
-        global CELLS
-        if not CELLS:
-            CELLS = objects.CellMappingList.get_all(context)
-            LOG.debug('Found %(count)i cells: %(cells)s',
-                      dict(count=len(CELLS), cells=CELLS))
-
-        if not CELLS:
-            LOG.error(_LE('No cells are configured, unable to list instances'))
+        load_cells()
 
         limit = kwargs.pop('limit', None)
 

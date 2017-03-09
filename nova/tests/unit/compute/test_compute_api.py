@@ -4730,7 +4730,7 @@ class _ComputeAPIUnitTestMixIn(object):
              mock.call(ctx2, filters={}, limit=None,
                        marker=None, expected_attrs=expa,
                        sort_keys=None, sort_dirs=None)])
-        mock_get_cm.assert_called_once_with(self.context)
+        mock_get_cm.assert_called_once_with(mock.ANY)
 
     @mock.patch('nova.objects.CellMappingList.get_all')
     @mock.patch('nova.objects.InstanceList.get_by_filters')
@@ -4775,7 +4775,7 @@ class _ComputeAPIUnitTestMixIn(object):
              mock.call(ctx3, filters={}, limit=None,
                        marker=None, expected_attrs=expa,
                        sort_keys=None, sort_dirs=None)])
-        mock_get_cm.assert_called_once_with(self.context)
+        mock_get_cm.assert_called_once_with(mock.ANY)
 
     @mock.patch('nova.objects.CellMappingList.get_all')
     @mock.patch('nova.objects.InstanceList.get_by_filters')
@@ -4788,7 +4788,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.compute_api._get_instances_by_filters_all_cells(self.context, {})
 
         # We should only call this once to prime the cache
-        mock_get_cm.assert_called_once_with(self.context)
+        mock_get_cm.assert_called_once_with(mock.ANY)
 
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
