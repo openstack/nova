@@ -135,9 +135,8 @@ class TestDeleteFromCell0CheckQuota(test.TestCase):
         self._delete_server(server['id'])
         self._wait_for_instance_delete(server['id'])
 
-        # Now check the quota again. Because we have not fixed the bug, the
-        # quota is still going to be showing a usage for instances. When the
-        # bug is fixed, ending usage should be current usage - 1.
+        # Now check the quota again. Since the bug is fixed, ending usage
+        # should be current usage - 1.
         ending_usage = self.api.get_limits()
-        self.assertEqual(current_usage['absolute']['totalInstancesUsed'],
+        self.assertEqual(current_usage['absolute']['totalInstancesUsed'] - 1,
                          ending_usage['absolute']['totalInstancesUsed'])

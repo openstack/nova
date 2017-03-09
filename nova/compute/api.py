@@ -1788,11 +1788,32 @@ class API(base.Base):
                 # acceptable to skip the rest of the delete processing.
                 cell, instance = self._lookup_instance(context, instance.uuid)
                 if cell and instance:
+                    # Conductor may have buried the instance in cell0 but
+                    # quotas must still be decremented in the main cell DB.
+                    project_id, user_id = quotas_obj.ids_from_instance(
+                        context, instance)
+
+                    # We have to get the flavor from the instance while the
+                    # context is still targeted to where the instance lives.
                     with nova_context.target_cell(context, cell):
-                        with compute_utils.notify_about_instance_delete(
-                                self.notifier, context, instance):
-                            instance.destroy()
-                        return
+                        quota_flavor = self._get_flavor_for_reservation(
+                            instance)
+
+                    # This is confusing but actually decrements quota usage.
+                    quotas = self._create_reservations(context,
+                                                       instance,
+                                                       instance.task_state,
+                                                       project_id, user_id,
+                                                       flavor=quota_flavor)
+                    quotas.commit()
+                    try:
+                        with nova_context.target_cell(context, cell):
+                            with compute_utils.notify_about_instance_delete(
+                                    self.notifier, context, instance):
+                                instance.destroy()
+                            return
+                    except exception.InstanceNotFound:
+                        quotas.rollback()
                 if not instance:
                     # Instance is already deleted.
                     return
@@ -1977,21 +1998,33 @@ class API(base.Base):
                 src_host, quotas.reservations,
                 cast=False)
 
+    def _get_flavor_for_reservation(self, instance):
+        """Returns the flavor needed for _create_reservations.
+
+        This is used when the context is targeted to a cell that is
+        different from the one that the instance lives in.
+        """
+        if instance.task_state in (task_states.RESIZE_MIGRATED,
+                                   task_states.RESIZE_FINISH):
+            return instance.old_flavor
+        return instance.flavor
+
     def _create_reservations(self, context, instance, original_task_state,
-                             project_id, user_id):
+                             project_id, user_id, flavor=None):
         # NOTE(wangpan): if the instance is resizing, and the resources
         #                are updated to new instance type, we should use
         #                the old instance type to create reservation.
         # see https://bugs.launchpad.net/nova/+bug/1099729 for more details
         if original_task_state in (task_states.RESIZE_MIGRATED,
                                    task_states.RESIZE_FINISH):
-            old_flavor = instance.old_flavor
+            old_flavor = flavor or instance.old_flavor
             instance_vcpus = old_flavor.vcpus
             vram_mb = old_flavor.extra_specs.get('hw_video:ram_max_mb', 0)
             instance_memory_mb = old_flavor.memory_mb + vram_mb
         else:
-            instance_vcpus = instance.flavor.vcpus
-            instance_memory_mb = instance.flavor.memory_mb
+            flavor = flavor or instance.flavor
+            instance_vcpus = flavor.vcpus
+            instance_memory_mb = flavor.memory_mb
 
         quotas = objects.Quotas(context=context)
         quotas.reserve(project_id=project_id,
