@@ -88,6 +88,11 @@ def cinderclient(context):
     if version == '1':
         raise exception.UnsupportedCinderAPIVersion(version=version)
 
+    if version == '3':
+        # TODO(ildikov): Add microversion support for picking up the new
+        # attach/detach API that was added in 3.27.
+        version = '3.0'
+
     return cinder_client.Client(version,
                                 session=_SESSION,
                                 auth=auth,

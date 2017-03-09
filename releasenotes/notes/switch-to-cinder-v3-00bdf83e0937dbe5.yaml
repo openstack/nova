@@ -1,0 +1,14 @@
+---
+upgrade:
+  - |
+    Nova is now configured to use the v3 version of the Cinder API. You need to
+    ensure that the v3 version of the Cinder API is available and listed in the
+    service catalog in order to use Nova with the default configuration option.
+
+    The base ``3.0`` version is identical to v2 and it was introduced in the
+    Newton release of OpenStack. In case you need Nova to continue using the v2
+    version you can point it towards that by setting the ``catalog_info``
+    option in the ``nova.conf`` file under the ``cinder`` section, like::
+
+        [cinder]
+        catalog_info = volumev2:cinderv2:publicURL

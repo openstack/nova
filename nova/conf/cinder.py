@@ -23,7 +23,7 @@ cinder_group = cfg.OptGroup(
 
 cinder_opts = [
     cfg.StrOpt('catalog_info',
-            default='volumev2:cinderv2:publicURL',
+            default='volumev3:cinderv3:publicURL',
             regex='(\w+):(\w+):(.*?)',
             help="""
 Info to match when looking for cinder in the service catalog.
