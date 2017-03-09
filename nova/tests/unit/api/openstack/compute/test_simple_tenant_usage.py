@@ -119,6 +119,8 @@ class SimpleTenantUsageTestV21(test.TestCase):
         self.alt_user_context = context.RequestContext('fakeadmin_0',
                                                       'faketenant_1',
                                                        is_admin=False)
+        self.num_cells = len(objects.CellMappingList.get_all(
+            self.admin_context))
 
     def _test_verify_index(self, start, stop, limit=None):
         url = '?start=%s&end=%s'
@@ -131,13 +133,23 @@ class SimpleTenantUsageTestV21(test.TestCase):
         res_dict = self.controller.index(req)
 
         usages = res_dict['tenant_usages']
+
+        if limit:
+            num = 1
+        else:
+            # NOTE(danms): We call our fake data mock once per cell,
+            # and the default fixture has two cells (cell0 and cell1),
+            # so all our math will be doubled.
+            num = self.num_cells
+
         for i in range(TENANTS):
-            self.assertEqual(SERVERS * HOURS, int(usages[i]['total_hours']))
-            self.assertEqual(SERVERS * (ROOT_GB + EPHEMERAL_GB) * HOURS,
+            self.assertEqual(SERVERS * HOURS * num,
+                             int(usages[i]['total_hours']))
+            self.assertEqual(SERVERS * (ROOT_GB + EPHEMERAL_GB) * HOURS * num,
                              int(usages[i]['total_local_gb_usage']))
-            self.assertEqual(SERVERS * MEMORY_MB * HOURS,
+            self.assertEqual(SERVERS * MEMORY_MB * HOURS * num,
                              int(usages[i]['total_memory_mb_usage']))
-            self.assertEqual(SERVERS * VCPUS * HOURS,
+            self.assertEqual(SERVERS * VCPUS * HOURS * num,
                              int(usages[i]['total_vcpus_usage']))
             self.assertFalse(usages[i].get('server_usages'))
 
@@ -216,9 +228,17 @@ class SimpleTenantUsageTestV21(test.TestCase):
         req.environ['nova.context'] = self.user_context
         res_dict = self.controller.show(req, tenant_id)
 
+        if limit:
+            num = 1
+        else:
+            # NOTE(danms): We call our fake data mock once per cell,
+            # and the default fixture has two cells (cell0 and cell1),
+            # so all our math will be doubled.
+            num = self.num_cells
+
         usage = res_dict['tenant_usage']
         servers = usage['server_usages']
-        self.assertEqual(TENANTS * SERVERS, len(usage['server_usages']))
+        self.assertEqual(TENANTS * SERVERS * num, len(usage['server_usages']))
         server_uuids = [getattr(uuids, 'instance_%d' % x)
                         for x in range(SERVERS)]
         for j in range(SERVERS):
@@ -292,10 +312,12 @@ class SimpleTenantUsageTestV40(SimpleTenantUsageTestV21):
     version = '2.40'
 
     def test_next_links_show(self):
-        self._test_verify_show(START, STOP, limit=SERVERS * TENANTS)
+        self._test_verify_show(START, STOP,
+                               limit=SERVERS * TENANTS)
 
     def test_next_links_index(self):
-        self._test_verify_index(START, STOP, limit=SERVERS * TENANTS)
+        self._test_verify_index(START, STOP,
+                                limit=SERVERS * TENANTS)
 
 
 class SimpleTenantUsageLimitsTestV21(test.TestCase):
@@ -311,7 +333,7 @@ class SimpleTenantUsageLimitsTestV21(test.TestCase):
         return fakes.HTTPRequest.blank(url, version=self.version)
 
     def assert_limit(self, mock_get, limit):
-        mock_get.assert_called_once_with(
+        mock_get.assert_called_with(
             mock.ANY, mock.ANY, mock.ANY, mock.ANY, expected_attrs=['flavor'],
             limit=1000, marker=None)
 
@@ -332,7 +354,8 @@ class SimpleTenantUsageLimitsTestV240(SimpleTenantUsageLimitsTestV21):
     version = '2.40'
 
     def assert_limit_and_marker(self, mock_get, limit, marker):
-        mock_get.assert_called_once_with(
+        # NOTE(danms): Make sure we called at least once with the marker
+        mock_get.assert_any_call(
             mock.ANY, mock.ANY, mock.ANY, mock.ANY, expected_attrs=['flavor'],
             limit=3, marker=marker)
 

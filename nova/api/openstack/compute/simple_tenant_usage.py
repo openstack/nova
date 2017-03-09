@@ -26,6 +26,7 @@ from nova.api.openstack.compute.views import usages as usages_view
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 import nova.conf
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -104,13 +105,43 @@ class SimpleTenantUsageController(wsgi.Controller):
 
         return flavor_ref
 
+    def _get_instances_all_cells(self, context, period_start, period_stop,
+                                 tenant_id, limit, marker):
+        all_instances = []
+        cells = objects.CellMappingList.get_all(context)
+        for cell in cells:
+            with nova_context.target_cell(context, cell):
+                try:
+                    instances = (
+                        objects.InstanceList.get_active_by_window_joined(
+                            context, period_start, period_stop, tenant_id,
+                            expected_attrs=['flavor'], limit=limit,
+                            marker=marker))
+                except exception.MarkerNotFound:
+                    # NOTE(danms): We need to keep looking through the later
+                    # cells to find the marker
+                    continue
+                all_instances.extend(instances)
+                # NOTE(danms): We must have found a marker if we had one,
+                # so make sure we don't require a marker in the next cell
+                marker = None
+                if limit:
+                    limit -= len(instances)
+                    if limit <= 0:
+                        break
+        if marker is not None and len(all_instances) == 0:
+            # NOTE(danms): If we did not find the marker in any cell,
+            # mimic the db_api behavior here
+            raise exception.MarkerNotFound(marker=marker)
+
+        return all_instances
+
     def _tenant_usages_for_period(self, context, period_start, period_stop,
                                   tenant_id=None, detailed=True, limit=None,
                                   marker=None):
-
-        instances = objects.InstanceList.get_active_by_window_joined(
-                        context, period_start, period_stop, tenant_id,
-                        expected_attrs=['flavor'], limit=limit, marker=marker)
+        instances = self._get_instances_all_cells(context, period_start,
+                                                  period_stop, tenant_id,
+                                                  limit, marker)
         rval = {}
         flavors = {}
         all_server_usages = []
