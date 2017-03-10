@@ -21,10 +21,8 @@ from oslo_serialization import jsonutils
 import testtools
 
 from nova import context
-from nova import objects
 from nova import rpc
 from nova import test
-from nova.tests import uuidsentinel as uuids
 
 
 # Make a class that resets all of the global variables in nova.rpc
@@ -465,10 +463,9 @@ class TestClientRouter(test.NoDBTestCase):
         mock_rpcclient.return_value = cell_client
         ctxt = mock.Mock()
         ctxt.mq_connection = mock.sentinel.transport
-        instance = objects.Instance(uuid=uuids.instance)
 
         router = rpc.ClientRouter(default_client)
-        client = router.by_instance(ctxt, instance)
+        client = router.client(ctxt)
 
         # verify a client was created by ClientRouter
         mock_rpcclient.assert_called_once_with(
@@ -485,45 +482,9 @@ class TestClientRouter(test.NoDBTestCase):
         mock_rpcclient.return_value = cell_client
         ctxt = mock.Mock()
         ctxt.mq_connection = None
-        instance = objects.Instance(uuid=uuids.instance)
 
         router = rpc.ClientRouter(default_client)
-        client = router.by_instance(ctxt, instance)
-
-        self.assertEqual(router.default_client, client)
-        self.assertFalse(mock_rpcclient.called)
-
-    @mock.patch('oslo_messaging.RPCClient')
-    def test_by_host(self, mock_rpcclient):
-        default_client = mock.Mock()
-        cell_client = mock.Mock()
-        mock_rpcclient.return_value = cell_client
-        ctxt = mock.Mock()
-        ctxt.mq_connection = mock.sentinel.transport
-        host = 'fake-host'
-
-        router = rpc.ClientRouter(default_client)
-        client = router.by_host(ctxt, host)
-
-        # verify a client was created by ClientRouter
-        mock_rpcclient.assert_called_once_with(
-                mock.sentinel.transport, default_client.target,
-                version_cap=default_client.version_cap,
-                serializer=default_client.serializer)
-        # verify cell client was returned
-        self.assertEqual(cell_client, client)
-
-    @mock.patch('oslo_messaging.RPCClient')
-    def test_by_host_untargeted(self, mock_rpcclient):
-        default_client = mock.Mock()
-        cell_client = mock.Mock()
-        mock_rpcclient.return_value = cell_client
-        ctxt = mock.Mock()
-        ctxt.mq_connection = None
-        host = 'fake-host'
-
-        router = rpc.ClientRouter(default_client)
-        client = router.by_host(ctxt, host)
+        client = router.client(ctxt)
 
         self.assertEqual(router.default_client, client)
         self.assertFalse(mock_rpcclient.called)

@@ -225,9 +225,9 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         rpcapi = compute_rpcapi.ComputeAPI()
         cast_mock = mock.Mock()
         cctxt_mock = mock.Mock(cast=cast_mock)
-        rpcapi.router.by_instance = mock.Mock()
+        rpcapi.router.client = mock.Mock()
         mock_client = mock.Mock()
-        rpcapi.router.by_instance.return_value = mock_client
+        rpcapi.router.client.return_value = mock_client
         with test.nested(
             mock.patch.object(mock_client, 'can_send_version',
                               return_value=False),
@@ -335,9 +335,9 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         ctxt = context.RequestContext('fake_user', 'fake_project')
         version = '4.12'
         rpcapi = compute_rpcapi.ComputeAPI()
-        rpcapi.router.by_host = mock.Mock()
+        rpcapi.router.client = mock.Mock()
         mock_client = mock.MagicMock()
-        rpcapi.router.by_host.return_value = mock_client
+        rpcapi.router.client.return_value = mock_client
         mock_client.can_send_version.return_value = True
         mock_cctx = mock.MagicMock()
         mock_client.prepare.return_value = mock_cctx
@@ -356,9 +356,9 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         version = '4.9'
         ctxt = context.RequestContext('fake_user', 'fake_project')
         rpcapi = compute_rpcapi.ComputeAPI()
-        rpcapi.router.by_host = mock.Mock()
+        rpcapi.router.client = mock.Mock()
         mock_client = mock.MagicMock()
-        rpcapi.router.by_host.return_value = mock_client
+        rpcapi.router.client.return_value = mock_client
         mock_client.can_send_version.return_value = False
         mock_cctx = mock.MagicMock()
         mock_client.prepare.return_value = mock_cctx
@@ -625,10 +625,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                                calltype='call', can_send=False):
         rpc = compute_rpcapi.ComputeAPI()
         mock_client = mock.Mock()
-        rpc.router.by_instance = mock.Mock()
-        rpc.router.by_instance.return_value = mock_client
-        rpc.router.by_host = mock.Mock()
-        rpc.router.by_host.return_value = mock_client
+        rpc.router.client = mock.Mock()
+        rpc.router.client.return_value = mock_client
 
         @mock.patch.object(compute_rpcapi, '_compute_host')
         def _test(mock_ch):
@@ -638,19 +636,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             ctxt = context.RequestContext()
             result = getattr(rpc, method)(ctxt, **inargs)
             call.assert_called_once_with(ctxt, method, **callargs)
-            # Get the target of the prepare call: prepare(server=<target>, ...)
-            prepare_target = mock_client.prepare.call_args[1]['server']
-            # If _compute_host(None, instance) was called, then by_instance
-            # should have been called with the instance. Otherwise by_host
-            # should have been called with the same host as the prepare target.
-            if mock_ch.called and mock_ch.call_args[0][0] is None:
-                instance = mock_ch.call_args[0][1]
-                rpc.router.by_instance.assert_called_once_with(ctxt, instance)
-                rpc.router.by_host.assert_not_called()
-            else:
-                rpc.router.by_host.assert_called_once_with(ctxt,
-                                                           prepare_target)
-                rpc.router.by_instance.assert_not_called()
+            rpc.router.client.assert_called_once_with(ctxt)
             return result
 
         return _test()
