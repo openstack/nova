@@ -1442,6 +1442,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         def _build_and_run_instance(ctxt, *args, **kwargs):
             details['instance'] = kwargs['instance']
             self.assertTrue(kwargs['instance'].id)
+            self.assertTrue(kwargs['filter_properties'].get('retry'))
             self.assertEqual(1, len(kwargs['block_device_mapping']))
             # FIXME(danms): How to validate the db connection here?
 
