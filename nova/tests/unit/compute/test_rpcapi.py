@@ -115,7 +115,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
 
         # This test wants to run the real prepare function, so must use
         # a real client object
-        default_client = rpcapi.router.clients['default'].client
+        default_client = rpcapi.router.default_client
 
         orig_prepare = default_client.prepare
         base_version = rpcapi.router.target.version
