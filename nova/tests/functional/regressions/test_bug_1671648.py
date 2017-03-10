@@ -118,22 +118,19 @@ class TestRetryBetweenComputeNodeBuilds(test.TestCase):
         scheduler picks the first host which we mock out to fail the claim.
         This should then trigger a retry to the second host.
         """
-        # Create the server which we expect to go to ERROR state because
-        # of the regression bug. Once the bug is fixed, we should assert
-        # that the server goes to ACTIVE status and is on the second host
-        # after the retry operation.
+        # Now that the bug is fixed, we should assert that the server goes to
+        # ACTIVE status and is on the second host after the retry operation.
         server = dict(
             name='retry-test',
             imageRef=self.image_id,
             flavorRef=self.flavor_id)
         server = self.admin_api.post_server({'server': server})
         self.addCleanup(self.admin_api.delete_server, server['id'])
-        server = self._wait_for_instance_status(server['id'], 'ERROR')
+        server = self._wait_for_instance_status(server['id'], 'ACTIVE')
 
-        # Assert that there is no host for the failed server. This should
-        # assert that the host is not the failed host once the bug is fixed.
-        self.assertIsNone(server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
+        # Assert that the host is not the failed host.
+        self.assertNotEqual(self.failed_host,
+                            server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
 
-        # Assert that we did not retry. Once the bug is fixed, this should
-        # be equal to 2.
-        self.assertEqual(1, self.attempts)
+        # Assert that we retried.
+        self.assertEqual(2, self.attempts)
