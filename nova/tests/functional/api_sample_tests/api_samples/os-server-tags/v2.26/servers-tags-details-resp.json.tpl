@@ -76,7 +76,6 @@
             "os-extended-volumes:volumes_attached": [],
             "OS-SRV-USG:launched_at": "%(strtime)s",
             "OS-SRV-USG:terminated_at": null,
-            "progress": 0,
             "security_groups": [
                 {
                     "name": "default"
