@@ -73,11 +73,22 @@ def parse_version_string(version_string):
             version_string, exc))
 
 
-def raise_404_if_not_version(req, min_version, max_version=None):
-    """Utility to raise a 404 if the wanted microversion does not match."""
+def raise_http_status_code_if_not_version(req, status_code, min_version,
+                                          max_version=None):
+    """Utility to raise a http status code if the wanted microversion does not
+       match.
+
+    :param req: The HTTP request for the placement api
+    :param status_code: HTTP status code (integer value) to be raised
+    :param min_version: Minimum placement microversion level
+    :param max_version: Maximum placement microversion level
+    :returns: None
+    :raises: HTTP status code if the specified microversion does not match
+    :raises: KeyError if status_code is not a valid HTTP status code
+    """
     want_version = req.environ[MICROVERSION_ENVIRON]
     if not want_version.matches(min_version, max_version):
-        raise webob.exc.HTTPNotFound
+        raise webob.exc.status_map[status_code]
 
 
 class MicroversionMiddleware(object):

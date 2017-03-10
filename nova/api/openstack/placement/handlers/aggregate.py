@@ -52,7 +52,7 @@ def get_aggregates(req):
     On success return a 200 with an application/json body containing a
     list of aggregate uuids.
     """
-    microversion.raise_404_if_not_version(req, (1, 1))
+    microversion.raise_http_status_code_if_not_version(req, 404, (1, 1))
     context = req.environ['placement.context']
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     resource_provider = objects.ResourceProvider.get_by_uuid(
@@ -65,7 +65,7 @@ def get_aggregates(req):
 @webob.dec.wsgify
 @util.require_content('application/json')
 def set_aggregates(req):
-    microversion.raise_404_if_not_version(req, (1, 1))
+    microversion.raise_http_status_code_if_not_version(req, 404, (1, 1))
     context = req.environ['placement.context']
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     resource_provider = objects.ResourceProvider.get_by_uuid(
