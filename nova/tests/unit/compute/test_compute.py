@@ -19,13 +19,14 @@
 
 import base64
 import datetime
+from itertools import chain
 import operator
 import sys
 import time
 import traceback
 import uuid
 
-from itertools import chain
+from castellan import key_manager
 import mock
 from neutronclient.common import exceptions as neutron_exceptions
 from oslo_log import log as logging
@@ -7890,6 +7891,36 @@ class ComputeAPITestCase(BaseTestCase):
                          instance['display_name'])
         self.assertIsNotNone(instance.get('uuid'))
         self.assertEqual([], instance.security_groups.objects)
+        self.assertIsNone(instance.ephemeral_key_uuid)
+
+    def test_populate_instance_for_create_encrypted(self, num_instances=1):
+        CONF.set_override('enabled', True,
+                          group='ephemeral_storage_encryption',
+                          enforce_type=True)
+        CONF.set_override('api_class',
+                          'castellan.tests.unit.key_manager.mock_key_manager.'
+                          'MockKeyManager',
+                          group='key_manager',
+                          enforce_type=True)
+        base_options = {'image_ref': self.fake_image['id'],
+                        'system_metadata': {'fake': 'value'},
+                        'display_name': 'foo',
+                        'uuid': uuids.instance}
+        instance = objects.Instance()
+        instance.update(base_options)
+        inst_type = flavors.get_flavor_by_name("m1.tiny")
+        self.compute_api.key_manager = key_manager.API()
+        index = 1
+        instance = self.compute_api._populate_instance_for_create(
+                                self.context,
+                                instance,
+                                self.fake_image,
+                                index,
+                                security_groups=objects.SecurityGroupList(),
+                                instance_type=inst_type,
+                                num_instances=num_instances,
+                                shutdown_terminate=False)
+        self.assertIsNotNone(instance.ephemeral_key_uuid)
 
     def test_default_hostname_generator(self):
         fake_uuids = [str(uuid.uuid4()) for x in range(4)]
