@@ -768,7 +768,6 @@ class OSAPIFixture(fixtures.Fixture):
         conf_overrides = {
             'osapi_compute_listen': '127.0.0.1',
             'osapi_compute_listen_port': 0,
-            'verbose': True,
             'debug': True,
         }
         self.useFixture(ConfPatcher(**conf_overrides))
@@ -804,7 +803,6 @@ class OSMetadataServer(fixtures.Fixture):
         conf_overrides = {
             'metadata_listen': '127.0.0.1',
             'metadata_listen_port': 0,
-            'verbose': True,
             'debug': True
         }
         self.useFixture(ConfPatcher(**conf_overrides))

@@ -41,7 +41,6 @@ class MultiCreateExtensionTestV21(test.TestCase):
         """Shared implementation for tests below that create instance."""
         super(MultiCreateExtensionTestV21, self).setUp()
 
-        self.flags(verbose=True)
         self.flags(enable_instance_password=True, group='api')
         self.instance_cache_num = 0
         self.instance_cache_by_id = {}

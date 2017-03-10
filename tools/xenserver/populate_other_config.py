@@ -28,7 +28,7 @@ populated.
 
 Run on compute-worker (not Dom0):
 
-    python ./tools/xenserver/populate_other_config.py [--dry-run|--verbose]
+    python ./tools/xenserver/populate_other_config.py [--dry-run]
 """
 import os
 import sys
@@ -92,9 +92,8 @@ def main():
             vm_utils._set_vdi_info(session, vdi_ref, vdi_type, name_label,
                                    vdi_type, instance)
 
-        if CONF.verbose:
-            print("Setting other_config for instance_uuid=%s vdi_uuid=%s" % (
-                    instance_uuid, vdi_rec['uuid']))
+        print("Setting other_config for instance_uuid=%s vdi_uuid=%s" % (
+                instance_uuid, vdi_rec['uuid']))
 
         if CONF.dry_run:
             print("Dry run completed")

@@ -35,7 +35,7 @@ class FpingTestV21(test.TestCase):
 
     def setUp(self):
         super(FpingTestV21, self).setUp()
-        self.flags(verbose=True, use_ipv6=False)
+        self.flags(use_ipv6=False)
         return_server = fakes.fake_instance_get()
         return_servers = fakes.fake_instance_get_all_by_filters()
         self.stub_out("nova.db.instance_get_all_by_filters",

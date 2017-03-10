@@ -123,7 +123,6 @@ def stub_instance(id, user_id='fake', project_id='fake', host=None,
 class ConsolesControllerTestV21(test.NoDBTestCase):
     def setUp(self):
         super(ConsolesControllerTestV21, self).setUp()
-        self.flags(verbose=True)
         self.instance_db = FakeInstanceDB()
         self.stub_out('nova.db.instance_get',
                       self.instance_db.return_server_by_id)

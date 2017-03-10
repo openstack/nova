@@ -157,7 +157,7 @@ class ControllerTest(test.TestCase):
 
     def setUp(self):
         super(ControllerTest, self).setUp()
-        self.flags(verbose=True, use_ipv6=False)
+        self.flags(use_ipv6=False)
         fakes.stub_out_key_pair_funcs(self)
         fake.stub_out_image_service(self)
         return_server = fakes.fake_compute_get()
@@ -2515,7 +2515,6 @@ class ServersControllerCreateTest(test.TestCase):
         """Shared implementation for tests below that create instance."""
         super(ServersControllerCreateTest, self).setUp()
 
-        self.flags(verbose=True)
         self.flags(enable_instance_password=True, group='api')
         self.instance_cache_num = 0
         self.instance_cache_by_id = {}
@@ -3830,7 +3829,6 @@ class ServersControllerCreateTestWithMock(test.TestCase):
         """Shared implementation for tests below that create instance."""
         super(ServersControllerCreateTestWithMock, self).setUp()
 
-        self.flags(verbose=True)
         self.flags(enable_instance_password=True, group='api')
         self.instance_cache_num = 0
         self.instance_cache_by_id = {}
