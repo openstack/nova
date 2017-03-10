@@ -1076,7 +1076,7 @@ object_data = {
     'ComputeNodeList': '1.16-40258d802a6ed045690a127a2088544b',
     'DNSDomain': '1.0-7b0b2dab778454b6a7b6c66afe163a1a',
     'DNSDomainList': '1.0-4ee0d9efdfd681fed822da88376e04d2',
-    'Destination': '1.0-4c59dd1288b2e7adbda6051a2de59183',
+    'Destination': '1.1-fff0853f3acec6b04ddc03158ded11ba',
     'DeviceBus': '1.0-77509ea1ea0dd750d5864b9bd87d3f9d',
     'DeviceMetadata': '1.0-04eb8fd218a49cbc3b1e54b774d179f7',
     'DiskMetadata': '1.0-e7a0f1ccccf10d26a76b28e7492f3788',
