@@ -694,6 +694,7 @@ def _create_test_instance():
         'numa_topology': None,
         'config_drive': None,
         'vm_mode': None,
+        'vm_state': None,
         'kernel_id': None,
         'ramdisk_id': None,
         'os_type': 'linux',
@@ -12318,7 +12319,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                     mock_updated_guest_xml,
                                     mock_migrateToURI3):
         self.compute = manager.ComputeManager()
-        instance_ref = self.test_instance
+        instance_ref = objects.Instance(**self.test_instance)
         target_connection = '127.0.0.2'
 
         target_xml = self.device_xml_tmpl.format(
@@ -12487,7 +12488,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                                       mock_migrateToURI3,
                                                       mock_min_version):
         self.compute = manager.ComputeManager()
-        instance_ref = self.test_instance
+        instance_ref = objects.Instance(**self.test_instance)
         target_connection = '127.0.0.2'
 
         target_xml = self.device_xml_tmpl.format(
@@ -13106,12 +13107,38 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(fakelibvirt.virDomain, "migrateToURI3")
     @mock.patch('nova.virt.libvirt.migration.get_updated_guest_xml',
                 return_value='')
+    def test_live_migration_paused_instance_postcopy(self, mock_new_xml,
+                                                     mock_migrateToURI3,
+                                                     mock_min_version):
+        disk_paths = []
+        params = {'bandwidth': CONF.libvirt.live_migration_bandwidth}
+        migrate_data = objects.LibvirtLiveMigrateData(block_migration=False,
+                                                      serial_listen_addr=False)
+        dom = fakelibvirt.virDomain
+        guest = libvirt_guest.Guest(dom)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr._parse_migration_flags()
+        instance = objects.Instance(**self.test_instance)
+        instance.vm_state = vm_states.PAUSED
+
+        drvr._live_migration_operation(self.context, instance, 'dest',
+                                       True, migrate_data, guest,
+                                       disk_paths)
+
+        # Verify VIR_MIGRATE_POSTCOPY flag was not set
+        self.assertEqual(drvr._live_migration_flags, 27)
+        mock_migrateToURI3.assert_called_once_with(
+            drvr._live_migration_uri('dest'), params=params, flags=27)
+
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
+    @mock.patch.object(fakelibvirt.virDomain, "migrateToURI3")
+    @mock.patch('nova.virt.libvirt.migration.get_updated_guest_xml',
+                return_value='')
     @mock.patch('nova.virt.libvirt.guest.Guest.get_xml_desc', return_value='')
     def test_block_live_migration_native_tls(
             self, mock_old_xml, mock_new_xml,
             mock_migrateToURI3, mock_min_version):
         self.flags(live_migration_with_native_tls=True, group='libvirt')
-
         target_connection = None
         disk_paths = ['vda', 'vdb']
 
