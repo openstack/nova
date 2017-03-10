@@ -88,6 +88,10 @@ def cinderclient(context):
     if version == '1':
         raise exception.UnsupportedCinderAPIVersion(version=version)
 
+    if version == '2':
+        LOG.warning("The support for the Cinder API v2 is deprecated, please "
+                    "upgrade to Cinder API v3.")
+
     if version == '3':
         # TODO(ildikov): Add microversion support for picking up the new
         # attach/detach API that was added in 3.27.
