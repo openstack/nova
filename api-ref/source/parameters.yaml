@@ -504,19 +504,12 @@ keypair_marker:
   required: false
   type: string
   min_version: 2.35
-keypair_type_in:
-  in: query
-  required: false
-  type: string
-  description: |
-    The type of the keypair. Allowed values are ``ssh`` or ``x509``
-  min_version: 2.2
 keypair_user:
   in: query
   required: false
   type: string
   description: |
-    This allows administrative users to list key-pairs of specified
+    This allows administrative users to operate key-pairs of specified
     user ID.
   min_version: 2.10
 limit:
@@ -1459,7 +1452,7 @@ delete_on_termination:
   type: string
 deleted:
   description: |
-    A boolean indicate whether this aggregate is deleted or not, if it has
+    A boolean indicates whether this aggregate is deleted or not, if it has
     not been deleted, ``false`` will appear.
   in: body
   required: true
@@ -2766,12 +2759,25 @@ keypair:
   required: true
   description: |
     Keypair object
+keypair_deleted:
+  description: |
+    A boolean indicates whether this keypair is deleted or not.
+    The value is always ``false`` (not deleted).
+  in: body
+  required: true
+  type: boolean
 keypair_fingerprint:
   in: body
   required: true
   type: string
   description: |
     The fingerprint for the keypair.
+keypair_id:
+  description: |
+    The keypair ID.
+  in: body
+  required: true
+  type: integer
 keypair_links:
   description: |
     Links pertaining to keypair. See `API Guide / Links and
@@ -2815,8 +2821,21 @@ keypair_type:
   required: true
   type: string
   description: |
-    The type of the keypair. Allowed values are ``ssh`` or ``x509``
+    The type of the keypair. Allowed values are ``ssh`` or ``x509``.
   min_version: 2.2
+keypair_type_in:
+  in: body
+  required: false
+  type: string
+  description: |
+    The type of the keypair. Allowed values are ``ssh`` or ``x509``.
+  min_version: 2.2
+keypair_updated_deleted_at:
+  description: |
+    It is always ``null``.
+  in: body
+  required: true
+  type: none
 # NOTE(mriedem): This is the user_id description for the keypair create/show
 # response which has always been returned.
 keypair_userid:
