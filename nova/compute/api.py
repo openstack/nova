@@ -1477,8 +1477,15 @@ class API(base.Base):
         instance.old_flavor = None
         instance.new_flavor = None
         if CONF.ephemeral_storage_encryption.enabled:
+            # NOTE(kfarr): dm-crypt expects the cipher in a
+            # hyphenated format: cipher-chainmode-ivmode
+            # (ex: aes-xts-plain64). The algorithm needs
+            # to be parsed out to pass to the key manager (ex: aes).
+            cipher = CONF.ephemeral_storage_encryption.cipher
+            algorithm = cipher.split('-')[0] if cipher else None
             instance.ephemeral_key_uuid = self.key_manager.create_key(
                 context,
+                algorithm=algorithm,
                 length=CONF.ephemeral_storage_encryption.key_size)
         else:
             instance.ephemeral_key_uuid = None
