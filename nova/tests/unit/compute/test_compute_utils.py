@@ -835,6 +835,23 @@ class ComputeUtilsTestCase(test.NoDBTestCase):
             self.assertEqual([], addresses)
         mock_ifaddresses.assert_called_once_with(iface)
 
+    @mock.patch('nova.compute.utils.notify_about_instance_usage')
+    @mock.patch('nova.objects.Instance.destroy')
+    def test_notify_about_instance_delete(self, mock_instance_destroy,
+                                          mock_notify_usage):
+        instance = fake_instance.fake_instance_obj(
+            self.context, expected_attrs=('system_metadata',))
+        with compute_utils.notify_about_instance_delete(
+            mock.sentinel.notifier, self.context, instance):
+            instance.destroy()
+        expected_notify_calls = [
+            mock.call(mock.sentinel.notifier, self.context, instance,
+                      'delete.start'),
+            mock.call(mock.sentinel.notifier, self.context, instance,
+                      'delete.end', system_metadata=instance.system_metadata)
+        ]
+        mock_notify_usage.assert_has_calls(expected_notify_calls)
+
 
 class ComputeUtilsQuotaDeltaTestCase(test.TestCase):
     def setUp(self):
