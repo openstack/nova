@@ -359,13 +359,13 @@ Response
   - tenant_id: tenant_id_body
   - updated: updated
   - user_id: user_id
-  - OS-EXT-SERV-ATTR:hostname: server_hostname
-  - OS-EXT-SERV-ATTR:reservation_id: server_reservation_id
-  - OS-EXT-SERV-ATTR:launch_index: server_launch_index
-  - OS-EXT-SERV-ATTR:kernel_id: server_kernel_id
-  - OS-EXT-SERV-ATTR:ramdisk_id: server_ramdisk_id
-  - OS-EXT-SERV-ATTR:root_device_name: server_root_device_name
-  - OS-EXT-SERV-ATTR:user_data: server_user_data
+  - OS-EXT-SRV-ATTR:hostname: server_hostname
+  - OS-EXT-SRV-ATTR:reservation_id: server_reservation_id
+  - OS-EXT-SRV-ATTR:launch_index: server_launch_index
+  - OS-EXT-SRV-ATTR:kernel_id: server_kernel_id
+  - OS-EXT-SRV-ATTR:ramdisk_id: server_ramdisk_id
+  - OS-EXT-SRV-ATTR:root_device_name: server_root_device_name
+  - OS-EXT-SRV-ATTR:user_data: server_user_data
 
 **Example Create Server**
 
@@ -518,13 +518,13 @@ Response
   - tenant_id: tenant_id_body
   - updated: updated
   - user_id: user_id
-  - OS-EXT-SERV-ATTR:hostname: server_hostname
-  - OS-EXT-SERV-ATTR:reservation_id: server_reservation_id
-  - OS-EXT-SERV-ATTR:launch_index: server_launch_index
-  - OS-EXT-SERV-ATTR:kernel_id: server_kernel_id
-  - OS-EXT-SERV-ATTR:ramdisk_id: server_ramdisk_id
-  - OS-EXT-SERV-ATTR:root_device_name: server_root_device_name
-  - OS-EXT-SERV-ATTR:user_data: server_user_data
+  - OS-EXT-SRV-ATTR:hostname: server_hostname
+  - OS-EXT-SRV-ATTR:reservation_id: server_reservation_id
+  - OS-EXT-SRV-ATTR:launch_index: server_launch_index
+  - OS-EXT-SRV-ATTR:kernel_id: server_kernel_id
+  - OS-EXT-SRV-ATTR:ramdisk_id: server_ramdisk_id
+  - OS-EXT-SRV-ATTR:root_device_name: server_root_device_name
+  - OS-EXT-SRV-ATTR:user_data: server_user_data
   - locked: locked
 
 **Example List Servers Detailed**
@@ -605,13 +605,13 @@ Response
   - updated: updated
   - user_id: user_id
   - fault: fault
-  - OS-EXT-SERV-ATTR:hostname: server_hostname
-  - OS-EXT-SERV-ATTR:reservation_id: server_reservation_id
-  - OS-EXT-SERV-ATTR:launch_index: server_launch_index
-  - OS-EXT-SERV-ATTR:kernel_id: server_kernel_id
-  - OS-EXT-SERV-ATTR:ramdisk_id: server_ramdisk_id
-  - OS-EXT-SERV-ATTR:root_device_name: server_root_device_name
-  - OS-EXT-SERV-ATTR:user_data: server_user_data
+  - OS-EXT-SRV-ATTR:hostname: server_hostname
+  - OS-EXT-SRV-ATTR:reservation_id: server_reservation_id
+  - OS-EXT-SRV-ATTR:launch_index: server_launch_index
+  - OS-EXT-SRV-ATTR:kernel_id: server_kernel_id
+  - OS-EXT-SRV-ATTR:ramdisk_id: server_ramdisk_id
+  - OS-EXT-SRV-ATTR:root_device_name: server_root_device_name
+  - OS-EXT-SRV-ATTR:user_data: server_user_data
   - locked: locked
 
 **Example Show Server Details**
@@ -699,13 +699,13 @@ Response
   - tenant_id: tenant_id_body
   - updated: updated
   - user_id: user_id
-  - OS-EXT-SERV-ATTR:hostname: server_hostname
-  - OS-EXT-SERV-ATTR:reservation_id: server_reservation_id
-  - OS-EXT-SERV-ATTR:launch_index: server_launch_index
-  - OS-EXT-SERV-ATTR:kernel_id: server_kernel_id
-  - OS-EXT-SERV-ATTR:ramdisk_id: server_ramdisk_id
-  - OS-EXT-SERV-ATTR:root_device_name: server_root_device_name
-  - OS-EXT-SERV-ATTR:user_data: server_user_data
+  - OS-EXT-SRV-ATTR:hostname: server_hostname
+  - OS-EXT-SRV-ATTR:reservation_id: server_reservation_id
+  - OS-EXT-SRV-ATTR:launch_index: server_launch_index
+  - OS-EXT-SRV-ATTR:kernel_id: server_kernel_id
+  - OS-EXT-SRV-ATTR:ramdisk_id: server_ramdisk_id
+  - OS-EXT-SRV-ATTR:root_device_name: server_root_device_name
+  - OS-EXT-SRV-ATTR:user_data: server_user_data
   - locked: locked
 
 **Example Update server name**
