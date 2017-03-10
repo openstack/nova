@@ -30,7 +30,7 @@ ALL_OPTS = [
     cfg.StrOpt(
         'notify_on_state_change',
         choices=(None, 'vm_state', 'vm_and_task_state'),
-        deprecated_group='default',
+        deprecated_group='DEFAULT',
         help="""
 If set, send compute.instance.update notifications on instance state
 changes.
@@ -48,7 +48,7 @@ Possible values:
     cfg.BoolOpt(
         'notify_on_api_faults',
         default=False,
-        deprecated_group='default',
+        deprecated_group='DEFAULT',
         deprecated_name='notify_api_faults',
         help="""
 If enabled, send api.fault notifications on caught exceptions in the
@@ -59,14 +59,14 @@ API service.
         'default_level',
         default='INFO',
         choices=('DEBUG', 'INFO', 'WARN', 'ERROR', 'CRITICAL'),
-        deprecated_group='default',
+        deprecated_group='DEFAULT',
         deprecated_name='default_notification_level',
         help="Default notification level for outgoing notifications."),
 
     cfg.StrOpt(
         'default_publisher_id',
         default='$my_ip',
-        deprecated_group='default',
+        deprecated_group='DEFAULT',
         help="""
 Default publisher_id for outgoing notifications. If you consider routing
 notifications using different publisher, change this value accordingly.
@@ -84,7 +84,7 @@ Related options:
         'notification_format',
         choices=['unversioned', 'versioned', 'both'],
         default='both',
-        deprecated_group='default',
+        deprecated_group='DEFAULT',
         help="""
 Specifies which notification format shall be used by nova.
 
