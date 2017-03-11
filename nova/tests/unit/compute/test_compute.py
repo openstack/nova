@@ -25,6 +25,8 @@ import time
 import traceback
 import uuid
 
+import ddt
+
 import mock
 from neutronclient.common import exceptions as neutron_exceptions
 from oslo_log import log as logging
@@ -4268,42 +4270,6 @@ class ComputeTestCase(BaseTestCase):
                                              mock.ANY)
         mock_deallocate.assert_called_once_with(mock.ANY, mock.ANY, mock.ANY)
 
-    def test_delete_instance_deletes_console_auth_tokens(self):
-        instance = self._create_fake_instance_obj()
-        self.flags(enabled=True, group='vnc')
-
-        self.tokens_deleted = False
-
-        def fake_delete_tokens(*args, **kwargs):
-            self.tokens_deleted = True
-
-        self.stub_out('nova.consoleauth.rpcapi.ConsoleAuthAPI.'
-                       'delete_tokens_for_instance',
-                       fake_delete_tokens)
-
-        self.compute._delete_instance(self.context, instance, [],
-                                      self.none_quotas)
-
-        self.assertTrue(self.tokens_deleted)
-
-    def test_delete_instance_deletes_console_auth_tokens_cells(self):
-        instance = self._create_fake_instance_obj()
-        self.flags(enabled=True, group='vnc')
-        self.flags(enable=True, group='cells')
-
-        self.tokens_deleted = False
-
-        def fake_delete_tokens(*args, **kwargs):
-            self.tokens_deleted = True
-
-        self.stub_out('nova.cells.rpcapi.CellsAPI.consoleauth_delete_tokens',
-                       fake_delete_tokens)
-
-        self.compute._delete_instance(self.context, instance,
-                                      [], self.none_quotas)
-
-        self.assertTrue(self.tokens_deleted)
-
     def test_delete_instance_changes_power_state(self):
         """Test that the power state is NOSTATE after deleting an instance."""
         instance = self._create_fake_instance_obj()
@@ -7918,6 +7884,7 @@ class ComputeTestCase(BaseTestCase):
             notify, instance.uuid, self.compute_api.notifier, self.context)
 
 
+@ddt.ddt
 class ComputeAPITestCase(BaseTestCase):
     def setUp(self):
         def fake_get_nw_info(cls, ctxt, instance):
@@ -9588,6 +9555,25 @@ class ComputeAPITestCase(BaseTestCase):
                           self.compute_api.get_spice_console,
                           self.context, instance, 'spice')
 
+    @ddt.data(('spice', task_states.DELETING),
+              ('spice', task_states.MIGRATING),
+              ('rdp', task_states.DELETING),
+              ('rdp', task_states.MIGRATING),
+              ('vnc', task_states.DELETING),
+              ('vnc', task_states.MIGRATING),
+              ('mks', task_states.DELETING),
+              ('mks', task_states.MIGRATING),
+              ('serial', task_states.DELETING),
+              ('serial', task_states.MIGRATING))
+    @ddt.unpack
+    def test_get_console_invalid_task_state(self, console_type, task_state):
+        instance = self._create_fake_instance_obj(
+            params={'task_state': task_state})
+        self.assertRaises(
+            exception.InstanceInvalidState,
+            getattr(self.compute_api, 'get_%s_console' % console_type),
+            self.context, instance, console_type)
+
     @mock.patch.object(compute_api.consoleauth_rpcapi.ConsoleAuthAPI,
                        'authorize_console')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'get_rdp_console')
@@ -10307,14 +10293,17 @@ class ComputeAPITestCase(BaseTestCase):
         instance, instance_uuid = self._run_instance()
 
         rpcapi = self.compute_api.compute_task_api
+        consoleauth_rpcapi = self.compute_api.consoleauth_rpcapi
         fake_spec = objects.RequestSpec()
 
+        @mock.patch.object(consoleauth_rpcapi, 'delete_tokens_for_instance')
         @mock.patch.object(rpcapi, 'live_migrate_instance')
         @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
         @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
         @mock.patch.object(self.compute_api, '_record_action_start')
         def do_test(record_action_start, get_by_instance_uuid,
-                    get_all_by_host, live_migrate_instance):
+                    get_all_by_host, live_migrate_instance,
+                    delete_tokens_for_instance):
             get_by_instance_uuid.return_value = fake_spec
             get_all_by_host.return_value = objects.ComputeNodeList(
                 objects=[objects.ComputeNode(
@@ -10338,6 +10327,9 @@ class ComputeAPITestCase(BaseTestCase):
                 block_migration=True,
                 disk_over_commit=True,
                 request_spec=fake_spec, async=False)
+
+            delete_tokens_for_instance.assert_called_once_with(
+                self.context, instance.uuid)
 
         do_test()
         instance.refresh()

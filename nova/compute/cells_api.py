@@ -24,6 +24,7 @@ from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import utils as cells_utils
 from nova.compute import api as compute_api
 from nova.compute import rpcapi as compute_rpcapi
+from nova.compute import task_states
 from nova.compute import vm_states
 from nova import exception
 from nova import objects
@@ -32,6 +33,7 @@ from nova import rpc
 
 
 check_instance_state = compute_api.check_instance_state
+reject_instance_state = compute_api.reject_instance_state
 check_instance_lock = compute_api.check_instance_lock
 check_instance_cell = compute_api.check_instance_cell
 
@@ -373,6 +375,8 @@ class ComputeCellsAPI(compute_api.API):
         self._cast_to_cells(context, instance, 'unshelve')
 
     @check_instance_cell
+    @reject_instance_state(
+        task_state=[task_states.DELETING, task_states.MIGRATING])
     def get_vnc_console(self, context, instance, console_type):
         """Get a url to a VNC Console."""
         if not instance.host:
@@ -388,6 +392,8 @@ class ComputeCellsAPI(compute_api.API):
         return {'url': connect_info['access_url']}
 
     @check_instance_cell
+    @reject_instance_state(
+        task_state=[task_states.DELETING, task_states.MIGRATING])
     def get_spice_console(self, context, instance, console_type):
         """Get a url to a SPICE Console."""
         if not instance.host:
@@ -403,6 +409,8 @@ class ComputeCellsAPI(compute_api.API):
         return {'url': connect_info['access_url']}
 
     @check_instance_cell
+    @reject_instance_state(
+        task_state=[task_states.DELETING, task_states.MIGRATING])
     def get_rdp_console(self, context, instance, console_type):
         """Get a url to a RDP Console."""
         if not instance.host:
@@ -418,6 +426,8 @@ class ComputeCellsAPI(compute_api.API):
         return {'url': connect_info['access_url']}
 
     @check_instance_cell
+    @reject_instance_state(
+        task_state=[task_states.DELETING, task_states.MIGRATING])
     def get_serial_console(self, context, instance, console_type):
         """Get a url to a serial console."""
         if not instance.host:

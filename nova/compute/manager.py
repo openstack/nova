@@ -67,7 +67,6 @@ from nova.compute.utils import wrap_instance_event
 from nova.compute import vm_states
 from nova import conductor
 import nova.conf
-from nova import consoleauth
 import nova.context
 from nova import exception
 from nova import exception_wrapper
@@ -511,7 +510,6 @@ class ComputeManager(manager.Manager):
         self.compute_task_api = conductor.ComputeTaskAPI()
         self.is_neutron_security_groups = (
             openstack_driver.is_neutron_security_groups())
-        self.consoleauth_rpcapi = consoleauth.rpcapi.ConsoleAuthAPI()
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
         self.scheduler_client = scheduler_client.SchedulerClient()
         self._resource_tracker = None
@@ -730,7 +728,6 @@ class ComputeManager(manager.Manager):
         compute_utils.notify_about_instance_action(context, instance,
                 self.host, action=fields.NotificationAction.DELETE,
                 phase=fields.NotificationPhase.END)
-        self._clean_instance_console_tokens(context, instance)
         self._delete_scheduler_instance_info(context, instance.uuid)
 
     def _create_reservations(self, context, instance, project_id, user_id):
@@ -5627,7 +5624,6 @@ class ComputeManager(manager.Manager):
                      "This error can be safely ignored."),
                  instance=instance)
 
-        self._clean_instance_console_tokens(ctxt, instance)
         if migrate_data and migrate_data.obj_attr_is_set('migration'):
             migrate_data.migration.status = 'completed'
             migrate_data.migration.save()
@@ -5637,16 +5633,6 @@ class ComputeManager(manager.Manager):
         return (CONF.vnc.enabled or CONF.spice.enabled or
                 CONF.rdp.enabled or CONF.serial_console.enabled or
                 CONF.mks.enabled)
-
-    def _clean_instance_console_tokens(self, ctxt, instance):
-        """Clean console tokens stored for an instance."""
-        if self._consoles_enabled():
-            if CONF.cells.enable:
-                self.cells_rpcapi.consoleauth_delete_tokens(
-                    ctxt, instance.uuid)
-            else:
-                self.consoleauth_rpcapi.delete_tokens_for_instance(
-                    ctxt, instance.uuid)
 
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
