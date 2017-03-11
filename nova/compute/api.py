@@ -1847,20 +1847,45 @@ class API(base.Base):
                     # quotas must still be decremented in the main cell DB.
                     project_id, user_id = quotas_obj.ids_from_instance(
                         context, instance)
-                    # This is confusing but actually decrements quota usage.
-                    quotas = self._create_reservations(context,
-                                                       instance,
-                                                       instance.task_state,
-                                                       project_id, user_id)
-                    quotas.commit()
+
+                    # TODO(mriedem): This is a hack until we have quotas in the
+                    # API database. When we looked up the instance in
+                    # _get_instance if the instance has a mapping then the
+                    # context is modified to set the target cell permanently.
+                    # However, if the instance is in cell0 then the context
+                    # is targeting cell0 and the quotas would be decremented
+                    # from cell0 and we actually need them decremented from
+                    # the cell database. So we temporarily untarget the
+                    # context while we do the quota stuff and re-target after
+                    # we're done.
+
+                    # We have to get the flavor from the instance while the
+                    # context is still targeted to where the instance lives.
+                    with nova_context.target_cell(context, cell):
+                        # If the instance has the targeted context in it then
+                        # we don't need the context manager.
+                        quota_flavor = self._get_flavor_for_reservation(
+                            instance)
+
+                    with nova_context.target_cell(context, None):
+                        # This is confusing but actually decrements quota usage
+                        quotas = self._create_reservations(
+                            context, instance, instance.task_state,
+                            project_id, user_id, flavor=quota_flavor)
+                        quotas.commit()
+
                     try:
+                        # Now destroy the instance from the cell it lives in.
                         with nova_context.target_cell(context, cell):
+                            # If the instance has the targeted context in it
+                            # then we don't need the context manager.
                             with compute_utils.notify_about_instance_delete(
                                     self.notifier, context, instance):
                                 instance.destroy()
                             return
                     except exception.InstanceNotFound:
-                        quotas.rollback()
+                        with nova_context.target_cell(context, None):
+                            quotas.rollback()
                 if not instance:
                     # Instance is already deleted.
                     return
@@ -2051,21 +2076,33 @@ class API(base.Base):
                 src_host, quotas.reservations,
                 cast=False)
 
+    def _get_flavor_for_reservation(self, instance):
+        """Returns the flavor needed for _create_reservations.
+
+        This is used when the context is targeted to a cell that is
+        different from the one that the instance lives in.
+        """
+        if instance.task_state in (task_states.RESIZE_MIGRATED,
+                                   task_states.RESIZE_FINISH):
+            return instance.old_flavor
+        return instance.flavor
+
     def _create_reservations(self, context, instance, original_task_state,
-                             project_id, user_id):
+                             project_id, user_id, flavor=None):
         # NOTE(wangpan): if the instance is resizing, and the resources
         #                are updated to new instance type, we should use
         #                the old instance type to create reservation.
         # see https://bugs.launchpad.net/nova/+bug/1099729 for more details
         if original_task_state in (task_states.RESIZE_MIGRATED,
                                    task_states.RESIZE_FINISH):
-            old_flavor = instance.old_flavor
+            old_flavor = flavor or instance.old_flavor
             instance_vcpus = old_flavor.vcpus
             vram_mb = old_flavor.extra_specs.get('hw_video:ram_max_mb', 0)
             instance_memory_mb = old_flavor.memory_mb + vram_mb
         else:
-            instance_vcpus = instance.flavor.vcpus
-            instance_memory_mb = instance.flavor.memory_mb
+            flavor = flavor or instance.flavor
+            instance_vcpus = flavor.vcpus
+            instance_memory_mb = flavor.memory_mb
 
         quotas = objects.Quotas(context=context)
         quotas.reserve(project_id=project_id,

@@ -309,6 +309,25 @@ class ContextTestCase(test.NoDBTestCase):
         self.assertEqual(mock.sentinel.db_conn, ctxt.db_connection)
         self.assertEqual(mock.sentinel.mq_conn, ctxt.mq_connection)
 
+    @mock.patch('nova.rpc.create_transport')
+    @mock.patch('nova.db.create_context_manager')
+    def test_target_cell_unset(self, mock_create_ctxt_mgr, mock_rpc):
+        """Tests that passing None as the mapping will temporarily
+        untarget any previously set cell context.
+        """
+        mock_create_ctxt_mgr.return_value = mock.sentinel.cdb
+        mock_rpc.return_value = mock.sentinel.cmq
+        ctxt = context.RequestContext('111',
+                                      '222',
+                                      roles=['admin', 'weasel'])
+        ctxt.db_connection = mock.sentinel.db_conn
+        ctxt.mq_connection = mock.sentinel.mq_conn
+        with context.target_cell(ctxt, None):
+            self.assertIsNone(ctxt.db_connection)
+            self.assertIsNone(ctxt.mq_connection)
+        self.assertEqual(mock.sentinel.db_conn, ctxt.db_connection)
+        self.assertEqual(mock.sentinel.mq_conn, ctxt.mq_connection)
+
     def test_get_context(self):
         ctxt = context.get_context()
         self.assertIsNone(ctxt.user_id)

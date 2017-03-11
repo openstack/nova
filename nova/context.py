@@ -365,17 +365,23 @@ def set_target_cell(context, cell_mapping):
     This is used for permanently targeting a cell in a context.
     Use this when you want all subsequent code to target a cell.
 
+    Passing None for cell_mapping will untarget the context.
+
     :param context: The RequestContext to add connection information
-    :param cell_mapping: An objects.CellMapping object
+    :param cell_mapping: An objects.CellMapping object or None
     """
-    # avoid circular import
-    from nova import db
-    from nova import rpc
-    db_connection_string = cell_mapping.database_connection
-    context.db_connection = db.create_context_manager(db_connection_string)
-    if not cell_mapping.transport_url.startswith('none'):
-        context.mq_connection = rpc.create_transport(
-            cell_mapping.transport_url)
+    if cell_mapping is not None:
+        # avoid circular import
+        from nova import db
+        from nova import rpc
+        db_connection_string = cell_mapping.database_connection
+        context.db_connection = db.create_context_manager(db_connection_string)
+        if not cell_mapping.transport_url.startswith('none'):
+            context.mq_connection = rpc.create_transport(
+                cell_mapping.transport_url)
+    else:
+        context.db_connection = None
+        context.mq_connection = None
 
 
 @contextmanager
@@ -386,8 +392,10 @@ def target_cell(context, cell_mapping):
     This context manager makes a temporary change to the context
     and restores it when complete.
 
+    Passing None for cell_mapping will untarget the context temporarily.
+
     :param context: The RequestContext to add connection information
-    :param cell_mapping: A objects.CellMapping object
+    :param cell_mapping: An objects.CellMapping object or None
     """
     original_db_connection = context.db_connection
     original_mq_connection = context.mq_connection

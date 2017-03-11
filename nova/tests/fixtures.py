@@ -399,6 +399,16 @@ class CellDatabases(fixtures.Fixture):
     @contextmanager
     def _wrap_target_cell(self, context, cell_mapping):
         with self._cell_lock.write_lock():
+            if cell_mapping is None:
+                # NOTE(danms): The real target_cell untargets with a
+                # cell_mapping of None. Since we're controlling our
+                # own targeting in this fixture, we need to call this out
+                # specifically and avoid switching global database state
+                try:
+                    with self._real_target_cell(context, cell_mapping) as c:
+                        yield c
+                finally:
+                    return
             ctxt_mgr = self._ctxt_mgrs[cell_mapping.database_connection]
             # This assumes the next local DB access is the same cell that
             # was targeted last time.

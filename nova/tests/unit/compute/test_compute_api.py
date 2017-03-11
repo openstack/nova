@@ -16,6 +16,7 @@
 import contextlib
 import datetime
 
+import ddt
 import iso8601
 import mock
 from mox3 import mox
@@ -67,6 +68,7 @@ SHELVED_IMAGE_NOT_AUTHORIZED = 'fake-shelved-image-not-authorized'
 SHELVED_IMAGE_EXCEPTION = 'fake-shelved-image-exception'
 
 
+@ddt.ddt
 class _ComputeAPIUnitTestMixIn(object):
     def setUp(self):
         super(_ComputeAPIUnitTestMixIn, self).setUp()
@@ -1487,6 +1489,16 @@ class _ComputeAPIUnitTestMixIn(object):
 
         test()
 
+    @ddt.data((task_states.RESIZE_MIGRATED, True),
+              (task_states.RESIZE_FINISH, True),
+              (None, False))
+    @ddt.unpack
+    def test_get_flavor_for_reservation(self, task_state, is_old):
+        instance = self._create_instance_obj({'task_state': task_state})
+        flavor = self.compute_api._get_flavor_for_reservation(instance)
+        expected_flavor = instance.old_flavor if is_old else instance.flavor
+        self.assertEqual(expected_flavor, flavor)
+
     @mock.patch('nova.context.target_cell')
     @mock.patch('nova.compute.utils.notify_about_instance_delete')
     @mock.patch('nova.objects.Instance.destroy')
@@ -1506,10 +1518,13 @@ class _ComputeAPIUnitTestMixIn(object):
                               return_value=False),
             mock.patch.object(self.compute_api, '_lookup_instance',
                               return_value=(cell0, instance)),
+            mock.patch.object(self.compute_api, '_get_flavor_for_reservation',
+                              return_value=instance.flavor),
             mock.patch.object(self.compute_api, '_create_reservations',
                               return_value=quota_mock)
         ) as (
-            _delete_while_booting, _lookup_instance, _create_reservations
+            _delete_while_booting, _lookup_instance,
+            _get_flavor_for_reservation, _create_reservations
         ):
             self.compute_api._delete(
                 self.context, instance, 'delete', mock.NonCallableMock())
@@ -1517,11 +1532,27 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, instance)
             _lookup_instance.assert_called_once_with(
                 self.context, instance.uuid)
+            _get_flavor_for_reservation.assert_called_once_with(instance)
             _create_reservations.assert_called_once_with(
                 self.context, instance, instance.task_state,
-                self.context.project_id, instance.user_id)
+                self.context.project_id, instance.user_id,
+                flavor=instance.flavor)
             quota_mock.commit.assert_called_once_with()
-            target_cell_mock.assert_called_once_with(self.context, cell0)
+            expected_target_cell_calls = [
+                # Get the instance.flavor.
+                mock.call(self.context, cell0),
+                mock.call().__enter__(),
+                mock.call().__exit__(None, None, None),
+                # Create the quota reservation.
+                mock.call(self.context, None),
+                mock.call().__enter__(),
+                mock.call().__exit__(None, None, None),
+                # Destroy the instance.
+                mock.call(self.context, cell0),
+                mock.call().__enter__(),
+                mock.call().__exit__(None, None, None),
+            ]
+            target_cell_mock.assert_has_calls(expected_target_cell_calls)
             notify_mock.assert_called_once_with(
                 self.compute_api.notifier, self.context, instance)
             destroy_mock.assert_called_once_with()
@@ -1552,10 +1583,13 @@ class _ComputeAPIUnitTestMixIn(object):
                               return_value=False),
             mock.patch.object(self.compute_api, '_lookup_instance',
                               return_value=(cell0, instance)),
+            mock.patch.object(self.compute_api, '_get_flavor_for_reservation',
+                              return_value=instance.flavor),
             mock.patch.object(self.compute_api, '_create_reservations',
                               return_value=quota_mock)
         ) as (
-            _delete_while_booting, _lookup_instance, _create_reservations
+            _delete_while_booting, _lookup_instance,
+            _get_flavor_for_reservation, _create_reservations
         ):
             self.assertRaises(
                 test.TestingException, self.compute_api._delete,
@@ -1564,14 +1598,37 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, instance)
             _lookup_instance.assert_called_once_with(
                 self.context, instance.uuid)
+            _get_flavor_for_reservation.assert_called_once_with(instance)
             _create_reservations.assert_called_once_with(
                 self.context, instance, instance.task_state,
-                self.context.project_id, instance.user_id)
+                self.context.project_id, instance.user_id,
+                flavor=instance.flavor)
             quota_mock.commit.assert_called_once_with()
-            target_cell_mock.assert_called_once_with(self.context, cell0)
             notify_mock.assert_called_once_with(
                 self.compute_api.notifier, self.context, instance)
             destroy_mock.assert_called_once_with()
+            expected_target_cell_calls = [
+                # Get the instance.flavor.
+                mock.call(self.context, cell0),
+                mock.call().__enter__(),
+                mock.call().__exit__(None, None, None),
+                # Create the quota reservation.
+                mock.call(self.context, None),
+                mock.call().__enter__(),
+                mock.call().__exit__(None, None, None),
+                # Destroy the instance.
+                mock.call(self.context, cell0),
+                mock.call().__enter__(),
+                mock.call().__exit__(
+                    exception.InstanceNotFound,
+                    destroy_mock.side_effect,
+                    mock.ANY),
+                # Rollback the quota reservation.
+                mock.call(self.context, None),
+                mock.call().__enter__(),
+                mock.call().__exit__(None, None, None),
+            ]
+            target_cell_mock.assert_has_calls(expected_target_cell_calls)
             quota_mock.rollback.assert_called_once_with()
 
     @mock.patch.object(context, 'target_cell')
