@@ -156,17 +156,19 @@ class _TestFlavor(object):
                                                  db_flavor['flavorid'])
         self._compare(self, db_flavor, flavor)
 
-    def test_add_access(self):
+    @mock.patch('nova.objects.Flavor._send_notification')
+    def test_add_access(self, mock_notify):
         elevated = self.context.elevated()
         flavor = flavor_obj.Flavor(context=elevated, id=12345, flavorid='123')
         with mock.patch.object(db, 'flavor_access_add') as add:
             flavor.add_access('456')
             add.assert_called_once_with(elevated, '123', '456')
 
+    @mock.patch('nova.objects.Flavor._send_notification')
     @mock.patch('nova.db.flavor_access_add')
     @mock.patch('nova.objects.Flavor._flavor_add_project')
     @mock.patch('nova.objects.Flavor.in_api', new=True)
-    def test_add_access_api(self, mock_api_add, mock_main_add):
+    def test_add_access_api(self, mock_api_add, mock_main_add, mock_notify):
         elevated = self.context.elevated()
         flavor = flavor_obj.Flavor(context=elevated, id=12345, flavorid='123')
         flavor.add_access('456')
@@ -178,17 +180,19 @@ class _TestFlavor(object):
         self.assertRaises(exception.ObjectActionError,
                           flavor.add_access, '2')
 
-    def test_remove_access(self):
+    @mock.patch('nova.objects.Flavor._send_notification')
+    def test_remove_access(self, mock_notify):
         elevated = self.context.elevated()
         flavor = flavor_obj.Flavor(context=elevated, id=12345, flavorid='123')
         with mock.patch.object(db, 'flavor_access_remove') as remove:
             flavor.remove_access('456')
             remove.assert_called_once_with(elevated, '123', '456')
 
+    @mock.patch('nova.objects.Flavor._send_notification')
     @mock.patch('nova.db.flavor_access_add')
     @mock.patch('nova.objects.Flavor._flavor_del_project')
     @mock.patch('nova.objects.Flavor.in_api', new=True)
-    def test_remove_access_api(self, mock_api_del, mock_main_del):
+    def test_remove_access_api(self, mock_api_del, mock_main_del, mock_notify):
         elevated = self.context.elevated()
         flavor = flavor_obj.Flavor(context=elevated, id=12345, flavorid='123')
         flavor.remove_access('456')
@@ -246,11 +250,13 @@ class _TestFlavor(object):
         flavor = objects.Flavor(self.context, **fields)
         self.assertRaises(exception.FlavorExists, flavor.create)
 
+    @mock.patch('nova.objects.Flavor._send_notification')
     @mock.patch('nova.db.flavor_access_add')
     @mock.patch('nova.db.flavor_access_remove')
     @mock.patch('nova.db.flavor_extra_specs_delete')
     @mock.patch('nova.db.flavor_extra_specs_update_or_create')
-    def test_save(self, mock_update, mock_delete, mock_remove, mock_add):
+    def test_save(self, mock_update, mock_delete, mock_remove, mock_add,
+                  mock_notify):
         ctxt = self.context.elevated()
         extra_specs = {'key1': 'value1', 'key2': 'value2'}
         projects = ['project-1', 'project-2']
@@ -289,12 +295,14 @@ class _TestFlavor(object):
         self.assertEqual(['project-1', 'project-3'], flavor.projects)
         mock_add.assert_called_once_with(ctxt, 'foo', 'project-3')
 
+    @mock.patch('nova.objects.Flavor._send_notification')
     @mock.patch('nova.objects.Flavor._flavor_add_project')
     @mock.patch('nova.objects.Flavor._flavor_del_project')
     @mock.patch('nova.objects.Flavor._flavor_extra_specs_del')
     @mock.patch('nova.objects.Flavor._flavor_extra_specs_add')
     @mock.patch('nova.objects.Flavor.in_api', new=True)
-    def test_save_api(self, mock_update, mock_delete, mock_remove, mock_add):
+    def test_save_api(self, mock_update, mock_delete, mock_remove, mock_add,
+                      mock_notify):
         extra_specs = {'key1': 'value1', 'key2': 'value2'}
         projects = ['project-1', 'project-2']
         flavor = flavor_obj.Flavor(context=self.context, flavorid='foo',

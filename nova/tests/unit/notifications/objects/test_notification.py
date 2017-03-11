@@ -17,6 +17,7 @@ import mock
 from oslo_utils import timeutils
 from oslo_versionedobjects import fixture
 
+from nova import exception
 from nova.network import model as network_model
 from nova.notifications import base as notification_base
 from nova.notifications.objects import base as notification
@@ -25,6 +26,7 @@ from nova.objects import base
 from nova.objects import fields
 from nova import test
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel as uuids
 
 
 class TestNotificationBase(test.NoDBTestCase):
@@ -36,7 +38,16 @@ class TestNotificationBase(test.NoDBTestCase):
             'field_1': fields.StringField(),
             'field_2': fields.IntegerField(),
             'not_important_field': fields.IntegerField(),
+            'lazy_field': fields.IntegerField()
         }
+
+        def obj_load_attr(self, attrname):
+            if attrname == 'lazy_field':
+                self.lazy_field = 42
+            else:
+                raise exception.ObjectActionError(
+                    action='obj_load_attr',
+                    reason='attribute %s not lazy-loadable' % attrname)
 
     @base.NovaObjectRegistry.register_if(False)
     class TestNotificationPayload(notification.NotificationPayloadBase):
@@ -45,12 +56,15 @@ class TestNotificationBase(test.NoDBTestCase):
         SCHEMA = {
             'field_1': ('source_field', 'field_1'),
             'field_2': ('source_field', 'field_2'),
+            'lazy_field': ('source_field', 'lazy_field')
         }
 
         fields = {
             'extra_field': fields.StringField(),  # filled by ctor
-            'field_1': fields.StringField(),  # filled by the schema
+            # filled by the schema
+            'field_1': fields.StringField(nullable=True),
             'field_2': fields.IntegerField(),   # filled by the schema
+            'lazy_field': fields.IntegerField()  # filled by the schema
         }
 
         def populate_schema(self, source_field):
@@ -103,7 +117,8 @@ class TestNotificationBase(test.NoDBTestCase):
         'nova_object.data': {
             'extra_field': 'test string',
             'field_1': 'test1',
-            'field_2': 42},
+            'field_2': 42,
+            'lazy_field': 42},
         'nova_object.version': '1.0',
         'nova_object.namespace': 'nova'}
 
@@ -223,6 +238,32 @@ class TestNotificationBase(test.NoDBTestCase):
         self.assertRaises(AssertionError, noti.emit, mock_context)
         self.assertFalse(mock_notifier.called)
 
+    def test_lazy_load_source_field(self):
+        my_obj = self.TestObject(field_1='test1',
+                                 field_2=42,
+                                 not_important_field=13)
+        payload = self.TestNotificationPayload(extra_field='test string')
+
+        payload.populate_schema(my_obj)
+
+        self.assertEqual(42, payload.lazy_field)
+
+    def test_uninited_source_field_defaulted_to_none(self):
+        my_obj = self.TestObject(field_2=42,
+                                 not_important_field=13)
+        payload = self.TestNotificationPayload(extra_field='test string')
+
+        payload.populate_schema(my_obj)
+
+        self.assertIsNone(payload.field_1)
+
+    def test_uninited_source_field_not_nullable_payload_field_fails(self):
+        my_obj = self.TestObject(field_1='test1',
+                                 not_important_field=13)
+        payload = self.TestNotificationPayload(extra_field='test string')
+
+        self.assertRaises(ValueError, payload.populate_schema, my_obj)
+
     @mock.patch('nova.rpc.NOTIFIER')
     def test_empty_schema(self, mock_notifier):
         non_populated_payload = self.TestNotificationPayloadEmptySchema(
@@ -258,14 +299,14 @@ class TestNotificationBase(test.NoDBTestCase):
 
 notification_object_data = {
     'AggregateNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'AggregatePayload': '1.0-2550af604410af7b4ad5d46fb29ba45b',
+    'AggregatePayload': '1.1-1eb9adcc4440d8627de6ec37c6398746',
     'AuditPeriodPayload': '1.0-2b429dd307b8374636703b843fa3f9cb',
     'BandwidthPayload': '1.0-ee2616a7690ab78406842a2b68e34130',
     'EventType': '1.5-ffa6d332f4462c45a2a363356a14165f',
     'ExceptionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'ExceptionPayload': '1.0-27db46ee34cd97e39f2643ed92ad0cc5',
     'FlavorNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'FlavorPayload': '1.2-6f73fa3dc2d5f7abff1a27aac70b8759',
+    'FlavorPayload': '1.3-6335e626893d7df5f96f87e6731fef56',
     'InstanceActionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'InstanceActionPayload': '1.1-8d12efc3251c606b61b3d479a9da51be',
     'InstanceActionVolumeSwapNotification':
@@ -345,15 +386,20 @@ class TestInstanceNotification(test.NoDBTestCase):
     def test_send_version_instance_update_uses_flavor(self, mock_emit):
         # Make sure that the notification payload chooses the values in
         # instance.flavor.$value instead of instance.$value
-        test_keys = ['memory_mb', 'vcpus', 'root_gb', 'ephemeral_gb']
+        test_keys = ['memory_mb', 'vcpus', 'root_gb', 'ephemeral_gb', 'swap']
         flavor_values = {k: 123 for k in test_keys}
         instance_values = {k: 456 for k in test_keys}
-        flavor = objects.Flavor(**flavor_values)
+        flavor = objects.Flavor(flavorid='test-flavor', name='test-flavor',
+                                disabled=False, projects=[], is_public=True,
+                                extra_specs = {}, **flavor_values)
         info_cache = objects.InstanceInfoCache(
             network_info=network_model.NetworkInfo())
         instance = objects.Instance(
             flavor=flavor,
             info_cache=info_cache,
+            metadata={},
+            uuid=uuids.instance1,
+            locked=False,
             **instance_values)
         payload = {
             'bandwidth': {},

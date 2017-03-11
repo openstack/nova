@@ -13,7 +13,8 @@
             "disabled_reason": null,
             "report_count": 1,
             "forced_down": false,
-            "version": 17
+            "version": 17,
+            "availability_zone": null
         }
     },
     "event_type": "service.update",
