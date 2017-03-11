@@ -588,7 +588,7 @@ class HostManager(object):
         services = {}
         for cell in self.cells:
             LOG.debug('Getting compute nodes and services for cell %(cell)s',
-                      {'cell': cell})
+                      {'cell': cell.identity})
             with context_module.target_cell(context, cell):
                 if compute_uuids is None:
                     compute_nodes.extend(objects.ComputeNodeList.get_all(

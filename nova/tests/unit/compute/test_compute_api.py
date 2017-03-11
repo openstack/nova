@@ -4706,9 +4706,10 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_target.side_effect = fake_target
 
         mock_get_cm.return_value = [
-            mock.MagicMock(uuid=uuids.cell1),
-            mock.MagicMock(uuid=objects.CellMapping.CELL0_UUID),
-            mock.MagicMock(uuid=uuids.cell2),
+            objects.CellMapping(name='foo1', uuid=uuids.cell1),
+            objects.CellMapping(name='foo2',
+                                uuid=objects.CellMapping.CELL0_UUID),
+            objects.CellMapping(name='foo3', uuid=uuids.cell2),
         ]
         mock_get_inst.side_effect = [
             [objects.Instance(uuid=uuids.cell1inst1),
@@ -4745,10 +4746,11 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_target.side_effect = fake_target
 
         mock_get_cm.return_value = [
-            mock.MagicMock(uuid=uuids.cell1),
-            mock.MagicMock(uuid=objects.CellMapping.CELL0_UUID),
-            mock.MagicMock(uuid=uuids.cell2),
-            mock.MagicMock(uuid=uuids.cell3),
+            objects.CellMapping(name='foo1', uuid=uuids.cell1),
+            objects.CellMapping(name='foo2',
+                                uuid=objects.CellMapping.CELL0_UUID),
+            objects.CellMapping(name='foo3', uuid=uuids.cell2),
+            objects.CellMapping(name='foo4', uuid=uuids.cell3),
         ]
         mock_get_inst.side_effect = [
             exception.MarkerNotFound(marker=uuids.marker),
@@ -4781,7 +4783,8 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_get_all_instances_honors_cache(self, mock_get_inst,
                                             mock_get_cm):
         mock_get_cm.return_value = [
-            objects.CellMapping(uuid=objects.CellMapping.CELL0_UUID)]
+            objects.CellMapping(name='foo',
+                                uuid=objects.CellMapping.CELL0_UUID)]
 
         self.compute_api._get_instances_by_filters_all_cells(self.context, {})
         self.compute_api._get_instances_by_filters_all_cells(self.context, {})

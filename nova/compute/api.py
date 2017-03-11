@@ -203,7 +203,8 @@ def load_cells():
         CELLS = objects.CellMappingList.get_all(
             nova_context.get_admin_context())
         LOG.debug('Found %(count)i cells: %(cells)s',
-                  dict(count=len(CELLS), cells=CELLS))
+                  dict(count=len(CELLS),
+                       cells=','.join([c.identity for c in CELLS])))
 
     if not CELLS:
         LOG.error(_LE('No cells are configured, unable to continue'))
@@ -2546,7 +2547,7 @@ class API(base.Base):
                 LOG.debug('Skipping already-collected cell0 list')
                 continue
             LOG.debug('Listing %s instances in cell %s',
-                      limit or 'all', cell.name or cell.uuid)
+                      limit or 'all', cell.identity)
             with nova_context.target_cell(context, cell) as ccontext:
                 try:
                     cell_insts = self._get_instances_by_filters(ccontext,

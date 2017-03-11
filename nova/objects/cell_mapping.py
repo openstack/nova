@@ -32,6 +32,13 @@ class CellMapping(base.NovaTimestampObject, base.NovaObject):
         'database_connection': fields.StringField(),
         }
 
+    @property
+    def identity(self):
+        if 'name' in self and self.name:
+            return '%s(%s)' % (self.uuid, self.name)
+        else:
+            return self.uuid
+
     @staticmethod
     def _from_db_object(context, cell_mapping, db_cell_mapping):
         for key in cell_mapping.fields:

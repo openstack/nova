@@ -17,6 +17,7 @@ from nova import exception
 from nova import objects
 from nova.objects import cell_mapping
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel as uuids
 
 
 def get_db_mapping(**updates):
@@ -102,6 +103,18 @@ class _TestCellMappingObject(object):
             uuid=uuidutils.generate_uuid()).is_cell0())
         self.assertTrue(objects.CellMapping(
             uuid=objects.CellMapping.CELL0_UUID).is_cell0())
+
+    def test_identity_no_name_set(self):
+        cm = objects.CellMapping(uuid=uuids.cell1)
+        self.assertEqual(uuids.cell1, cm.identity)
+
+    def test_identity_name_is_none(self):
+        cm = objects.CellMapping(uuid=uuids.cell1)
+        self.assertEqual(uuids.cell1, cm.identity)
+
+    def test_identity_with_name(self):
+        cm = objects.CellMapping(uuid=uuids.cell1, name='foo')
+        self.assertEqual('%s(foo)' % uuids.cell1, cm.identity)
 
 
 class TestCellMappingObject(test_objects._LocalTest,

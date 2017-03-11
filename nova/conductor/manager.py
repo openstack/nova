@@ -73,7 +73,7 @@ def targets_cell(fn):
             im = None
         else:
             LOG.debug('Targeting cell %(cell)s for conductor method %(meth)s',
-                      {'cell': im.cell_mapping,
+                      {'cell': im.cell_mapping.identity,
                        'meth': fn.__name__})
             # NOTE(danms): Target our context to the cell for the rest of
             # this request, so that none of the subsequent code needs to
