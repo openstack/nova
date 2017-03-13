@@ -102,6 +102,21 @@ Possible values:
 The list of versioned notifications is visible in
 http://docs.openstack.org/developer/nova/notifications.html
 """),
+    cfg.ListOpt(
+        'versioned_notifications_topics',
+        default=['versioned_notifications'],
+        help="""
+Specifies the topics for the versioned notifications issued by nova.
+
+The default value is fine for most deployments and rarely needs to be changed.
+However, if you have a third-party service that consumes versioned
+notifications, it might be worth getting a topic for that service.
+Nova will send a message containing a versioned notification payload to each
+topic queue in this list.
+
+The list of versioned notifications is visible in
+http://docs.openstack.org/developer/nova/notifications.html
+"""),
 ]
 
 

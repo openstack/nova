@@ -85,6 +85,20 @@ class TestRPC(testtools.TestCase):
         self._test_init(mock_notif, mock_noti_trans, mock_ser,
                         mock_exmods, 'versioned', expected)
 
+    @mock.patch.object(rpc, 'get_allowed_exmods')
+    @mock.patch.object(rpc, 'RequestContextSerializer')
+    @mock.patch.object(messaging, 'get_notification_transport')
+    @mock.patch.object(messaging, 'Notifier')
+    def test_init_versioned_with_custom_topics(self, mock_notif,
+                                               mock_noti_trans, mock_ser,
+                                               mock_exmods):
+        expected = [{'driver': 'noop'},
+                    {'topics': ['custom_topic1', 'custom_topic2']}]
+        self._test_init(
+            mock_notif, mock_noti_trans, mock_ser, mock_exmods, 'versioned',
+            expected, versioned_notification_topics=['custom_topic1',
+                                                     'custom_topic2'])
+
     def test_cleanup_transport_null(self):
         rpc.NOTIFICATION_TRANSPORT = mock.Mock()
         rpc.LEGACY_NOTIFIER = mock.Mock()
@@ -304,7 +318,8 @@ class TestRPC(testtools.TestCase):
                                                aliases=rpc.TRANSPORT_ALIASES)
 
     def _test_init(self, mock_notif, mock_noti_trans, mock_ser,
-                   mock_exmods, notif_format, expected_driver_topic_kwargs):
+                   mock_exmods, notif_format, expected_driver_topic_kwargs,
+                   versioned_notification_topics=['versioned_notifications']):
         legacy_notifier = mock.Mock()
         notifier = mock.Mock()
         notif_transport = mock.Mock()
@@ -314,6 +329,8 @@ class TestRPC(testtools.TestCase):
 
         conf.transport_url = None
         conf.notifications.notification_format = notif_format
+        conf.notifications.versioned_notifications_topics = (
+            versioned_notification_topics)
         mock_exmods.return_value = ['foo']
         mock_noti_trans.return_value = notif_transport
         mock_ser.return_value = serializer
