@@ -15,7 +15,7 @@ deprecations:
     - ``ldap_dns_user``
     - ``ldap_dns_password``
     - ``ldap_dns_soa_hostmaster``
-    - ``ldap_dns_server``
+    - ``ldap_dns_servers``
     - ``ldap_dns_base_dn``
     - ``ldap_dns_soa_refresh``
     - ``ldap_dns_soa_retry``
