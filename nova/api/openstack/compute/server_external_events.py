@@ -21,7 +21,6 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
 from nova import context as nova_context
-from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.policies import server_external_events as see_policies
@@ -42,6 +41,28 @@ class ServerExternalEventsController(wsgi.Controller):
             return False
         return True
 
+    def _get_instances_all_cells(self, context, instance_uuids,
+                                 instance_mappings):
+        cells = {}
+        instance_uuids_by_cell = {}
+        for im in instance_mappings:
+            if im.cell_mapping.uuid not in cells:
+                cells[im.cell_mapping.uuid] = im.cell_mapping
+            instance_uuids_by_cell.setdefault(im.cell_mapping.uuid, list())
+            instance_uuids_by_cell[im.cell_mapping.uuid].append(
+                im.instance_uuid)
+
+        instances = {}
+        for cell_uuid, cell in cells.items():
+            with nova_context.target_cell(context, cell) as cctxt:
+                instances.update(
+                    {inst.uuid: inst for inst in
+                     objects.InstanceList.get_by_filters(
+                         cctxt, {'uuid': instance_uuids_by_cell[cell_uuid]},
+                         expected_attrs=['migration_context', 'info_cache'])})
+
+        return instances
+
     @extensions.expected_errors((400, 403, 404))
     @wsgi.response(200)
     @validation.schema(server_external_events.create, '2.1', '2.50')
@@ -54,11 +75,16 @@ class ServerExternalEventsController(wsgi.Controller):
         response_events = []
         accepted_events = []
         accepted_instances = set()
-        instances = {}
-        mappings = {}
         result = 200
 
         body_events = body['events']
+
+        # Fetch instance objects for all relevant instances
+        instance_uuids = set([event['server_uuid'] for event in body_events])
+        instance_mappings = objects.InstanceMappingList.get_by_instance_uuids(
+                context, list(instance_uuids))
+        instances = self._get_instances_all_cells(context, instance_uuids,
+                                                  instance_mappings)
 
         for _event in body_events:
             client_event = dict(_event)
@@ -69,70 +95,54 @@ class ServerExternalEventsController(wsgi.Controller):
             event.status = client_event.pop('status', 'completed')
             event.tag = client_event.pop('tag', None)
 
+            response_events.append(_event)
+
             instance = instances.get(event.instance_uuid)
             if not instance:
-                try:
-                    mapping = objects.InstanceMapping.get_by_instance_uuid(
-                        context, event.instance_uuid)
-                    cell_mapping = mapping.cell_mapping
-                    mappings[event.instance_uuid] = cell_mapping
-
-                    # Load migration_context and info_cache here in a single DB
-                    # operation because we need them later on
-                    with nova_context.target_cell(context,
-                                                  cell_mapping) as cctxt:
-                        instance = objects.Instance.get_by_uuid(
-                            cctxt, event.instance_uuid,
-                            expected_attrs=['migration_context', 'info_cache'])
-                    instances[event.instance_uuid] = instance
-                except (exception.InstanceNotFound,
-                        exception.InstanceMappingNotFound):
-                    LOG.debug('Dropping event %(name)s:%(tag)s for unknown '
-                              'instance %(instance_uuid)s',
-                              {'name': event.name, 'tag': event.tag,
-                               'instance_uuid': event.instance_uuid})
-                    _event['status'] = 'failed'
-                    _event['code'] = 404
-                    result = 207
+                LOG.debug('Dropping event %(name)s:%(tag)s for unknown '
+                          'instance %(instance_uuid)s',
+                          {'name': event.name, 'tag': event.tag,
+                           'instance_uuid': event.instance_uuid})
+                _event['status'] = 'failed'
+                _event['code'] = 404
+                result = 207
+                continue
 
             # NOTE: before accepting the event, make sure the instance
             # for which the event is sent is assigned to a host; otherwise
             # it will not be possible to dispatch the event
-            if instance:
-                if not self._is_event_tag_present_when_required(event):
-                    LOG.debug("Event tag is missing for instance "
-                              "%(instance)s. Dropping event %(event)s",
-                              {'instance': event.instance_uuid,
-                               'event': event.name})
-                    _event['status'] = 'failed'
-                    _event['code'] = 400
-                    result = 207
-                elif instance.host:
-                    accepted_events.append(event)
-                    accepted_instances.add(instance)
-                    LOG.info('Creating event %(name)s:%(tag)s for '
-                             'instance %(instance_uuid)s on %(host)s',
-                              {'name': event.name, 'tag': event.tag,
-                               'instance_uuid': event.instance_uuid,
-                               'host': instance.host})
-                    # NOTE: as the event is processed asynchronously verify
-                    # whether 202 is a more suitable response code than 200
-                    _event['status'] = 'completed'
-                    _event['code'] = 200
-                else:
-                    LOG.debug("Unable to find a host for instance "
-                              "%(instance)s. Dropping event %(event)s",
-                              {'instance': event.instance_uuid,
-                               'event': event.name})
-                    _event['status'] = 'failed'
-                    _event['code'] = 422
-                    result = 207
-
-            response_events.append(_event)
+            if not self._is_event_tag_present_when_required(event):
+                LOG.debug("Event tag is missing for instance "
+                          "%(instance)s. Dropping event %(event)s",
+                          {'instance': event.instance_uuid,
+                           'event': event.name})
+                _event['status'] = 'failed'
+                _event['code'] = 400
+                result = 207
+            elif instance.host:
+                accepted_events.append(event)
+                accepted_instances.add(instance)
+                LOG.info('Creating event %(name)s:%(tag)s for '
+                         'instance %(instance_uuid)s on %(host)s',
+                          {'name': event.name, 'tag': event.tag,
+                           'instance_uuid': event.instance_uuid,
+                           'host': instance.host})
+                # NOTE: as the event is processed asynchronously verify
+                # whether 202 is a more suitable response code than 200
+                _event['status'] = 'completed'
+                _event['code'] = 200
+            else:
+                LOG.debug("Unable to find a host for instance "
+                          "%(instance)s. Dropping event %(event)s",
+                          {'instance': event.instance_uuid,
+                           'event': event.name})
+                _event['status'] = 'failed'
+                _event['code'] = 422
+                result = 207
 
         if accepted_events:
             self.compute_api.external_instance_event(
-                context, accepted_instances, mappings, accepted_events)
+                context, accepted_instances, accepted_events)
         else:
             msg = _('No instances found for any event')
             raise webob.exc.HTTPNotFound(explanation=msg)

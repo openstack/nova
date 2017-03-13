@@ -4312,7 +4312,7 @@ class API(base.Base):
 
         do_volume_snapshot_delete(self, context, bdm.instance)
 
-    def external_instance_event(self, context, instances, mappings, events):
+    def external_instance_event(self, api_context, instances, events):
         # NOTE(danms): The external API consumer just provides events,
         # but doesn't know where they go. We need to collate lists
         # by the host the affected instance is on and dispatch them
@@ -4320,8 +4320,23 @@ class API(base.Base):
         instances_by_host = collections.defaultdict(list)
         events_by_host = collections.defaultdict(list)
         hosts_by_instance = collections.defaultdict(list)
+        cell_contexts_by_host = {}
         for instance in instances:
-            for host in self._get_relevant_hosts(context, instance):
+            # instance._context is used here since it's already targeted to
+            # the cell that the instance lives in, and we need to use that
+            # cell context to lookup any migrations associated to the instance.
+            for host in self._get_relevant_hosts(instance._context, instance):
+                # NOTE(danms): All instances on a host must have the same
+                # mapping, so just use that
+                # NOTE(mdbooth): We don't currently support migrations between
+                # cells, and given that the Migration record is hosted in the
+                # cell _get_relevant_hosts will likely have to change before we
+                # do. Consequently we can currently assume that the context for
+                # both the source and destination hosts of a migration is the
+                # same.
+                if host not in cell_contexts_by_host:
+                    cell_contexts_by_host[host] = instance._context
+
                 instances_by_host[host].append(instance)
                 hosts_by_instance[instance.uuid].append(host)
 
@@ -4330,24 +4345,23 @@ class API(base.Base):
                 # Volume extend is a user-initiated operation starting in the
                 # Block Storage service API. We record an instance action so
                 # the user can monitor the operation to completion.
+                host = hosts_by_instance[event.instance_uuid][0]
+                cell_context = cell_contexts_by_host[host]
                 objects.InstanceAction.action_start(
-                    context, event.instance_uuid,
+                    cell_context, event.instance_uuid,
                     instance_actions.EXTEND_VOLUME, want_result=False)
             for host in hosts_by_instance[event.instance_uuid]:
                 events_by_host[host].append(event)
 
         for host in instances_by_host:
-            # NOTE(danms): All instances on a host must have the same
-            # mapping, so just use that
-            cell_mapping = mappings[instances_by_host[host][0].uuid]
+            cell_context = cell_contexts_by_host[host]
 
             # TODO(salv-orlando): Handle exceptions raised by the rpc api layer
             # in order to ensure that a failure in processing events on a host
             # will not prevent processing events on other hosts
-            with nova_context.target_cell(context, cell_mapping) as cctxt:
-                self.compute_rpcapi.external_instance_event(
-                    cctxt, instances_by_host[host], events_by_host[host],
-                    host=host)
+            self.compute_rpcapi.external_instance_event(
+                cell_context, instances_by_host[host], events_by_host[host],
+                host=host)
 
     def _get_relevant_hosts(self, context, instance):
         hosts = set()

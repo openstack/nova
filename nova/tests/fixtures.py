@@ -289,6 +289,9 @@ class SingleCellSimple(fixtures.Fixture):
             'nova.objects.InstanceMapping._get_by_instance_uuid_from_db',
             self._fake_instancemapping_get))
         self.useFixture(fixtures.MonkeyPatch(
+            'nova.objects.InstanceMappingList._get_by_instance_uuids_from_db',
+            self._fake_instancemapping_get_uuids))
+        self.useFixture(fixtures.MonkeyPatch(
             'nova.objects.InstanceMapping._save_in_db',
             self._fake_instancemapping_get))
         self.useFixture(fixtures.MonkeyPatch(
@@ -310,12 +313,16 @@ class SingleCellSimple(fixtures.Fixture):
             'id': 1,
             'updated_at': None,
             'created_at': None,
-            'instance_uuid': uuidsentinel.instance,
+            'instance_uuid': args[-1],
             'cell_id': (self.instances_created and 1 or None),
             'project_id': 'project',
             'cell_mapping': (
                 self.instances_created and self._fake_cell_get() or None),
         }
+
+    def _fake_instancemapping_get_uuids(self, *args):
+        return [self._fake_instancemapping_get(uuid)
+                for uuid in args[-1]]
 
     def _fake_cell_get(self, *args):
         return self._fake_cell_list()[0]
