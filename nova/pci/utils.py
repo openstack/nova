@@ -45,11 +45,19 @@ def pci_device_prop_match(pci_dev, specs):
     b) Device with vendor_id as 0x10de and product_id as 0x10d8:
 
     [{"vendor_id":"8086", "product_id":"8259"},
-     {"vendor_id":"10de", "product_id":"10d8"}]
+     {"vendor_id":"10de", "product_id":"10d8",
+      "capabilities_network": ["rx", "tx", "tso", "gso"]}]
 
     """
     def _matching_devices(spec):
-        return all(pci_dev.get(k) == v for k, v in spec.items())
+        for k, v in spec.items():
+            pci_dev_v = pci_dev.get(k)
+            if isinstance(v, list) and isinstance(pci_dev_v, list):
+                if not all(x in pci_dev.get(k) for x in v):
+                    return False
+            elif pci_dev_v != v:
+                return False
+        return True
 
     return any(_matching_devices(spec) for spec in specs)
 

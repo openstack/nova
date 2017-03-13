@@ -30,7 +30,8 @@ class PciDeviceMatchTestCase(test.NoDBTestCase):
     def setUp(self):
         super(PciDeviceMatchTestCase, self).setUp()
         self.fake_pci_1 = {'vendor_id': 'v1',
-                           'device_id': 'd1'}
+                           'device_id': 'd1',
+                           'capabilities_network': ['cap1', 'cap2', 'cap3']}
 
     def test_single_spec_match(self):
         self.assertTrue(utils.pci_device_prop_match(
@@ -52,6 +53,24 @@ class PciDeviceMatchTestCase(test.NoDBTestCase):
         self.assertFalse(utils.pci_device_prop_match(
             self.fake_pci_1,
             [{'vendor_id': 'v1', 'device_id': 'd1', 'wrong_key': 'k1'}]))
+
+    def test_spec_list(self):
+        self.assertTrue(utils.pci_device_prop_match(
+            self.fake_pci_1, [{'vendor_id': 'v1', 'device_id': 'd1',
+                               'capabilities_network': ['cap1', 'cap2',
+                                                        'cap3']}]))
+        self.assertTrue(utils.pci_device_prop_match(
+            self.fake_pci_1, [{'vendor_id': 'v1', 'device_id': 'd1',
+                               'capabilities_network': ['cap3', 'cap1']}]))
+
+    def test_spec_list_no_matching(self):
+        self.assertFalse(utils.pci_device_prop_match(
+            self.fake_pci_1, [{'vendor_id': 'v1', 'device_id': 'd1',
+                               'capabilities_network': ['cap1', 'cap33']}]))
+
+    def test_spec_list_wrong_type(self):
+        self.assertFalse(utils.pci_device_prop_match(
+            self.fake_pci_1, [{'vendor_id': 'v1', 'device_id': ['d1']}]))
 
 
 class PciDeviceAddressParserTestCase(test.NoDBTestCase):
