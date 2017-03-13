@@ -574,6 +574,35 @@ class TestInstanceNotificationSample(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_do_rebuild_instance_with_claim')
+    def test_rebuild_server_exc(self, mock_rebuild):
+        def _compute_resources_unavailable(*args, **kwargs):
+            raise exception.ComputeResourcesUnavailable(
+                reason="fake-resource")
+
+        server = self._boot_a_server(
+            extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
+
+        fake_notifier.reset()
+
+        post = {
+            'rebuild': {
+                'imageRef': 'a2459075-d96c-40d5-893e-577ff92e721c',
+                'metadata': {}
+            }
+        }
+        self.api.post_server_action(server['id'], post)
+        mock_rebuild.side_effect = _compute_resources_unavailable
+        self._wait_for_state_change(self.api, server, expected_status='ERROR')
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-rebuild-error',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+
     def _test_restore_server(self, server):
         self.flags(reclaim_instance_interval=30)
         self.api.delete_server(server['id'])

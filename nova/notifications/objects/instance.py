@@ -270,7 +270,7 @@ class InstanceStateUpdatePayload(base.NotificationPayloadBase):
 # @base.notification_sample('instance-live_migration_rollback_dest-end.json')
 @base.notification_sample('instance-rebuild-start.json')
 @base.notification_sample('instance-rebuild-end.json')
-# @base.notification_sample('instance-rebuild-error.json')
+@base.notification_sample('instance-rebuild-error.json')
 # @base.notification_sample('instance-remove_fixed_ip-start.json')
 # @base.notification_sample('instance-remove_fixed_ip-end.json')
 # @base.notification_sample('instance-resize_confirm-start.json')

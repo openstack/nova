@@ -2668,6 +2668,14 @@ class ComputeManager(manager.Manager):
                               admin_password, network_info=network_info,
                               block_device_info=new_block_device_info)
 
+    def _notify_instance_rebuild_error(self, context, instance, error):
+        self._notify_about_instance_usage(context, instance,
+                                          'rebuild.error', fault=error)
+        compute_utils.notify_about_instance_action(
+            context, instance, self.host,
+            action=fields.NotificationAction.REBUILD,
+            phase=fields.NotificationPhase.ERROR, exception=error)
+
     @messaging.expected_exceptions(exception.PreserveEphemeralNotSupported)
     @wrap_exception()
     @reverts_task_state
@@ -2752,9 +2760,8 @@ class ComputeManager(manager.Manager):
                 # NOTE(ndipanov): We just abort the build for now and leave a
                 # migration record for potential cleanup later
                 self._set_migration_status(migration, 'failed')
+                self._notify_instance_rebuild_error(context, instance, e)
 
-                self._notify_about_instance_usage(context, instance,
-                        'rebuild.error', fault=e)
                 raise exception.BuildAbortException(
                     instance_uuid=instance.uuid, reason=e.format_message())
             except (exception.InstanceNotFound,
@@ -2762,12 +2769,10 @@ class ComputeManager(manager.Manager):
                 LOG.debug('Instance was deleted while rebuilding',
                           instance=instance)
                 self._set_migration_status(migration, 'failed')
-                self._notify_about_instance_usage(context, instance,
-                        'rebuild.error', fault=e)
+                self._notify_instance_rebuild_error(context, instance, e)
             except Exception as e:
                 self._set_migration_status(migration, 'failed')
-                self._notify_about_instance_usage(context, instance,
-                        'rebuild.error', fault=e)
+                self._notify_instance_rebuild_error(context, instance, e)
                 raise
             else:
                 instance.apply_migration_context()
