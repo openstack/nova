@@ -498,12 +498,6 @@ Possible values:
 * None (default)
 * Any string representing network name.
 """),
-    cfg.BoolOpt('defer_iptables_apply',
-        default=False,
-        help="""
-Whether to batch up the application of IPTables rules during a host restart
-and apply all at the end of the init phase.
-"""),
     cfg.StrOpt('instances_path',
         default=paths.state_path_def('instances'),
         sample_default="$state_path/instances",
