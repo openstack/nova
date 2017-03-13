@@ -2852,6 +2852,13 @@ class ComputeManager(manager.Manager):
         extra_usage_info = {'image_name': self._get_image_name(image_meta)}
         self._notify_about_instance_usage(context, instance,
                 "rebuild.start", extra_usage_info=extra_usage_info)
+        # NOTE: image_name is not included in the versioned notification
+        # because we already provide the image_uuid in the notification
+        # payload and the image details can be looked up via the uuid.
+        compute_utils.notify_about_instance_action(
+            context, instance, self.host,
+            action=fields.NotificationAction.REBUILD,
+            phase=fields.NotificationPhase.START)
 
         instance.power_state = self._get_power_state(context, instance)
         instance.task_state = task_states.REBUILDING
@@ -2920,6 +2927,10 @@ class ComputeManager(manager.Manager):
                 context, instance, "rebuild.end",
                 network_info=network_info,
                 extra_usage_info=extra_usage_info)
+        compute_utils.notify_about_instance_action(
+            context, instance, self.host,
+            action=fields.NotificationAction.REBUILD,
+            phase=fields.NotificationPhase.END)
 
     def _handle_bad_volumes_detached(self, context, instance, bad_devices,
                                      block_device_info):

@@ -75,6 +75,7 @@ class TestInstanceNotificationSample(
             self._test_unshelve_server,
             self._test_resize_server,
             self._test_snapshot_server,
+            self._test_rebuild_server,
         ]
 
         for action in actions:
@@ -539,6 +540,35 @@ class TestInstanceNotificationSample(
                     actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
         self._verify_notification(
             'instance-snapshot-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
+    def _test_rebuild_server(self, server):
+        post = {
+            'rebuild': {
+                'imageRef': 'a2459075-d96c-40d5-893e-577ff92e721c',
+                'metadata': {}
+            }
+        }
+        self.api.post_server_action(server['id'], post)
+        # Before going back to ACTIVE state
+        # server state need to be changed to REBUILD state
+        self._wait_for_state_change(self.api, server,
+                                    expected_status='REBUILD')
+        self._wait_for_state_change(self.api, server,
+                                    expected_status='ACTIVE')
+
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-rebuild-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-rebuild-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},

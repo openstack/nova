@@ -11697,7 +11697,7 @@ class EvacuateHostTestCase(BaseTestCase):
         super(EvacuateHostTestCase, self).tearDown()
 
     def _rebuild(self, on_shared_storage=True, migration=None,
-                 send_node=False):
+                 send_node=False, vm_states_is_stopped=False):
         network_api = self.compute.network_api
         ctxt = context.get_admin_context()
 
@@ -11706,11 +11706,13 @@ class EvacuateHostTestCase(BaseTestCase):
             node = NODENAME
             limits = {}
 
+        @mock.patch('nova.compute.utils.notify_about_instance_action')
         @mock.patch.object(network_api, 'setup_networks_on_host')
         @mock.patch.object(network_api, 'setup_instance_network_on_host')
         @mock.patch('nova.context.RequestContext.elevated', return_value=ctxt)
         def _test_rebuild(mock_context, mock_setup_instance_network_on_host,
-                          mock_setup_networks_on_host):
+                          mock_setup_networks_on_host, mock_notify,
+                          vm_is_stopped=False):
             orig_image_ref = None
             image_ref = None
             injected_files = None
@@ -11721,12 +11723,29 @@ class EvacuateHostTestCase(BaseTestCase):
                 image_ref, injected_files, 'newpass', {}, bdms, recreate=True,
                 on_shared_storage=on_shared_storage, migration=migration,
                 scheduled_node=node, limits=limits)
+            if vm_states_is_stopped:
+                mock_notify.assert_has_calls([
+                    mock.call(ctxt, self.inst, self.inst.host,
+                              action='rebuild', phase='start'),
+                    mock.call(ctxt, self.inst, self.inst.host,
+                              action='power_off', phase='start'),
+                    mock.call(ctxt, self.inst, self.inst.host,
+                              action='power_off', phase='end'),
+                    mock.call(ctxt, self.inst, self.inst.host,
+                              action='rebuild', phase='end')])
+            else:
+                mock_notify.assert_has_calls([
+                    mock.call(ctxt, self.inst, self.inst.host,
+                              action='rebuild', phase='start'),
+                    mock.call(ctxt, self.inst, self.inst.host,
+                              action='rebuild', phase='end')])
+
             mock_setup_networks_on_host.assert_called_once_with(
                 ctxt, self.inst, self.inst.host)
             mock_setup_instance_network_on_host.assert_called_once_with(
                 ctxt, self.inst, self.inst.host)
 
-        _test_rebuild()
+        _test_rebuild(vm_is_stopped=vm_states_is_stopped)
 
     def test_rebuild_on_host_updated_target(self):
         """Confirm evacuate scenario updates host and node."""
@@ -11795,7 +11814,7 @@ class EvacuateHostTestCase(BaseTestCase):
         self.stub_out('nova.virt.fake.FakeDriver.instance_on_disk',
                       lambda *a, **ka: True)
 
-        self._rebuild()
+        self._rebuild(vm_states_is_stopped=True)
 
         # Check the vm state is reset to stopped
         instance = db.instance_get(self.context, self.inst.id)
