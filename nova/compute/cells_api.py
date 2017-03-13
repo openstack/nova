@@ -14,7 +14,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Compute API that proxies via Cells Service."""
+"""Compute API that proxies via Cells Service.
+
+This relates to cells v1. This layer is basically responsible for intercepting
+compute/api calls at the top layer and forwarding to the child cell to be
+replayed there.
+"""
 
 import oslo_messaging as messaging
 from oslo_utils import excutils
