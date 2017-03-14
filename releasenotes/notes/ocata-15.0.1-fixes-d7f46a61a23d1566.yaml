@@ -1,0 +1,41 @@
+---
+prelude: >
+    The 15.0.1 Ocata release contains fixes for several high severity, high
+    impact bugs. If you have not yet upgraded to 15.0.0, it is recommended to
+    upgrade directly to 15.0.1.
+issues:
+  - |
+    There is a known regression in Ocata reported in `bug 1671648`_ where
+    server build failures on a compute node are not retried on another compute
+    node. The fix for this bug is being worked and will be provided shortly in
+    a 15.0.2 release.
+
+    .. _bug 1671648: https://launchpad.net/bugs/1671648
+critical:
+  - |
+    `Bug 1670627`_ is fixed. This bug led to potential over-quota errors after
+    several failed server build attempts, resulting in quota usage to reach the
+    limit even though the servers were deleted.
+
+    Unfortunately the ``nova-manage project quota_usage_refresh`` command will
+    not reset the usages to fix this problem once encountered.
+
+    If the project should not have any outstanding resource usage, then one
+    possible workaround is to delete the existing quota usage for the project::
+
+      ``nova quota-delete --tenant <tenant_id>``
+
+    That will cleanup the ``project_user_quotas``, ``quota_usages`` and
+    ``reservations`` tables for the given project in the ``nova`` database and
+    reset the quota limits for the project back to the defaults defined in
+    nova.conf.
+
+    .. _Bug 1670627: https://launchpad.net/bugs/1670627
+fixes:
+  - |
+    `Bug 1665263`_ is fixed. This was a regression where
+    ``instance.delete.start`` and ``instance.delete.end`` notifications were
+    not emitted when deleting an instance in ``ERROR`` state due to a failed
+    build.
+
+    .. _Bug 1665263: https://launchpad.net/bugs/1665263
