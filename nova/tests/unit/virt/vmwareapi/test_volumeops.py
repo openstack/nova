@@ -661,8 +661,8 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
         vm_id = 'fake-vm'
         vm_ref = mock.MagicMock(value=vm_id)
         iqn = 'iscsi-name'
-        url = 'test_url'
-        self.flags(host_ip=url, group='vmware')
+        host_ip = 'testhostname'
+        self.flags(host_ip=host_ip, group='vmware')
 
         with test.nested(
             mock.patch.object(vm_util, 'get_vm_ref', return_value=vm_ref),
@@ -675,7 +675,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                                                     self._instance)
             fake_iscsi_get_host_iqn.assert_called_once_with(self._instance)
 
-            self.assertEqual(url, connector['ip'])
-            self.assertEqual(url, connector['host'])
+            self.assertEqual(host_ip, connector['ip'])
+            self.assertEqual(host_ip, connector['host'])
             self.assertEqual(iqn, connector['initiator'])
             self.assertEqual(vm_id, connector['instance'])

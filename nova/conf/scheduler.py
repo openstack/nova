@@ -586,8 +586,8 @@ Configuration options for enabling Trusted Platform Module.
 """)
 
 trusted_opts = [
-    cfg.StrOpt("attestation_server",
-            help="""
+    cfg.HostAddressOpt("attestation_server",
+                       help="""
 The host to use as the attestation server.
 
 Cloud computing pools can involve thousands of compute nodes located at

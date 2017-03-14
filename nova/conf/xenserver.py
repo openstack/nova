@@ -463,7 +463,7 @@ Related opitons:
     cfg.StrOpt('sr_base_path',
         default='/var/run/sr-mount',
         help='Base path to the storage repository on the XenServer host.'),
-    cfg.StrOpt('target_host',
+    cfg.HostAddressOpt('target_host',
         help="""
 The iSCSI Target Host.
 

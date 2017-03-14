@@ -92,8 +92,8 @@ This option is ignored if serial_port_service_uri is not specified.
 ]
 
 vmwareapi_opts = [
-    cfg.StrOpt('host_ip',
-               help="""
+    cfg.HostAddressOpt('host_ip',
+                       help="""
 Hostname or IP address for connection to VMware vCenter host."""),
     cfg.PortOpt('host_port',
                 default=443,

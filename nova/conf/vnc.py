@@ -54,7 +54,7 @@ Possible values:
   of supported keyboard layouts at ``/usr/share/qemu/keymaps``.
 """),
 
-    cfg.StrOpt(
+    cfg.HostAddressOpt(
         'vncserver_listen',
         default='127.0.0.1',
         deprecated_group='DEFAULT',
@@ -63,7 +63,7 @@ The IP address or hostname on which an instance should listen to for
 incoming VNC connection requests on this node.
 """),
 
-    cfg.StrOpt(
+    cfg.HostAddressOpt(
         'vncserver_proxyclient_address',
         default='127.0.0.1',
         deprecated_group='DEFAULT',
@@ -98,7 +98,7 @@ Related options:
 * novncproxy_port
 """),
 
-    cfg.StrOpt(
+    cfg.HostAddressOpt(
         'xvpvncproxy_host',
         default='0.0.0.0',
         deprecated_group='DEFAULT',

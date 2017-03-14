@@ -43,7 +43,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         vm_util.vm_refs_cache_reset()
         self.context = context.RequestContext('fake', 'fake', is_admin=False)
         self.flags(cluster_name='test_cluster',
-                   host_ip='test_url',
+                   host_ip='testhostname',
                    host_username='test_username',
                    host_password='test_pass',
                    use_linked_clone=False, group='vmware')

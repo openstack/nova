@@ -33,9 +33,9 @@ from nova import test
 from nova.tests.unit import utils
 
 test_service_opts = [
-    cfg.StrOpt("test_service_listen",
-               default='127.0.0.1',
-               help="Host to bind test service to"),
+    cfg.HostAddressOpt("test_service_listen",
+                       default='127.0.0.1',
+                       help="Host to bind test service to"),
     cfg.IntOpt("test_service_listen_port",
                default=0,
                help="Port number to bind test service to"),
