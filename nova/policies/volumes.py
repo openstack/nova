@@ -26,9 +26,35 @@ volumes_policies = [
     policy.RuleDefault(
         name=POLICY_ROOT % 'discoverable',
         check_str=base.RULE_ANY),
-    policy.RuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_OR_OWNER),
+    base.create_rule_default(
+        BASE_POLICY_NAME,
+        base.RULE_ADMIN_OR_OWNER,
+        """Manages volumes for use with the Compute API.
+
+Lists, shows details, creates, and deletes volumes. These APIs are proxy calls
+to the Volume service. These are all deprecated.""",
+       [
+           {
+               'method': 'GET',
+               'path': '/os-volumes'
+           },
+           {
+               'method': 'POST',
+               'path': '/os-volumes'
+           },
+           {
+               'method': 'GET',
+               'path': '/os-volumes/detail'
+           },
+           {
+               'method': 'GET',
+               'path': '/os-volumes/{volume_id}'
+           },
+           {
+               'method': 'DELETE',
+               'path': '/os-volumes/{volume_id}'
+           }
+      ]),
 ]
 
 
