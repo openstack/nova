@@ -18,6 +18,7 @@ import copy
 import datetime
 
 import cryptography
+from cursive import exception as cursive_exception
 import glanceclient.exc
 from glanceclient.v1 import images
 import glanceclient.v2.schemas as schemas
@@ -815,7 +816,7 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
 
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
-    @mock.patch('nova.signature_utils.get_verifier')
+    @mock.patch('cursive.signature_utils.get_verifier')
     def test_download_with_signature_verification_v2(self,
                                                      mock_get_verifier,
                                                      mock_show,
@@ -826,16 +827,19 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
         res = service.download(context=None, image_id=None,
                                data=None, dst_path=None)
         self.assertEqual(self.fake_img_data, res)
-        mock_get_verifier.assert_called_once_with(None,
-                                                  uuids.img_sig_cert_uuid,
-                                                  'SHA-224',
-                                                  'signature', 'RSA-PSS')
+        mock_get_verifier.assert_called_once_with(
+            context=None,
+            img_signature_certificate_uuid=uuids.img_sig_cert_uuid,
+            img_signature_hash_method='SHA-224',
+            img_signature='signature',
+            img_signature_key_type='RSA-PSS'
+        )
         mock_log.info.assert_called_once_with(mock.ANY, mock.ANY)
 
     @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
-    @mock.patch('nova.signature_utils.get_verifier')
+    @mock.patch('cursive.signature_utils.get_verifier')
     @mock.patch('os.fsync')
     def test_download_dst_path_signature_verification_v2(self,
                                                          mock_fsync,
@@ -851,10 +855,13 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
         mock_open.return_value = mock_dest
         service.download(context=None, image_id=None,
                          data=None, dst_path=fake_path)
-        mock_get_verifier.assert_called_once_with(None,
-                                                  uuids.img_sig_cert_uuid,
-                                                  'SHA-224',
-                                                  'signature', 'RSA-PSS')
+        mock_get_verifier.assert_called_once_with(
+            context=None,
+            img_signature_certificate_uuid=uuids.img_sig_cert_uuid,
+            img_signature_hash_method='SHA-224',
+            img_signature='signature',
+            img_signature_key_type='RSA-PSS'
+        )
         mock_log.info.assert_called_once_with(mock.ANY, mock.ANY)
         self.assertEqual(len(self.fake_img_data), mock_dest.write.call_count)
         self.assertTrue(mock_dest.close.called)
@@ -863,18 +870,17 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
 
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
-    @mock.patch('nova.signature_utils.get_verifier')
+    @mock.patch('cursive.signature_utils.get_verifier')
     def test_download_with_get_verifier_failure_v2(self,
-                                                   mock_get_verifier,
+                                                   mock_get,
                                                    mock_show,
                                                    mock_log):
         service = glance.GlanceImageServiceV2(self.client)
-        mock_get_verifier.side_effect = exception.SignatureVerificationError(
-                                            reason='Signature verification '
-                                                   'failed.'
-                                        )
+        mock_get.side_effect = cursive_exception.SignatureVerificationError(
+            reason='Signature verification failed.'
+        )
         mock_show.return_value = self.fake_img_props
-        self.assertRaises(exception.SignatureVerificationError,
+        self.assertRaises(cursive_exception.SignatureVerificationError,
                           service.download,
                           context=None, image_id=None,
                           data=None, dst_path=None)
@@ -882,7 +888,7 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
 
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
-    @mock.patch('nova.signature_utils.get_verifier')
+    @mock.patch('cursive.signature_utils.get_verifier')
     def test_download_with_invalid_signature_v2(self,
                                                 mock_get_verifier,
                                                 mock_show,
@@ -903,7 +909,7 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
                                                     mock_log):
         service = glance.GlanceImageServiceV2(self.client)
         mock_show.return_value = {'properties': {}}
-        self.assertRaisesRegex(exception.SignatureVerificationError,
+        self.assertRaisesRegex(cursive_exception.SignatureVerificationError,
                                'Required image properties for signature '
                                'verification do not exist. Cannot verify '
                                'signature. Missing property: .*',
@@ -912,7 +918,7 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
                                data=None, dst_path=None)
 
     @mock.patch.object(six.moves.builtins, 'open')
-    @mock.patch('nova.signature_utils.get_verifier')
+    @mock.patch('cursive.signature_utils.get_verifier')
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
     @mock.patch('os.fsync')

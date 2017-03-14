@@ -15,6 +15,7 @@
 import os
 import re
 
+from cursive import signature_utils
 from oslo_versionedobjects import fields
 import six
 
@@ -420,14 +421,14 @@ class HVType(BaseNovaEnum):
 
 class ImageSignatureHashType(BaseNovaEnum):
     # Represents the possible hash methods used for image signing
-    ALL = ('SHA-224', 'SHA-256', 'SHA-384', 'SHA-512')
+    ALL = tuple(sorted(signature_utils.HASH_METHODS.keys()))
 
 
 class ImageSignatureKeyType(BaseNovaEnum):
     # Represents the possible keypair types used for image signing
-    ALL = ('DSA', 'ECC_SECT571K1', 'ECC_SECT409K1', 'ECC_SECT571R1',
-           'ECC_SECT409R1', 'ECC_SECP521R1', 'ECC_SECP384R1', 'RSA-PSS'
-           )
+    ALL = tuple(
+        sorted(signature_utils.SignatureKeyType.REGISTERED_TYPES.keys())
+    )
 
 
 class OSType(BaseNovaEnum):

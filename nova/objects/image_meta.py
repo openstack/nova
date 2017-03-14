@@ -166,7 +166,8 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.15: Added hw_rescue_bus and hw_rescue_device.
     # Version 1.16: WatchdogActionField supports 'disabled' enum.
     # Version 1.17: Add lan9118 as valid nic for hw_vif_model property for qemu
-    VERSION = '1.17'
+    # Version 1.18: Pull signature properties from cursive library
+    VERSION = '1.18'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,

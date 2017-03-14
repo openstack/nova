@@ -17,6 +17,7 @@ import datetime
 import time
 
 from cinderclient import exceptions as cinder_exception
+from cursive import exception as cursive_exception
 from eventlet import event as eventlet_event
 import mock
 import netaddr
@@ -4129,7 +4130,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
     def test_build_and_run_signature_verification_error(self):
         self._test_build_and_run_spawn_exceptions(
-            exception.SignatureVerificationError(reason=""))
+            cursive_exception.SignatureVerificationError(reason=""))
 
     def test_build_and_run_volume_encryption_not_supported(self):
         self._test_build_and_run_spawn_exceptions(

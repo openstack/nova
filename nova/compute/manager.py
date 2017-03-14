@@ -35,6 +35,7 @@ import time
 import traceback
 
 from cinderclient import exceptions as cinder_exception
+from cursive import exception as cursive_exception
 import eventlet.event
 from eventlet import greenthread
 import eventlet.semaphore
@@ -1990,7 +1991,7 @@ class ComputeManager(manager.Manager):
                 exception.ImageUnacceptable,
                 exception.InvalidDiskInfo,
                 exception.InvalidDiskFormat,
-                exception.SignatureVerificationError,
+                cursive_exception.SignatureVerificationError,
                 exception.VolumeEncryptionNotSupported,
                 exception.InvalidInput) as e:
             self._notify_about_instance_usage(context, instance,
