@@ -50,6 +50,7 @@ class TestInstanceNotificationSampleWithMultipleCompute(
 
         actions = [
             self._test_live_migration_rollback,
+            self._test_live_migration_abort,
         ]
 
         for action in actions:
@@ -81,6 +82,55 @@ class TestInstanceNotificationSampleWithMultipleCompute(
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
         self._verify_notification(
             'instance-live_migration_rollback-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
+    @mock.patch('nova.virt.fake.FakeDriver.live_migration')
+    def _test_live_migration_abort(self, server, mock_migration):
+        """We need synchronize the migration table (it should not be empty)
+        and the server status (it should be in 'migrating' status). These
+        conditions are met for a really short of time, so we need delaying the
+        live_migration. The migration table is empty when the server switches
+        to 'migrating' status, so we need polling the get_active_migrations,
+        while conditions aren't met.
+        """
+        def _delayed_live_migration(context, instance, dest,
+                       post_method, recover_method, block_migration=False,
+                       migrate_data=None):
+            time.sleep(2)  # make time for abort
+            post_method(context, instance, dest, block_migration,
+                        migrate_data)
+            return
+
+        mock_migration.side_effect = _delayed_live_migration
+        post = {
+            "os-migrateLive": {
+                "host": "host2",
+                "block_migration": False,
+                "force": True
+            }
+        }
+
+        self.admin_api.post_server_action(server['id'], post)
+        self._wait_for_state_change(self.api, server, 'MIGRATING')
+
+        migrations = self._wait_and_get_migrations(server)
+
+        self.admin_api.delete_migration(server['id'], migrations[0]['id'])
+        self._wait_for_notification('instance.live_migration_abort.start')
+        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        self._wait_for_notification('instance.live_migration_abort.end')
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-live_migration_abort-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-live_migration_abort-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
