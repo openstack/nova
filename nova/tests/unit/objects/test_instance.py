@@ -1518,30 +1518,6 @@ class _TestInstanceObject(object):
         inst1 = inst1.obj_clone()
         self.assertEqual(len(inst1.obj_what_changed()), 0)
 
-    def test_flavor_deserialization_orphans_flavor(self):
-        flavor = objects.Flavor(context=self.context,
-                                name='test-flavor',
-                                memory_mb=1024,
-                                root_gb=0,
-                                vcpus=1,
-                                flavorid="m1.test")
-        flavor.create()
-        inst = objects.Instance(context=self.context,
-                                user_id=self.context.user_id,
-                                project_id=self.context.project_id,
-                                flavor=flavor,
-                                old_flavor=flavor,
-                                new_flavor=flavor)
-        inst.create()
-
-        inst = objects.Instance.get_by_uuid(self.context,
-                                            uuid=inst.uuid,
-                                            expected_attrs=['flavor'])
-
-        self.assertIsNone(inst.flavor._context)
-        self.assertIsNone(inst.old_flavor._context)
-        self.assertIsNone(inst.new_flavor._context)
-
 
 class TestInstanceObject(test_objects._LocalTest,
                          _TestInstanceObject):
