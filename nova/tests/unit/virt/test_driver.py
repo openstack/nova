@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+from os_brick.initiator import connector
 from oslo_config import fixture as fixture_config
 
 from nova import test
@@ -27,6 +29,13 @@ class FakeDriver(object):
 
 class FakeDriver2(FakeDriver):
     pass
+
+
+class FailDriver(object):
+    def __init__(self):
+        self.connector = connector.InitiatorConnector.factory(
+            'UNSUPPORTED', None
+        )
 
 
 class ToDriverRegistryTestCase(test.NoDBTestCase):
@@ -58,6 +67,14 @@ class ToDriverRegistryTestCase(test.NoDBTestCase):
             drvs['key2'],
             FakeDriver2, 'arg1', 'arg2', param1='value1',
             param2='value2')
+
+    @mock.patch.object(connector.InitiatorConnector, "factory")
+    def test_driver_dict_from_config_exception(self, mocked_factory):
+        mocked_factory.side_effect = ValueError
+        registry = driver.driver_dict_from_config([
+            'fail=nova.tests.unit.virt.test_driver.FailDriver',
+        ])
+        self.assertEqual({}, registry)
 
 
 class DriverMethodTestCase(test.NoDBTestCase):
