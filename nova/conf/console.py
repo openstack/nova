@@ -69,7 +69,7 @@ Possible values:
 console_opts = [
     cfg.ListOpt('allowed_origins',
         default=[],
-        deprecated_group='default',
+        deprecated_group='DEFAULT',
         deprecated_name='console_allowed_origins',
         help="""
 Adds list of allowed origins to the console websocket proxy to allow
