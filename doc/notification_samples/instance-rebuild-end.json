@@ -62,7 +62,7 @@
             "os_type": null,
             "uuid": "b271fcb9-75c3-4c76-84eb-6ccad1150ece",
             "locked": false,
-            "availability_zone": null,
+            "availability_zone": "nova",
             "ramdisk_id": "",
             "architecture": null,
             "progress": 0,

@@ -4,7 +4,7 @@
         "nova_object.name": "InstanceActionPayload",
         "nova_object.data": {
             "state": "active",
-            "availability_zone": null,
+            "availability_zone": "nova",
             "kernel_id": "",
             "host_name": "some-server",
             "progress": 0,

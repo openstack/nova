@@ -12,6 +12,7 @@
 
 from oslo_serialization import jsonutils
 
+from nova import availability_zones
 from nova.conductor.tasks import base
 from nova import objects
 from nova.scheduler import utils as scheduler_utils
@@ -66,6 +67,10 @@ class MigrationTask(base.TaskBase):
         legacy_props.pop('context', None)
 
         (host, node) = (host_state['host'], host_state['nodename'])
+
+        self.instance.availability_zone = (
+            availability_zones.get_host_availability_zone(
+                self.context, host))
 
         # FIXME(sbauza): Serialize/Unserialize the legacy dict because of
         # oslo.messaging #1529084 to transform datetime values into strings.

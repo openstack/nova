@@ -379,8 +379,9 @@ class _BaseTaskTestCase(object):
     def test_cold_migrate_forced_shutdown(self):
         self._test_cold_migrate(clean_shutdown=False)
 
-    @mock.patch('nova.objects.Instance.refresh')
-    def test_build_instances(self, mock_refresh):
+    @mock.patch('nova.availability_zones.get_host_availability_zone')
+    @mock.patch('nova.objects.Instance.save')
+    def test_build_instances(self, mock_save, mock_getaz):
         instance_type = flavors.get_default_flavor()
         # NOTE(danms): Avoid datetime timezone issues with converted flavors
         instance_type.created_at = None
@@ -455,6 +456,8 @@ class _BaseTaskTestCase(object):
         # build_instances() is a cast, we need to wait for it to complete
         self.useFixture(cast_as_call.CastAsCall(self.stubs))
 
+        mock_getaz.return_value = 'myaz'
+
         self.conductor.build_instances(self.context,
                 instances=instances,
                 image={'fake_data': 'should_pass_silently'},
@@ -465,6 +468,9 @@ class _BaseTaskTestCase(object):
                 security_groups='security_groups',
                 block_device_mapping='block_device_mapping',
                 legacy_bdm=False)
+        mock_getaz.assert_has_calls([
+            mock.call(self.context, 'host1'),
+            mock.call(self.context, 'host2')])
 
     @mock.patch.object(scheduler_utils, 'build_request_spec')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
@@ -608,7 +614,7 @@ class _BaseTaskTestCase(object):
         state_mock.assert_has_calls(set_state_calls)
         cleanup_mock.assert_has_calls(cleanup_network_calls)
 
-    @mock.patch.object(objects.Instance, 'refresh')
+    @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid',
             side_effect=exc.InstanceMappingNotFound(uuid='fake'))
     @mock.patch.object(objects.HostMapping, 'get_by_host')
@@ -618,7 +624,7 @@ class _BaseTaskTestCase(object):
                        '_set_vm_state_and_notify')
     def test_build_instances_no_instance_mapping(self, _mock_set_state,
             mock_select_dests, mock_get_by_host, mock_get_inst_map_by_uuid,
-            _mock_refresh):
+            _mock_save):
 
         mock_select_dests.return_value = [
                 {'host': 'host1', 'nodename': 'node1', 'limits': []},
@@ -649,7 +655,7 @@ class _BaseTaskTestCase(object):
             mock.call(self.context, instances[1].uuid)])
         self.assertFalse(mock_get_by_host.called)
 
-    @mock.patch.object(objects.Instance, 'refresh')
+    @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(objects.HostMapping, 'get_by_host',
             side_effect=exc.HostMappingNotFound(name='fake'))
@@ -659,7 +665,7 @@ class _BaseTaskTestCase(object):
                        '_set_vm_state_and_notify')
     def test_build_instances_no_host_mapping(self, _mock_set_state,
             mock_select_dests, mock_get_by_host, mock_get_inst_map_by_uuid,
-            _mock_refresh):
+            _mock_save):
 
         mock_select_dests.return_value = [
                 {'host': 'host1', 'nodename': 'node1', 'limits': []},
@@ -698,7 +704,7 @@ class _BaseTaskTestCase(object):
         mock_get_by_host.assert_has_calls([mock.call(self.context, 'host1'),
                                            mock.call(self.context, 'host2')])
 
-    @mock.patch.object(objects.Instance, 'refresh')
+    @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(objects.HostMapping, 'get_by_host')
     @mock.patch.object(scheduler_client.SchedulerClient,
@@ -707,7 +713,7 @@ class _BaseTaskTestCase(object):
                        '_set_vm_state_and_notify')
     def test_build_instances_update_instance_mapping(self, _mock_set_state,
             mock_select_dests, mock_get_by_host, mock_get_inst_map_by_uuid,
-            _mock_refresh):
+            _mock_save):
 
         mock_select_dests.return_value = [
                 {'host': 'host1', 'nodename': 'node1', 'limits': []},
@@ -751,7 +757,7 @@ class _BaseTaskTestCase(object):
         mock_get_by_host.assert_has_calls([mock.call(self.context, 'host1'),
                                            mock.call(self.context, 'host2')])
 
-    @mock.patch.object(objects.Instance, 'refresh', new=mock.MagicMock())
+    @mock.patch.object(objects.Instance, 'save', new=mock.MagicMock())
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
     @mock.patch.object(scheduler_client.SchedulerClient,
                        'select_destinations')
@@ -796,7 +802,7 @@ class _BaseTaskTestCase(object):
         for build_req in build_req_mocks:
             build_req.destroy.assert_called_once_with()
 
-    @mock.patch.object(objects.Instance, 'refresh', new=mock.MagicMock())
+    @mock.patch.object(objects.Instance, 'save', new=mock.MagicMock())
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid',
             side_effect=exc.BuildRequestNotFound(uuid='fake'))
     @mock.patch.object(scheduler_client.SchedulerClient,
@@ -839,7 +845,7 @@ class _BaseTaskTestCase(object):
         do_test()
 
     @mock.patch.object(objects.Service, 'get_minimum_version', return_value=12)
-    @mock.patch.object(objects.Instance, 'refresh', new=mock.MagicMock())
+    @mock.patch.object(objects.Instance, 'save', new=mock.MagicMock())
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid',
             side_effect=exc.BuildRequestNotFound(uuid='fake'))
     @mock.patch.object(scheduler_client.SchedulerClient,
@@ -886,7 +892,7 @@ class _BaseTaskTestCase(object):
         mock_service_version.assert_called_once_with(self.context,
                                                      'nova-osapi_compute')
 
-    @mock.patch.object(objects.Instance, 'refresh', new=mock.MagicMock())
+    @mock.patch.object(objects.Instance, 'save', new=mock.MagicMock())
     @mock.patch.object(scheduler_client.SchedulerClient,
                        'select_destinations')
     @mock.patch.object(conductor_manager.ComputeTaskManager,
@@ -1432,13 +1438,16 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             objects=[bdm])
         self.params = params
 
+    @mock.patch('nova.availability_zones.get_host_availability_zone')
     @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
     def test_schedule_and_build_instances(self, select_destinations,
-                                          build_and_run_instance):
+                                          build_and_run_instance,
+                                          get_az):
         select_destinations.return_value = [{'host': 'fake-host',
                                              'nodename': 'fake-nodename',
                                              'limits': None}]
+        get_az.return_value = 'myaz'
         params = self.params
         details = {}
 
@@ -1453,6 +1462,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         build_and_run_instance.side_effect = _build_and_run_instance
         self.conductor.schedule_and_build_instances(**params)
         self.assertTrue(build_and_run_instance.called)
+        get_az.assert_called_once_with(mock.ANY, 'fake-host')
 
         instance_uuid = details['instance'].uuid
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
@@ -2227,8 +2237,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     def test_build_instances_instance_not_found(self):
         instances = [fake_instance.fake_instance_obj(self.context)
                 for i in range(2)]
-        self.mox.StubOutWithMock(instances[0], 'refresh')
-        self.mox.StubOutWithMock(instances[1], 'refresh')
+        self.mox.StubOutWithMock(instances[0], 'save')
+        self.mox.StubOutWithMock(instances[1], 'save')
         image = {'fake-data': 'should_pass_silently'}
         spec = {'fake': 'specs',
                 'instance_properties': instances[0]}
@@ -2244,9 +2254,9 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 spec, filter_properties).AndReturn(
                         [{'host': 'host1', 'nodename': 'node1', 'limits': []},
                          {'host': 'host2', 'nodename': 'node2', 'limits': []}])
-        instances[0].refresh().AndRaise(
+        instances[0].save().AndRaise(
                 exc.InstanceNotFound(instance_id=instances[0].uuid))
-        instances[1].refresh()
+        instances[1].save()
         self.conductor_manager.compute_rpcapi.build_and_run_instance(
                 self.context, instance=instances[1], host='host2',
                 image={'fake-data': 'should_pass_silently'}, request_spec=spec,
@@ -2289,16 +2299,16 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 'instance_properties': instances[0]}
         build_request_spec.return_value = spec
         with test.nested(
-                mock.patch.object(instances[0], 'refresh',
+                mock.patch.object(instances[0], 'save',
                     side_effect=exc.InstanceInfoCacheNotFound(
                         instance_uuid=instances[0].uuid)),
-                mock.patch.object(instances[1], 'refresh'),
+                mock.patch.object(instances[1], 'save'),
                 mock.patch.object(objects.RequestSpec, 'from_primitives'),
                 mock.patch.object(self.conductor_manager.scheduler_client,
                     'select_destinations', return_value=destinations),
                 mock.patch.object(self.conductor_manager.compute_rpcapi,
                     'build_and_run_instance')
-                ) as (inst1_refresh, inst2_refresh, from_primitives,
+                ) as (inst1_save, inst2_save, from_primitives,
                         select_destinations,
                         build_and_run_instance):
 

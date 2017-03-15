@@ -25,6 +25,7 @@ from oslo_utils import excutils
 from oslo_utils import versionutils
 import six
 
+from nova import availability_zones
 from nova.compute import instance_actions
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
@@ -575,8 +576,13 @@ class ComputeTaskManager(base.Base):
             return
 
         for (instance, host) in six.moves.zip(instances, hosts):
+            instance.availability_zone = (
+                availability_zones.get_host_availability_zone(context,
+                                                              host['host']))
             try:
-                instance.refresh()
+                # NOTE(danms): This saves the az change above, refreshes our
+                # instance, and tells us if it has been deleted underneath us
+                instance.save()
             except (exception.InstanceNotFound,
                     exception.InstanceInfoCacheNotFound):
                 LOG.debug('Instance deleted during build', instance=instance)
@@ -698,6 +704,9 @@ class ComputeTaskManager(base.Base):
                     scheduler_utils.populate_filter_properties(
                             filter_properties, host_state)
                     (host, node) = (host_state['host'], host_state['nodename'])
+                    instance.availability_zone = (
+                        availability_zones.get_host_availability_zone(
+                            context, host))
                     self.compute_rpcapi.unshelve_instance(
                             context, instance, host, image=image,
                             filter_properties=filter_properties, node=node)
@@ -789,6 +798,10 @@ class ComputeTaskManager(base.Base):
 
             compute_utils.notify_about_instance_usage(
                 self.notifier, context, instance, "rebuild.scheduled")
+
+            instance.availability_zone = (
+                availability_zones.get_host_availability_zone(
+                    context, host))
 
             self.compute_rpcapi.rebuild_instance(context,
                     instance=instance,
@@ -947,6 +960,9 @@ class ComputeTaskManager(base.Base):
                           'was already deleted.', instance=instance)
                 continue
             else:
+                instance.availability_zone = (
+                    availability_zones.get_host_availability_zone(
+                        context, host['host']))
                 with obj_target_cell(instance, cell):
                     instance.create()
 
