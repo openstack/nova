@@ -1088,7 +1088,7 @@ object_data = {
     'EC2SnapshotMapping': '1.0-47e7ddabe1af966dce0cfd0ed6cd7cd1',
     'EC2VolumeMapping': '1.0-5b713751d6f97bad620f3378a521020d',
     'FixedIP': '1.14-53e1c10b539f1a82fe83b1af4720efae',
-    'FixedIPList': '1.14-87a39361c8f08f059004d6b15103cdfd',
+    'FixedIPList': '1.15-07b6261cef836cb09d2d8673f68ece15',
     'Flavor': '1.1-b6bb7a730a79d720344accefafacf7ee',
     'FlavorList': '1.1-52b5928600e7ca973aa4fc1e46f3934c',
     'FloatingIP': '1.10-52a67d52d85eb8b3f324a5b7935a335b',
