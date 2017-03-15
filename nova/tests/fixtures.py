@@ -31,6 +31,7 @@ from oslo_config import cfg
 import oslo_messaging as messaging
 from oslo_messaging import conffixture as messaging_conffixture
 
+from nova.api.openstack.compute import tenant_networks
 from nova.api.openstack.placement import deploy as placement_deploy
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
@@ -41,6 +42,7 @@ from nova.network import model as network_model
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import service as service_obj
+from nova import quota as nova_quota
 from nova import rpc
 from nova import service
 from nova.tests.functional.api import client
@@ -987,6 +989,18 @@ class AllServicesCurrent(fixtures.Fixture):
 
     def _fake_minimum(self, *args, **kwargs):
         return service_obj.SERVICE_VERSION
+
+
+class RegisterNetworkQuota(fixtures.Fixture):
+    def setUp(self):
+        super(RegisterNetworkQuota, self).setUp()
+        # Quota resource registration modifies the global QUOTAS engine, so
+        # this fixture registers and unregisters network quota for a test.
+        tenant_networks._register_network_quota()
+        self.addCleanup(self.cleanup)
+
+    def cleanup(self):
+        nova_quota.QUOTAS._resources.pop('networks', None)
 
 
 class NeutronFixture(fixtures.Fixture):

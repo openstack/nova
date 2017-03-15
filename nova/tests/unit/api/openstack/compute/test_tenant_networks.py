@@ -22,6 +22,7 @@ from nova.api.openstack.compute import tenant_networks \
         as networks_v21
 from nova import exception
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit.api.openstack import fakes
 
 CONF = cfg.CONF
@@ -72,6 +73,7 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         # result in a 503 and 500 response, respectively.
         self.flags(enable_network_quota=True,
                    use_neutron=self.use_neutron)
+        self.useFixture(nova_fixtures.RegisterNetworkQuota())
         self.controller = self.ctrlr()
         self.req = fakes.HTTPRequest.blank('')
         self.original_value = CONF.api.use_neutron_default_nets
@@ -85,16 +87,12 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         self.assertEqual(context.project_id, kwargs['project_id'])
         return NETWORKS
 
-    @mock.patch('nova.quota.QUOTAS.reserve')
-    @mock.patch('nova.quota.QUOTAS.rollback')
     @mock.patch('nova.network.api.API.disassociate')
     @mock.patch('nova.network.api.API.delete')
     def _test_network_delete_exception(self, delete_ex, disassociate_ex, expex,
-                                       delete_mock, disassociate_mock,
-                                       rollback_mock, reserve_mock):
+                                       delete_mock, disassociate_mock):
         ctxt = self.req.environ['nova.context']
 
-        reserve_mock.return_value = 'rv'
         if delete_mock:
             delete_mock.side_effect = delete_ex
         if disassociate_ex:
@@ -108,8 +106,6 @@ class TenantNetworksTestV21(test.NoDBTestCase):
             disassociate_mock.assert_called_once_with(ctxt, 1)
             if not disassociate_ex:
                 delete_mock.assert_called_once_with(ctxt, 1)
-            rollback_mock.assert_called_once_with(ctxt, 'rv')
-            reserve_mock.assert_called_once_with(ctxt, networks=-1)
 
     def test_network_delete_exception_network_not_found(self):
         ex = exception.NetworkNotFound(network_id=1)
@@ -126,15 +122,10 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         expex = webob.exc.HTTPConflict
         self._test_network_delete_exception(ex, None, expex)
 
-    @mock.patch('nova.quota.QUOTAS.reserve')
-    @mock.patch('nova.quota.QUOTAS.commit')
     @mock.patch('nova.network.api.API.delete')
     @mock.patch('nova.network.api.API.disassociate')
-    def test_network_delete(self, disassociate_mock, delete_mock, commit_mock,
-                            reserve_mock):
+    def test_network_delete(self, disassociate_mock, delete_mock):
         ctxt = self.req.environ['nova.context']
-
-        reserve_mock.return_value = 'rv'
 
         delete_method = self.controller.delete
         res = delete_method(self.req, 1)
@@ -148,8 +139,6 @@ class TenantNetworksTestV21(test.NoDBTestCase):
 
         disassociate_mock.assert_called_once_with(ctxt, 1)
         delete_mock.assert_called_once_with(ctxt, 1)
-        commit_mock.assert_called_once_with(ctxt, 'rv')
-        reserve_mock.assert_called_once_with(ctxt, networks=-1)
 
     def test_network_show(self):
         with mock.patch.object(self.controller.network_api, 'get',
@@ -184,13 +173,9 @@ class TenantNetworksTestV21(test.NoDBTestCase):
     def test_network_index_without_default_net(self):
         self._test_network_index(default_net=False)
 
-    @mock.patch('nova.quota.QUOTAS.reserve')
-    @mock.patch('nova.quota.QUOTAS.commit')
+    @mock.patch('nova.objects.Quotas.check_deltas')
     @mock.patch('nova.network.api.API.create')
-    def test_network_create(self, create_mock, commit_mock, reserve_mock):
-        ctxt = self.req.environ['nova.context']
-
-        reserve_mock.return_value = 'rv'
+    def test_network_create(self, create_mock, check_mock):
         create_mock.side_effect = self._fake_network_api_create
 
         body = copy.deepcopy(NETWORKS[0])
@@ -199,35 +184,77 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         res = self.controller.create(self.req, body=body)
 
         self.assertEqual(NETWORKS[0], res['network'])
-        commit_mock.assert_called_once_with(ctxt, 'rv')
-        reserve_mock.assert_called_once_with(ctxt, networks=1)
 
-    @mock.patch('nova.quota.QUOTAS.reserve')
-    def test_network_create_quota_error(self, reserve_mock):
+    @mock.patch('nova.objects.Quotas.check_deltas')
+    @mock.patch('nova.network.api.API.delete')
+    @mock.patch('nova.network.api.API.create')
+    def test_network_create_quota_error_during_recheck(self, create_mock,
+                                                       delete_mock,
+                                                       check_mock):
+        create_mock.side_effect = self._fake_network_api_create
         ctxt = self.req.environ['nova.context']
 
-        reserve_mock.side_effect = exception.OverQuota(overs='fake')
+        # Simulate a race where the first check passes and the recheck fails.
+        check_mock.side_effect = [None, exception.OverQuota(overs='networks')]
+
+        body = copy.deepcopy(NETWORKS[0])
+        del body['id']
+        body = {'network': body}
+        self.assertRaises(webob.exc.HTTPForbidden,
+                          self.controller.create, self.req, body=body)
+
+        self.assertEqual(2, check_mock.call_count)
+        call1 = mock.call(ctxt, {'networks': 1}, ctxt.project_id)
+        call2 = mock.call(ctxt, {'networks': 0}, ctxt.project_id)
+        check_mock.assert_has_calls([call1, call2])
+
+        # Verify we removed the network that was added after the first quota
+        # check passed.
+        delete_mock.assert_called_once_with(ctxt, NETWORKS[0]['id'])
+
+    @mock.patch('nova.objects.Quotas.check_deltas')
+    @mock.patch('nova.network.api.API.create')
+    def test_network_create_no_quota_recheck(self, create_mock, check_mock):
+        create_mock.side_effect = self._fake_network_api_create
+        ctxt = self.req.environ['nova.context']
+        # Disable recheck_quota.
+        self.flags(recheck_quota=False, group='quota')
+
+        body = copy.deepcopy(NETWORKS[0])
+        del body['id']
+        body = {'network': body}
+        self.controller.create(self.req, body=body)
+
+        # check_deltas should have been called only once.
+        check_mock.assert_called_once_with(ctxt, {'networks': 1},
+                                           ctxt.project_id)
+
+    @mock.patch('nova.objects.Quotas.check_deltas')
+    def test_network_create_quota_error(self, check_mock):
+        ctxt = self.req.environ['nova.context']
+
+        check_mock.side_effect = exception.OverQuota(overs='networks')
         body = {'network': {"cidr": "10.20.105.0/24",
                             "label": "new net 1"}}
         self.assertRaises(webob.exc.HTTPForbidden,
                           self.controller.create, self.req, body=body)
-        reserve_mock.assert_called_once_with(ctxt, networks=1)
+        check_mock.assert_called_once_with(ctxt, {'networks': 1},
+                                           ctxt.project_id)
 
-    @mock.patch('nova.quota.QUOTAS.reserve')
-    @mock.patch('nova.quota.QUOTAS.rollback')
+    @mock.patch('nova.objects.Quotas.check_deltas')
     @mock.patch('nova.network.api.API.create')
     def _test_network_create_exception(self, ex, expex, create_mock,
-                                       rollback_mock, reserve_mock):
+                                       check_mock):
         ctxt = self.req.environ['nova.context']
 
-        reserve_mock.return_value = 'rv'
         create_mock.side_effect = ex
         body = {'network': {"cidr": "10.20.105.0/24",
                             "label": "new net 1"}}
         if self.use_neutron:
             expex = webob.exc.HTTPServiceUnavailable
         self.assertRaises(expex, self.controller.create, self.req, body=body)
-        reserve_mock.assert_called_once_with(ctxt, networks=1)
+        check_mock.assert_called_once_with(ctxt, {'networks': 1},
+                                           ctxt.project_id)
 
     def test_network_create_exception_policy_failed(self):
         ex = exception.PolicyNotAuthorized(action='dummy')
@@ -277,6 +304,18 @@ class TenantNeutronNetworksTestV21(TenantNetworksTestV21):
         self.assertRaises(
             webob.exc.HTTPServiceUnavailable,
             super(TenantNeutronNetworksTestV21, self).test_network_create)
+
+    def test_network_create_quota_error_during_recheck(self):
+        self.assertRaises(
+            webob.exc.HTTPServiceUnavailable,
+            super(TenantNeutronNetworksTestV21, self)
+                .test_network_create_quota_error_during_recheck)
+
+    def test_network_create_no_quota_recheck(self):
+        self.assertRaises(
+            webob.exc.HTTPServiceUnavailable,
+            super(TenantNeutronNetworksTestV21, self)
+                .test_network_create_no_quota_recheck)
 
     def test_network_delete(self):
         self.assertRaises(
