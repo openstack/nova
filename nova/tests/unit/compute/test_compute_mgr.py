@@ -1883,7 +1883,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                     'delete_on_termination': True,
                     'connection_info': '{"foo": "bar"}'})
         comp_ret = {'save_volume_id': old_volume_id}
-        new_info = {"foo": "bar"}
+        new_info = {"foo": "bar", "serial": old_volume_id}
         swap_volume_mock.return_value = (comp_ret, new_info)
         volume_connector_mock.return_value = {}
         update_bdm_mock.return_value = fake_bdm
@@ -1893,7 +1893,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 fake_instance.fake_instance_obj(self.context,
                                                 **{'uuid': uuids.instance}))
         update_values = {'no_device': False,
-                         'connection_info': u'{"foo": "bar"}',
+                         'connection_info': jsonutils.dumps(new_info),
                          'volume_id': old_volume_id,
                          'source_type': u'volume',
                          'snapshot_id': None,

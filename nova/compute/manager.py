@@ -4865,7 +4865,11 @@ class ComputeManager(manager.Manager):
         old_cinfo = jsonutils.loads(bdm['connection_info'])
         if old_cinfo and 'serial' not in old_cinfo:
             old_cinfo['serial'] = old_volume_id
-        new_cinfo['serial'] = old_cinfo['serial']
+        # NOTE(lyarwood): serial is not always present in the returned
+        # connection_info so set it if it is missing as we do in
+        # DriverVolumeBlockDevice.attach().
+        if 'serial' not in new_cinfo:
+            new_cinfo['serial'] = new_volume_id
         return (old_cinfo, new_cinfo)
 
     def _swap_volume(self, context, instance, bdm, connector,
@@ -4880,6 +4884,10 @@ class ComputeManager(manager.Manager):
                                                                 connector,
                                                                 instance,
                                                                 bdm)
+            # NOTE(lyarwood): The Libvirt driver, the only virt driver
+            # currently implementing swap_volume, will modify the contents of
+            # new_cinfo when connect_volume is called. This is then saved to
+            # the BDM in swap_volume for future use outside of this flow.
             LOG.debug("swap_volume: Calling driver volume swap with "
                       "connection infos: new: %(new_cinfo)s; "
                       "old: %(old_cinfo)s",
@@ -4887,6 +4895,9 @@ class ComputeManager(manager.Manager):
                       contex=context, instance=instance)
             self.driver.swap_volume(old_cinfo, new_cinfo, instance, mountpoint,
                                     resize_to)
+            LOG.debug("swap_volume: Driver volume swap returned, new "
+                      "connection_info is now : %(new_cinfo)s",
+                      {'new_cinfo': new_cinfo})
         except Exception:
             failed = True
             with excutils.save_and_reraise_exception():
@@ -4915,8 +4926,13 @@ class ComputeManager(manager.Manager):
                 self.volume_api.terminate_connection(context,
                                                      conn_volume,
                                                      connector)
-            # If Cinder initiated the swap, it will keep
-            # the original ID
+            # NOTE(lyarwood): The following call to
+            # os-migrate-volume-completion returns a dict containing
+            # save_volume_id, this volume id has two possible values :
+            # 1. old_volume_id if we are migrating (retyping) volumes
+            # 2. new_volume_id if we are swapping between two existing volumes
+            # This volume id is later used to update the volume_id and
+            # connection_info['serial'] of the BDM.
             comp_ret = self.volume_api.migrate_volume_completion(
                                                       context,
                                                       old_volume_id,
@@ -4955,9 +4971,10 @@ class ComputeManager(manager.Manager):
                                                          new_volume_id,
                                                          resize_to)
 
+        # NOTE(lyarwood): Update the BDM with the modified new_cinfo and
+        # correct volume_id returned by Cinder.
         save_volume_id = comp_ret['save_volume_id']
-
-        # Update bdm
+        new_cinfo['serial'] = save_volume_id
         values = {
             'connection_info': jsonutils.dumps(new_cinfo),
             'source_type': 'volume',
