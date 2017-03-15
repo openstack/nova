@@ -85,16 +85,18 @@ def init(conf):
     elif conf.notifications.notification_format == 'both':
         LEGACY_NOTIFIER = messaging.Notifier(NOTIFICATION_TRANSPORT,
                                              serializer=serializer)
-        NOTIFIER = messaging.Notifier(NOTIFICATION_TRANSPORT,
-                                      serializer=serializer,
-                                      topics=['versioned_notifications'])
+        NOTIFIER = messaging.Notifier(
+            NOTIFICATION_TRANSPORT,
+            serializer=serializer,
+            topics=conf.notifications.versioned_notifications_topics)
     else:
         LEGACY_NOTIFIER = messaging.Notifier(NOTIFICATION_TRANSPORT,
                                              serializer=serializer,
                                              driver='noop')
-        NOTIFIER = messaging.Notifier(NOTIFICATION_TRANSPORT,
-                                      serializer=serializer,
-                                      topics=['versioned_notifications'])
+        NOTIFIER = messaging.Notifier(
+            NOTIFICATION_TRANSPORT,
+            serializer=serializer,
+            topics=conf.notifications.versioned_notifications_topics)
 
 
 def cleanup():

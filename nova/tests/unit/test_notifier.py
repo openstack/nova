@@ -29,6 +29,8 @@ class TestNotifier(test.NoDBTestCase):
                                                              mock_noti_trans,
                                                              mock_transport):
         conf = mock.Mock()
+        conf.notifications.versioned_notifications_topics = [
+            'versioned_notifications']
 
         cases = {
             'unversioned': [
