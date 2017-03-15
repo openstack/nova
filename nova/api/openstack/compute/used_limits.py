@@ -27,13 +27,6 @@ QUOTAS = quota.QUOTAS
 
 class UsedLimitsController(wsgi.Controller):
 
-    @staticmethod
-    def _reserved(req):
-        try:
-            return int(req.GET['reserved'])
-        except (ValueError, KeyError):
-            return False
-
     @wsgi.extends
     @extensions.expected_errors(())
     def index(self, req, resp_obj):
@@ -61,9 +54,7 @@ class UsedLimitsController(wsgi.Controller):
         used_limits = {}
         for display_name, key in quota_map.items():
             if key in quotas:
-                reserved = (quotas[key]['reserved']
-                            if self._reserved(req) else 0)
-                used_limits[display_name] = quotas[key]['in_use'] + reserved
+                used_limits[display_name] = quotas[key]['in_use']
 
         resp_obj.obj['limits']['absolute'].update(used_limits)
 
