@@ -1857,6 +1857,22 @@ def _server_group_count_members_by_user(context, group, user_id):
     return {'user': {'server_group_members': count}}
 
 
+def _server_group_count(context, project_id, user_id=None):
+    """Get the counts of server groups in the database.
+
+    :param context: The request context for database access
+    :param project_id: The project_id to count across
+    :param user_id: The user_id to count across
+    :returns: A dict containing the project-scoped counts and user-scoped
+              counts if user_id is specified. For example:
+
+                {'project': {'server_groups': <count across project>},
+                 'user': {'server_groups': <count across user>}}
+    """
+    return objects.InstanceGroupList.get_counts(context, project_id,
+                                                user_id=user_id)
+
+
 def _security_group_rule_count_by_group(context, security_group_id):
     count = db.security_group_rule_count_by_group(context, security_group_id)
     # NOTE(melwitt): Neither 'project' nor 'user' fit perfectly here as
@@ -1888,8 +1904,7 @@ resources = [
                       _security_group_rule_count_by_group,
                       'security_group_rules'),
     CountableResource('key_pairs', _keypair_get_count_by_user, 'key_pairs'),
-    ReservableResource('server_groups', '_sync_server_groups',
-                      'server_groups'),
+    CountableResource('server_groups', _server_group_count, 'server_groups'),
     CountableResource('server_group_members',
                       _server_group_count_members_by_user,
                       'server_group_members'),

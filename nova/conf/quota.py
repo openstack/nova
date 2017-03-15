@@ -287,7 +287,6 @@ to help keep quota usage up-to-date and reduce the impact of out of sync usage
 issues. Note that quotas are not updated on a periodic task, they will update
 on a new reservation if max_age has passed since the last reservation.
 """),
-
 # TODO(pumaranikar): Add a new config to select between the db_driver and
 # the no_op driver using stevedore.
     cfg.StrOpt('driver',
@@ -306,6 +305,31 @@ Possible values:
 
 * nova.quota.DbQuotaDriver (default) or any string representing fully
   qualified class name.
+"""),
+    cfg.BoolOpt('recheck_quota',
+        default=True,
+        help="""
+Recheck quota after resource creation to prevent allowing quota to be exceeded.
+
+This defaults to True (recheck quota after resource creation) but can be set to
+False to avoid additional load if allowing quota to be exceeded because of
+racing requests is considered acceptable. For example, when set to False, if a
+user makes highly parallel REST API requests to create servers, it will be
+possible for them to create more servers than their allowed quota during the
+race. If their quota is 10 servers, they might be able to create 50 during the
+burst. After the burst, they will not be able to create any more servers but
+they will be able to keep their 50 servers until they delete them.
+
+The initial quota check is done before resources are created, so if multiple
+parallel requests arrive at the same time, all could pass the quota check and
+create resources, potentially exceeding quota. When recheck_quota is True,
+quota will be checked a second time after resources have been created and if
+the resource is over quota, it will be deleted and OverQuota will be raised,
+usually resulting in a 403 response to the REST API user. This makes it
+impossible for a user to exceed their quota with the caveat that it will,
+however, be possible for a REST API user to be rejected with a 403 response in
+the event of a collision close to reaching their quota limit, even if the user
+has enough quota available when they made the request.
 """),
 ]
 

@@ -1,0 +1,12 @@
+features:
+  - |
+    A new configuration option ``[quota]/recheck_quota`` has been added to
+    recheck quota after resource creation to prevent allowing quota to be
+    exceeded as a result of racing requests. It defaults to True, which makes
+    it impossible for a user to exceed their quota. However, it will be
+    possible for a REST API user to be rejected with an over quota 403 error
+    response in the event of a collision close to reaching their quota limit,
+    even if the user has enough quota available when they made the request.
+    Operators may want to set the option to False to avoid additional load on
+    the system if allowing quota to be exceeded because of racing requests is
+    considered acceptable.
