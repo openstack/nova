@@ -13,6 +13,8 @@
 #    under the License.
 
 from nova import db
+from nova.db.sqlalchemy import api as db_api
+from nova.db.sqlalchemy import models
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
@@ -173,10 +175,20 @@ class FloatingIPList(obj_base.ObjectListBase, obj_base.NovaObject):
     # Version 1.9: FloatingIP 1.8
     # Version 1.10: FloatingIP 1.9
     # Version 1.11: FloatingIP 1.10
+    # Version 1.12: Added get_count_by_project() for quotas
     fields = {
         'objects': fields.ListOfObjectsField('FloatingIP'),
         }
-    VERSION = '1.11'
+    VERSION = '1.12'
+
+    @staticmethod
+    @db_api.pick_context_manager_reader
+    def _get_count_by_project_from_db(context, project_id):
+        return context.session.query(models.FloatingIp.id).\
+                filter_by(deleted=0).\
+                filter_by(project_id=project_id).\
+                filter_by(auto_assigned=False).\
+                count()
 
     @obj_base.remotable_classmethod
     def get_all(cls, context):
@@ -227,6 +239,10 @@ class FloatingIPList(obj_base.ObjectListBase, obj_base.NovaObject):
     @obj_base.remotable_classmethod
     def destroy(cls, context, ips):
         db.floating_ip_bulk_destroy(context, ips)
+
+    @obj_base.remotable_classmethod
+    def get_count_by_project(cls, context, project_id):
+        return cls._get_count_by_project_from_db(context, project_id)
 
 
 # We don't want to register this object because it will not be passed
