@@ -3,7 +3,7 @@
 # process, which may cause wedges in the gate later.
 
 pbr>=2.0.0 # Apache-2.0
-SQLAlchemy<1.1.0,>=1.0.10 # MIT
+SQLAlchemy>=1.0.10 # MIT
 decorator>=3.4.0 # BSD
 eventlet!=0.18.3,>=0.18.2 # MIT
 Jinja2!=2.9.0,!=2.9.1,!=2.9.2,!=2.9.3,!=2.9.4,>=2.8 # BSD License (3 clause)
@@ -32,11 +32,11 @@ python-glanceclient>=2.5.0 # Apache-2.0
 requests!=2.12.2,!=2.13.0,>=2.10.0 # Apache-2.0
 six>=1.9.0 # MIT
 stevedore>=1.20.0 # Apache-2.0
-setuptools!=24.0.0,!=34.0.0,!=34.0.1,!=34.0.2,!=34.0.3,!=34.1.0,!=34.1.1,!=34.2.0,!=34.3.0,>=16.0 # PSF/ZPL
+setuptools!=24.0.0,!=34.0.0,!=34.0.1,!=34.0.2,!=34.0.3,!=34.1.0,!=34.1.1,!=34.2.0,!=34.3.0,!=34.3.1,>=16.0 # PSF/ZPL
 websockify>=0.8.0 # LGPLv3
 oslo.cache>=1.5.0 # Apache-2.0
 oslo.concurrency>=3.8.0 # Apache-2.0
-oslo.config!=3.18.0,>=3.14.0 # Apache-2.0
+oslo.config>=3.22.0 # Apache-2.0
 oslo.context>=2.12.0 # Apache-2.0
 oslo.log>=3.11.0 # Apache-2.0
 oslo.reports>=0.6.0 # Apache-2.0
@@ -44,7 +44,7 @@ oslo.serialization>=1.10.0 # Apache-2.0
 oslo.utils>=3.20.0 # Apache-2.0
 oslo.db>=4.15.0 # Apache-2.0
 oslo.rootwrap>=5.0.0 # Apache-2.0
-oslo.messaging>=5.14.0 # Apache-2.0
+oslo.messaging>=5.19.0 # Apache-2.0
 oslo.policy>=1.17.0 # Apache-2.0
 oslo.privsep>=1.9.0 # Apache-2.0
 oslo.i18n>=2.1.0 # Apache-2.0
