@@ -1195,7 +1195,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 2.0: Initial Version
     # Version 2.1: Add get_uuids_by_host()
     # Version 2.2: Pagination for get_active_by_window_joined()
-    VERSION = '2.2'
+    # Version 2.3: Add get_count_by_vm_state()
+    VERSION = '2.3'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
@@ -1380,6 +1381,21 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         db_instances = db.instance_get_all_by_host(context, host,
                                                    columns_to_join=[])
         return [inst['uuid'] for inst in db_instances]
+
+    @staticmethod
+    @db_api.pick_context_manager_reader
+    def _get_count_by_vm_state_in_db(context, project_id, user_id, vm_state):
+        return context.session.query(models.Instance.id).\
+            filter_by(deleted=0).\
+            filter_by(project_id=project_id).\
+            filter_by(user_id=user_id).\
+            filter_by(vm_state=vm_state).\
+            count()
+
+    @base.remotable_classmethod
+    def get_count_by_vm_state(cls, context, project_id, user_id, vm_state):
+        return cls._get_count_by_vm_state_in_db(context, project_id, user_id,
+                                                vm_state)
 
 
 @db_api.pick_context_manager_writer
