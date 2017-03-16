@@ -69,7 +69,7 @@ Request
 **Example Add (Associate) Floating Ip (addFloatingIp Action)**
 
 .. literalinclude:: ../../doc/api_samples/servers/server-action-addfloatingip.json
-  :language: javascript
+   :language: javascript
 
 Response
 --------
@@ -455,11 +455,10 @@ Request
   - removeFloatingIp: removeFloatingIp
   - address: address
 
-.. TODO(sdague) build example for this
-   **Example Remove (Disassociate) Floating Ip (removeFloatingIp Action)**
+**Example Remove (Disassociate) Floating Ip (removeFloatingIp Action)**
 
-   .. literalinclude:: ../../doc/api_samples/servers-action/removeFloatingIp-req.json
-                       :language: javascript
+.. literalinclude:: ../../doc/api_samples/servers/server-action-removefloatingip.json
+   :language: javascript
 
 Response
 --------
