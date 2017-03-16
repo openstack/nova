@@ -36,6 +36,8 @@ tests:
       $.errors.[0].min_version: /^\d+\.\d+$/
   response_strings:
       - "Unacceptable version header: 0.5"
+  response_json_paths:
+      $.errors[0].title: Not Acceptable
 
 - name: latest microversion is 1.4
   GET: /
@@ -63,6 +65,8 @@ tests:
   status: 400
   response_strings:
       - "invalid version string: pony.horse"
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: bad format multidot raises 400
   GET: /
@@ -71,6 +75,8 @@ tests:
   status: 400
   response_strings:
       - "invalid version string: 1.2.3"
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: error in application produces microversion headers
   desc: we do not want xml

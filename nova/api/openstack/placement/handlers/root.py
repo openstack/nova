@@ -13,13 +13,13 @@
 
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
-import webob
 
 
 from nova.api.openstack.placement import microversion
+from nova.api.openstack.placement import wsgi_wrapper
 
 
-@webob.dec.wsgify
+@wsgi_wrapper.PlacementWsgify
 def home(req):
     min_version = microversion.min_version_string()
     max_version = microversion.max_version_string()
