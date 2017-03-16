@@ -391,6 +391,9 @@ class Guest(object):
             # Raise DeviceNotFound if the device isn't found during detach
             try:
                 self.detach_device(conf, persistent=persistent, live=live)
+                LOG.debug('Successfully detached device %s from guest. '
+                          'Persistent? %s. Live? %s',
+                          device, persistent, live)
             except libvirt.libvirtError as ex:
                 with excutils.save_and_reraise_exception():
                     errcode = ex.get_error_code()
@@ -413,7 +416,9 @@ class Guest(object):
         if conf is None:
             raise exception.DeviceNotFound(device=alternative_device_name)
 
+        LOG.debug('Attempting initial detach for device %s', device)
         _try_detach_device(conf, persistent, live)
+        LOG.debug('Start retrying detach until device %s is gone.', device)
 
         @loopingcall.RetryDecorator(max_retry_count=max_retry_count,
                                     inc_sleep_time=inc_sleep_time,
