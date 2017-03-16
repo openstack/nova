@@ -55,7 +55,13 @@ class RequestSpec(base.NovaObject):
         'flavor': fields.ObjectField('Flavor', nullable=False),
         'num_instances': fields.IntegerField(default=1),
         'ignore_hosts': fields.ListOfStringsField(nullable=True),
+        # NOTE(mriedem): In reality, you can only ever have one
+        # host in the force_hosts list. The fact this is a list
+        # is a mistake perpetuated over time.
         'force_hosts': fields.ListOfStringsField(nullable=True),
+        # NOTE(mriedem): In reality, you can only ever have one
+        # node in the force_nodes list. The fact this is a list
+        # is a mistake perpetuated over time.
         'force_nodes': fields.ListOfStringsField(nullable=True),
         'requested_destination': fields.ObjectField('Destination',
                                                     nullable=True,
