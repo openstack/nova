@@ -208,32 +208,6 @@ class HackingTestCase(test.NoDBTestCase):
         self.assertEqual(len(list(checks.no_setting_conf_directly_in_tests(
             "CONF.option = 1", "nova/compute/foo.py"))), 0)
 
-    def test_log_translations(self):
-        logs = ['audit', 'error', 'info', 'warning', 'critical', 'warn',
-                'exception']
-        levels = ['_LI', '_LW', '_LE', '_LC']
-        debug = "LOG.debug('OK')"
-        self.assertEqual(
-            0, len(list(checks.validate_log_translations(debug, debug, 'f'))))
-        for log in logs:
-            bad = 'LOG.%s("Bad")' % log
-            self.assertEqual(1,
-                len(list(
-                    checks.validate_log_translations(bad, bad, 'f'))))
-            ok = "LOG.%s('OK')    # noqa" % log
-            self.assertEqual(0,
-                len(list(
-                    checks.validate_log_translations(ok, ok, 'f'))))
-            ok = "LOG.%s(variable)" % log
-            self.assertEqual(0,
-                len(list(
-                    checks.validate_log_translations(ok, ok, 'f'))))
-            for level in levels:
-                ok = "LOG.%s(%s('OK'))" % (log, level)
-                self.assertEqual(0,
-                    len(list(
-                        checks.validate_log_translations(ok, ok, 'f'))))
-
     def test_no_mutable_default_args(self):
         self.assertEqual(1, len(list(checks.no_mutable_default_args(
             "def get_info_from_bdm(virt_type, bdm, mapping=[])"))))

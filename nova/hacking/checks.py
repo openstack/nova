@@ -311,28 +311,6 @@ def no_setting_conf_directly_in_tests(logical_line, filename):
                       "forbidden. Use self.flags(option=value) instead")
 
 
-def validate_log_translations(logical_line, physical_line, filename):
-    # Translations are not required in the test directory
-    # and the Xen utilities
-    if ("nova/tests" in filename or
-                "plugins/xenserver/xenapi/etc/xapi.d" in filename):
-        return
-    if pep8.noqa(physical_line):
-        return
-    msg = "N328: LOG.info messages require translations `_LI()`!"
-    if log_translation_info.match(logical_line):
-        yield (0, msg)
-    msg = "N329: LOG.exception messages require translations `_LE()`!"
-    if log_translation_exception.match(logical_line):
-        yield (0, msg)
-    msg = "N330: LOG.warning, LOG.warn messages require translations `_LW()`!"
-    if log_translation_LW.match(logical_line):
-        yield (0, msg)
-    msg = "N321: Log messages require translations!"
-    if log_translation.match(logical_line):
-        yield (0, msg)
-
-
 def no_mutable_default_args(logical_line):
     msg = "N322: Method's default argument shouldn't be mutable!"
     if mutable_default_args.match(logical_line):
@@ -846,7 +824,6 @@ def factory(register):
     register(assert_raises_regexp)
     register(no_translate_debug_logs)
     register(no_setting_conf_directly_in_tests)
-    register(validate_log_translations)
     register(no_mutable_default_args)
     register(check_explicit_underscore_import)
     register(use_jsonutils)
