@@ -405,7 +405,7 @@ stack vs spread.
 
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
-only affects scheduling if the 'ram' weigher is enabled.
+only affects scheduling if the 'disk' weigher is enabled.
 
 Possible values:
 
