@@ -200,29 +200,6 @@ class CinderApiTestCase(test.NoDBTestCase):
                           self.ctx, volume, instance)
         mock_get_instance_az.assert_called_once_with(self.ctx, instance)
 
-    def test_check_detach(self):
-        volume = {'id': 'fake', 'status': 'in-use',
-                  'attach_status': 'attached',
-                  'attachments': {uuids.instance: {
-                                    'attachment_id': uuids.attachment}}
-                  }
-        self.assertIsNone(self.api.check_detach(self.ctx, volume))
-        instance = fake_instance_obj(self.ctx)
-        instance.uuid = uuids.instance
-        self.assertIsNone(self.api.check_detach(self.ctx, volume, instance))
-        instance.uuid = uuids.instance2
-        self.assertRaises(exception.VolumeUnattached,
-                          self.api.check_detach, self.ctx, volume, instance)
-        volume['attachments'] = {}
-        self.assertRaises(exception.VolumeUnattached,
-                          self.api.check_detach, self.ctx, volume, instance)
-        volume['status'] = 'available'
-        self.assertRaises(exception.InvalidVolume,
-                          self.api.check_detach, self.ctx, volume)
-        volume['attach_status'] = 'detached'
-        self.assertRaises(exception.InvalidVolume,
-                          self.api.check_detach, self.ctx, volume)
-
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_reserve_volume(self, mock_cinderclient):
         mock_volumes = mock.MagicMock()

@@ -1351,10 +1351,6 @@ class CinderFixture(fixtures.Fixture):
 
         self.test.stub_out('nova.volume.cinder.API.begin_detaching',
                            lambda *args, **kwargs: None)
-        self.test.stub_out('nova.volume.cinder.API.check_attach',
-                           lambda *args, **kwargs: None)
-        self.test.stub_out('nova.volume.cinder.API.check_detach',
-                           lambda *args, **kwargs: None)
         self.test.stub_out('nova.volume.cinder.API.get',
                            fake_get)
         self.test.stub_out('nova.volume.cinder.API.initialize_connection',

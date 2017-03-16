@@ -994,8 +994,8 @@ class ServerTestV220(ServersTestBase):
 
         # Test detach volume
         self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
-        with test.nested(mock.patch.object(compute_api.API,
-                                           '_check_and_begin_detach'),
+        with test.nested(mock.patch.object(volume.cinder.API,
+                                           'begin_detaching'),
                          mock.patch.object(objects.BlockDeviceMappingList,
                                            'get_by_instance_uuid'),
                          mock.patch.object(rpcapi.ComputeAPI,
@@ -1034,8 +1034,8 @@ class ServerTestV220(ServersTestBase):
 
         # Test detach volume
         self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
-        with test.nested(mock.patch.object(compute_api.API,
-                                           '_check_and_begin_detach'),
+        with test.nested(mock.patch.object(volume.cinder.API,
+                                           'begin_detaching'),
                          mock.patch.object(objects.BlockDeviceMappingList,
                                            'get_by_instance_uuid'),
                          mock.patch.object(compute_api.API,

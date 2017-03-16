@@ -10143,16 +10143,12 @@ class ComputeAPITestCase(BaseTestCase):
         # Set attach_status to 'fake' as nothing is reading the value.
         volume = {'id': 1, 'attach_status': 'fake'}
 
-        def fake_check_detach(*args, **kwargs):
-            called['fake_check_detach'] = True
-
         def fake_begin_detaching(*args, **kwargs):
             called['fake_begin_detaching'] = True
 
         def fake_rpc_detach_volume(self, context, **kwargs):
             called['fake_rpc_detach_volume'] = True
 
-        self.stub_out('nova.volume.cinder.API.check_detach', fake_check_detach)
         self.stub_out('nova.volume.cinder.API.begin_detaching',
                       fake_begin_detaching)
         self.stub_out('nova.compute.rpcapi.ComputeAPI.detach_volume',
@@ -10160,17 +10156,16 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.compute_api.detach_volume(self.context,
                 instance, volume)
-        self.assertTrue(called.get('fake_check_detach'))
         self.assertTrue(called.get('fake_begin_detaching'))
         self.assertTrue(called.get('fake_rpc_detach_volume'))
 
-    @mock.patch.object(compute_api.API, '_check_and_begin_detach')
+    @mock.patch.object(nova.volume.cinder.API, 'begin_detaching')
     @mock.patch.object(compute_api.API, '_local_cleanup_bdm_volumes')
     @mock.patch.object(objects.BlockDeviceMapping, 'get_by_volume_id')
     def test_detach_volume_shelved_offloaded(self,
                                              mock_block_dev,
                                              mock_local_cleanup,
-                                             mock_check_begin_detach):
+                                             mock_begin_detaching):
 
         mock_block_dev.return_value = [block_device_obj.BlockDeviceMapping(
                                       context=context)]
@@ -10179,12 +10174,13 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api._detach_volume_shelved_offloaded(self.context,
                                                           instance,
                                                           volume)
-        mock_check_begin_detach.assert_called_once_with(self.context,
-                                                        volume,
-                                                        instance)
+        mock_begin_detaching.assert_called_once_with(self.context,
+                                                     volume['id'])
         self.assertTrue(mock_local_cleanup.called)
 
-    def test_detach_invalid_volume(self):
+    @mock.patch.object(nova.volume.cinder.API, 'begin_detaching',
+                       side_effect=exception.InvalidInput(reason='error'))
+    def test_detach_invalid_volume(self, mock_begin_detaching):
         # Ensure exception is raised while detaching an un-attached volume
         fake_instance = self._fake_instance({
                     'uuid': 'f7000000-0000-0000-0000-000000000001',
@@ -10195,22 +10191,6 @@ class ComputeAPITestCase(BaseTestCase):
         volume = {'id': 1, 'attach_status': 'detached', 'status': 'available'}
 
         self.assertRaises(exception.InvalidVolume,
-                          self.compute_api.detach_volume, self.context,
-                          fake_instance, volume)
-
-    def test_detach_unattached_volume(self):
-        # Ensure exception is raised when volume's idea of attached
-        # instance doesn't match.
-        fake_instance = self._fake_instance({
-                    'uuid': 'f7000000-0000-0000-0000-000000000001',
-                    'locked': False,
-                    'launched_at': timeutils.utcnow(),
-                    'vm_state': vm_states.ACTIVE,
-                    'task_state': None})
-        volume = {'id': 1, 'attach_status': 'attached', 'status': 'in-use',
-                  'attachments': {'fake_uuid': {'attachment_id': 'fakeid'}}}
-
-        self.assertRaises(exception.VolumeUnattached,
                           self.compute_api.detach_volume, self.context,
                           fake_instance, volume)
 

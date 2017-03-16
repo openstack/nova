@@ -2954,8 +2954,6 @@ class ComputeManager(manager.Manager):
                 #
                 # API-detach
                 LOG.info("Detaching from volume api: %s", volume_id)
-                volume = self.volume_api.get(context, volume_id)
-                self.volume_api.check_detach(context, volume)
                 self.volume_api.begin_detaching(context, volume_id)
 
                 # Manager-detach
