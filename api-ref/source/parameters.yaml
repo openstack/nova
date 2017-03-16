@@ -2291,7 +2291,11 @@ host_zone:
   type: string
 hostId:
   description: |
-    The ID of the host.
+    An ID string representing the host. This is a hashed value so will not actually look like
+    a hostname, and is hashed with data from the project_id, so the same physical host as seen
+    by two different project_ids, will be different. It is useful when within the same project you
+    need to determine if two instances are on the same or different physical hosts for the
+    purposes of availability or performance.
   in: body
   required: true
   type: string
@@ -2347,7 +2351,8 @@ hypervisor_free_disk_gb:
   type: integer
 hypervisor_hostname:
   description: |
-    The hypervisor host name.
+    The hypervisor host name provided by the Nova virt driver. For the Ironic driver,
+    it is the Ironic node name.
   in: body
   required: true
   type: string
@@ -3328,13 +3333,15 @@ OS-EXT-AZ:availability_zone_optional:
   type: string
 OS-EXT-SRV-ATTR:host:
   description: |
-    The host name. Appears in the response for administrative users only.
+    The name of the compute host on which this instance is running.
+    Appears in the response for administrative users only.
   in: body
   required: true
   type: string
 OS-EXT-SRV-ATTR:hypervisor_hostname:
   description: |
-    The hypervisor host name. Appears in the response for administrative users only.
+    The hypervisor host name provided by the Nova virt driver. For the Ironic driver,
+    it is the Ironic node name. Appears in the response for administrative users only.
   in: body
   required: true
   type: string
