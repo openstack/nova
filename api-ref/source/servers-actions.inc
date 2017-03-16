@@ -710,7 +710,6 @@ to start the server.
 **Asynchronous Postconditions**
 
 After you successfully start a server, its status changes to ``ACTIVE``.
-The server appears on the compute node that the Compute service manages.
 
 **Troubleshooting**
 
@@ -762,8 +761,8 @@ to stop the server.
 **Asynchronous Postconditions**
 
 After you successfully stop a server, its status changes to ``SHUTOFF``.
-The server instance data appears only on the compute node that
-Compute service manages.
+This API operation does not delete the server instance data and the data
+will be available again after ``os-start`` action.
 
 Normal response codes: 202
 
