@@ -14,6 +14,7 @@
 
 import time
 
+import nova.compute.resource_tracker
 from nova import exception
 from nova import test
 from nova.tests import fixtures as nova_fixtures
@@ -21,6 +22,7 @@ from nova.tests.unit import cast_as_call
 from nova.tests.unit import fake_network
 import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
+from nova.virt import fake
 
 
 class TestRetryBetweenComputeNodeBuilds(test.TestCase):
@@ -63,13 +65,23 @@ class TestRetryBetweenComputeNodeBuilds(test.TestCase):
         self.start_service('consoleauth')
 
         # Configure a minimal filter scheduler setup.
-        self.flags(enabled_filters=['ComputeFilter'],
+        self.flags(enabled_filters=['ComputeFilter', 'RetryFilter'],
                    group='filter_scheduler')
         self.start_service('scheduler')
 
         # We start two compute services because we're going to fake one
         # of them to fail the build so we can trigger the retry code.
+        # set_nodes() is needed to have each compute service return a
+        # different nodename, so we get two hosts in the list of candidates
+        # for scheduling. Otherwise both hosts will have the same default
+        # nodename "fake-mini". The host passed to start_service controls the
+        # "host" attribute and set_nodes() sets the "nodename" attribute.
+        # We set_nodes() to make host and nodename the same for each compute.
+        fake.set_nodes(['host1'])
+        self.addCleanup(fake.restore_nodes)
         self.start_service('compute', host='host1')
+        fake.set_nodes(['host2'])
+        self.addCleanup(fake.restore_nodes)
         self.start_service('compute', host='host2')
 
         self.useFixture(cast_as_call.CastAsCall(self.stubs))
@@ -82,20 +94,26 @@ class TestRetryBetweenComputeNodeBuilds(test.TestCase):
         self.failed_host = None
         self.attempts = 0
 
-        def fake_claim_init(_self, ctxt, instance, nodename, tracker,
-                            *args, **kwargs):
+        # We can't stub nova.compute.claims.Claims.__init__ because there is
+        # a race where nova.compute.claims.NopClaim will be used instead,
+        # see for details:
+        #   https://github.com/openstack/nova/blob/bb02d11/nova/compute/
+        #   resource_tracker.py#L121-L130
+        real_instance_claim =\
+                nova.compute.resource_tracker.ResourceTracker.instance_claim
+
+        def fake_instance_claim(_self, *args, **kwargs):
             self.attempts += 1
             if self.failed_host is None:
-                # Set the failed_host value to the
-                # ResourceTracker.host value.
-                self.failed_host = tracker.host
+                # Set the failed_host value to the ResourceTracker.host value.
+                self.failed_host = _self.host
                 raise exception.ComputeResourcesUnavailable(
-                    reason='failure on host %s' % tracker.host)
-            # We have to set this since we are stubbing out Claim.__init__
-            # and self.claimed_numa_topology is set in the parent class' init.
-            _self.claimed_numa_topology = None
+                    reason='failure on host %s' % _self.host)
+            return real_instance_claim(_self, *args, **kwargs)
 
-        self.stub_out('nova.compute.claims.Claim.__init__', fake_claim_init)
+        self.stub_out(
+            'nova.compute.resource_tracker.ResourceTracker.instance_claim',
+            fake_instance_claim)
 
     def _wait_for_instance_status(self, server_id, status):
         timeout = 0.0
@@ -130,7 +148,7 @@ class TestRetryBetweenComputeNodeBuilds(test.TestCase):
 
         # Assert that the host is not the failed host.
         self.assertNotEqual(self.failed_host,
-                            server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
+                            server['OS-EXT-SRV-ATTR:host'])
 
         # Assert that we retried.
         self.assertEqual(2, self.attempts)
