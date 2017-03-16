@@ -184,9 +184,9 @@ class KeypairsTestV21(test.TestCase):
     def test_keypair_import_quota_limit(self):
 
         def fake_quotas_count(self, context, resource, *args, **kwargs):
-            return 100
+            return {'user': {'key_pairs': 100}}
 
-        self.stubs.Set(QUOTAS, "count", fake_quotas_count)
+        self.stubs.Set(QUOTAS, "count_as_dict", fake_quotas_count)
 
         body = {
             'keypair': {
@@ -210,9 +210,9 @@ class KeypairsTestV21(test.TestCase):
     def test_keypair_create_quota_limit(self):
 
         def fake_quotas_count(self, context, resource, *args, **kwargs):
-            return 100
+            return {'user': {'key_pairs': 100}}
 
-        self.stubs.Set(QUOTAS, "count", fake_quotas_count)
+        self.stubs.Set(QUOTAS, "count_as_dict", fake_quotas_count)
 
         body = {
             'keypair': {
