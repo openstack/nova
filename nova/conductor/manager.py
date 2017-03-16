@@ -911,9 +911,10 @@ class ComputeTaskManager(base.Base):
         for (build_request, request_spec, host) in six.moves.zip(
                 build_requests, request_specs, hosts):
             filter_props = request_spec.to_legacy_filter_properties_dict()
+            instance = build_request.get_new_instance(context)
+            scheduler_utils.populate_retry(filter_props, instance.uuid)
             scheduler_utils.populate_filter_properties(filter_props,
                                                        host)
-            instance = build_request.get_new_instance(context)
 
             # Convert host from the scheduler into a cell record
             if host['host'] not in host_mapping_cache:
