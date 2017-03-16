@@ -15,6 +15,7 @@
 import datetime
 
 import iso8601
+from oslo_config import cfg
 
 from nova.api.openstack.compute import availability_zone as az_v21
 from nova.api.openstack.compute import extension_info
@@ -30,7 +31,6 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.image import fake
 from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_service
-from oslo_config import cfg
 
 FAKE_UUID = fakes.FAKE_UUID
 

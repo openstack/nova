@@ -16,6 +16,7 @@
 from cinderclient import exceptions as cinder_exception
 from keystoneclient import exceptions as keystone_exception
 import mock
+from oslo_utils import timeutils
 
 import nova.conf
 from nova import context
@@ -24,8 +25,6 @@ from nova import test
 from nova.tests.unit.fake_instance import fake_instance_obj
 from nova.tests import uuidsentinel as uuids
 from nova.volume import cinder
-
-from oslo_utils import timeutils
 
 CONF = nova.conf.CONF
 

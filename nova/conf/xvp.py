@@ -13,9 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.conf import paths
-
 from oslo_config import cfg
+
+from nova.conf import paths
 
 xvp_group = cfg.OptGroup(
     'xvp',

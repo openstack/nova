@@ -11,6 +11,7 @@
 #    under the License.
 
 import mock
+from oslo_serialization import jsonutils
 import six
 import testscenarios
 import webob
@@ -24,7 +25,6 @@ from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import matchers
 from nova.tests.unit import utils
-from oslo_serialization import jsonutils
 
 
 class MicroversionedTest(testscenarios.WithScenarios, test.NoDBTestCase):

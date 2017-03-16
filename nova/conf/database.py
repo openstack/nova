@@ -13,10 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.conf import paths
-
 from oslo_config import cfg
 from oslo_db import options as oslo_db_options
+
+from nova.conf import paths
 
 _DEFAULT_SQL_CONNECTION = 'sqlite:///' + paths.state_path_def('nova.sqlite')
 

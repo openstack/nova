@@ -18,11 +18,11 @@ import logging as py_logging
 import os
 import os.path
 
+from oslo_log import log as logging
+
 from nova.api.openstack.placement import deploy
 from nova import conf
 from nova import config
-
-from oslo_log import log as logging
 
 CONFIG_FILE = 'nova.conf'
 
