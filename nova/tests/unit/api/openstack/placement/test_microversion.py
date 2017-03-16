@@ -16,6 +16,7 @@ import collections
 import operator
 
 import mock
+import webob
 
 # import the handlers to load up handler decorators
 import nova.api.openstack.placement.handler  # noqa
@@ -106,3 +107,23 @@ class TestMicroversionIntersection(test.NoDBTestCase):
             self.assertFalse(
                 self._check_intersection(method_info),
                 'method %s has intersecting versioned handlers' % method_name)
+
+
+class TestMicroversionUtility(test.NoDBTestCase):
+
+    req = webob.Request.blank('/', method="GET")
+    req.accept = 'application/json'
+
+    def test_raise_405_out_of_date_version(self):
+        version_obj = microversion.parse_version_string('1.4')
+        self.req.environ['placement.microversion'] = version_obj
+        self.assertRaises(webob.exc.HTTPMethodNotAllowed,
+             microversion.raise_http_status_code_if_not_version,
+             self.req, 405, (1, 5))
+
+    def test_raise_keyerror_out_of_date_version(self):
+        version_obj = microversion.parse_version_string('1.4')
+        self.req.environ['placement.microversion'] = version_obj
+        self.assertRaises(KeyError,
+             microversion.raise_http_status_code_if_not_version,
+             self.req, 999, (1, 5))

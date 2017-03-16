@@ -169,8 +169,9 @@ compared as such or there is a ``matches`` method.
 In other cases there are some helper methods in the microversion
 package:
 
-* The ``raise_404_if_not_version`` utility will cause a 404 if the
-  requested microversion is not within a described version window.
+* The ``raise_http_status_code_if_not_version`` utility will raise a
+  http status code if the requested microversion is not within a
+  described version window.
 * The ``version_handler`` decorator makes it possible to have
   multiple different handler methods of the same (fully-qualified by
   package) name, each available for a different microversion window.
