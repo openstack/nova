@@ -4,7 +4,7 @@
  Compute services (os-services)
 ================================
 
-Lists all running Compute services for a tenant, enables or disables
+Lists all running Compute services in a region, enables or disables
 scheduling for a Compute service, logs disabled Compute service
 information, and deletes a Compute service.
 
