@@ -271,7 +271,9 @@ Request
 Response
 --------
 
-If successful, this method does not return content in the response body.
+.. rest_parameters:: parameters.yaml
+
+  - image_location: image_location
 
 
 Lock Server (lock Action)

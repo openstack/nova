@@ -55,8 +55,9 @@ Request
 Response
 --------
 
-If successful, the header 'Location' : <image location URL>
-will be returned. No response body is returned.
+.. rest_parameters:: parameters.yaml
+
+  - image_location: image_location
 
 
 Inject Network Information (injectNetworkInfo Action)
