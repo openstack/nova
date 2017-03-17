@@ -62,6 +62,7 @@ class WrapExceptionTestCase(test.NoDBTestCase):
         self.assertEqual(3, notifier.provided_payload['args']['extra'])
         for key in ['exception', 'args']:
             self.assertIn(key, notifier.provided_payload.keys())
+        self.assertNotIn('context', notifier.provided_payload['args'].keys())
 
 
 class NovaExceptionTestCase(test.NoDBTestCase):

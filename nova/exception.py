@@ -97,6 +97,10 @@ def wrap_exception(notifier=None, get_notifier=None):
                         # self can't be serialized and shouldn't be in the
                         # payload
                         call_dict.pop('self', None)
+                        # NOTE(gibi) remove context as well as it contains
+                        # sensitive information and it can also contain
+                        # circular references
+                        call_dict.pop('context', None)
                         cleansed = _cleanse_dict(call_dict)
                         payload.update({'args': cleansed})
 
