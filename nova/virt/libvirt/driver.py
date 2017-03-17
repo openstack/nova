@@ -4080,6 +4080,19 @@ class LibvirtDriver(driver.ComputeDriver):
         guest_arch = libvirt_utils.get_arch(image_meta)
 
         if CONF.serial_console.enabled:
+            try:
+                # TODO(sahid): the guest param of this method should
+                # be renamed as guest_cfg then guest_obj to guest.
+                guest_obj = self._host.get_guest(instance)
+                if list(self._get_serial_ports_from_guest(guest_obj)):
+                    # Serial port are already configured for instance that
+                    # means we are in a context of migration.
+                    return
+            except exception.InstanceNotFound:
+                LOG.debug(
+                    "Instance does not exist yet on libvirt, we can "
+                    "safely pass on looking for already defined serial "
+                    "ports in its domain XML", instance=instance)
             num_ports = hardware.get_number_of_serial_ports(
                 flavor, image_meta)
 
@@ -5950,12 +5963,25 @@ class LibvirtDriver(driver.ComputeDriver):
                     libvirt.VIR_MIGRATE_TUNNELLED != 0):
                     params.pop('migrate_disks')
 
+            # TODO(sahid): This should be in
+            # post_live_migration_at_source but no way to retrieve
+            # ports acquired on the host for the guest at this
+            # step. Since the domain is going to be removed from
+            # libvird on source host after migration, we backup the
+            # serial ports to release them if all went well.
+            serial_ports = []
+            if CONF.serial_console.enabled:
+                serial_ports = list(self._get_serial_ports_from_guest(guest))
+
             guest.migrate(self._live_migration_uri(dest),
                           migrate_uri=migrate_uri,
                           flags=migration_flags,
                           params=params,
                           domain_xml=new_xml_str,
                           bandwidth=CONF.libvirt.live_migration_bandwidth)
+
+            for hostname, port in serial_ports:
+                serial_console.release_port(host=hostname, port=port)
         except Exception as e:
             with excutils.save_and_reraise_exception():
                 LOG.error(_LE("Live Migration failure: %s"), e,
@@ -6448,6 +6474,13 @@ class LibvirtDriver(driver.ComputeDriver):
             is_shared_instance_path = True
             if migrate_data:
                 is_shared_instance_path = migrate_data.is_shared_instance_path
+                if (migrate_data.obj_attr_is_set("serial_listen_ports")
+                    and migrate_data.serial_listen_ports):
+                    # Releases serial ports reserved.
+                    for port in migrate_data.serial_listen_ports:
+                        serial_console.release_port(
+                            host=migrate_data.serial_listen_addr, port=port)
+
             if not is_shared_instance_path:
                 instance_dir = libvirt_utils.get_instance_path_at_destination(
                     instance, migrate_data)
@@ -6578,6 +6611,15 @@ class LibvirtDriver(driver.ComputeDriver):
         migrate_data.target_connect_addr = \
             CONF.libvirt.live_migration_inbound_addr
         migrate_data.supported_perf_events = self._supported_perf_events
+
+        migrate_data.serial_listen_ports = []
+        if CONF.serial_console.enabled:
+            num_ports = hardware.get_number_of_serial_ports(
+                instance.flavor, instance.image_meta)
+            for port in six.moves.range(num_ports):
+                migrate_data.serial_listen_ports.append(
+                    serial_console.acquire_port(
+                        migrate_data.serial_listen_addr))
 
         for vol in block_device_mapping:
             connection_info = vol['connection_info']

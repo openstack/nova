@@ -3588,15 +3588,21 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(cfg.devices[5].type, "spice")
         self.assertEqual(cfg.devices[6].type, "qxl")
 
+    @mock.patch.object(host.Host, 'get_guest')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_get_serial_ports_from_guest')
     @mock.patch('nova.console.serial.acquire_port')
     @mock.patch('nova.virt.hardware.get_number_of_serial_ports',
                 return_value=1)
     @mock.patch.object(libvirt_driver.libvirt_utils, 'get_arch',)
     def test_create_serial_console_devices_based_on_arch(self, mock_get_arch,
-                                           mock_get_port_number,
-                                           mock_acquire_port):
+                                                         mock_get_port_number,
+                                                         mock_acquire_port,
+                                                         mock_ports,
+                                                         mock_guest):
         self.flags(enabled=True, group='serial_console')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance = objects.Instance(**self.test_instance)
 
         expected = {arch.X86_64: vconfig.LibvirtConfigGuestSerial,
                     arch.S390: vconfig.LibvirtConfigGuestConsole,
@@ -3605,19 +3611,22 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         for guest_arch, device_type in expected.items():
             mock_get_arch.return_value = guest_arch
             guest = vconfig.LibvirtConfigGuest()
-            drvr._create_serial_console_devices(guest, instance=None,
+            drvr._create_serial_console_devices(guest, instance=instance,
                                                 flavor={}, image_meta={})
             self.assertEqual(1, len(guest.devices))
             console_device = guest.devices[0]
             self.assertIsInstance(console_device, device_type)
             self.assertEqual("tcp", console_device.type)
 
+    @mock.patch.object(host.Host, 'get_guest')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_get_serial_ports_from_guest')
     @mock.patch('nova.virt.hardware.get_number_of_serial_ports',
                 return_value=4)
     @mock.patch.object(libvirt_driver.libvirt_utils, 'get_arch',
                        side_effect=[arch.X86_64, arch.S390, arch.S390X])
     def test_create_serial_console_devices_with_limit_exceeded_based_on_arch(
-            self, mock_get_arch, mock_get_port_number):
+            self, mock_get_arch, mock_get_port_number, mock_ports, mock_guest):
         self.flags(enabled=True, group='serial_console')
         self.flags(virt_type="qemu", group='libvirt')
         flavor = 'fake_flavor'
@@ -7841,24 +7850,27 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 drvr._get_volume_config)
             self.assertEqual(target_xml, config)
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_get_serial_ports_from_guest')
     @mock.patch.object(fakelibvirt.virDomain, "migrateToURI2")
     @mock.patch.object(fakelibvirt.virDomain, "XMLDesc")
     def test_live_migration_update_serial_console_xml(self, mock_xml,
-                                                      mock_migrate):
+                                                      mock_migrate, mock_get):
         self.compute = importutils.import_object(CONF.compute_manager)
         instance_ref = self.test_instance
 
         xml_tmpl = ("<domain type='kvm'>"
                     "<devices>"
                     "<console type='tcp'>"
-                    "<source mode='bind' host='{addr}' service='10000'/>"
+                    "<source mode='bind' host='{addr}' service='{port}'/>"
+                    "<target type='serial' port='0'/>"
                     "</console>"
                     "</devices>"
                     "</domain>")
 
-        initial_xml = xml_tmpl.format(addr='9.0.0.1')
+        initial_xml = xml_tmpl.format(addr='9.0.0.1', port='10100')
 
-        target_xml = xml_tmpl.format(addr='9.0.0.12')
+        target_xml = xml_tmpl.format(addr='9.0.0.12', port='10200')
         target_xml = etree.tostring(etree.fromstring(target_xml))
 
         # Preparing mocks
@@ -7873,7 +7885,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             serial_listen_addr='9.0.0.12',
             target_connect_addr=None,
             bdms=[],
-            block_migration=False)
+            block_migration=False,
+            serial_listen_ports=[10200])
         dom = fakelibvirt.virDomain
         guest = libvirt_guest.Guest(dom)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
