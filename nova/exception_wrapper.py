@@ -86,6 +86,9 @@ def _get_call_dict(function, self, context, *args, **kw):
     # self can't be serialized and shouldn't be in the
     # payload
     call_dict.pop('self', None)
+    # NOTE(gibi) remove context as well as it contains sensitive information
+    # and it can also contain circular references
+    call_dict.pop('context', None)
     return _cleanse_dict(call_dict)
 
 
