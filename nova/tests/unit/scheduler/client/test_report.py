@@ -1529,6 +1529,7 @@ class TestAllocations(SchedulerReportClientTestCase):
     @mock.patch("nova.objects.InstanceList.get_by_host_and_node")
     def test_delete_resource_provider_cascade(self, mock_by_host,
             mock_del_alloc, mock_delete):
+        self.client._resource_providers[uuids.cn] = mock.Mock()
         cn = objects.ComputeNode(uuid=uuids.cn, host="fake_host",
                 hypervisor_hostname="fake_hostname", )
         inst1 = objects.Instance(uuid=uuids.inst1)
@@ -1541,6 +1542,7 @@ class TestAllocations(SchedulerReportClientTestCase):
         self.assertEqual(2, mock_del_alloc.call_count)
         exp_url = "/resource_providers/%s" % uuids.cn
         mock_delete.assert_called_once_with(exp_url)
+        self.assertNotIn(uuids.cn, self.client._resource_providers)
 
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
                 "delete")
@@ -1549,6 +1551,7 @@ class TestAllocations(SchedulerReportClientTestCase):
     @mock.patch("nova.objects.InstanceList.get_by_host_and_node")
     def test_delete_resource_provider_no_cascade(self, mock_by_host,
             mock_del_alloc, mock_delete):
+        self.client._provider_aggregate_map[uuids.cn] = mock.Mock()
         cn = objects.ComputeNode(uuid=uuids.cn, host="fake_host",
                 hypervisor_hostname="fake_hostname", )
         inst1 = objects.Instance(uuid=uuids.inst1)
@@ -1561,6 +1564,7 @@ class TestAllocations(SchedulerReportClientTestCase):
         mock_del_alloc.assert_not_called()
         exp_url = "/resource_providers/%s" % uuids.cn
         mock_delete.assert_called_once_with(exp_url)
+        self.assertNotIn(uuids.cn, self.client._provider_aggregate_map)
 
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
                 "delete")
