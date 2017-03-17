@@ -269,6 +269,20 @@ volume_id_path:
   type: string
 
 # variables in query
+access_ip_v4_query_server:
+  in: query
+  required: false
+  type: string
+  description: |
+    Filter server list result by IPv4 address that should be used
+    to access the server.
+access_ip_v6_query_server:
+  in: query
+  required: false
+  type: string
+  description: |
+    Filter server list result by IPv6 address that should be used
+    to access the server.
 all_projects:
   description: |
     Administrator only. Lists server groups for all projects. For example:
@@ -295,6 +309,12 @@ all_tenants_query:
   in: query
   required: false
   type: integer
+availability_zone_query_server:
+  description: |
+    Filter the server list result by server availability zone.
+  in: query
+  required: false
+  type: string
 changes-since:
   description: |
     Filters the response by a date and time when the image last changed status.
@@ -335,6 +355,27 @@ changes_since_server:
   in: query
   required: false
   type: string
+config_drive_query_server:
+  description: |
+    Filter the server list result by the config drive setting of the server.
+  in: query
+  required: false
+  type: boolean
+created_at_query_server:
+  description: |
+    Filter the server list result by a date and time stamp when server was created.
+
+    The date and time stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:
+    ::
+
+       CCYY-MM-DDThh:mm:ss±hh:mm
+
+    The ``±hh:mm`` value, if included, returns the time zone as an offset from UTC.
+    For example, ``2015-08-27T09:49:58-05:00``.
+    If you omit the time zone, the UTC time zone is assumed.
+  in: query
+  required: false
+  type: string
 delete_info:
   description: |
     Information for snapshot deletion. Include the ID of the associated volume. For
@@ -355,6 +396,18 @@ deleted_query:
     be accessible via the backend database, however there is no
     contract on how long, so this parameter should be used with
     caution. It is typically only available to administrators.
+description_query_server:
+  description: |
+    Filter the server list result by description.
+
+    .. note::
+
+       ``display_description`` can also be requested which is alias of
+       ``description`` but that is not recommended to use as that will
+       be removed in future.
+  in: query
+  required: false
+  type: string
 detailed_simple_tenant_usage:
   description: |
     Specify the ``detailed=1`` query parameter to get detail information
@@ -362,6 +415,16 @@ detailed_simple_tenant_usage:
   in: query
   required: false
   type: integer
+disk_config_query_server:
+  description: |
+    Filter the server list result by the ``disk_config`` setting of the server,
+    Valid values are:
+
+    - ``AUTO``
+    - ``MANUAL``
+  in: query
+  required: false
+  type: string
 end_simple_tenant_usage:
   description: |
     The ending time to calculate usage statistics on compute and
@@ -410,6 +473,18 @@ flavor_query:
   in: query
   required: false
   type: string
+host_query_server:
+  description: |
+    Filter the server list result by the host name of compute node. Only allowed for Admin.
+  in: query
+  required: false
+  type: string
+hostname_query_server:
+  description: |
+    Filter the server list result by the host name of server.
+  in: query
+  required: false
+  type: string
 hypervisor_limit:
   description: |
     Requests a page size of items. Returns a number of items up to a limit value.
@@ -444,6 +519,11 @@ image_name_query:
 image_query:
   description: |
     Filters the response by an image, as a UUID.
+
+    .. note::
+
+       'image_ref' can also be requested which is alias of 'image'
+       but that is not recommended to use as that will be removed in future.
   in: query
   required: false
   type: string
@@ -485,6 +565,19 @@ ip_query:
   in: query
   required: false
   type: string
+kernel_id_query_server:
+  in: query
+  required: false
+  type: string
+  description: |
+    Filter the server list result by the UUID of the kernel image
+    when using an AMI.
+key_name_query_server:
+  description: |
+    Filter the server list result by keypair name.
+  in: query
+  required: false
+  type: string
 keypair_limit:
   description: |
     Requests a page size of items. Returns a number of items up to a limit value.
@@ -512,6 +605,27 @@ keypair_user:
     This allows administrative users to operate key-pairs of specified
     user ID.
   min_version: 2.10
+launch_index_query_server:
+  description: |
+    Filter the server list result by the sequence in which the
+    servers were launched.
+  in: query
+  required: false
+  type: string
+launched_at_query_server:
+  description: |
+    Filter the server list result by a date and time stamp when the instance was launched.
+    The date and time stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:
+    ::
+
+       CCYY-MM-DDThh:mm:ss±hh:mm
+
+    The ``±hh:mm`` value, if included, returns the time zone as an offset from UTC.
+    For example, ``2015-08-27T09:49:58-05:00``.
+    If you omit the time zone, the UTC time zone is assumed.
+  in: query
+  required: false
+  type: string
 limit:
   description: |
     Requests a page size of items. Returns a number of items up to a limit value.
@@ -530,6 +644,13 @@ limit_simple:
   in: query
   required: false
   type: integer
+locked_by_query_server:
+  description: |
+    Filter the server list result by who locked the server, possible value
+    could be ``admin``, ``owner`` or ``none``.
+  in: query
+  required: false
+  type: string
 marker:
   description: |
     The ID of the last-seen item. Use the ``limit`` parameter to make an initial limited
@@ -586,6 +707,12 @@ minRam:
   in: query
   required: false
   type: integer
+node_query_server:
+  description: |
+    Filter the server list result by the node. Only allowed for Admin.
+  in: query
+  required: false
+  type: string
 not_tags_any_query:
   in: query
   required: false
@@ -611,6 +738,25 @@ offset_simple:
   in: query
   required: false
   type: integer
+power_state_query_server:
+  in: query
+  required: false
+  type: string
+  description: |
+    Filter the server list result by server power state.
+progress_query_server:
+  description: |
+    Filter the server list result by the progress of the server.
+  in: query
+  required: false
+  type: string
+ramdisk_id_query_server:
+  in: query
+  required: false
+  type: string
+  description: |
+    Filter the server list result by the UUID of the ramdisk image when
+    using an AMI.
 reservation_id_query:
   in: query
   required: false
@@ -624,13 +770,30 @@ server_name_query:
     and bobb. If you must match on only bob, you can use a regular expression that
     matches the syntax of the underlying database server that is implemented for Compute,
     such as MySQL or PostgreSQL.
+
+    .. note::
+
+       'display_name' can also be requested which is alias of 'name'
+       but that is not reccomended to use as that will be removed in future.
   format: regexp
   in: query
   required: false
   type: string
+server_root_device_name_query:
+  in: query
+  required: true
+  type: string
+  description: |
+    Filter the server list result by the root device name of the server
 server_status_query:
   description: |
     Filters the response by a server status, as a string. For example, ``ACTIVE``.
+  in: query
+  required: false
+  type: string
+server_uuid_query:
+  description: |
+    Filter the server list result by the UUID of the server.
   in: query
   required: false
   type: string
@@ -666,7 +829,37 @@ sort_key_server:
     Sorts by a server attribute. Default attribute is ``created``. You can specify
     multiple pairs of sort key and sort direction query parameters. If you omit the
     sort direction in a pair, the API uses the natural sorting direction of the server
-    ``sort_key`` attribute.
+    ``sort_key`` attribute. The sort keys are limited to:
+
+    - ``access_ip_v4``
+    - ``access_ip_v6``
+    - ``auto_disk_config``
+    - ``availability_zone``
+    - ``config_drive``
+    - ``created_at``
+    - ``display_description``
+    - ``display_name``
+    - ``host``
+    - ``hostname``
+    - ``image_ref``
+    - ``instance_type_id``
+    - ``kernel_id``
+    - ``key_name``
+    - ``launch_index``
+    - ``launched_at``
+    - ``locked_by``
+    - ``node``
+    - ``power_state``
+    - ``progress``
+    - ``project_id``
+    - ``ramdisk_id``
+    - ``root_device_name``
+    - ``task_state``
+    - ``terminated_at``
+    - ``updated_at``
+    - ``user_id``
+    - ``uuid``
+    - ``vm_state``
   in: query
   required: false
   type: string
@@ -715,13 +908,23 @@ tags_query:
     all tags in this list will be returned. Boolean expression in this
     case is 't1 AND t2'. Tags in query must be separated by comma.
   min_version: 2.26
-tenant_id_query:
+task_state_query_server:
+  in: query
+  required: false
+  type: string
   description: |
-    When passed alongside the ``all_tenants=1`` query parameter, the
-    ``tenant_id`` query parameter only returns the resources that belong to the
-    specified tenant. By default this is only allowed by admin users. Note that
-    this query parameter has no effect and is ignored unless the
-    ``all_tenants=1`` query parameter is also passed.
+    Filter the server list result by task state.
+terminated_at_query_server:
+  description: |
+    Filter the server list result by a date and time stamp when instance was terminated.
+    The date and time stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:
+    ::
+
+       CCYY-MM-DDThh:mm:ss±hh:mm
+
+    The ``±hh:mm`` value, if included, returns the time zone as an offset from UTC.
+    For example, ``2015-08-27T09:49:58-05:00``.
+    If you omit the time zone, the UTC time zone is assumed.
   in: query
   required: false
   type: string
@@ -756,9 +959,21 @@ user_id_query_quota_delete:
   in: query
   required: false
   type: string
+user_id_query_server:
+  description: |
+    Filter the list of servers by the given user ID.
+  in: query
+  required: false
+  type: string
 user_id_query_set_quota:
   description: |
     ID of user to set the quotas for.
+  in: query
+  required: false
+  type: string
+vm_state_query_server:
+  description: |
+    Filter the server list result by vm state.
   in: query
   required: false
   type: string
@@ -3682,6 +3897,17 @@ project_id_instance_action:
     The UUID of the project that this server belongs to.
   in: body
   required: ture
+  type: string
+project_id_query_server:
+  description: |
+    Filter the list of servers by the given project ID.
+
+    .. note::
+
+       'tenant_id' can also be requested which is alias of 'project_id'
+       but that is not recommended to use as that will be removed in future.
+  in: body
+  required: false
   type: string
 project_id_server_group:
   description: |
