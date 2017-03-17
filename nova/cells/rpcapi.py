@@ -328,8 +328,7 @@ class CellsAPI(object):
         return cctxt.call(ctxt, 'proxy_rpc_to_manager',
                           topic=topic,
                           rpc_message=rpc_message,
-                          call=call,
-                          timeout=timeout)
+                          call=call)
 
     def task_log_get_all(self, ctxt, task_name, period_beginning,
                          period_ending, host=None, state=None):
