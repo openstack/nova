@@ -664,8 +664,7 @@ class RPCFixture(fixtures.Fixture):
             self._buses[url] = messaging.get_transport(
                 CONF,
                 url=url,
-                allowed_remote_exmods=exmods,
-                aliases=rpc.TRANSPORT_ALIASES)
+                allowed_remote_exmods=exmods)
         return self._buses[url]
 
     def setUp(self):

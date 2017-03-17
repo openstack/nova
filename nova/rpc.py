@@ -23,7 +23,6 @@ __all__ = [
     'get_client',
     'get_server',
     'get_notifier',
-    'TRANSPORT_ALIASES',
 ]
 
 import functools
@@ -57,25 +56,13 @@ ALLOWED_EXMODS = [
 ]
 EXTRA_EXMODS = []
 
-# NOTE(markmc): The nova.openstack.common.rpc entries are for backwards compat
-# with Havana rpc_backend configuration values. The nova.rpc entries are for
-# compat with Essex values.
-TRANSPORT_ALIASES = {
-    'nova.openstack.common.rpc.impl_kombu': 'rabbit',
-    'nova.openstack.common.rpc.impl_qpid': 'qpid',
-    'nova.openstack.common.rpc.impl_zmq': 'zmq',
-    'nova.rpc.impl_kombu': 'rabbit',
-    'nova.rpc.impl_qpid': 'qpid',
-    'nova.rpc.impl_zmq': 'zmq',
-}
-
 
 def init(conf):
     global TRANSPORT, NOTIFICATION_TRANSPORT, LEGACY_NOTIFIER, NOTIFIER
     exmods = get_allowed_exmods()
     TRANSPORT = create_transport(get_transport_url())
     NOTIFICATION_TRANSPORT = messaging.get_notification_transport(
-        conf, allowed_remote_exmods=exmods, aliases=TRANSPORT_ALIASES)
+        conf, allowed_remote_exmods=exmods)
     serializer = RequestContextSerializer(JsonPayloadSerializer())
     if conf.notifications.notification_format == 'unversioned':
         LEGACY_NOTIFIER = messaging.Notifier(NOTIFICATION_TRANSPORT,
@@ -182,7 +169,7 @@ class ProfilerRequestContextSerializer(RequestContextSerializer):
 
 
 def get_transport_url(url_str=None):
-    return messaging.TransportURL.parse(CONF, url_str, TRANSPORT_ALIASES)
+    return messaging.TransportURL.parse(CONF, url_str)
 
 
 def get_client(target, version_cap=None, serializer=None):
@@ -232,8 +219,7 @@ def create_transport(url):
     exmods = get_allowed_exmods()
     return messaging.get_transport(CONF,
                                    url=url,
-                                   allowed_remote_exmods=exmods,
-                                   aliases=TRANSPORT_ALIASES)
+                                   allowed_remote_exmods=exmods)
 
 
 class LegacyValidatingNotifier(object):

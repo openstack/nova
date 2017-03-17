@@ -179,8 +179,7 @@ class TestRPC(testtools.TestCase):
         url = rpc.get_transport_url(url_str='bar')
 
         self.assertEqual('foo', url)
-        mock_url.parse.assert_called_once_with(conf, 'bar',
-                                               rpc.TRANSPORT_ALIASES)
+        mock_url.parse.assert_called_once_with(conf, 'bar')
 
     @mock.patch.object(messaging, 'TransportURL')
     def test_get_transport_url_null(self, mock_url):
@@ -191,8 +190,7 @@ class TestRPC(testtools.TestCase):
         url = rpc.get_transport_url()
 
         self.assertEqual('foo', url)
-        mock_url.parse.assert_called_once_with(conf, None,
-                                               rpc.TRANSPORT_ALIASES)
+        mock_url.parse.assert_called_once_with(conf, None)
 
     @mock.patch.object(rpc, 'profiler', None)
     @mock.patch.object(rpc, 'RequestContextSerializer')
@@ -314,8 +312,7 @@ class TestRPC(testtools.TestCase):
         mock_exmods.assert_called_once_with()
         mock_transport.assert_called_once_with(rpc.CONF,
                                                url=mock.sentinel.url,
-                                               allowed_remote_exmods=exmods,
-                                               aliases=rpc.TRANSPORT_ALIASES)
+                                               allowed_remote_exmods=exmods)
 
     def _test_init(self, mock_notif, mock_noti_trans, mock_ser,
                    mock_exmods, notif_format, expected_driver_topic_kwargs,

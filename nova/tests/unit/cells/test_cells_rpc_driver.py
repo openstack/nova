@@ -89,8 +89,7 @@ class CellsRPCDriverTestCase(test.NoDBTestCase):
         # first call to _get_transport creates a oslo.messaging.Transport obj
         with mock.patch.object(oslo_messaging, 'get_transport') as get_trans:
             transport = rpcapi._get_transport(next_hop)
-            get_trans.assert_called_once_with(rpc_driver.CONF, transport_url,
-                                              rpc.TRANSPORT_ALIASES)
+            get_trans.assert_called_once_with(rpc_driver.CONF, transport_url)
             self.assertIn(transport_url, rpcapi.transports)
             self.assertEqual(transport, rpcapi.transports[transport_url])
 
