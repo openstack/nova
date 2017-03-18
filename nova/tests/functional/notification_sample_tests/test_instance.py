@@ -76,6 +76,7 @@ class TestInstanceNotificationSample(
             self._test_resize_server,
             self._test_snapshot_server,
             self._test_rebuild_server,
+            self._test_reboot_server,
         ]
 
         for action in actions:
@@ -625,6 +626,26 @@ class TestInstanceNotificationSample(
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
         self.flags(reclaim_instance_interval=0)
+
+    def _test_reboot_server(self, server):
+        post = {'reboot': {'type': 'HARD'}}
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_notification('instance.reboot.start')
+        self._wait_for_notification('instance.reboot.end')
+
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-reboot-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-reboot-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
     def _attach_volume_to_server(self, server, volume_id):
         self.api.post_server_volume(

@@ -2990,6 +2990,11 @@ class ComputeManager(manager.Manager):
         network_info = self.network_api.get_instance_nw_info(context, instance)
 
         self._notify_about_instance_usage(context, instance, "reboot.start")
+        compute_utils.notify_about_instance_action(
+            context, instance, self.host,
+            action=fields.NotificationAction.REBOOT,
+            phase=fields.NotificationPhase.START
+        )
 
         instance.power_state = self._get_power_state(context, instance)
         instance.save(expected_task_state=expected_states)
@@ -3057,6 +3062,11 @@ class ComputeManager(manager.Manager):
                         instance=instance)
 
         self._notify_about_instance_usage(context, instance, "reboot.end")
+        compute_utils.notify_about_instance_action(
+            context, instance, self.host,
+            action=fields.NotificationAction.REBOOT,
+            phase=fields.NotificationPhase.END
+        )
 
     @delete_image_on_error
     def _do_snapshot_instance(self, context, image_id, instance):
