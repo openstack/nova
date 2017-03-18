@@ -3018,6 +3018,9 @@ class ComputeTestCase(BaseTestCase):
             if fail_running:
                 notify_call_list.append(mock.call(econtext, instance,
                                                   'reboot.error', fault=fault))
+                notify_action_call_list.append(
+                    mock.call(econtext, instance, 'fake-mini',
+                              action='reboot', phase='error', exception=fault))
             notify_call_list.append(mock.call(econtext, instance,
                                               'reboot.end'))
             notify_action_call_list.append(

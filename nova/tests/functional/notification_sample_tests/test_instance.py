@@ -77,6 +77,7 @@ class TestInstanceNotificationSample(
             self._test_snapshot_server,
             self._test_rebuild_server,
             self._test_reboot_server,
+            self._test_reboot_server_error,
         ]
 
         for action in actions:
@@ -642,6 +643,29 @@ class TestInstanceNotificationSample(
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
         self._verify_notification(
             'instance-reboot-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
+    @mock.patch('nova.virt.fake.SmallFakeDriver.reboot')
+    def _test_reboot_server_error(self, server, mock_reboot):
+        def _hard_reboot(*args, **kwargs):
+            raise exception.UnsupportedVirtType(virt="FakeVirt")
+        mock_reboot.side_effect = _hard_reboot
+        post = {'reboot': {'type': 'HARD'}}
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_notification('instance.reboot.start')
+        self._wait_for_notification('instance.reboot.error')
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-reboot-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-reboot-error',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},

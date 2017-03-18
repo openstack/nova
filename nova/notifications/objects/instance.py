@@ -241,6 +241,7 @@ class InstanceStateUpdatePayload(base.NotificationPayloadBase):
 @base.notification_sample('instance-power_off-end.json')
 @base.notification_sample('instance-reboot-start.json')
 @base.notification_sample('instance-reboot-end.json')
+@base.notification_sample('instance-reboot-error.json')
 @base.notification_sample('instance-shutdown-start.json')
 @base.notification_sample('instance-shutdown-end.json')
 @base.notification_sample('instance-snapshot-start.json')
