@@ -296,8 +296,8 @@ class FlavorsTestV21(test.TestCase):
                         matchers.DictMatches(params))
 
     def test_get_flavor_with_default_limit(self):
-        self.stubs.Set(common, "get_limit_and_marker",
-                       fake_get_limit_and_marker)
+        self.stub_out('nova.api.openstack.common.get_limit_and_marker',
+                      fake_get_limit_and_marker)
         self.flags(max_limit=1, group='api')
         req = fakes.HTTPRequest.blank('/v2/fake/flavors?limit=2')
         response = self.controller.index(req)
