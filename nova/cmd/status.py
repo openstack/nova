@@ -28,6 +28,7 @@ import traceback
 from keystoneauth1 import exceptions as ks_exc
 from keystoneauth1 import loading as keystone
 from oslo_config import cfg
+import pkg_resources
 import prettytable
 from sqlalchemy import func as sqlfunc
 from sqlalchemy import MetaData, Table, select
@@ -200,10 +201,11 @@ class UpgradeCommands(object):
         """
         try:
             versions = self._placement_get("/")
-            max_version = float(versions["versions"][0]["max_version"])
+            max_version = pkg_resources.parse_version(
+                versions["versions"][0]["max_version"])
             # NOTE(rpodolyaka): 1.4 is needed in Pike and further as
             # FilterScheduler will no longer fall back to not using placement
-            needs_version = 1.4
+            needs_version = pkg_resources.parse_version("1.4")
             if max_version < needs_version:
                 msg = (_('Placement API version %(needed)s needed, '
                          'you have %(current)s.') %

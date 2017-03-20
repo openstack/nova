@@ -219,6 +219,26 @@ class TestPlacementCheck(test.NoDBTestCase):
         self.assertEqual(status.UpgradeCheckCode.SUCCESS, res.code)
 
     @mock.patch.object(status.UpgradeCommands, "_placement_get")
+    def test_version_comparison_does_not_use_floats(self, get):
+        # NOTE(rpodolyaka): previously _check_placement() coerced the version
+        # numbers to floats prior to comparison, that would lead to failures
+        # in cases like float('1.10') < float('1.4'). As we require 1.4+ now,
+        # the _check_placement() call below will assert that version comparison
+        # continues to work correctly when Placement API versions 1.10
+        # (or newer) is released
+        get.return_value = {
+             "versions": [
+                {
+                    "min_version": "1.0",
+                    "max_version": "1.10",
+                    "id": "v1.0"
+                }
+            ]
+        }
+        res = self.cmd._check_placement()
+        self.assertEqual(status.UpgradeCheckCode.SUCCESS, res.code)
+
+    @mock.patch.object(status.UpgradeCommands, "_placement_get")
     def test_invalid_version(self, get):
         get.return_value = {
             "versions": [
