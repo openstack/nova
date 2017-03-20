@@ -4,3 +4,5 @@ upgrade:
     placement service during instance boot if old computes were
     running. That compatibility mode is no longer present in Pike, and
     as such, the scheduler fully depends on the placement service.
+    This effectively means that in Pike Nova requires Placement API
+    version 1.4 (Ocata).

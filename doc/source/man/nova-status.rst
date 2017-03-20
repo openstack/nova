@@ -95,6 +95,11 @@ Upgrade
     Placement service. More information on the Placement service can be found
     at: `<http://docs.openstack.org/developer/nova/placement.html>`_
 
+  **16.0.0 (Pike)**
+
+  * Checks for the Placement API are modified to require version 1.4, that
+    is needed in Pike and further for nova-scheduler to work correctly.
+
 
 SEE ALSO
 ========
