@@ -36,6 +36,7 @@ from nova import test
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_pci_device as fake_pci_device
 from nova.tests import uuidsentinel as uuids
+from nova.virt import driver
 
 _HOSTNAME = 'fake-host'
 _NODENAME = 'fake-node'
@@ -431,7 +432,7 @@ def setup_rt(hostname, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES,
     """
     sched_client_mock = mock.MagicMock()
     notifier_mock = mock.MagicMock()
-    vd = mock.MagicMock(autospec='nova.virt.driver.ComputeDriver')
+    vd = mock.MagicMock(autospec=driver.ComputeDriver)
     # Make sure we don't change any global fixtures during tests
     virt_resources = copy.deepcopy(virt_resources)
     vd.get_available_resource.return_value = virt_resources

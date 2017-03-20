@@ -45,6 +45,7 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 from oslo_versionedobjects import fixture as ovo_fixture
+from oslotest import mock_fixture
 from oslotest import moxstubout
 import six
 import testtools
@@ -330,6 +331,7 @@ class TestCase(testtools.TestCase):
 
         # NOTE(mikal): make sure we don't load a privsep helper accidentally
         self.useFixture(nova_fixtures.PrivsepNoHelperFixture())
+        self.useFixture(mock_fixture.MockAutospecFixture())
 
     def _setup_cells(self):
         """Setup a normal cellsv2 environment.

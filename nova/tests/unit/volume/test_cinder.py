@@ -17,6 +17,7 @@ from cinderclient import api_versions as cinder_api_versions
 from cinderclient import exceptions as cinder_exception
 from cinderclient.v2 import limits as cinder_limits
 from keystoneauth1 import loading as ks_loading
+from keystoneauth1 import session
 from keystoneclient import exceptions as keystone_exception
 import mock
 from oslo_utils import timeutils
@@ -988,8 +989,7 @@ class CinderClientTestCase(test.NoDBTestCase):
         cinder.reset_globals()
         self.ctxt = context.RequestContext('fake-user', 'fake-project')
         # Mock out the keystoneauth stuff.
-        self.mock_session = mock.Mock(
-            autospec='keystoneauth1.loading.session.Session')
+        self.mock_session = mock.Mock(autospec=session.Session)
         load_session = mock.patch('keystoneauth1.loading.'
                                   'load_session_from_conf_options',
                                   return_value=self.mock_session).start()

@@ -25,6 +25,7 @@ from nova import rc_fields as fields
 from nova import test
 from nova.tests.functional.api.openstack.placement import test_report_client
 from nova.tests import uuidsentinel as uuids
+from nova.virt import driver as virt_driver
 
 CONF = conf.CONF
 VCPU = fields.ResourceClass.VCPU
@@ -143,7 +144,7 @@ class IronicResourceTrackerTest(test.TestCase):
         self.app = lambda: deploy.loadapp(CONF)
         self.report_client = test_report_client.NoAuthReportClient()
 
-        driver = mock.MagicMock(autospec='nova.virt.driver.ComputeDriver')
+        driver = mock.MagicMock(autospec=virt_driver.ComputeDriver)
         driver.node_is_available.return_value = True
         self.driver_mock = driver
         self.rt = resource_tracker.ResourceTracker(COMPUTE_HOST, driver)
