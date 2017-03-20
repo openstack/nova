@@ -1484,6 +1484,12 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertEqual('Cell with uuid %s was not found.' % cell_uuid,
                          output)
 
+    def test_delete_cell_cell0(self):
+        cell_uuid = objects.CellMapping.CELL0_UUID
+        self.assertEqual(5, self.commands.delete_cell(cell_uuid))
+        output = self.output.getvalue().strip()
+        self.assertEqual('Cell 0 can not be deleted.', output)
+
     def test_delete_cell_host_mappings_exist(self):
         """Tests trying to delete a cell which has host mappings."""
         cell_uuid = uuidutils.generate_uuid()
