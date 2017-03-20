@@ -55,8 +55,24 @@ class InterfaceAttachmentController(wsgi.Controller):
     @extensions.expected_errors((404, 501))
     def index(self, req, server_id):
         """Returns the list of interface attachments for a given instance."""
-        return self._items(req, server_id,
-            entity_maker=_translate_interface_attachment_view)
+        context = req.environ['nova.context']
+        context.can(ai_policies.BASE_POLICY_NAME)
+
+        instance = common.get_instance(self.compute_api, context, server_id)
+        search_opts = {'device_id': instance.uuid}
+
+        try:
+            data = self.network_api.list_ports(context, **search_opts)
+        except exception.NotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+        except NotImplementedError:
+            common.raise_feature_not_supported()
+
+        ports = data.get('ports', [])
+        entity_maker = _translate_interface_attachment_view
+        results = [entity_maker(port) for port in ports]
+
+        return {'interfaceAttachments': results}
 
     @extensions.expected_errors((403, 404))
     def show(self, req, server_id, id):
@@ -161,26 +177,6 @@ class InterfaceAttachmentController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'detach_interface', server_id)
-
-    def _items(self, req, server_id, entity_maker):
-        """Returns a list of attachments, transformed through entity_maker."""
-        context = req.environ['nova.context']
-        context.can(ai_policies.BASE_POLICY_NAME)
-
-        instance = common.get_instance(self.compute_api, context, server_id)
-        search_opts = {'device_id': instance.uuid}
-
-        try:
-            data = self.network_api.list_ports(context, **search_opts)
-        except exception.NotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
-        except NotImplementedError:
-            common.raise_feature_not_supported()
-
-        ports = data.get('ports', [])
-        results = [entity_maker(port) for port in ports]
-
-        return {'interfaceAttachments': results}
 
 
 class AttachInterfaces(extensions.V21APIExtensionBase):
