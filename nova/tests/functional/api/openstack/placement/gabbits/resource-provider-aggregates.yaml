@@ -52,6 +52,8 @@ tests:
   status: 400
   response_strings:
       - 'Invalid uuid value: not a uuid'
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: associate an aggregate with rp2
   PUT: /resource_providers/5202c48f-c960-4eec-bde3-89c4f22a17b9/aggregates
@@ -98,9 +100,13 @@ tests:
   status: 400
   response_strings:
       - 'Invalid query string parameters'
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: error on bogus query parameter
   GET: '/resource_providers?assoc_with_aggregate=in:83a3d69d-8920-48e2-8914-cadfd8fa2f91,99652f11-9f77-46b9-80b7-4b1989be9f8c'
   status: 400
   response_strings:
       - 'Invalid query string parameters'
+  response_json_paths:
+      $.errors[0].title: Bad Request

@@ -5,6 +5,7 @@ fixtures:
 defaults:
     request_headers:
         x-auth-token: admin
+        accept: application/json
         content-type: application/json
         openstack-api-version: placement latest
 
@@ -16,11 +17,15 @@ tests:
 - name: get aggregates for bad resource provider
   GET: /resource_providers/6984bb2d-830d-4c8d-ac64-c5a8103664be/aggregates
   status: 404
+  response_json_paths:
+      $.errors[0].title: Not Found
 
 - name: put aggregates for bad resource provider
   PUT: /resource_providers/6984bb2d-830d-4c8d-ac64-c5a8103664be/aggregates
   data: []
   status: 404
+  response_json_paths:
+      $.errors[0].title: Not Found
 
 - name: post new resource provider
   POST: /resource_providers
@@ -41,12 +46,16 @@ tests:
   request_headers:
       openstack-api-version: placement 1.0
   status: 404
+  response_json_paths:
+      $.errors[0].title: Not Found
 
 - name: aggregates 404 for out of date microversion put
   PUT: /resource_providers/$ENVIRON['RP_UUID']/aggregates
   request_headers:
       openstack-api-version: placement 1.0
   status: 404
+  response_json_paths:
+      $.errors[0].title: Not Found
 
 - name: put some aggregates
   PUT: $LAST_URL
@@ -83,6 +92,8 @@ tests:
   status: 400
   response_strings:
       - Malformed JSON
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: put invalid json not array
   PUT: $LAST_URL
@@ -93,6 +104,8 @@ tests:
   status: 400
   response_strings:
       - JSON does not validate
+  response_json_paths:
+      $.errors[0].title: Bad Request
 
 - name: put invalid json not uuids
   PUT: $LAST_URL
@@ -102,3 +115,5 @@ tests:
   status: 400
   response_strings:
       - JSON does not validate
+  response_json_paths:
+      $.errors[0].title: Bad Request
