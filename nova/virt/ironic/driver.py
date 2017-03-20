@@ -30,6 +30,7 @@ from oslo_utils import excutils
 from oslo_utils import importutils
 import six
 import six.moves.urllib.parse as urlparse
+from tooz import hashring as hash_ring
 
 from nova.api.metadata import base as instance_metadata
 from nova.compute import power_state
@@ -39,7 +40,6 @@ import nova.conf
 from nova.console import type as console_type
 from nova import context as nova_context
 from nova import exception
-from nova import hash_ring
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LI
@@ -80,6 +80,10 @@ _NODE_FIELDS = ('uuid', 'power_state', 'target_power_state', 'provision_state',
 
 # Console state checking interval in seconds
 _CONSOLE_STATE_CHECKING_INTERVAL = 1
+
+# Number of hash ring partitions per service
+# 5 should be fine for most deployments, as an experimental feature.
+_HASH_RING_PARTITIONS = 2 ** 5
 
 
 def map_power_state(state):
@@ -548,7 +552,8 @@ class IronicDriver(virt_driver.ComputeDriver):
         # table will be here so far, and we might be brand new.
         services.add(CONF.host)
 
-        self.hash_ring = hash_ring.HashRing(services)
+        self.hash_ring = hash_ring.HashRing(services,
+                                            partitions=_HASH_RING_PARTITIONS)
 
     def _refresh_cache(self):
         # NOTE(lucasagomes): limit == 0 is an indicator to continue
@@ -570,7 +575,8 @@ class IronicDriver(virt_driver.ComputeDriver):
             # nova while the service was down, and not yet reaped, will not be
             # reported until the periodic task cleans it up.
             elif (node.instance_uuid is None and
-                  CONF.host in self.hash_ring.get_hosts(node.uuid)):
+                  CONF.host in
+                  self.hash_ring.get_nodes(node.uuid.encode('utf-8'))):
                 node_cache[node.uuid] = node
 
         self.node_cache = node_cache

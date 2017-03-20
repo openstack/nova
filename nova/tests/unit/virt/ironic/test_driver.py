@@ -22,6 +22,7 @@ from oslo_service import loopingcall
 from oslo_utils import uuidutils
 import six
 from testtools import matchers
+from tooz import hashring as hash_ring
 
 from nova.api.metadata import base as instance_metadata
 from nova.compute import power_state as nova_states
@@ -30,7 +31,6 @@ from nova.compute import vm_states
 from nova.console import type as console_type
 from nova import context as nova_context
 from nova import exception
-from nova import hash_ring
 from nova import objects
 from nova.objects import fields
 from nova import servicegroup
@@ -2029,7 +2029,7 @@ class HashRingTestCase(test.NoDBTestCase):
 
         mock_services.assert_called_once_with(
             mock.ANY, self.driver._get_hypervisor_type())
-        mock_hash_ring.assert_called_once_with(expected_hosts)
+        mock_hash_ring.assert_called_once_with(expected_hosts, partitions=32)
         self.assertEqual(SENTINEL, self.driver.hash_ring)
         self.mock_is_up.assert_has_calls(is_up_calls)
 
@@ -2078,7 +2078,7 @@ class NodeCacheTestCase(test.NoDBTestCase):
         self.flags(host=self.host)
 
     @mock.patch.object(ironic_driver.IronicDriver, '_refresh_hash_ring')
-    @mock.patch.object(hash_ring.HashRing, 'get_hosts')
+    @mock.patch.object(hash_ring.HashRing, 'get_nodes')
     @mock.patch.object(ironic_driver.IronicDriver, '_get_node_list')
     @mock.patch.object(objects.InstanceList, 'get_uuids_by_host')
     def _test__refresh_cache(self, instances, nodes, hosts, mock_instances,
