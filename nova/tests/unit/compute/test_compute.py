@@ -432,9 +432,27 @@ class ComputeVolumeTestCase(BaseTestCase):
             self.assertRaises(
                     test.TestingException, self.compute.detach_volume,
                     self.context, 'fake', instance, 'fake_id')
-            mock_internal_detach.assert_called_once_with(self.context,
-                                                         instance,
-                                                         fake_bdm, {})
+            self.assertFalse(mock_destroy.called)
+
+    def test_detach_volume_bdm_destroyed(self):
+        # Assert that the BDM is destroyed given a successful call to detach
+        # the volume from the instance in Cinder.
+        fake_bdm = objects.BlockDeviceMapping(**self.fake_volume)
+        instance = self._create_fake_instance_obj()
+
+        with test.nested(
+            mock.patch.object(self.compute, '_driver_detach_volume'),
+            mock.patch.object(self.compute.volume_api, 'detach'),
+            mock.patch.object(objects.BlockDeviceMapping,
+                              'get_by_volume_and_instance'),
+            mock.patch.object(fake_bdm, 'destroy')
+        ) as (mock_internal_detach, mock_detach, mock_get, mock_destroy):
+            mock_get.return_value = fake_bdm
+            self.compute.detach_volume(self.context, uuids.volume_id, instance,
+                                       uuids.attachment_id)
+            mock_detach.assert_called_once_with(mock.ANY, uuids.volume_id,
+                                                instance.uuid,
+                                                uuids.attachment_id)
             self.assertTrue(mock_destroy.called)
 
     def test_await_block_device_created_too_slow(self):
