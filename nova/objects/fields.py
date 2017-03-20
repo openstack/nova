@@ -552,9 +552,6 @@ class VIFModel(BaseNovaEnum):
 
     ALL = network_model.VIF_MODEL_ALL
 
-    def _get_legacy(self, value):
-        return value
-
     def coerce(self, obj, attr, value):
         # Some compat for strings we'd see in the legacy
         # hw_vif_model image property
