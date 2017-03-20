@@ -433,8 +433,27 @@ class MigrateServerTestsV234(MigrateServerTestsV230):
     def test_migrate_live_migration_with_old_nova_not_supported(self):
         pass
 
+    def test_migrate_live_compute_host_not_found(self):
+        exc = exception.ComputeHostNotFound(
+                reason="Compute host %(host)s could not be found.",
+                host='hostname')
+        self.mox.StubOutWithMock(self.compute_api, 'live_migrate')
+        instance = self._stub_instance_get()
+        self.compute_api.live_migrate(self.context, instance, None,
+                                      self.disk_over_commit, 'hostname',
+                                      self.force, self.async).AndRaise(exc)
+
+        self.mox.ReplayAll()
+        body = {'os-migrateLive':
+                {'host': 'hostname', 'block_migration': 'auto'}}
+
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._migrate_live,
+                          self.req, instance.uuid, body=body)
+
     def test_migrate_live_unexpected_error(self):
-        exc = exception.NoValidHost(reason="No valid host found")
+        exc = exception.InvalidHypervisorType(
+                reason="The supplied hypervisor type of is invalid.")
         self.mox.StubOutWithMock(self.compute_api, 'live_migrate')
         instance = self._stub_instance_get()
         self.compute_api.live_migrate(self.context, instance, None,
