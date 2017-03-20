@@ -21,7 +21,7 @@ SYNOPSIS
 DESCRIPTION
 ===========
 
-nova-manage controls cloud computing instances by managing shell selection, vpn connections, and floating IP address configuration. More information about OpenStack Nova is at http://nova.openstack.org.
+nova-manage controls cloud computing instances by managing shell selection, vpn connections, and floating IP address configuration. More information about OpenStack Nova is at https://docs.openstack.org/developer/nova.
 
 OPTIONS
 =======
@@ -229,7 +229,7 @@ Nova Project
 SEE ALSO
 ========
 
-* `OpenStack Nova <http://nova.openstack.org>`__
+* `OpenStack Nova <https://docs.openstack.org/developer/nova>`__
 
 BUGS
 ====
