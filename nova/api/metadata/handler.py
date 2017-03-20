@@ -32,8 +32,6 @@ import nova.conf
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LE
-from nova.i18n import _LW
 from nova.network.neutronv2 import api as neutronapi
 from nova import wsgi
 
@@ -49,9 +47,9 @@ class MetadataRequestHandler(wsgi.Application):
                 expiration_time=CONF.api.metadata_cache_expiration)
         if (CONF.neutron.service_metadata_proxy and
             not CONF.neutron.metadata_proxy_shared_secret):
-            LOG.warning(_LW("metadata_proxy_shared_secret is not configured, "
-                            "the metadata information returned by the proxy "
-                            "cannot be trusted"))
+            LOG.warning("metadata_proxy_shared_secret is not configured, "
+                        "the metadata information returned by the proxy "
+                        "cannot be trusted")
 
     def get_metadata_by_remote_address(self, address):
         if not address:
@@ -106,9 +104,9 @@ class MetadataRequestHandler(wsgi.Application):
         else:
             if req.headers.get('X-Instance-ID'):
                 LOG.warning(
-                    _LW("X-Instance-ID present in request headers. The "
-                        "'service_metadata_proxy' option must be "
-                        "enabled to process this header."))
+                    "X-Instance-ID present in request headers. The "
+                    "'service_metadata_proxy' option must be "
+                    "enabled to process this header.")
             meta_data = self._handle_remote_ip_request(req)
 
         if meta_data is None:
@@ -136,7 +134,7 @@ class MetadataRequestHandler(wsgi.Application):
         try:
             meta_data = self.get_metadata_by_remote_address(remote_address)
         except Exception:
-            LOG.exception(_LE('Failed to get metadata for IP %s'),
+            LOG.exception('Failed to get metadata for IP %s',
                           remote_address)
             msg = _('An unknown error has occurred. '
                     'Please try your request again.')
@@ -144,7 +142,7 @@ class MetadataRequestHandler(wsgi.Application):
                                                explanation=six.text_type(msg))
 
         if meta_data is None:
-            LOG.error(_LE('Failed to get metadata for IP %s: no metadata'),
+            LOG.error('Failed to get metadata for IP %s: no metadata',
                       remote_address)
 
         return meta_data
@@ -215,10 +213,10 @@ class MetadataRequestHandler(wsgi.Application):
                 network_id=md_networks,
                 fields=['device_id', 'tenant_id'])['ports'][0]
         except Exception as e:
-            LOG.error(_LE('Failed to get instance id for metadata '
-                          'request, provider %(provider)s '
-                          'networks %(networks)s '
-                          'requester %(requester)s. Error: %(error)s'),
+            LOG.error('Failed to get instance id for metadata '
+                      'request, provider %(provider)s '
+                      'networks %(networks)s '
+                      'requester %(requester)s. Error: %(error)s',
                       {'provider': provider_id,
                        'networks': md_networks,
                        'requester': instance_address,
@@ -268,11 +266,11 @@ class MetadataRequestHandler(wsgi.Application):
 
         if not secutils.constant_time_compare(expected_signature, signature):
             if requestor_id:
-                LOG.warning(_LW('X-Instance-ID-Signature: %(signature)s does '
-                                'not match the expected value: '
-                                '%(expected_signature)s for id: '
-                                '%(requestor_id)s. Request From: '
-                                '%(requestor_address)s'),
+                LOG.warning('X-Instance-ID-Signature: %(signature)s does '
+                            'not match the expected value: '
+                            '%(expected_signature)s for id: '
+                            '%(requestor_id)s. Request From: '
+                            '%(requestor_address)s',
                             {'signature': signature,
                              'expected_signature': expected_signature,
                              'requestor_id': requestor_id,
@@ -286,7 +284,7 @@ class MetadataRequestHandler(wsgi.Application):
             meta_data = self.get_metadata_by_instance_id(instance_id,
                                                          remote_address)
         except Exception:
-            LOG.exception(_LE('Failed to get metadata for instance id: %s'),
+            LOG.exception('Failed to get metadata for instance id: %s',
                           instance_id)
             msg = _('An unknown error has occurred. '
                     'Please try your request again.')
@@ -294,11 +292,11 @@ class MetadataRequestHandler(wsgi.Application):
                                                explanation=six.text_type(msg))
 
         if meta_data is None:
-            LOG.error(_LE('Failed to get metadata for instance id: %s'),
+            LOG.error('Failed to get metadata for instance id: %s',
                       instance_id)
         elif meta_data.instance.project_id != tenant_id:
-            LOG.warning(_LW("Tenant_id %(tenant_id)s does not match tenant_id "
-                            "of instance %(instance_id)s."),
+            LOG.warning("Tenant_id %(tenant_id)s does not match tenant_id "
+                        "of instance %(instance_id)s.",
                         {'tenant_id': tenant_id, 'instance_id': instance_id})
             # causes a 404 to be raised
             meta_data = None
