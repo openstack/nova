@@ -648,13 +648,14 @@ that adding new host will fail, thus option to force join was introduced.
 xenapi_console_opts = [
     cfg.StrOpt('console_public_hostname',
         default=socket.gethostname(),
+        sample_default='<current_hostname>',
         deprecated_group='DEFAULT',
         help="""
 Publicly visible name for this console host.
 
 Possible values:
 
-* A string representing a valid hostname
+* Current hostname (default) or any string representing hostname.
 """),
 ]
 
