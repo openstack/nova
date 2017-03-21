@@ -285,7 +285,16 @@ class Image(object):
     def get_disk_size(self, name):
         return disk.get_disk_size(name)
 
+    @abc.abstractmethod
     def snapshot_extract(self, target, out_format):
+        """Extract a snapshot of the image.
+
+        This is used during cold (offline) snapshots. Live snapshots
+        while the guest is still running are handled separately.
+
+        :param target: The target path for the image snapshot.
+        :param out_format: The image snapshot format.
+        """
         raise NotImplementedError()
 
     def _get_driver_format(self):
@@ -375,7 +384,10 @@ class Image(object):
 
     def direct_snapshot(self, context, snapshot_name, image_format, image_id,
                         base_image_id):
-        """Prepare a snapshot for direct reference from glance
+        """Prepare a snapshot for direct reference from glance.
+
+        The implementation of this method is optional and therefore is
+        not an abstractmethod.
 
         :raises: exception.ImageUnacceptable if it cannot be
                  referenced directly in the specified image format
@@ -396,6 +408,7 @@ class Image(object):
         """Get an image's name of a base file."""
         return os.path.split(base)[-1]
 
+    @abc.abstractmethod
     def get_model(self, connection):
         """Get the image information model
 
