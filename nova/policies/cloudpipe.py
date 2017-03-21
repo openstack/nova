@@ -23,9 +23,28 @@ POLICY_ROOT = 'os_compute_api:os-cloudpipe:%s'
 
 
 cloudpipe_policies = [
-    policy.RuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_API),
+    base.create_rule_default(
+        BASE_POLICY_NAME,
+        base.RULE_ADMIN_API,
+        """List, create and update cloud pipes.
+
+os-cloudpipe API is deprecated as this works only with nova-network which \
+itself is deprecated.
+""",
+        [
+            {
+                'method': 'GET',
+                'path': '/os-cloudpipe'
+            },
+            {
+                'method': 'POST',
+                'path': '/os-cloudpipe'
+            },
+            {
+                'method': 'PUT',
+                'path': '/os-cloudpipe/configure-project'
+            }
+        ]),
     policy.RuleDefault(
         name=POLICY_ROOT % 'discoverable',
         check_str=base.RULE_ANY),
