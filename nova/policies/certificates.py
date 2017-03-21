@@ -25,12 +25,26 @@ certificates_policies = [
     policy.RuleDefault(
         name=POLICY_ROOT % 'discoverable',
         check_str=base.RULE_ANY),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'create',
-        check_str=base.RULE_ADMIN_OR_OWNER),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'show',
-        check_str=base.RULE_ADMIN_OR_OWNER),
+    base.create_rule_default(
+        POLICY_ROOT % 'create',
+        base.RULE_ADMIN_OR_OWNER,
+        "Create a root certificate. This API is deprecated.",
+        [
+            {
+                'method': 'POST',
+                'path': '/os-certificates'
+            }
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'show',
+        base.RULE_ADMIN_OR_OWNER,
+        "Show details for a root certificate.  This API is deprecated.",
+        [
+            {
+                'method': 'GET',
+                'path': '/os-certificates/root'
+            }
+        ])
 ]
 
 
