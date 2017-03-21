@@ -22,7 +22,7 @@ import webob
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _
 from nova import objects
 
 
@@ -261,11 +261,11 @@ def set_allocations(req):
                   "%(rp_uuid)s: %(error)s") %
             {'rp_uuid': resource_provider_uuid, 'error': exc})
     except exception.InvalidInventory as exc:
-        LOG.exception(_LE("Bad inventory"))
+        LOG.exception("Bad inventory")
         raise webob.exc.HTTPConflict(
             _('Unable to allocate inventory: %(error)s') % {'error': exc})
     except exception.ConcurrentUpdateDetected as exc:
-        LOG.exception(_LE("Concurrent Update"))
+        LOG.exception("Concurrent Update")
         raise webob.exc.HTTPConflict(
             _('Inventory changed while attempting to allocate: %(error)s') %
             {'error': exc})

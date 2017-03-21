@@ -30,7 +30,6 @@ import nova.conf
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LE
 import nova.network
 from nova.policies import tenant_networks as tn_policies
 from nova import quota
@@ -64,7 +63,7 @@ class TenantNetworkController(wsgi.Controller):
             try:
                 self._default_networks = self._get_default_networks()
             except Exception:
-                LOG.exception(_LE("Failed to get default networks"))
+                LOG.exception("Failed to get default networks")
 
     def _get_default_networks(self):
         project_id = CONF.api.neutron_default_tenant_id
@@ -110,8 +109,7 @@ class TenantNetworkController(wsgi.Controller):
                 reservation = QUOTAS.reserve(context, networks=-1)
         except Exception:
             reservation = None
-            LOG.exception(_LE("Failed to update usages deallocating "
-                              "network."))
+            LOG.exception("Failed to update usages deallocating network.")
 
         def _rollback_quota(reservation):
             if CONF.enable_network_quota and reservation:

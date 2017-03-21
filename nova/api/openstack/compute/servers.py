@@ -41,7 +41,6 @@ import nova.conf
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LW
 from nova.image import glance
 from nova import objects
 from nova.policies import servers as server_policies
@@ -112,10 +111,8 @@ class ServersController(wsgi.Controller):
                     if ext.obj.alias in whitelist:
                         if ext.obj.alias in blacklist:
                             LOG.warning(
-                                _LW(
-                                    "Extension %s is both in whitelist and "
-                                    "blacklist, blacklisting takes precedence"
-                                ),
+                                "Extension %s is both in whitelist and "
+                                "blacklist, blacklisting takes precedence",
                                 ext.obj.alias)
                             return False
                         else:
