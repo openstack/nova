@@ -53,12 +53,25 @@ class DesignerTestCase(test.NoDBTestCase):
         self.assertEqual('fake-bridge', conf.source_dev)
         self.assertEqual('fake-tap', conf.target_dev)
 
-    def test_set_vif_host_backend_ethernet_config(self):
+    def test_set_vif_host_backend_ethernet_config_libvirt_1_3_3(self):
         conf = config.LibvirtConfigGuestInterface()
-        designer.set_vif_host_backend_ethernet_config(conf, 'fake-tap')
+        mock_host = mock.Mock(autospec='nova.virt.libvirt.host.Host')
+        mock_host.has_min_version.return_value = True
+        designer.set_vif_host_backend_ethernet_config(
+            conf, 'fake-tap', mock_host)
         self.assertEqual('ethernet', conf.net_type)
         self.assertEqual('fake-tap', conf.target_dev)
         self.assertIsNone(conf.script)
+
+    def test_set_vif_host_backend_ethernet_config_libvirt_pre_1_3_3(self):
+        conf = config.LibvirtConfigGuestInterface()
+        mock_host = mock.Mock(autospec='nova.virt.libvirt.host.Host')
+        mock_host.has_min_version.return_value = False
+        designer.set_vif_host_backend_ethernet_config(
+            conf, 'fake-tap', mock_host)
+        self.assertEqual('ethernet', conf.net_type)
+        self.assertEqual('fake-tap', conf.target_dev)
+        self.assertEqual('', conf.script)
 
     def test_set_vif_host_backend_802qbg_config(self):
         conf = config.LibvirtConfigGuestInterface()
