@@ -22,7 +22,6 @@ from oslo_serialization import jsonutils
 
 from nova.api.metadata import vendordata
 import nova.conf
-from nova.i18n import _LW
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
@@ -40,14 +39,14 @@ class JsonFileVendorData(vendordata.VendorDataDriver):
                     data = jsonutils.load(fp)
             except IOError as e:
                 if e.errno == errno.ENOENT:
-                    LOG.warning(_LW("%(logprefix)s file does not exist"),
+                    LOG.warning("%(logprefix)s file does not exist",
                                 {'logprefix': logprefix})
                 else:
-                    LOG.warning(_LW("%(logprefix)s unexpected IOError when "
-                                    "reading"), {'logprefix': logprefix})
+                    LOG.warning("%(logprefix)s unexpected IOError when "
+                                "reading", {'logprefix': logprefix})
                 raise
             except ValueError:
-                LOG.warning(_LW("%(logprefix)s failed to load json"),
+                LOG.warning("%(logprefix)s failed to load json",
                             {'logprefix': logprefix})
                 raise
 

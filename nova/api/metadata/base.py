@@ -38,7 +38,6 @@ from nova.cells import rpcapi as cells_rpcapi
 import nova.conf
 from nova import context
 from nova import exception
-from nova.i18n import _LI, _LW
 from nova import network
 from nova.network.security_group import openstack_driver
 from nova import objects
@@ -520,8 +519,8 @@ class InstanceMetadata(object):
                     values = self.vendordata_providers[provider].get()
                     for key in list(values):
                         if key in j:
-                            LOG.warning(_LW('Removing duplicate metadata key: '
-                                            '%s'), key, instance=self.instance)
+                            LOG.warning('Removing duplicate metadata key: %s',
+                                        key, instance=self.instance)
                             del values[key]
                     j.update(values)
 
@@ -666,7 +665,7 @@ class RouteConfiguration(object):
 def get_metadata_by_address(address):
     ctxt = context.get_admin_context()
     fixed_ip = network.API().get_fixed_ip_by_address(ctxt, address)
-    LOG.info(_LI('Fixed IP %(ip)s translates to instance UUID %(uuid)s'),
+    LOG.info('Fixed IP %(ip)s translates to instance UUID %(uuid)s',
              {'ip': address, 'uuid': fixed_ip['instance_uuid']})
 
     return get_metadata_by_instance_id(fixed_ip['instance_uuid'],
@@ -683,8 +682,8 @@ def get_metadata_by_instance_id(instance_id, address, ctxt=None):
     try:
         im = objects.InstanceMapping.get_by_instance_uuid(ctxt, instance_id)
     except exception.InstanceMappingNotFound:
-        LOG.warning(_LW('Instance mapping for %(uuid)s not found; '
-                        'cell setup is incomplete'), {'uuid': instance_id})
+        LOG.warning('Instance mapping for %(uuid)s not found; '
+                    'cell setup is incomplete', {'uuid': instance_id})
         instance = objects.Instance.get_by_uuid(ctxt, instance_id,
                                                 expected_attrs=attrs)
         return InstanceMetadata(instance, address)

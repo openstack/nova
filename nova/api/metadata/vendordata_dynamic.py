@@ -25,7 +25,6 @@ import six
 
 from nova.api.metadata import vendordata
 import nova.conf
-from nova.i18n import _LW
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
@@ -48,9 +47,9 @@ def _load_ks_session(conf):
             conf, nova.conf.vendordata.vendordata_group.name)
 
     if not _ADMIN_AUTH:
-        LOG.warning(_LW('Passing insecure dynamic vendordata requests '
-                        'because of missing or incorrect service account '
-                        'configuration.'))
+        LOG.warning('Passing insecure dynamic vendordata requests '
+                    'because of missing or incorrect service account '
+                    'configuration.')
 
     if not _SESSION:
         _SESSION = ks_loading.load_session_from_conf_options(
@@ -109,8 +108,8 @@ class DynamicVendorData(vendordata.VendorDataDriver):
         except (TypeError, ValueError,
                 ks_exceptions.connection.ConnectionError,
                 ks_exceptions.http.HttpError) as e:
-            LOG.warning(_LW('Error from dynamic vendordata service '
-                            '%(service_name)s at %(url)s: %(error)s'),
+            LOG.warning('Error from dynamic vendordata service '
+                        '%(service_name)s at %(url)s: %(error)s',
                         {'service_name': service_name,
                          'url': url,
                          'error': e},
@@ -129,8 +128,8 @@ class DynamicVendorData(vendordata.VendorDataDriver):
             # where name is the name to use in the metadata handed to
             # instances, and url is the URL to fetch it from
             if target.find('@') == -1:
-                LOG.warning(_LW('Vendordata target %(target)s lacks a name. '
-                                'Skipping'),
+                LOG.warning('Vendordata target %(target)s lacks a name. '
+                            'Skipping',
                             {'target': target}, instance=self.instance)
                 continue
 
@@ -139,8 +138,8 @@ class DynamicVendorData(vendordata.VendorDataDriver):
             url = '@'.join(tokens[1:])
 
             if name in j:
-                LOG.warning(_LW('Vendordata already contains an entry named '
-                                '%(target)s. Skipping'),
+                LOG.warning('Vendordata already contains an entry named '
+                            '%(target)s. Skipping',
                             {'target': target}, instance=self.instance)
                 continue
 
