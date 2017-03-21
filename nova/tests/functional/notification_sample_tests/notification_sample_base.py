@@ -61,6 +61,15 @@ class NotificationSampleTestBase(test.TestCase,
 
         self.api = api_fixture.api
         self.admin_api = api_fixture.admin_api
+
+        # NOTE(gibi): Notification payloads always reflect the data needed
+        # for every supported API microversion so we can safe to use the latest
+        # API version in the tests. This helps the test to use the new API
+        # features too.
+        max_version = 'latest'
+        self.api.microversion = max_version
+        self.admin_api.microversion = max_version
+
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
 
@@ -155,6 +164,10 @@ class NotificationSampleTestBase(test.TestCase,
             self.api, 'some-server',
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             flavor_id=flavor_id)
+
+        # NOTE(gibi): from microversion 2.19 the description is not set to the
+        # instance name automatically but can be provided at boot.
+        server['description'] = 'some-server'
 
         if extra_params:
             extra_params['return_reservation_id'] = True
