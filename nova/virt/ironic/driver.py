@@ -636,7 +636,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             obj_fields.ResourceClass.VCPU: {
                 'total': info['vcpus'],
                 'reserved': 0,
-                'min_unit': info['vcpus'],
+                'min_unit': 1,
                 'max_unit': info['vcpus'],
                 'step_size': 1,
                 'allocation_ratio': 1.0,
@@ -644,7 +644,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             obj_fields.ResourceClass.MEMORY_MB: {
                 'total': info['memory_mb'],
                 'reserved': 0,
-                'min_unit': info['memory_mb'],
+                'min_unit': 1,
                 'max_unit': info['memory_mb'],
                 'step_size': 1,
                 'allocation_ratio': 1.0,
@@ -652,7 +652,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             obj_fields.ResourceClass.DISK_GB: {
                 'total': info['local_gb'],
                 'reserved': 0,
-                'min_unit': info['local_gb'],
+                'min_unit': 1,
                 'max_unit': info['local_gb'],
                 'step_size': 1,
                 'allocation_ratio': 1.0,

@@ -772,7 +772,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
             fields.ResourceClass.VCPU: {
                 'total': 24,
                 'reserved': 0,
-                'min_unit': 24,
+                'min_unit': 1,
                 'max_unit': 24,
                 'step_size': 1,
                 'allocation_ratio': 1.0,
@@ -780,7 +780,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
             fields.ResourceClass.MEMORY_MB: {
                 'total': 1024,
                 'reserved': 0,
-                'min_unit': 1024,
+                'min_unit': 1,
                 'max_unit': 1024,
                 'step_size': 1,
                 'allocation_ratio': 1.0,
@@ -788,7 +788,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
             fields.ResourceClass.DISK_GB: {
                 'total': 100,
                 'reserved': 0,
-                'min_unit': 100,
+                'min_unit': 1,
                 'max_unit': 100,
                 'step_size': 1,
                 'allocation_ratio': 1.0,
@@ -818,7 +818,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
             fields.ResourceClass.VCPU: {
                 'total': 24,
                 'reserved': 0,
-                'min_unit': 24,
+                'min_unit': 1,
                 'max_unit': 24,
                 'step_size': 1,
                 'allocation_ratio': 1.0,
@@ -826,7 +826,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
             fields.ResourceClass.MEMORY_MB: {
                 'total': 1024,
                 'reserved': 0,
-                'min_unit': 1024,
+                'min_unit': 1,
                 'max_unit': 1024,
                 'step_size': 1,
                 'allocation_ratio': 1.0,
@@ -834,7 +834,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
             fields.ResourceClass.DISK_GB: {
                 'total': 100,
                 'reserved': 0,
-                'min_unit': 100,
+                'min_unit': 1,
                 'max_unit': 100,
                 'step_size': 1,
                 'allocation_ratio': 1.0,

@@ -249,7 +249,7 @@ class IronicResourceTrackerTest(test.TestCase):
                     VCPU: {
                         'total': cn.vcpus,
                         'reserved': 0,
-                        'min_unit': cn.vcpus,
+                        'min_unit': 1,
                         'max_unit': cn.vcpus,
                         'step_size': 1,
                         'allocation_ratio': 1.0,
@@ -257,7 +257,7 @@ class IronicResourceTrackerTest(test.TestCase):
                     MEMORY_MB: {
                         'total': cn.memory_mb,
                         'reserved': 0,
-                        'min_unit': cn.memory_mb,
+                        'min_unit': 1,
                         'max_unit': cn.memory_mb,
                         'step_size': 1,
                         'allocation_ratio': 1.0,
@@ -265,7 +265,7 @@ class IronicResourceTrackerTest(test.TestCase):
                     DISK_GB: {
                         'total': cn.local_gb,
                         'reserved': 0,
-                        'min_unit': cn.local_gb,
+                        'min_unit': 1,
                         'max_unit': cn.local_gb,
                         'step_size': 1,
                         'allocation_ratio': 1.0,
@@ -328,7 +328,7 @@ class IronicResourceTrackerTest(test.TestCase):
                 VCPU: {
                     'total': cn1_obj.vcpus,
                     'reserved': 0,
-                    'min_unit': cn1_obj.vcpus,
+                    'min_unit': 1,
                     'max_unit': cn1_obj.vcpus,
                     'step_size': 1,
                     'allocation_ratio': 1.0,
@@ -336,7 +336,7 @@ class IronicResourceTrackerTest(test.TestCase):
                 MEMORY_MB: {
                     'total': cn1_obj.memory_mb,
                     'reserved': 0,
-                    'min_unit': cn1_obj.memory_mb,
+                    'min_unit': 1,
                     'max_unit': cn1_obj.memory_mb,
                     'step_size': 1,
                     'allocation_ratio': 1.0,
@@ -344,7 +344,7 @@ class IronicResourceTrackerTest(test.TestCase):
                 DISK_GB: {
                     'total': cn1_obj.local_gb,
                     'reserved': 0,
-                    'min_unit': cn1_obj.local_gb,
+                    'min_unit': 1,
                     'max_unit': cn1_obj.local_gb,
                     'step_size': 1,
                     'allocation_ratio': 1.0,
