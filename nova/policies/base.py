@@ -28,5 +28,22 @@ rules = [
 ]
 
 
+def create_rule_default(name, check_str, description, operations):
+    # TODO(sneti): use DocumentedRuleDefault instead of RuleDefault
+    # when oslo.policy library with DocumentedRuleDefault change is released.
+    # formatted_description hack can be removed then.
+    ops = ""
+    for operation in operations:
+            ops += ('%(method)s %(path)s\n' %
+                     {'method': operation['method'],
+                      'path': operation['path']})
+    template = """%(description)s\n%(operations)s"""
+    formatted_description = template % {
+        "description": description,
+        "operations": ops,
+    }
+    return policy.RuleDefault(name, check_str, formatted_description)
+
+
 def list_rules():
     return rules
