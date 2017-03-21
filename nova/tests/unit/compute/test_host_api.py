@@ -18,6 +18,7 @@ import copy
 
 import mock
 from oslo_serialization import jsonutils
+import testtools
 
 from nova.api.openstack.compute import services
 from nova.cells import utils as cells_utils
@@ -32,7 +33,6 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_objects
 from nova.tests.unit.objects import test_service
-import testtools
 
 
 class ComputeHostAPITestCase(test.TestCase):

@@ -13,13 +13,13 @@
 #    under the License.
 
 import mock
+from oslo_versionedobjects import fixture as ovo_fixture
 
 from nova import db
 from nova.objects import instance
 from nova.objects import security_group
 from nova.tests.unit.objects import test_objects
 from nova.tests import uuidsentinel as uuids
-from oslo_versionedobjects import fixture as ovo_fixture
 
 
 fake_secgroup = {
