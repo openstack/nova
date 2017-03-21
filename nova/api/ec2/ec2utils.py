@@ -26,7 +26,6 @@ from nova import cache_utils
 from nova import context
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LI
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import base as obj_base
@@ -289,7 +288,7 @@ def is_ec2_timestamp_expired(request, expires=None):
                        timeutils.is_newer_than(query_time, expires)
         return False
     except ValueError:
-        LOG.info(_LI("Timestamp is invalid."))
+        LOG.info("Timestamp is invalid.")
         return True
 
 

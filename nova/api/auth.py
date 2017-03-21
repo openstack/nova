@@ -25,7 +25,6 @@ import webob.exc
 import nova.conf
 from nova import context
 from nova.i18n import _
-from nova.i18n import _LW
 from nova import wsgi
 
 
@@ -46,9 +45,9 @@ def pipeline_factory(loader, global_conf, **local_conf):
     """A paste pipeline replica that keys off of auth_strategy."""
     versionutils.report_deprecated_feature(
         LOG,
-        _LW("The legacy V2 API code tree has been removed in Newton. "
-            "Please remove legacy v2 API entry from api-paste.ini, and use "
-            "V2.1 API or V2.1 API compat mode instead")
+        "The legacy V2 API code tree has been removed in Newton. "
+        "Please remove legacy v2 API entry from api-paste.ini, and use "
+        "V2.1 API or V2.1 API compat mode instead"
     )
 
 
