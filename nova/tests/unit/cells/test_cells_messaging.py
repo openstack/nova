@@ -702,11 +702,13 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
         build_inst_kwargs = {'filter_properties': {},
                              'key1': 'value1',
                              'key2': 'value2'}
-        self.mox.StubOutWithMock(self.tgt_scheduler, 'build_instances')
-        self.tgt_scheduler.build_instances(self.ctxt, build_inst_kwargs)
-        self.mox.ReplayAll()
-        self.src_msg_runner.build_instances(self.ctxt, self.tgt_cell_name,
-                build_inst_kwargs)
+        with mock.patch.object(self.tgt_scheduler,
+                               'build_instances') as mock_build_instances:
+            self.src_msg_runner.build_instances(self.ctxt, self.tgt_cell_name,
+                                                build_inst_kwargs)
+            mock_build_instances.assert_called_with(
+                    test.MatchType(messaging._TargetedMessage),
+                    build_inst_kwargs)
 
     def _run_compute_api_method(self, method_name):
         instance = fake_instance.fake_instance_obj(self.ctxt)
@@ -745,7 +747,8 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
         # metadata to be present in instance object
         self._run_compute_api_method('shelve')
 
-    def test_run_compute_api_method_unknown_instance(self):
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_run_compute_api_method_unknown_instance(self, mock_get_by_uuid):
         # Unknown instance should send a broadcast up that instance
         # is gone.
         instance = fake_instance.fake_instance_obj(self.ctxt)
@@ -754,26 +757,24 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
                        'method_args': (instance_uuid, 2, 3),
                        'method_kwargs': {'arg1': 'val1', 'arg2': 'val2'}}
 
-        self.mox.StubOutWithMock(objects.Instance, 'get_by_uuid')
-        self.mox.StubOutWithMock(self.tgt_msg_runner,
-                                 'instance_destroy_at_top')
+        mock_get_by_uuid.side_effect = exception.InstanceNotFound(
+                instance_id=instance_uuid)
+        with mock.patch.object(self.tgt_msg_runner,
+                               'instance_destroy_at_top') as des_top:
+            response = self.src_msg_runner.run_compute_api_method(
+                    self.ctxt,
+                    self.tgt_cell_name,
+                    method_info,
+                    True)
 
-        objects.Instance.get_by_uuid(self.ctxt, instance.uuid,
+            self.assertRaises(exception.InstanceNotFound,
+                              response.value_or_raise)
+            des_top.assert_called_with(self.ctxt,
+                                       test.MatchType(objects.Instance))
+            mock_get_by_uuid.assert_called_once_with(
+                self.ctxt, instance.uuid,
                 expected_attrs=['metadata', 'system_metadata',
-                                'security_groups', 'info_cache']).AndRaise(
-                        exception.InstanceNotFound(instance_id=instance_uuid))
-        self.tgt_msg_runner.instance_destroy_at_top(self.ctxt,
-                                                    mox.IsA(objects.Instance))
-
-        self.mox.ReplayAll()
-
-        response = self.src_msg_runner.run_compute_api_method(
-                self.ctxt,
-                self.tgt_cell_name,
-                method_info,
-                True)
-        self.assertRaises(exception.InstanceNotFound,
-                          response.value_or_raise)
+                                'security_groups', 'info_cache'])
 
     def test_update_capabilities(self):
         # Route up to API
@@ -785,38 +786,32 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
         # testing... which is check that a set was converted to a list.
         expected_capabs = {'cap1': list(set(['val1', 'val2'])),
                            'cap2': ['val3']}
-        self.mox.StubOutWithMock(self.src_state_manager,
-                                 'get_our_capabilities')
-        self.mox.StubOutWithMock(self.tgt_state_manager,
-                                 'update_cell_capabilities')
-        self.mox.StubOutWithMock(self.tgt_msg_runner,
-                                 'tell_parents_our_capabilities')
-        self.src_state_manager.get_our_capabilities().AndReturn(capabs)
-        self.tgt_state_manager.update_cell_capabilities('child-cell2',
-                                                        expected_capabs)
-        self.tgt_msg_runner.tell_parents_our_capabilities(self.ctxt)
-
-        self.mox.ReplayAll()
+        self.src_state_manager.get_our_capabilities = mock.Mock()
+        self.src_state_manager.get_our_capabilities.return_value = capabs
+        self.tgt_state_manager.update_cell_capabilities = mock.Mock()
+        self.tgt_msg_runner.tell_parents_our_capabilities = mock.Mock()
 
         self.src_msg_runner.tell_parents_our_capabilities(self.ctxt)
+        self.tgt_state_manager.update_cell_capabilities.\
+                assert_called_with('child-cell2', expected_capabs)
+        self.tgt_msg_runner.tell_parents_our_capabilities.\
+                assert_called_with(self.ctxt)
+        self.src_state_manager.get_our_capabilities.\
+                assert_called_once()
 
     def test_update_capacities(self):
         self._setup_attrs('child-cell2', 'child-cell2!api-cell')
         capacs = 'fake_capacs'
-        self.mox.StubOutWithMock(self.src_state_manager,
-                                 'get_our_capacities')
-        self.mox.StubOutWithMock(self.tgt_state_manager,
-                                 'update_cell_capacities')
-        self.mox.StubOutWithMock(self.tgt_msg_runner,
-                                 'tell_parents_our_capacities')
-        self.src_state_manager.get_our_capacities().AndReturn(capacs)
-        self.tgt_state_manager.update_cell_capacities('child-cell2',
-                                                      capacs)
-        self.tgt_msg_runner.tell_parents_our_capacities(self.ctxt)
-
-        self.mox.ReplayAll()
+        self.src_state_manager.get_our_capacities = mock.Mock()
+        self.src_state_manager.get_our_capacities.return_value = capacs
+        self.tgt_state_manager.update_cell_capacities = mock.Mock()
+        self.tgt_msg_runner.tell_parents_our_capacities = mock.Mock()
 
         self.src_msg_runner.tell_parents_our_capacities(self.ctxt)
+        self.tgt_state_manager.update_cell_capacities.\
+                assert_called_with('child-cell2', capacs)
+        self.tgt_msg_runner.tell_parents_our_capacities.\
+                assert_called_with(self.ctxt)
 
     def test_announce_capabilities(self):
         self._setup_attrs('api-cell', 'api-cell!child-cell1')
@@ -824,13 +819,11 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
         cell_state = self.src_state_manager.child_cells['child-cell1']
         self.src_state_manager.child_cells = {'child-cell1': cell_state}
 
-        self.mox.StubOutWithMock(self.tgt_msg_runner,
-                                 'tell_parents_our_capabilities')
-        self.tgt_msg_runner.tell_parents_our_capabilities(self.ctxt)
-
-        self.mox.ReplayAll()
+        self.tgt_msg_runner.tell_parents_our_capabilities = mock.Mock()
 
         self.src_msg_runner.ask_children_for_capabilities(self.ctxt)
+        self.tgt_msg_runner.tell_parents_our_capabilities.\
+                assert_called_with(self.ctxt)
 
     def test_announce_capacities(self):
         self._setup_attrs('api-cell', 'api-cell!child-cell1')
@@ -838,22 +831,17 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
         cell_state = self.src_state_manager.child_cells['child-cell1']
         self.src_state_manager.child_cells = {'child-cell1': cell_state}
 
-        self.mox.StubOutWithMock(self.tgt_msg_runner,
-                                 'tell_parents_our_capacities')
-        self.tgt_msg_runner.tell_parents_our_capacities(self.ctxt)
-
-        self.mox.ReplayAll()
+        self.tgt_msg_runner.tell_parents_our_capacities = mock.Mock()
 
         self.src_msg_runner.ask_children_for_capacities(self.ctxt)
+        self.tgt_msg_runner.tell_parents_our_capacities.\
+                assert_called_with(self.ctxt)
 
-    def test_service_get_by_compute_host(self):
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
+    def test_service_get_by_compute_host(self, mock_cp_host):
         fake_host_name = 'fake-host-name'
 
-        self.mox.StubOutWithMock(objects.Service, 'get_by_compute_host')
-
-        objects.Service.get_by_compute_host(self.ctxt,
-                fake_host_name).AndReturn('fake-service')
-        self.mox.ReplayAll()
+        mock_cp_host.return_value = 'fake-service'
 
         response = self.src_msg_runner.service_get_by_compute_host(
                 self.ctxt,
@@ -861,8 +849,11 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
                 fake_host_name)
         result = response.value_or_raise()
         self.assertEqual('fake-service', result)
+        mock_cp_host.assert_called_with(self.ctxt, fake_host_name)
 
-    def test_service_update(self):
+    @mock.patch.object(objects.Service, 'get_by_args')
+    @mock.patch.object(objects.Service, 'save')
+    def test_service_update(self, mock_save, mock_get_args):
         binary = 'nova-compute'
         params_to_update = {'disabled': True, 'report_count': 13}
 
@@ -870,12 +861,7 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
                                        binary='nova-compute',
                                        topic='compute')
         fake_service.compute_node = objects.ComputeNode(id=1, host='fake_host')
-        self.mox.StubOutWithMock(objects.Service, 'get_by_args')
-        self.mox.StubOutWithMock(objects.Service, 'save')
-        objects.Service.get_by_args(
-            self.ctxt, 'fake_host', 'nova-compute').AndReturn(fake_service)
-        fake_service.save()
-        self.mox.ReplayAll()
+        mock_get_args.return_value = fake_service
 
         response = self.src_msg_runner.service_update(
                 self.ctxt, self.tgt_cell_name,
@@ -883,25 +869,30 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
         result = response.value_or_raise()
         self.assertIsInstance(result, objects.Service)
         self.assertTrue(objects_base.obj_equal_prims(fake_service, result))
+        mock_get_args.assert_called_with(self.ctxt,
+                                         'fake_host', 'nova-compute')
+        mock_save.assert_called_once()
 
-    def test_proxy_rpc_to_manager_call(self):
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
+    def test_proxy_rpc_to_manager_call(self, mock_cp_host):
         fake_topic = 'fake-topic'
         fake_rpc_message = {'method': 'fake_rpc_method', 'args': {}}
         fake_host_name = 'fake-host-name'
 
-        self.mox.StubOutWithMock(objects.Service, 'get_by_compute_host')
-        objects.Service.get_by_compute_host(self.ctxt, fake_host_name)
+        class FakeRPCClient(object):
 
-        target = oslo_messaging.Target(topic='fake-topic')
-        rpcclient = self.mox.CreateMockAnything()
+            def prepare(self, timeout=5):
+                return self
 
-        self.mox.StubOutWithMock(rpc, 'get_client')
-        rpc.get_client(target).AndReturn(rpcclient)
-        rpcclient.prepare(timeout=5).AndReturn(rpcclient)
-        rpcclient.call(mox.IgnoreArg(),
-                       'fake_rpc_method').AndReturn('fake_result')
+            def call(self, ctxt, method, **kwargs):
+                return 'fake_result'
 
-        self.mox.ReplayAll()
+        def fake_get_client(target):
+            return FakeRPCClient()
+
+        # (Fixme) mock will mess up when mock an object of mock
+        # how to mock a function of mock object's return value
+        self.stub_out('nova.rpc.get_client', fake_get_client)
 
         response = self.src_msg_runner.proxy_rpc_to_manager(
                 self.ctxt,
@@ -911,23 +902,19 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
                 fake_rpc_message, True, timeout=5)
         result = response.value_or_raise()
         self.assertEqual('fake_result', result)
+        mock_cp_host.assert_called_with(self.ctxt, fake_host_name)
 
-    def test_proxy_rpc_to_manager_cast(self):
+    @mock.patch.object(rpc, 'get_client')
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
+    def test_proxy_rpc_to_manager_cast(self, mock_cp_host, mock_client):
         fake_topic = 'fake-topic'
         fake_rpc_message = {'method': 'fake_rpc_method', 'args': {}}
         fake_host_name = 'fake-host-name'
-
-        self.mox.StubOutWithMock(objects.Service, 'get_by_compute_host')
-        objects.Service.get_by_compute_host(self.ctxt, fake_host_name)
-
         target = oslo_messaging.Target(topic='fake-topic')
-        rpcclient = self.mox.CreateMockAnything()
 
-        self.mox.StubOutWithMock(rpc, 'get_client')
-        rpc.get_client(target).AndReturn(rpcclient)
-        rpcclient.cast(mox.IgnoreArg(), 'fake_rpc_method')
+        rpcclient = mock.Mock()
 
-        self.mox.ReplayAll()
+        mock_client.return_value = rpcclient
 
         self.src_msg_runner.proxy_rpc_to_manager(
                 self.ctxt,
@@ -935,6 +922,9 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
                 fake_host_name,
                 fake_topic,
                 fake_rpc_message, False, timeout=None)
+        mock_cp_host.assert_called_with(self.ctxt, fake_host_name)
+        rpcclient.cast.assert_called_with(mock.ANY, 'fake_rpc_method')
+        mock_client.assert_called_with(target)
 
     def test_task_log_get_all_targeted(self):
         task_name = 'fake_task_name'
@@ -943,79 +933,73 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
         host = 'fake_host'
         state = 'fake_state'
 
-        self.mox.StubOutWithMock(self.tgt_db_inst, 'task_log_get_all')
-        self.tgt_db_inst.task_log_get_all(self.ctxt, task_name,
-                begin, end, host=host,
-                state=state).AndReturn(['fake_result'])
+        with mock.patch.object(self.tgt_db_inst, 'task_log_get_all') as log_a:
+            log_a.return_value = ['fake_result']
+            response = self.src_msg_runner.task_log_get_all(self.ctxt,
+                    self.tgt_cell_name, task_name, begin, end, host=host,
+                    state=state)
+            log_a.assert_called_with(self.ctxt, task_name,
+                    begin, end, host=host, state=state)
+            self.assertIsInstance(response, list)
+            self.assertEqual(1, len(response))
+            result = response[0].value_or_raise()
+            self.assertEqual(['fake_result'], result)
 
-        self.mox.ReplayAll()
-
-        response = self.src_msg_runner.task_log_get_all(self.ctxt,
-                self.tgt_cell_name, task_name, begin, end, host=host,
-                state=state)
-        self.assertIsInstance(response, list)
-        self.assertEqual(1, len(response))
-        result = response[0].value_or_raise()
-        self.assertEqual(['fake_result'], result)
-
-    def test_compute_node_get(self):
+    @mock.patch.object(objects.ComputeNode, 'get_by_id')
+    def test_compute_node_get(self, mock_get_id):
         compute_id = 'fake-id'
-        self.mox.StubOutWithMock(objects.ComputeNode, 'get_by_id')
-        objects.ComputeNode.get_by_id(self.ctxt,
-                compute_id).AndReturn('fake_result')
-
-        self.mox.ReplayAll()
+        mock_get_id.return_value = 'fake_result'
 
         response = self.src_msg_runner.compute_node_get(self.ctxt,
                 self.tgt_cell_name, compute_id)
         result = response.value_or_raise()
         self.assertEqual('fake_result', result)
+        mock_get_id.assert_called_with(self.ctxt, compute_id)
 
     def test_actions_get(self):
         fake_uuid = fake_server_actions.FAKE_UUID
         fake_req_id = fake_server_actions.FAKE_REQUEST_ID1
         fake_act = fake_server_actions.FAKE_ACTIONS[fake_uuid][fake_req_id]
 
-        self.mox.StubOutWithMock(self.tgt_db_inst, 'actions_get')
-        self.tgt_db_inst.actions_get(self.ctxt,
-                                     fake_uuid).AndReturn([fake_act])
-        self.mox.ReplayAll()
+        with mock.patch.object(self.tgt_db_inst, 'actions_get') as ac_get:
+            ac_get.return_value = [fake_act]
 
-        response = self.src_msg_runner.actions_get(self.ctxt,
+            response = self.src_msg_runner.actions_get(self.ctxt,
                                                    self.tgt_cell_name,
                                                    fake_uuid)
-        result = response.value_or_raise()
-        self.assertEqual([jsonutils.to_primitive(fake_act)], result)
+            result = response.value_or_raise()
+            self.assertEqual([jsonutils.to_primitive(fake_act)], result)
+            ac_get.assert_called_with(self.ctxt, fake_uuid)
 
     def test_action_get_by_request_id(self):
         fake_uuid = fake_server_actions.FAKE_UUID
         fake_req_id = fake_server_actions.FAKE_REQUEST_ID1
         fake_act = fake_server_actions.FAKE_ACTIONS[fake_uuid][fake_req_id]
 
-        self.mox.StubOutWithMock(self.tgt_db_inst, 'action_get_by_request_id')
-        self.tgt_db_inst.action_get_by_request_id(self.ctxt,
-                fake_uuid, 'req-fake').AndReturn(fake_act)
-        self.mox.ReplayAll()
+        with mock.patch.object(self.tgt_db_inst,
+                              'action_get_by_request_id') as act_id:
+            act_id.return_value = fake_act
 
-        response = self.src_msg_runner.action_get_by_request_id(self.ctxt,
-                self.tgt_cell_name, fake_uuid, 'req-fake')
-        result = response.value_or_raise()
-        self.assertEqual(jsonutils.to_primitive(fake_act), result)
+            response = self.src_msg_runner.action_get_by_request_id(self.ctxt,
+                    self.tgt_cell_name, fake_uuid, 'req-fake')
+            result = response.value_or_raise()
+            self.assertEqual(jsonutils.to_primitive(fake_act), result)
+            act_id.assert_called_with(self.ctxt, fake_uuid, 'req-fake')
 
     def test_action_events_get(self):
         fake_action_id = fake_server_actions.FAKE_ACTION_ID1
         fake_events = fake_server_actions.FAKE_EVENTS[fake_action_id]
 
-        self.mox.StubOutWithMock(self.tgt_db_inst, 'action_events_get')
-        self.tgt_db_inst.action_events_get(self.ctxt,
-                                     'fake-action').AndReturn(fake_events)
-        self.mox.ReplayAll()
+        with mock.patch.object(self.tgt_db_inst,
+                               'action_events_get') as act_get:
+            act_get.return_value = fake_events
 
-        response = self.src_msg_runner.action_events_get(self.ctxt,
+            response = self.src_msg_runner.action_events_get(self.ctxt,
                                                          self.tgt_cell_name,
                                                          'fake-action')
-        result = response.value_or_raise()
-        self.assertEqual(jsonutils.to_primitive(fake_events), result)
+            result = response.value_or_raise()
+            self.assertEqual(jsonutils.to_primitive(fake_events), result)
+            act_get.assert_called_with(self.ctxt, 'fake-action')
 
     def test_validate_console_port(self):
         instance_uuid = uuids.instance
@@ -1041,18 +1025,16 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
     def test_get_migrations_for_a_given_cell(self):
         filters = {'cell_name': 'child-cell2', 'status': 'confirmed'}
         migrations_in_progress = [{'id': 123}]
-        self.mox.StubOutWithMock(self.tgt_compute_api,
-                                 'get_migrations')
+        with mock.patch.object(self.tgt_compute_api,
+                               'get_migrations') as get_mig:
+            get_mig.return_value = migrations_in_progress
 
-        self.tgt_compute_api.get_migrations(self.ctxt, filters).\
-            AndReturn(migrations_in_progress)
-        self.mox.ReplayAll()
-
-        responses = self.src_msg_runner.get_migrations(
-                self.ctxt,
-                self.tgt_cell_name, False, filters)
-        result = responses[0].value_or_raise()
-        self.assertEqual(migrations_in_progress, result)
+            responses = self.src_msg_runner.get_migrations(
+                    self.ctxt,
+                    self.tgt_cell_name, False, filters)
+            result = responses[0].value_or_raise()
+            self.assertEqual(migrations_in_progress, result)
+            get_mig.assert_called_with(self.ctxt, filters)
 
     def test_get_migrations_for_an_invalid_cell(self):
         filters = {'cell_name': 'invalid_Cell', 'status': 'confirmed'}
