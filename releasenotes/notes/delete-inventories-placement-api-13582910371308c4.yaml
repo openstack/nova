@@ -1,0 +1,18 @@
+---
+features:
+  - |
+    Supports a new method for deleting all inventory for a
+    resource provider
+
+    * DELETE /resource-providers/{uuid}/inventories
+
+    Return codes
+
+    * 204 NoContent on success
+    * 404 NotFound for missing resource provider
+    * 405 MethodNotAllowed if a microversion is specified that is before
+          this change (1.5)
+    * 409 Conflict if inventory in use or if some other request concurrently
+          updates this resource provider
+
+    Requires OpenStack-API-Version placement 1.5

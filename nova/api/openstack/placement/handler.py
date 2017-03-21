@@ -80,7 +80,8 @@ ROUTE_DECLARATIONS = {
     '/resource_providers/{uuid}/inventories': {
         'GET': inventory.get_inventories,
         'POST': inventory.create_inventory,
-        'PUT': inventory.set_inventories
+        'PUT': inventory.set_inventories,
+        'DELETE': inventory.delete_inventories
     },
     '/resource_providers/{uuid}/inventories/{resource_class}': {
         'GET': inventory.get_inventory,

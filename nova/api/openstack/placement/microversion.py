@@ -40,6 +40,7 @@ VERSIONS = [
     '1.3',  # Adds 'member_of' query parameter to get resource providers
             # that are members of any of the listed aggregates
     '1.4',  # Adds resources query string parameter in GET /resource_providers
+    '1.5',  # Adds DELETE /resource_providers/{uuid}/inventories
 ]
 
 
