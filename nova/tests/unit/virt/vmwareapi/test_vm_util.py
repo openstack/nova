@@ -874,6 +874,48 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
         self.assertEqual(expected, result)
 
+    def test_get_vm_create_spec_with_firmware(self):
+        extra_specs = vm_util.ExtraSpecs(firmware='efi')
+        fake_factory = fake.FakeFactory()
+        result = vm_util.get_vm_create_spec(fake_factory,
+                                            self._instance,
+                                            'fake-datastore', [],
+                                            extra_specs)
+        expected = fake_factory.create('ns0:VirtualMachineConfigSpec')
+        expected.name = self._instance.uuid
+        expected.instanceUuid = self._instance.uuid
+        expected.deviceChange = []
+        expected.numCPUs = 2
+
+        expected.version = None
+        expected.memoryMB = 2048
+        expected.guestId = 'otherGuest'
+        expected.firmware = 'efi'
+        expected.extraConfig = []
+
+        extra_config = fake_factory.create("ns0:OptionValue")
+        extra_config.value = self._instance.uuid
+        extra_config.key = 'nvp.vm-uuid'
+        expected.extraConfig.append(extra_config)
+        extra_config = fake_factory.create("ns0:OptionValue")
+        extra_config.value = True
+        extra_config.key = 'disk.EnableUUID'
+        expected.extraConfig.append(extra_config)
+        expected.files = fake_factory.create('ns0:VirtualMachineFileInfo')
+        expected.files.vmPathName = '[fake-datastore]'
+
+        expected.managedBy = fake_factory.create('ns0:ManagedByInfo')
+        expected.managedBy.extensionKey = 'org.openstack.compute'
+        expected.managedBy.type = 'instance'
+
+        expected.tools = fake_factory.create('ns0:ToolsConfigInfo')
+        expected.tools.afterPowerOn = True
+        expected.tools.afterResume = True
+        expected.tools.beforeGuestReboot = True
+        expected.tools.beforeGuestShutdown = True
+        expected.tools.beforeGuestStandby = True
+        self.assertEqual(expected, result)
+
     def test_create_vm(self):
 
         def fake_call_method(module, method, *args, **kwargs):
