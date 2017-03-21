@@ -22,24 +22,61 @@ POLICY_ROOT = 'os_compute_api:os-volumes-attachments:%s'
 
 
 volumes_attachments_policies = [
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'index',
-        check_str=base.RULE_ADMIN_OR_OWNER),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'create',
-        check_str=base.RULE_ADMIN_OR_OWNER),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'show',
-        check_str=base.RULE_ADMIN_OR_OWNER),
+    base.create_rule_default(
+        POLICY_ROOT % 'index',
+        base.RULE_ADMIN_OR_OWNER,
+        "List volume attachments for an instance",
+        [
+            {'method': 'GET',
+             'path': '/servers/{server_id}/os-volume_attachments'
+            }
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'create',
+        base.RULE_ADMIN_OR_OWNER,
+        "Attach a volume to an instance",
+        [
+            {
+                'method': 'POST',
+                'path': '/servers/{server_id}/os-volume_attachments'
+            }
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'show',
+        base.RULE_ADMIN_OR_OWNER,
+        "Show details of a volume attachment",
+        [
+            {
+                'method': 'GET',
+                'path':
+                 '/servers/{server_id}/os-volume_attachments/{attachment_id}'
+            }
+        ]),
     policy.RuleDefault(
         name=POLICY_ROOT % 'discoverable',
         check_str=base.RULE_ANY),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'update',
-        check_str=base.RULE_ADMIN_API),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'delete',
-        check_str=base.RULE_ADMIN_OR_OWNER),
+    base.create_rule_default(
+        POLICY_ROOT % 'update',
+        base.RULE_ADMIN_API,
+        "Update a volume attachment",
+        [
+            {
+                'method': 'PUT',
+                'path':
+                 '/servers/{server_id}/os-volume_attachments/{attachment_id}'
+            }
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'delete',
+        base.RULE_ADMIN_OR_OWNER,
+        "Detach a volume from an instance",
+        [
+            {
+                'method': 'DELETE',
+                'path':
+                 '/servers/{server_id}/os-volume_attachments/{attachment_id}'
+            }
+        ]),
 ]
 
 
