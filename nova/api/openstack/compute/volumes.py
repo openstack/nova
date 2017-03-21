@@ -266,14 +266,27 @@ class VolumeAttachmentController(wsgi.Controller):
         """Returns the list of volume attachments for a given instance."""
         context = req.environ['nova.context']
         context.can(va_policies.POLICY_ROOT % 'index')
-        return self._items(req, server_id,
-                           entity_maker=_translate_attachment_summary_view)
+
+        instance = common.get_instance(self.compute_api, context, server_id)
+
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance.uuid)
+        limited_list = common.limited(bdms, req)
+
+        results = []
+        for bdm in limited_list:
+            if bdm.volume_id:
+                va = _translate_attachment_summary_view(bdm.volume_id,
+                                                        bdm.instance_uuid,
+                                                        bdm.device_name)
+                results.append(va)
+
+        return {'volumeAttachments': results}
 
     @extensions.expected_errors(404)
     def show(self, req, server_id, id):
         """Return data about the given volume attachment."""
         context = req.environ['nova.context']
-        context.can(vol_policies.BASE_POLICY_NAME)
         context.can(va_policies.POLICY_ROOT % 'show')
 
         volume_id = id
@@ -308,7 +321,6 @@ class VolumeAttachmentController(wsgi.Controller):
     def create(self, req, server_id, body):
         """Attach a volume to an instance."""
         context = req.environ['nova.context']
-        context.can(vol_policies.BASE_POLICY_NAME)
         context.can(va_policies.POLICY_ROOT % 'create')
 
         volume_id = body['volumeAttachment']['volumeId']
@@ -362,7 +374,6 @@ class VolumeAttachmentController(wsgi.Controller):
     @validation.schema(volumes_schema.update_volume_attachment)
     def update(self, req, server_id, id, body):
         context = req.environ['nova.context']
-        context.can(vol_policies.BASE_POLICY_NAME)
         context.can(va_policies.POLICY_ROOT % 'update')
 
         old_volume_id = id
@@ -420,7 +431,6 @@ class VolumeAttachmentController(wsgi.Controller):
     def delete(self, req, server_id, id):
         """Detach a volume from an instance."""
         context = req.environ['nova.context']
-        context.can(vol_policies.BASE_POLICY_NAME)
         context.can(va_policies.POLICY_ROOT % 'delete')
 
         volume_id = id
@@ -473,26 +483,6 @@ class VolumeAttachmentController(wsgi.Controller):
         if not found:
             msg = _("volume_id not found: %s") % volume_id
             raise exc.HTTPNotFound(explanation=msg)
-
-    def _items(self, req, server_id, entity_maker):
-        """Returns a list of attachments, transformed through entity_maker."""
-        context = req.environ['nova.context']
-        context.can(vol_policies.BASE_POLICY_NAME)
-
-        instance = common.get_instance(self.compute_api, context, server_id)
-
-        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                context, instance.uuid)
-        limited_list = common.limited(bdms, req)
-        results = []
-
-        for bdm in limited_list:
-            if bdm.volume_id:
-                results.append(entity_maker(bdm.volume_id,
-                                            bdm.instance_uuid,
-                                            bdm.device_name))
-
-        return {'volumeAttachments': results}
 
 
 def _translate_snapshot_detail_view(context, vol):

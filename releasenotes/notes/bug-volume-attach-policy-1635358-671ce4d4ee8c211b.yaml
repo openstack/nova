@@ -1,0 +1,8 @@
+---
+upgrade:
+  - |
+    The os-volume_attachments APIs no longer check
+    ``os_compute_api:os-volumes`` policy. They do still check
+    ``os_compute_api:os-volumes-attachments`` policy rules. Deployers
+    who have customized policy should confirm that their settings for
+    os-volume_attachments policy checks are sufficient.
