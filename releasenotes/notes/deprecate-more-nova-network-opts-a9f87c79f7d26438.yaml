@@ -42,3 +42,4 @@ deprecations:
     - ``networks_path``
     - ``public_interface``
     - ``routing_source_ip``
+    - ``use_ipv6``
