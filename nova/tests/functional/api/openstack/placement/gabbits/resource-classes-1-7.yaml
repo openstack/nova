@@ -1,0 +1,49 @@
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        accept: application/json
+        content-type: application/json
+        OpenStack-API-Version: placement 1.7
+
+tests:
+
+- name: create new custom class with put
+  PUT: /resource_classes/CUSTOM_COW
+  status: 201
+  response_headers:
+      location: //resource_classes/CUSTOM_COW/
+
+- name: verify that class with put
+  PUT: /resource_classes/CUSTOM_COW
+  status: 204
+  response_headers:
+      location: //resource_classes/CUSTOM_COW/
+
+- name: fail to put non custom class
+  PUT: /resource_classes/COW
+  status: 400
+  response_strings:
+      - "Failed validating 'pattern'"
+
+- name: try to put standard class
+  PUT: /resource_classes/VCPU
+  status: 400
+  response_strings:
+      - "Failed validating 'pattern'"
+
+- name: try to put too long class
+  PUT: /resource_classes/CUSTOM_SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+  status: 400
+  response_strings:
+      - "Failed validating 'maxLength'"
+
+- name: post to create still works
+  POST: /resource_classes
+  data:
+      name: CUSTOM_SHEEP
+  status: 201
+  response_headers:
+      location: //resource_classes/CUSTOM_SHEEP/

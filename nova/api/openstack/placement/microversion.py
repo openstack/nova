@@ -43,6 +43,7 @@ VERSIONS = [
     '1.5',  # Adds DELETE /resource_providers/{uuid}/inventories
     '1.6',  # Adds /traits and /resource_providers{uuid}/traits resource
             # endpoints
+    '1.7',  # PUT /resource_classes/{name} is bodiless create or update
 ]
 
 
