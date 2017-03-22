@@ -51,19 +51,23 @@ class ResourceProviderBaseCase(test.NoDBTestCase):
         self.api_db = self.useFixture(fixtures.Database(database='api'))
         self.context = context.RequestContext('fake-user', 'fake-project')
 
-    def _make_allocation(self, rp_uuid=None):
+    def _make_allocation(self, rp_uuid=None, inv_dict=None):
         rp_uuid = rp_uuid or uuidsentinel.allocation_resource_provider
         rp = objects.ResourceProvider(
             context=self.context,
             uuid=rp_uuid,
             name=rp_uuid)
         rp.create()
-        alloc = objects.Allocation(
-            self.context,
-            resource_provider=rp,
-            **DISK_ALLOCATION
-        )
-        alloc.create()
+        inv_dict = inv_dict or DISK_INVENTORY
+        disk_inv = objects.Inventory(context=self.context,
+                resource_provider=rp, **inv_dict)
+        disk_inv.create()
+        inv_list = objects.InventoryList(objects=[disk_inv])
+        rp.set_inventory(inv_list)
+        alloc = objects.Allocation(self.context, resource_provider=rp,
+                **DISK_ALLOCATION)
+        alloc_list = objects.AllocationList(self.context, objects=[alloc])
+        alloc_list.create_all()
         return rp, alloc
 
 
@@ -297,10 +301,10 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         disk_inv = objects.Inventory(
                 resource_provider=rp,
                 resource_class=fields.ResourceClass.DISK_GB,
-                total=1024,
+                total=2048,
                 reserved=15,
                 min_unit=10,
-                max_unit=100,
+                max_unit=600,
                 step_size=10,
                 allocation_ratio=1.0)
         vcpu_inv = objects.Inventory(
@@ -323,8 +327,9 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
             resource_provider=rp,
             consumer_id=uuidsentinel.consumer,
             resource_class='DISK_GB',
-            used=512)
-        alloc.create()
+            used=500)
+        alloc_list = objects.AllocationList(self.context, objects=[alloc])
+        alloc_list.create_all()
 
         # Update our inventory to over-subscribe us after the above allocation
         disk_inv.total = 400
@@ -481,13 +486,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
                       str(error))
 
     def test_delete_inventory_with_allocation(self):
-        rp, allocation = self._make_allocation()
-        disk_inv = objects.Inventory(resource_provider=rp,
-                                     resource_class='DISK_GB',
-                                     total=2048)
-        disk_inv.obj_set_defaults()
-        inv_list = objects.InventoryList(objects=[disk_inv])
-        rp.set_inventory(inv_list)
+        rp, allocation = self._make_allocation(inv_dict=DISK_INVENTORY)
         error = self.assertRaises(exception.InventoryInUse,
                                   rp.delete_inventory,
                                   'DISK_GB')
@@ -515,12 +514,6 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         # their inventory to something that violates allocations so
         # we need to make that possible.
         rp, allocation = self._make_allocation()
-        disk_inv = objects.Inventory(resource_provider=rp,
-                                     resource_class='DISK_GB',
-                                     total=2048)
-        disk_inv.obj_set_defaults()
-        inv_list = objects.InventoryList(objects=[disk_inv])
-        rp.set_inventory(inv_list)
         # attempt to set inventory to less than currently allocated
         # amounts
         new_total = 1
@@ -830,12 +823,17 @@ class TestAllocation(ResourceProviderBaseCase):
         )
         resource_provider.create()
         resource_class = fields.ResourceClass.DISK_GB
+        inv = objects.Inventory(context=self.context,
+                resource_provider=resource_provider, **DISK_INVENTORY)
+        inv.create()
         disk_allocation = objects.Allocation(
             context=self.context,
             resource_provider=resource_provider,
             **DISK_ALLOCATION
         )
-        disk_allocation.create()
+        alloc_list = objects.AllocationList(self.context,
+                objects=[disk_allocation])
+        alloc_list.create_all()
 
         self.assertEqual(resource_class, disk_allocation.resource_class)
         self.assertEqual(resource_provider,
@@ -916,21 +914,30 @@ class TestAllocation(ResourceProviderBaseCase):
             resource_provider=rp1,
             used=2,
         )
-        alloc3.create()
+        alloc_list = objects.AllocationList(self.context, objects=[alloc3])
+        alloc_list.create_all()
         allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
             self.context, rp1.uuid)
         self.assertEqual(2, len(allocations))
 
         # add more allocations for the first resource provider
         # of a different class
+        # First we need to add sufficient inventory
+        res_cls = fields.ResourceClass.IPV4_ADDRESS
+        inv = objects.Inventory(self.context, resource_provider=rp1,
+                resource_class=res_cls, total=256, max_unit=10)
+        inv.obj_set_defaults()
+        inv.create()
+        # Now allocate 4 of them.
         alloc4 = objects.Allocation(
             self.context,
-            consumer_id=uuidsentinel.consumer1,
-           resource_class=fields.ResourceClass.IPV4_ADDRESS,
-           resource_provider=rp1,
-           used=4,
+            consumer_id=uuidsentinel.consumer2,
+            resource_class=res_cls,
+            resource_provider=rp1,
+            used=4,
         )
-        alloc4.create()
+        alloc_list = objects.AllocationList(self.context, objects=[alloc4])
+        alloc_list.create_all()
         allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
             self.context, rp1.uuid)
         self.assertEqual(3, len(allocations))

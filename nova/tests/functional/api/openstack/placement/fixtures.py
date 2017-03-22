@@ -107,18 +107,19 @@ class AllocationFixture(APIFixture):
             step_size=10, min_unit=10, max_unit=600)
         inventory.obj_set_defaults()
         rp.add_inventory(inventory)
-        allocation = objects.Allocation(
+        alloc1 = objects.Allocation(
             self.context, resource_provider=rp,
             resource_class='DISK_GB',
             consumer_id=uuidutils.generate_uuid(),
-            used=512)
-        allocation.create()
-        allocation = objects.Allocation(
+            used=500)
+        alloc2 = objects.Allocation(
             self.context, resource_provider=rp,
             resource_class='DISK_GB',
             consumer_id=uuidutils.generate_uuid(),
-            used=512)
-        allocation.create()
+            used=500)
+        alloc_list = objects.AllocationList(self.context,
+                objects=[alloc1, alloc2])
+        alloc_list.create_all()
 
         # Create some VCPU inventory and allocations.
         inventory = objects.Inventory(
@@ -127,18 +128,19 @@ class AllocationFixture(APIFixture):
             max_unit=4)
         inventory.obj_set_defaults()
         rp.add_inventory(inventory)
-        allocation = objects.Allocation(
+        alloc1 = objects.Allocation(
             self.context, resource_provider=rp,
             resource_class='VCPU',
             consumer_id=uuidutils.generate_uuid(),
             used=2)
-        allocation.create()
-        allocation = objects.Allocation(
+        alloc2 = objects.Allocation(
             self.context, resource_provider=rp,
             resource_class='VCPU',
             consumer_id=uuidutils.generate_uuid(),
             used=4)
-        allocation.create()
+        alloc_list = objects.AllocationList(self.context,
+                objects=[alloc1, alloc2])
+        alloc_list.create_all()
 
         # The ALT_RP_XXX variables are for a resource provider that has
         # not been created in the Allocation fixture

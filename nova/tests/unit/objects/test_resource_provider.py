@@ -457,37 +457,63 @@ class TestInventory(test_objects._LocalTest):
                           target_version='1.0')
 
 
-class TestAllocationNoDB(test_objects._LocalTest):
-    USES_DB = False
+class TestAllocation(test_objects._LocalTest):
+    USES_DB = True
 
     @mock.patch('nova.objects.resource_provider._ensure_rc_cache',
             side_effect=_fake_ensure_cache)
-    @mock.patch('nova.objects.Allocation._create_in_db',
-                return_value=_ALLOCATION_DB)
-    def test_create(self, mock_db_create, mock_ensure_cache):
-        rp = objects.ResourceProvider(id=_RESOURCE_PROVIDER_ID,
-                                      uuid=uuids.resource_provider)
+    def test_create(self, mock_ensure_cache):
+        rp = objects.ResourceProvider(context=self.context,
+                                      uuid=_RESOURCE_PROVIDER_UUID,
+                                      name=_RESOURCE_PROVIDER_NAME)
+        rp.create()
+        inv = objects.Inventory(context=self.context,
+                                resource_provider=rp,
+                                resource_class=_RESOURCE_CLASS_NAME,
+                                total=16,
+                                reserved=2,
+                                min_unit=1,
+                                max_unit=8,
+                                step_size=1,
+                                allocation_ratio=1.0)
+        inv.create()
         obj = objects.Allocation(context=self.context,
                                  resource_provider=rp,
                                  resource_class=_RESOURCE_CLASS_NAME,
                                  consumer_id=uuids.fake_instance,
                                  used=8)
-        obj.create()
-        self.assertEqual(_ALLOCATION_ID, obj.id)
-        expected = dict(_ALLOCATION_DB)
-        expected.pop('id')
-        mock_db_create.assert_called_once_with(self.context, expected)
+        alloc_list = objects.AllocationList(self.context, objects=[obj])
+        self.assertNotIn("id", obj)
+        alloc_list.create_all()
+        self.assertIn("id", obj)
 
     def test_create_with_id_fails(self):
-        rp = objects.ResourceProvider(id=_RESOURCE_PROVIDER_ID,
-                                      uuid=uuids.resource_provider)
+        rp = objects.ResourceProvider(context=self.context,
+                                      uuid=_RESOURCE_PROVIDER_UUID,
+                                      name=_RESOURCE_PROVIDER_NAME)
+        rp.create()
+        inv = objects.Inventory(context=self.context,
+                                resource_provider=rp,
+                                resource_class=_RESOURCE_CLASS_NAME,
+                                total=16,
+                                reserved=2,
+                                min_unit=1,
+                                max_unit=8,
+                                step_size=1,
+                                allocation_ratio=1.0)
+        inv.create()
         obj = objects.Allocation(context=self.context,
                                  id=99,
                                  resource_provider=rp,
                                  resource_class=_RESOURCE_CLASS_NAME,
                                  consumer_id=uuids.fake_instance,
                                  used=8)
-        self.assertRaises(exception.ObjectActionError, obj.create)
+        alloc_list = objects.AllocationList(self.context, objects=[obj])
+        self.assertRaises(exception.ObjectActionError, alloc_list.create_all)
+
+
+class TestAllocationNoDB(test_objects._LocalTest):
+    USES_DB = False
 
     def test_custom_resource_raises(self):
         """Ensure that if we send an inventory object to a backversioned 1.0
