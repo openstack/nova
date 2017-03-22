@@ -573,7 +573,7 @@ class NetworkInfoTests(test.NoDBTestCase):
 
         nwinfo = model.NetworkInfo(vifs)
         return netutils.get_injected_network_template(
-            nwinfo, use_ipv6=use_ipv6, libvirt_virt_type=libvirt_virt_type)
+            nwinfo, libvirt_virt_type=libvirt_virt_type)
 
     def test_injection_dynamic(self):
         expected = None
@@ -869,8 +869,7 @@ class TestNetworkMetadata(test.NoDBTestCase):
 
     def test_get_network_metadata_json(self):
 
-        net_metadata = netutils.get_network_metadata(self.netinfo,
-                                                     use_ipv6=True)
+        net_metadata = netutils.get_network_metadata(self.netinfo)
 
         # Physical Ethernet
         self.assertEqual(
@@ -938,8 +937,7 @@ class TestNetworkMetadata(test.NoDBTestCase):
 
         self.netinfo[0]['network']['subnets'][0] = ipv4_subnet
         self.netinfo[0]['network']['subnets'][1] = ipv6_subnet
-        net_metadata = netutils.get_network_metadata(self.netinfo,
-                                                     use_ipv6=True)
+        net_metadata = netutils.get_network_metadata(self.netinfo)
 
         # IPv4 Network
         self.assertEqual(

@@ -1,0 +1,19 @@
+---
+upgrade:
+  - |
+    Injected network templates will now ignore the ``use_ipv6`` config option.
+
+    Nova supports file injection of network templates. Putting these in a
+    config drive is the only way to configure networking without DHCP.
+
+    Previously, setting the ``use_ipv6`` config option to ``False`` prevented
+    the generation of IPv6 network info, even if there were IPv6 networks
+    available. This was fine when using nova-network, where the same config
+    option is used to control generation of these subnets. However, a mismatch
+    between this nova option and equivalent IPv6 options in neutron would
+    have resulted in IPv6 packets being dropped.
+
+    Seeing as there was no apparent reason for not including IPv6 network info
+    when IPv6 capable networks are present, we now ignore this option.
+    Instead, we include info for all available networks in the template, be
+    they IPv4 or IPv6.
