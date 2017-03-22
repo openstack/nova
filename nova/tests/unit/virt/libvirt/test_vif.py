@@ -491,7 +491,8 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         conf.vcpus = 4
         return conf
 
-    def _get_instance_xml(self, driver, vif, image_meta=None, flavor=None):
+    def _get_instance_xml(self, driver, vif, image_meta=None, flavor=None,
+                          has_min_libvirt_version=True):
         if flavor is None:
             flavor = objects.Flavor(name='m1.small',
                                 memory_mb=128,
@@ -508,9 +509,11 @@ class LibvirtVifTestCase(test.NoDBTestCase):
 
         conf = self._get_conf()
         hostimpl = host.Host("qemu:///system")
-        nic = driver.get_config(self.instance, vif, image_meta,
-                                flavor, CONF.libvirt.virt_type,
-                                hostimpl)
+        with mock.patch.object(hostimpl, 'has_min_version',
+                               return_value=has_min_libvirt_version):
+            nic = driver.get_config(self.instance, vif, image_meta,
+                                    flavor, CONF.libvirt.virt_type,
+                                    hostimpl)
         conf.add_device(nic)
         return conf.to_xml()
 
@@ -1225,7 +1228,9 @@ class LibvirtVifTestCase(test.NoDBTestCase):
     def test_hw_veb_driver_macvtap_pre_vlan_support(self, ver_mock,
                                                     mock_get_ifname):
         d = vif.LibvirtGenericVIFDriver()
-        xml = self._get_instance_xml(d, self.vif_hw_veb_macvtap)
+        xml = self._get_instance_xml(
+            d, self.vif_hw_veb_macvtap,
+            has_min_libvirt_version=ver_mock.return_value)
         node = self._get_node(xml)
         self.assertEqual(node.get("type"), "direct")
         self._assertTypeEquals(node, "direct", "source",
@@ -1352,7 +1357,8 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         image_meta = objects.ImageMeta.from_dict(
             {'properties': {'hw_vif_model': 'virtio',
                             'hw_vif_multiqueue_enabled': 'true'}})
-        xml = self._get_instance_xml(d, self.vif_vhostuser, image_meta)
+        xml = self._get_instance_xml(d, self.vif_vhostuser, image_meta,
+                                     has_min_libvirt_version=False)
         node = self._get_node(xml)
         self.assertEqual(node.get("type"),
                          network_model.VIF_TYPE_VHOSTUSER)
