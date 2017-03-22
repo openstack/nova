@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
 import webob
 
 from nova.api.openstack import api_version_request
@@ -31,7 +33,7 @@ from nova.tests import uuidsentinel as uuids
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 
 
-def compute_api_get(self, context, instance_id, expected_attrs=None):
+def compute_api_get(context, instance_id, expected_attrs=None):
     return dict(uuid=FAKE_UUID, id=instance_id, instance_type_id=1, host='bob')
 
 
@@ -51,7 +53,7 @@ def _generate_fake_vifs(context):
     return fake_vifs
 
 
-def get_vifs_by_instance(self, context, instance_id):
+def get_vifs_by_instance(context, instance_id):
     return _generate_fake_vifs(context)
 
 
@@ -75,10 +77,16 @@ class ServerVirtualInterfaceTestV21(test.NoDBTestCase):
         # the tests need to specifically run against nova-network unless
         # otherwise setup to run with Neutron and expect failure.
         self.flags(use_neutron=False)
-        self.stubs.Set(compute.api.API, "get",
-                       compute_api_get)
-        self.stubs.Set(network.api.API, "get_vifs_by_instance",
-                       get_vifs_by_instance)
+        self.compute_api_get_patcher = mock.patch.object(
+            compute.api.API, "get",
+            side_effect=compute_api_get)
+        self.get_vifs_by_instance_patcher = mock.patch.object(
+            network.api.API, "get_vifs_by_instance",
+            side_effect=get_vifs_by_instance)
+        self.compute_api_get_patcher.start()
+        self.get_vifs_by_instance_patcher.start()
+        self.addCleanup(self.compute_api_get_patcher.stop)
+        self.addCleanup(self.get_vifs_by_instance_patcher.stop)
         self._set_controller()
 
     def _set_controller(self):
@@ -97,33 +105,33 @@ class ServerVirtualInterfaceTestV21(test.NoDBTestCase):
         limited_response = {name: [self.expected_response[name][1]]}
         self.assertEqual(limited_response, res_dict)
 
-    def test_vif_instance_not_found(self):
-        self.mox.StubOutWithMock(compute_api.API, 'get')
+    @mock.patch.object(compute_api.API, 'get',
+                       side_effect=exception.InstanceNotFound(
+                           instance_id='instance-0000'))
+    def test_vif_instance_not_found(self, mock_get):
         fake_context = context.RequestContext('fake', 'fake')
         fake_req = FakeRequest(fake_context)
         fake_req.api_version_request = api_version_request.APIVersionRequest(
                                         self.wsgi_api_version)
-        compute_api.API.get(fake_context, 'fake_uuid',
-                            expected_attrs=None).AndRaise(
-            exception.InstanceNotFound(instance_id='instance-0000'))
-
-        self.mox.ReplayAll()
         self.assertRaises(
             webob.exc.HTTPNotFound,
             self.controller.index,
             fake_req, 'fake_uuid')
+        mock_get.assert_called_once_with(fake_context,
+                                         'fake_uuid',
+                                         expected_attrs=None)
 
     def test_list_vifs_neutron_notimplemented(self):
         """Tests that a 400 is returned when using neutron as the backend"""
         # unset the get_vifs_by_instance stub from setUp
-        self.mox.UnsetStubs()
+        self.get_vifs_by_instance_patcher.stop()
         self.flags(use_neutron=True)
         # reset the controller to use the neutron network API
         self._set_controller()
-        self.stub_out('nova.compute.api.API.get', compute_api_get)
         req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.index, req, FAKE_UUID)
+        self.get_vifs_by_instance_patcher.start()
 
 
 class ServerVirtualInterfaceTestV212(ServerVirtualInterfaceTestV21):
