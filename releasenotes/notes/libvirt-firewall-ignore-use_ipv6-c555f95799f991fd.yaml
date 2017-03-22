@@ -1,0 +1,30 @@
+---
+upgrade:
+  - |
+    The libvirt driver port filtering feature will now ignore the ``use_ipv6``
+    config option.
+
+    The libvirt driver provides port filtering capability. This capability
+    is enabled when the following is true:
+
+    - The ``nova.virt.libvirt.firewall.IptablesFirewallDriver`` firewall driver
+      is enabled
+    - Security groups are disabled
+    - Neutron port filtering is disabled/unsupported
+    - An IPTables-compatible interface is used, e.g. an OVS VIF in hybrid mode,
+      where the VIF is a tap device connected to OVS with a bridge
+
+    When enabled, libvirt applies IPTables rules to all interface ports that
+    provide MAC, IP, and ARP spoofing protection.
+
+    Previously, setting the ``use_ipv6`` config option to ``False`` prevented
+    the generation of IPv6 rules even when there were IPv6 subnets available.
+    This was fine when using nova-network, where the same config option was
+    used to control generation of these subnets. However, a mismatch between
+    this nova option and equivalent IPv6 options in neutron would have resulted
+    in IPv6 packets being dropped.
+
+    Seeing as there was no apparent reason for not allowing IPv6 traffic when
+    the network is IPv6-capable, we now ignore this option. Instead, we use the
+    availability of IPv6-capable subnets as an indicator that IPv6 rules should
+    be added.
