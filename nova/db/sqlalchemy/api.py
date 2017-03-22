@@ -2245,7 +2245,6 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
     if query_prefix is None:
         return []
     query_prefix = _regex_instance_filter(query_prefix, filters)
-    query_prefix = _tag_instance_filter(context, query_prefix, filters)
 
     # paginate query
     if marker is not None:
@@ -2264,65 +2263,6 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
         raise exception.InvalidSortKey()
 
     return _instances_fill_metadata(context, query_prefix.all(), manual_joins)
-
-
-def _tag_instance_filter(context, query, filters):
-    """Applies tag filtering to an Instance query.
-
-    Returns the updated query.  This method alters filters to remove
-    keys that are tags.  This filters on resources by tags - this
-    method assumes that the caller will take care of access control
-
-    :param context: request context object
-    :param query: query to apply filters to
-    :param filters: dictionary of filters
-    """
-    if filters.get('filter') is None:
-        return query
-
-    model = models.Instance
-    model_metadata = models.InstanceMetadata
-    model_uuid = model_metadata.instance_uuid
-
-    or_query = None
-
-    def _to_list(val):
-        if isinstance(val, dict):
-            val = val.values()
-        if not isinstance(val, (tuple, list, set)):
-            val = (val,)
-        return val
-
-    for filter_block in filters['filter']:
-        if not isinstance(filter_block, dict):
-            continue
-
-        filter_name = filter_block.get('name')
-        if filter_name is None:
-            continue
-
-        tag_name = filter_name[4:]
-        tag_val = _to_list(filter_block.get('value'))
-
-        if filter_name.startswith('tag-'):
-            if tag_name not in ['key', 'value']:
-                msg = _("Invalid field name: %s") % tag_name
-                raise exception.InvalidParameterValue(err=msg)
-            subq = getattr(model_metadata, tag_name).in_(tag_val)
-            or_query = subq if or_query is None else or_(or_query, subq)
-
-        elif filter_name.startswith('tag:'):
-            subq = model_query(context, model_metadata, (model_uuid,)).\
-                filter_by(key=tag_name).\
-                filter(model_metadata.value.in_(tag_val))
-            query = query.filter(model.uuid.in_(subq))
-
-    if or_query is not None:
-        subq = model_query(context, model_metadata, (model_uuid,)).\
-                filter(or_query)
-        query = query.filter(model.uuid.in_(subq))
-
-    return query
 
 
 def _db_connection_type(db_connection):
