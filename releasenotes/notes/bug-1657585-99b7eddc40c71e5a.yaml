@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    The ``POST`` and ``DELETE`` operations on the
+    ``os-assisted-volume-snapshots`` API will now fail with a 400 error if the
+    related instance is undergoing a task state transition or does not have a
+    host, i.e. is shelved offloaded.

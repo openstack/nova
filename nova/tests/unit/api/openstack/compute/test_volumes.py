@@ -29,6 +29,7 @@ from nova.api.openstack.compute import assisted_volume_snapshots \
 from nova.api.openstack.compute import volumes as volumes_v21
 from nova.compute import api as compute_api
 from nova.compute import flavors
+from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
 from nova import context
@@ -796,6 +797,33 @@ class AssistedSnapshotCreateTestCaseV21(test.NoDBTestCase):
         self.assertRaises(
             webob.exc.HTTPBadRequest, self.controller.create, req, body=body)
 
+    def _test_assisted_create_instance_conflict(self, api_error):
+        # unset the stub on volume_snaphost_create from setUp
+        self.mox.UnsetStubs()
+        req = fakes.HTTPRequest.blank('/v2/fake/os-assisted-volume-snapshots')
+        body = {'snapshot':
+                   {'volume_id': '1',
+                    'create_info': {'type': 'qcow2',
+                                    'new_file': 'new_file',
+                                    'snapshot_id': 'snapshot_id'}}}
+        req.method = 'POST'
+        with mock.patch.object(compute_api.API, 'volume_snapshot_create',
+                               side_effect=api_error):
+            self.assertRaises(
+                webob.exc.HTTPBadRequest, self.controller.create,
+                req, body=body)
+
+    def test_assisted_create_instance_invalid_state(self):
+        api_error = exception.InstanceInvalidState(
+            instance_uuid=FAKE_UUID, attr='task_state',
+            state=task_states.SHELVING_OFFLOADING,
+            method='volume_snapshot_create')
+        self._test_assisted_create_instance_conflict(api_error)
+
+    def test_assisted_create_instance_not_ready(self):
+        api_error = exception.InstanceNotReady(instance_id=FAKE_UUID)
+        self._test_assisted_create_instance_conflict(api_error)
+
 
 class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
     assisted_snaps = assisted_snaps_v21
@@ -827,6 +855,32 @@ class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
         req.method = 'DELETE'
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.delete,
                 req, '5')
+
+    def _test_assisted_delete_instance_conflict(self, api_error):
+        # unset the stub on volume_snapshot_delete from setUp
+        self.mox.UnsetStubs()
+        params = {
+            'delete_info': jsonutils.dumps({'volume_id': '1'}),
+        }
+        req = fakes.HTTPRequest.blank(
+                '/v2/fake/os-assisted-volume-snapshots?%s' %
+                urllib.parse.urlencode(params))
+        req.method = 'DELETE'
+        with mock.patch.object(compute_api.API, 'volume_snapshot_delete',
+                               side_effect=api_error):
+            self.assertRaises(
+                webob.exc.HTTPBadRequest, self.controller.delete, req, '5')
+
+    def test_assisted_delete_instance_invalid_state(self):
+        api_error = exception.InstanceInvalidState(
+            instance_uuid=FAKE_UUID, attr='task_state',
+            state=task_states.UNSHELVING,
+            method='volume_snapshot_delete')
+        self._test_assisted_delete_instance_conflict(api_error)
+
+    def test_assisted_delete_instance_not_ready(self):
+        api_error = exception.InstanceNotReady(instance_id=FAKE_UUID)
+        self._test_assisted_delete_instance_conflict(api_error)
 
 
 class TestAssistedVolumeSnapshotsPolicyEnforcementV21(test.NoDBTestCase):

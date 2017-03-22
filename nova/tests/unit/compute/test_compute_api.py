@@ -2941,7 +2941,9 @@ class _ComputeAPIUnitTestMixIn(object):
                     'connection_info': "{'fake': 'connection_info'}",
                     'volume_id': 1,
                     'boot_index': -1})
-        fake_bdm['instance'] = fake_instance.fake_db_instance()
+        fake_bdm['instance'] = fake_instance.fake_db_instance(
+            launched_at=timeutils.utcnow(),
+            vm_state=vm_states.ACTIVE)
         fake_bdm['instance_uuid'] = fake_bdm['instance']['uuid']
         fake_bdm = objects.BlockDeviceMapping._from_db_object(
                 self.context, objects.BlockDeviceMapping(),
@@ -2971,6 +2973,38 @@ class _ComputeAPIUnitTestMixIn(object):
         }
         self.assertEqual(snapshot, expected_snapshot)
 
+    @mock.patch.object(
+        objects.BlockDeviceMapping, 'get_by_volume',
+        return_value=objects.BlockDeviceMapping(
+            instance=objects.Instance(
+                launched_at=timeutils.utcnow(), uuid=uuids.instance_uuid,
+                vm_state=vm_states.ACTIVE, task_state=task_states.SHELVING,
+                host='fake_host')))
+    def test_volume_snapshot_create_shelving(self, bdm_get_by_volume):
+        """Tests a negative scenario where the instance task_state is not
+        accepted for creating a guest-assisted volume snapshot.
+        """
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.volume_snapshot_create,
+                          self.context, mock.sentinel.volume_id,
+                          mock.sentinel.create_info)
+
+    @mock.patch.object(
+        objects.BlockDeviceMapping, 'get_by_volume',
+        return_value=objects.BlockDeviceMapping(
+            instance=objects.Instance(
+                launched_at=timeutils.utcnow(), uuid=uuids.instance_uuid,
+                vm_state=vm_states.SHELVED_OFFLOADED, task_state=None,
+                host=None)))
+    def test_volume_snapshot_create_shelved_offloaded(self, bdm_get_by_volume):
+        """Tests a negative scenario where the instance is shelved offloaded
+        so we don't have a host to cast to for the guest-assisted snapshot.
+        """
+        self.assertRaises(exception.InstanceNotReady,
+                          self.compute_api.volume_snapshot_create,
+                          self.context, mock.sentinel.volume_id,
+                          mock.sentinel.create_info)
+
     def test_volume_snapshot_delete(self):
         volume_id = '1'
         snapshot_id = '2'
@@ -2982,7 +3016,9 @@ class _ComputeAPIUnitTestMixIn(object):
                     'connection_info': "{'fake': 'connection_info'}",
                     'volume_id': 1,
                     'boot_index': -1})
-        fake_bdm['instance'] = fake_instance.fake_db_instance()
+        fake_bdm['instance'] = fake_instance.fake_db_instance(
+            launched_at=timeutils.utcnow(),
+            vm_state=vm_states.STOPPED)
         fake_bdm['instance_uuid'] = fake_bdm['instance']['uuid']
         fake_bdm = objects.BlockDeviceMapping._from_db_object(
                 self.context, objects.BlockDeviceMapping(),
@@ -3003,6 +3039,38 @@ class _ComputeAPIUnitTestMixIn(object):
 
         self.compute_api.volume_snapshot_delete(self.context, volume_id,
                 snapshot_id, {})
+
+    @mock.patch.object(
+        objects.BlockDeviceMapping, 'get_by_volume',
+        return_value=objects.BlockDeviceMapping(
+            instance=objects.Instance(
+                launched_at=timeutils.utcnow(), uuid=uuids.instance_uuid,
+                vm_state=vm_states.ACTIVE, task_state=task_states.SHELVING,
+                host='fake_host')))
+    def test_volume_snapshot_delete_shelving(self, bdm_get_by_volume):
+        """Tests a negative scenario where the instance is shelving and the
+        task_state is set so we can't perform the guest-assisted snapshot.
+        """
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.volume_snapshot_delete,
+                          self.context, mock.sentinel.volume_id,
+                          mock.sentinel.snapshot_id, mock.sentinel.delete_info)
+
+    @mock.patch.object(
+        objects.BlockDeviceMapping, 'get_by_volume',
+        return_value=objects.BlockDeviceMapping(
+            instance=objects.Instance(
+                launched_at=timeutils.utcnow(), uuid=uuids.instance_uuid,
+                vm_state=vm_states.SHELVED_OFFLOADED, task_state=None,
+                host=None)))
+    def test_volume_snapshot_delete_shelved_offloaded(self, bdm_get_by_volume):
+        """Tests a negative scenario where the instance is shelved offloaded
+        so there is no host to cast to for the guest-assisted snapshot delete.
+        """
+        self.assertRaises(exception.InstanceNotReady,
+                          self.compute_api.volume_snapshot_delete,
+                          self.context, mock.sentinel.volume_id,
+                          mock.sentinel.snapshot_id, mock.sentinel.delete_info)
 
     def _test_boot_volume_bootable(self, is_bootable=False):
         def get_vol_data(*args, **kwargs):
