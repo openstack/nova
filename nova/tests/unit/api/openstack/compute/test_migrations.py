@@ -15,7 +15,6 @@
 import datetime
 
 import mock
-from oslotest import moxstubout
 
 from nova.api.openstack.compute import migrations as migrations_v21
 from nova import context
@@ -155,8 +154,6 @@ class MigrationsTestCaseV21(test.NoDBTestCase):
         self.controller = self.migrations.MigrationsController()
         self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
         self.context = self.req.environ['nova.context']
-        mox_fixture = self.useFixture(moxstubout.MoxStubout())
-        self.mox = mox_fixture.mox
 
     def test_index(self):
         migrations_in_progress = {'migrations': self._migrations_output()}
@@ -170,15 +167,15 @@ class MigrationsTestCaseV21(test.NoDBTestCase):
         filters = {'host': 'host1', 'status': 'migrating',
                    'cell_name': 'ChildCell'}
         self.req.GET.update(filters)
-        self.mox.StubOutWithMock(self.controller.compute_api,
-                                 "get_migrations")
 
-        self.controller.compute_api.get_migrations(
-            self.context, filters).AndReturn(migrations_obj)
-        self.mox.ReplayAll()
-
-        response = self.controller.index(self.req)
-        self.assertEqual(migrations_in_progress, response)
+        with mock.patch.object(self.controller.compute_api,
+                               'get_migrations',
+                               return_value=migrations_obj) as (
+            mock_get_migrations
+        ):
+            response = self.controller.index(self.req)
+            self.assertEqual(migrations_in_progress, response)
+            mock_get_migrations.assert_called_once_with(self.context, filters)
 
 
 class MigrationsTestCaseV223(MigrationsTestCaseV21):
