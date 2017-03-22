@@ -272,19 +272,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         self = super(Instance, cls)._obj_from_primitive(context, objver,
                                                         primitive)
         self._reset_metadata_tracking()
-
-        # Note(gibi): The flavors stored in the instance should not be used
-        # for lazy load data from the db as these objects aren't connected to
-        # real flavor objects in the db. However during RPC deserialization
-        # every object gets a valid context so we have to orphan the flavors
-        # again.
-        if self.obj_attr_is_set('flavor'):
-            self.flavor._context = None
-        if self.obj_attr_is_set('old_flavor') and self.old_flavor:
-            self.old_flavor._context = None
-        if self.obj_attr_is_set('new_flavor') and self.new_flavor:
-            self.new_flavor._context = None
-
         return self
 
     @property

@@ -75,6 +75,13 @@ class FlavorPayload(base.NotificationPayloadBase):
 
     def __init__(self, flavor, **kwargs):
         super(FlavorPayload, self).__init__(**kwargs)
+        if 'projects' not in flavor:
+            # NOTE(danms): If projects is not loaded in the flavor,
+            # don't attempt to load it. If we're in a child cell then
+            # we can't load the real flavor, and if we're a flavor on
+            # an instance then we don't want to anyway.
+            flavor = flavor.obj_clone()
+            flavor._context = None
         self.populate_schema(flavor=flavor)
 
     def obj_make_compatible(self, primitive, target_version):

@@ -610,6 +610,11 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
             db.flavor_destroy(self._context, self.flavorid)
 
     def _send_notification(self, action):
+        # NOTE(danms): Instead of making the below notification
+        # lazy-load projects (which is a problem for instance-bound
+        # flavors and compute-cell operations), just load them here.
+        if 'projects' not in self:
+            self._load_projects()
         notification_type = flavor_notification.FlavorNotification
         payload_type = flavor_notification.FlavorPayload
 
