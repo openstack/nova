@@ -26,18 +26,46 @@ keypairs_policies = [
     policy.RuleDefault(
         name=POLICY_ROOT % 'discoverable',
         check_str=base.RULE_ANY),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'index',
-        check_str='rule:admin_api or user_id:%(user_id)s'),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'create',
-        check_str='rule:admin_api or user_id:%(user_id)s'),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'delete',
-        check_str='rule:admin_api or user_id:%(user_id)s'),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'show',
-        check_str='rule:admin_api or user_id:%(user_id)s'),
+    base.create_rule_default(
+        POLICY_ROOT % 'index',
+        'rule:admin_api or user_id:%(user_id)s',
+        "List all keypairs",
+        [
+            {
+                'path': '/os-keypairs',
+                'method': 'GET'
+            }
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'create',
+        'rule:admin_api or user_id:%(user_id)s',
+        "Create a keypair",
+        [
+            {
+                'path': '/os-keypairs',
+                'method': 'POST'
+            }
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'delete',
+        'rule:admin_api or user_id:%(user_id)s',
+        "Delete a keypair",
+        [
+            {
+                'path': '/os-keypairs/{keypair_name}',
+                'method': 'DELETE'
+            }
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'show',
+        'rule:admin_api or user_id:%(user_id)s',
+        "Show details of a keypair",
+        [
+            {
+                'path': '/os-keypairs/{keypair_name}',
+                'method': 'GET'
+            }
+        ]),
     policy.RuleDefault(
         name=BASE_POLICY_NAME,
         check_str=base.RULE_ADMIN_OR_OWNER),
