@@ -901,7 +901,7 @@ def last_bytes(file_like_object, num):
     :param file_like_object: The file to read
     :param num: The number of bytes to return
 
-    :returns (data, remaining)
+    :returns: (data, remaining)
     """
 
     try:

@@ -116,7 +116,7 @@ class ResourceClassCache(object):
 
         :param rc_id: The numeric representation of the resource class to look
                       up a string identifier for.
-        :returns string identifier for the resource class, or None, if no such
+        :returns: string identifier for the resource class, or None, if no such
                  resource class was found in the list of standard resource
                  classes or the resource_classes database table.
         :raises `exception.ResourceClassNotFound` if rc_id cannot be found in
