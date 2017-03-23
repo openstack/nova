@@ -191,7 +191,7 @@ class TestOpenStackClient(object):
                     raise OpenStackApiAuthorizationException(response=response)
                 else:
                     raise OpenStackApiException(
-                        message="Unexpected status code",
+                        message="Unexpected status code: %s" % response.text,
                         response=response)
 
         return response
