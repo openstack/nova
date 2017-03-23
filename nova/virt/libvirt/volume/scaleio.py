@@ -48,14 +48,14 @@ class LibvirtScaleIOVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         conf.source_path = connection_info['data']['device_path']
         return conf
 
-    def connect_volume(self, connection_info, disk_info):
+    def connect_volume(self, connection_info, disk_info, instance):
         device_info = self.connector.connect_volume(connection_info['data'])
         LOG.debug("Attached ScaleIO volume %s.", device_info)
         connection_info['data']['device_path'] = device_info['path']
 
-    def disconnect_volume(self, connection_info, disk_dev):
+    def disconnect_volume(self, connection_info, disk_dev, instance):
         self.connector.disconnect_volume(connection_info['data'], None)
         LOG.debug("Disconnected volume %s.", disk_dev)
 
         super(LibvirtScaleIOVolumeDriver, self).disconnect_volume(
-            connection_info, disk_dev)
+            connection_info, disk_dev, instance)

@@ -49,13 +49,13 @@ class LibvirtDISCOVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         conf.source_type = 'file'
         return conf
 
-    def connect_volume(self, connection_info, disk_info):
+    def connect_volume(self, connection_info, disk_info, instance):
         """Connect a DISCO volume to a compute node."""
         device_info = self.connector.connect_volume(connection_info['data'])
         connection_info['data']['device_path'] = device_info['path']
 
-    def disconnect_volume(self, connection_info, disk_dev):
+    def disconnect_volume(self, connection_info, disk_dev, instance):
         """Disconnect a DISCO volume of a compute node."""
         self.connector.disconnect_volume(connection_info['data'], None)
         super(LibvirtDISCOVolumeDriver, self).disconnect_volume(
-            connection_info, disk_dev)
+            connection_info, disk_dev, instance)

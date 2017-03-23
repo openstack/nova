@@ -38,7 +38,7 @@ class LibvirtScaleIOVolumeDriverTestCase(
         sio.connector.connect_volume = brick_conn_vol
         disk_info = {'path': '/dev/vol01', 'name': 'vol01'}
         conn = {'data': disk_info}
-        sio.connect_volume(conn, None)
+        sio.connect_volume(conn, None, mock.sentinel.instance)
         self.assertEqual('/dev/vol01',
                          conn['data']['device_path'])
 
@@ -57,6 +57,6 @@ class LibvirtScaleIOVolumeDriverTestCase(
         disk_info = {'path': '/dev/vol01', 'name': 'vol01', 'type': 'raw',
                     'dev': 'vda1', 'bus': 'pci0', 'device_path': '/dev/vol01'}
         conn = {'data': disk_info}
-        sio.disconnect_volume(conn, disk_info)
+        sio.disconnect_volume(conn, disk_info, mock.sentinel.instance)
         sio.connector.disconnect_volume.assert_called_once_with(
             disk_info, None)
