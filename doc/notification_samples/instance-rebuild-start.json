@@ -64,7 +64,7 @@
                 }
             ],
             "tenant_id": "6f70656e737461636b20342065766572",
-            "availability_zone": null,
+            "availability_zone": "nova",
             "host": "compute",
             "image_uuid": "a2459075-d96c-40d5-893e-577ff92e721c",
             "state": "active",
