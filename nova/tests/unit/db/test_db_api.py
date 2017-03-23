@@ -6316,14 +6316,22 @@ class BlockDeviceMappingTestCase(test.TestCase):
         bdm = self._create_bdm({})
         self.assertIsNotNone(bdm)
 
+    def test_block_device_mapping_create_with_attachment_id(self):
+        bdm = self._create_bdm({'attachment_id': uuidsentinel.attachment_id})
+        self.assertEqual(uuidsentinel.attachment_id, bdm.attachment_id)
+
     def test_block_device_mapping_update(self):
         bdm = self._create_bdm({})
+        self.assertIsNone(bdm.attachment_id)
         result = db.block_device_mapping_update(
-                self.ctxt, bdm['id'], {'destination_type': 'moon'},
-                legacy=False)
+            self.ctxt, bdm['id'],
+            {'destination_type': 'moon',
+             'attachment_id': uuidsentinel.attachment_id},
+            legacy=False)
         uuid = bdm['instance_uuid']
         bdm_real = db.block_device_mapping_get_all_by_instance(self.ctxt, uuid)
         self.assertEqual(bdm_real[0]['destination_type'], 'moon')
+        self.assertEqual(uuidsentinel.attachment_id, bdm_real[0].attachment_id)
         # Also make sure the update call returned correct data
         self.assertEqual(dict(bdm_real[0]),
                          dict(result))

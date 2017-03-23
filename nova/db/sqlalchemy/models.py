@@ -623,6 +623,8 @@ class BlockDeviceMapping(BASE, NovaBase, models.SoftDeleteMixin):
 
     tag = Column(String(255))
 
+    attachment_id = Column(String(36))
+
 
 class SecurityGroupInstanceAssociation(BASE, NovaBase, models.SoftDeleteMixin):
     __tablename__ = 'security_group_instance_association'
