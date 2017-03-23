@@ -65,7 +65,7 @@ def _serialize_resource_classes(environ, rcs):
 
 
 @wsgi_wrapper.PlacementWsgify
-@microversion.version_handler(1.2)
+@microversion.version_handler('1.2')
 @util.require_content('application/json')
 def create_resource_class(req):
     """POST to create a resource class.
@@ -97,7 +97,7 @@ def create_resource_class(req):
 
 
 @wsgi_wrapper.PlacementWsgify
-@microversion.version_handler(1.2)
+@microversion.version_handler('1.2')
 def delete_resource_class(req):
     """DELETE to destroy a single resource class.
 
@@ -123,7 +123,7 @@ def delete_resource_class(req):
 
 
 @wsgi_wrapper.PlacementWsgify
-@microversion.version_handler(1.2)
+@microversion.version_handler('1.2')
 @util.check_accept('application/json')
 def get_resource_class(req):
     """Get a single resource class.
@@ -144,7 +144,7 @@ def get_resource_class(req):
 
 
 @wsgi_wrapper.PlacementWsgify
-@microversion.version_handler(1.2)
+@microversion.version_handler('1.2')
 @util.check_accept('application/json')
 def list_resource_classes(req):
     """GET a list of resource classes.
@@ -164,7 +164,7 @@ def list_resource_classes(req):
 
 
 @wsgi_wrapper.PlacementWsgify
-@microversion.version_handler(1.2)
+@microversion.version_handler('1.2')
 @util.require_content('application/json')
 def update_resource_class(req):
     """PUT to update a single resource class.

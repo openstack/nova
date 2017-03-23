@@ -37,17 +37,32 @@ class TestMicroversionDecoration(test.NoDBTestCase):
         self.assertEqual(0, len(microversion.VERSIONED_METHODS))
         fully_qualified_method = microversion._fully_qualified_name(
             handler)
-        microversion.version_handler('1.0', '1.9')(handler)
+        microversion.version_handler('1.1', '1.10')(handler)
         microversion.version_handler('2.0')(handler)
 
         methods_data = microversion.VERSIONED_METHODS[fully_qualified_method]
 
         stored_method_data = methods_data[-1]
         self.assertEqual(2, len(methods_data))
-        self.assertEqual(1.0, stored_method_data[0])
-        self.assertEqual(1.9, stored_method_data[1])
+        self.assertEqual(microversion.Version(1, 1), stored_method_data[0])
+        self.assertEqual(microversion.Version(1, 10), stored_method_data[1])
         self.assertEqual(handler, stored_method_data[2])
-        self.assertEqual(2.0, methods_data[0][0])
+        self.assertEqual(microversion.Version(2, 0), methods_data[0][0])
+
+    def test_version_handler_float_exception(self):
+        self.assertRaises(AttributeError,
+                          microversion.version_handler(1.1),
+                          handler)
+
+    def test_version_handler_nan_exception(self):
+        self.assertRaises(TypeError,
+                          microversion.version_handler('cow'),
+                          handler)
+
+    def test_version_handler_tuple_exception(self):
+        self.assertRaises(AttributeError,
+                          microversion.version_handler((1, 1)),
+                          handler)
 
 
 class TestMicroversionIntersection(test.NoDBTestCase):
@@ -121,9 +136,23 @@ class TestMicroversionUtility(test.NoDBTestCase):
              microversion.raise_http_status_code_if_not_version,
              self.req, 405, (1, 5))
 
-    def test_raise_keyerror_out_of_date_version(self):
+    def test_raise_405_out_of_date_version_max(self):
+        version_obj = microversion.parse_version_string('1.4')
+        self.req.environ['placement.microversion'] = version_obj
+        self.assertRaises(webob.exc.HTTPMethodNotAllowed,
+             microversion.raise_http_status_code_if_not_version,
+             self.req, 405, (1, 2), '1.3')
+
+    def test_raise_keyerror_out_of_date_version_tuple(self):
         version_obj = microversion.parse_version_string('1.4')
         self.req.environ['placement.microversion'] = version_obj
         self.assertRaises(KeyError,
              microversion.raise_http_status_code_if_not_version,
              self.req, 999, (1, 5))
+
+    def test_raise_keyerror_out_of_date_version_string(self):
+        version_obj = microversion.parse_version_string('1.4')
+        self.req.environ['placement.microversion'] = version_obj
+        self.assertRaises(KeyError,
+             microversion.raise_http_status_code_if_not_version,
+             self.req, 999, '1.5')
