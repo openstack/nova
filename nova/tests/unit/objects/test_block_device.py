@@ -33,6 +33,7 @@ class _TestBlockDeviceMappingObject(object):
         fake_bdm = fake_block_device.FakeDbBlockDeviceDict({
             'id': 123,
             'instance_uuid': instance.get('uuid') or uuids.instance,
+            'attachment_id': None,
             'device_name': '/dev/sda2',
             'source_type': 'snapshot',
             'destination_type': 'volume',
@@ -215,7 +216,8 @@ class _TestBlockDeviceMappingObject(object):
             self.flags(enable=False, group='cells')
         values = {'source_type': 'volume', 'volume_id': 'fake-vol-id',
                   'destination_type': 'volume',
-                  'instance_uuid': uuids.instance}
+                  'instance_uuid': uuids.instance,
+                  'attachment_id': None}
         if device_name:
             values['device_name'] = device_name
         fake_bdm = fake_block_device.FakeDbBlockDeviceDict(values)
@@ -370,6 +372,15 @@ class _TestBlockDeviceMappingObject(object):
         primitive = bdm.obj_to_primitive(target_version='1.16')
         self.assertNotIn('tag', primitive)
 
+    def test_obj_make_compatible_pre_1_18(self):
+        values = {'source_type': 'volume', 'volume_id': 'fake-vol-id',
+                  'destination_type': 'volume',
+                  'instance_uuid': uuids.instance,
+                  'attachment_id': uuids.attachment_id}
+        bdm = objects.BlockDeviceMapping(context=self.context, **values)
+        primitive = bdm.obj_to_primitive(target_version='1.17')
+        self.assertNotIn('attachment_id', primitive)
+
 
 class TestBlockDeviceMappingObject(test_objects._LocalTest,
                                    _TestBlockDeviceMappingObject):
@@ -387,6 +398,7 @@ class _TestBlockDeviceMappingListObject(object):
             'id': bdm_id,
             'boot_index': boot_index,
             'instance_uuid': instance_uuid,
+            'attachment_id': None,
             'device_name': '/dev/sda2',
             'source_type': 'snapshot',
             'destination_type': 'volume',
