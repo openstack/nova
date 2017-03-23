@@ -23,7 +23,6 @@ from nova.tests.unit.virt.xenapi import stubs
 from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake
 from nova.virt.xenapi.image import bittorrent
-from nova.virt.xenapi import vm_utils
 
 
 class TestBittorrentStore(stubs.XenAPITestBaseNoDB):
@@ -45,8 +44,8 @@ class TestBittorrentStore(stubs.XenAPITestBaseNoDB):
         driver = xenapi_conn.XenAPIDriver(False)
         self.session = driver._session
 
-        self.stubs.Set(
-                vm_utils, 'get_sr_path', lambda *a, **kw: '/fake/sr/path')
+        self.stub_out('nova.virt.xenapi.vm_utils.get_sr_path',
+                      lambda *a, **kw: '/fake/sr/path')
 
     @mock.patch.object(client.session.XenAPISession, 'call_plugin_serialized')
     def test_download_image(self, mock_call_plugin):
@@ -115,7 +114,8 @@ class LookupTorrentURLTestCase(test.NoDBTestCase):
         def fake_warn(msg):
             warnings.append(msg)
 
-        self.stubs.Set(bittorrent.LOG, 'warning', fake_warn)
+        self.stub_out('nova.virt.xenapi.image.bittorrent.LOG.warning',
+                      fake_warn)
 
         lookup_fn = self.store._lookup_torrent_url_fn()
         self.assertEqual('fakeimageid.torrent',
