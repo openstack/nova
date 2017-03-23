@@ -671,6 +671,13 @@ class LibvirtVifTestCase(test.NoDBTestCase):
             if virt == 'parallels':
                 supported = (network_model.VIF_MODEL_RTL8139,
                              network_model.VIF_MODEL_E1000)
+            elif virt == 'qemu':
+                supported = (network_model.VIF_MODEL_LAN9118,
+                             network_model.VIF_MODEL_NE2K_PCI,
+                             network_model.VIF_MODEL_PCNET,
+                             network_model.VIF_MODEL_RTL8139,
+                             network_model.VIF_MODEL_E1000,
+                             network_model.VIF_MODEL_SPAPR_VLAN)
             else:
                 supported = (network_model.VIF_MODEL_NE2K_PCI,
                              network_model.VIF_MODEL_PCNET,

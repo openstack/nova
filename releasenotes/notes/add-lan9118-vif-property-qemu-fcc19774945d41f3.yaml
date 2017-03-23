@@ -1,0 +1,3 @@
+---
+features:
+  - Add support for LAN9118 as a valid nic for hw_vif_model property in qemu.
