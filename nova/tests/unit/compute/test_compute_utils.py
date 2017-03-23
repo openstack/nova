@@ -33,7 +33,6 @@ import nova.conf
 from nova import context
 from nova import exception
 from nova.image import glance
-from nova.network import api as network_api
 from nova.network import model
 from nova import objects
 from nova.objects import base
@@ -392,8 +391,8 @@ class UsageInfoTestCase(test.TestCase):
             return fake_network.fake_get_instance_nw_info(self, 1, 1)
 
         super(UsageInfoTestCase, self).setUp()
-        self.stubs.Set(network_api.API, 'get_instance_nw_info',
-                       fake_get_nw_info)
+        self.stub_out('nova.network.api.get_instance_nw_info',
+                      fake_get_nw_info)
 
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
@@ -409,8 +408,8 @@ class UsageInfoTestCase(test.TestCase):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
 
         self.flags(group='glance', api_servers=['http://localhost:9292'])
-        self.stubs.Set(nova.tests.unit.image.fake._FakeImageService,
-                       'show', fake_show)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      fake_show)
         fake_network.set_stub_network_methods(self)
         fake_server_actions.stub_out_action_events(self)
 
