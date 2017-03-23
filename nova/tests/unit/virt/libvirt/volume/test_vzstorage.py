@@ -64,8 +64,7 @@ class LibvirtVZStorageTestCase(test_volume.LibvirtVolumeBaseTestCase):
                                 err_pattern,
                                 drv.connect_volume,
                                 connection_info,
-                                self.disk_info,
-                                mock.sentinel.instance)
+                                self.disk_info)
 
     def test_libvirt_vzstorage_driver_connect(self):
         def brick_conn_vol(data):
@@ -78,8 +77,7 @@ class LibvirtVZStorageTestCase(test_volume.LibvirtVolumeBaseTestCase):
         connection_info = {'data': {'export': export_string,
                                     'name': self.name}}
 
-        drv.connect_volume(connection_info, self.disk_info,
-                           mock.sentinel.instance)
+        drv.connect_volume(connection_info, self.disk_info)
         self.assertEqual('vstorage://testcluster',
                          connection_info['data']['device_path'])
         self.assertEqual('-u stack -g qemu -m 0770 '
@@ -91,7 +89,7 @@ class LibvirtVZStorageTestCase(test_volume.LibvirtVolumeBaseTestCase):
         drv = vzstorage.LibvirtVZStorageVolumeDriver(self.fake_host)
         drv.connector.disconnect_volume = mock.MagicMock()
         conn = {'data': self.disk_info}
-        drv.disconnect_volume(conn, self.disk_info, mock.sentinel.instance)
+        drv.disconnect_volume(conn, self.disk_info)
         drv.connector.disconnect_volume.assert_called_once_with(
             self.disk_info, None)
 
