@@ -87,6 +87,10 @@ def raise_http_status_code_if_not_version(req, status_code, min_version,
     :raises: HTTP status code if the specified microversion does not match
     :raises: KeyError if status_code is not a valid HTTP status code
     """
+    if not isinstance(min_version, tuple):
+        min_version = parse_version_string(min_version)
+    if max_version and not isinstance(max_version, tuple):
+        max_version = parse_version_string(max_version)
     want_version = req.environ[MICROVERSION_ENVIRON]
     if not want_version.matches(min_version, max_version):
         raise webob.exc.status_map[status_code]
@@ -142,9 +146,6 @@ class Version(collections.namedtuple('Version', 'major minor')):
 
     def __str__(self):
         return '%s.%s' % (self.major, self.minor)
-
-    def __float__(self):
-        return float(self.__str__())
 
     @property
     def max_version(self):
@@ -214,7 +215,7 @@ def _fully_qualified_name(obj):
     return name
 
 
-def _find_method(f, version_float):
+def _find_method(f, version):
     """Look in VERSIONED_METHODS for method with right name matching version.
 
     If no match is found raise a 404.
@@ -224,7 +225,7 @@ def _find_method(f, version_float):
     # just in case.
     method_list = VERSIONED_METHODS.get(qualified_name, [])
     for min_version, max_version, func in method_list:
-        if min_version <= version_float <= max_version:
+        if min_version <= version <= max_version:
             return func
 
     raise webob.exc.HTTPNotFound()
@@ -246,18 +247,18 @@ def version_handler(min_ver, max_ver=None):
                     maximum version allowed for the decorated method.
     """
     def decorator(f):
-        min_version_float = float(min_ver)
+        min_version = parse_version_string(min_ver)
         if max_ver:
-            max_version_float = float(max_ver)
+            max_version = parse_version_string(max_ver)
         else:
-            max_version_float = float(max_version_string())
+            max_version = parse_version_string(max_version_string())
         qualified_name = _fully_qualified_name(f)
         VERSIONED_METHODS[qualified_name].append(
-            (min_version_float, max_version_float, f))
+            (min_version, max_version, f))
 
         def decorated_func(req, *args, **kwargs):
-            version_float = float(req.environ[MICROVERSION_ENVIRON])
-            return _find_method(f, version_float)(req, *args, **kwargs)
+            version = req.environ[MICROVERSION_ENVIRON]
+            return _find_method(f, version)(req, *args, **kwargs)
 
         # Sort highest min version to beginning of list.
         VERSIONED_METHODS[qualified_name].sort(key=lambda x: x[0],
