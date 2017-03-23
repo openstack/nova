@@ -26,21 +26,72 @@ cells_policies = [
     policy.RuleDefault(
         name=POLICY_ROOT % 'discoverable',
         check_str=base.RULE_ANY),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'update',
-        check_str=base.RULE_ADMIN_API),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'create',
-        check_str=base.RULE_ADMIN_API),
-    policy.RuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_API),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'sync_instances',
-        check_str=base.RULE_ADMIN_API),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'delete',
-        check_str=base.RULE_ADMIN_API),
+    base.create_rule_default(
+        POLICY_ROOT % 'update',
+        base.RULE_ADMIN_API,
+        'Update an existing cell',
+        [
+            {
+                'method': 'PUT',
+                'path': '/os-cells/{cell_id}'
+            }
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'create',
+        base.RULE_ADMIN_API,
+        'Create a new cell',
+        [
+            {
+                'method': 'POST',
+                'path': '/os-cells'
+            }
+        ]),
+    base.create_rule_default(
+        BASE_POLICY_NAME,
+        base.RULE_ADMIN_API,
+        'List and get detailed info of a given cell or all cells',
+        [
+            {
+                'method': 'GET',
+                'path': '/os-cells'
+            },
+            {
+                'method': 'GET',
+                'path': '/os-cells/detail'
+            },
+            {
+                'method': 'GET',
+                'path': '/os-cells/info'
+            },
+            {
+                'method': 'GET',
+                'path': '/os-cells/capacities'
+            },
+            {
+                'method': 'GET',
+                'path': '/os-cells/{cell_id}'
+            }
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'sync_instances',
+        base.RULE_ADMIN_API,
+        'Sync instances info in all cells',
+        [
+            {
+                'method': 'POST',
+                'path': '/os-cells/sync_instances'
+            }
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'delete',
+        base.RULE_ADMIN_API,
+        'Remove a cell',
+        [
+            {
+                'method': 'DELETE',
+                'path': '/os-cells/{cell_id}'
+            }
+        ])
 ]
 
 
