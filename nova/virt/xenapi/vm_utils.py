@@ -338,7 +338,7 @@ def unplug_vbd(session, vbd_ref, this_vm_ref):
                 LOG.info(_LI('VBD %s already detached'), vbd_ref)
                 return
             elif _should_retry_unplug_vbd(err):
-                LOG.info(_LI('VBD %(vbd_ref)s uplug failed with "%(err)s", '
+                LOG.info(_LI('VBD %(vbd_ref)s unplug failed with "%(err)s", '
                              'attempt %(num_attempt)d/%(max_attempts)d'),
                          {'vbd_ref': vbd_ref, 'num_attempt': num_attempt,
                           'max_attempts': max_attempts, 'err': err})
