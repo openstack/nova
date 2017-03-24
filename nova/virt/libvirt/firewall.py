@@ -60,7 +60,6 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
                              "NWFilterFirewall will not work correctly."))
         self._host = host
         self.static_filters_configured = False
-        self.handle_security_groups = False
 
     def apply_instance_filter(self, instance, network_info):
         """No-op. Everything is done in prepare_instance_filter."""
@@ -113,11 +112,6 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
         """Set up basic filtering (MAC, IP, and ARP spoofing protection)."""
         LOG.info(_LI('Called setup_basic_filtering in nwfilter'),
                  instance=instance)
-
-        if self.handle_security_groups:
-            # No point in setting up a filter set that we'll be overriding
-            # anyway.
-            return
 
         LOG.info(_LI('Ensuring static filters'), instance=instance)
         self._ensure_static_filters()
