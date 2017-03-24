@@ -6266,7 +6266,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                     test.MatchType(objects.ImageMeta),
                     bdm)
                 mock_connect_volume.assert_called_with(
-                    connection_info, disk_info, instance)
+                    connection_info, disk_info)
                 mock_get_volume_config.assert_called_with(
                     connection_info, disk_info)
                 mock_set_cache_mode.assert_called_with(mock_conf)
@@ -6320,7 +6320,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 </disk>
 """, flags=flags)
                 mock_disconnect_volume.assert_called_with(
-                    connection_info, 'vdc', instance)
+                    connection_info, 'vdc')
 
     @mock.patch('nova.virt.libvirt.host.Host.get_domain')
     def test_detach_volume_disk_not_found(self, mock_get_domain):
@@ -6376,7 +6376,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_order.assert_has_calls([
             mock.call.detach_volume(),
             mock.call.detach_encryptor(**encryption),
-            mock.call.disconnect_volume(connection_info, 'vdc', instance)])
+            mock.call.disconnect_volume(connection_info, 'vdc')])
 
     def test_multi_nic(self):
         network_info = _fake_network_info(self, 2)
@@ -9551,7 +9551,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 'dev': v['mount_device'].rpartition("/")[2],
                 'type': "disk"
                 }
-            drvr._connect_volume(v['connection_info'], disk_info, instance)
+            drvr._connect_volume(v['connection_info'],
+                                 disk_info)
         self.mox.StubOutWithMock(drvr, 'plug_vifs')
         drvr.plug_vifs(mox.IsA(instance), nw_info)
 
@@ -9688,8 +9689,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                     'dev': v['mount_device'].rpartition("/")[2],
                     'type': "disk"
                     }
-                drvr._connect_volume(v['connection_info'], disk_info,
-                                     inst_ref)
+                drvr._connect_volume(v['connection_info'],
+                                     disk_info)
             self.mox.StubOutWithMock(drvr, 'plug_vifs')
             drvr.plug_vifs(mox.IsA(inst_ref), nw_info)
             self.mox.ReplayAll()
@@ -10036,9 +10037,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             get_volume_connector.assert_has_calls([
                 mock.call(inst_ref)])
             _disconnect_volume.assert_has_calls([
-                mock.call({'data': {'multipath_id': 'dummy1'}}, 'sda',
-                          inst_ref),
-                mock.call({'data': {}}, 'sdb', inst_ref)])
+                mock.call({'data': {'multipath_id': 'dummy1'}}, 'sda'),
+                mock.call({'data': {}}, 'sdb')])
 
     def test_get_instance_disk_info_excludes_volumes(self):
         # Test data
@@ -10396,7 +10396,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                   'delete_on_termination': False
               }
 
-        def _connect_volume_side_effect(connection_info, disk_info, instance):
+        def _connect_volume_side_effect(connection_info, disk_info):
             bdm['connection_info']['data']['device_path'] = '/dev/path/to/dev'
 
         def _get(key, opt=None):
@@ -14066,7 +14066,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             drvr.detach_volume(connection_info, instance, '/dev/sda')
             _get_domain.assert_called_once_with(instance)
             _disconnect_volume.assert_called_once_with(connection_info,
-                                                       'sda', instance)
+                                                       'sda')
 
     def _test_attach_detach_interface_get_config(self, method_name):
         """Tests that the get_config() method is properly called in
@@ -14614,7 +14614,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.assertEqual('/dev/vdb', instance.default_ephemeral_device)
             self.assertIsNone(instance.default_swap_device)
             connect_volume.assert_called_with(bdm['connection_info'],
-                {'bus': 'virtio', 'type': 'disk', 'dev': 'vdc'}, instance)
+                {'bus': 'virtio', 'type': 'disk', 'dev': 'vdc'})
             get_volume_config.assert_called_with(bdm['connection_info'],
                 {'bus': 'virtio', 'type': 'disk', 'dev': 'vdc'})
             volume_save.assert_called_once_with()
@@ -14767,13 +14767,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                          '/dev/vdb', 1)
 
         get_guest.assert_called_once_with(instance)
-        connect_volume.assert_called_once_with(new_connection_info, disk_info,
-                                               instance)
+        connect_volume.assert_called_once_with(new_connection_info, disk_info)
 
         swap_volume.assert_called_once_with(guest, 'vdb',
                                             '/fake-new-volume', 1)
-        disconnect_volume.assert_called_once_with(old_connection_info, 'vdb',
-                                                  instance)
+        disconnect_volume.assert_called_once_with(old_connection_info, 'vdb')
 
     def test_swap_volume_driver_source_is_volume(self):
         self._test_swap_volume_driver(source_type='volume')
@@ -15562,7 +15560,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                  'flavor': {'root_gb': 10,
                                             'ephemeral_gb': 0}})
         disconnect_volume.assert_called_with(
-            mock.sentinel.conn_info_vda, 'vda', mock.ANY)
+            mock.sentinel.conn_info_vda, 'vda')
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
     def test_migrate_disk_and_power_off_boot_from_volume_backed_snapshot(
@@ -15588,7 +15586,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                 'flavor': {'root_gb': 10,
                            'ephemeral_gb': 0}})
         disconnect_volume.assert_called_with(
-            mock.sentinel.conn_info_vda, 'vda', mock.ANY)
+            mock.sentinel.conn_info_vda, 'vda')
 
     @mock.patch('nova.utils.execute')
     @mock.patch('nova.virt.libvirt.utils.copy_image')
