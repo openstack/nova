@@ -90,10 +90,12 @@ class OsInfo(object):
         self._os_obj = self._get_os_obj(os_name)
 
     def _get_os_obj(self, os_name):
-        try:
-            return _OsInfoDatabase.get_instance().get_os(os_name)
-        except exception.NovaException as e:
-            LOG.warning(_LW("Cannot find OS information - Reason: (%s)"), e)
+        if os_name is not None:
+            try:
+                return _OsInfoDatabase.get_instance().get_os(os_name)
+            except exception.NovaException as e:
+                LOG.warning(_LW("Cannot find OS information "
+                                "- Reason: (%s)"), e)
 
     @property
     def network_model(self):
