@@ -33,7 +33,6 @@ class MigrationTask(base.TaskBase):
         self.scheduler_client = scheduler_client
 
     def _execute(self):
-        image = self.request_spec.image
         self.quotas = objects.Quotas.from_reservations(self.context,
                                                        self.reservations,
                                                        instance=self.instance)
@@ -46,13 +45,6 @@ class MigrationTask(base.TaskBase):
         scheduler_utils.populate_retry(legacy_props,
                                        self.instance.uuid)
 
-        # TODO(sbauza): Remove that RequestSpec rehydratation once
-        # scheduler.utils methods use directly the NovaObject.
-        self.request_spec = objects.RequestSpec.from_components(
-            self.context, self.instance.uuid, image,
-            self.flavor, self.instance.numa_topology,
-            self.instance.pci_requests, legacy_props, None,
-            self.instance.availability_zone)
         # NOTE(sbauza): Force_hosts/nodes needs to be reset
         # if we want to make sure that the next destination
         # is not forced to be the original host
