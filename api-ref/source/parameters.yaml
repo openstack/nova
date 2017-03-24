@@ -3587,6 +3587,22 @@ os-extended-volumes:volumes_attached:
   in: body
   required: true
   type: array
+os-extended-volumes:volumes_attached.delete_on_termination:
+  description: |
+    A flag indicating if the attached volume will be deleted
+    when the server is deleted. By default this is False and
+    can only be set when creating a volume while creating a
+    server, which is commonly referred to as boot from volume.
+  in: body
+  required: true
+  type: boolean
+  min_version: 2.3
+os-extended-volumes:volumes_attached.id:
+  description: |
+    The attached volume ID.
+  in: body
+  required: true
+  type: string
 os-getConsoleOutput:
   description: |
     The action.
