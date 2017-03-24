@@ -409,7 +409,7 @@ Request
   - rebuild: rebuild
   - imageRef: imageRef
   - name: server_name_optional
-  - adminPass: adminPass_evacuate_rebuild
+  - adminPass: adminPass_request
   - metadata: metadata
   - personality: personality
   - preserve_ephemeral: preserve_ephemeral
@@ -533,7 +533,7 @@ Request
 
   - server_id: server_id_path
   - rescue: rescue
-  - adminPass: adminPass_rescue
+  - adminPass: adminPass_rescue_request
   - rescue_image_ref: rescue_image_ref
 
 **Example Rescue server**
@@ -546,7 +546,7 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-  - adminPass: adminPass
+  - adminPass: adminPass_response
 
 **Example Extended rescue server**
 

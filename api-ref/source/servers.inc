@@ -310,7 +310,7 @@ Request
   - metadata: metadata
   - accessIPv4: accessIPv4_in
   - accessIPv6: accessIPv6_in
-  - adminPass: adminPass
+  - adminPass: adminPass_request
   - user_data: user_data
   - availability_zone: os-availability-zone:availability_zone
   - networks: networks
@@ -389,6 +389,7 @@ Response
   - OS-EXT-SRV-ATTR:ramdisk_id: server_ramdisk_id
   - OS-EXT-SRV-ATTR:root_device_name: server_root_device_name
   - OS-EXT-SRV-ATTR:user_data: server_user_data
+  - adminPass: adminPass_response
 
 **Example Create Server**
 

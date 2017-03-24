@@ -1,3 +1,4 @@
+.. note:: Microversion 2.23 or greater is required for this API.
 .. -*- rst -*-
 
 Evacuate Server (evacuate Action)
@@ -24,7 +25,7 @@ Request
   - server_id: server_id_path
   - evacuate: evacuate
   - host: host
-  - adminPass: adminPass_evacuate_rebuild_request
+  - adminPass: adminPass_evacuate_request
   - onSharedStorage: on_shared_storage
   - force: force_evacuate
 
@@ -41,9 +42,10 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-  - adminPass: adminPass_evacuate_rebuild
+  - adminPass: adminPass_evacuate
 
-|
+.. note:: API does not return any Response for Microversion 2.14 or greater.
+
 
 **Example Evacuate Server (evacuate Action)**
 
