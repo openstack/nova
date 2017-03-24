@@ -87,3 +87,18 @@ class LibvirtOsInfoTest(test.NoDBTestCase):
             osinfo_obj = osinfo.HardwareProperties(self.img_meta)
             self.assertEqual('rtl8139', osinfo_obj.network_model)
             self.assertEqual('ide', osinfo_obj.disk_model)
+
+    @mock.patch('nova.virt.osinfo.LOG.warning')
+    def test_hardware_properties_from_meta_no_os_distro(self, mock_warn):
+        """Verifies that HardwareProperties attributes are not being set
+           from image properties if there is no os_distro provided.
+        """
+        img_meta = {'properties': {'hw_watchdog_action': 'disabled'}}
+        img_meta = objects.ImageMeta.from_dict(img_meta)
+        with mock.patch.object(osinfo._OsInfoDatabase,
+                               'get_instance') as get_instance:
+            osinfo_obj = osinfo.HardwareProperties(img_meta)
+            self.assertIsNone(osinfo_obj.network_model)
+            self.assertIsNone(osinfo_obj.disk_model)
+        get_instance.assert_not_called()
+        mock_warn.assert_not_called()
