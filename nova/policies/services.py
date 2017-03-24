@@ -23,9 +23,39 @@ POLICY_ROOT = 'os_compute_api:os-services:%s'
 
 
 services_policies = [
-    policy.RuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_API),
+    base.create_rule_default(
+        BASE_POLICY_NAME,
+        base.RULE_ADMIN_API,
+        """Lists all running Compute services in a region, enables \
+or disables scheduling for a Compute service, logs disabled Compute service \
+information, set or unset forced_down flag for the compute service and \
+deletes a Compute service.""",
+        [
+            {
+                'method': 'GET',
+                'path': '/os-services'
+            },
+            {
+                'method': 'PUT',
+                'path': '/os-services/enable'
+            },
+            {
+                'method': 'PUT',
+                'path': '/os-services/disable'
+            },
+            {
+                'method': 'PUT',
+                'path': '/os-services/disable-log-reason'
+            },
+            {
+                'method': 'PUT',
+                'path': '/os-services/force-down'
+            },
+            {
+                'method': 'DELETE',
+                'path': '/os-services/{service_id}'
+            }
+        ]),
     policy.RuleDefault(
         name=POLICY_ROOT % 'discoverable',
         check_str=base.RULE_ANY),
