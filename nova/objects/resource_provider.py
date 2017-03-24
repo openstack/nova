@@ -1454,3 +1454,121 @@ class ResourceClassList(base.ObjectListBase, base.NovaObject):
     def __repr__(self):
         strings = [repr(x) for x in self.objects]
         return "ResourceClassList[" + ", ".join(strings) + "]"
+
+
+@base.NovaObjectRegistry.register
+class Trait(base.NovaObject):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    # All the user-defined traits must begin with this prefix.
+    CUSTOM_NAMESPACE = 'CUSTOM_'
+
+    fields = {
+        'id': fields.IntegerField(read_only=True),
+        'name': fields.StringField(nullable=False)
+    }
+
+    @staticmethod
+    def _from_db_object(context, trait, db_trait):
+        for key in trait.fields:
+            setattr(trait, key, db_trait[key])
+        trait.obj_reset_changes()
+        trait._context = context
+        return trait
+
+    @staticmethod
+    @db_api.api_context_manager.writer
+    def _create_in_db(context, updates):
+        trait = models.Trait()
+        trait.update(updates)
+        context.session.add(trait)
+        return trait
+
+    def create(self):
+        if 'id' in self:
+            raise exception.ObjectActionError(action='create',
+                                              reason='already created')
+        if 'name' not in self:
+            raise exception.ObjectActionError(action='create',
+                                              reason='name is required')
+
+        if not self.name.startswith(self.CUSTOM_NAMESPACE):
+            raise exception.ObjectActionError(
+                    action='create',
+                    reason='name must start with %s' % self.CUSTOM_NAMESPACE)
+
+        updates = self.obj_get_changes()
+
+        try:
+            db_trait = self._create_in_db(self._context, updates)
+        except db_exc.DBDuplicateEntry:
+            raise exception.TraitExists(name=self.name)
+
+        self._from_db_object(self._context, self, db_trait)
+
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_by_name_from_db(context, name):
+        result = context.session.query(models.Trait).filter_by(
+            name=name).first()
+        if not result:
+            raise exception.TraitNotFound(name=name)
+        return result
+
+    @classmethod
+    def get_by_name(cls, context, name):
+        db_trait = cls._get_by_name_from_db(context, name)
+        return cls._from_db_object(context, cls(), db_trait)
+
+    @staticmethod
+    @db_api.api_context_manager.writer
+    def _destroy_in_db(context, name):
+        res = context.session.query(models.Trait).filter_by(
+            name=name).delete()
+        if not res:
+            raise exception.TraitNotFound(name=name)
+
+    def destroy(self):
+        if 'name' not in self:
+            raise exception.ObjectActionError(action='destroy',
+                                              reason='name is required')
+
+        if not self.name.startswith(self.CUSTOM_NAMESPACE):
+            raise exception.TraitCannotDeleteStandard(name=self.name)
+
+        if 'id' not in self:
+            raise exception.ObjectActionError(action='destroy',
+                                              reason='ID attribute not found')
+
+        self._destroy_in_db(self._context, self.name)
+
+
+@base.NovaObjectRegistry.register
+class TraitList(base.ObjectListBase, base.NovaObject):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'objects': fields.ListOfObjectsField('Trait')
+    }
+
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_all_from_db(context, filters):
+        if not filters:
+            filters = {}
+
+        query = context.session.query(models.Trait)
+        if 'name_in' in filters:
+            query = query.filter(models.Trait.name.in_(filters['name_in']))
+        if 'prefix' in filters:
+            query = query.filter(
+                models.Trait.name.like(filters['prefix'] + '%'))
+
+        return query.all()
+
+    @base.remotable_classmethod
+    def get_all(cls, context, filters=None):
+        db_traits = cls._get_all_from_db(context, filters)
+        return base.obj_make_list(context, cls(context), Trait, db_traits)
