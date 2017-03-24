@@ -195,7 +195,20 @@ class _FakeImageService(object):
         metadata['id'] = image_id
         if image_id in self.images:
             raise exception.CouldNotUploadImage(image_id=image_id)
-        self.images[image_id] = copy.deepcopy(metadata)
+        image_meta = copy.deepcopy(metadata)
+        # Glance sets the size value when an image is created, so we
+        # need to do that here to fake things out if it's not provided
+        # by the caller. This is needed to avoid a KeyError in the
+        # image-size API.
+        if 'size' not in image_meta:
+            image_meta['size'] = None
+        # Similarly, Glance provides the status on the image once it's created
+        # and this is checked in the compute API when booting a server from
+        # this image, so we just fake it out to be 'active' even though this
+        # is mostly a lie on a newly created image.
+        if 'status' not in metadata:
+            image_meta['status'] = 'active'
+        self.images[image_id] = image_meta
         if data:
             self._imagedata[image_id] = data.read()
         return self.images[image_id]
