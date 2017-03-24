@@ -68,16 +68,8 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         task = self._generate_task()
         request_spec_from_components.return_value = self.request_spec
         legacy_request_spec = self.request_spec.to_legacy_request_spec_dict()
-        expected_props = {'retry': {'num_attempts': 1,
-                                    'hosts': [['host1', None]]},
-                          'limits': {}}
         task.execute()
 
-        request_spec_from_components.assert_called_once_with(
-            self.context, self.instance.uuid, self.request_spec.image,
-            task.flavor, self.instance.numa_topology,
-            self.instance.pci_requests, expected_props, None,
-            None)
         quotas_mock.assert_called_once_with(self.context, self.reservations,
                                             instance=self.instance)
         sig_mock.assert_called_once_with(self.context, legacy_request_spec,
