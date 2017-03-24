@@ -85,7 +85,7 @@ class ServerGroupController(wsgi.Controller):
     @wsgi.response(204)
     @extensions.expected_errors(404)
     def delete(self, req, id):
-        """Delete an server group."""
+        """Delete a server group."""
         context = _authorize_context(req, 'delete')
         try:
             sg = objects.InstanceGroup.get_by_uuid(context, id)
