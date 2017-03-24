@@ -1,3 +1,12 @@
+# variables in path
+resource_provider_uuid_path: &resource_provider_uuid_path
+  type: string
+  in: path
+  required: true
+  description: >
+    The uuid of a resource provider.
+
+# variables in query
 member_of:
   type: string
   in: query
@@ -13,11 +22,9 @@ resource_provider_name_query:
   description: >
     The name of a resource provider to filter the list.
 resource_provider_uuid_query:
-  type: string
+  <<: *resource_provider_uuid_path
   in: query
   required: false
-  description: >
-    The uuid of a resource provider to filter the list.
 resources_query:
   type: string
   in: query
@@ -29,6 +36,51 @@ resources_query:
 
         resources=VCPU:4,DISK_GB:64,MEMORY_MB:2048
 
+# variables in body
+allocation_ratio:
+  type: float
+  in: body
+  required: true
+  description: |
+    It is used in determining whether consumption of the resource of
+    the provider can exceed physical constraints.
+
+    For example, for a vCPU resource with::
+
+        allocation_ratio = 16.0
+        total = 8
+
+    Overall capacity is equal to 128 vCPUs.
+inventories:
+  type: object
+  in: body
+  required: true
+  description: >
+    A dictionary of inventories keyed by resource classes.
+max_unit: &max_unit
+  type: integer
+  in: body
+  required: true
+  description: >
+    A maximum amount any single allocation against an inventory can have.
+min_unit:
+  type: integer
+  in: body
+  required: true
+  description: >
+    A minimum amount any single allocation against an inventory can have.
+reserved:
+  type: integer
+  in: body
+  required: true
+  description: >
+    The amount of the resource a provider has reserved for its own use.
+resource_class:
+  type: string
+  in: body
+  required: true
+  description: >
+    The name of the resource class.
 resource_provider_generation:
   type: integer
   in: body
@@ -49,17 +101,28 @@ resource_provider_name:
   description: >
     The name of one resource provider.
 resource_provider_uuid:
-  type: string
+  <<: *resource_provider_uuid_path
   in: body
-  required: true
-  description: >
-    The UUID for one resource provider.
 resource_providers:
   type: array
   in: body
   required: true
   description: >
     A list of ``resource_provider`` objects.
+step_size:
+  type: integer
+  in: body
+  required: true
+  description: >
+    A representation of the divisible amount of the resource
+    that may be requested. For example, step_size = 5 means
+    that only values divisible by 5 (5, 10, 15, etc.) can be requested.
+total:
+  type: integer
+  in: body
+  required: true
+  description: >
+    The actual amount of the resource that the provider can accommodate.
 version_id:
   type: string
   in: body
