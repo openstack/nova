@@ -23,9 +23,36 @@ POLICY_ROOT = 'os_compute_api:os-tenant-networks:%s'
 
 
 tenant_networks_policies = [
-    policy.RuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_OR_OWNER),
+    base.create_rule_default(
+        BASE_POLICY_NAME,
+        base.RULE_ADMIN_OR_OWNER,
+        """Creates, lists, shows information for, and deletes
+project networks.
+
+These APIs are proxy calls to the Network service. These are all
+deprecated.""",
+        [
+            {
+                'method': 'GET',
+                'path': '/os-tenant-networks'
+            },
+
+            {
+                'method': 'POST',
+                'path': '/os-tenant-networks'
+            },
+
+            {
+                'method': 'GET',
+                'path': '/os-tenant-networks/{network_id}'
+            },
+
+            {
+                'method': 'DELETE',
+                'path': '/os-tenant-networks/{network_id}'
+            }
+
+        ]),
     policy.RuleDefault(
         name=POLICY_ROOT % 'discoverable',
         check_str=base.RULE_ANY),
