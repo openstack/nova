@@ -179,8 +179,6 @@ class FlavorManageTestV21(test.NoDBTestCase):
                              self.expected_flavor["flavor"][key])
 
     def _create_flavor_bad_request_case(self, body):
-        self.stubs.UnsetAll()
-
         self.assertRaises(self.validation_error, self.controller._create,
                           self._get_http_request(), body=body)
 
@@ -324,14 +322,12 @@ class FlavorManageTestV21(test.NoDBTestCase):
                         flavorid, swap, rxtx_factor, is_public):
             raise exception.FlavorExists(name=name)
 
-        self.stubs.Set(flavors, "create", fake_create)
+        self.stub_out('nova.compute.flavors.create', fake_create)
         self.assertRaises(webob.exc.HTTPConflict, self.controller._create,
                           self._get_http_request(), body=expected)
 
     def test_invalid_memory_mb(self):
         """Check negative and decimal number can't be accepted."""
-
-        self.stubs.UnsetAll()
         self.assertRaises(exception.InvalidInput, flavors.create, "abc",
                           -512, 2, 1, 1, 1234, 512, 1, True)
         self.assertRaises(exception.InvalidInput, flavors.create, "abcd",
