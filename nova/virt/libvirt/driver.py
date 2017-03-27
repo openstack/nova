@@ -1012,8 +1012,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _detach_encrypted_volumes(self, instance, block_device_info):
         """Detaches encrypted volumes attached to instance."""
-        disks = jsonutils.loads(self.get_instance_disk_info(instance,
-                                                            block_device_info))
+        disks = self._get_instance_disk_info(instance, block_device_info)
         encrypted_volumes = filter(dmcrypt.is_encrypted,
                                    [disk['path'] for disk in disks])
         for path in encrypted_volumes:
@@ -2376,9 +2375,8 @@ class LibvirtDriver(driver.ComputeDriver):
         #                _hard_reboot from resume_state_on_host_boot()
         if context.auth_token is not None:
             # NOTE (rmk): Re-populate any missing backing files.
-            backing_disk_info = self._get_instance_disk_info(instance.name,
-                                                             xml,
-                                                             block_device_info)
+            backing_disk_info = self._get_instance_disk_info_from_xml(
+                instance.name, xml, block_device_info)
             self._create_images_and_backing(context, instance, instance_dir,
                                             backing_disk_info)
 
@@ -5799,16 +5797,15 @@ class LibvirtDriver(driver.ComputeDriver):
             return True
 
         if (dest_check_data.is_volume_backed and
-                not bool(jsonutils.loads(
-                    self.get_instance_disk_info(instance,
-                                                block_device_info)))):
+                not bool(self._get_instance_disk_info(instance,
+                                                      block_device_info))):
             return True
 
         return False
 
     def _assert_dest_node_has_enough_disk(self, context, instance,
                                              available_mb, disk_over_commit,
-                                             block_device_info=None):
+                                             block_device_info):
         """Checks if destination has enough disk for block migration."""
         # Libvirt supports qcow2 disk format,which is usually compressed
         # on compute nodes.
@@ -5824,9 +5821,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if available_mb:
             available = available_mb * units.Mi
 
-        ret = self.get_instance_disk_info(instance,
-                                          block_device_info=block_device_info)
-        disk_infos = jsonutils.loads(ret)
+        disk_infos = self._get_instance_disk_info(instance, block_device_info)
 
         necessary = 0
         if disk_over_commit:
@@ -6772,7 +6767,8 @@ class LibvirtDriver(driver.ComputeDriver):
                instance path to use, calculated externally to handle block
                migrating an instance with an old style instance path
            :param disk_info:
-               disk info specified in _get_instance_disk_info (list of dicts)
+               disk info specified in _get_instance_disk_info_from_xml
+               (list of dicts)
            :param fallback_from_host:
                host where we can retrieve images if the glance images are
                not available.
@@ -6905,8 +6901,8 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = guest.get_xml_desc()
         self._host.write_instance_config(xml)
 
-    def _get_instance_disk_info(self, instance_name, xml,
-                                block_device_info=None):
+    def _get_instance_disk_info_from_xml(self, instance_name, xml,
+                                         block_device_info):
         """Get the non-volume disk information from the domain xml
 
         :param str instance_name: the name of the instance (domain)
@@ -7007,8 +7003,7 @@ class LibvirtDriver(driver.ComputeDriver):
                               'over_committed_disk_size': over_commit_size})
         return disk_info
 
-    def get_instance_disk_info(self, instance,
-                               block_device_info=None):
+    def _get_instance_disk_info(self, instance, block_device_info):
         try:
             guest = self._host.get_guest(instance)
             xml = guest.get_xml_desc()
@@ -7023,9 +7018,13 @@ class LibvirtDriver(driver.ComputeDriver):
                      instance=instance)
             raise exception.InstanceNotFound(instance_id=instance.uuid)
 
+        return self._get_instance_disk_info_from_xml(instance.name, xml,
+                                                     block_device_info)
+
+    def get_instance_disk_info(self, instance,
+                               block_device_info=None):
         return jsonutils.dumps(
-                self._get_instance_disk_info(instance.name, xml,
-                                             block_device_info))
+            self._get_instance_disk_info(instance, block_device_info))
 
     def _get_disk_over_committed_size_total(self):
         """Return total over committed disk size for all instances."""
@@ -7069,8 +7068,8 @@ class LibvirtDriver(driver.ComputeDriver):
                     block_device_info = driver.get_block_device_info(
                         local_instances[guest.uuid], bdms[guest.uuid])
 
-                disk_infos = self._get_instance_disk_info(guest.name, xml,
-                                 block_device_info=block_device_info)
+                disk_infos = self._get_instance_disk_info_from_xml(
+                    guest.name, xml, block_device_info)
                 if not disk_infos:
                     continue
 
@@ -7231,9 +7230,7 @@ class LibvirtDriver(driver.ComputeDriver):
             disk_dev = vol['mount_device'].rpartition("/")[2]
             self._disconnect_volume(connection_info, disk_dev)
 
-        disk_info_text = self.get_instance_disk_info(
-            instance, block_device_info=block_device_info)
-        disk_info = jsonutils.loads(disk_info_text)
+        disk_info = self._get_instance_disk_info(instance, block_device_info)
 
         try:
             utils.execute('mv', inst_base, inst_base_resize)
@@ -7284,7 +7281,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                                inst_base_resize,
                                                shared_storage)
 
-        return disk_info_text
+        return jsonutils.dumps(disk_info)
 
     def _wait_for_running(self, instance):
         state = self.get_info(instance).state
