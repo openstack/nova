@@ -4596,7 +4596,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               drvr._create_domain_and_network,
                               self.context,
                               'xml',
-                              mock_instance, None, None)
+                              mock_instance, None)
 
             mock_teardown.assert_called_with(container_dir='/tmp/rootfs')
 
@@ -10252,7 +10252,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_build_device_metadata.return_value = None
 
         def fake_create_domain_and_network(
-                context, xml, instance, network_info, disk_info,
+                context, xml, instance, network_info,
                 block_device_info=None, power_on=True, reboot=False,
                 vifs_already_plugged=False, post_xml_callback=None,
                 destroy_disks_on_failure=False):
@@ -11561,19 +11561,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_destroy.assert_called_once_with(instance)
         mock_undefine.assert_called_once_with(instance)
 
-        # Check the structure of disk_info passed to
-        # _create_domain_and_network, but we don't care about any of the values
-        mock_disk_info = {
-            'disk_bus': mock.ANY,
-            'cdrom_bus': mock.ANY,
-            'mapping': {
-                'root': mock.ANY,
-                'disk': mock.ANY,
-                'disk.local': mock.ANY
-            }
-        }
         mock_create_domain_and_network.assert_called_once_with(self.context,
-            dummyxml, instance, network_info, mock_disk_info,
+            dummyxml, instance, network_info,
             block_device_info=block_device_info,
             reboot=True, vifs_already_plugged=True)
 
@@ -11914,17 +11903,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock.patch.object(pci_manager, 'get_instance_pci_devs',
                               return_value='fake_pci_devs'),
             mock.patch.object(utils, 'get_image_from_system_metadata'),
-            mock.patch.object(blockinfo, 'get_disk_info'),
             mock.patch.object(guest, 'sync_guest_time'),
             mock.patch.object(drvr, '_wait_for_running',
                               side_effect=loopingcall.LoopingCallDone()),
         ) as (_get_existing_domain_xml, _create_domain_and_network,
               _attach_pci_devices, get_instance_pci_devs, get_image_metadata,
-              get_disk_info, mock_sync_time, mock_wait):
+              mock_sync_time, mock_wait):
             get_image_metadata.return_value = {'bar': 234}
-
-            disk_info = {'foo': 123}
-            get_disk_info.return_value = disk_info
 
             drvr.resume(self.context, instance, network_info,
                         block_device_info)
@@ -11932,7 +11917,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                             network_info, block_device_info)])
             _create_domain_and_network.assert_has_calls([mock.call(
                                         self.context, dummyxml,
-                                        instance, network_info, disk_info,
+                                        instance, network_info,
                                         block_device_info=block_device_info,
                                         vifs_already_plugged=True)])
             self.assertTrue(mock_sync_time.called)
@@ -13746,7 +13731,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock.patch.object(drvr.firewall_driver, 'prepare_instance_filter'),
             mock.patch.object(drvr.firewall_driver, 'apply_instance_filter')):
             drvr._create_domain_and_network(self.context, 'xml',
-                                            mock_instance, [], None)
+                                            mock_instance, [])
 
         self.assertEqual('/dev/nbd0', inst_sys_meta['rootfs_device_name'])
         self.assertFalse(mock_instance.called)
@@ -13814,7 +13799,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock_apply_instance_filter
         ):
             drvr._create_domain_and_network(self.context, 'xml',
-                                            mock_instance, [], None)
+                                            mock_instance, [])
 
         self.assertEqual('/dev/nbd0', inst_sys_meta['rootfs_device_name'])
         self.assertFalse(mock_instance.called)
@@ -13863,7 +13848,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock.patch.object(drvr.firewall_driver, 'prepare_instance_filter'),
             mock.patch.object(drvr.firewall_driver, 'apply_instance_filter')):
             drvr._create_domain_and_network(self.context, 'xml',
-                                            mock_instance, [], None)
+                                            mock_instance, [])
 
         self.assertEqual('/dev/nbd0', inst_sys_meta['rootfs_device_name'])
         self.assertFalse(mock_instance.called)
@@ -14297,7 +14282,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               drvr._create_domain_and_network,
                               self.context,
                               'xml',
-                              instance, None, None)
+                              instance, None)
 
     def test_create_without_pause(self):
         self.flags(virt_type='lxc', group='libvirt')
@@ -14318,7 +14303,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
               mock.patch.object(drvr, 'cleanup')) as (
               _handler, cleanup, firewall_driver, create, plug_vifs):
             domain = drvr._create_domain_and_network(self.context, 'xml',
-                                                     instance, None, None)
+                                                     instance, None)
             self.assertEqual(0, create.call_args_list[0][1]['pause'])
             self.assertEqual(0, domain.resume.call_count)
 
@@ -14359,7 +14344,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         @mock.patch.object(drvr, 'cleanup')
         def test_create(cleanup, create, fw_driver, plug_vifs):
             domain = drvr._create_domain_and_network(self.context, 'xml',
-                                                     instance, vifs, None,
+                                                     instance, vifs,
                                                      power_on=power_on)
             plug_vifs.assert_called_with(instance, vifs)
 
@@ -14560,7 +14545,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             create_domain.return_value = libvirt_guest.Guest(mock_dom)
 
             guest = drvr._create_domain_and_network(
-                    self.context, fake_xml, instance, network_info, None,
+                    self.context, fake_xml, instance, network_info,
                     block_device_info=block_device_info)
 
             get_encryption_metadata.assert_called_once_with(self.context,
@@ -16044,7 +16029,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         # NOTE(mdbooth): If we wanted to check the generated xml, we could
         #                insert a hook here
         mock_create_domain_and_network.assert_called_once_with(
-            mock.ANY, mock.ANY, instance, [], mock.ANY,
+            mock.ANY, mock.ANY, instance, [],
             block_device_info=bdi, power_on=power_on,
             vifs_already_plugged=True, post_xml_callback=mock.ANY)
 
@@ -16078,8 +16063,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             pass
 
         def fake_create_domain(context, xml, instance, network_info,
-                               disk_info, block_device_info=None,
-                               power_on=None,
+                               block_device_info=None, power_on=None,
                                vifs_already_plugged=None):
             self.fake_create_domain_called = True
             self.assertEqual(powered_on, power_on)

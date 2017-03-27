@@ -2383,7 +2383,6 @@ class LibvirtDriver(driver.ComputeDriver):
         # Initialize all the necessary networking, block devices and
         # start the instance.
         self._create_domain_and_network(context, xml, instance, network_info,
-                                        disk_info,
                                         block_device_info=block_device_info,
                                         reboot=True,
                                         vifs_already_plugged=True)
@@ -2530,15 +2529,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def resume(self, context, instance, network_info, block_device_info=None):
         """resume the specified instance."""
-        disk_info = blockinfo.get_disk_info(
-                CONF.libvirt.virt_type, instance, instance.image_meta,
-                block_device_info=block_device_info)
-
         xml = self._get_existing_domain_xml(instance, network_info,
                                             block_device_info)
         guest = self._create_domain_and_network(context, xml, instance,
-                           network_info, disk_info,
-                           block_device_info=block_device_info,
+                           network_info, block_device_info=block_device_info,
                            vifs_already_plugged=True)
         self._attach_pci_devices(guest,
             pci_manager.get_instance_pci_devs(instance))
@@ -2675,7 +2669,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                   disk_info, image_meta,
                                   block_device_info=block_device_info)
         self._create_domain_and_network(
-            context, xml, instance, network_info, disk_info,
+            context, xml, instance, network_info,
             block_device_info=block_device_info,
             post_xml_callback=gen_confdrive,
             destroy_disks_on_failure=True)
@@ -4875,7 +4869,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return guest.get_info(self._host)
 
     def _create_domain_setup_lxc(self, instance, image_meta,
-                                 block_device_info, disk_info):
+                                 block_device_info):
         inst_path = libvirt_utils.get_instance_path(instance)
         block_device_mapping = driver.block_device_info_get_mapping(
             block_device_info)
@@ -4932,8 +4926,7 @@ class LibvirtDriver(driver.ComputeDriver):
             disk_api.teardown_container(container_dir=container_dir)
 
     @contextlib.contextmanager
-    def _lxc_disk_handler(self, instance, image_meta,
-                          block_device_info, disk_info):
+    def _lxc_disk_handler(self, instance, image_meta, block_device_info):
         """Context manager to handle the pre and post instance boot,
            LXC specific disk operations.
 
@@ -4947,8 +4940,7 @@ class LibvirtDriver(driver.ComputeDriver):
             yield
             return
 
-        self._create_domain_setup_lxc(instance, image_meta,
-                                      block_device_info, disk_info)
+        self._create_domain_setup_lxc(instance, image_meta, block_device_info)
 
         try:
             yield
@@ -5008,7 +5000,7 @@ class LibvirtDriver(driver.ComputeDriver):
                          destroy_disks=destroy_disks)
 
     def _create_domain_and_network(self, context, xml, instance, network_info,
-                                   disk_info, block_device_info=None,
+                                   block_device_info=None,
                                    power_on=True, reboot=False,
                                    vifs_already_plugged=False,
                                    post_xml_callback=None,
@@ -5052,7 +5044,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 self.firewall_driver.prepare_instance_filter(instance,
                                                              network_info)
                 with self._lxc_disk_handler(instance, instance.image_meta,
-                                            block_device_info, disk_info):
+                                            block_device_info):
                     guest = self._create_domain(
                         xml, pause=pause, power_on=power_on,
                         post_xml_callback=post_xml_callback)
@@ -7387,7 +7379,6 @@ class LibvirtDriver(driver.ComputeDriver):
         # unplugged in the first place and never send an event.
         guest = self._create_domain_and_network(context, xml, instance,
                                         network_info,
-                                        block_disk_info,
                                         block_device_info=block_device_info,
                                         power_on=power_on,
                                         vifs_already_plugged=True,
@@ -7457,7 +7448,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                   instance.image_meta,
                                   block_device_info=block_device_info)
         self._create_domain_and_network(context, xml, instance, network_info,
-                                        disk_info,
                                         block_device_info=block_device_info,
                                         power_on=power_on,
                                         vifs_already_plugged=True)
