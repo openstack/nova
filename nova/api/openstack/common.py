@@ -31,8 +31,6 @@ from nova.compute import vm_states
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LE
-from nova.i18n import _LW
 from nova import objects
 from nova import quota
 from nova import utils
@@ -118,9 +116,9 @@ def status_from_state(vm_state, task_state='default'):
     task_map = _STATE_MAP.get(vm_state, dict(default='UNKNOWN'))
     status = task_map.get(task_state, task_map['default'])
     if status == "UNKNOWN":
-        LOG.error(_LE("status is UNKNOWN from vm_state=%(vm_state)s "
-                      "task_state=%(task_state)s. Bad upgrade or db "
-                      "corrupted?"),
+        LOG.error("status is UNKNOWN from vm_state=%(vm_state)s "
+                  "task_state=%(task_state)s. Bad upgrade or db "
+                  "corrupted?",
                   {'vm_state': vm_state, 'task_state': task_state})
     return status
 
@@ -352,8 +350,8 @@ def check_snapshots_enabled(f):
     @functools.wraps(f)
     def inner(*args, **kwargs):
         if not CONF.api.allow_instance_snapshots:
-            LOG.warning(_LW('Rejecting snapshot request, snapshots currently'
-                            ' disabled'))
+            LOG.warning('Rejecting snapshot request, snapshots currently'
+                        ' disabled')
             msg = _("Instance snapshots are not permitted at this time.")
             raise webob.exc.HTTPBadRequest(explanation=msg)
         return f(*args, **kwargs)

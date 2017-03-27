@@ -17,17 +17,15 @@
 from oslo_log import log as logging
 from oslo_log import versionutils
 
-from nova.i18n import _LW
-
 LOG = logging.getLogger(__name__)
 
 
 class CloudController(object):
     def __init__(self):
         versionutils.report_deprecated_feature(
-                LOG,
-                _LW('The in tree EC2 API has been removed in Mitaka. '
-                    'Please remove entries from api-paste.ini and use '
-                    'the OpenStack ec2-api project '
-                    'http://git.openstack.org/cgit/openstack/ec2-api/')
+            LOG,
+            'The in tree EC2 API has been removed in Mitaka. '
+            'Please remove entries from api-paste.ini and use '
+            'the OpenStack ec2-api project '
+            'http://git.openstack.org/cgit/openstack/ec2-api/'
         )
