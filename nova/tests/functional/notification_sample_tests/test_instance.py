@@ -74,10 +74,17 @@ class TestInstanceNotificationSample(
             self._test_shelve_offload_server,
             self._test_unshelve_server,
             self._test_resize_server,
+            self._test_revert_server,
+            self._test_resize_confirm_server,
             self._test_snapshot_server,
             self._test_rebuild_server,
             self._test_reboot_server,
             self._test_reboot_server_error,
+            self._test_trigger_crash_dump,
+            self._test_volume_attach_detach_server,
+            self._test_rescue_server,
+            self._test_unrescue_server,
+            self._test_soft_delete_server,
         ]
 
         for action in actions:
@@ -743,3 +750,24 @@ class TestInstanceNotificationSample(
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
+
+    def _test_revert_server(self, server):
+        pass
+
+    def _test_resize_confirm_server(self, server):
+        pass
+
+    def _test_trigger_crash_dump(self, server):
+        pass
+
+    def _test_volume_attach_detach_server(self, server):
+        pass
+
+    def _test_rescue_server(self, server):
+        pass
+
+    def _test_unrescue_server(self, server):
+        pass
+
+    def _test_soft_delete_server(self, server):
+        pass
