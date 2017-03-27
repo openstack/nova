@@ -1201,6 +1201,48 @@ class LibvirtConfigGuestFilesysTest(LibvirtConfigBaseTest):
               <target dir="/mnt"/>
             </filesystem>""")
 
+    def test_parse_mount(self):
+        xmldoc = """
+          <filesystem type="mount">
+            <source dir="/tmp/hello"/>
+            <target dir="/mnt"/>
+          </filesystem>
+        """
+        obj = config.LibvirtConfigGuestFilesys()
+        obj.parse_str(xmldoc)
+        self.assertEqual('mount', obj.source_type)
+        self.assertEqual('/tmp/hello', obj.source_dir)
+        self.assertEqual('/mnt', obj.target_dir)
+
+    def test_parse_block(self):
+        xmldoc = """
+          <filesystem type="block">
+            <source dev="/dev/sdb"/>
+            <target dir="/mnt"/>
+          </filesystem>
+        """
+        obj = config.LibvirtConfigGuestFilesys()
+        obj.parse_str(xmldoc)
+        self.assertEqual('block', obj.source_type)
+        self.assertEqual('/dev/sdb', obj.source_dev)
+        self.assertEqual('/mnt', obj.target_dir)
+
+    def test_parse_file(self):
+        xmldoc = """
+          <filesystem type="file">
+            <driver format="qcow2" type="nbd"/>
+            <source file="/data/myimage.qcow2"/>
+            <target dir="/mnt"/>
+          </filesystem>
+        """
+        obj = config.LibvirtConfigGuestFilesys()
+        obj.parse_str(xmldoc)
+        self.assertEqual('file', obj.source_type)
+        self.assertEqual('qcow2', obj.driver_format)
+        self.assertEqual('nbd', obj.driver_type)
+        self.assertEqual('/data/myimage.qcow2', obj.source_file)
+        self.assertEqual('/mnt', obj.target_dir)
+
 
 class LibvirtConfigGuestInputTest(LibvirtConfigBaseTest):
 
@@ -2230,17 +2272,22 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
                       <devices>
                         <hostdev mode="subsystem" type="pci" managed="no">
                         </hostdev>
+                        <filesystem type="mount">
+                        </filesystem>
                       </devices>
                      </domain>
                  """
         obj = config.LibvirtConfigGuest()
         obj.parse_str(xmldoc)
         self.assertEqual('kvm', obj.virt_type)
-        self.assertEqual(len(obj.devices), 1)
+        self.assertEqual(len(obj.devices), 2)
         self.assertIsInstance(obj.devices[0],
                               config.LibvirtConfigGuestHostdevPCI)
         self.assertEqual(obj.devices[0].mode, 'subsystem')
         self.assertEqual(obj.devices[0].managed, 'no')
+        self.assertIsInstance(obj.devices[1],
+                              config.LibvirtConfigGuestFilesys)
+        self.assertEqual('mount', obj.devices[1].source_type)
 
     def test_ConfigGuest_parse_devices_wrong_type(self):
         xmldoc = """ <domain type="kvm">
