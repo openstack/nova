@@ -14,7 +14,6 @@
 #    under the License.
 
 import mock
-from mox3 import mox
 from oslo_config import cfg
 from oslo_serialization import jsonutils
 from six.moves import range
@@ -26,7 +25,6 @@ from nova.api.openstack.compute import servers as servers_v21
 from nova import block_device
 from nova.compute import api as compute_api
 from nova import exception
-from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.image import fake
@@ -103,7 +101,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
             self.assertNotIn('block_device_mapping', kwargs)
             return old_create(*args, **kwargs)
 
-        self.stubs.Set(compute_api.API, 'create', create)
+        self.stub_out('nova.compute.api.API.create', create)
 
         params = {block_device_mapping.ATTRIBUTE_NAME: bdm}
         self._test_create(params,
@@ -119,12 +117,17 @@ class BlockDeviceMappingTestV21(test.TestCase):
             self.assertNotIn('imageRef', kwargs)
             return old_create(*args, **kwargs)
 
-        self.stubs.Set(compute_api.API, 'create', create)
+        self.stub_out('nova.compute.api.API.create', create)
 
         self.assertRaises(exc.HTTPBadRequest,
                           self._test_create, {}, no_image=True)
 
-    def test_create_instance_with_bdms_and_no_image(self):
+    @mock.patch.object(compute_api.API, '_validate_bdm')
+    @mock.patch.object(compute_api.API, '_get_bdm_image_metadata')
+    def test_create_instance_with_bdms_and_no_image(
+            self, mock_bdm_image_metadata, mock_validate_bdm):
+        mock_bdm_image_metadata.return_value = {}
+        mock_validate_bdm.return_value = True
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
@@ -134,20 +137,15 @@ class BlockDeviceMappingTestV21(test.TestCase):
             )
             return old_create(*args, **kwargs)
 
-        self.stubs.Set(compute_api.API, 'create', create)
-
-        self.mox.StubOutWithMock(compute_api.API, '_validate_bdm')
-        self.mox.StubOutWithMock(compute_api.API, '_get_bdm_image_metadata')
-
-        compute_api.API._validate_bdm(
-            mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
-            mox.IgnoreArg()).AndReturn(True)
-        compute_api.API._get_bdm_image_metadata(
-            mox.IgnoreArg(), mox.IgnoreArg(), False).AndReturn({})
-        self.mox.ReplayAll()
+        self.stub_out('nova.compute.api.API.create', create)
 
         params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
         self._test_create(params, no_image=True)
+
+        mock_validate_bdm.assert_called_once_with(
+            mock.ANY, mock.ANY, mock.ANY, mock.ANY)
+        mock_bdm_image_metadata.assert_called_once_with(
+            mock.ANY, mock.ANY, False)
 
     @mock.patch.object(compute_api.API, '_validate_bdm')
     @mock.patch.object(compute_api.API, '_get_bdm_image_metadata')
@@ -266,7 +264,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
             self.assertEqual(kwargs['block_device_mapping'], self.bdm)
             return old_create(*args, **kwargs)
 
-        self.stubs.Set(compute_api.API, 'create', create)
+        self.stub_out('nova.compute.api.API.create', create)
 
         params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
         self.assertRaises(self.validation_error,
@@ -287,7 +285,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
             self.assertEqual(kwargs['block_device_mapping'], self.bdm)
             return old_create(*args, **kwargs)
 
-        self.stubs.Set(compute_api.API, 'create', create)
+        self.stub_out('nova.compute.api.API.create', create)
 
         params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
         self.assertRaises(self.validation_error,
@@ -302,7 +300,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
             self.assertEqual(kwargs['block_device_mapping'], self.bdm)
             return old_create(*args, **kwargs)
 
-        self.stubs.Set(compute_api.API, 'create', create)
+        self.stub_out('nova.compute.api.API.create', create)
 
         params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
         self.assertRaises(self.validation_error,
@@ -318,7 +316,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
             self.assertEqual(kwargs['block_device_mapping'], self.bdm)
             return old_create(*args, **kwargs)
 
-        self.stubs.Set(compute_api.API, 'create', create)
+        self.stub_out('nova.compute.api.API.create', create)
 
         params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
         self.assertRaises(self.validation_error,
@@ -333,7 +331,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
             self.assertEqual(kwargs['block_device_mapping'], self.bdm)
             return old_create(*args, **kwargs)
 
-        self.stubs.Set(compute_api.API, 'create', create)
+        self.stub_out('nova.compute.api.API.create', create)
 
         params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
         self.assertRaises(self.validation_error,
@@ -353,7 +351,8 @@ class BlockDeviceMappingTestV21(test.TestCase):
     def test_create_instance_with_invalid_destination_type(self):
         self._test_create_instance_with_destination_type_error('fake')
 
-    def test_create_instance_bdm(self):
+    @mock.patch.object(compute_api.API, '_validate_bdm')
+    def test_create_instance_bdm(self, mock_validate_bdm):
         bdm = [{
             'source_type': 'volume',
             'device_name': 'fake_dev',
@@ -375,16 +374,17 @@ class BlockDeviceMappingTestV21(test.TestCase):
                                 matchers.DictMatches(received))
             return old_create(*args, **kwargs)
 
-        def _validate_bdm(*args, **kwargs):
-            pass
-
-        self.stubs.Set(compute_api.API, 'create', create)
-        self.stubs.Set(compute_api.API, '_validate_bdm', _validate_bdm)
+        self.stub_out('nova.compute.api.API.create', create)
 
         params = {block_device_mapping.ATTRIBUTE_NAME: bdm}
         self._test_create(params, no_image=True)
+        mock_validate_bdm.assert_called_once_with(mock.ANY,
+                                                  mock.ANY,
+                                                  mock.ANY,
+                                                  mock.ANY)
 
-    def test_create_instance_bdm_missing_device_name(self):
+    @mock.patch.object(compute_api.API, '_validate_bdm')
+    def test_create_instance_bdm_missing_device_name(self, mock_validate_bdm):
         del self.bdm[0]['device_name']
 
         old_create = compute_api.API.create
@@ -395,22 +395,19 @@ class BlockDeviceMappingTestV21(test.TestCase):
                              kwargs['block_device_mapping'][0]['device_name'])
             return old_create(*args, **kwargs)
 
-        def _validate_bdm(*args, **kwargs):
-            pass
-
-        self.stubs.Set(compute_api.API, 'create', create)
-        self.stubs.Set(compute_api.API, '_validate_bdm', _validate_bdm)
+        self.stub_out('nova.compute.api.API.create', create)
 
         params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
         self._test_create(params, no_image=True)
+        mock_validate_bdm.assert_called_once_with(mock.ANY,
+                                                  mock.ANY,
+                                                  mock.ANY,
+                                                  mock.ANY)
 
-    def test_create_instance_bdm_validation_error(self):
-        def _validate(*args, **kwargs):
-            raise exception.InvalidBDMFormat(details='Wrong BDM')
-
-        self.stubs.Set(block_device.BlockDeviceDict,
-                      '_validate', _validate)
-
+    @mock.patch.object(
+        block_device.BlockDeviceDict, '_validate',
+        side_effect=exception.InvalidBDMFormat(details='Wrong BDM'))
+    def test_create_instance_bdm_validation_error(self, mock_validate):
         params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
         self.assertRaises(exc.HTTPBadRequest,
                           self._test_create, params, no_image=True)
@@ -442,8 +439,8 @@ class BlockDeviceMappingTestV21(test.TestCase):
         def _instance_destroy(*args, **kwargs):
             self.validation_fail_instance_destroy_called = True
 
-        self.stubs.Set(compute_api.API, '_validate_bdm', _validate_bdm)
-        self.stubs.Set(objects.Instance, 'destroy', _instance_destroy)
+        self.stub_out('nova.compute.api.API._validate_bdm', _validate_bdm)
+        self.stub_out('nova.objects.Instance.destroy', _instance_destroy)
 
         for _unused in range(len(bdm_exceptions)):
             params = {block_device_mapping.ATTRIBUTE_NAME:
