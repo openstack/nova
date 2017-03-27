@@ -1120,7 +1120,7 @@ class ComputeDriver(object):
             ""startup", "shutdown" and "reboot".
 
         :return: The result of the power action
-        :rtype: : str
+        :rtype: str
         """
 
         raise NotImplementedError()
