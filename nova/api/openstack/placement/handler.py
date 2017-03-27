@@ -35,10 +35,10 @@ from nova.api.openstack.placement.handlers import resource_class
 from nova.api.openstack.placement.handlers import resource_provider
 from nova.api.openstack.placement.handlers import root
 from nova.api.openstack.placement.handlers import usage
+from nova.api.openstack.placement import policy
 from nova.api.openstack.placement import util
 from nova import exception
-from nova.i18n import _, _LE
-from nova.api.openstack.placement import policy
+from nova.i18n import _
 
 LOG = logging.getLogger(__name__)
 
@@ -206,5 +206,5 @@ class PlacementHandler(object):
         except webob.exc.HTTPNotFound:
             raise
         except Exception as exc:
-            LOG.exception(_LE("Uncaught exception"))
+            LOG.exception("Uncaught exception")
             raise

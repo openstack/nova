@@ -23,7 +23,6 @@ from nova import compute
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LI
 from nova import objects
 from nova.policies import server_external_events as see_policies
 
@@ -96,8 +95,8 @@ class ServerExternalEventsController(wsgi.Controller):
                 if instance.host:
                     accepted_events.append(event)
                     accepted_instances.add(instance)
-                    LOG.info(_LI('Creating event %(name)s:%(tag)s for '
-                                 'instance %(instance_uuid)s on %(host)s'),
+                    LOG.info('Creating event %(name)s:%(tag)s for '
+                             'instance %(instance_uuid)s on %(host)s',
                               {'name': event.name, 'tag': event.tag,
                                'instance_uuid': event.instance_uuid,
                                'host': instance.host})

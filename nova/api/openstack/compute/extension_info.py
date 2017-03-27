@@ -21,7 +21,6 @@ import webob.exc
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import exception
-from nova.i18n import _LE
 from nova.policies import base as base_policies
 from nova.policies import extensions as ext_policies
 
@@ -330,7 +329,7 @@ class LoadedExtensionInfo(object):
         try:
             extension.is_valid()
         except AttributeError:
-            LOG.exception(_LE("Exception loading extension"))
+            LOG.exception("Exception loading extension")
             return False
 
         return True

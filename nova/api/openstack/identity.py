@@ -17,7 +17,7 @@ from keystoneauth1 import session
 from oslo_log import log as logging
 import webob
 
-from nova.i18n import _, _LE, _LI, _LW
+from nova.i18n import _
 
 LOG = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ def verify_project_id(context, project_id):
     except kse.ClientException:
         # something is wrong, like there isn't a keystone v3 endpoint,
         # we'll take the pass and default to everything being ok.
-        LOG.exception(_LE("Unable to contact keystone to verify project_id"))
+        LOG.exception("Unable to contact keystone to verify project_id")
         return True
 
     if resp:
@@ -52,14 +52,14 @@ def verify_project_id(context, project_id):
         # we don't have enough permission to verify this, so default
         # to "it's ok".
         LOG.info(
-            _LI("Insufficient permissions for user %(user)s to verify "
-                "existence of project_id %(pid)s"),
+            "Insufficient permissions for user %(user)s to verify "
+            "existence of project_id %(pid)s",
             {"user": context.user_id, "pid": project_id})
         return True
     else:
         LOG.warning(
-            _LW("Unexpected response from keystone trying to "
-                "verify project_id %(pid)s - resp: %(code)s %(content)s"),
+            "Unexpected response from keystone trying to "
+            "verify project_id %(pid)s - resp: %(code)s %(content)s",
             {"pid": project_id,
              "code": resp.status_code,
              "content": resp.content})

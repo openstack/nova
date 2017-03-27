@@ -27,7 +27,6 @@ from nova.api import validation
 from nova import compute
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LE
 from nova.policies import migrate_server as ms_policies
 
 LOG = logging.getLogger(__name__)
@@ -114,9 +113,9 @@ class MigrateServerController(wsgi.Controller):
                 exception.LiveMigrationWithOldNovaNotSupported) as ex:
             if async:
                 with excutils.save_and_reraise_exception():
-                    LOG.error(_LE("Unexpected exception received from "
-                                  "conductor during pre-live-migration checks "
-                                  "'%(ex)s'"), {'ex': ex})
+                    LOG.error("Unexpected exception received from "
+                              "conductor during pre-live-migration checks "
+                              "'%(ex)s'", {'ex': ex})
             else:
                 raise exc.HTTPBadRequest(explanation=ex.format_message())
         except exception.InstanceIsLocked as e:

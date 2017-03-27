@@ -27,7 +27,6 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 import nova.exception
 from nova.i18n import _
-from nova.i18n import _LE
 from nova import objects
 from nova.policies import server_groups as sg_policies
 
@@ -101,8 +100,7 @@ class ServerGroupController(wsgi.Controller):
                            user_id=user_id, server_groups=-1)
         except Exception:
             quotas = None
-            LOG.exception(_LE("Failed to update usages deallocating "
-                                  "server group"))
+            LOG.exception("Failed to update usages deallocating server group")
 
         try:
             sg.destroy()
