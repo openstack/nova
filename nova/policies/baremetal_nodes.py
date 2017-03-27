@@ -26,9 +26,23 @@ baremetal_nodes_policies = [
     policy.RuleDefault(
         name=POLICY_ROOT % 'discoverable',
         check_str=base.RULE_ANY),
-    policy.RuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_API),
+    base.create_rule_default(
+        BASE_POLICY_NAME,
+        base.RULE_ADMIN_API,
+        """List and show details of bare metal nodes.
+
+These APIs are proxy calls to the Ironic service and are deprecated.
+""",
+        [
+            {
+                'method': 'GET',
+                'path': '/os-baremetal-nodes'
+            },
+            {
+                'method': 'GET',
+                'path': '/os-baremetal-nodes/{node_id}'
+            }
+        ]),
 ]
 
 
