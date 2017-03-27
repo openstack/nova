@@ -963,6 +963,46 @@ class TestNetworkMetadata(test.NoDBTestCase):
             },
             net_metadata['networks'][1])
 
+    def _test_get_network_metadata_json_ipv6_addr_mode(self, mode):
+        ipv6_subnet = fake_network_cache_model.new_subnet(
+            subnet_dict=dict(dhcp_server='1234:567::',
+                             ipv6_address_mode=mode), version=6)
+
+        self.netinfo[0]['network']['subnets'][1] = ipv6_subnet
+        net_metadata = netutils.get_network_metadata(self.netinfo)
+
+        self.assertEqual(
+            {
+                'id': 'network1',
+                'link': 'interface0',
+                'ip_address': 'fd00::2',
+                'netmask': 'ffff:ffff:ffff::',
+                'routes': [
+                    {
+                        'network': '::',
+                        'netmask': '::',
+                        'gateway': 'fd00::1'
+                    },
+                    {
+                        'network': '::',
+                        'netmask': 'ffff:ffff:ffff::',
+                        'gateway': 'fd00::1:1'
+                    }
+                ],
+                'type': 'ipv6_%s' % mode,
+                'network_id': 1
+            },
+            net_metadata['networks'][1])
+
+    def test_get_network_metadata_json_ipv6_addr_mode_slaac(self):
+        self._test_get_network_metadata_json_ipv6_addr_mode('slaac')
+
+    def test_get_network_metadata_json_ipv6_addr_mode_stateful(self):
+        self._test_get_network_metadata_json_ipv6_addr_mode('dhcpv6-stateful')
+
+    def test_get_network_metadata_json_ipv6_addr_mode_stateless(self):
+        self._test_get_network_metadata_json_ipv6_addr_mode('dhcpv6-stateless')
+
     def test__get_nets(self):
         expected_net = {
             'id': 'network0',

@@ -1,0 +1,14 @@
+---
+features:
+  - |
+    The network.json metadata format has been amended for IPv6 networks
+    under Neutron control. The type that is shown has been changed
+    from being always set to ``ipv6_dhcp`` to correctly reflecting the
+    ``ipv6_address_mode`` option in Neutron, so the type now will be
+    ``ipv6_slaac``, ``ipv6_dhcpv6-stateless`` or ``ipv6_dhcpv6-stateful``.
+upgrade:
+  - |
+    The information in the network.json metadata has been amended,
+    for IPv6 networks under Neutron control, the ``type`` field has been
+    changed from being always set to ``ipv6_dhcp`` to correctly reflecting
+    the ``ipv6_address_mode`` option in Neutron.
