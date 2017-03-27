@@ -1020,6 +1020,8 @@ class NeutronFixture(fixtures.Fixture):
         'mac_address': 'fa:16:3e:4c:2c:30',
         'fixed_ips': [
             {
+                # The IP on this port must be a prefix of the IP on port_2 to
+                # test listing servers with an ip filter regex.
                 'ip_address': '192.168.1.3',
                 'subnet_id': subnet_1['id']
             }
@@ -1027,9 +1029,26 @@ class NeutronFixture(fixtures.Fixture):
         'tenant_id': tenant_id
     }
 
-    def __init__(self, test):
+    # This port is only used if the fixture is created with multiple_ports=True
+    port_2 = {
+        'id': '88dae9fa-0dc6-49e3-8c29-3abc41e99ac9',
+        'network_id': network_1['id'],
+        'admin_state_up': True,
+        'status': 'ACTIVE',
+        'mac_address': '00:0c:29:0d:11:74',
+        'fixed_ips': [
+            {
+                'ip_address': '192.168.1.30',
+                'subnet_id': subnet_1['id']
+            }
+        ],
+        'tenant_id': tenant_id
+    }
+
+    def __init__(self, test, multiple_ports=False):
         super(NeutronFixture, self).__init__()
         self.test = test
+        self.multiple_ports = multiple_ports
 
     def setUp(self):
         super(NeutronFixture, self).setUp()
@@ -1058,17 +1077,29 @@ class NeutronFixture(fixtures.Fixture):
 
         mock_neutron_client = mock.Mock()
         mock_neutron_client.list_extensions.return_value = {'extensions': []}
-        mock_neutron_client.show_port.return_value = {
-            'port': NeutronFixture.port_1}
+
+        def stub_show_port(port_id, *args, **kwargs):
+            if port_id == NeutronFixture.port_1['id']:
+                return {'port': NeutronFixture.port_1}
+            if port_id == NeutronFixture.port_2['id']:
+                return {'port': NeutronFixture.port_2}
+            raise exception.PortNotFound(port_id=port_id)
+
+        mock_neutron_client.show_port.side_effect = stub_show_port
         mock_neutron_client.list_networks.return_value = {
             'networks': [NeutronFixture.network_1]}
-        mock_neutron_client.list_ports.return_value = {
-            'ports': [NeutronFixture.port_1]}
+
+        def stub_list_ports(*args, **kwargs):
+            ports = {'ports': [NeutronFixture.port_1]}
+            if self.multiple_ports:
+                ports['ports'].append(NeutronFixture.port_2)
+            return ports
+
+        mock_neutron_client.list_ports.side_effect = stub_list_ports
         mock_neutron_client.list_subnets.return_value = {
             'subnets': [NeutronFixture.subnet_1]}
         mock_neutron_client.list_floatingips.return_value = {'floatingips': []}
-        mock_neutron_client.update_port.return_value = {
-            'port': NeutronFixture.port_1}
+        mock_neutron_client.update_port.side_effect = stub_show_port
 
         self.test.stub_out(
             'nova.network.neutronv2.api.get_client',
