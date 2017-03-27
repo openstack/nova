@@ -955,7 +955,7 @@ Possible values:
 
 Related options:
 
-* running_deleted_instance_poll
+* running_deleted_instance_poll_interval
 * running_deleted_instance_timeout
 """),
     cfg.IntOpt("running_deleted_instance_poll_interval",
