@@ -18,10 +18,11 @@ the `API guide <http://developer.openstack.org/api-guide/compute/index.html>`_.
 .. include:: servers-action-evacuate.inc
 .. include:: servers-action-deferred-delete.inc
 .. include:: servers-action-console-output.inc
-.. include:: servers-action-remote-consoles.inc
 .. include:: servers-action-shelve.inc
 .. include:: servers-action-crash-dump.inc
+.. include:: servers-action-remote-consoles.inc
 .. include:: servers-admin-action.inc
+.. include:: servers-remote-consoles.inc
 .. include:: server-security-groups.inc
 .. include:: diagnostics.inc
 .. include:: ips.inc
