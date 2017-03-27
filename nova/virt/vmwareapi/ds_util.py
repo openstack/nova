@@ -435,7 +435,7 @@ def _filter_datastores_matching_storage_policy(session, data_stores,
 
     :param data_stores: the list of retrieve result wrapped datastore objects
     :param storage_policy: the storage policy name
-    :return the list of datastores conforming to the given storage policy
+    :return: the list of datastores conforming to the given storage policy
     """
     profile_id = pbm.get_profile_id_by_name(session, storage_policy)
     if profile_id:

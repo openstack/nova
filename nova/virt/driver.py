@@ -356,7 +356,7 @@ class ComputeDriver(object):
         :param context: security context
         :param instance: nova.objects.instance.Instance
 
-        :returns an instance of console.type.ConsoleVNC
+        :returns: an instance of console.type.ConsoleVNC
         """
         raise NotImplementedError()
 
@@ -366,7 +366,7 @@ class ComputeDriver(object):
         :param context: security context
         :param instance: nova.objects.instance.Instance
 
-        :returns an instance of console.type.ConsoleSpice
+        :returns: an instance of console.type.ConsoleSpice
         """
         raise NotImplementedError()
 
@@ -376,7 +376,7 @@ class ComputeDriver(object):
         :param context: security context
         :param instance: nova.objects.instance.Instance
 
-        :returns an instance of console.type.ConsoleRDP
+        :returns: an instance of console.type.ConsoleRDP
         """
         raise NotImplementedError()
 
@@ -386,7 +386,7 @@ class ComputeDriver(object):
         :param context: security context
         :param instance: nova.objects.instance.Instance
 
-        :returns an instance of console.type.ConsoleSerial
+        :returns: an instance of console.type.ConsoleSerial
         """
         raise NotImplementedError()
 

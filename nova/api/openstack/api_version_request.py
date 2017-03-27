@@ -144,7 +144,7 @@ def is_supported(req, min_version=_MIN_API_VERSION,
     :param max_version: maximum version of API needed for correct
            request processing
 
-    :returns True if request satisfies minimal and maximum API version
+    :returns: True if request satisfies minimal and maximum API version
              requirements. False in other case.
     """
 
