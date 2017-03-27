@@ -5,7 +5,7 @@
 ===================================================================
 
 Attaches volumes that are created through the volume API to server
-instances. Also, lists volume attachments for a server instance, shows
+instances. Also, lists volume attachments for a server, shows
 details for a volume attachment, and detaches a volume.
 
 List volume attachments for an instance

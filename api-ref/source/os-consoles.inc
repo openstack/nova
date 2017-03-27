@@ -11,7 +11,7 @@ Lists Consoles
 
 .. rest_method:: GET /servers/{server_id}/consoles
 
-Lists all consoles for a server instance.
+Lists all consoles for a server.
 
 Normal response codes: 200
 
@@ -47,7 +47,7 @@ Create Console
 
 .. rest_method:: POST /servers/{server_id}/consoles
 
-Creates a console for a server instance.
+Creates a console for a server.
 
 Normal response codes: 200
 
@@ -71,7 +71,7 @@ Show Console Details
 
 .. rest_method:: GET /servers/{server_id}/consoles/{console_id}
 
-Shows console details for a server instance.
+Shows console details for a server.
 
 Normal response codes: 200
 
@@ -111,7 +111,7 @@ Delete Console
 
 .. rest_method:: DELETE /servers/{server_id}/consoles/{console_id}
 
-Deletes a console for a server instance.
+Deletes a console for a server.
 
 Normal response codes: 202
 
@@ -137,7 +137,7 @@ Show Console Connection Information
 
 .. rest_method:: GET /os-console-auth-tokens/{console_token}
 
-Given the console authentication token for a server instance,
+Given the console authentication token for a server,
 shows the related connection information.
 
 This method used to be available only for the ``rdp-html5`` console type before

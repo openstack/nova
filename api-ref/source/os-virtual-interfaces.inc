@@ -4,7 +4,7 @@
  Servers virtual interfaces (servers, os-virtual-interfaces)
 =============================================================
 
-Lists virtual interfaces for a server instance.
+Lists virtual interfaces for a server.
 
 .. note::
     This API is only implemented for the nova-network service and will result

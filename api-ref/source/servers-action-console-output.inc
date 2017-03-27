@@ -5,7 +5,7 @@ Show Console Output (os-getConsoleOutput Action)
 
 .. rest_method:: POST /servers/{server_id}/action
 
-Shows console output for a server instance.
+Shows console output for a server.
 
 This API returns the text of the console since boot.
 The content returned may be large. Limit the lines of console
