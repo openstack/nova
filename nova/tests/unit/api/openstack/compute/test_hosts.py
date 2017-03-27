@@ -17,6 +17,7 @@ import mock
 import testtools
 import webob.exc
 
+from nova.api.openstack import api_version_request as api_version
 from nova.api.openstack.compute import hosts as os_hosts_v21
 from nova.compute import power_state
 from nova.compute import vm_states
@@ -131,6 +132,7 @@ def _create_instance_dict(**kwargs):
 class FakeRequestWithNovaZone(object):
     environ = {"nova.context": context_maker.get_admin_context()}
     GET = {"zone": "nova"}
+    api_version_request = api_version.APIVersionRequest('2.1')
 
 
 class HostTestCaseV21(test.TestCase):
@@ -413,3 +415,26 @@ class HostsPolicyEnforcementV21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
+
+
+class HostControllerDeprecationTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(HostControllerDeprecationTest, self).setUp()
+        self.controller = os_hosts_v21.HostController()
+        self.req = fakes.HTTPRequest.blank('', version='2.43')
+
+    def test_not_found_for_all_host_api(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+                          self.controller.show, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+                          self.controller.startup, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+                          self.controller.shutdown, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+                          self.controller.reboot, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+                          self.controller.index, self.req)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+                          self.controller.update, self.req, fakes.FAKE_UUID,
+                          body={})

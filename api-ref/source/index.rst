@@ -43,7 +43,6 @@ the `API guide <http://developer.openstack.org/api-guide/compute/index.html>`_.
 .. include:: os-availability-zone.inc
 .. include:: os-cells.inc
 .. include:: os-consoles.inc
-.. include:: os-hosts.inc
 .. include:: os-hypervisors.inc
 .. include:: os-instance-usage-audit-log.inc
 .. include:: os-migrations.inc
@@ -71,3 +70,4 @@ the `API guide <http://developer.openstack.org/api-guide/compute/index.html>`_.
 .. include:: os-security-groups.inc
 .. include:: os-security-group-default-rules.inc
 .. include:: os-security-group-rules.inc
+.. include:: os-hosts.inc

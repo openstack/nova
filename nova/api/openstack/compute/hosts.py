@@ -40,6 +40,7 @@ class HostController(wsgi.Controller):
         self.api = compute.HostAPI()
         super(HostController, self).__init__()
 
+    @wsgi.Controller.api_version("2.1", "2.42")
     @extensions.expected_errors(())
     def index(self, req):
         """Returns a dict in the format
@@ -96,6 +97,7 @@ class HostController(wsgi.Controller):
                               'zone': service['availability_zone']})
         return {'hosts': hosts}
 
+    @wsgi.Controller.api_version("2.1", "2.42")
     @extensions.expected_errors((400, 404, 501))
     @validation.schema(hosts.update)
     def update(self, req, id, body):
@@ -187,14 +189,17 @@ class HostController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         return {"host": host_name, "power_action": result}
 
+    @wsgi.Controller.api_version("2.1", "2.42")
     @extensions.expected_errors((400, 404, 501))
     def startup(self, req, id):
         return self._host_power_action(req, host_name=id, action="startup")
 
+    @wsgi.Controller.api_version("2.1", "2.42")
     @extensions.expected_errors((400, 404, 501))
     def shutdown(self, req, id):
         return self._host_power_action(req, host_name=id, action="shutdown")
 
+    @wsgi.Controller.api_version("2.1", "2.42")
     @extensions.expected_errors((400, 404, 501))
     def reboot(self, req, id):
         return self._host_power_action(req, host_name=id, action="reboot")
@@ -248,6 +253,7 @@ class HostController(wsgi.Controller):
                                     instance['ephemeral_gb'])
         return project_map
 
+    @wsgi.Controller.api_version("2.1", "2.42")
     @extensions.expected_errors(404)
     def show(self, req, id):
         """Shows the physical/usage resource given by hosts.

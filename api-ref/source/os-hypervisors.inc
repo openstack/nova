@@ -1,5 +1,7 @@
 .. -*- rst -*-
 
+.. _os-hypervisors:
+
 ==============================
  Hypervisors (os-hypervisors)
 ==============================

@@ -102,6 +102,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              re-introduce the tag attribute that, due to bugs, was lost
              starting with version 2.33 for block devices and starting with
              version 2.37 for network interfaces.
+    * 2.43 - Deprecate os-hosts API
 """
 
 # The minimum and maximum versions of the API supported
@@ -110,7 +111,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.42"
+_MAX_API_VERSION = "2.43"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which related to network, images and baremetal

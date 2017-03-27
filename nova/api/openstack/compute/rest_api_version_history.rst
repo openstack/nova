@@ -482,3 +482,14 @@ user documentation.
   2.37 and for block_device_mapping_v2 starting with version 2.33. Microversion
   2.42 restores the tag parameter to both networks and block_device_mapping_v2,
   allowing networks and block devices to be tagged again.
+
+2.43
+----
+
+  The ``os-hosts`` API is deprecated as of the 2.43 microversion. Requests
+  made with microversion >= 2.43 will result in a 404 error. To list and show
+  host details, use the ``os-hypervisors`` API. To enable or disable a
+  service, use the ``os-services`` API. There is no replacement for the
+  `shutdown`, `startup`, `reboot`, or `maintenance_mode` actions as those are
+  system-level operations which should be outside of the control of the
+  compute service.
