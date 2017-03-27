@@ -1,0 +1,5 @@
+---
+upgrade:
+  - |
+    Policy rule with name os_compute_api:os-admin-actions has been removed
+    as it was never used by any API.

@@ -26,10 +26,6 @@ admin_actions_policies = [
     policy.RuleDefault(
         name=POLICY_ROOT % 'discoverable',
         check_str=base.RULE_ANY),
-    # TODO(sneti): remove this rule as this not used by any API
-    policy.RuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_API),
     base.create_rule_default(
         POLICY_ROOT % 'reset_state',
         base.RULE_ADMIN_API,
