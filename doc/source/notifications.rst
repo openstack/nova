@@ -102,6 +102,11 @@ that can be used to specify which notifications are emitted by Nova. The
 possible values are `unversioned`, `versioned`, `both` and the default value
 is `both`.
 
+The versioned notifications are emitted to a different topic than the legacy
+notifications. By default they are emitted to 'versioned_notifications' but it
+is configurable in the nova.conf with the `versioned_notifications_topic`
+config option.
+
 How to add a new versioned notification
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
