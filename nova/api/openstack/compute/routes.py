@@ -47,6 +47,7 @@ from nova.api.openstack.compute import floating_ips
 from nova.api.openstack.compute import floating_ips_bulk
 from nova.api.openstack.compute import fping
 from nova.api.openstack.compute import hide_server_addresses
+from nova.api.openstack.compute import hosts
 from nova.api.openstack.compute import instance_actions
 from nova.api.openstack.compute import instance_usage_audit_log
 from nova.api.openstack.compute import ips
@@ -164,6 +165,10 @@ floating_ips_bulk_controller = functools.partial(_create_controller,
 
 fping_controller = functools.partial(_create_controller,
     fping.FpingController, [], [])
+
+
+hosts_controller = functools.partial(
+    _create_controller, hosts.HostController, [], [])
 
 
 instance_actions_controller = functools.partial(_create_controller,
@@ -391,6 +396,22 @@ ROUTE_LIST = (
     }),
     ('/os-fping/{id}', {
         'GET': [fping_controller, 'show']
+    }),
+    ('/os-hosts', {
+        'GET': [hosts_controller, 'index']
+    }),
+    ('/os-hosts/{id}', {
+        'GET': [hosts_controller, 'show'],
+        'PUT': [hosts_controller, 'update']
+    }),
+    ('/os-hosts/{id}/reboot', {
+        'GET': [hosts_controller, 'reboot']
+    }),
+    ('/os-hosts/{id}/shutdown', {
+        'GET': [hosts_controller, 'shutdown']
+    }),
+    ('/os-hosts/{id}/startup', {
+        'GET': [hosts_controller, 'startup']
     }),
     ('/os-instance_usage_audit_log', {
         'GET': [instance_usage_audit_log_controller, 'index']
