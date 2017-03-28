@@ -583,10 +583,7 @@ class ServersController(wsgi.Controller):
         return_reservation_id = create_kwargs.pop('return_reservation_id',
                                                   False)
 
-        requested_networks = None
-        if ('os-networks' in self.extension_info.get_extensions()
-                or utils.is_neutron()):
-            requested_networks = server_dict.get('networks')
+        requested_networks = server_dict.get('networks', None)
 
         if requested_networks is not None:
             requested_networks = self._get_requested_networks(
