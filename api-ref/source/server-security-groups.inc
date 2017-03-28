@@ -4,7 +4,7 @@
  Servers Security Groups (servers, os-security-groups)
 ======================================================
 
-Lists Security Groups for a server instance.
+Lists Security Groups for a server.
 
 List Security Groups By Server
 ==============================
