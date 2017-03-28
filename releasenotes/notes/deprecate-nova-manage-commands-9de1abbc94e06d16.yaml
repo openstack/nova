@@ -4,6 +4,12 @@ deprecations:
     A number of `nova-manage` commands have been deprecated. The commands,
     along with the reasons for their deprecation, are listed below:
 
+    `agent`
+
+      This allows for the creation, deletion, update and listing of "agent
+      builds". Operators should use the equivalent resources in the `REST
+      API`__ instead.
+
     `shell`
 
       This starts the Python interactive interpreter. It is a clone of the same
@@ -12,3 +18,5 @@ deprecations:
       simply be removed.
 
     These commands will be removed in their entirety during the Queens cycle.
+
+    __ https://developer.openstack.org/api-ref/compute/#guest-agents-os-agents
