@@ -23,26 +23,74 @@ POLICY_ROOT = 'os_compute_api:server-metadata:%s'
 
 server_metadata_policies = [
     policy.RuleDefault(
-        name=POLICY_ROOT % 'index',
-        check_str=base.RULE_ADMIN_OR_OWNER),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'show',
-        check_str=base.RULE_ADMIN_OR_OWNER),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'create',
-        check_str=base.RULE_ADMIN_OR_OWNER),
-    policy.RuleDefault(
         name=POLICY_ROOT % 'discoverable',
         check_str=base.RULE_ANY),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'update_all',
-        check_str=base.RULE_ADMIN_OR_OWNER),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'delete',
-        check_str=base.RULE_ADMIN_OR_OWNER),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'update',
-        check_str=base.RULE_ADMIN_OR_OWNER),
+    base.create_rule_default(
+        POLICY_ROOT % 'index',
+        base.RULE_ADMIN_OR_OWNER,
+        "List all metadata of a server",
+        [
+            {
+                'path': '/servers/server_id/metadata',
+                'method': 'GET'
+            }
+        ]
+    ),
+    base.create_rule_default(
+        POLICY_ROOT % 'show',
+        base.RULE_ADMIN_OR_OWNER,
+        "Show metadata for a server",
+        [
+            {
+                'path': '/servers/server_id/metadata/{key}',
+                'method': 'GET'
+            }
+        ]
+    ),
+    base.create_rule_default(
+        POLICY_ROOT % 'create',
+        base.RULE_ADMIN_OR_OWNER,
+        "Create metadata for a server",
+        [
+            {
+                'path': '/servers/server_id/metadata',
+                'method': 'POST'
+            }
+        ]
+    ),
+    base.create_rule_default(
+        POLICY_ROOT % 'update_all',
+        base.RULE_ADMIN_OR_OWNER,
+        "Replace metadata for a server",
+        [
+            {
+                'path': '/servers/server_id/metadata',
+                'method': 'PUT'
+            }
+        ]
+    ),
+    base.create_rule_default(
+        POLICY_ROOT % 'update',
+        base.RULE_ADMIN_OR_OWNER,
+        "Update metadata from a server",
+        [
+            {
+                'path': '/servers/server_id/metadata/{key}',
+                'method': 'PUT'
+            }
+        ]
+    ),
+    base.create_rule_default(
+        POLICY_ROOT % 'delete',
+        base.RULE_ADMIN_OR_OWNER,
+        "Delete metadata from a server",
+        [
+            {
+                'path': '/servers/server_id/metadata/{key}',
+                'method': 'DELETE'
+            }
+        ]
+    ),
 ]
 
 
