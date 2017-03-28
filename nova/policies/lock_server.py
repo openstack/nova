@@ -25,15 +25,42 @@ lock_server_policies = [
     policy.RuleDefault(
         name=POLICY_ROOT % 'discoverable',
         check_str=base.RULE_ANY),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'lock',
-        check_str=base.RULE_ADMIN_OR_OWNER),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'unlock:unlock_override',
-        check_str=base.RULE_ADMIN_API),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'unlock',
-        check_str=base.RULE_ADMIN_OR_OWNER),
+    base.create_rule_default(
+        POLICY_ROOT % 'lock',
+        base.RULE_ADMIN_OR_OWNER,
+        "Lock a server",
+        [
+            {
+                'path': '/servers/{server_id}/action (lock)',
+                'method': 'POST'
+            }
+        ]
+    ),
+    base.create_rule_default(
+        POLICY_ROOT % 'unlock',
+        base.RULE_ADMIN_OR_OWNER,
+        "Unlock a server",
+        [
+            {
+                'path': '/servers/{server_id}/action (unlock)',
+                'method': 'POST'
+            }
+        ]
+    ),
+    base.create_rule_default(
+        POLICY_ROOT % 'unlock:unlock_override',
+        base.RULE_ADMIN_API,
+        """Unlock a server, regardless who locked the server.
+
+        This check is performed only after the check
+        os_compute_api:os-lock-server:unlock passes""",
+        [
+            {
+                'path': '/servers/{server_id}/action (unlock)',
+                'method': 'POST'
+            }
+        ]
+    ),
 ]
 
 
