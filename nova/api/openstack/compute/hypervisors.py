@@ -32,8 +32,6 @@ from nova import servicegroup
 
 LOG = logging.getLogger(__name__)
 
-ALIAS = "os-hypervisors"
-
 
 class HypervisorsController(wsgi.Controller):
     """The Hypervisors API controller for the OpenStack API."""
@@ -278,25 +276,3 @@ class HypervisorsController(wsgi.Controller):
         context.can(hv_policies.BASE_POLICY_NAME)
         stats = self.host_api.compute_node_statistics(context)
         return dict(hypervisor_statistics=stats)
-
-
-class Hypervisors(extensions.V21APIExtensionBase):
-    """Admin-only hypervisor administration."""
-
-    name = "Hypervisors"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        resources = [extensions.ResourceExtension(ALIAS,
-                HypervisorsController(),
-                collection_actions={'detail': 'GET',
-                                    'statistics': 'GET'},
-                member_actions={'uptime': 'GET',
-                                'search': 'GET',
-                                'servers': 'GET'})]
-
-        return resources
-
-    def get_controller_extensions(self):
-        return []
