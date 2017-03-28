@@ -2872,6 +2872,30 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         self.assertEqual(new_cell.cells[0].cpu_usage, 1)
 
 
+class CPUSReservedCellTestCase(test.NoDBTestCase):
+    def _test_reserved(self, reserved):
+        host_cell = objects.NUMACell(id=0, cpuset=set([0, 1, 2]),
+                                     memory=2048, memory_usage=0, siblings=[],
+                                     mempages=[], pinned_cpus=set([]))
+        inst_cell = objects.InstanceNUMACell(cpuset=set([0, 1]), memory=2048)
+        return hw._numa_fit_instance_cell_with_pinning(
+            host_cell, inst_cell, reserved)
+
+    def test_no_reserved(self):
+        inst_cell = self._test_reserved(reserved=0)
+        self.assertEqual(set([0, 1]), inst_cell.cpuset)
+        self.assertIsNone(inst_cell.cpuset_reserved)
+
+    def test_reserved(self):
+        inst_cell = self._test_reserved(reserved=1)
+        self.assertEqual(set([0, 1]), inst_cell.cpuset)
+        self.assertEqual(set([2]), inst_cell.cpuset_reserved)
+
+    def test_reserved_exceeded(self):
+        inst_cell = self._test_reserved(reserved=2)
+        self.assertIsNone(inst_cell)
+
+
 class CPURealtimeTestCase(test.NoDBTestCase):
     def test_success_flavor(self):
         flavor = objects.Flavor(vcpus=3, memory_mb=2048,
