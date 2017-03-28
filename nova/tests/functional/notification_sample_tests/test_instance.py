@@ -66,10 +66,8 @@ class TestInstanceNotificationSample(
         actions = [
             self._test_power_off_on_server,
             self._test_restore_server,
-            self._test_suspend_server,
-            self._test_resume_server,
-            self._test_pause_server,
-            self._test_unpause_server,
+            self._test_suspend_resume_server,
+            self._test_pause_unpause_server,
             self._test_shelve_server,
             self._test_shelve_offload_server,
             self._test_unshelve_server,
@@ -90,6 +88,8 @@ class TestInstanceNotificationSample(
         for action in actions:
             fake_notifier.reset()
             action(server)
+            # Ensure that instance is in active state after an action
+            self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
 
     def test_create_delete_server(self):
         server = self._boot_a_server(
@@ -411,12 +411,21 @@ class TestInstanceNotificationSample(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[5])
 
-    def _test_suspend_server(self, server):
+    def _test_suspend_resume_server(self, server):
         post = {'suspend': {}}
         self.api.post_server_action(server['id'], post)
         self._wait_for_state_change(self.admin_api, server, 'SUSPENDED')
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        post = {'resume': None}
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+        # Four versioned notification are generated.
+        # 0. instance-suspend-start
+        # 1. instance-suspend-end
+        # 2. instance-resume-start
+        # 3. instance-resume-end
+        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'instance-suspend-start',
             replacements={
@@ -430,32 +439,34 @@ class TestInstanceNotificationSample(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
-    def _test_resume_server(self, server):
-        post = {'resume': None}
-        self.api.post_server_action(server['id'], post)
-        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
-
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'instance-resume-start',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
         self._verify_notification(
             'instance-resume-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
 
         self.flags(reclaim_instance_interval=0)
 
-    def _test_pause_server(self, server):
+    def _test_pause_unpause_server(self, server):
         self.api.post_server_action(server['id'], {'pause': {}})
         self._wait_for_state_change(self.api, server, 'PAUSED')
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.api.post_server_action(server['id'], {'unpause': {}})
+        self._wait_for_state_change(self.api, server, 'ACTIVE')
+
+        # Four versioned notifications are generated
+        # 0. instance-pause-start
+        # 1. instance-pause-end
+        # 2. instance-unpause-start
+        # 3. instance-unpause-end
+        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'instance-pause-start',
             replacements={
@@ -468,24 +479,18 @@ class TestInstanceNotificationSample(
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
-
-    def _test_unpause_server(self, server):
-        self.api.post_server_action(server['id'], {'unpause': {}})
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
-
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'instance-unpause-start',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
         self._verify_notification(
             'instance-unpause-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
 
     def _test_resize_server(self, server):
         self.flags(allow_resize_to_same_host=True)
