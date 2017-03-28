@@ -32,6 +32,7 @@ from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import models
 from nova import exception
 from nova.i18n import _, _LE, _LW
+from nova.network import model as network_model
 from nova import notifications
 from nova import objects
 from nova.objects import base
@@ -1155,6 +1156,11 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             yield
         finally:
             self._normalize_cell_name()
+
+    def get_network_info(self):
+        if self.info_cache is None:
+            return network_model.NetworkInfo.hydrate([])
+        return self.info_cache.network_info
 
 
 def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):

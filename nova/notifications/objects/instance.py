@@ -94,11 +94,8 @@ class InstancePayload(base.NotificationPayloadBase):
 
     def __init__(self, instance):
         super(InstancePayload, self).__init__()
-        # Note(gibi): ugly but needed to avoid cyclic import
-        from nova.compute import utils
-
-        self.ip_addresses = IpPayload.from_network_info(
-                utils.get_nw_info_for_instance(instance))
+        network_info = instance.get_network_info()
+        self.ip_addresses = IpPayload.from_network_info(network_info)
         self.flavor = flavor_payload.FlavorPayload(flavor=instance.flavor)
 
         self.populate_schema(instance=instance)

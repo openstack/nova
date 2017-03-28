@@ -825,6 +825,21 @@ class _TestInstanceObject(object):
         mock_get.assert_called_once_with(self.context, fake_uuid,
             columns_to_join=['info_cache'])
 
+    def test_get_network_info_with_cache(self):
+        info_cache = instance_info_cache.InstanceInfoCache()
+        nwinfo = network_model.NetworkInfo.hydrate([{'address': 'foo'}])
+        info_cache.network_info = nwinfo
+        inst = objects.Instance(context=self.context,
+                                info_cache=info_cache)
+
+        self.assertEqual(nwinfo, inst.get_network_info())
+
+    def test_get_network_info_without_cache(self):
+        inst = objects.Instance(context=self.context, info_cache=None)
+
+        self.assertEqual(network_model.NetworkInfo.hydrate([]),
+                         inst.get_network_info())
+
     @mock.patch.object(db, 'security_group_update')
     @mock.patch.object(db, 'instance_update_and_get_original')
     @mock.patch.object(db, 'instance_get_by_uuid')

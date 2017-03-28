@@ -30,7 +30,6 @@ from nova.compute import power_state
 from nova.compute import task_states
 import nova.conf
 from nova import exception
-from nova.network import model as network_model
 from nova import notifications
 from nova.notifications.objects import aggregate as aggregate_notification
 from nova.notifications.objects import base as notification_base
@@ -491,9 +490,7 @@ def notify_about_host_update(context, event_suffix, host_payload):
 
 
 def get_nw_info_for_instance(instance):
-    if instance.info_cache is None:
-        return network_model.NetworkInfo.hydrate([])
-    return instance.info_cache.network_info
+    return instance.get_network_info()
 
 
 def refresh_info_cache_for_instance(context, instance):
