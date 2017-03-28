@@ -19,7 +19,6 @@ import webob
 
 from nova.api.openstack.compute import quota_sets as quotas_v21
 from nova.api.openstack.compute import tenant_networks
-from nova.api.openstack import extensions
 from nova import db
 from nova import exception
 from nova import quota
@@ -75,8 +74,7 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
             self.default_quotas['server_group_members'] = 10
 
     def _setup_controller(self):
-        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
-        self.controller = self.plugin.QuotaSetsController(self.ext_mgr)
+        self.controller = self.plugin.QuotaSetsController()
 
     def _get_http_request(self, url=''):
         return fakes.HTTPRequest.blank(url)
@@ -269,16 +267,13 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
         body = {'quota_set': self.default_quotas}
         self._quotas_update_bad_request_case(body)
 
-    def test_quotas_delete(self):
+    @mock.patch.object(quota.QUOTAS, 'destroy_all_by_project')
+    def test_quotas_delete(self, mock_destroy_all_by_project):
         req = self._get_http_request()
-        self.mox.StubOutWithMock(quota.QUOTAS,
-                                 "destroy_all_by_project")
-        quota.QUOTAS.destroy_all_by_project(req.environ['nova.context'],
-                                            1234)
-        self.mox.ReplayAll()
         res = self.controller.delete(req, 1234)
-        self.mox.VerifyAll()
         self.assertEqual(202, self.get_delete_status_int(res))
+        mock_destroy_all_by_project.assert_called_once_with(
+            req.environ['nova.context'], 1234)
 
     def test_update_network_quota_disabled(self):
         self.flags(enable_network_quota=False)
@@ -312,8 +307,7 @@ class ExtendedQuotasTestV21(BaseQuotaSetsTest):
                                  'reserved': 0}}
 
     def _setup_controller(self):
-        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
-        self.controller = self.plugin.QuotaSetsController(self.ext_mgr)
+        self.controller = self.plugin.QuotaSetsController()
 
     def fake_get_quotas(self, context, id, user_id=None, usages=False):
         if usages:
@@ -404,8 +398,7 @@ class UserQuotasTestV21(BaseQuotaSetsTest):
         return fakes.HTTPRequest.blank(url)
 
     def _setup_controller(self):
-        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
-        self.controller = self.plugin.QuotaSetsController(self.ext_mgr)
+        self.controller = self.plugin.QuotaSetsController()
 
     def test_user_quotas_show(self):
         req = self._get_http_request('/v2/fake4/os-quota-sets/1234?user_id=1')
@@ -441,17 +434,15 @@ class UserQuotasTestV21(BaseQuotaSetsTest):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, 'update_me', body=body)
 
-    def test_user_quotas_delete(self):
+    @mock.patch.object(quota.QUOTAS, "destroy_all_by_project_and_user")
+    def test_user_quotas_delete(self, mock_destroy_all_by_project_and_user):
         url = '/v2/fake4/os-quota-sets/1234?user_id=1'
         req = self._get_http_request(url)
-        self.mox.StubOutWithMock(quota.QUOTAS,
-                                 "destroy_all_by_project_and_user")
-        quota.QUOTAS.destroy_all_by_project_and_user(
-            req.environ['nova.context'], 1234, '1')
-        self.mox.ReplayAll()
         res = self.controller.delete(req, 1234)
-        self.mox.VerifyAll()
         self.assertEqual(202, self.get_delete_status_int(res))
+        mock_destroy_all_by_project_and_user.assert_called_once_with(
+            req.environ['nova.context'], 1234, '1'
+        )
 
     @mock.patch('nova.objects.Quotas.create_limit')
     def test_user_quotas_update_good_data(self, mock_createlimit):
