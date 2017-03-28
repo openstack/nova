@@ -26,9 +26,16 @@ evacuate_policies = [
     policy.RuleDefault(
         name=POLICY_ROOT % 'discoverable',
         check_str=base.RULE_ANY),
-    policy.RuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_API),
+    base.create_rule_default(
+        BASE_POLICY_NAME,
+        base.RULE_ADMIN_API,
+        "Evacuate a server from a failed host to a new host",
+        [
+            {
+                'path': '/servers/{server_id}/action (evacuate)',
+                'method': 'POST'
+            }
+        ]),
 ]
 
 
