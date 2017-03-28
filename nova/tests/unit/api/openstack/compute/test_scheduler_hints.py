@@ -13,20 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import datetime
-
 from oslo_config import cfg
 from oslo_serialization import jsonutils
 
 from nova.api.openstack import compute
-from nova.api.openstack.compute import extension_info
-from nova.api.openstack.compute import servers as servers_v21
-import nova.compute.api
-from nova.compute import flavors
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-from nova.tests.unit import fake_instance
-from nova.tests.unit.image import fake
 
 
 UUID = fakes.FAKE_UUID
@@ -137,81 +129,3 @@ class SchedulerHintsTestCaseV21(test.TestCase):
 
         param = {'different_host': ['non-server-id01', 'non-server-id02']}
         self._create_server_with_scheduler_hints_bad_request(param)
-
-
-class ServersControllerCreateTestV21(test.TestCase):
-
-    def setUp(self):
-        """Shared implementation for tests below that create instance."""
-        super(ServersControllerCreateTestV21, self).setUp()
-
-        self.instance_cache_num = 0
-        fakes.stub_out_nw_api(self)
-        self._set_up_controller()
-
-        def instance_create(context, inst):
-            inst_type = flavors.get_flavor_by_flavor_id(3)
-            image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-            def_image_ref = 'http://localhost/images/%s' % image_uuid
-            self.instance_cache_num += 1
-            instance = fake_instance.fake_db_instance(**{
-                'id': self.instance_cache_num,
-                'display_name': inst['display_name'] or 'test',
-                'uuid': fakes.FAKE_UUID,
-                'instance_type': inst_type,
-                'access_ip_v4': '1.2.3.4',
-                'access_ip_v6': 'fead::1234',
-                'image_ref': inst.get('image_ref', def_image_ref),
-                'user_id': 'fake',
-                'project_id': 'fake',
-                'reservation_id': inst['reservation_id'],
-                "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
-                "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
-                "progress": 0,
-                "fixed_ips": [],
-                "task_state": "",
-                "vm_state": "",
-                "root_device_name": inst.get('root_device_name', 'vda'),
-            })
-
-            return instance
-
-        fake.stub_out_image_service(self)
-        self.stub_out('nova.db.instance_create', instance_create)
-
-    def _set_up_controller(self):
-        ext_info = extension_info.LoadedExtensionInfo()
-        CONF.set_override('extensions_blacklist', 'os-scheduler-hints',
-                          'osapi_v21')
-        self.no_scheduler_hints_controller = servers_v21.ServersController(
-            extension_info=ext_info)
-
-    def _verify_availability_zone(self, **kwargs):
-        self.assertNotIn('scheduler_hints', kwargs)
-
-    def _get_request(self):
-        return fakes.HTTPRequest.blank('/servers')
-
-    def _test_create_extra(self, params):
-        image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
-        server = dict(name='server_test', imageRef=image_uuid, flavorRef=2)
-        body = dict(server=server)
-        body.update(params)
-        req = self._get_request()
-        req.method = 'POST'
-        req.body = jsonutils.dump_as_bytes(body)
-        req.headers["content-type"] = "application/json"
-        server = self.no_scheduler_hints_controller.create(
-                     req, body=body).obj['server']
-
-    def test_create_instance_with_scheduler_hints_disabled(self):
-        hints = {'same_host': '48e6a9f6-30af-47e0-bc04-acaed113bb4e'}
-        params = {'OS-SCH-HNT:scheduler_hints': hints}
-        old_create = nova.compute.api.API.create
-
-        def create(*args, **kwargs):
-            self._verify_availability_zone(**kwargs)
-            return old_create(*args, **kwargs)
-
-        self.stub_out('nova.compute.api.API.create', create)
-        self._test_create_extra(params)
