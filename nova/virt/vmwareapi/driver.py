@@ -19,10 +19,12 @@
 A connection to the VMware vCenter platform.
 """
 
+import os
 import re
 
 from oslo_log import log as logging
 from oslo_utils import excutils
+from oslo_utils import units
 from oslo_utils import versionutils as v_utils
 from oslo_vmware import api
 from oslo_vmware import exceptions as vexc
@@ -35,6 +37,7 @@ from nova.compute import task_states
 import nova.conf
 from nova import exception
 from nova.i18n import _
+import nova.privsep.path
 from nova.virt import driver
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import error_util
@@ -49,6 +52,7 @@ LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
 
 TIME_BETWEEN_API_CALL_RETRIES = 1.0
+MAX_CONSOLE_BYTES = 100 * units.Ki
 
 
 class VMwareVCDriver(driver.ComputeDriver):
@@ -258,6 +262,21 @@ class VMwareVCDriver(driver.ComputeDriver):
 
     def get_mks_console(self, context, instance):
         return self._vmops.get_mks_console(instance)
+
+    def get_console_output(self, context, instance):
+        if not CONF.vmware.serial_log_dir:
+            LOG.error("The 'serial_log_dir' config option is not set!")
+            return
+        fname = instance.uuid.replace('-', '')
+        path = os.path.join(CONF.vmware.serial_log_dir, fname)
+        if not os.path.exists(path):
+            LOG.warning('The console log is missing. Check your VSPC '
+                        'configuration', instance=instance)
+            return b""
+        with open(path, 'rb') as fp:
+            read_log_data, remaining = nova.privsep.path.last_bytes(
+                fp, MAX_CONSOLE_BYTES)
+            return read_log_data
 
     def _get_vcenter_uuid(self):
         """Retrieves the vCenter UUID."""

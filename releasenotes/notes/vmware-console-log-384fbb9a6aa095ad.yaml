@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    VMware serial console log is completed. `VSPC`_ must be deployed along
+    with nova-compute and configured properly. The ``[vmware]/serial_log_dir``
+    config option must have the same value in both nova.conf and vspc.conf.
+
+    .. _VSPC: https://github.com/openstack/vmware-vspc

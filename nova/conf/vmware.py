@@ -92,6 +92,13 @@ Related options:
 This option is ignored if serial_port_service_uri is not specified.
 * serial_port_service_uri
 """),
+    cfg.StrOpt('serial_log_dir',
+               default='/opt/vmware/vspc',
+               help="""
+Specifies the directory where the Virtual Serial Port Concentrator is
+storing console log files. It should match the 'serial_log_dir' config
+value of VSPC.
+"""),
 ]
 
 vmwareapi_opts = [

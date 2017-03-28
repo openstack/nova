@@ -1671,10 +1671,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         actual = self.conn.get_instance_diagnostics(instance)
         self.assertDiagnosticsEqual(expected, actual)
 
-    def test_get_console_output(self):
-        self.assertRaises(NotImplementedError, self.conn.get_console_output,
-            None, None)
-
     def test_get_vnc_console_non_existent(self):
         self._create_instance()
         self.assertRaises(exception.InstanceNotFound,
@@ -1701,6 +1697,24 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                           self.conn.get_vnc_console,
                           self.context,
                           self.instance)
+
+    def test_get_console_output(self):
+        self.flags(serial_log_dir='/opt/vspc', group='vmware')
+        self._create_instance()
+        with test.nested(
+            mock.patch('os.path.exists', return_value=True),
+            mock.patch('{}.open'.format(driver.__name__), create=True),
+            mock.patch('nova.privsep.path.last_bytes')
+        ) as (fake_exists, fake_open, fake_last_bytes):
+            fake_open.return_value = mock.MagicMock()
+            fake_fd = fake_open.return_value.__enter__.return_value
+            fake_last_bytes.return_value = b'fira', 0
+            output = self.conn.get_console_output(self.context, self.instance)
+            fname = self.instance.uuid.replace('-', '')
+            fake_exists.assert_called_once_with('/opt/vspc/{}'.format(fname))
+            fake_last_bytes.assert_called_once_with(fake_fd,
+                                                    driver.MAX_CONSOLE_BYTES)
+        self.assertEqual(b'fira', output)
 
     def test_get_volume_connector(self):
         self._create_vm()
