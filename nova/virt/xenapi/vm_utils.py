@@ -1144,7 +1144,7 @@ def generate_configdrive(session, context, instance, vm_ref, userdevice,
 def _create_kernel_image(context, session, instance, name_label, image_id,
                          image_type):
     """Creates kernel/ramdisk file from the image stored in the cache.
-    If the image is not present in the cache, it streams it from glance.
+    If the image is not present in the cache, fetch it from glance.
 
     Returns: A list of dictionaries that describe VDIs
     """
