@@ -85,11 +85,6 @@ class ServersControllerCreateTestV21(test.TestCase):
         ext_info = extension_info.LoadedExtensionInfo()
         self.controller = servers_v21.ServersController(
             extension_info=ext_info)
-        CONF.set_override('extensions_blacklist',
-                          'os-config-drive',
-                          'osapi_v21')
-        self.no_config_drive_controller = servers_v21.ServersController(
-            extension_info=ext_info)
 
     def _verify_config_drive(self, **kwargs):
         self.assertNotIn('config_drive', kwargs)
@@ -115,7 +110,7 @@ class ServersControllerCreateTestV21(test.TestCase):
         self.stub_out('nova.compute.api.API.create_db_entry_for_new_instance',
                       create_db_entry_for_new_instance)
 
-    def _test_create_extra(self, params, override_controller):
+    def _test_create_extra(self, params):
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
         server = dict(name='server_test', imageRef=image_uuid, flavorRef=2)
         server.update(params)
@@ -124,22 +119,7 @@ class ServersControllerCreateTestV21(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dump_as_bytes(body)
         req.headers["content-type"] = "application/json"
-        if override_controller is not None:
-            server = override_controller.create(req, body=body).obj['server']
-        else:
-            server = self.controller.create(req, body=body).obj['server']
-
-    def test_create_instance_with_config_drive_disabled(self):
-        params = {'config_drive': "False"}
-        old_create = compute_api.API.create
-
-        def create(*args, **kwargs):
-            self._verify_config_drive(**kwargs)
-            return old_create(*args, **kwargs)
-
-        self.stub_out('nova.compute.api.API.create', create)
-        self._test_create_extra(params,
-            override_controller=self.no_config_drive_controller)
+        server = self.controller.create(req, body=body).obj['server']
 
     def _create_instance_body_of_config_drive(self, param):
         self._initialize_extension()
