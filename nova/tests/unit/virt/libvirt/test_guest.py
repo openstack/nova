@@ -359,6 +359,14 @@ class GuestTestCase(test.NoDBTestCase):
         self.guest.set_user_password("foo", "123")
         self.domain.setUserPassword.assert_called_once_with("foo", "123", 0)
 
+    def test_get_config(self):
+        xml = "<domain type='kvm'><name>fake</name></domain>"
+        self.domain.XMLDesc.return_value = xml
+        result = self.guest.get_config()
+        self.assertIsInstance(result, vconfig.LibvirtConfigGuest)
+        self.assertEqual('kvm', result.virt_type)
+        self.assertEqual('fake', result.name)
+
     def test_get_devices(self):
         xml = """
 <domain type='qemu'>
