@@ -553,7 +553,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
 
     @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
-    @mock.patch('os.fsync')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2._safe_fsync')
     def test_download_no_data_dest_path_v2(self, fsync_mock, show_mock,
                                            open_mock):
         client = mock.MagicMock()
@@ -569,8 +569,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         client.call.assert_called_once_with(ctx, 2, 'data',
                                             mock.sentinel.image_id)
         open_mock.assert_called_once_with(mock.sentinel.dst_path, 'wb')
-        fsync_mock.assert_called_once_with(
-                writer.fileno.return_value)
+        fsync_mock.assert_called_once_with(writer)
         self.assertIsNone(res)
         writer.write.assert_has_calls(
                 [
@@ -664,7 +663,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
     @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_module')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
-    @mock.patch('os.fsync')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2._safe_fsync')
     def test_download_direct_exception_fallback_v2(
             self, fsync_mock, show_mock, get_tran_mock, open_mock):
         # Test that we fall back to downloading to the dst_path
@@ -701,8 +700,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
                                                   mock.sentinel.loc_meta)
         client.call.assert_called_once_with(ctx, 2, 'data',
                                             mock.sentinel.image_id)
-        fsync_mock.assert_called_once_with(
-                open_mock.return_value.fileno.return_value)
+        fsync_mock.assert_called_once_with(writer)
         # NOTE(jaypipes): log messages call open() in part of the
         # download path, so here, we just check that the last open()
         # call was done for the dst_path file descriptor.
@@ -719,7 +717,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
     @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_module')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
-    @mock.patch('os.fsync')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2._safe_fsync')
     def test_download_direct_no_mod_fallback(
             self, fsync_mock, show_mock, get_tran_mock, open_mock):
         # Test that we fall back to downloading to the dst_path
@@ -751,8 +749,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         get_tran_mock.assert_called_once_with('file')
         client.call.assert_called_once_with(ctx, 2, 'data',
                                             mock.sentinel.image_id)
-        fsync_mock.assert_called_once_with(
-                open_mock.return_value.fileno.return_value)
+        fsync_mock.assert_called_once_with(writer)
         # NOTE(jaypipes): log messages call open() in part of the
         # download path, so here, we just check that the last open()
         # call was done for the dst_path file descriptor.
@@ -827,7 +824,7 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
     @mock.patch('cursive.signature_utils.get_verifier')
-    @mock.patch('os.fsync')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2._safe_fsync')
     def test_download_dst_path_signature_verification_v2(self,
                                                          mock_fsync,
                                                          mock_get_verifier,
@@ -852,8 +849,7 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
         mock_log.info.assert_called_once_with(mock.ANY, mock.ANY)
         self.assertEqual(len(self.fake_img_data), mock_dest.write.call_count)
         self.assertTrue(mock_dest.close.called)
-        mock_fsync.assert_called_once_with(
-                mock_dest.fileno.return_value)
+        mock_fsync.assert_called_once_with(mock_dest)
 
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
@@ -908,7 +904,7 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
     @mock.patch('cursive.signature_utils.get_verifier')
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
-    @mock.patch('os.fsync')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2._safe_fsync')
     def test_download_dst_path_signature_fail_v2(self, mock_fsync,
                                                  mock_show, mock_log,
                                                  mock_get_verifier,
@@ -925,8 +921,7 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
                           data=None, dst_path=fake_path)
         mock_log.error.assert_called_once_with(mock.ANY, mock.ANY)
         mock_open.assert_called_once_with(fake_path, 'wb')
-        mock_fsync.assert_called_once_with(
-                mock_open.return_value.fileno.return_value)
+        mock_fsync.assert_called_once_with(mock_dest)
         mock_dest.truncate.assert_called_once_with(0)
         self.assertTrue(mock_dest.close.called)
 
@@ -1709,3 +1704,43 @@ class TestTranslateToGlance(test.NoDBTestCase):
         nova_image_dict = self.fixture
         image_v2_dict = glance._translate_to_glance(nova_image_dict)
         self.assertEqual(expected_v2_image, image_v2_dict)
+
+
+@mock.patch('stat.S_ISSOCK')
+@mock.patch('stat.S_ISFIFO')
+@mock.patch('os.fsync')
+@mock.patch('os.fstat')
+class TestSafeFSync(test.NoDBTestCase):
+    """Validate _safe_fsync."""
+    @staticmethod
+    def common(mock_isfifo, isfifo, mock_issock, issock, mock_fstat):
+        """Execution & assertions common to all test cases."""
+        fh = mock.Mock()
+        mock_isfifo.return_value = isfifo
+        mock_issock.return_value = issock
+        glance.GlanceImageServiceV2._safe_fsync(fh)
+        fh.fileno.assert_called_once_with()
+        mock_fstat.assert_called_once_with(fh.fileno.return_value)
+        mock_isfifo.assert_called_once_with(mock_fstat.return_value.st_mode)
+        # Condition short-circuits, so S_ISSOCK is only called if !S_ISFIFO
+        if isfifo:
+            mock_issock.assert_not_called()
+        else:
+            mock_issock.assert_called_once_with(
+                mock_fstat.return_value.st_mode)
+        return fh
+
+    def test_fsync(self, mock_fstat, mock_fsync, mock_isfifo, mock_issock):
+        """Validate path where fsync is called."""
+        fh = self.common(mock_isfifo, False, mock_issock, False, mock_fstat)
+        mock_fsync.assert_called_once_with(fh.fileno.return_value)
+
+    def test_fifo(self, mock_fstat, mock_fsync, mock_isfifo, mock_issock):
+        """Validate fsync not called for pipe/fifo."""
+        self.common(mock_isfifo, True, mock_issock, False, mock_fstat)
+        mock_fsync.assert_not_called()
+
+    def test_sock(self, mock_fstat, mock_fsync, mock_isfifo, mock_issock):
+        """Validate fsync not called for socket."""
+        self.common(mock_isfifo, False, mock_issock, True, mock_fstat)
+        mock_fsync.assert_not_called()
