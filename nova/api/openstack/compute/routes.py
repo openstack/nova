@@ -47,6 +47,7 @@ from nova.api.openstack.compute import floating_ips_bulk
 from nova.api.openstack.compute import hide_server_addresses
 from nova.api.openstack.compute import instance_usage_audit_log
 from nova.api.openstack.compute import keypairs
+from nova.api.openstack.compute import limits
 from nova.api.openstack.compute import lock_server
 from nova.api.openstack.compute import migrate_server
 from nova.api.openstack.compute import migrations
@@ -63,6 +64,7 @@ from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import shelve
 from nova.api.openstack.compute import simple_tenant_usage
 from nova.api.openstack.compute import suspend_server
+from nova.api.openstack.compute import used_limits
 from nova.api.openstack import wsgi
 import nova.conf
 
@@ -158,6 +160,14 @@ floating_ips_bulk_controller = functools.partial(_create_controller,
 
 instance_usage_audit_log_controller = functools.partial(_create_controller,
     instance_usage_audit_log.InstanceUsageAuditLogController, [], [])
+
+
+limits_controller = functools.partial(
+    _create_controller, limits.LimitsController,
+    [
+        used_limits.UsedLimitsController,
+    ],
+    [])
 
 
 migrations_controller = functools.partial(_create_controller,
@@ -257,6 +267,9 @@ ROUTE_LIST = (
     }),
     ('/flavors/{flavor_id}/os-flavor-access', {
         'GET': [flavor_access_controller, 'index']
+    }),
+    ('/limits', {
+        'GET': [limits_controller, 'index']
     }),
     ('/os-agents', {
         'GET': [agents_controller, 'index'],
