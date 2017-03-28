@@ -2389,6 +2389,38 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         self.assertFalse(obj.os_bootmenu)
         self.assertIsNone(obj.os_smbios)
 
+    def test_ConfigGuest_parse_basic_props(self):
+        xmldoc = """
+          <domain>
+            <uuid>b38a3f43-4be2-4046-897f-b67c2f5e0147</uuid>
+            <name>demo</name>
+            <memory>104857600</memory>
+            <vcpu cpuset="0-1,3-5">2</vcpu>
+          </domain>
+        """
+        obj = config.LibvirtConfigGuest()
+        obj.parse_str(xmldoc)
+
+        self.assertEqual('b38a3f43-4be2-4046-897f-b67c2f5e0147', obj.uuid)
+        self.assertEqual('demo', obj.name)
+        self.assertEqual(100 * units.Mi, obj.memory)
+        self.assertEqual(2, obj.vcpus)
+        self.assertEqual(set([0, 1, 3, 4, 5]), obj.cpuset)
+
+        xmldoc = """
+          <domain>
+            <vcpu>3</vcpu>
+          </domain>
+        """
+        obj = config.LibvirtConfigGuest()
+        obj.parse_str(xmldoc)
+
+        self.assertIsNone(obj.uuid)
+        self.assertIsNone(obj.name)
+        self.assertEqual(500 * units.Mi, obj.memory)  # default value
+        self.assertEqual(3, obj.vcpus)
+        self.assertIsNone(obj.cpuset)
+
 
 class LibvirtConfigGuestSnapshotTest(LibvirtConfigBaseTest):
 
