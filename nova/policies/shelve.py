@@ -22,15 +22,36 @@ POLICY_ROOT = 'os_compute_api:os-shelve:%s'
 
 
 shelve_policies = [
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'shelve',
-        check_str=base.RULE_ADMIN_OR_OWNER),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'unshelve',
-        check_str=base.RULE_ADMIN_OR_OWNER),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'shelve_offload',
-        check_str=base.RULE_ADMIN_API),
+    base.create_rule_default(
+        POLICY_ROOT % 'shelve',
+        base.RULE_ADMIN_OR_OWNER,
+        "Shelve Server",
+        [
+            {
+                'method': 'POST',
+                'path': '/servers/{server_id}/action (shelve)'
+            }
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'unshelve',
+        base.RULE_ADMIN_OR_OWNER,
+        "Unshelve (Restore) Shelved Server",
+        [
+            {
+                'method': 'POST',
+                'path': '/servers/{server_id}/action (unshelve)'
+            }
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'shelve_offload',
+        base.RULE_ADMIN_API,
+        "Shelf-Offload (Remove) Server",
+        [
+            {
+                'method': 'POST',
+                'path': '/servers/{server_id}/action (shelveOffload)'
+            }
+        ]),
     policy.RuleDefault(
         name=POLICY_ROOT % 'discoverable',
         check_str=base.RULE_ANY),
