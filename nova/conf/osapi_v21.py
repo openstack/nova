@@ -18,49 +18,6 @@ from oslo_config import cfg
 api_opts_group = cfg.OptGroup(name="osapi_v21", title="API v2.1 Options")
 
 api_opts = [
-    cfg.ListOpt("extensions_blacklist",
-        default=[],
-        deprecated_for_removal=True,
-        deprecated_since="12.0.0",
-        deprecated_reason="""
-API extensions are now part of the standard API. API extensions should be
-disabled using policy, rather than via these configuration options.""",
-        help="""
-This option is a list of all of the v2.1 API extensions to never load.
-
-Possible values:
-
-* A list of strings, each being the alias of an extension that you do not
-  wish to load.
-
-Related options:
-
-* enabled
-* extensions_whitelist
-"""),
-    cfg.ListOpt("extensions_whitelist",
-        default=[],
-        deprecated_for_removal=True,
-        deprecated_since="12.0.0",
-        deprecated_reason="""
-API extensions are now part of the standard API. API extensions should be
-disabled using policy, rather than via these configuration options.""",
-        help="""
-This is a list of extensions. If it is empty, then *all* extensions except
-those specified in the extensions_blacklist option will be loaded. If it is not
-empty, then only those extensions in this list will be loaded, provided that
-they are also not in the extensions_blacklist option.
-
-Possible values:
-
-* A list of strings, each being the alias of an extension that you wish to
-  load, or an empty list, which indicates that all extensions are to be run.
-
-Related options:
-
-* enabled
-* extensions_blacklist
-"""),
     cfg.StrOpt("project_id_regex",
         deprecated_for_removal=True,
         deprecated_since="13.0.0",
