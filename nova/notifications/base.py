@@ -34,7 +34,6 @@ from nova.image import glance
 from nova import network
 from nova.network import model as network_model
 from nova.notifications.objects import base as notification_base
-from nova.notifications.objects import flavor as flavor_notification
 from nova.notifications.objects import instance as instance_notification
 from nova import objects
 from nova.objects import base as obj_base
@@ -280,17 +279,11 @@ def _send_versioned_instance_update(context, instance, payload, host, service):
                     out_bytes=bw['bw_out'])
                  for label, bw in payload['bandwidth'].items()]
 
-    network_info = instance.info_cache.network_info
-    flavor = flavor_notification.FlavorPayload(instance.flavor)
-
     versioned_payload = instance_notification.InstanceUpdatePayload(
         instance=instance,
         state_update=state_update,
         audit_period=audit_period,
         bandwidth=bandwidth,
-        ip_addresses=instance_notification.IpPayload.from_network_info(
-            network_info),
-        flavor=flavor,
         old_display_name=payload.get('old_display_name'))
 
     notification = instance_notification.InstanceUpdateNotification(

@@ -36,7 +36,6 @@ from nova import notifications
 from nova.notifications.objects import aggregate as aggregate_notification
 from nova.notifications.objects import base as notification_base
 from nova.notifications.objects import exception as notification_exception
-from nova.notifications.objects import flavor as flavor_notification
 from nova.notifications.objects import instance as instance_notification
 from nova import objects
 from nova.objects import fields
@@ -328,23 +327,6 @@ def notify_about_instance_usage(notifier, context, instance, event_suffix,
     method(context, 'compute.instance.%s' % event_suffix, usage_info)
 
 
-def _get_instance_ips(instance):
-    network_info = get_nw_info_for_instance(instance)
-    ips = []
-    if network_info is not None:
-        for vif in network_info:
-            for ip in vif.fixed_ips():
-                ips.append(instance_notification.IpPayload(
-                    label=vif["network"]["label"],
-                    mac=vif["address"],
-                    meta=vif["meta"],
-                    port_uuid=vif["id"],
-                    version=ip["version"],
-                    address=ip["address"],
-                    device_name=vif["devname"]))
-    return ips
-
-
 def _get_fault_and_priority_from_exc(exception):
     fault = None
     priority = fields.NotificationPriority.INFO
@@ -367,15 +349,10 @@ def notify_about_instance_action(context, instance, host, action, phase=None,
     :param binary: the binary emitting the notification
     :param exception: the thrown exception (used in error notifications)
     """
-    ips = _get_instance_ips(instance)
-
-    flavor = flavor_notification.FlavorPayload(instance.flavor)
     fault, priority = _get_fault_and_priority_from_exc(exception)
     payload = instance_notification.InstanceActionPayload(
             instance=instance,
-            fault=fault,
-            ip_addresses=ips,
-            flavor=flavor)
+            fault=fault)
     notification = instance_notification.InstanceActionNotification(
             context=context,
             priority=priority,
@@ -403,16 +380,10 @@ def notify_about_volume_swap(context, instance, host, action, phase,
     :param new_volume_id: the ID of the volume that is copied to and attached
     :param exception: an exception
     """
-    ips = _get_instance_ips(instance)
-
-    flavor = flavor_notification.FlavorPayload(instance.flavor)
-
     fault, priority = _get_fault_and_priority_from_exc(exception)
     payload = instance_notification.InstanceActionVolumeSwapPayload(
         instance=instance,
         fault=fault,
-        ip_addresses=ips,
-        flavor=flavor,
         old_volume_id=old_volume_id,
         new_volume_id=new_volume_id)
 
