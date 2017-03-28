@@ -18,6 +18,28 @@ from oslo_log import log as logging
 
 import webob.exc
 
+from nova.api.openstack.compute import admin_actions
+from nova.api.openstack.compute import admin_password
+from nova.api.openstack.compute import config_drive
+from nova.api.openstack.compute import console_output
+from nova.api.openstack.compute import create_backup
+from nova.api.openstack.compute import deferred_delete
+from nova.api.openstack.compute import evacuate
+from nova.api.openstack.compute import extended_availability_zone
+from nova.api.openstack.compute import extended_server_attributes
+from nova.api.openstack.compute import extended_status
+from nova.api.openstack.compute import extended_volumes
+from nova.api.openstack.compute import hide_server_addresses
+from nova.api.openstack.compute import lock_server
+from nova.api.openstack.compute import migrate_server
+from nova.api.openstack.compute import multinic
+from nova.api.openstack.compute import pause_server
+from nova.api.openstack.compute import rescue
+from nova.api.openstack.compute import scheduler_hints
+from nova.api.openstack.compute import server_usage
+from nova.api.openstack.compute import servers
+from nova.api.openstack.compute import shelve
+from nova.api.openstack.compute import suspend_server
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import exception
@@ -163,6 +185,36 @@ hardcoded_extensions = [
      'alias': 'os-personality'},
 ]
 
+
+# TODO(alex_xu): This is a list of unused extension objs. Add those
+# extension objs here for building a compatible extension API. Finally,
+# we should remove those extension objs, and add corresponding entries
+# in the 'hardcoded_extensions'.
+unused_extension_objs = [
+    admin_actions.AdminActions,
+    admin_password.AdminPassword,
+    config_drive.ConfigDrive,
+    console_output.ConsoleOutput,
+    create_backup.CreateBackup,
+    deferred_delete.DeferredDelete,
+    evacuate.Evacuate,
+    extended_availability_zone.ExtendedAvailabilityZone,
+    extended_server_attributes.ExtendedServerAttributes,
+    extended_status.ExtendedStatus,
+    extended_volumes.ExtendedVolumes,
+    hide_server_addresses.HideServerAddresses,
+    lock_server.LockServer,
+    migrate_server.MigrateServer,
+    multinic.Multinic,
+    pause_server.PauseServer,
+    rescue.Rescue,
+    scheduler_hints.SchedulerHints,
+    server_usage.ServerUsage,
+    servers.Servers,
+    shelve.Shelve,
+    suspend_server.SuspendServer
+]
+
 # V2.1 does not support XML but we need to keep an entry in the
 # /extensions information returned to the user for backwards
 # compatibility
@@ -218,6 +270,16 @@ class ExtensionInfoController(wsgi.Controller):
                 item['alias'],
                 item['description']
             )
+
+        for ext_cls in unused_extension_objs:
+            ext = ext_cls(None)
+            action = ':'.join([
+                base_policies.COMPUTE_API, ext.alias, 'discoverable'])
+            if context.can(action, fatal=False):
+                discoverable_extensions[ext.alias] = ext
+            else:
+                LOG.debug("Filter out extension %s from discover list",
+                          ext.alias)
 
         for alias, ext in self.extension_info.get_extensions().items():
             action = ':'.join([

@@ -608,10 +608,6 @@ class Volumes(extensions.V21APIExtensionBase):
             ALIAS, VolumeController(), collection_actions={'detail': 'GET'})
         resources.append(res)
 
-        res = extensions.ResourceExtension('os-volumes_boot',
-                                           inherits='servers')
-        resources.append(res)
-
         res = extensions.ResourceExtension('os-volume_attachments',
                                            VolumeAttachmentController(),
                                            parent=dict(

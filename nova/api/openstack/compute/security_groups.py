@@ -503,11 +503,7 @@ class SecurityGroups(extensions.V21APIExtensionBase):
     version = 1
 
     def get_controller_extensions(self):
-        secgrp_output_ext = extensions.ControllerExtension(
-            self, 'servers', SecurityGroupsOutputController())
-        secgrp_act_ext = extensions.ControllerExtension(
-            self, 'servers', SecurityGroupActionController())
-        return [secgrp_output_ext, secgrp_act_ext]
+        return []
 
     def get_resources(self):
         secgrp_ext = extensions.ResourceExtension(ALIAS,

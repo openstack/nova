@@ -14,25 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-WSGI middleware for OpenStack Compute API.
-"""
-
-import nova.api.openstack
-from nova.api.openstack.compute import extension_info
-
-
-class APIRouterV21(nova.api.openstack.APIRouterV21):
-    """Routes requests on the OpenStack API to the appropriate controller
-    and method.
-    """
-    def __init__(self):
-        self._loaded_extension_info = extension_info.LoadedExtensionInfo()
-        super(APIRouterV21, self).__init__()
-
-    def _register_extension(self, ext):
-        return self.loaded_extension_info.register_extension(ext.obj)
-
-    @property
-    def loaded_extension_info(self):
-        return self._loaded_extension_info
+# The APIRouterV21 moves down to the 'nova.api.openstack.compute.routes' for
+# circle reference problem. Import the APIRouterV21 is for the api-paste.ini
+# works correctly without modification. We still looking for a chance to move
+# the APIRouterV21 back to here after cleanups.
+from nova.api.openstack.compute.routes import APIRouterV21  # noqa
