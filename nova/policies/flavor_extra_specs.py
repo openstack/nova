@@ -22,24 +22,67 @@ POLICY_ROOT = 'os_compute_api:os-flavor-extra-specs:%s'
 
 
 flavor_extra_specs_policies = [
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'show',
-        check_str=base.RULE_ADMIN_OR_OWNER),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'create',
-        check_str=base.RULE_ADMIN_API),
+    base.create_rule_default(
+        POLICY_ROOT % 'show',
+        base.RULE_ADMIN_OR_OWNER,
+        "Show an extra spec for a flavor",
+        [
+            {
+                'path': '/flavors/{flavor_id}/os-extra_specs/'
+                        '{flavor_extra_spec_key}',
+                'method': 'GET'
+            }
+        ]
+    ),
+    base.create_rule_default(
+        POLICY_ROOT % 'create',
+        base.RULE_ADMIN_API,
+        "Create extra specs for a flavor",
+        [
+            {
+                'path': '/flavors/{flavor_id}/os-extra_specs/',
+                'method': 'POST'
+            }
+        ]
+    ),
     policy.RuleDefault(
         name=POLICY_ROOT % 'discoverable',
         check_str=base.RULE_ANY),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'update',
-        check_str=base.RULE_ADMIN_API),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'delete',
-        check_str=base.RULE_ADMIN_API),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'index',
-        check_str=base.RULE_ADMIN_OR_OWNER),
+    base.create_rule_default(
+        POLICY_ROOT % 'update',
+        base.RULE_ADMIN_API,
+        "Update an extra spec for a flavor",
+        [
+            {
+                'path': '/flavors/{flavor_id}/os-extra_specs/'
+                        '{flavor_extra_spec_key}',
+                'method': 'PUT'
+            }
+        ]
+    ),
+    base.create_rule_default(
+        POLICY_ROOT % 'delete',
+        base.RULE_ADMIN_API,
+        "Delete an extra spec for a flavor",
+        [
+            {
+                'path': '/flavors/{flavor_id}/os-extra_specs/'
+                        '{flavor_extra_spec_key}',
+                'method': 'DELETE'
+            }
+        ]
+    ),
+    base.create_rule_default(
+        POLICY_ROOT % 'index',
+        base.RULE_ADMIN_OR_OWNER,
+        "List extra specs for a flavor",
+        [
+            {
+                'path': '/flavors/{flavor_id}/os-extra_specs/',
+                'method': 'GET'
+            }
+        ]
+    ),
 ]
 
 
