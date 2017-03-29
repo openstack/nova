@@ -90,7 +90,6 @@ class ServersController(wsgi.Controller):
     # NOTE(alex_xu): Please do not add more items into this list. This list
     # should be removed in the future.
     schema_func_list = [
-        availability_zone.get_server_create_schema,
         block_device_mapping.get_server_create_schema,
         block_device_mapping_v1.get_server_create_schema,
         config_drive.get_server_create_schema,

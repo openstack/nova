@@ -54,6 +54,7 @@ base_create = {
                 'accessIPv4': parameter_types.accessIPv4,
                 'accessIPv6': parameter_types.accessIPv6,
                 'personality': parameter_types.personality,
+                'availability_zone': parameter_types.name,
             },
             'required': ['name', 'flavorRef'],
             'additionalProperties': False,
@@ -67,6 +68,8 @@ base_create = {
 base_create_v20 = copy.deepcopy(base_create)
 base_create_v20['properties']['server'][
     'properties']['name'] = parameter_types.name_with_leading_trailing_spaces
+base_create_v20['properties']['server']['properties'][
+    'availability_zone'] = parameter_types.name_with_leading_trailing_spaces
 
 
 base_create_v219 = copy.deepcopy(base_create)
