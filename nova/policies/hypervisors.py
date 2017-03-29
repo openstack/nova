@@ -26,9 +26,51 @@ hypervisors_policies = [
     policy.RuleDefault(
         name=POLICY_ROOT % 'discoverable',
         check_str=base.RULE_ANY),
-    policy.RuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_API),
+    base.create_rule_default(
+        BASE_POLICY_NAME,
+        base.RULE_ADMIN_API,
+        """Policy rule for hypervisor related APIs.
+
+This rule will be checked for the following APIs:
+
+List all hypervisors, list all hypervisors with details, show
+summary statistics for all hypervisors over all compute nodes,
+show details for a hypervisor, show the uptime of a hypervisor,
+search hypervisor by hypervisor_hostname pattern and list all
+servers on hypervisors that can match the provided hypervisor_hostname
+pattern.""",
+        [
+            {
+                'path': '/os-hypervisors',
+                'method': 'GET'
+            },
+            {
+                'path': '/os-hypervisors/details',
+                'method': 'GET'
+            },
+            {
+                'path': '/os-hypervisors/statistics',
+                'method': 'GET'
+            },
+            {
+                'path': '/os-hypervisors/{hypervisor_id}',
+                'method': 'GET'
+            },
+            {
+                'path': '/os-hypervisors/{hypervisor_id}/uptime',
+                'method': 'GET'
+            },
+            {
+                'path': '/os-hypervisors/{hypervisor_hostname_pattern}/search',
+                'method': 'GET'
+            },
+            {
+                'path':
+                '/os-hypervisors/{hypervisor_hostname_pattern}/servers',
+                'method': 'GET'
+            }
+        ]
+    ),
 ]
 
 
