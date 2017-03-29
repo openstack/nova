@@ -345,7 +345,6 @@ class TestInstanceNotificationSample(
 
         post = {'unshelve': None}
         self.api.post_server_action(server['id'], post)
-        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
 
     def _test_shelve_offload_server(self, server):
         self.flags(shelved_offload_time=-1)
@@ -384,7 +383,6 @@ class TestInstanceNotificationSample(
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
 
         self.api.post_server_action(server['id'], {'unshelve': None})
-        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
 
     def _test_unshelve_server(self, server):
         # setting the shelved_offload_time to 0 should set the
@@ -538,7 +536,6 @@ class TestInstanceNotificationSample(
 
         post = {'revertResize': None}
         self.api.post_server_action(server['id'], post)
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
 
     def _test_snapshot_server(self, server):
         post = {'createImage': {'name': 'test-snap'}}
