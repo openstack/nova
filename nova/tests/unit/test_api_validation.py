@@ -1424,7 +1424,7 @@ class Ipv6TestCase(APIValidationTestCase):
 class Base64TestCase(APIValidationTestCase):
 
     def setUp(self):
-        super(APIValidationTestCase, self).setUp()
+        super(Base64TestCase, self).setUp()
         schema = {
             'type': 'object',
             'properties': {
@@ -1458,7 +1458,7 @@ class Base64TestCase(APIValidationTestCase):
 class RegexFormatTestCase(APIValidationTestCase):
 
     def setUp(self):
-        super(APIValidationTestCase, self).setUp()
+        super(RegexFormatTestCase, self).setUp()
         self.controller = RegexFormatFakeController()
 
     def test_validate_regex(self):

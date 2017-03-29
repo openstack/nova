@@ -325,7 +325,7 @@ notification_object_data = {
 
 class TestNotificationObjectVersions(test.NoDBTestCase):
     def setUp(self):
-        super(test.NoDBTestCase, self).setUp()
+        super(TestNotificationObjectVersions, self).setUp()
         base.NovaObjectRegistry.register_notification_objects()
 
     def test_versions(self):
