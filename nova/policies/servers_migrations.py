@@ -22,18 +22,47 @@ POLICY_ROOT = 'os_compute_api:servers:migrations:%s'
 
 
 servers_migrations_policies = [
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'show',
-        check_str=base.RULE_ADMIN_API),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'force_complete',
-        check_str=base.RULE_ADMIN_API),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'delete',
-        check_str=base.RULE_ADMIN_API),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'index',
-        check_str=base.RULE_ADMIN_API),
+    base.create_rule_default(
+        POLICY_ROOT % 'show',
+        base.RULE_ADMIN_API,
+        "Show details for an in-progress live migration for a given server",
+        [
+            {
+                'method': 'GET',
+                'path': '/servers/{server_id}/migrations/{migration_id}'
+            }
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'force_complete',
+        base.RULE_ADMIN_API,
+        "Force an in-progress live migration for a given server to complete",
+        [
+            {
+                'method': 'POST',
+                'path': '/servers/{server_id}/migrations/{migration_id}'
+                        '/action (force_complete)'
+            }
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'delete',
+        base.RULE_ADMIN_API,
+        "Delete(Abort) an in-progress live migration",
+        [
+            {
+                'method': 'DELETE',
+                'path': '/servers/{server_id}/migrations/{migration_id}'
+            }
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'index',
+        base.RULE_ADMIN_API,
+        "Lists in-progress live migrations for a given server",
+        [
+            {
+                'method': 'GET',
+                'path': '/servers/{server_id}/migrations'
+            }
+        ]),
     policy.RuleDefault(
         name='os_compute_api:server-migrations:discoverable',
         check_str=base.RULE_ANY),
