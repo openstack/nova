@@ -38,7 +38,8 @@ class UserData(extensions.V21APIExtensionBase):
     def server_create(self, server_dict, create_kwargs, body_deprecated_param):
         create_kwargs['user_data'] = server_dict.get(ATTRIBUTE_NAME)
 
-    def get_server_create_schema(self, version):
-        if version == '2.0':
-            return schema_user_data.server_create_v20
-        return schema_user_data.server_create
+
+def get_server_create_schema(version):
+    if version == '2.0':
+        return schema_user_data.server_create_v20
+    return schema_user_data.server_create

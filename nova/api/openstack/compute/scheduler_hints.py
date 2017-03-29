@@ -44,5 +44,6 @@ class SchedulerHints(extensions.V21APIExtensionBase):
 
         create_kwargs['scheduler_hints'] = scheduler_hints
 
-    def get_server_create_schema(self, version):
-        return schema.server_create
+
+def get_server_create_schema(version):
+    return schema.server_create
