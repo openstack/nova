@@ -1,0 +1,5 @@
+upgrade:
+  - The default policy on os-server-tags has been changed from
+    ``RULE_ANY`` (allow all) to ``RULE_ADMIN_OR_OWNER``. This is because server
+    tags should only be manipulated on servers owned by the user or admin. This
+    doesn't have any affect on how the API works.
