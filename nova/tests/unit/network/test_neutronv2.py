@@ -4272,13 +4272,14 @@ class TestNeutronv2WithMock(test.TestCase):
                           instance, port_id, migrate_profile, admin_client)
         update_port_mock.assert_called_once_with(port_id, port_profile)
 
-    @mock.patch('nova.network.neutronv2.api.compute_utils')
-    def test_get_preexisting_port_ids(self, mocked_comp_utils):
-        mocked_comp_utils.get_nw_info_for_instance.return_value = [model.VIF(
+    @mock.patch('nova.objects.Instance.get_network_info')
+    def test_get_preexisting_port_ids(self, mock_get_nw_info):
+        instance = fake_instance.fake_instance_obj(self.context)
+        mock_get_nw_info.return_value = [model.VIF(
             id='1', preserve_on_delete=False), model.VIF(
             id='2', preserve_on_delete=True), model.VIF(
             id='3', preserve_on_delete=True)]
-        result = self.api._get_preexisting_port_ids(None)
+        result = self.api._get_preexisting_port_ids(instance)
         self.assertEqual(['2', '3'], result, "Invalid preexisting ports")
 
     def _test_unbind_ports_get_client(self, mock_neutron,
@@ -4492,22 +4493,22 @@ class TestNeutronv2WithMock(test.TestCase):
 
     @mock.patch('nova.network.neutronv2.api.API.get_instance_nw_info')
     @mock.patch('nova.network.neutronv2.api.API._unbind_ports')
-    @mock.patch('nova.network.neutronv2.api.compute_utils')
+    @mock.patch('nova.objects.Instance.get_network_info')
     @mock.patch('nova.network.neutronv2.api.get_client')
     @mock.patch.object(objects.VirtualInterface, 'get_by_uuid')
     def test_preexisting_deallocate_port_for_instance(self,
                                                       mock_get_vif_by_uuid,
                                                       mock_ntrn,
-                                                      mock_comp_utils,
+                                                      mock_inst_get_nwinfo,
                                                       mock_unbind,
                                                       mock_netinfo):
-        mock_comp_utils.get_nw_info_for_instance.return_value = [model.VIF(
-            id='1', preserve_on_delete=False), model.VIF(
-            id='2', preserve_on_delete=True), model.VIF(
-            id='3', preserve_on_delete=True)]
         mock_inst = mock.Mock(project_id="proj-1",
                               availability_zone='zone-1',
                               uuid='inst-1')
+        mock_inst.get_network_info.return_value = [model.VIF(
+            id='1', preserve_on_delete=False), model.VIF(
+            id='2', preserve_on_delete=True), model.VIF(
+            id='3', preserve_on_delete=True)]
         mock_client = mock.Mock()
         mock_ntrn.return_value = mock_client
         mock_vif = mock.MagicMock(spec=objects.VirtualInterface)

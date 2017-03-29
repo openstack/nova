@@ -476,7 +476,7 @@ class TestIptablesFirewallDriver(test.NoDBTestCase):
         ins_list_mock.get_by_security_group.return_value = [i_obj_list_mock]
         return i_mock, i_obj_mock, ni_mock, driver
 
-    @mock.patch('nova.compute.utils.get_nw_info_for_instance')
+    @mock.patch('nova.objects.Instance.get_network_info')
     @mock.patch('nova.objects.InstanceList')
     @mock.patch('nova.objects.SecurityGroupRuleList')
     @mock.patch('nova.objects.SecurityGroupList')
@@ -510,7 +510,7 @@ class TestIptablesFirewallDriver(test.NoDBTestCase):
         self.assertEqual(expected, v4_rules)
         self.assertEqual(expected, v6_rules)
 
-    @mock.patch('nova.compute.utils.get_nw_info_for_instance')
+    @mock.patch('nova.objects.Instance.get_network_info')
     @mock.patch('nova.objects.InstanceList')
     @mock.patch('nova.objects.SecurityGroupRuleList')
     @mock.patch('nova.objects.SecurityGroupList')

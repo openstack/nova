@@ -28,7 +28,6 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
-from nova.compute import utils as compute_utils
 from nova import exception
 from nova.i18n import _
 from nova import network
@@ -224,7 +223,7 @@ class FloatingIPActionController(wsgi.Controller):
 
         instance = common.get_instance(self.compute_api, context, id,
                                        expected_attrs=['flavor'])
-        cached_nwinfo = compute_utils.get_nw_info_for_instance(instance)
+        cached_nwinfo = instance.get_network_info()
         if not cached_nwinfo:
             LOG.warning(
                 'Info cache is %r during associate with no nw_info cache',

@@ -21,7 +21,6 @@ import string
 import uuid
 
 import mock
-from oslo_serialization import jsonutils
 import six
 
 from nova.compute import flavors
@@ -729,15 +728,6 @@ class ComputeUtilsGetValFromSysMetadata(test.NoDBTestCase):
         result = compute_utils.get_value_from_system_metadata(
                    instance, 'not_int', int, 0)
         self.assertEqual(0, result)
-
-
-class ComputeUtilsGetNWInfo(test.NoDBTestCase):
-    def test_instance_object_none_info_cache(self):
-        inst = fake_instance.fake_instance_obj('fake-context',
-                                               expected_attrs=['info_cache'])
-        self.assertIsNone(inst.info_cache)
-        result = compute_utils.get_nw_info_for_instance(inst)
-        self.assertEqual(jsonutils.dumps([]), result.json())
 
 
 class ComputeUtilsGetRebootTypes(test.NoDBTestCase):

@@ -489,10 +489,6 @@ def notify_about_host_update(context, event_suffix, host_payload):
     notifier.info(context, 'HostAPI.%s' % event_suffix, host_payload)
 
 
-def get_nw_info_for_instance(instance):
-    return instance.get_network_info()
-
-
 def refresh_info_cache_for_instance(context, instance):
     """Refresh the info cache for an instance.
 
