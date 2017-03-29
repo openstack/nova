@@ -651,12 +651,6 @@ class ServersController(wsgi.Controller):
         for func in self.server_create_func_list:
             func(server_dict, create_kwargs, req_body)
 
-    def _rebuild_extension_point(self, ext, rebuild_dict, rebuild_kwargs):
-        handler = ext.obj
-        LOG.debug("Running _rebuild_extension_point for %s", ext.obj)
-
-        handler.server_rebuild(rebuild_dict, rebuild_kwargs)
-
     def _create_schema(self, create_schema, version):
         for schema_func in self.schema_func_list:
             self._create_schema_by_func(create_schema, version, schema_func)
@@ -672,13 +666,6 @@ class ServersController(wsgi.Controller):
             create_schema['properties'].update(schema)
         else:
             create_schema['properties']['server']['properties'].update(schema)
-
-    def _rebuild_extension_schema(self, ext, rebuild_schema, version):
-        handler = ext.obj
-        LOG.debug("Running _rebuild_extension_schema for %s", ext.obj)
-
-        schema = handler.get_server_rebuild_schema(version)
-        rebuild_schema['properties']['rebuild']['properties'].update(schema)
 
     def _delete(self, context, req, instance_uuid):
         instance = self._get_server(context, req, instance_uuid)
