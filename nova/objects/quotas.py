@@ -231,3 +231,6 @@ class QuotasNoOp(Quotas):
 
     def rollback(self, context=None):
         pass
+
+    def check_deltas(cls, context, deltas, *count_args, **count_kwargs):
+        pass

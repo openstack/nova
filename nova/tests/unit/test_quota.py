@@ -517,7 +517,7 @@ class BaseResourceTestCase(test.TestCase):
                           resources, 'reserve', quota.QUOTAS._resources)
 
     def test_valid_method_call_check_wrong_method_check(self):
-        resources = {'fixed_ips': 1}
+        resources = {'instances': 1}
 
         self.assertRaises(exception.InvalidQuotaMethodUsage,
                           quota._valid_method_call_check_resources,
@@ -2673,13 +2673,11 @@ class QuotaSqlAlchemyBase(test.TestCase):
             instances=5,
             cores=10,
             ram=10 * 1024,
-            fixed_ips=5,
             )
         self.deltas = dict(
             instances=2,
             cores=4,
             ram=2 * 1024,
-            fixed_ips=2,
             )
 
         def make_sync(res_name):
@@ -2702,8 +2700,7 @@ class QuotaSqlAlchemyBase(test.TestCase):
 
         self.addCleanup(restore_sync_functions)
 
-        for res_name in ('instances', 'cores', 'ram', 'fixed_ips',
-                         'floating_ips'):
+        for res_name in ('instances', 'cores', 'ram', 'floating_ips'):
             method_name = '_sync_%s' % res_name
             sqa_api.QUOTA_SYNC_FUNCTIONS[method_name] = make_sync(res_name)
             res = quota.ReservableResource(res_name, '_sync_%s' % res_name)
@@ -2731,12 +2728,6 @@ class QuotaSqlAlchemyBase(test.TestCase):
                      user_id='fake_user',
                      in_use=2,
                      reserved=2 * 1024,
-                     until_refresh=None),
-                dict(resource='fixed_ips',
-                     project_id='test_project',
-                     user_id=None,
-                     in_use=2,
-                     reserved=2,
                      until_refresh=None),
                 ]
 
@@ -2862,29 +2853,23 @@ class QuotaSqlAlchemyBase(test.TestCase):
                 delta=4),
             dict(resource='ram',
                 delta=2 * 1024),
-            dict(resource='fixed_ips',
-                project_id='test_project',
-                delta=2),
             ]
         if usage_id_change:
             reservations_list[0]["usage_id"] = self.usages_created['instances']
             reservations_list[1]["usage_id"] = self.usages_created['cores']
             reservations_list[2]["usage_id"] = self.usages_created['ram']
-            reservations_list[3]["usage_id"] = self.usages_created['fixed_ips']
         else:
             reservations_list[0]["usage_id"] = self.usages['instances']
             reservations_list[1]["usage_id"] = self.usages['cores']
             reservations_list[2]["usage_id"] = self.usages['ram']
-            reservations_list[3]["usage_id"] = self.usages['fixed_ips']
         if delta_change:
             reservations_list[0]["delta"] = -2
             reservations_list[1]["delta"] = -4
             reservations_list[2]["delta"] = -2 * 1024
-            reservations_list[3]["delta"] = -2
         return reservations_list
 
     def _init_usages(self, *in_use, **kwargs):
-        for i, option in enumerate(('instances', 'cores', 'ram', 'fixed_ips')):
+        for i, option in enumerate(('instances', 'cores', 'ram')):
             self.init_usage('test_project', 'fake_user',
                             option, in_use[i], **kwargs)
         return FakeContext('test_project', 'test_class')
@@ -2902,11 +2887,10 @@ class QuotaReserveSqlAlchemyTestCase(QuotaSqlAlchemyBase):
                                        0, 0)
 
         self.assertEqual(self.sync_called, set(['instances', 'cores',
-                                                'ram', 'fixed_ips']))
+                                                'ram']))
         self.usages_list[0]["in_use"] = 0
         self.usages_list[1]["in_use"] = 0
         self.usages_list[2]["in_use"] = 0
-        self.usages_list[3]["in_use"] = 0
         self.compare_usage(self.usages_created, self.usages_list)
         reservations_list = self._update_reservations_list(True)
         self.compare_reservation(result, reservations_list)
@@ -2918,11 +2902,10 @@ class QuotaReserveSqlAlchemyTestCase(QuotaSqlAlchemyBase):
                                        5, 0)
 
         self.assertEqual(self.sync_called, set(['instances', 'cores',
-                                                'ram', 'fixed_ips']))
+                                                'ram']))
         self.usages_list[0]["until_refresh"] = 5
         self.usages_list[1]["until_refresh"] = 5
         self.usages_list[2]["until_refresh"] = 5
-        self.usages_list[3]["until_refresh"] = 5
         self.compare_usage(self.usages, self.usages_list)
         self.assertEqual(self.usages_created, {})
         self.compare_reservation(result, self._update_reservations_list())
@@ -2934,11 +2917,10 @@ class QuotaReserveSqlAlchemyTestCase(QuotaSqlAlchemyBase):
                                        5, 0)
 
         self.assertEqual(self.sync_called, set(['instances', 'cores',
-                                                'ram', 'fixed_ips']))
+                                                'ram']))
         self.usages_list[0]["until_refresh"] = 5
         self.usages_list[1]["until_refresh"] = 5
         self.usages_list[2]["until_refresh"] = 5
-        self.usages_list[3]["until_refresh"] = 5
         self.compare_usage(self.usages, self.usages_list)
         self.assertEqual(self.usages_created, {})
         self.compare_reservation(result, self._update_reservations_list())
@@ -2954,7 +2936,7 @@ class QuotaReserveSqlAlchemyTestCase(QuotaSqlAlchemyBase):
                                        0, max_age)
 
         self.assertEqual(self.sync_called, set(['instances', 'cores',
-                                                'ram', 'fixed_ips']))
+                                                'ram']))
         self.compare_usage(self.usages, self.usages_list)
         self.assertEqual(self.usages_created, {})
         self.compare_reservation(result, self._update_reservations_list())
@@ -2969,7 +2951,6 @@ class QuotaReserveSqlAlchemyTestCase(QuotaSqlAlchemyBase):
         self.usages_list[0]["in_use"] = 3
         self.usages_list[1]["in_use"] = 3
         self.usages_list[2]["in_use"] = 3
-        self.usages_list[3]["in_use"] = 3
         self.compare_usage(self.usages, self.usages_list)
         self.assertEqual(self.usages_created, {})
         self.compare_reservation(result, self._update_reservations_list())
@@ -2979,7 +2960,6 @@ class QuotaReserveSqlAlchemyTestCase(QuotaSqlAlchemyBase):
         self.deltas["instances"] = -2
         self.deltas["cores"] = -4
         self.deltas["ram"] = -2 * 1024
-        self.deltas["fixed_ips"] = -2
         result = sqa_api.quota_reserve(context, self.resources, self.quotas,
                                        self.quotas, self.deltas, self.expire,
                                        0, 0)
@@ -2991,8 +2971,6 @@ class QuotaReserveSqlAlchemyTestCase(QuotaSqlAlchemyBase):
         self.usages_list[1]["reserved"] = 0
         self.usages_list[2]["in_use"] = 1 * 1024
         self.usages_list[2]["reserved"] = 0
-        self.usages_list[3]["in_use"] = 1
-        self.usages_list[3]["reserved"] = 0
         self.compare_usage(self.usages, self.usages_list)
         self.assertEqual(self.usages_created, {})
         reservations_list = self._update_reservations_list(False, True)
@@ -3007,11 +2985,10 @@ class QuotaReserveSqlAlchemyTestCase(QuotaSqlAlchemyBase):
             expected_kwargs = {'code': 500,
                 'usages': {'instances': {'reserved': 0, 'in_use': 4},
                 'ram': {'reserved': 0, 'in_use': 10240},
-                'fixed_ips': {'reserved': 0, 'in_use': 4},
                 'cores': {'reserved': 0, 'in_use': 8}},
-                'overs': ['cores', 'fixed_ips', 'instances', 'ram'],
+                'overs': ['cores', 'instances', 'ram'],
                 'quotas': {'cores': 10, 'ram': 10240,
-                           'fixed_ips': 5, 'instances': 5}}
+                           'instances': 5}}
             self.assertEqual(e.kwargs, expected_kwargs)
         else:
             self.fail('Expected OverQuota failure')
@@ -3022,8 +2999,6 @@ class QuotaReserveSqlAlchemyTestCase(QuotaSqlAlchemyBase):
         self.usages_list[1]["reserved"] = 0
         self.usages_list[2]["in_use"] = 10 * 1024
         self.usages_list[2]["reserved"] = 0
-        self.usages_list[3]["in_use"] = 4
-        self.usages_list[3]["reserved"] = 0
         self.compare_usage(self.usages, self.usages_list)
         self.assertEqual(self.usages_created, {})
         self.assertEqual(self.reservations_created, {})
@@ -3039,8 +3014,6 @@ class QuotaReserveSqlAlchemyTestCase(QuotaSqlAlchemyBase):
         self.usages_list[1]["reserved"] = 0
         self.usages_list[2]["in_use"] = 1 * 1024
         self.usages_list[2]["reserved"] = 0
-        self.usages_list[3]["in_use"] = 1
-        self.usages_list[3]["reserved"] = 0
         self.compare_usage(self.usages, self.usages_list)
         self.assertEqual(self.usages_created, {})
         self.assertEqual(self.reservations_created, {})
@@ -3056,8 +3029,6 @@ class QuotaReserveSqlAlchemyTestCase(QuotaSqlAlchemyBase):
         self.usages_list[1]["reserved"] = 0
         self.usages_list[2]["in_use"] = 10 * 1024
         self.usages_list[2]["reserved"] = 0
-        self.usages_list[3]["in_use"] = 1
-        self.usages_list[3]["reserved"] = 0
         self.compare_usage(self.usages, self.usages_list)
         self.assertEqual(self.usages_created, {})
         self.assertEqual(self.reservations_created, {})
@@ -3067,7 +3038,6 @@ class QuotaReserveSqlAlchemyTestCase(QuotaSqlAlchemyBase):
         self.deltas["instances"] = -2
         self.deltas["cores"] = -4
         self.deltas["ram"] = -2 * 1024
-        self.deltas["fixed_ips"] = -2
         result = sqa_api.quota_reserve(context, self.resources, self.quotas,
                                        self.quotas, self.deltas, self.expire,
                                        0, 0)
@@ -3079,8 +3049,6 @@ class QuotaReserveSqlAlchemyTestCase(QuotaSqlAlchemyBase):
         self.usages_list[1]["reserved"] = 0
         self.usages_list[2]["in_use"] = 20 * 1024
         self.usages_list[2]["reserved"] = 0
-        self.usages_list[3]["in_use"] = 10
-        self.usages_list[3]["reserved"] = 0
         self.compare_usage(self.usages, self.usages_list)
         self.assertEqual(self.usages_created, {})
         reservations_list = self._update_reservations_list(False, True)
@@ -3089,7 +3057,7 @@ class QuotaReserveSqlAlchemyTestCase(QuotaSqlAlchemyBase):
 
 class QuotaEngineUsageRefreshTestCase(QuotaSqlAlchemyBase):
     def _init_usages(self, *in_use, **kwargs):
-        for i, option in enumerate(('instances', 'cores', 'ram', 'fixed_ips',
+        for i, option in enumerate(('instances', 'cores', 'ram',
                                     'floating_ips')):
             self.init_usage('test_project', 'fake_user',
                             option, in_use[i], **kwargs)
@@ -3110,8 +3078,7 @@ class QuotaEngineUsageRefreshTestCase(QuotaSqlAlchemyBase):
         # 0     instances        user
         # 1     cores            user
         # 2     ram              user
-        # 3     fixed_ips        project
-        # 4     floating_ips     project
+        # 3     floating_ips     project
         self.usages_list.append(dict(resource='floating_ips',
                      project_id='test_project',
                      user_id=None,
@@ -3124,7 +3091,6 @@ class QuotaEngineUsageRefreshTestCase(QuotaSqlAlchemyBase):
         self.usages_list[1]['reserved'] = 0
         self.usages_list[2]['reserved'] = 0
         self.usages_list[3]['reserved'] = 0
-        self.usages_list[4]['reserved'] = 0
 
         def fake_quota_get_all_by_project_and_user(context, project_id,
                                                    user_id):
@@ -3173,12 +3139,9 @@ class QuotaEngineUsageRefreshTestCase(QuotaSqlAlchemyBase):
         self.assertEqual(self.sync_called, set(['instances']))
 
         # Compare the expected usages with the actual usages.
-        # Expect fixed_ips not to change since it is project scoped.
+        # Expect floating_ips not to change since it is project scoped.
         self.usages_list[3]['in_use'] = 3
         self.usages_list[3]['until_refresh'] = 5
-        # Expect floating_ips not to change since it is project scoped.
-        self.usages_list[4]['in_use'] = 3
-        self.usages_list[4]['until_refresh'] = 5
         self.compare_usage(self.usages, self.usages_list)
 
         # No usages were created.
@@ -3194,12 +3157,9 @@ class QuotaEngineUsageRefreshTestCase(QuotaSqlAlchemyBase):
         self.assertEqual(self.sync_called, set(['instances']))
 
         # Compare the expected usages with the actual usages.
-        # Expect fixed_ips not to change since it is project scoped.
+        # Expect floating_ips not to change since it is project scoped.
         self.usages_list[3]['in_use'] = 3
         self.usages_list[3]['until_refresh'] = 5
-        # Expect floating_ips not to change since it is project scoped.
-        self.usages_list[4]['in_use'] = 3
-        self.usages_list[4]['until_refresh'] = 5
         self.compare_usage(self.usages, self.usages_list)
 
         # No usages were created.
@@ -3231,7 +3191,7 @@ class QuotaEngineUsageRefreshTestCase(QuotaSqlAlchemyBase):
         ctxt = context.get_admin_context()
         quota.QUOTAS.usage_refresh(ctxt, 'test_project')
 
-        self.assertEqual(self.sync_called, set(['fixed_ips', 'floating_ips']))
+        self.assertEqual(self.sync_called, set(['floating_ips']))
 
         # Compare the expected usages with the actual usages.
         # Expect instances not to change since it is user scoped.
@@ -3266,9 +3226,6 @@ class QuotaEngineUsageRefreshTestCase(QuotaSqlAlchemyBase):
         # Expect ram not to change since it is user scoped.
         self.usages_list[2]['in_use'] = 3
         self.usages_list[2]['until_refresh'] = 5
-        # Expect fixed_ips not to change since it is not in the keys list.
-        self.usages_list[3]['in_use'] = 3
-        self.usages_list[3]['until_refresh'] = 5
         self.compare_usage(self.usages, self.usages_list)
 
         self.assertEqual(self.usages_created, {})
@@ -3284,8 +3241,8 @@ class QuotaEngineUsageRefreshTestCase(QuotaSqlAlchemyBase):
 
         # Compare the expected usages with the created usages.
         # Expect floating_ips to be created and initialized to 0
-        self.usages_list[4]['in_use'] = 0
-        self.compare_usage(self.usages_created, self.usages_list[6:])
+        self.usages_list[3]['in_use'] = 0
+        self.compare_usage(self.usages_created, self.usages_list[3:])
 
         self.assertEqual(len(self.usages_created), 1)
 
@@ -3299,10 +3256,10 @@ class QuotaEngineUsageRefreshTestCase(QuotaSqlAlchemyBase):
 
     def test_usage_refresh_invalid_user_key(self):
         context = FakeContext('test_project', 'test_class')
-        # fixed_ips is a valid syncable project key,
+        # floating_ips is a valid syncable project key,
         # but not a valid user key
         self._test_exception(context, 'test_project', 'fake_user',
-                             ['fixed_ips'])
+                             ['floating_ips'])
 
     def test_usage_refresh_non_syncable_user_key(self):
         # security_group_rules is a valid user key, but not syncable
