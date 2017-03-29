@@ -341,16 +341,17 @@ class Keypairs(extensions.V21APIExtensionBase):
         extension = extensions.ControllerExtension(self, 'servers', controller)
         return [extension]
 
-    # use nova.api.extensions.server.extensions entry point to modify
-    # server create kwargs
-    # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
-    # parameter as this is placed to handle scheduler_hint extension for V2.1.
-    def server_create(self, server_dict, create_kwargs, body_deprecated_param):
-        # NOTE(alex_xu): The v2.1 API compat mode, we strip the spaces for
-        # keypair create. But we didn't strip spaces at here for
-        # backward-compatible some users already created keypair and name with
-        # leading/trailing spaces by legacy v2 API.
-        create_kwargs['key_name'] = server_dict.get('key_name')
+
+# use nova.api.extensions.server.extensions entry point to modify
+# server create kwargs
+# NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
+# parameter as this is placed to handle scheduler_hint extension for V2.1.
+def server_create(server_dict, create_kwargs, body_deprecated_param):
+    # NOTE(alex_xu): The v2.1 API compat mode, we strip the spaces for
+    # keypair create. But we didn't strip spaces at here for
+    # backward-compatible some users already created keypair and name with
+    # leading/trailing spaces by legacy v2 API.
+    create_kwargs['key_name'] = server_dict.get('key_name')
 
 
 def get_server_create_schema(version):
