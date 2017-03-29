@@ -928,9 +928,9 @@ class ComputeUtilsTestCase(test.NoDBTestCase):
         mock_notify_usage.assert_has_calls(expected_notify_calls)
 
 
-class ComputeUtilsQuotaDeltaTestCase(test.TestCase):
+class ComputeUtilsQuotaTestCase(test.TestCase):
     def setUp(self):
-        super(ComputeUtilsQuotaDeltaTestCase, self).setUp()
+        super(ComputeUtilsQuotaTestCase, self).setUp()
         self.context = context.RequestContext('fake', 'fake')
 
     def test_upsize_quota_delta(self):
@@ -994,6 +994,35 @@ class ComputeUtilsQuotaDeltaTestCase(test.TestCase):
         compute_utils.reserve_quota_delta(self.context, deltas, inst)
         mock_reserve.assert_called_once_with(project_id=inst.project_id,
                                              user_id=inst.user_id, **deltas)
+
+    @mock.patch('nova.objects.Quotas.count_as_dict')
+    def test_check_instance_quota_exceeds_with_multiple_resources(self,
+                                                                  mock_count):
+        quotas = {'cores': 1, 'instances': 1, 'ram': 512}
+        overs = ['cores', 'instances', 'ram']
+        over_quota_args = dict(quotas=quotas,
+                               usages={'instances': 1, 'cores': 1, 'ram': 512},
+                               overs=overs)
+        e = exception.OverQuota(**over_quota_args)
+        fake_flavor = objects.Flavor(vcpus=1, memory_mb=512)
+        instance_num = 1
+        proj_count = {'instances': 1, 'cores': 1, 'ram': 512}
+        user_count = proj_count.copy()
+        mock_count.return_value = {'project': proj_count, 'user': user_count}
+        with mock.patch.object(objects.Quotas, 'limit_check_project_and_user',
+                               side_effect=e):
+            try:
+                compute_utils.check_num_instances_quota(self.context,
+                                                        fake_flavor,
+                                                        instance_num,
+                                                        instance_num)
+            except exception.TooManyInstances as e:
+                self.assertEqual('cores, instances, ram', e.kwargs['overs'])
+                self.assertEqual('1, 1, 512', e.kwargs['req'])
+                self.assertEqual('1, 1, 512', e.kwargs['used'])
+                self.assertEqual('1, 1, 512', e.kwargs['allowed'])
+            else:
+                self.fail("Exception not raised")
 
 
 class IsVolumeBackedInstanceTestCase(test.TestCase):

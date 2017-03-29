@@ -75,3 +75,51 @@ class QuotaTestCase(test.NoDBTestCase):
                                                           'fake-user')
 
         self.assertEqual(2, count['user']['server_group_members'])
+
+    def test_instances_cores_ram_count(self):
+        ctxt = context.RequestContext('fake-user', 'fake-project')
+        mapping1 = objects.CellMapping(context=ctxt,
+                                       uuid=uuidutils.generate_uuid(),
+                                       database_connection='cell1',
+                                       transport_url='none:///')
+        mapping2 = objects.CellMapping(context=ctxt,
+                                       uuid=uuidutils.generate_uuid(),
+                                       database_connection='cell2',
+                                       transport_url='none:///')
+        mapping1.create()
+        mapping2.create()
+
+        # Create an instance in cell1
+        with context.target_cell(ctxt, mapping1) as cctxt:
+            instance = objects.Instance(context=cctxt,
+                                        project_id='fake-project',
+                                        user_id='fake-user',
+                                        vcpus=2, memory_mb=512)
+            instance.create()
+
+        # Create an instance in cell2
+        with context.target_cell(ctxt, mapping2) as cctxt:
+            instance = objects.Instance(context=cctxt,
+                                        project_id='fake-project',
+                                        user_id='fake-user',
+                                        vcpus=4, memory_mb=1024)
+            instance.create()
+
+        # Create an instance in cell2 for a different user
+        with context.target_cell(ctxt, mapping2) as cctxt:
+            instance = objects.Instance(context=cctxt,
+                                        project_id='fake-project',
+                                        user_id='other-fake-user',
+                                        vcpus=4, memory_mb=1024)
+            instance.create()
+
+        # Count instances, cores, and ram across cells
+        count = quota._instances_cores_ram_count(ctxt, 'fake-project',
+                                                 user_id='fake-user')
+
+        self.assertEqual(3, count['project']['instances'])
+        self.assertEqual(10, count['project']['cores'])
+        self.assertEqual(2560, count['project']['ram'])
+        self.assertEqual(2, count['user']['instances'])
+        self.assertEqual(6, count['user']['cores'])
+        self.assertEqual(1536, count['user']['ram'])

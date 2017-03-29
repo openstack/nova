@@ -154,7 +154,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         specd_compute._delete_instance(specd_compute,
                                        self.context,
                                        mock_inst,
-                                       mock.Mock(),
                                        mock.Mock())
 
         methods_called = [n for n, a, k in call_tracker.mock_calls]
@@ -277,7 +276,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 vm_state=vm_states.ERROR,
                 host=self.compute.host,
                 expected_attrs=['system_metadata'])
-        quotas = mock.create_autospec(objects.Quotas, spec_set=True)
 
         with test.nested(
             mock.patch.object(self.compute, '_notify_about_instance_usage'),
@@ -290,7 +288,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             instance_obj_load_attr, instance_save, instance_destroy
         ):
             instance.info_cache = None
-            self.compute._delete_instance(self.context, instance, [], quotas)
+            self.compute._delete_instance(self.context, instance, [])
 
         mock_notify.assert_has_calls([
             mock.call(self.context, instance, 'fake-mini',
@@ -779,11 +777,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'destroy')
     @mock.patch.object(objects.Instance, 'obj_load_attr')
-    @mock.patch.object(objects.quotas.Quotas, 'commit')
-    @mock.patch.object(objects.quotas.Quotas, 'reserve')
     @mock.patch.object(objects.quotas, 'ids_from_instance')
     def test_init_instance_complete_partial_deletion(
-            self, mock_ids_from_instance, mock_reserve, mock_commit,
+            self, mock_ids_from_instance,
             mock_inst_destroy, mock_obj_load_attr, mock_get_by_instance_uuid,
             mock_bdm_destroy):
         """Test to complete deletion for instances in DELETED status but not
@@ -810,10 +806,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertEqual(vm_states.DELETED, instance.vm_state)
         self.assertFalse(instance.deleted)
 
-        deltas = {'instances': -1,
-                  'cores': -instance.flavor.vcpus,
-                  'ram': -instance.flavor.memory_mb}
-
         def fake_inst_destroy():
             instance.deleted = True
             instance.deleted_at = timeutils.utcnow()
@@ -826,12 +818,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         # Make sure that instance.destroy method was called and
         # instance was deleted from db.
-        self.assertTrue(mock_reserve.called)
-        self.assertTrue(mock_commit.called)
         self.assertNotEqual(0, instance.deleted)
-        mock_reserve.assert_called_once_with(project_id=instance.project_id,
-                                             user_id=instance.user_id,
-                                             **deltas)
 
     @mock.patch('nova.compute.manager.LOG')
     def test_init_instance_complete_partial_deletion_raises_exception(
@@ -872,24 +859,18 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 task_state=task_states.DELETING)
 
         bdms = []
-        quotas = objects.quotas.Quotas(self.context)
 
         with test.nested(
                 mock.patch.object(objects.BlockDeviceMappingList,
                                   'get_by_instance_uuid',
                                   return_value=bdms),
                 mock.patch.object(self.compute, '_delete_instance'),
-                mock.patch.object(instance, 'obj_load_attr'),
-                mock.patch.object(self.compute, '_create_reservations',
-                                  return_value=quotas)
-        ) as (mock_get, mock_delete, mock_load, mock_create):
+                mock.patch.object(instance, 'obj_load_attr')
+        ) as (mock_get, mock_delete, mock_load):
             self.compute._init_instance(self.context, instance)
             mock_get.assert_called_once_with(self.context, instance.uuid)
-            mock_create.assert_called_once_with(self.context, instance,
-                                                instance.project_id,
-                                                instance.user_id)
             mock_delete.assert_called_once_with(self.context, instance,
-                                                bdms, mock.ANY)
+                                                bdms)
 
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
@@ -910,7 +891,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             expected_attrs=['metadata', 'system_metadata'])
 
         bdms = []
-        reservations = ['fake-resv']
 
         def _create_patch(name, attr):
             patcher = mock.patch.object(name, attr)
@@ -921,10 +901,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         mock_delete_instance = _create_patch(self.compute, '_delete_instance')
         mock_set_instance_error_state = _create_patch(
             self.compute, '_set_instance_obj_error_state')
-        mock_create_reservations = _create_patch(self.compute,
-                                                 '_create_reservations')
-
-        mock_create_reservations.return_value = reservations
         mock_get_by_instance_uuid.return_value = bdms
         mock_get_by_uuid.return_value = instance
         mock_delete_instance.side_effect = test.TestingException('test')
@@ -1173,28 +1149,18 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 host=self.compute.host,
                 task_state=task_states.DELETING)
         bdms = []
-        quotas = objects.quotas.Quotas(self.context)
 
         with test.nested(
                 mock.patch.object(objects.BlockDeviceMappingList,
                                   'get_by_instance_uuid',
                                   return_value=bdms),
                 mock.patch.object(self.compute, '_delete_instance'),
-                mock.patch.object(instance, 'obj_load_attr'),
-                mock.patch.object(self.compute, '_create_reservations',
-                                  return_value=quotas),
-                mock.patch.object(objects.quotas, 'ids_from_instance',
-                                  return_value=(instance.project_id,
-                                                instance.user_id))
-        ) as (mock_get, mock_delete, mock_load, mock_create, mock_ids):
+                mock.patch.object(instance, 'obj_load_attr')
+        ) as (mock_get, mock_delete, mock_load):
             self.compute._init_instance(self.context, instance)
             mock_get.assert_called_once_with(self.context, instance.uuid)
-            mock_create.assert_called_once_with(self.context, instance,
-                                                instance.project_id,
-                                                instance.user_id)
             mock_delete.assert_called_once_with(self.context, instance,
-                                                bdms, mock.ANY)
-            mock_ids.assert_called_once_with(self.context, instance)
+                                                bdms)
 
     def test_init_instance_resize_prep(self):
         instance = fake_instance.fake_instance_obj(
@@ -3425,16 +3391,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def test_error_out_instance_on_exception_unknown_with_quotas(self,
                                                                  set_error):
         instance = fake_instance.fake_instance_obj(self.context)
-        quotas = mock.create_autospec(objects.Quotas, spec_set=True)
 
         def do_test():
             with self.compute._error_out_instance_on_exception(
-                    self.context, instance, quotas):
+                    self.context, instance):
                 raise test.TestingException('test')
 
         self.assertRaises(test.TestingException, do_test)
-        self.assertEqual(1, len(quotas.method_calls))
-        self.assertEqual(mock.call.rollback(), quotas.method_calls[0])
         set_error.assert_called_once_with(self.context, instance)
 
     def test_cleanup_volumes(self):
@@ -3871,7 +3834,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         mock_bdm_get_by_inst.assert_called_once_with(
             self.context, instance.uuid)
         mock_delete_instance.assert_called_once_with(
-            self.context, instance, bdms, mock.ANY)
+            self.context, instance, bdms)
 
     @mock.patch.object(nova.compute.manager.ComputeManager,
                        '_notify_about_instance_usage')
@@ -5501,7 +5464,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                             mock.ANY, mock.ANY, not is_shared)
             mock_finish_revert.assert_called_once_with(
                     self.context, self.instance, self.migration,
-                    self.migration.source_compute, mock.ANY)
+                    self.migration.source_compute)
 
         do_test()
 

@@ -363,12 +363,6 @@ class ProjectCommandsTestCase(test.TestCase):
         self.assertIsNone(self.commands.quota_usage_refresh(
             'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'))
 
-    def test_quota_usage_refresh_with_keys(self):
-        self.assertIsNone(self.commands.quota_usage_refresh(
-            'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-            'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaab',
-            'ram'))
-
     def test_quota_usage_refresh_invalid_user_key(self):
         self.assertEqual(2, self.commands.quota_usage_refresh(
             'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',

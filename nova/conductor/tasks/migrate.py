@@ -30,15 +30,11 @@ class MigrationTask(base.TaskBase):
         self.request_spec = request_spec
         self.reservations = reservations
         self.flavor = flavor
-        self.quotas = None
 
         self.compute_rpcapi = compute_rpcapi
         self.scheduler_client = scheduler_client
 
     def _execute(self):
-        self.quotas = objects.Quotas.from_reservations(self.context,
-                                                       self.reservations,
-                                                       instance=self.instance)
         # TODO(sbauza): Remove that once prep_resize() accepts a  RequestSpec
         # object in the signature and all the scheduler.utils methods too
         legacy_spec = self.request_spec.to_legacy_request_spec_dict()
@@ -96,5 +92,4 @@ class MigrationTask(base.TaskBase):
             node=node, clean_shutdown=self.clean_shutdown)
 
     def rollback(self):
-        if self.quotas:
-            self.quotas.rollback()
+        pass

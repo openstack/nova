@@ -38,6 +38,8 @@ from nova.conductor.tasks import migrate
 from nova import conf
 from nova import context
 from nova import db
+from nova.db.sqlalchemy import api as db_api
+from nova.db.sqlalchemy import api_models
 from nova import exception as exc
 from nova.image import api as image_api
 from nova import objects
@@ -1337,9 +1339,14 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             self.ctxt, instance_uuid=build_request.instance.uuid,
             cell_mapping=None, project_id=self.ctxt.project_id)
         im.create()
-        params['request_specs'] = [objects.RequestSpec(
-            instance_uuid=build_request.instance_uuid,
-            instance_group=None)]
+        rs = fake_request_spec.fake_spec_obj(remove_id=True)
+        rs._context = self.ctxt
+        rs.instance_uuid = build_request.instance_uuid
+        rs.instance_group = None
+        rs.retry = None
+        rs.limits = None
+        rs.create()
+        params['request_specs'] = [rs]
         params['image'] = {'fake_data': 'should_pass_silently'}
         params['admin_password'] = 'admin_password',
         params['injected_files'] = 'injected_files'
@@ -1677,6 +1684,73 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.assertTrue(bury.called)
         self.assertFalse(build_and_run.called)
 
+    @mock.patch('nova.objects.quotas.Quotas.check_deltas')
+    @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
+    def test_schedule_and_build_over_quota_during_recheck(self, mock_select,
+                                                          mock_check):
+        mock_select.return_value = [{'host': 'fake-host',
+                                     'nodename': 'fake-nodename',
+                                     'limits': None}]
+        # Simulate a race where the first check passes and the recheck fails.
+        # First check occurs in compute/api.
+        fake_quotas = {'instances': 5, 'cores': 10, 'ram': 4096}
+        fake_headroom = {'instances': 5, 'cores': 10, 'ram': 4096}
+        fake_usages = {'instances': 5, 'cores': 10, 'ram': 4096}
+        e = exc.OverQuota(overs=['instances'], quotas=fake_quotas,
+                          headroom=fake_headroom, usages=fake_usages)
+        mock_check.side_effect = e
+
+        # This is needed to register the compute node in a cell.
+        self.start_service('compute', host='fake-host')
+        self.assertRaises(
+            exc.TooManyInstances,
+            self.conductor.schedule_and_build_instances, **self.params)
+
+        project_id = self.params['context'].project_id
+        mock_check.assert_called_once_with(
+            self.params['context'], {'instances': 0, 'cores': 0, 'ram': 0},
+            project_id, user_id=None, check_project_id=project_id,
+            check_user_id=None)
+
+        # Verify we set the instance to ERROR state and set the fault message.
+        instances = objects.InstanceList.get_all(self.ctxt)
+        self.assertEqual(1, len(instances))
+        instance = instances[0]
+        self.assertEqual(vm_states.ERROR, instance.vm_state)
+        self.assertIsNone(instance.task_state)
+        self.assertIn('Quota exceeded', instance.fault.message)
+        # Verify we removed the build objects.
+        build_requests = objects.BuildRequestList.get_all(self.ctxt)
+
+        self.assertEqual(0, len(build_requests))
+
+        @db_api.api_context_manager.reader
+        def request_spec_get_all(context):
+            return context.session.query(api_models.RequestSpec).all()
+
+        request_specs = request_spec_get_all(self.ctxt)
+        self.assertEqual(0, len(request_specs))
+
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
+    @mock.patch('nova.objects.quotas.Quotas.check_deltas')
+    @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
+    def test_schedule_and_build_no_quota_recheck(self, mock_select,
+                                                 mock_check, mock_build):
+        mock_select.return_value = [{'host': 'fake-host',
+                                     'nodename': 'fake-nodename',
+                                     'limits': None}]
+        # Disable recheck_quota.
+        self.flags(recheck_quota=False, group='quota')
+        # This is needed to register the compute node in a cell.
+        self.start_service('compute', host='fake-host')
+        self.conductor.schedule_and_build_instances(**self.params)
+
+        # check_deltas should not have been called a second time. The first
+        # check occurs in compute/api.
+        mock_check.assert_not_called()
+
+        self.assertTrue(mock_build.called)
+
     @mock.patch('nova.objects.CellMapping.get_by_uuid')
     def test_bury_in_cell0_no_cell0(self, mock_cm_get):
         mock_cm_get.side_effect = exc.CellMappingNotFound(uuid='0')
@@ -1893,13 +1967,12 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch.object(objects.RequestSpec, 'from_components')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(utils, 'get_image_from_system_metadata')
-    @mock.patch.object(objects.Quotas, 'from_reservations')
     @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations')
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_set_vm_state_and_notify')
     @mock.patch.object(migrate.MigrationTask, 'rollback')
     def test_cold_migrate_no_valid_host_back_in_active_state(
-            self, rollback_mock, notify_mock, select_dest_mock, quotas_mock,
+            self, rollback_mock, notify_mock, select_dest_mock,
             metadata_mock, sig_mock, spec_fc_mock, im_mock):
         flavor = flavors.get_flavor_by_name('m1.tiny')
         inst_obj = objects.Instance(
@@ -1934,8 +2007,6 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                           flavor, {}, [resvs],
                           True, None)
         metadata_mock.assert_called_with({})
-        quotas_mock.assert_called_once_with(self.context, [resvs],
-                                            instance=inst_obj)
         sig_mock.assert_called_once_with(self.context, fake_spec)
         notify_mock.assert_called_once_with(self.context, inst_obj.uuid,
                                               'migrate_server', updates,
@@ -1946,13 +2017,12 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(objects.RequestSpec, 'from_components')
     @mock.patch.object(utils, 'get_image_from_system_metadata')
-    @mock.patch.object(objects.Quotas, 'from_reservations')
     @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations')
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_set_vm_state_and_notify')
     @mock.patch.object(migrate.MigrationTask, 'rollback')
     def test_cold_migrate_no_valid_host_back_in_stopped_state(
-            self, rollback_mock, notify_mock, select_dest_mock, quotas_mock,
+            self, rollback_mock, notify_mock, select_dest_mock,
             metadata_mock, spec_fc_mock, sig_mock, im_mock):
         flavor = flavors.get_flavor_by_name('m1.tiny')
         inst_obj = objects.Instance(
@@ -1988,8 +2058,6 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                            flavor, {}, [resvs],
                            True, None)
         metadata_mock.assert_called_with({})
-        quotas_mock.assert_called_once_with(self.context, [resvs],
-                                            instance=inst_obj)
         sig_mock.assert_called_once_with(self.context, fake_spec)
         notify_mock.assert_called_once_with(self.context, inst_obj.uuid,
                                             'migrate_server', updates,
@@ -2072,7 +2140,6 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(objects.RequestSpec, 'from_components')
     @mock.patch.object(utils, 'get_image_from_system_metadata')
-    @mock.patch.object(objects.Quotas, 'from_reservations')
     @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations')
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_set_vm_state_and_notify')
@@ -2080,7 +2147,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'prep_resize')
     def test_cold_migrate_exception_host_in_error_state_and_raise(
             self, prep_resize_mock, rollback_mock, notify_mock,
-            select_dest_mock, quotas_mock, metadata_mock, spec_fc_mock,
+            select_dest_mock, metadata_mock, spec_fc_mock,
             sig_mock, im_mock):
         flavor = flavors.get_flavor_by_name('m1.tiny')
         inst_obj = objects.Instance(
@@ -2123,8 +2190,6 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                'limits': {}}
 
         metadata_mock.assert_called_with({})
-        quotas_mock.assert_called_once_with(self.context, [resvs],
-                                            instance=inst_obj)
         sig_mock.assert_called_once_with(self.context, fake_spec)
         select_dest_mock.assert_called_once_with(
             self.context, fake_spec, [inst_obj.uuid])

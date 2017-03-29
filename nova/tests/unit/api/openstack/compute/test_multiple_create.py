@@ -431,3 +431,36 @@ class MultiCreateExtensionTestV21(test.TestCase):
 
         self.assertRaises(self.validation_error,
                           self.controller.create, self.req, body=body)
+
+    def test_create_multiple_instance_max_count_overquota_min_count_ok(self):
+        self.flags(instances=3, group='quota')
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+        body = {
+            'server': {
+                multiple_create_v21.MIN_ATTRIBUTE_NAME: 2,
+                multiple_create_v21.MAX_ATTRIBUTE_NAME: 5,
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+            }
+        }
+        res = self.controller.create(self.req, body=body).obj
+        instance_uuids = self.instance_cache_by_uuid.keys()
+        self.assertIn(res["server"]["id"], instance_uuids)
+
+    def test_create_multiple_instance_max_count_overquota_min_count_over(self):
+        self.flags(instances=3, group='quota')
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+        body = {
+            'server': {
+                multiple_create_v21.MIN_ATTRIBUTE_NAME: 4,
+                multiple_create_v21.MAX_ATTRIBUTE_NAME: 5,
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+            }
+        }
+        self.assertRaises(webob.exc.HTTPForbidden, self.controller.create,
+                          self.req, body=body)
