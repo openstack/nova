@@ -1535,7 +1535,7 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
                           'CUSTOM_IRON_NFV')
 
 
-class ResourceProviderTraitsTestCase(ResourceProviderBaseCase):
+class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
 
     def _assert_traits(self, expected_traits, traits_objs):
         expected_traits.sort()
