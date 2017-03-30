@@ -710,6 +710,34 @@ class LibvirtDriver(driver.ComputeDriver):
         except (exception.InternalError, exception.InstanceNotFound):
             return False
 
+    def estimate_instance_overhead(self, instance_info):
+        overhead = super(LibvirtDriver, self).estimate_instance_overhead(
+            instance_info)
+        if isinstance(instance_info, objects.Flavor):
+            # A flavor object is passed during case of migrate
+            # TODO(sahid): We do not have any way to retrieve the
+            # image meta related to the instance so if the cpu_policy
+            # has been set in image_meta we will get an
+            # exception. Until we fix it we specifically set the
+            # cpu_policy in dedicated in an ImageMeta object so if the
+            # emulator threads has been requested nothing is going to
+            # fail.
+            image_meta = objects.ImageMeta.from_dict({"properties": {
+                "hw_cpu_policy": fields.CPUAllocationPolicy.DEDICATED,
+            }})
+            if (hardware.get_emulator_threads_constraint(
+                    instance_info, image_meta)
+                == fields.CPUEmulatorThreadsPolicy.ISOLATE):
+                overhead['vcpus'] += 1
+        else:
+            # An instance object is passed during case of spawing or a
+            # dict is passed when computing resource for an instance
+            numa_topology = hardware.instance_topology_from_instance(
+                instance_info)
+            if numa_topology and numa_topology.emulator_threads_isolated:
+                overhead['vcpus'] += 1
+        return overhead
+
     def list_instances(self):
         names = []
         for guest in self._host.list_guests(only_running=False):
