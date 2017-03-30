@@ -203,7 +203,8 @@ class ComputeDriver(object):
         :returns: Dict of estimated overhead values.
         """
         return {'memory_mb': 0,
-                'disk_gb': 0}
+                'disk_gb': 0,
+                'vcpus': 0}
 
     def list_instances(self):
         """Return the names of all the instances known to the virtualization

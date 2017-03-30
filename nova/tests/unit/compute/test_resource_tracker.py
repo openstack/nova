@@ -404,6 +404,7 @@ def overhead_zero(instance):
     return {
         'memory_mb': 0,
         'disk_gb': 0,
+        'vcpus': 0,
     }
 
 
