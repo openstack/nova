@@ -47,7 +47,7 @@ def fake_call_xenapi(method, *args):
             return {'uuid': fake_vif['uuid'],
                     'MAC': fake_vif['address'],
                     'network': 'fake_network',
-                    'other_config': {'nicira-iface-id': fake_vif['id']}
+                    'other_config': {'neutron-port-id': fake_vif['id']}
                     }
         else:
             raise exception.Exception("Failed get vif record")
@@ -293,7 +293,6 @@ class XenAPIOpenVswitchDriverTestCase(XenVIFDriverTestBase):
                         'MAC': fake_vif['address'],
                         'network': 'fake_network',
                         'other_config': {
-                            'nicira-iface-id': 'fake-nicira-iface-id',
                             'neutron-port-id': 'fake-neutron-port-id'}
                        }
         mock_VIF_get_record = self.mock_patch_object(
@@ -327,7 +326,6 @@ class XenAPIOpenVswitchDriverTestCase(XenVIFDriverTestBase):
                         'MAC': fake_vif['address'],
                         'network': 'fake_network',
                         'other_config': {
-                            'nicira-iface-id': 'fake-nicira-iface-id',
                             'neutron-port-id': 'fake-neutron-port-id'}
                        }
         mock_VIF_get_record = self.mock_patch_object(

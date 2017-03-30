@@ -274,9 +274,7 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
         vif_rec['MTU'] = '1500'
         vif_rec['qos_algorithm_type'] = ''
         vif_rec['qos_algorithm_params'] = {}
-        # Deprecated: 'niciria-iface-id', will remove it in the next release
-        vif_rec['other_config'] = {'nicira-iface-id': vif['id'],
-                                   'neutron-port-id': vif['id']}
+        vif_rec['other_config'] = {'neutron-port-id': vif['id']}
         vif_ref = self._create_vif(vif, vif_rec, vm_ref)
 
         # call XenAPI to plug vif
