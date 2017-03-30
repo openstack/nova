@@ -398,7 +398,7 @@ set the ``preserve_ephemeral`` parameter to ``true``.
 Normal response codes: 202
 
 Error response codes: badRequest(400),unauthorized(401), forbidden(403),
-itemNotFound(404), conflict(409), payloadTooLarge(413)
+itemNotFound(404), conflict(409)
 
 Request
 -------
@@ -521,7 +521,7 @@ reference, the base image reference is used by default.
 After you successfully rescue a server and make a ``GET
 /servers/​{server_id}​`` request, its status changes to ``RESCUE``.
 
-Normal response codes: 202
+Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
 itemNotFound(404), conflict(409), notImplemented(501)
