@@ -280,7 +280,7 @@ request.
 Normal response codes: 202
 
 Error response codes: badRequest(400), unauthorized(401),
-forbidden(403), itemNotFound(404), conflict(409), entityTooLarge(413)
+forbidden(403), itemNotFound(404), conflict(409)
 
 ..
   TODO(sdague): leave these notes for later when fixing the body
