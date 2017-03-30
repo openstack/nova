@@ -8429,6 +8429,74 @@ class ComputeAPITestCase(BaseTestCase):
         group = objects.InstanceGroup.get_by_uuid(self.context, group.uuid)
         self.assertIn(refs[0]['uuid'], group.members)
 
+    @mock.patch('nova.objects.quotas.Quotas.check_deltas')
+    @mock.patch('nova.compute.api.API._get_requested_instance_group')
+    def test_create_instance_group_members_over_quota_during_recheck(
+            self, get_group_mock, check_deltas_mock):
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      self.fake_show)
+
+        # Simulate a race where the first check passes and the recheck fails.
+        check_deltas_mock.side_effect = [
+            None, exception.OverQuota(overs='server_group_members')]
+
+        group = objects.InstanceGroup(self.context)
+        group.uuid = uuids.fake
+        group.project_id = self.context.project_id
+        group.user_id = self.context.user_id
+        group.create()
+        get_group_mock.return_value = group
+
+        inst_type = flavors.get_default_flavor()
+        self.assertRaises(exception.QuotaError, self.compute_api.create,
+            self.context, inst_type, self.fake_image['id'],
+            scheduler_hints={'group': group.uuid},
+            check_server_group_quota=True)
+
+        self.assertEqual(2, check_deltas_mock.call_count)
+        call1 = mock.call(self.context, {'server_group_members': 1}, group,
+                          self.context.user_id)
+        call2 = mock.call(self.context, {'server_group_members': 0}, group,
+                          self.context.user_id)
+        check_deltas_mock.assert_has_calls([call1, call2])
+
+        # Verify we removed the group members that were added after the first
+        # quota check passed.
+        group = objects.InstanceGroup.get_by_uuid(self.context, group.uuid)
+        self.assertEqual(0, len(group.members))
+
+    @mock.patch('nova.objects.quotas.Quotas.check_deltas')
+    @mock.patch('nova.compute.api.API._get_requested_instance_group')
+    def test_create_instance_group_members_no_quota_recheck(self,
+                                                            get_group_mock,
+                                                            check_deltas_mock):
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      self.fake_show)
+        # Disable recheck_quota.
+        self.flags(recheck_quota=False, group='quota')
+
+        group = objects.InstanceGroup(self.context)
+        group.uuid = uuids.fake
+        group.project_id = self.context.project_id
+        group.user_id = self.context.user_id
+        group.create()
+        get_group_mock.return_value = group
+
+        inst_type = flavors.get_default_flavor()
+        (refs, resv_id) = self.compute_api.create(
+            self.context, inst_type, self.fake_image['id'],
+            scheduler_hints={'group': group.uuid},
+            check_server_group_quota=True)
+        self.assertEqual(len(refs), len(group.members))
+
+        # check_deltas should have been called only once.
+        check_deltas_mock.assert_called_once_with(
+            self.context, {'server_group_members': 1}, group,
+            self.context.user_id)
+
+        group = objects.InstanceGroup.get_by_uuid(self.context, group.uuid)
+        self.assertIn(refs[0]['uuid'], group.members)
+
     def test_instance_create_with_group_uuid_fails_group_not_exist(self):
         self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
                       self.fake_show)

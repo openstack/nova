@@ -25,10 +25,12 @@ from oslo_utils import timeutils
 import six
 
 import nova.conf
+from nova import context as nova_context
 from nova import db
 from nova import exception
 from nova.i18n import _LE
 from nova import objects
+from nova import utils
 
 LOG = logging.getLogger(__name__)
 
@@ -1853,8 +1855,26 @@ def _keypair_get_count_by_user(context, user_id):
 
 
 def _server_group_count_members_by_user(context, group, user_id):
-    count = group.count_members_by_user(user_id)
-    return {'user': {'server_group_members': count}}
+    # NOTE(melwitt): This is mostly duplicated from
+    # InstanceGroup.count_members_by_user() to query across multiple cells.
+    # We need to be able to pass the correct cell context to
+    # InstanceList.get_by_filters().
+    # TODO(melwitt): Counting across cells for instances means we will miss
+    # counting resources if a cell is down. In the future, we should query
+    # placement for cores/ram and InstanceMappings for instances (once we are
+    # deleting InstanceMappings when we delete instances).
+    cell_mappings = objects.CellMappingList.get_all(context)
+    greenthreads = []
+    filters = {'deleted': False, 'user_id': user_id, 'uuid': group.members}
+    for cell_mapping in cell_mappings:
+        with nova_context.target_cell(context, cell_mapping) as cctxt:
+            greenthreads.append(utils.spawn(
+                objects.InstanceList.get_by_filters, cctxt, filters))
+    instances = objects.InstanceList(objects=[])
+    for greenthread in greenthreads:
+        found = greenthread.wait()
+        instances = instances + found
+    return {'user': {'server_group_members': len(instances)}}
 
 
 def _server_group_count(context, project_id, user_id=None):
