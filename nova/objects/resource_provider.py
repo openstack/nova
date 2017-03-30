@@ -1493,11 +1493,6 @@ class Trait(base.NovaObject):
             raise exception.ObjectActionError(action='create',
                                               reason='name is required')
 
-        if not self.name.startswith(self.CUSTOM_NAMESPACE):
-            raise exception.ObjectActionError(
-                    action='create',
-                    reason='name must start with %s' % self.CUSTOM_NAMESPACE)
-
         updates = self.obj_get_changes()
 
         try:

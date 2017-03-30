@@ -1562,11 +1562,6 @@ class ResourceProviderTraitsTestCase(ResourceProviderBaseCase):
         t = objects.Trait(self.context)
         self.assertRaises(exception.ObjectActionError, t.create)
 
-    def test_trait_create_without_custom_prefix(self):
-        t = objects.Trait(self.context)
-        t.name = 'TRAIT_A'
-        self.assertRaises(exception.ObjectActionError, t.create)
-
     def test_trait_create_duplicated_trait(self):
         trait = objects.Trait(self.context)
         trait.name = 'CUSTOM_TRAIT_A'
