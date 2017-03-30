@@ -132,6 +132,25 @@ class InstanceGroupObjectTestCase(test.TestCase):
                                                      create_group.uuid)
         self.assertEqual(new_member, db_group.members)
 
+    def test_remove_members(self):
+        create_group = self._api_group(members=[])
+        # Add new members.
+        new_members = [uuids.instance1, uuids.instance2, uuids.instance3]
+        objects.InstanceGroup.add_members(self.context, create_group.uuid,
+                                          new_members)
+        # We already have tests for adding members, so we don't have to
+        # verify they were added.
+
+        # Remove the first two members we added.
+        objects.InstanceGroup._remove_members_in_db(self.context,
+                                                    create_group.id,
+                                                    new_members[:2])
+        # Refresh the group from the database.
+        db_group = create_group._get_from_db_by_uuid(self.context,
+                                                     create_group.uuid)
+        # We should have one new member left.
+        self.assertEqual([uuids.instance3], db_group.members)
+
     def test_get_by_uuid(self):
         create_group = self._api_group()
         get_group = objects.InstanceGroup.get_by_uuid(self.context,
