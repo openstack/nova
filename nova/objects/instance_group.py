@@ -475,7 +475,8 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
     # Version 1.5: InstanceGroup <= version 1.8
     # Version 1.6: InstanceGroup <= version 1.9
     # Version 1.7: InstanceGroup <= version 1.10
-    VERSION = '1.7'
+    # Version 1.8: Added get_counts() for quotas
+    VERSION = '1.8'
 
     fields = {
         'objects': fields.ListOfObjectsField('InstanceGroup'),
@@ -496,6 +497,18 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(context, cls(context), objects.InstanceGroup,
                                   main_db_groups)
 
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_counts_from_db(context, project_id, user_id=None):
+        query = context.session.query(api_models.InstanceGroup.id).\
+                filter_by(project_id=project_id)
+        counts = {}
+        counts['project'] = {'server_groups': query.count()}
+        if user_id:
+            query = query.filter_by(user_id=user_id)
+            counts['user'] = {'server_groups': query.count()}
+        return counts
+
     @base.remotable_classmethod
     def get_by_project_id(cls, context, project_id):
         api_db_groups = cls._get_from_db(context, project_id=project_id)
@@ -510,6 +523,21 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
         main_db_groups = db.instance_group_get_all(context)
         return base.obj_make_list(context, cls(context), objects.InstanceGroup,
                                   api_db_groups + main_db_groups)
+
+    @base.remotable_classmethod
+    def get_counts(cls, context, project_id, user_id=None):
+        """Get the counts of InstanceGroup objects in the database.
+
+        :param context: The request context for database access
+        :param project_id: The project_id to count across
+        :param user_id: The user_id to count across
+        :returns: A dict containing the project-scoped counts and user-scoped
+                  counts if user_id is specified. For example:
+
+                    {'project': {'server_groups': <count across project>},
+                     'user': {'server_groups': <count across user>}}
+        """
+        return cls._get_counts_from_db(context, project_id, user_id=user_id)
 
 
 @db_api.pick_context_manager_reader

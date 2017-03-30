@@ -185,6 +185,26 @@ class InstanceGroupObjectTestCase(test.TestCase):
         self.assertTrue(base.obj_equal_prims(create_group, get_groups[0]))
         ovo_fixture.compare_obj(self, get_groups[1], db_group)
 
+    def test_get_counts(self):
+        # _api_group() creates a group with project_id and user_id from
+        # self.context by default
+        self._api_group()
+        self._api_group(project_id='foo')
+        self._api_group(user_id='bar')
+
+        # Count only across a project
+        counts = objects.InstanceGroupList.get_counts(self.context, 'foo')
+        self.assertEqual(1, counts['project']['server_groups'])
+        self.assertNotIn('user', counts)
+
+        # Count across a project and a user
+        counts = objects.InstanceGroupList.get_counts(
+            self.context, self.context.project_id,
+            user_id=self.context.user_id)
+
+        self.assertEqual(2, counts['project']['server_groups'])
+        self.assertEqual(1, counts['user']['server_groups'])
+
     def test_migrate_instance_groups(self):
         self._api_group(name='apigroup')
         orig_main_models = []
