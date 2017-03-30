@@ -27,9 +27,6 @@ from nova.tests.unit.api.openstack import fakes
 
 class APITest(test.NoDBTestCase):
 
-    def setUp(self):
-        super(APITest, self).setUp()
-
     @property
     def wsgi_app(self):
         return fakes.wsgi_app_v21()
