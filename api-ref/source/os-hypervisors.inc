@@ -6,8 +6,9 @@
 
 Lists all hypervisors, shows summary statistics for all hypervisors over
 all compute nodes, shows details for a hypervisor, shows the uptime
-for a hypervisor, list all servers on a given hypervisor or search
-hypervisor by given id.
+for a hypervisor, lists all servers on hypervisors that match the given
+``hypervisor_hostname_pattern`` or searches for hypervisors by the given
+``hypervisor_hostname_pattern``.
 
 List Hypervisors
 ================
