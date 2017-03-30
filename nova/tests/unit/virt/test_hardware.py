@@ -3055,3 +3055,48 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
         self.assertEqual(set([1]), inst_topo.cells[0].cpuset_reserved)
         self.assertEqual({1: 2, 2: 3}, inst_topo.cells[1].cpu_pinning)
         self.assertIsNone(inst_topo.cells[1].cpuset_reserved)
+
+    def test_isolate_usage(self):
+        host_topo = self._host_topology()
+        inst_topo = objects.InstanceNUMATopology(
+            emulator_threads_policy=(
+                fields.CPUEmulatorThreadsPolicy.ISOLATE),
+            cells=[objects.InstanceNUMACell(
+                id=0,
+                cpuset=set([0]), memory=2048,
+                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                cpu_pinning={0: 0},
+                cpuset_reserved=set([1]))])
+
+        host_topo = hw.numa_usage_from_instances(
+            host_topo, [inst_topo])
+        self.assertEqual(2, host_topo.cells[0].cpu_usage)
+        self.assertEqual(set([0, 1]), host_topo.cells[0].pinned_cpus)
+        self.assertEqual(0, host_topo.cells[1].cpu_usage)
+        self.assertEqual(set([]), host_topo.cells[1].pinned_cpus)
+
+    def test_isolate_full_usage(self):
+        host_topo = self._host_topology()
+        inst_topo1 = objects.InstanceNUMATopology(
+            emulator_threads_policy=(
+                fields.CPUEmulatorThreadsPolicy.ISOLATE),
+            cells=[objects.InstanceNUMACell(
+                id=0,
+                cpuset=set([0]), memory=2048,
+                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                cpu_pinning={0: 0},
+                cpuset_reserved=set([1]))])
+        inst_topo2 = objects.InstanceNUMATopology(
+            emulator_threads_policy=(
+                fields.CPUEmulatorThreadsPolicy.ISOLATE),
+            cells=[objects.InstanceNUMACell(
+                id=1,
+                cpuset=set([0]), memory=2048,
+                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                cpu_pinning={0: 2},
+                cpuset_reserved=set([3]))])
+
+        host_topo = hw.numa_usage_from_instances(
+            host_topo, [inst_topo1, inst_topo2])
+        self.assertEqual(2, host_topo.cells[0].cpu_usage)
+        self.assertEqual(set([0, 1]), host_topo.cells[0].pinned_cpus)
