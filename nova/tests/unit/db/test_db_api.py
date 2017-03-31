@@ -1889,7 +1889,8 @@ class ReservationTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                             self.ctxt, 'project1', 'user1'))
 
     def test_reservation_expire(self):
-        db.reservation_expire(self.ctxt)
+        self.assertEqual(len(self.reservations),
+                         db.reservation_expire(self.ctxt))
 
         expected = {'project_id': 'project1', 'user_id': 'user1',
                 'resource0': {'reserved': 0, 'in_use': 0},
