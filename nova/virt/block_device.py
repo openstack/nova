@@ -153,6 +153,24 @@ class DriverBlockDevice(dict):
         """
         raise NotImplementedError()
 
+    def detach(self, **kwargs):
+        """Detach the device from an instance and detach in Cinder.
+
+        Note: driver_detach is called as part of this method.
+
+        To be overridden in subclasses with the detaching logic for
+        the type of device the subclass represents.
+        """
+        raise NotImplementedError()
+
+    def driver_detach(self, **kwargs):
+        """Detach the device from an instance (don't detach in Cinder).
+
+        To be overridden in subclasses with the detaching logic for
+        the type of device the subclass represents.
+        """
+        raise NotImplementedError()
+
     def save(self):
         for attr_name, key_name in self._update_on_save.items():
             lookup_name = key_name or attr_name
@@ -241,6 +259,99 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                     self['connection_info']['data']['multipath_id']
                 LOG.info(_LI('preserve multipath_id %s'),
                          connection_info['data']['multipath_id'])
+
+    def driver_detach(self, context, instance, volume_api, virt_driver):
+        connection_info = self['connection_info']
+        mp = self['mount_device']
+        volume_id = self.volume_id
+
+        LOG.info(_LI('Attempting to driver detach volume %(volume_id)s from '
+                     ' mountpoint %(mp)s'), {'volume_id': volume_id, 'mp': mp},
+                     instance=instance)
+        try:
+            if not virt_driver.instance_exists(instance):
+                LOG.warning(_LW('Detaching volume from unknown instance'),
+                                instance=instance)
+
+            encryption = encryptors.get_encryption_metadata(context,
+                    volume_api, volume_id, connection_info)
+            virt_driver.detach_volume(connection_info, instance, mp,
+                                      encryption=encryption)
+        except exception.DiskNotFound as err:
+            LOG.warning(_LW('Ignoring DiskNotFound exception while '
+                            'detaching volume %(volume_id)s from '
+                            '%(mp)s : %(err)s'),
+                        {'volume_id': volume_id, 'mp': mp,
+                         'err': err}, instance=instance)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                LOG.exception(_LE('Failed to detach volume '
+                                  '%(volume_id)s from %(mp)s'),
+                              {'volume_id': volume_id, 'mp': mp},
+                              instance=instance)
+                volume_api.roll_detaching(context, volume_id)
+
+    def detach(self, context, instance, volume_api, virt_driver,
+               attachment_id=None, destroy_bdm=False):
+
+        connector = virt_driver.get_volume_connector(instance)
+        connection_info = self['connection_info']
+        volume_id = self.volume_id
+
+        # Only attempt to detach and disconnect from the volume if the instance
+        # is currently associated with the local compute host.
+        if CONF.host == instance.host:
+            self.driver_detach(context, instance, volume_api, virt_driver)
+        elif not destroy_bdm:
+            LOG.debug("Skipping _driver_detach during remote rebuild.",
+                      instance=instance)
+        elif destroy_bdm:
+            LOG.error(_LE("Unable to call for a driver detach of volume "
+                          "%(vol_id)s due to the instance being "
+                          "registered to the remote host %(inst_host)s."),
+                      {'vol_id': volume_id,
+                       'inst_host': instance.host}, instance=instance)
+
+        if connection_info and not destroy_bdm and (
+           connector.get('host') != instance.host):
+            # If the volume is attached to another host (evacuate) then
+            # this connector is for the wrong host. Use the connector that
+            # was stored in connection_info instead (if we have one, and it
+            # is for the expected host).
+            stashed_connector = connection_info.get('connector')
+            if not stashed_connector:
+                # Volume was attached before we began stashing connectors
+                LOG.warning(_LW("Host mismatch detected, but stashed "
+                                "volume connector not found. Instance host is "
+                                "%(ihost)s, but volume connector host is "
+                                "%(chost)s."),
+                            {'ihost': instance.host,
+                             'chost': connector.get('host')})
+            elif stashed_connector.get('host') != instance.host:
+                # Unexpected error. The stashed connector is also not matching
+                # the needed instance host.
+                LOG.error(_LE("Host mismatch detected in stashed volume "
+                              "connector. Will use local volume connector. "
+                              "Instance host is %(ihost)s. Local volume "
+                              "connector host is %(chost)s. Stashed volume "
+                              "connector host is %(schost)s."),
+                          {'ihost': instance.host,
+                           'chost': connector.get('host'),
+                           'schost': stashed_connector.get('host')})
+            else:
+                # Fix found. Use stashed connector.
+                LOG.debug("Host mismatch detected. Found usable stashed "
+                          "volume connector. Instance host is %(ihost)s. "
+                          "Local volume connector host was %(chost)s. "
+                          "Stashed volume connector host is %(schost)s.",
+                          {'ihost': instance.host,
+                           'chost': connector.get('host'),
+                           'schost': stashed_connector.get('host')})
+                connector = stashed_connector
+
+        volume_api.terminate_connection(context, volume_id, connector)
+        volume_api.detach(context.elevated(), volume_id, instance.uuid,
+                          attachment_id)
 
     @update_db
     def attach(self, context, instance, volume_api, virt_driver,

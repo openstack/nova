@@ -59,6 +59,7 @@ from nova.tests.unit.objects import test_instance_fault
 from nova.tests.unit.objects import test_instance_info_cache
 from nova.tests import uuidsentinel as uuids
 from nova import utils
+from nova.virt.block_device import DriverVolumeBlockDevice as driver_bdm_volume
 from nova.virt import driver as virt_driver
 from nova.virt import event as virtevent
 from nova.virt import fake as fake_driver
@@ -2414,75 +2415,84 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertEqual(reboot_type, 'HARD')
 
     @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume_and_instance')
-    @mock.patch('nova.compute.manager.ComputeManager._driver_detach_volume')
-    @mock.patch('nova.objects.Instance._from_db_object')
-    def test_remove_volume_connection(self, inst_from_db, detach, bdm_get):
-        bdm = mock.sentinel.bdm
-        bdm.connection_info = jsonutils.dumps({})
-        inst_obj = mock.Mock()
-        inst_obj.uuid = 'uuid'
+    def test_remove_volume_connection(self, bdm_get):
+        inst = mock.Mock()
+        inst.uuid = uuids.instance_uuid
+        fake_bdm = fake_block_device.FakeDbBlockDeviceDict(
+                {'source_type': 'volume', 'destination_type': 'volume',
+                 'volume_id': uuids.volume_id, 'device_name': '/dev/vdb',
+                 'connection_info': '{"test": "test"}'})
+        bdm = objects.BlockDeviceMapping(context=self.context, **fake_bdm)
         bdm_get.return_value = bdm
-        inst_from_db.return_value = inst_obj
-        with mock.patch.object(self.compute, 'volume_api'):
-            self.compute.remove_volume_connection(self.context, 'vol',
-                                                  inst_obj)
-        detach.assert_called_once_with(self.context, inst_obj, bdm, {})
-        bdm_get.assert_called_once_with(self.context, 'vol', 'uuid')
+        with test.nested(
+            mock.patch.object(self.compute, 'volume_api'),
+            mock.patch.object(self.compute, 'driver'),
+            mock.patch.object(driver_bdm_volume, 'driver_detach'),
+        ) as (mock_volume_api, mock_virt_driver, mock_driver_detach):
+            connector = mock.Mock()
+            mock_virt_driver.get_volume_connector.return_value = connector
+            self.compute.remove_volume_connection(self.context,
+                                                  uuids.volume_id, inst)
+
+            bdm_get.assert_called_once_with(self.context, uuids.volume_id,
+                                            uuids.instance_uuid)
+            mock_driver_detach.assert_called_once_with(self.context, inst,
+                    connector, mock_volume_api, mock_virt_driver)
+            mock_volume_api.terminate_connection.assert_called_once_with(
+                    self.context, uuids.volume_id, connector)
 
     def test_detach_volume(self):
+        # TODO(lyarwood): Move into ../virt/test_block_device.py
         self._test_detach_volume()
 
     def test_detach_volume_not_destroy_bdm(self):
+        # TODO(lyarwood): Move into ../virt/test_block_device.py
         self._test_detach_volume(destroy_bdm=False)
 
     @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume_and_instance')
-    @mock.patch('nova.compute.manager.ComputeManager._driver_detach_volume')
+    @mock.patch.object(driver_bdm_volume, 'detach')
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_notify_about_instance_usage')
     def _test_detach_volume(self, notify_inst_usage, detach,
                             bdm_get, destroy_bdm=True):
+        # TODO(lyarwood): Move into ../virt/test_block_device.py
         volume_id = uuids.volume
         inst_obj = mock.Mock()
         inst_obj.uuid = uuids.instance
         inst_obj.host = CONF.host
         attachment_id = uuids.attachment
 
-        bdm = mock.MagicMock(spec=objects.BlockDeviceMapping)
-        bdm.device_name = 'vdb'
-        bdm.connection_info = jsonutils.dumps({})
+        fake_bdm = fake_block_device.FakeDbBlockDeviceDict(
+                {'source_type': 'volume', 'destination_type': 'volume',
+                 'volume_id': volume_id, 'device_name': '/dev/vdb',
+                 'connection_info': '{"test": "test"}'})
+        bdm = objects.BlockDeviceMapping(context=self.context, **fake_bdm)
         bdm_get.return_value = bdm
 
-        detach.return_value = {}
+        with test.nested(
+            mock.patch.object(self.compute, 'volume_api'),
+            mock.patch.object(self.compute, 'driver'),
+            mock.patch.object(bdm, 'destroy'),
+        ) as (volume_api, driver, bdm_destroy):
+            self.compute._detach_volume(self.context, volume_id, inst_obj,
+                                        destroy_bdm=destroy_bdm,
+                                        attachment_id=attachment_id)
+            detach.assert_called_once_with(self.context, inst_obj,
+                    self.compute.volume_api, self.compute.driver,
+                    attachment_id=attachment_id,
+                    destroy_bdm=destroy_bdm)
+            notify_inst_usage.assert_called_once_with(
+                self.context, inst_obj, "volume.detach",
+                extra_usage_info={'volume_id': volume_id})
 
-        with mock.patch.object(self.compute, 'volume_api') as volume_api:
-            with mock.patch.object(self.compute, 'driver') as driver:
-                connector_sentinel = mock.sentinel.connector
-                driver.get_volume_connector.return_value = connector_sentinel
-
-                self.compute._detach_volume(self.context, volume_id,
-                                            inst_obj,
-                                            destroy_bdm=destroy_bdm,
-                                            attachment_id=attachment_id)
-
-                detach.assert_called_once_with(self.context, inst_obj, bdm, {})
-                driver.get_volume_connector.assert_called_once_with(inst_obj)
-                volume_api.terminate_connection.assert_called_once_with(
-                    self.context, volume_id, connector_sentinel)
-                volume_api.detach.assert_called_once_with(mock.ANY, volume_id,
-                                                          inst_obj.uuid,
-                                                          attachment_id)
-                notify_inst_usage.assert_called_once_with(
-                    self.context, inst_obj, "volume.detach",
-                    extra_usage_info={'volume_id': volume_id}
-                )
-
-                if destroy_bdm:
-                    bdm.destroy.assert_called_once_with()
-                else:
-                    self.assertFalse(bdm.destroy.called)
+            if destroy_bdm:
+                bdm_destroy.assert_called_once_with()
+            else:
+                self.assertFalse(bdm_destroy.called)
 
     def test_detach_volume_evacuate(self):
         """For evacuate, terminate_connection is called with original host."""
+        # TODO(lyarwood): Move into ../virt/test_block_device.py
         expected_connector = {'host': 'evacuated-host'}
         conn_info_str = '{"connector": {"host": "evacuated-host"}}'
         self._test_detach_volume_evacuate(conn_info_str,
@@ -2497,6 +2507,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         case because nova does not have the info to get the connector for the
         original (evacuated) host.
         """
+        # TODO(lyarwood): Move into ../virt/test_block_device.py
         conn_info_str = '{"foo": "bar"}'  # Has no 'connector'.
         self._test_detach_volume_evacuate(conn_info_str)
 
@@ -2506,6 +2517,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         For evacuate, if the stashed connector also has the wrong host,
         then log it and stay with the local connector.
         """
+        # TODO(lyarwood): Move into ../virt/test_block_device.py
         conn_info_str = '{"connector": {"host": "other-host"}}'
         self._test_detach_volume_evacuate(conn_info_str)
 
@@ -2521,37 +2533,45 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                          terminate call (optional). Default is to expect the
                          local connector to be used.
         """
+        # TODO(lyarwood): Move into ../virt/test_block_device.py
         volume_id = 'vol_id'
         instance = fake_instance.fake_instance_obj(self.context,
                                                    host='evacuated-host')
-        bdm = mock.Mock()
+        fake_bdm = fake_block_device.FakeDbBlockDeviceDict(
+        {'source_type': 'volume', 'destination_type': 'volume',
+         'volume_id': volume_id, 'device_name': '/dev/vdb',
+         'connection_info': '{"test": "test"}'})
+        bdm = objects.BlockDeviceMapping(context=self.context, **fake_bdm)
         bdm.connection_info = conn_info_str
         bdm_get.return_value = bdm
 
         local_connector = {'host': 'local-connector-host'}
         expected_connector = local_connector if not expected else expected
 
-        with mock.patch.object(self.compute, 'volume_api') as volume_api:
-            with mock.patch.object(self.compute, 'driver') as driver:
-                driver.get_volume_connector.return_value = local_connector
+        with test.nested(
+            mock.patch.object(self.compute, 'volume_api'),
+            mock.patch.object(self.compute, 'driver'),
+            mock.patch.object(driver_bdm_volume, 'driver_detach'),
+        ) as (volume_api, driver, driver_detach):
+            driver.get_volume_connector.return_value = local_connector
 
-                self.compute._detach_volume(self.context,
-                                            volume_id,
-                                            instance,
-                                            destroy_bdm=False)
+            self.compute._detach_volume(self.context,
+                                        volume_id,
+                                        instance,
+                                        destroy_bdm=False)
 
-                driver._driver_detach_volume.assert_not_called()
-                driver.get_volume_connector.assert_called_once_with(instance)
-                volume_api.terminate_connection.assert_called_once_with(
-                    self.context, volume_id, expected_connector)
-                volume_api.detach.assert_called_once_with(mock.ANY,
-                                                          volume_id,
-                                                          instance.uuid,
-                                                          None)
-                notify_inst_usage.assert_called_once_with(
-                    self.context, instance, "volume.detach",
-                    extra_usage_info={'volume_id': volume_id}
-                )
+            driver_detach.assert_not_called()
+            driver.get_volume_connector.assert_called_once_with(instance)
+            volume_api.terminate_connection.assert_called_once_with(
+                self.context, volume_id, expected_connector)
+            volume_api.detach.assert_called_once_with(mock.ANY,
+                                                      volume_id,
+                                                      instance.uuid,
+                                                      None)
+            notify_inst_usage.assert_called_once_with(
+                self.context, instance, "volume.detach",
+                extra_usage_info={'volume_id': volume_id}
+            )
 
     def _test_rescue(self, clean_shutdown=True):
         instance = fake_instance.fake_instance_obj(
