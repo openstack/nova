@@ -106,7 +106,7 @@ class HostState(object):
     previously used and lock down access.
     """
 
-    def __init__(self, host, node):
+    def __init__(self, host, node, cell_uuid):
         self.host = host
         self.nodename = node
         self._lock_name = (host, node)
@@ -151,6 +151,9 @@ class HostState(object):
         self.ram_allocation_ratio = None
         self.cpu_allocation_ratio = None
         self.disk_allocation_ratio = None
+
+        # Host cell (v2) membership
+        self.cell_uuid = cell_uuid
 
         self.updated = None
 
@@ -330,8 +333,8 @@ class HostManager(object):
     """Base HostManager class."""
 
     # Can be overridden in a subclass
-    def host_state_cls(self, host, node, **kwargs):
-        return HostState(host, node)
+    def host_state_cls(self, host, node, cell, **kwargs):
+        return HostState(host, node, cell)
 
     def __init__(self):
         self.host_state_map = {}
@@ -543,7 +546,7 @@ class HostManager(object):
         force_nodes = spec_obj.force_nodes or []
         requested_node = spec_obj.requested_destination
 
-        if requested_node is not None:
+        if requested_node is not None and 'host' in requested_node:
             # NOTE(sbauza): Reduce a potentially long set of hosts as much as
             # possible to any requested destination nodes before passing the
             # list to the filters
@@ -577,24 +580,21 @@ class HostManager(object):
         return self.weight_handler.get_weighed_objects(self.weighers,
                 hosts, spec_obj)
 
-    def _get_computes_all_cells(self, context, compute_uuids=None):
-        if not self.cells:
-            # NOTE(danms): global list of cells cached forever right now
-            self.cells = objects.CellMappingList.get_all(context)
-            LOG.debug('Found %(count)i cells: %(cells)s',
-                      {'count': len(self.cells),
-                       'cells': ', '.join([c.uuid for c in self.cells])})
-        compute_nodes = []
+    def _get_computes_for_cells(self, context, cells, compute_uuids=None):
+        """Returns: a cell-uuid keyed dict of compute node lists."""
+
+        compute_nodes = collections.defaultdict(list)
         services = {}
-        for cell in self.cells:
+        for cell in cells:
             LOG.debug('Getting compute nodes and services for cell %(cell)s',
                       {'cell': cell.identity})
             with context_module.target_cell(context, cell):
                 if compute_uuids is None:
-                    compute_nodes.extend(objects.ComputeNodeList.get_all(
-                        context))
+                    compute_nodes[cell.uuid].extend(
+                        objects.ComputeNodeList.get_all(
+                            context))
                 else:
-                    compute_nodes.extend(
+                    compute_nodes[cell.uuid].extend(
                         objects.ComputeNodeList.get_all_by_uuids(
                             context, compute_uuids))
                 services.update(
@@ -604,9 +604,31 @@ class HostManager(object):
                              include_disabled=True)})
         return compute_nodes, services
 
-    def get_host_states_by_uuids(self, context, compute_uuids):
-        compute_nodes, services = self._get_computes_all_cells(context,
-                                                               compute_uuids)
+    def _load_cells(self, context):
+        if not self.cells:
+            # NOTE(danms): global list of cells cached forever right now
+            self.cells = objects.CellMappingList.get_all(context)
+            LOG.debug('Found %(count)i cells: %(cells)s',
+                      {'count': len(self.cells),
+                       'cells': ', '.join([c.uuid for c in self.cells])})
+
+    def get_host_states_by_uuids(self, context, compute_uuids, spec_obj):
+
+        self._load_cells(context)
+        if (spec_obj and 'requested_destination' in spec_obj and
+                spec_obj.requested_destination and
+                'cell' in spec_obj.requested_destination):
+            only_cell = spec_obj.requested_destination.cell
+        else:
+            only_cell = None
+
+        if only_cell:
+            cells = [only_cell]
+        else:
+            cells = self.cells
+
+        compute_nodes, services = self._get_computes_for_cells(
+            context, cells, compute_uuids=compute_uuids)
         return self._get_host_states(context, compute_nodes, services)
 
     def get_all_host_states(self, context):
@@ -614,7 +636,9 @@ class HostManager(object):
         the HostManager knows about. Also, each of the consumable resources
         in HostState are pre-populated and adjusted based on data in the db.
         """
-        compute_nodes, services = self._get_computes_all_cells(context)
+        self._load_cells(context)
+        compute_nodes, services = self._get_computes_for_cells(context,
+                                                               self.cells)
         return self._get_host_states(context, compute_nodes, services)
 
     def _get_host_states(self, context, compute_nodes, services):
@@ -624,30 +648,34 @@ class HostManager(object):
         """
         # Get resource usage across the available compute nodes:
         seen_nodes = set()
-        for compute in compute_nodes:
-            service = services.get(compute.host)
+        for cell_uuid, computes in compute_nodes.items():
+            for compute in computes:
+                service = services.get(compute.host)
 
-            if not service:
-                LOG.warning(_LW(
-                    "No compute service record found for host %(host)s"),
-                    {'host': compute.host})
-                continue
-            host = compute.host
-            node = compute.hypervisor_hostname
-            state_key = (host, node)
-            host_state = self.host_state_map.get(state_key)
-            if not host_state:
-                host_state = self.host_state_cls(host, node, compute=compute)
-                self.host_state_map[state_key] = host_state
-            # We force to update the aggregates info each time a new request
-            # comes in, because some changes on the aggregates could have been
-            # happening after setting this field for the first time
-            host_state.update(compute,
-                              dict(service),
-                              self._get_aggregates_info(host),
-                              self._get_instance_info(context, compute))
+                if not service:
+                    LOG.warning(_LW(
+                        "No compute service record found for host %(host)s"),
+                        {'host': compute.host})
+                    continue
+                host = compute.host
+                node = compute.hypervisor_hostname
+                state_key = (host, node)
+                host_state = self.host_state_map.get(state_key)
+                if not host_state:
+                    host_state = self.host_state_cls(host, node,
+                                                     cell_uuid,
+                                                     compute=compute)
+                    self.host_state_map[state_key] = host_state
+                # We force to update the aggregates info each time a
+                # new request comes in, because some changes on the
+                # aggregates could have been happening after setting
+                # this field for the first time
+                host_state.update(compute,
+                                  dict(service),
+                                  self._get_aggregates_info(host),
+                                  self._get_instance_info(context, compute))
 
-            seen_nodes.add(state_key)
+                seen_nodes.add(state_key)
 
         # remove compute nodes from host_state_map if they are not active
         dead_nodes = set(self.host_state_map.keys()) - seen_nodes

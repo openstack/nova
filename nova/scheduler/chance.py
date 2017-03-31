@@ -60,6 +60,8 @@ class ChanceScheduler(driver.Scheduler):
         num_instances = spec_obj.num_instances
         # NOTE(timello): Returns a list of dicts with 'host', 'nodename' and
         # 'limits' as keys for compatibility with filter_scheduler.
+        # TODO(danms): This needs to be extended to support multiple cells
+        # and limiting the destination scope to a single requested cell
         dests = []
         for i in range(num_instances):
             host = self._schedule(context, CONF.compute_topic, spec_obj)

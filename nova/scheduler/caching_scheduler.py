@@ -13,6 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
+import itertools
+
 from nova.scheduler import filter_scheduler
 
 
@@ -70,8 +73,27 @@ class CachingScheduler(filter_scheduler.FilterScheduler):
             # Rather than raise an error, we fetch the list of hosts.
             self.all_host_states = self._get_up_hosts(context)
 
-        return self.all_host_states
+        if (spec_obj and 'requested_destination' in spec_obj and
+                spec_obj.requested_destination and
+                'cell' in spec_obj.requested_destination):
+            only_cell = spec_obj.requested_destination.cell
+        else:
+            only_cell = None
+
+        if only_cell:
+            return self.all_host_states.get(only_cell.uuid, [])
+        else:
+            return itertools.chain.from_iterable(
+                self.all_host_states.values())
 
     def _get_up_hosts(self, context):
         all_hosts_iterator = self.host_manager.get_all_host_states(context)
-        return list(all_hosts_iterator)
+        # NOTE(danms): This could be more efficient if host_manager returned
+        # a dict for us. However, it flattens the information for the more
+        # mainline FilterScheduler. Since CachingScheduler goes away soonish,
+        # and since we were already iterating the full host list on every
+        # refresh, just build the dict here for now.
+        hosts_by_cell = collections.defaultdict(list)
+        for host in all_hosts_iterator:
+            hosts_by_cell[host.cell_uuid].append(host)
+        return hosts_by_cell

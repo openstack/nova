@@ -22,6 +22,7 @@ from nova import objects
 from nova.scheduler import caching_scheduler
 from nova.scheduler import host_manager
 from nova.tests.unit.scheduler import test_scheduler
+from nova.tests import uuidsentinel as uuids
 
 ENABLE_PROFILER = False
 
@@ -46,37 +47,40 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
     @mock.patch.object(caching_scheduler.CachingScheduler,
                        "_get_up_hosts")
     def test_get_all_host_states_returns_cached_value(self, mock_up_hosts):
-        self.driver.all_host_states = []
+        self.driver.all_host_states = {uuids.cell: []}
 
         self.driver._get_all_host_states(self.context, None)
 
         self.assertFalse(mock_up_hosts.called)
-        self.assertEqual([], self.driver.all_host_states)
+        self.assertEqual({uuids.cell: []}, self.driver.all_host_states)
 
     @mock.patch.object(caching_scheduler.CachingScheduler,
                        "_get_up_hosts")
     def test_get_all_host_states_loads_hosts(self, mock_up_hosts):
-        mock_up_hosts.return_value = ["asdf"]
+        host_state = self._get_fake_host_state()
+        mock_up_hosts.return_value = {uuids.cell: [host_state]}
 
         result = self.driver._get_all_host_states(self.context, None)
 
         self.assertTrue(mock_up_hosts.called)
-        self.assertEqual(["asdf"], self.driver.all_host_states)
-        self.assertEqual(["asdf"], result)
+        self.assertEqual({uuids.cell: [host_state]},
+                         self.driver.all_host_states)
+        self.assertEqual([host_state], list(result))
 
     def test_get_up_hosts(self):
         with mock.patch.object(self.driver.host_manager,
                                "get_all_host_states") as mock_get_hosts:
-            mock_get_hosts.return_value = ["asdf"]
+            host_state = self._get_fake_host_state()
+            mock_get_hosts.return_value = [host_state]
 
             result = self.driver._get_up_hosts(self.context)
 
             self.assertTrue(mock_get_hosts.called)
-            self.assertEqual(mock_get_hosts.return_value, result)
+            self.assertEqual({uuids.cell: [host_state]}, result)
 
     def test_select_destination_raises_with_no_hosts(self):
         spec_obj = self._get_fake_request_spec()
-        self.driver.all_host_states = []
+        self.driver.all_host_states = {uuids.cell: []}
 
         self.assertRaises(exception.NoValidHost,
                 self.driver.select_destinations,
@@ -88,7 +92,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
     def test_select_destination_works(self, mock_get_extra):
         spec_obj = self._get_fake_request_spec()
         fake_host = self._get_fake_host_state()
-        self.driver.all_host_states = [fake_host]
+        self.driver.all_host_states = {uuids.cell: [fake_host]}
 
         result = self._test_select_destinations(spec_obj)
 
@@ -134,7 +138,8 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
     def _get_fake_host_state(self, index=0):
         host_state = host_manager.HostState(
             'host_%s' % index,
-            'node_%s' % index)
+            'node_%s' % index,
+            uuids.cell)
         host_state.free_ram_mb = 50000
         host_state.total_usable_ram_mb = 50000
         host_state.free_disk_mb = 4096
@@ -164,7 +169,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
         for x in range(hosts):
             host_state = self._get_fake_host_state(x)
             host_states.append(host_state)
-        self.driver.all_host_states = host_states
+        self.driver.all_host_states = {uuids.cell: host_states}
 
         def run_test():
             a = timeutils.utcnow()
@@ -203,6 +208,22 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # This has proved to be around 1 ms on a random dev box
         # But this is here so you can do simply performance testing easily.
         self.assertLess(per_request_ms, 1000)
+
+    def test_request_single_cell(self):
+        spec_obj = self._get_fake_request_spec()
+        spec_obj.requested_destination = objects.Destination(
+            cell=objects.CellMapping(uuid=uuids.cell2))
+        host_states_cell1 = [self._get_fake_host_state(i)
+                             for i in range(1, 5)]
+        host_states_cell2 = [self._get_fake_host_state(i)
+                             for i in range(5, 10)]
+
+        self.driver.all_host_states = {
+            uuids.cell1: host_states_cell1,
+            uuids.cell2: host_states_cell2,
+        }
+        d = self.driver.select_destinations(self.context, spec_obj)
+        self.assertIn(d[0]['host'], [hs.host for hs in host_states_cell2])
 
 
 if __name__ == '__main__':

@@ -97,13 +97,13 @@ class IronicHostManager(host_manager.HostManager):
             return CONF.filter_scheduler.baremetal_enabled_filters
         return super(IronicHostManager, self)._load_filters()
 
-    def host_state_cls(self, host, node, **kwargs):
+    def host_state_cls(self, host, node, cell, **kwargs):
         """Factory function/property to create a new HostState."""
         compute = kwargs.get('compute')
         if compute and self._is_ironic_compute(compute):
-            return IronicNodeState(host, node)
+            return IronicNodeState(host, node, cell)
         else:
-            return host_manager.HostState(host, node)
+            return host_manager.HostState(host, node, cell)
 
     def _init_instance_info(self, compute_nodes=None):
         """Ironic hosts should not pass instance info."""
