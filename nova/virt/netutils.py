@@ -248,10 +248,10 @@ def _get_eth_link(vif, ifc_num):
         link_id = 'interface%d' % ifc_num
 
     # Use 'phy' for physical links. Ethernet can be confusing
-    if vif.get('type') == 'ethernet':
-        nic_type = 'phy'
-    else:
+    if vif.get('type') in model.LEGACY_EXPOSED_VIF_TYPES:
         nic_type = vif.get('type')
+    else:
+        nic_type = 'phy'
 
     link = {
         'id': link_id,
