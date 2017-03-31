@@ -284,8 +284,6 @@ class _SchemaValidator(object):
                 else:
                     detail = _("Invalid input for query parameters %(path)s. "
                                "Value: %(value)s. %(message)s")
-                # NOTE: For whole OpenStack message consistency, this error
-                #       message has been written as the similar format of WSME.
                 detail = detail % {
                     'path': ex.path.pop(), 'value': ex.instance,
                     'message': ex.message
