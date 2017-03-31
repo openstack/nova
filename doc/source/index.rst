@@ -127,6 +127,7 @@ community, while keeping users happy and keeping developers productive.
    process
    blueprints
    policies
+   code-review
 
 Architecture Concepts
 ----------------------
@@ -177,7 +178,6 @@ these are a great place to start reading up on the current plans.
    api_microversion_dev
    policy_enforcement
    stable_api
-   code-review
    scheduler_evolution
 
 Advanced testing and guides
