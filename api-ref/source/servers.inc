@@ -534,7 +534,7 @@ Response
   - server: server
   - addresses: addresses
   - created: created
-  - flavor: flavor
+  - flavor: flavor_server
   - hostId: hostId
   - id: server_id
   - image: image
@@ -620,7 +620,7 @@ Response
   - server: server
   - addresses: addresses
   - created: created
-  - flavor: flavor
+  - flavor: flavor_server
   - hostId: hostId
   - id: server_id
   - image: image
@@ -716,7 +716,7 @@ Response
   - server: server
   - addresses: addresses
   - created: created
-  - flavor: flavor
+  - flavor: flavor_server
   - hostId: hostId
   - id: server_id
   - image: image
