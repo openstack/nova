@@ -69,6 +69,9 @@ class FakeNotifier(object):
                           payload, ctxt)
         NOTIFICATIONS.append(msg)
 
+    def is_enabled(self):
+        return True
+
 
 class FakeVersionedNotifier(FakeNotifier):
     def _notify(self, priority, ctxt, event_type, payload):

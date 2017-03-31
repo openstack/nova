@@ -35,6 +35,7 @@ class RPCResetFixture(fixtures.Fixture):
         self.noti = copy.copy(rpc.NOTIFIER)
         self.all_mods = copy.copy(rpc.ALLOWED_EXMODS)
         self.ext_mods = copy.copy(rpc.EXTRA_EXMODS)
+        self.conf = copy.copy(rpc.CONF)
         self.addCleanup(self._reset_everything)
 
     def _reset_everything(self):
@@ -43,6 +44,7 @@ class RPCResetFixture(fixtures.Fixture):
         rpc.NOTIFIER = self.noti
         rpc.ALLOWED_EXMODS = self.all_mods
         rpc.EXTRA_EXMODS = self.ext_mods
+        rpc.CONF = self.conf
 
 
 # We can't import nova.test.TestCase because that sets up an RPCFixture
@@ -525,3 +527,26 @@ class TestClientRouter(test.NoDBTestCase):
 
         self.assertEqual(router.default_client, client)
         self.assertFalse(mock_rpcclient.called)
+
+
+class TestIsNotificationsEnabledDecorator(test.NoDBTestCase):
+
+    def setUp(self):
+        super(TestIsNotificationsEnabledDecorator, self).setUp()
+        self.f = mock.Mock()
+        self.f.__name__ = 'f'
+        self.decorated = rpc.if_notifications_enabled(self.f)
+
+    def test_call_func_if_needed(self):
+        self.decorated()
+        self.f.assert_called_once_with()
+
+    @mock.patch('nova.rpc.NOTIFIER.is_enabled', return_value=False)
+    def test_not_call_func_if_notifier_disabled(self, mock_is_enabled):
+        self.decorated()
+        self.assertEqual(0, len(self.f.mock_calls))
+
+    def test_not_call_func_if_only_unversioned_notifications_requested(self):
+        self.flags(notification_format='unversioned', group='notifications')
+        self.decorated()
+        self.assertEqual(0, len(self.f.mock_calls))

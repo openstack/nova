@@ -93,6 +93,7 @@ class NotificationPayloadBase(NotificationObject):
         super(NotificationPayloadBase, self).__init__(**kwargs)
         self.populated = not self.SCHEMA
 
+    @rpc.if_notifications_enabled
     def populate_schema(self, **kwargs):
         """Populate the object based on the SCHEMA and the source objects
 
@@ -163,6 +164,7 @@ class NotificationBase(NotificationObject):
         notify = getattr(notifier, self.priority)
         notify(context, event_type=event_type, payload=payload)
 
+    @rpc.if_notifications_enabled
     def emit(self, context):
         """Send the notification."""
         assert self.payload.populated
