@@ -3234,18 +3234,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertIsInstance(cfg.devices[2],
                               vconfig.LibvirtConfigGuestConsole)
 
-    def test_has_uefi_support_with_invalid_version(self):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        with mock.patch.object(drvr._host,
-                               'has_min_version', return_value=False):
-            self.assertFalse(drvr._has_uefi_support())
-
     def test_has_uefi_support_not_supported_arch(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        caps = vconfig.LibvirtConfigCaps()
-        caps.host = vconfig.LibvirtConfigCapsHost()
-        caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = "alpha"
+        self._stub_host_capabilities_cpu_arch(fields.Architecture.ALPHA)
         self.assertFalse(drvr._has_uefi_support())
 
     @mock.patch('os.path.exists', return_value=False)
@@ -3257,10 +3248,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_has_uefi_support(self, mock_has_version):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
-        caps = vconfig.LibvirtConfigCaps()
-        caps.host = vconfig.LibvirtConfigCapsHost()
-        caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = fields.Architecture.X86_64
+        self._stub_host_capabilities_cpu_arch(fields.Architecture.X86_64)
 
         with mock.patch.object(drvr._host,
                                'has_min_version', return_value=True):
