@@ -5005,10 +5005,27 @@ volume_type_optional:
   in: body
   required: false
   type: string
+# This is the volumeAttachment in a response body.
 volumeAttachment:
   description: |
-    A dictionary representation of a volume attachment containing the fields,
-    ``device``, ``id``, ``serverId``, ``volumeId``.
+    A dictionary representation of a volume attachment containing the fields
+    ``device``, ``id``, ``serverId`` and ``volumeId``.
+  in: body
+  required: true
+  type: object
+# This is the volumeAttachment in a POST (attach volume) request body.
+volumeAttachment_post:
+  description: |
+    A dictionary representation of a volume attachment containing the fields
+    ``device`` and ``volumeId``.
+  in: body
+  required: true
+  type: object
+# This is the volumeAttachment in a PUT (swap volume) request body.
+volumeAttachment_put:
+  description: |
+    A dictionary representation of a volume attachment containing the field
+    ``volumeId``.
   in: body
   required: true
   type: object

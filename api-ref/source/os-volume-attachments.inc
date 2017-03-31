@@ -64,7 +64,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - server_id: server_id_path
-  - volumeAttachment: volumeAttachment
+  - volumeAttachment: volumeAttachment_post
   - volumeId: volumeId
   - device: device
 
@@ -142,7 +142,7 @@ Request
 
   - server_id: server_id_path
   - attachment_id: attachment_id
-  - volumeAttachment: volumeAttachment
+  - volumeAttachment: volumeAttachment_put
   - volumeId: volumeId_swap
 
 **Example Update a volume attachment: JSON request**
