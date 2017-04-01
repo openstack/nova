@@ -12,7 +12,7 @@ lxml!=3.7.0,>=2.3 # BSD
 Routes!=2.0,!=2.1,!=2.3.0,>=1.12.3;python_version=='2.7' # MIT
 Routes!=2.0,!=2.3.0,>=1.12.3;python_version!='2.7' # MIT
 cryptography>=1.6 # BSD/Apache-2.0
-WebOb>=1.6.0 # MIT
+WebOb>=1.7.1 # MIT
 greenlet>=0.3.2 # MIT
 PasteDeploy>=1.5.0 # MIT
 Paste # MIT
