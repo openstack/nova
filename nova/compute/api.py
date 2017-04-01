@@ -1723,8 +1723,6 @@ class API(base.Base):
                                                instance.task_state,
                                                project_id, user_id)
             try:
-                quotas.commit()
-
                 # NOTE(alaski): Though the conductor halts the build process it
                 # does not currently delete the instance record. This is
                 # because in the near future the instance record will not be
@@ -1745,6 +1743,7 @@ class API(base.Base):
                                 instance.destroy()
                     else:
                         instance.destroy()
+                    quotas.commit()
             except exception.InstanceNotFound:
                 quotas.rollback()
 
@@ -1805,17 +1804,17 @@ class API(base.Base):
                                                        instance.task_state,
                                                        project_id, user_id,
                                                        flavor=quota_flavor)
-                    quotas.commit()
                     try:
                         with nova_context.target_cell(context, cell):
                             with compute_utils.notify_about_instance_delete(
                                     self.notifier, context, instance):
                                 instance.destroy()
-                            return
+                        # Now commit the quota reservation to decrement usage.
+                        quotas.commit()
                     except exception.InstanceNotFound:
                         quotas.rollback()
-                        # Instance is already deleted.
-                        return
+                    # The instance was deleted or is already gone.
+                    return
                 if not instance:
                     # Instance is already deleted.
                     return
