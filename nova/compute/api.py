@@ -1781,8 +1781,6 @@ class API(base.Base):
                                                instance.task_state,
                                                project_id, user_id)
             try:
-                quotas.commit()
-
                 # NOTE(alaski): Though the conductor halts the build process it
                 # does not currently delete the instance record. This is
                 # because in the near future the instance record will not be
@@ -1793,7 +1791,8 @@ class API(base.Base):
                 # Look up the instance because the current instance object was
                 # stashed on the buildrequest and therefore not complete enough
                 # to run .destroy().
-                cell, instance = self._lookup_instance(context, instance.uuid)
+                instance_uuid = instance.uuid
+                cell, instance = self._lookup_instance(context, instance_uuid)
                 if instance is not None:
                     # If instance is None it has already been deleted.
                     if cell:
@@ -1803,6 +1802,11 @@ class API(base.Base):
                                 instance.destroy()
                     else:
                         instance.destroy()
+                    quotas.commit()
+                else:
+                    # The instance is already deleted so rollback the quota
+                    # usage decrement reservation in the not found block below.
+                    raise exception.InstanceNotFound(instance_id=instance_uuid)
             except exception.InstanceNotFound:
                 quotas.rollback()
 
@@ -1875,7 +1879,6 @@ class API(base.Base):
                         quotas = self._create_reservations(
                             context, instance, instance.task_state,
                             project_id, user_id, flavor=quota_flavor)
-                        quotas.commit()
 
                     try:
                         # Now destroy the instance from the cell it lives in.
@@ -1885,12 +1888,14 @@ class API(base.Base):
                             with compute_utils.notify_about_instance_delete(
                                     self.notifier, context, instance):
                                 instance.destroy()
-                            return
+                        # Now commit the quota reservation to decrement usage.
+                        with nova_context.target_cell(context, None):
+                            quotas.commit()
                     except exception.InstanceNotFound:
                         with nova_context.target_cell(context, None):
                             quotas.rollback()
-                            # Instance is already deleted.
-                            return
+                    # The instance was deleted or is already gone.
+                    return
                 if not instance:
                     # Instance is already deleted.
                     return

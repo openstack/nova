@@ -62,9 +62,7 @@ class TestDeleteFromCell0CheckQuotaRollback(
                          current_usage['absolute']['totalInstancesUsed'])
 
         # Now we stub out instance.destroy to fail with InstanceNotFound
-        # which triggers the quotas.rollback call, which until the bug is
-        # fixed actually does nothing because we have already committed the
-        # reservation before we actually tried to destroy the instance.
+        # which triggers the quotas.rollback call.
         original_instance_destroy = objects.Instance.destroy
 
         def fake_instance_destroy(*args, **kwargs):
@@ -79,8 +77,7 @@ class TestDeleteFromCell0CheckQuotaRollback(
         self.stub_out('nova.objects.instance.Instance.destroy',
                       original_instance_destroy)
 
-        # Now check the quota again. Until the bug is fixed, quota usage will
-        # have been decremented even though we failed to delete the instance.
+        # Now check the quota again. We should be back to the pre-delete usage.
         ending_usage = self.api.get_limits()
-        self.assertEqual(current_usage['absolute']['totalInstancesUsed'] - 1,
+        self.assertEqual(current_usage['absolute']['totalInstancesUsed'],
                          ending_usage['absolute']['totalInstancesUsed'])
