@@ -17730,9 +17730,6 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                                          'merge_target_file':
                                              'some_other_file'}
 
-    def tearDown(self):
-        super(LibvirtVolumeSnapshotTestCase, self).tearDown()
-
     @mock.patch('nova.virt.block_device.DriverVolumeBlockDevice.'
                 'refresh_connection_info')
     @mock.patch('nova.objects.block_device.BlockDeviceMapping.'
