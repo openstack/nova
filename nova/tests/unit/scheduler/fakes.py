@@ -123,19 +123,19 @@ COMPUTE_NODES = [
 ]
 
 RESOURCE_PROVIDERS = [
-    objects.ResourceProvider(
+    dict(
         uuid=uuidsentinel.rp1,
         name='host1',
         generation=1),
-    objects.ResourceProvider(
+    dict(
         uuid=uuidsentinel.rp2,
         name='host2',
         generation=1),
-    objects.ResourceProvider(
+    dict(
         uuid=uuidsentinel.rp3,
         name='host3',
         generation=1),
-    objects.ResourceProvider(
+    dict(
         uuid=uuidsentinel.rp4,
         name='host4',
         generation=1),

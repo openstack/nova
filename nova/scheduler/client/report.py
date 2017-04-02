@@ -265,12 +265,7 @@ class SchedulerReportClient(object):
                         version='1.4')
         if resp.status_code == 200:
             data = resp.json()
-            raw_rps = data.get('resource_providers', [])
-            rps = [objects.ResourceProvider(uuid=rp['uuid'],
-                                            name=rp['name'],
-                                            generation=rp['generation'],
-                                            ) for rp in raw_rps]
-            return objects.ResourceProviderList(objects=rps)
+            return data.get('resource_providers', [])
         else:
             msg = _LE("Failed to retrieve filtered list of resource providers "
                       "from placement API for filters %(filters)s. "
@@ -324,7 +319,7 @@ class SchedulerReportClient(object):
         """Queries the placement API for a resource provider record with the
         supplied UUID.
 
-        Returns an `objects.ResourceProvider` object if found or None if no
+        Returns a dict of resource provider information if found or None if no
         such resource provider could be found.
 
         :param uuid: UUID identifier for the resource provider to look up
@@ -332,11 +327,7 @@ class SchedulerReportClient(object):
         resp = self.get("/resource_providers/%s" % uuid)
         if resp.status_code == 200:
             data = resp.json()
-            return objects.ResourceProvider(
-                    uuid=uuid,
-                    name=data['name'],
-                    generation=data['generation'],
-            )
+            return data
         elif resp.status_code == 404:
             return None
         else:
@@ -356,8 +347,8 @@ class SchedulerReportClient(object):
     def _create_resource_provider(self, uuid, name):
         """Calls the placement API to create a new resource provider record.
 
-        Returns an `objects.ResourceProvider` object representing the
-        newly-created resource provider object.
+        Returns a dict of resource provider information object representing
+        the newly-created resource provider.
 
         :param uuid: UUID of the new resource provider
         :param name: Name of the resource provider
@@ -379,7 +370,7 @@ class SchedulerReportClient(object):
                 'placement_req_id': placement_req_id,
             }
             LOG.info(msg, args)
-            return objects.ResourceProvider(
+            return dict(
                     uuid=uuid,
                     name=name,
                     generation=0,
@@ -473,12 +464,12 @@ class SchedulerReportClient(object):
         server_gen = curr.get('resource_provider_generation')
         if server_gen:
             my_rp = self._resource_providers[rp_uuid]
-            if server_gen != my_rp.generation:
+            if server_gen != my_rp['generation']:
                 LOG.debug('Updating our resource provider generation '
                           'from %(old)i to %(new)i',
-                          {'old': my_rp.generation,
+                          {'old': my_rp['generation'],
                            'new': server_gen})
-            my_rp.generation = server_gen
+            my_rp['generation'] = server_gen
         return curr
 
     def _update_inventory_attempt(self, rp_uuid, inv_data):
@@ -495,7 +486,7 @@ class SchedulerReportClient(object):
         if inv_data == curr.get('inventories', {}):
             return True
 
-        cur_rp_gen = self._resource_providers[rp_uuid].generation
+        cur_rp_gen = self._resource_providers[rp_uuid]['generation']
         payload = {
             'resource_provider_generation': cur_rp_gen,
             'inventories': inv_data,
@@ -586,7 +577,7 @@ class SchedulerReportClient(object):
         updated_inventories_result = result.json()
         new_gen = updated_inventories_result['resource_provider_generation']
 
-        self._resource_providers[rp_uuid].generation = new_gen
+        self._resource_providers[rp_uuid]['generation'] = new_gen
         LOG.debug('Updated inventory for %s at generation %i',
                   rp_uuid, new_gen)
         return True
@@ -626,7 +617,7 @@ class SchedulerReportClient(object):
         LOG.info(msg, rp_uuid)
 
         url = '/resource_providers/%s/inventories' % rp_uuid
-        cur_rp_gen = self._resource_providers[rp_uuid].generation
+        cur_rp_gen = self._resource_providers[rp_uuid]['generation']
         payload = {
             'resource_provider_generation': cur_rp_gen,
             'inventories': {},
@@ -638,7 +629,7 @@ class SchedulerReportClient(object):
             updated_inv = r.json()
             new_gen = updated_inv['resource_provider_generation']
 
-            self._resource_providers[rp_uuid].generation = new_gen
+            self._resource_providers[rp_uuid]['generation'] = new_gen
             msg_args = {
                 'rp_uuid': rp_uuid,
                 'generation': new_gen,

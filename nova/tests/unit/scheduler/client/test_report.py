@@ -19,7 +19,6 @@ import nova.conf
 from nova import context
 from nova import exception
 from nova import objects
-from nova.objects import base as obj_base
 from nova.scheduler.client import report
 from nova import test
 from nova.tests import uuidsentinel as uuids
@@ -313,7 +312,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
 
         result = self.client.get_filtered_resource_providers(filters)
 
-        expected_provider = objects.ResourceProvider(
+        expected_provider_dict = dict(
                 uuid=uuid,
                 name=uuid,
                 generation=42,
@@ -323,8 +322,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.ks_sess_mock.get.assert_called_once_with(
             expected_url, endpoint_filter=mock.ANY, raise_exc=False,
             headers={'OpenStack-API-Version': 'placement 1.4'})
-        self.assertTrue(obj_base.obj_equal_prims(expected_provider,
-                                                 result[0]))
+        self.assertEqual(expected_provider_dict, result[0])
 
     def test_get_filtered_resource_providers_not_found(self):
         # Ensure _get_resource_provider() just returns None when the placement
@@ -341,8 +339,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.assertIsNone(result)
 
     def test_get_resource_provider_found(self):
-        # Ensure _get_resource_provider() returns a ResourceProvider object if
-        # it finds a resource provider record from the placement API
+        # Ensure _get_resource_provider() returns a dict of resource provider
+        # if it finds a resource provider record from the placement API
         uuid = uuids.compute_node
         resp_mock = mock.Mock(status_code=200)
         json_data = {
@@ -355,7 +353,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
 
         result = self.client._get_resource_provider(uuid)
 
-        expected_provider = objects.ResourceProvider(
+        expected_provider_dict = dict(
                 uuid=uuid,
                 name=uuid,
                 generation=42,
@@ -364,8 +362,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.ks_sess_mock.get.assert_called_once_with(expected_url,
                                                       endpoint_filter=mock.ANY,
                                                       raise_exc=False)
-        self.assertTrue(obj_base.obj_equal_prims(expected_provider,
-                                                 result))
+        self.assertEqual(expected_provider_dict, result)
 
     def test_get_resource_provider_not_found(self):
         # Ensure _get_resource_provider() just returns None when the placement
@@ -408,8 +405,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.assertIsNone(result)
 
     def test_create_resource_provider(self):
-        # Ensure _create_resource_provider() returns a ResourceProvider object
-        # constructed after creating a resource provider record in the
+        # Ensure _create_resource_provider() returns a dict of resource
+        # provider constructed after creating a resource provider record in the
         # placement API
         uuid = uuids.compute_node
         name = 'computehost'
@@ -422,7 +419,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             'uuid': uuid,
             'name': name,
         }
-        expected_provider = objects.ResourceProvider(
+        expected_provider_dict = dict(
             uuid=uuid,
             name=name,
             generation=0,
@@ -433,17 +430,16 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                 endpoint_filter=mock.ANY,
                 json=expected_payload,
                 raise_exc=False)
-        self.assertTrue(obj_base.obj_equal_prims(expected_provider,
-                                                 result))
+        self.assertEqual(expected_provider_dict, result)
 
     @mock.patch.object(report.LOG, 'info')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_resource_provider')
     def test_create_resource_provider_concurrent_create(self, get_rp_mock,
                                                         logging_mock):
-        # Ensure _create_resource_provider() returns a ResourceProvider object
-        # gotten from _get_resource_provider() if the call to create the
-        # resource provider in the placement API returned a 409 Conflict,
+        # Ensure _create_resource_provider() returns a dict of resource
+        # provider gotten from _get_resource_provider() if the call to create
+        # the resource provider in the placement API returned a 409 Conflict,
         # indicating another thread concurrently created the resource provider
         # record.
         uuid = uuids.compute_node
@@ -713,8 +709,8 @@ class TestInventory(SchedulerReportClientTestCase):
     def test_delete_inventory_already_no_inventory(self, mock_get, mock_put,
             mock_extract):
         cn = self.compute_node
-        rp = objects.ResourceProvider(uuid=cn.uuid, generation=42)
-        # Make sure the ResourceProvider exists for preventing to call the API
+        rp = dict(uuid=cn.uuid, generation=42)
+        # Make sure the resource provider exists for preventing to call the API
         self.client._resource_providers[cn.uuid] = rp
 
         mock_get.return_value.json.return_value = {
@@ -726,7 +722,7 @@ class TestInventory(SchedulerReportClientTestCase):
         self.assertIsNone(result)
         self.assertFalse(mock_put.called)
         self.assertFalse(mock_extract.called)
-        new_gen = self.client._resource_providers[cn.uuid].generation
+        new_gen = self.client._resource_providers[cn.uuid]['generation']
         self.assertEqual(1, new_gen)
 
     @mock.patch.object(report.LOG, 'info')
@@ -738,8 +734,8 @@ class TestInventory(SchedulerReportClientTestCase):
     def test_delete_inventory(self, mock_get, mock_put, mock_extract,
                               mock_info):
         cn = self.compute_node
-        rp = objects.ResourceProvider(uuid=cn.uuid, generation=42)
-        # Make sure the ResourceProvider exists for preventing to call the API
+        rp = dict(uuid=cn.uuid, generation=42)
+        # Make sure the resource provider exists for preventing to call the API
         self.client._resource_providers[cn.uuid] = rp
 
         mock_get.return_value.json.return_value = {
@@ -761,7 +757,7 @@ class TestInventory(SchedulerReportClientTestCase):
         result = self.client._delete_inventory(cn.uuid)
         self.assertIsNone(result)
         self.assertFalse(mock_extract.called)
-        new_gen = self.client._resource_providers[cn.uuid].generation
+        new_gen = self.client._resource_providers[cn.uuid]['generation']
         self.assertEqual(44, new_gen)
         self.assertTrue(mock_info.called)
         self.assertEqual(uuids.request_id,
@@ -775,8 +771,8 @@ class TestInventory(SchedulerReportClientTestCase):
     def test_delete_inventory_inventory_in_use(self, mock_get, mock_put,
             mock_warn):
         cn = self.compute_node
-        rp = objects.ResourceProvider(uuid=cn.uuid, generation=42)
-        # Make sure the ResourceProvider exists for preventing to call the API
+        rp = dict(uuid=cn.uuid, generation=42)
+        # Make sure the resource provider exists for preventing to call the API
         self.client._resource_providers[cn.uuid] = rp
 
         mock_get.return_value.json.return_value = {
@@ -823,8 +819,8 @@ There was a conflict when trying to complete your request.
     def test_delete_inventory_inventory_error(self, mock_get, mock_put,
             mock_warn, mock_error):
         cn = self.compute_node
-        rp = objects.ResourceProvider(uuid=cn.uuid, generation=42)
-        # Make sure the ResourceProvider exists for preventing to call the API
+        rp = dict(uuid=cn.uuid, generation=42)
+        # Make sure the resource provider exists for preventing to call the API
         self.client._resource_providers[cn.uuid] = rp
 
         mock_get.return_value.json.return_value = {
@@ -862,8 +858,8 @@ There was a conflict when trying to complete your request.
         # after creating or updating the existing values
         uuid = uuids.compute_node
         compute_node = self.compute_node
-        rp = objects.ResourceProvider(uuid=uuid, name='foo', generation=42)
-        # Make sure the ResourceProvider exists for preventing to call the API
+        rp = dict(uuid=uuid, name='foo', generation=42)
+        # Make sure the resource provider exists for preventing to call the API
         self.client._resource_providers[uuid] = rp
 
         mock_get.return_value.json.return_value = {
@@ -893,7 +889,7 @@ There was a conflict when trying to complete your request.
         exp_url = '/resource_providers/%s/inventories' % uuid
         mock_get.assert_called_once_with(exp_url)
         # Updated with the new inventory from the PUT call
-        self.assertEqual(44, rp.generation)
+        self.assertEqual(44, rp['generation'])
         expected = {
             # Called with the newly-found generation from the existing
             # inventory
@@ -934,7 +930,7 @@ There was a conflict when trying to complete your request.
     def test_update_inventory_no_update(self, mock_put, mock_get):
         uuid = uuids.compute_node
         compute_node = self.compute_node
-        rp = objects.ResourceProvider(uuid=uuid, name='foo', generation=42)
+        rp = dict(uuid=uuid, name='foo', generation=42)
         self.client._resource_providers[uuid] = rp
         mock_get.return_value.json.return_value = {
             'resource_provider_generation': 43,
@@ -975,7 +971,7 @@ There was a conflict when trying to complete your request.
         # No update so put should not be called
         self.assertFalse(mock_put.called)
         # Make sure we updated the generation from the inventory records
-        self.assertEqual(43, rp.generation)
+        self.assertEqual(43, rp['generation'])
 
     @mock.patch.object(report.LOG, 'info')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -990,8 +986,8 @@ There was a conflict when trying to complete your request.
         # after creating or updating the existing values
         uuid = uuids.compute_node
         compute_node = self.compute_node
-        rp = objects.ResourceProvider(uuid=uuid, name='foo', generation=42)
-        # Make sure the ResourceProvider exists for preventing to call the API
+        rp = dict(uuid=uuid, name='foo', generation=42)
+        # Make sure the resource provider exists for preventing to call the API
         self.client._resource_providers[uuid] = rp
 
         mock_get.return_value = {}
@@ -1023,8 +1019,8 @@ There was a conflict when trying to complete your request.
         # after creating or updating the existing values
         uuid = uuids.compute_node
         compute_node = self.compute_node
-        rp = objects.ResourceProvider(uuid=uuid, name='foo', generation=42)
-        # Make sure the ResourceProvider exists for preventing to call the API
+        rp = dict(uuid=uuid, name='foo', generation=42)
+        # Make sure the resource provider exists for preventing to call the API
         self.client._resource_providers[uuid] = rp
 
         mock_get.return_value = {}
@@ -1056,8 +1052,8 @@ There was a conflict when trying to complete your request.
         # after creating or updating the existing values
         uuid = uuids.compute_node
         compute_node = self.compute_node
-        rp = objects.ResourceProvider(uuid=uuid, name='foo', generation=42)
-        # Make sure the ResourceProvider exists for preventing to call the API
+        rp = dict(uuid=uuid, name='foo', generation=42)
+        # Make sure the resource provider exists for preventing to call the API
         self.client._resource_providers[uuid] = rp
 
         mock_get.return_value = {}
@@ -1089,8 +1085,8 @@ There was a conflict when trying to complete your request.
         # after creating or updating the existing values
         uuid = uuids.compute_node
         compute_node = self.compute_node
-        rp = objects.ResourceProvider(uuid=uuid, name='foo', generation=42)
-        # Make sure the ResourceProvider exists for preventing to call the API
+        rp = dict(uuid=uuid, name='foo', generation=42)
+        # Make sure the resource provider exists for preventing to call the API
         self.client._resource_providers[uuid] = rp
 
         mock_get.return_value = {}
