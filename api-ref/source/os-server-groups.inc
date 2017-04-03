@@ -38,7 +38,7 @@ Response
   - name: name_server_group
   - policies: policies
   - members: members
-  - metadata: metadata_required
+  - metadata: metadata_object 
   - project_id: project_id_server_group
   - user_id: user_id_server_group
 
@@ -82,7 +82,7 @@ Response
   - name: name_server_group
   - policies: policies
   - members: members
-  - metadata: metadata_required
+  - metadata: metadata_object 
   - project_id: project_id_server_group
   - user_id: user_id_server_group
 
@@ -119,7 +119,7 @@ Response
   - name: name_server_group
   - policies: policies
   - members: members
-  - metadata: metadata_required
+  - metadata: metadata_object 
   - project_id: project_id_server_group
   - user_id: user_id_server_group
 

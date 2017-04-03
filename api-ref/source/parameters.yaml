@@ -3227,8 +3227,6 @@ meta:
   in: body
   required: true
   type: object
-# TODO(karenb): Clean-up the various metadata object params.
-# See metadata, metadata_required, metadata_object, metadata_set_required ...
 metadata:
   description: |
     Metadata key and value pairs. The maximum size of the metadata key and value is
@@ -3240,13 +3238,6 @@ metadata_compat:
   description: |
     A dictionary of metadata key-and-value pairs, which is maintained for backward
     compatibility.
-  in: body
-  required: true
-  type: object
-metadata_image:
-  description: |
-    Metadata key and value pairs. The maximum size for each metadata key and value
-    pair is 255 bytes.
   in: body
   required: true
   type: object
@@ -3273,20 +3264,6 @@ metadata_object:
   description: |
     Metadata key and value pairs. The maximum size for each metadata key and value
     pair is 255 bytes.
-  in: body
-  required: true
-  type: object
-metadata_required:
-  description: |
-    Metadata key and value pairs. The maximum size of the metadata key and value is
-    255 bytes each. The associated metadata key and value pairs.
-  in: body
-  required: true
-  type: object
-metadata_set_required:
-  description: |
-    Metadata key and value pairs. The maximum size of the metadata key and value is
-    255 bytes each.
   in: body
   required: true
   type: object

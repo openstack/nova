@@ -50,7 +50,7 @@ Response
   - displayDescription: display_description
   - displayName: display_name
   - id: volume_id_resp
-  - metadata: metadata_set_required
+  - metadata: metadata_object 
   - size: size
   - snapshotId: snapshot_id
   - status: volume_status
@@ -110,7 +110,7 @@ Response
   - displayName: display_name
   - displayDescription: display_description
   - id: volume_id_resp
-  - metadata: metadata_set_required
+  - metadata: metadata_object 
   - size: size
   - snapshotId: snapshot_id
   - status: volume_status
@@ -158,7 +158,7 @@ Response
   - displayName: display_name
   - displayDescription: display_description
   - id: volume_id_resp
-  - metadata: metadata_set_required
+  - metadata: metadata_object 
   - size: size
   - snapshotId: snapshot_id
   - status: volume_status
@@ -205,7 +205,7 @@ Response
   - displayName: display_name
   - displayDescription: display_description
   - id: volume_id_resp
-  - metadata: metadata_set_required
+  - metadata: metadata_object 
   - size: size
   - snapshotId: snapshot_id
   - status: volume_status
