@@ -67,6 +67,8 @@ from nova.virt.vmwareapi import volumeops
 
 CONF = nova.conf.CONF
 
+HOST = 'testhostname'
+
 DEFAULT_FLAVORS = [
     {'memory_mb': 512, 'root_gb': 1, 'deleted_at': None, 'name': 'm1.tiny',
      'deleted': 0, 'created_at': None, 'ephemeral_gb': 0, 'updated_at': None,
@@ -201,7 +203,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         vm_util.vm_refs_cache_reset()
         self.context = context.RequestContext('fake', 'fake', is_admin=False)
         self.flags(cluster_name='test_cluster',
-                   host_ip='test_url',
+                   host_ip=HOST,
                    host_username='test_username',
                    host_password='test_pass',
                    api_retry_count=1,
@@ -215,7 +217,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         stubs.set_stubs(self)
         vmwareapi_fake.reset()
         nova.tests.unit.image.fake.stub_out_image_service(self)
-        service = self._create_service(host='test_url')
+        service = self._create_service(host=HOST)
 
         self.conn = driver.VMwareVCDriver(None, False)
         self.assertFalse(service.disabled)
@@ -251,7 +253,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertFalse(self.conn.need_legacy_block_device_info)
 
     def test_get_host_ip_addr(self):
-        self.assertEqual('test_url', self.conn.get_host_ip_addr())
+        self.assertEqual(HOST, self.conn.get_host_ip_addr())
 
     def test_init_host_with_no_session(self):
         self.conn._session = mock.Mock()
@@ -1700,9 +1702,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         connector_dict = self.conn.get_volume_connector(self.instance)
         fake_vm = self._get_vm_record()
         fake_vm_id = fake_vm.obj.value
-        self.assertEqual('test_url', connector_dict['ip'])
+        self.assertEqual(HOST, connector_dict['ip'])
         self.assertEqual('iscsi-name', connector_dict['initiator'])
-        self.assertEqual('test_url', connector_dict['host'])
+        self.assertEqual(HOST, connector_dict['host'])
         self.assertEqual(fake_vm_id, connector_dict['instance'])
 
     def _test_vmdk_connection_info(self, type):
@@ -1891,8 +1893,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_connection_info_get(self):
         self._create_vm()
         connector = self.conn.get_volume_connector(self.instance)
-        self.assertEqual('test_url', connector['ip'])
-        self.assertEqual('test_url', connector['host'])
+        self.assertEqual(HOST, connector['ip'])
+        self.assertEqual(HOST, connector['host'])
         self.assertEqual('iscsi-name', connector['initiator'])
         self.assertIn('instance', connector)
 
@@ -1900,8 +1902,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._create_vm()
         self.conn.destroy(self.context, self.instance, self.network_info)
         connector = self.conn.get_volume_connector(self.instance)
-        self.assertEqual('test_url', connector['ip'])
-        self.assertEqual('test_url', connector['host'])
+        self.assertEqual(HOST, connector['ip'])
+        self.assertEqual(HOST, connector['host'])
         self.assertEqual('iscsi-name', connector['initiator'])
         self.assertNotIn('instance', connector)
 

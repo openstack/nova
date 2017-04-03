@@ -31,7 +31,7 @@ Following requirements must be met in order to use SPICE:
 """)
 
 CLI_OPTS = [
-    cfg.StrOpt('html5proxy_host',
+    cfg.HostAddressOpt('html5proxy_host',
         default='0.0.0.0',
         help="""
 IP address or a hostname on which the ``nova-spicehtml5proxy`` service

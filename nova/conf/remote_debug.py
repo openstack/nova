@@ -20,8 +20,8 @@ debugger_group = cfg.OptGroup('remote_debug',
     title='debugger options')
 
 CLI_OPTS = [
-    cfg.StrOpt('host',
-               help="""
+    cfg.HostAddressOpt('host',
+                       help="""
 Debug host (IP or name) to connect to. This command line parameter is used when
 you want to connect to a nova service via a debugger running on a different
 host.
