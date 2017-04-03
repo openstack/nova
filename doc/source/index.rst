@@ -128,6 +128,7 @@ community, while keeping users happy and keeping developers productive.
    blueprints
    policies
    code-review
+   releasenotes
 
 Architecture Concepts
 ----------------------
