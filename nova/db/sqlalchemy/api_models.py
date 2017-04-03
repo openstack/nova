@@ -567,7 +567,7 @@ class Trait(API_BASE):
     name = Column(Unicode(255), nullable=False)
 
 
-class ResourceProviderTraits(API_BASE):
+class ResourceProviderTrait(API_BASE):
     """Represents the relationship between traits and resource provider"""
 
     __tablename__ = "resource_provider_traits"
