@@ -19,15 +19,18 @@ It is used via a single directive in the .rst file
   .. versioned_notifications::
 
 """
+import os
 
 from docutils import nodes
 from docutils.parsers import rst
 import importlib
+from oslo_serialization import jsonutils
 import pkgutil
 
-import nova.notifications.objects
 from nova.notifications.objects import base as notification
 from nova.objects import base
+from nova.tests import json_ref
+import nova.utils
 
 
 class VersionedNotificationDirective(rst.Directive):
@@ -125,8 +128,16 @@ jQuery(document).ready(function(){
             col = nodes.entry()
             row.append(col)
 
-            with open(self.SAMPLE_ROOT + sample_file, 'r') as f:
+            with open(os.path.join(self.SAMPLE_ROOT, sample_file), 'r') as f:
                 sample_content = f.read()
+
+            sample_obj = jsonutils.loads(sample_content)
+            sample_obj = json_ref.resolve_refs(
+                sample_obj,
+                base_path=os.path.abspath(self.SAMPLE_ROOT))
+            sample_content = jsonutils.dumps(sample_obj,
+                                             sort_keys=True, indent=4,
+                                             separators=(',', ': '))
 
             event_type = sample_file[0: -5]
             html_str = self.TOGGLE_SCRIPT % ((event_type, ) * 3)

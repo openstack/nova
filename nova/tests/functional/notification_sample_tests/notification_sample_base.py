@@ -21,6 +21,7 @@ from oslo_utils import fixture as utils_fixture
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
+from nova.tests import json_ref
 from nova.tests.unit.api.openstack.compute import test_services
 from nova.tests.unit import fake_crypto
 from nova.tests.unit import fake_notifier
@@ -133,11 +134,14 @@ class NotificationSampleTestBase(test.TestCase,
             notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
         else:
             notification = actual
-
-        with open(self._get_notification_sample(sample_file_name)) as sample:
+        sample_file = self._get_notification_sample(sample_file_name)
+        with open(sample_file) as sample:
             sample_data = sample.read()
 
         sample_obj = jsonutils.loads(sample_data)
+        sample_base_dir = os.path.dirname(sample_file)
+        sample_obj = json_ref.resolve_refs(
+            sample_obj, base_path=sample_base_dir)
         self._apply_replacements(replacements, sample_obj, notification)
 
         self.assertJsonEqual(sample_obj, notification)
