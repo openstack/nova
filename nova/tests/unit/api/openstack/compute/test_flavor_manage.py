@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import datetime
-
 import mock
 from oslo_serialization import jsonutils
 import six
@@ -27,31 +25,6 @@ from nova import db
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-
-
-def fake_db_flavor(**updates):
-    db_flavor = {
-        'root_gb': 1,
-        'ephemeral_gb': 1,
-        'name': u'frob',
-        'deleted': False,
-        'created_at': datetime.datetime(2012, 1, 19, 18, 49, 30, 877329),
-        'updated_at': None,
-        'memory_mb': 256,
-        'vcpus': 1,
-        'flavorid': 1,
-        'swap': 0,
-        'rxtx_factor': 1.0,
-        'extra_specs': {},
-        'deleted_at': None,
-        'vcpu_weight': None,
-        'id': 7,
-        'is_public': True,
-        'disabled': False,
-    }
-    if updates:
-        db_flavor.update(updates)
-    return db_flavor
 
 
 def fake_create(newflavor):
