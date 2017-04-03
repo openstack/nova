@@ -11430,8 +11430,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock_domain_destroy.assert_called_once_with()
             mock_teardown_container.assert_called_once_with(instance)
             mock_cleanup.assert_called_once_with(self.context, instance,
-                                                 network_info, None, False,
-                                                 None)
+                                                 network_info, None, False)
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'cleanup')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_teardown_container')
@@ -11451,8 +11450,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                           mock.call(instance)])
         mock_teardown_container.assert_called_once_with(instance)
         mock_cleanup.assert_called_once_with(self.context, instance,
-                                             network_info, None, False,
-                                             None)
+                                             network_info, None, False)
 
     def test_reboot_different_ids(self):
         class FakeLoopingCall(object):

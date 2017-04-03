@@ -264,7 +264,7 @@ class FakeDriver(driver.ComputeDriver):
         pass
 
     def destroy(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True, migrate_data=None):
+                destroy_disks=True):
         key = instance.uuid
         if key in self.instances:
             flavor = instance.flavor
