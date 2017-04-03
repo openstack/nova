@@ -1,0 +1,21 @@
+{
+    "inventories": {
+        "MEMORY_MB": {
+            "allocation_ratio": 2.0,
+            "max_unit": 16,
+            "min_unit": 1,
+            "reserved": 0,
+            "step_size": 4,
+            "total": 128
+        },
+        "VCPU": {
+            "allocation_ratio": 10.0,
+            "max_unit": 2147483647,
+            "min_unit": 1,
+            "reserved": 2,
+            "step_size": 1,
+            "total": 64
+        }
+    },
+    "resource_provider_generation": 2
+}

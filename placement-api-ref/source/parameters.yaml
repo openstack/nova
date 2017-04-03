@@ -37,7 +37,7 @@ resources_query:
         resources=VCPU:4,DISK_GB:64,MEMORY_MB:2048
 
 # variables in body
-allocation_ratio:
+allocation_ratio: &allocation_ratio
   type: float
   in: body
   required: true
@@ -51,6 +51,9 @@ allocation_ratio:
         total = 8
 
     Overall capacity is equal to 128 vCPUs.
+allocation_ratio_opt:
+  <<: *allocation_ratio
+  required: false
 inventories:
   type: object
   in: body
@@ -63,18 +66,27 @@ max_unit: &max_unit
   required: true
   description: >
     A maximum amount any single allocation against an inventory can have.
-min_unit:
+max_unit_opt:
+  <<: *max_unit
+  required: false
+min_unit: &min_unit
   type: integer
   in: body
   required: true
   description: >
     A minimum amount any single allocation against an inventory can have.
-reserved:
+min_unit_opt:
+  <<: *min_unit
+  required: false
+reserved: &reserved
   type: integer
   in: body
   required: true
   description: >
     The amount of the resource a provider has reserved for its own use.
+reserved_opt:
+  <<: *reserved
+  required: false
 resource_class:
   type: string
   in: body
@@ -109,7 +121,7 @@ resource_providers:
   required: true
   description: >
     A list of ``resource_provider`` objects.
-step_size:
+step_size: &step_size
   type: integer
   in: body
   required: true
@@ -117,6 +129,9 @@ step_size:
     A representation of the divisible amount of the resource
     that may be requested. For example, step_size = 5 means
     that only values divisible by 5 (5, 10, 15, etc.) can be requested.
+step_size_opt:
+  <<: *step_size
+  required: false
 total:
   type: integer
   in: body
