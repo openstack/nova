@@ -43,14 +43,16 @@ Response
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-resp.json
    :language: javascript
 
-Update Metadata Items
-=====================
+Create or Update Metadata Items
+===============================
 
 .. rest_method:: POST /servers/{server_id}/metadata
 
-Updates one or more metadata items for a server.
+Create or update one or more metadata items for a server.
 
-Replaces metadata items that match keys. Does not modify items that are not in the request.
+Creates any metadata items that do not already exist in the server, replaces
+exists metadata items that match keys. Does not modify items that are not in
+the request.
 
 Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
 
@@ -85,12 +87,12 @@ Response
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-resp.json
    :language: javascript
 
-Create Or Replace Metadata Items
-================================
+Replace Metadata Items
+======================
 
 .. rest_method:: PUT /servers/{server_id}/metadata
 
-Creates or replaces one or more metadata items for a server.
+Replaces one or more metadata items for a server.
 
 Creates any metadata items that do not already exist in the server. Removes and completely replaces any metadata items that already exist in the server with the metadata items in the request.
 
@@ -168,7 +170,8 @@ Create Or Update Metadata Item
 
 Creates or replaces a metadata item, by key, for a server.
 
-Creates a metadata item that does not already exist in the server. Removes and completely replaces a metadata item that already exists in the server with the metadata item in the request.
+Creates a metadata item that does not already exist in the server. Replaces
+existing metadata items that match keys with the metadata item in the request.
 
 Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
 
