@@ -959,6 +959,11 @@ class AgentBuildCommands(object):
 class GetLogCommands(object):
     """Get logging information."""
 
+    # TODO(stephenfin): Remove this during the Queens cycle
+    description = ('DEPRECATED: The log commands are deprecated since '
+                   'Pike as they are not maintained. They will be removed '
+                   'in an upcoming release.')
+
     def errors(self):
         """Get all of the errors from the log files."""
         error_found = 0

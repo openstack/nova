@@ -30,6 +30,13 @@ deprecations:
       This allows for the listing of compute hosts. Operators should use the
       equivalent resources in the `REST API`__ instead.
 
+    `log`
+
+      This allows for the filtering of errors from nova's logs and extraction
+      of all logs from syslog. This command has not been actively maintained in
+      a long time, is not tested, and can be achieved using `journalctl` or by
+      simply grepping through ``/var/log``. It will simply be removed.
+
     `project`
 
       This is an alias for `account` and has been deprecated for the same
