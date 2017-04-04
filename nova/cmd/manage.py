@@ -618,6 +618,11 @@ class NetworkCommands(object):
 class HostCommands(object):
     """List hosts."""
 
+    # TODO(stephenfin): Remove this during the Queens cycle
+    description = ('DEPRECATED: The host commands are deprecated since '
+                   'Pike as this information is available over the API. They '
+                   'will be removed in an upcoming release.')
+
     def list(self, zone=None):
         """Show a list of all physical hosts. Filter by zone.
         args: [zone]
