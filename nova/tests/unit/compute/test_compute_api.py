@@ -3208,7 +3208,8 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_check_injected_file_quota_onset_file_path_limit(self):
         # This is the second call to limit_check.
         side_effect = (mock.DEFAULT,
-                       exception.OverQuota(overs='injected_file_path_bytes'))
+                       exception.OverQuota(overs='injected_file_path_bytes',
+                                    quotas={'injected_file_path_bytes': 255}))
         self.assertRaises(exception.OnsetFilePathLimitExceeded,
             self._test_check_injected_file_quota_onset_file_limit_exceeded,
             side_effect)
@@ -3216,7 +3217,8 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_check_injected_file_quota_onset_file_content_limit(self):
         # This is the second call to limit_check but with different overs.
         side_effect = (mock.DEFAULT,
-            exception.OverQuota(overs='injected_file_content_bytes'))
+            exception.OverQuota(overs='injected_file_content_bytes',
+                                quotas={'injected_file_content_bytes': 10240}))
         self.assertRaises(exception.OnsetFileContentLimitExceeded,
             self._test_check_injected_file_quota_onset_file_limit_exceeded,
             side_effect)
