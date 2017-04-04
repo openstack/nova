@@ -493,6 +493,35 @@ def notify_about_volume_swap(context, instance, host, action, phase,
         payload=payload).emit(context)
 
 
+@rpc.if_notifications_enabled
+def notify_about_instance_snapshot(context, instance, host, phase,
+                                   snapshot_image_id):
+    """Send versioned notification about the snapshot action executed on the
+       instance
+
+    :param context: the request context
+    :param instance: the instance from which a snapshot image is being created
+    :param host: the host emitting the notification
+    :param phase: the phase of the action
+    :param snapshot_image_id: the ID of the snapshot
+    """
+    payload = instance_notification.InstanceActionSnapshotPayload(
+        instance=instance,
+        fault=None,
+        snapshot_image_id=snapshot_image_id)
+
+    instance_notification.InstanceActionSnapshotNotification(
+        context=context,
+        priority=fields.NotificationPriority.INFO,
+        publisher=notification_base.NotificationPublisher(
+            host=host, source=fields.NotificationSource.COMPUTE),
+        event_type=notification_base.EventType(
+            object='instance',
+            action=fields.NotificationAction.SNAPSHOT,
+            phase=phase),
+        payload=payload).emit(context)
+
+
 def notify_about_server_group_update(context, event_suffix, sg_payload):
     """Send a notification about server group update.
 

@@ -78,11 +78,12 @@
             },
             "user_id":"fake",
             "uuid":"178b0921-8f85-4257-88b6-2e743b5a975c",
-            "updated_at": "2012-10-29T13:42:11Z"
+            "updated_at": "2012-10-29T13:42:11Z",
+            "snapshot_image_id": "d2aae36f-785c-4518-8016-bc9534d9fc7f"
         },
-        "nova_object.name":"InstanceActionPayload",
+        "nova_object.name":"InstanceActionSnapshotPayload",
         "nova_object.namespace":"nova",
-        "nova_object.version":"1.5"
+        "nova_object.version":"1.6"
     },
     "priority":"INFO",
     "publisher_id":"nova-compute:compute"

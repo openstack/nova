@@ -3187,9 +3187,9 @@ class ComputeManager(manager.Manager):
 
             self._notify_about_instance_usage(
                 context, instance, "snapshot.start")
-            compute_utils.notify_about_instance_action(context, instance,
-                self.host, action=fields.NotificationAction.SNAPSHOT,
-                phase=fields.NotificationPhase.START)
+            compute_utils.notify_about_instance_snapshot(context, instance,
+                self.host, phase=fields.NotificationPhase.START,
+                snapshot_image_id=image_id)
 
             def update_task_state(task_state,
                                   expected_state=expected_task_state):
@@ -3204,9 +3204,9 @@ class ComputeManager(manager.Manager):
 
             self._notify_about_instance_usage(context, instance,
                                               "snapshot.end")
-            compute_utils.notify_about_instance_action(context, instance,
-                self.host, action=fields.NotificationAction.SNAPSHOT,
-                phase=fields.NotificationPhase.END)
+            compute_utils.notify_about_instance_snapshot(context, instance,
+                self.host, phase=fields.NotificationPhase.END,
+                snapshot_image_id=image_id)
         except (exception.InstanceNotFound,
                 exception.UnexpectedDeletingTaskStateError):
             # the instance got deleted during the snapshot

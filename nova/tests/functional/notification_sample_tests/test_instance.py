@@ -747,19 +747,21 @@ class TestInstanceNotificationSample(
 
     def _test_snapshot_server(self, server):
         post = {'createImage': {'name': 'test-snap'}}
-        self.api.post_server_action(server['id'], post)
+        response = self.api.post_server_action(server['id'], post)
         self._wait_for_notification('instance.snapshot.end')
 
         self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'instance-snapshot-start',
             replacements={
+                'snapshot_image_id': response['image_id'],
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
                     actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
         self._verify_notification(
             'instance-snapshot-end',
             replacements={
+                'snapshot_image_id': response['image_id'],
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
