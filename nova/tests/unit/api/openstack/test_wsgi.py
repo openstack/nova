@@ -592,6 +592,16 @@ class ResourceTest(MicroversionedTest):
         self.assertEqual('application/json', content_type)
         self.assertEqual(b'', body)
 
+    def test_get_body_content_body_none(self):
+        resource = wsgi.Resource(None)
+        request = wsgi.Request.blank('/', method='PUT')
+        body = None
+
+        contents = resource._get_request_content(body, request)
+
+        self.assertIn('body', contents)
+        self.assertIsNone(contents['body'])
+
     def test_get_body(self):
         class Controller(object):
             def index(self, req, pants=None):
