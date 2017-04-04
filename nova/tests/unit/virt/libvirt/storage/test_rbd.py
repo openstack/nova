@@ -86,9 +86,6 @@ class RbdTestCase(test.NoDBTestCase):
         self.volume_name = u'volume-00000001'
         self.snap_name = u'test-snap'
 
-    def tearDown(self):
-        super(RbdTestCase, self).tearDown()
-
     @mock.patch.object(rbd_utils, 'rbd')
     def test_rbdproxy_wraps_rbd(self, mock_rbd):
         proxy = rbd_utils.RbdProxy()
