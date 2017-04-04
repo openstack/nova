@@ -1,14 +1,34 @@
 ---
+upgrade:
+  - |
+    The ``nova-manage project quota_usage_refresh`` and its alias ``nova-manage
+    account quota_usage_refresh`` commands have been renamed ``nova-manage
+    quota refresh``. Aliases are provided but these are marked as deprecated
+    and will be removed in the next release of nova.
 deprecations:
   - |
     A number of `nova-manage` commands have been deprecated. The commands,
     along with the reasons for their deprecation, are listed below:
+
+    `account`
+
+      This allows for the creation, deletion, update and listing of user and
+      project quotas. Operators should use the equivalent resources in the
+      `REST API`__ instead.
+
+      The ``quota_usage_refresh`` sub-command has been renamed to ``nova-manage
+      quota refresh``. This new command should be used instead.
 
     `agent`
 
       This allows for the creation, deletion, update and listing of "agent
       builds". Operators should use the equivalent resources in the `REST
       API`__ instead.
+
+    `project`
+
+      This is an alias for `account` and has been deprecated for the same
+      reasons.
 
     `shell`
 
@@ -19,4 +39,5 @@ deprecations:
 
     These commands will be removed in their entirety during the Queens cycle.
 
+    __ https://developer.openstack.org/api-ref/compute/#quota-sets-os-quota-sets
     __ https://developer.openstack.org/api-ref/compute/#guest-agents-os-agents

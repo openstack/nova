@@ -205,8 +205,41 @@ def _db_error(caught_exception):
     sys.exit(1)
 
 
+class QuotaCommands(object):
+    """Class for managing quotas."""
+
+    @args('--project', dest='project_id', metavar='<Project Id>',
+            help='Project Id', required=True)
+    @args('--user', dest='user_id', metavar='<User Id>',
+            help='User Id')
+    @args('--key', metavar='<key>', help='Key')
+    def refresh(self, project_id, user_id=None, key=None):
+        """Refresh the quotas for a project or user.
+
+        If no quota key is provided, all the quota usages will be refreshed.
+        If a valid quota key is provided and it does not exist, it will be
+        created. Otherwise, it will be refreshed.
+        """
+        ctxt = context.get_admin_context()
+
+        keys = None
+        if key:
+            keys = [key]
+
+        try:
+            QUOTAS.usage_refresh(ctxt, project_id, user_id, keys)
+        except exception.QuotaUsageRefreshNotAllowed as e:
+            print(e.format_message())
+            return 2
+
+
 class ProjectCommands(object):
     """Class for managing projects."""
+
+    # TODO(stephenfin): Remove this during the Queens cycle
+    description = ('DEPRECATED: The project commands are deprecated since '
+                   'Pike as this information is available over the API. They '
+                   'will be removed in an upcoming release.')
 
     @args('--project', dest='project_id', metavar='<Project name>',
             help='Project name')
@@ -286,8 +319,11 @@ class ProjectCommands(object):
         """Refresh the quotas for project/user
 
         If no quota key is provided, all the quota usages will be refreshed.
-        If a valid quota key is provided and it does not exist,
-        it will be created. Otherwise, it will be refreshed.
+        If a valid quota key is provided and it does not exist, it will be
+        created. Otherwise, it will be refreshed.
+
+        DEPRECATED: This command is deprecated. Use ``nova-manage quota
+        refresh`` instead.
         """
         ctxt = context.get_admin_context()
 
@@ -302,7 +338,13 @@ class ProjectCommands(object):
             return 2
 
 
-AccountCommands = ProjectCommands
+class AccountCommands(ProjectCommands):
+    """Class for managing projects."""
+
+    # TODO(stephenfin): Remove this during the Queens cycle
+    description = ('DEPRECATED: The account commands are deprecated since '
+                   'Pike as this information is available over the API. They '
+                   'will be removed in an upcoming release.')
 
 
 class FloatingIpCommands(object):
@@ -1571,6 +1613,7 @@ CATEGORIES = {
     'network': NetworkCommands,
     'project': ProjectCommands,
     'shell': ShellCommands,
+    'quota': QuotaCommands,
 }
 
 
