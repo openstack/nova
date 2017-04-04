@@ -1,0 +1,5 @@
+{
+    "removeFloatingIp" : {
+        "address": "%(address)s"
+    }
+}

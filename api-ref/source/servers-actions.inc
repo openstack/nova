@@ -73,7 +73,7 @@ Request
 
 **Example Add (Associate) Floating Ip (addFloatingIp Action)**
 
-.. literalinclude:: ../../doc/api_samples/servers/server-action-addfloatingip.json
+.. literalinclude:: ../../doc/api_samples/servers/server-action-addfloatingip-req.json
    :language: javascript
 
 Response
@@ -531,7 +531,7 @@ Request
 
 **Example Remove (Disassociate) Floating Ip (removeFloatingIp Action)**
 
-.. literalinclude:: ../../doc/api_samples/servers/server-action-removefloatingip.json
+.. literalinclude:: ../../doc/api_samples/servers/server-action-removefloatingip-req.json
    :language: javascript
 
 Response

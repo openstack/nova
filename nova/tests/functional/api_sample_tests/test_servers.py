@@ -340,7 +340,27 @@ class ServersActionsJsonTest(ServersSampleBase, _ServersActionsJsonTestMixin):
         self.stub_out('nova.network.api.API.associate_floating_ip',
                       lambda *a, **k: None)
         self._test_server_action(uuid, 'addFloatingIp',
-                                 'server-action-addfloatingip', subs)
+                                 'server-action-addfloatingip-req', subs)
+
+    def test_server_remove_floating_ip(self):
+        server_uuid = self._post_server()
+        self._wait_for_active_server(server_uuid)
+
+        subs = {
+            "address": "172.16.10.7"
+        }
+
+        self.stub_out('nova.network.api.API.get_floating_ip_by_address',
+                      lambda *a, **k: {'fixed_ip_id':
+                                       'a0c566f0-faab-406f-b77f-2b286dc6dd7e'})
+        self.stub_out(
+            'nova.network.api.API.get_instance_id_by_floating_address',
+            lambda *a, **k: server_uuid)
+        self.stub_out('nova.network.api.API.disassociate_floating_ip',
+                      lambda *a, **k: None)
+
+        self._test_server_action(server_uuid, 'removeFloatingIp',
+                                 'server-action-removefloatingip-req', subs)
 
 
 class ServersActionsJson219Test(ServersSampleBase):
