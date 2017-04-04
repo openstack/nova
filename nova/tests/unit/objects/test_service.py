@@ -27,6 +27,7 @@ from nova.objects import service
 from nova import test
 from nova.tests.unit.objects import test_compute_node
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel
 
 NOW = timeutils.utcnow().replace(microsecond=0)
 
@@ -38,6 +39,7 @@ def _fake_service(**kwargs):
         'deleted_at': None,
         'deleted': False,
         'id': 123,
+        'uuid': uuidsentinel.service,
         'host': 'fake-host',
         'binary': 'nova-fake',
         'topic': 'fake-service-topic',
@@ -123,12 +125,24 @@ class _TestServiceObject(object):
     def test_create(self, mock_service_create):
         service_obj = service.Service(context=self.context)
         service_obj.host = 'fake-host'
+        service_obj.uuid = uuidsentinel.service2
         service_obj.create()
         self.assertEqual(fake_service['id'], service_obj.id)
         self.assertEqual(service.SERVICE_VERSION, service_obj.version)
         mock_service_create.assert_called_once_with(
                        self.context, {'host': 'fake-host',
+                                      'uuid': uuidsentinel.service2,
                                       'version': fake_service['version']})
+
+    @mock.patch('nova.objects.service.uuidutils.generate_uuid',
+                return_value=uuidsentinel.service3)
+    @mock.patch.object(db, 'service_create', return_value=fake_service)
+    def test_create_without_uuid_generates_one(
+            self, mock_service_create, generate_uuid):
+        service_obj = service.Service(context=self.context)
+        service_obj.create()
+        create_args = mock_service_create.call_args[0][1]
+        self.assertEqual(generate_uuid.return_value, create_args['uuid'])
 
     @mock.patch.object(db, 'service_create', return_value=fake_service)
     def test_recreate_fails(self, mock_service_create):
@@ -391,6 +405,28 @@ class _TestServiceObject(object):
                               objects.Service(context=self.context,
                                               binary='nova-compute',
                                               ).create)
+
+    @mock.patch('nova.objects.base.NovaObject'
+                '.obj_make_compatible_from_manifest', new=mock.Mock())
+    def test_obj_make_compatible_from_manifest_strips_uuid(self):
+        s = service.Service()
+        primitive = {'uuid': uuidsentinel.service}
+        s.obj_make_compatible_from_manifest(primitive, '1.20', mock.Mock())
+        self.assertNotIn('uuid', primitive)
+
+    @mock.patch('nova.objects.service.uuidutils.generate_uuid',
+                return_value=uuidsentinel.service4)
+    def test_from_db_object_without_uuid_generates_one(self, generate_uuid):
+        values = _fake_service(uuid=None, id=None)
+        db_service = db.api.service_create(self.context, values)
+
+        s = service.Service()
+        service.Service._from_db_object(self.context, s, db_service)
+        self.assertEqual(uuidsentinel.service4, s.uuid)
+
+        # Check the DB too
+        db_service2 = db.api.service_get(self.context, s.id)
+        self.assertEqual(s.uuid, db_service2['uuid'])
 
 
 class TestServiceObject(test_objects._LocalTest,

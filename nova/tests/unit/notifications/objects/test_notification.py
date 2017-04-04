@@ -102,6 +102,7 @@ class TestNotificationBase(test.NoDBTestCase):
         'deleted_at': None,
         'deleted': False,
         'id': 123,
+        'uuid': uuids.service,
         'host': 'fake-host',
         'binary': 'nova-fake',
         'topic': 'fake-service-topic',

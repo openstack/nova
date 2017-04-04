@@ -61,7 +61,7 @@ class AvailabilityZoneTestCases(test.TestCase):
 
     def _create_service_with_topic(self, topic, host, disabled=False):
         values = {
-            'binary': 'bin',
+            'binary': 'nova-bin',
             'host': host,
             'topic': topic,
             'disabled': disabled,

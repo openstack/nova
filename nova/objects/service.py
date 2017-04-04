@@ -13,6 +13,7 @@
 #    under the License.
 
 from oslo_log import log as logging
+from oslo_utils import uuidutils
 from oslo_utils import versionutils
 
 from nova import availability_zones
@@ -128,10 +129,12 @@ class Service(base.NovaPersistentObject, base.NovaObject,
     # Version 1.18: ComputeNode version 1.14
     # Version 1.19: Added get_minimum_version()
     # Version 1.20: Added get_minimum_version_multi()
-    VERSION = '1.20'
+    # Version 1.21: Added uuid
+    VERSION = '1.21'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
+        'uuid': fields.UUIDField(),
         'host': fields.StringField(nullable=True),
         'binary': fields.StringField(nullable=True),
         'topic': fields.StringField(nullable=True),
@@ -171,6 +174,8 @@ class Service(base.NovaPersistentObject, base.NovaObject,
         super(Service, self).obj_make_compatible_from_manifest(
             primitive, target_version, version_manifest)
         _target_version = versionutils.convert_version_to_tuple(target_version)
+        if _target_version < (1, 21) and 'uuid' in primitive:
+            del primitive['uuid']
         if _target_version < (1, 16) and 'version' in primitive:
             del primitive['version']
         if _target_version < (1, 14) and 'forced_down' in primitive:
@@ -210,10 +215,23 @@ class Service(base.NovaPersistentObject, base.NovaObject,
                 # NOTE(danms): Special handling of the version field, since
                 # it is read_only and set in our init.
                 setattr(service, base.get_attrname(key), db_service[key])
+            elif key == 'uuid' and not db_service.get(key):
+                # Leave uuid off the object if undefined in the database
+                # so that it will be generated below.
+                continue
             else:
                 service[key] = db_service[key]
+
         service._context = context
         service.obj_reset_changes()
+
+        # TODO(dpeschman): Drop this once all services have uuids in database
+        if 'uuid' not in service:
+            service.uuid = uuidutils.generate_uuid()
+            LOG.debug('Generated UUID %(uuid)s for service %(id)i',
+                      dict(uuid=service.uuid, id=service.id))
+            service.save()
+
         return service
 
     def obj_load_attr(self, attrname):
@@ -311,6 +329,11 @@ class Service(base.NovaPersistentObject, base.NovaObject,
                                               reason='already created')
         self._check_minimum_version()
         updates = self.obj_get_changes()
+
+        if 'uuid' not in updates:
+            updates['uuid'] = uuidutils.generate_uuid()
+            self.uuid = updates['uuid']
+
         db_service = db.service_create(self._context, updates)
         self._from_db_object(self._context, self, db_service)
 
