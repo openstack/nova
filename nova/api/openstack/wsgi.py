@@ -625,13 +625,7 @@ class Resource(wsgi.Application):
 
         # Now, deserialize the request body...
         try:
-            contents = {}
-            if self._should_have_body(request):
-                # allow empty body with PUT and POST
-                if request.content_length == 0:
-                    contents = {'body': None}
-                else:
-                    contents = self.deserialize(body)
+            contents = self._get_request_content(body, request)
         except exception.MalformedRequestBody:
             msg = _("Malformed request body")
             return Fault(webob.exc.HTTPBadRequest(explanation=msg))
@@ -698,6 +692,16 @@ class Resource(wsgi.Application):
                 response.headers.add('Vary', LEGACY_API_VERSION_REQUEST_HEADER)
 
         return response
+
+    def _get_request_content(self, body, request):
+        contents = {}
+        if self._should_have_body(request):
+            # allow empty body with PUT and POST
+            if request.content_length == 0 or request.content_length is None:
+                contents = {'body': None}
+            else:
+                contents = self.deserialize(body)
+        return contents
 
     def get_method(self, request, action, content_type, body):
         meth, extensions = self._get_method(request,
