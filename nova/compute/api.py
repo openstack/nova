@@ -1771,10 +1771,12 @@ class API(base.Base):
                      instance=instance)
             return
 
-        # If there is an instance.host the instance has been scheduled and
-        # sent to a cell/compute which means it was pulled from the cell db.
+        # If there is an instance.host (or the instance is shelved-offloaded),
+        # the instance has been scheduled and sent to a cell/compute which
+        # means it was pulled from the cell db.
         # Normal delete should be attempted.
-        if not instance.host:
+        if not (instance.host or
+                instance.vm_state == vm_states.SHELVED_OFFLOADED):
             try:
                 if self._delete_while_booting(context, instance):
                     return
