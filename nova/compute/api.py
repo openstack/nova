@@ -1814,6 +1814,8 @@ class API(base.Base):
                             return
                     except exception.InstanceNotFound:
                         quotas.rollback()
+                        # Instance is already deleted.
+                        return
                 if not instance:
                     # Instance is already deleted.
                     return

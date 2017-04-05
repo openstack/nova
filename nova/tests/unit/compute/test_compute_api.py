@@ -1552,9 +1552,7 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch('nova.context.target_cell')
     @mock.patch('nova.compute.utils.notify_about_instance_delete')
     @mock.patch('nova.objects.Instance.destroy')
-    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid',
-                # This just lets us exit the test early.
-                side_effect=test.TestingException)
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
     def test_delete_instance_from_cell0_rollback_quota(
             self, bdms_get_by_instance_uuid, destroy_mock, notify_mock,
             target_cell_mock):
@@ -1584,8 +1582,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 _delete_while_booting, _lookup_instance,
                 _get_flavor_for_reservation, _create_reservations
         ):
-            self.assertRaises(
-                test.TestingException, self.compute_api._delete,
+            self.compute_api._delete(
                 self.context, instance, 'delete', mock.NonCallableMock())
             _delete_while_booting.assert_called_once_with(
                 self.context, instance)
@@ -1615,6 +1612,8 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.compute_api.notifier, self.context, instance)
             destroy_mock.assert_called_once_with()
             quota_mock.rollback.assert_called_once_with()
+            # Make sure we short-circuited and returned.
+            bdms_get_by_instance_uuid.assert_not_called()
 
     @mock.patch.object(context, 'target_cell')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid',
