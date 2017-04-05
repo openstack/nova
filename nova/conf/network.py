@@ -13,13 +13,29 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+"""Config options for the nova-network service and related services."""
+
+# NOTE(sfinucan): Don't make any non-bugfix changes to this file, as every
+# single option found here will be removed in a future release.
+
 from oslo_config import cfg
 
 from nova.conf import paths
 
 network_opts = [
-    # NOTE(sfinucan): Don't move this option to a group as it will be
-    # deprecated in a future release.
+    cfg.BoolOpt('use_neutron',
+        default=True,
+        deprecated_for_removal=True,
+        deprecated_since='15.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
+        help="""
+Enable neutron as the backend for networking.
+
+Determine whether to use Neutron or Nova Network as the back end. Set to true
+to use neutron.
+"""),
     # TODO(sfinucan): This option is tied into the XenAPI and VMWare drivers.
     # We should remove this dependency by either adding a new opt for each
     # driver or simply removing the offending code. Until then we cannot
@@ -498,18 +514,6 @@ release after Mitaka. It is recommended that instead of relying on this option,
 an explicit value should be passed to 'create_networks()' as a keyword argument
 with the name 'share_address'.
 """),
-    # NOTE(stephenfin): This should move to True for a cycle before being
-    # removed.
-    cfg.BoolOpt('use_neutron',
-        default=True,
-        deprecated_for_removal=True,
-        deprecated_since='15.0.0',
-        deprecated_reason="""
-nova-network is deprecated, as are any related configuration options.
-""",
-        help="Whether to use Neutron or Nova Network as the back end "
-              "for networking. Defaults to False (indicating Nova "
-              "network).Set to True to use neutron.")
 ]
 
 linux_net_opts = [
