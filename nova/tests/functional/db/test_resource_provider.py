@@ -1642,3 +1642,101 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
         traits = objects.TraitList.get_all(self.context,
             filters={"prefix": "NOT_EXISTED"})
         self.assertEqual(0, len(traits))
+
+    def test_set_traits_for_resource_provider(self):
+        rp = objects.ResourceProvider(
+            context=self.context,
+            uuid=uuidsentinel.fake_resource_provider,
+            name=uuidsentinel.fake_resource_name,
+        )
+        rp.create()
+        generation = rp.generation
+        self.assertIsInstance(rp.id, int)
+
+        trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
+        trait_objs = []
+        for name in trait_names:
+            t = objects.Trait(self.context)
+            t.name = name
+            t.create()
+            trait_objs.append(t)
+
+        rp.set_traits(trait_objs)
+        self._assert_traits(trait_names, rp.get_traits())
+        self.assertEqual(rp.generation, generation + 1)
+        generation = rp.generation
+
+        trait_names.remove('CUSTOM_TRAIT_A')
+        updated_traits = objects.TraitList.get_all(self.context,
+            filters={'name_in': trait_names})
+        self._assert_traits(trait_names, updated_traits)
+        rp.set_traits(updated_traits)
+        self._assert_traits(trait_names, rp.get_traits())
+        self.assertEqual(rp.generation, generation + 1)
+
+    def test_trait_delete_in_use(self):
+        rp = objects.ResourceProvider(
+            context=self.context,
+            uuid=uuidsentinel.fake_resource_provider,
+            name=uuidsentinel.fake_resource_name,
+        )
+        rp.create()
+        t = objects.Trait(self.context)
+        t.name = 'CUSTOM_TRAIT_A'
+        t.create()
+        rp.set_traits([t])
+        self.assertRaises(exception.TraitInUse, t.destroy)
+
+    def test_traits_get_all_with_associated_true(self):
+        rp1 = objects.ResourceProvider(
+            context=self.context,
+            uuid=uuidsentinel.fake_resource_provider1,
+            name=uuidsentinel.fake_resource_name1,
+        )
+        rp1.create()
+        rp2 = objects.ResourceProvider(
+            context=self.context,
+            uuid=uuidsentinel.fake_resource_provider2,
+            name=uuidsentinel.fake_resource_name2,
+        )
+        rp2.create()
+        trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
+        for name in trait_names:
+            t = objects.Trait(self.context)
+            t.name = name
+            t.create()
+
+        associated_traits = objects.TraitList.get_all(self.context,
+            filters={'name_in': ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B']})
+        rp1.set_traits(associated_traits)
+        rp2.set_traits(associated_traits)
+        self._assert_traits(['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B'],
+            objects.TraitList.get_all(self.context,
+                filters={'associated': True}))
+
+    def test_traits_get_all_with_associated_false(self):
+        rp1 = objects.ResourceProvider(
+            context=self.context,
+            uuid=uuidsentinel.fake_resource_provider1,
+            name=uuidsentinel.fake_resource_name1,
+        )
+        rp1.create()
+        rp2 = objects.ResourceProvider(
+            context=self.context,
+            uuid=uuidsentinel.fake_resource_provider2,
+            name=uuidsentinel.fake_resource_name2,
+        )
+        rp2.create()
+        trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
+        for name in trait_names:
+            t = objects.Trait(self.context)
+            t.name = name
+            t.create()
+
+        associated_traits = objects.TraitList.get_all(self.context,
+            filters={'name_in': ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B']})
+        rp1.set_traits(associated_traits)
+        rp2.set_traits(associated_traits)
+        self._assert_traits(['CUSTOM_TRAIT_C'],
+            objects.TraitList.get_all(self.context,
+                filters={'associated': False}))

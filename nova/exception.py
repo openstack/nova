@@ -2149,3 +2149,7 @@ class TraitExists(NovaException):
 
 class TraitCannotDeleteStandard(Invalid):
     msg_fmt = _("Cannot delete standard trait %(name)s.")
+
+
+class TraitInUse(Invalid):
+    msg_fmt = _("The trait %(name)s is in use by a resource provider.")
