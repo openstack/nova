@@ -268,18 +268,45 @@ class TestNewtonCheck(test.TestCase):
         self.assertRaises(exception.ValidationError,
                           self.migration.upgrade, self.engine)
 
-    def test_pci_device_not_migrated(self):
+    def test_pci_device_type_vf_not_migrated(self):
         db_api.pci_device_update(self.context, 1, 'foo:bar',
                                  {'parent_addr': None,
                                   'compute_node_id': 1,
                                   'address': 'foo:bar',
                                   'vendor_id': '123',
                                   'product_id': '456',
-                                  'dev_type': 'foo',
+                                  'dev_type': 'type-VF',
                                   'label': 'foobar',
                                   'status': 'whatisthis?'})
+        # type-VF devices should have a parent_addr
         self.assertRaises(exception.ValidationError,
                           self.migration.upgrade, self.engine)
+
+    def test_pci_device_type_pf_not_migrated(self):
+        db_api.pci_device_update(self.context, 1, 'foo:bar',
+                                 {'parent_addr': None,
+                                  'compute_node_id': 1,
+                                  'address': 'foo:bar',
+                                  'vendor_id': '123',
+                                  'product_id': '456',
+                                  'dev_type': 'type-PF',
+                                  'label': 'foobar',
+                                  'status': 'whatisthis?'})
+        # blocker should not block on type-PF devices
+        self.migration.upgrade(self.engine)
+
+    def test_pci_device_type_pci_not_migrated(self):
+        db_api.pci_device_update(self.context, 1, 'foo:bar',
+                                 {'parent_addr': None,
+                                  'compute_node_id': 1,
+                                  'address': 'foo:bar',
+                                  'vendor_id': '123',
+                                  'product_id': '456',
+                                  'dev_type': 'type-PCI',
+                                  'label': 'foobar',
+                                  'status': 'whatisthis?'})
+        # blocker should not block on type-PCI devices
+        self.migration.upgrade(self.engine)
 
     def test_deleted_not_migrated(self):
         cn_values = dict(vcpus=1, memory_mb=512, local_gb=10,

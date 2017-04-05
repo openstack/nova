@@ -38,9 +38,15 @@ def upgrade(migrate_engine):
             raise exception.ValidationError(detail=msg)
 
     pci_devices = Table('pci_devices', meta, autoload=True)
+
+    # Ensure that all non-deleted PCI device records have a populated
+    # parent address. Note that we test directly against the 'type-VF'
+    # enum value to prevent issues with this migration going forward
+    # if the definition is altered.
     count = select([func.count()]).select_from(pci_devices).where(and_(
         pci_devices.c.deleted == 0,
-        pci_devices.c.parent_addr == None)).execute().scalar()  # NOQA
+        pci_devices.c.parent_addr == None,
+        pci_devices.c.dev_type == 'type-VF')).execute().scalar()  # NOQA
     if count > 0:
         msg = WARNING_MSG % {
             'count': count,
