@@ -1142,6 +1142,11 @@ Related options:
 """),
     cfg.BoolOpt('allow_same_net_traffic',
         default=True,
+        deprecated_for_removal=True,
+        deprecated_since='16.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
         help="""
 Determine whether to allow network traffic from same network.
 
