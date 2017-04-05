@@ -64,6 +64,8 @@ class TestLocalDeleteAttachedVolumes(test.TestCase):
         self.flags(driver='chance_scheduler', group='scheduler')
         self.start_service('scheduler')
         self.start_service('compute')
+        # The consoleauth service is needed for deleting console tokens.
+        self.start_service('consoleauth')
 
         self.useFixture(cast_as_call.CastAsCall(self.stubs))
 
@@ -164,5 +166,5 @@ class TestLocalDeleteAttachedVolumes(test.TestCase):
 
         LOG.info('Validating that volume %s was detached from server %s.',
                  volume_id, server_id)
-        # When bug 1675570 is fixed, this should be assertNotIn.
-        self.assertIn(volume_id, self.cinder.attachments[server_id])
+        # Now that the bug is fixed, assert the volume was detached.
+        self.assertNotIn(volume_id, self.cinder.attachments[server_id])
