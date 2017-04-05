@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    The following volume attach and volume detach versioned notifications have
+    been added to the nova-compute service:
+
+    * instance.volume_attach.start
+    * instance.volume_attach.end
+    * instance.volume_attach.error
+    * instance.volume_detach.start
+    * instance.volume_detach.end

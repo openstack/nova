@@ -2451,8 +2451,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     @mock.patch.object(driver_bdm_volume, 'detach')
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_notify_about_instance_usage')
-    def _test_detach_volume(self, notify_inst_usage, detach,
-                            bdm_get, destroy_bdm=True):
+    @mock.patch('nova.compute.utils.notify_about_volume_attach_detach')
+    def _test_detach_volume(self, mock_notify_attach_detach, notify_inst_usage,
+                            detach, bdm_get, destroy_bdm=True):
         # TODO(lyarwood): Move into ../virt/test_block_device.py
         volume_id = uuids.volume
         inst_obj = mock.Mock()
@@ -2488,6 +2489,15 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             else:
                 self.assertFalse(bdm_destroy.called)
 
+        mock_notify_attach_detach.assert_has_calls([
+            mock.call(self.context, inst_obj, 'fake-mini',
+                      action='volume_detach', phase='start',
+                      volume_id=volume_id),
+            mock.call(self.context, inst_obj, 'fake-mini',
+                      action='volume_detach', phase='end',
+                      volume_id=volume_id),
+            ])
+
     def test_detach_volume_evacuate(self):
         """For evacuate, terminate_connection is called with original host."""
         # TODO(lyarwood): Move into ../virt/test_block_device.py
@@ -2522,8 +2532,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume_and_instance')
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_notify_about_instance_usage')
-    def _test_detach_volume_evacuate(self, conn_info_str, notify_inst_usage,
-                                     bdm_get, expected=None):
+    @mock.patch('nova.compute.utils.notify_about_volume_attach_detach')
+    def _test_detach_volume_evacuate(self, conn_info_str,
+                                     mock_notify_attach_detach,
+                                     notify_inst_usage, bdm_get,
+                                     expected=None):
         """Re-usable code for detach volume evacuate test cases.
 
         :param conn_info_str: String form of the stashed connector.
@@ -2570,6 +2583,15 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 self.context, instance, "volume.detach",
                 extra_usage_info={'volume_id': volume_id}
             )
+
+            mock_notify_attach_detach.assert_has_calls([
+                mock.call(self.context, instance, 'fake-mini',
+                          action='volume_detach', phase='start',
+                          volume_id=volume_id),
+                mock.call(self.context, instance, 'fake-mini',
+                          action='volume_detach', phase='end',
+                          volume_id=volume_id),
+                ])
 
     def _test_rescue(self, clean_shutdown=True):
         instance = fake_instance.fake_instance_obj(
