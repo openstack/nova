@@ -1464,7 +1464,8 @@ class _ComputeAPIUnitTestMixIn(object):
             self.assertTrue(
                 self.compute_api._delete_while_booting(self.context,
                                                        inst))
-            self.assertTrue(quota_mock.commit.called)
+            self.assertFalse(quota_mock.commit.called)
+            quota_mock.rollback.assert_called_once_with()
 
         test()
 
@@ -1484,7 +1485,7 @@ class _ComputeAPIUnitTestMixIn(object):
             self.assertTrue(
                 self.compute_api._delete_while_booting(self.context,
                                                        inst))
-            self.assertTrue(quota_mock.commit.called)
+            self.assertFalse(quota_mock.commit.called)
             self.assertTrue(quota_mock.rollback.called)
 
         test()
@@ -1600,7 +1601,6 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, instance, instance.task_state,
                 self.context.project_id, instance.user_id,
                 flavor=instance.flavor)
-            quota_mock.commit.assert_called_once_with()
             notify_mock.assert_called_once_with(
                 self.compute_api.notifier, self.context, instance)
             destroy_mock.assert_called_once_with()
