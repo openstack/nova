@@ -406,8 +406,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
     def setUp(self):
         super(LibvirtVifTestCase, self).setUp()
         self.useFixture(fakelibvirt.FakeLibvirtFixture(stub_os_vif=False))
-        self.flags(allow_same_net_traffic=True,
-                   firewall_driver=None)
+        self.flags(firewall_driver=None)
         # os_vif.initialize is typically done in nova-compute startup
         os_vif.initialize()
         self.setup_os_vif_objects()
