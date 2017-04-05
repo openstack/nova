@@ -28,6 +28,9 @@ from xml.dom import minidom
 from xml.parsers import expat
 
 from eventlet import greenthread
+from os_xenapi.client import disk_management
+from os_xenapi.client import host_network
+from os_xenapi.client import vm_management
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import excutils
@@ -490,11 +493,10 @@ def _safe_copy_vdi(session, sr_ref, instance, vdi_to_copy_ref):
         label = "snapshot"
         with snapshot_attached_here(
                 session, instance, vm_ref, label) as vdi_uuids:
-            imported_vhds = session.call_plugin_serialized(
-                'workarounds.py', 'safe_copy_vdis',
-                sr_path=get_sr_path(session, sr_ref=sr_ref),
-                vdi_uuids=vdi_uuids, uuid_stack=_make_uuid_stack())
-
+            sr_path = get_sr_path(session, sr_ref=sr_ref)
+            uuid_stack = _make_uuid_stack()
+            imported_vhds = disk_management.safe_copy_vdis(
+                session, sr_path, vdi_uuids, uuid_stack)
     root_uuid = imported_vhds['root']['uuid']
 
     # rescan to discover new VHDs
@@ -1003,13 +1005,11 @@ def _generate_disk(session, instance, vm_ref, userdevice, name_label,
             partition_start = "2048"
             partition_end = "-"
 
-            session.call_plugin_serialized('partition_utils.py',
-                                           'make_partition', dev,
-                                           partition_start, partition_end)
+            disk_management.make_partition(session, dev, partition_start,
+                                           partition_end)
 
             if mkfs_in_dom0:
-                session.call_plugin_serialized('partition_utils.py', 'mkfs',
-                                               dev, '1', fs_type, fs_label)
+                disk_management.mkfs(session, dev, '1', fs_type, fs_label)
 
         # 3.a. dom0 does not support nfs/ext4, so may have to mkfs in domU
         if fs_type is not None and not mkfs_in_dom0:
@@ -1156,11 +1156,9 @@ def _create_kernel_image(context, session, instance, name_label, image_id,
 
     filename = ""
     if CONF.xenserver.cache_images != 'none':
-        args = {}
-        args['cached-image'] = image_id
-        args['new-image-uuid'] = uuidutils.generate_uuid()
-        filename = session.call_plugin('kernel.py', 'create_kernel_ramdisk',
-                                       args)
+        new_image_uuid = uuidutils.generate_uuid()
+        filename = disk_management.create_kernel_ramdisk(
+            session, image_id, new_image_uuid)
 
     if filename == "":
         return _fetch_disk_image(context, session, instance, name_label,
@@ -1189,15 +1187,11 @@ def create_kernel_and_ramdisk(context, session, instance, name_label):
 
 
 def destroy_kernel_ramdisk(session, instance, kernel, ramdisk):
-    args = {}
-    if kernel:
-        args['kernel-file'] = kernel
-    if ramdisk:
-        args['ramdisk-file'] = ramdisk
-    if args:
+    if kernel or ramdisk:
         LOG.debug("Removing kernel/ramdisk files from dom0",
                     instance=instance)
-        session.call_plugin('kernel.py', 'remove_kernel_ramdisk', args)
+        disk_management.remove_kernel_ramdisk(
+            session, kernel_file=kernel, ramdisk_file=ramdisk)
 
 
 def _get_image_vdi_label(image_id):
@@ -1545,14 +1539,11 @@ def _fetch_disk_image(context, session, instance, name_label, image_id,
             LOG.debug("Copying VDI %s to /boot/guest on dom0",
                       vdi_ref, instance=instance)
 
-            args = {}
-            args['vdi-ref'] = vdi_ref
-
-            # Let the plugin copy the correct number of bytes.
-            args['image-size'] = str(vdi_size)
+            cache_image = None
             if CONF.xenserver.cache_images != 'none':
-                args['cached-image'] = image_id
-            filename = session.call_plugin('kernel.py', 'copy_vdi', args)
+                cache_image = image_id
+            filename = disk_management.copy_vdi(session, vdi_ref, vdi_size,
+                                                image_id=cache_image)
 
             # Remove the VDI as it is not needed anymore.
             destroy_vdi(session, vdi_ref)
@@ -1854,7 +1845,7 @@ def compile_diagnostics(vm_rec):
 
 
 def fetch_bandwidth(session):
-    bw = session.call_plugin_serialized('bandwidth.py', 'fetch_all_bandwidth')
+    bw = host_network.fetch_all_bandwidth(session)
     return bw
 
 
@@ -2183,9 +2174,8 @@ def _wait_for_device(session, dev, dom0, max_seconds):
     dev_path = utils.make_dev_path(dev)
     found_path = None
     if dom0:
-        found_path = session.call_plugin_serialized('partition_utils.py',
-                                                    'wait_for_dev',
-                                                    dev_path, max_seconds)
+        found_path = disk_management.wait_for_dev(session, dev_path,
+                                                  max_seconds)
     else:
         for i in range(0, max_seconds):
             if os.path.exists(dev_path):
@@ -2606,10 +2596,9 @@ def _import_migrate_ephemeral_disks(session, instance):
 def _import_migrated_vhds(session, instance, chain_label, disk_type,
                           vdi_label):
     """Move and possibly link VHDs via the XAPI plugin."""
-    # TODO(johngarbutt) tidy up plugin params
-    imported_vhds = session.call_plugin_serialized(
-            'migration.py', 'move_vhds_into_sr', instance_uuid=chain_label,
-            sr_path=get_sr_path(session), uuid_stack=_make_uuid_stack())
+    imported_vhds = vm_management.receive_vhd(session, chain_label,
+                                              get_sr_path(session),
+                                              _make_uuid_stack())
 
     # Now we rescan the SR so we find the VHDs
     scan_default_sr(session)
@@ -2633,10 +2622,8 @@ def migrate_vhd(session, instance, vdi_uuid, dest, sr_path, seq_num,
     if ephemeral_number:
         chain_label = instance['uuid'] + "_ephemeral_%d" % ephemeral_number
     try:
-        # TODO(johngarbutt) tidy up plugin params
-        session.call_plugin_serialized('migration.py', 'transfer_vhd',
-                instance_uuid=chain_label, host=dest, vdi_uuid=vdi_uuid,
-                sr_path=sr_path, seq_num=seq_num)
+        vm_management.transfer_vhd(session, chain_label, dest, vdi_uuid,
+                                   sr_path, seq_num)
     except session.XenAPI.Failure:
         msg = "Failed to transfer vhd to new host"
         LOG.debug(msg, instance=instance, exc_info=True)
@@ -2699,9 +2686,10 @@ def handle_ipxe_iso(session, instance, cd_vdi, network_info):
     dns = subnet['dns'][0]['address']
 
     try:
-        session.call_plugin_serialized('ipxe.py', 'inject', sr_path,
-                cd_vdi['uuid'], boot_menu_url, ip_address, netmask,
-                gateway, dns, CONF.xenserver.ipxe_mkisofs_cmd)
+        disk_management.inject_ipxe_config(session, sr_path, cd_vdi['uuid'],
+                                           boot_menu_url, ip_address, netmask,
+                                           gateway, dns,
+                                           CONF.xenserver.ipxe_mkisofs_cmd)
     except session.XenAPI.Failure as exc:
         _type, _method, error = exc.details[:3]
         if error == 'CommandNotFound':

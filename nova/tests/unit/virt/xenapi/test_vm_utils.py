@@ -18,6 +18,7 @@ import contextlib
 from eventlet import greenthread
 import mock
 from mox3 import mox
+import os_xenapi
 from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
 from oslo_config import fixture as config_fixture
@@ -1003,24 +1004,23 @@ class VDIOtherConfigTestCase(VMUtilsTestBase):
 
         self.assertEqual(expected, other_config)
 
-    def test_import_migrated_vhds(self):
+    @mock.patch.object(os_xenapi.client.vm_management, 'receive_vhd')
+    @mock.patch.object(vm_utils, 'scan_default_sr')
+    @mock.patch.object(vm_utils, 'get_sr_path')
+    def test_import_migrated_vhds(self, mock_sr_path, mock_scan_sr,
+                                  mock_recv_vhd):
         # Migrated images should preserve the `other_config`
         other_config = {}
 
         def VDI_add_to_other_config(ref, key, value):
             other_config[key] = value
 
-        def call_plugin_serialized(*args, **kwargs):
-            return {'root': {'uuid': 'aaaa-bbbb-cccc-dddd'}}
-
         # Stubbing on the session object and not class so we don't pollute
         # other tests
         self.session.VDI_add_to_other_config = VDI_add_to_other_config
         self.session.VDI_get_other_config = lambda vdi: {}
-        self.session.call_plugin_serialized = call_plugin_serialized
 
-        self.stubs.Set(vm_utils, 'get_sr_path', lambda *a, **k: None)
-        self.stubs.Set(vm_utils, 'scan_default_sr', lambda *a, **k: None)
+        mock_sr_path.return_value = {'root': {'uuid': 'aaaa-bbbb-cccc-dddd'}}
 
         vm_utils._import_migrated_vhds(self.session, self.fake_instance,
                                        "disk_label", "root", "vdi_label")
@@ -1029,6 +1029,11 @@ class VDIOtherConfigTestCase(VMUtilsTestBase):
                     'nova_instance_uuid': 'aaaa-bbbb-cccc-dddd'}
 
         self.assertEqual(expected, other_config)
+        mock_scan_sr.assert_called_once_with(self.session)
+        mock_recv_vhd.assert_called_with(
+            self.session, "disk_label",
+            {'root': {'uuid': 'aaaa-bbbb-cccc-dddd'}}, mock.ANY)
+        mock_sr_path.assert_called_once_with(self.session)
 
 
 class GenerateDiskTestCase(VMUtilsTestBase):
@@ -1367,7 +1372,9 @@ class CreateKernelRamdiskTestCase(VMUtilsTestBase):
                     self.session, self.instance, self.name_label)
         self.assertEqual((None, None), result)
 
-    def test_create_kernel_and_ramdisk_create_both_cached(self):
+    @mock.patch.object(os_xenapi.client.disk_management,
+                       'create_kernel_ramdisk')
+    def test_create_kernel_and_ramdisk_create_both_cached(self, mock_ramdisk):
         kernel_id = "kernel"
         ramdisk_id = "ramdisk"
         self.instance["kernel_id"] = kernel_id
@@ -1377,22 +1384,22 @@ class CreateKernelRamdiskTestCase(VMUtilsTestBase):
         args_kernel['cached-image'] = kernel_id
         args_kernel['new-image-uuid'] = "fake_uuid1"
         uuidutils.generate_uuid().AndReturn("fake_uuid1")
-        self.session.call_plugin('kernel.py', 'create_kernel_ramdisk',
-                                  args_kernel).AndReturn("k")
+        mock_ramdisk.side_effect = ["k", "r"]
 
         args_ramdisk = {}
         args_ramdisk['cached-image'] = ramdisk_id
         args_ramdisk['new-image-uuid'] = "fake_uuid2"
         uuidutils.generate_uuid().AndReturn("fake_uuid2")
-        self.session.call_plugin('kernel.py', 'create_kernel_ramdisk',
-                                  args_ramdisk).AndReturn("r")
 
         self.mox.ReplayAll()
         result = vm_utils.create_kernel_and_ramdisk(self.context,
                     self.session, self.instance, self.name_label)
         self.assertEqual(("k", "r"), result)
 
-    def test_create_kernel_and_ramdisk_create_kernel_not_cached(self):
+    @mock.patch.object(os_xenapi.client.disk_management,
+                       'create_kernel_ramdisk')
+    def test_create_kernel_and_ramdisk_create_kernel_not_cached(self,
+                                                                mock_ramdisk):
         kernel_id = "kernel"
         self.instance["kernel_id"] = kernel_id
 
@@ -1400,8 +1407,7 @@ class CreateKernelRamdiskTestCase(VMUtilsTestBase):
         args_kernel['cached-image'] = kernel_id
         args_kernel['new-image-uuid'] = "fake_uuid1"
         uuidutils.generate_uuid().AndReturn("fake_uuid1")
-        self.session.call_plugin('kernel.py', 'create_kernel_ramdisk',
-                                  args_kernel).AndReturn("")
+        mock_ramdisk.return_value = ""
 
         kernel = {"kernel": {"file": "k"}}
         vm_utils._fetch_disk_image(self.context, self.session, self.instance,
@@ -1423,8 +1429,6 @@ class CreateKernelRamdiskTestCase(VMUtilsTestBase):
 
         if cache_images == 'all':
             uuidutils.generate_uuid().AndReturn("fake_uuid1")
-            self.session.call_plugin('kernel.py', 'create_kernel_ramdisk',
-                                     args_kernel).AndReturn("cached_image")
         else:
             kernel = {"kernel": {"file": "new_image", "uuid": None}}
             vm_utils._fetch_disk_image(self.context, self.session,
@@ -1446,8 +1450,13 @@ class CreateKernelRamdiskTestCase(VMUtilsTestBase):
             self.assertEqual(result, {"kernel":
                                       {"file": "new_image", "uuid": None}})
 
-    def test_create_kernel_image_cached_config(self):
+    @mock.patch.object(os_xenapi.client.disk_management,
+                       'create_kernel_ramdisk')
+    def test_create_kernel_image_cached_config(self, mock_ramdisk):
+        mock_ramdisk.return_value = "cached_image"
         self._test_create_kernel_image('all')
+        mock_ramdisk.assert_called_once_with(self.session, "kernel",
+                                             "fake_uuid1")
 
     def test_create_kernel_image_uncached_config(self):
         self._test_create_kernel_image('none')
@@ -2020,14 +2029,15 @@ class ImportMigratedDisksTestCase(VMUtilsTestBase):
         vm_utils._import_migrate_ephemeral_disks("s", instance)
         mock_get_sizes.assert_called_once_with(4000)
 
+    @mock.patch.object(os_xenapi.client.vm_management, 'receive_vhd')
     @mock.patch.object(vm_utils, '_set_vdi_info')
     @mock.patch.object(vm_utils, 'scan_default_sr')
     @mock.patch.object(vm_utils, 'get_sr_path')
     def test_import_migrated_vhds(self, mock_get_sr_path, mock_scan_sr,
-                                  mock_set_info):
+                                  mock_set_info, mock_recv_vhd):
         session = mock.Mock()
         instance = {"uuid": "uuid"}
-        session.call_plugin_serialized.return_value = {"root": {"uuid": "a"}}
+        mock_recv_vhd.return_value = {"root": {"uuid": "a"}}
         session.call_xenapi.return_value = "vdi_ref"
         mock_get_sr_path.return_value = "sr_path"
 
@@ -2037,9 +2047,8 @@ class ImportMigratedDisksTestCase(VMUtilsTestBase):
         expected = {'uuid': "a", 'ref': "vdi_ref"}
         self.assertEqual(expected, result)
         mock_get_sr_path.assert_called_once_with(session)
-        session.call_plugin_serialized.assert_called_once_with('migration.py',
-                'move_vhds_into_sr', instance_uuid='chain_label',
-                sr_path='sr_path', uuid_stack=mock.ANY)
+        mock_recv_vhd.assert_called_once_with(session, 'chain_label',
+                                              'sr_path', mock.ANY)
         mock_scan_sr.assert_called_once_with(session)
         session.call_xenapi.assert_called_once_with('VDI.get_by_uuid', 'a')
         mock_set_info.assert_called_once_with(session, 'vdi_ref', 'disk_type',
@@ -2061,33 +2070,42 @@ class MigrateVHDTestCase(VMUtilsTestBase):
             'migration.py', 'transfer_vhd', instance_uuid=label, host="dest",
             vdi_uuid="vdi_uuid", sr_path="sr_path", seq_num=2)
 
-    def test_migrate_vhd_root(self):
+    @mock.patch.object(os_xenapi.client.vm_management, 'transfer_vhd')
+    def test_migrate_vhd_root(self, mock_trans_vhd):
         session = mock.Mock()
         instance = {"uuid": "a"}
 
         vm_utils.migrate_vhd(session, instance, "vdi_uuid", "dest",
                              "sr_path", 2)
 
-        self._assert_transfer_called(session, "a")
+        mock_trans_vhd.assert_called_once_with(session, "a",
+                                               "dest", "vdi_uuid", "sr_path",
+                                               2)
 
-    def test_migrate_vhd_ephemeral(self):
+    @mock.patch.object(os_xenapi.client.vm_management, 'transfer_vhd')
+    def test_migrate_vhd_ephemeral(self, mock_trans_vhd):
         session = mock.Mock()
         instance = {"uuid": "a"}
 
         vm_utils.migrate_vhd(session, instance, "vdi_uuid", "dest",
                              "sr_path", 2, 2)
 
-        self._assert_transfer_called(session, "a_ephemeral_2")
+        mock_trans_vhd.assert_called_once_with(session, "a_ephemeral_2",
+                                               "dest", "vdi_uuid", "sr_path",
+                                               2)
 
-    def test_migrate_vhd_converts_exceptions(self):
+    @mock.patch.object(os_xenapi.client.vm_management, 'transfer_vhd')
+    def test_migrate_vhd_converts_exceptions(self, mock_trans_vhd):
         session = mock.Mock()
         session.XenAPI.Failure = test.TestingException
-        session.call_plugin_serialized.side_effect = test.TestingException()
+        mock_trans_vhd.side_effect = test.TestingException()
         instance = {"uuid": "a"}
 
         self.assertRaises(exception.MigrationError, vm_utils.migrate_vhd,
                           session, instance, "vdi_uuid", "dest", "sr_path", 2)
-        self._assert_transfer_called(session, "a")
+        mock_trans_vhd.assert_called_once_with(session, "a",
+                                               "dest", "vdi_uuid", "sr_path",
+                                               2)
 
 
 class StripBaseMirrorTestCase(VMUtilsTestBase):

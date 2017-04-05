@@ -19,6 +19,8 @@ import os
 import sys
 import time
 
+from os_xenapi.client import host_agent
+from os_xenapi.client import XenAPI
 from oslo_log import log as logging
 from oslo_serialization import base64
 from oslo_serialization import jsonutils
@@ -61,23 +63,22 @@ def _call_agent(session, instance, vm_ref, method, addl_args=None,
 
     # always fetch domid because VM may have rebooted
     dom_id = session.VM.get_domid(vm_ref)
-
+    uuid = uuidutils.generate_uuid()
     args = {
-        'id': uuidutils.generate_uuid(),
+        'id': uuid,
         'dom_id': str(dom_id),
         'timeout': str(timeout),
     }
-    args.update(addl_args)
 
     try:
-        ret = session.call_plugin('agent.py', method, args)
-    except session.XenAPI.Failure as e:
+        ret = method(session, uuid, dom_id, timeout, **addl_args)
+    except XenAPI.Failure as e:
         err_msg = e.details[-1].splitlines()[-1]
         if 'TIMEOUT:' in err_msg:
             LOG.error(_LE('TIMEOUT: The call to %(method)s timed out. '
                           'args=%(args)r'),
                       {'method': method, 'args': args}, instance=instance)
-            raise exception.AgentTimeout(method=method)
+            raise exception.AgentTimeout(method=method.__name__)
         elif 'REBOOT:' in err_msg:
             LOG.debug('REBOOT: The call to %(method)s detected a reboot. '
                       'args=%(args)r',
@@ -89,13 +90,13 @@ def _call_agent(session, instance, vm_ref, method, addl_args=None,
             LOG.error(_LE('NOT IMPLEMENTED: The call to %(method)s is not '
                           'supported by the agent. args=%(args)r'),
                       {'method': method, 'args': args}, instance=instance)
-            raise exception.AgentNotImplemented(method=method)
+            raise exception.AgentNotImplemented(method=method.__name__)
         else:
             LOG.error(_LE('The call to %(method)s returned an error: %(e)s. '
                           'args=%(args)r'),
                       {'method': method, 'args': args, 'e': e},
                       instance=instance)
-            raise exception.AgentError(method=method)
+            raise exception.AgentError(method=method.__name__)
 
     if not isinstance(ret, dict):
         try:
@@ -105,14 +106,14 @@ def _call_agent(session, instance, vm_ref, method, addl_args=None,
                           'response: %(ret)r. args=%(args)r'),
                       {'method': method, 'ret': ret, 'args': args},
                       instance=instance)
-            raise exception.AgentError(method=method)
+            raise exception.AgentError(method=method.__name__)
 
     if ret['returncode'] not in success_codes:
         LOG.error(_LE('The agent call to %(method)s returned '
                       'an error: %(ret)r. args=%(args)r'),
                   {'method': method, 'ret': ret, 'args': args},
                   instance=instance)
-        raise exception.AgentError(method=method)
+        raise exception.AgentError(method=method.__name__)
 
     LOG.debug('The agent call to %(method)s was successful: '
               '%(ret)r. args=%(args)r',
@@ -135,7 +136,7 @@ def _wait_for_new_dom_id(session, vm_ref, old_dom_id, method):
 
         if time.time() > expiration:
             LOG.debug("Timed out waiting for new dom_id %s", dom_id)
-            raise exception.AgentTimeout(method=method)
+            raise exception.AgentTimeout(method=method.__name__)
 
         time.sleep(1)
 
@@ -190,7 +191,8 @@ class XenAPIBasedAgent(object):
                 # NOTE(johngarbutt): we can't use the xapi plugin
                 # timeout, because the domid may change when
                 # the server is rebooted
-                return self._call_agent('version', ignore_errors=False)
+                return self._call_agent(host_agent.version,
+                                        ignore_errors=False)
             except exception.AgentError as error:
                 if time.time() > expiration:
                     self._add_instance_fault(error, sys.exc_info())
@@ -229,7 +231,7 @@ class XenAPIBasedAgent(object):
     def _perform_update(self, agent_build):
         args = {'url': agent_build.url, 'md5sum': agent_build.md5hash}
         try:
-            self._call_agent('agentupdate', args)
+            self._call_agent(host_agent.agent_update, args)
         except exception.AgentError as exc:
             # Silently fail for agent upgrades
             LOG.warning(_LW("Unable to update the agent due "
@@ -239,8 +241,8 @@ class XenAPIBasedAgent(object):
     def _exchange_key_with_agent(self):
         dh = SimpleDH()
         args = {'pub': str(dh.get_public())}
-        resp = self._call_agent('key_init', args, success_codes=['D0'],
-                                ignore_errors=False)
+        resp = self._call_agent(host_agent.key_init, args,
+                                success_codes=['D0'], ignore_errors=False)
         agent_pub = int(resp)
         dh.compute_shared(agent_pub)
         return dh
@@ -276,7 +278,7 @@ class XenAPIBasedAgent(object):
         enc_pass = dh.encrypt(new_pass + '\n')
 
         args = {'enc_pass': enc_pass}
-        self._call_agent('password', args)
+        self._call_agent(host_agent.password, args)
         self._save_instance_password_if_sshkey_present(new_pass)
 
     def inject_ssh_key(self):
@@ -321,13 +323,13 @@ class XenAPIBasedAgent(object):
         b64_contents = base64.encode_as_bytes(contents)
 
         args = {'b64_path': b64_path, 'b64_contents': b64_contents}
-        return self._call_agent('inject_file', args)
+        return self._call_agent(host_agent.inject_file, args)
 
     def resetnetwork(self):
         LOG.debug('Resetting network', instance=self.instance)
 
         # NOTE(johngarbutt) old FreeBSD and Gentoo agents return 500 on success
-        return self._call_agent('resetnetwork',
+        return self._call_agent(host_agent.reset_network,
                             timeout=CONF.xenserver.agent_resetnetwork_timeout,
                             success_codes=['0', '500'])
 

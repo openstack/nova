@@ -24,6 +24,7 @@ import re
 
 import mock
 from mox3 import mox
+from os_xenapi.client import host_management
 from os_xenapi.client import session as xenapi_session
 from os_xenapi.client import XenAPI
 from oslo_concurrency import lockutils
@@ -1694,18 +1695,29 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         instance.create()
         return instance
 
+    @mock.patch.object(vmops.VMOps, '_migrate_disk_resizing_up')
+    @mock.patch.object(vm_utils, 'get_sr_path')
+    @mock.patch.object(vm_utils, 'lookup')
     @mock.patch.object(volume_utils, 'is_booted_from_volume')
-    def test_migrate_disk_and_power_off(self, mock_boot):
+    def test_migrate_disk_and_power_off(self, mock_boot_from_volume,
+                                        mock_lookup, mock_sr_path,
+                                        mock_migrate):
         instance = self._create_instance()
         xenapi_fake.create_vm(instance['name'], 'Running')
         flavor = fake_flavor.fake_flavor_obj(self.context, root_gb=80,
                                              ephemeral_gb=0)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
-        vm_ref = vm_utils.lookup(conn._session, instance['name'])
-        volume_utils.is_booted_from_volume(conn._session, vm_ref)
+        mock_boot_from_volume.return_value = True
+        mock_lookup.return_value = 'fake_vm_ref'
+        mock_sr_path.return_value = 'fake_sr_path'
         conn.migrate_disk_and_power_off(self.context, instance,
                                         '127.0.0.1', flavor, None)
-        mock_boot.assert_any_call(conn._session, vm_ref)
+        mock_lookup.assert_called_once_with(conn._session, instance['name'],
+                                            False)
+        mock_sr_path.assert_called_once_with(conn._session)
+        mock_migrate.assert_called_once_with(self.context, instance,
+                                             '127.0.0.1', 'fake_vm_ref',
+                                             'fake_sr_path')
 
     def test_migrate_disk_and_power_off_passes_exceptions(self):
         instance = self._create_instance()
@@ -1735,20 +1747,31 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
                           self.context, instance,
                           'fake_dest', flavor, None)
 
+    @mock.patch.object(vmops.VMOps, '_migrate_disk_resizing_up')
+    @mock.patch.object(vm_utils, 'get_sr_path')
+    @mock.patch.object(vm_utils, 'lookup')
     @mock.patch.object(volume_utils, 'is_booted_from_volume')
-    def test_migrate_disk_and_power_off_with_zero_gb_old_and_new_works(self,
-                                                                 mock_boot):
+    def test_migrate_disk_and_power_off_with_zero_gb_old_and_new_works(
+            self, mock_boot_from_volume, mock_lookup, mock_sr_path,
+            mock_migrate):
         flavor = fake_flavor.fake_flavor_obj(self.context, root_gb=0,
                                              ephemeral_gb=0)
         instance = self._create_instance(root_gb=0, ephemeral_gb=0)
         instance.flavor.root_gb = 0
         instance.flavor.ephemeral_gb = 0
         xenapi_fake.create_vm(instance['name'], 'Running')
+        mock_boot_from_volume.return_value = True
+        mock_lookup.return_value = 'fake_vm_ref'
+        mock_sr_path.return_value = 'fake_sr_path'
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
-        vm_ref = vm_utils.lookup(conn._session, instance['name'])
         conn.migrate_disk_and_power_off(self.context, instance,
                                         '127.0.0.1', flavor, None)
-        mock_boot.assert_any_call(conn._session, vm_ref)
+        mock_lookup.assert_called_once_with(conn._session, instance['name'],
+                                            False)
+        mock_sr_path.assert_called_once_with(conn._session)
+        mock_migrate.assert_called_once_with(self.context, instance,
+                                             '127.0.0.1', 'fake_vm_ref',
+                                             'fake_sr_path')
 
     def _test_revert_migrate(self, power_on):
         instance = create_instance_with_system_metadata(self.context,
@@ -2234,12 +2257,15 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
         stats = self.conn.host_state.get_host_stats(False)
         self.assertEqual("SOMERETURNVALUE", stats['supported_instances'])
 
-    def test_update_stats_caches_hostname(self):
-        self.mox.StubOutWithMock(host, 'call_xenhost')
-        self.mox.StubOutWithMock(vm_utils, 'scan_default_sr')
-        self.mox.StubOutWithMock(vm_utils, 'list_vms')
-        self.mox.StubOutWithMock(self.conn._session, 'call_xenapi')
-        self.mox.StubOutWithMock(host.HostState, 'get_disk_used')
+    @mock.patch.object(host.HostState, 'get_disk_used')
+    @mock.patch.object(host.HostState, '_get_passthrough_devices')
+    @mock.patch.object(jsonutils, 'loads')
+    @mock.patch.object(vm_utils, 'list_vms')
+    @mock.patch.object(vm_utils, 'scan_default_sr')
+    @mock.patch.object(host_management, 'get_host_data')
+    def test_update_stats_caches_hostname(self, mock_host_data, mock_scan_sr,
+                                          mock_list_vms, mock_loads,
+                                          mock_devices, mock_dis_used):
         data = {'disk_total': 0,
                 'disk_used': 0,
                 'disk_available': 0,
@@ -2253,23 +2279,26 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
             'physical_utilisation': 0,
             'virtual_allocation': 0,
             }
-
-        for i in range(3):
-            host.call_xenhost(mox.IgnoreArg(), 'host_data', {}).AndReturn(data)
-            vm_utils.scan_default_sr(self.conn._session).AndReturn("ref")
-            vm_utils.list_vms(self.conn._session).AndReturn([])
-            self.conn._session.call_xenapi('SR.get_record', "ref").AndReturn(
-                sr_rec)
-            host.HostState.get_disk_used("ref").AndReturn((0, 0))
-            if i == 2:
-                # On the third call (the second below) change the hostname
-                data = dict(data, host_hostname='bar')
-
-        self.mox.ReplayAll()
-        stats = self.conn.host_state.get_host_stats(refresh=True)
-        self.assertEqual('foo', stats['hypervisor_hostname'])
-        stats = self.conn.host_state.get_host_stats(refresh=True)
-        self.assertEqual('foo', stats['hypervisor_hostname'])
+        mock_loads.return_value = data
+        mock_host_data.return_value = data
+        mock_scan_sr.return_value = 'ref'
+        mock_list_vms.return_value = []
+        mock_devices.return_value = "dev1"
+        mock_dis_used.return_value = (0, 0)
+        self.conn._session = mock.Mock()
+        with mock.patch.object(self.conn._session.SR, 'get_record') \
+                as mock_record:
+            mock_record.return_value = sr_rec
+            stats = self.conn.host_state.get_host_stats(refresh=True)
+            self.assertEqual('foo', stats['hypervisor_hostname'])
+            self.assertEqual(2, mock_loads.call_count)
+            self.assertEqual(2, mock_host_data.call_count)
+            self.assertEqual(2, mock_scan_sr.call_count)
+            self.assertEqual(2, mock_devices.call_count)
+            mock_loads.assert_called_with(data)
+            mock_host_data.assert_called_with(self.conn._session)
+            mock_scan_sr.assert_called_with(self.conn._session)
+            mock_devices.assert_called_with()
 
 
 @mock.patch.object(host.HostState, 'update_status')
