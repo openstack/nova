@@ -1,0 +1,20 @@
+---
+upgrade:
+  - |
+    The ``nova-manage api_db sync`` and ``nova-manage db sync`` commands
+    previously took an optional ``--version`` parameter to determine which
+    version to sync to. For example::
+
+        $ nova-manage api_db sync --version some-version
+
+    This is now an optional positional argument. For example::
+
+        $ nova-manage api_db sync some-version
+
+    Aliases are provided but these are marked as deprecated and will be removed
+    in the next release of nova.
+deprecations:
+  - |
+    The ``--version`` parameters of the ``nova-manage api_db sync`` and
+    ``nova-manage db sync`` commands has been deprecated in favor of
+    positional arguments.
