@@ -26,9 +26,33 @@ security_group_default_rules_policies = [
     policy.RuleDefault(
         name=POLICY_ROOT % 'discoverable',
         check_str=base.RULE_ANY),
-    policy.RuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_API),
+    base.create_rule_default(
+        BASE_POLICY_NAME,
+        base.RULE_ADMIN_API,
+        """Lists, shows information for, creates and deletes default security
+group rules.
+
+These API's are only available with nova-network which is now deprecated.""",
+        [
+            {
+                'method': 'GET',
+                'path': '/os-security-group-default-rules'
+            },
+            {
+                'method': 'GET',
+                'path': '/os-security-group-default-rules'
+                        '/{security_group_default_rule_id}'
+            },
+            {
+                'method': 'POST',
+                'path': '/os-security-group-default-rules'
+            },
+            {
+                'method': 'DELETE',
+                'path': '/os-security-group-default-rules'
+                        '/{security_group_default_rule_id}'
+            }
+        ]),
 ]
 
 
