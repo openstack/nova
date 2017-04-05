@@ -990,23 +990,24 @@ class ProjectTestCase(test.NoDBTestCase):
 
     def test_no_migrations_have_downgrade(self):
         topdir = os.path.normpath(os.path.dirname(__file__) + '/../../../')
-        py_glob = os.path.join(topdir, "nova", "db", "sqlalchemy",
-                               "migrate_repo", "versions", "*.py")
-
+        # Walk both the nova_api and nova (cell) database migrations.
         includes_downgrade = []
-        for path in glob.iglob(py_glob):
-            has_upgrade = False
-            has_downgrade = False
-            with open(path, "r") as f:
-                for line in f:
-                    if 'def upgrade(' in line:
-                        has_upgrade = True
-                    if 'def downgrade(' in line:
-                        has_downgrade = True
+        for subdir in ('api_migrations', ''):
+            py_glob = os.path.join(topdir, "db", "sqlalchemy", subdir,
+                                   "migrate_repo", "versions", "*.py")
+            for path in glob.iglob(py_glob):
+                has_upgrade = False
+                has_downgrade = False
+                with open(path, "r") as f:
+                    for line in f:
+                        if 'def upgrade(' in line:
+                            has_upgrade = True
+                        if 'def downgrade(' in line:
+                            has_downgrade = True
 
-                if has_upgrade and has_downgrade:
-                    fname = os.path.basename(path)
-                    includes_downgrade.append(fname)
+                    if has_upgrade and has_downgrade:
+                        fname = os.path.basename(path)
+                        includes_downgrade.append(fname)
 
         helpful_msg = ("The following migrations have a downgrade "
                        "which is not supported:"
