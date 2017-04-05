@@ -1889,6 +1889,8 @@ class API(base.Base):
                     except exception.InstanceNotFound:
                         with nova_context.target_cell(context, None):
                             quotas.rollback()
+                            # Instance is already deleted.
+                            return
                 if not instance:
                     # Instance is already deleted.
                     return
