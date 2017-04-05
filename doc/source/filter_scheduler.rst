@@ -92,7 +92,8 @@ There are many standard filter classes which may be used
   It passes hosts that can create the specified instance type.
   The extra specifications can have the same operators as
   |ComputeCapabilitiesFilter|. To specify multiple values for the same key
-  use a comma. E.g., "value1,value2"
+  use a comma. E.g., "value1,value2". All hosts are passed if no extra_specs
+  are specified.
 * |ComputeFilter| - passes all hosts that are operational and enabled.
 * |CoreFilter| - filters based on CPU core utilization. It passes hosts with
   sufficient number of CPU cores.
