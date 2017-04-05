@@ -645,6 +645,29 @@ class ServersTest(ServersTestBase):
         # Cleanup
         self._delete_server(created_server_id)
 
+    def test_confirm_resized_server_negative_invalid_state(self):
+        # Create server
+        server = self._build_minimal_create_server_request()
+        created_server = self.api.post_server({"server": server})
+        created_server_id = created_server['id']
+        found_server = self._wait_for_state_change(created_server, 'BUILD')
+        self.assertEqual('ACTIVE', found_server['status'])
+
+        # Confirm resized server in ACTIVE
+        # NOTE(yatsumi): When confirm resized server API runs,
+        # the server status must be VERIFY_RESIZE.
+        # By returning 409, I want to confirm that the ACTIVE server does not
+        # cause unexpected behavior.
+        post = {'confirmResize': {}}
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self.api.post_server_action,
+                               created_server_id, post)
+        self.assertEqual(409, ex.response.status_code)
+        self.assertEqual('ACTIVE', found_server['status'])
+
+        # Cleanup
+        self._delete_server(created_server_id)
+
 
 class ServersTestV21(ServersTest):
     api_major_version = 'v2.1'
