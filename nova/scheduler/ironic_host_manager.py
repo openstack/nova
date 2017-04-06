@@ -105,14 +105,21 @@ class IronicHostManager(host_manager.HostManager):
         else:
             return host_manager.HostState(host, node, cell)
 
-    def _init_instance_info(self, compute_nodes=None):
+    def _init_instance_info(self, computes_by_cell=None):
         """Ironic hosts should not pass instance info."""
         context = context_module.RequestContext()
-        if not compute_nodes:
-            compute_nodes = objects.ComputeNodeList.get_all(context).objects
+        self._load_cells(context)
+        if not computes_by_cell:
+            computes_by_cell = {}
+            for cell in self.cells:
+                with context_module.target_cell(context, cell):
+                    computes_by_cell[cell] = (
+                        objects.ComputeNodeList.get_all(context).objects)
 
-        non_ironic_computes = [c for c in compute_nodes
-                               if not self._is_ironic_compute(c)]
+        non_ironic_computes = {cell: [c for c in compute_nodes
+                                      if not self._is_ironic_compute(c)]
+                               for cell, compute_nodes in
+                               computes_by_cell.items()}
         super(IronicHostManager, self)._init_instance_info(non_ironic_computes)
 
     def _get_instance_info(self, context, compute):

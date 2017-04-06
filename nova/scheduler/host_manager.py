@@ -337,6 +337,7 @@ class HostManager(object):
         return HostState(host, node, cell)
 
     def __init__(self):
+        self.cells = None
         self.host_state_map = {}
         self.filter_handler = filters.HostFilterHandler()
         filter_classes = self.filter_handler.get_matching_classes(
@@ -360,7 +361,6 @@ class HostManager(object):
         self._instance_info = {}
         if self.track_instance_changes:
             self._init_instance_info()
-        self.cells = None
 
     def _load_filters(self):
         return CONF.filter_scheduler.enabled_filters
@@ -401,7 +401,7 @@ class HostManager(object):
             if aggregate.id in self.host_aggregates_map[host]:
                 self.host_aggregates_map[host].remove(aggregate.id)
 
-    def _init_instance_info(self, compute_nodes=None):
+    def _init_instance_info(self, computes_by_cell=None):
         """Creates the initial view of instances for all hosts.
 
         As this initial population of instance information may take some time,
@@ -413,46 +413,56 @@ class HostManager(object):
         if is None, compute_nodes will be looked up in database
         """
 
-        def _async_init_instance_info(compute_nodes):
+        def _async_init_instance_info(computes_by_cell):
             context = context_module.RequestContext()
+            self._load_cells(context)
             LOG.debug("START:_async_init_instance_info")
             self._instance_info = {}
 
-            if not compute_nodes:
-                compute_nodes = objects.ComputeNodeList.get_all(
-                    context).objects
+            count = 0
+            if not computes_by_cell:
+                computes_by_cell = {}
+                for cell in self.cells:
+                    with context_module.target_cell(context, cell):
+                        cell_cns = objects.ComputeNodeList.get_all(
+                            context).objects
+                        computes_by_cell[cell] = cell_cns
+                        count += len(cell_cns)
 
-            LOG.debug("Total number of compute nodes: %s", len(compute_nodes))
-            # Break the queries into batches of 10 to reduce the total number
-            # of calls to the DB.
-            batch_size = 10
-            start_node = 0
-            end_node = batch_size
-            while start_node <= len(compute_nodes):
-                curr_nodes = compute_nodes[start_node:end_node]
-                start_node += batch_size
-                end_node += batch_size
-                filters = {"host": [curr_node.host
-                                    for curr_node in curr_nodes],
-                           "deleted": False}
-                result = objects.InstanceList.get_by_filters(
-                    context.elevated(), filters)
-                instances = result.objects
-                LOG.debug("Adding %s instances for hosts %s-%s",
-                          len(instances), start_node, end_node)
-                for instance in instances:
-                    host = instance.host
-                    if host not in self._instance_info:
-                        self._instance_info[host] = {"instances": {},
-                                                     "updated": False}
-                    inst_dict = self._instance_info[host]
-                    inst_dict["instances"][instance.uuid] = instance
-                # Call sleep() to cooperatively yield
-                time.sleep(0)
-            LOG.debug("END:_async_init_instance_info")
+            LOG.debug("Total number of compute nodes: %s", count)
+
+            for cell, compute_nodes in computes_by_cell.items():
+                # Break the queries into batches of 10 to reduce the total
+                # number of calls to the DB.
+                batch_size = 10
+                start_node = 0
+                end_node = batch_size
+                while start_node <= len(compute_nodes):
+                    curr_nodes = compute_nodes[start_node:end_node]
+                    start_node += batch_size
+                    end_node += batch_size
+                    filters = {"host": [curr_node.host
+                                        for curr_node in curr_nodes],
+                               "deleted": False}
+                    with context_module.target_cell(context, cell):
+                        result = objects.InstanceList.get_by_filters(
+                            context.elevated(), filters)
+                    instances = result.objects
+                    LOG.debug("Adding %s instances for hosts %s-%s",
+                              len(instances), start_node, end_node)
+                    for instance in instances:
+                        host = instance.host
+                        if host not in self._instance_info:
+                            self._instance_info[host] = {"instances": {},
+                                                         "updated": False}
+                        inst_dict = self._instance_info[host]
+                        inst_dict["instances"][instance.uuid] = instance
+                    # Call sleep() to cooperatively yield
+                    time.sleep(0)
+                LOG.debug("END:_async_init_instance_info")
 
         # Run this async so that we don't block the scheduler start-up
-        utils.spawn_n(_async_init_instance_info, compute_nodes)
+        utils.spawn_n(_async_init_instance_info, computes_by_cell)
 
     def _choose_host_filters(self, filter_cls_names):
         """Since the caller may specify which filters to use we need
@@ -581,7 +591,12 @@ class HostManager(object):
                 hosts, spec_obj)
 
     def _get_computes_for_cells(self, context, cells, compute_uuids=None):
-        """Returns: a cell-uuid keyed dict of compute node lists."""
+        """Get a tuple of compute node and service information.
+
+        Returns a tuple (compute_nodes, services) where:
+         - compute_nodes is cell-uuid keyed dict of compute node lists
+         - services is a dict of services indexed by hostname
+        """
 
         compute_nodes = collections.defaultdict(list)
         services = {}
@@ -691,6 +706,12 @@ class HostManager(object):
         return [self.aggs_by_id[agg_id] for agg_id in
                 self.host_aggregates_map[host]]
 
+    def _get_instances_by_host(self, context, host_name):
+        hm = objects.HostMapping.get_by_host(context, host_name)
+        with context_module.target_cell(context, hm.cell_mapping):
+            inst_list = objects.InstanceList.get_by_host(context, host_name)
+            return {inst.uuid: inst for inst in inst_list}
+
     def _get_instance_info(self, context, compute):
         """Gets the host instance info from the compute host.
 
@@ -707,17 +728,14 @@ class HostManager(object):
             inst_dict = host_info["instances"]
         else:
             # Host is running old version, or updates aren't flowing.
-            inst_list = objects.InstanceList.get_by_host(context, host_name)
-            inst_dict = {instance.uuid: instance
-                         for instance in inst_list.objects}
+            inst_dict = self._get_instances_by_host(context, host_name)
         return inst_dict
 
     def _recreate_instance_info(self, context, host_name):
         """Get the InstanceList for the specified host, and store it in the
         _instance_info dict.
         """
-        instances = objects.InstanceList.get_by_host(context, host_name)
-        inst_dict = {instance.uuid: instance for instance in instances}
+        inst_dict = self._get_instances_by_host(context, host_name)
         host_info = self._instance_info[host_name] = {}
         host_info["instances"] = inst_dict
         host_info["updated"] = False

@@ -19,6 +19,7 @@ Tests For IronicHostManager
 
 import mock
 
+from nova import context
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
@@ -138,11 +139,14 @@ class IronicHostManagerTestCase(test.NoDBTestCase):
         cn1 = objects.ComputeNode(**{'hypervisor_type': 'ironic'})
         cn2 = objects.ComputeNode(**{'hypervisor_type': 'qemu'})
         cn3 = objects.ComputeNode(**{'hypervisor_type': 'qemu'})
+        cell = objects.CellMappingList.get_all(context.get_admin_context())[0]
+        self.host_manager.cells = [cell]
         mock_get_all.return_value.objects = [cn1, cn2, cn3]
 
         self.host_manager._init_instance_info()
         # ensure we filter out ironic nodes before calling the base class impl
-        mock_base_init_instance_info.assert_called_once_with([cn2, cn3])
+        mock_base_init_instance_info.assert_called_once_with(
+            {cell: [cn2, cn3]})
 
     @mock.patch.object(host_manager.HostManager, '_init_instance_info')
     @mock.patch.object(objects.ComputeNodeList, 'get_all')
@@ -150,13 +154,15 @@ class IronicHostManagerTestCase(test.NoDBTestCase):
                                               mock_base_init_instance_info):
         cn1 = objects.ComputeNode(**{'hypervisor_type': 'ironic'})
         cn2 = objects.ComputeNode(**{'hypervisor_type': 'qemu'})
+        cell = objects.CellMapping()
 
-        self.host_manager._init_instance_info(compute_nodes=[cn1, cn2])
+        self.host_manager._init_instance_info(computes_by_cell={
+            cell: [cn1, cn2]})
 
         # check we don't try to get nodes list if it was passed explicitly
         self.assertFalse(mock_get_all.called)
         # ensure we filter out ironic nodes before calling the base class impl
-        mock_base_init_instance_info.assert_called_once_with([cn2])
+        mock_base_init_instance_info.assert_called_once_with({cell: [cn2]})
 
 
 class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
