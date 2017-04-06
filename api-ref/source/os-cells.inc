@@ -9,7 +9,12 @@
 ==============================
 
 Adds neighbor cells, lists neighbor cells, and shows the capabilities of
-the local cell.
+the local cell. By default, only administrators can manage cells.
+
+.. note:: These APIs refer to a Cells v1 deployment which is optional and not
+  recommended for new deployments of Nova. These are not used with Cells v2
+  which is required beginning with the 15.0.0 Ocata release where all Nova
+  deployments consist of at least one Cells v2 cell.
 
 List Cells
 ==========
