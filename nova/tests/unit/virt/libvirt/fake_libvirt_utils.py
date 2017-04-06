@@ -30,7 +30,7 @@ def create_image(disk_format, path, size):
     pass
 
 
-def create_cow_image(backing_file, path):
+def create_cow_image(backing_file, path, size=None):
     pass
 
 
