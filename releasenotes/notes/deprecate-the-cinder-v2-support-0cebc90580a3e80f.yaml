@@ -1,0 +1,5 @@
+deprecations:
+- |
+  Nova support for using the Block Storage (Cinder) v2 API is now deprecated
+  and will be removed in the 17.0.0 Queens release. The v3 API is now the
+  default and is backward compatible with the v2 API.
