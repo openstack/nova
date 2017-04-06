@@ -20,7 +20,9 @@ from oslo_utils import timeutils
 from nova import exception
 from nova import objects
 from nova.tests.unit.objects import test_objects
+from nova.tests.unit import utils as test_utils
 from nova.tests import uuidsentinel as uuids
+
 
 _TS_NOW = timeutils.utcnow(with_timezone=True)
 # o.vo.fields.DateTimeField converts to tz-aware and
@@ -122,10 +124,11 @@ class _TestInstanceGroupObject(object):
         self.assertFalse(mock_db_update.called)
         self.assertFalse(mock_notify.called)
 
+    @mock.patch('nova.compute.utils.notify_about_server_group_action')
     @mock.patch('nova.compute.utils.notify_about_server_group_update')
     @mock.patch('nova.objects.InstanceGroup._create_in_db',
                 return_value=_INST_GROUP_DB)
-    def test_create(self, mock_db_create, mock_notify):
+    def test_create(self, mock_db_create, mock_notify, mock_notify_action):
         obj = objects.InstanceGroup(context=self.context)
         obj.uuid = _DB_UUID
         obj.name = _INST_GROUP_DB['name']
@@ -165,7 +168,26 @@ class _TestInstanceGroupObject(object):
              'policies': _INST_GROUP_DB['policies'],
              'server_group_id': _DB_UUID})
 
+        def _group_matcher(group):
+            """Custom mock call matcher method."""
+            return (group.uuid == _DB_UUID and
+                group.name == _INST_GROUP_DB['name'] and
+                group.user_id == _INST_GROUP_DB['user_id'] and
+                group.project_id == _INST_GROUP_DB['project_id'] and
+                group.created_at == _TS_NOW and
+                group.updated_at == _TS_NOW and
+                group.deleted_at is None and
+                group.deleted is False and
+                group.members == _INST_GROUP_DB['members'] and
+                group.policies == _INST_GROUP_DB['policies'] and
+                group.id == 1)
+
+        group_matcher = test_utils.CustomMockCallMatcher(_group_matcher)
+
         self.assertRaises(exception.ObjectActionError, obj.create)
+        mock_notify_action.assert_called_once_with(context=self.context,
+                                                   group=group_matcher,
+                                                   action='create')
 
     @mock.patch('nova.compute.utils.notify_about_server_group_update')
     @mock.patch('nova.objects.InstanceGroup._destroy_in_db')

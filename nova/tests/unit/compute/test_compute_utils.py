@@ -969,6 +969,49 @@ class ComputeUtilsTestCase(test.NoDBTestCase):
         mock_notify_usage.assert_has_calls(expected_notify_calls)
 
 
+class ServerGroupTestCase(test.TestCase):
+    def setUp(self):
+        super(ServerGroupTestCase, self).setUp()
+        fake_notifier.stub_notifier(self)
+        self.addCleanup(fake_notifier.reset)
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.context = context.RequestContext(self.user_id, self.project_id)
+
+    def test_notify_about_server_group_action(self):
+        uuid = uuids.instance
+        group = objects.InstanceGroup(context=self.context,
+                                      id=1,
+                                      uuid=uuid,
+                                      user_id=self.user_id,
+                                      project_id=self.project_id,
+                                      name="test-server-group",
+                                      policies=["anti-affinity"])
+        compute_utils.notify_about_server_group_action(self.context,
+                                                       group, 'create')
+        self.assertEqual(len(fake_notifier.VERSIONED_NOTIFICATIONS), 1)
+        notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+        expected = {'priority': 'INFO',
+                    'event_type': u'server_group.create',
+                    'publisher_id': u'nova-api:fake-mini',
+                    'payload': {
+                        'nova_object.data': {
+                            'name': u'test-server-group',
+                            'policies': [u'anti-affinity'],
+                            'project_id': u'fake',
+                            'user_id': u'fake',
+                            'uuid': uuid,
+                            'hosts': None,
+                            'members': None
+                        },
+                        'nova_object.name': 'ServerGroupPayload',
+                        'nova_object.namespace': 'nova',
+                        'nova_object.version': '1.0'
+                   }
+            }
+        self.assertEqual(notification, expected)
+
+
 class ComputeUtilsQuotaTestCase(test.TestCase):
     def setUp(self):
         super(ComputeUtilsQuotaTestCase, self).setUp()
