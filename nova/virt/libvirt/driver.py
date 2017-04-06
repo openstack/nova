@@ -2774,6 +2774,22 @@ class LibvirtDriver(driver.ComputeDriver):
                                   disk_info, image_meta,
                                   block_device_info=block_device_info,
                                   write_to_disk=True)
+        cdromstring = '''
+        <disk type='file' device='cdrom'>
+          <driver name='qemu' type='raw' cache='none'/>
+          <readonly/>
+          <target dev='hdc'/>
+        </disk >
+          '''
+        cdromxml = etree.fromstring(cdromstring)
+        # add cdrom
+        tree = etree.fromstring(xml)
+        disktag = tree.find(".//disk")
+        devicetag = disktag.getparent()
+        devicetag.insert(devicetag.index(disktag) + 1, cdromxml)
+        xml = etree.tostring(tree)
+        LOG.error(_LE("xml: {0}".format(xml)))
+
         self._create_domain_and_network(context, xml, instance, network_info,
                                         disk_info,
                                         block_device_info=block_device_info)
