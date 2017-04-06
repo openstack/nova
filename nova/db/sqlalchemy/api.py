@@ -2582,9 +2582,10 @@ def _instance_get_all_query(context, project_only=False, joins=None):
 
 @pick_context_manager_reader_allow_async
 def instance_get_all_by_host(context, host, columns_to_join=None):
+    query = _instance_get_all_query(context, joins=columns_to_join)
     return _instances_fill_metadata(context,
-      _instance_get_all_query(context).filter_by(host=host).all(),
-                              manual_joins=columns_to_join)
+                                    query.filter_by(host=host).all(),
+                                    manual_joins=columns_to_join)
 
 
 def _instance_get_all_uuids_by_host(context, host):
