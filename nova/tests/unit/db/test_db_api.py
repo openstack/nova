@@ -1182,6 +1182,28 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
         result = test(ctxt)
 
         self.assertEqual(2, len(result))
+        # make sure info_cache and security_groups were auto-joined
+        instance = result[0]
+        self.assertIn('info_cache', instance)
+        self.assertIn('security_groups', instance)
+
+    def test_instance_get_all_by_host_no_joins(self):
+        """Tests that we don't join on the info_cache and security_groups
+        tables if columns_to_join is an empty list.
+        """
+        self.create_instance_with_args()
+
+        @sqlalchemy_api.pick_context_manager_reader
+        def test(ctxt):
+            return sqlalchemy_api.instance_get_all_by_host(
+                ctxt, 'host1', columns_to_join=[])
+
+        result = test(context.get_admin_context())
+        self.assertEqual(1, len(result))
+        # make sure info_cache and security_groups were not auto-joined
+        instance = result[0]
+        self.assertNotIn('info_cache', instance)
+        self.assertNotIn('security_groups', instance)
 
     def test_instance_get_all_uuids_by_host(self):
         ctxt = context.get_admin_context()
