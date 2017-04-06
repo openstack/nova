@@ -76,8 +76,6 @@ Possible values:
    multiple schedulers
 ** 'chance_scheduler', which simply picks a host at random
 ** 'fake_scheduler', which is used for testing
-** A custom scheduler driver. In this case, you will be responsible for
-   creating and maintaining the entry point in your 'setup.cfg' file
 """),
     cfg.IntOpt("periodic_task_interval",
         default=60,
