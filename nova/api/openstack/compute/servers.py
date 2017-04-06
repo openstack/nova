@@ -95,31 +95,6 @@ class ServersController(wsgi.Controller):
     def __init__(self, **kwargs):
         def _check_load_extension(required_function):
 
-            def should_load_extension(ext):
-                # Check whitelist is either empty or if not then the extension
-                # is in the whitelist
-                whitelist = CONF.osapi_v21.extensions_whitelist
-                blacklist = CONF.osapi_v21.extensions_blacklist
-                if not whitelist:
-                    # if there is no whitelist, we accept everything,
-                    # so we only care about the blacklist.
-                    if ext.obj.alias in blacklist:
-                        return False
-                    else:
-                        return True
-                else:
-                    if ext.obj.alias in whitelist:
-                        if ext.obj.alias in blacklist:
-                            LOG.warning(
-                                "Extension %s is both in whitelist and "
-                                "blacklist, blacklisting takes precedence",
-                                ext.obj.alias)
-                            return False
-                        else:
-                            return True
-                    else:
-                        return False
-
             def check_load_extension(ext):
                 if isinstance(ext.obj, extensions.V21APIExtensionBase):
                     # Filter out for the existence of the required
@@ -133,7 +108,7 @@ class ServersController(wsgi.Controller):
                                   'servers extension for function %(func)s',
                                   {'ext_alias': ext.obj.alias,
                                    'func': required_function})
-                        return should_load_extension(ext)
+                        return True
                     else:
                         LOG.debug(
                             'extension %(ext_alias)s is missing %(func)s',
