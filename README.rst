@@ -2,8 +2,8 @@
 Team and repository tags
 ========================
 
-.. image:: http://governance.openstack.org/badges/nova.svg
-    :target: http://governance.openstack.org/reference/tags/index.html
+.. image:: https://governance.openstack.org/badges/nova.svg
+    :target: https://governance.openstack.org/reference/tags/index.html
 
 .. Change things from this point on
 
@@ -25,14 +25,14 @@ API
 To learn how to use Nova's API, consult the documentation
 available online at:
 
-    http://developer.openstack.org/api-guide/compute/
-    http://developer.openstack.org/api-ref/compute/
+    https://developer.openstack.org/api-guide/compute/
+    https://developer.openstack.org/api-ref/compute/
 
 For more information on OpenStack APIs, SDKs and CLIs,
 please see:
 
-    http://www.openstack.org/appdev/
-    http://developer.openstack.org/
+    https://www.openstack.org/appdev/
+    https://developer.openstack.org/
 
 Operators
 ---------
@@ -40,12 +40,12 @@ Operators
 To learn how to deploy and configure OpenStack Nova, consult the
 documentation available online at:
 
-    http://docs.openstack.org
+    https://docs.openstack.org
 
 For information about the different compute (hypervisor) drivers
 supported by Nova, please read:
 
-   http://docs.openstack.org/developer/nova/feature_classification.html
+   https://docs.openstack.org/developer/nova/feature_classification.html
 
 In the unfortunate event that bugs are discovered, they should
 be reported to the appropriate bug tracker. If you obtained
@@ -54,7 +54,7 @@ often wise to use their own bug tracker for reporting problems.
 In all other cases use the master OpenStack bug tracker,
 available at:
 
-   http://bugs.launchpad.net/nova
+   https://bugs.launchpad.net/nova
 
 Developers
 ----------
@@ -67,4 +67,4 @@ in the HACKING.rst file, and pass all unit tests.
 
 Further developer focused documentation is available at:
 
-   http://docs.openstack.org/developer/nova/
+   https://docs.openstack.org/developer/nova/
