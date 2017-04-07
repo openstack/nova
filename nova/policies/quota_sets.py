@@ -22,24 +22,59 @@ POLICY_ROOT = 'os_compute_api:os-quota-sets:%s'
 
 
 quota_sets_policies = [
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'update',
-        check_str=base.RULE_ADMIN_API),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'defaults',
-        check_str=base.RULE_ANY),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'show',
-        check_str=base.RULE_ADMIN_OR_OWNER),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'delete',
-        check_str=base.RULE_ADMIN_API),
+    base.create_rule_default(
+        POLICY_ROOT % 'update',
+        base.RULE_ADMIN_API,
+        "Update the quotas",
+        [
+            {
+                'method': 'PUT',
+                'path': '/os-quota-sets/{tenant_id}'
+            }
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'defaults',
+        base.RULE_ANY,
+        "List default quotas",
+        [
+            {
+                'method': 'GET',
+                'path': '/os-quota-sets/{tenant_id}/defaults'
+            }
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'show',
+        base.RULE_ADMIN_OR_OWNER,
+        "Show a quota",
+        [
+            {
+                'method': 'GET',
+                'path': '/os-quota-sets/{tenant_id}'
+            }
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'delete',
+        base.RULE_ADMIN_API,
+        "Revert quotas to defaults",
+        [
+            {
+                'method': 'DELETE',
+                'path': '/os-quota-sets/{tenant_id}'
+            }
+        ]),
     policy.RuleDefault(
         name=POLICY_ROOT % 'discoverable',
         check_str=base.RULE_ANY),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'detail',
-        check_str=base.RULE_ADMIN_API),
+    base.create_rule_default(
+        POLICY_ROOT % 'detail',
+        base.RULE_ADMIN_API,
+        "Show the detail of quota",
+        [
+            {
+                'method': 'GET',
+                'path': '/os-quota-sets/{tenant_id}/detail'
+            }
+        ]),
 ]
 
 
