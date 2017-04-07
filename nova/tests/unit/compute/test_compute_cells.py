@@ -27,7 +27,7 @@ from nova.cells import manager
 from nova.compute import api as compute_api
 from nova.compute import cells_api as compute_cells_api
 from nova.compute import flavors
-from nova.compute import task_states
+from nova.compute import power_state
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 import nova.conf
@@ -35,6 +35,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import objects
+from nova.objects import fields as obj_fields
 from nova import quota
 from nova import test
 from nova.tests.unit.compute import test_compute
@@ -46,6 +47,10 @@ from nova.tests import uuidsentinel as uuids
 
 ORIG_COMPUTE_API = None
 CONF = nova.conf.CONF
+FAKE_IMAGE_REF = uuids.image_ref
+
+NODENAME = 'fakenode1'
+NODENAME2 = 'fakenode2'
 
 
 def stub_call_to_cells(context, instance, method, *args, **kwargs):
@@ -451,15 +456,61 @@ class CellsShelveComputeAPITestCase(test_shelve.ShelveComputeAPITestCase):
         def _fake_validate_cell(*args, **kwargs):
             return
 
-        def _fake_cast_to_cells(self, context, instance, method,
-                                *args, **kwargs):
-            fn = getattr(ORIG_COMPUTE_API, method)
-            fn(context, instance, *args, **kwargs)
-
         self.stub_out('nova.compute.api.API._validate_cell',
                       _fake_validate_cell)
-        self.stub_out('nova.compute.cells_api.ComputeCellsAPI._cast_to_cells',
-                      _fake_cast_to_cells)
+
+    def _create_fake_instance_obj(self, params=None, type_name='m1.tiny',
+                                  services=False, context=None):
+        flavor = flavors.get_flavor_by_name(type_name)
+        inst = objects.Instance(context=context or self.context)
+        inst.cell_name = 'api!child'
+        inst.vm_state = vm_states.ACTIVE
+        inst.task_state = None
+        inst.power_state = power_state.RUNNING
+        inst.image_ref = FAKE_IMAGE_REF
+        inst.reservation_id = 'r-fakeres'
+        inst.user_id = self.user_id
+        inst.project_id = self.project_id
+        inst.host = self.compute.host
+        inst.node = NODENAME
+        inst.instance_type_id = flavor.id
+        inst.ami_launch_index = 0
+        inst.memory_mb = 0
+        inst.vcpus = 0
+        inst.root_gb = 0
+        inst.ephemeral_gb = 0
+        inst.architecture = obj_fields.Architecture.X86_64
+        inst.os_type = 'Linux'
+        inst.system_metadata = (
+            params and params.get('system_metadata', {}) or {})
+        inst.locked = False
+        inst.created_at = timeutils.utcnow()
+        inst.updated_at = timeutils.utcnow()
+        inst.launched_at = timeutils.utcnow()
+        inst.security_groups = objects.SecurityGroupList(objects=[])
+        inst.flavor = flavor
+        inst.old_flavor = None
+        inst.new_flavor = None
+        if params:
+            inst.flavor.update(params.pop('flavor', {}))
+            inst.update(params)
+        inst.create()
+
+        return inst
+
+    def _test_shelve(self, vm_state=vm_states.ACTIVE,
+                     boot_from_volume=False, clean_shutdown=True):
+        params = dict(task_state=None, vm_state=vm_state,
+                      display_name='fake-name')
+        instance = self._create_fake_instance_obj(params=params)
+        with mock.patch.object(self.compute_api,
+                               '_cast_to_cells') as cast_to_cells:
+            self.compute_api.shelve(self.context, instance,
+                                    clean_shutdown=clean_shutdown)
+            cast_to_cells.assert_called_once_with(self.context,
+                                                  instance, 'shelve',
+                                                  clean_shutdown=clean_shutdown
+                                                  )
 
     def test_unshelve(self):
         # Ensure instance can be unshelved on cell environment.
@@ -474,9 +525,11 @@ class CellsShelveComputeAPITestCase(test_shelve.ShelveComputeAPITestCase):
         instance.vm_state = vm_states.SHELVED
         instance.save()
 
-        self.compute_api.unshelve(self.context, instance)
-
-        self.assertEqual(task_states.UNSHELVING, instance.task_state)
+        with mock.patch.object(self.compute_api,
+                               '_cast_to_cells') as cast_to_cells:
+            self.compute_api.unshelve(self.context, instance)
+            cast_to_cells.assert_called_once_with(self.context,
+                                                  instance, 'unshelve')
 
     def tearDown(self):
         global ORIG_COMPUTE_API

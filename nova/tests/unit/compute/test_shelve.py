@@ -15,10 +15,13 @@ from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
 
 from nova.compute import claims
+from nova.compute import instance_actions
 from nova.compute import task_states
+from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 import nova.conf
 from nova import db
+from nova import exception
 from nova.network.neutronv2 import api as neutron_api
 from nova import objects
 from nova import test
@@ -529,36 +532,137 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
 
 class ShelveComputeAPITestCase(test_compute.BaseTestCase):
-    def test_shelve(self):
+    def _get_vm_states(self, exclude_states=None):
+        vm_state = set([vm_states.ACTIVE, vm_states.BUILDING, vm_states.PAUSED,
+                    vm_states.SUSPENDED, vm_states.RESCUED, vm_states.STOPPED,
+                    vm_states.RESIZED, vm_states.SOFT_DELETED,
+                    vm_states.DELETED, vm_states.ERROR, vm_states.SHELVED,
+                    vm_states.SHELVED_OFFLOADED])
+        if not exclude_states:
+            exclude_states = set()
+        return vm_state - exclude_states
+
+    def _test_shelve(self, vm_state=vm_states.ACTIVE, boot_from_volume=False,
+                     clean_shutdown=True):
         # Ensure instance can be shelved.
-        fake_instance = self._create_fake_instance_obj(
-            {'display_name': 'vm01'})
+        params = dict(task_state=None, vm_state=vm_state, display_name='vm01')
+        fake_instance = self._create_fake_instance_obj(params=params)
         instance = fake_instance
 
         self.assertIsNone(instance['task_state'])
 
-        def fake_init(self2):
-            # In original _FakeImageService.__init__(), some fake images are
-            # created. To verify the snapshot name of this test only, here
-            # sets a fake method.
-            self2.images = {}
+        with test.nested(
+            mock.patch.object(compute_utils, 'is_volume_backed_instance',
+                              return_value=boot_from_volume),
+            mock.patch.object(self.compute_api, '_create_image',
+                              return_value=dict(id='fake-image-id')),
+            mock.patch.object(instance, 'save'),
+            mock.patch.object(self.compute_api, '_record_action_start'),
+            mock.patch.object(self.compute_api.compute_rpcapi,
+                              'shelve_instance'),
+            mock.patch.object(self.compute_api.compute_rpcapi,
+                              'shelve_offload_instance')
+        ) as (
+            volume_backed_inst, create_image, instance_save,
+            record_action_start, rpcapi_shelve_instance,
+            rpcapi_shelve_offload_instance
+        ):
 
-        def fake_create(self2, ctxt, metadata, data=None):
-            self.assertEqual(metadata['name'], 'vm01-shelved')
-            metadata['id'] = '8b24ed3f-ee57-43bc-bc2e-fb2e9482bc42'
-            return metadata
+            self.compute_api.shelve(self.context, instance,
+                                    clean_shutdown=clean_shutdown)
 
-        fake_image.stub_out_image_service(self)
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.__init__',
-                      fake_init)
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.create',
-                      fake_create)
+            self.assertEqual(instance.task_state, task_states.SHELVING)
+            # assert our mock calls
+            volume_backed_inst.assert_called_once_with(
+                self.context, instance)
+            instance_save.assert_called_once_with(expected_task_state=[None])
+            record_action_start.assert_called_once_with(
+                self.context, instance, instance_actions.SHELVE)
+            if boot_from_volume:
+                rpcapi_shelve_offload_instance.assert_called_once_with(
+                    self.context, instance=instance,
+                    clean_shutdown=clean_shutdown)
+            else:
+                rpcapi_shelve_instance.assert_called_once_with(
+                    self.context, instance=instance, image_id='fake-image-id',
+                    clean_shutdown=clean_shutdown)
 
-        self.compute_api.shelve(self.context, instance)
+            db.instance_destroy(self.context, instance['uuid'])
 
-        self.assertEqual(instance.task_state, task_states.SHELVING)
+    def test_shelve(self):
+        self._test_shelve()
 
-        db.instance_destroy(self.context, instance['uuid'])
+    def test_shelves_stopped(self):
+        self._test_shelve(vm_state=vm_states.STOPPED)
+
+    def test_shelves_paused(self):
+        self._test_shelve(vm_state=vm_states.PAUSED)
+
+    def test_shelves_suspended(self):
+        self._test_shelve(vm_state=vm_states.SUSPENDED)
+
+    def test_shelves_boot_from_volume(self):
+        self._test_shelve(boot_from_volume=True)
+
+    def test_shelve_forced_shutdown(self):
+        self._test_shelve(clean_shutdown=False)
+
+    def test_shelve_boot_from_volume_forced_shutdown(self):
+        self._test_shelve(boot_from_volume=True,
+                          clean_shutdown=False)
+
+    def _test_shelve_invalid_state(self, vm_state):
+        params = dict(vm_state=vm_state)
+        fake_instance = self._create_fake_instance_obj(params=params)
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.shelve,
+                          self.context, fake_instance)
+
+    def test_shelve_fails_invalid_states(self):
+        invalid_vm_states = self._get_vm_states(set([vm_states.ACTIVE,
+                                                     vm_states.STOPPED,
+                                                     vm_states.PAUSED,
+                                                     vm_states.SUSPENDED]))
+        for state in invalid_vm_states:
+            self._test_shelve_invalid_state(state)
+
+    def _test_shelve_offload(self, clean_shutdown=True):
+        params = dict(task_state=None, vm_state=vm_states.SHELVED)
+        fake_instance = self._create_fake_instance_obj(params=params)
+        with test.nested(
+            mock.patch.object(fake_instance, 'save'),
+            mock.patch.object(self.compute_api.compute_rpcapi,
+                              'shelve_offload_instance')
+        ) as (
+            instance_save, rpcapi_shelve_offload_instance
+        ):
+            self.compute_api.shelve_offload(self.context, fake_instance,
+                                            clean_shutdown=clean_shutdown)
+            # assert field values set on the instance object
+            self.assertEqual(task_states.SHELVING_OFFLOADING,
+                             fake_instance.task_state)
+            instance_save.assert_called_once_with(expected_task_state=[None])
+            rpcapi_shelve_offload_instance.assert_called_once_with(
+                    self.context, instance=fake_instance,
+                    clean_shutdown=clean_shutdown)
+
+    def test_shelve_offload(self):
+        self._test_shelve_offload()
+
+    def test_shelve_offload_forced_shutdown(self):
+        self._test_shelve_offload(clean_shutdown=False)
+
+    def _test_shelve_offload_invalid_state(self, vm_state):
+        params = dict(vm_state=vm_state)
+        fake_instance = self._create_fake_instance_obj(params=params)
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.shelve_offload,
+                          self.context, fake_instance)
+
+    def test_shelve_offload_fails_invalid_states(self):
+        invalid_vm_states = self._get_vm_states(set([vm_states.SHELVED]))
+        for state in invalid_vm_states:
+            self._test_shelve_offload_invalid_state(state)
 
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     def test_unshelve(self, get_by_instance_uuid):
