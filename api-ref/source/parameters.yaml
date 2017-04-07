@@ -2193,6 +2193,14 @@ flavor_rxtx_factor_in:
   in: body
   required: false
   type: float
+flavor_server:
+  description: |
+    The ID and links for the flavor for your server instance. A flavor is a combination
+    of memory, disk size, and CPUs. This can be empty object in case flavor information
+    is not present in the system.
+  in: body
+  required: true
+  type: object
 flavor_swap:
   description: |
     The size of a dedicated swap disk that will be allocated, in
