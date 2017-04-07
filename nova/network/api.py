@@ -365,11 +365,6 @@ class API(base_api.NetworkAPI):
                 objects.Network.associate(context, project,
                                           network_id=network.id, force=True)
 
-    def get_instance_nw_info(self, context, instance, **kwargs):
-        """Returns all network info related to an instance."""
-        return super(API, self).get_instance_nw_info(context, instance,
-                                                     **kwargs)
-
     def _get_instance_nw_info(self, context, instance, **kwargs):
         """Returns all network info related to an instance."""
         flavor = instance.get_flavor()
