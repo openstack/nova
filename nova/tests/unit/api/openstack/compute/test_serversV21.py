@@ -2884,20 +2884,6 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
         self._test_create_extra(params)
 
-    def test_create_instance_with_networks_disabled_nova_net(self):
-        self.flags(use_neutron=False)
-        net_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        requested_networks = [{'uuid': net_uuid}]
-        params = {'networks': requested_networks}
-        old_create = compute_api.API.create
-
-        def create(*args, **kwargs):
-            self.assertIsNone(kwargs['requested_networks'])
-            return old_create(*args, **kwargs)
-
-        self.stubs.Set(compute_api.API, 'create', create)
-        self._test_create_extra(params)
-
     def test_create_instance_with_pass_disabled(self):
         # test with admin passwords disabled See lp bug 921814
         self.flags(enable_instance_password=False, group='api')
