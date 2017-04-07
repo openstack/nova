@@ -706,7 +706,15 @@ class HostManager(object):
                 self.host_aggregates_map[host]]
 
     def _get_instances_by_host(self, context, host_name):
-        hm = objects.HostMapping.get_by_host(context, host_name)
+        try:
+            hm = objects.HostMapping.get_by_host(context, host_name)
+        except exception.HostMappingNotFound:
+            # It's possible to hit this when the compute service first starts
+            # up and casts to update_instance_info with an empty list but
+            # before the host is mapped in the API database.
+            LOG.info('Host mapping not found for host %s. Not tracking '
+                     'instance info for this host.', host_name)
+            return {}
         with context_module.target_cell(context, hm.cell_mapping) as cctxt:
             inst_list = objects.InstanceList.get_by_host(cctxt, host_name)
             return {inst.uuid: inst for inst in inst_list}

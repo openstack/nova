@@ -1150,7 +1150,14 @@ class ComputeManager(manager.Manager):
         finally:
             if CONF.defer_iptables_apply:
                 self.driver.filter_defer_apply_off()
-            self._update_scheduler_instance_info(context, instances)
+            if instances:
+                # We only send the instance info to the scheduler on startup
+                # if there is anything to send, otherwise this host might
+                # not be mapped yet in a cell and the scheduler may have
+                # issues dealing with the information. Later changes to
+                # instances on this host will update the scheduler, or the
+                # _sync_scheduler_instance_info periodic task will.
+                self._update_scheduler_instance_info(context, instances)
 
     def cleanup_host(self):
         self.driver.register_event_listener(None)
