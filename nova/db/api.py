@@ -2048,10 +2048,6 @@ def aggregate_uuids_online_data_migration(context, max_count):
     return IMPL.aggregate_uuids_online_data_migration(context, max_count)
 
 
-def computenode_uuids_online_data_migration(context, max_count):
-    return IMPL.computenode_uuids_online_data_migration(context, max_count)
-
-
 ####################
 
 
