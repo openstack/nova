@@ -1,0 +1,7 @@
+---
+upgrade:
+  - |
+    ``libvirt.num_iscsi_scan_tries`` option has been renamed to
+    ``libvirt.num_volume_scan_tries``, as the previous name was suggesting
+    that this option only concerns devices connected using iSCSI interface.
+    It also concerns devices connected using fibrechannel, scaleio and disco.

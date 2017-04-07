@@ -37,7 +37,7 @@ class LibvirtDISCOVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
                                                        is_block_dev=False)
         self.connector = connector.InitiatorConnector.factory(
             'DISCO', utils.get_root_helper(),
-            device_scan_attempts=CONF.libvirt.num_iscsi_scan_tries)
+            device_scan_attempts=CONF.libvirt.num_volume_scan_tries)
 
     def get_config(self, connection_info, disk_info):
         """Get DISCO volume attachment configuration."""
