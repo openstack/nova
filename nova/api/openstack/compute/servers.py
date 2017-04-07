@@ -28,8 +28,17 @@ from webob import exc
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
+from nova.api.openstack.compute import availability_zone
+from nova.api.openstack.compute import block_device_mapping
+from nova.api.openstack.compute import block_device_mapping_v1
+from nova.api.openstack.compute import config_drive
 from nova.api.openstack.compute import helpers
+from nova.api.openstack.compute import keypairs
+from nova.api.openstack.compute import multiple_create
+from nova.api.openstack.compute import scheduler_hints
 from nova.api.openstack.compute.schemas import servers as schema_servers
+from nova.api.openstack.compute import security_groups
+from nova.api.openstack.compute import user_data
 from nova.api.openstack.compute.views import servers as views_servers
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -78,6 +87,20 @@ class ServersController(wsgi.Controller):
     schema_server_create_v232 = schema_servers.base_create_v232
     schema_server_create_v237 = schema_servers.base_create_v237
     schema_server_create_v242 = schema_servers.base_create_v242
+
+    # NOTE(alex_xu): Please do not add more items into this list. This list
+    # should be removed in the future.
+    schema_func_list = [
+        availability_zone.get_server_create_schema,
+        block_device_mapping.get_server_create_schema,
+        block_device_mapping_v1.get_server_create_schema,
+        config_drive.get_server_create_schema,
+        keypairs.get_server_create_schema,
+        multiple_create.get_server_create_schema,
+        scheduler_hints.get_server_create_schema,
+        security_groups.get_server_create_schema,
+        user_data.get_server_create_schema,
+    ]
 
     @staticmethod
     def _add_location(robj):
@@ -134,34 +157,14 @@ class ServersController(wsgi.Controller):
         if not list(self.create_extension_manager):
             LOG.debug("Did not find any server create extensions")
 
-        # Look for API schema of server create extension
-        self.create_schema_manager = \
-            stevedore.enabled.EnabledExtensionManager(
-                namespace=self.EXTENSION_CREATE_NAMESPACE,
-                check_func=_check_load_extension('get_server_create_schema'),
-                invoke_on_load=True,
-                invoke_kwds={"extension_info": self.extension_info},
-                propagate_map_exceptions=True)
-        if list(self.create_schema_manager):
-            self.create_schema_manager.map(self._create_extension_schema,
-                                           self.schema_server_create_v242,
-                                           '2.42')
-            self.create_schema_manager.map(self._create_extension_schema,
-                                           self.schema_server_create_v237,
-                                           '2.37')
-            self.create_schema_manager.map(self._create_extension_schema,
-                                           self.schema_server_create_v232,
-                                          '2.32')
-            self.create_schema_manager.map(self._create_extension_schema,
-                                           self.schema_server_create_v219,
-                                          '2.19')
-            self.create_schema_manager.map(self._create_extension_schema,
-                                           self.schema_server_create, '2.1')
-            self.create_schema_manager.map(self._create_extension_schema,
-                                           self.schema_server_create_v20,
-                                           '2.0')
-        else:
-            LOG.debug("Did not find any server create schemas")
+        # TODO(alex_xu): The final goal is that merging all of
+        # extended json-schema into server main json-schema.
+        self._create_schema(self.schema_server_create_v242, '2.42')
+        self._create_schema(self.schema_server_create_v237, '2.37')
+        self._create_schema(self.schema_server_create_v232, '2.32')
+        self._create_schema(self.schema_server_create_v219, '2.19')
+        self._create_schema(self.schema_server_create, '2.1')
+        self._create_schema(self.schema_server_create_v20, '2.0')
 
     @extensions.expected_errors((400, 403))
     @validation.query_schema(schema_servers.query_params_v226, '2.26')
@@ -719,12 +722,15 @@ class ServersController(wsgi.Controller):
 
         handler.server_rebuild(rebuild_dict, rebuild_kwargs)
 
-    def _create_extension_schema(self, ext, create_schema, version):
-        handler = ext.obj
-        LOG.debug("Running _create_extension_schema for %s", ext.obj)
+    def _create_schema(self, create_schema, version):
+        for schema_func in self.schema_func_list:
+            self._create_schema_by_func(create_schema, version, schema_func)
 
-        schema = handler.get_server_create_schema(version)
-        if ext.obj.name == 'SchedulerHints':
+    def _create_schema_by_func(self, create_schema, version, schema_func):
+        schema = schema_func(version)
+
+        if (schema_func.__module__ ==
+                'nova.api.openstack.compute.scheduler_hints'):
             # NOTE(oomichi): The request parameter position of scheduler-hint
             # extension is different from the other extensions, so here handles
             # the difference.

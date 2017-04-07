@@ -531,7 +531,8 @@ class SecurityGroups(extensions.V21APIExtensionBase):
             create_kwargs['security_groups'] = list(
                 set(create_kwargs['security_groups']))
 
-    def get_server_create_schema(self, version):
-        if version == '2.0':
-            return schema_security_groups.server_create_v20
-        return schema_security_groups.server_create
+
+def get_server_create_schema(version):
+    if version == '2.0':
+        return schema_security_groups.server_create_v20
+    return schema_security_groups.server_create

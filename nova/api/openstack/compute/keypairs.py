@@ -352,8 +352,9 @@ class Keypairs(extensions.V21APIExtensionBase):
         # leading/trailing spaces by legacy v2 API.
         create_kwargs['key_name'] = server_dict.get('key_name')
 
-    def get_server_create_schema(self, version):
-        if version == '2.0':
-            return keypairs.server_create_v20
-        else:
-            return keypairs.server_create
+
+def get_server_create_schema(version):
+    if version == '2.0':
+        return keypairs.server_create_v20
+    else:
+        return keypairs.server_create

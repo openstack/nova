@@ -151,7 +151,8 @@ class AvailabilityZone(extensions.V21APIExtensionBase):
         # leading/trailing spaces with legacy v2 API.
         create_kwargs['availability_zone'] = server_dict.get(ATTRIBUTE_NAME)
 
-    def get_server_create_schema(self, version):
-        if version == "2.0":
-            return schema.server_create_v20
-        return schema.server_create
+
+def get_server_create_schema(version):
+    if version == "2.0":
+        return schema.server_create_v20
+    return schema.server_create
