@@ -169,12 +169,12 @@ class FilterScheduler(driver.Scheduler):
         reportclient = self.scheduler_client.reportclient
         rps = reportclient.get_filtered_resource_providers(filters)
         # NOTE(sbauza): In case the Placement service is not running yet or
-        # when returning an exception, we wouldn't get any ResourceProviders.
+        # when returning an exception, we wouldn't get any resource providers.
         # If so, let's return an empty list so _schedule would raise a
         # NoValidHosts.
         if not rps:
             return []
-        compute_uuids = [rp.uuid for rp in rps]
+        compute_uuids = [rp['uuid'] for rp in rps]
         return self.host_manager.get_host_states_by_uuids(context,
                                                           compute_uuids,
                                                           spec_obj)
