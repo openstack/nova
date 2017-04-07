@@ -29,7 +29,6 @@ from oslo_serialization import jsonutils
 
 import nova.conf
 from nova import exception
-from nova.i18n import _LE
 from nova import objects
 from nova.objects import base as objects_base
 from nova import profiler
@@ -420,7 +419,7 @@ class CellsAPI(object):
             cctxt.cast(ctxt, 'bdm_update_or_create_at_top',
                        bdm=bdm, create=create)
         except Exception:
-            LOG.exception(_LE("Failed to notify cells of BDM update/create."))
+            LOG.exception("Failed to notify cells of BDM update/create.")
 
     def bdm_destroy_at_top(self, ctxt, instance_uuid, device_name=None,
                            volume_id=None):
@@ -434,7 +433,7 @@ class CellsAPI(object):
                        device_name=device_name,
                        volume_id=volume_id)
         except Exception:
-            LOG.exception(_LE("Failed to notify cells of BDM destroy."))
+            LOG.exception("Failed to notify cells of BDM destroy.")
 
     def get_migrations(self, ctxt, filters):
         """Get all migrations applying the filters."""

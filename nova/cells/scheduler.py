@@ -31,7 +31,6 @@ from nova import conductor
 import nova.conf
 from nova.db import base
 from nova import exception
-from nova.i18n import _LE, _LI
 from nova import objects
 from nova.objects import base as obj_base
 from nova.scheduler import utils as scheduler_utils
@@ -187,11 +186,11 @@ class CellsScheduler(base.Base):
                         build_inst_kwargs)
                 return
             except Exception:
-                LOG.exception(_LE("Couldn't communicate with cell '%s'"),
+                LOG.exception("Couldn't communicate with cell '%s'",
                               target_cell.name)
         # FIXME(comstud): Would be nice to kick this back up so that
         # the parent cell could retry, if we had a parent.
-        LOG.error(_LE("Couldn't communicate with any cells"))
+        LOG.error("Couldn't communicate with any cells")
         raise exception.NoCellsAvailable()
 
     def build_instances(self, message, build_inst_kwargs):
@@ -228,13 +227,13 @@ class CellsScheduler(base.Base):
                     if i == max(0, CONF.cells.scheduler_retries):
                         raise
                     sleep_time = max(1, CONF.cells.scheduler_retry_delay)
-                    LOG.info(_LI("No cells available when scheduling.  Will "
-                                 "retry in %(sleep_time)s second(s)"),
+                    LOG.info("No cells available when scheduling.  Will "
+                             "retry in %(sleep_time)s second(s)",
                              {'sleep_time': sleep_time})
                     time.sleep(sleep_time)
                     continue
         except Exception:
-            LOG.exception(_LE("Error scheduling instances %(instance_uuids)s"),
+            LOG.exception("Error scheduling instances %(instance_uuids)s",
                           {'instance_uuids': instance_uuids})
             ctxt = message.ctxt
             for instance_uuid in instance_uuids:

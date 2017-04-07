@@ -20,7 +20,7 @@ from oslo_cache import core as cache
 from oslo_log import log as logging
 
 import nova.conf
-from nova.i18n import _, _LW
+from nova.i18n import _
 
 CONF = nova.conf.CONF
 
@@ -31,7 +31,7 @@ WEEK = 604800
 
 def _warn_if_null_backend():
     if CONF.cache.backend == 'dogpile.cache.null':
-        LOG.warning(_LW("Cache enabled with backend dogpile.cache.null."))
+        LOG.warning("Cache enabled with backend dogpile.cache.null.")
 
 
 def get_memcached_client(expiration_time=0):
