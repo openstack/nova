@@ -4007,7 +4007,7 @@ def reservation_expire(context):
             reservation.usage.reserved -= reservation.delta
             context.session.add(reservation.usage)
 
-    reservation_query.soft_delete(synchronize_session=False)
+    return reservation_query.soft_delete(synchronize_session=False)
 
 
 ###################
