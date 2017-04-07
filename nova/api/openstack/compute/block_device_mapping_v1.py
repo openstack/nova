@@ -41,28 +41,29 @@ class BlockDeviceMappingV1(extensions.V21APIExtensionBase):
     def get_controller_extensions(self):
         return []
 
-    # use nova.api.extensions.server.extensions entry point to modify
-    # server create kwargs
-    # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
-    # parameter as this is placed to handle scheduler_hint extension for V2.1.
-    def server_create(self, server_dict, create_kwargs, body_deprecated_param):
-        block_device_mapping = server_dict.get(ATTRIBUTE_NAME, [])
-        block_device_mapping_v2 = server_dict.get(ATTRIBUTE_NAME_V2, [])
 
-        if block_device_mapping and block_device_mapping_v2:
-            expl = _('Using different block_device_mapping syntaxes '
-                     'is not allowed in the same request.')
-            raise exc.HTTPBadRequest(explanation=expl)
+# use nova.api.extensions.server.extensions entry point to modify
+# server create kwargs
+# NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
+# parameter as this is placed to handle scheduler_hint extension for V2.1.
+def server_create(server_dict, create_kwargs, body_deprecated_param):
+    block_device_mapping = server_dict.get(ATTRIBUTE_NAME, [])
+    block_device_mapping_v2 = server_dict.get(ATTRIBUTE_NAME_V2, [])
 
-        for bdm in block_device_mapping:
-            if 'delete_on_termination' in bdm:
-                bdm['delete_on_termination'] = strutils.bool_from_string(
-                    bdm['delete_on_termination'])
+    if block_device_mapping and block_device_mapping_v2:
+        expl = _('Using different block_device_mapping syntaxes '
+                 'is not allowed in the same request.')
+        raise exc.HTTPBadRequest(explanation=expl)
 
-        if block_device_mapping:
-            create_kwargs['block_device_mapping'] = block_device_mapping
-            # Sets the legacy_bdm flag if we got a legacy block device mapping.
-            create_kwargs['legacy_bdm'] = True
+    for bdm in block_device_mapping:
+        if 'delete_on_termination' in bdm:
+            bdm['delete_on_termination'] = strutils.bool_from_string(
+                bdm['delete_on_termination'])
+
+    if block_device_mapping:
+        create_kwargs['block_device_mapping'] = block_device_mapping
+        # Sets the legacy_bdm flag if we got a legacy block device mapping.
+        create_kwargs['legacy_bdm'] = True
 
 
 def get_server_create_schema(version):

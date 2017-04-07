@@ -22,7 +22,6 @@ from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import six
-import stevedore
 import webob
 from webob import exc
 
@@ -67,8 +66,6 @@ LOG = logging.getLogger(__name__)
 class ServersController(wsgi.Controller):
     """The Server API base controller class for the OpenStack API."""
 
-    EXTENSION_CREATE_NAMESPACE = 'nova.api.v21.extensions.server.create'
-
     _view_builder_class = views_servers.ViewBuilder
 
     schema_server_create = schema_servers.base_create
@@ -102,6 +99,20 @@ class ServersController(wsgi.Controller):
         user_data.get_server_create_schema,
     ]
 
+    # NOTE(alex_xu): Please do not add more items into this list. This list
+    # should be removed in the future.
+    server_create_func_list = [
+        availability_zone.server_create,
+        block_device_mapping.server_create,
+        block_device_mapping_v1.server_create,
+        config_drive.server_create,
+        keypairs.server_create,
+        multiple_create.server_create,
+        scheduler_hints.server_create,
+        security_groups.server_create,
+        user_data.server_create,
+    ]
+
     @staticmethod
     def _add_location(robj):
         # Just in case...
@@ -116,46 +127,12 @@ class ServersController(wsgi.Controller):
         return robj
 
     def __init__(self, **kwargs):
-        def _check_load_extension(required_function):
+        # TODO(alex_xu): Remove this line when 'extension_info' won't be passed
+        # in when creating controller.
+        kwargs.pop('extension_info', None)
 
-            def check_load_extension(ext):
-                if isinstance(ext.obj, extensions.V21APIExtensionBase):
-                    # Filter out for the existence of the required
-                    # function here rather than on every request. We
-                    # don't have a new abstract base class to reduce
-                    # duplication in the extensions as they may want
-                    # to implement multiple server (and other) entry
-                    # points if hasattr(ext.obj, 'server_create'):
-                    if hasattr(ext.obj, required_function):
-                        LOG.debug('extension %(ext_alias)s detected by '
-                                  'servers extension for function %(func)s',
-                                  {'ext_alias': ext.obj.alias,
-                                   'func': required_function})
-                        return True
-                    else:
-                        LOG.debug(
-                            'extension %(ext_alias)s is missing %(func)s',
-                            {'ext_alias': ext.obj.alias,
-                            'func': required_function})
-                        return False
-                else:
-                    return False
-            return check_load_extension
-
-        self.extension_info = kwargs.pop('extension_info')
         super(ServersController, self).__init__(**kwargs)
         self.compute_api = compute.API()
-
-        # Look for implementation of extension point of server creation
-        self.create_extension_manager = \
-          stevedore.enabled.EnabledExtensionManager(
-              namespace=self.EXTENSION_CREATE_NAMESPACE,
-              check_func=_check_load_extension('server_create'),
-              invoke_on_load=True,
-              invoke_kwds={"extension_info": self.extension_info},
-              propagate_map_exceptions=True)
-        if not list(self.create_extension_manager):
-            LOG.debug("Did not find any server create extensions")
 
         # TODO(alex_xu): The final goal is that merging all of
         # extended json-schema into server main json-schema.
@@ -525,16 +502,10 @@ class ServersController(wsgi.Controller):
         # Arguments to be passed to instance create function
         create_kwargs = {}
 
-        # Query extensions which want to manipulate the keyword
-        # arguments.
-        # NOTE(cyeoh): This is the hook that extensions use
-        # to replace the extension specific code below.
-        # When the extensions are ported this will also result
-        # in some convenience function from this class being
-        # moved to the extension
-        if list(self.create_extension_manager):
-            self.create_extension_manager.map(self._create_extension_point,
-                                              server_dict, create_kwargs, body)
+        # TODO(alex_xu): This is for back-compatible with stevedore
+        # extension interface. But the final goal is that merging
+        # all of extended code into ServersController.
+        self._create_by_func_list(server_dict, create_kwargs, body)
 
         availability_zone = create_kwargs.pop("availability_zone", None)
 
@@ -709,12 +680,10 @@ class ServersController(wsgi.Controller):
     # NOTE(gmann): Parameter 'req_body' is placed to handle scheduler_hint
     # extension for V2.1. No other extension supposed to use this as
     # it will be removed soon.
-    def _create_extension_point(self, ext, server_dict,
-                                create_kwargs, req_body):
-        handler = ext.obj
-        LOG.debug("Running _create_extension_point for %s", ext.obj)
-
-        handler.server_create(server_dict, create_kwargs, req_body)
+    def _create_by_func_list(self, server_dict,
+                             create_kwargs, req_body):
+        for func in self.server_create_func_list:
+            func(server_dict, create_kwargs, req_body)
 
     def _rebuild_extension_point(self, ext, rebuild_dict, rebuild_kwargs):
         handler = ext.obj

@@ -39,26 +39,27 @@ class MultipleCreate(extensions.V21APIExtensionBase):
     def get_controller_extensions(self):
         return []
 
-    # use nova.api.extensions.server.extensions entry point to modify
-    # server create kwargs
-    # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
-    # parameter as this is placed to handle scheduler_hint extension for V2.1.
-    def server_create(self, server_dict, create_kwargs, body_deprecated_param):
-        # min_count and max_count are optional.  If they exist, they may come
-        # in as strings.  Verify that they are valid integers and > 0.
-        # Also, we want to default 'min_count' to 1, and default
-        # 'max_count' to be 'min_count'.
-        min_count = int(server_dict.get(MIN_ATTRIBUTE_NAME, 1))
-        max_count = int(server_dict.get(MAX_ATTRIBUTE_NAME, min_count))
-        return_id = server_dict.get(RRID_ATTRIBUTE_NAME, False)
 
-        if min_count > max_count:
-            msg = _('min_count must be <= max_count')
-            raise exc.HTTPBadRequest(explanation=msg)
+# use nova.api.extensions.server.extensions entry point to modify
+# server create kwargs
+# NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
+# parameter as this is placed to handle scheduler_hint extension for V2.1.
+def server_create(server_dict, create_kwargs, body_deprecated_param):
+    # min_count and max_count are optional.  If they exist, they may come
+    # in as strings.  Verify that they are valid integers and > 0.
+    # Also, we want to default 'min_count' to 1, and default
+    # 'max_count' to be 'min_count'.
+    min_count = int(server_dict.get(MIN_ATTRIBUTE_NAME, 1))
+    max_count = int(server_dict.get(MAX_ATTRIBUTE_NAME, min_count))
+    return_id = server_dict.get(RRID_ATTRIBUTE_NAME, False)
 
-        create_kwargs['min_count'] = min_count
-        create_kwargs['max_count'] = max_count
-        create_kwargs['return_reservation_id'] = return_id
+    if min_count > max_count:
+        msg = _('min_count must be <= max_count')
+        raise exc.HTTPBadRequest(explanation=msg)
+
+    create_kwargs['min_count'] = min_count
+    create_kwargs['max_count'] = max_count
+    create_kwargs['return_reservation_id'] = return_id
 
 
 def get_server_create_schema(version):

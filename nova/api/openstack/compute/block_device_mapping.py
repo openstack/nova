@@ -43,36 +43,37 @@ class BlockDeviceMapping(extensions.V21APIExtensionBase):
     def get_controller_extensions(self):
         return []
 
-    # use nova.api.extensions.server.extensions entry point to modify
-    # server create kwargs
-    # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
-    # parameter as this is placed to handle scheduler_hint extension for V2.1.
-    def server_create(self, server_dict, create_kwargs, body_deprecated_param):
 
-        # Have to check whether --image is given, see bug 1433609
-        image_href = server_dict.get('imageRef')
-        image_uuid_specified = image_href is not None
+# use nova.api.extensions.server.extensions entry point to modify
+# server create kwargs
+# NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
+# parameter as this is placed to handle scheduler_hint extension for V2.1.
+def server_create(server_dict, create_kwargs, body_deprecated_param):
 
-        bdm = server_dict.get(ATTRIBUTE_NAME, [])
-        legacy_bdm = server_dict.get(LEGACY_ATTRIBUTE_NAME, [])
+    # Have to check whether --image is given, see bug 1433609
+    image_href = server_dict.get('imageRef')
+    image_uuid_specified = image_href is not None
 
-        if bdm and legacy_bdm:
-            expl = _('Using different block_device_mapping syntaxes '
-                     'is not allowed in the same request.')
-            raise exc.HTTPBadRequest(explanation=expl)
+    bdm = server_dict.get(ATTRIBUTE_NAME, [])
+    legacy_bdm = server_dict.get(LEGACY_ATTRIBUTE_NAME, [])
 
-        try:
-            block_device_mapping = [
-                block_device.BlockDeviceDict.from_api(bdm_dict,
-                    image_uuid_specified)
-                for bdm_dict in bdm]
-        except exception.InvalidBDMFormat as e:
-            raise exc.HTTPBadRequest(explanation=e.format_message())
+    if bdm and legacy_bdm:
+        expl = _('Using different block_device_mapping syntaxes '
+                 'is not allowed in the same request.')
+        raise exc.HTTPBadRequest(explanation=expl)
 
-        if block_device_mapping:
-            create_kwargs['block_device_mapping'] = block_device_mapping
-            # Unset the legacy_bdm flag if we got a block device mapping.
-            create_kwargs['legacy_bdm'] = False
+    try:
+        block_device_mapping = [
+            block_device.BlockDeviceDict.from_api(bdm_dict,
+                image_uuid_specified)
+            for bdm_dict in bdm]
+    except exception.InvalidBDMFormat as e:
+        raise exc.HTTPBadRequest(explanation=e.format_message())
+
+    if block_device_mapping:
+        create_kwargs['block_device_mapping'] = block_device_mapping
+        # Unset the legacy_bdm flag if we got a block device mapping.
+        create_kwargs['legacy_bdm'] = False
 
 
 def get_server_create_schema(version):
