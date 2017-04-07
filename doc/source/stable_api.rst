@@ -64,13 +64,11 @@ The extension is considered as two things in the Nova V2.1 API:
 
 * The '/extensions' API
 
-  In V2.1 API, microversions enable us to add new features in backwards-
-  compatible ways. And microversions not only enable us to add new futures by
-  backwards-compatible method, also can be added by appropriate backwards-
-  incompatible method.
+  This API exposed the list of enabled API functions to users
+  by GET method. However as the above, new API extensions
+  should not be added to the list of this API.
 
-  The '/extensions' API is frozen in Nova V2.1 API and will be deprecated
-  in the future.
+  The '/extensions' API is frozen in Nova V2.1 API and is deprecated.
 
 * The plugin framework
 
