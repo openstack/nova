@@ -23,7 +23,6 @@ import six
 from nova import exception
 from nova.network import model as network_model
 from nova.objects import fields
-from nova import signature_utils
 from nova import test
 from nova.tests.unit import fake_instance
 from nova import utils
@@ -330,25 +329,6 @@ class TestVMMode(TestField):
         self.assertRaises(exception.InvalidVirtualMachineMode,
                           fields.VMMode.canonicalize,
                           'invalid')
-
-
-class TestImageSignatureTypes(TestField):
-    # Ensure that the object definition is updated
-    # in step with the signature_utils module
-    def setUp(self):
-        super(TestImageSignatureTypes, self).setUp()
-        self.hash_field = fields.ImageSignatureHashType()
-        self.key_type_field = fields.ImageSignatureKeyType()
-
-    def test_hashes(self):
-        for hash_name in list(signature_utils.HASH_METHODS.keys()):
-            self.assertIn(hash_name, self.hash_field.ALL)
-
-    def test_key_types(self):
-        key_type_dict = signature_utils.SignatureKeyType._REGISTERED_TYPES
-        key_types = list(key_type_dict.keys())
-        for key_type in key_types:
-            self.assertIn(key_type, self.key_type_field.ALL)
 
 
 class TestResourceClass(TestString):

@@ -26,6 +26,8 @@ import sys
 import time
 
 import cryptography
+from cursive import exception as cursive_exception
+from cursive import signature_utils
 import glanceclient
 import glanceclient.exc
 from glanceclient.v2 import schemas
@@ -44,7 +46,6 @@ from nova.i18n import _LE, _LI, _LW
 import nova.image.download as image_xfers
 from nova import objects
 from nova.objects import fields
-from nova import signature_utils
 
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
@@ -314,12 +315,14 @@ class GlanceImageServiceV2(object):
                 'img_signature_key_type'
             )
             try:
-                verifier = signature_utils.get_verifier(context,
-                                                        img_sig_cert_uuid,
-                                                        img_sig_hash_method,
-                                                        img_signature,
-                                                        img_sig_key_type)
-            except exception.SignatureVerificationError:
+                verifier = signature_utils.get_verifier(
+                    context=context,
+                    img_signature_certificate_uuid=img_sig_cert_uuid,
+                    img_signature_hash_method=img_sig_hash_method,
+                    img_signature=img_signature,
+                    img_signature_key_type=img_sig_key_type,
+                )
+            except cursive_exception.SignatureVerificationError:
                 with excutils.save_and_reraise_exception():
                     LOG.error(_LE('Image signature verification failed '
                                   'for image: %s'), image_id)
