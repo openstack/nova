@@ -1,0 +1,9 @@
+{
+    "allocation_ratio": 1.0,
+    "max_unit": 2147483647,
+    "min_unit": 1,
+    "reserved": 0,
+    "resource_provider_generation": 8,
+    "step_size": 1,
+    "total": 50
+}
