@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 import testtools
 import webob.exc
 
@@ -23,6 +24,7 @@ from nova import context as context_maker
 from nova import db
 from nova import exception
 from nova import test
+from nova.tests import fixtures
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_hosts
 from nova.tests import uuidsentinel
@@ -158,6 +160,7 @@ class HostTestCaseV21(test.TestCase):
         self.controller = self.Controller()
         self.hosts_api = self.controller.api
         self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
+        self.useFixture(fixtures.SingleCellSimple())
 
         self._setup_stubs()
 
@@ -368,6 +371,14 @@ class HostTestCaseV21(test.TestCase):
         db.service_destroy(ctxt, s_ref['id'])
         db.instance_destroy(ctxt, i_ref1['uuid'])
         db.instance_destroy(ctxt, i_ref2['uuid'])
+
+    def test_show_late_host_mapping_gone(self):
+        s_ref = self._create_compute_service()
+        with mock.patch.object(self.controller.api,
+                               'instance_get_all_by_host') as m:
+            m.side_effect = exception.HostMappingNotFound
+            self.assertRaises(webob.exc.HTTPNotFound,
+                              self.controller.show, self.req, s_ref['host'])
 
     def test_list_hosts_with_zone(self):
         result = self.controller.index(FakeRequestWithNovaZone())

@@ -33,6 +33,7 @@ from nova import exception
 from nova import objects
 from nova.servicegroup.drivers import db as db_driver
 from nova import test
+from nova.tests import fixtures
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.objects import test_service
 
@@ -130,7 +131,8 @@ class FakeRequestWithHostService(FakeRequest):
 
 
 def fake_service_get_all(services):
-    def service_get_all(context, filters=None, set_zones=False):
+    def service_get_all(context, filters=None, set_zones=False,
+                        all_cells=False):
         if set_zones or 'availability_zone' in filters:
             return availability_zones.set_availability_zones(context,
                                                              services)
@@ -210,6 +212,7 @@ class ServicesTestV21(test.TestCase):
                       fake_db_service_update(fake_services_list))
 
         self.req = fakes.HTTPRequest.blank('')
+        self.useFixture(fixtures.SingleCellSimple())
 
     def _process_output(self, services, has_disabled=False, has_id=False):
         return services
@@ -487,6 +490,17 @@ class ServicesTestV21(test.TestCase):
                           "enable",
                           body=body)
 
+    def test_services_enable_with_unmapped_host(self):
+        body = {'host': 'invalid', 'binary': 'nova-compute'}
+        with mock.patch.object(self.controller.host_api,
+                               'service_update') as m:
+            m.side_effect = exception.HostMappingNotFound
+            self.assertRaises(webob.exc.HTTPNotFound,
+                              self.controller.update,
+                              self.req,
+                              "enable",
+                              body=body)
+
     def test_services_enable_with_invalid_binary(self):
         body = {'host': 'host1', 'binary': 'invalid'}
         self.assertRaises(webob.exc.HTTPNotFound,
@@ -573,11 +587,18 @@ class ServicesTestV21(test.TestCase):
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.delete, self.req, 1234)
 
-    def test_services_delete_bad_request(self):
+    def test_services_delete_invalid_id(self):
         self.ext_mgr.extensions['os-extended-services-delete'] = True
 
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.delete, self.req, 'abc')
+
+    def test_services_delete_duplicate_service(self):
+        with mock.patch.object(self.controller, 'host_api') as host_api:
+            host_api.service_delete.side_effect = exception.ServiceNotUnique()
+            self.assertRaises(webob.exc.HTTPBadRequest,
+                              self.controller.delete, self.req, 1234)
+            self.assertTrue(host_api.service_delete.called)
 
     # This test is just to verify that the servicegroup API gets used when
     # calling the API
