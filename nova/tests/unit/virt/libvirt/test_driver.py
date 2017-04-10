@@ -11192,6 +11192,30 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
             self.assertEqual(b'67890', output)
 
+    def test_get_console_output_pty_not_available(self):
+        instance = objects.Instance(**self.test_instance)
+        fake_dom_xml = """
+            <domain type='kvm'>
+                <devices>
+                    <disk type='file'>
+                        <source file='filename'/>
+                    </disk>
+                    <console type='pty'>
+                        <target port='0'/>
+                    </console>
+                </devices>
+            </domain>
+        """
+
+        def fake_lookup(id):
+            return FakeVirtDomain(fake_dom_xml)
+
+        self.create_fake_libvirt_mock()
+        libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertRaises(exception.ConsoleNotAvailable,
+                          drvr.get_console_output, self.context, instance)
+
     @mock.patch('nova.virt.libvirt.host.Host.get_domain')
     @mock.patch.object(libvirt_guest.Guest, "get_xml_desc")
     def test_get_console_output_not_available(self, mock_get_xml, get_domain):
