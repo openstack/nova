@@ -1206,7 +1206,26 @@ class LibvirtVifTestCase(test.NoDBTestCase):
 
     @mock.patch.object(pci_utils, 'get_ifname_by_pci_address',
                        return_value='eth1')
-    def test_hw_veb_driver_macvtap(self, mock_get_ifname):
+    @mock.patch.object(host.Host, "has_min_version", return_value=True)
+    def test_hw_veb_driver_macvtap(self, ver_mock, mock_get_ifname):
+        d = vif.LibvirtGenericVIFDriver()
+        xml = self._get_instance_xml(d, self.vif_hw_veb_macvtap)
+        node = self._get_node(xml)
+        self.assertEqual(node.get("type"), "direct")
+        self._assertTypeEquals(node, "direct", "source",
+                               "dev", "eth1")
+        self._assertTypeEquals(node, "direct", "source",
+                               "mode", "passthrough")
+        self._assertMacEquals(node, self.vif_hw_veb_macvtap)
+        vlan = node.find("vlan").find("tag").get("id")
+        vlan_want = self.vif_hw_veb["details"]["vlan"]
+        self.assertEqual(int(vlan), vlan_want)
+
+    @mock.patch.object(pci_utils, 'get_ifname_by_pci_address',
+                       return_value='eth1')
+    @mock.patch.object(host.Host, "has_min_version", return_value=False)
+    def test_hw_veb_driver_macvtap_pre_vlan_support(self, ver_mock,
+                                                    mock_get_ifname):
         d = vif.LibvirtGenericVIFDriver()
         xml = self._get_instance_xml(d, self.vif_hw_veb_macvtap)
         node = self._get_node(xml)
