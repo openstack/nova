@@ -75,20 +75,6 @@ class _TestAggregateObject(object):
         mock_get_api.assert_called_once_with(self.context, 123)
         mock_get.assert_called_once_with(self.context, 123)
 
-    @mock.patch('nova.objects.Aggregate.save')
-    @mock.patch('nova.db.aggregate_get')
-    def test_load_allocates_uuid(self, mock_get, mock_save):
-        fake_agg = dict(fake_aggregate)
-        del fake_agg['uuid']
-        mock_get.return_value = fake_agg
-        uuid = uuidsentinel.aggregate
-        with mock.patch('oslo_utils.uuidutils.generate_uuid') as mock_g:
-            mock_g.return_value = uuid
-            obj = aggregate.Aggregate.get_by_id(self.context, 123)
-            mock_g.assert_called_once_with()
-            self.assertEqual(uuid, obj.uuid)
-            mock_save.assert_called_once_with()
-
     @mock.patch('nova.objects.aggregate._aggregate_get_from_db_by_uuid')
     @mock.patch('nova.db.aggregate_get_by_uuid')
     def test_get_by_uuid(self, get_by_uuid, get_by_uuid_api):

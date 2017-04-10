@@ -609,7 +609,8 @@ class AggregateMigrationTestCase(test.TestCase):
         self.context = context.get_admin_context()
 
     def test_migration(self):
-        db.aggregate_create(self.context, {'name': 'foo'})
+        db.aggregate_create(self.context, {'name': 'foo',
+                                           'uuid': uuidsentinel.agg_uuid})
         main_aggregates_len = len(db.aggregate_get_all(self.context))
         match, done = aggregate_obj.migrate_aggregates(self.context, 50)
         self.assertEqual(1, main_aggregates_len)

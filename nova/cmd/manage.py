@@ -594,8 +594,6 @@ class DbCommands(object):
     """Class for managing the main database."""
 
     online_migrations = (
-        # Added in Mitaka
-        db.aggregate_uuids_online_data_migration,
         # Added in Newton
         flavor_obj.migrate_flavors,
         # Added in Newton

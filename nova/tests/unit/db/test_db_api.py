@@ -9795,19 +9795,6 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
             db.pci_device_update(self.admin_context, v['compute_node_id'],
                                  v['address'], v)
 
-    def test_migrate_aggregates(self):
-        db.aggregate_create(self.context, {'name': 'foo'})
-        db.aggregate_create(self.context, {'name': 'bar',
-                                           'uuid': 'fake-uuid'})
-        total, done = db.aggregate_uuids_online_data_migration(
-            self.context, 10)
-        self.assertEqual(1, total)
-        self.assertEqual(1, done)
-        total, done = db.aggregate_uuids_online_data_migration(
-            self.context, 10)
-        self.assertEqual(0, total)
-        self.assertEqual(0, done)
-
 
 @mock.patch('time.sleep', new=lambda x: None)
 class RetryOnDeadlockTestCase(test.TestCase):
