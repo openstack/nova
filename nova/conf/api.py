@@ -259,6 +259,14 @@ allow_instance_snapshots_opts = [
     cfg.BoolOpt("allow_instance_snapshots",
         default=True,
         deprecated_group="DEFAULT",
+        deprecated_for_removal=True,
+        deprecated_since="16.0.0",
+        deprecated_reason="This option disables the createImage server action "
+                          "API in a non-discoverable way and is thus a "
+                          "barrier to interoperability. Also, it is not used "
+                          "for other APIs that create snapshots like shelve "
+                          "or createBackup. Disabling snapshots should be "
+                          "done via policy if so desired.",
         help="""
 Operators can turn off the ability for a user to take snapshots of their
 instances by setting this option to False. When disabled, any attempt to

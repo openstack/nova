@@ -1,0 +1,7 @@
+---
+deprecations:
+  - |
+    The ``[api]/allow_instance_snapshots`` configuration option is now
+    deprecated for removal. To disable snapshots in the ``createImage`` server
+    action API, change the ``os_compute_api:servers:create_image`` and
+    ``os_compute_api:servers:create_image:allow_volume_backed`` policies.
