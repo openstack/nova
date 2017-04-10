@@ -177,17 +177,9 @@ class PlacementHandler(object):
                 raise webob.exc.HTTPForbidden(
                     _('admin required'),
                     json_formatter=util.json_error_formatter)
-        # Check that an incoming write-oriented request method has
-        # the required content-type header. If not raise a 400. If
-        # this doesn't happen here then webob.dec.wsgify (elsewhere
-        # in the stack) will raise an uncaught KeyError. Since that
-        # is such a generic exception we cannot merely catch it
-        # here, we need to avoid it ever happening.
-        # TODO(cdent): Move this and the auth checking above into
-        # middleware. It shouldn't be here. This is for dispatch not
-        # validation or authorization.
-        request_method = environ['REQUEST_METHOD'].upper()
-        if request_method in ('POST', 'PUT', 'PATCH'):
+        # Check that an incoming request with a content-length
+        # header also has a content-type header. If not raise a 400.
+        if int(environ.get('CONTENT_LENGTH', 0)):
             if 'CONTENT_TYPE' not in environ:
                 raise webob.exc.HTTPBadRequest(
                     _('content-type header required'),

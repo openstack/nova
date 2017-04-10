@@ -84,9 +84,23 @@ tests:
   status: 415
 
 - name: post resource provider missing content-type
+  desc: because content-length is set, we should have a content-type
   POST: /resource_providers
   data: I want a resource provider please
   status: 400
+  response_strings:
+      - content-type header required
+
+# NOTE(cdent): This is an awkward test. It is not actually testing a
+# PUT of a resource provider. It is confirming that a PUT with no
+# body, no content-length header and no content-type header will
+# reach the desired handler.
+- name: PUT resource provider no body
+  desc: different response string from prior test indicates past content-length requirement
+  PUT: /resource_providers/d3a64825-8228-4ccb-8a6c-1c6d3eb6a3e8
+  status: 415
+  response_strings:
+      - The media type None is not supported, use application/json
 
 - name: post resource provider schema mismatch
   POST: /resource_providers
