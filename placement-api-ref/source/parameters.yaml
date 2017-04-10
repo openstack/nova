@@ -1,4 +1,10 @@
 # variables in path
+resource_class_path: &resource_class_path
+  type: string
+  in: path
+  required: true
+  description: >
+    The name of one resource class.
 resource_provider_uuid_path: &resource_provider_uuid_path
   type: string
   in: path
@@ -88,11 +94,8 @@ reserved_opt:
   <<: *reserved
   required: false
 resource_class:
-  type: string
+  <<: *resource_class_path
   in: body
-  required: true
-  description: >
-    The name of the resource class.
 resource_provider_generation:
   type: integer
   in: body
