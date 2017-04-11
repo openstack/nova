@@ -3669,8 +3669,22 @@ class LibvirtDriver(driver.ComputeDriver):
             self._connect_volume(connection_info, info)
             cfg = self._get_volume_config(connection_info, info)
             devices.append(cfg)
+
             vol['connection_info'] = connection_info
             vol.save()
+        LOG.info("** setting cdrom **")
+        cd_cfg = vconfig.LibvirtConfigGuestDisk()
+        cd_cfg.driver_name = 'qemu'
+        cd_cfg.source_device = 'cdrom'
+        cd_cfg.driver_format = 'raw'
+        cd_cfg.driver_cache = 'none'
+        cd_cfg.target_bus = 'ide'
+        cd_cfg.target_dev = 'hdc'
+        cd_cfg.root_name = 'disk'
+        cd_cfg.source_type = 'block'
+        cd_cfg.source_path = ''
+
+        devices.append(cd_cfg)
 
         for d in devices:
             self._set_cache_mode(d)
