@@ -372,6 +372,7 @@ Request
 
   - server_id: server_id_path
   - reboot: reboot
+  - type: reboot_type
 
 **Example Reboot Server (reboot Action)**
 
