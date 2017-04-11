@@ -350,44 +350,11 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - server: server
-  - addresses: addresses
-  - created: created
-  - flavor: flavor
-  - hostId: hostId
   - id: server_id
-  - image: image
-  - key_name: key_name_resp
   - links: links
-  - metadata: metadata_compat
-  - name: server_name
-  - accessIPv4: accessIPv4
-  - accessIPv6: accessIPv6
-  - config_drive: config_drive_resp
   - OS-DCF:diskConfig: disk_config
-  - OS-EXT-AZ:availability_zone: OS-EXT-AZ:availability_zone
-  - OS-EXT-SRV-ATTR:host: OS-EXT-SRV-ATTR:host
-  - OS-EXT-SRV-ATTR:hypervisor_hostname: OS-EXT-SRV-ATTR:hypervisor_hostname
-  - OS-EXT-SRV-ATTR:instance_name: OS-EXT-SRV-ATTR:instance_name
-  - OS-EXT-STS:power_state: OS-EXT-STS:power_state
-  - OS-EXT-STS:task_state: OS-EXT-STS:task_state
-  - OS-EXT-STS:vm_state: OS-EXT-STS:vm_state
-  - OS-SRV-USG:launched_at: OS-SRV-USG:launched_at
-  - OS-SRV-USG:terminated_at: OS-SRV-USG:terminated_at
-  - progress: progress
   - security_groups: security_groups_obj
-  - security_group.name: name
-  - status: server_status
-  - host_status: host_status
-  - tenant_id: tenant_id_body
-  - updated: updated
-  - user_id: user_id
-  - OS-EXT-SRV-ATTR:hostname: server_hostname
-  - OS-EXT-SRV-ATTR:reservation_id: server_reservation_id
-  - OS-EXT-SRV-ATTR:launch_index: server_launch_index
-  - OS-EXT-SRV-ATTR:kernel_id: server_kernel_id
-  - OS-EXT-SRV-ATTR:ramdisk_id: server_ramdisk_id
-  - OS-EXT-SRV-ATTR:root_device_name: server_root_device_name
-  - OS-EXT-SRV-ATTR:user_data: server_user_data
+  - security_groups.name: name
   - adminPass: adminPass_response
 
 **Example Create Server**
