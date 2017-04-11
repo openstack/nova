@@ -132,6 +132,19 @@ class ValidationRegex(test.NoDBTestCase):
 
 class APIValidationTestCase(test.NoDBTestCase):
 
+    post_schema = None
+
+    def setUp(self):
+        super(APIValidationTestCase, self).setUp()
+        self.post = None
+
+        if self.post_schema is not None:
+            @validation.schema(request_body_schema=self.post_schema)
+            def post(req, body):
+                return 'Validation succeeded.'
+
+            self.post = post
+
     def check_validation_error(self, method, body, expected_detail, req=None):
         if not req:
             req = FakeRequest()
@@ -303,22 +316,14 @@ class QueryParamsSchemaTestCase(test.NoDBTestCase):
 
 class RequiredDisableTestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(RequiredDisableTestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': {
-                    'type': 'integer',
-                },
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': {
+                'type': 'integer',
             },
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+        },
+    }
 
     def test_validate_required_disable(self):
         self.assertEqual(self.post(body={'foo': 1}, req=FakeRequest()),
@@ -329,23 +334,15 @@ class RequiredDisableTestCase(APIValidationTestCase):
 
 class RequiredEnableTestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(RequiredEnableTestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': {
-                    'type': 'integer',
-                },
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': {
+                'type': 'integer',
             },
-            'required': ['foo']
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+        },
+        'required': ['foo']
+    }
 
     def test_validate_required_enable(self):
         self.assertEqual(self.post(body={'foo': 1},
@@ -359,23 +356,15 @@ class RequiredEnableTestCase(APIValidationTestCase):
 
 class AdditionalPropertiesEnableTestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(AdditionalPropertiesEnableTestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': {
-                    'type': 'integer',
-                },
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': {
+                'type': 'integer',
             },
-            'required': ['foo'],
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+        },
+        'required': ['foo'],
+    }
 
     def test_validate_additionalProperties_enable(self):
         self.assertEqual(self.post(body={'foo': 1}, req=FakeRequest()),
@@ -387,24 +376,16 @@ class AdditionalPropertiesEnableTestCase(APIValidationTestCase):
 
 class AdditionalPropertiesDisableTestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(AdditionalPropertiesDisableTestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': {
-                    'type': 'integer',
-                },
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': {
+                'type': 'integer',
             },
-            'required': ['foo'],
-            'additionalProperties': False,
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+        },
+        'required': ['foo'],
+        'additionalProperties': False,
+    }
 
     def test_validate_additionalProperties_disable(self):
         self.assertEqual(self.post(body={'foo': 1}, req=FakeRequest()),
@@ -418,22 +399,14 @@ class AdditionalPropertiesDisableTestCase(APIValidationTestCase):
 
 class PatternPropertiesTestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(PatternPropertiesTestCase, self).setUp()
-        schema = {
-            'patternProperties': {
-                '^[a-zA-Z0-9]{1,10}$': {
-                    'type': 'string'
-                },
+    post_schema = {
+        'patternProperties': {
+            '^[a-zA-Z0-9]{1,10}$': {
+                'type': 'string'
             },
-            'additionalProperties': False,
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+        },
+        'additionalProperties': False,
+    }
 
     def test_validate_patternProperties(self):
         self.assertEqual('Validation succeeded.',
@@ -476,22 +449,14 @@ class PatternPropertiesTestCase(APIValidationTestCase):
 
 class StringTestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(StringTestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': {
-                    'type': 'string',
-                },
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': {
+                'type': 'string',
             },
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+        },
+    }
 
     def test_validate_string(self):
         self.assertEqual(self.post(body={'foo': 'abc'}, req=FakeRequest()),
@@ -520,24 +485,16 @@ class StringTestCase(APIValidationTestCase):
 
 class StringLengthTestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(StringLengthTestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': {
-                    'type': 'string',
-                    'minLength': 1,
-                    'maxLength': 10,
-                },
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': {
+                'type': 'string',
+                'minLength': 1,
+                'maxLength': 10,
             },
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+        },
+    }
 
     def test_validate_string_length(self):
         self.assertEqual(self.post(body={'foo': '0'}, req=FakeRequest()),
@@ -560,23 +517,15 @@ class StringLengthTestCase(APIValidationTestCase):
 
 class IntegerTestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(IntegerTestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': {
-                    'type': ['integer', 'string'],
-                    'pattern': '^[0-9]+$',
-                },
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': {
+                'type': ['integer', 'string'],
+                'pattern': '^[0-9]+$',
             },
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+        },
+    }
 
     def test_validate_integer(self):
         self.assertEqual(self.post(body={'foo': 1}, req=FakeRequest()),
@@ -616,25 +565,17 @@ class IntegerTestCase(APIValidationTestCase):
 
 class IntegerRangeTestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(IntegerRangeTestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': {
-                    'type': ['integer', 'string'],
-                    'pattern': '^[0-9]+$',
-                    'minimum': 1,
-                    'maximum': 10,
-                },
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': {
+                'type': ['integer', 'string'],
+                'pattern': '^[0-9]+$',
+                'minimum': 1,
+                'maximum': 10,
             },
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+        },
+    }
 
     def test_validate_integer_range(self):
         self.assertEqual(self.post(body={'foo': 1}, req=FakeRequest()),
@@ -668,20 +609,12 @@ class IntegerRangeTestCase(APIValidationTestCase):
 
 class BooleanTestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(BooleanTestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': parameter_types.boolean,
-            },
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': parameter_types.boolean,
+        },
+    }
 
     def test_validate_boolean(self):
         self.assertEqual('Validation succeeded.',
@@ -716,20 +649,12 @@ class BooleanTestCase(APIValidationTestCase):
 
 class HostnameTestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(HostnameTestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': parameter_types.hostname,
-            },
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': parameter_types.hostname,
+        },
+    }
 
     def test_validate_hostname(self):
         self.assertEqual('Validation succeeded.',
@@ -762,20 +687,12 @@ class HostnameTestCase(APIValidationTestCase):
 
 class HostnameIPaddressTestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(HostnameIPaddressTestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': parameter_types.hostname_or_ip_address,
-            },
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': parameter_types.hostname_or_ip_address,
+        },
+    }
 
     def test_validate_hostname_or_ip_address(self):
         self.assertEqual('Validation succeeded.',
@@ -814,20 +731,12 @@ class HostnameIPaddressTestCase(APIValidationTestCase):
 
 class CellNameTestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(CellNameTestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': parameter_types.cell_name,
-            },
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': parameter_types.cell_name,
+        },
+    }
 
     def test_validate_name(self):
         self.assertEqual('Validation succeeded.',
@@ -870,20 +779,12 @@ class CellNameTestCase(APIValidationTestCase):
 
 class CellNameLeadingTrailingSpacesTestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(CellNameLeadingTrailingSpacesTestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': parameter_types.cell_name_leading_trailing_spaces,
-            },
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': parameter_types.cell_name_leading_trailing_spaces,
+        },
+    }
 
     def test_validate_name(self):
         self.assertEqual('Validation succeeded.',
@@ -930,20 +831,12 @@ class CellNameLeadingTrailingSpacesTestCase(APIValidationTestCase):
 
 class NameTestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(NameTestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': parameter_types.name,
-            },
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': parameter_types.name,
+        },
+    }
 
     def test_validate_name(self):
         self.assertEqual('Validation succeeded.',
@@ -986,20 +879,12 @@ class NameTestCase(APIValidationTestCase):
 
 class NameWithLeadingTrailingSpacesTestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(NameWithLeadingTrailingSpacesTestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': parameter_types.name_with_leading_trailing_spaces,
-            },
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': parameter_types.name_with_leading_trailing_spaces,
+        },
+    }
 
     def test_validate_name(self):
         self.assertEqual('Validation succeeded.',
@@ -1053,20 +938,12 @@ class NameWithLeadingTrailingSpacesTestCase(APIValidationTestCase):
 
 class NoneTypeTestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(NoneTypeTestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': parameter_types.none
-            }
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': parameter_types.none
         }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+    }
 
     def test_validate_none(self):
         self.assertEqual('Validation succeeded.',
@@ -1094,20 +971,12 @@ class NoneTypeTestCase(APIValidationTestCase):
 
 class TcpUdpPortTestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(TcpUdpPortTestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': parameter_types.tcp_udp_port,
-            },
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': parameter_types.tcp_udp_port,
+        },
+    }
 
     def test_validate_tcp_udp_port(self):
         self.assertEqual('Validation succeeded.',
@@ -1129,23 +998,15 @@ class TcpUdpPortTestCase(APIValidationTestCase):
 
 class CidrFormatTestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(CidrFormatTestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': {
-                    'type': 'string',
-                    'format': 'cidr',
-                },
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': {
+                'type': 'string',
+                'format': 'cidr',
             },
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+        },
+    }
 
     def test_validate_cidr(self):
         self.assertEqual('Validation succeeded.',
@@ -1181,23 +1042,15 @@ class CidrFormatTestCase(APIValidationTestCase):
 
 class DatetimeTestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(DatetimeTestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': {
-                    'type': 'string',
-                    'format': 'date-time',
-                },
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': {
+                'type': 'string',
+                'format': 'date-time',
             },
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+        },
+    }
 
     def test_validate_datetime(self):
         self.assertEqual('Validation succeeded.',
@@ -1227,23 +1080,15 @@ class DatetimeTestCase(APIValidationTestCase):
 
 class UuidTestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(UuidTestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': {
-                    'type': 'string',
-                    'format': 'uuid',
-                },
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': {
+                'type': 'string',
+                'format': 'uuid',
             },
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+        },
+    }
 
     def test_validate_uuid(self):
         self.assertEqual('Validation succeeded.',
@@ -1273,23 +1118,15 @@ class UuidTestCase(APIValidationTestCase):
 
 class UriTestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(UriTestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': {
-                    'type': 'string',
-                    'format': 'uri',
-                },
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': {
+                'type': 'string',
+                'format': 'uri',
             },
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+        },
+    }
 
     def test_validate_uri(self):
         self.assertEqual('Validation succeeded.',
@@ -1333,23 +1170,15 @@ class UriTestCase(APIValidationTestCase):
 
 class Ipv4TestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(Ipv4TestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': {
-                    'type': 'string',
-                    'format': 'ipv4',
-                },
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': {
+                'type': 'string',
+                'format': 'ipv4',
             },
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+        },
+    }
 
     def test_validate_ipv4(self):
         self.assertEqual('Validation succeeded.',
@@ -1379,23 +1208,15 @@ class Ipv4TestCase(APIValidationTestCase):
 
 class Ipv6TestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(Ipv6TestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': {
-                    'type': 'string',
-                    'format': 'ipv6',
-                },
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': {
+                'type': 'string',
+                'format': 'ipv6',
             },
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+        },
+    }
 
     def test_validate_ipv6(self):
         self.assertEqual('Validation succeeded.',
@@ -1423,23 +1244,15 @@ class Ipv6TestCase(APIValidationTestCase):
 
 class Base64TestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(Base64TestCase, self).setUp()
-        schema = {
-            'type': 'object',
-            'properties': {
-                'foo': {
-                    'type': 'string',
-                    'format': 'base64',
-                },
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': {
+               'type': 'string',
+                'format': 'base64',
             },
-        }
-
-        @validation.schema(request_body_schema=schema)
-        def post(req, body):
-            return 'Validation succeeded.'
-
-        self.post = post
+        },
+    }
 
     def test_validate_base64(self):
         self.assertEqual('Validation succeeded.',
