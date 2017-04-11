@@ -6889,3 +6889,11 @@ class ComputeManager(manager.Manager):
                               error, instance=instance)
         image_meta = objects.ImageMeta.from_instance(instance)
         self.driver.unquiesce(context, instance, image_meta)
+
+    def attach_iso(self, context, instance):
+        try:
+            self.driver.attach_iso(instance)
+        except exception:
+            LOG.error(_("UNEXPECTED ERROR: ATTACH ISO TO %s") % instance)
+
+

@@ -375,6 +375,7 @@ libvirt_volume_drivers = [
 ]
 
 
+
 def patch_tpool_proxy():
     """eventlet.tpool.Proxy doesn't work with old-style class in __str__()
     or __repr__() calls. See bug #962840 for details.
@@ -2774,21 +2775,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                   disk_info, image_meta,
                                   block_device_info=block_device_info,
                                   write_to_disk=True)
-        cdromstring = '''
-        <disk type='file' device='cdrom'>
-          <driver name='qemu' type='raw' cache='none'/>
-          <readonly/>
-          <target dev='hdc'/>
-        </disk >
-          '''
-        cdromxml = etree.fromstring(cdromstring)
-        # add cdrom
-        tree = etree.fromstring(xml)
-        disktag = tree.find(".//disk")
-        devicetag = disktag.getparent()
-        devicetag.insert(devicetag.index(disktag) + 1, cdromxml)
-        xml = etree.tostring(tree)
-        LOG.error(_LE("xml: {0}".format(xml)))
 
         self._create_domain_and_network(context, xml, instance, network_info,
                                         disk_info,
@@ -7839,3 +7825,31 @@ class LibvirtDriver(driver.ComputeDriver):
     def is_supported_fs_format(self, fs_type):
         return fs_type in [disk.FS_FORMAT_EXT2, disk.FS_FORMAT_EXT3,
                            disk.FS_FORMAT_EXT4, disk.FS_FORMAT_XFS]
+
+    def attach_iso(self, instance):
+        iso_path = "/var/lib/nova/instances/691fa4fe-4868-43cc-a961-a245e26b5f58"
+        cdromstring = '''
+        <disk type='file' device='cdrom'>
+          <driver name='qemu' type='raw' cache='none'/>
+          <source file='{0}'/>
+          <target dev='hdc'/>
+        </disk >
+          '''.format(iso_path)
+
+        try:
+          guest = self._host.get_guest(instance)
+          xml = guest.get_xml_desc()
+
+          cdromxml = etree.fromstring(cdromstring)
+          # add cdrom
+          tree = etree.fromstring(xml)
+          disktag = tree.find(".//disk")
+          devicetag = disktag.getparent()
+          devicetag.insert(devicetag.index(disktag) + 1, cdromxml)
+          xml = etree.tostring(tree)
+          LOG.error(_LE("xml: {0}".format(xml)))
+        except exception.InstanceNotFound as e:
+            guest = None
+            LOG.error(_LE("InstanceNotFound: {0}".format(str(e.message))))
+        finally:
+          self._host.write_instance_config(xml)

@@ -3630,6 +3630,10 @@ class API(base.Base):
             host_statuses[instance.uuid] = host_status
         return host_statuses
 
+    def attach_iso(self, context, instance):
+        """attach iso"""
+        self.compute_rpcapi.attach_iso(context, instance)
+
 
 class HostAPI(base.Base):
     """Sub-set of the Compute Manager API for managing host operations."""
