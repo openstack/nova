@@ -2337,7 +2337,7 @@ class LibvirtConfigNodeDevice(LibvirtConfigObject):
                 self.name = c.text
             elif c.tag == "parent":
                 self.parent = c.text
-            elif c.tag == "capability" and c.get("type") == 'pci':
+            elif c.tag == "capability" and c.get("type") in ['pci', 'net']:
                 pcicap = LibvirtConfigNodeDevicePciCap()
                 pcicap.parse_dom(c)
                 self.pci_capability = pcicap
@@ -2358,7 +2358,11 @@ class LibvirtConfigNodeDevicePciCap(LibvirtConfigObject):
         self.vendor = None
         self.vendor_id = None
         self.numa_node = None
-        self.fun_capability = list()
+        self.fun_capability = []
+        self.interface = None
+        self.address = None
+        self.link_state = None
+        self.features = []
 
     def parse_dom(self, xmldoc):
         super(LibvirtConfigNodeDevicePciCap, self).parse_dom(xmldoc)
@@ -2380,6 +2384,14 @@ class LibvirtConfigNodeDevicePciCap(LibvirtConfigObject):
                 self.vendor_id = int(c.get('id'), 16)
             elif c.tag == "numa":
                 self.numa_node = int(c.get('node'))
+            elif c.tag == "interface":
+                self.interface = c.text
+            elif c.tag == "address":
+                self.address = c.text
+            elif c.tag == "link":
+                self.link_state = c.get('state')
+            elif c.tag == "feature":
+                self.features.append(c.get('name'))
             elif c.tag == "capability" and c.get('type') in \
                             ('virt_functions', 'phys_function'):
                 funcap = LibvirtConfigNodeDevicePciSubFunctionCap()

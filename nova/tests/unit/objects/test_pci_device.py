@@ -16,6 +16,7 @@
 import copy
 
 import mock
+from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 
 from nova import context
@@ -133,8 +134,21 @@ class _TestPciDeviceObject(object):
         self.dev_dict['k2'] = 'v2'
         self.pci_device = pci_device.PciDevice.create(None, self.dev_dict)
         extra_value = self.pci_device.extra_info
-        self.assertEqual(extra_value.get('k1'), 'v1')
+        self.assertEqual(extra_value.get('k1'), self.dev_dict['k1'])
         self.assertEqual(set(extra_value.keys()), set(('k1', 'k2')))
+        self.assertEqual(self.pci_device.obj_what_changed(),
+                         set(['compute_node_id', 'address', 'product_id',
+                              'vendor_id', 'numa_node', 'status',
+                              'extra_info', 'dev_type', 'parent_addr']))
+
+    def test_pci_device_extra_info_with_dict(self):
+        self.dev_dict = copy.copy(dev_dict)
+        self.dev_dict['k1'] = {'sub_k1': ['val1', 'val2']}
+        self.pci_device = pci_device.PciDevice.create(None, self.dev_dict)
+        extra_value = self.pci_device.extra_info
+        self.assertEqual(jsonutils.loads(extra_value.get('k1')),
+                         self.dev_dict['k1'])
+        self.assertEqual(set(extra_value.keys()), set(['k1']))
         self.assertEqual(self.pci_device.obj_what_changed(),
                          set(['compute_node_id', 'address', 'product_id',
                               'vendor_id', 'numa_node', 'status',

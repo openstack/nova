@@ -5275,6 +5275,19 @@ class LibvirtDriver(driver.ComputeDriver):
         cpu_info['features'] = features
         return cpu_info
 
+    def _get_pcinet_info(self, vf_address):
+        """Returns a dict of NET device."""
+        devname = pci_utils.get_net_name_by_vf_pci_address(vf_address)
+        if not devname:
+            return
+
+        virtdev = self._host.device_lookup_by_name(devname)
+        xmlstr = virtdev.XMLDesc(0)
+        cfgdev = vconfig.LibvirtConfigNodeDevice()
+        cfgdev.parse_str(xmlstr)
+        return {'name': cfgdev.name,
+                'capabilities': cfgdev.pci_capability.features}
+
     def _get_pcidev_info(self, devname):
         """Returns a dict of PCI device."""
 
@@ -5317,6 +5330,20 @@ class LibvirtDriver(driver.ComputeDriver):
 
             return {'dev_type': fields.PciDeviceType.STANDARD}
 
+        def _get_device_capabilities(device, address):
+            """Get PCI VF device's additional capabilities.
+
+            If a PCI device is a virtual function, this function reads the PCI
+            parent's network capabilities (must be always a NIC device) and
+            appends this information to the device's dictionary.
+            """
+            if device.get('dev_type') == fields.PciDeviceType.SRIOV_VF:
+                pcinet_info = self._get_pcinet_info(address)
+                if pcinet_info:
+                    return {'capabilities':
+                                {'network': pcinet_info.get('capabilities')}}
+            return {}
+
         virtdev = self._host.device_lookup_by_name(devname)
         xmlstr = virtdev.XMLDesc(0)
         cfgdev = vconfig.LibvirtConfigNodeDevice()
@@ -5340,6 +5367,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # requirement by DataBase Model
         device['label'] = 'label_%(vendor_id)s_%(product_id)s' % device
         device.update(_get_device_type(cfgdev, address))
+        device.update(_get_device_capabilities(device, address))
         return device
 
     def _get_pci_passthrough_devices(self):

@@ -266,6 +266,26 @@ _fake_NodeDevXml = \
         </pci-express>
       </capability>
     </device>""",
+    "net_enp2s2_02_9a_a1_37_be_54": """
+    <device>
+      <name>net_enp2s2_02_9a_a1_37_be_54</name>
+      <path>/sys/devices/pci0000:00/0000:00:02.0/0000:02:02.0/net/enp2s2</path>
+      <parent>pci_0000_04_11_7</parent>
+      <capability type='net'>
+        <interface>enp2s2</interface>
+        <address>02:9a:a1:37:be:54</address>
+        <link state='down'/>
+        <feature name='rx'/>
+        <feature name='tx'/>
+        <feature name='sg'/>
+        <feature name='tso'/>
+        <feature name='gso'/>
+        <feature name='gro'/>
+        <feature name='rxvlan'/>
+        <feature name='txvlan'/>
+        <capability type='80203'/>
+      </capability>
+    </device>"""
     }
 
 _fake_cpu_info = {
@@ -12612,6 +12632,26 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         got = drvr._get_cpu_info()
         self.assertEqual(want, got)
 
+    def test_get_pcinet_info(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        dev_name = "net_enp2s2_02_9a_a1_37_be_54"
+        parent_address = "pci_0000_04_11_7"
+        node_dev = FakeNodeDevice(_fake_NodeDevXml[dev_name])
+
+        with mock.patch.object(pci_utils, 'get_net_name_by_vf_pci_address',
+                return_value=dev_name) as mock_get_net_name, \
+                mock.patch.object(drvr._host, 'device_lookup_by_name',
+                return_value=node_dev) as mock_dev_lookup:
+            actualvf = drvr._get_pcinet_info(parent_address)
+            expect_vf = {
+                "name": dev_name,
+                "capabilities": ["rx", "tx", "sg", "tso", "gso", "gro",
+                                 "rxvlan", "txvlan"]
+            }
+            self.assertEqual(expect_vf, actualvf)
+            mock_get_net_name.called_once_with(parent_address)
+            mock_dev_lookup.called_once_with(dev_name)
+
     def test_get_pcidev_info(self):
 
         def fake_nodeDeviceLookupByName(self, name):
@@ -12652,19 +12692,23 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 }
             self.assertEqual(expect_vf, actualvf)
 
-            actualvf = drvr._get_pcidev_info("pci_0000_04_11_7")
-            expect_vf = {
-                "dev_id": "pci_0000_04_11_7",
-                "address": "0000:04:11.7",
-                "product_id": '1520',
-                "vendor_id": '8086',
-                "numa_node": 0,
-                "label": 'label_8086_1520',
-                "dev_type": fields.PciDeviceType.SRIOV_VF,
-                "parent_addr": '0000:04:00.3',
-                }
-
-            self.assertEqual(expect_vf, actualvf)
+            with mock.patch.object(pci_utils, 'get_net_name_by_vf_pci_address',
+                    return_value="net_enp2s2_02_9a_a1_37_be_54"):
+                actualvf = drvr._get_pcidev_info("pci_0000_04_11_7")
+                expect_vf = {
+                    "dev_id": "pci_0000_04_11_7",
+                    "address": "0000:04:11.7",
+                    "product_id": '1520',
+                    "vendor_id": '8086',
+                    "numa_node": 0,
+                    "label": 'label_8086_1520',
+                    "dev_type": fields.PciDeviceType.SRIOV_VF,
+                    "parent_addr": '0000:04:00.3',
+                    "capabilities": {
+                        "network": ["rx", "tx", "sg", "tso", "gso", "gro",
+                                    "rxvlan", "txvlan"]},
+                    }
+                self.assertEqual(expect_vf, actualvf)
 
             with mock.patch.object(
                 pci_utils, 'is_physical_function', return_value=True):
