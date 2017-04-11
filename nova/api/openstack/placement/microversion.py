@@ -41,6 +41,8 @@ VERSIONS = [
             # that are members of any of the listed aggregates
     '1.4',  # Adds resources query string parameter in GET /resource_providers
     '1.5',  # Adds DELETE /resource_providers/{uuid}/inventories
+    '1.6',  # Adds /traits and /resource_providers{uuid}/traits resource
+            # endpoints
 ]
 
 

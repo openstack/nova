@@ -89,3 +89,27 @@ Placement API version 1.5 adds DELETE method for deleting all inventory for a
 resource provider. The following new method is supported:
 
 * DELETE /resource_providers/{uuid}/inventories
+
+1.6 Traits API
+--------------
+
+The 1.6 version adds basic operations allowing an admin to create, list, and
+delete custom traits, also adds basic operations allowing an admin to attach
+traits to a resource provider.
+
+The following new routes are added:
+
+* GET /traits: Returns all resource classes.
+* PUT /traits/{name}: To insert a single custom trait.
+* GET /traits/{name}: To check if a trait name exists.
+* DELETE /traits/{name}: To delete the specified trait.
+* GET /resource_providers/{uuid}/traits: a list of traits associated
+  with a specific resource provider
+* PUT /resource_providers/{uuid}/traits: Set all the traits for a
+  specific resource provider
+* DELETE /resource_providers/{uuid}/traits: Remove any existing trait
+  associations for a specific resource provider
+
+Custom traits must begin with the prefix "CUSTOM\_" and contain only
+the letters A through Z, the numbers 0 through 9 and the underscore "\_"
+character.

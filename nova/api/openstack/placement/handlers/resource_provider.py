@@ -144,7 +144,7 @@ def _normalize_resources_qs_param(qs):
 def _serialize_links(environ, resource_provider):
     url = util.resource_provider_url(environ, resource_provider)
     links = [{'rel': 'self', 'href': url}]
-    for rel in ('aggregates', 'inventories', 'usages'):
+    for rel in ('aggregates', 'inventories', 'usages', 'traits'):
         links.append({'rel': rel, 'href': '%s/%s' % (url, rel)})
     return links
 

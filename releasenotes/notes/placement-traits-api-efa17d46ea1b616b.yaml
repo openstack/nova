@@ -1,0 +1,15 @@
+---
+features:
+  - |
+    Traits are added to the placement with Microversion 1.6.
+
+    * GET /traits: Returns all resource classes.
+    * PUT /traits/{name}: To insert a single custom trait.
+    * GET /traits/{name}: To check if a trait name exists.
+    * DELETE /traits/{name}: To delete the specified trait.
+    * GET /resource_providers/{uuid}/traits: a list of traits associated
+      with a specific resource provider
+    * PUT /resource_providers/{uuid}/traits: Set all the traits for a
+      specific resource provider
+    * DELETE /resource_providers/{uuid}/traits: Remove any existing trait
+      associations for a specific resource provider
