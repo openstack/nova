@@ -371,7 +371,6 @@ Response
   - OS-EXT-STS:power_state: OS-EXT-STS:power_state
   - OS-EXT-STS:task_state: OS-EXT-STS:task_state
   - OS-EXT-STS:vm_state: OS-EXT-STS:vm_state
-  - os-extended-volumes:volumes_attached: os-extended-volumes:volumes_attached
   - OS-SRV-USG:launched_at: OS-SRV-USG:launched_at
   - OS-SRV-USG:terminated_at: OS-SRV-USG:terminated_at
   - progress: progress
@@ -555,6 +554,8 @@ Response
   - OS-EXT-STS:task_state: OS-EXT-STS:task_state
   - OS-EXT-STS:vm_state: OS-EXT-STS:vm_state
   - os-extended-volumes:volumes_attached: os-extended-volumes:volumes_attached
+  - os-extended-volumes:volumes_attached.id: os-extended-volumes:volumes_attached.id
+  - os-extended-volumes:volumes_attached.delete_on_termination: os-extended-volumes:volumes_attached.delete_on_termination
   - OS-SRV-USG:launched_at: OS-SRV-USG:launched_at
   - OS-SRV-USG:terminated_at: OS-SRV-USG:terminated_at
   - progress: progress
@@ -641,6 +642,8 @@ Response
   - OS-EXT-STS:task_state: OS-EXT-STS:task_state
   - OS-EXT-STS:vm_state: OS-EXT-STS:vm_state
   - os-extended-volumes:volumes_attached: os-extended-volumes:volumes_attached
+  - os-extended-volumes:volumes_attached.id: os-extended-volumes:volumes_attached.id
+  - os-extended-volumes:volumes_attached.delete_on_termination: os-extended-volumes:volumes_attached.delete_on_termination
   - OS-SRV-USG:launched_at: OS-SRV-USG:launched_at
   - OS-SRV-USG:terminated_at: OS-SRV-USG:terminated_at
   - progress: progress
@@ -735,7 +738,6 @@ Response
   - OS-EXT-STS:power_state: OS-EXT-STS:power_state
   - OS-EXT-STS:task_state: OS-EXT-STS:task_state
   - OS-EXT-STS:vm_state: OS-EXT-STS:vm_state
-  - os-extended-volumes:volumes_attached: os-extended-volumes:volumes_attached
   - OS-SRV-USG:launched_at: OS-SRV-USG:launched_at
   - OS-SRV-USG:terminated_at: OS-SRV-USG:terminated_at
   - progress: progress
