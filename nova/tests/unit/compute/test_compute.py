@@ -397,12 +397,17 @@ class ComputeVolumeTestCase(BaseTestCase):
             self.compute.attach_volume(self.context, instance, bdm=fake_bdm)
             self.assertEqual(self.cinfo.get('serial'), uuids.volume_id)
 
-    def test_attach_volume_raises(self):
+    @mock.patch('nova.context.RequestContext.elevated')
+    @mock.patch('nova.compute.utils.notify_about_volume_attach_detach')
+    def test_attach_volume_raises(self, mock_notify, mock_elevate):
+        mock_elevate.return_value = self.context
+
         fake_bdm = objects.BlockDeviceMapping(**self.fake_volume)
         instance = self._create_fake_instance_obj()
+        expected_exception = test.TestingException()
 
         def fake_attach(*args, **kwargs):
-            raise test.TestingException
+            raise expected_exception
 
         with test.nested(
             mock.patch.object(driver_block_device.DriverVolumeBlockDevice,
@@ -417,6 +422,15 @@ class ComputeVolumeTestCase(BaseTestCase):
                     self.context, instance, fake_bdm)
             self.assertTrue(mock_unreserve.called)
             self.assertTrue(mock_destroy.called)
+            mock_notify.assert_has_calls([
+                mock.call(self.context, instance, 'fake-mini',
+                          action='volume_attach', phase='start',
+                          volume_id=uuids.volume_id),
+                mock.call(self.context, instance, 'fake-mini',
+                          action='volume_attach', phase='error',
+                          volume_id=uuids.volume_id,
+                          exception=expected_exception),
+            ])
 
     def test_detach_volume_api_raises(self):
         fake_bdm = objects.BlockDeviceMapping(**self.fake_volume)

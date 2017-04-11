@@ -367,7 +367,8 @@ def notify_about_instance_action(context, instance, host, action, phase=None,
 
 
 def notify_about_volume_attach_detach(context, instance, host, action, phase,
-                                      binary='nova-compute', volume_id=None):
+                                      binary='nova-compute', volume_id=None,
+                                      exception=None):
     """Send versioned notification about the action made on the instance
     :param instance: the instance which the action performed on
     :param host: the host emitting the notification
@@ -375,14 +376,16 @@ def notify_about_volume_attach_detach(context, instance, host, action, phase,
     :param phase: the phase of the action
     :param binary: the binary emitting the notification
     :param volume_id: id of the volume will be attached
+    :param exception: the thrown exception (used in error notifications)
     """
+    fault, priority = _get_fault_and_priority_from_exc(exception)
     payload = instance_notification.InstanceActionVolumePayload(
             instance=instance,
-            fault=None,
+            fault=fault,
             volume_id=volume_id)
     notification = instance_notification.InstanceActionVolumeNotification(
             context=context,
-            priority=fields.NotificationPriority.INFO,
+            priority=priority,
             publisher=notification_base.NotificationPublisher(
                     context=context, host=host, binary=binary),
             event_type=notification_base.EventType(

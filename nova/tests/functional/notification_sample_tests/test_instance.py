@@ -83,6 +83,7 @@ class TestInstanceNotificationSample(
             self._test_rescue_server,
             self._test_unrescue_server,
             self._test_soft_delete_server,
+            self._test_attach_volume_error,
         ]
 
         for action in actions:
@@ -800,3 +801,34 @@ class TestInstanceNotificationSample(
 
     def _test_soft_delete_server(self, server):
         pass
+
+    @mock.patch('nova.volume.cinder.API.attach')
+    def _test_attach_volume_error(self, server, mock_attach):
+        def attach_volume(*args, **kwargs):
+            raise exception.CinderConnectionFailed(
+                reason="Connection timed out")
+        mock_attach.side_effect = attach_volume
+
+        post = {"volumeAttachment": {"volumeId": self.cinder.SWAP_OLD_VOL}}
+        self.api.post_server_volume(server['id'], post)
+
+        self._wait_for_notification('instance.volume_attach.error')
+
+        # 0. volume_attach-start
+        # 1. volume_attach-error
+        # 2. compute.exception
+        # We only rely on the first 2 notifications, in this case we don't
+        # care about the exception notification.
+        self.assertLessEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-volume_attach-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-volume_attach-error',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])

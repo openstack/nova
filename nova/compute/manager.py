@@ -4819,7 +4819,7 @@ class ComputeManager(manager.Manager):
         try:
             bdm.attach(context, instance, self.volume_api, self.driver,
                        do_driver_attach=True)
-        except Exception:
+        except Exception as e:
             with excutils.save_and_reraise_exception():
                 LOG.exception(_LE("Failed to attach %(volume_id)s "
                                   "at %(mountpoint)s"),
@@ -4827,6 +4827,12 @@ class ComputeManager(manager.Manager):
                                'mountpoint': bdm['mount_device']},
                               instance=instance)
                 self.volume_api.unreserve_volume(context, bdm.volume_id)
+                compute_utils.notify_about_volume_attach_detach(
+                    context, instance, self.host,
+                    action=fields.NotificationAction.VOLUME_ATTACH,
+                    phase=fields.NotificationPhase.ERROR,
+                    exception=e,
+                    volume_id=bdm.volume_id)
 
         info = {'volume_id': bdm.volume_id}
         self._notify_about_instance_usage(
