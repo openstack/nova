@@ -3474,7 +3474,7 @@ networks:
     including other network uuids, ports or fixed IPs. These are requested as
     strings for the networks value, not in a list. See the associated example.
   in: body
-  required: false
+  required: true
   type: object
 new_file:
   description: |
