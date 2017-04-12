@@ -1,5 +1,5 @@
 {
     "addFixedIp": {
-        "networkId": %(networkId)s
+        "networkId": "%(networkId)s"
     }
 }

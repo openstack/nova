@@ -13,27 +13,40 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.tests.functional.api_sample_tests import test_servers
+from nova.tests import fixtures
+from nova.tests.functional.api_sample_tests import api_sample_base
+from nova.tests.functional import integrated_helpers
 
 
-class MultinicSampleJsonTest(test_servers.ServersSampleBase):
+class MultinicSampleJsonTest(integrated_helpers.InstanceHelperMixin,
+                             api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
+    USE_NEUTRON = True
     sample_dir = "os-multinic"
 
-    def _disable_instance_dns_manager(self):
-        # NOTE(markmc): it looks like multinic and instance_dns_manager are
-        #               incompatible. See:
-        #               https://bugs.launchpad.net/nova/+bug/1213251
-        self.flags(
-            instance_dns_manager='nova.network.noop_dns_driver.NoopDNSDriver')
-
     def setUp(self):
-        self._disable_instance_dns_manager()
         super(MultinicSampleJsonTest, self).setUp()
-        self.uuid = self._post_server()
+        self.neutron = fixtures.NeutronFixture(self)
+        self.useFixture(self.neutron)
+        server = self._boot_a_server(
+            extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
+        self.uuid = server['id']
+
+    def _boot_a_server(self, expected_status='ACTIVE', extra_params=None):
+        server = self._build_minimal_create_server_request(
+            self.api, 'MultinicSampleJsonTestServer')
+        if extra_params:
+            server.update(extra_params)
+
+        created_server = self.api.post_server({'server': server})
+
+        # Wait for it to finish being created
+        found_server = self._wait_for_state_change(self.api, created_server,
+                                                   expected_status)
+        return found_server
 
     def _add_fixed_ip(self):
-        subs = {"networkId": '1'}
+        subs = {"networkId": 'e1882e38-38c2-4239-ade7-35d644cb963a'}
         response = self._do_post('servers/%s/action' % (self.uuid),
                                  'multinic-add-fixed-ip-req', subs)
         self.assertEqual(202, response.status_code)

@@ -37,6 +37,7 @@ from nova import context
 from nova.db import migration
 from nova.db.sqlalchemy import api as session
 from nova import exception
+from nova.network import model as network_model
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import service as service_obj
@@ -1046,6 +1047,55 @@ class NeutronFixture(fixtures.Fixture):
         'tenant_id': tenant_id
     }
 
+    nw_info = [{
+        "profile": {},
+        "ovs_interfaceid": "b71f1699-42be-4515-930a-f3ef01f94aa7",
+        "preserve_on_delete": False,
+        "network": {
+            "bridge": "br-int",
+            "subnets": [{
+                "ips": [{
+                    "meta": {},
+                    "version": 4,
+                    "type": "fixed",
+                    "floating_ips": [],
+                    "address": "10.0.0.4"
+                }],
+                "version": 4,
+                "meta": {},
+                "dns": [],
+                "routes": [],
+                "cidr": "10.0.0.0/26",
+                "gateway": {
+                    "meta": {},
+                    "version": 4,
+                    "type": "gateway",
+                    "address": "10.0.0.1"
+                }
+            }],
+            "meta": {
+                "injected": False,
+                "tenant_id": tenant_id,
+                "mtu": 1500
+            },
+            "id": "e1882e38-38c2-4239-ade7-35d644cb963a",
+            "label": "public"
+        },
+        "devname": "tapb71f1699-42",
+        "vnic_type": "normal",
+        "qbh_params": None,
+        "meta": {},
+        "details": {
+            "port_filter": True,
+            "ovs_hybrid_plug": True
+        },
+        "address": "fa:16:3e:47:94:4a",
+        "active": True,
+        "type": "ovs",
+        "id": "b71f1699-42be-4515-930a-f3ef01f94aa7",
+        "qbg_params": None
+    }]
+
     def __init__(self, test, multiple_ports=False):
         super(NeutronFixture, self).__init__()
         self.test = test
@@ -1068,6 +1118,14 @@ class NeutronFixture(fixtures.Fixture):
         self.test.stub_out(
             'nova.network.neutronv2.api.API.migrate_instance_start',
             lambda *args, **kwargs: None)
+        self.test.stub_out(
+            'nova.network.neutronv2.api.API.add_fixed_ip_to_instance',
+            lambda *args, **kwargs: network_model.NetworkInfo.hydrate(
+                NeutronFixture.nw_info))
+        self.test.stub_out(
+            'nova.network.neutronv2.api.API.remove_fixed_ip_from_instance',
+            lambda *args, **kwargs: network_model.NetworkInfo.hydrate(
+                NeutronFixture.nw_info))
         self.test.stub_out(
             'nova.network.neutronv2.api.API.migrate_instance_finish',
             lambda *args, **kwargs: None)
