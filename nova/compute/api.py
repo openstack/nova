@@ -2034,7 +2034,8 @@ class API(base.Base):
         else:
             flavor = flavor or instance.flavor
             instance_vcpus = flavor.vcpus
-            instance_memory_mb = flavor.memory_mb
+            vram_mb = int(flavor.get('extra_specs', {}).get(VIDEO_RAM, 0))
+            instance_memory_mb = flavor.memory_mb + vram_mb
 
         quotas = objects.Quotas(context=context)
         quotas.reserve(project_id=project_id,
