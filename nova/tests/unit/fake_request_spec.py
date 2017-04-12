@@ -28,7 +28,7 @@ IMAGE_META = objects.ImageMeta.from_dict(
          'container_format': 'bare',
          'min_ram': 0,
          'updated_at': '2014-12-12T11:16:36.000000',
-         'min_disk': '0',
+         'min_disk': 0,
          'owner': '2d8b9502858c406ebee60f0849486222',
          'protected': 'yes',
          'properties': {
