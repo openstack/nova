@@ -115,12 +115,18 @@ function configure_and_start_nova {
     echo 'check processes after compute stop'
     $ANSIBLE all --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "ps aux | grep compute"
 
+    # Determine what the libvirt is. If there is a group called "libvirtd"
+    # in /etc/groups use that, otherwise default to "libvirt".
+    # Note, new ubuntu and debian use libvirt, everything else is libvirtd.
+    local libvirt_group
+    libvirt_group=$(cut -d ':' -f 1 /etc/group | grep 'libvirtd$' || true)
+    libvirt_group=${libvirt_group:-libvirt}
     # restart  local nova-compute
-    sudo -H -u $STACK_USER bash -c "/tmp/start_process.sh n-cpu '/usr/local/bin/nova-compute --config-file /etc/nova/nova.conf' libvirtd"
+    sudo -H -u $STACK_USER bash -c "/tmp/start_process.sh n-cpu '/usr/local/bin/nova-compute --config-file /etc/nova/nova.conf' $libvirt_group"
 
     # restart remote nova-compute
     for SUBNODE in $SUBNODES ; do
-        ssh $SUBNODE "sudo -H -u $STACK_USER bash -c '/tmp/start_process.sh n-cpu \"/usr/local/bin/nova-compute --config-file /etc/nova/nova.conf\" libvirtd'"
+        ssh $SUBNODE "sudo -H -u $STACK_USER bash -c '/tmp/start_process.sh n-cpu \"/usr/local/bin/nova-compute --config-file /etc/nova/nova.conf\" $libvirt_group'"
     done
     $ANSIBLE all --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "ps aux | grep compute"
 
