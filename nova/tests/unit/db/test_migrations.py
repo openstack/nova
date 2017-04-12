@@ -1004,6 +1004,11 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
                                 'aggregate_metadata_value_idx',
                                 ['value'])
 
+    def _check_390(self, engine, data):
+        self.assertColumnExists(engine, 'instance_extra', 'trusted_certs')
+        self.assertColumnExists(engine, 'shadow_instance_extra',
+                                'trusted_certs')
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,
