@@ -118,7 +118,8 @@ class HypervisorsController(wsgi.Controller):
                 hypervisors_list.append(
                     self._view_hypervisor(
                         hyp, service, False, req))
-            except exception.ComputeHostNotFound:
+            except (exception.ComputeHostNotFound,
+                    exception.HostMappingNotFound):
                 # The compute service could be deleted which doesn't delete
                 # the compute node record, that has to be manually removed
                 # from the database so we just ignore it when listing nodes.
@@ -164,7 +165,8 @@ class HypervisorsController(wsgi.Controller):
                 hypervisors_list.append(
                     self._view_hypervisor(
                         hyp, service, True, req))
-            except exception.ComputeHostNotFound:
+            except (exception.ComputeHostNotFound,
+                    exception.HostMappingNotFound):
                 # The compute service could be deleted which doesn't delete
                 # the compute node record, that has to be manually removed
                 # from the database so we just ignore it when listing nodes.
@@ -186,11 +188,12 @@ class HypervisorsController(wsgi.Controller):
         try:
             hyp = self.host_api.compute_node_get(context, id)
             req.cache_db_compute_node(hyp)
-        except (ValueError, exception.ComputeHostNotFound):
+            service = self.host_api.service_get_by_compute_host(
+                context, hyp.host)
+        except (ValueError, exception.ComputeHostNotFound,
+                exception.HostMappingNotFound):
             msg = _("Hypervisor with ID '%s' could not be found.") % id
             raise webob.exc.HTTPNotFound(explanation=msg)
-        service = self.host_api.service_get_by_compute_host(
-            context, hyp.host)
         return dict(hypervisor=self._view_hypervisor(
             hyp, service, True, req))
 
@@ -209,13 +212,18 @@ class HypervisorsController(wsgi.Controller):
         try:
             host = hyp.host
             uptime = self.host_api.get_host_uptime(context, host)
+            service = self.host_api.service_get_by_compute_host(context, host)
         except NotImplementedError:
             common.raise_feature_not_supported()
-        except (exception.ComputeServiceUnavailable,
-                exception.HostMappingNotFound) as e:
+        except exception.ComputeServiceUnavailable as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
+        except exception.HostMappingNotFound:
+            # NOTE(danms): This mirrors the compute_node_get() behavior
+            # where the node is missing, resulting in NotFound instead of
+            # BadRequest if we fail on the map lookup.
+            msg = _("Hypervisor with ID '%s' could not be found.") % id
+            raise webob.exc.HTTPNotFound(explanation=msg)
 
-        service = self.host_api.service_get_by_compute_host(context, host)
         return dict(hypervisor=self._view_hypervisor(hyp, service, False, req,
                                                      uptime=uptime))
 
@@ -226,12 +234,17 @@ class HypervisorsController(wsgi.Controller):
         hypervisors = self.host_api.compute_node_search_by_hypervisor(
                 context, id)
         if hypervisors:
-            return dict(hypervisors=[self._view_hypervisor(
-                                     hyp,
-                                     self.host_api.service_get_by_compute_host(
-                                         context, hyp.host),
-                                     False, req)
-                                     for hyp in hypervisors])
+            try:
+                return dict(hypervisors=[
+                    self._view_hypervisor(
+                        hyp,
+                        self.host_api.service_get_by_compute_host(context,
+                                                                  hyp.host),
+                        False, req)
+                    for hyp in hypervisors])
+            except exception.HostMappingNotFound:
+                msg = _("No hypervisor matching '%s' could be found.") % id
+                raise webob.exc.HTTPNotFound(explanation=msg)
         else:
             msg = _("No hypervisor matching '%s' could be found.") % id
             raise webob.exc.HTTPNotFound(explanation=msg)
