@@ -32,7 +32,9 @@ create = {
                     # probably change the type from array to string with a
                     # microversion at some point but it's very low priority.
                     'type': 'array',
-                    'items': [{'enum': ['anti-affinity', 'affinity']}],
+                    'items': [{
+                        'type': 'string',
+                        'enum': ['anti-affinity', 'affinity']}],
                     'uniqueItems': True,
                     'additionalItems': False,
                 }
