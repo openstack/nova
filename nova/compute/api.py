@@ -25,6 +25,7 @@ import functools
 import re
 import string
 import uuid
+import os
 
 from oslo_log import log as logging
 from oslo_messaging import exceptions as oslo_exceptions
@@ -788,6 +789,11 @@ class API(base.Base):
 
         image = self.image_api.get(context, image_href)
         return image['id'], image
+
+    def _download_image(self, context, image_href, dest_path):
+        if not image_href:
+            return None, {}
+        self.image_api.download(context, image_href, dest_path=dest_path)
 
     def _checks_for_create_and_rebuild(self, context, image_id, image,
                                        instance_type, metadata,
@@ -3630,9 +3636,21 @@ class API(base.Base):
             host_statuses[instance.uuid] = host_status
         return host_statuses
 
-    def attach_iso(self, context, instance):
+    def attach_iso(self, context, instance, iso_image_href):
+        dest_path = os.path.join("/iServCluster1/_base/iso", iso_image_href)
+        while not os.path.exists(dest_path):
+            self._download_image(context, iso_image_href, dest_path)
         """attach iso"""
-        self.compute_rpcapi.attach_iso(context, instance)
+        image_id, image = self._get_image(context, iso_image_href)
+        self.compute_rpcapi.attach_iso(context, instance, iso_image_href)
+
+    def detach_iso(self, context, instance):
+        """detach iso"""
+        self.compute_rpcapi.detach_iso(context, instance)
+
+    def cdrom_is_empty(self, context, instance):
+        """detach iso"""
+        return self.compute_rpcapi.cdrom_is_empty(context, instance)
 
 
 class HostAPI(base.Base):

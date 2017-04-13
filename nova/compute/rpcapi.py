@@ -1040,7 +1040,7 @@ class ComputeAPI(object):
                 version=version)
         return cctxt.call(ctxt, 'quiesce_instance', instance=instance)
 
-    def unquiesce_instance(self, ctxt, instance, mapping=None):
+    def unquiesce_instance(self, catxt, instance, mapping=None):
         version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
@@ -1067,8 +1067,20 @@ class ComputeAPI(object):
                 version=version)
         return cctxt.cast(ctxt, "trigger_crash_dump", instance=instance)
 
-    def attach_iso(self, ctxt, instance):
+    def attach_iso(self, ctxt, instance, iso_image_href):
         version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
-        cctxt.cast(ctxt, 'attach_iso', instance=instance)
+        cctxt.cast(ctxt, 'attach_iso', instance=instance, iso_image_href=iso_image_href)
+
+    def detach_iso(self, ctxt, instance):
+        version = '4.0'
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=version)
+        cctxt.cast(ctxt, 'detach_iso', instance=instance)
+
+    def cdrom_is_empty(self, ctxt, instance):
+        version = '4.0'
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=version)
+        return cctxt.call(ctxt, 'cdrom_is_empty', instance=instance)

@@ -3681,7 +3681,7 @@ class LibvirtDriver(driver.ComputeDriver):
         cd_cfg.target_bus = 'ide'
         cd_cfg.target_dev = 'hdc'
         cd_cfg.root_name = 'disk'
-        cd_cfg.source_type = 'block'
+        cd_cfg.source_type = 'file'
         cd_cfg.source_path = ''
 
         devices.append(cd_cfg)
@@ -7840,30 +7840,66 @@ class LibvirtDriver(driver.ComputeDriver):
         return fs_type in [disk.FS_FORMAT_EXT2, disk.FS_FORMAT_EXT3,
                            disk.FS_FORMAT_EXT4, disk.FS_FORMAT_XFS]
 
-    def attach_iso(self, instance):
-        iso_path = "/var/lib/nova/instances/691fa4fe-4868-43cc-a961-a245e26b5f58"
+    def attach_iso(self, instance, iso_image_href):
+        iso_path = os.path.join("/var/lib/nova/instances/_base/iso", iso_image_href)
         cdromstring = '''
-        <disk type='file' device='cdrom'>
-          <driver name='qemu' type='raw' cache='none'/>
           <source file='{0}'/>
-          <target dev='hdc'/>
-        </disk >
           '''.format(iso_path)
-
         try:
           guest = self._host.get_guest(instance)
           xml = guest.get_xml_desc()
-
           cdromxml = etree.fromstring(cdromstring)
           # add cdrom
           tree = etree.fromstring(xml)
-          disktag = tree.find(".//disk")
-          devicetag = disktag.getparent()
-          devicetag.insert(devicetag.index(disktag) + 1, cdromxml)
+          disktags = tree.findall(".//disk")
+          for disktag in disktags:
+            if disktag.attrib["device"] == "cdrom":
+              if disktag.find("source") is None:
+                disktag.insert(disktag.index(disktag.find("target")) + 1, cdromxml)
+
           xml = etree.tostring(tree)
-          LOG.error(_LE("xml: {0}".format(xml)))
+          LOG.debug(_LE("xml: {0}".format(xml)))
         except exception.InstanceNotFound as e:
-            guest = None
-            LOG.error(_LE("InstanceNotFound: {0}".format(str(e.message))))
+          guest = None
+          LOG.error(_LE("InstanceNotFound: {0}".format(str(e.message))))
         finally:
           self._host.write_instance_config(xml)
+
+    def detach_iso(self, instance):
+        try:
+          guest = self._host.get_guest(instance)
+          xml = guest.get_xml_desc()
+          # detach iso
+          tree = etree.fromstring(xml)
+          disktags = tree.findall(".//disk")
+          for disktag in disktags:
+            if disktag.attrib["device"] == "cdrom":
+              sourcetag = disktag.find("source")
+              if sourcetag is not None:
+                sourcetag.set("file", "")
+
+          xml = etree.tostring(tree)
+          LOG.debug(_LE("xml: {0}".format(xml)))
+        except exception.InstanceNotFound as e:
+          guest = None
+          LOG.error(_LE("InstanceNotFound: {0}".format(str(e.message))))
+        finally:
+          self._host.write_instance_config(xml)
+
+    def cdrom_is_empty(self, instance):
+        try:
+          guest = self._host.get_guest(instance)
+          xml = guest.get_xml_desc()
+          # get xml
+          tree = etree.fromstring(xml)
+          disktags = tree.findall(".//disk/")
+          for disktag in disktags:
+            if disktag.attrib["device"] == "cdrom":
+              sourcetag = disktag.find("source")
+              if sourcetag is None:
+                return True
+              else:
+                return False
+        except exception.InstanceNotFound as e:
+          guest = None
+          LOG.error(_LE("InstanceNotFound: {0}".format(str(e.message))))

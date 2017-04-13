@@ -1215,11 +1215,16 @@ class ServersController(wsgi.Controller):
     def attach_iso(self, req, id, body):
         """ attach iso file """
         context = req.environ['nova.context']
+        attach_dict = body['attach-iso']
+
+        iso_image_href = attach_dict["iso_imageRef"]
+        # image_href = self._image_uuid_from_href(image_href)
+
         instance = self._get_instance(context, id)
         authorize(context, instance, 'attach_iso')
         LOG.debug('attach iso', instance=instance)
         try:
-            self.compute_api.attach_iso(context, instance)
+            self.compute_api.attach_iso(context, instance, iso_image_href)
         except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceUnknownCell as e:
@@ -1227,6 +1232,43 @@ class ServersController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                 'attach-iso', id)
+
+    @wsgi.response(202)
+    @extensions.expected_errors((404, 409))
+    @wsgi.action('detach-iso')
+    def detach_iso(self, req, id, body):
+        """ detach iso file """
+        context = req.environ['nova.context']
+        instance = self._get_instance(context, id)
+        authorize(context, instance, 'attach_iso')
+        LOG.debug('detach iso', instance=instance)
+        try:
+            self.compute_api.detach_iso(context, instance)
+        except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
+            raise webob.exc.HTTPConflict(explanation=e.format_message())
+        except exception.InstanceUnknownCell as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                'detach-iso', id)
+
+    @wsgi.response(202)
+    @extensions.expected_errors((404, 409))
+    @wsgi.action('cdrom-is-empty')
+    def cdrom_is_empty(self, req, id, body):
+        """ Check cdrom is empty or not """
+        context = req.environ['nova.context']
+        instance = self._get_instance(context, id)
+        authorize(context, instance, 'cdrom_is_empty')
+        try:
+            return self.compute_api.cdrom_is_empty(context, instance)
+        except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
+            raise webob.exc.HTTPConflict(explanation=e.format_message())
+        except exception.InstanceUnknownCell as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                'cdrom-is-empty', id)
 
 
 def remove_invalid_options(context, search_options, allowed_search_options):
