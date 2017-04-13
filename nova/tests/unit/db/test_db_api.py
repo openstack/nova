@@ -3493,6 +3493,7 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def _get_base_values(self):
         return {
+            'uuid': None,
             'host': 'fake_host',
             'binary': 'fake_binary',
             'topic': 'fake_topic',
@@ -3536,6 +3537,7 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_service_update(self):
         service = self._create_service({})
         new_values = {
+            'uuid': uuidsentinel.service,
             'host': 'fake_host1',
             'binary': 'fake_binary1',
             'topic': 'fake_topic1',
