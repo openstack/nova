@@ -1,0 +1,3 @@
+Defaults:nova !requiretty
+
+nova ALL = (root) NOPASSWD: /usr/bin/nova-rootwrap /etc/nova/rootwrap.conf *

@@ -1,0 +1,6 @@
+[Allow nova libvirt management permissions]
+Identity=unix-user:nova
+Action=org.libvirt.unix.manage
+ResultAny=yes
+ResultInactive=yes
+ResultActive=yes

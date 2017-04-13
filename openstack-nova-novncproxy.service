@@ -1,0 +1,13 @@
+[Unit]
+Description=OpenStack Nova NoVNC Proxy Server
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User=nova
+EnvironmentFile=-/etc/sysconfig/openstack-nova-novncproxy
+ExecStart=/usr/bin/nova-novncproxy --web /usr/share/novnc/ $OPTIONS
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

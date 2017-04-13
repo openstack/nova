@@ -1,0 +1,15 @@
+[Unit]
+Description=OpenStack Nova VNC console auth Server
+After=syslog.target network.target
+
+[Service]
+Type=notify
+NotifyAccess=all
+TimeoutStartSec=0
+Restart=always
+User=nova
+ExecStart=/usr/bin/nova-consoleauth
+
+[Install]
+WantedBy=multi-user.target
+
