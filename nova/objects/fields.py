@@ -426,8 +426,9 @@ class ImageSignatureHashType(BaseNovaEnum):
 
 class ImageSignatureKeyType(BaseNovaEnum):
     # Represents the possible keypair types used for image signing
-    ALL = tuple(
-        sorted(signature_utils.SignatureKeyType.REGISTERED_TYPES.keys())
+    ALL = (
+        'DSA', 'ECC_SECP384R1', 'ECC_SECP521R1', 'ECC_SECT409K1',
+        'ECC_SECT409R1', 'ECC_SECT571K1', 'ECC_SECT571R1', 'RSA-PSS'
     )
 
 
