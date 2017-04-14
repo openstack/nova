@@ -76,6 +76,8 @@ Nova API Database
 
     Sync the api cells database up to the most recent version. This is the standard way to create the db as well.
 
+.. _man-page-cells-v2:
+
 Nova Cells v2
 ~~~~~~~~~~~~~
 
