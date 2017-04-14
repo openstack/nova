@@ -148,7 +148,7 @@ Nova Cells v2
     any hosts which are not currently mapped. If a host is already mapped
     nothing will be done. You need to re-run this command each time you add
     more compute hosts to a cell (otherwise the scheduler will never place
-    instances there).
+    instances there and the API will not list the new hosts).
 
 ``nova-manage cell_v2 list_cells [--verbose]``
 

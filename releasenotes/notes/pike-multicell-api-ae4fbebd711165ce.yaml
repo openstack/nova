@@ -1,0 +1,24 @@
+---
+upgrade:
+  - |
+    Parts of the compute REST API are now relying on getting information from
+    cells via their mappings in the ``nova_api`` database. This is to support
+    multiple cells. For example, when listing compute hosts or services, all
+    cells will be iterated in the API and the results will be returned.
+
+    This change can have impacts, however, to deployment tooling that relies on
+    parts of the API, like listing compute hosts, `before` the compute hosts
+    are mapped using the ``nova-manage cell_v2 discover_hosts`` command.
+
+    If you were using ``nova hypervisor-list`` after starting new nova-compute
+    services to tell when to run ``nova-manage cell_v2 discover_hosts``, you
+    should change your tooling to instead use one of the following commands::
+
+      nova service-list --binary nova-compute [--host <hostname>]
+
+      openstack compute service list --service nova-compute [--host <host>]
+
+    As a reminder, there is also the
+    ``[scheduler]/discover_hosts_in_cells_interval`` configuration option which
+    can be used to automatically discover hosts from the nova-scheduler
+    service.
