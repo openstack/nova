@@ -2114,7 +2114,7 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
 
     # Make a copy of the filters dictionary to use going forward, as we'll
     # be modifying it and we shouldn't affect the caller's use of it.
-    filters = filters.copy()
+    filters = copy.deepcopy(filters)
 
     if 'changes-since' in filters:
         changes_since = timeutils.normalize_time(filters['changes-since'])
