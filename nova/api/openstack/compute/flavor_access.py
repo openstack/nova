@@ -152,7 +152,4 @@ class FlavorAccess(extensions.V21APIExtensionBase):
         return [res]
 
     def get_controller_extensions(self):
-        extension = extensions.ControllerExtension(
-                self, 'flavors', FlavorActionController())
-
-        return [extension]
+        return []

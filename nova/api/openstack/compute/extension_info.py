@@ -183,6 +183,15 @@ hardcoded_extensions = [
     {'name': 'Personality',
      'description': 'Personality support.',
      'alias': 'os-personality'},
+    {'name': 'Flavors',
+     'description': 'Flavors Extension.',
+     'alias': 'flavors'},
+    {'name': 'FlavorManage',
+     'description': 'Flavor create/delete API support.',
+     'alias': 'os-flavor-manage'},
+    {'name': 'FlavorRxtx',
+     'description': 'Support to show the rxtx status of a flavor.',
+     'alias': 'os-flavor-rxtx'}
 ]
 
 

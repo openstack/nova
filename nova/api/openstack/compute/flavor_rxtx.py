@@ -14,7 +14,6 @@
 
 """The Flavor Rxtx API extension."""
 
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.policies import flavor_rxtx as fr_policies
 
@@ -49,19 +48,3 @@ class FlavorRxtxController(wsgi.Controller):
         if not context.can(fr_policies.BASE_POLICY_NAME, fatal=False):
             return
         self._extend_flavors(req, list(resp_obj.obj['flavors']))
-
-
-class FlavorRxtx(extensions.V21APIExtensionBase):
-    """Support to show the rxtx status of a flavor."""
-
-    name = "FlavorRxtx"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        controller = FlavorRxtxController()
-        extension = extensions.ControllerExtension(self, 'flavors', controller)
-        return [extension]
-
-    def get_resources(self):
-        return []
