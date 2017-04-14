@@ -326,6 +326,39 @@ class HypervisorsTestV21(test.NoDBTestCase):
 
         _test(self)
 
+    def test_index_compute_host_not_mapped(self):
+        """Tests that we don't fail index if a host is not mapped."""
+
+        # two computes, a matching service only exists for the first one
+        compute_nodes = objects.ComputeNodeList(objects=[
+            objects.ComputeNode(**TEST_HYPERS[0]),
+            objects.ComputeNode(**TEST_HYPERS[1])
+        ])
+
+        def fake_service_get_by_compute_host(context, host):
+            if host == TEST_HYPERS[0]['host']:
+                return TEST_SERVICES[0]
+            raise exception.HostMappingNotFound(name=host)
+
+        @mock.patch.object(self.controller.host_api, 'compute_node_get_all',
+                           return_value=compute_nodes)
+        @mock.patch.object(self.controller.host_api,
+                           'service_get_by_compute_host',
+                           fake_service_get_by_compute_host)
+        def _test(self, compute_node_get_all):
+            req = self._get_request(True)
+            result = self.controller.index(req)
+            self.assertEqual(1, len(result['hypervisors']))
+            expected = {
+                'id': compute_nodes[0].id,
+                'hypervisor_hostname': compute_nodes[0].hypervisor_hostname,
+                'state': 'up',
+                'status': 'enabled',
+            }
+            self.assertDictEqual(expected, result['hypervisors'][0])
+
+        _test(self)
+
     def test_detail(self):
         req = self._get_request(True)
         result = self.controller.detail(req)
@@ -378,6 +411,76 @@ class HypervisorsTestV21(test.NoDBTestCase):
             self.assertEqual(compute_nodes[0].hypervisor_hostname,
                              hypervisor['hypervisor_hostname'])
 
+        _test(self)
+
+    def test_detail_compute_host_not_mapped(self):
+        """Tests that if a service is deleted but the compute node is not we
+        don't fail when listing hypervisors.
+        """
+
+        # two computes, a matching service only exists for the first one
+        compute_nodes = objects.ComputeNodeList(objects=[
+            objects.ComputeNode(**TEST_HYPERS[0]),
+            objects.ComputeNode(**TEST_HYPERS[1])
+        ])
+
+        def fake_service_get_by_compute_host(context, host):
+            if host == TEST_HYPERS[0]['host']:
+                return TEST_SERVICES[0]
+            raise exception.HostMappingNotFound(name=host)
+
+        @mock.patch.object(self.controller.host_api, 'compute_node_get_all',
+                           return_value=compute_nodes)
+        @mock.patch.object(self.controller.host_api,
+                           'service_get_by_compute_host',
+                           fake_service_get_by_compute_host)
+        def _test(self, compute_node_get_all):
+            req = self._get_request(True)
+            result = self.controller.detail(req)
+            self.assertEqual(1, len(result['hypervisors']))
+            expected = {
+                'id': compute_nodes[0].id,
+                'hypervisor_hostname': compute_nodes[0].hypervisor_hostname,
+                'state': 'up',
+                'status': 'enabled',
+            }
+            # we don't care about all of the details, just make sure we get
+            # the subset we care about and there are more keys than what index
+            # would return
+            hypervisor = result['hypervisors'][0]
+            self.assertTrue(
+                set(expected.keys()).issubset(set(hypervisor.keys())))
+            self.assertGreater(len(hypervisor.keys()), len(expected.keys()))
+            self.assertEqual(compute_nodes[0].hypervisor_hostname,
+                             hypervisor['hypervisor_hostname'])
+
+        _test(self)
+
+    def test_show_compute_host_not_mapped(self):
+        """Tests that if a service is deleted but the compute node is not we
+        don't fail when listing hypervisors.
+        """
+
+        # two computes, a matching service only exists for the first one
+        compute_nodes = objects.ComputeNodeList(objects=[
+            objects.ComputeNode(**TEST_HYPERS[0]),
+            objects.ComputeNode(**TEST_HYPERS[1])
+        ])
+
+        def fake_service_get_by_compute_host(context, host):
+            return TEST_SERVICES[0]
+
+        @mock.patch.object(self.controller.host_api, 'compute_node_get',
+                           fake_service_get_by_compute_host)
+        @mock.patch.object(self.controller.host_api,
+                           'service_get_by_compute_host')
+        def _test(self, mock_service):
+            req = self._get_request(True)
+            mock_service.side_effect = exception.HostMappingNotFound(
+                name='foo')
+            self.assertRaises(exc.HTTPNotFound, self.controller.show,
+                              req, compute_nodes[0].id)
+            self.assertTrue(mock_service.called)
         _test(self)
 
     def test_show_noid(self):
@@ -447,12 +550,28 @@ class HypervisorsTestV21(test.NoDBTestCase):
             mock_get_uptime.assert_called_once_with(
                 mock.ANY, self.TEST_HYPERS_OBJ[0].host)
 
+    def test_uptime_hypervisor_not_mapped_service_get(self):
+        @mock.patch.object(self.controller.host_api, 'compute_node_get')
+        @mock.patch.object(self.controller.host_api, 'get_host_uptime')
+        @mock.patch.object(self.controller.host_api,
+                           'service_get_by_compute_host',
+                           side_effect=exception.HostMappingNotFound(
+                               name='dummy'))
+        def _test(mock_get, _, __):
+            req = self._get_request(True)
+            self.assertRaises(exc.HTTPNotFound,
+                              self.controller.uptime, req,
+                              self.TEST_HYPERS_OBJ[0].id)
+            self.assertTrue(mock_get.called)
+
+        _test()
+
     def test_uptime_hypervisor_not_mapped(self):
         with mock.patch.object(self.controller.host_api, 'get_host_uptime',
                 side_effect=exception.HostMappingNotFound(name='dummy')
                 ) as mock_get_uptime:
             req = self._get_request(True)
-            self.assertRaises(exc.HTTPBadRequest,
+            self.assertRaises(exc.HTTPNotFound,
                               self.controller.uptime, req,
                               self.TEST_HYPERS_OBJ[0].id)
             mock_get_uptime.assert_called_once_with(
@@ -478,6 +597,23 @@ class HypervisorsTestV21(test.NoDBTestCase):
             self.assertRaises(exc.HTTPNotFound, self.controller.search,
                               req, 'a')
             self.assertEqual(1, mock_node_search.call_count)
+
+    def test_search_unmapped(self):
+
+        @mock.patch.object(self.controller.host_api,
+                           'compute_node_search_by_hypervisor')
+        @mock.patch.object(self.controller.host_api,
+                           'service_get_by_compute_host')
+        def _test(mock_service, mock_search):
+            mock_search.return_value = [mock.MagicMock()]
+            mock_service.side_effect = exception.HostMappingNotFound(
+                name='foo')
+            req = self._get_request(True)
+            self.assertRaises(exc.HTTPNotFound, self.controller.search,
+                              req, 'a')
+            self.assertTrue(mock_service.called)
+
+        _test()
 
     @mock.patch.object(objects.InstanceList, 'get_by_host',
                        side_effect=fake_instance_get_all_by_host)
