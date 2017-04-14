@@ -2154,21 +2154,26 @@ class API(base.Base):
         for bdm in bdms:
             if bdm.is_volume:
                 try:
-                    connector = self._get_stashed_volume_connector(
-                        bdm, instance)
-                    if connector:
-                        self.volume_api.terminate_connection(context,
-                                                             bdm.volume_id,
-                                                             connector)
+                    if bdm.attachment_id:
+                        self.volume_api.attachment_delete(context,
+                                                          bdm.attachment_id)
                     else:
-                        LOG.debug('Unable to find connector for volume %s, '
-                                  'not attempting terminate_connection.',
-                                  bdm.volume_id, instance=instance)
-                    # Attempt to detach the volume. If there was no connection
-                    # made in the first place this is just cleaning up the
-                    # volume state in the Cinder database.
-                    self.volume_api.detach(elevated, bdm.volume_id,
-                                           instance.uuid)
+                        connector = self._get_stashed_volume_connector(
+                            bdm, instance)
+                        if connector:
+                            self.volume_api.terminate_connection(context,
+                                                                 bdm.volume_id,
+                                                                 connector)
+                        else:
+                            LOG.debug('Unable to find connector for volume %s,'
+                                      ' not attempting terminate_connection.',
+                                      bdm.volume_id, instance=instance)
+                        # Attempt to detach the volume. If there was no
+                        # connection made in the first place this is just
+                        # cleaning up the volume state in the Cinder DB.
+                        self.volume_api.detach(elevated, bdm.volume_id,
+                                               instance.uuid)
+
                     if bdm.delete_on_termination:
                         self.volume_api.delete(context, bdm.volume_id)
                 except Exception as exc:

@@ -1175,7 +1175,8 @@ class _ComputeAPIUnitTestMixIn(object):
                                              delete_on_termination=True,
                                              connection_info=jsonutils.dumps(
                                                 conn_info
-                                             ))
+                                             ),
+                                             attachment_id=None,)
         loc_bdm = objects.BlockDeviceMapping(self.context, id=2,
                                              instance_uuid=inst.uuid,
                                              volume_id=uuids.volume_id2,
@@ -1198,6 +1199,39 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_delete.assert_called_once_with(self.context, uuids.volume_id)
             self.assertEqual(2, mock_destroy.call_count)
 
+        do_test(self)
+
+    @mock.patch.object(objects.BlockDeviceMapping, 'destroy')
+    def test_local_cleanup_bdm_volumes_with_attach_id(self, mock_destroy):
+        """Tests that we call volume_api.attachment_delete when we have an
+        attachment_id in the bdm.
+        """
+        instance = self._create_instance_obj()
+        conn_info = {'connector': {'host': instance.host}}
+        vol_bdm = objects.BlockDeviceMapping(
+            self.context,
+            id=1,
+            instance_uuid=instance.uuid,
+            volume_id=uuids.volume_id,
+            source_type='volume',
+            destination_type='volume',
+            delete_on_termination=True,
+            connection_info=jsonutils.dumps(conn_info),
+            attachment_id=uuids.attachment_id)
+        bdms = objects.BlockDeviceMappingList(objects=[vol_bdm])
+
+        @mock.patch.object(self.compute_api.volume_api, 'delete')
+        @mock.patch.object(self.compute_api.volume_api, 'attachment_delete')
+        @mock.patch.object(self.context, 'elevated', return_value=self.context)
+        def do_test(self, mock_elevated, mock_attach_delete, mock_delete):
+            self.compute_api._local_cleanup_bdm_volumes(
+                bdms, instance, self.context)
+
+            mock_attach_delete.assert_called_once_with(
+                self.context, vol_bdm.attachment_id)
+            mock_delete.assert_called_once_with(
+                self.context, vol_bdm.volume_id)
+            mock_destroy.assert_called_once_with()
         do_test(self)
 
     def test_get_stashed_volume_connector_none(self):
