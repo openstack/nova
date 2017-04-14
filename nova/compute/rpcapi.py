@@ -1040,7 +1040,7 @@ class ComputeAPI(object):
                 version=version)
         return cctxt.call(ctxt, 'quiesce_instance', instance=instance)
 
-    def unquiesce_instance(self, catxt, instance, mapping=None):
+    def unquiesce_instance(self, ctxt, instance, mapping=None):
         version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
