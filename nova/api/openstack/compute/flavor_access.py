@@ -27,8 +27,6 @@ from nova import exception
 from nova.i18n import _
 from nova.policies import flavor_access as fa_policies
 
-ALIAS = 'os-flavor-access'
-
 
 def _marshall_flavor_access(flavor):
     rval = []
@@ -60,7 +58,7 @@ class FlavorAccessController(wsgi.Controller):
 class FlavorActionController(wsgi.Controller):
     """The flavor access API controller for the OpenStack API."""
     def _extend_flavor(self, flavor_rval, flavor_ref):
-        key = "%s:is_public" % (FlavorAccess.alias)
+        key = "os-flavor-access:is_public"
         flavor_rval[key] = flavor_ref['is_public']
 
     @wsgi.extends
@@ -134,22 +132,3 @@ class FlavorActionController(wsgi.Controller):
                 exception.FlavorNotFound) as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         return _marshall_flavor_access(flavor)
-
-
-class FlavorAccess(extensions.V21APIExtensionBase):
-    """Flavor access support."""
-
-    name = "FlavorAccess"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        res = extensions.ResourceExtension(
-            ALIAS,
-            controller=FlavorAccessController(),
-            parent=dict(member_name='flavor', collection_name='flavors'))
-
-        return [res]
-
-    def get_controller_extensions(self):
-        return []
