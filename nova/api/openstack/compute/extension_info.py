@@ -170,6 +170,10 @@ v21_to_v2_alias_mapping = {
 # completely from the code we're going to have a static list here to
 # keep the surface metadata the same.
 hardcoded_extensions = [
+    {'name': 'Aggregates',
+     'alias': 'os-aggregates',
+     'description': 'Admin-only aggregate administration.'
+    },
     {'name': 'DiskConfig',
      'alias': 'os-disk-config',
      'description': 'Disk Management Extension.'},
