@@ -71,6 +71,10 @@ def _create_controller(main_controller, controller_list,
     return controller
 
 
+keypairs_controller = functools.partial(
+    _create_controller, keypairs.KeypairController, [], [])
+
+
 flavor_controller = functools.partial(_create_controller,
     flavors.FlavorsController,
     [
@@ -169,6 +173,14 @@ ROUTE_LIST = (
     }),
     ('/flavors/{flavor_id}/os-flavor-access', {
         'GET': [flavor_access_controller, 'index']
+    }),
+    ('/os-keypairs', {
+        'GET': [keypairs_controller, 'index'],
+        'POST': [keypairs_controller, 'create']
+    }),
+    ('/os-keypairs/{id}', {
+        'GET': [keypairs_controller, 'show'],
+        'DELETE': [keypairs_controller, 'delete']
     }),
     ('/os-volumes_boot', {
         'GET': [server_controller, 'index'],
