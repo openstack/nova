@@ -2257,13 +2257,22 @@ class ComputeManager(manager.Manager):
         timer.restart()
         for bdm in vol_bdms:
             try:
-                # NOTE(vish): actual driver detach done in driver.destroy, so
-                #             just tell cinder that we are done with it.
-                connector = self.driver.get_volume_connector(instance)
-                self.volume_api.terminate_connection(context,
-                                                     bdm.volume_id,
-                                                     connector)
-                self.volume_api.detach(context, bdm.volume_id, instance.uuid)
+                if bdm.attachment_id:
+                    self.volume_api.attachment_delete(context,
+                                                      bdm.attachment_id)
+                else:
+                    # NOTE(vish): actual driver detach done in driver.destroy,
+                    #             so just tell cinder that we are done with it.
+                    connector = self.driver.get_volume_connector(instance)
+                    self.volume_api.terminate_connection(context,
+                                                         bdm.volume_id,
+                                                         connector)
+                    self.volume_api.detach(context, bdm.volume_id,
+                                           instance.uuid)
+
+            except exception.VolumeAttachmentNotFound as exc:
+                LOG.debug('Ignoring VolumeAttachmentNotFound: %s', exc,
+                          instance=instance)
             except exception.DiskNotFound as exc:
                 LOG.debug('Ignoring DiskNotFound: %s', exc,
                           instance=instance)

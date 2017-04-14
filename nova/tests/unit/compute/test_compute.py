@@ -771,7 +771,8 @@ class ComputeVolumeTestCase(BaseTestCase):
                                          disk_bus='foo',
                                          device_type='disk',
                                          volume_size=1,
-                                         volume_id=uuids.volume_id)
+                                         volume_id=uuids.volume_id,
+                                         attachment_id=None)
         host_volume_bdms = {'id': 1, 'device_name': '/dev/vdb',
                'connection_info': '{}', 'instance_uuid': instance['uuid'],
                'volume_id': uuids.volume_id}
@@ -10203,6 +10204,66 @@ class ComputeAPITestCase(BaseTestCase):
             mock_destroy.assert_called_once_with()
             mock_detach.assert_called_once_with(mock.ANY, 'fake-id',
                                                 instance.uuid, None)
+
+    @mock.patch.object(context.RequestContext, 'elevated')
+    @mock.patch.object(cinder.API, 'attachment_delete')
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_get_instance_block_device_info')
+    def test_shutdown_with_attachment_delete(self, mock_info,
+                                             mock_attach_delete,
+                                             mock_elevated):
+        # test _shutdown_instance with volume bdm containing an
+        # attachment id. This should use the v3 cinder api.
+        admin = context.get_admin_context()
+        instance = self._create_fake_instance_obj()
+
+        attachment_id = uuids.attachment_id
+
+        vol_bdm = block_device_obj.BlockDeviceMapping(
+            instance_uuid=instance['uuid'],
+            source_type='volume', destination_type='volume',
+            delete_on_termination=False,
+            volume_id=uuids.volume_id,
+            attachment_id=attachment_id)
+        bdms = [vol_bdm]
+
+        mock_elevated.return_value = admin
+        self.compute._shutdown_instance(admin, instance, bdms)
+
+        mock_attach_delete.assert_called_once_with(admin, attachment_id)
+
+    @mock.patch.object(compute_manager.LOG, 'debug')
+    @mock.patch.object(cinder.API, 'attachment_delete')
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_get_instance_block_device_info')
+    def test_shutdown_with_attachment_not_found(self, mock_info,
+                                                mock_attach_delete,
+                                                mock_debug_log):
+        # test _shutdown_instance with attachment_delete throwing
+        # a VolumeAttachmentNotFound exception. This should not
+        # cause _shutdown_instance to fail. Only a debug log
+        # message should be generated.
+        admin = context.get_admin_context()
+        instance = self._create_fake_instance_obj()
+
+        attachment_id = uuids.attachment_id
+
+        vol_bdm = block_device_obj.BlockDeviceMapping(
+            instance_uuid=instance['uuid'],
+            source_type='volume', destination_type='volume',
+            delete_on_termination=False,
+            volume_id=uuids.volume_id,
+            attachment_id=attachment_id)
+        bdms = [vol_bdm]
+
+        mock_attach_delete.side_effect = \
+            exception.VolumeAttachmentNotFound(attachment_id=attachment_id)
+
+        self.compute._shutdown_instance(admin, instance, bdms)
+
+        # get last call to LOG.debug and verify correct exception is in there
+        self.assertIsInstance(mock_debug_log.call_args[0][1],
+                              exception.VolumeAttachmentNotFound)
 
     def test_terminate_with_volumes(self):
         # Make sure that volumes get detached during instance termination.
