@@ -232,14 +232,24 @@ class SchedulerReportClient(object):
             url, json=data,
             endpoint_filter=self.ks_filter, raise_exc=False, **kwargs)
 
-    def put(self, url, data):
+    def put(self, url, data, version=None):
         # NOTE(sdague): using json= instead of data= sets the
         # media type to application/json for us. Placement API is
         # more sensitive to this than other APIs in the OpenStack
         # ecosystem.
+        kwargs = {}
+        if version is not None:
+            # TODO(mriedem): Perform some version discovery at some point.
+            kwargs = {
+                'headers': {
+                    'OpenStack-API-Version': 'placement %s' % version
+                },
+            }
+        if data:
+            kwargs['json'] = data
         return self._client.put(
-            url, json=data,
-            endpoint_filter=self.ks_filter, raise_exc=False)
+            url, endpoint_filter=self.ks_filter, raise_exc=False,
+            **kwargs)
 
     def delete(self, url):
         return self._client.delete(
@@ -682,7 +692,7 @@ class SchedulerReportClient(object):
         for rc_name, inv in inv_data.items():
             if rc_name not in fields.ResourceClass.STANDARD:
                 # Auto-create custom resource classes coming from a virt driver
-                self._get_or_create_resource_class(rc_name)
+                self._ensure_resource_class(rc_name)
 
             new_inv[rc_name] = inv
 
@@ -692,6 +702,42 @@ class SchedulerReportClient(object):
             self._delete_inventory(rp_uuid)
 
     @safe_connect
+    def _ensure_resource_class(self, name):
+        """Make sure a custom resource class exists.
+
+        First attempt to PUT the resource class using microversion 1.7. If
+        this results in a 406, fail over to a GET and POST with version 1.2.
+
+        Returns the name of the resource class if it was successfully
+        created or already exists. Otherwise None.
+
+        :param name: String name of the resource class to check/create.
+        :raises: `exception.InvalidResourceClass` upon error.
+        """
+        # no payload on the put request
+        response = self.put("/resource_classes/%s" % name, None, version="1.7")
+        if 200 <= response.status_code < 300:
+            return name
+        elif response.status_code == 406:
+            # microversion 1.7 not available so try the earlier way
+            # TODO(cdent): When we're happy that all placement
+            # servers support microversion 1.7 we can remove this
+            # call and the associated code.
+            LOG.debug('Falling back to placement API microverison 1.2 '
+                      'for resource class management.')
+            return self._get_or_create_resource_class(name)
+        else:
+            msg = _LE("Failed to ensure resource class record with "
+                      "placement API for resource class %(rc_name)s. "
+                      "Got %(status_code)d: %(err_text)s.")
+            args = {
+                'rc_name': name,
+                'status_code': response.status_code,
+                'err_text': response.text,
+            }
+            LOG.error(msg, args)
+            raise exception.InvalidResourceClass(resource_class=name)
+
     def _get_or_create_resource_class(self, name):
         """Queries the placement API for a resource class supplied resource
         class string name. If the resource class does not exist, creates it.
