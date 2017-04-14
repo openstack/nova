@@ -33,6 +33,7 @@ from nova.api.openstack.compute import flavor_access
 from nova.api.openstack.compute import flavor_manage
 from nova.api.openstack.compute import flavor_rxtx
 from nova.api.openstack.compute import flavors
+from nova.api.openstack.compute import flavors_extraspecs
 from nova.api.openstack.compute import floating_ips
 from nova.api.openstack.compute import hide_server_addresses
 from nova.api.openstack.compute import keypairs
@@ -81,6 +82,10 @@ flavor_controller = functools.partial(_create_controller,
         flavor_access.FlavorActionController
     ]
 )
+
+
+flavor_extraspec_controller = functools.partial(_create_controller,
+    flavors_extraspecs.FlavorExtraSpecsController, [], [])
 
 
 server_controller = functools.partial(_create_controller,
@@ -148,6 +153,15 @@ ROUTE_LIST = (
     }),
     ('/flavors/{id}/action', {
         'POST': [flavor_controller, 'action']
+    }),
+    ('/flavors/{flavor_id}/os-extra_specs', {
+        'GET': [flavor_extraspec_controller, 'index'],
+        'POST': [flavor_extraspec_controller, 'create']
+    }),
+    ('/flavors/{flavor_id}/os-extra_specs/{id}', {
+        'GET': [flavor_extraspec_controller, 'show'],
+        'PUT': [flavor_extraspec_controller, 'update'],
+        'DELETE': [flavor_extraspec_controller, 'delete']
     }),
     ('/os-volumes_boot', {
         'GET': [server_controller, 'index'],
