@@ -2259,6 +2259,8 @@ class API(base_api.NetworkAPI):
                                 address=subnet['gateway_ip'],
                                 type='gateway'),
             }
+            if subnet.get('ipv6_address_mode'):
+                subnet_dict['ipv6_address_mode'] = subnet['ipv6_address_mode']
 
             # attempt to populate DHCP server field
             search_opts = {'network_id': subnet['network_id'],

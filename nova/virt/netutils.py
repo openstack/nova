@@ -261,7 +261,10 @@ def _get_nets(vif, subnet, version, net_num, link_id):
     :param link_id: Arbitrary identifier for the link the networks are
         attached to
     """
-    if subnet.get_meta('dhcp_server') is not None:
+    net_type = ''
+    if subnet.get_meta('ipv6_address_mode') is not None:
+        net_type = '_%s' % subnet.get_meta('ipv6_address_mode')
+    elif subnet.get_meta('dhcp_server') is not None:
         net_info = {
             'id': 'network%d' % net_num,
             'type': 'ipv%d_dhcp' % version,
@@ -279,7 +282,7 @@ def _get_nets(vif, subnet, version, net_num, link_id):
 
     net_info = {
         'id': 'network%d' % net_num,
-        'type': 'ipv%d' % version,
+        'type': 'ipv%d%s' % (version, net_type),
         'link': link_id,
         'ip_address': address,
         'netmask': netmask,
