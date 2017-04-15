@@ -38,6 +38,7 @@ import shutil
 import tempfile
 import time
 import uuid
+import json
 
 import eventlet
 from eventlet import greenthread
@@ -7888,18 +7889,25 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def cdrom_is_empty(self, instance):
         try:
+          output ={}
           guest = self._host.get_guest(instance)
           xml = guest.get_xml_desc()
           # get xml
           tree = etree.fromstring(xml)
-          disktags = tree.findall(".//disk/")
+          disktags = tree.findall(".//disk")
           for disktag in disktags:
             if disktag.attrib["device"] == "cdrom":
               sourcetag = disktag.find("source")
+              LOG.error(_LE("sourcetag: {0}".format(sourcetag)))
               if sourcetag is None:
-                return True
+                LOG.error(_LE("cdrom_is_empty: True"))
+                output["status"]= True
+                return json.dumps(output)
               else:
-                return False
+                LOG.error(_LE("cdrom_is_empty: False"))
+                output["status"]= False
+                return json.dumps(output)
+          LOG.error(_LE("xml: {0}".format(xml)))
         except exception.InstanceNotFound as e:
           guest = None
           LOG.error(_LE("InstanceNotFound: {0}".format(str(e.message))))
