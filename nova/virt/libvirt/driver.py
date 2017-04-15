@@ -7841,50 +7841,50 @@ class LibvirtDriver(driver.ComputeDriver):
                            disk.FS_FORMAT_EXT4, disk.FS_FORMAT_XFS]
 
     def attach_iso(self, instance, iso_image_href):
-        iso_path = os.path.join("/var/lib/nova/instances/_base/iso", iso_image_href)
-        cdromstring = '''
-          <source file='{0}'/>
-          '''.format(iso_path)
+        iso_path = os.path.join("/var/lib/nova/instances/iso", iso_image_href)
         try:
           guest = self._host.get_guest(instance)
-          xml = guest.get_xml_desc()
-          cdromxml = etree.fromstring(cdromstring)
-          # add cdrom
-          tree = etree.fromstring(xml)
-          disktags = tree.findall(".//disk")
-          for disktag in disktags:
-            if disktag.attrib["device"] == "cdrom":
-              if disktag.find("source") is None:
-                disktag.insert(disktag.index(disktag.find("target")) + 1, cdromxml)
 
-          xml = etree.tostring(tree)
-          LOG.debug(_LE("xml: {0}".format(xml)))
+          LOG.info("** attach cdrom **")
+          cd_cfg = vconfig.LibvirtConfigGuestDisk()
+          cd_cfg.driver_name = 'qemu'
+          cd_cfg.source_device = 'cdrom'
+          cd_cfg.driver_format = 'raw'
+          cd_cfg.driver_cache = 'none'
+          cd_cfg.target_bus = 'ide'
+          cd_cfg.target_dev = 'hdc'
+          cd_cfg.root_name = 'disk'
+          cd_cfg.source_type = 'file'
+          cd_cfg.source_path = '{0}'.format(iso_path)
+
+          LOG.info("cd_cfg.source_path: {0}".format(cd_cfg.source_path))
+          guest.attach_device(cd_cfg)
+
         except exception.InstanceNotFound as e:
           guest = None
           LOG.error(_LE("InstanceNotFound: {0}".format(str(e.message))))
-        finally:
-          self._host.write_instance_config(xml)
+        
 
     def detach_iso(self, instance):
         try:
           guest = self._host.get_guest(instance)
-          xml = guest.get_xml_desc()
-          # detach iso
-          tree = etree.fromstring(xml)
-          disktags = tree.findall(".//disk")
-          for disktag in disktags:
-            if disktag.attrib["device"] == "cdrom":
-              sourcetag = disktag.find("source")
-              if sourcetag is not None:
-                sourcetag.set("file", "")
+          LOG.info("** detach cdrom **")
+          cd_cfg = vconfig.LibvirtConfigGuestDisk()
+          cd_cfg.driver_name = 'qemu'
+          cd_cfg.source_device = 'cdrom'
+          cd_cfg.driver_format = 'raw'
+          cd_cfg.driver_cache = 'none'
+          cd_cfg.target_bus = 'ide'
+          cd_cfg.target_dev = 'hdc'
+          cd_cfg.root_name = 'disk'
+          cd_cfg.source_type = 'file'
+          cd_cfg.source_path = ''
 
-          xml = etree.tostring(tree)
-          LOG.debug(_LE("xml: {0}".format(xml)))
+          LOG.info("cd_cfg.source_path: {0}".format(cd_cfg.source_path))
+          guest.attach_device(cd_cfg)
         except exception.InstanceNotFound as e:
           guest = None
           LOG.error(_LE("InstanceNotFound: {0}".format(str(e.message))))
-        finally:
-          self._host.write_instance_config(xml)
 
     def cdrom_is_empty(self, instance):
         try:
