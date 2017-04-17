@@ -7842,11 +7842,11 @@ class LibvirtDriver(driver.ComputeDriver):
                            disk.FS_FORMAT_EXT4, disk.FS_FORMAT_XFS]
 
     def attach_iso(self, instance, iso_image_href):
-        iso_path = os.path.join("/var/lib/nova/instances/iso", iso_image_href)
+        iso_path = os.path.join("/var/lib/nova/instances/_base/iso", iso_image_href)
         try:
           guest = self._host.get_guest(instance)
 
-          LOG.info("** attach cdrom **")
+          LOG.info(_LI("** attach cdrom **"))
           cd_cfg = vconfig.LibvirtConfigGuestDisk()
           cd_cfg.driver_name = 'qemu'
           cd_cfg.source_device = 'cdrom'
@@ -7858,7 +7858,7 @@ class LibvirtDriver(driver.ComputeDriver):
           cd_cfg.source_type = 'file'
           cd_cfg.source_path = '{0}'.format(iso_path)
 
-          LOG.info("cd_cfg.source_path: {0}".format(cd_cfg.source_path))
+          LOG.info(_LI("cd_cfg.source_path: {0}".format(cd_cfg.source_path)))
           guest.attach_device(cd_cfg)
 
         except exception.InstanceNotFound as e:
@@ -7881,7 +7881,7 @@ class LibvirtDriver(driver.ComputeDriver):
           cd_cfg.source_type = 'file'
           cd_cfg.source_path = ''
 
-          LOG.info("cd_cfg.source_path: {0}".format(cd_cfg.source_path))
+          LOG.info(_LI("cd_cfg.source_path: {0}".format(cd_cfg.source_path)))
           guest.attach_device(cd_cfg)
         except exception.InstanceNotFound as e:
           guest = None
@@ -7898,16 +7898,16 @@ class LibvirtDriver(driver.ComputeDriver):
           for disktag in disktags:
             if disktag.attrib["device"] == "cdrom":
               sourcetag = disktag.find("source")
-              LOG.error(_LE("sourcetag: {0}".format(sourcetag)))
+              LOG.info(_LI("sourcetag: {0}".format(sourcetag)))
               if sourcetag is None:
-                LOG.error(_LE("cdrom_is_empty: True"))
+                LOG.info(_LI("cdrom_is_empty: True"))
                 output["status"]= True
                 return json.dumps(output)
               else:
-                LOG.error(_LE("cdrom_is_empty: False"))
+                LOG.info(_LI("cdrom_is_empty: False"))
                 output["status"]= False
                 return json.dumps(output)
-          LOG.error(_LE("xml: {0}".format(xml)))
+          LOG.info(_LI("xml: {0}".format(xml)))
         except exception.InstanceNotFound as e:
           guest = None
           LOG.error(_LE("InstanceNotFound: {0}".format(str(e.message))))
