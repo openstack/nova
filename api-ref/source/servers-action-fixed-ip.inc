@@ -1,13 +1,11 @@
 .. -*- rst -*-
 
-Add (Associate) Fixed Ip (addFixedIp Action)
-============================================
+Add (Associate) Fixed Ip (addFixedIp Action) (DEPRECATED)
+==========================================================
 
-.. note::
-
-   Network APIs and proxies are deprecated beginning microversion 2.36, except
-   for actions on non-deprecated resources such as servers. The addFixedIp
-   action is one such exemption.
+.. warning:: This API is deprecated and will fail with a 404 starting
+             from microversion 2.44. This is replaced with using the
+             Neutron networking service API.
 
 .. rest_method:: POST /servers/{server_id}/action
 
@@ -46,14 +44,12 @@ Response
 No response body is returned after a successful addFixedIp action.
 
 
-Remove (Disassociate) Fixed Ip (removeFixedIp Action)
-=====================================================
+Remove (Disassociate) Fixed Ip (removeFixedIp Action) (DEPRECATED)
+===================================================================
 
-.. note::
-
-   Network APIs and proxies are deprecated as of microversion 2.36, except
-   for actions on non-deprecated resources such as servers. The removeFixedIp
-   action is one such exemption.
+.. warning:: This API is deprecated and will fail with a 404 starting
+             from microversion 2.44. This is replaced with using the
+             Neutron networking service API.
 
 .. rest_method:: POST /servers/{server_id}/action
 

@@ -203,11 +203,14 @@ class FloatingIPController(wsgi.Controller):
 
 
 class FloatingIPActionController(wsgi.Controller):
+    """This API is deprecated from the Microversion '2.44'."""
+
     def __init__(self, *args, **kwargs):
         super(FloatingIPActionController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
         self.network_api = network.API()
 
+    @wsgi.Controller.api_version("2.1", "2.43")
     @extensions.expected_errors((400, 403, 404))
     @wsgi.action('addFloatingIp')
     @validation.schema(floating_ips.add_floating_ip)
@@ -286,6 +289,7 @@ class FloatingIPActionController(wsgi.Controller):
 
         return webob.Response(status_int=202)
 
+    @wsgi.Controller.api_version("2.1", "2.43")
     @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.action('removeFloatingIp')
     @validation.schema(floating_ips.remove_floating_ip)

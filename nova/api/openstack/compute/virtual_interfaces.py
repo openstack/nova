@@ -46,6 +46,8 @@ def _translate_vif_summary_view(req, vif):
 
 class ServerVirtualInterfaceController(wsgi.Controller):
     """The instance VIF API controller for the OpenStack API.
+
+       This API is deprecated from the Microversion '2.44'.
     """
 
     def __init__(self):
@@ -69,6 +71,7 @@ class ServerVirtualInterfaceController(wsgi.Controller):
         res = [entity_maker(req, vif) for vif in limited_list]
         return {'virtual_interfaces': res}
 
+    @wsgi.Controller.api_version("2.1", "2.43")
     @extensions.expected_errors((400, 404))
     def index(self, req, server_id):
         """Returns the list of VIFs for a given instance."""

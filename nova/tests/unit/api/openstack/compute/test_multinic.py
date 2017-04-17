@@ -71,15 +71,7 @@ class FixedIpTestV21(test.NoDBTestCase):
         last_add_fixed_ip = (None, None)
 
         body = dict(addFixedIp=dict(networkId='test_net'))
-        resp = self.controller._add_fixed_ip(self.fake_req, UUID, body=body)
-        # NOTE: on v2.1, http status code is set as wsgi_code of API
-        # method instead of status_int in a response object.
-        if isinstance(self.controller,
-                      multinic_v21.MultinicController):
-            status_int = self.controller._add_fixed_ip.wsgi_code
-        else:
-            status_int = resp.status_int
-        self.assertEqual(status_int, 202)
+        self.controller._add_fixed_ip(self.fake_req, UUID, body=body)
         self.assertEqual(last_add_fixed_ip, (UUID, 'test_net'))
 
     def _test_add_fixed_ip_bad_request(self, body):
@@ -119,15 +111,7 @@ class FixedIpTestV21(test.NoDBTestCase):
         last_remove_fixed_ip = (None, None)
 
         body = dict(removeFixedIp=dict(address='10.10.10.1'))
-        resp = self.controller._remove_fixed_ip(self.fake_req, UUID, body=body)
-        # NOTE: on v2.1, http status code is set as wsgi_code of API
-        # method instead of status_int in a response object.
-        if isinstance(self.controller,
-                      multinic_v21.MultinicController):
-            status_int = self.controller._remove_fixed_ip.wsgi_code
-        else:
-            status_int = resp.status_int
-        self.assertEqual(status_int, 202)
+        self.controller._remove_fixed_ip(self.fake_req, UUID, body=body)
         self.assertEqual(last_remove_fixed_ip, (UUID, '10.10.10.1'))
 
     def test_remove_fixed_ip_no_address(self):
@@ -188,3 +172,21 @@ class MultinicPolicyEnforcementV21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
+
+
+class MultinicAPIDeprecationTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(MultinicAPIDeprecationTest, self).setUp()
+        self.controller = multinic_v21.MultinicController()
+        self.req = fakes.HTTPRequest.blank('', version='2.44')
+
+    def test_add_fixed_ip_not_found(self):
+        body = dict(addFixedIp=dict(networkId='test_net'))
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller._add_fixed_ip, self.req, UUID, body=body)
+
+    def test_remove_fixed_ip__not_found(self):
+        body = dict(removeFixedIp=dict(address='10.10.10.1'))
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller._remove_fixed_ip, self.req, UUID, body=body)

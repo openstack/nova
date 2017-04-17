@@ -103,6 +103,8 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              starting with version 2.33 for block devices and starting with
              version 2.37 for network interfaces.
     * 2.43 - Deprecate os-hosts API
+    * 2.44 - The servers action addFixedIp, removeFixedIp, addFloatingIp,
+             removeFloatingIp and os-virtual-interfaces APIs are deprecated.
 """
 
 # The minimum and maximum versions of the API supported
@@ -111,7 +113,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.43"
+_MAX_API_VERSION = "2.44"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which related to network, images and baremetal

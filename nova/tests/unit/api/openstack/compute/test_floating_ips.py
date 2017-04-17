@@ -987,3 +987,22 @@ class FloatingIpsDeprecationTest(test.NoDBTestCase):
             self.controller.create, self.req, {})
         self.assertRaises(exception.VersionNotFoundForAPIMethod,
             self.controller.delete, self.req, fakes.FAKE_UUID)
+
+
+class FloatingIpActionDeprecationTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FloatingIpActionDeprecationTest, self).setUp()
+        self.req = fakes.HTTPRequest.blank('', version='2.44')
+        self.controller = fips_v21.FloatingIPActionController()
+
+    def test_add_floating_ip_not_found(self):
+        body = dict(addFloatingIp=dict(address='10.10.10.11'))
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller._add_floating_ip, self.req, FAKE_UUID, body=body)
+
+    def test_remove_floating_ip_not_found(self):
+        body = dict(removeFloatingIp=dict(address='10.10.10.10'))
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller._remove_floating_ip, self.req, FAKE_UUID,
+            body=body)

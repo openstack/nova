@@ -30,7 +30,6 @@ the `API guide <http://developer.openstack.org/api-guide/compute/index.html>`_.
 .. include:: os-instance-actions.inc
 .. include:: os-interface.inc
 .. include:: os-server-password.inc
-.. include:: os-virtual-interfaces.inc
 .. include:: os-volume-attachments.inc
 .. include:: flavors.inc
 .. include:: os-flavor-access.inc
@@ -71,3 +70,4 @@ the `API guide <http://developer.openstack.org/api-guide/compute/index.html>`_.
 .. include:: os-security-group-default-rules.inc
 .. include:: os-security-group-rules.inc
 .. include:: os-hosts.inc
+.. include:: os-virtual-interfaces.inc

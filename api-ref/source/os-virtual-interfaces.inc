@@ -1,10 +1,16 @@
 .. -*- rst -*-
 
-=============================================================
- Servers virtual interfaces (servers, os-virtual-interfaces)
-=============================================================
+=========================================================================
+ Servers virtual interfaces (servers, os-virtual-interfaces) (DEPRECATED)
+=========================================================================
 
 Lists virtual interfaces for a server.
+
+.. warning:: Since this API is only implemented for the nova-network, the API
+            is deprecated from the Microversion 2.44. This API will fail with
+            a 404 starting from microversion 2.44. To query the server attached
+            neutron interface, please use the API
+            ``GET /servers/{server_uuid}/os-interface``.
 
 .. note::
     This API is only implemented for the nova-network service and will result
