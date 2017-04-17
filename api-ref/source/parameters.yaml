@@ -1083,12 +1083,13 @@ adminPass_evacuate:
   max_version: 2.13
 adminPass_evacuate_request:
   description: |
-    An administrative password to access the evacuated instance. If you omit this parameter, the operation
-    generates a new password.
+    An administrative password to access the evacuated server.
+    If you omit this parameter, the operation generates a new password.
+    Up to API version 2.13, if ``onSharedStorage`` is set to ``True`` and
+    this parameter is specified, an error is raised.
   in: body
   required: false
   type: string
-  max_version: 2.13
 adminPass_request:
   description: |
     The administrative password of the server. If you omit this parameter, the operation
@@ -1853,10 +1854,10 @@ errors:
   type: integer
 evacuate:
   description: |
-    Specify the ``evacuate`` action in the request body.
+    The action to evacuate a server to another host.
   in: body
   required: true
-  type: string
+  type: object
 event:
   description: |
     The name of the event.
@@ -2383,6 +2384,7 @@ guest_format:
 host:
   description: |
     The name or ID of the host to which the server is evacuated.
+    If you omit this parameter, the scheduler chooses a host.
   in: body
   required: false
   type: string
@@ -3500,10 +3502,16 @@ new_file:
 on_shared_storage:
   description: |
     Server on shared storage.
+
+    .. note::
+
+      Starting since version 2.14, Nova automatically detects
+      whether the server is on shared storage or not.
+      Therefore this parameter was removed.
   in: body
   required: true
   type: boolean
-  max_version: 2.14
+  max_version: 2.13
 os:
   description: |
     The name of the operating system.
