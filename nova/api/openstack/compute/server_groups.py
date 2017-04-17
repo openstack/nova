@@ -15,6 +15,8 @@
 
 """The Server Group API Extension."""
 
+import collections
+
 from oslo_log import log as logging
 import webob
 from webob import exc
@@ -25,6 +27,7 @@ from nova.api.openstack.compute.schemas import server_groups as schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
+from nova import context as nova_context
 import nova.exception
 from nova.i18n import _
 from nova import objects
@@ -39,6 +42,40 @@ def _authorize_context(req, action):
     context = req.environ['nova.context']
     context.can(sg_policies.POLICY_ROOT % action)
     return context
+
+
+def _get_not_deleted(context, uuids):
+    mappings = objects.InstanceMappingList.get_by_instance_uuids(
+        context, uuids)
+    inst_by_cell = collections.defaultdict(list)
+    cell_mappings = {}
+    found_inst_uuids = []
+
+    # Get a master list of cell mappings, and a list of instance
+    # uuids organized by cell
+    for im in mappings:
+        if not im.cell_mapping:
+            # Not scheduled yet, so just throw it in the final list
+            # and move on
+            found_inst_uuids.append(im.instance_uuid)
+            continue
+        if im.cell_mapping.uuid not in cell_mappings:
+            cell_mappings[im.cell_mapping.uuid] = im.cell_mapping
+        inst_by_cell[im.cell_mapping.uuid].append(im.instance_uuid)
+
+    # Query each cell for the instances that are inside, building
+    # a list of non-deleted instance uuids.
+    for cell_uuid, cell_mapping in cell_mappings.items():
+        inst_uuids = inst_by_cell[cell_uuid]
+        LOG.debug('Querying cell %(cell)s for %(num)i instances',
+                  {'cell': cell_mapping.identity, 'num': len(uuids)})
+        filters = {'uuid': inst_uuids, 'deleted': False}
+        with nova_context.target_cell(context, cell_mapping) as ctx:
+            found_inst_uuids.extend([
+                inst.uuid for inst in objects.InstanceList.get_by_filters(
+                    ctx, filters=filters)])
+
+    return found_inst_uuids
 
 
 class ServerGroupController(wsgi.Controller):
@@ -59,10 +96,7 @@ class ServerGroupController(wsgi.Controller):
         members = []
         if group.members:
             # Display the instances that are not deleted.
-            filters = {'uuid': group.members, 'deleted': False}
-            instances = objects.InstanceList.get_by_filters(
-                context, filters=filters)
-            members = [instance.uuid for instance in instances]
+            members = _get_not_deleted(context, group.members)
         server_group['members'] = members
         # Add project id information to the response data for
         # API version v2.13
