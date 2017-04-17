@@ -631,7 +631,7 @@ class Guest(object):
         else:
             if params:
                 if migrate_uri:
-                    # In migrateToURI3 this paramenter is searched in
+                    # In migrateToURI3 this parameter is searched in
                     # the `params` dict
                     params['migrate_uri'] = migrate_uri
                 self._domain.migrateToURI3(

@@ -735,7 +735,7 @@ class OSAPIFixture(fixtures.Fixture):
     """Create an OS API server as a fixture.
 
     This spawns an OS API server as a fixture in a new greenthread in
-    the current test. The fixture has a .api paramenter with is a
+    the current test. The fixture has a .api parameter with is a
     simple rest client that can communicate with it.
 
     This fixture is extremely useful for testing REST responses
