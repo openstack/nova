@@ -146,11 +146,6 @@ class ServerGroupTestV21(test.TestCase):
                                     vm_state='fake',
                                     system_metadata={'key': 'value'})
         instance.create()
-        im = objects.InstanceMapping(context=context,
-                                     project_id=context.project_id,
-                                     user_id=context.user_id,
-                                     instance_uuid=instance.uuid)
-        im.create()
         return instance
 
     def _create_instance_group(self, context, members):
@@ -310,8 +305,6 @@ class ServerGroupTestV21(test.TestCase):
 
         # delete an instance
         instances[1].destroy()
-        objects.InstanceMapping.get_by_instance_uuid(
-            ctx, instances[1].uuid).destroy()
         # check that the instance does not exist
         self.assertRaises(exception.InstanceNotFound,
                           objects.Instance.get_by_uuid,
