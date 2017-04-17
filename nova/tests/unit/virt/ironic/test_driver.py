@@ -2297,11 +2297,7 @@ class IronicDriverConsoleTestCase(test.NoDBTestCase):
     @mock.patch.object(ironic_driver, 'LOG', autospec=True)
     def test__get_node_console_with_reset_wait_timeout(self, mock_log,
                                                        mock_node):
-        # Set timeout to a small value to reduce testing time
-        # Note: timeout value is integer, use enforce_type=False to set it
-        # to a floating number.
-        CONF.set_override('serial_console_state_timeout', 0.1,
-                          group='ironic', enforce_type=False)
+        CONF.set_override('serial_console_state_timeout', 1, group='ironic')
         temp_data = {'target_mode': True}
 
         def _fake_get_console(node_uuid):

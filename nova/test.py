@@ -348,7 +348,7 @@ class TestCase(testtools.TestCase):
         """Override flag variables for a test."""
         group = kw.pop('group', None)
         for k, v in kw.items():
-            CONF.set_override(k, v, group, enforce_type=True)
+            CONF.set_override(k, v, group)
 
     def start_service(self, name, host=None, **kwargs):
         if name == 'compute' and self.USES_DB:
