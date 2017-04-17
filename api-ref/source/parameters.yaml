@@ -1056,13 +1056,19 @@ addresses_obj:
   type: object
 addSecurityGroup:
   description: |
+    The action to add a security group to a server.
+  in: body
+  required: true
+  type: object
+addTenantAccess:
+  description: |
     The action.
   in: body
   required: true
   type: string
-addTenantAccess:
+adminPass_change_password:
   description: |
-    The action.
+    The administrative password for the server.
   in: body
   required: true
   type: string
@@ -1453,10 +1459,10 @@ certificate:
   type: object
 changePassword:
   description: |
-    The action.
+    The action to change an administrative password of the server.
   in: body
   required: true
-  type: string
+  type: object
 cidr:
   description: |
     The CIDR for address range.
@@ -1511,7 +1517,7 @@ configure_project_cloudpipe:
   type: object
 confirmResize:
   description: |
-    The action.
+    The action to confirm a resize operation.
   in: body
   required: true
   type: none
@@ -1638,10 +1644,11 @@ created:
   type: string
 createImage:
   description: |
-    The action.
+    The action to create a snapshot of the image or
+    the volume(s) of the server.
   in: body
   required: true
-  type: string
+  type: object
 current_workload:
   description: |
     The current_workload is the number of tasks the hypervisor is responsible for. This will be
@@ -2687,6 +2694,13 @@ image_id_body:
   in: body
   required: true
   type: string
+image_metadata:
+  description: |
+    Metadata key and value pairs for the image.
+    The maximum size for each metadata key and value pair is 255 bytes.
+  in: body
+  required: false
+  type: object
 image_metadata_items:
   description: |
     The number of allowed metadata items for each image. Starting from

@@ -134,9 +134,9 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - changePassword: changePassword
+  - adminPass: adminPass_change_password
 
 **Example Change Administrative Password (changePassword Action)**
 
@@ -259,9 +259,10 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - createImage: createImage
+  - name: image_name
+  - metadata: image_metadata
 
 **Example Create Image (createImage Action)**
 
@@ -273,7 +274,7 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-  - image_location: image_location
+  - Location: image_location
 
 
 Lock Server (lock Action)
