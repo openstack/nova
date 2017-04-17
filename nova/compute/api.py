@@ -791,8 +791,6 @@ class API(base.Base):
         return image['id'], image
 
     def _download_image(self, context, image_href, dest_path):
-        if not image_href:
-            return None, {}
         self.image_api.download(context, image_href, dest_path=dest_path)
 
     def _checks_for_create_and_rebuild(self, context, image_id, image,
@@ -3637,7 +3635,10 @@ class API(base.Base):
         return host_statuses
 
     def attach_iso(self, context, instance, iso_image_href):
-        dest_path = os.path.join("/iServCluster1/_base/iso", iso_image_href)
+        iso_path = "/iServCluster1/_base/iso"
+        dest_path = os.path.join(iso_path, iso_image_href)
+        if os.path.exists(iso_path) is not True:
+            os.mkdir(iso_path)
         while not os.path.exists(dest_path):
             self._download_image(context, iso_image_href, dest_path)
         """attach iso"""
