@@ -189,7 +189,7 @@ base_rebuild_v219 = copy.deepcopy(base_rebuild)
 base_rebuild_v219['properties']['rebuild'][
     'properties']['description'] = parameter_types.description
 
-base_resize = {
+resize = {
     'type': 'object',
     'properties': {
         'resize': {
