@@ -31,6 +31,7 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.image import fake
 from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_service
+from nova.tests import uuidsentinel
 
 FAKE_UUID = fakes.FAKE_UUID
 
@@ -229,7 +230,8 @@ class ServersControllerCreateTestV21(test.TestCase):
                                           'topic': 'compute',
                                           'report_count': 0})
         agg = db.aggregate_create(admin_context,
-                {'name': 'agg1'}, {'availability_zone': 'nova'})
+                {'name': 'agg1', 'uuid': uuidsentinel.agg_uuid},
+                {'availability_zone': 'nova'})
         db.aggregate_host_add(admin_context, agg['id'], 'host1_zones')
         return self.req, body
 

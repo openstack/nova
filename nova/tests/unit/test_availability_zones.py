@@ -26,6 +26,7 @@ from nova import context
 from nova import db
 from nova import objects
 from nova import test
+from nova.tests import uuidsentinel
 
 CONF = nova.conf.CONF
 
@@ -47,7 +48,7 @@ class AvailabilityZoneTestCases(test.TestCase):
         super(AvailabilityZoneTestCases, self).tearDown()
 
     def _create_az(self, agg_name, az_name):
-        agg_meta = {'name': agg_name}
+        agg_meta = {'name': agg_name, 'uuid': uuidsentinel.agg_uuid}
         agg = db.aggregate_create(self.context, agg_meta)
 
         metadata = {'availability_zone': az_name}

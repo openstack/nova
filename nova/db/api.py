@@ -2044,10 +2044,6 @@ def pcidevice_online_data_migration(context, max_count):
     return IMPL.pcidevice_online_data_migration(context, max_count)
 
 
-def aggregate_uuids_online_data_migration(context, max_count):
-    return IMPL.aggregate_uuids_online_data_migration(context, max_count)
-
-
 ####################
 
 

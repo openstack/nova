@@ -258,19 +258,11 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
         for key in aggregate.fields:
             if key == 'metadata':
                 db_key = 'metadetails'
-            elif key == 'uuid':
-                continue
             elif key in DEPRECATED_FIELDS and key not in db_aggregate:
                 continue
             else:
                 db_key = key
             setattr(aggregate, key, db_aggregate[db_key])
-
-        # NOTE(danms): Remove this conditional load (and remove uuid
-        # special cases above) once we're in Newton and have enforced
-        # that all UUIDs in the database are not NULL.
-        if db_aggregate.get('uuid'):
-            aggregate.uuid = db_aggregate['uuid']
 
         # NOTE: This can be removed when we remove compatibility with
         # the old aggregate model.
@@ -280,16 +272,6 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
 
         aggregate._context = context
         aggregate.obj_reset_changes()
-
-        # NOTE(danms): This needs to come after obj_reset_changes() to make
-        # sure we only save the uuid, if we generate one.
-        # FIXME(danms): Remove this in Newton once we have enforced that
-        # all aggregates have uuids set in the database.
-        if 'uuid' not in aggregate:
-            aggregate.uuid = uuidutils.generate_uuid()
-            LOG.debug('Generating UUID %(uuid)s for aggregate %(agg)i',
-                      dict(uuid=aggregate.uuid, agg=aggregate.id))
-            aggregate.save()
 
         return aggregate
 
