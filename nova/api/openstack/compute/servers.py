@@ -71,7 +71,6 @@ class ServersController(wsgi.Controller):
     schema_server_create = schema_servers.base_create
     schema_server_update = schema_servers.base_update
     schema_server_rebuild = schema_servers.base_rebuild
-    schema_server_resize = schema_servers.base_resize
 
     schema_server_create_v20 = schema_servers.base_create_v20
     schema_server_update_v20 = schema_servers.base_update_v20
@@ -877,7 +876,7 @@ class ServersController(wsgi.Controller):
     @wsgi.response(202)
     @extensions.expected_errors((400, 401, 403, 404, 409))
     @wsgi.action('resize')
-    @validation.schema(schema_server_resize)
+    @validation.schema(schema_servers.resize)
     def _action_resize(self, req, id, body):
         """Resizes a given instance to the flavor size requested."""
         resize_dict = body['resize']
