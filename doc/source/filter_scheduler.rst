@@ -164,6 +164,15 @@ There are many standard filter classes which may be used
 
 * |TypeAffinityFilter| - Only passes hosts that are not already running an
   instance of the requested type.
+
+  .. warning:: TypeAffinityFilter is deprecated for removal in the
+    17.0.0 Queens release. There is no replacement planned for this
+    filter. It is fundamentally flawed in that it relies on the
+    ``flavors.id`` primary key and if a flavor "changed", i.e. deleted
+    and re-created with new values, it will result in this filter
+    thinking it is a different flavor, thus breaking the usefulness of
+    this filter.
+
 * |AggregateTypeAffinityFilter| - limits instance_type by aggregate.
    This filter passes hosts if no instance_type key is set or
    the instance_type aggregate metadata value contains the name of the
