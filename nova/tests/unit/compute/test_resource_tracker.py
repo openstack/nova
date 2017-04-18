@@ -1157,8 +1157,11 @@ class TestUpdateComputeNode(BaseTestCase):
         save_mock.assert_called_once_with()
         ucn_mock.assert_called_once_with(new_compute)
 
+    @mock.patch('nova.compute.resource_tracker.'
+                '_normalize_inventory_from_cn_obj')
     @mock.patch('nova.objects.ComputeNode.save')
-    def test_existing_node_get_inventory_implemented(self, save_mock):
+    def test_existing_node_get_inventory_implemented(self, save_mock,
+            norm_mock):
         """The get_inventory() virt driver method is only implemented for some
         virt drivers. This method returns inventory information for a
         node/provider in a way that the placement API better understands, and
@@ -1190,6 +1193,129 @@ class TestUpdateComputeNode(BaseTestCase):
             mock.sentinel.inv_data,
         )
         self.assertFalse(ucn_mock.called)
+
+
+class TestNormalizatInventoryFromComputeNode(test.NoDBTestCase):
+    def test_normalize_libvirt(self):
+        self.flags(reserved_host_disk_mb=100,
+                   reserved_host_memory_mb=10,
+                   reserved_host_cpus=1)
+        vcpus = 24
+        memory_mb = 1024
+        disk_gb = 200
+        cn = objects.ComputeNode(
+            mock.sentinel.ctx,
+            ram_allocation_ratio=1.5,
+            cpu_allocation_ratio=16.0,
+            disk_allocation_ratio=1.0,
+        )
+        # What we get back from libvirt driver, for instance, doesn't contain
+        # allocation_ratio or reserved amounts for some resources. Verify that
+        # the information on the compute node fills in this information...
+        inv = {
+            obj_fields.ResourceClass.VCPU: {
+                'total': vcpus,
+                'min_unit': 1,
+                'max_unit': vcpus,
+                'step_size': 1,
+            },
+            obj_fields.ResourceClass.MEMORY_MB: {
+                'total': memory_mb,
+                'min_unit': 1,
+                'max_unit': memory_mb,
+                'step_size': 1,
+            },
+            obj_fields.ResourceClass.DISK_GB: {
+                'total': disk_gb,
+                'min_unit': 1,
+                'max_unit': disk_gb,
+                'step_size': 1,
+            },
+        }
+        expected = {
+            obj_fields.ResourceClass.VCPU: {
+                'total': vcpus,
+                'reserved': 1,
+                'min_unit': 1,
+                'max_unit': vcpus,
+                'step_size': 1,
+                'allocation_ratio': 16.0,
+            },
+            obj_fields.ResourceClass.MEMORY_MB: {
+                'total': memory_mb,
+                'reserved': 10,
+                'min_unit': 1,
+                'max_unit': memory_mb,
+                'step_size': 1,
+                'allocation_ratio': 1.5,
+            },
+            obj_fields.ResourceClass.DISK_GB: {
+                'total': disk_gb,
+                'reserved': 1,  # Rounded up from CONF.reserved_host_disk_mb
+                'min_unit': 1,
+                'max_unit': disk_gb,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+        }
+        self.assertNotEqual(expected, inv)
+        resource_tracker._normalize_inventory_from_cn_obj(inv, cn)
+        self.assertEqual(expected, inv)
+
+    def test_normalize_ironic(self):
+        """Test that when normalizing the return from Ironic virt driver's
+        get_inventory() method, we don't overwrite the information that the
+        virt driver gave us.
+        """
+        self.flags(reserved_host_disk_mb=100,
+                   reserved_host_memory_mb=10,
+                   reserved_host_cpus=1)
+        vcpus = 24
+        memory_mb = 1024
+        disk_gb = 200
+        # We will make sure that these field values do NOT override what the
+        # Ironic virt driver sets (which is, for example, that allocation
+        # ratios are all 1.0 for Ironic baremetal nodes)
+        cn = objects.ComputeNode(
+            mock.sentinel.ctx,
+            ram_allocation_ratio=1.5,
+            cpu_allocation_ratio=16.0,
+            disk_allocation_ratio=1.0,
+        )
+        # What we get back from Ironic driver contains fully-filled-out info
+        # blocks for VCPU, MEMORY_MB, DISK_GB and the custom resource class
+        # inventory items
+        inv = {
+            obj_fields.ResourceClass.VCPU: {
+                'total': vcpus,
+                'reserved': 0,
+                'min_unit': 1,
+                'max_unit': vcpus,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+            obj_fields.ResourceClass.MEMORY_MB: {
+                'total': memory_mb,
+                'reserved': 0,
+                'min_unit': 1,
+                'max_unit': memory_mb,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+            obj_fields.ResourceClass.DISK_GB: {
+                'total': disk_gb,
+                'reserved': 0,
+                'min_unit': 1,
+                'max_unit': disk_gb,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+        }
+        # We are expecting that NOTHING changes after calling the normalization
+        # function
+        expected = copy.deepcopy(inv)
+        resource_tracker._normalize_inventory_from_cn_obj(inv, cn)
+        self.assertEqual(expected, inv)
 
 
 class TestInstanceClaim(BaseTestCase):
