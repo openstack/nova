@@ -1,0 +1,11 @@
+---
+other:
+  - |
+    The disabled ``os-pci`` API has been removed. This API was originally added
+    to the v3 API which over time finally became the v2.1 API and the initial
+    microversion is backward compatible with the v2.0 API, where the
+    ``os-pci`` extension did not exist. The ``os-pci`` API was never enabled
+    as a microversion in the v2.1 API and at this time no longer aligns with
+    Nova strategically and is therefore just technical debt, so it has been
+    removed. Since it was never enabled or exposed out of the compute REST API
+    endpoint there was no deprecation period for this.

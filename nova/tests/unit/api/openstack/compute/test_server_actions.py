@@ -136,7 +136,7 @@ class ServerActionsControllerTestV21(test.TestCase):
                               body=body_map.get(action))
 
             mock_get.assert_called_once_with(self.context, uuid,
-                expected_attrs=['flavor', 'pci_devices', 'numa_topology'])
+                expected_attrs=['flavor', 'numa_topology'])
             mock_method.assert_called_once_with(self.context, instance,
                                                 *args, **kwargs)
 

@@ -291,7 +291,7 @@ class ServersController(wsgi.Controller):
             context, sort_keys, sort_dirs,
             schema_servers.SERVER_LIST_IGNORE_SORT_KEY, ('host', 'node'))
 
-        expected_attrs = ['pci_devices']
+        expected_attrs = []
         if is_detail:
             expected_attrs.append('services')
             if api_version_request.is_supported(req, '2.26'):
@@ -333,7 +333,7 @@ class ServersController(wsgi.Controller):
         :param is_detail: True if you plan on showing the details of the
             instance in the response, False otherwise.
         """
-        expected_attrs = ['flavor', 'pci_devices', 'numa_topology']
+        expected_attrs = ['flavor', 'numa_topology']
         if is_detail:
             if api_version_request.is_supported(req, '2.26'):
                 expected_attrs.append("tags")

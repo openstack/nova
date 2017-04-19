@@ -71,7 +71,6 @@ from nova.policies import multiple_create
 from nova.policies import networks
 from nova.policies import networks_associate
 from nova.policies import pause_server
-from nova.policies import pci
 from nova.policies import quota_class_sets
 from nova.policies import quota_sets
 from nova.policies import remote_consoles
@@ -161,7 +160,6 @@ def list_rules():
         networks.list_rules(),
         networks_associate.list_rules(),
         pause_server.list_rules(),
-        pci.list_rules(),
         quota_class_sets.list_rules(),
         quota_sets.list_rules(),
         remote_consoles.list_rules(),

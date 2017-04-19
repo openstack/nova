@@ -289,12 +289,12 @@ class ServersControllerTest(ControllerTest):
         res_dict = self.controller.show(req, FAKE_UUID)
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
 
-    def test_get_server_joins_pci_devices(self):
+    def test_get_server_joins(self):
 
         def fake_get(_self, *args, **kwargs):
             expected_attrs = kwargs['expected_attrs']
             self.assertEqual(['flavor', 'info_cache', 'metadata',
-                              'numa_topology', 'pci_devices'], expected_attrs)
+                              'numa_topology'], expected_attrs)
             ctxt = context.RequestContext('fake', 'fake')
             return fake_instance.fake_instance_obj(
                 ctxt, expected_attrs=expected_attrs)
@@ -1121,7 +1121,7 @@ class ServersControllerTest(ControllerTest):
             self.assertIsNotNone(search_opts)
             self.assertIn('name', search_opts)
             self.assertEqual(search_opts['name'], 'whee.*')
-            self.assertEqual(['pci_devices'], expected_attrs)
+            self.assertEqual([], expected_attrs)
             return objects.InstanceList(
                 objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
 
@@ -1415,19 +1415,6 @@ class ServersControllerTest(ControllerTest):
             self.assertEqual(s['id'], fakes.get_fake_uuid(i))
             self.assertEqual(s['hostId'], host_ids[i % 2])
             self.assertEqual(s['name'], 'server%d' % (i + 1))
-
-    def test_get_servers_joins_pci_devices(self):
-
-        def fake_get_all(compute_self, context, search_opts=None,
-                         limit=None, marker=None,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
-            self.assertEqual(['pci_devices'], expected_attrs)
-            return []
-
-        self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
-
-        req = self.req('/fake/servers', use_admin_context=True)
-        self.assertIn('servers', self.controller.index(req))
 
     def test_get_servers_joins_services(self):
         def fake_get_all(compute_self, context, search_opts=None,
