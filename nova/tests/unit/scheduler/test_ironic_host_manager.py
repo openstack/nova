@@ -114,7 +114,7 @@ class IronicHostManagerTestCase(test.NoDBTestCase):
 
         # for ironic compute nodes we always return an empty dict
         self.assertEqual({}, rv)
-        # base class implementation is overriden and not called
+        # base class implementation is overridden and not called
         self.assertFalse(mock_get_instance_info.called)
 
     @mock.patch.object(host_manager.HostManager, '_get_instance_info')

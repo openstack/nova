@@ -170,7 +170,7 @@ class SortParamUtilsTest(test.NoDBTestCase):
         self.assertEqual(['desc'], sort_dirs)
 
     def test_get_sort_params_override_defaults(self):
-        '''Verifies that the defaults can be overriden.'''
+        '''Verifies that the defaults can be overridden.'''
         sort_keys, sort_dirs = common.get_sort_params({}, default_key='key1',
                                                       default_dir='dir1')
         self.assertEqual(['key1'], sort_keys)
