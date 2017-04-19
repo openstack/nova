@@ -224,7 +224,8 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
     _legacy_fields = set(['connection_info', 'mount_device',
                           'delete_on_termination'])
     _new_fields = set(['guest_format', 'device_type',
-                       'disk_bus', 'boot_index'])
+                       'disk_bus', 'boot_index',
+                       'attachment_id'])
     _fields = _legacy_fields | _new_fields
 
     _valid_source = 'volume'
@@ -349,9 +350,16 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                            'schost': stashed_connector.get('host')})
                 connector = stashed_connector
 
-        volume_api.terminate_connection(context, volume_id, connector)
-        volume_api.detach(context.elevated(), volume_id, instance.uuid,
-                          attachment_id)
+        # NOTE(jdg): For now we need to actually inspect the bdm for an
+        # attachment_id as opposed to relying on what may have been passed
+        # in, we want to force usage of the old detach flow for now and only
+        # use the new flow when we explicitly used it for the attach.
+        if not self['attachment_id']:
+            volume_api.terminate_connection(context, volume_id, connector)
+            volume_api.detach(context.elevated(), volume_id, instance.uuid,
+                              attachment_id)
+        else:
+            volume_api.attachment_delete(context, self['attachment_id'])
 
     @update_db
     def attach(self, context, instance, volume_api, virt_driver,

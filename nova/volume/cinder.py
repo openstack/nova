@@ -205,6 +205,19 @@ def translate_volume_exception(method):
     return translate_cinder_exception(wrapper)
 
 
+def translate_attachment_exception(method):
+    """Transforms the exception for the attachment but keeps its traceback intact.
+    """
+    def wrapper(self, ctx, attachment_id, *args, **kwargs):
+        try:
+            res = method(self, ctx, attachment_id, *args, **kwargs)
+        except (keystone_exception.NotFound, cinder_exception.NotFound):
+            _reraise(exception.VolumeAttachmentNotFound(
+                attachment_id=attachment_id))
+        return res
+    return translate_cinder_exception(wrapper)
+
+
 def translate_snapshot_exception(method):
     """Transforms the exception for the snapshot but keeps its traceback
        intact.
@@ -480,3 +493,16 @@ class API(object):
             {'status': status,
              'progress': '90%'}
         )
+
+    @translate_attachment_exception
+    def attachment_delete(self, context, attachment_id):
+        try:
+            cinderclient(
+                context).attachments.delete(attachment_id)
+        except cinder_exception.ClientException as ex:
+            with excutils.save_and_reraise_exception():
+                LOG.error(('Delete attachment failed for attachment '
+                           '%(id)s. Error: %(msg)s Code: %(code)s'),
+                          {'id': attachment_id,
+                           'msg': six.text_type(ex),
+                           'code': getattr(ex, 'code', None)})

@@ -571,6 +571,10 @@ class AgentBuildExists(NovaException):
                 "architecture %(architecture)s exists.")
 
 
+class VolumeAttachmentNotFound(NotFound):
+    msg_fmt = _("Volume attachment %(attachment_id)s could not be found.")
+
+
 class VolumeNotFound(NotFound):
     msg_fmt = _("Volume %(volume_id)s could not be found.")
 

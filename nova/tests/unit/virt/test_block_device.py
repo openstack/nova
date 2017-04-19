@@ -101,6 +101,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
          'boot_index': 0})
 
     volume_driver_bdm = {
+        'attachment_id': None,
         'mount_device': '/dev/sda1',
         'connection_info': {"fake": "connection_info"},
         'delete_on_termination': False,
@@ -129,6 +130,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
          'boot_index': -1})
 
     snapshot_driver_bdm = {
+        'attachment_id': None,
         'mount_device': '/dev/sda2',
         'connection_info': {"fake": "connection_info"},
         'delete_on_termination': True,
@@ -157,6 +159,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
          'boot_index': -1})
 
     image_driver_bdm = {
+        'attachment_id': None,
         'mount_device': '/dev/sda2',
         'connection_info': {"fake": "connection_info"},
         'delete_on_termination': True,
@@ -185,6 +188,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
          'boot_index': -1})
 
     blank_driver_bdm = {
+        'attachment_id': None,
         'mount_device': '/dev/sda2',
         'connection_info': {"fake": "connection_info"},
         'delete_on_termination': True,
@@ -382,6 +386,31 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
     def test_call_wait_no_delete_volume(self):
         self._test_call_wait_func(False)
+
+    def test_volume_delete_attachment(self):
+        attachment_id = uuids.attachment
+        driver_bdm = self.driver_classes['volume'](self.volume_bdm)
+        driver_bdm['attachment_id'] = attachment_id
+
+        elevated_context = self.context.elevated()
+        instance_detail = {'id': '123', 'uuid': uuids.uuid,
+                           'availability_zone': None}
+        instance = fake_instance.fake_instance_obj(self.context,
+                                                   **instance_detail)
+        connector = {'ip': 'fake_ip', 'host': 'fake_host'}
+
+        with test.nested(
+            mock.patch.object(self.virt_driver, 'get_volume_connector',
+                              return_value=connector),
+            mock.patch.object(self.volume_api, 'attachment_delete'),
+        ) as (_, vapi_attach_del):
+
+            driver_bdm.detach(elevated_context, instance,
+                              self.volume_api, self.virt_driver,
+                              attachment_id=attachment_id)
+
+            vapi_attach_del.assert_called_once_with(elevated_context,
+                                                    attachment_id)
 
     def _test_volume_attach(self, driver_bdm, bdm_dict,
                             fake_volume, fail_check_av_zone=False,
