@@ -1558,6 +1558,12 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
             ["server1:1899", "server2:1920"]),
                          model)
 
+    @mock.patch.object(rbd_utils.RBDDriver, 'flatten')
+    def test_flatten(self, mock_flatten):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        image.flatten()
+        mock_flatten.assert_called_once_with(image.rbd_name, pool=self.POOL)
+
     def test_import_file(self):
         image = self.image_class(self.INSTANCE, self.NAME)
 
