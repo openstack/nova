@@ -30,7 +30,7 @@ from nova.tests.unit import utils
 class MicroversionedTest(testscenarios.WithScenarios, test.NoDBTestCase):
 
     scenarios = [
-        ('legacy-microverison', {
+        ('legacy-microversion', {
             'header_name': 'X-OpenStack-Nova-API-Version',
         }),
         ('modern-microversion', {
