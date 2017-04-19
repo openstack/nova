@@ -620,6 +620,8 @@ class DbCommands(object):
         # NOTE(mriedem): This online migration is going to be backported to
         # Newton also since it's an upgrade issue when upgrading from Mitaka.
         build_request_obj.delete_build_requests_with_no_instance_uuid,
+        # Added in Pike
+        db.service_uuids_online_data_migration,
     )
 
     def __init__(self):

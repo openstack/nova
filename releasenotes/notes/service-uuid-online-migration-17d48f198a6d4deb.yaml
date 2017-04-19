@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    An online data migration has been added to populate the ``services.uuid``
+    column in the nova database for non-deleted services records. Listing or
+    showing services out of the ``os-services`` API will have the same effect.
