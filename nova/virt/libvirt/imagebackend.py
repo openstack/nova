@@ -430,6 +430,14 @@ class Image(object):
         raise exception.ImageUnacceptable(image_id=image_id_or_uri,
                                           reason=reason)
 
+    def flatten(self):
+        """Flatten an image.
+
+        The implementation of this method is optional and therefore is
+        not an abstractmethod.
+        """
+        raise NotImplementedError('flatten() is not implemented')
+
     def direct_snapshot(self, context, snapshot_name, image_format, image_id,
                         base_image_id):
         """Prepare a snapshot for direct reference from glance.
@@ -958,6 +966,9 @@ class Rbd(Image):
         reason = _('No image locations are accessible')
         raise exception.ImageUnacceptable(image_id=image_id_or_uri,
                                           reason=reason)
+
+    def flatten(self):
+        self.driver.flatten(self.rbd_name, pool=self.pool)
 
     def get_model(self, connection):
         secret = None
