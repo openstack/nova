@@ -62,9 +62,8 @@ class DeferredDeleteController(wsgi.Controller):
                             'project_id': instance.project_id})
         try:
             self.compute_api.force_delete(context, instance)
-        except exception.InstanceNotFound as e:
-            raise webob.exc.HTTPNotFound(explanation=e.format_message())
-        except exception.InstanceUnknownCell as e:
+        except (exception.InstanceNotFound,
+                exception.InstanceUnknownCell) as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
