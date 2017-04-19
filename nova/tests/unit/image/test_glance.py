@@ -1573,7 +1573,8 @@ class TestDelete(test.NoDBTestCase):
 
 class TestGlanceApiServers(test.NoDBTestCase):
 
-    def test_get_api_servers(self):
+    def test_get_api_servers_multiple(self):
+        """Test get_api_servers via `api_servers` conf option."""
         glance_servers = ['10.0.1.1:9292',
                           'https://10.0.0.1:9293',
                           'http://10.0.2.2:9294']
@@ -1588,6 +1589,24 @@ class TestGlanceApiServers(test.NoDBTestCase):
             self.assertIn(server, expected_servers)
             if i > 2:
                 break
+
+    @mock.patch('keystoneauth1.adapter.Adapter.get_endpoint_data')
+    def test_get_api_servers_get_ksa_adapter(self, mock_epd):
+        """Test get_api_servers via nova.utils.get_ksa_adapter()."""
+        self.flags(api_servers=None, group='glance')
+        api_servers = glance.get_api_servers()
+        self.assertEqual(mock_epd.return_value.catalog_url, next(api_servers))
+        # Still get itertools.cycle behavior
+        self.assertEqual(mock_epd.return_value.catalog_url, next(api_servers))
+        mock_epd.assert_called_once_with()
+
+        # Now test with endpoint_override - get_endpoint_data is not called.
+        mock_epd.reset_mock()
+        self.flags(endpoint_override='foo', group='glance')
+        api_servers = glance.get_api_servers()
+        self.assertEqual('foo', next(api_servers))
+        self.assertEqual('foo', next(api_servers))
+        mock_epd.assert_not_called()
 
 
 class TestUpdateGlanceImage(test.NoDBTestCase):

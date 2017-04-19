@@ -16,6 +16,11 @@
 from keystoneauth1 import loading as ks_loading
 from oslo_config import cfg
 
+from nova.conf import utils as confutils
+
+
+DEFAULT_SERVICE_TYPE = 'baremetal'
+
 ironic_group = cfg.OptGroup(
     'ironic',
     title='Ironic Options',
@@ -35,6 +40,13 @@ ironic_options = [
     cfg.URIOpt(
         'api_endpoint',
         schemes=['http', 'https'],
+        deprecated_for_removal=True,
+        deprecated_reason='Endpoint lookup uses the service catalog via '
+                          'common keystoneauth1 Adapter configuration '
+                          'options. In the current release, api_endpoint will '
+                          'override this behavior, but will be ignored and/or '
+                          'removed in a future release. To achieve the same '
+                          'result, use the endpoint_override option instead.',
         sample_default='http://ironic.example.org:6385/',
         help='URL override for the Ironic API endpoint.'),
     cfg.IntOpt(
@@ -69,17 +81,24 @@ Related options:
              'changed. Set to 0 to disable timeout.'),
 ]
 
+deprecated_opts = {
+    'endpoint_override': [cfg.DeprecatedOpt('api_endpoint',
+                                            group=ironic_group.name)]}
+
 
 def register_opts(conf):
     conf.register_group(ironic_group)
     conf.register_opts(ironic_options, group=ironic_group)
-    ks_loading.register_auth_conf_options(conf, group=ironic_group.name)
-    ks_loading.register_session_conf_options(conf, group=ironic_group.name)
+    confutils.register_ksa_opts(conf, ironic_group, DEFAULT_SERVICE_TYPE,
+                                deprecated_opts=deprecated_opts)
 
 
 def list_opts():
-    return {ironic_group: ironic_options +
-                          ks_loading.get_session_conf_options() +
-                          ks_loading.get_auth_common_conf_options() +
-                          ks_loading.get_auth_plugin_conf_options('v3password')
-            }
+    return {ironic_group: (
+        ironic_options +
+        ks_loading.get_session_conf_options() +
+        ks_loading.get_auth_common_conf_options() +
+        ks_loading.get_auth_plugin_conf_options('v3password') +
+        confutils.get_ksa_adapter_opts(DEFAULT_SERVICE_TYPE,
+                                       deprecated_opts=deprecated_opts))
+    }

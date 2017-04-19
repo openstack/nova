@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from keystoneauth1 import discover as ks_disc
 from keystoneauth1 import loading as ks_loading
 from oslo_log import log as logging
 from oslo_utils import importutils
@@ -20,6 +21,7 @@ from oslo_utils import importutils
 import nova.conf
 from nova import exception
 from nova.i18n import _
+from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -89,10 +91,26 @@ class IronicClientWrapper(object):
         kwargs['retry_interval'] = retry_interval
         kwargs['os_ironic_api_version'] = '%d.%d' % IRONIC_API_VERSION
 
-        # NOTE(clenimar): by default, the endpoint is taken from the service
-        # catalog. Use `api_endpoint` if you want to override it.
-        ironic_url = (CONF.ironic.api_endpoint
-                      if CONF.ironic.api_endpoint else None)
+        # NOTE(clenimar/efried): by default, the endpoint is taken from the
+        # service catalog. Use `endpoint_override` if you want to override it.
+        if CONF.ironic.api_endpoint:
+            # NOTE(efried): `api_endpoint` still overrides service catalog and
+            # `endpoint_override` conf options. This will be removed in a
+            # future release.
+            ironic_url = CONF.ironic.api_endpoint
+        else:
+            try:
+                ksa_adap = utils.get_ksa_adapter(
+                    nova.conf.ironic.DEFAULT_SERVICE_TYPE,
+                    ksa_auth=auth_plugin, ksa_session=sess,
+                    min_version=IRONIC_API_VERSION,
+                    max_version=(IRONIC_API_VERSION[0], ks_disc.LATEST))
+                ironic_url = ksa_adap.get_endpoint()
+            except exception.ServiceNotFound:
+                # NOTE(efried): No reason to believe service catalog lookup
+                # won't also fail in ironic client init, but this way will
+                # yield the expected exception/behavior.
+                ironic_url = None
 
         try:
             cli = ironic.client.get_client(IRONIC_API_VERSION[0],

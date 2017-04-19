@@ -20,6 +20,8 @@ import os.path
 import tempfile
 
 import eventlet
+from keystoneauth1.identity import base as ks_identity
+from keystoneauth1 import session as ks_session
 import mock
 import netaddr
 from oslo_concurrency import processutils
@@ -1307,3 +1309,79 @@ class TestObjectCallHelpers(test.NoDBTestCase):
             test_utils.obj_called_once_with(
                 tester.foo, 3,
                 test_objects.MyObj(foo=3, bar='baz')))
+
+
+class GetKSAAdapterTestCase(test.NoDBTestCase):
+    """Tests for nova.utils.get_endpoint_data()."""
+    def setUp(self):
+        super(GetKSAAdapterTestCase, self).setUp()
+        self.sess = mock.create_autospec(ks_session.Session, instance=True)
+        self.auth = mock.create_autospec(ks_identity.BaseIdentityPlugin,
+                                         instance=True)
+
+        load_sess_p = mock.patch(
+            'keystoneauth1.loading.load_session_from_conf_options')
+        self.addCleanup(load_sess_p.stop)
+        self.load_sess = load_sess_p.start()
+        self.load_sess.return_value = self.sess
+
+        load_adap_p = mock.patch(
+            'keystoneauth1.loading.load_adapter_from_conf_options')
+        self.addCleanup(load_adap_p.stop)
+        self.load_adap = load_adap_p.start()
+
+        load_auth_p = mock.patch(
+            'keystoneauth1.loading.load_auth_from_conf_options')
+        self.addCleanup(load_auth_p.stop)
+        self.load_auth = load_auth_p.start()
+        self.load_auth.return_value = self.auth
+
+    def test_bogus_service_type(self):
+        self.assertRaises(exception.ConfGroupForServiceTypeNotFound,
+                          utils.get_ksa_adapter, 'bogus')
+        self.load_auth.assert_not_called()
+        self.load_sess.assert_not_called()
+        self.load_adap.assert_not_called()
+
+    def test_all_params(self):
+        ret = utils.get_ksa_adapter(
+            'image', ksa_auth='auth', ksa_session='sess',
+            min_version='min', max_version='max')
+        # Returned the result of load_adapter_from_conf_options
+        self.assertEqual(self.load_adap.return_value, ret)
+        # Because we supplied ksa_auth, load_auth* not called
+        self.load_auth.assert_not_called()
+        # Ditto ksa_session/load_session*
+        self.load_sess.assert_not_called()
+        # load_adapter* called with what we passed in (and the right group)
+        self.load_adap.assert_called_once_with(
+            utils.CONF, 'glance', session='sess', auth='auth',
+            min_version='min', max_version='max')
+
+    def test_auth_from_session(self):
+        self.sess.auth = 'auth'
+        ret = utils.get_ksa_adapter('baremetal', ksa_session=self.sess)
+        # Returned the result of load_adapter_from_conf_options
+        self.assertEqual(self.load_adap.return_value, ret)
+        # Because ksa_auth found in ksa_session, load_auth* not called
+        self.load_auth.assert_not_called()
+        # Because we supplied ksa_session, load_session* not called
+        self.load_sess.assert_not_called()
+        # load_adapter* called with the auth from the session
+        self.load_adap.assert_called_once_with(
+            utils.CONF, 'ironic', session=self.sess, auth='auth',
+            min_version=None, max_version=None)
+
+    def test_load_auth_and_session(self):
+        ret = utils.get_ksa_adapter('volumev2')
+        # Returned the result of load_adapter_from_conf_options
+        self.assertEqual(self.load_adap.return_value, ret)
+        # Had to load the auth
+        self.load_auth.assert_called_once_with(utils.CONF, 'cinder')
+        # Had to load the session, passed in the loaded auth
+        self.load_sess.assert_called_once_with(utils.CONF, 'cinder',
+                                               auth=self.auth)
+        # load_adapter* called with the loaded auth & session
+        self.load_adap.assert_called_once_with(
+            utils.CONF, 'cinder', session=self.sess, auth=self.auth,
+            min_version=None, max_version=None)
