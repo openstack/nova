@@ -523,7 +523,6 @@ class API(base_api.NetworkAPI):
         :type neutron: neutronclient.v2_0.client.Client
         :returns: tuple of:
             - ports: dict mapping of port id to port dict
-            - net_ids: list of requested network ids
             - ordered_networks: list of nova.objects.NetworkRequest objects
                 for requested networks (either via explicit network request
                 or the network for an explicit port request)
