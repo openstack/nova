@@ -70,7 +70,7 @@ function configure_and_start_glance {
 function _ceph_configure_nova {
     #setup ceph for nova, we don't reuse configure_ceph_nova - as we need to emulate case where cinder is not configured for ceph
     sudo ceph -c ${CEPH_CONF_FILE} osd pool create ${NOVA_CEPH_POOL} ${NOVA_CEPH_POOL_PG} ${NOVA_CEPH_POOL_PGP}
-    NOVA_CONF=${NOVA_CONF:-/etc/nova/nova.conf}
+    NOVA_CONF=${NOVA_CPU_CONF:-/etc/nova/nova.conf}
     $ANSIBLE all --sudo -f 5 -i "$WORKSPACE/inventory" -m ini_file -a  "dest=${NOVA_CONF} section=libvirt option=rbd_user value=${CINDER_CEPH_USER}"
     $ANSIBLE all --sudo -f 5 -i "$WORKSPACE/inventory" -m ini_file -a  "dest=${NOVA_CONF} section=libvirt option=rbd_secret_uuid value=${CINDER_CEPH_UUID}"
     $ANSIBLE all --sudo -f 5 -i "$WORKSPACE/inventory" -m ini_file -a  "dest=${NOVA_CONF} section=libvirt option=inject_key value=false"

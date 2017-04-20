@@ -14,6 +14,7 @@ cd $BASE/new/tempest
 
 source $BASE/new/devstack/functions
 source $BASE/new/devstack/functions-common
+source $BASE/new/devstack/lib/nova
 source $WORKSPACE/devstack-gate/functions.sh
 source $BASE/new/nova/nova/tests/live_migration/hooks/utils.sh
 source $BASE/new/nova/nova/tests/live_migration/hooks/nfs.sh
