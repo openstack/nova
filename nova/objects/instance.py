@@ -1360,6 +1360,12 @@ def _migrate_instance_keypairs(ctxt, count):
     count_all = len(db_extras)
     count_hit = 0
     for db_extra in db_extras:
+        if db_extra.instance is None:
+            LOG.error(
+                ('Instance %(uuid)s has been purged, but an instance_extra '
+                 'record remains for it. Unable to migrate.'),
+                {'uuid': db_extra.instance_uuid})
+            continue
         key_name = db_extra.instance.key_name
         keypairs = objects.KeyPairList(objects=[])
         if key_name:
