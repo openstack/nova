@@ -1468,22 +1468,14 @@ class _ComputeAPIUnitTestMixIn(object):
                 flavor=instance.flavor)
             quota_mock.commit.assert_called_once_with()
             expected_target_cell_calls = [
-                # Get the instance.flavor.
-                mock.call(self.context, cell0),
-                mock.call().__enter__(),
-                mock.call().__exit__(None, None, None),
                 # Create the quota reservation.
                 mock.call(self.context, None),
-                mock.call().__enter__(),
-                mock.call().__exit__(None, None, None),
-                # Destroy the instance.
-                mock.call(self.context, cell0),
                 mock.call().__enter__(),
                 mock.call().__exit__(None, None, None),
             ]
             target_cell_mock.assert_has_calls(expected_target_cell_calls)
             notify_mock.assert_called_once_with(
-                self.compute_api.notifier, mock.sentinel.cctxt, instance)
+                self.compute_api.notifier, self.context, instance)
             destroy_mock.assert_called_once_with()
 
     @mock.patch('nova.context.target_cell')
@@ -1531,25 +1523,10 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context.project_id, instance.user_id,
                 flavor=instance.flavor)
             notify_mock.assert_called_once_with(
-                self.compute_api.notifier, mock.sentinel.cctxt, instance)
+                self.compute_api.notifier, self.context, instance)
             destroy_mock.assert_called_once_with()
             expected_target_cell_calls = [
-                # Get the instance.flavor.
-                mock.call(self.context, cell0),
-                mock.call().__enter__(),
-                mock.call().__exit__(None, None, None),
                 # Create the quota reservation.
-                mock.call(self.context, None),
-                mock.call().__enter__(),
-                mock.call().__exit__(None, None, None),
-                # Destroy the instance.
-                mock.call(self.context, cell0),
-                mock.call().__enter__(),
-                mock.call().__exit__(
-                    exception.InstanceNotFound,
-                    destroy_mock.side_effect,
-                    mock.ANY),
-                # Rollback the quota reservation.
                 mock.call(self.context, None),
                 mock.call().__enter__(),
                 mock.call().__exit__(None, None, None),
