@@ -529,3 +529,10 @@ user documentation.
 
   To query attached neutron interfaces for a specific server, the API
   `GET /servers/{server_uuid}/os-interface` can be used.
+
+2.45
+----
+
+  The ``createImage`` and ``createBackup`` server action APIs no longer return
+  a ``Location`` header in the response for the snapshot image, they now return
+  a json dict in the response body with an ``image_id`` key and uuid value.

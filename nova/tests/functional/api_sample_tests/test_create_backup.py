@@ -36,3 +36,21 @@ class CreateBackupSamplesJsonTest(test_servers.ServersSampleBase):
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'create-backup-req', {})
         self.assertEqual(202, response.status_code)
+        # we should have gotten a location header back
+        self.assertIn('location', response.headers)
+        # we should not have gotten a body back
+        self.assertEqual(0, len(response.content))
+
+
+class CreateBackupSamplesJsonTestv2_45(CreateBackupSamplesJsonTest):
+    """Tests the createBackup server action API with microversion 2.45."""
+    microversion = '2.45'
+    scenarios = [('v2_45', {'api_major_version': 'v2.1'})]
+
+    def test_post_backup_server(self):
+        # Get api samples to backup server request.
+        response = self._do_post('servers/%s/action' % self.uuid,
+                                 'create-backup-req', {})
+        self._verify_response('create-backup-resp', {}, response, 202)
+        # assert that no location header was returned
+        self.assertNotIn('location', response.headers)

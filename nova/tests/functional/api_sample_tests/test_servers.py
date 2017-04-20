@@ -225,8 +225,7 @@ class ServerSortKeysJsonTests(ServersSampleBase):
                               200)
 
 
-class ServersActionsJsonTest(ServersSampleBase):
-
+class _ServersActionsJsonTestMixin(object):
     def _test_server_action(self, uuid, action, req_tpl,
                             subs=None, resp_tpl=None, code=202):
         subs = subs or {}
@@ -240,6 +239,10 @@ class ServersActionsJsonTest(ServersSampleBase):
         else:
             self.assertEqual(code, response.status_code)
             self.assertEqual("", response.text)
+        return response
+
+
+class ServersActionsJsonTest(ServersSampleBase, _ServersActionsJsonTestMixin):
 
     def test_server_reboot_hard(self):
         uuid = self._post_server()
@@ -290,12 +293,6 @@ class ServersActionsJsonTest(ServersSampleBase):
         self._test_server_action(uuid, "confirmResize",
                                  'server-action-confirm-resize',
                                  code=204)
-
-    def test_server_create_image(self):
-        uuid = self._post_server()
-        self._test_server_action(uuid, 'createImage',
-                                 'server-action-create-image',
-                                 {'name': 'foo-image'})
 
     def _wait_for_active_server(self, uuid):
         """Wait 10 seconds for the server to be ACTIVE, else fail.
@@ -368,6 +365,34 @@ class ServersActionsJson219Test(ServersSampleBase):
         subs = params.copy()
         del subs['uuid']
         self._verify_response('server-action-rebuild-resp', subs, resp, 202)
+
+
+class ServersCreateImageJsonTest(ServersSampleBase,
+                                 _ServersActionsJsonTestMixin):
+    """Tests the createImage server action API against 2.1."""
+    def test_server_create_image(self):
+        uuid = self._post_server()
+        resp = self._test_server_action(uuid, 'createImage',
+                                        'server-action-create-image',
+                                        {'name': 'foo-image'})
+        # we should have gotten a location header back
+        self.assertIn('location', resp.headers)
+        # we should not have gotten a body back
+        self.assertEqual(0, len(resp.content))
+
+
+class ServersCreateImageJsonTestv2_45(ServersCreateImageJsonTest):
+    """Tests the createImage server action API against 2.45."""
+    microversion = '2.45'
+    scenarios = [('v2_45', {'api_major_version': 'v2.1'})]
+
+    def test_server_create_image(self):
+        uuid = self._post_server()
+        resp = self._test_server_action(
+            uuid, 'createImage', 'server-action-create-image',
+            {'name': 'foo-image'}, 'server-action-create-image-resp')
+        # assert that no location header was returned
+        self.assertNotIn('location', resp.headers)
 
 
 class ServerStartStopJsonTest(ServersSampleBase):

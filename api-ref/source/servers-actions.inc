@@ -244,7 +244,7 @@ Request
   - rotation: backup_rotation
   - metadata: metadata
 
-**Example Create Server Back Up (Createbackup Action)**
+**Example Create Server Back Up (createBackup Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-create-backup/create-backup-req.json
    :language: javascript
@@ -254,7 +254,13 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-  - image_location: image_location
+  - Location: image_location
+  - image_id: snapshot_id_resp_2_45
+
+**Example Create Server Back Up (v2.45)**
+
+.. literalinclude:: ../../doc/api_samples/os-create-backup/v2.45/create-backup-resp.json
+   :language: javascript
 
 
 Create Image (createImage Action)
@@ -329,6 +335,12 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - Location: image_location
+  - image_id: snapshot_id_resp_2_45
+
+**Example Create Image (v2.45)**
+
+.. literalinclude:: ../../doc/api_samples/servers/v2.45/server-action-create-image-resp.json
+   :language: javascript
 
 
 Lock Server (lock Action)
