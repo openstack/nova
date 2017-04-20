@@ -1973,8 +1973,20 @@ class TestInstanceObjectMisc(test.TestCase):
                                  key_name='missingkey')
         inst3.create()
 
+        inst4 = objects.Instance(context=ctxt,
+                                 user_id=ctxt.user_id,
+                                 project_id=ctxt.project_id,
+                                 key_name='missingkey')
+        inst4.create()
+        inst4.destroy()
+
+        # NOTE(danms): Add an orphaned instance_extra record for
+        # a totally invalid instance to make sure we don't explode.
+        # See bug 1684861 for more information.
+        db.instance_extra_update_by_uuid(ctxt, 'foo', {})
+
         hit, done = instance.migrate_instance_keypairs(ctxt, 10)
-        self.assertEqual(2, hit)
+        self.assertEqual(3, hit)
         self.assertEqual(2, done)
         db_extra = db.instance_extra_get_by_instance_uuid(
             ctxt, inst1.uuid, ['keypairs'])
