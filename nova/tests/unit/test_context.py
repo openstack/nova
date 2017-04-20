@@ -305,9 +305,9 @@ class ContextTestCase(test.NoDBTestCase):
         mapping = objects.CellMapping(database_connection='fake://',
                                       transport_url='fake://',
                                       uuid=uuids.cell)
-        with context.target_cell(ctxt, mapping):
-            self.assertEqual(ctxt.db_connection, mock.sentinel.cdb)
-            self.assertEqual(ctxt.mq_connection, mock.sentinel.cmq)
+        with context.target_cell(ctxt, mapping) as cctxt:
+            self.assertEqual(cctxt.db_connection, mock.sentinel.cdb)
+            self.assertEqual(cctxt.mq_connection, mock.sentinel.cmq)
         self.assertEqual(mock.sentinel.db_conn, ctxt.db_connection)
         self.assertEqual(mock.sentinel.mq_conn, ctxt.mq_connection)
 
@@ -324,9 +324,9 @@ class ContextTestCase(test.NoDBTestCase):
                                       roles=['admin', 'weasel'])
         ctxt.db_connection = mock.sentinel.db_conn
         ctxt.mq_connection = mock.sentinel.mq_conn
-        with context.target_cell(ctxt, None):
-            self.assertIsNone(ctxt.db_connection)
-            self.assertIsNone(ctxt.mq_connection)
+        with context.target_cell(ctxt, None) as cctxt:
+            self.assertIsNone(cctxt.db_connection)
+            self.assertIsNone(cctxt.mq_connection)
         self.assertEqual(mock.sentinel.db_conn, ctxt.db_connection)
         self.assertEqual(mock.sentinel.mq_conn, ctxt.mq_connection)
 
@@ -346,16 +346,16 @@ class ContextTestCase(test.NoDBTestCase):
                                       transport_url='fake://mq',
                                       uuid=uuids.cell)
         # First call should create new connection objects.
-        with context.target_cell(ctxt, mapping):
-            self.assertEqual(mock.sentinel.db_conn_obj, ctxt.db_connection)
-            self.assertEqual(mock.sentinel.mq_conn_obj, ctxt.mq_connection)
+        with context.target_cell(ctxt, mapping) as cctxt:
+            self.assertEqual(mock.sentinel.db_conn_obj, cctxt.db_connection)
+            self.assertEqual(mock.sentinel.mq_conn_obj, cctxt.mq_connection)
         mock_create_cm.assert_called_once_with('fake://db')
         mock_create_tport.assert_called_once_with('fake://mq')
         # Second call should use cached objects.
         mock_create_cm.reset_mock()
         mock_create_tport.reset_mock()
-        with context.target_cell(ctxt, mapping):
-            self.assertEqual(mock.sentinel.db_conn_obj, ctxt.db_connection)
-            self.assertEqual(mock.sentinel.mq_conn_obj, ctxt.mq_connection)
+        with context.target_cell(ctxt, mapping) as cctxt:
+            self.assertEqual(mock.sentinel.db_conn_obj, cctxt.db_connection)
+            self.assertEqual(mock.sentinel.mq_conn_obj, cctxt.mq_connection)
         mock_create_cm.assert_not_called()
         mock_create_tport.assert_not_called()

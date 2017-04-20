@@ -406,22 +406,16 @@ def set_target_cell(context, cell_mapping):
 
 @contextmanager
 def target_cell(context, cell_mapping):
-    """Temporarily adds database connection information to the context
-    for communicating with the given target cell.
+    """Yields a new context with connection information for a specific cell.
 
-    This context manager makes a temporary change to the context
-    and restores it when complete.
+    This function yields a copy of the provided context, which is targeted to
+    the referenced cell for MQ and DB connections.
 
-    Passing None for cell_mapping will untarget the context temporarily.
+    Passing None for cell_mapping will yield an untargetd copy of the context.
 
     :param context: The RequestContext to add connection information
     :param cell_mapping: An objects.CellMapping object or None
     """
-    original_db_connection = context.db_connection
-    original_mq_connection = context.mq_connection
-    set_target_cell(context, cell_mapping)
-    try:
-        yield context
-    finally:
-        context.db_connection = original_db_connection
-        context.mq_connection = original_mq_connection
+    cctxt = copy.copy(context)
+    set_target_cell(cctxt, cell_mapping)
+    yield cctxt
