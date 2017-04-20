@@ -2294,8 +2294,10 @@ class IronicDriverConsoleTestCase(test.NoDBTestCase):
         self.assertTrue(mock_log.error.called)
 
     @mock.patch.object(ironic_driver, '_CONSOLE_STATE_CHECKING_INTERVAL', 0.05)
+    @mock.patch.object(loopingcall, 'BackOffLoopingCall')
     @mock.patch.object(ironic_driver, 'LOG', autospec=True)
     def test__get_node_console_with_reset_wait_timeout(self, mock_log,
+                                                       mock_looping,
                                                        mock_node):
         CONF.set_override('serial_console_state_timeout', 1, group='ironic')
         temp_data = {'target_mode': True}
@@ -2304,8 +2306,6 @@ class IronicDriverConsoleTestCase(test.NoDBTestCase):
             return self._create_console_data(enabled=temp_data['target_mode'])
 
         def _fake_set_console_mode(node_uuid, mode):
-            # This causes the _wait_state() will timeout because
-            # the target mode never gets set successfully.
             temp_data['target_mode'] = not mode
 
         def _fake_log_error(msg, *args, **kwargs):
@@ -2316,13 +2316,20 @@ class IronicDriverConsoleTestCase(test.NoDBTestCase):
         mock_node.set_console_mode.side_effect = _fake_set_console_mode
         mock_log.error.side_effect = _fake_log_error
 
+        mock_timer = mock_looping.return_value
+        mock_event = mock_timer.start.return_value
+        mock_event.wait.side_effect = loopingcall.LoopingCallTimeOut
+
         self.assertRaises(exception.ConsoleNotAvailable,
                           self.driver._get_node_console_with_reset,
                           self.instance)
 
-        self.assertGreater(mock_node.get_console.call_count, 1)
+        self.assertEqual(mock_node.get_console.call_count, 1)
         self.assertEqual(2, mock_node.set_console_mode.call_count)
         self.assertTrue(mock_log.error.called)
+
+        mock_timer.start.assert_called_with(starting_interval=0.05, timeout=1,
+                                            jitter=0.5)
 
     def test_get_serial_console_socat(self, mock_node):
         temp_data = {'target_mode': True}
