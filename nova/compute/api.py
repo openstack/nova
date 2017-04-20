@@ -2788,7 +2788,8 @@ class API(base.Base):
         if compute_utils.is_volume_backed_instance(context, instance):
             LOG.info(_LI("It's not supported to backup volume backed "
                          "instance."), instance=instance)
-            raise exception.InvalidRequest()
+            raise exception.InvalidRequest(
+                _('Backup is not supported for volume-backed instances.'))
         else:
             image_meta = self._create_image(context, instance,
                                             name, 'backup',

@@ -20,6 +20,8 @@ Create Server Back Up (createBackup Action)
 
 Creates a back up of a server.
 
+.. note:: This API is not supported for volume-backed instances.
+
 Specify the ``createBackup`` action in the request body.
 
 Policy defaults enable only users with the administrative role or the

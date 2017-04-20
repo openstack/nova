@@ -14,12 +14,15 @@
 #    under the License.
 
 import mock
+from oslo_utils import timeutils
+import six
 import webob
 
 from nova.api.openstack import common
 from nova.api.openstack.compute import create_backup \
         as create_backup_v21
 from nova.compute import api
+from nova.compute import utils as compute_utils
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
@@ -334,8 +337,9 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
                           self.req, fakes.FAKE_UUID, body=body)
 
     @mock.patch.object(common, 'check_img_metadata_properties_quota')
-    @mock.patch.object(api.API, 'backup')
-    def test_backup_volume_backed_instance(self, mock_backup,
+    @mock.patch.object(compute_utils, 'is_volume_backed_instance',
+                       return_value=True)
+    def test_backup_volume_backed_instance(self, mock_is_volume_backed,
                                            mock_check_image):
         body = {
             'createBackup': {
@@ -345,18 +349,20 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
             },
         }
 
-        instance = fake_instance.fake_instance_obj(self.context)
+        updates = {'vm_state': 'active',
+                   'task_state': None,
+                   'launched_at': timeutils.utcnow()}
+        instance = fake_instance.fake_instance_obj(self.context, **updates)
         instance.image_ref = None
         self.mock_get.return_value = instance
-        mock_backup.side_effect = exception.InvalidRequest()
 
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller._create_backup,
-                          self.req, instance['uuid'], body=body)
+        ex = self.assertRaises(webob.exc.HTTPBadRequest,
+                               self.controller._create_backup,
+                               self.req, instance['uuid'], body=body)
         mock_check_image.assert_called_once_with(self.context, {})
-        mock_backup.assert_called_once_with(self.context, instance, 'BackupMe',
-                                              'daily', 3,
-                                              extra_properties={})
+        mock_is_volume_backed.assert_called_once_with(self.context, instance)
+        self.assertIn('Backup is not supported for volume-backed instances',
+                      six.text_type(ex))
 
 
 class CreateBackupPolicyEnforcementv21(test.NoDBTestCase):
