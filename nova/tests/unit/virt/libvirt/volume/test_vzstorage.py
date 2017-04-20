@@ -40,7 +40,7 @@ class LibvirtVZStorageTestCase(test_volume.LibvirtVolumeBaseTestCase):
         """Test that custom options cannot duplicate the configured"""
         bad_opts = [
                      ["-c", "clus111", "-v"],
-                     ["-l", "/var/log/pstorage.log", "-L", "5x5"],
+                     ["-l", "/var/log/vstorage.log", "-L", "5x5"],
                      ["-u", "user1", "-p", "pass1"],
                      ["-v", "-R", "100", "-C", "/ssd"],
                    ]
@@ -83,7 +83,7 @@ class LibvirtVZStorageTestCase(test_volume.LibvirtVolumeBaseTestCase):
         self.assertEqual('vstorage://testcluster',
                          connection_info['data']['device_path'])
         self.assertEqual('-u stack -g qemu -m 0770 '
-                         '-l /var/log/pstorage/testcluster/nova.log.gz '
+                         '-l /var/log/vstorage/testcluster/nova.log.gz '
                          '-C /tmp/ssd-cache/testcluster',
                           connection_info['data']['options'])
 

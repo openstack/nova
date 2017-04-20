@@ -974,7 +974,7 @@ Related options:
 """
               ),
     cfg.StrOpt('vzstorage_log_path',
-               default='/var/log/pstorage/%(cluster_name)s/nova.log.gz',
+               default='/var/log/vstorage/%(cluster_name)s/nova.log.gz',
                help="""
 Path to vzstorage client log.
 
