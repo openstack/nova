@@ -72,8 +72,8 @@ class ServerTagsController(wsgi.Controller):
         try:
             im = objects.InstanceMapping.get_by_instance_uuid(context,
                                                               server_id)
-            with nova_context.target_cell(context, im.cell_mapping):
-                exists = objects.Tag.exists(context, server_id, id)
+            with nova_context.target_cell(context, im.cell_mapping) as cctxt:
+                exists = objects.Tag.exists(cctxt, server_id, id)
         except (exception.InstanceNotFound,
                 exception.InstanceMappingNotFound) as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
@@ -92,8 +92,8 @@ class ServerTagsController(wsgi.Controller):
         try:
             im = objects.InstanceMapping.get_by_instance_uuid(context,
                                                               server_id)
-            with nova_context.target_cell(context, im.cell_mapping):
-                tags = objects.TagList.get_by_resource_id(context, server_id)
+            with nova_context.target_cell(context, im.cell_mapping) as cctxt:
+                tags = objects.TagList.get_by_resource_id(cctxt, server_id)
         except (exception.InstanceNotFound,
                 exception.InstanceMappingNotFound) as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
@@ -108,8 +108,8 @@ class ServerTagsController(wsgi.Controller):
         context.can(st_policies.POLICY_ROOT % 'update')
         im = _get_instance_mapping(context, server_id)
 
-        with nova_context.target_cell(context, im.cell_mapping):
-            self._check_instance_in_valid_state(context, server_id,
+        with nova_context.target_cell(context, im.cell_mapping) as cctxt:
+            self._check_instance_in_valid_state(cctxt, server_id,
                                                 'update tag')
 
         try:
@@ -121,8 +121,8 @@ class ServerTagsController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         try:
-            with nova_context.target_cell(context, im.cell_mapping):
-                tags = objects.TagList.get_by_resource_id(context, server_id)
+            with nova_context.target_cell(context, im.cell_mapping) as cctxt:
+                tags = objects.TagList.get_by_resource_id(cctxt, server_id)
         except exception.InstanceNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
@@ -135,10 +135,9 @@ class ServerTagsController(wsgi.Controller):
             # NOTE(snikitin): server already has specified tag
             return webob.Response(status_int=204)
 
-        tag = objects.Tag(context=context, resource_id=server_id, tag=id)
-
         try:
-            with nova_context.target_cell(context, im.cell_mapping):
+            with nova_context.target_cell(context, im.cell_mapping) as cctxt:
+                tag = objects.Tag(context=cctxt, resource_id=server_id, tag=id)
                 tag.create()
         except exception.InstanceNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
@@ -156,13 +155,13 @@ class ServerTagsController(wsgi.Controller):
         context.can(st_policies.POLICY_ROOT % 'update_all')
         im = _get_instance_mapping(context, server_id)
 
-        with nova_context.target_cell(context, im.cell_mapping):
-            self._check_instance_in_valid_state(context, server_id,
+        with nova_context.target_cell(context, im.cell_mapping) as cctxt:
+            self._check_instance_in_valid_state(cctxt, server_id,
                                                 'update tags')
 
         try:
-            with nova_context.target_cell(context, im.cell_mapping):
-                tags = objects.TagList.create(context, server_id, body['tags'])
+            with nova_context.target_cell(context, im.cell_mapping) as cctxt:
+                tags = objects.TagList.create(cctxt, server_id, body['tags'])
         except exception.InstanceNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
@@ -176,13 +175,13 @@ class ServerTagsController(wsgi.Controller):
         context.can(st_policies.POLICY_ROOT % 'delete')
         im = _get_instance_mapping(context, server_id)
 
-        with nova_context.target_cell(context, im.cell_mapping):
-            self._check_instance_in_valid_state(context, server_id,
+        with nova_context.target_cell(context, im.cell_mapping) as cctxt:
+            self._check_instance_in_valid_state(cctxt, server_id,
                                                 'delete tag')
 
         try:
-            with nova_context.target_cell(context, im.cell_mapping):
-                objects.Tag.destroy(context, server_id, id)
+            with nova_context.target_cell(context, im.cell_mapping) as cctxt:
+                objects.Tag.destroy(cctxt, server_id, id)
         except (exception.InstanceTagNotFound,
                 exception.InstanceNotFound) as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
@@ -195,13 +194,13 @@ class ServerTagsController(wsgi.Controller):
         context.can(st_policies.POLICY_ROOT % 'delete_all')
         im = _get_instance_mapping(context, server_id)
 
-        with nova_context.target_cell(context, im.cell_mapping):
-            self._check_instance_in_valid_state(context, server_id,
+        with nova_context.target_cell(context, im.cell_mapping) as cctxt:
+            self._check_instance_in_valid_state(cctxt, server_id,
                                                 'delete tags')
 
         try:
-            with nova_context.target_cell(context, im.cell_mapping):
-                objects.TagList.destroy(context, server_id)
+            with nova_context.target_cell(context, im.cell_mapping) as cctxt:
+                objects.TagList.destroy(cctxt, server_id)
         except exception.InstanceNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 

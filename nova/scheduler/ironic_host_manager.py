@@ -112,9 +112,9 @@ class IronicHostManager(host_manager.HostManager):
         if not computes_by_cell:
             computes_by_cell = {}
             for cell in self.cells:
-                with context_module.target_cell(context, cell):
+                with context_module.target_cell(context, cell) as cctxt:
                     computes_by_cell[cell] = (
-                        objects.ComputeNodeList.get_all(context).objects)
+                        objects.ComputeNodeList.get_all(cctxt).objects)
 
         non_ironic_computes = {cell: [c for c in compute_nodes
                                       if not self._is_ironic_compute(c)]

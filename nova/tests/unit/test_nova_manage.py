@@ -552,7 +552,7 @@ Archiving.....stopped
             mock_target_cell.assert_called_once_with(ctxt, 'map')
 
             db_sync_calls = [
-                    mock.call(4, context=ctxt),
+                    mock.call(4, context=cell_ctxt),
                     mock.call(4)
             ]
             mock_db_sync.assert_has_calls(db_sync_calls)
@@ -1268,6 +1268,8 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
                                            transport_url='fake:///mq')
         cell_mapping.create()
 
+        mock_target_cell.return_value.__enter__.return_value = ctxt
+
         self.commands.discover_hosts(cell_uuid=cell_mapping.uuid)
 
         # Check that the host mappings were created
@@ -1343,10 +1345,12 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
 
         compute_nodes = self._return_compute_nodes(ctxt, num=2)
         # Create the first compute node in cell1's db
-        with context.target_cell(ctxt, cell_mapping1):
+        with context.target_cell(ctxt, cell_mapping1) as cctxt:
+            compute_nodes[0]._context = cctxt
             compute_nodes[0].create()
         # Create the first compute node in cell2's db
-        with context.target_cell(ctxt, cell_mapping2):
+        with context.target_cell(ctxt, cell_mapping2) as cctxt:
+            compute_nodes[1]._context = cctxt
             compute_nodes[1].create()
 
         self.commands.discover_hosts(verbose=True)

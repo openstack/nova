@@ -686,8 +686,8 @@ def get_metadata_by_instance_id(instance_id, address, ctxt=None):
                                                 expected_attrs=attrs)
         return InstanceMetadata(instance, address)
 
-    with context.target_cell(ctxt, im.cell_mapping):
-        instance = objects.Instance.get_by_uuid(ctxt, instance_id,
+    with context.target_cell(ctxt, im.cell_mapping) as cctxt:
+        instance = objects.Instance.get_by_uuid(cctxt, instance_id,
                                                 expected_attrs=attrs)
         return InstanceMetadata(instance, address)
 

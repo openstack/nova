@@ -1440,6 +1440,7 @@ class _ComputeAPIUnitTestMixIn(object):
         instance = self._create_instance_obj({'host': None})
         cell0 = objects.CellMapping(uuid=objects.CellMapping.CELL0_UUID)
         quota_mock = mock.MagicMock()
+        target_cell_mock().__enter__.return_value = mock.sentinel.cctxt
 
         with test.nested(
             mock.patch.object(self.compute_api, '_delete_while_booting',
@@ -1462,7 +1463,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, instance.uuid)
             _get_flavor_for_reservation.assert_called_once_with(instance)
             _create_reservations.assert_called_once_with(
-                self.context, instance, instance.task_state,
+                mock.sentinel.cctxt, instance, instance.task_state,
                 self.context.project_id, instance.user_id,
                 flavor=instance.flavor)
             quota_mock.commit.assert_called_once_with()
@@ -1482,7 +1483,7 @@ class _ComputeAPIUnitTestMixIn(object):
             ]
             target_cell_mock.assert_has_calls(expected_target_cell_calls)
             notify_mock.assert_called_once_with(
-                self.compute_api.notifier, self.context, instance)
+                self.compute_api.notifier, mock.sentinel.cctxt, instance)
             destroy_mock.assert_called_once_with()
 
     @mock.patch('nova.context.target_cell')
@@ -1503,6 +1504,7 @@ class _ComputeAPIUnitTestMixIn(object):
         quota_mock = mock.MagicMock()
         destroy_mock.side_effect = exception.InstanceNotFound(
             instance_id=instance.uuid)
+        target_cell_mock().__enter__.return_value = mock.sentinel.cctxt
 
         with test.nested(
             mock.patch.object(self.compute_api, '_delete_while_booting',
@@ -1525,11 +1527,11 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, instance.uuid)
             _get_flavor_for_reservation.assert_called_once_with(instance)
             _create_reservations.assert_called_once_with(
-                self.context, instance, instance.task_state,
+                mock.sentinel.cctxt, instance, instance.task_state,
                 self.context.project_id, instance.user_id,
                 flavor=instance.flavor)
             notify_mock.assert_called_once_with(
-                self.compute_api.notifier, self.context, instance)
+                self.compute_api.notifier, mock.sentinel.cctxt, instance)
             destroy_mock.assert_called_once_with()
             expected_target_cell_calls = [
                 # Get the instance.flavor.
@@ -1591,6 +1593,7 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch.object(context, 'target_cell')
     def test_lookup_instance_cell_mapping(self, mock_target_cell):
         instance = self._create_instance_obj()
+        mock_target_cell.return_value.__enter__.return_value = self.context
 
         inst_map = objects.InstanceMapping(
             cell_mapping=objects.CellMapping(database_connection='',
@@ -4692,6 +4695,8 @@ class _ComputeAPIUnitTestMixIn(object):
             objects.CellMapping(uuid=uuids.cell1, name='1'),
         ]
 
+        cctxt = mock_target_cell.return_value.__enter__.return_value
+
         with mock.patch.object(self.compute_api,
                                '_get_instances_by_filters') as mock_inst_get:
             mock_inst_get.side_effect = [objects.InstanceList(
@@ -4709,7 +4714,7 @@ class _ComputeAPIUnitTestMixIn(object):
             if self.cell_type is None:
                 for cm in mock_cm_get_all.return_value:
                     mock_target_cell.assert_any_call(self.context, cm)
-            inst_get_calls = [mock.call(self.context, {'foo': 'bar'},
+            inst_get_calls = [mock.call(cctxt, {'foo': 'bar'},
                                         limit=10, marker='fake-marker',
                                         expected_attrs=None, sort_keys=['baz'],
                                         sort_dirs=['desc']),
@@ -4747,6 +4752,7 @@ class _ComputeAPIUnitTestMixIn(object):
             cell_mapping,
             objects.CellMapping(uuid=uuids.cell1, name='1'),
         ]
+        cctxt = mock_target_cell.return_value.__enter__.return_value
 
         with mock.patch.object(self.compute_api,
                                '_get_instances_by_filters') as mock_inst_get:
@@ -4765,7 +4771,7 @@ class _ComputeAPIUnitTestMixIn(object):
             if self.cell_type is None:
                 for cm in mock_cm_get_all.return_value:
                     mock_target_cell.assert_any_call(self.context, cm)
-            inst_get_calls = [mock.call(self.context, {'foo': 'bar'},
+            inst_get_calls = [mock.call(cctxt, {'foo': 'bar'},
                                         limit=8, marker='fake-marker',
                                         expected_attrs=None, sort_keys=['baz'],
                                         sort_dirs=['desc']),
@@ -4804,6 +4810,7 @@ class _ComputeAPIUnitTestMixIn(object):
             objects.CellMapping(uuid=uuids.cell1, name='1'),
         ]
         marker = uuids.marker
+        cctxt = mock_target_cell.return_value.__enter__.return_value
 
         with mock.patch.object(self.compute_api,
                                '_get_instances_by_filters') as mock_inst_get:
@@ -4822,7 +4829,7 @@ class _ComputeAPIUnitTestMixIn(object):
             if self.cell_type is None:
                 for cm in mock_cm_get_all.return_value:
                     mock_target_cell.assert_any_call(self.context, cm)
-            inst_get_calls = [mock.call(self.context, {'foo': 'bar'},
+            inst_get_calls = [mock.call(cctxt, {'foo': 'bar'},
                                         limit=10, marker=marker,
                                         expected_attrs=None, sort_keys=['baz'],
                                         sort_dirs=['desc']),

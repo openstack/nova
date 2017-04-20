@@ -119,11 +119,11 @@ class ConsoleAuthManager(manager.Manager):
 
         mapping = objects.InstanceMapping.get_by_instance_uuid(context,
                                                                instance_uuid)
-        with nova_context.target_cell(context, mapping.cell_mapping):
-            instance = objects.Instance.get_by_uuid(context, instance_uuid)
+        with nova_context.target_cell(context, mapping.cell_mapping) as cctxt:
+            instance = objects.Instance.get_by_uuid(cctxt, instance_uuid)
 
             return self.compute_rpcapi.validate_console_port(
-                context,
+                cctxt,
                 instance,
                 token['port'],
                 token['console_type'])

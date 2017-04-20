@@ -73,9 +73,10 @@ class ServerExternalEventsController(wsgi.Controller):
 
                     # Load migration_context and info_cache here in a single DB
                     # operation because we need them later on
-                    with nova_context.target_cell(context, cell_mapping):
+                    with nova_context.target_cell(context,
+                                                  cell_mapping) as cctxt:
                         instance = objects.Instance.get_by_uuid(
-                            context, event.instance_uuid,
+                            cctxt, event.instance_uuid,
                             expected_attrs=['migration_context', 'info_cache'])
                     instances[event.instance_uuid] = instance
                 except (exception.InstanceNotFound,

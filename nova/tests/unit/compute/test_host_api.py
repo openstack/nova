@@ -176,8 +176,8 @@ class ComputeHostAPITestCase(test.TestCase):
     def test_service_get_all_cells(self):
         cells = objects.CellMappingList.get_all(self.ctxt)
         for cell in cells:
-            with context.target_cell(self.ctxt, cell):
-                objects.Service(context=self.ctxt,
+            with context.target_cell(self.ctxt, cell) as cctxt:
+                objects.Service(context=cctxt,
                                 binary='nova-compute',
                                 host='host-%s' % cell.uuid).create()
         services = self.host_api.service_get_all(self.ctxt, all_cells=True)
