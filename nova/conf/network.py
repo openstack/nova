@@ -36,7 +36,8 @@ Enable neutron as the backend for networking.
 Determine whether to use Neutron or Nova Network as the back end. Set to true
 to use neutron.
 """),
-    # TODO(sfinucan): This option is tied into the XenAPI and VMWare drivers.
+    # TODO(sfinucan): This option is tied into the XenAPI, VMWare and Libvirt
+    # drivers.
     # We should remove this dependency by either adding a new opt for each
     # driver or simply removing the offending code. Until then we cannot
     # deprecate this option.
@@ -44,8 +45,10 @@ to use neutron.
         default=False,
         help="""
 This option determines whether the network setup information is injected into
-the VM before it is booted. While it was originally designed to be used only by
-nova-network, it is also used by the vmware and xenapi virt drivers to control
+the VM before it is booted. While it was originally designed to be used only
+by nova-network, it is also used by the vmware and xenapi virt drivers to
+control whether network information is injected into a VM. The libvirt virt
+driver also uses it when we use config_drive to configure network to control
 whether network information is injected into a VM.
 """),
     cfg.StrOpt("flat_network_bridge",
