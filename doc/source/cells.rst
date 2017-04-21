@@ -386,7 +386,8 @@ database yet. This will set up a single cell Nova deployment.
    configuration file if not specified on the command line.
 
 6. Configure and start your compute hosts. Before step 7, make sure you have
-   compute hosts in the database by running ``nova hypervisor-list``.
+   compute hosts in the database by running
+   ``nova service-list --binary nova-compute``.
 
 7. Run the ``discover_hosts`` command to map compute hosts to the single cell::
 
