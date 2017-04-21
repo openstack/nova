@@ -44,6 +44,7 @@ from nova.network.neutronv2 import constants
 from nova import objects
 from nova.objects import network_request as net_req_obj
 from nova.pci import manager as pci_manager
+from nova.pci import request as pci_request
 from nova.pci import utils as pci_utils
 from nova.pci import whitelist as pci_whitelist
 from nova import policy
@@ -3146,7 +3147,7 @@ class TestNeutronv2(TestNeutronv2Base):
         mock_client.show_port.return_value = test_port
         mock_client.list_extensions.return_value = test_ext_list
         mock_client.show_network.return_value = test_net
-        vnic_type, phynet_name = api._get_port_vnic_info(
+        vnic_type, phynet_name, trusted = api._get_port_vnic_info(
             self.context, mock_client, test_port['port']['id'])
 
         mock_client.show_network.assert_called_once_with(
@@ -3176,7 +3177,7 @@ class TestNeutronv2(TestNeutronv2Base):
         mock_client.show_port.return_value = test_port
         mock_client.list_extensions.return_value = test_ext_list
         mock_client.show_network.return_value = test_net
-        vnic_type, phynet_name = api._get_port_vnic_info(
+        vnic_type, phynet_name, trusted = api._get_port_vnic_info(
             self.context, mock_client, test_port['port']['id'])
 
         mock_client.show_network.assert_called_with(
@@ -3228,16 +3229,17 @@ class TestNeutronv2(TestNeutronv2Base):
         mock_client = mock_get_client()
         mock_client.show_port.return_value = test_port
         mock_client.show_network.return_value = test_net
-        vnic_type, phynet_name = api._get_port_vnic_info(
+        vnic_type, phynet_name, trusted = api._get_port_vnic_info(
             self.context, mock_client, test_port['port']['id'])
 
         mock_client.show_port.assert_called_once_with(test_port['port']['id'],
-            fields=['binding:vnic_type', 'network_id'])
+            fields=['binding:vnic_type', 'network_id', 'binding:profile'])
         mock_client.show_network.assert_called_once_with(
             test_port['port']['network_id'],
             fields='provider:physical_network')
         self.assertEqual(model.VNIC_TYPE_DIRECT, vnic_type)
         self.assertEqual('phynet1', phynet_name)
+        self.assertIsNone(trusted)
 
     def _test_get_port_vnic_info(self, mock_get_client,
                                  binding_vnic_type=None):
@@ -3255,13 +3257,14 @@ class TestNeutronv2(TestNeutronv2Base):
         mock_get_client.reset_mock()
         mock_client = mock_get_client()
         mock_client.show_port.return_value = test_port
-        vnic_type, phynet_name = api._get_port_vnic_info(
+        vnic_type, phynet_name, trusted = api._get_port_vnic_info(
             self.context, mock_client, test_port['port']['id'])
 
         mock_client.show_port.assert_called_once_with(test_port['port']['id'],
-            fields=['binding:vnic_type', 'network_id'])
+            fields=['binding:vnic_type', 'network_id', 'binding:profile'])
         self.assertEqual(model.VNIC_TYPE_NORMAL, vnic_type)
         self.assertFalse(phynet_name)
+        self.assertIsNone(trusted)
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_get_port_vnic_info_2(self, mock_get_client):
@@ -3271,38 +3274,6 @@ class TestNeutronv2(TestNeutronv2Base):
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_get_port_vnic_info_3(self, mock_get_client):
         self._test_get_port_vnic_info(mock_get_client)
-
-    @mock.patch.object(neutronapi.API, "_get_port_vnic_info")
-    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
-    def test_create_pci_requests_for_sriov_ports(self, mock_get_client,
-                                                 mock_get_port_vnic_info):
-        api = neutronapi.API()
-        self.mox.ResetAll()
-        requested_networks = objects.NetworkRequestList(
-            objects = [
-                objects.NetworkRequest(port_id=uuids.portid_1),
-                objects.NetworkRequest(network_id='net1'),
-                objects.NetworkRequest(port_id=uuids.portid_2),
-                objects.NetworkRequest(port_id=uuids.portid_3),
-                objects.NetworkRequest(port_id=uuids.portid_4),
-                objects.NetworkRequest(port_id=uuids.portid_5)])
-        pci_requests = objects.InstancePCIRequests(requests=[])
-        mock_get_port_vnic_info.side_effect = [
-                (model.VNIC_TYPE_DIRECT, 'phynet1'),
-                (model.VNIC_TYPE_NORMAL, ''),
-                (model.VNIC_TYPE_MACVTAP, 'phynet1'),
-                (model.VNIC_TYPE_MACVTAP, 'phynet2'),
-                (model.VNIC_TYPE_DIRECT_PHYSICAL, 'phynet3')
-            ]
-        api.create_pci_requests_for_sriov_ports(
-            None, pci_requests, requested_networks)
-        self.assertEqual(4, len(pci_requests.requests))
-        has_pci_request_id = [net.pci_request_id is not None for net in
-                              requested_networks.objects]
-        self.assertEqual(pci_requests.requests[3].spec[0]["dev_type"],
-                         "type-PF")
-        expected_results = [True, False, False, True, True, True]
-        self.assertEqual(expected_results, has_pci_request_id)
 
 
 class TestNeutronv2WithMock(test.TestCase):
@@ -3314,6 +3285,34 @@ class TestNeutronv2WithMock(test.TestCase):
         self.context = context.RequestContext(
             'fake-user', 'fake-project',
             auth_token='bff4a5a6b9eb4ea2a6efec6eefb77936')
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_get_port_vnic_info_trusted(self, mock_get_client):
+        test_port = {
+            'port': {'id': 'my_port_id1',
+                     'network_id': 'net-id',
+                     'binding:vnic_type': model.VNIC_TYPE_DIRECT,
+                     'binding:profile': {"trusted": "Yes"},
+            },
+        }
+        test_net = {'network': {'provider:physical_network': 'phynet1'}}
+        test_ext_list = {'extensions': []}
+
+        mock_client = mock_get_client()
+        mock_client.show_port.return_value = test_port
+        mock_client.list_extensions.return_value = test_ext_list
+        mock_client.show_network.return_value = test_net
+        vnic_type, phynet_name, trusted = self.api._get_port_vnic_info(
+            self.context, mock_client, test_port['port']['id'])
+
+        mock_client.show_port.assert_called_once_with(test_port['port']['id'],
+            fields=['binding:vnic_type', 'network_id', 'binding:profile'])
+        mock_client.show_network.assert_called_once_with(
+            test_port['port']['network_id'],
+            fields='provider:physical_network')
+        self.assertEqual(model.VNIC_TYPE_DIRECT, vnic_type)
+        self.assertEqual('phynet1', phynet_name)
+        self.assertTrue(trusted)
 
     @mock.patch('nova.network.neutronv2.api.API._show_port')
     def test_deferred_ip_port_immediate_allocation(self, mock_show):
@@ -4961,6 +4960,48 @@ class TestNeutronv2WithMock(test.TestCase):
         api.create_pci_requests_for_sriov_ports(
             self.context, pci_requests, requested_networks)
         self.assertFalse(getclient.called)
+
+    @mock.patch.object(neutronapi.API, "_get_port_vnic_info")
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_create_pci_requests_for_sriov_ports(self, getclient,
+                                                 mock_get_port_vnic_info):
+        requested_networks = objects.NetworkRequestList(
+            objects = [
+                objects.NetworkRequest(port_id=uuids.portid_1),
+                objects.NetworkRequest(network_id='net1'),
+                objects.NetworkRequest(port_id=uuids.portid_2),
+                objects.NetworkRequest(port_id=uuids.portid_3),
+                objects.NetworkRequest(port_id=uuids.portid_4),
+                objects.NetworkRequest(port_id=uuids.portid_5),
+                objects.NetworkRequest(port_id=uuids.trusted_port)])
+        pci_requests = objects.InstancePCIRequests(requests=[])
+        mock_get_port_vnic_info.side_effect = [
+                (model.VNIC_TYPE_DIRECT, 'phynet1', None),
+                (model.VNIC_TYPE_NORMAL, '', None),
+                (model.VNIC_TYPE_MACVTAP, 'phynet1', None),
+                (model.VNIC_TYPE_MACVTAP, 'phynet2', None),
+                (model.VNIC_TYPE_DIRECT_PHYSICAL, 'phynet3', None),
+                (model.VNIC_TYPE_DIRECT, 'phynet4', True)
+            ]
+        api = neutronapi.API()
+        api.create_pci_requests_for_sriov_ports(
+            self.context, pci_requests, requested_networks)
+        self.assertEqual(5, len(pci_requests.requests))
+        has_pci_request_id = [net.pci_request_id is not None for net in
+                              requested_networks.objects]
+        self.assertEqual(pci_requests.requests[3].spec[0]["dev_type"],
+                         "type-PF")
+        expected_results = [True, False, False, True, True, True, True]
+        self.assertEqual(expected_results, has_pci_request_id)
+        # Make sure only the trusted VF has the 'trusted' tag set in the spec.
+        for pci_req in pci_requests.requests:
+            spec = pci_req.spec[0]
+            if spec[pci_request.PCI_NET_TAG] == 'phynet4':
+                # trusted should be true in the spec for this request
+                self.assertIn(pci_request.PCI_TRUSTED_TAG, spec)
+                self.assertEqual('True', spec[pci_request.PCI_TRUSTED_TAG])
+            else:
+                self.assertNotIn(pci_request.PCI_TRUSTED_TAG, spec)
 
     @mock.patch.object(neutronapi, 'get_client')
     def test_associate_floating_ip_conflict(self, mock_get_client):

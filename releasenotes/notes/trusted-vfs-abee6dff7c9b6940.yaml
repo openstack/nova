@@ -1,0 +1,32 @@
+features:
+  - |
+    The libvirt compute driver now allows users to create instances
+    with SR-IOV virtual functions which will be configured as trusted.
+
+    The operator will have to create pools of devices with tag
+    trusted=true.
+
+    For example, modify ``/etc/nova/nova.conf`` and set:
+
+    .. code-block:: ini
+
+      [pci]
+      passthrough_whitelist = {"devname": "eth0", "trusted": "true",
+                               "physical_network":"sriovnet1"}
+
+    Where "eth0" is the interface name related to the physical
+    function.
+
+    Ensure that the version of ``ip-link`` on the compute host supports setting
+    the trust mode on the device.
+
+    Ports from the physical network will have to be created with a
+    binding profile to match the trusted tag. Only ports with
+    ``binding:vif_type=hw_veb`` and ``binding:vnic_type=direct`` are supported.
+
+    .. code-block:: ini
+
+      $ neutron port-create <net-id> \
+                            --name sriov_port \
+                            --vnic-type direct \
+                            --binding:profile type=dict trusted=true
