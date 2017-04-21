@@ -1601,8 +1601,10 @@ cpu_info:
     ``vendor``, ``features`` and ``topology``. The content of this field is
     hypervisor specific.
 
-    NOTE: Since version 2.28 ``cpu_info`` field is returned as a dictionary
-    instead of string.
+    .. note::
+
+      Since version 2.28 ``cpu_info`` field is returned as a dictionary
+      instead of string.
   in: body
   required: true
   type: object
@@ -1621,9 +1623,12 @@ create_info_id:
 create_info_id_resp:
   description: |
     Its the same arbitrary string which was sent in request body.
-    NOTE: This string is passed back to user as it is and not being
-    used in Nova internally. So use snapshot_id instead for further
-    operation on this snapshot.
+
+    .. note::
+
+      This string is passed back to user as it is and not being
+      used in Nova internally. So use ``snapshot_id`` instead for further
+      operation on this snapshot.
   in: body
   required: true
   type: string
@@ -4913,8 +4918,10 @@ user_data:
   description: |
     Configuration information or scripts to use upon launch. Must be Base64 encoded.
 
-    NOTE: The 'null' value allowed in Nova legacy v2 API, but due to the strict
-    input validation, it isn't allowed in Nova v2.1 API.
+    .. note::
+
+      The ``null`` value allowed in Nova legacy v2 API, but due to the strict
+      input validation, it isn't allowed in Nova v2.1 API.
   in: body
   required: false
   type: string
