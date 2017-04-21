@@ -52,6 +52,7 @@
             "state":"active",
             "task_state":null,
             "power_state":"running",
+            "tags":["tag"],
             "tenant_id":"6f70656e737461636b20342065766572",
             "terminated_at":null,
             "auto_disk_config":"MANUAL",
@@ -82,7 +83,7 @@
         },
         "nova_object.name":"InstanceCreatePayload",
         "nova_object.namespace":"nova",
-        "nova_object.version":"1.5"
+        "nova_object.version":"1.6"
     },
     "priority":"INFO",
     "publisher_id":"nova-compute:compute"

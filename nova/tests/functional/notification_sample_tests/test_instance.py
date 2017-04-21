@@ -156,7 +156,8 @@ class TestInstanceNotificationSample(
 
     def test_create_delete_server(self):
         server = self._boot_a_server(
-            extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
+            extra_params={'networks': [{'port': self.neutron.port_1['id']}],
+                          'tags': ['tag']})
         self._attach_volume_to_server(server, self.cinder.SWAP_OLD_VOL)
         self.api.delete_server(server['id'])
         self._wait_until_deleted(server)
@@ -191,7 +192,8 @@ class TestInstanceNotificationSample(
 
         server = self._boot_a_server(
             expected_status='ERROR',
-            extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
+            extra_params={'networks': [{'port': self.neutron.port_1['id']}],
+                          'tags': ['tag']})
 
         self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
 

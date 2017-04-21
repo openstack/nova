@@ -140,6 +140,9 @@ class _TestBuildRequestObject(object):
         # on build_request
         fake_req = fake_build_request.fake_db_req()
         fields = jsonutils.loads(fake_req['instance'])['nova_object.data']
+        # TODO(Kevin Zheng): clean up this workaround once
+        # build_request.get_new_instance() can handle tags.
+        fields.pop('tags', None)
         build_request = objects.BuildRequest._from_db_object(
             self.context, objects.BuildRequest(), fake_req)
         self.assertEqual(0, len(build_request.instance.obj_what_changed()))

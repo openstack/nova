@@ -1011,6 +1011,12 @@ class ComputeTaskManager(base.Base):
                     cell, instance.flavor, instance.uuid, block_device_mapping)
                 instance_tags = self._create_tags(cctxt, instance.uuid, tags)
 
+            # TODO(Kevin Zheng): clean this up once instance.create() handles
+            # tags; we do this so the instance.create notification in
+            # build_and_run_instance in nova-compute doesn't lazy-load tags
+            instance.tags = instance_tags if instance_tags \
+                else objects.TagList()
+
             # Update mapping for instance. Normally this check is guarded by
             # a try/except but if we're here we know that a newer nova-api
             # handled the build process and would have created the mapping

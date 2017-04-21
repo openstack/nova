@@ -385,7 +385,7 @@ notification_object_data = {
     '1.0-a73147b93b520ff0061865849d3dfa56',
     'InstanceActionVolumeSwapPayload': '1.4-8b82cef523c62020c24b3eb1c39ea2ef',
     'InstanceCreateNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceCreatePayload': '1.5-97e9c0f516a68f20b25ce2f994cab081',
+    'InstanceCreatePayload': '1.6-b117dd709616d60cf5e126b983c72cd2',
     'InstancePayload': '1.4-46d922bd0a5cce46398b0cf7e8735fc4',
     'InstanceStateUpdatePayload': '1.0-07e111c0fa0f6db0f79b0726d593e3da',
     'InstanceUpdateNotification': '1.0-a73147b93b520ff0061865849d3dfa56',

@@ -5265,7 +5265,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     mock.ANY, 'expected_task_state': 'spawning'}
             expected_call = mock.call(self.context, self.instance.uuid,
                     updates, columns_to_join=['metadata', 'system_metadata',
-                        'info_cache'])
+                        'info_cache', 'tags'])
             last_update_call = mock_db_update.call_args_list[
                 mock_db_update.call_count - 1]
             self.assertEqual(expected_call, last_update_call)

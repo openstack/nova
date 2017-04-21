@@ -733,11 +733,11 @@ class _TestInstanceObject(object):
                 mock.call(self.context, inst.uuid,
                     {'vm_state': 'foo', 'task_state': 'bar',
                      'cell_name': 'foo!bar@baz'},
-                    columns_to_join=['system_metadata', 'extra',
-                        'extra.flavor']),
+                    columns_to_join=['tags', 'system_metadata',
+                                     'extra', 'extra.flavor']),
                 mock.call(self.context, inst.uuid,
                     {'vm_state': 'bar', 'task_state': 'foo'},
-                    columns_to_join=['system_metadata'])]
+                    columns_to_join=['system_metadata', 'tags'])]
         mock_db_update.assert_has_calls(expected_calls)
 
     def test_skip_cells_api(self):
