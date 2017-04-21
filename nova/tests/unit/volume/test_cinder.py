@@ -281,6 +281,33 @@ class CinderApiTestCase(test.NoDBTestCase):
                                                     mode='ro')
 
     @mock.patch('nova.volume.cinder.cinderclient')
+    def test_attachment_delete(self, mock_cinderclient):
+        mock_attachments = mock.MagicMock()
+        mock_cinderclient.return_value = \
+            mock.MagicMock(attachments=mock_attachments)
+
+        attachment_id = uuids.attachment
+        self.api.attachment_delete(self.ctx, attachment_id)
+
+        mock_cinderclient.assert_called_once_with(self.ctx)
+        mock_attachments.delete.assert_called_once_with(attachment_id)
+
+    @mock.patch('nova.volume.cinder.LOG')
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_attachment_delete_failed(self, mock_cinderclient, mock_log):
+        mock_cinderclient.return_value.attachments.delete.side_effect = (
+                cinder_exception.NotFound(404, '404'))
+
+        attachment_id = uuids.attachment
+        ex = self.assertRaises(exception.VolumeAttachmentNotFound,
+                               self.api.attachment_delete,
+                               self.ctx,
+                               attachment_id)
+
+        self.assertEqual(404, ex.code)
+        self.assertIn(attachment_id, ex.message)
+
+    @mock.patch('nova.volume.cinder.cinderclient')
     def test_detach(self, mock_cinderclient):
         mock_volumes = mock.MagicMock()
         mock_cinderclient.return_value = mock.MagicMock(version='2',
