@@ -23,9 +23,66 @@ POLICY_ROOT = 'os_compute_api:os-security-groups:%s'
 
 
 security_groups_policies = [
-    policy.RuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_OR_OWNER),
+    base.create_rule_default(
+        BASE_POLICY_NAME,
+        base.RULE_ADMIN_OR_OWNER,
+        """This policy checks permission on security groups related APIs.
+
+APIs which are directly related to security groups resource are deprecated:
+Lists, shows information for, creates, updates and deletes
+security groups. Creates and deletes security group rules. All these
+API's are deprecated.
+
+APIs which are related to server resource are not deprecated:
+Lists Security Groups for a server. Add Security Group to a server
+and remove security group from a server. Expand security_groups in
+server representation""",
+    [
+        {
+            'method': 'GET',
+            'path': '/os-security-groups'
+        },
+        {
+            'method': 'GET',
+            'path': '/os-security-groups/{security_group_id}'
+        },
+        {
+            'method': 'POST',
+            'path': '/os-security-groups'
+        },
+        {
+            'method': 'PUT',
+            'path': '/os-security-groups/{security_group_id}'
+        },
+        {
+            'method': 'DELETE',
+            'path': '/os-security-groups/{security_group_id}'
+        },
+        {
+            'method': 'GET',
+            'path': '/servers/{server_id}/os-security-groups'
+        },
+        {
+            'method': 'POST',
+            'path': '/servers/{server_id}/action (addSecurityGroup)'
+        },
+        {
+            'method': 'POST',
+            'path': '/servers/{server_id}/action (removeSecurityGroup)'
+        },
+        {
+            'method': 'POST',
+            'path': '/servers'
+        },
+        {
+            'method': 'GET',
+            'path': '/servers/{server_id}'
+        },
+        {
+            'method': 'GET',
+            'path': '/servers/detail'
+        }
+    ]),
     policy.RuleDefault(
         name=POLICY_ROOT % 'discoverable',
         check_str=base.RULE_ANY),
