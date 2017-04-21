@@ -23,7 +23,12 @@ DESCRIPTION
 
 Starts the nova-cells service.
 
-The nova-cells service handles communication between cells and selects cells for new instances.
+The nova-cells service handles communication between cells and selects cells
+for new instances.
+
+.. warning:: Everything in this document is referring to Cells v1, which is
+    not recommended for new deployments. For information about commands to use
+    with Cells v2, see the man page for :ref:`man-page-cells-v2`.
 
 OPTIONS
 =======
