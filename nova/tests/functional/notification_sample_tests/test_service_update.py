@@ -58,7 +58,6 @@ class TestServiceUpdateNotificationSample(
         body = {'host': 'host1',
                 'binary': 'nova-compute',
                 'forced_down': True}
-        self.admin_api.microversion = '2.12'
         self.admin_api.api_put('os-services/force-down', body)
         self._verify_notification('service-update',
                                   replacements={'forced_down': True,
