@@ -23,7 +23,6 @@ from oslo_utils import timeutils
 
 from nova.cells import weights
 import nova.conf
-from nova.i18n import _LW
 
 LOG = logging.getLogger(__name__)
 
@@ -52,8 +51,8 @@ class MuteChildWeigher(weights.BaseCellWeigher):
 
         if timeutils.is_older_than(last_seen, secs):
             # yep, that's a mute child;  recommend highly that it be skipped!
-            LOG.warning(_LW("%(cell)s has not been seen since %(last_seen)s "
-                            "and is being treated as mute."),
+            LOG.warning("%(cell)s has not been seen since %(last_seen)s "
+                        "and is being treated as mute.",
                         {'cell': cell, 'last_seen': last_seen})
             return self.MUTE_WEIGH_VALUE
         else:

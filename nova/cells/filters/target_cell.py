@@ -24,7 +24,6 @@ done as there's no way to know whether the full path is a valid.
 from oslo_log import log as logging
 
 from nova.cells import filters
-from nova.i18n import _LI
 
 LOG = logging.getLogger(__name__)
 
@@ -56,8 +55,8 @@ class TargetCellFilter(filters.BaseCellFilter):
             # No filtering, if not authorized.
             return cells
 
-        LOG.info(_LI("Forcing direct route to %(cell_name)s because "
-                     "of 'target_cell' scheduler hint"),
+        LOG.info("Forcing direct route to %(cell_name)s because "
+                 "of 'target_cell' scheduler hint",
                  {'cell_name': cell_name})
 
         scheduler = filter_properties['scheduler']
