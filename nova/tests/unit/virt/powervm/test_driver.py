@@ -134,3 +134,33 @@ class TestPowerVMDriver(test.NoDBTestCase):
         self.assertRaises(ValueError,
                           self.drv.destroy, 'context', self.inst, [],
                           block_device_info={})
+
+    @mock.patch('nova.virt.powervm.vm.power_on')
+    def test_power_on(self, mock_power_on):
+        self.drv.power_on('context', self.inst, 'network_info')
+        mock_power_on.assert_called_once_with(self.adp, self.inst)
+
+    @mock.patch('nova.virt.powervm.vm.power_off')
+    def test_power_off(self, mock_power_off):
+        self.drv.power_off(self.inst)
+        mock_power_off.assert_called_once_with(
+            self.adp, self.inst, force_immediate=True, timeout=None)
+
+    @mock.patch('nova.virt.powervm.vm.power_off')
+    def test_power_off_timeout(self, mock_power_off):
+        # Long timeout (retry interval means nothing on powervm)
+        self.drv.power_off(self.inst, timeout=500, retry_interval=10)
+        mock_power_off.assert_called_once_with(
+            self.adp, self.inst, force_immediate=False, timeout=500)
+
+    @mock.patch('nova.virt.powervm.vm.reboot')
+    def test_reboot_soft(self, mock_reboot):
+        inst = mock.Mock()
+        self.drv.reboot('context', inst, 'network_info', 'SOFT')
+        mock_reboot.assert_called_once_with(self.adp, inst, False)
+
+    @mock.patch('nova.virt.powervm.vm.reboot')
+    def test_reboot_hard(self, mock_reboot):
+        inst = mock.Mock()
+        self.drv.reboot('context', inst, 'network_info', 'HARD')
+        mock_reboot.assert_called_once_with(self.adp, inst, True)

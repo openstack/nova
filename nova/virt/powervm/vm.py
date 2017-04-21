@@ -128,12 +128,15 @@ def power_on(adapter, instance):
                 raise exc.InstancePowerOnFailure(reason=six.text_type(e))
 
 
-def power_off(adapter, instance, force_immediate=False):
+def power_off(adapter, instance, force_immediate=False, timeout=None):
     """Powers off a VM.
 
     :param adapter: A pypowervm.adapter.Adapter.
     :param instance: The nova instance to power off.
-    :param force_immediate: (Optional, Default False) Should it be immediately
+    :param timeout: (Optional, Default None) How long to wait for the job
+                    to complete.  By default, is None which indicates it should
+                    use the default from pypowervm's power off method.
+     :param force_immediate: (Optional, Default False) Should it be immediately
                             shut down.
     :raises: InstancePowerOffFailure
     """
@@ -150,9 +153,10 @@ def power_off(adapter, instance, force_immediate=False):
             try:
                 LOG.debug("Power off executing for instance %(inst)s.",
                           {'inst': instance.name})
-                force_flag = (power.Force.TRUE if force_immediate
-                              else power.Force.ON_FAILURE)
-                power.power_off(entry, None, force_immediate=force_flag)
+                kwargs = {'timeout': timeout} if timeout else {}
+                force = (power.Force.TRUE if force_immediate
+                         else power.Force.ON_FAILURE)
+                power.power_off(entry, None, force_immediate=force, **kwargs)
             except pvm_exc.Error as e:
                 LOG.exception("PowerVM error during power_off.",
                               instance=instance)
@@ -160,6 +164,32 @@ def power_off(adapter, instance, force_immediate=False):
         else:
             LOG.debug("Power off not required for instance %(inst)s.",
                       {'inst': instance.name})
+
+
+def reboot(adapter, instance, hard):
+    """Reboots a VM.
+
+    :param adapter: A pypowervm.adapter.Adapter.
+    :param instance: The nova instance to reboot.
+    :param hard: Boolean True if hard reboot, False otherwise.
+    :raises: InstanceRebootFailure
+    """
+    # Synchronize power-on and power-off ops on a given instance
+    with lockutils.lock('power_%s' % instance.uuid):
+        try:
+            entry = get_instance_wrapper(adapter, instance)
+            if entry.state != pvm_bp.LPARState.NOT_ACTIVATED:
+                power.power_off(entry, None, force_immediate=hard,
+                                restart=True)
+            else:
+                # pypowervm does NOT throw an exception if "already down".
+                # Any other exception from pypowervm is a legitimate failure;
+                # let it raise up.
+                # If we get here, pypowervm thinks the instance is down.
+                power.power_on(entry, None)
+        except pvm_exc.Error as e:
+            LOG.exception("PowerVM error during reboot.", instance=instance)
+            raise exc.InstanceRebootFailure(reason=six.text_type(e))
 
 
 def delete_lpar(adapter, instance):
