@@ -5438,8 +5438,8 @@ class ComputeManager(manager.Manager):
                       "old: %(old_cinfo)s",
                       {'new_cinfo': new_cinfo, 'old_cinfo': old_cinfo},
                       instance=instance)
-            self.driver.swap_volume(old_cinfo, new_cinfo, instance, mountpoint,
-                                    resize_to)
+            self.driver.swap_volume(context, old_cinfo, new_cinfo, instance,
+                                    mountpoint, resize_to)
             if new_attachment_id:
                 self.volume_api.attachment_complete(context, new_attachment_id)
             LOG.debug("swap_volume: Driver volume swap returned, new "

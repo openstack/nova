@@ -471,10 +471,11 @@ class ComputeDriver(object):
         """Detach the disk attached to the instance."""
         raise NotImplementedError()
 
-    def swap_volume(self, old_connection_info, new_connection_info,
+    def swap_volume(self, context, old_connection_info, new_connection_info,
                     instance, mountpoint, resize_to):
         """Replace the volume attached to the given `instance`.
 
+        :param context: The request context.
         :param dict old_connection_info:
             The volume for this connection gets detached from the given
             `instance`.
