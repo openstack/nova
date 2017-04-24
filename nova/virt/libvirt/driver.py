@@ -4054,7 +4054,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # called "I/O Threads" which will let us configure an explicit
                 # I/O thread for each guest vCPU or guest NUMA node. It is
                 # still TBD how to make use of this feature though, especially
-                # how to associate IO threads with guest devices to eliminiate
+                # how to associate IO threads with guest devices to eliminate
                 # cross NUMA node traffic. This is an area of investigation
                 # for QEMU community devs.
                 emulatorpin = vconfig.LibvirtConfigGuestCPUTuneEmulatorPin()
