@@ -1,0 +1,5 @@
+---
+upgrade:
+  - The deprecated nova cert daemon is now removed. The /os-certificates API
+    endpoint that depended on this service now returns 410 whenever it is
+    called.

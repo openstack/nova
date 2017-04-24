@@ -180,10 +180,6 @@ on compute hosts rather than servers.
 
      This service provides authorization for compute instances consoles.
 
-   - **nova-cert**
-
-     This service handles the management of X509 certificates.
-
 -  **Services Actions**
 
    - **enable, disable, disable-log-reason**
@@ -261,11 +257,6 @@ on compute hosts rather than servers.
    Administrators are able to query the records in database for information
    about migrations. For example, they can determine the source and
    destination hosts, type of migration, or changes in the server's flavor.
-
--  **Certificates**
-
-   Nova service "nova-cert" handles the management of X509 certificates which
-   are used to generate certificates for euca-bundle-image.
 
 Relationship with Volume API
 ============================
