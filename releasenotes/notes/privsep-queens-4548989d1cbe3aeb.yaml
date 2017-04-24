@@ -1,0 +1,9 @@
+---
+security:
+    Privsep transitions. Nova is transitioning from using the older style
+    rootwrap privilege escalation path to the new style Oslo privsep path.
+    This should improve performance and security of Nova in the long term.
+  - |
+    privsep daemons are now started by nova when required. These daemons can
+    be started via rootwrap if required. rootwrap configs therefore need to
+    be updated to include new privsep daemon invocations.

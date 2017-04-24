@@ -188,11 +188,6 @@ def is_linux():
     return platform.system() == 'Linux'
 
 
-def coreutils_readlink_available():
-    _out, err = nova.utils.trycmd('readlink', '-nm', '/')
-    return err == ''
-
-
 test_dns_managers = []
 
 

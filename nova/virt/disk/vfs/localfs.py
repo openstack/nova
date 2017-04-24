@@ -1,4 +1,5 @@
 # Copyright 2012 Red Hat, Inc.
+# Copyright 2017 Rackspace Australia
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -12,7 +13,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import grp
 import os
+import pwd
 import tempfile
 
 from oslo_log import log as logging
@@ -20,6 +23,7 @@ from oslo_utils import excutils
 
 from nova import exception
 from nova.i18n import _
+import nova.privsep.dac_admin
 from nova import utils
 from nova.virt.disk.mount import api as mount_api
 from nova.virt.disk.vfs import api as vfs
@@ -37,10 +41,7 @@ class VFSLocalFS(vfs.VFS):
     path with '..' in it will hit this safeguard.
     """
     def _canonical_path(self, path):
-        canonpath, _err = utils.execute(
-            'readlink', '-nm',
-            os.path.join(self.imgdir, path.lstrip("/")),
-            run_as_root=True)
+        canonpath = nova.privsep.dac_admin.readlink(path)
         if not canonpath.startswith(os.path.realpath(self.imgdir) + '/'):
             raise exception.Invalid(_('File path %s not valid') % path)
         return canonpath
@@ -99,64 +100,45 @@ class VFSLocalFS(vfs.VFS):
 
     def make_path(self, path):
         LOG.debug("Make directory path=%s", path)
-        canonpath = self._canonical_path(path)
-        utils.execute('mkdir', '-p', canonpath, run_as_root=True)
+        nova.privsep.dac_admin.makedirs(self._canonical_path(path))
 
     def append_file(self, path, content):
         LOG.debug("Append file path=%s", path)
-        canonpath = self._canonical_path(path)
-
-        args = ["-a", canonpath]
-        kwargs = dict(process_input=content, run_as_root=True)
-
-        utils.execute('tee', *args, **kwargs)
+        return nova.privsep.dac_admin.writefile(
+            self._canonical_path(path), 'a', content)
 
     def replace_file(self, path, content):
         LOG.debug("Replace file path=%s", path)
-        canonpath = self._canonical_path(path)
-
-        args = [canonpath]
-        kwargs = dict(process_input=content, run_as_root=True)
-
-        utils.execute('tee', *args, **kwargs)
+        return nova.privsep.dac_admin.writefile(
+            self._canonical_path(path), 'w', content)
 
     def read_file(self, path):
         LOG.debug("Read file path=%s", path)
-        canonpath = self._canonical_path(path)
-
-        return utils.read_file_as_root(canonpath)
+        return nova.privsep.dac_admin.readfile(self._canonical_path(path))
 
     def has_file(self, path):
+        # NOTE(mikal): it is deliberate that we don't generate a canonical
+        # path here, as that tests for existance and would raise an exception.
         LOG.debug("Has file path=%s", path)
-        canonpath = self._canonical_path(path)
-        exists, _err = utils.trycmd('readlink', '-e',
-                                    canonpath,
-                                    run_as_root=True)
-        return exists
+        return nova.privsep.dac_admin.path.exists(path)
 
     def set_permissions(self, path, mode):
         LOG.debug("Set permissions path=%(path)s mode=%(mode)o",
                   {'path': path, 'mode': mode})
-        canonpath = self._canonical_path(path)
-        utils.execute('chmod', "%o" % mode, canonpath, run_as_root=True)
+        nova.privsep.dac_admin.chmod(self._canonical_path(path), mode)
 
     def set_ownership(self, path, user, group):
         LOG.debug("Set permissions path=%(path)s "
                   "user=%(user)s group=%(group)s",
                   {'path': path, 'user': user, 'group': group})
         canonpath = self._canonical_path(path)
-        owner = None
-        cmd = "chown"
-        if group is not None and user is not None:
-            owner = user + ":" + group
-        elif user is not None:
-            owner = user
-        elif group is not None:
-            owner = group
-            cmd = "chgrp"
 
-        if owner is not None:
-            utils.execute(cmd, owner, canonpath, run_as_root=True)
+        chown_kwargs = {}
+        if user:
+            chown_kwargs['uid'] = pwd.getpwnam(user).pw_uid
+        if group:
+            chown_kwargs['gid'] = grp.getgrnam(group).gr_gid
+        nova.privsep.dac_admin.chown(canonpath, **chown_kwargs)
 
     def get_image_fs(self):
         if self.mount.device or self.mount.get_dev():

@@ -666,15 +666,6 @@ def generate_mac_address():
     return ':'.join(map(lambda x: "%02x" % x, mac))
 
 
-def read_file_as_root(file_path):
-    """Secure helper to read file as root."""
-    try:
-        out, _err = execute('cat', file_path, run_as_root=True)
-        return out
-    except processutils.ProcessExecutionError:
-        raise exception.FileNotFound(file_path=file_path)
-
-
 @contextlib.contextmanager
 def temporary_chown(path, owner_uid=None):
     """Temporarily chown a path.
