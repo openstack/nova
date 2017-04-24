@@ -1026,7 +1026,24 @@ class TestInstanceNotificationSample(
         pass
 
     def _test_trigger_crash_dump(self, server):
-        pass
+        post = {'trigger_crash_dump': None}
+        self.api.post_server_action(server['id'], post)
+
+        self._wait_for_notification('instance.trigger_crash_dump.end')
+
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-trigger_crash_dump-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-trigger_crash_dump-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
     def _test_volume_detach_attach_server(self, server):
         self._detach_volume_from_server(server, self.cinder.SWAP_OLD_VOL)

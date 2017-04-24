@@ -2634,6 +2634,9 @@ class ComputeManager(manager.Manager):
 
         self._notify_about_instance_usage(context, instance,
                                           "trigger_crash_dump.start")
+        compute_utils.notify_about_instance_action(context, instance,
+                self.host, action=fields.NotificationAction.TRIGGER_CRASH_DUMP,
+                phase=fields.NotificationPhase.START)
 
         # This method does not change task_state and power_state because the
         # effect of a trigger depends on user's configuration.
@@ -2641,6 +2644,9 @@ class ComputeManager(manager.Manager):
 
         self._notify_about_instance_usage(context, instance,
                                           "trigger_crash_dump.end")
+        compute_utils.notify_about_instance_action(context, instance,
+                self.host, action=fields.NotificationAction.TRIGGER_CRASH_DUMP,
+                phase=fields.NotificationPhase.END)
 
     @wrap_exception()
     @reverts_task_state
