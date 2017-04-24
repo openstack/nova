@@ -364,7 +364,7 @@ notification_object_data = {
     'InstancePayload': '1.1-5b9e3a4bb805d9fed20063bc237e4913',
     'InstanceStateUpdatePayload': '1.0-07e111c0fa0f6db0f79b0726d593e3da',
     'InstanceUpdateNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceUpdatePayload': '1.1-12955de638c3a4bcd734601711214d39',
+    'InstanceUpdatePayload': '1.2-67174f00c1ed9b5a6c408a31bd2540a5',
     'IpPayload': '1.0-8ecf567a99e516d4af094439a7632d34',
     'NotificationPublisher': '1.0-bbbc1402fb0e443a3eb227cc52b61545',
     'ServiceStatusNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
@@ -457,6 +457,8 @@ class TestInstanceNotification(test.NoDBTestCase):
     @mock.patch('nova.notifications.objects.instance.'
                 'InstanceUpdateNotification._emit')
     def test_send_version_instance_update_uses_flavor(self, mock_emit):
+        # instance.update notification needs some tags value to avoid lazy-load
+        self.instance.tags = objects.TagList()
         # Make sure that the notification payload chooses the values in
         # instance.flavor.$value instead of instance.$value
         notification_base._send_versioned_instance_update(

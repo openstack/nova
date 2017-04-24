@@ -148,22 +148,27 @@ class InstanceActionVolumeSwapPayload(InstanceActionPayload):
 class InstanceUpdatePayload(InstancePayload):
     # Version 1.0: Initial version
     # Version 1.1: locked and display_description added to InstancePayload
-    VERSION = '1.1'
+    # Version 1.2: Added tags field
+    VERSION = '1.2'
     fields = {
         'state_update': fields.ObjectField('InstanceStateUpdatePayload'),
         'audit_period': fields.ObjectField('AuditPeriodPayload'),
         'bandwidth': fields.ListOfObjectsField('BandwidthPayload'),
-        'old_display_name': fields.StringField(nullable=True)
+        'old_display_name': fields.StringField(nullable=True),
+        'tags': fields.ListOfStringsField(),
     }
 
     def __init__(self, instance, state_update, audit_period, bandwidth,
                  old_display_name):
+        tags = [instance_tag.tag for instance_tag in instance.tags.objects]
+
         super(InstanceUpdatePayload, self).__init__(
                 instance=instance,
                 state_update=state_update,
                 audit_period=audit_period,
                 bandwidth=bandwidth,
-                old_display_name=old_display_name)
+                old_display_name=old_display_name,
+                tags=tags)
 
 
 @nova_base.NovaObjectRegistry.register_notification

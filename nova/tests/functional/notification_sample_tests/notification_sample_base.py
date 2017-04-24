@@ -186,6 +186,9 @@ class NotificationSampleTestBase(test.TestCase,
         found_server = self._wait_for_state_change(self.api, created_server,
                                                    expected_status)
         found_server['reservation_id'] = reservation_id
+
+        if found_server['status'] == 'ACTIVE':
+            self.api.put_server_tags(found_server['id'], ['tag1'])
         return found_server
 
     def _wait_until_deleted(self, server):

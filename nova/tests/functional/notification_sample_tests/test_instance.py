@@ -267,7 +267,8 @@ class TestInstanceNotificationSample(
                       {'network_name': 'private-network',
                        'out_bytes': 0,
                        'in_bytes': 0},
-                  'nova_object.version': '1.0'}]
+                  'nova_object.version': '1.0'}],
+             'tags': ["tag1"]
             },
 
             # deleting -> deleted
@@ -280,7 +281,9 @@ class TestInstanceNotificationSample(
              'terminated_at': '2012-10-29T13:42:11Z',
              'ip_addresses': [],
              'power_state': 'pending',
-             'bandwidth': []},
+             'bandwidth': [],
+             'tags': ["tag1"]
+            },
         ]
 
         self._verify_instance_update_steps(delete_steps, instance_updates,
