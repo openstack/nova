@@ -9,11 +9,11 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-"""WSGI application entry-point for Nova Compute API, installed by pbr."""
+"""WSGI application entry-point for Nova Metadata API, installed by pbr."""
 
 from nova.api.openstack import wsgi_app
 
-NAME = "osapi_compute"
+NAME = "metadata"
 
 
 def init_application():
