@@ -195,8 +195,9 @@ Related options:
 nova-network is deprecated, as are any related configuration options.
 """,
         help="""
-This is the public IP address for the cloudpipe VPN servers. It defaults to the
-IP address of the host.
+This option is no longer used since the /os-cloudpipe API was removed in the
+16.0.0 Pike release. This is the public IP address for the cloudpipe VPN
+servers. It defaults to the IP address of the host.
 
 Please note that this option is only used when using nova-network instead of
 Neutron in your deployment. It also will be ignored if the configuration option

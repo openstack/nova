@@ -24,7 +24,6 @@ from nova.policies import baremetal_nodes
 from nova.policies import base
 from nova.policies import cells
 from nova.policies import cells_scheduler
-from nova.policies import cloudpipe
 from nova.policies import config_drive
 from nova.policies import console_auth_tokens
 from nova.policies import console_output
@@ -103,7 +102,6 @@ def list_rules():
         base.list_rules(),
         cells.list_rules(),
         cells_scheduler.list_rules(),
-        cloudpipe.list_rules(),
         config_drive.list_rules(),
         console_auth_tokens.list_rules(),
         console_output.list_rules(),

@@ -23,7 +23,6 @@ from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import importutils
 
-from nova.cloudpipe import pipelib
 import nova.conf
 from nova.i18n import _LI
 from nova.i18n import _LW
@@ -190,9 +189,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
         filters added to the list must also be correctly defined
         within the subclass.
         """
-        if pipelib.is_vpn_image(instance.image_ref):
-            base_filter = 'nova-vpn'
-        elif allow_dhcp:
+        if allow_dhcp:
             base_filter = 'nova-base'
         else:
             base_filter = 'nova-nodhcp'
@@ -218,8 +215,6 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
         self._define_filter(self._filter_container('nova-nodhcp', filter_set))
         filter_set.append('allow-dhcp-server')
         self._define_filter(self._filter_container('nova-base', filter_set))
-        self._define_filter(self._filter_container('nova-vpn',
-                                                   ['allow-dhcp-server']))
         self._define_filter(self.nova_dhcp_filter())
 
         self.static_filters_configured = True

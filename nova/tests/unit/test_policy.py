@@ -291,7 +291,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-cells:delete",
 "os_compute_api:os-cells:update",
 "os_compute_api:os-cells:sync_instances",
-"os_compute_api:os-cloudpipe",
 "os_compute_api:os-evacuate",
 "os_compute_api:os-extended-server-attributes",
 "os_compute_api:os-fixed-ips",

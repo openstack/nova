@@ -114,10 +114,6 @@ In this section we focus on this related to networking.
 
    TODO
 
--  **Cloudpipe**
-
-   TODO
-
 -  **Extended Networks**
 
    TODO
