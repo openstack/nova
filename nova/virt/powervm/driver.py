@@ -21,10 +21,13 @@ from pypowervm.helpers import vios_busy as vio_hlp
 from pypowervm.tasks import partition as pvm_par
 from pypowervm.wrappers import managed_system as pvm_ms
 import six
+from taskflow.patterns import linear_flow as tf_lf
 
 from nova import exception as exc
 from nova.virt import driver
 from nova.virt.powervm import host
+from nova.virt.powervm.tasks import base as tf_base
+from nova.virt.powervm.tasks import vm as tf_vm
 from nova.virt.powervm import vm
 
 LOG = logging.getLogger(__name__)
@@ -145,14 +148,17 @@ class PowerVMDriver(driver.ComputeDriver):
                                   attached to the instance.
         """
         self._log_operation('spawn', instance)
-
-        # TODO(efried): Use TaskFlow
-        vm.create_lpar(self.adapter, self.host_wrapper, instance)
+        # Define the flow
+        flow_spawn = tf_lf.Flow("spawn")
+        flow_spawn.add(tf_vm.Create(self.adapter, self.host_wrapper, instance))
         # TODO(thorst, efried) Plug the VIFs
         # TODO(thorst, efried) Create/Connect the disk
         # TODO(thorst, efried) Add the config drive
         # Last step is to power on the system.
-        vm.power_on(self.adapter, instance)
+        flow_spawn.add(tf_vm.PowerOn(self.adapter, instance))
+
+        # Run the flow.
+        tf_base.run(flow_spawn, instance=instance)
 
     def destroy(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True, migrate_data=None):
@@ -172,15 +178,27 @@ class PowerVMDriver(driver.ComputeDriver):
         """
         # TODO(thorst, efried) Add resize checks for destroy
         self._log_operation('destroy', instance)
-        try:
-            # TODO(efried): Use TaskFlow
-            vm.power_off(self.adapter, instance, force_immediate=destroy_disks)
+
+        def _setup_flow_and_run():
+            # Define the flow
+            flow = tf_lf.Flow("destroy")
+
+            # Power Off the LPAR. If its disks are about to be deleted, issue a
+            # hard shutdown.
+            flow.add(tf_vm.PowerOff(self.adapter, instance,
+                                    force_immediate=destroy_disks))
             # TODO(thorst, efried) Add unplug vifs task
             # TODO(thorst, efried) Add config drive tasks
             # TODO(thorst, efried) Add volume disconnect tasks
             # TODO(thorst, efried) Add disk disconnect/destroy tasks
             # TODO(thorst, efried) Add LPAR id based scsi map clean up task
-            vm.delete_lpar(self.adapter, instance)
+            flow.add(tf_vm.Delete(self.adapter, instance))
+
+            # Build the engine & run!
+            tf_base.run(flow, instance=instance)
+
+        try:
+            _setup_flow_and_run()
         except exc.InstanceNotFound:
             LOG.debug('VM was not found during destroy operation.',
                       instance=instance)
