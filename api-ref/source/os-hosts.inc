@@ -1,8 +1,18 @@
 .. -*- rst -*-
 
-==================
- Hosts (os-hosts)
-==================
+===============================
+ Hosts (os-hosts) (DEPRECATED)
+===============================
+
+.. warning::
+
+    The ``os-hosts`` API is deprecated as of the 2.43 microversion. Requests
+    made with microversion >= 2.43 will result in a 404 error. To list and show
+    host details, use the :ref:`os-hypervisors` API. To enable or disable a
+    service, use the :ref:`os-services` API. There is no replacement for the
+    `shutdown`, `startup`, `reboot`, or `maintenance_mode` actions as those are
+    system-level operations which should be outside of the control of the
+    compute service.
 
 Manages physical hosts. Some virt drivers do not support all host
 functions. For more information, see `nova virt support
@@ -81,6 +91,17 @@ Update Host status
 
 Enables, disables a host or put a host in maintenance or normal mode.
 
+.. warning::
+
+  Putting a host into maintenance mode is only implemented by the XenServer
+  compute driver and it has been reported that it does not actually evacuate
+  all of the guests from the host, it just sets a flag in the Xen management
+  console, and is therefore useless. There are other APIs that allow you to do
+  the same thing which are supported across all compute drivers, which would be
+  disabling a service and then migrating the instances off that host. See the
+  `Operations Guide <https://docs.openstack.org/ops-guide/ops-maintenance-compute.html>`_
+  for more information on maintenance.
+
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
@@ -121,6 +142,19 @@ Reboot Host
 
 Reboots a host.
 
+.. warning::
+
+  This is only supported by the XenServer and Hyper-v drivers. The backing
+  drivers do no orchestration of dealing with guests in the nova database when
+  performing a reboot of the host. The nova-compute service for that host may
+  be temporarily disabled by the service group health check which would take it
+  out of scheduling decisions, and the guests would be down, but the periodic
+  task which checks for unexpectedly stopped instances runs in the nova-compute
+  service, which might be dead now so the nova API would show the instances as
+  running when in fact they are actually stopped. This API is also not tested
+  in a live running OpenStack environment. Needless to say, it is not
+  recommended to use this API and it is deprecated as of the 2.43 microversion.
+
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
@@ -153,6 +187,19 @@ Shut Down Host
 
 Shuts down a host.
 
+.. warning::
+
+  This is only supported by the XenServer and Hyper-v drivers. The backing
+  drivers do no orchestration of dealing with guests in the nova database when
+  performing a shutdown of the host. The nova-compute service for that host may
+  be temporarily disabled by the service group health check which would take it
+  out of scheduling decisions, and the guests would be down, but the periodic
+  task which checks for unexpectedly stopped instances runs in the nova-compute
+  service, which might be dead now so the nova API would show the instances as
+  running when in fact they are actually stopped. This API is also not tested
+  in a live running OpenStack environment. Needless to say, it is not
+  recommended to use this API and it is deprecated as of the 2.43 microversion.
+
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
@@ -184,6 +231,12 @@ Start Host
 .. rest_method:: GET /os-hosts/{host_name}/startup
 
 Starts a host.
+
+.. warning::
+
+  This is not implemented by any in-tree compute drivers and therefore will
+  always fail with a `501 NotImplemented` error. Needless to say, it is not
+  recommended to use this API and it is deprecated as of the 2.43 microversion.
 
 Normal response codes: 200
 
