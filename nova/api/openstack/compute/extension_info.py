@@ -197,7 +197,10 @@ hardcoded_extensions = [
      'alias': 'os-flavor-extra-specs'},
     {'name': 'FlavorAccess',
      'description': 'Flavor access support.',
-     'alias': 'os-flavor-access'}
+     'alias': 'os-flavor-access'},
+    {'name': 'Keypairs',
+     'description': 'Keypair Support.',
+     'alias': 'os-keypairs'}
 ]
 
 

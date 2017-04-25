@@ -32,9 +32,6 @@ from nova.objects import keypair as keypair_obj
 from nova.policies import keypairs as kp_policies
 
 
-ALIAS = 'os-keypairs'
-
-
 class KeypairController(wsgi.Controller):
 
     """Keypair API controller for the OpenStack API."""
@@ -321,25 +318,6 @@ class Controller(wsgi.Controller):
                 kp_policies.BASE_POLICY_NAME, fatal=False):
             servers = resp_obj.obj['servers']
             self._add_key_name(req, servers)
-
-
-class Keypairs(extensions.V21APIExtensionBase):
-    """Keypair Support."""
-
-    name = "Keypairs"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        resources = [
-            extensions.ResourceExtension(ALIAS,
-                                         KeypairController())]
-        return resources
-
-    def get_controller_extensions(self):
-        controller = Controller()
-        extension = extensions.ControllerExtension(self, 'servers', controller)
-        return [extension]
 
 
 # use nova.api.extensions.server.extensions entry point to modify
