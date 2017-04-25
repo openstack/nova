@@ -3611,6 +3611,7 @@ class LibvirtDriver(driver.ComputeDriver):
         block_device_mapping = driver.block_device_info_get_mapping(
             block_device_info)
         mount_rootfs = CONF.libvirt.virt_type == "lxc"
+        scsi_controller = self._get_scsi_controller(image_meta)
 
         def _get_ephemeral_devices():
             eph_devices = []
@@ -3707,14 +3708,21 @@ class LibvirtDriver(driver.ComputeDriver):
         for d in devices:
             self._set_cache_mode(d)
 
+        if scsi_controller:
+            devices.append(scsi_controller)
+
+        return devices
+
+    @staticmethod
+    def _get_scsi_controller(image_meta):
+        """Return scsi controller or None based on image meta"""
+        # TODO(sahid): should raise an exception for an invalid controller
         if image_meta.properties.get('hw_scsi_model'):
             hw_scsi_model = image_meta.properties.hw_scsi_model
             scsi_controller = vconfig.LibvirtConfigGuestController()
             scsi_controller.type = 'scsi'
             scsi_controller.model = hw_scsi_model
-            devices.append(scsi_controller)
-
-        return devices
+            return scsi_controller
 
     def _get_host_sysinfo_serial_hardware(self):
         """Get a UUID from the host hardware
