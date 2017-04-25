@@ -605,6 +605,9 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
                 self.assertEqual(['resource_provider_id'],
                                  fk['constrained_columns'])
 
+    def _check_042(self, engine, data):
+        self.assertColumnExists(engine, 'build_requests', 'tags')
+
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
                                       test_base.DbTestCase,
