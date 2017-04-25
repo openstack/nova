@@ -1034,15 +1034,11 @@ class API(base.Base):
                     self._bdm_validate_set_size_and_instance(context,
                         instance, instance_type, block_device_mapping))
 
-                # NOTE(danms): BDMs are still not created, so we need to pass
-                # a clone and then reset them on our object after create so
-                # that they're still dirty for later in this process
                 build_request = objects.BuildRequest(context,
                         instance=instance, instance_uuid=instance.uuid,
                         project_id=instance.project_id,
-                        block_device_mappings=block_device_mapping.obj_clone())
+                        block_device_mappings=block_device_mapping)
                 build_request.create()
-                build_request.block_device_mappings = block_device_mapping
 
                 # Create an instance_mapping.  The null cell_mapping indicates
                 # that the instance doesn't yet exist in a cell, and lookups
