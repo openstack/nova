@@ -3,7 +3,7 @@
     "publisher_id": "nova-compute:compute",
     "payload": {
         "nova_object.namespace": "nova",
-        "nova_object.version": "1.1",
+        "nova_object.version":"1.2",
         "nova_object.data": {
             "node": "fake-mini",
             "fault": null,
@@ -12,6 +12,7 @@
             "image_uuid": "a2459075-d96c-40d5-893e-577ff92e721c",
             "display_name": "some-server",
             "display_description": "some-server",
+            "auto_disk_config":"MANUAL",
             "tenant_id": "6f70656e737461636b20342065766572",
             "kernel_id": "",
             "created_at": "2012-10-29T13:42:11Z",

@@ -27,6 +27,7 @@
             "power_state":"pending",
             "tenant_id":"6f70656e737461636b20342065766572",
             "terminated_at":"2012-10-29T13:42:11Z",
+            "auto_disk_config":"MANUAL",
             "flavor": {
                 "nova_object.name": "FlavorPayload",
                 "nova_object.data": {
@@ -54,7 +55,7 @@
         },
         "nova_object.name":"InstanceActionPayload",
         "nova_object.namespace":"nova",
-        "nova_object.version":"1.1"
+        "nova_object.version":"1.2"
     },
     "priority":"INFO",
     "publisher_id":"nova-compute:compute"

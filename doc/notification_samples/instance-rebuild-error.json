@@ -11,6 +11,7 @@
             "task_state": "rebuilding",
             "deleted_at": null,
             "architecture": null,
+            "auto_disk_config":"MANUAL",
             "ramdisk_id": "",
             "locked": false,
             "created_at": "2012-10-29T13:42:11Z",
@@ -76,7 +77,7 @@
                 "nova_object.namespace": "nova"
             }
         },
-        "nova_object.version": "1.1",
+        "nova_object.version":"1.2",
         "nova_object.namespace": "nova"
     },
     "publisher_id": "nova-compute:compute",

@@ -357,14 +357,14 @@ notification_object_data = {
     'FlavorNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'FlavorPayload': '1.3-6335e626893d7df5f96f87e6731fef56',
     'InstanceActionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceActionPayload': '1.1-8d12efc3251c606b61b3d479a9da51be',
+    'InstanceActionPayload': '1.2-b7b2481bcd0e1edcc1970ef7150df5aa',
     'InstanceActionVolumeSwapNotification':
     '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceActionVolumeSwapPayload': '1.1-fbb6618f652a7f88742495ea3185582c',
-    'InstancePayload': '1.1-5b9e3a4bb805d9fed20063bc237e4913',
+    'InstanceActionVolumeSwapPayload': '1.2-d7925b763e0795f8e5c1aa0e95bd67bd',
+    'InstancePayload': '1.2-a1988f6fe728bd4b478353a85c48ad55',
     'InstanceStateUpdatePayload': '1.0-07e111c0fa0f6db0f79b0726d593e3da',
     'InstanceUpdateNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceUpdatePayload': '1.2-67174f00c1ed9b5a6c408a31bd2540a5',
+    'InstanceUpdatePayload': '1.3-5bf5f18ed1232b1d8884fa784b77728f',
     'IpPayload': '1.0-8ecf567a99e516d4af094439a7632d34',
     'NotificationPublisher': '1.0-bbbc1402fb0e443a3eb227cc52b61545',
     'ServiceStatusNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
@@ -447,6 +447,7 @@ class TestInstanceNotification(test.NoDBTestCase):
             metadata={},
             uuid=uuids.instance1,
             locked=False,
+            auto_disk_config=False,
             **instance_values)
         self.payload = {
             'bandwidth': {},
