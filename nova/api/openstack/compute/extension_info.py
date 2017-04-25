@@ -191,7 +191,10 @@ hardcoded_extensions = [
      'alias': 'os-flavor-manage'},
     {'name': 'FlavorRxtx',
      'description': 'Support to show the rxtx status of a flavor.',
-     'alias': 'os-flavor-rxtx'}
+     'alias': 'os-flavor-rxtx'},
+    {'name': 'FlavorExtraSpecs',
+     'description': 'Flavors extra specs support.',
+     'alias': 'os-flavor-extra-specs'}
 ]
 
 

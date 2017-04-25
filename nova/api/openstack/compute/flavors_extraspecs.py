@@ -26,8 +26,6 @@ from nova.i18n import _
 from nova.policies import flavor_extra_specs as fes_policies
 from nova import utils
 
-ALIAS = 'os-flavor-extra-specs'
-
 
 class FlavorExtraSpecsController(wsgi.Controller):
     """The flavor extra specs API controller for the OpenStack API."""
@@ -130,21 +128,3 @@ class FlavorExtraSpecsController(wsgi.Controller):
                     "key %(key)s.") % dict(flavor_id=flavor_id,
                                            key=id)
             raise webob.exc.HTTPNotFound(explanation=msg)
-
-
-class FlavorsExtraSpecs(extensions.V21APIExtensionBase):
-    """Flavors extra specs support."""
-    name = 'FlavorExtraSpecs'
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        extra_specs = extensions.ResourceExtension(
-                'os-extra_specs',
-                FlavorExtraSpecsController(),
-                parent=dict(member_name='flavor', collection_name='flavors'))
-
-        return [extra_specs]
-
-    def get_controller_extensions(self):
-        return []
