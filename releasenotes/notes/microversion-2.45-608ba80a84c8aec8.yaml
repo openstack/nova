@@ -1,0 +1,11 @@
+---
+other:
+  - |
+    The 2.45 microversion is introduced which changes the response for the
+    ``createImage`` and ``createBackup`` server action APIs to no longer
+    return a ``Location`` response header. With microversion 2.45 those APIs
+    now return a json dict in the response body with a single ``image_id`` key
+    whose value is the snapshot image ID (a uuid). The old ``Location`` header
+    in the response before microversion 2.45 is most likely broken and
+    inaccessible by end users since it relies on the internal Glance API
+    server configuration and does not take into account Glance API versions.

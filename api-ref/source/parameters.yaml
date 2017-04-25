@@ -3,9 +3,14 @@ image_location:
   description: |
     The image location URL of the image or backup created, HTTP header
     "Location: <image location URL>" will be returned.
+
+    .. note:: The URL returned may not be accessible to users and should not
+      be relied upon. Use microversion 2.45 or simply parse the image ID out
+      of the URL in the Location response header.
   in: header
   required: true
   type: string
+  max_version: 2.44
 tag_location:
   description: |
     The location of the tag. It's individual tag URL which can be used for
@@ -4601,6 +4606,13 @@ snapshot_id_optional:
   in: body
   required: false
   type: string
+snapshot_id_resp_2_45:
+  description: |
+    The UUID for the resulting image snapshot.
+  in: body
+  required: true
+  type: string
+  min_version: 2.45
 snapshot_name:
   description: |
     The snapshot name.

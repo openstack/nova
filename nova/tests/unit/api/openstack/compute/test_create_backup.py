@@ -284,6 +284,27 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
         self.assertIn('fake-image-id', res.headers['Location'])
 
     @mock.patch.object(common, 'check_img_metadata_properties_quota')
+    @mock.patch.object(api.API, 'backup', return_value=dict(
+        id='fake-image-id', status='ACTIVE', name='Backup 1', properties={}))
+    def test_create_backup_v2_45(self, mock_backup, mock_check_image):
+        """Tests the 2.45 microversion to ensure the Location header is not
+        in the response.
+        """
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': '1',
+            },
+        }
+        instance = fake_instance.fake_instance_obj(self.context)
+        self.mock_get.return_value = instance
+        req = fakes.HTTPRequest.blank('', version='2.45')
+        res = self.controller._create_backup(req, instance['uuid'], body=body)
+        self.assertIsInstance(res, dict)
+        self.assertEqual('fake-image-id', res['image_id'])
+
+    @mock.patch.object(common, 'check_img_metadata_properties_quota')
     @mock.patch.object(api.API, 'backup')
     def test_create_backup_raises_conflict_on_invalid_state(self,
                                    mock_backup, mock_check_image):

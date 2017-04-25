@@ -33,6 +33,7 @@ class CreateBackupController(wsgi.Controller):
         super(CreateBackupController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
+    @wsgi.response(202)
     @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.action('createBackup')
     @validation.schema(create_backup.create_backup_v20, '2.0', '2.0')
@@ -77,6 +78,11 @@ class CreateBackupController(wsgi.Controller):
                     'createBackup', id)
         except exception.InvalidRequest as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
+
+        # Starting with microversion 2.45 we return a response body containing
+        # the snapshot image id without the Location header.
+        if api_version_request.is_supported(req, '2.45'):
+            return {'image_id': image['id']}
 
         resp = webob.Response(status_int=202)
 

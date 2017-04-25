@@ -901,6 +901,21 @@ class ServerActionsControllerTestV21(test.TestCase):
                          glance.generate_image_url('123'),
                          location)
 
+    def test_create_image_v2_45(self):
+        """Tests the createImage server action API with the 2.45 microversion
+        where there is a response body but no Location header.
+        """
+        body = {
+            'createImage': {
+                'name': 'Snapshot 1',
+            },
+        }
+        req = fakes.HTTPRequest.blank('', version='2.45')
+        response = self.controller._action_create_image(req, FAKE_UUID,
+                                                        body=body)
+        self.assertIsInstance(response, dict)
+        self.assertEqual('123', response['image_id'])
+
     def test_create_image_name_too_long(self):
         long_name = 'a' * 260
         body = {

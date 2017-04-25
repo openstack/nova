@@ -1017,6 +1017,11 @@ class ServersController(wsgi.Controller):
         except exception.Invalid as err:
             raise exc.HTTPBadRequest(explanation=err.format_message())
 
+        # Starting with microversion 2.45 we return a response body containing
+        # the snapshot image id without the Location header.
+        if api_version_request.is_supported(req, '2.45'):
+            return {'image_id': image['id']}
+
         # build location of newly-created image entity
         image_id = str(image['id'])
         image_ref = glance.generate_image_url(image_id)
