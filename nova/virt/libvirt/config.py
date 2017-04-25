@@ -824,6 +824,9 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         if self.boot_order:
             dev.append(etree.Element("boot", order=self.boot_order))
 
+        if self.device_addr:
+            dev.append(self.device_addr.format_dom())
+
         return dev
 
     def parse_dom(self, xmldoc):
