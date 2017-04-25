@@ -114,6 +114,17 @@ class LibvirtBaseVolumeDriver(object):
                         'type': connection_info['driver_volume_type']
                     })
 
+        if disk_info['bus'] == 'scsi':
+            # The driver is responsible to create the SCSI controller
+            # at index 0.
+            conf.device_addr = vconfig.LibvirtConfigGuestDeviceAddressDrive()
+            conf.device_addr.controller = 0
+            if 'unit' in disk_info:
+                # In order to allow up to 256 disks handled by one
+                # virtio-scsi controller, the device addr should be
+                # specified.
+                conf.device_addr.unit = disk_info['unit']
+
         return conf
 
     def connect_volume(self, connection_info, disk_info):

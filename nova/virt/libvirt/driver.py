@@ -1052,6 +1052,17 @@ class LibvirtDriver(driver.ComputeDriver):
         for source in tcp_devices:
             yield (source.get("host"), int(source.get("service")))
 
+    def _get_scsi_controller_max_unit(self, guest):
+        """Returns the max disk unit used by scsi controller"""
+        xml = guest.get_xml_desc()
+        tree = etree.fromstring(xml)
+        addrs = "./devices/disk[@device='disk']/address[@type='drive']"
+
+        ret = []
+        for obj in tree.findall(addrs):
+            ret.append(int(obj.get('unit', 0)))
+        return max(ret)
+
     @staticmethod
     def _get_rbd_driver():
         return rbd_utils.RBDDriver(
@@ -1215,6 +1226,9 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_info = blockinfo.get_info_from_bdm(
             instance, CONF.libvirt.virt_type, instance.image_meta, bdm)
         self._connect_volume(connection_info, disk_info)
+        if disk_info['bus'] == 'scsi':
+            disk_info['unit'] = self._get_scsi_controller_max_unit(guest) + 1
+
         conf = self._get_volume_config(connection_info, disk_info)
         self._set_cache_mode(conf)
 
@@ -3680,6 +3694,9 @@ class LibvirtDriver(driver.ComputeDriver):
             vol_dev = block_device.prepend_dev(vol['mount_device'])
             info = disk_mapping[vol_dev]
             self._connect_volume(connection_info, info)
+            if scsi_controller and scsi_controller.model == 'virtio-scsi':
+                info['unit'] = disk_mapping['unit']
+                disk_mapping['unit'] += 1
             cfg = self._get_volume_config(connection_info, info)
             devices.append(cfg)
             vol['connection_info'] = connection_info
