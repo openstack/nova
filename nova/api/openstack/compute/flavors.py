@@ -114,26 +114,3 @@ class FlavorsController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         return limited_flavors
-
-
-class Flavors(extensions.V21APIExtensionBase):
-    """Flavors Extension."""
-    name = "Flavors"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        collection_actions = {'detail': 'GET'}
-        member_actions = {'action': 'POST'}
-
-        resources = [
-            extensions.ResourceExtension(ALIAS,
-                                         FlavorsController(),
-                                         member_name='flavor',
-                                         collection_actions=collection_actions,
-                                         member_actions=member_actions)
-            ]
-        return resources
-
-    def get_controller_extensions(self):
-        return []

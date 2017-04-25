@@ -29,6 +29,10 @@ from nova.api.openstack.compute import extended_server_attributes
 from nova.api.openstack.compute import extended_status
 from nova.api.openstack.compute import extended_volumes
 from nova.api.openstack.compute import extension_info
+from nova.api.openstack.compute import flavor_access
+from nova.api.openstack.compute import flavor_manage
+from nova.api.openstack.compute import flavor_rxtx
+from nova.api.openstack.compute import flavors
 from nova.api.openstack.compute import floating_ips
 from nova.api.openstack.compute import hide_server_addresses
 from nova.api.openstack.compute import keypairs
@@ -64,6 +68,19 @@ def _create_controller(main_controller, controller_list,
     for ctl in action_controller_list:
         controller.register_actions(ctl())
     return controller
+
+
+flavor_controller = functools.partial(_create_controller,
+    flavors.FlavorsController,
+    [
+        flavor_rxtx.FlavorRxtxController,
+        flavor_access.FlavorActionController
+    ],
+    [
+        flavor_manage.FlavorManageController,
+        flavor_access.FlavorActionController
+    ]
+)
 
 
 server_controller = functools.partial(_create_controller,
@@ -118,6 +135,20 @@ server_controller = functools.partial(_create_controller,
 ROUTE_LIST = (
     # NOTE: '/os-volumes_boot' is a clone of '/servers'. We may want to
     # deprecate it in the future.
+    ('/flavors', {
+        'GET': [flavor_controller, 'index'],
+        'POST': [flavor_controller, 'create']
+    }),
+    ('/flavors/detail', {
+        'GET': [flavor_controller, 'detail']
+    }),
+    ('/flavors/{id}', {
+        'GET': [flavor_controller, 'show'],
+        'DELETE': [flavor_controller, 'delete']
+    }),
+    ('/flavors/{id}/action', {
+        'POST': [flavor_controller, 'action']
+    }),
     ('/os-volumes_boot', {
         'GET': [server_controller, 'index'],
         'POST': [server_controller, 'create']
