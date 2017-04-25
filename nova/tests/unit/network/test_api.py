@@ -317,7 +317,7 @@ class ApiTestCase(test.TestCase):
     def test_is_multi_host_instance_has_no_fixed_ip(self):
         with mock.patch.object(self.network_api.db, 'fixed_ip_get_by_instance',
             side_effect=exception.FixedIpNotFoundForInstance(
-                instance_uuid=uuid)):
+                instance_uuid=FAKE_UUID)):
             instance = objects.Instance(uuid=FAKE_UUID)
             result, floats = (
                 self.network_api._get_multi_addresses(self.context, instance))
