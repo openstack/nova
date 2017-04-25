@@ -95,9 +95,11 @@ create_v26 = {
             'type': 'object',
             'properties': {
                 'protocol': {
+                    'type': 'string',
                     'enum': ['vnc', 'spice', 'rdp', 'serial'],
                 },
                 'type': {
+                    'type': 'string',
                     'enum': ['novnc', 'xvpvnc', 'rdp-html5',
                              'spice-html5', 'serial'],
                 },
@@ -117,9 +119,11 @@ create_v28 = {
             'type': 'object',
             'properties': {
                 'protocol': {
+                    'type': 'string',
                     'enum': ['vnc', 'spice', 'rdp', 'serial', 'mks'],
                 },
                 'type': {
+                    'type': 'string',
                     'enum': ['novnc', 'xvpvnc', 'rdp-html5',
                              'spice-html5', 'serial', 'webmks'],
                 },

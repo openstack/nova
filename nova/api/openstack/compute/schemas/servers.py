@@ -236,6 +236,7 @@ reboot = {
             'type': 'object',
             'properties': {
                 'type': {
+                    'type': 'string',
                     'enum': ['HARD', 'Hard', 'hard', 'SOFT', 'Soft', 'soft']
                 }
             },
