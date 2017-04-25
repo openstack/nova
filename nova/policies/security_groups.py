@@ -13,13 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_policy import policy
-
 from nova.policies import base
 
 
 BASE_POLICY_NAME = 'os_compute_api:os-security-groups'
-POLICY_ROOT = 'os_compute_api:os-security-groups:%s'
 
 
 security_groups_policies = [
@@ -83,9 +80,6 @@ server representation""",
             'path': '/servers/detail'
         }
     ]),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'discoverable',
-        check_str=base.RULE_ANY),
 ]
 
 

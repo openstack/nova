@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_policy import policy
-
 from nova.policies import base
 
 
@@ -63,9 +61,6 @@ servers_migrations_policies = [
                 'path': '/servers/{server_id}/migrations'
             }
         ]),
-    policy.RuleDefault(
-        name='os_compute_api:server-migrations:discoverable',
-        check_str=base.RULE_ANY),
 ]
 
 

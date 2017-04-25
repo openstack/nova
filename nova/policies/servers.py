@@ -11,8 +11,6 @@
 #    under the License.
 
 
-from oslo_policy import policy
-
 from nova.policies import base
 
 
@@ -246,7 +244,6 @@ rules = [
                 'path': '/servers/{server_id}/action (trigger_crash_dump)'
             }
         ]),
-    policy.RuleDefault(SERVERS % 'discoverable', base.RULE_ANY),
 ]
 
 

@@ -13,13 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_policy import policy
-
 from nova.policies import base
 
 
 BASE_POLICY_NAME = 'os_compute_api:os-agents'
-POLICY_ROOT = 'os_compute_api:os-agents:%s'
 
 
 agents_policies = [
@@ -35,9 +32,6 @@ XenAPI guest agent on instance boot.
          {'path': '/os-agents', 'method': 'POST'},
          {'path': '/os-agents/{agent_build_id}', 'method': 'PUT'},
          {'path': '/os-agents/{agent_build_id}', 'method': 'DELETE'}]),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'discoverable',
-        check_str=base.RULE_ANY),
 ]
 
 

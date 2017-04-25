@@ -19,16 +19,12 @@ from nova.policies import base
 
 
 BASE_POLICY_NAME = 'os_compute_api:os-multinic'
-POLICY_ROOT = 'os_compute_api:os-multinic:%s'
 
 
 multinic_policies = [
     policy.RuleDefault(
         name=BASE_POLICY_NAME,
         check_str=base.RULE_ADMIN_OR_OWNER),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'discoverable',
-        check_str=base.RULE_ANY),
 ]
 
 

@@ -43,7 +43,6 @@ from nova.api.openstack.compute import suspend_server
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import exception
-from nova.policies import base as base_policies
 from nova.policies import extensions as ext_policies
 
 ALIAS = 'extensions'
@@ -270,7 +269,7 @@ class ExtensionInfoController(wsgi.Controller):
     def _create_fake_ext(self, name, alias, description=""):
         return FakeExtension(name, alias, description)
 
-    def _add_vif_extension(self, discoverable_extensions):
+    def _add_vif_extension(self, all_extensions):
         vif_extension = {}
         vif_extension_info = {'name': 'ExtendedVIFNet',
                               'alias': 'OS-EXT-VIF-NET',
@@ -279,15 +278,15 @@ class ExtensionInfoController(wsgi.Controller):
         vif_extension[vif_extension_info["alias"]] = self._create_fake_ext(
             vif_extension_info["name"], vif_extension_info["alias"],
                 vif_extension_info["description"])
-        discoverable_extensions.update(vif_extension)
+        all_extensions.update(vif_extension)
 
     def _get_extensions(self, context):
         """Filter extensions list based on policy."""
 
-        discoverable_extensions = dict()
+        all_extensions = dict()
 
         for item in hardcoded_extensions:
-            discoverable_extensions[item['alias']] = self._create_fake_ext(
+            all_extensions[item['alias']] = self._create_fake_ext(
                 item['name'],
                 item['alias'],
                 item['description']
@@ -295,63 +294,51 @@ class ExtensionInfoController(wsgi.Controller):
 
         for ext_cls in unused_extension_objs:
             ext = ext_cls(None)
-            action = ':'.join([
-                base_policies.COMPUTE_API, ext.alias, 'discoverable'])
-            if context.can(action, fatal=False):
-                discoverable_extensions[ext.alias] = ext
-            else:
-                LOG.debug("Filter out extension %s from discover list",
-                          ext.alias)
+            all_extensions[ext.alias] = ext
 
         for alias, ext in self.extension_info.get_extensions().items():
-            action = ':'.join([
-                base_policies.COMPUTE_API, alias, 'discoverable'])
-            if context.can(action, fatal=False):
-                discoverable_extensions[alias] = ext
-            else:
-                LOG.debug("Filter out extension %s from discover list",
-                          alias)
+            all_extensions[alias] = ext
 
         # Add fake v2 extensions to list
         extra_exts = {}
-        for alias in discoverable_extensions:
+        for alias in all_extensions:
             if alias in v21_to_v2_extension_list_mapping:
                 for extra_ext in v21_to_v2_extension_list_mapping[alias]:
                     extra_exts[extra_ext["alias"]] = self._create_fake_ext(
                         extra_ext["name"], extra_ext["alias"],
                         extra_ext["description"])
-        discoverable_extensions.update(extra_exts)
+        all_extensions.update(extra_exts)
 
         # Suppress extensions which we don't want to see in v2
         for suppress_ext in v2_extension_suppress_list:
             try:
-                del discoverable_extensions[suppress_ext]
+                del all_extensions[suppress_ext]
             except KeyError:
                 pass
 
         # v2.1 to v2 extension name mapping
         for rename_ext in v21_to_v2_alias_mapping:
-            if rename_ext in discoverable_extensions:
+            if rename_ext in all_extensions:
                 new_name = v21_to_v2_alias_mapping[rename_ext]
                 mod_ext = copy.deepcopy(
-                    discoverable_extensions.pop(rename_ext))
+                    all_extensions.pop(rename_ext))
                 mod_ext.alias = new_name
-                discoverable_extensions[new_name] = mod_ext
+                all_extensions[new_name] = mod_ext
 
-        return discoverable_extensions
+        return all_extensions
 
     @extensions.expected_errors(())
     def index(self, req):
         context = req.environ['nova.context']
         context.can(ext_policies.BASE_POLICY_NAME)
-        discoverable_extensions = self._get_extensions(context)
+        all_extensions = self._get_extensions(context)
         # NOTE(gmann): This is for v2.1 compatible mode where
         # extension list should show all extensions as shown by v2.
         # Here we add VIF extension which has been removed from v2.1 list.
         if req.is_legacy_v2():
-            self._add_vif_extension(discoverable_extensions)
+            self._add_vif_extension(all_extensions)
         sorted_ext_list = sorted(
-            discoverable_extensions.items())
+            all_extensions.items())
 
         extensions = []
         for _alias, ext in sorted_ext_list:

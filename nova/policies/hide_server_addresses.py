@@ -15,17 +15,11 @@
 
 from oslo_policy import policy
 
-from nova.policies import base
-
 
 BASE_POLICY_NAME = 'os_compute_api:os-hide-server-addresses'
-POLICY_ROOT = 'os_compute_api:os-hide-server-addresses:%s'
 
 
 hide_server_addresses_policies = [
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'discoverable',
-        check_str=base.RULE_ANY),
     policy.RuleDefault(
         name=BASE_POLICY_NAME,
         check_str='is_admin:False'),

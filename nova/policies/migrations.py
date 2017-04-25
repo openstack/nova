@@ -25,9 +25,6 @@ migrations_policies = [
     policy.RuleDefault(
         name=POLICY_ROOT % 'index',
         check_str=base.RULE_ADMIN_API),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'discoverable',
-        check_str=base.RULE_ANY),
 ]
 
 

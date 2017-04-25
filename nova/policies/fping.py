@@ -27,9 +27,6 @@ fping_policies = [
         name=POLICY_ROOT % 'all_tenants',
         check_str=base.RULE_ADMIN_API),
     policy.RuleDefault(
-        name=POLICY_ROOT % 'discoverable',
-        check_str=base.RULE_ANY),
-    policy.RuleDefault(
         name=BASE_POLICY_NAME,
         check_str=base.RULE_ADMIN_OR_OWNER),
 ]

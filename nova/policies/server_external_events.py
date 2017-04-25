@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_policy import policy
-
 from nova.policies import base
 
 
@@ -32,9 +30,6 @@ server_external_events_policies = [
                 'path': '/os-server-external-events'
             }
         ]),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'discoverable',
-        check_str=base.RULE_ANY),
 ]
 
 

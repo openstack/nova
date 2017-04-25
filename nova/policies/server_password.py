@@ -13,13 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_policy import policy
-
 from nova.policies import base
 
 
 BASE_POLICY_NAME = 'os_compute_api:os-server-password'
-POLICY_ROOT = 'os_compute_api:os-server-password:%s'
 
 
 server_password_policies = [
@@ -37,9 +34,6 @@ server_password_policies = [
                 'path': '/servers/{server_id}/os-server-password'
             }
         ]),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'discoverable',
-        check_str=base.RULE_ANY),
 ]
 
 

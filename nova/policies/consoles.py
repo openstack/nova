@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_policy import policy
-
 from nova.policies import base
 
 
@@ -52,9 +50,6 @@ consoles_policies = [
                 'path': '/servers/{server_id}/consoles/{console_id}'
             }
         ]),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'discoverable',
-        check_str=base.RULE_ANY),
     base.create_rule_default(
         POLICY_ROOT % 'index',
         base.RULE_ADMIN_OR_OWNER,

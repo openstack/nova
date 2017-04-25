@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_policy import policy
-
 from nova.policies import base
 
 
@@ -62,9 +60,6 @@ quota_sets_policies = [
                 'path': '/os-quota-sets/{tenant_id}'
             }
         ]),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'discoverable',
-        check_str=base.RULE_ANY),
     base.create_rule_default(
         POLICY_ROOT % 'detail',
         base.RULE_ADMIN_API,

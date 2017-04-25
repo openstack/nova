@@ -58,10 +58,6 @@ simulated_extension_list = {
 }
 
 
-def fake_policy_authorize_selective(context, action, target):
-    return action != 'os_compute_api:ext1-alias:discoverable'
-
-
 class ExtensionInfoTest(test.NoDBTestCase):
 
     def setUp(self):
@@ -106,30 +102,6 @@ class ExtensionInfoTest(test.NoDBTestCase):
         self.assertEqual(res_dict['extension']['updated'], FAKE_UPDATED_DATE)
         self.assertEqual(res_dict['extension']['links'], [])
         self.assertEqual(6, len(res_dict['extension']))
-
-    @mock.patch.object(policy, 'authorize')
-    def test_extension_info_list_not_all_discoverable(self, mock_authorize):
-        mock_authorize.side_effect = fake_policy_authorize_selective
-        req = fakes.HTTPRequestV21.blank('/extensions')
-        res_dict = self.controller.index(req)
-        # NOTE(sdague): because of hardcoded extensions the count is
-        # going to grow, and that's fine. We'll just check that it's
-        # greater than the 2 that we inserted.
-        self.assertGreaterEqual(len(res_dict['extensions']), 2)
-
-        # NOTE(sdague): filter the extension list by only ones that
-        # are the fake alias names, otherwise we get errors as we
-        # migrate extensions into the hardcoded list.
-        for e in [x for x in res_dict['extensions'] if '-alias' in x['alias']]:
-            self.assertNotEqual('ext1-alias', e['alias'])
-            self.assertIn(e['alias'], fake_extensions)
-            self.assertEqual(e['name'], fake_extensions[e['alias']].name)
-            self.assertEqual(e['alias'], fake_extensions[e['alias']].alias)
-            self.assertEqual(e['description'],
-                             fake_extensions[e['alias']].__doc__)
-            self.assertEqual(e['updated'], FAKE_UPDATED_DATE)
-            self.assertEqual(e['links'], [])
-            self.assertEqual(6, len(e))
 
 
 class ExtensionInfoV21Test(test.NoDBTestCase):
