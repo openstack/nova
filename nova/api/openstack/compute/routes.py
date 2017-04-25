@@ -1,0 +1,177 @@
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+import functools
+
+import nova.api.openstack
+from nova.api.openstack.compute import admin_actions
+from nova.api.openstack.compute import admin_password
+from nova.api.openstack.compute import config_drive
+from nova.api.openstack.compute import console_output
+from nova.api.openstack.compute import create_backup
+from nova.api.openstack.compute import deferred_delete
+from nova.api.openstack.compute import evacuate
+from nova.api.openstack.compute import extended_availability_zone
+from nova.api.openstack.compute import extended_server_attributes
+from nova.api.openstack.compute import extended_status
+from nova.api.openstack.compute import extended_volumes
+from nova.api.openstack.compute import extension_info
+from nova.api.openstack.compute import floating_ips
+from nova.api.openstack.compute import hide_server_addresses
+from nova.api.openstack.compute import keypairs
+from nova.api.openstack.compute import lock_server
+from nova.api.openstack.compute import migrate_server
+from nova.api.openstack.compute import multinic
+from nova.api.openstack.compute import pause_server
+from nova.api.openstack.compute import remote_consoles
+from nova.api.openstack.compute import rescue
+from nova.api.openstack.compute import security_groups
+from nova.api.openstack.compute import server_usage
+from nova.api.openstack.compute import servers
+from nova.api.openstack.compute import shelve
+from nova.api.openstack.compute import suspend_server
+from nova.api.openstack import wsgi
+import nova.conf
+
+
+CONF = nova.conf.CONF
+
+
+def _create_controller(main_controller, controller_list,
+                      action_controller_list):
+    """This is a helper method to create controller with a
+    list of extended controller. This is for backward compatible
+    with old extension interface. Finally, the controller for the
+    same resource will be merged into single one controller.
+    """
+
+    controller = wsgi.ResourceV21(main_controller())
+    for ctl in controller_list:
+        controller.register_extensions(ctl())
+    for ctl in action_controller_list:
+        controller.register_actions(ctl())
+    return controller
+
+
+server_controller = functools.partial(_create_controller,
+    servers.ServersController,
+    [
+        config_drive.ConfigDriveController,
+        extended_availability_zone.ExtendedAZController,
+        extended_server_attributes.ExtendedServerAttributesController,
+        extended_status.ExtendedStatusController,
+        extended_volumes.ExtendedVolumesController,
+        hide_server_addresses.Controller,
+        keypairs.Controller,
+        security_groups.SecurityGroupsOutputController,
+        server_usage.ServerUsageController,
+    ],
+    [
+        admin_actions.AdminActionsController,
+        admin_password.AdminPasswordController,
+        console_output.ConsoleOutputController,
+        create_backup.CreateBackupController,
+        deferred_delete.DeferredDeleteController,
+        evacuate.EvacuateController,
+        floating_ips.FloatingIPActionController,
+        lock_server.LockServerController,
+        migrate_server.MigrateServerController,
+        multinic.MultinicController,
+        pause_server.PauseServerController,
+        remote_consoles.RemoteConsolesController,
+        rescue.RescueController,
+        security_groups.SecurityGroupActionController,
+        shelve.ShelveController,
+        suspend_server.SuspendServerController
+    ]
+)
+
+
+# NOTE(alex_xu): This is structure of this route list as below:
+# (
+#     ('Route path': {
+#         'HTTP method: [
+#             'Controller',
+#             'The method of controller is used to handle this route'
+#         ],
+#         ...
+#     }),
+#     ...
+# )
+#
+# Also note that this is ordered tuple. For example, the '/servers/detail'
+# should be in the front of '/servers/{id}', otherwise the request to
+# '/servers/detail' always matches to '/servers/{id}' as the id is 'detail'.
+ROUTE_LIST = (
+    # NOTE: '/os-volumes_boot' is a clone of '/servers'. We may want to
+    # deprecate it in the future.
+    ('/os-volumes_boot', {
+        'GET': [server_controller, 'index'],
+        'POST': [server_controller, 'create']
+    }),
+    ('/os-volumes_boot/detail', {
+        'GET': [server_controller, 'detail']
+    }),
+    ('/os-volumes_boot/{id}', {
+        'GET': [server_controller, 'show'],
+        'PUT': [server_controller, 'update'],
+        'DELETE': [server_controller, 'delete']
+    }),
+    ('/os-volumes_boot/{id}/action', {
+        'POST': [server_controller, 'action']
+    }),
+    ('/servers', {
+        'GET': [server_controller, 'index'],
+        'POST': [server_controller, 'create']
+    }),
+    ('/servers/detail', {
+        'GET': [server_controller, 'detail']
+    }),
+    ('/servers/{id}', {
+        'GET': [server_controller, 'show'],
+        'PUT': [server_controller, 'update'],
+        'DELETE': [server_controller, 'delete']
+    }),
+    ('/servers/{id}/action', {
+        'POST': [server_controller, 'action']
+    })
+)
+
+
+class APIRouterV21(nova.api.openstack.APIRouterV21):
+    """Routes requests on the OpenStack API to the appropriate controller
+    and method. The URL mapping based on the plain list `ROUTE_LIST` is built
+    at here. The stevedore based API loading will be replaced by this.
+    """
+    def __init__(self):
+        self._loaded_extension_info = extension_info.LoadedExtensionInfo()
+        super(APIRouterV21, self).__init__()
+
+        for path, methods in ROUTE_LIST:
+            for method, controller_info in methods.items():
+                # TODO(alex_xu): In the end, I want to create single controller
+                # instance instead of create controller instance for each
+                # route.
+                controller = controller_info[0]()
+                action = controller_info[1]
+                self.map.create_route(path, method, controller, action)
+
+    def _register_extension(self, ext):
+        return self.loaded_extension_info.register_extension(ext.obj)
+
+    @property
+    def loaded_extension_info(self):
+        return self._loaded_extension_info

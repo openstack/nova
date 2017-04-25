@@ -152,7 +152,7 @@ class APIMapper(routes.Mapper):
 
 
 class ProjectMapper(APIMapper):
-    def resource(self, member_name, collection_name, **kwargs):
+    def _get_project_id_token(self):
         # NOTE(sdague): project_id parameter is only valid if its hex
         # or hex + dashes (note, integers are a subset of this). This
         # is required to hand our overlaping routes issues.
@@ -160,7 +160,10 @@ class ProjectMapper(APIMapper):
         if CONF.osapi_v21.project_id_regex:
             project_id_regex = CONF.osapi_v21.project_id_regex
 
-        project_id_token = '{project_id:%s}' % project_id_regex
+        return '{project_id:%s}' % project_id_regex
+
+    def resource(self, member_name, collection_name, **kwargs):
+        project_id_token = self._get_project_id_token()
         if 'parent_resource' not in kwargs:
             kwargs['path_prefix'] = '%s/' % project_id_token
         else:
@@ -190,6 +193,20 @@ class ProjectMapper(APIMapper):
         routes.Mapper.resource(self, member_name,
                                      collection_name,
                                      **kwargs)
+
+    def create_route(self, path, method, controller, action):
+        project_id_token = self._get_project_id_token()
+
+        # while we transition away from project IDs in the API URIs, create
+        # additional routes that include the project_id
+        self.connect('/%s%s' % (project_id_token, path),
+                     conditions=dict(method=[method]),
+                     controller=controller,
+                     action=action)
+        self.connect(path,
+                     conditions=dict(method=[method]),
+                     controller=controller,
+                     action=action)
 
 
 class PlainMapper(APIMapper):

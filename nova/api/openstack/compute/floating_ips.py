@@ -338,6 +338,4 @@ class FloatingIps(extensions.V21APIExtensionBase):
         return resource
 
     def get_controller_extensions(self):
-        controller = FloatingIPActionController()
-        extension = extensions.ControllerExtension(self, 'servers', controller)
-        return [extension]
+        return []

@@ -195,9 +195,7 @@ class RemoteConsoles(extensions.V21APIExtensionBase):
     version = 1
 
     def get_controller_extensions(self):
-        controller = RemoteConsolesController()
-        extension = extensions.ControllerExtension(self, 'servers', controller)
-        return [extension]
+        return []
 
     def get_resources(self):
         parent = {'member_name': 'server',
