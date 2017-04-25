@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_policy import policy
-
 from nova.policies import base
 
 
@@ -23,15 +21,54 @@ POLICY_ROOT = 'os_compute_api:os-floating-ip-dns:%s'
 
 
 floating_ip_dns_policies = [
-    policy.RuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_OR_OWNER),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'domain:update',
-        check_str=base.RULE_ADMIN_API),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'domain:delete',
-        check_str=base.RULE_ADMIN_API),
+    base.create_rule_default(
+        BASE_POLICY_NAME,
+        base.RULE_ADMIN_OR_OWNER,
+        """List registered DNS domains, and CRUD actions on domain names.
+
+Note this only works with nova-network and this API is deprecated.""",
+        [
+            {
+                'method': 'GET',
+                'path': '/os-floating-ip-dns'
+            },
+            {
+                'method': 'GET',
+                'path': '/os-floating-ip-dns/{domain}/entries/{ip}'
+            },
+            {
+                'method': 'GET',
+                'path': '/os-floating-ip-dns/{domain}/entries/{name}'
+            },
+            {
+                'method': 'PUT',
+                'path': '/os-floating-ip-dns/{domain}/entries/{name}'
+            },
+            {
+                'method': 'DELETE',
+                'path': '/os-floating-ip-dns/{domain}/entries/{name}'
+            },
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'domain:update',
+        base.RULE_ADMIN_API,
+        "Create or update a DNS domain.",
+        [
+            {
+                'method': 'PUT',
+                'path': '/os-floating-ip-dns/{domain}'
+            }
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'domain:delete',
+        base.RULE_ADMIN_API,
+        "Delete a DNS domain.",
+        [
+            {
+                'method': 'DELETE',
+                'path': '/os-floating-ip-dns/{domain}'
+            }
+        ]),
 ]
 
 
