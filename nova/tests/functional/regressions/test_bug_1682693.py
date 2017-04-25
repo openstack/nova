@@ -14,7 +14,6 @@
 
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.functional.api import client as api_client
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.image import fake as image_fake
 from nova.tests.unit import policy_fixture
@@ -90,9 +89,5 @@ class ServerTagsFilteringTest(test.TestCase,
         self.assertEqual(['bar', 'foo'], sorted(server['tags']))
 
         # query for the shared tag and we should get two servers back
-        # FIXME(mriedem): This causes a 500 error until bug 1682693 is fixed.
-        ex = self.assertRaises(api_client.OpenStackApiException,
-                               self.api.get_servers,
-                               search_opts=dict(tags='foo'))
-        self.assertEqual(500, ex.response.status_code)
-        self.assertIn('IndexError', ex.message)
+        servers = self.api.get_servers(search_opts=dict(tags='foo'))
+        self.assertEqual(2, len(servers))

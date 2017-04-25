@@ -10368,6 +10368,32 @@ class TestInstanceTagsFiltering(test.TestCase):
         self._assertEqualInstanceUUIDs([uuids[0], uuids[1], uuids[3], uuids[4],
                                         uuids[6], uuids[7]], result)
 
+    def test_instance_get_all_by_filters_not_tags_multiple_cells(self):
+        """Test added for bug 1682693.
+
+        In cells v2 scenario, db.instance_get_all_by_filters() will
+        be called multiple times to search across all cells. This
+        test tests that filters for all cells remain the same in the
+        loop.
+        """
+        uuids = self._create_instances(8)
+
+        db.instance_tag_set(self.ctxt, uuids[0], [u't1'])
+        db.instance_tag_set(self.ctxt, uuids[1], [u't2'])
+        db.instance_tag_set(self.ctxt, uuids[2], [u't1', u't2'])
+        db.instance_tag_set(self.ctxt, uuids[3], [u't2', u't3'])
+        db.instance_tag_set(self.ctxt, uuids[4], [u't3'])
+        db.instance_tag_set(self.ctxt, uuids[5], [u't1', u't2', u't3'])
+        db.instance_tag_set(self.ctxt, uuids[6], [u't3', u't4'])
+        db.instance_tag_set(self.ctxt, uuids[7], [])
+
+        filters = {'not-tags': [u't1', u't2']}
+
+        result = db.instance_get_all_by_filters(self.ctxt, filters)
+
+        self._assertEqualInstanceUUIDs([uuids[0], uuids[1], uuids[3], uuids[4],
+                                        uuids[6], uuids[7]], result)
+
     def test_instance_get_all_by_filters_not_tags_any(self):
         uuids = self._create_instances(8)
 
