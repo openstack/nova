@@ -2217,6 +2217,14 @@ flavorRef:
   in: body
   required: true
   type: string
+flavorRef_resize:
+  description: |
+    The flavor ID for resizing the server.
+    If a specified flavor ID is the same as the current one of the server,
+    the request returns a ``Bad Request (400)`` response code.
+  in: body
+  required: true
+  type: string
 flavors:
   description: |
     An array of flavor objects.
@@ -4084,10 +4092,10 @@ removeFloatingIp:
   type: object
 removeSecurityGroup:
   description: |
-    The action.
+    The action to remove a security group from the server.
   in: body
   required: true
-  type: string
+  type: object
 removeTenantAccess:
   description: |
     The action.
@@ -4143,10 +4151,10 @@ resetNetwork:
   type: none
 resize:
   description: |
-    The action.
+    The action to resize a server.
   in: body
   required: true
-  type: string
+  type: object
 restore:
   description: |
     The action.
@@ -4155,7 +4163,7 @@ restore:
   type: none
 resume:
   description: |
-    The action.
+    The action to resume a suspended server.
   in: body
   required: true
   type: none
@@ -4168,7 +4176,7 @@ return_reservation_id:
   type: boolean
 revertResize:
   description: |
-    The action.
+    The action to revert a resize operation.
   in: body
   required: true
   type: none

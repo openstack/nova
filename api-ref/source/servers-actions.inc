@@ -646,6 +646,8 @@ Request
 
   - server_id: server_id_path
   - resize: resize
+  - flavorRef: flavorRef_resize
+  - OS-DCF:diskConfig: OS-DCF:diskConfig
 
 **Example Resize Server (Resize Action)**
 
