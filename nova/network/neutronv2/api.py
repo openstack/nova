@@ -2403,7 +2403,8 @@ class API(base_api.NetworkAPI):
             # resize is happening on the same host, a new PCI device can be
             # allocated.
             vnic_type = p.get('binding:vnic_type')
-            if vnic_type in network_model.VNIC_TYPES_SRIOV:
+            if (vnic_type in network_model.VNIC_TYPES_SRIOV
+                    and migration is not None):
                 if not pci_mapping:
                     pci_mapping = self._get_pci_mapping_for_migration(context,
                         instance, migration)
