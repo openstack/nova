@@ -7,59 +7,11 @@
 Enables administrators to perform an action on a server. Specify the
 action in the request body.
 
-You can change the administrative password for, create a back up of, and
+You can change the administrative password for a server and
 inject network information into a server.
 
 You can migrate, live-migrate, reset networking on, and reset the state
 of a server.
-
-Create Server Back Up (createBackup Action)
-===========================================
-
-.. rest_method:: POST /servers/{server_id}/action
-
-Creates a back up of a server.
-
-.. note:: This API is not supported for volume-backed instances.
-
-Specify the ``createBackup`` action in the request body.
-
-Policy defaults enable only users with the administrative role or the
-owner of the server to perform this operation. Cloud providers can
-change these permissions through the ``policy.json`` file.
-
-.. note::
-    Starting from version 2.39 the image quota enforcement with Nova `metadata`
-    is removed and quota checks should be performed using Glance API directly.
-
-Normal response codes: 202
-
-Error response codes: badRequest(400), unauthorized(401), forbidden(403),
-itemNotFound(404), conflict(409)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - server_id: server_id_path
-  - createBackup: createBackup
-  - name: backup_name
-  - backup_type: backup_type
-  - rotation: backup_rotation
-  - metadata: metadata
-
-**Example Create Server Back Up (Createbackup Action)**
-
-.. literalinclude:: ../../doc/api_samples/os-create-backup/create-backup-req.json
-   :language: javascript
-
-Response
---------
-
-.. rest_parameters:: parameters.yaml
-
-  - image_location: image_location
 
 
 Inject Network Information (injectNetworkInfo Action)

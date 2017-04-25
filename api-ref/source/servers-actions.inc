@@ -14,8 +14,9 @@ You can associate a fixed or floating IP address with a server,
 or disassociate a fixed or floating IP address from a server.
 You can attach a volume to a server.
 
-You can create an image from a server, evacuate a server from a failed
-host to a new host, and force-delete a server before deferred cleanup.
+You can create an image from a server, create a backup of a server,
+evacuate a server from a failed host to a new host, and force-delete a
+server before deferred cleanup.
 You can lock, pause, reboot, rebuild, rescue, resize, resume, confirm
 the resize of, revert a pending resize for, shelve, shelf-offload,
 unshelve, start, stop, unlock, unpause, and unrescue a server. You can
@@ -205,6 +206,55 @@ Response
 --------
 
 If successful, this method does not return content in the response body.
+
+
+Create Server Back Up (createBackup Action)
+===========================================
+
+.. rest_method:: POST /servers/{server_id}/action
+
+Creates a back up of a server.
+
+.. note:: This API is not supported for volume-backed instances.
+
+Specify the ``createBackup`` action in the request body.
+
+Policy defaults enable only users with the administrative role or the
+owner of the server to perform this operation. Cloud providers can
+change these permissions through the ``policy.json`` file.
+
+.. note::
+    Starting from version 2.39 the image quota enforcement with Nova `metadata`
+    is removed and quota checks should be performed using Glance API directly.
+
+Normal response codes: 202
+
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - server_id: server_id_path
+  - createBackup: createBackup
+  - name: backup_name
+  - backup_type: backup_type
+  - rotation: backup_rotation
+  - metadata: metadata
+
+**Example Create Server Back Up (Createbackup Action)**
+
+.. literalinclude:: ../../doc/api_samples/os-create-backup/create-backup-req.json
+   :language: javascript
+
+Response
+--------
+
+.. rest_parameters:: parameters.yaml
+
+  - image_location: image_location
 
 
 Create Image (createImage Action)
