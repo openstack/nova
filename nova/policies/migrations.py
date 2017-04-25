@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_policy import policy
-
 from nova.policies import base
 
 
@@ -22,9 +20,16 @@ POLICY_ROOT = 'os_compute_api:os-migrations:%s'
 
 
 migrations_policies = [
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'index',
-        check_str=base.RULE_ADMIN_API),
+    base.create_rule_default(
+        POLICY_ROOT % 'index',
+        base.RULE_ADMIN_API,
+        "List migrations",
+        [
+            {
+                'method': 'GET',
+                'path': '/os-migrations'
+            }
+        ]),
 ]
 
 
