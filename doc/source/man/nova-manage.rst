@@ -194,6 +194,10 @@ Nova Logs
 Nova Shell
 ~~~~~~~~~~
 
+.. deprecated:: 16.0.0
+
+    This will be removed in 17.0.0 (Queens)
+
 ``nova-manage shell bpython``
 
     Starts a new bpython shell.

@@ -1,0 +1,14 @@
+---
+deprecations:
+  - |
+    A number of `nova-manage` commands have been deprecated. The commands,
+    along with the reasons for their deprecation, are listed below:
+
+    `shell`
+
+      This starts the Python interactive interpreter. It is a clone of the same
+      functionality found in Django's `django-manage` command. This command
+      hasn't been actively maintained in a long time and is not tested. It will
+      simply be removed.
+
+    These commands will be removed in their entirety during the Queens cycle.

@@ -118,6 +118,12 @@ def param2id(object_id):
 
 
 class ShellCommands(object):
+
+    # TODO(stephenfin): Remove this during the Queens cycle
+    description = ('DEPRECATED: The shell commands are deprecated since '
+                   'Pike as they serve no useful purpose in modern nova. '
+                   'They will be removed in an upcoming release.')
+
     def bpython(self):
         """Runs a bpython shell.
 
