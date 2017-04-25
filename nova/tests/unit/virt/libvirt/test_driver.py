@@ -3516,7 +3516,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         image_meta = objects.ImageMeta.from_dict({
             "disk_format": "raw",
-            "properties": {"hw_scsi_model": "virtio-scsi"}})
+            "properties": {"hw_scsi_model": "virtio-scsi",
+                           "hw_disk_bus": "scsi"}})
         instance_ref = objects.Instance(**self.test_instance)
         conn_info = {'driver_volume_type': 'fake'}
         bdms = block_device_obj.block_device_make_list_from_dicts(
@@ -3549,10 +3550,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                              vconfig.LibvirtConfigGuestDisk)
             self.assertEqual(cfg.devices[2].target_dev, 'sdc')
             self.assertEqual(cfg.devices[2].target_bus, 'scsi')
+            self.assertEqual(2, cfg.devices[2].device_addr.unit)
             self.assertIsInstance(cfg.devices[3],
                              vconfig.LibvirtConfigGuestDisk)
             self.assertEqual(cfg.devices[3].target_dev, 'sdd')
             self.assertEqual(cfg.devices[3].target_bus, 'scsi')
+            self.assertEqual(3, cfg.devices[3].device_addr.unit)
             self.assertIsInstance(cfg.devices[4],
                              vconfig.LibvirtConfigGuestController)
             self.assertEqual(cfg.devices[4].model, 'virtio-scsi')
