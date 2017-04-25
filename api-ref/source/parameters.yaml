@@ -3181,7 +3181,7 @@ local_gb_used:
   type: integer
 lock:
   description: |
-    The action.
+    The action to lock a server.
   in: body
   required: true
   type: none
@@ -3829,7 +3829,7 @@ path:
   type: string
 pause:
   description: |
-    The action.
+    The action to pause a server.
   in: body
   required: true
   type: none
@@ -4022,7 +4022,16 @@ ram_quota_optional:
   type: integer
 reboot:
   description: |
-    The action.
+    The action to reboot a server.
+  in: body
+  required: true
+  type: object
+reboot_type:
+  description: |
+    The type of the reboot action. The valid values are ``HARD`` and ``SOFT``.
+    A ``SOFT`` reboot attempts a graceful shutdown and restart of the server.
+    A ``HARD`` reboot attempts a forced shutdown and restart of the server.
+    The ``HARD`` reboot corresponds to the power cycles of the server.
   in: body
   required: true
   type: string
@@ -4068,10 +4077,11 @@ removeFixedIp:
   type: object
 removeFloatingIp:
   description: |
-    The action.
+    The action to remove or disassociate a floating IP address
+    from the server.
   in: body
   required: true
-  type: string
+  type: object
 removeSecurityGroup:
   description: |
     The action.
