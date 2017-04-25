@@ -2304,19 +2304,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           instance_ref, [],
                           image_meta, disk_info)
 
-    def test_get_guest_config_numa_old_version_libvirt(self):
-        self.flags(virt_type='kvm', group='libvirt')
-
-        self._test_get_guest_config_numa_unsupported(
-            versionutils.convert_version_to_int(
-                libvirt_driver.MIN_LIBVIRT_NUMA_VERSION) - 1,
-            versionutils.convert_version_to_int(
-                libvirt_driver.MIN_QEMU_VERSION),
-            host.HV_DRIVER_QEMU,
-            fields.Architecture.X86_64,
-            exception.NUMATopologyUnsupported,
-            None)
-
     def test_get_guest_config_numa_old_version_libvirt_ppc(self):
         self.flags(virt_type='kvm', group='libvirt')
 
@@ -2362,7 +2349,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self._test_get_guest_config_numa_unsupported(
             versionutils.convert_version_to_int(
-                libvirt_driver.MIN_LIBVIRT_NUMA_VERSION),
+                libvirt_driver.MIN_LIBVIRT_VERSION),
             versionutils.convert_version_to_int(
                 libvirt_driver.MIN_QEMU_VERSION),
             host.HV_DRIVER_QEMU,
@@ -2374,7 +2361,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(virt_type='xen', group='libvirt')
         self._test_get_guest_config_numa_unsupported(
             versionutils.convert_version_to_int(
-                libvirt_driver.MIN_LIBVIRT_NUMA_VERSION),
+                libvirt_driver.MIN_LIBVIRT_VERSION),
             versionutils.convert_version_to_int((4, 5, 0)),
             'XEN',
             fields.Architecture.X86_64,
@@ -12948,28 +12935,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(fakelibvirt.Connection, 'getType')
     @mock.patch.object(fakelibvirt.Connection, 'getVersion')
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion')
-    def test_get_host_numa_topology_old_version(self, mock_lib_version,
-                                                mock_version, mock_type):
-        self.flags(virt_type='kvm', group='libvirt')
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-
-        mock_lib_version.return_value = versionutils.convert_version_to_int(
-                libvirt_driver.MIN_LIBVIRT_NUMA_VERSION) - 1
-        mock_version.return_value = versionutils.convert_version_to_int(
-                libvirt_driver.MIN_QEMU_VERSION)
-        mock_type.return_value = host.HV_DRIVER_QEMU
-        self.assertIsNone(drvr._get_host_numa_topology())
-
-    @mock.patch.object(fakelibvirt.Connection, 'getType')
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion')
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion')
     def test_get_host_numa_topology_xen(self, mock_lib_version,
                                         mock_version, mock_type):
         self.flags(virt_type='xen', group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         mock_lib_version.return_value = versionutils.convert_version_to_int(
-                libvirt_driver.MIN_LIBVIRT_NUMA_VERSION)
+                libvirt_driver.MIN_LIBVIRT_VERSION)
         mock_version.return_value = versionutils.convert_version_to_int(
                 libvirt_driver.MIN_QEMU_VERSION)
         mock_type.return_value = host.HV_DRIVER_XEN

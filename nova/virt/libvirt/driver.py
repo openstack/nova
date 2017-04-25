@@ -212,12 +212,6 @@ NEXT_MIN_QEMU_VERSION = (2, 5, 0)
 # Libvirt version 1.2.17 is required for successful block live migration
 # of vm booted from image with attached devices
 MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION = (1, 2, 17)
-# While earlier versions could support NUMA reporting and
-# NUMA placement, not until 1.2.7 was there the ability
-# to pin guest nodes to host nodes, so mandate that. Without
-# this the scheduler cannot make guaranteed decisions, as the
-# guest placement may not match what was requested
-MIN_LIBVIRT_NUMA_VERSION = (1, 2, 7)
 # PowerPC based hosts that support NUMA using libvirt
 MIN_LIBVIRT_NUMA_VERSION_PPC = (1, 2, 19)
 # Versions of libvirt with known NUMA topology issues
@@ -5421,20 +5415,20 @@ class LibvirtDriver(driver.ComputeDriver):
                     self._bad_libvirt_numa_version_warn = True
                 return False
 
-        support_matrix = {
-            (fields.Architecture.I686,
-             fields.Architecture.X86_64,
-             fields.Architecture.AARCH64): MIN_LIBVIRT_NUMA_VERSION,
-            (fields.Architecture.PPC64,
-             fields.Architecture.PPC64LE): MIN_LIBVIRT_NUMA_VERSION_PPC}
         caps = self._host.get_capabilities()
-        is_supported = False
-        for archs, libvirt_ver in support_matrix.items():
-            if ((caps.host.cpu.arch in archs) and
-                    self._host.has_min_version(libvirt_ver,
-                                               hv_type=host.HV_DRIVER_QEMU)):
-                is_supported = True
-        return is_supported
+
+        if (caps.host.cpu.arch in (fields.Architecture.I686,
+                                   fields.Architecture.X86_64,
+                                   fields.Architecture.AARCH64) and
+                self._host.has_min_version(hv_type=host.HV_DRIVER_QEMU)):
+            return True
+        elif (caps.host.cpu.arch in (fields.Architecture.PPC64,
+                                     fields.Architecture.PPC64LE) and
+                self._host.has_min_version(MIN_LIBVIRT_NUMA_VERSION_PPC,
+                                           hv_type=host.HV_DRIVER_QEMU)):
+            return True
+
+        return False
 
     def _has_hugepage_support(self):
         # This means that the host can support multiple values for the size
