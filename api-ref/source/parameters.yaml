@@ -2213,7 +2213,8 @@ flavor_swap_in:
   type: integer
 flavorRef:
   description: |
-    The flavor reference, as a UUID or full URL, for the flavor for your server instance.
+    The flavor reference, as an ID (including a UUID) or full URL,
+    for the flavor for your server instance.
   in: body
   required: true
   type: string
