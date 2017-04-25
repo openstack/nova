@@ -2368,19 +2368,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             exception.NUMATopologyUnsupported,
             None)
 
-    def test_get_guest_config_numa_old_pages_libvirt(self):
-        self.flags(virt_type='kvm', group='libvirt')
-
-        self._test_get_guest_config_numa_unsupported(
-            versionutils.convert_version_to_int(
-                libvirt_driver.MIN_LIBVIRT_HUGEPAGE_VERSION) - 1,
-            versionutils.convert_version_to_int(
-                libvirt_driver.MIN_QEMU_VERSION),
-            host.HV_DRIVER_QEMU,
-            fields.Architecture.X86_64,
-            exception.MemoryPagesUnsupported,
-            2048)
-
     @mock.patch.object(
         host.Host, "is_cpu_control_policy_capable", return_value=True)
     def test_get_guest_config_numa_host_instance_fit_w_cpu_pinset(
@@ -2984,10 +2971,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_numa_support",
                        return_value=True)
-    @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_hugepage_support",
-                       return_value=True)
     @mock.patch.object(host.Host, "get_capabilities")
-    def test_does_not_want_hugepages(self, mock_caps, mock_hp, mock_numa):
+    def test_does_not_want_hugepages(self, mock_caps, mock_numa):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_topology = objects.InstanceNUMATopology(
             cells=[
@@ -3016,20 +3001,16 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_numa_support",
                        return_value=True)
-    @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_hugepage_support",
-                       return_value=True)
     @mock.patch.object(host.Host, "get_capabilities")
-    def test_does_want_hugepages(self, mock_caps, mock_hp, mock_numa):
+    def test_does_want_hugepages(self, mock_caps, mock_numa):
         for arch in [fields.Architecture.I686,
                      fields.Architecture.X86_64,
                      fields.Architecture.AARCH64,
                      fields.Architecture.PPC64LE,
                      fields.Architecture.PPC64]:
-            self._test_does_want_hugepages(
-                mock_caps, mock_hp, mock_numa, arch)
+            self._test_does_want_hugepages(mock_caps, mock_numa, arch)
 
-    def _test_does_want_hugepages(self, mock_caps, mock_hp, mock_numa,
-                                  architecture):
+    def _test_does_want_hugepages(self, mock_caps, mock_numa, architecture):
         self.flags(reserved_huge_pages=[
             {'node': 0, 'size': 2048, 'count': 128},
             {'node': 1, 'size': 2048, 'count': 1},
@@ -12902,19 +12883,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     def test_get_host_numa_topology(self, mock_version):
         self._test_get_host_numa_topology(mempages=True)
-
-    @mock.patch.object(fakelibvirt.Connection, 'getType')
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion')
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion')
-    def test_get_host_numa_topology_no_mempages(self, mock_lib_version,
-                                                mock_version, mock_type):
-        self.flags(virt_type='kvm', group='libvirt')
-        mock_lib_version.return_value = versionutils.convert_version_to_int(
-                libvirt_driver.MIN_LIBVIRT_HUGEPAGE_VERSION) - 1
-        mock_version.return_value = versionutils.convert_version_to_int(
-                libvirt_driver.MIN_QEMU_VERSION)
-        mock_type.return_value = host.HV_DRIVER_QEMU
-        self._test_get_host_numa_topology(mempages=False)
 
     def test_get_host_numa_topology_empty(self):
         caps = vconfig.LibvirtConfigCaps()
