@@ -2382,8 +2382,10 @@ class LibvirtDriver(driver.ComputeDriver):
         #                _hard_reboot from resume_state_on_host_boot()
         if context.auth_token is not None:
             # NOTE (rmk): Re-populate any missing backing files.
-            backing_disk_info = self._get_instance_disk_info_from_xml(
-                instance.name, xml, block_device_info)
+            config = vconfig.LibvirtConfigGuest()
+            config.parse_str(xml)
+            backing_disk_info = self._get_instance_disk_info_from_config(
+                config, block_device_info)
             self._create_images_and_backing(context, instance, instance_dir,
                                             backing_disk_info)
 
@@ -6787,7 +6789,7 @@ class LibvirtDriver(driver.ComputeDriver):
                instance path to use, calculated externally to handle block
                migrating an instance with an old style instance path
            :param disk_info:
-               disk info specified in _get_instance_disk_info_from_xml
+               disk info specified in _get_instance_disk_info_from_config
                (list of dicts)
            :param fallback_from_host:
                host where we can retrieve images if the glance images are
@@ -6921,12 +6923,12 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = guest.get_xml_desc()
         self._host.write_instance_config(xml)
 
-    def _get_instance_disk_info_from_xml(self, instance_name, xml,
-                                         block_device_info):
+    def _get_instance_disk_info_from_config(self, guest_config,
+                                            block_device_info):
         """Get the non-volume disk information from the domain xml
 
-        :param str instance_name: the name of the instance (domain)
-        :param str xml: the libvirt domain xml for the instance
+        :param LibvirtConfigGuest guest_config: the libvirt domain config
+                                                for the instance
         :param dict block_device_info: block device info for BDMs
         :returns disk_info: list of dicts with keys:
 
@@ -6946,34 +6948,32 @@ class LibvirtDriver(driver.ComputeDriver):
             volume_devices.add(disk_dev)
 
         disk_info = []
-        doc = etree.fromstring(xml)
 
-        def find_nodes(doc, device_type):
-            return (doc.findall('.//devices/%s' % device_type),
-                    doc.findall('.//devices/%s/source' % device_type),
-                    doc.findall('.//devices/%s/driver' % device_type),
-                    doc.findall('.//devices/%s/target' % device_type))
-
-        if (CONF.libvirt.virt_type == 'parallels' and
-            doc.find('os/type').text == fields.VMMode.EXE):
+        if (guest_config.virt_type == 'parallels' and
+                guest_config.os_type == fields.VMMode.EXE):
             node_type = 'filesystem'
         else:
             node_type = 'disk'
 
-        (disk_nodes, path_nodes,
-         driver_nodes, target_nodes) = find_nodes(doc, node_type)
-
-        for cnt, path_node in enumerate(path_nodes):
-            disk_type = disk_nodes[cnt].get('type')
-            path = path_node.get('file') or path_node.get('dev')
-            if (node_type == 'filesystem'):
-                target = target_nodes[cnt].attrib['dir']
+        for device in guest_config.devices:
+            if device.root_name != node_type:
+                continue
+            disk_type = device.source_type
+            if device.root_name == 'filesystem':
+                target = device.target_dir
+                if device.source_type == 'file':
+                    path = device.source_file
+                elif device.source_type == 'block':
+                    path = device.source_dev
+                else:
+                    path = None
             else:
-                target = target_nodes[cnt].attrib['dev']
+                target = device.target_dev
+                path = device.source_path
 
             if not path:
                 LOG.debug('skipping disk for %s as it does not have a path',
-                          instance_name)
+                          guest_config.name)
                 continue
 
             if disk_type not in ['file', 'block']:
@@ -6985,10 +6985,14 @@ class LibvirtDriver(driver.ComputeDriver):
                           'volume', {'path': path, 'target': target})
                 continue
 
+            if device.root_name == 'filesystem':
+                driver_type = device.driver_type
+            else:
+                driver_type = device.driver_format
             # get the real disk size or
             # raise a localized error if image is unavailable
             if disk_type == 'file':
-                if driver_nodes[cnt].get('type') == 'ploop':
+                if driver_type == 'ploop':
                     dk_size = 0
                     for dirpath, dirnames, filenames in os.walk(path):
                         for f in filenames:
@@ -7004,9 +7008,7 @@ class LibvirtDriver(driver.ComputeDriver):
                           {'path': path, 'target': target})
                 continue
 
-            disk_type = driver_nodes[cnt].get('type')
-
-            if disk_type in ("qcow2", "ploop"):
+            if driver_type in ("qcow2", "ploop"):
                 backing_file = libvirt_utils.get_disk_backing_file(path)
                 virt_size = disk_api.get_disk_size(path)
                 over_commit_size = int(virt_size) - dk_size
@@ -7015,7 +7017,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 virt_size = dk_size
                 over_commit_size = 0
 
-            disk_info.append({'type': disk_type,
+            disk_info.append({'type': driver_type,
                               'path': path,
                               'virt_disk_size': virt_size,
                               'backing_file': backing_file,
@@ -7026,7 +7028,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _get_instance_disk_info(self, instance, block_device_info):
         try:
             guest = self._host.get_guest(instance)
-            xml = guest.get_xml_desc()
+            config = guest.get_config()
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
             LOG.warning(_LW('Error from libvirt while getting description of '
@@ -7038,8 +7040,8 @@ class LibvirtDriver(driver.ComputeDriver):
                      instance=instance)
             raise exception.InstanceNotFound(instance_id=instance.uuid)
 
-        return self._get_instance_disk_info_from_xml(instance.name, xml,
-                                                     block_device_info)
+        return self._get_instance_disk_info_from_config(config,
+                                                        block_device_info)
 
     def get_instance_disk_info(self, instance,
                                block_device_info=None):
@@ -7079,7 +7081,7 @@ class LibvirtDriver(driver.ComputeDriver):
         for dom in instance_domains:
             try:
                 guest = libvirt_guest.Guest(dom)
-                xml = guest.get_xml_desc()
+                config = guest.get_config()
 
                 block_device_info = None
                 if guest.uuid in local_instances \
@@ -7088,8 +7090,8 @@ class LibvirtDriver(driver.ComputeDriver):
                     block_device_info = driver.get_block_device_info(
                         local_instances[guest.uuid], bdms[guest.uuid])
 
-                disk_infos = self._get_instance_disk_info_from_xml(
-                    guest.name, xml, block_device_info)
+                disk_infos = self._get_instance_disk_info_from_config(
+                    config, block_device_info)
                 if not disk_infos:
                     continue
 

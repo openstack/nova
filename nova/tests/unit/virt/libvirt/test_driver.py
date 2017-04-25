@@ -10031,7 +10031,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # Preparing mocks
         vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
-        vdmock.XMLDesc(flags=0).AndReturn(dummyxml)
+        vdmock.XMLDesc(0).AndReturn(dummyxml)
 
         def fake_lookup(instance_name):
             if instance_name == instance.name:
@@ -10140,7 +10140,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # Preparing mocks
         vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
-        vdmock.XMLDesc(flags=0).AndReturn(dummyxml)
+        vdmock.XMLDesc(0).AndReturn(dummyxml)
 
         def fake_lookup(instance_name):
             if instance_name == instance.name:
@@ -10208,7 +10208,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # Preparing mocks
         vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
-        vdmock.XMLDesc(flags=0).AndReturn(dummyxml)
+        vdmock.XMLDesc(0).AndReturn(dummyxml)
 
         def fake_lookup(instance_name):
             if instance_name == instance.name:
@@ -11608,7 +11608,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_domain_and_network')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._get_guest_xml')
     @mock.patch('nova.virt.libvirt.LibvirtDriver.'
-                '_get_instance_disk_info_from_xml')
+                '_get_instance_disk_info_from_config')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._destroy')
     def test_hard_reboot(self, mock_destroy, mock_get_disk_info,
                          mock_get_guest_xml, mock_create_domain_and_network,
@@ -11675,7 +11675,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_domain_and_network')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_images_and_backing')
     @mock.patch('nova.virt.libvirt.LibvirtDriver.'
-                '_get_instance_disk_info_from_xml')
+                '_get_instance_disk_info_from_config')
     @mock.patch('nova.virt.libvirt.utils.write_to_file')
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._get_guest_config')
@@ -11725,7 +11725,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         @mock.patch.object(dmcrypt, 'delete_volume')
-        @mock.patch.object(conn, '_get_instance_disk_info_from_xml',
+        @mock.patch.object(conn, '_get_instance_disk_info_from_config',
                            return_value=[])
         @mock.patch.object(conn, '_detach_direct_passthrough_ports')
         @mock.patch.object(conn, '_detach_pci_devices')
@@ -12377,7 +12377,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 return self._uuid
 
             def XMLDesc(self, flags):
-                return "<domain/>"
+                return "<domain><name>%s</name></domain>" % self._name
 
         instance_domains = [
             DiagFakeDomain("instance0000001"),
@@ -12399,8 +12399,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                         'disk_size': '10737418240',
                         'over_committed_disk_size': '0'}]}
 
-        def get_info(instance_name, xml, block_device_info):
-            return fake_disks.get(instance_name)
+        def get_info(cfg, block_device_info):
+            return fake_disks.get(cfg.name)
 
         instance_uuids = [dom.UUIDString() for dom in instance_domains]
         instances = [objects.Instance(
@@ -12413,7 +12413,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_get.return_value = instances
 
         with mock.patch.object(
-                drvr, "_get_instance_disk_info_from_xml") as mock_info:
+                drvr, "_get_instance_disk_info_from_config") as mock_info:
             mock_info.side_effect = get_info
 
             result = drvr._get_disk_over_committed_size_total()
@@ -12446,7 +12446,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 return self._uuid
 
             def XMLDesc(self, flags):
-                return "<domain/>"
+                return "<domain><name>%s</name></domain>" % self._name
 
         instance_domains = [
             DiagFakeDomain("instance0000001"),
@@ -12483,26 +12483,26 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                         'disk_size': '32212254720',
                         'over_committed_disk_size': '42949672960'}]}
 
-        def side_effect(name, dom, block_device_info):
-            if name == 'instance0000001':
+        def side_effect(cfg, block_device_info):
+            if cfg.name == 'instance0000001':
                 self.assertEqual('/dev/vda',
                                  block_device_info['root_device_name'])
                 raise OSError(errno.ENOENT, 'No such file or directory')
-            if name == 'instance0000002':
+            if cfg.name == 'instance0000002':
                 self.assertEqual('/dev/vdb',
                                  block_device_info['root_device_name'])
                 raise OSError(errno.ESTALE, 'Stale NFS file handle')
-            if name == 'instance0000003':
+            if cfg.name == 'instance0000003':
                 self.assertEqual('/dev/vdc',
                                  block_device_info['root_device_name'])
                 raise OSError(errno.EACCES, 'Permission denied')
-            if name == 'instance0000004':
+            if cfg.name == 'instance0000004':
                 self.assertEqual('/dev/vdd',
                                  block_device_info['root_device_name'])
-                return fake_disks.get(name)
+                return fake_disks.get(cfg.name)
         get_disk_info = mock.Mock()
         get_disk_info.side_effect = side_effect
-        drvr._get_instance_disk_info_from_xml = get_disk_info
+        drvr._get_instance_disk_info_from_config = get_disk_info
 
         instance_uuids = [dom.UUIDString() for dom in instance_domains]
         instances = [objects.Instance(
@@ -12535,10 +12535,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_get.assert_called_once_with(mock.ANY, filters, use_slave=True)
         mock_bdms.assert_called_with(mock.ANY, instance_uuids)
 
-    @mock.patch.object(host.Host, "list_instance_domains",
-                       return_value=[mock.MagicMock(name='foo')])
+    @mock.patch.object(host.Host, "list_instance_domains")
     @mock.patch.object(libvirt_driver.LibvirtDriver,
-                       "_get_instance_disk_info_from_xml",
+                       "_get_instance_disk_info_from_config",
                        side_effect=exception.VolumeBDMPathNotFound(path='bar'))
     @mock.patch.object(objects.BlockDeviceMappingList, "bdms_by_instance_uuid")
     @mock.patch.object(objects.InstanceList, "get_by_filters")
@@ -12547,6 +12546,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                                           mock_bdms,
                                                           mock_get_disk_info,
                                                           mock_list_domains):
+        mock_dom = mock.Mock()
+        mock_dom.XMLDesc.return_value = "<domain/>"
+        mock_list_domains.return_value = [mock_dom]
         # Tests that we handle VolumeBDMPathNotFound gracefully.
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertEqual(0, drvr._get_disk_over_committed_size_total())
