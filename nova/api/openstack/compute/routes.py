@@ -19,6 +19,7 @@ import functools
 import nova.api.openstack
 from nova.api.openstack.compute import admin_actions
 from nova.api.openstack.compute import admin_password
+from nova.api.openstack.compute import aggregates
 from nova.api.openstack.compute import config_drive
 from nova.api.openstack.compute import console_output
 from nova.api.openstack.compute import create_backup
@@ -69,6 +70,10 @@ def _create_controller(main_controller, controller_list,
     for ctl in action_controller_list:
         controller.register_actions(ctl())
     return controller
+
+
+aggregates_controller = functools.partial(
+    _create_controller, aggregates.AggregateController, [], [])
 
 
 keypairs_controller = functools.partial(
@@ -173,6 +178,18 @@ ROUTE_LIST = (
     }),
     ('/flavors/{flavor_id}/os-flavor-access', {
         'GET': [flavor_access_controller, 'index']
+    }),
+    ('/os-aggregates', {
+        'GET': [aggregates_controller, 'index'],
+        'POST': [aggregates_controller, 'create']
+    }),
+    ('/os-aggregates/{id}', {
+        'GET': [aggregates_controller, 'show'],
+        'PUT': [aggregates_controller, 'update'],
+        'DELETE': [aggregates_controller, 'delete']
+    }),
+    ('/os-aggregates/{id}/action', {
+        'POST': [aggregates_controller, 'action'],
     }),
     ('/os-keypairs', {
         'GET': [keypairs_controller, 'index'],
