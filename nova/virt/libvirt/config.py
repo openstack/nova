@@ -2000,6 +2000,20 @@ class LibvirtConfigGuestFeaturePAE(LibvirtConfigGuestFeature):
                                                            **kwargs)
 
 
+class LibvirtConfigGuestFeatureKvmHidden(LibvirtConfigGuestFeature):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestFeatureKvmHidden, self).__init__("kvm",
+                                                                 **kwargs)
+
+    def format_dom(self):
+        root = super(LibvirtConfigGuestFeatureKvmHidden, self).format_dom()
+
+        root.append(etree.Element("hidden", state="on"))
+
+        return root
+
+
 class LibvirtConfigGuestFeatureHyperV(LibvirtConfigGuestFeature):
 
     # QEMU requires at least this value to be set

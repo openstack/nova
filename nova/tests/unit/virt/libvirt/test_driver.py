@@ -4916,6 +4916,54 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(10000, cfg.cputune.shares)
         self.assertEqual(20000, cfg.cputune.period)
 
+    def test_get_guest_config_with_hiding_hypervisor_id(self):
+        self.flags(virt_type='kvm', group='libvirt')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        instance_ref = objects.Instance(**self.test_instance)
+
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"img_hide_hypervisor_id": "true"}})
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        cfg = drvr._get_guest_config(instance_ref,
+                                     [],
+                                     image_meta,
+                                     disk_info)
+
+        self.assertTrue(
+            any(isinstance(feature, vconfig.LibvirtConfigGuestFeatureKvmHidden)
+                           for feature in cfg.features))
+
+    def test_get_guest_config_without_hiding_hypervisor_id(self):
+        self.flags(virt_type='kvm', group='libvirt')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        instance_ref = objects.Instance(**self.test_instance)
+
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"img_hide_hypervisor_id": "false"}})
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        cfg = drvr._get_guest_config(instance_ref,
+                                     [],
+                                     image_meta,
+                                     disk_info)
+
+        self.assertFalse(
+            any(isinstance(feature, vconfig.LibvirtConfigGuestFeatureKvmHidden)
+                           for feature in cfg.features))
+
     @mock.patch.object(
         host.Host, "is_cpu_control_policy_capable", return_value=True)
     def test_get_guest_config_with_bogus_cpu_quota(self, is_able):
