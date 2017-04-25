@@ -25,8 +25,12 @@ into a server since Mitaka release.
 
 You can get an RDP, serial, SPICE, or VNC console for a server.
 
-Add (Associate) Floating Ip (addFloatingIp Action)
-==================================================
+Add (Associate) Floating Ip (addFloatingIp Action) (DEPRECATED)
+================================================================
+
+.. warning:: This API is deprecated and will fail with a 404 starting
+             from microversion 2.44. This is replaced with using the
+             Neutron networking service API.
 
 .. rest_method:: POST /servers/{server_id}/action
 
@@ -430,8 +434,12 @@ Response
 .. literalinclude:: ../../doc/api_samples/servers/server-action-rebuild-resp.json
    :language: javascript
 
-Remove (Disassociate) Floating Ip (removeFloatingIp Action)
-===========================================================
+Remove (Disassociate) Floating Ip (removeFloatingIp Action) (DEPRECATED)
+=========================================================================
+
+.. warning:: This API is deprecated and will fail with a 404 starting
+             from microversion 2.44. This is replaced with using the
+             Neutron networking service API.
 
 .. rest_method:: POST /servers/{server_id}/action
 

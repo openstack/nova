@@ -61,7 +61,7 @@ class FakeRequest(object):
 
 
 class ServerVirtualInterfaceTestV21(test.NoDBTestCase):
-    wsgi_api_version = None
+    wsgi_api_version = '2.1'
     expected_response = {
         'virtual_interfaces': [
             {'id': uuids.vif1_uuid,
@@ -155,3 +155,15 @@ class ServerVirtualInterfaceEnforcementV21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
+
+
+class ServerVirtualInterfaceDeprecationTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(ServerVirtualInterfaceDeprecationTest, self).setUp()
+        self.controller = vi21.ServerVirtualInterfaceController()
+        self.req = fakes.HTTPRequest.blank('', version='2.44')
+
+    def test_index_not_found(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.index, self.req, FAKE_UUID)

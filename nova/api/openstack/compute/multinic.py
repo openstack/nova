@@ -31,10 +31,13 @@ ALIAS = "os-multinic"
 
 
 class MultinicController(wsgi.Controller):
+    """This API is deprecated from Microversion '2.44'."""
+
     def __init__(self, *args, **kwargs):
         super(MultinicController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
+    @wsgi.Controller.api_version("2.1", "2.43")
     @wsgi.response(202)
     @wsgi.action('addFixedIp')
     @extensions.expected_errors((400, 404))
@@ -53,6 +56,7 @@ class MultinicController(wsgi.Controller):
         except exception.NoMoreFixedIps as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
+    @wsgi.Controller.api_version("2.1", "2.43")
     @wsgi.response(202)
     @wsgi.action('removeFixedIp')
     @extensions.expected_errors((400, 404))

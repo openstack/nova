@@ -493,3 +493,39 @@ user documentation.
   `shutdown`, `startup`, `reboot`, or `maintenance_mode` actions as those are
   system-level operations which should be outside of the control of the
   compute service.
+
+2.44
+----
+
+  The following APIs which are considered as proxies of Neutron networking API,
+  are deprecated and will result in a 404 error response in new Microversion::
+
+    POST /servers/{server_uuid}/action
+    {
+        "addFixedIp": {...}
+    }
+
+    POST /servers/{server_uuid}/action
+    {
+        "removeFixedIp": {...}
+    }
+
+    POST /servers/{server_uuid}/action
+    {
+        "addFloatingIp": {...}
+    }
+
+    POST /servers/{server_uuid}/action
+    {
+        "removeFloatingIp": {...}
+    }
+
+  Those server actions can be replaced by calling the Neutron API directly.
+
+  The nova-network specific API to query the server's interfaces is
+  deprecated::
+
+    GET /servers/{server_uuid}/os-virtual-interfaces
+
+  To query attached neutron interfaces for a specific server, the API
+  `GET /servers/{server_uuid}/os-interface` can be used.
