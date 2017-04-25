@@ -1272,11 +1272,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
             dev.abort_job(pivot=True)
             if resize_to:
-                # NOTE(alex_xu): domain.blockJobAbort isn't sync call. This
-                # is bug in libvirt. So we need waiting for the pivot is
-                # finished. libvirt bug #1119173
-                while not dev.is_job_complete():
-                    time.sleep(0.5)
                 dev.resize(resize_to * units.Gi / units.Ki)
         finally:
             self._host.write_instance_config(xml)
