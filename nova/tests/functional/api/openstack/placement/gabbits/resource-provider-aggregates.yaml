@@ -93,7 +93,7 @@ tests:
       $.resource_providers.`len`: 1
       $.resource_providers[0].uuid: 5202c48f-c960-4eec-bde3-89c4f22a17b9
 
-- name: error on old microverison
+- name: error on old microversion
   GET: '/resource_providers?member_of=in:83a3d69d-8920-48e2-8914-cadfd8fa2f91,99652f11-9f77-46b9-80b7-4b1989be9f8c'
   request_headers:
       openstack-api-version: placement 1.1
