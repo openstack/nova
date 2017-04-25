@@ -36,7 +36,8 @@ class BuildRequest(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added block_device_mappings
     # Version 1.2: Added save() method
-    VERSION = '1.2'
+    # Version 1.3: Added tags
+    VERSION = '1.3'
 
     fields = {
         'id': fields.IntegerField(),
@@ -49,6 +50,7 @@ class BuildRequest(base.NovaObject):
         # created_at/updated_at. There is no soft delete for this object.
         'created_at': fields.DateTimeField(nullable=True),
         'updated_at': fields.DateTimeField(nullable=True),
+        'tags': fields.ObjectField('TagList'),
     }
 
     def obj_make_compatible(self, primitive, target_version):
@@ -57,6 +59,8 @@ class BuildRequest(base.NovaObject):
         target_version = versionutils.convert_version_to_tuple(target_version)
         if target_version < (1, 1) and 'block_device_mappings' in primitive:
             del primitive['block_device_mappings']
+        elif target_version < (1, 3) and 'tags' in primitive:
+            del primitive['tags']
 
     def _load_instance(self, db_instance):
         # NOTE(alaski): Be very careful with instance loading because it
@@ -104,7 +108,7 @@ class BuildRequest(base.NovaObject):
         # was never persisted.
         self.instance.created_at = self.created_at
         self.instance.updated_at = self.updated_at
-        self.instance.tags = objects.TagList([])
+        self.instance.tags = self.tags
 
     def _load_block_device_mappings(self, db_bdms):
         # 'db_bdms' is a serialized BlockDeviceMappingList object. If it's None
@@ -121,6 +125,22 @@ class BuildRequest(base.NovaObject):
         self.block_device_mappings = (
             objects.BlockDeviceMappingList.obj_from_primitive(
                 jsonutils.loads(db_bdms)))
+
+    def _load_tags(self, db_tags):
+        # 'db_tags' is a serialized TagList object. If it's None
+        # we're in a mixed version nova-api scenario and can't retrieve the
+        # actual list. Set it to an empty list here which will cause a
+        # temporary API inconsistency that will be resolved as soon as the
+        # instance is scheduled and on a compute.
+        if db_tags is None:
+            LOG.debug('Failed to load tags from BuildRequest '
+                      'for instance %s because it is None', self.instance_uuid)
+            self.tags = objects.TagList()
+            return
+
+        self.tags = (
+            objects.TagList.obj_from_primitive(
+                jsonutils.loads(db_tags)))
 
     @staticmethod
     def _from_db_object(context, req, db_req):
@@ -225,6 +245,8 @@ class BuildRequest(base.NovaObject):
         for field in self.instance.obj_fields:
             # NOTE(danms): Don't copy the defaulted tags field
             # as instance.create() won't handle it properly.
+            # TODO(zhengzhenyu): Handle this when the API supports creating
+            # servers with tags.
             if field == 'tags':
                 continue
             if self.instance.obj_attr_is_set(field):
@@ -344,6 +366,8 @@ class BuildRequestList(base.ObjectListBase, base.NovaObject):
         # Fortunately some filters do not apply here.
         # 'tags' can not be applied at boot time so will not be set for an
         # instance here.
+        # TODO(zhengzhenyu): Handle this when the API supports creating
+        # servers with tags.
         # 'changes-since' works off of the updated_at field which has not yet
         # been set at the point in the boot process where build_request still
         # exists. So it can be ignored.

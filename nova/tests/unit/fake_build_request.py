@@ -40,6 +40,8 @@ def fake_db_req(**updates):
                 snapshot_id=None, volume_id=None, volume_size=0,
                 image_id='bar', no_device=False, connection_info=None,
                 tag='', instance_uuid=uuids.instance))])
+    tags = objects.TagList(objects=[objects.Tag(tag='tag1',
+                                                resource_id=instance_uuid)])
     db_build_request = {
             'id': 1,
             'project_id': 'fake-project',
@@ -47,6 +49,7 @@ def fake_db_req(**updates):
             'instance': jsonutils.dumps(instance.obj_to_primitive()),
             'block_device_mappings': jsonutils.dumps(
                 block_devices.obj_to_primitive()),
+            'tags': jsonutils.dumps(tags.obj_to_primitive()),
             'created_at': datetime.datetime(2016, 1, 16),
             'updated_at': datetime.datetime(2016, 1, 16),
     }
@@ -85,6 +88,9 @@ def fake_req_obj(ctxt, db_req=None):
                 req_obj.block_device_mappings = (
                     objects.BlockDeviceMappingList.obj_from_primitive(
                         jsonutils.loads(value)))
+            elif field == 'tags':
+                req_obj.tags = objects.TagList.obj_from_primitive(
+                    jsonutils.loads(value))
         elif field == 'instance_metadata':
             setattr(req_obj, field, jsonutils.loads(value))
         else:
