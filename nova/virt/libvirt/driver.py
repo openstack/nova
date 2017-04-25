@@ -3582,6 +3582,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _get_guest_disk_config(self, instance, name, disk_mapping, inst_type,
                                image_type=None):
+        disk_unit = None
         disk = self.image_backend.by_name(instance, name, image_type)
         if (name == 'disk.config' and image_type == 'rbd' and
                 not disk.exists()):
@@ -3597,12 +3598,17 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.debug('Config drive not found in RBD, falling back to the '
                           'instance directory', instance=instance)
         disk_info = disk_mapping[name]
-        return disk.libvirt_info(disk_info['bus'],
+        if 'unit' in disk_mapping:
+            disk_unit = disk_mapping['unit']
+            disk_mapping['unit'] += 1  # Increments for the next disk added
+        conf = disk.libvirt_info(disk_info['bus'],
                                  disk_info['dev'],
                                  disk_info['type'],
                                  self.disk_cachemode,
                                  inst_type['extra_specs'],
-                                 self._host.get_version())
+                                 self._host.get_version(),
+                                 disk_unit=disk_unit)
+        return conf
 
     def _get_guest_fs_config(self, instance, name, image_type=None):
         disk = self.image_backend.by_name(instance, name, image_type)
@@ -3619,6 +3625,19 @@ class LibvirtDriver(driver.ComputeDriver):
             block_device_info)
         mount_rootfs = CONF.libvirt.virt_type == "lxc"
         scsi_controller = self._get_scsi_controller(image_meta)
+
+        if scsi_controller and scsi_controller.model == 'virtio-scsi':
+            # The virtio-scsi can handle up to 256 devices but the
+            # optional element "address" must be defined to describe
+            # where the device is placed on the controller (see:
+            # LibvirtConfigGuestDeviceAddressDrive).
+            #
+            # Note about why it's added in disk_mapping: It's not
+            # possible to pass an 'int' by reference in Python, so we
+            # use disk_mapping as container to keep reference of the
+            # unit added and be able to increment it for each disk
+            # added.
+            disk_mapping['unit'] = 0
 
         def _get_ephemeral_devices():
             eph_devices = []
@@ -3729,6 +3748,7 @@ class LibvirtDriver(driver.ComputeDriver):
             scsi_controller = vconfig.LibvirtConfigGuestController()
             scsi_controller.type = 'scsi'
             scsi_controller.model = hw_scsi_model
+            scsi_controller.index = 0
             return scsi_controller
 
     def _get_host_sysinfo_serial_hardware(self):

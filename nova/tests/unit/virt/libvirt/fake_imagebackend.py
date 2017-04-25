@@ -197,7 +197,8 @@ class ImageBackendFixture(fixtures.Fixture):
             self.imported_files.append((local_filename, remote_filename))
 
     def _fake_libvirt_info(self, mock_disk, disk_bus, disk_dev, device_type,
-                     cache_mode, extra_specs, hypervisor_version):
+                           cache_mode, extra_specs, hypervisor_version,
+                           disk_unit=None):
         # For tests in test_virt_drivers which expect libvirt_info to be
         # functional
         info = config.LibvirtConfigGuestDisk()
