@@ -20,6 +20,7 @@ import copy
 import mock
 from mox3 import mox
 import oslo_messaging as messaging
+from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 from oslo_versionedobjects import exception as ovo_exc
 import six
@@ -1352,19 +1353,21 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             tag=''))
         params['block_device_mapping'] = objects.BlockDeviceMappingList(
             objects=[bdm])
+        tag = objects.Tag(self.ctxt, tag='tag1')
+        params['tags'] = objects.TagList(objects=[tag])
         self.params = params
 
     @mock.patch('nova.availability_zones.get_host_availability_zone')
     @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
-    def test_schedule_and_build_instances(self, select_destinations,
-                                          build_and_run_instance,
-                                          get_az):
+    def _do_schedule_and_build_instances_test(self, params,
+                                               select_destinations,
+                                               build_and_run_instance,
+                                               get_az):
         select_destinations.return_value = [{'host': 'fake-host',
                                              'nodename': 'fake-nodename',
                                              'limits': None}]
         get_az.return_value = 'myaz'
-        params = self.params
         details = {}
 
         def _build_and_run_instance(ctxt, *args, **kwargs):
@@ -1382,24 +1385,53 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         instance_uuid = details['instance'].uuid
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-            self.context, instance_uuid)
+            self.ctxt, instance_uuid)
         ephemeral = list(filter(block_device.new_format_is_ephemeral, bdms))
         self.assertEqual(1, len(ephemeral))
         swap = list(filter(block_device.new_format_is_swap, bdms))
         self.assertEqual(0, len(swap))
 
         self.assertEqual(1, ephemeral[0].volume_size)
+        return instance_uuid
 
-        cells = objects.CellMappingList.get_all(self.context)
+    def test_schedule_and_build_instances(self):
+        instance_uuid = self._do_schedule_and_build_instances_test(
+            self.params)
+        cells = objects.CellMappingList.get_all(self.ctxt)
 
         # NOTE(danms): Assert that we created the InstanceAction in the
         # correct cell
+        # NOTE(Kevin Zheng): Also assert tags in the correct cell
         for cell in cells:
-            with context.target_cell(self.context, cell) as cctxt:
+            with context.target_cell(self.ctxt, cell) as cctxt:
                 actions = objects.InstanceActionList.get_by_instance_uuid(
                     cctxt, instance_uuid)
                 if cell.name == 'cell1':
                     self.assertEqual(1, len(actions))
+                    tags = objects.TagList.get_by_resource_id(
+                        cctxt, instance_uuid)
+                    self.assertEqual(1, len(tags))
+                else:
+                    self.assertEqual(0, len(actions))
+
+    def test_schedule_and_build_instances_no_tags_provided(self):
+        params = copy.deepcopy(self.params)
+        del params['tags']
+        instance_uuid = self._do_schedule_and_build_instances_test(params)
+        cells = objects.CellMappingList.get_all(self.ctxt)
+
+        # NOTE(danms): Assert that we created the InstanceAction in the
+        # correct cell
+        # NOTE(Kevin Zheng): Also assert tags in the correct cell
+        for cell in cells:
+            with context.target_cell(self.ctxt, cell) as cctxt:
+                actions = objects.InstanceActionList.get_by_instance_uuid(
+                    cctxt, instance_uuid)
+                if cell.name == 'cell1':
+                    self.assertEqual(1, len(actions))
+                    tags = objects.TagList.get_by_resource_id(
+                        cctxt, instance_uuid)
+                    self.assertEqual(0, len(tags))
                 else:
                     self.assertEqual(0, len(actions))
 
@@ -1483,6 +1515,9 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.assertEqual('error', instance.vm_state)
         self.assertIsNone(instance.task_state)
 
+    @mock.patch('nova.conductor.manager.try_target_cell')
+    @mock.patch('nova.objects.TagList.destroy')
+    @mock.patch('nova.objects.TagList.create')
     @mock.patch('nova.compute.utils.notify_about_instance_usage')
     @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
@@ -1494,7 +1529,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                                          br_destroy,
                                                          select_destinations,
                                                          build_and_run,
-                                                         notify):
+                                                         notify,
+                                                         taglist_create,
+                                                         taglist_destroy,
+                                                         try_target):
 
         br_destroy.side_effect = exc.BuildRequestNotFound(uuid='foo')
         self.start_service('compute', host='fake-host')
@@ -1504,10 +1542,14 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         targeted_context = mock.MagicMock(
             autospec='nova.context.RequestContext')
         target_cell.return_value.__enter__.return_value = targeted_context
+        try_target.return_value.__enter__.return_value = targeted_context
+        taglist_create.return_value = self.params['tags']
         self.conductor.schedule_and_build_instances(**self.params)
         self.assertFalse(build_and_run.called)
         self.assertFalse(bury.called)
         self.assertTrue(br_destroy.called)
+        taglist_destroy.assert_called_once_with(
+            targeted_context, self.params['build_requests'][0].instance_uuid)
 
         test_utils.assert_instance_delete_notification_by_uuid(
             notify, self.params['build_requests'][0].instance_uuid,
@@ -2374,6 +2416,76 @@ class ConductorTaskRPCAPITestCase(_BaseTaskTestCase,
         self.assertEqual(mock.sentinel.iransofaraway,
                          test(None, ctxt, inst))
         mock_im.assert_called_once_with(ctxt, inst.uuid)
+
+    def test_schedule_and_build_instances_with_tags(self):
+
+        build_request = fake_build_request.fake_req_obj(self.context)
+        request_spec = objects.RequestSpec(
+            instance_uuid=build_request.instance_uuid)
+        image = {'fake_data': 'should_pass_silently'}
+        admin_password = 'fake_password'
+        injected_file = 'fake'
+        requested_network = None
+        block_device_mapping = None
+        tags = ['fake_tag']
+        version = '1.17'
+        cctxt_mock = mock.MagicMock()
+
+        @mock.patch.object(self.conductor.client, 'can_send_version',
+                           return_value=True)
+        @mock.patch.object(self.conductor.client, 'prepare',
+                          return_value=cctxt_mock)
+        def _test(prepare_mock, can_send_mock):
+            self.conductor.schedule_and_build_instances(
+                self.context, build_request, request_spec, image,
+                admin_password, injected_file, requested_network,
+                block_device_mapping, tags=tags)
+            prepare_mock.assert_called_once_with(version=version)
+            kw = {'build_requests': build_request,
+                  'request_specs': request_spec,
+                  'image': jsonutils.to_primitive(image),
+                  'admin_password': admin_password,
+                  'injected_files': injected_file,
+                  'requested_networks': requested_network,
+                  'block_device_mapping': block_device_mapping,
+                  'tags': tags}
+            cctxt_mock.cast.assert_called_once_with(
+                self.context, 'schedule_and_build_instances', **kw)
+        _test()
+
+    def test_schedule_and_build_instances_with_tags_cannot_send(self):
+
+        build_request = fake_build_request.fake_req_obj(self.context)
+        request_spec = objects.RequestSpec(
+            instance_uuid=build_request.instance_uuid)
+        image = {'fake_data': 'should_pass_silently'}
+        admin_password = 'fake_password'
+        injected_file = 'fake'
+        requested_network = None
+        block_device_mapping = None
+        tags = ['fake_tag']
+        cctxt_mock = mock.MagicMock()
+
+        @mock.patch.object(self.conductor.client, 'can_send_version',
+                           return_value=False)
+        @mock.patch.object(self.conductor.client, 'prepare',
+                           return_value=cctxt_mock)
+        def _test(prepare_mock, can_send_mock):
+            self.conductor.schedule_and_build_instances(
+                self.context, build_request, request_spec, image,
+                admin_password, injected_file, requested_network,
+                block_device_mapping, tags=tags)
+            prepare_mock.assert_called_once_with(version='1.16')
+            kw = {'build_requests': build_request,
+                  'request_specs': request_spec,
+                  'image': jsonutils.to_primitive(image),
+                  'admin_password': admin_password,
+                  'injected_files': injected_file,
+                  'requested_networks': requested_network,
+                  'block_device_mapping': block_device_mapping}
+            cctxt_mock.cast.assert_called_once_with(
+                self.context, 'schedule_and_build_instances', **kw)
+        _test()
 
 
 class ConductorTaskAPITestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
