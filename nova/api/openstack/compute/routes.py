@@ -84,6 +84,10 @@ flavor_controller = functools.partial(_create_controller,
 )
 
 
+flavor_access_controller = functools.partial(_create_controller,
+    flavor_access.FlavorAccessController, [], [])
+
+
 flavor_extraspec_controller = functools.partial(_create_controller,
     flavors_extraspecs.FlavorExtraSpecsController, [], [])
 
@@ -162,6 +166,9 @@ ROUTE_LIST = (
         'GET': [flavor_extraspec_controller, 'show'],
         'PUT': [flavor_extraspec_controller, 'update'],
         'DELETE': [flavor_extraspec_controller, 'delete']
+    }),
+    ('/flavors/{flavor_id}/os-flavor-access', {
+        'GET': [flavor_access_controller, 'index']
     }),
     ('/os-volumes_boot', {
         'GET': [server_controller, 'index'],
