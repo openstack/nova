@@ -1158,6 +1158,11 @@ class LibvirtConfigGuestDeviceAddress(LibvirtConfigObject):
             root_name='address', **kwargs)
         self.type = type
 
+    def format_dom(self):
+        xml = super(LibvirtConfigGuestDeviceAddress, self).format_dom()
+        xml.set("type", self.type)
+        return xml
+
     @staticmethod
     def parse_dom(xmldoc):
         addr_type = xmldoc.get('type')
@@ -1179,6 +1184,20 @@ class LibvirtConfigGuestDeviceAddressDrive(LibvirtConfigGuestDeviceAddress):
         self.bus = None
         self.target = None
         self.unit = None
+
+    def format_dom(self):
+        xml = super(LibvirtConfigGuestDeviceAddressDrive, self).format_dom()
+
+        if self.controller is not None:
+            xml.set("controller", str(self.controller))
+        if self.bus is not None:
+            xml.set("bus", str(self.bus))
+        if self.target is not None:
+            xml.set("target", str(self.target))
+        if self.unit is not None:
+            xml.set("unit", str(self.unit))
+
+        return xml
 
     def parse_dom(self, xmldoc):
         self.controller = xmldoc.get('controller')
