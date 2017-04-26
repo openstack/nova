@@ -28,20 +28,38 @@ rules = [
 ]
 
 
+def _unwrap_text(text):
+
+    def _split_paragraphs(lines):
+        output = []
+        for line in lines.split('\n'):
+            if line:
+                output.append(line.strip())
+            elif output:
+                yield ' '.join(output)
+                output = []
+
+        if output:
+            yield ' '.join(output)
+
+    return '\n\n'.join([x for x in _split_paragraphs(text)])
+
+
 def create_rule_default(name, check_str, description, operations):
-    # TODO(sneti): use DocumentedRuleDefault instead of RuleDefault
-    # when oslo.policy library with DocumentedRuleDefault change is released.
-    # formatted_description hack can be removed then.
+    # TODO(sneti): use DocumentedRuleDefault instead of RuleDefault when
+    # oslo.policy library is bumped to 1.21.0. The formatted_description hack
+    # can be removed then.
     ops = ""
     for operation in operations:
             ops += ('%(method)s %(path)s\n' %
                      {'method': operation['method'],
                       'path': operation['path']})
-    template = """%(description)s\n%(operations)s"""
+    template = """%(description)s\n\n%(operations)s\n"""
     formatted_description = template % {
-        "description": description,
+        "description": _unwrap_text(description),
         "operations": ops,
     }
+
     return policy.RuleDefault(name, check_str, formatted_description)
 
 
