@@ -2701,6 +2701,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 if not pty:
                     continue
                 break
+            else:
+                raise exception.ConsoleNotAvailable()
         else:
             raise exception.ConsoleNotAvailable()
 
