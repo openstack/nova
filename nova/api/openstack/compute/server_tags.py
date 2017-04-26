@@ -183,9 +183,8 @@ class ServerTagsController(wsgi.Controller):
         try:
             with nova_context.target_cell(context, im.cell_mapping):
                 objects.Tag.destroy(context, server_id, id)
-        except exception.InstanceTagNotFound as e:
-            raise webob.exc.HTTPNotFound(explanation=e.format_message())
-        except exception.InstanceNotFound as e:
+        except (exception.InstanceTagNotFound,
+                exception.InstanceNotFound) as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
     @wsgi.Controller.api_version("2.26")
