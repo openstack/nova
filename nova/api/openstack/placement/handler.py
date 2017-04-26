@@ -191,13 +191,19 @@ class PlacementHandler(object):
                 raise webob.exc.HTTPForbidden(
                     _('admin required'),
                     json_formatter=util.json_error_formatter)
-        # Check that an incoming request with a content-length
-        # header also has a content-type header. If not raise a 400.
-        if int(environ.get('CONTENT_LENGTH', 0)):
-            if 'CONTENT_TYPE' not in environ:
+        # Check that an incoming request with a content-length header
+        # that is an integer > 0 and not empty, also has a content-type
+        # header that is not empty. If not raise a 400.
+        clen = environ.get('CONTENT_LENGTH')
+        try:
+            if clen and (int(clen) > 0) and not environ.get('CONTENT_TYPE'):
                 raise webob.exc.HTTPBadRequest(
-                    _('content-type header required'),
-                    json_formatter=util.json_error_formatter)
+                   _('content-type header required when content-length > 0'),
+                   json_formatter=util.json_error_formatter)
+        except ValueError as exc:
+            raise webob.exc.HTTPBadRequest(
+                _('content-length header must be an integer'),
+                json_formatter=util.json_error_formatter)
         try:
             return dispatch(environ, start_response, self._map)
         # Trap the NotFound exceptions raised by the objects used

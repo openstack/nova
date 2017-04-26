@@ -142,3 +142,42 @@ class DeclarationsTest(test.NoDBTestCase):
         environ = _environ(path='')
         result = self.mapper.match(environ=environ)
         self.assertEqual(root.home, result['action'])
+
+
+class ContentHeadersTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(ContentHeadersTest, self).setUp()
+        self.environ = _environ(path='/')
+        self.app = handler.PlacementHandler()
+
+    def test_no_content_type(self):
+        self.environ['CONTENT_LENGTH'] = '10'
+        self.assertRaisesRegex(webob.exc.HTTPBadRequest,
+                               "content-type header required when "
+                               "content-length > 0", self.app,
+                               self.environ, start_response)
+
+    def test_non_integer_content_length(self):
+        self.environ['CONTENT_LENGTH'] = 'foo'
+        self.assertRaisesRegex(webob.exc.HTTPBadRequest,
+                               "content-length header must be an integer",
+                               self.app, self.environ, start_response)
+
+    def test_empty_content_type(self):
+        self.environ['CONTENT_LENGTH'] = '10'
+        self.environ['CONTENT_TYPE'] = ''
+        self.assertRaisesRegex(webob.exc.HTTPBadRequest,
+                               "content-type header required when "
+                               "content-length > 0", self.app,
+                               self.environ, start_response)
+
+    def test_empty_content_length_and_type_works(self):
+        self.environ['CONTENT_LENGTH'] = ''
+        self.environ['CONTENT_TYPE'] = ''
+        self.app(self.environ, start_response)
+
+    def test_content_length_and_type_works(self):
+        self.environ['CONTENT_LENGTH'] = '10'
+        self.environ['CONTENT_TYPE'] = 'foo'
+        self.app(self.environ, start_response)
