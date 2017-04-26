@@ -23,6 +23,8 @@ import six
 
 from nova.pci import utils as pci_utils
 
+MIN_LIBVIRT_ETHERNET_SCRIPT_PATH_NONE = (1, 3, 3)
+
 
 def set_vif_guest_frontend_config(conf, mac, model, driver, queues=None):
     """Populate a LibvirtConfigGuestInterface instance
@@ -47,7 +49,7 @@ def set_vif_host_backend_bridge_config(conf, brname, tapname=None):
         conf.target_dev = tapname
 
 
-def set_vif_host_backend_ethernet_config(conf, tapname):
+def set_vif_host_backend_ethernet_config(conf, tapname, host):
     """Populate a LibvirtConfigGuestInterface instance
     with host backend details for an externally configured
     host device.
@@ -58,7 +60,16 @@ def set_vif_host_backend_ethernet_config(conf, tapname):
 
     conf.net_type = "ethernet"
     conf.target_dev = tapname
-    conf.script = None
+    # NOTE(mriedem): Before libvirt 1.3.3, passing script=None results
+    # in errors because /etc/qemu-ifup gets run which is blocked by
+    # AppArmor. Passing script='' between libvirt 1.3.3 and 3.1 will also
+    # result in errors. So we have to check the libvirt version and set
+    # the script value accordingly. Libvirt 3.1 allows and properly handles
+    # both None and '' as no-ops.
+    if host.has_min_version(MIN_LIBVIRT_ETHERNET_SCRIPT_PATH_NONE):
+        conf.script = None
+    else:
+        conf.script = ''
 
 
 def set_vif_host_backend_802qbg_config(conf, devname, managerid,

@@ -250,7 +250,7 @@ class LibvirtGenericVIFDriver(object):
                                     vif['vnic_type'])
 
         dev = self.get_vif_devname(vif)
-        designer.set_vif_host_backend_ethernet_config(conf, dev)
+        designer.set_vif_host_backend_ethernet_config(conf, dev, host)
 
         return conf
 
@@ -370,7 +370,7 @@ class LibvirtGenericVIFDriver(object):
                                     inst_type, virt_type, vif['vnic_type'])
 
         dev = self.get_vif_devname(vif)
-        designer.set_vif_host_backend_ethernet_config(conf, dev)
+        designer.set_vif_host_backend_ethernet_config(conf, dev, host)
 
         designer.set_vif_bandwidth_config(conf, inst_type)
 
@@ -382,7 +382,7 @@ class LibvirtGenericVIFDriver(object):
                                     inst_type, virt_type, vif['vnic_type'])
 
         dev = self.get_vif_devname(vif)
-        designer.set_vif_host_backend_ethernet_config(conf, dev)
+        designer.set_vif_host_backend_ethernet_config(conf, dev, host)
 
         return conf
 
@@ -392,7 +392,7 @@ class LibvirtGenericVIFDriver(object):
                                     inst_type, virt_type, vif['vnic_type'])
 
         dev = self.get_vif_devname(vif)
-        designer.set_vif_host_backend_ethernet_config(conf, dev)
+        designer.set_vif_host_backend_ethernet_config(conf, dev, host)
 
         return conf
 
@@ -430,7 +430,7 @@ class LibvirtGenericVIFDriver(object):
         conf = self.get_base_config(instance, vif['address'], image_meta,
                                     inst_type, virt_type, vif['vnic_type'])
         dev = self.get_vif_devname(vif)
-        designer.set_vif_host_backend_ethernet_config(conf, dev)
+        designer.set_vif_host_backend_ethernet_config(conf, dev, host)
 
         designer.set_vif_bandwidth_config(conf, inst_type)
         return conf
