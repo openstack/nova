@@ -97,12 +97,13 @@ class TestInstanceNotificationSample(
             extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
         self.api.delete_server(server['id'])
         self._wait_until_deleted(server)
-        self.assertEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(7, len(fake_notifier.VERSIONED_NOTIFICATIONS))
 
         # This list needs to be in order.
         expected_notifications = [
             'instance-create-start',
             'instance-create-end',
+            'instance-update-tags-action',
             'instance-delete-start',
             'instance-shutdown-start',
             'instance-shutdown-end',
@@ -166,15 +167,19 @@ class TestInstanceNotificationSample(
         server = self._boot_a_server(
             extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
 
-        instance_updates = self._wait_for_notifications('instance.update', 7)
+        instance_updates = self._wait_for_notifications('instance.update', 8)
 
-        # The first notification comes from the nova-conductor the
+        # The first notification comes from the nova-conductor, the
+        # eighth notification comes from nova-api the
         # rest is from the nova-compute. To keep the test simpler
         # assert this fact and then modify the publisher_id of the
-        # first notification to match the template
+        # first and eighth notification to match the template
         self.assertEqual('conductor:fake-mini',
                          instance_updates[0]['publisher_id'])
+        self.assertEqual('nova-api:fake-mini',
+                         instance_updates[7]['publisher_id'])
         instance_updates[0]['publisher_id'] = 'nova-compute:fake-mini'
+        instance_updates[7]['publisher_id'] = 'nova-compute:fake-mini'
 
         create_steps = [
             # nothing -> scheduling
@@ -237,6 +242,11 @@ class TestInstanceNotificationSample(
              'state': 'active',
              'task_state': None,
              'power_state': 'running'},
+
+            # tag added
+            {'state_update.old_task_state': None,
+             'state_update.old_state': 'active',
+             'tags': ['tag1']},
         ]
 
         replacements = self._verify_instance_update_steps(
@@ -708,19 +718,19 @@ class TestInstanceNotificationSample(
                                  self.cinder.SWAP_NEW_VOL)
         self._wait_until_swap_volume(server, self.cinder.SWAP_NEW_VOL)
 
-        self.assertEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(7, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'instance-volume_swap-start',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[4])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[5])
         self._verify_notification(
             'instance-volume_swap-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[5])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[6])
 
     def test_volume_swap_server_with_error(self):
         server = self._boot_a_server(
@@ -740,12 +750,13 @@ class TestInstanceNotificationSample(
         # which generates the last notification (compute.exception).
         # 0. instance-create-start
         # 1. instance-create-end
-        # 2. instance-volume_attach-start
-        # 3. instance-volume_attach-end
-        # 4. instance-volume_swap-start
-        # 5. instance-volume_swap-error
-        # 6. compute.exception
-        self.assertTrue(len(fake_notifier.VERSIONED_NOTIFICATIONS) >= 6,
+        # 2. instance-update
+        # 3. instance-volume_attach-start
+        # 4. instance-volume_attach-end
+        # 5. instance-volume_swap-start
+        # 6. instance-volume_swap-error
+        # 7. compute.exception
+        self.assertTrue(len(fake_notifier.VERSIONED_NOTIFICATIONS) >= 7,
                         'Unexpected number of versioned notifications. '
                         'Expected at least 6, got: %s' %
                         len(fake_notifier.VERSIONED_NOTIFICATIONS))
@@ -756,13 +767,13 @@ class TestInstanceNotificationSample(
                 'old_volume_id': self.cinder.SWAP_ERR_OLD_VOL,
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[4])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[5])
         self._verify_notification(
             'instance-volume_swap-error',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[5])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[6])
 
     def _test_revert_server(self, server):
         pass

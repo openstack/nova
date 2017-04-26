@@ -1,0 +1,4 @@
+---
+features:
+  - Versioned instance.update notification will be sent
+    when server's tags field is updated.

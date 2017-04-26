@@ -14,6 +14,8 @@
 #    under the License.
 import datetime
 
+import mock
+
 from nova.notifications import base
 from nova import test
 from nova import utils
@@ -44,3 +46,19 @@ class TestNullSafeUtils(test.NoDBTestCase):
         self.assertEqual('', base.null_safe_int(number))
         number = 10
         self.assertEqual(number, base.null_safe_int(number))
+
+
+class TestSendInstanceUpdateNotification(test.NoDBTestCase):
+
+    @mock.patch.object(base, 'info_from_instance',
+                       new_callable=mock.NonCallableMock)  # asserts not called
+    # TODO(mriedem): Rather than mock is_enabled, it would be better to
+    # configure oslo_messaging_notifications.driver=['noop']
+    @mock.patch('nova.rpc.NOTIFIER.is_enabled', return_value=False)
+    def test_send_instance_update_notification_disabled(self, mock_enabled,
+                                                        mock_info):
+        """Tests the case that notifications are disabled which makes
+        send_instance_update_notification a noop.
+        """
+        base.send_instance_update_notification(mock.sentinel.ctxt,
+                                               mock.sentinel.instance)

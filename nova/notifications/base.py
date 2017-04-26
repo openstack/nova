@@ -134,7 +134,7 @@ def send_update(context, old_instance, new_instance, service="compute",
             old_display_name = None
             if new_instance["display_name"] != old_instance["display_name"]:
                 old_display_name = old_instance["display_name"]
-            _send_instance_update_notification(context, new_instance,
+            send_instance_update_notification(context, new_instance,
                     service=service, host=host,
                     old_display_name=old_display_name)
         except exception.InstanceNotFound:
@@ -176,7 +176,7 @@ def send_update_with_states(context, instance, old_vm_state, new_vm_state,
     if fire_update:
         # send either a state change or a regular notification
         try:
-            _send_instance_update_notification(context, instance,
+            send_instance_update_notification(context, instance,
                     old_vm_state=old_vm_state, old_task_state=old_task_state,
                     new_vm_state=new_vm_state, new_task_state=new_task_state,
                     service=service, host=host)
@@ -217,7 +217,8 @@ def _compute_states_payload(instance, old_vm_state=None,
     return states_payload
 
 
-def _send_instance_update_notification(context, instance, old_vm_state=None,
+@rpc.if_notifications_enabled
+def send_instance_update_notification(context, instance, old_vm_state=None,
             old_task_state=None, new_vm_state=None, new_task_state=None,
             service="compute", host=None, old_display_name=None):
     """Send 'compute.instance.update' notification to inform observers
