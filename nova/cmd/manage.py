@@ -1462,17 +1462,11 @@ class CellV2Commands(object):
     def delete_cell(self, cell_uuid):
         """Delete an empty cell by the given uuid.
 
-        If the cell is cell0 this command will return a non-zero exit code.
-
         If the cell is not found by uuid or it is not empty (it has host or
         instance mappings) this command will return a non-zero exit code.
 
         Returns 0 if the empty cell is found and deleted successfully.
         """
-        if cell_uuid == objects.CellMapping.CELL0_UUID:
-            print(_('Cell 0 can not be deleted.'))
-            return 5
-
         ctxt = context.get_admin_context()
         # Find the CellMapping given the uuid.
         try:
