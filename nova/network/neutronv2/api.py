@@ -2401,7 +2401,10 @@ class API(base_api.NetworkAPI):
 
             # Update port with newly allocated PCI devices.  Even if the
             # resize is happening on the same host, a new PCI device can be
-            # allocated.
+            # allocated. Note that this only needs to happen if a migration
+            # is in progress such as in a resize / migrate.  It is possible
+            # that this function is called without a migration object, such
+            # as in an unshelve operation.
             vnic_type = p.get('binding:vnic_type')
             if (vnic_type in network_model.VNIC_TYPES_SRIOV
                     and migration is not None):
