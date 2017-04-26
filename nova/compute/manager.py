@@ -1586,11 +1586,11 @@ class ComputeManager(manager.Manager):
             self._block_device_info_to_legacy(block_device_info)
             return block_device_info
 
-        except exception.OverQuota:
-            msg = _LW('Failed to create block device for instance due to '
-                      'being over volume resource quota')
-            LOG.warning(msg, instance=instance)
-            raise exception.VolumeLimitExceeded()
+        except exception.OverQuota as e:
+            LOG.warning(_LW('Failed to create block device for instance due'
+                            ' to exceeding volume related resource quota.'
+                            ' Error: %s'), e.message, instance=instance)
+            raise
 
         except Exception:
             LOG.exception(_LE('Instance failed block device setup'),
@@ -2104,8 +2104,7 @@ class ComputeManager(manager.Manager):
                 if network_info is not None:
                     network_info.wait(do_raise=False)
         except (exception.UnexpectedTaskStateError,
-                exception.VolumeLimitExceeded,
-                exception.InvalidBDM) as e:
+                exception.OverQuota, exception.InvalidBDM) as e:
             # Make sure the async call finishes
             if network_info is not None:
                 network_info.wait(do_raise=False)

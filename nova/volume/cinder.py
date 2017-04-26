@@ -190,8 +190,8 @@ def translate_volume_exception(method):
             res = method(self, ctx, volume_id, *args, **kwargs)
         except (keystone_exception.NotFound, cinder_exception.NotFound):
             _reraise(exception.VolumeNotFound(volume_id=volume_id))
-        except cinder_exception.OverLimit:
-            _reraise(exception.OverQuota(overs='volumes'))
+        except cinder_exception.OverLimit as e:
+            _reraise(exception.OverQuota(message=e.message))
         return res
     return translate_cinder_exception(wrapper)
 
