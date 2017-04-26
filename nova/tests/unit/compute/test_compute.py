@@ -1291,7 +1291,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                 self.instance_object, 'fake_id', 'fake_id2', {})
 
     @mock.patch.object(cinder.API, 'create',
-                       side_effect=exception.OverQuota(overs='volumes'))
+                       side_effect=exception.OverQuota())
     def test_prep_block_device_over_quota_failure(self, mock_create):
         instance = self._create_fake_instance_obj()
         bdms = [
@@ -1308,7 +1308,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             })]
         bdms = block_device_obj.block_device_make_list_from_dicts(
             self.context, bdms)
-        self.assertRaises(exception.VolumeLimitExceeded,
+        self.assertRaises(exception.OverQuota,
                           compute_manager.ComputeManager()._prep_block_device,
                           self.context, instance, bdms)
         self.assertTrue(mock_create.called)
