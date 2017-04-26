@@ -1484,41 +1484,6 @@ class TestAllocations(SchedulerReportClientTestCase):
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'delete')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get')
-    @mock.patch('nova.scheduler.client.report.'
-                '_instance_to_allocations_dict')
-    def test_remove_deleted_instances(self, mock_a, mock_get,
-                                      mock_delete):
-        cn = objects.ComputeNode(uuid=uuids.cn)
-        inst1 = objects.Instance(uuid=uuids.inst1)
-        inst2 = objects.Instance(uuid=uuids.inst2)
-        fake_allocations = {
-            'MEMORY_MB': 1024,
-            'VCPU': 2,
-            'DISK_GB': 101,
-        }
-        mock_get.return_value.json.return_value = {'allocations': {
-                inst1.uuid: fake_allocations,
-                inst2.uuid: fake_allocations,
-            }
-        }
-
-        # One instance still on the node, dict form as the
-        # RT tracks it
-        inst3 = {'uuid': 'foo'}
-
-        mock_delete.return_value = True
-        self.client.remove_deleted_instances(cn, [inst3])
-        mock_get.assert_called_once_with(
-            '/resource_providers/%s/allocations' % cn.uuid)
-        expected_calls = [
-            mock.call('/allocations/%s' % inst1.uuid),
-            mock.call('/allocations/%s' % inst2.uuid)]
-        mock_delete.assert_has_calls(expected_calls, any_order=True)
-
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'delete')
     @mock.patch('nova.scheduler.client.report.LOG')
     def test_delete_allocation_for_instance_ignore_404(self, mock_log,
                                                        mock_delete):
@@ -1532,7 +1497,7 @@ class TestAllocations(SchedulerReportClientTestCase):
             # py3 uses __bool__
             mock_response.__bool__.return_value = False
         mock_delete.return_value = mock_response
-        self.client._delete_allocation_for_instance(uuids.rp_uuid)
+        self.client.delete_allocation_for_instance(uuids.rp_uuid)
         # make sure we didn't screw up the logic or the mock
         mock_log.info.assert_not_called()
         # make sure warning wasn't called for the 404
@@ -1541,7 +1506,7 @@ class TestAllocations(SchedulerReportClientTestCase):
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
                 "delete")
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
-                "_delete_allocation_for_instance")
+                "delete_allocation_for_instance")
     @mock.patch("nova.objects.InstanceList.get_by_host_and_node")
     def test_delete_resource_provider_cascade(self, mock_by_host,
             mock_del_alloc, mock_delete):
@@ -1563,7 +1528,7 @@ class TestAllocations(SchedulerReportClientTestCase):
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
                 "delete")
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
-                "_delete_allocation_for_instance")
+                "delete_allocation_for_instance")
     @mock.patch("nova.objects.InstanceList.get_by_host_and_node")
     def test_delete_resource_provider_no_cascade(self, mock_by_host,
             mock_del_alloc, mock_delete):

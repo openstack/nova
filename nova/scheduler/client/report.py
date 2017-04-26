@@ -884,7 +884,7 @@ class SchedulerReportClient(object):
         return r.status_code == 204
 
     @safe_connect
-    def _delete_allocation_for_instance(self, uuid):
+    def delete_allocation_for_instance(self, uuid):
         url = '/allocations/%s' % uuid
         r = self.delete(url)
         if r:
@@ -905,30 +905,16 @@ class SchedulerReportClient(object):
         if sign > 0:
             self._allocate_for_instance(compute_node.uuid, instance)
         else:
-            self._delete_allocation_for_instance(instance.uuid)
+            self.delete_allocation_for_instance(instance.uuid)
 
     @safe_connect
-    def _get_allocations(self, rp_uuid):
+    def get_allocations_for_resource_provider(self, rp_uuid):
         url = '/resource_providers/%s/allocations' % rp_uuid
         resp = self.get(url)
         if not resp:
             return {}
         else:
             return resp.json()['allocations']
-
-    def remove_deleted_instances(self, compute_node, instance_uuids):
-        allocations = self._get_allocations(compute_node.uuid)
-        if allocations is None:
-            allocations = {}
-
-        instance_dict = {instance['uuid']: instance
-                         for instance in instance_uuids}
-        removed_instances = set(allocations.keys()) - set(instance_dict.keys())
-
-        for uuid in removed_instances:
-            LOG.warning(_LW('Deleting stale allocation for instance %s'),
-                        uuid)
-            self._delete_allocation_for_instance(uuid)
 
     @safe_connect
     def delete_resource_provider(self, context, compute_node, cascade=False):
@@ -951,7 +937,7 @@ class SchedulerReportClient(object):
             instances = objects.InstanceList.get_by_host_and_node(context,
                     host, nodename)
             for instance in instances:
-                self._delete_allocation_for_instance(instance.uuid)
+                self.delete_allocation_for_instance(instance.uuid)
         url = "/resource_providers/%s" % rp_uuid
         resp = self.delete(url)
         if resp:

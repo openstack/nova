@@ -992,10 +992,27 @@ class ResourceTracker(object):
             if instance.vm_state not in vm_states.ALLOW_RESOURCE_REMOVAL:
                 self._update_usage_from_instance(context, instance, nodename)
 
-        self.reportclient.remove_deleted_instances(cn,
-                self.tracked_instances.values())
+        # Remove allocations for instances that have been removed.
+        self._remove_deleted_instances_allocations(context, cn)
+
         cn.free_ram_mb = max(0, cn.free_ram_mb)
         cn.free_disk_gb = max(0, cn.free_disk_gb)
+
+    def _remove_deleted_instances_allocations(self, context, cn):
+        tracked_keys = set(self.tracked_instances.keys())
+        allocations = self.reportclient.get_allocations_for_resource_provider(
+                cn.uuid) or {}
+        allocations_to_delete = set(allocations.keys()) - tracked_keys
+        for instance_uuid in allocations_to_delete:
+            # Allocations related to instances being scheduled should not be
+            # deleted if we already wrote the allocation previously.
+            instance = objects.Instance.get_by_uuid(context, instance_uuid,
+                                                    expected_attrs=[])
+            if not instance.host:
+                continue
+            LOG.warning('Deleting stale allocation for instance %s',
+                        instance_uuid)
+            self.reportclient.delete_allocation_for_instance(instance_uuid)
 
     def _find_orphaned_instances(self):
         """Given the set of instances and migrations already account for
