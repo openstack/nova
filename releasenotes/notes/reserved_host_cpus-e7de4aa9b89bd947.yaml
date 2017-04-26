@@ -1,0 +1,6 @@
+---
+features:
+  - A new configuration option ``reserved_host_cpus`` has been added for
+    compute services. It helps operators to provide how many physical CPUs they
+    would like to reserve for the hypervisor separately from what the instances
+    use.

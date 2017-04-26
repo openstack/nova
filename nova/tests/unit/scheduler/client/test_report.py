@@ -592,13 +592,14 @@ class TestComputeNodeToInventoryDict(test.NoDBTestCase):
 
         self.flags(reserved_host_memory_mb=1000)
         self.flags(reserved_host_disk_mb=200)
+        self.flags(reserved_host_cpus=1)
 
         result = report._compute_node_to_inventory_dict(compute_node)
 
         expected = {
             'VCPU': {
                 'total': compute_node.vcpus,
-                'reserved': 0,
+                'reserved': CONF.reserved_host_cpus,
                 'min_unit': 1,
                 'max_unit': compute_node.vcpus,
                 'step_size': 1,
@@ -652,7 +653,7 @@ class TestInventory(SchedulerReportClientTestCase):
         expected_inv_data = {
             'VCPU': {
                 'total': 8,
-                'reserved': 0,
+                'reserved': CONF.reserved_host_cpus,
                 'min_unit': 1,
                 'max_unit': 8,
                 'step_size': 1,
@@ -897,7 +898,7 @@ There was a conflict when trying to complete your request.
             'inventories': {
                 'VCPU': {
                     'total': 8,
-                    'reserved': 0,
+                    'reserved': CONF.reserved_host_cpus,
                     'min_unit': 1,
                     'max_unit': compute_node.vcpus,
                     'step_size': 1,
@@ -937,7 +938,7 @@ There was a conflict when trying to complete your request.
             'inventories': {
                 'VCPU': {
                     'total': 8,
-                    'reserved': 0,
+                    'reserved': CONF.reserved_host_cpus,
                     'min_unit': 1,
                     'max_unit': compute_node.vcpus,
                     'step_size': 1,
