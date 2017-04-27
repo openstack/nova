@@ -39,7 +39,7 @@ please refer to the `OpenStack API WG
 Basic plugin structure
 ----------------------
 
-A very basic skeleton of a v2.1 plugin can be seen `here in the unittests <http://git.openstack.org/cgit/openstack/nova/tree/nova/tests/unit/api/openstack/compute/test_plugins/basic.py>`_. An annotated version below::
+A very basic skeleton of a v2.1 plugin can be seen `here in the unittests <https://git.openstack.org/cgit/openstack/nova/tree/nova/tests/unit/api/openstack/compute/basic.py>`_. An annotated version below::
 
     """Basic Test Extension"""
 
