@@ -22,6 +22,8 @@ BASE_POLICY_NAME = 'os_compute_api:flavors'
 
 
 flavors_policies = [
+    # TODO(johngarbutt) this doesn't appear to be used in the code and
+    # as such should be removed.
     policy.RuleDefault(
         name=BASE_POLICY_NAME,
         check_str=base.RULE_ADMIN_OR_OWNER),
