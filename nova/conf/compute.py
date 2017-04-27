@@ -414,7 +414,10 @@ configuration value if no per-aggregate setting is found.
 
 NOTE: This can be set per-compute, or if set to 0.0, the value
 set on the scheduler node(s) or compute node(s) will be used
-and defaulted to 16.0'.
+and defaulted to 16.0.
+
+NOTE: As of the 16.0.0 Pike release, this configuration option is ignored
+for the ironic.IronicDriver compute driver and is hardcoded to 1.0.
 
 Possible values:
 
@@ -439,6 +442,9 @@ configuration value if no per-aggregate setting found.
 NOTE: This can be set per-compute, or if set to 0.0, the value
 set on the scheduler node(s) or compute node(s) will be used and
 defaulted to 1.5.
+
+NOTE: As of the 16.0.0 Pike release, this configuration option is ignored
+for the ironic.IronicDriver compute driver and is hardcoded to 1.0.
 
 Possible values:
 
@@ -466,7 +472,10 @@ instances.
 
 NOTE: This can be set per-compute, or if set to 0.0, the value
 set on the scheduler node(s) or compute node(s) will be used and
-defaulted to 1.0'.
+defaulted to 1.0.
+
+NOTE: As of the 16.0.0 Pike release, this configuration option is ignored
+for the ironic.IronicDriver compute driver and is hardcoded to 1.0.
 
 Possible values:
 
