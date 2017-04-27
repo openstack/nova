@@ -17,8 +17,6 @@ import webob.exc
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 
-ALIAS = "os-certificates"
-
 
 class CertificatesController(wsgi.Controller):
     """The x509 Certificates API controller for the OpenStack API."""
@@ -32,21 +30,3 @@ class CertificatesController(wsgi.Controller):
     def create(self, req, body=None):
         """Create a certificate."""
         raise webob.exc.HTTPGone()
-
-
-class Certificates(extensions.V21APIExtensionBase):
-    """Certificates support."""
-
-    name = "Certificates"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        resources = [
-            extensions.ResourceExtension(ALIAS,
-                                         CertificatesController(),
-                                         member_actions={})]
-        return resources
-
-    def get_controller_extensions(self):
-        return []
