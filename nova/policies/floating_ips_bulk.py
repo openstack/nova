@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_policy import policy
-
 from nova.policies import base
 
 
@@ -22,9 +20,28 @@ BASE_POLICY_NAME = 'os_compute_api:os-floating-ips-bulk'
 
 
 floating_ips_bulk_policies = [
-    policy.RuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_API),
+    base.create_rule_default(
+        BASE_POLICY_NAME,
+        base.RULE_ADMIN_API,
+        "Bulk-create, delete, and list floating IPs. API is deprecated.",
+        [
+            {
+                'method': 'GET',
+                'path': '/os-floating-ips-bulk'
+            },
+            {
+                'method': 'POST',
+                'path': '/os-floating-ips-bulk'
+            },
+            {
+                'method': 'PUT',
+                'path': '/os-floating-ips-bulk/delete'
+            },
+            {
+                'method': 'GET',
+                'path': '/os-floating-ips-bulk/{host_name}'
+            },
+        ]),
 ]
 
 

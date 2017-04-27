@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_policy import policy
-
 from nova.policies import base
 
 
@@ -22,9 +20,36 @@ BASE_POLICY_NAME = 'os_compute_api:os-floating-ips'
 
 
 floating_ips_policies = [
-    policy.RuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_OR_OWNER),
+    base.create_rule_default(
+        BASE_POLICY_NAME,
+        base.RULE_ADMIN_OR_OWNER,
+        "Manage a project's floating IPs. These APIs are all deprecated.",
+        [
+            {
+                'method': 'POST',
+                'path': '/servers/{server_id}/action (addFloatingIp)'
+            },
+            {
+                'method': 'POST',
+                'path': '/servers/{server_id}/action (removeFloatingIp)'
+            },
+            {
+                'method': 'GET',
+                'path': '/os-floating-ips'
+            },
+            {
+                'method': 'POST',
+                'path': '/os-floating-ips'
+            },
+            {
+                'method': 'GET',
+                'path': '/os-floating-ips/{floating_ip_id}'
+            },
+            {
+                'method': 'DELETE',
+                'path': '/os-floating-ips/{floating_ip_id}'
+            },
+        ]),
 ]
 
 
