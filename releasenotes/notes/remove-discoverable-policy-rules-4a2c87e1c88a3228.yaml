@@ -1,0 +1,10 @@
+---
+upgrade:
+  - |
+    All policy rules with the following naming scheme have been
+    removed: ``os_compute_api:{extension_alias}:discoverable``
+    These policy rules were used to hide an enabled extension from the
+    list active API extensions API. Given it is no longer possible to
+    disable any API extensions, it makes no sense to have the option
+    to hide the fact an API extension is active. As such, all these policy
+    rules have been removed.

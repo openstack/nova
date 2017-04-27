@@ -13,13 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_policy import policy
-
 from nova.policies import base
 
 
 BASE_POLICY_NAME = 'os_compute_api:os-server-diagnostics'
-POLICY_ROOT = 'os_compute_api:os-server-diagnostics:%s'
 
 
 server_diagnostics_policies = [
@@ -33,9 +30,6 @@ server_diagnostics_policies = [
                 'path': '/servers/{server_id}/diagnostics'
             }
         ]),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'discoverable',
-        check_str=base.RULE_ANY),
 ]
 
 

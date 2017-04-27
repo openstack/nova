@@ -19,16 +19,12 @@ from nova.policies import base
 
 
 BASE_POLICY_NAME = 'os_compute_api:os-instance-usage-audit-log'
-POLICY_ROOT = 'os_compute_api:os-instance-usage-audit-log:%s'
 
 
 instance_usage_audit_log_policies = [
     policy.RuleDefault(
         name=BASE_POLICY_NAME,
         check_str=base.RULE_ADMIN_API),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'discoverable',
-        check_str=base.RULE_ANY),
 ]
 
 

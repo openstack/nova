@@ -27,9 +27,6 @@ flavor_access_policies = [
         name=POLICY_ROOT % 'add_tenant_access',
         check_str=base.RULE_ADMIN_API),
     policy.RuleDefault(
-        name=POLICY_ROOT % 'discoverable',
-        check_str=base.RULE_ANY),
-    policy.RuleDefault(
         name=POLICY_ROOT % 'remove_tenant_access',
         check_str=base.RULE_ADMIN_API),
     policy.RuleDefault(

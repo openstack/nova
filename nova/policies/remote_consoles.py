@@ -13,13 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_policy import policy
-
 from nova.policies import base
 
 
 BASE_POLICY_NAME = 'os_compute_api:os-remote-consoles'
-POLICY_ROOT = 'os_compute_api:os-remote-consoles:%s'
 
 
 remote_consoles_policies = [
@@ -49,9 +46,6 @@ remote_consoles_policies = [
                 'path': '/servers/{server_id}/remote-consoles'
             },
         ]),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'discoverable',
-        check_str=base.RULE_ANY),
 ]
 
 

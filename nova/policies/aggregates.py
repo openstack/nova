@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_policy import policy
-
 from nova.policies import base
 
 
@@ -42,9 +40,6 @@ aggregates_policies = [
                 'method': 'POST'
             }
         ]),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'discoverable',
-        check_str=base.RULE_ANY),
     base.create_rule_default(
         POLICY_ROOT % 'create',
         base.RULE_ADMIN_API,

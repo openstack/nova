@@ -23,9 +23,6 @@ POLICY_ROOT = 'os_compute_api:ips:%s'
 
 ips_policies = [
     policy.RuleDefault(
-        name=POLICY_ROOT % 'discoverable',
-        check_str=base.RULE_ANY),
-    policy.RuleDefault(
         name=POLICY_ROOT % 'show',
         check_str=base.RULE_ADMIN_OR_OWNER),
     policy.RuleDefault(

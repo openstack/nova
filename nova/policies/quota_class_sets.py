@@ -26,9 +26,6 @@ quota_class_sets_policies = [
         name=POLICY_ROOT % 'show',
         check_str='is_admin:True or quota_class:%(quota_class)s'),
     policy.RuleDefault(
-        name=POLICY_ROOT % 'discoverable',
-        check_str=base.RULE_ANY),
-    policy.RuleDefault(
         name=POLICY_ROOT % 'update',
         check_str=base.RULE_ADMIN_API),
 ]

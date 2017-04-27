@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_policy import policy
-
 from nova.policies import base
 
 
@@ -52,9 +50,6 @@ volumes_attachments_policies = [
                  '/servers/{server_id}/os-volume_attachments/{attachment_id}'
             }
         ]),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'discoverable',
-        check_str=base.RULE_ANY),
     base.create_rule_default(
         POLICY_ROOT % 'update',
         base.RULE_ADMIN_API,

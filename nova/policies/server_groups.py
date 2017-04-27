@@ -24,9 +24,6 @@ BASE_POLICY_RULE = 'rule:%s' % BASE_POLICY_NAME
 
 
 server_groups_policies = [
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'discoverable',
-        check_str=base.RULE_ANY),
     # TODO(Kevin_Zheng): remove this rule as this not used by any API
     policy.RuleDefault(
         name=BASE_POLICY_NAME,

@@ -19,13 +19,9 @@ from nova.policies import base
 
 
 BASE_POLICY_NAME = 'os_compute_api:os-extended-status'
-POLICY_ROOT = 'os_compute_api:os-extended-status:%s'
 
 
 extended_status_policies = [
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'discoverable',
-        check_str=base.RULE_ANY),
     policy.RuleDefault(
         name=BASE_POLICY_NAME,
         check_str=base.RULE_ADMIN_OR_OWNER),

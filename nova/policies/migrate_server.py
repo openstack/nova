@@ -26,9 +26,6 @@ migrate_server_policies = [
         name=POLICY_ROOT % 'migrate',
         check_str=base.RULE_ADMIN_API),
     policy.RuleDefault(
-        name=POLICY_ROOT % 'discoverable',
-        check_str=base.RULE_ANY),
-    policy.RuleDefault(
         name=POLICY_ROOT % 'migrate_live',
         check_str=base.RULE_ADMIN_API),
 ]

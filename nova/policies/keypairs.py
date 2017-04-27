@@ -23,9 +23,6 @@ POLICY_ROOT = 'os_compute_api:os-keypairs:%s'
 
 
 keypairs_policies = [
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'discoverable',
-        check_str=base.RULE_ANY),
     base.create_rule_default(
         POLICY_ROOT % 'index',
         'rule:admin_api or user_id:%(user_id)s',
