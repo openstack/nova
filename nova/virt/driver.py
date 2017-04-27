@@ -28,7 +28,6 @@ import six
 
 import nova.conf
 from nova.i18n import _, _LE, _LI
-from nova import utils
 from nova.virt import event as virtevent
 
 CONF = nova.conf.CONF
@@ -1624,9 +1623,15 @@ def load_compute_driver(virtapi, compute_driver=None):
         driver = importutils.import_object(
             'nova.virt.%s' % compute_driver,
             virtapi)
-        return utils.check_isinstance(driver, ComputeDriver)
+        if isinstance(driver, ComputeDriver):
+            return driver
+        raise ValueError()
     except ImportError:
         LOG.exception(_LE("Unable to load the virtualization driver"))
+        sys.exit(1)
+    except ValueError:
+        LOG.exception("Compute driver '%s' from 'nova.virt' is not of type"
+                      "'%s'", compute_driver, str(ComputeDriver))
         sys.exit(1)
 
 

@@ -35,7 +35,6 @@ import sys
 import tempfile
 import textwrap
 import time
-from xml.sax import saxutils
 
 import eventlet
 import netaddr
@@ -161,13 +160,6 @@ def get_root_helper():
     else:
         cmd = 'sudo nova-rootwrap %s' % CONF.rootwrap_config
     return cmd
-
-
-def _get_rootwrap_helper():
-    if CONF.use_rootwrap_daemon:
-        return RootwrapDaemonHelper(CONF.rootwrap_config)
-    else:
-        return RootwrapProcessHelper()
 
 
 class RootwrapProcessHelper(object):
@@ -330,11 +322,6 @@ DEFAULT_PASSWORD_SYMBOLS = ('23456789',  # Removed: 0,1
                             'abcdefghijkmnopqrstuvwxyz')  # Removed: l
 
 
-# ~5 bits per symbol
-EASIER_PASSWORD_SYMBOLS = ('23456789',  # Removed: 0, 1
-                           'ABCDEFGHJKLMNPQRSTUVWXYZ')  # Removed: I, O
-
-
 def last_completed_audit_period(unit=None, before=None):
     """This method gives you the most recently *completed* audit period.
 
@@ -480,13 +467,7 @@ def get_my_linklocal(interface):
         raise exception.NovaException(msg)
 
 
-def xhtml_escape(value):
-    """Escapes a string so it is valid within XML or XHTML.
-
-    """
-    return saxutils.escape(value, {'"': '&quot;', "'": '&apos;'})
-
-
+# TODO(sfinucan): Replace this with the equivalent from oslo.utils
 def utf8(value):
     """Try to turn a string into utf-8 if possible.
 
@@ -501,13 +482,6 @@ def utf8(value):
         value = six.text_type(value)
 
     return value.encode('utf-8')
-
-
-def check_isinstance(obj, cls):
-    """Checks that obj is of type cls, and lets PyLint infer types."""
-    if isinstance(obj, cls):
-        return obj
-    raise Exception(_('Expected object of type: %s') % (str(cls)))
 
 
 def parse_server_string(server_str):
