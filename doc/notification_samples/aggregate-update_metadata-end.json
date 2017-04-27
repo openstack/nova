@@ -1,0 +1,13 @@
+{
+    "priority": "INFO",
+    "payload": {
+        "$ref": "common_payloads/AggregatePayload.json#",
+        "nova_object.data": {
+            "metadata": {
+                "availability_zone": "AZ-1"
+            }
+        }
+    },
+    "event_type": "aggregate.update_metadata.end",
+    "publisher_id": "nova-api:fake-mini"
+}

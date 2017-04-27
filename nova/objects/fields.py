@@ -827,6 +827,7 @@ class NotificationAction(BaseNovaEnum):
     ADD_HOST = 'add_host'
     REMOVE_HOST = 'remove_host'
     ADD_MEMBER = 'add_member'
+    UPDATE_METADATA = 'update_metadata'
 
     ALL = (UPDATE, EXCEPTION, DELETE, PAUSE, UNPAUSE, RESIZE, VOLUME_SWAP,
            SUSPEND, POWER_ON, REBOOT, SHUTDOWN, SNAPSHOT, INTERFACE_ATTACH,
@@ -837,7 +838,7 @@ class NotificationAction(BaseNovaEnum):
            LIVE_MIGRATION_ROLLBACK_DEST, REBUILD, INTERFACE_DETACH,
            RESIZE_CONFIRM, RESIZE_PREP, RESIZE_REVERT, SHELVE_OFFLOAD,
            SOFT_DELETE, TRIGGER_CRASH_DUMP, UNRESCUE, UNSHELVE, ADD_HOST,
-           REMOVE_HOST, ADD_MEMBER)
+           REMOVE_HOST, ADD_MEMBER, UPDATE_METADATA)
 
 
 # TODO(rlrossit): These should be changed over to be a StateMachine enum from

@@ -347,6 +347,11 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
         compute_utils.notify_about_aggregate_update(self._context,
                                                     "updatemetadata.start",
                                                     payload)
+        compute_utils.notify_about_aggregate_action(
+            context=self._context,
+            aggregate=self,
+            action=fields.NotificationAction.UPDATE_METADATA,
+            phase=fields.NotificationPhase.START)
         to_add = {}
         for key, value in updates.items():
             if value is None:
@@ -365,6 +370,11 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
         compute_utils.notify_about_aggregate_update(self._context,
                                                     "updatemetadata.end",
                                                     payload)
+        compute_utils.notify_about_aggregate_action(
+            context=self._context,
+            aggregate=self,
+            action=fields.NotificationAction.UPDATE_METADATA,
+            phase=fields.NotificationPhase.END)
         self.obj_reset_changes(fields=['metadata'])
 
     @base.remotable

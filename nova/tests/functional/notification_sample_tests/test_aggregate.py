@@ -105,3 +105,34 @@ class TestAggregateNotificationSample(
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
 
         self.admin_api.delete_aggregate(aggregate['id'])
+
+    def test_aggregate_update_metadata(self):
+        aggregate_req = {
+            "aggregate": {
+                "name": "my-aggregate",
+                "availability_zone": "nova"}}
+        aggregate = self.admin_api.post_aggregate(aggregate_req)
+
+        set_metadata_req = {
+            "set_metadata": {
+                "metadata": {
+                    "availability_zone": "AZ-1"
+                }
+            }
+        }
+        fake_notifier.reset()
+        self.admin_api.post_aggregate_action(aggregate['id'], set_metadata_req)
+
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'aggregate-update_metadata-start',
+            replacements={
+                'uuid': aggregate['uuid'],
+                'id': aggregate['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'aggregate-update_metadata-end',
+            replacements={
+                'uuid': aggregate['uuid'],
+                'id': aggregate['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
