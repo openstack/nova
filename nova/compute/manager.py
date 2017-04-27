@@ -5609,10 +5609,12 @@ class ComputeManager(manager.Manager):
 
         # Define domain at destination host, without doing it,
         # pause/suspend/terminate do not work.
+        post_at_dest_success = True
         try:
             self.compute_rpcapi.post_live_migration_at_destination(ctxt,
                     instance, block_migration, dest)
         except Exception as error:
+            post_at_dest_success = False
             # We don't want to break _post_live_migration() if
             # post_live_migration_at_destination() fails as it should never
             # affect cleaning up source node.
@@ -5640,8 +5642,9 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(ctxt, instance,
                                           "live_migration._post.end",
                                           network_info=network_info)
-        LOG.info(_LI('Migrating instance to %s finished successfully.'),
-                 dest, instance=instance)
+        if post_at_dest_success:
+            LOG.info(_LI('Migrating instance to %s finished successfully.'),
+                     dest, instance=instance)
 
         self._clean_instance_console_tokens(ctxt, instance)
         if migrate_data and migrate_data.obj_attr_is_set('migration'):
