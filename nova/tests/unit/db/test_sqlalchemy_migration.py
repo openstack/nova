@@ -239,29 +239,6 @@ class TestNewtonCheck(test.TestCase):
             '330_enforce_mitaka_online_migrations')
         self.engine = db_api.get_engine()
 
-    def test_all_migrated(self):
-        cn = objects.ComputeNode(context=self.context,
-                                 vcpus=1, memory_mb=512, local_gb=10,
-                                 vcpus_used=0, memory_mb_used=256,
-                                 local_gb_used=5, hypervisor_type='HyperDanVM',
-                                 hypervisor_version='34', cpu_info='foo')
-        cn.create()
-        objects.Aggregate(context=self.context,
-                          name='foo').create()
-        objects.PciDevice.create(self.context, {})
-        self.migration.upgrade(self.engine)
-
-    def test_cn_not_migrated(self):
-        cn = objects.ComputeNode(context=self.context,
-                                 vcpus=1, memory_mb=512, local_gb=10,
-                                 vcpus_used=0, memory_mb_used=256,
-                                 local_gb_used=5, hypervisor_type='HyperDanVM',
-                                 hypervisor_version='34', cpu_info='foo')
-        cn.create()
-        db_api.compute_node_update(self.context, cn.id, {'uuid': None})
-        self.assertRaises(exception.ValidationError,
-                          self.migration.upgrade, self.engine)
-
     def test_aggregate_not_migrated(self):
         agg = db_api.aggregate_create(self.context, {"name": "foobar"})
         db_api.aggregate_update(self.context, agg.id, {'uuid': None})
@@ -306,31 +283,6 @@ class TestNewtonCheck(test.TestCase):
                                   'label': 'foobar',
                                   'status': 'whatisthis?'})
         # blocker should not block on type-PCI devices
-        self.migration.upgrade(self.engine)
-
-    def test_deleted_not_migrated(self):
-        cn_values = dict(vcpus=1, memory_mb=512, local_gb=10,
-                         vcpus_used=0, memory_mb_used=256,
-                         local_gb_used=5, hypervisor_type='HyperDanVM',
-                         hypervisor_version='34', cpu_info='foo')
-        cn = db_api.compute_node_create(self.context, cn_values)
-        agg_values = dict(name='foo')
-        agg = db_api.aggregate_create(self.context, agg_values)
-        pd = db_api.pci_device_update(self.context, 1, 'foo:bar',
-                                 {'parent_addr': None,
-                                  'compute_node_id': 1,
-                                  'address': 'foo:bar',
-                                  'vendor_id': '123',
-                                  'product_id': '456',
-                                  'dev_type': 'foo',
-                                  'label': 'foobar',
-                                  'status': 'whatisthis?'})
-        db_api.compute_node_delete(self.context, cn['id'])
-        db_api.aggregate_delete(self.context, agg['id'])
-        db_api.pci_device_destroy(self.context, pd['compute_node_id'],
-                                  pd['address'])
-
-        # blocker should not block on soft-deleted records
         self.migration.upgrade(self.engine)
 
 

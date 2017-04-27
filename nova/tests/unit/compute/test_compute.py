@@ -176,6 +176,7 @@ class BaseTestCase(test.TestCase):
                                    'memory_mb': 131072,
                                    'current_workload': 0,
                                    'vcpus': 16,
+                                   'mapped': 1,
                                    'cpu_info': 'ppc64,powervm,3940',
                                    'running_vms': 0,
                                    'free_disk_gb': 259,

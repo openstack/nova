@@ -48,7 +48,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
     # Version 1.14: Added cpu_allocation_ratio and ram_allocation_ratio
     # Version 1.15: Added uuid
     # Version 1.16: Added disk_allocation_ratio
-    VERSION = '1.16'
+    # Version 1.17: Added mapped
+    VERSION = '1.17'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -89,11 +90,15 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         'cpu_allocation_ratio': fields.FloatField(),
         'ram_allocation_ratio': fields.FloatField(),
         'disk_allocation_ratio': fields.FloatField(),
+        'mapped': fields.IntegerField(),
         }
 
     def obj_make_compatible(self, primitive, target_version):
         super(ComputeNode, self).obj_make_compatible(primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 17):
+            if 'mapped' in primitive:
+                del primitive['mapped']
         if target_version < (1, 16):
             if 'disk_allocation_ratio' in primitive:
                 del primitive['disk_allocation_ratio']
@@ -199,6 +204,9 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
                     if value == 0.0 and key == 'disk_allocation_ratio':
                         # It's not specified either on the controller
                         value = 1.0
+            elif key == 'mapped':
+                value = 0 if value is None else value
+
             setattr(compute, key, value)
 
         stats = db_compute['stats']
