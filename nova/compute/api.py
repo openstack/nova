@@ -4304,6 +4304,65 @@ def target_host_cell(fn):
     return targeted
 
 
+def _find_service_in_cell(context, service_id=None, service_host=None):
+    """Find a service by id or hostname by searching all cells.
+
+    If one matching service is found, return it. If none or multiple
+    are found, raise an exception.
+
+    :param context: A context.RequestContext
+    :param service_id: If not none, the DB ID of the service to find
+    :param service_host: If not None, the hostname of the service to find
+    :returns: An objects.Service
+    :raises: ServiceNotUnique if multiple matching IDs are found
+    :raises: NotFound if no matches are found
+    :raises: NovaException if called with neither search option
+    """
+
+    load_cells()
+    service = None
+    found_in_cell = None
+
+    is_uuid = False
+    if service_id is not None:
+        is_uuid = uuidutils.is_uuid_like(service_id)
+        if is_uuid:
+            lookup_fn = lambda c: objects.Service.get_by_uuid(c, service_id)
+        else:
+            lookup_fn = lambda c: objects.Service.get_by_id(c, service_id)
+    elif service_host is not None:
+        lookup_fn = lambda c: (
+            objects.Service.get_by_compute_host(c, service_host))
+    else:
+        LOG.exception('_find_service_in_cell called with no search parameters')
+        # This is intentionally cryptic so we don't leak implementation details
+        # out of the API.
+        raise exception.NovaException()
+
+    for cell in CELLS:
+        # NOTE(danms): Services can be in cell0, so don't skip it here
+        try:
+            with nova_context.target_cell(context, cell):
+                cell_service = lookup_fn(context)
+        except exception.NotFound:
+            # NOTE(danms): Keep looking in other cells
+            continue
+        if service and cell_service:
+            raise exception.ServiceNotUnique()
+        service = cell_service
+        found_in_cell = cell
+        if service and is_uuid:
+            break
+
+    if service:
+        # NOTE(danms): Set the cell on the context so it remains
+        # when we return to our caller
+        nova_context.set_target_cell(context, found_in_cell)
+        return service
+    else:
+        raise exception.NotFound()
+
+
 class HostAPI(base.Base):
     """Sub-set of the Compute Manager API for managing host operations."""
 
@@ -4418,57 +4477,12 @@ class HostAPI(base.Base):
                 ret_services.append(service)
         return ret_services
 
-    def _find_service(self, context, service_id):
-        """Find a service by id by searching all cells.
-
-        If one matching service is found, return it. If none or multiple
-        are found, raise an exception.
-
-        :param context: A context.RequestContext
-        :param service_id: The DB ID (or UUID) of the service to find
-        :returns: An objects.Service
-        :raises: ServiceNotUnique if multiple matches are found
-        :raises: ServiceNotFound if no matches are found
-        """
-
-        load_cells()
-        # NOTE(danms): Unfortunately this API exposes database identifiers
-        # which means we really can't do something efficient here
-        service = None
-        found_in_cell = None
-        is_uuid = uuidutils.is_uuid_like(service_id)
-        for cell in CELLS:
-            # NOTE(danms): Services can be in cell0, so don't skip it here
-            try:
-                with nova_context.target_cell(context, cell) as cctxt:
-                    if is_uuid:
-                        service = objects.Service.get_by_uuid(cctxt,
-                                                              service_id)
-                        found_in_cell = cell
-                        # Service uuids are unique so we can break the loop now
-                        break
-                    else:
-                        cell_service = objects.Service.get_by_id(cctxt,
-                                                                 service_id)
-            except exception.ServiceNotFound:
-                # NOTE(danms): Keep looking in other cells
-                continue
-            if service and cell_service:
-                raise exception.ServiceNotUnique()
-            service = cell_service
-            found_in_cell = cell
-
-        if service:
-            # NOTE(danms): Set the cell on the context so it remains
-            # when we return to our caller
-            nova_context.set_target_cell(context, found_in_cell)
-            return service
-        else:
-            raise exception.ServiceNotFound(service_id=service_id)
-
     def service_get_by_id(self, context, service_id):
         """Get service entry for the given service id or uuid."""
-        return self._find_service(context, service_id)
+        try:
+            return _find_service_in_cell(context, service_id=service_id)
+        except exception.NotFound:
+            raise exception.ServiceNotFound(service_id=service_id)
 
     @target_host_cell
     def service_get_by_compute_host(self, context, host_name):
@@ -4494,7 +4508,10 @@ class HostAPI(base.Base):
 
     def _service_delete(self, context, service_id):
         """Performs the actual Service deletion operation."""
-        service = self._find_service(context, service_id)
+        try:
+            service = _find_service_in_cell(context, service_id=service_id)
+        except exception.NotFound:
+            raise exception.ServiceNotFound(service_id=service_id)
         service.destroy()
 
     def service_delete(self, context, service_id):
@@ -4761,9 +4778,16 @@ class AggregateAPI(base.Base):
                                                     aggregate_payload)
         # validates the host; HostMappingNotFound or ComputeHostNotFound
         # is raised if invalid
-        mapping = objects.HostMapping.get_by_host(context, host_name)
-        nova_context.set_target_cell(context, mapping.cell_mapping)
-        objects.Service.get_by_compute_host(context, host_name)
+        try:
+            mapping = objects.HostMapping.get_by_host(context, host_name)
+            nova_context.set_target_cell(context, mapping.cell_mapping)
+            objects.Service.get_by_compute_host(context, host_name)
+        except exception.HostMappingNotFound:
+            try:
+                # NOTE(danms): This targets our cell
+                _find_service_in_cell(context, service_host=host_name)
+            except exception.NotFound:
+                raise exception.ComputeHostNotFound(host=host_name)
 
         aggregate = objects.Aggregate.get_by_id(context, aggregate_id)
         self.is_safe_to_update_az(context, aggregate.metadata,

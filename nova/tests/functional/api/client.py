@@ -398,6 +398,10 @@ class TestOpenStackClient(object):
     def delete_aggregate(self, aggregate_id):
         self.api_delete('/os-aggregates/%s' % aggregate_id)
 
+    def add_host_to_aggregate(self, aggregate_id, host):
+        return self.api_post('/os-aggregates/%s/action' % aggregate_id,
+                             {'add_host': {'host': host}})
+
     def get_limits(self):
         return self.api_get('/limits').body['limits']
 
@@ -416,3 +420,6 @@ class TestOpenStackClient(object):
     def detach_interface(self, server_id, port_id):
         return self.api_delete('/servers/%s/os-interface/%s' %
                                (server_id, port_id))
+
+    def get_services(self):
+        return self.api_get('/os-services').body['services']

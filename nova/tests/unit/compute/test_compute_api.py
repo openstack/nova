@@ -5100,6 +5100,10 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         self.assertRaises(exception.CannotResizeToSameFlavor,
                           self._test_resize, same_flavor=True)
 
+    def test_find_service_in_cell_error_case(self):
+        self.assertRaises(exception.NovaException,
+                          compute_api._find_service_in_cell, self.context)
+
     def test_validate_and_build_base_options_translate_neutron_secgroup(self):
         """Tests that _check_requested_secgroups will return a uuid for a
         requested Neutron security group and that will be returned from
