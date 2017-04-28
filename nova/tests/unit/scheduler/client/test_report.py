@@ -1170,11 +1170,13 @@ There was a conflict when trying to complete your request.
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_delete_inventory')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_ensure_resource_class')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_or_create_resource_class')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
     def test_set_inventory_for_provider_no_custom(self, mock_erp, mock_gocr,
-            mock_del, mock_upd):
+            mock_erc, mock_del, mock_upd):
         """Tests that inventory records of all standard resource classes are
         passed to the report client's _update_inventory() method.
         """
@@ -1214,6 +1216,7 @@ There was a conflict when trying to complete your request.
             mock.sentinel.rp_name,
         )
         # No custom resource classes to ensure...
+        self.assertFalse(mock_erc.called)
         self.assertFalse(mock_gocr.called)
         mock_upd.assert_called_once_with(
             mock.sentinel.rp_uuid,
@@ -1226,11 +1229,13 @@ There was a conflict when trying to complete your request.
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_delete_inventory')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_ensure_resource_class')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_or_create_resource_class')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
     def test_set_inventory_for_provider_no_inv(self, mock_erp, mock_gocr,
-            mock_del, mock_upd):
+            mock_erc, mock_del, mock_upd):
         """Tests that passing empty set of inventory records triggers a delete
         of inventory for the provider.
         """
@@ -1245,6 +1250,7 @@ There was a conflict when trying to complete your request.
             mock.sentinel.rp_name,
         )
         self.assertFalse(mock_gocr.called)
+        self.assertFalse(mock_erc.called)
         self.assertFalse(mock_upd.called)
         mock_del.assert_called_once_with(mock.sentinel.rp_uuid)
 
@@ -1253,11 +1259,13 @@ There was a conflict when trying to complete your request.
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_delete_inventory')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_ensure_resource_class')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_or_create_resource_class')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
     def test_set_inventory_for_provider_with_custom(self, mock_erp,
-            mock_gocr, mock_del, mock_upd):
+            mock_gocr, mock_erc, mock_del, mock_upd):
         """Tests that inventory records that include a custom resource class
         are passed to the report client's _update_inventory() method and that
         the custom resource class is auto-created.
@@ -1306,12 +1314,23 @@ There was a conflict when trying to complete your request.
             mock.sentinel.rp_uuid,
             mock.sentinel.rp_name,
         )
-        mock_gocr.assert_called_once_with('CUSTOM_IRON_SILVER')
+        mock_erc.assert_called_once_with('CUSTOM_IRON_SILVER')
         mock_upd.assert_called_once_with(
             mock.sentinel.rp_uuid,
             inv_data,
         )
+        self.assertFalse(mock_gocr.called)
         self.assertFalse(mock_del.called)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'put')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_or_create_resource_class')
+    def test_ensure_resource_class_microversion_failover(self, mock_gocr,
+                                                         mock_put):
+        mock_put.return_value.status_code = 406
+        self.client._ensure_resource_class('CUSTOM_IRON_SILVER')
+        mock_gocr.assert_called_once_with('CUSTOM_IRON_SILVER')
 
 
 class TestAllocations(SchedulerReportClientTestCase):
