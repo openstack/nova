@@ -453,7 +453,8 @@ class BaseTestCase(test.NoDBTestCase):
         self.rt = None
         self.flags(my_ip='1.1.1.1',
                    reserved_host_disk_mb=0,
-                   reserved_host_memory_mb=0)
+                   reserved_host_memory_mb=0,
+                   reserved_host_cpus=0)
 
     def _setup_rt(self, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES,
                   estimate_overhead=overhead_zero):
@@ -564,11 +565,12 @@ class TestUpdateAvailableResources(BaseTestCase):
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
-    def test_no_instances_no_migrations_reserved_disk_and_ram(
+    def test_no_instances_no_migrations_reserved_disk_ram_and_cpu(
             self, get_mock, migr_mock, get_cn_mock, pci_mock,
             instance_pci_mock):
         self.flags(reserved_host_disk_mb=1024,
-                   reserved_host_memory_mb=512)
+                   reserved_host_memory_mb=512,
+                   reserved_host_cpus=1)
         self._setup_rt()
 
         get_mock.return_value = []
@@ -585,7 +587,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             'local_gb': 6,
             'free_ram_mb': 0,  # 512MB avail - 512MB reserved
             'memory_mb_used': 512,  # 0MB used + 512MB reserved
-            'vcpus_used': 0,
+            'vcpus_used': 1,
             'local_gb_used': 1,  # 0GB used + 1 GB reserved
             'memory_mb': 512,
             'current_workload': 0,

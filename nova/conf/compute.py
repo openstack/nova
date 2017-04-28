@@ -394,6 +394,20 @@ Possible values:
 * Any positive integer representing amount of memory in MB to reserve
   for the host.
 """),
+    cfg.IntOpt('reserved_host_cpus',
+        default=0,
+        min=0,
+        help="""
+Number of physical CPUs to reserve for the host. The host resources usage is
+reported back to the scheduler continuously from nova-compute running on the
+compute node. To prevent the host CPU from being considered as available,
+this option is used to reserve random pCPU(s) for the host.
+
+Possible values:
+
+* Any positive integer representing number of physical CPUs to reserve
+  for the host.
+"""),
 ]
 
 allocation_ratio_opts = [

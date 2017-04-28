@@ -982,7 +982,7 @@ class ResourceTracker(object):
         # set some initial values, reserve room for host/hypervisor:
         cn.local_gb_used = CONF.reserved_host_disk_mb / 1024
         cn.memory_mb_used = CONF.reserved_host_memory_mb
-        cn.vcpus_used = 0
+        cn.vcpus_used = CONF.reserved_host_cpus
         cn.free_ram_mb = (cn.memory_mb - cn.memory_mb_used)
         cn.free_disk_gb = (cn.local_gb - cn.local_gb_used)
         cn.current_workload = 0

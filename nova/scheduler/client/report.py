@@ -108,7 +108,7 @@ def _compute_node_to_inventory_dict(compute_node):
     if compute_node.vcpus > 0:
         result[VCPU] = {
             'total': compute_node.vcpus,
-            'reserved': 0,
+            'reserved': CONF.reserved_host_cpus,
             'min_unit': 1,
             'max_unit': compute_node.vcpus,
             'step_size': 1,
