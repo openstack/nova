@@ -71,6 +71,7 @@ from nova.api.openstack.compute import server_password
 from nova.api.openstack.compute import server_tags
 from nova.api.openstack.compute import server_usage
 from nova.api.openstack.compute import servers
+from nova.api.openstack.compute import services
 from nova.api.openstack.compute import shelve
 from nova.api.openstack.compute import simple_tenant_usage
 from nova.api.openstack.compute import suspend_server
@@ -269,6 +270,10 @@ server_password_controller = functools.partial(_create_controller,
 
 server_tags_controller = functools.partial(_create_controller,
     server_tags.ServerTagsController, [], [])
+
+
+services_controller = functools.partial(_create_controller,
+    services.ServiceController, [], [])
 
 
 simple_tenant_usage_controller = functools.partial(_create_controller,
@@ -474,6 +479,13 @@ ROUTE_LIST = (
     }),
     ('/os-server-external-events', {
         'POST': [server_external_events_controller, 'create']
+    }),
+    ('/os-services', {
+        'GET': [services_controller, 'index']
+    }),
+    ('/os-services/{id}', {
+        'PUT': [services_controller, 'update'],
+        'DELETE': [services_controller, 'delete']
     }),
     ('/os-simple-tenant-usage', {
         'GET': [simple_tenant_usage_controller, 'index']
