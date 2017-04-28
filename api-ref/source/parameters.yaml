@@ -2205,14 +2205,14 @@ flavor_server:
 flavor_swap:
   description: |
     The size of a dedicated swap disk that will be allocated, in
-    GiB. If 0 (the default), no dedicated swap disk will be created.
+    MiB. If 0 (the default), no dedicated swap disk will be created.
   in: body
   required: true
   type: integer
 flavor_swap_in:
   description: |
     The size of a dedicated swap disk that will be allocated, in
-    GiB. If 0 (the default), no dedicated swap disk will be created.
+    MiB. If 0 (the default), no dedicated swap disk will be created.
   in: body
   required: false
   type: integer
