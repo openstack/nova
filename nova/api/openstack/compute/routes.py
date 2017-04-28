@@ -61,6 +61,7 @@ from nova.api.openstack.compute import migrate_server
 from nova.api.openstack.compute import migrations
 from nova.api.openstack.compute import multinic
 from nova.api.openstack.compute import pause_server
+from nova.api.openstack.compute import quota_classes
 from nova.api.openstack.compute import quota_sets
 from nova.api.openstack.compute import remote_consoles
 from nova.api.openstack.compute import rescue
@@ -207,6 +208,10 @@ limits_controller = functools.partial(
 
 migrations_controller = functools.partial(_create_controller,
     migrations.MigrationsController, [], [])
+
+
+quota_classes_controller = functools.partial(_create_controller,
+    quota_classes.QuotaClassSetsController, [], [])
 
 
 quota_set_controller = functools.partial(_create_controller,
@@ -483,6 +488,10 @@ ROUTE_LIST = (
     }),
     ('/os-migrations', {
         'GET': [migrations_controller, 'index']
+    }),
+    ('/os-quota-class-sets/{id}', {
+        'GET': [quota_classes_controller, 'show'],
+        'PUT': [quota_classes_controller, 'update']
     }),
     ('/os-quota-sets/{id}', {
         'GET': [quota_set_controller, 'show'],
