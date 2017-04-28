@@ -179,6 +179,7 @@ class ComputeNode(BASE, NovaBase, models.SoftDeleteMixin):
     ram_allocation_ratio = Column(Float, nullable=True)
     cpu_allocation_ratio = Column(Float, nullable=True)
     disk_allocation_ratio = Column(Float, nullable=True)
+    mapped = Column(Integer, nullable=True, default=0)
 
 
 class Certificate(BASE, NovaBase, models.SoftDeleteMixin):

@@ -90,6 +90,7 @@ fake_compute_node = {
     'cpu_allocation_ratio': 16.0,
     'ram_allocation_ratio': 1.5,
     'disk_allocation_ratio': 1.0,
+    'mapped': 0,
     }
 # FIXME(sbauza) : For compatibility checking, to be removed once we are sure
 # that all computes are running latest DB version with host field in it.
@@ -162,6 +163,18 @@ class _TestComputeNodeObject(object):
                          comparators=self.comparators())
         self.assertNotIn('uuid', compute.obj_what_changed())
         get_mock.assert_called_once_with(self.context, 123)
+
+    @mock.patch.object(db, 'compute_node_get')
+    def test_get_without_mapped(self, get_mock):
+        fake_node = copy.copy(fake_compute_node)
+        fake_node['mapped'] = None
+        get_mock.return_value = fake_node
+        compute = compute_node.ComputeNode.get_by_id(self.context, 123)
+        self.compare_obj(compute, fake_compute_node,
+                         subs=self.subs(),
+                         comparators=self.comparators())
+        self.assertIn('mapped', compute)
+        self.assertEqual(0, compute.mapped)
 
     @mock.patch.object(objects.Service, 'get_by_id')
     @mock.patch.object(db, 'compute_node_get')
