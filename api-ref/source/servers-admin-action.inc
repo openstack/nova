@@ -7,11 +7,8 @@
 Enables administrators to perform an action on a server. Specify the
 action in the request body.
 
-You can change the administrative password for a server and
-inject network information into a server.
-
-You can migrate, live-migrate, reset networking on, and reset the state
-of a server.
+You can inject network information into, migrate, live-migrate,
+reset networking on, and reset the state of a server.
 
 
 Inject Network Information (injectNetworkInfo Action)
