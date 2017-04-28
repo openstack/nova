@@ -411,7 +411,8 @@ class VolumeAttachmentController(wsgi.Controller):
                                                  new_volume)
                     found = True
                     break
-                except exception.VolumeUnattached:
+                except (exception.VolumeUnattached,
+                        exception.VolumeBDMNotFound):
                     # The volume is not attached.  Treat it as NotFound
                     # by falling through.
                     pass

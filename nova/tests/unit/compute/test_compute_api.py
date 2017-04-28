@@ -2424,7 +2424,14 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_swap_volume_volume_api_usage(self):
         self._test_swap_volume()
 
-    def _test_swap_volume(self, expected_exception=None):
+    def test_swap_volume_volume_api_usage_new_attach_flow(self):
+        self._test_swap_volume(attachment_id=uuids.attachment_id)
+
+    def test_swap_volume_with_swap_volume_error_new_attach_flow(self):
+        self._test_swap_volume(expected_exception=AttributeError,
+                               attachment_id=uuids.attachment_id)
+
+    def _test_swap_volume(self, expected_exception=None, attachment_id=None):
         volumes = self._get_volumes_for_test_swap_volume()
         instance = self._get_instance_for_test_swap_volume()
 
@@ -2447,19 +2454,45 @@ class _ComputeAPIUnitTestMixIn(object):
             if volumes[volume_id]['status'] == 'attaching':
                 volumes[volume_id]['status'] = 'available'
 
+        def fake_vol_api_attachment_create(context, volume_id, instance_id):
+            self.assertTrue(uuidutils.is_uuid_like(volume_id))
+            self.assertEqual('available', volumes[volume_id]['status'])
+            volumes[volume_id]['status'] = 'reserved'
+            return {'id': uuids.attachment_id}
+
+        def fake_vol_api_attachment_delete(context, attachment_id):
+            self.assertTrue(uuidutils.is_uuid_like(attachment_id))
+            if volumes[uuids.new_volume]['status'] == 'reserved':
+                volumes[uuids.new_volume]['status'] = 'available'
+
         @mock.patch.object(self.compute_api.compute_rpcapi, 'swap_volume',
                            return_value=True)
         @mock.patch.object(self.compute_api.volume_api, 'unreserve_volume',
                            side_effect=fake_vol_api_unreserve)
+        @mock.patch.object(self.compute_api.volume_api, 'attachment_delete',
+                           side_effect=fake_vol_api_attachment_delete)
         @mock.patch.object(self.compute_api.volume_api, 'reserve_volume',
                            side_effect=fake_vol_api_reserve)
+        @mock.patch.object(self.compute_api.volume_api, 'attachment_create',
+                           side_effect=fake_vol_api_attachment_create)
         @mock.patch.object(self.compute_api.volume_api, 'roll_detaching',
                            side_effect=fake_vol_api_roll_detaching)
+        @mock.patch.object(objects.BlockDeviceMapping,
+                           'get_by_volume_and_instance')
         @mock.patch.object(self.compute_api.volume_api, 'begin_detaching',
                            side_effect=fake_vol_api_begin_detaching)
-        def _do_test(mock_begin_detaching, mock_roll_detaching,
-                     mock_reserve_volume, mock_unreserve_volume,
-                     mock_swap_volume):
+        def _do_test(mock_begin_detaching, mock_get_by_volume_and_instance,
+                     mock_roll_detaching, mock_attachment_create,
+                     mock_reserve_volume, mock_attachment_delete,
+                     mock_unreserve_volume, mock_swap_volume):
+            bdm = objects.BlockDeviceMapping(
+                        **fake_block_device.FakeDbBlockDeviceDict(
+                        {'no_device': False, 'volume_id': '1', 'boot_index': 0,
+                         'connection_info': 'inf', 'device_name': '/dev/vda',
+                         'source_type': 'volume', 'destination_type': 'volume',
+                         'tag': None, 'attachment_id': attachment_id},
+                        anon=True))
+            mock_get_by_volume_and_instance.return_value = bdm
             if expected_exception:
                 mock_swap_volume.side_effect = AttributeError()
                 self.assertRaises(expected_exception,
@@ -2469,10 +2502,45 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.assertEqual('in-use', volumes[uuids.old_volume]['status'])
                 self.assertEqual('available',
                                  volumes[uuids.new_volume]['status'])
+                # Make assertions about what was called if there was or was not
+                # a Cinder 3.27 style attachment provided.
+                if attachment_id is None:
+                    # Old style attachment, so unreserve was called and
+                    # attachment_delete was not called.
+                    mock_unreserve_volume.assert_called_once_with(
+                        self.context, uuids.new_volume)
+                    mock_attachment_delete.assert_not_called()
+                else:
+                    # New style attachment, so unreserve was not called and
+                    # attachment_delete was called.
+                    mock_unreserve_volume.assert_not_called()
+                    mock_attachment_delete.assert_called_once_with(
+                        self.context, attachment_id)
             else:
                 self.compute_api.swap_volume(self.context, instance,
                                              volumes[uuids.old_volume],
                                              volumes[uuids.new_volume])
+                # Make assertions about what was called if there was or was not
+                # a Cinder 3.27 style attachment provided.
+                if attachment_id is None:
+                    # Old style attachment, so reserve was called and
+                    # attachment_create was not called.
+                    mock_reserve_volume.assert_called_once_with(
+                        self.context, uuids.new_volume)
+                    mock_attachment_create.assert_not_called()
+                else:
+                    # New style attachment, so reserve was not called and
+                    # attachment_create was called.
+                    mock_reserve_volume.assert_not_called()
+                    mock_attachment_create.assert_called_once_with(
+                        self.context, uuids.new_volume, instance.uuid)
+
+            # Assert the call to the rpcapi.
+            mock_swap_volume.assert_called_once_with(
+                self.context, instance=instance,
+                old_volume_id=uuids.old_volume,
+                new_volume_id=uuids.new_volume,
+                new_attachment_id=attachment_id)
 
         _do_test()
 

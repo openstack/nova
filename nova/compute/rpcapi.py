@@ -326,6 +326,7 @@ class ComputeAPI(object):
                  was bumped to signal the availability of the corrected RPC API
         * 4.15 - Add tag argument to reserve_block_device_name()
         * 4.16 - Add tag argument to attach_interface()
+        * 4.17 - Add new_attachment_id to swap_volume.
     '''
 
     VERSION_ALIASES = {
@@ -914,13 +915,20 @@ class ComputeAPI(object):
                 server=host, version=version)
         return cctxt.call(ctxt, 'set_host_enabled', enabled=enabled)
 
-    def swap_volume(self, ctxt, instance, old_volume_id, new_volume_id):
-        version = '4.0'
-        cctxt = self.router.client(ctxt).prepare(
-                server=_compute_host(None, instance), version=version)
-        cctxt.cast(ctxt, 'swap_volume',
-                   instance=instance, old_volume_id=old_volume_id,
-                   new_volume_id=new_volume_id)
+    def swap_volume(self, ctxt, instance, old_volume_id, new_volume_id,
+                    new_attachment_id=None):
+        version = '4.17'
+        client = self.router.client(ctxt)
+        kwargs = dict(instance=instance,
+                      old_volume_id=old_volume_id,
+                      new_volume_id=new_volume_id,
+                      new_attachment_id=new_attachment_id)
+        if not client.can_send_version(version):
+            version = '4.0'
+            kwargs.pop('new_attachment_id')
+        cctxt = client.prepare(
+            server=_compute_host(None, instance), version=version)
+        cctxt.cast(ctxt, 'swap_volume', **kwargs)
 
     def get_host_uptime(self, ctxt, host):
         version = '4.0'
