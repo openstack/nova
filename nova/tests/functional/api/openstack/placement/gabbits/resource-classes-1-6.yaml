@@ -1,0 +1,21 @@
+# Confirm that 1.7 behavior of PUT resource classes is not in
+# microversion 1.6.
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        accept: application/json
+        content-type: application/json
+        OpenStack-API-Version: placement 1.6
+
+tests:
+
+- name: bodiless put
+  PUT: /resource_classes/CUSTOM_COW
+  status: 400
+  response_strings:
+      # We don't check much of this string because it is different
+      # between python 2 and 3.
+      - "Malformed JSON:"

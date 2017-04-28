@@ -125,6 +125,7 @@ tests:
   PUT: /resource_classes/VCPU
   request_headers:
     content-type: application/json
+    OpenStack-API-Version: placement 1.6
   data:
       name: VCPU_ALTERNATE
   status: 400
@@ -137,6 +138,7 @@ tests:
   PUT: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
   request_headers:
     content-type: application/json
+    OpenStack-API-Version: placement 1.6
   data:
       name: VCPU
   status: 400
@@ -157,6 +159,7 @@ tests:
   PUT: /resource_classes/CUSTOM_NFV_FOO
   request_headers:
     content-type: application/json
+    OpenStack-API-Version: placement 1.6
   data:
       name: $ENVIRON['CUSTOM_RES_CLASS']
   status: 409
@@ -170,6 +173,7 @@ tests:
   PUT: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
   request_headers:
     content-type: application/json
+    OpenStack-API-Version: placement 1.6
   data:
       name: CUSTOM_NFV_BAR
   status: 200
@@ -234,6 +238,7 @@ tests:
   PUT: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
   request_headers:
       content-type: application/json
+      OpenStack-API-Version: placement 1.6
   data:
       name: *name_exceeds_max_length_check
   status: 400

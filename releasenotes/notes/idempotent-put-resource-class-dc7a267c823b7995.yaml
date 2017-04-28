@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    The 1.7 version of the placement API changes handling of
+    `PUT /resource_classes/{name}` to be a create or verification of the
+    resource class with `{name}`. If the resource class is a custom resource
+    class and does not already exist it will be created and a ``201`` response
+    code returned. If the class already exists the response code will be
+    ``204``. This makes it possible to check or create a resource class in one
+    request.

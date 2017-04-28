@@ -113,3 +113,13 @@ The following new routes are added:
 Custom traits must begin with the prefix "CUSTOM\_" and contain only
 the letters A through Z, the numbers 0 through 9 and the underscore "\_"
 character.
+
+1.7 Idempotent PUT /resource_classes/{name}
+-------------------------------------------
+
+The 1.7 version changes handling of `PUT /resource_classes/{name}` to be a
+create or verification of the resource class with `{name}`. If the resource
+class is a custom resource class and does not already exist it will be created
+and a ``201`` response code returned. If the class already exists the response
+code will be ``204``. This makes it possible to check or create a resource
+class in one request.

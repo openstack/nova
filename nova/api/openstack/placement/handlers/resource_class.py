@@ -164,7 +164,7 @@ def list_resource_classes(req):
 
 
 @wsgi_wrapper.PlacementWsgify
-@microversion.version_handler('1.2')
+@microversion.version_handler('1.2', '1.6')
 @util.require_content('application/json')
 def update_resource_class(req):
     """PUT to update a single resource class.
@@ -198,4 +198,39 @@ def update_resource_class(req):
     )
     req.response.status = 200
     req.response.content_type = 'application/json'
+    return req.response
+
+
+@wsgi_wrapper.PlacementWsgify  # noqa
+@microversion.version_handler('1.7')
+def update_resource_class(req):
+    """PUT to create or validate the existence of single resource class.
+
+    On a successful create return 201. Return 204 if the class already
+    exists. If the resource class is not a custom resource class, return
+    a 400. 409 might be a better choice, but 400 aligns with previous code.
+    """
+    name = util.wsgi_path_item(req.environ, 'name')
+    context = req.environ['placement.context']
+
+    # Use JSON validation to validation resource class name.
+    util.extract_json('{"name": "%s"}' % name, PUT_RC_SCHEMA_V1_2)
+
+    status = 204
+    try:
+        rc = objects.ResourceClass.get_by_name(context, name)
+    except exception.NotFound:
+        try:
+            rc = objects.ResourceClass(context, name=name)
+            rc.create()
+            status = 201
+        # We will not see ResourceClassCannotUpdateStandard because
+        # that was already caught when validating the {name}.
+        except exception.ResourceClassExists:
+            # Someone just now created the class, so stick with 204
+            pass
+
+    req.response.status = status
+    req.response.content_type = None
+    req.response.location = util.resource_class_url(req.environ, rc)
     return req.response
