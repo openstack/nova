@@ -342,7 +342,7 @@ necessary to add changes to other places which describe your change:
   ``nova/api/openstack/api_version_request.py``
 
 * Add a verbose description to
-  ``nova/api/openstack/rest_api_version_history.rst``.  There should
+  ``nova/api/openstack/compute/rest_api_version_history.rst``.  There should
   be enough information that it could be used by the docs team for
   release notes.
 
