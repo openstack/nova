@@ -21,6 +21,8 @@ from nova.objects import fields
 from nova import test
 from nova.tests.unit.objects.test_flavor import fake_flavor
 
+PROJECTS_SENTINEL = object()
+
 
 class TestFlavorNotification(test.TestCase):
     def setUp(self):
@@ -29,7 +31,8 @@ class TestFlavorNotification(test.TestCase):
 
     @mock.patch('nova.notifications.objects.flavor.FlavorNotification')
     def _verify_notification(self, flavor_obj, flavor, action,
-                             mock_notification, project_id=None):
+                             mock_notification, project_id=None,
+                             expected_projects=PROJECTS_SENTINEL):
         notification = mock_notification
         if action == "CREATE":
             flavor_obj.create()
@@ -61,8 +64,12 @@ class TestFlavorNotification(test.TestCase):
 
         schema = flavor_notification.FlavorPayload.SCHEMA
         for field in schema:
-            if field in flavor:
-                self.assertEqual(flavor[field], getattr(payload, field))
+            if field == 'projects' and expected_projects != PROJECTS_SENTINEL:
+                self.assertEqual(expected_projects, getattr(payload, field))
+            elif field in flavor_obj:
+                self.assertEqual(flavor_obj[field], getattr(payload, field))
+            else:
+                self.fail('Missing check for field %s in flavor_obj.' % field)
 
     @mock.patch('nova.objects.Flavor._flavor_create')
     def test_flavor_create_with_notification(self, mock_create):
@@ -117,6 +124,26 @@ class TestFlavorNotification(test.TestCase):
         mock_destroy.return_value = flavor
         flavor_obj = objects.Flavor(context=self.ctxt, **flavor)
         flavor_obj.obj_reset_changes()
+        self.assertNotIn('projects', flavor_obj)
+        # We specifically expect there to not be any projects as we don't want
+        # to try and lazy-load them from the main database and end up with [].
+        self._verify_notification(flavor_obj, flavor, "DELETE",
+                                  expected_projects=None)
+
+    @mock.patch('nova.objects.Flavor._flavor_destroy')
+    def test_flavor_destroy_with_notification_and_projects(self, mock_destroy):
+        """Tests the flavor-delete notification with flavor.projects loaded."""
+        flavor = copy.deepcopy(fake_flavor)
+        flavorid = '1'
+        flavor['flavorid'] = flavorid
+        flavor['id'] = flavorid
+        mock_destroy.return_value = flavor
+        flavor_obj = objects.Flavor(
+            context=self.ctxt, projects=['foo'], **flavor)
+        flavor_obj.obj_reset_changes()
+        self.assertIn('projects', flavor_obj)
+        self.assertEqual(['foo'], flavor_obj.projects)
+        # Since projects is loaded we shouldn't try to lazy-load it.
         self._verify_notification(flavor_obj, flavor, "DELETE")
 
     def test_obj_make_compatible(self):
