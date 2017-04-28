@@ -7831,6 +7831,20 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         new_stats = jsonutils.loads(node['stats'])
         self.assertEqual(self.stats, new_stats)
 
+    def test_compute_node_get_all_mapped_less_than(self):
+        cn = dict(self.compute_node_dict,
+                  hostname='foo',
+                  hypervisor_hostname='foo',
+                  mapped=None)
+        db.compute_node_create(self.ctxt, cn)
+        cn = dict(self.compute_node_dict,
+                  hostname='bar',
+                  hypervisor_hostname='nar',
+                  mapped=3)
+        db.compute_node_create(self.ctxt, cn)
+        cns = db.compute_node_get_all_mapped_less_than(self.ctxt, 1)
+        self.assertEqual(2, len(cns))
+
     def test_compute_node_get_all_by_pagination(self):
         service_dict = dict(host='host2', binary='nova-compute',
                             topic=CONF.compute_topic, report_count=1,

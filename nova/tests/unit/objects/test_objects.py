@@ -1073,7 +1073,7 @@ object_data = {
     'CellMapping': '1.0-7f1a7e85a22bbb7559fc730ab658b9bd',
     'CellMappingList': '1.0-4ee0d9efdfd681fed822da88376e04d2',
     'ComputeNode': '1.17-abc222ef5a707dcd3e3d32b48197c9e7',
-    'ComputeNodeList': '1.16-40258d802a6ed045690a127a2088544b',
+    'ComputeNodeList': '1.17-52f3b0962b1c86b98590144463ebb192',
     'DNSDomain': '1.0-7b0b2dab778454b6a7b6c66afe163a1a',
     'DNSDomainList': '1.0-4ee0d9efdfd681fed822da88376e04d2',
     'Destination': '1.1-fff0853f3acec6b04ddc03158ded11ba',
