@@ -41,6 +41,7 @@ SEE ALSO
 ========
 
 * `OpenStack Nova <https://docs.openstack.org/developer/nova>`__
+* `Using WSGI with Nova <https://docs.openstack.org/devloper/nova/wsgi.html>`__
 
 BUGS
 ====

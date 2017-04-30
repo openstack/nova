@@ -159,6 +159,7 @@ Open Development.
    quotas
    threading
    vmstates
+   wsgi
 
 Architecture Evolution Plans
 -----------------------------
