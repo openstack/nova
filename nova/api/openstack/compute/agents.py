@@ -25,9 +25,6 @@ from nova.policies import agents as agents_policies
 from nova import utils
 
 
-ALIAS = "os-agents"
-
-
 class AgentController(wsgi.Controller):
     """The agent is talking about guest agent.The host can use this for
     things like accessing files on the disk, configuring networking,
@@ -166,22 +163,3 @@ class AgentController(wsgi.Controller):
         except exception.AgentBuildExists as ex:
             raise webob.exc.HTTPConflict(explanation=ex.format_message())
         return {'agent': agent}
-
-
-class Agents(extensions.V21APIExtensionBase):
-    """Agents support."""
-
-    name = "Agents"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        resource = [extensions.ResourceExtension(ALIAS,
-                                                AgentController())]
-        return resource
-
-    def get_controller_extensions(self):
-        """It's an abstract function V21APIExtensionBase and the extension
-        will not be loaded without it.
-        """
-        return []

@@ -169,6 +169,10 @@ v21_to_v2_alias_mapping = {
 # completely from the code we're going to have a static list here to
 # keep the surface metadata the same.
 hardcoded_extensions = [
+    {'name': 'Agents',
+     'alias': 'os-agents',
+     'description': 'Agents support.'
+    },
     {'name': 'Aggregates',
      'alias': 'os-aggregates',
      'description': 'Admin-only aggregate administration.'

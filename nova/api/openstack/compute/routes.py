@@ -19,6 +19,7 @@ import functools
 import nova.api.openstack
 from nova.api.openstack.compute import admin_actions
 from nova.api.openstack.compute import admin_password
+from nova.api.openstack.compute import agents
 from nova.api.openstack.compute import aggregates
 from nova.api.openstack.compute import config_drive
 from nova.api.openstack.compute import console_output
@@ -73,6 +74,10 @@ def _create_controller(main_controller, controller_list,
     for ctl in action_controller_list:
         controller.register_actions(ctl())
     return controller
+
+
+agents_controller = functools.partial(
+    _create_controller, agents.AgentController, [], [])
 
 
 aggregates_controller = functools.partial(
@@ -201,6 +206,14 @@ ROUTE_LIST = (
     }),
     ('/flavors/{flavor_id}/os-flavor-access', {
         'GET': [flavor_access_controller, 'index']
+    }),
+    ('/os-agents', {
+        'GET': [agents_controller, 'index'],
+        'POST': [agents_controller, 'create']
+    }),
+    ('/os-agents/{id}', {
+        'PUT': [agents_controller, 'update'],
+        'DELETE': [agents_controller, 'delete']
     }),
     ('/os-aggregates', {
         'GET': [aggregates_controller, 'index'],
