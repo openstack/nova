@@ -29,9 +29,6 @@ from nova import network
 from nova.policies import floating_ip_dns as fid_policies
 
 
-ALIAS = "os-floating-ip-dns"
-
-
 def _translate_dns_entry_view(dns_entry):
     result = {}
     result['ip'] = dns_entry.get('ip')
@@ -255,32 +252,3 @@ class FloatingIPDNSEntryController(wsgi.Controller):
             common.raise_feature_not_supported()
         except exception.NotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
-
-
-class FloatingIpDns(extensions.V21APIExtensionBase):
-    """Floating IP DNS support."""
-
-    name = "FloatingIpDns"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        resources = []
-
-        res = extensions.ResourceExtension(ALIAS,
-                         controller=FloatingIPDNSDomainController())
-        resources.append(res)
-
-        res = extensions.ResourceExtension('entries',
-                         controller=FloatingIPDNSEntryController(),
-                         parent={'member_name': 'domain',
-                                 'collection_name': 'os-floating-ip-dns'})
-        resources.append(res)
-
-        return resources
-
-    def get_controller_extensions(self):
-        """It's an abstract function V21APIExtensionBase and the extension
-        will not be loaded without it.
-        """
-        return []
