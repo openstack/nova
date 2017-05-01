@@ -370,7 +370,7 @@ notification_object_data = {
     'IpPayload': '1.0-8ecf567a99e516d4af094439a7632d34',
     'NotificationPublisher': '1.0-bbbc1402fb0e443a3eb227cc52b61545',
     'ServiceStatusNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'ServiceStatusPayload': '1.0-c43a812046139e875ff2dc5590cd8d02',
+    'ServiceStatusPayload': '1.1-7b6856bd879db7f3ecbcd0ca9f35f92f',
 }
 
 
