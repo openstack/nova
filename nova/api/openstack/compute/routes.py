@@ -21,6 +21,7 @@ from nova.api.openstack.compute import admin_actions
 from nova.api.openstack.compute import admin_password
 from nova.api.openstack.compute import agents
 from nova.api.openstack.compute import aggregates
+from nova.api.openstack.compute import assisted_volume_snapshots
 from nova.api.openstack.compute import config_drive
 from nova.api.openstack.compute import console_output
 from nova.api.openstack.compute import create_backup
@@ -82,6 +83,11 @@ agents_controller = functools.partial(
 
 aggregates_controller = functools.partial(
     _create_controller, aggregates.AggregateController, [], [])
+
+
+assisted_volume_snapshots_controller = functools.partial(
+    _create_controller,
+    assisted_volume_snapshots.AssistedVolumeSnapshotsController, [], [])
 
 
 keypairs_controller = functools.partial(
@@ -226,6 +232,12 @@ ROUTE_LIST = (
     }),
     ('/os-aggregates/{id}/action', {
         'POST': [aggregates_controller, 'action'],
+    }),
+    ('/os-assisted-volume-snapshots', {
+        'POST': [assisted_volume_snapshots_controller, 'create']
+    }),
+    ('/os-assisted-volume-snapshots/{id}', {
+        'DELETE': [assisted_volume_snapshots_controller, 'delete']
     }),
     ('/os-floating-ip-dns', {
         'GET': [floating_ip_dns_controller, 'index']

@@ -177,6 +177,10 @@ hardcoded_extensions = [
      'alias': 'os-aggregates',
      'description': 'Admin-only aggregate administration.'
     },
+    {'name': 'AssistedVolumeSnapshots',
+     'alias': 'os-assisted-volume-snapshots',
+     'description': 'Assisted volume snapshots.'
+    },
     {'name': 'DiskConfig',
      'alias': 'os-disk-config',
      'description': 'Disk Management Extension.'},
