@@ -164,6 +164,27 @@ class _TestComputeNodeObject(object):
         self.assertNotIn('uuid', compute.obj_what_changed())
         get_mock.assert_called_once_with(self.context, 123)
 
+    @mock.patch.object(compute_node.ComputeNodeList, 'get_all_by_uuids')
+    def test_get_by_uuid(self, get_all_by_uuids):
+        fake_node = copy.copy(fake_compute_node)
+        fake_node['stats'] = None
+        get_all_by_uuids.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(**fake_node)])
+        compute = compute_node.ComputeNode.get_by_uuid(
+            self.context, uuidsentinel.fake_compute_node)
+        self.assertEqual(uuidsentinel.fake_compute_node, compute.uuid)
+        get_all_by_uuids.assert_called_once_with(
+            self.context, [uuidsentinel.fake_compute_node])
+
+    @mock.patch.object(compute_node.ComputeNodeList, 'get_all_by_uuids')
+    def test_get_by_uuid_not_found(self, get_all_by_uuids):
+        get_all_by_uuids.return_value = objects.ComputeNodeList()
+        self.assertRaises(exception.ComputeHostNotFound,
+                          compute_node.ComputeNode.get_by_uuid,
+                          self.context, uuidsentinel.fake_compute_node)
+        get_all_by_uuids.assert_called_once_with(
+            self.context, [uuidsentinel.fake_compute_node])
+
     @mock.patch.object(db, 'compute_node_get')
     def test_get_without_mapped(self, get_mock):
         fake_node = copy.copy(fake_compute_node)
