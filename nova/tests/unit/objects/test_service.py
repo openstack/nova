@@ -99,6 +99,10 @@ class _TestServiceObject(object):
     def test_get_by_id(self):
         self._test_query('service_get', 'get_by_id', 123)
 
+    def test_get_by_uuid(self):
+        self._test_query('service_get_by_uuid', 'get_by_uuid',
+                         uuidsentinel.service_uuid)
+
     def test_get_by_host_and_topic(self):
         self._test_query('service_get_by_host_and_topic',
                          'get_by_host_and_topic', 'fake-host', 'fake-topic')
