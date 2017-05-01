@@ -20,9 +20,6 @@ from nova import network
 from nova.policies import floating_ip_pools as fip_policies
 
 
-ALIAS = 'os-floating-ip-pools'
-
-
 def _translate_floating_ip_view(pool_name):
     return {
         'name': pool_name,
@@ -51,22 +48,3 @@ class FloatingIPPoolsController(wsgi.Controller):
         context.can(fip_policies.BASE_POLICY_NAME)
         pools = self.network_api.get_floating_ip_pools(context)
         return _translate_floating_ip_pools_view(pools)
-
-
-class FloatingIpPools(extensions.V21APIExtensionBase):
-    """Floating IPs support."""
-
-    name = "FloatingIpPools"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        resource = [extensions.ResourceExtension(ALIAS,
-                                                 FloatingIPPoolsController())]
-        return resource
-
-    def get_controller_extensions(self):
-        """It's an abstract function V21APIExtensionBase and the extension
-        will not be loaded without it.
-        """
-        return []
