@@ -14,60 +14,24 @@
 
 import webob.exc
 
-from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-import nova.cert.rpcapi
-from nova import exception
-from nova.i18n import _
-from nova.policies import certificates as cert_policies
 
 ALIAS = "os-certificates"
-
-
-def _translate_certificate_view(certificate, private_key=None):
-    return {
-        'data': certificate,
-        'private_key': private_key,
-    }
 
 
 class CertificatesController(wsgi.Controller):
     """The x509 Certificates API controller for the OpenStack API."""
 
-    def __init__(self):
-        self.cert_rpcapi = nova.cert.rpcapi.CertAPI()
-        super(CertificatesController, self).__init__()
-
-    @extensions.expected_errors((404, 501))
+    @extensions.expected_errors(410)
     def show(self, req, id):
         """Return certificate information."""
-        context = req.environ['nova.context']
-        context.can(cert_policies.POLICY_ROOT % 'show')
-        if id != 'root':
-            msg = _("Only root certificate can be retrieved.")
-            # TODO(oomichi): This seems a HTTPBadRequest case because of the
-            # above message. This will be changed with a microversion in the
-            # future.
-            common.raise_feature_not_supported(msg=msg)
-        try:
-            cert = self.cert_rpcapi.fetch_ca(context,
-                                             project_id=context.project_id)
-        except exception.CryptoCAFileNotFound as e:
-            raise webob.exc.HTTPNotFound(explanation=e.format_message())
-        return {'certificate': _translate_certificate_view(cert)}
+        raise webob.exc.HTTPGone()
 
-    # NOTE(gmann): Here should be 201 instead of 200 by v2.1
-    # +microversions because the resource certificate has been created
-    # completely when returning a response.
-    @extensions.expected_errors(())
+    @extensions.expected_errors((410))
     def create(self, req, body=None):
         """Create a certificate."""
-        context = req.environ['nova.context']
-        context.can(cert_policies.POLICY_ROOT % 'create')
-        pk, cert = self.cert_rpcapi.generate_x509_cert(context,
-                user_id=context.user_id, project_id=context.project_id)
-        return {'certificate': _translate_certificate_view(cert, pk)}
+        raise webob.exc.HTTPGone()
 
 
 class Certificates(extensions.V21APIExtensionBase):

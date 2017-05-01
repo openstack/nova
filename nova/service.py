@@ -55,7 +55,6 @@ SERVICE_MANAGERS = {
     'nova-compute': 'nova.compute.manager.ComputeManager',
     'nova-console': 'nova.console.manager.ConsoleProxyManager',
     'nova-consoleauth': 'nova.consoleauth.manager.ConsoleAuthManager',
-    'nova-cert': 'nova.cert.manager.CertManager',
     'nova-conductor': 'nova.conductor.manager.ConductorManager',
     'nova-metadata': 'nova.api.manager.MetadataManager',
     'nova-scheduler': 'nova.scheduler.manager.SchedulerManager',

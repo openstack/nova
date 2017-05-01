@@ -50,8 +50,6 @@ class TestProfiler(test.NoDBTestCase):
             'nova.api.manager.MetadataManager',
             'nova.cells.manager.CellsManager',
             'nova.cells.rpcapi.CellsAPI',
-            'nova.cert.manager.CertManager',
-            'nova.cert.rpcapi.CertAPI',
             'nova.compute.api.API',
             'nova.compute.manager.ComputeManager',
             'nova.compute.rpcapi.ComputeAPI',

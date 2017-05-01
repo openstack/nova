@@ -382,8 +382,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-attach-interfaces",
 "os_compute_api:os-attach-interfaces:create",
 "os_compute_api:os-attach-interfaces:delete",
-"os_compute_api:os-certificates:create",
-"os_compute_api:os-certificates:show",
 "os_compute_api:os-consoles:create",
 "os_compute_api:os-consoles:delete",
 "os_compute_api:os-consoles:index",
