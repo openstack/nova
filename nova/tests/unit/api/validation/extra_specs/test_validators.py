@@ -59,6 +59,7 @@ class TestValidators(test.NoDBTestCase):
     def test_value__str(self):
         valid_specs = (
             # patterns
+            ('hw:cpu_realtime_mask', '0'),
             ('hw:cpu_realtime_mask', '^0'),
             ('hw:cpu_realtime_mask', '^0,2-3,1'),
             ('hw:mem_page_size', 'large'),
@@ -74,7 +75,7 @@ class TestValidators(test.NoDBTestCase):
 
         invalid_specs = (
             # patterns
-            ('hw:cpu_realtime_mask', '0'),
+            ('hw:cpu_realtime_mask', 'a'),
             ('hw:cpu_realtime_mask', '^0,2-3,b'),
             ('hw:mem_page_size', 'largest'),
             ('hw:mem_page_size', '2kbits'),

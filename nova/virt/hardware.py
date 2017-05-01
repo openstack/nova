@@ -1708,7 +1708,10 @@ def get_realtime_cpu_constraint(
 
     vcpus_set = set(range(flavor.vcpus))
     if mask:
-        vcpus_rt = parse_cpu_spec("0-%d,%s" % (flavor.vcpus - 1, mask))
+        if mask.strip().startswith('^'):
+            vcpus_rt = parse_cpu_spec("0-%d,%s" % (flavor.vcpus - 1, mask))
+        else:
+            vcpus_rt = parse_cpu_spec("%s" % (mask))
     else:
         vcpus_rt = set(range(flavor.vcpus))
 

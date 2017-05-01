@@ -3818,6 +3818,42 @@ class CPURealtimeTestCase(test.NoDBTestCase):
         rt = hw.get_realtime_cpu_constraint(flavor, image)
         self.assertEqual(set([2]), rt)
 
+    def test_success_image_no_exclusion(self):
+        flavor = objects.Flavor(
+            vcpus=3, memory_mb=2048,
+            extra_specs={
+                'hw:cpu_realtime': 'true',
+            },
+        )
+        image = objects.ImageMeta.from_dict(
+            {"properties": {"hw_cpu_realtime_mask": "1-2"}})
+        rt = hw.get_realtime_cpu_constraint(flavor, image)
+        self.assertEqual(set([1, 2]), rt)
+
+    def test_success_image_leading_space(self):
+        flavor = objects.Flavor(
+            vcpus=3, memory_mb=2048,
+            extra_specs={
+                'hw:cpu_realtime': 'true',
+            },
+        )
+        image = objects.ImageMeta.from_dict(
+            {"properties": {"hw_cpu_realtime_mask": " ^1"}})
+        rt = hw.get_realtime_cpu_constraint(flavor, image)
+        self.assertEqual(set([0, 2]), rt)
+
+    def test_success_image_no_implicit_exclusion(self):
+        flavor = objects.Flavor(
+            vcpus=3, memory_mb=2048,
+            extra_specs={
+                'hw:cpu_realtime': 'true',
+            },
+        )
+        image = objects.ImageMeta.from_dict(
+            {"properties": {"hw_cpu_realtime_mask": "1-2,^1"}})
+        rt = hw.get_realtime_cpu_constraint(flavor, image)
+        self.assertEqual(set([2]), rt)
+
     def test_no_mask_configured(self):
         flavor = objects.Flavor(
             vcpus=3, memory_mb=2048,
