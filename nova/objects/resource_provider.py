@@ -736,7 +736,6 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
             filters = copy.deepcopy(filters)
         name = filters.pop('name', None)
         uuid = filters.pop('uuid', None)
-        can_host = filters.pop('can_host', 0)
         member_of = filters.pop('member_of', [])
 
         resources = filters.pop('resources', {})
@@ -749,7 +748,6 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
             query = query.filter(models.ResourceProvider.name == name)
         if uuid:
             query = query.filter(models.ResourceProvider.uuid == uuid)
-        query = query.filter(models.ResourceProvider.can_host == can_host)
 
         # If 'member_of' has values join with the PlacementAggregates to
         # get those resource providers that are associated with any of the

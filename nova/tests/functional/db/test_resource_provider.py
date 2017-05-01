@@ -587,9 +587,6 @@ class ResourceProviderListTestCase(ResourceProviderBaseCase):
             self.context, filters={'name': u'rp_name_1'})
         self.assertEqual(1, len(resource_providers))
         resource_providers = objects.ResourceProviderList.get_all_by_filters(
-            self.context, filters={'can_host': 1})
-        self.assertEqual(0, len(resource_providers))
-        resource_providers = objects.ResourceProviderList.get_all_by_filters(
             self.context, filters={'uuid': getattr(uuidsentinel, 'rp_uuid_2')})
         self.assertEqual(1, len(resource_providers))
         self.assertEqual('rp_name_2', resource_providers[0].name)
