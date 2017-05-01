@@ -37,6 +37,7 @@ from nova.api.openstack.compute import flavors
 from nova.api.openstack.compute import flavors_extraspecs
 from nova.api.openstack.compute import floating_ip_pools
 from nova.api.openstack.compute import floating_ips
+from nova.api.openstack.compute import floating_ips_bulk
 from nova.api.openstack.compute import hide_server_addresses
 from nova.api.openstack.compute import keypairs
 from nova.api.openstack.compute import lock_server
@@ -108,6 +109,10 @@ floating_ip_pools_controller = functools.partial(_create_controller,
 
 floating_ips_controller = functools.partial(_create_controller,
     floating_ips.FloatingIPController, [], [])
+
+
+floating_ips_bulk_controller = functools.partial(_create_controller,
+    floating_ips_bulk.FloatingIPBulkController, [], [])
 
 
 server_controller = functools.partial(_create_controller,
@@ -210,6 +215,14 @@ ROUTE_LIST = (
     ('/os-floating-ips/{id}', {
         'GET': [floating_ips_controller, 'show'],
         'DELETE': [floating_ips_controller, 'delete']
+    }),
+    ('/os-floating-ips-bulk', {
+        'GET': [floating_ips_bulk_controller, 'index'],
+        'POST': [floating_ips_bulk_controller, 'create']
+    }),
+    ('/os-floating-ips-bulk/{id}', {
+        'GET': [floating_ips_bulk_controller, 'show'],
+        'PUT': [floating_ips_bulk_controller, 'update']
     }),
     ('/os-keypairs', {
         'GET': [keypairs_controller, 'index'],

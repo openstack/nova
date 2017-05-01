@@ -207,6 +207,9 @@ hardcoded_extensions = [
     {'name': 'FloatingIps',
      'description': 'Floating IPs support.',
      'alias': 'os-floating-ips'},
+    {'name': 'FloatingIpsBulk',
+     'description': 'Bulk handling of Floating IPs.',
+     'alias': 'os-floating-ips-bulk'},
     {'name': 'Keypairs',
      'description': 'Keypair Support.',
      'alias': 'os-keypairs'}

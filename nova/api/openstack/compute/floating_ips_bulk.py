@@ -31,9 +31,6 @@ from nova.policies import floating_ips_bulk as fib_policies
 CONF = nova.conf.CONF
 
 
-ALIAS = 'os-floating-ips-bulk'
-
-
 class FloatingIPBulkController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
@@ -154,22 +151,3 @@ class FloatingIPBulkController(wsgi.Controller):
                 return net.iter_hosts()
         except netaddr.AddrFormatError as exc:
             raise exception.InvalidInput(reason=six.text_type(exc))
-
-
-class FloatingIpsBulk(extensions.V21APIExtensionBase):
-    """Bulk handling of Floating IPs."""
-
-    name = "FloatingIpsBulk"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        resource = [extensions.ResourceExtension(ALIAS,
-                                                 FloatingIPBulkController())]
-        return resource
-
-    def get_controller_extensions(self):
-        """It's an abstract function V21APIExtensionBase and the extension
-        will not be loaded without it.
-        """
-        return []
