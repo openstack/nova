@@ -22,7 +22,6 @@ from nova.policies import availability_zone as az_policies
 from nova import servicegroup
 
 CONF = nova.conf.CONF
-ALIAS = "os-availability-zone"
 ATTRIBUTE_NAME = "availability_zone"
 
 
@@ -119,28 +118,6 @@ class AvailabilityZoneController(wsgi.Controller):
         context.can(az_policies.POLICY_ROOT % 'detail')
 
         return self._describe_availability_zones_verbose(context)
-
-
-class AvailabilityZone(extensions.V21APIExtensionBase):
-    """1. Add availability_zone to the Create Server API.
-       2. Add availability zones describing.
-    """
-
-    name = "AvailabilityZone"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        resource = [extensions.ResourceExtension(ALIAS,
-            AvailabilityZoneController(),
-            collection_actions={'detail': 'GET'})]
-        return resource
-
-    def get_controller_extensions(self):
-        """It's an abstract function V21APIExtensionBase and the extension
-        will not be loaded without it.
-        """
-        return []
 
 
 # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'

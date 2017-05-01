@@ -181,6 +181,11 @@ hardcoded_extensions = [
      'alias': 'os-assisted-volume-snapshots',
      'description': 'Assisted volume snapshots.'
     },
+    {'name': 'AvailabilityZone',
+     'alias': 'os-availability-zone',
+     'description': '1. Add availability_zone to the Create Server API.\n'
+                    '       2. Add availability zones describing.\n    ',
+    },
     {'name': 'DiskConfig',
      'alias': 'os-disk-config',
      'description': 'Disk Management Extension.'},
