@@ -36,7 +36,6 @@ from nova.policies import floating_ips as fi_policies
 
 
 LOG = logging.getLogger(__name__)
-ALIAS = 'os-floating-ips'
 
 
 def _translate_floating_ip_view(floating_ip):
@@ -327,19 +326,3 @@ class FloatingIPActionController(wsgi.Controller):
             msg = _("Floating IP %(address)s is not associated with instance "
                     "%(id)s.") % {'address': address, 'id': id}
             raise webob.exc.HTTPConflict(explanation=msg)
-
-
-class FloatingIps(extensions.V21APIExtensionBase):
-    """Floating IPs support."""
-
-    name = "FloatingIps"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        resource = [extensions.ResourceExtension(ALIAS,
-                                FloatingIPController())]
-        return resource
-
-    def get_controller_extensions(self):
-        return []
