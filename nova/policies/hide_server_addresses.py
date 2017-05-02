@@ -13,16 +13,32 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_policy import policy
-
+from nova.policies import base
 
 BASE_POLICY_NAME = 'os_compute_api:os-hide-server-addresses'
 
 
 hide_server_addresses_policies = [
-    policy.RuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str='is_admin:False'),
+    base.create_rule_default(
+        BASE_POLICY_NAME,
+        'is_admin:False',
+        """Hide server's 'addresses' key in the server response.
+
+This set the 'addresses' key in the server response to an empty dictionary
+when the server is in a specific set of states as defined in
+CONF.api.hide_server_address_states.
+By default 'addresses' is hidden only when the server is in 'BUILDING'
+state.""",
+        [
+            {
+                'method': 'GET',
+                'path': '/servers/{id}'
+            },
+            {
+                'method': 'GET',
+                'path': '/servers/detail'
+            }
+        ]),
 ]
 
 
