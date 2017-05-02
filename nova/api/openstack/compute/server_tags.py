@@ -29,9 +29,6 @@ from nova import objects
 from nova.policies import server_tags as st_policies
 
 
-ALIAS = "os-server-tags"
-
-
 def _get_tags_names(tags):
     return [t.tag for t in tags]
 
@@ -203,25 +200,3 @@ class ServerTagsController(wsgi.Controller):
                 objects.TagList.destroy(cctxt, server_id)
         except exception.InstanceNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
-
-
-class ServerTags(extensions.V21APIExtensionBase):
-    """Server tags support."""
-
-    name = "ServerTags"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        return []
-
-    def get_resources(self):
-        res = extensions.ResourceExtension('tags',
-                                           ServerTagsController(),
-                                           parent=dict(
-                                               member_name='server',
-                                               collection_name='servers'),
-                                           collection_actions={
-                                               'delete_all': 'DELETE',
-                                               'update_all': 'PUT'})
-        return [res]
