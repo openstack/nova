@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_policy import policy
-
 from nova.policies import base
 
 
@@ -22,9 +20,26 @@ BASE_POLICY_NAME = 'os_compute_api:os-fixed-ips'
 
 
 fixed_ips_policies = [
-    policy.RuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_API),
+    base.create_rule_default(
+        BASE_POLICY_NAME,
+        base.RULE_ADMIN_API,
+        """Shows details for, reserve and unreserve a fixed IP address.
+
+These APIs are only available with nova-network which is deprecated.""",
+        [
+            {
+                'method': 'GET',
+                'path': '/os-fixed-ips/{fixed_ip}'
+            },
+            {
+                'method': 'POST',
+                'path': '/os-fixed-ips/{fixed_ip}/action (reserve)'
+            },
+            {
+                'method': 'POST',
+                'path': '/os-fixed-ips/{fixed_ip}/action (unreserve)'
+            }
+        ]),
 ]
 
 
