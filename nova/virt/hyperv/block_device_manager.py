@@ -258,7 +258,7 @@ class BlockDeviceInfoManager(object):
         boot_order = []
         for dev in devices:
             if dev.get('connection_info'):
-                dev_path = self._volops.get_mounted_disk_path_from_volume(
+                dev_path = self._volops.get_disk_resource_path(
                     dev['connection_info'])
                 boot_order.append(dev_path)
             else:
