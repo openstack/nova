@@ -60,14 +60,10 @@ function configure_and_start_glance {
     echo 'check processes before glance-api stop'
     $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "ps aux | grep glance-api"
 
-    #stop g-api
-    stop 'primary' 'g-api'
+    # restart glance
+    $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "systemctl restart devstack@g-api"
 
     echo 'check processes after glance-api stop'
-    $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "ps aux | grep glance-api"
-
-    # restart glance
-    sudo -H -u $STACK_USER bash -c "/tmp/start_process.sh g-api '/usr/local/bin/glance-api --config-file=/etc/glance/glance-api.conf'"
     $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "ps aux | grep glance-api"
 }
 
@@ -109,25 +105,10 @@ function configure_and_start_nova {
     echo 'check compute processes before restart'
     $ANSIBLE all --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "ps aux | grep compute"
 
-    #stop nova-compute
-    stop 'all' 'n-cpu'
+    # restart nova-compute
+    $ANSIBLE all --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "systemctl restart devstack@n-cpu"
 
-    echo 'check processes after compute stop'
-    $ANSIBLE all --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "ps aux | grep compute"
-
-    # Determine what the libvirt is. If there is a group called "libvirtd"
-    # in /etc/groups use that, otherwise default to "libvirt".
-    # Note, new ubuntu and debian use libvirt, everything else is libvirtd.
-    local libvirt_group
-    libvirt_group=$(cut -d ':' -f 1 /etc/group | grep 'libvirtd$' || true)
-    libvirt_group=${libvirt_group:-libvirt}
-    # restart  local nova-compute
-    sudo -H -u $STACK_USER bash -c "/tmp/start_process.sh n-cpu '/usr/local/bin/nova-compute --config-file /etc/nova/nova.conf' $libvirt_group"
-
-    # restart remote nova-compute
-    for SUBNODE in $SUBNODES ; do
-        ssh $SUBNODE "sudo -H -u $STACK_USER bash -c '/tmp/start_process.sh n-cpu \"/usr/local/bin/nova-compute --config-file /etc/nova/nova.conf\" $libvirt_group'"
-    done
+    # test that they are all running again
     $ANSIBLE all --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "ps aux | grep compute"
 
 }
@@ -156,9 +137,10 @@ function _ceph_configure_cinder {
 
 function configure_and_start_cinder {
     _ceph_configure_cinder
-    stop 'primary' 'c-vol'
 
-    sudo -H -u $STACK_USER bash -c "/tmp/start_process.sh c-vol '/usr/local/bin/cinder-volume --config-file /etc/cinder/cinder.conf'"
+    # restart cinder
+    $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "systemctl restart devstack@c-vol"
+
     source $BASE/new/devstack/openrc
 
     export OS_USERNAME=admin
