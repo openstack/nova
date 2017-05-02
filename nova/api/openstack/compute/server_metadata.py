@@ -26,8 +26,6 @@ from nova import exception
 from nova.i18n import _
 from nova.policies import server_metadata as sm_policies
 
-ALIAS = 'server-metadata'
-
 
 class ServerMetadataController(wsgi.Controller):
     """The server metadata API controller for the OpenStack API."""
@@ -163,36 +161,3 @@ class ServerMetadataController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'delete metadata', server_id)
-
-
-class ServerMetadata(extensions.V21APIExtensionBase):
-    """Server Metadata API."""
-    name = "ServerMetadata"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        parent = {'member_name': 'server',
-                  'collection_name': 'servers'}
-        resources = [extensions.ResourceExtension('metadata',
-                                                  ServerMetadataController(),
-                                                  member_name='server_meta',
-                                                  parent=parent,
-                                                  custom_routes_fn=
-                                                  self.server_metadata_map
-                                                  )]
-        return resources
-
-    def get_controller_extensions(self):
-        return []
-
-    def server_metadata_map(self, mapper, wsgi_resource):
-        mapper.connect("metadata",
-                       "/{project_id}/servers/{server_id}/metadata",
-                       controller=wsgi_resource,
-                       action='update_all', conditions={"method": ['PUT']})
-        # Also connect the non project_id routes
-        mapper.connect("metadata",
-                       "/servers/{server_id}/metadata",
-                       controller=wsgi_resource,
-                       action='update_all', conditions={"method": ['PUT']})

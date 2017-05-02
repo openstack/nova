@@ -203,7 +203,10 @@ hardcoded_extensions = [
      'alias': 'os-flavor-access'},
     {'name': 'Keypairs',
      'description': 'Keypair Support.',
-     'alias': 'os-keypairs'}
+     'alias': 'os-keypairs'},
+    {'name': 'ServerMetadata',
+     'description': 'Server metadata Support.',
+     'alias': 'server-metadata'},
 ]
 
 
