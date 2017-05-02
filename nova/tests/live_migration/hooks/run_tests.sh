@@ -23,8 +23,6 @@ SUBNODES=$(cat /etc/nodepool/sub_nodes_private)
 SERVICE_HOST=$primary_node
 STACK_USER=${STACK_USER:-stack}
 
-populate_start_script
-
 echo '1. test with all local storage (use default for volumes)'
 echo 'NOTE: test_volume_backed_live_migration is skipped due to https://bugs.launchpad.net/nova/+bug/1524898'
 run_tempest "block migration test" "^.*test_live_migration(?!.*(test_volume_backed_live_migration))"
