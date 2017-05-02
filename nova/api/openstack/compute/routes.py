@@ -101,6 +101,10 @@ flavor_extraspec_controller = functools.partial(_create_controller,
     flavors_extraspecs.FlavorExtraSpecsController, [], [])
 
 
+floating_ips_controller = functools.partial(_create_controller,
+    floating_ips.FloatingIPController, [], [])
+
+
 server_controller = functools.partial(_create_controller,
     servers.ServersController,
     [
@@ -190,6 +194,14 @@ ROUTE_LIST = (
     }),
     ('/os-aggregates/{id}/action', {
         'POST': [aggregates_controller, 'action'],
+    }),
+    ('/os-floating-ips', {
+        'GET': [floating_ips_controller, 'index'],
+        'POST': [floating_ips_controller, 'create']
+    }),
+    ('/os-floating-ips/{id}', {
+        'GET': [floating_ips_controller, 'show'],
+        'DELETE': [floating_ips_controller, 'delete']
     }),
     ('/os-keypairs', {
         'GET': [keypairs_controller, 'index'],
