@@ -59,6 +59,7 @@ from nova.api.openstack.compute import remote_consoles
 from nova.api.openstack.compute import rescue
 from nova.api.openstack.compute import security_groups
 from nova.api.openstack.compute import server_metadata
+from nova.api.openstack.compute import server_migrations
 from nova.api.openstack.compute import server_password
 from nova.api.openstack.compute import server_tags
 from nova.api.openstack.compute import server_usage
@@ -216,6 +217,10 @@ server_controller = functools.partial(_create_controller,
 
 server_metadata_controller = functools.partial(_create_controller,
     server_metadata.ServerMetadataController, [], [])
+
+
+server_migrations_controller = functools.partial(_create_controller,
+    server_migrations.ServerMigrationsController, [], [])
 
 
 server_os_interface_controller = functools.partial(_create_controller,
@@ -429,6 +434,16 @@ ROUTE_LIST = (
         'GET': [server_metadata_controller, 'show'],
         'PUT': [server_metadata_controller, 'update'],
         'DELETE': [server_metadata_controller, 'delete'],
+    }),
+    ('/servers/{server_id}/migrations', {
+        'GET': [server_migrations_controller, 'index']
+    }),
+    ('/servers/{server_id}/migrations/{id}', {
+        'GET': [server_migrations_controller, 'show'],
+        'DELETE': [server_migrations_controller, 'delete']
+    }),
+    ('/servers/{server_id}/migrations/{id}/action', {
+        'POST': [server_migrations_controller, 'action']
     }),
     ('/servers/{server_id}/os-interface', {
         'GET': [server_os_interface_controller, 'index'],
