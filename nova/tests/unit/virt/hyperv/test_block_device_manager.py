@@ -407,7 +407,8 @@ class BlockDeviceManagerTestCase(test_base.HyperVBaseTestCase):
         res = self._bdman._get_boot_order_gen1(fake_bdi)
         self.assertEqual(expected, res)
 
-    def test_get_boot_order_gen2(self):
+    @mock.patch('nova.virt.hyperv.volumeops.VolumeOps.get_disk_resource_path')
+    def test_get_boot_order_gen2(self, mock_get_disk_path):
         fake_root_disk = {'boot_index': 0,
                           'path': mock.sentinel.FAKE_ROOT_PATH}
         fake_eph1 = {'boot_index': 2,
@@ -421,8 +422,7 @@ class BlockDeviceManagerTestCase(test_base.HyperVBaseTestCase):
                                    fake_eph2],
                     'block_device_mapping': [fake_bdm]}
 
-        self._bdman._volops.get_mounted_disk_path_from_volume = (
-            mock.MagicMock(return_value=fake_bdm['connection_info']))
+        mock_get_disk_path.return_value = fake_bdm['connection_info']
 
         expected_res = [mock.sentinel.FAKE_ROOT_PATH,
                         mock.sentinel.FAKE_CONN_INFO,
