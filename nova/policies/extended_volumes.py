@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_policy import policy
-
 from nova.policies import base
 
 
@@ -22,9 +20,21 @@ BASE_POLICY_NAME = 'os_compute_api:os-extended-volumes'
 
 
 extended_volumes_policies = [
-    policy.RuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_OR_OWNER),
+    base.create_rule_default(
+        BASE_POLICY_NAME,
+        base.RULE_ADMIN_OR_OWNER,
+        "Return 'os-extended-volumes:volumes_attached' in the response of "
+        "server.",
+        [
+            {
+                'method': 'GET',
+                'path': '/servers/{id}'
+            },
+            {
+                'method': 'GET',
+                'path': '/servers/detail'
+            }
+        ]),
 ]
 
 
