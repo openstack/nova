@@ -6187,6 +6187,10 @@ class ComputeTestCase(BaseTestCase):
             update_available_resource.assert_has_calls([mock.call(c)])
             self.assertEqual('completed', migration_obj.status)
             mig_save.assert_called_once_with()
+            # assert we logged a success message
+            self.assertIn(
+                'Migrating instance to desthost finished successfully.',
+                self.stdlog.logger.output)
 
     def test_post_live_migration_exc_on_dest_works_correctly(self):
         """Confirm that post_live_migration() completes successfully
@@ -6238,6 +6242,10 @@ class ComputeTestCase(BaseTestCase):
                                               migrate_data=migrate_data)
             update_available_resource.assert_has_calls([mock.call(c)])
             self.assertEqual('completed', migration_obj.status)
+            # assert we did not log a success message
+            self.assertNotIn(
+                'Migrating instance to desthost finished successfully.',
+                self.stdlog.logger.output)
 
     def test_post_live_migration_terminate_volume_connections(self):
         c = context.get_admin_context()
