@@ -5097,7 +5097,7 @@ class ComputeManager(manager.Manager):
         """Use hotplug to add an network adapter to an instance."""
         if not self.driver.capabilities['supports_attach_interface']:
             raise exception.AttachInterfaceNotSupported(
-                instance_id=instance.uuid)
+                instance_uuid=instance.uuid)
         bind_host_id = self.driver.network_binding_host_id(context, instance)
         network_info = self.network_api.allocate_port_for_instance(
             context, instance, port_id, network_id, requested_ip,

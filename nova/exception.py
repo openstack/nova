@@ -2035,7 +2035,7 @@ class BuildRequestNotFound(NotFound):
 
 class AttachInterfaceNotSupported(Invalid):
     msg_fmt = _("Attaching interfaces is not supported for "
-                "instance %(instance)s.")
+                "instance %(instance_uuid)s.")
 
 
 class InvalidReservedMemoryPagesOption(Invalid):
