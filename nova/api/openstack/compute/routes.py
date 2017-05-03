@@ -35,6 +35,7 @@ from nova.api.openstack.compute import flavor_manage
 from nova.api.openstack.compute import flavor_rxtx
 from nova.api.openstack.compute import flavors
 from nova.api.openstack.compute import flavors_extraspecs
+from nova.api.openstack.compute import floating_ip_pools
 from nova.api.openstack.compute import floating_ips
 from nova.api.openstack.compute import hide_server_addresses
 from nova.api.openstack.compute import keypairs
@@ -100,6 +101,10 @@ flavor_access_controller = functools.partial(_create_controller,
 
 flavor_extraspec_controller = functools.partial(_create_controller,
     flavors_extraspecs.FlavorExtraSpecsController, [], [])
+
+
+floating_ip_pools_controller = functools.partial(_create_controller,
+    floating_ip_pools.FloatingIPPoolsController, [], [])
 
 
 floating_ips_controller = functools.partial(_create_controller,
@@ -198,6 +203,9 @@ ROUTE_LIST = (
     }),
     ('/os-aggregates/{id}/action', {
         'POST': [aggregates_controller, 'action'],
+    }),
+    ('/os-floating-ip-pools', {
+        'GET': [floating_ip_pools_controller, 'index'],
     }),
     ('/os-floating-ips', {
         'GET': [floating_ips_controller, 'index'],
