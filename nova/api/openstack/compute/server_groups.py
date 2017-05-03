@@ -36,8 +36,6 @@ from nova.policies import server_groups as sg_policies
 
 LOG = logging.getLogger(__name__)
 
-ALIAS = "os-server-groups"
-
 CONF = nova.conf.CONF
 
 
@@ -188,19 +186,3 @@ class ServerGroupController(wsgi.Controller):
                 raise exc.HTTPForbidden(explanation=msg)
 
         return {'server_group': self._format_server_group(context, sg, req)}
-
-
-class ServerGroups(extensions.V21APIExtensionBase):
-    """Server group support."""
-    name = "ServerGroups"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        res = extensions.ResourceExtension(
-                 ALIAS, controller=ServerGroupController(),
-                 member_actions={"action": "POST", })
-        return [res]
-
-    def get_controller_extensions(self):
-        return []
