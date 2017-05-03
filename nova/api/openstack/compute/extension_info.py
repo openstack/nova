@@ -206,7 +206,10 @@ hardcoded_extensions = [
      'alias': 'os-floating-ips'},
     {'name': 'Keypairs',
      'description': 'Keypair Support.',
-     'alias': 'os-keypairs'}
+     'alias': 'os-keypairs'},
+    {'name': 'ServerMetadata',
+     'description': 'Server metadata Support.',
+     'alias': 'server-metadata'},
 ]
 
 

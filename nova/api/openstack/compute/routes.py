@@ -45,6 +45,7 @@ from nova.api.openstack.compute import pause_server
 from nova.api.openstack.compute import remote_consoles
 from nova.api.openstack.compute import rescue
 from nova.api.openstack.compute import security_groups
+from nova.api.openstack.compute import server_metadata
 from nova.api.openstack.compute import server_usage
 from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import shelve
@@ -138,6 +139,9 @@ server_controller = functools.partial(_create_controller,
     ]
 )
 
+
+server_metadata_controller = functools.partial(_create_controller,
+    server_metadata.ServerMetadataController, [], [])
 
 # NOTE(alex_xu): This is structure of this route list as below:
 # (
@@ -240,7 +244,17 @@ ROUTE_LIST = (
     }),
     ('/servers/{id}/action', {
         'POST': [server_controller, 'action']
-    })
+    }),
+    ('/servers/{server_id}/metadata', {
+        'GET': [server_metadata_controller, 'index'],
+        'POST': [server_metadata_controller, 'create'],
+        'PUT': [server_metadata_controller, 'update_all'],
+    }),
+    ('/servers/{server_id}/metadata/{id}', {
+        'GET': [server_metadata_controller, 'show'],
+        'PUT': [server_metadata_controller, 'update'],
+        'DELETE': [server_metadata_controller, 'delete'],
+    }),
 )
 
 
