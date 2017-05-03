@@ -1,0 +1,8 @@
+---
+upgrade:
+  - |
+    WSGI application scripts ``nova-api-wsgi`` and ``nova-metadata-wsgi`` are
+    now available. They allow running the compute and metadata APIs using a WSGI
+    server of choice (for example nginx and uwsgi, apache2 with mod_proxy_uwsgx
+    or gunicorn). The eventlet-based servers are still available, but the WSGI
+    options will allow greater deployment flexibility.
