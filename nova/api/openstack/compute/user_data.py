@@ -13,25 +13,9 @@
 #    under the License.
 
 from nova.api.openstack.compute.schemas import user_data as schema_user_data
-from nova.api.openstack import extensions
 
 
-ALIAS = "os-user-data"
 ATTRIBUTE_NAME = 'user_data'
-
-
-class UserData(extensions.V21APIExtensionBase):
-    """Add user_data to the Create Server API."""
-
-    name = "UserData"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        return []
-
-    def get_resources(self):
-        return []
 
 
 # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
