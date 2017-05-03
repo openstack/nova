@@ -3136,9 +3136,14 @@ length:
   description: |
     The number of lines to fetch from the end of console log. All
     lines will be returned if this is not specified.
+
+    .. note::
+
+      This parameter can be specified as not only 'integer' but also 'string'.
+
   in: body
   required: false
-  type: string
+  type: integer
 limits:
   description: |
     Data structure that contains both absolute limits within a deployment.
@@ -3655,10 +3660,10 @@ os-extended-volumes:volumes_attached.id:
   type: string
 os-getConsoleOutput:
   description: |
-    The action.
+    The action to get console output of the server.
   in: body
   required: true
-  type: string
+  type: object
 os-getRDPConsole:
   description: |
     The action.
