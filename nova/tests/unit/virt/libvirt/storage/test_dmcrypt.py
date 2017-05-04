@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import binascii
 import mock
 from oslo_concurrency import processutils
 
@@ -29,8 +30,8 @@ class LibvirtDmcryptTestCase(test.NoDBTestCase):
         self.NAME = 'disk'
         self.TARGET = dmcrypt.volume_name(self.NAME)
         self.PATH = '/dev/nova-lvm/instance_disk'
-        self.KEY = range(0, self.KEY_SIZE)
-        self.KEY_STR = ''.join(["%02x" % x for x in range(0, self.KEY_SIZE)])
+        self.KEY = bytes(bytearray(x for x in range(0, self.KEY_SIZE)))
+        self.KEY_STR = binascii.hexlify(self.KEY).decode('utf-8')
 
     @mock.patch('nova.utils.execute')
     def test_create_volume(self, mock_execute):
