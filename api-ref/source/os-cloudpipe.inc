@@ -8,7 +8,8 @@
 
    This API only works with ``nova-network`` which is
    deprecated in favor of Neutron. It should be avoided
-   in any new applications.
+   in any new applications. It was removed in the 16.0.0
+   Pike release.
 
 Manages virtual VPNs for projects.
 

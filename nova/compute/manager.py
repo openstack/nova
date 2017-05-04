@@ -55,7 +55,6 @@ from six.moves import range
 
 from nova import block_device
 from nova.cells import rpcapi as cells_rpcapi
-from nova.cloudpipe import pipelib
 from nova import compute
 from nova.compute import build_results
 from nova.compute import claims
@@ -1460,7 +1459,7 @@ class ComputeManager(manager.Manager):
         instance.save(expected_task_state=[None])
         self._update_resource_tracker(context, instance)
 
-        is_vpn = pipelib.is_vpn_image(instance.image_ref)
+        is_vpn = False
         return network_model.NetworkInfoAsyncWrapper(
                 self._allocate_network_async, context, instance,
                 requested_networks, macs, security_groups, is_vpn,

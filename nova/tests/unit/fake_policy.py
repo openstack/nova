@@ -27,7 +27,6 @@ policy_data = """
     "os_compute_api:os-attach-interfaces": "",
     "os_compute_api:os-baremetal-nodes": "",
     "os_compute_api:os-cells": "",
-    "os_compute_api:os-cloudpipe": "",
     "os_compute_api:os-config-drive": "",
     "os_compute_api:os-console-output": "",
     "os_compute_api:os-remote-consoles": "",
