@@ -1007,8 +1007,10 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
         instance.obj_reset_changes(items_to_remove)
         instance.cell_name = _reverse_path(message.routing_path)
 
+        # instance.display_name could be unicode
+        instance_repr = utils.get_obj_repr_unicode(instance)
         LOG.debug("Got update for instance: %(instance)s",
-                  {'instance': instance}, instance_uuid=instance.uuid)
+                  {'instance': instance_repr}, instance_uuid=instance.uuid)
 
         expected_vm_state = self._get_expected_vm_state(instance)
         expected_task_state = self._get_expected_task_state(instance)
