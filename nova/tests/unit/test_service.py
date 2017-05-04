@@ -340,7 +340,8 @@ class TestLauncher(test.NoDBTestCase):
         service.serve(mock.sentinel.service)
         mock_launch.assert_called_once_with(mock.ANY,
                                             mock.sentinel.service,
-                                            workers=None)
+                                            workers=None,
+                                            restart_method='mutate')
 
     @mock.patch.object(_service, 'launch')
     def test_launch_app_with_workers(self, mock_launch):
@@ -348,7 +349,8 @@ class TestLauncher(test.NoDBTestCase):
         service.serve(mock.sentinel.service, workers=mock.sentinel.workers)
         mock_launch.assert_called_once_with(mock.ANY,
                                             mock.sentinel.service,
-                                            workers=mock.sentinel.workers)
+                                            workers=mock.sentinel.workers,
+                                            restart_method='mutate')
 
     @mock.patch.object(_service, 'launch')
     def test_launch_app_more_than_once_raises(self, mock_launch):
