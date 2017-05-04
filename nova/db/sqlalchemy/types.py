@@ -59,7 +59,7 @@ class CIDR(types.TypeDecorator):
     def process_bind_param(self, value, dialect):
         """Process/Formats the value before insert it into the db."""
         # NOTE(sdague): normalize all the inserts
-        if utils.is_valid_ipv6_cidr(value):
+        if netutils.is_valid_ipv6_cidr(value):
             return utils.get_shortened_ipv6_cidr(value)
         return value
 

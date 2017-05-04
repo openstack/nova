@@ -539,14 +539,6 @@ def parse_server_string(server_str):
         return ('', '')
 
 
-def is_valid_ipv6_cidr(address):
-    try:
-        netaddr.IPNetwork(address, version=6).cidr
-        return True
-    except (TypeError, netaddr.AddrFormatError):
-        return False
-
-
 def get_shortened_ipv6(address):
     addr = netaddr.IPAddress(address, version=6)
     return str(addr.ipv6())
@@ -555,29 +547,6 @@ def get_shortened_ipv6(address):
 def get_shortened_ipv6_cidr(address):
     net = netaddr.IPNetwork(address, version=6)
     return str(net.cidr)
-
-
-def is_valid_cidr(address):
-    """Check if address is valid
-
-    The provided address can be a IPv6 or a IPv4
-    CIDR address.
-    """
-    try:
-        # Validate the correct CIDR Address
-        netaddr.IPNetwork(address)
-    except netaddr.AddrFormatError:
-        return False
-
-    # Prior validation partially verify /xx part
-    # Verify it here
-    ip_segment = address.split('/')
-
-    if (len(ip_segment) <= 1 or
-            ip_segment[1] == ''):
-        return False
-
-    return True
 
 
 def get_ip_version(network):

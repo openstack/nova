@@ -178,17 +178,6 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         self.assertEqual('&lt;', utils.xhtml_escape('<'))
         self.assertEqual('&lt;foo&gt;', utils.xhtml_escape('<foo>'))
 
-    def test_is_valid_ipv6_cidr(self):
-        self.assertTrue(utils.is_valid_ipv6_cidr("2600::/64"))
-        self.assertTrue(utils.is_valid_ipv6_cidr(
-                "abcd:ef01:2345:6789:abcd:ef01:192.168.254.254/48"))
-        self.assertTrue(utils.is_valid_ipv6_cidr(
-                "0000:0000:0000:0000:0000:0000:0000:0001/32"))
-        self.assertTrue(utils.is_valid_ipv6_cidr(
-                "0000:0000:0000:0000:0000:0000:0000:0001"))
-        self.assertFalse(utils.is_valid_ipv6_cidr("foo"))
-        self.assertFalse(utils.is_valid_ipv6_cidr("127.0.0.1"))
-
     def test_get_shortened_ipv6(self):
         self.assertEqual("abcd:ef01:2345:6789:abcd:ef01:c0a8:fefe",
                          utils.get_shortened_ipv6(
