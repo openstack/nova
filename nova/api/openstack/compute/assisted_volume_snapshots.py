@@ -29,9 +29,6 @@ from nova import exception
 from nova.policies import assisted_volume_snapshots as avs_policies
 
 
-ALIAS = 'os-assisted-volume-snapshots'
-
-
 class AssistedVolumeSnapshotsController(wsgi.Controller):
     """The Assisted volume snapshots API controller for the OpenStack API."""
 
@@ -96,22 +93,3 @@ class AssistedVolumeSnapshotsController(wsgi.Controller):
             # microversion, which we should just do in a single microversion
             # across all APIs when we fix status code wrinkles.
             raise exc.HTTPBadRequest(explanation=e.format_message())
-
-
-class AssistedVolumeSnapshots(extensions.V21APIExtensionBase):
-    """Assisted volume snapshots."""
-
-    name = "AssistedVolumeSnapshots"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        res = [extensions.ResourceExtension(ALIAS,
-                                    AssistedVolumeSnapshotsController())]
-        return res
-
-    def get_controller_extensions(self):
-        """It's an abstract function V21APIExtensionBase and the extension
-        will not be loaded without it.
-        """
-        return []
