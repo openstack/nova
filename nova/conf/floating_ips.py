@@ -19,6 +19,14 @@ from oslo_config import cfg
 floating_ip_opts = [
     cfg.StrOpt('default_floating_pool',
         default='nova',
+        deprecated_for_removal=True,
+        deprecated_since='16.0.0',
+        deprecated_reason="""
+This option was used for two purposes: to set the floating IP pool name for
+nova-network and to do the same for neutron. nova-network is deprecated, as are
+any related configuration options. Users of neutron, meanwhile, should use the
+'default_floating_pool' option in the '[neutron]' group.
+""",
         help="""
 Default pool for floating IPs.
 

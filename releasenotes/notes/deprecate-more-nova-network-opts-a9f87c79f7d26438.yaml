@@ -4,6 +4,8 @@ deprecations:
     The following options, found in ``DEFAULT``, were only used for configuring
     nova-network and are, like nova-network itself, now deprecated.
 
+    - ``default_floating_pool`` (neutron users should use the
+      ``neutron.default_floating_pool``)
     - ``ipv6_backend``
     - ``firewall_driver``
     - ``metadata_host``
