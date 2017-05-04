@@ -1,0 +1,8 @@
+---
+fixes:
+  - Physical network name will be retrieved from a multi-segement network.
+    The current implementation will retrieve the physical network name for the
+    first segment that provides it. This is mostly intended to support a
+    combinatin of vxlan and vlan segments. Additional work will be required to
+    support a case of multiple vlan segments associated with different
+    physical networks.
