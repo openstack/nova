@@ -2076,6 +2076,12 @@ disk_available_least:
   in: body
   required: true
   type: integer
+disk_available_least_total:
+  description: |
+    The actual free disk on all hypervisors(in GB).
+  in: body
+  required: true
+  type: integer
 disk_bus:
   description: |
     Disk bus type, some hypervisors (currently only libvirt) support
@@ -2889,6 +2895,12 @@ free_ram_mb:
   in: body
   required: true
   type: integer
+free_ram_mb_total:
+  description: |
+    The free RAM on all hypervisors(in MB).
+  in: body
+  required: true
+  type: integer
 from_port:
   description: |
     The port at start of range.
@@ -3159,6 +3171,12 @@ hypervisor_free_disk_gb:
   in: body
   required: true
   type: integer
+hypervisor_free_disk_gb_total:
+  description: |
+    The free disk remaining on all hypervisors(in GB).
+  in: body
+  required: true
+  type: integer
 hypervisor_hostname:
   description: |
     The hypervisor host name provided by the Nova virt driver. For the Ironic driver,
@@ -3266,9 +3284,21 @@ hypervisor_vcpus:
   in: body
   required: true
   type: integer
+hypervisor_vcpus_total:
+  description: |
+    The number of vcpu on all hypervisors.
+  in: body
+  required: true
+  type: integer
 hypervisor_vcpus_used:
   description: |
     The number of vcpu used in this hypervisor.
+  in: body
+  required: true
+  type: integer
+hypervisor_vcpus_used_total:
+  description: |
+    The number of vcpu used on all hypervisors.
   in: body
   required: true
   type: integer
@@ -3870,9 +3900,21 @@ local_gb_simple_tenant_usage_optional:
   in: body
   required: false
   type: integer
+local_gb_total:
+  description: |
+    The disk on all hypervisors(in GB).
+  in: body
+  required: true
+  type: integer
 local_gb_used:
   description: |
     The disk used in this hypervisor(in GB).
+  in: body
+  required: true
+  type: integer
+local_gb_used_total:
+  description: |
+    The disk used on all hypervisors(in GB).
   in: body
   required: true
   type: integer
@@ -3956,9 +3998,21 @@ memory_mb_simple_tenant_usage_optional:
   in: body
   required: false
   type: integer
+memory_mb_total:
+  description: |
+    The memory of all hypervisors(in MB).
+  in: body
+  required: true
+  type: integer
 memory_mb_used:
   description: |
     The memory used in this hypervisor(in MB).
+  in: body
+  required: true
+  type: integer
+memory_mb_used_total:
+  description: |
+    The memory used on all hypervisors(in MB).
   in: body
   required: true
   type: integer

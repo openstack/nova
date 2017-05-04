@@ -159,16 +159,16 @@ Response
   - hypervisor_statistics: hypervisor_statistics
   - count: hypervisor_count
   - current_workload: current_workload
-  - disk_available_least: disk_available_least
-  - free_disk_gb: hypervisor_free_disk_gb
-  - free_ram_mb: free_ram_mb
-  - local_gb: local_gb
-  - local_gb_used: local_gb_used
-  - memory_mb: memory_mb
-  - memory_mb_used: memory_mb_used
+  - disk_available_least: disk_available_least_total
+  - free_disk_gb: hypervisor_free_disk_gb_total
+  - free_ram_mb: free_ram_mb_total
+  - local_gb: local_gb_total
+  - local_gb_used: local_gb_used_total
+  - memory_mb: memory_mb_total
+  - memory_mb_used: memory_mb_used_total
   - running_vms: running_vms_total
-  - vcpus: hypervisor_vcpus
-  - vcpus_used: hypervisor_vcpus_used
+  - vcpus: hypervisor_vcpus_total
+  - vcpus_used: hypervisor_vcpus_used_total
 
 **Example Show Hypervisor Statistics: JSON response**
 
