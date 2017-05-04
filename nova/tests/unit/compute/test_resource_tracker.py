@@ -2612,15 +2612,12 @@ class TestIsTrackableMigration(test.NoDBTestCase):
 class OverCommitTestCase(BaseTestCase):
     def test_cpu_allocation_ratio_none_negative(self):
         self.assertRaises(ValueError,
-                          CONF.set_default, 'cpu_allocation_ratio', -1.0,
-                          enforce_type=True)
+                          CONF.set_default, 'cpu_allocation_ratio', -1.0)
 
     def test_ram_allocation_ratio_none_negative(self):
         self.assertRaises(ValueError,
-                          CONF.set_default, 'ram_allocation_ratio', -1.0,
-                          enforce_type=True)
+                          CONF.set_default, 'ram_allocation_ratio', -1.0)
 
     def test_disk_allocation_ratio_none_negative(self):
         self.assertRaises(ValueError,
-                          CONF.set_default, 'disk_allocation_ratio', -1.0,
-                          enforce_type=True)
+                          CONF.set_default, 'disk_allocation_ratio', -1.0)
