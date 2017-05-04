@@ -366,6 +366,33 @@ def notify_about_instance_action(context, instance, host, action, phase=None,
     notification.emit(context)
 
 
+def notify_about_volume_attach_detach(context, instance, host, action, phase,
+                                      binary='nova-compute', volume_id=None):
+    """Send versioned notification about the action made on the instance
+    :param instance: the instance which the action performed on
+    :param host: the host emitting the notification
+    :param action: the name of the action
+    :param phase: the phase of the action
+    :param binary: the binary emitting the notification
+    :param volume_id: id of the volume will be attached
+    """
+    payload = instance_notification.InstanceActionVolumePayload(
+            instance=instance,
+            fault=None,
+            volume_id=volume_id)
+    notification = instance_notification.InstanceActionVolumeNotification(
+            context=context,
+            priority=fields.NotificationPriority.INFO,
+            publisher=notification_base.NotificationPublisher(
+                    context=context, host=host, binary=binary),
+            event_type=notification_base.EventType(
+                    object='instance',
+                    action=action,
+                    phase=phase),
+            payload=payload)
+    notification.emit(context)
+
+
 def notify_about_volume_swap(context, instance, host, action, phase,
                              old_volume_id, new_volume_id, exception=None):
     """Send versioned notification about the volume swap action

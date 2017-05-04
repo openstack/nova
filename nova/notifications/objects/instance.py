@@ -130,6 +130,22 @@ class InstanceActionPayload(InstancePayload):
 
 
 @nova_base.NovaObjectRegistry.register_notification
+class InstanceActionVolumePayload(InstanceActionPayload):
+    # Version 1.0: Initial version
+
+    VERSION = '1.0'
+    fields = {
+        'volume_id': fields.UUIDField()
+    }
+
+    def __init__(self, instance, fault, volume_id):
+        super(InstanceActionVolumePayload, self).__init__(
+                instance=instance,
+                fault=fault,
+                volume_id=volume_id)
+
+
+@nova_base.NovaObjectRegistry.register_notification
 class InstanceActionVolumeSwapPayload(InstanceActionPayload):
     # No SCHEMA as all the additional fields are calculated
 
@@ -342,4 +358,16 @@ class InstanceActionVolumeSwapNotification(base.NotificationBase):
 
     fields = {
         'payload': fields.ObjectField('InstanceActionVolumeSwapPayload')
+    }
+
+
+@base.notification_sample('instance-volume_attach-start.json')
+@base.notification_sample('instance-volume_attach-end.json')
+@nova_base.NovaObjectRegistry.register_notification
+class InstanceActionVolumeNotification(base.NotificationBase):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'payload': fields.ObjectField('InstanceActionVolumePayload')
     }
