@@ -35,6 +35,7 @@ from nova.api.openstack.compute import flavor_manage
 from nova.api.openstack.compute import flavor_rxtx
 from nova.api.openstack.compute import flavors
 from nova.api.openstack.compute import flavors_extraspecs
+from nova.api.openstack.compute import floating_ip_dns
 from nova.api.openstack.compute import floating_ip_pools
 from nova.api.openstack.compute import floating_ips
 from nova.api.openstack.compute import floating_ips_bulk
@@ -102,6 +103,14 @@ flavor_access_controller = functools.partial(_create_controller,
 
 flavor_extraspec_controller = functools.partial(_create_controller,
     flavors_extraspecs.FlavorExtraSpecsController, [], [])
+
+
+floating_ip_dns_controller = functools.partial(_create_controller,
+    floating_ip_dns.FloatingIPDNSDomainController, [], [])
+
+
+floating_ip_dnsentry_controller = functools.partial(_create_controller,
+    floating_ip_dns.FloatingIPDNSEntryController, [], [])
 
 
 floating_ip_pools_controller = functools.partial(_create_controller,
@@ -208,6 +217,18 @@ ROUTE_LIST = (
     }),
     ('/os-aggregates/{id}/action', {
         'POST': [aggregates_controller, 'action'],
+    }),
+    ('/os-floating-ip-dns', {
+        'GET': [floating_ip_dns_controller, 'index']
+    }),
+    ('/os-floating-ip-dns/{id}', {
+        'PUT': [floating_ip_dns_controller, 'update'],
+        'DELETE': [floating_ip_dns_controller, 'delete']
+    }),
+    ('/os-floating-ip-dns/{domain_id}/entries/{id}', {
+        'GET': [floating_ip_dnsentry_controller, 'show'],
+        'PUT': [floating_ip_dnsentry_controller, 'update'],
+        'DELETE': [floating_ip_dnsentry_controller, 'delete']
     }),
     ('/os-floating-ip-pools', {
         'GET': [floating_ip_pools_controller, 'index'],
