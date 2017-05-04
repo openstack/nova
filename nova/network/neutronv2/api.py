@@ -1914,10 +1914,27 @@ class API(base_api.NetworkAPI):
                    % name_or_id)
             raise exception.NovaException(message=msg)
 
+    def _get_default_floating_ip_pool_name(self):
+        """Get default pool name from config.
+
+        TODO(stephenfin): Remove this helper function in Queens, opting to
+        use the [neutron] option only.
+        """
+        if CONF.default_floating_pool != 'nova':
+            LOG.warning(_LW("Config option 'default_floating_pool' is set to "
+                            "a non-default value. Falling back to this value "
+                            "for now but this behavior will change in a "
+                            "future release. You should unset this value "
+                            "and set the '[neutron] default_floating_pool' "
+                            "option instead."))
+            return CONF.default_floating_pool
+
+        return CONF.neutron.default_floating_pool
+
     def allocate_floating_ip(self, context, pool=None):
         """Add a floating IP to a project from a pool."""
         client = get_client(context)
-        pool = pool or CONF.default_floating_pool
+        pool = pool or self._get_default_floating_ip_pool_name()
         pool_id = self._get_floating_ip_pool_id_by_name_or_id(client, pool)
 
         param = {'floatingip': {'floating_network_id': pool_id}}
