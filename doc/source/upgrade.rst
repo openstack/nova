@@ -86,7 +86,7 @@ same time.
      ``[upgrade_levels]compute=auto`` in nova.conf.  It is safest to
      start nova-conductor first and nova-api last. Note that you may
      use a static alias name instead of ``auto``, such as
-     ``[upgrade_levels]compute=newton``. Also note that this step is
+     ``[upgrade_levels]compute=<release_name>``. Also note that this step is
      only required if compute services are not upgraded in lock-step
      with the control services.
 
@@ -107,7 +107,7 @@ same time.
      starts, it automatically detects which version of the compute RPC protocol
      to use, and it can decide if it is safe to do any online data migrations.
      Note, if you used a static value for the upgrade_level, such as
-     ``[upgrade_levels]compute=newton``, you must update nova.conf to remove
+     ``[upgrade_levels]compute=<release_name>``, you must update nova.conf to remove
      that configuration value and do a full service restart.
 
    * Now all the services are upgraded and signaled, the system is able to use
