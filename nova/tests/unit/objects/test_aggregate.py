@@ -17,6 +17,7 @@ from oslo_utils import timeutils
 
 from nova import exception
 from nova.objects import aggregate
+from nova import test
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_objects
 from nova.tests import uuidsentinel
@@ -96,8 +97,9 @@ class _TestAggregateObject(object):
         agg.destroy()
         api_delete_mock.assert_called_with(self.context, 123)
 
+    @mock.patch('nova.compute.utils.notify_about_aggregate_action')
     @mock.patch('nova.objects.aggregate._aggregate_update_to_db')
-    def test_save_to_api(self, api_update_mock):
+    def test_save_to_api(self, api_update_mock, mock_notify):
         api_update_mock.return_value = fake_aggregate
         agg = aggregate.Aggregate(context=self.context)
         agg.id = 123
@@ -110,6 +112,15 @@ class _TestAggregateObject(object):
 
         api_update_mock.assert_called_once_with(self.context,
             123, {'name': 'fake-api-aggregate'})
+
+        mock_notify.assert_has_calls([
+            mock.call(context=self.context,
+                      aggregate=test.MatchType(aggregate.Aggregate),
+                      action='update_prop', phase='start'),
+            mock.call(context=self.context,
+                      aggregate=test.MatchType(aggregate.Aggregate),
+                      action='update_prop', phase='end')])
+        self.assertEqual(2, mock_notify.call_count)
 
     def test_save_and_create_no_hosts(self):
         agg = aggregate.Aggregate(context=self.context)

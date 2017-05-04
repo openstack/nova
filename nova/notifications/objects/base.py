@@ -61,7 +61,9 @@ class EventType(NotificationObject):
     # Version 1.12: UNLOCK is added to NotificationActionField enum
     # Version 1.13: REBUILD_SCHEDULED value is added to the
     #               NotificationActionField enum
-    VERSION = '1.13'
+    # Version 1.14: UPDATE_PROP value is added to the NotificationActionField
+    #               enum
+    VERSION = '1.14'
 
     fields = {
         'object': fields.StringField(nullable=False),

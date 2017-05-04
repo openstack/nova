@@ -136,3 +136,33 @@ class TestAggregateNotificationSample(
                 'uuid': aggregate['uuid'],
                 'id': aggregate['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
+    def test_aggregate_updateprops(self):
+        aggregate_req = {
+            "aggregate": {
+                "name": "my-aggregate",
+                "availability_zone": "nova"}}
+        aggregate = self.admin_api.post_aggregate(aggregate_req)
+
+        update_req = {
+            "aggregate": {
+                "name": "my-new-aggregate"}}
+        self.admin_api.put_aggregate(aggregate['id'], update_req)
+
+        # 0. aggregate-create-start
+        # 1. aggregate-create-end
+        # 2. aggregate-update_prop-start
+        # 3. aggregate-update_prop-end
+        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'aggregate-update_prop-start',
+            replacements={
+                'uuid': aggregate['uuid'],
+                'id': aggregate['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+        self._verify_notification(
+            'aggregate-update_prop-end',
+            replacements={
+                'uuid': aggregate['uuid'],
+                'id': aggregate['id']},
+                actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])

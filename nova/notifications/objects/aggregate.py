@@ -52,6 +52,8 @@ class AggregatePayload(base.NotificationPayloadBase):
 @base.notification_sample('aggregate-remove_host-end.json')
 @base.notification_sample('aggregate-update_metadata-start.json')
 @base.notification_sample('aggregate-update_metadata-end.json')
+@base.notification_sample('aggregate-update_prop-start.json')
+@base.notification_sample('aggregate-update_prop-end.json')
 @nova_base.NovaObjectRegistry.register_notification
 class AggregateNotification(base.NotificationBase):
     # Version 1.0: Initial version

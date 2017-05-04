@@ -332,12 +332,22 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
         compute_utils.notify_about_aggregate_update(self._context,
                                                     "updateprop.start",
                                                     payload)
+        compute_utils.notify_about_aggregate_action(
+            context=self._context,
+            aggregate=self,
+            action=fields.NotificationAction.UPDATE_PROP,
+            phase=fields.NotificationPhase.START)
         updates.pop('id', None)
         db_aggregate = _aggregate_update_to_db(self._context,
                                                self.id, updates)
         compute_utils.notify_about_aggregate_update(self._context,
                                                     "updateprop.end",
                                                     payload)
+        compute_utils.notify_about_aggregate_action(
+            context=self._context,
+            aggregate=self,
+            action=fields.NotificationAction.UPDATE_PROP,
+            phase=fields.NotificationPhase.END)
         self._from_db_object(self._context, self, db_aggregate)
 
     @base.remotable
