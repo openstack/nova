@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_policy import policy
 
 from nova.policies import base
 
@@ -22,9 +21,21 @@ BASE_POLICY_NAME = 'os_compute_api:os-flavor-manage'
 
 
 flavor_manage_policies = [
-    policy.RuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_API),
+    base.create_rule_default(
+        BASE_POLICY_NAME,
+        base.RULE_ADMIN_API,
+        "Create and delete Flavors",
+        [
+            {
+                'method': 'POST',
+                'path': '/flavors'
+            },
+            {
+                'method': 'DELETE',
+                'path': '/flavors/{flavor_id}'
+            },
+
+        ]),
 ]
 
 

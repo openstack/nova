@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_policy import policy
 
 from nova.policies import base
 
@@ -22,9 +21,24 @@ BASE_POLICY_NAME = 'os_compute_api:os-flavor-rxtx'
 
 
 flavor_rxtx_policies = [
-    policy.RuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_OR_OWNER),
+    base.create_rule_default(
+        BASE_POLICY_NAME,
+        base.RULE_ADMIN_OR_OWNER,
+        "Adds the rxtx_factor key into some Flavor APIs",
+        [
+            {
+                'method': 'GET',
+                'path': '/flavors/detail'
+            },
+            {
+                'method': 'GET',
+                'path': '/flavors/{flavor_id}'
+            },
+            {
+                'method': 'POST',
+                'path': '/flavors'
+            },
+        ]),
 ]
 
 

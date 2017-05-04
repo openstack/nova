@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_policy import policy
 
 from nova.policies import base
 
@@ -23,15 +22,54 @@ POLICY_ROOT = 'os_compute_api:os-flavor-access:%s'
 
 
 flavor_access_policies = [
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'add_tenant_access',
-        check_str=base.RULE_ADMIN_API),
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'remove_tenant_access',
-        check_str=base.RULE_ADMIN_API),
-    policy.RuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_OR_OWNER),
+    base.create_rule_default(
+        POLICY_ROOT % 'add_tenant_access',
+        base.RULE_ADMIN_API,
+        "Add flavor access to a tenant",
+        [
+            {
+                'method': 'POST',
+                'path': '/flavors/{flavor_id}/action (addTenantAccess)'
+            }
+        ]),
+    base.create_rule_default(
+        POLICY_ROOT % 'remove_tenant_access',
+        base.RULE_ADMIN_API,
+        "Remove flavor access from a tenant",
+        [
+            {
+                'method': 'POST',
+                'path': '/flavors/{flavor_id}/action (removeTenantAccess)'
+            }
+        ]),
+    base.create_rule_default(
+        BASE_POLICY_NAME,
+        base.RULE_ADMIN_OR_OWNER,
+        """Allow the listing of flavor access information
+
+Adds the os-flavor-access:is_public key into several flavor APIs.
+
+It also allows access to the full list of tenants that have access
+to a flavor via an os-flavor-access API.
+""",
+        [
+            {
+                'method': 'GET',
+                'path': '/flavors/{flavor_id}/os-flavor-access'
+            },
+            {
+                'method': 'GET',
+                'path': '/flavors/detail'
+            },
+            {
+                'method': 'GET',
+                'path': '/flavors/{flavor_id}'
+            },
+            {
+                'method': 'POST',
+                'path': '/flavors'
+            },
+        ]),
 ]
 
 
