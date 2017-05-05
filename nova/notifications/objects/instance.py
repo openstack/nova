@@ -12,6 +12,7 @@
 
 from nova.notifications.objects import base
 from nova.notifications.objects import flavor as flavor_payload
+from nova.notifications.objects import keypair as keypair_payload
 from nova.objects import base as nova_base
 from nova.objects import fields
 
@@ -162,12 +163,19 @@ class InstanceCreatePayload(InstanceActionPayload):
     #              payload is created as a child of it so that the
     #              instance.create notification using this new payload does not
     #              have decreasing version.
-    VERSION = '1.2'
+    #         1.3: Add keypairs field
+    VERSION = '1.3'
+
+    fields = {
+        'keypairs': fields.ListOfObjectsField('KeypairPayload')
+    }
 
     def __init__(self, instance, fault):
         super(InstanceCreatePayload, self).__init__(
-            instance=instance,
-            fault=fault)
+                instance=instance,
+                fault=fault)
+        self.keypairs = [keypair_payload.KeypairPayload(keypair=keypair)
+                         for keypair in instance.keypairs]
 
 
 @nova_base.NovaObjectRegistry.register_notification

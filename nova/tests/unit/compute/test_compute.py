@@ -302,6 +302,7 @@ class BaseTestCase(test.TestCase):
         inst.updated_at = timeutils.utcnow()
         inst.launched_at = timeutils.utcnow()
         inst.security_groups = objects.SecurityGroupList(objects=[])
+        inst.keypairs = objects.KeyPairList(objects=[])
         inst.flavor = flavor
         inst.old_flavor = None
         inst.new_flavor = None

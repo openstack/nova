@@ -24,6 +24,7 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client as api_client
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.api.openstack.compute import test_services
+from nova.tests.unit import fake_crypto
 from nova.tests.unit import fake_notifier
 import nova.tests.unit.image.fake
 
@@ -160,6 +161,13 @@ class NotificationSampleTestBase(test.TestCase,
         # Ignore the create flavor notification
         fake_notifier.reset()
 
+        keypair_req = {
+            "keypair": {
+                "name": "my-key",
+                "public_key": fake_crypto.get_ssh_public_key()
+            }}
+        self.api.post_keypair(keypair_req)
+
         server = self._build_minimal_create_server_request(
             self.api, 'some-server',
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
@@ -171,6 +179,7 @@ class NotificationSampleTestBase(test.TestCase,
 
         if extra_params:
             extra_params['return_reservation_id'] = True
+            extra_params['key_name'] = 'my-key'
             server.update(extra_params)
 
         post = {'server': server}
