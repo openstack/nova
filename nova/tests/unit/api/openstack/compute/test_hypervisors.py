@@ -639,7 +639,7 @@ class HypervisorsTestV21(test.NoDBTestCase):
         req = self._get_request(True)
         with mock.patch.object(self.controller.host_api,
                                'instance_get_all_by_host') as m:
-            m.side_effect = exception.HostMappingNotFound
+            m.side_effect = exception.HostMappingNotFound(name='something')
             self.assertRaises(exc.HTTPNotFound,
                               self.controller.servers, req, 'hyper')
 

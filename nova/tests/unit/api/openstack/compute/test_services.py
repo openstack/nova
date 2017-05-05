@@ -494,7 +494,7 @@ class ServicesTestV21(test.TestCase):
         body = {'host': 'invalid', 'binary': 'nova-compute'}
         with mock.patch.object(self.controller.host_api,
                                'service_update') as m:
-            m.side_effect = exception.HostMappingNotFound
+            m.side_effect = exception.HostMappingNotFound(name='something')
             self.assertRaises(webob.exc.HTTPNotFound,
                               self.controller.update,
                               self.req,

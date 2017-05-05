@@ -5959,10 +5959,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertTrue(drvr.instance_exists(None))
 
-        mock_get_guest.side_effect = exception.InstanceNotFound
+        mock_get_guest.side_effect = exception.InstanceNotFound(
+            instance_id='something')
         self.assertFalse(drvr.instance_exists(None))
 
-        mock_get_guest.side_effect = exception.InternalError
+        mock_get_guest.side_effect = exception.InternalError(err='something')
         self.assertFalse(drvr.instance_exists(None))
 
     def test_estimate_instance_overhead_spawn(self):

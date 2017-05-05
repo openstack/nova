@@ -4151,7 +4151,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
     def test_build_and_run_volume_encryption_not_supported(self):
         self._test_build_and_run_spawn_exceptions(
-            exception.VolumeEncryptionNotSupported(reason=""))
+            exception.VolumeEncryptionNotSupported(volume_type='something',
+                                                   volume_id='something'))
 
     def test_build_and_run_invalid_input(self):
         self._test_build_and_run_spawn_exceptions(
