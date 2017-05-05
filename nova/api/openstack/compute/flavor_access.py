@@ -21,6 +21,7 @@ from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import flavor_access
 from nova.api.openstack import extensions
+from nova.api.openstack import identity
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import exception
@@ -95,6 +96,7 @@ class FlavorActionController(wsgi.Controller):
 
         vals = body['addTenantAccess']
         tenant = vals['tenant']
+        identity.verify_project_id(context, tenant)
 
         flavor = common.get_flavor(context, id)
 
@@ -120,6 +122,7 @@ class FlavorActionController(wsgi.Controller):
 
         vals = body['removeTenantAccess']
         tenant = vals['tenant']
+        identity.verify_project_id(context, tenant)
 
         # NOTE(gibi): We have to load a flavor from the db here as
         # flavor.remove_access() will try to emit a notification and that needs

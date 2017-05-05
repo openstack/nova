@@ -1,10 +1,11 @@
 ---
 fixes:
   - |
-    API calls to /os-quota-sets/* will now attempt to validate the
-    project_id being opperated on with keystone. If the user has
-    enough permissions in user, and the keystone project does not
-    exist, a 400 will be returned to prevent invalidate quota data
-    from being put in the Nova database. This fixes an effective
-    silent error where this would be stored even if this was not a
+    API calls to ``/os-quota-sets`` and flavor access will now attempt
+    to validate the project_id being operated on with Keystone. If
+    the user token has enough permissions to perform
+    ``GET /v3/projects/{project_id}``, and the Keystone project
+    does not exist, a 400 BadRequest will be returned to prevent invalid
+    project data from being put in the Nova database. This fixes an effective
+    silent error where the project_id would be stored even if it was not a
     valid project_id in the system.
