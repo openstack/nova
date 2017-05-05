@@ -3764,6 +3764,43 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertRaises(exception.ServiceTopicExists, db.service_create,
                           self.ctxt, values)
 
+    def test_migrate_service_uuids(self):
+        # Start with nothing.
+        total, done = db.service_uuids_online_data_migration(self.ctxt, 10)
+        self.assertEqual(0, total)
+        self.assertEqual(0, done)
+
+        # Create two services, one with a uuid and one without.
+        db.service_create(self.ctxt,
+                          dict(host='host1', binary='nova-compute',
+                               topic='compute', report_count=1,
+                               disabled=False))
+        db.service_create(self.ctxt,
+                          dict(host='host2', binary='nova-compute',
+                               topic='compute', report_count=1,
+                               disabled=False, uuid=uuidsentinel.host2))
+
+        # Now migrate them, we should find one and update one.
+        total, done = db.service_uuids_online_data_migration(
+            self.ctxt, 10)
+        self.assertEqual(1, total)
+        self.assertEqual(1, done)
+
+        # Get the services back to make sure the original uuid didn't change.
+        services = db.service_get_all_by_binary(self.ctxt, 'nova-compute')
+        self.assertEqual(2, len(services))
+        for service in services:
+            if service['host'] == 'host2':
+                self.assertEqual(uuidsentinel.host2, service['uuid'])
+            else:
+                self.assertIsNotNone(service['uuid'])
+
+        # Run the online migration again to see nothing was processed.
+        total, done = db.service_uuids_online_data_migration(
+            self.ctxt, 10)
+        self.assertEqual(0, total)
+        self.assertEqual(0, done)
+
 
 class BaseInstanceTypeTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def setUp(self):
