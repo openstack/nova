@@ -112,6 +112,7 @@ class ComputeNode(BASE, NovaBase, models.SoftDeleteMixin):
 
     __tablename__ = 'compute_nodes'
     __table_args__ = (
+        Index('compute_nodes_uuid_idx', 'uuid', unique=True),
         schema.UniqueConstraint(
             'host', 'hypervisor_hostname', 'deleted',
             name="uniq_compute_nodes0host0hypervisor_hostname0deleted"),
