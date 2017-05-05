@@ -56,6 +56,7 @@
                 }
             ],
             "kernel_id": "",
+            "key_name": "my-key",
             "launched_at": "2012-10-29T13:42:11Z",
             "locked": false,
             "metadata": {},
@@ -84,7 +85,7 @@
             "uuid": "d5ca7280-1f12-4238-a86f-378bb5d93c38"},
         "nova_object.name": "InstanceUpdatePayload",
         "nova_object.namespace": "nova",
-        "nova_object.version": "1.3"},
+        "nova_object.version": "1.4"},
     "priority": "INFO",
     "publisher_id": "nova-api:fake-mini"
 }

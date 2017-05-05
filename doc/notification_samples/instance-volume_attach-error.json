@@ -58,6 +58,7 @@
                 "nova_object.namespace": "nova",
                 "nova_object.version": "1.0"
             }],
+            "key_name": "my-key",
             "kernel_id": "",
             "launched_at": "2012-10-29T13:42:11Z",
             "metadata": {},
@@ -79,7 +80,7 @@
         },
         "nova_object.name": "InstanceActionVolumePayload",
         "nova_object.namespace": "nova",
-        "nova_object.version": "1.0"
+        "nova_object.version": "1.1"
     },
     "priority": "ERROR",
     "publisher_id": "nova-compute:compute"
