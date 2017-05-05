@@ -44,6 +44,7 @@ from nova.api.openstack.compute import floating_ip_pools
 from nova.api.openstack.compute import floating_ips
 from nova.api.openstack.compute import floating_ips_bulk
 from nova.api.openstack.compute import hide_server_addresses
+from nova.api.openstack.compute import instance_usage_audit_log
 from nova.api.openstack.compute import keypairs
 from nova.api.openstack.compute import lock_server
 from nova.api.openstack.compute import migrate_server
@@ -144,6 +145,10 @@ floating_ips_controller = functools.partial(_create_controller,
 
 floating_ips_bulk_controller = functools.partial(_create_controller,
     floating_ips_bulk.FloatingIPBulkController, [], [])
+
+
+instance_usage_audit_log_controller = functools.partial(_create_controller,
+    instance_usage_audit_log.InstanceUsageAuditLogController, [], [])
 
 
 server_controller = functools.partial(_create_controller,
@@ -295,6 +300,12 @@ ROUTE_LIST = (
     ('/os-floating-ips-bulk/{id}', {
         'GET': [floating_ips_bulk_controller, 'show'],
         'PUT': [floating_ips_bulk_controller, 'update']
+    }),
+    ('/os-instance_usage_audit_log', {
+        'GET': [instance_usage_audit_log_controller, 'index']
+    }),
+    ('/os-instance_usage_audit_log/{id}', {
+        'GET': [instance_usage_audit_log_controller, 'show']
     }),
     ('/os-keypairs', {
         'GET': [keypairs_controller, 'index'],

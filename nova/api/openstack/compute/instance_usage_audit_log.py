@@ -28,8 +28,6 @@ from nova import utils
 
 CONF = nova.conf.CONF
 
-ALIAS = 'os-instance-usage-audit-log'
-
 
 class InstanceUsageAuditLogController(wsgi.Controller):
     def __init__(self):
@@ -111,18 +109,3 @@ class InstanceUsageAuditLogController(wsgi.Controller):
                     total_errors=total_errors,
                     overall_status=overall_status,
                     log=log)
-
-
-class InstanceUsageAuditLog(extensions.V21APIExtensionBase):
-    """Admin-only Task Log Monitoring."""
-    name = "OSInstanceUsageAuditLog"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        ext = extensions.ResourceExtension('os-instance_usage_audit_log',
-                                           InstanceUsageAuditLogController())
-        return [ext]
-
-    def get_controller_extensions(self):
-        return []
