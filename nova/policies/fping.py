@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_policy import policy
-
 from nova.policies import base
 
 
@@ -23,12 +21,38 @@ POLICY_ROOT = 'os_compute_api:os-fping:%s'
 
 
 fping_policies = [
-    policy.RuleDefault(
-        name=POLICY_ROOT % 'all_tenants',
-        check_str=base.RULE_ADMIN_API),
-    policy.RuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_OR_OWNER),
+    base.create_rule_default(
+        POLICY_ROOT % 'all_tenants',
+        base.RULE_ADMIN_API,
+        """Pings instances for all projects and reports which instances
+are alive.
+
+os-fping API is deprecated as this works only with nova-network
+which itself is deprecated.""",
+        [
+            {
+                'method': 'GET',
+                'path': '/os-fping?all_tenants=true'
+            }
+        ]),
+    base.create_rule_default(
+        BASE_POLICY_NAME,
+        base.RULE_ADMIN_OR_OWNER,
+        """Pings instances, particular instance and reports which instances
+are alive.
+
+os-fping API is deprecated as this works only with nova-network
+which itself is deprecated.""",
+        [
+            {
+                'method': 'GET',
+                'path': '/os-fping'
+            },
+            {
+                'method': 'GET',
+                'path': '/os-fping/{instance_id}'
+            }
+        ])
 ]
 
 
