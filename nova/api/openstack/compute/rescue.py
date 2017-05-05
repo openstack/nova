@@ -27,8 +27,6 @@ from nova import exception
 from nova.policies import rescue as rescue_policies
 from nova import utils
 
-
-ALIAS = "os-rescue"
 CONF = nova.conf.CONF
 
 
@@ -100,19 +98,3 @@ class RescueController(wsgi.Controller):
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                                                                   'unrescue',
                                                                   id)
-
-
-class Rescue(extensions.V21APIExtensionBase):
-    """Instance rescue mode."""
-
-    name = "Rescue"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        return []
-
-    def get_controller_extensions(self):
-        controller = RescueController()
-        extension = extensions.ControllerExtension(self, 'servers', controller)
-        return [extension]

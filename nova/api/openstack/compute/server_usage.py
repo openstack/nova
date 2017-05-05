@@ -12,12 +12,9 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.policies import server_usage as su_policies
 
-
-ALIAS = "os-server-usage"
 
 resp_topic = "OS-SRV-USG"
 
@@ -54,19 +51,3 @@ class ServerUsageController(wsgi.Controller):
                 # server['id'] is guaranteed to be in the cache due to
                 # the core API adding it in its 'detail' method.
                 self._extend_server(server, db_instance)
-
-
-class ServerUsage(extensions.V21APIExtensionBase):
-    """Adds launched_at and terminated_at on Servers."""
-
-    name = "ServerUsage"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        controller = ServerUsageController()
-        extension = extensions.ControllerExtension(self, 'servers', controller)
-        return [extension]
-
-    def get_resources(self):
-        return []

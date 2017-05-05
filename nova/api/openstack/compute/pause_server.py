@@ -22,8 +22,6 @@ from nova import compute
 from nova import exception
 from nova.policies import pause_server as ps_policies
 
-ALIAS = "os-pause-server"
-
 
 class PauseServerController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
@@ -73,19 +71,3 @@ class PauseServerController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=e.format_message())
         except NotImplementedError:
             common.raise_feature_not_supported()
-
-
-class PauseServer(extensions.V21APIExtensionBase):
-    """Enable pause/unpause server actions."""
-
-    name = "PauseServer"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        controller = PauseServerController()
-        extension = extensions.ControllerExtension(self, 'servers', controller)
-        return [extension]
-
-    def get_resources(self):
-        return []

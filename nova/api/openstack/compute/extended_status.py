@@ -14,11 +14,8 @@
 
 """The Extended Status Admin API extension."""
 
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.policies import extended_status as es_policies
-
-ALIAS = "os-extended-status"
 
 
 class ExtendedStatusController(wsgi.Controller):
@@ -53,19 +50,3 @@ class ExtendedStatusController(wsgi.Controller):
                 # server['id'] is guaranteed to be in the cache due to
                 # the core API adding it in its 'detail' method.
                 self._extend_server(server, db_instance)
-
-
-class ExtendedStatus(extensions.V21APIExtensionBase):
-    """Extended Status support."""
-
-    name = "ExtendedStatus"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        controller = ExtendedStatusController()
-        extension = extensions.ControllerExtension(self, 'servers', controller)
-        return [extension]
-
-    def get_resources(self):
-        return []

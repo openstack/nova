@@ -30,7 +30,6 @@ from nova.i18n import _
 from nova.policies import migrate_server as ms_policies
 
 LOG = logging.getLogger(__name__)
-ALIAS = "os-migrate-server"
 
 
 class MigrateServerController(wsgi.Controller):
@@ -131,19 +130,3 @@ class MigrateServerController(wsgi.Controller):
             message = _("Can't force to a non-provided destination")
             raise exc.HTTPBadRequest(explanation=message)
         return force
-
-
-class MigrateServer(extensions.V21APIExtensionBase):
-    """Enable migrate and live-migrate server actions."""
-
-    name = "MigrateServer"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        controller = MigrateServerController()
-        extension = extensions.ControllerExtension(self, 'servers', controller)
-        return [extension]
-
-    def get_resources(self):
-        return []

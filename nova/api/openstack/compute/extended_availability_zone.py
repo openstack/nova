@@ -15,12 +15,10 @@
 
 """The Extended Availability Zone Status API extension."""
 
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import availability_zones as avail_zone
 from nova.policies import extended_availability_zone as eaz_policies
 
-ALIAS = "os-extended-availability-zone"
 PREFIX = "OS-EXT-AZ"
 
 
@@ -49,19 +47,3 @@ class ExtendedAZController(wsgi.Controller):
             for server in servers:
                 db_instance = req.get_db_instance(server['id'])
                 self._extend_server(context, server, db_instance)
-
-
-class ExtendedAvailabilityZone(extensions.V21APIExtensionBase):
-    """Extended Availability Zone support."""
-
-    name = "ExtendedAvailabilityZone"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        controller = ExtendedAZController()
-        extension = extensions.ControllerExtension(self, 'servers', controller)
-        return [extension]
-
-    def get_resources(self):
-        return []

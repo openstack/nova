@@ -27,8 +27,6 @@ from nova import compute
 from nova import exception
 from nova.policies import console_output as co_policies
 
-ALIAS = "os-console-output"
-
 
 class ConsoleOutputController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
@@ -71,19 +69,3 @@ class ConsoleOutputController(wsgi.Controller):
         output = remove_re.sub('', output)
 
         return {'output': output}
-
-
-class ConsoleOutput(extensions.V21APIExtensionBase):
-    """Console log output support, with tailing ability."""
-
-    name = "ConsoleOutput"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        controller = ConsoleOutputController()
-        extension = extensions.ControllerExtension(self, 'servers', controller)
-        return [extension]
-
-    def get_resources(self):
-        return []
