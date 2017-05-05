@@ -378,7 +378,7 @@ class HostTestCaseV21(test.TestCase):
         s_ref = self._create_compute_service()
         with mock.patch.object(self.controller.api,
                                'instance_get_all_by_host') as m:
-            m.side_effect = exception.HostMappingNotFound
+            m.side_effect = exception.HostMappingNotFound(name='something')
             self.assertRaises(webob.exc.HTTPNotFound,
                               self.controller.show, self.req, s_ref['host'])
 

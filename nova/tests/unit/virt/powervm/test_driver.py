@@ -120,7 +120,8 @@ class TestPowerVMDriver(test.NoDBTestCase):
         mock_del.reset_mock()
 
         # InstanceNotFound exception, non-forced
-        mock_pwroff.side_effect = exception.InstanceNotFound
+        mock_pwroff.side_effect = exception.InstanceNotFound(
+            instance_id='something')
         self.drv.destroy('context', self.inst, [], block_device_info={},
                          destroy_disks=False)
         mock_pwroff.assert_called_once_with(

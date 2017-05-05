@@ -2442,7 +2442,7 @@ class ConductorTaskRPCAPITestCase(_BaseTaskTestCase,
         def test(self, context, instance):
             return mock.sentinel.iransofaraway
 
-        mock_im.side_effect = exc.InstanceMappingNotFound
+        mock_im.side_effect = exc.InstanceMappingNotFound(uuid='something')
         ctxt = mock.MagicMock()
         inst = mock.MagicMock()
         self.assertEqual(mock.sentinel.iransofaraway,

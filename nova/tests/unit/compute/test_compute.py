@@ -1325,7 +1325,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                 self.instance_object, 'fake_id', 'fake_id2', {})
 
     @mock.patch.object(cinder.API, 'create',
-                       side_effect=exception.OverQuota())
+                       side_effect=exception.OverQuota(overs='something'))
     def test_prep_block_device_over_quota_failure(self, mock_create):
         instance = self._create_fake_instance_obj()
         bdms = [
