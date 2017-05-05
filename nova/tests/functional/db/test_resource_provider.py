@@ -1740,3 +1740,107 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
         self._assert_traits(['CUSTOM_TRAIT_C'],
             objects.TraitList.get_all(self.context,
                 filters={'associated': False}))
+
+
+class SharedProviderTestCase(ResourceProviderBaseCase):
+    """Tests that the queries used to determine placement in deployments with
+    shared resource providers such as a shared disk pool result in accurate
+    reporting of inventory and usage.
+    """
+
+    def test_shared_provider_capacity(self):
+        """Sets up a resource provider that shares DISK_GB inventory via an
+        aggregate, a couple resource providers representing "local disk"
+        compute nodes and ensures the _get_providers_sharing_capacity()
+        function finds that provider and not providers of "local disk".
+        """
+        # Create the two "local disk" compute node providers
+        cn1_uuid = uuidsentinel.cn1
+        cn1 = objects.ResourceProvider(
+            self.context,
+            name='cn1',
+            uuid=cn1_uuid,
+        )
+        cn1.create()
+
+        cn2_uuid = uuidsentinel.cn2
+        cn2 = objects.ResourceProvider(
+            self.context,
+            name='cn2',
+            uuid=cn2_uuid,
+        )
+        cn2.create()
+
+        # Populate the two compute node providers with inventory, sans DISK_GB
+        for cn in (cn1, cn2):
+            vcpu = objects.Inventory(
+                resource_provider=cn,
+                resource_class=fields.ResourceClass.VCPU,
+                total=24,
+                reserved=0,
+                min_unit=1,
+                max_unit=24,
+                step_size=1,
+                allocation_ratio=16.0,
+            )
+            memory_mb = objects.Inventory(
+                resource_provider=cn,
+                resource_class=fields.ResourceClass.MEMORY_MB,
+                total=32768,
+                reserved=0,
+                min_unit=64,
+                max_unit=32768,
+                step_size=64,
+                allocation_ratio=1.5,
+            )
+            inv_list = objects.InventoryList(objects=[vcpu, memory_mb])
+            cn.set_inventory(inv_list)
+
+        # Create the shared storage pool
+        ss_uuid = uuidsentinel.ss
+        ss = objects.ResourceProvider(
+            self.context,
+            name='shared storage',
+            uuid=ss_uuid,
+        )
+        ss.create()
+
+        # Give the shared storage pool some inventory of DISK_GB
+        disk_gb = objects.Inventory(
+            resource_provider=ss,
+            resource_class=fields.ResourceClass.DISK_GB,
+            total=2000,
+            reserved=0,
+            min_unit=10,
+            max_unit=100,
+            step_size=10,
+            allocation_ratio=1.0,
+        )
+        disk_gb.obj_set_defaults()
+        inv_list = objects.InventoryList(objects=[disk_gb])
+        ss.set_inventory(inv_list)
+
+        # Mark the shared storage pool as having inventory shared among any
+        # provider associated via aggregate
+        t = objects.Trait(
+            self.context,
+            name="MISC_SHARES_VIA_AGGREGATE",
+        )
+        # TODO(jaypipes): Once MISC_SHARES_VIA_AGGREGATE is a standard
+        # os-traits trait, we won't need to create() here. Instead, we will
+        # just do:
+        # t = objects.Trait.get_by_name(
+        #    self.context,
+        #    "MISC_SHARES_VIA_AGGREGATE",
+        # )
+        t.create()
+        ss.set_traits(objects.TraitList(objects=[t]))
+
+        # OK, now that has all been set up, let's verify that we get the ID of
+        # the shared storage pool when we ask for 100 DISK_GB
+        got_ids = rp_obj._get_providers_with_shared_capacity(
+            self.context,
+            fields.ResourceClass.STANDARD.index(fields.ResourceClass.DISK_GB),
+            100,
+        )
+        self.assertEqual([ss.id], got_ids)

@@ -34,12 +34,14 @@ from nova import objects
 from nova.objects import base
 from nova.objects import fields
 
+_TRAIT_TBL = models.Trait.__table__
 _ALLOC_TBL = models.Allocation.__table__
 _INV_TBL = models.Inventory.__table__
 _RP_TBL = models.ResourceProvider.__table__
 _RC_TBL = models.ResourceClass.__table__
 _AGG_TBL = models.PlacementAggregate.__table__
 _RP_AGG_TBL = models.ResourceProviderAggregate.__table__
+_RP_TRAIT_TBL = models.ResourceProviderTrait.__table__
 _RC_CACHE = None
 
 LOG = logging.getLogger(__name__)
@@ -582,6 +584,125 @@ class ResourceProvider(base.NovaObject):
     @base.remotable
     def set_traits(self, traits):
         self._set_traits_to_db(self._context, self, self.id, traits)
+
+
+@db_api.api_context_manager.reader
+def _get_providers_with_shared_capacity(ctx, rc_id, amount):
+    """Returns a list of resource provider IDs (internal IDs, not UUIDs)
+    that have capacity for a requested amount of a resource and indicate that
+    they share resource via an aggregate association.
+
+    Shared resource providers are marked with a standard trait called
+    MISC_SHARES_VIA_AGGREGATE. This indicates that the provider allows its
+    inventory to be consumed by other resource providers associated via an
+    aggregate link.
+
+    For example, assume we have two compute nodes, CN_1 and CN_2, each with
+    inventory of VCPU and MEMORY_MB but not DISK_GB (in other words, these are
+    compute nodes with no local disk). There is a resource provider called
+    "NFS_SHARE" that has an inventory of DISK_GB and has the
+    MISC_SHARES_VIA_AGGREGATE trait. Both the "CN_1" and "CN_2" compute node
+    resource providers and the "NFS_SHARE" resource provider are associated
+    with an aggregate called "AGG_1".
+
+    The scheduler needs to determine the resource providers that can fulfill a
+    request for 2 VCPU, 1024 MEMORY_MB and 100 DISK_GB.
+
+    Clearly, no single provider can satisfy the request for all three
+    resources, since neither compute node has DISK_GB inventory and the
+    NFS_SHARE provider has no VCPU or MEMORY_MB inventories.
+
+    However, if we consider the NFS_SHARE resource provider as providing
+    inventory of DISK_GB for both CN_1 and CN_2, we can include CN_1 and CN_2
+    as potential fits for the requested set of resources.
+
+    To facilitate that matching query, this function returns all providers that
+    indicate they share their inventory with providers in some aggregate and
+    have enough capacity for the requested amount of a resource.
+
+    To follow the example above, if we were to call
+    _get_providers_with_shared_capacity(ctx, "DISK_GB", 100), we would want to
+    get back the ID for the NFS_SHARE resource provider.
+    """
+    # The SQL we need to generate here looks like this:
+    #
+    # SELECT rp.id
+    # FROM resource_providers AS rp
+    #   INNER JOIN resource_provider_traits AS rpt
+    #     ON rp.id = rpt.resource_provider_id
+    #   INNER JOIN traits AS t
+    #     AND rpt.trait_id = t.id
+    #     AND t.name = "MISC_SHARES_VIA_AGGREGATE"
+    #   INNER JOIN inventories AS inv
+    #     ON rp.id = inv.resource_provider_id
+    #     AND inv.resource_class_id = $rc_id
+    #   LEFT JOIN (
+    #     SELECT resource_provider_id, SUM(used) as used
+    #     FROM allocations
+    #     WHERE resource_class_id = $rc_id
+    #     GROUP BY resource_provider_id
+    #   ) AS usage
+    #     ON rp.id = usage.resource_provider_id
+    # WHERE COALESCE(usage.used, 0) + $amount <= (
+    #   inv.total + inv.reserved) * inv.allocation_ratio
+    # ) AND
+    #   inv.min_unit <= $amount AND
+    #   inv.max_unit >= $amount AND
+    #   $amount % inv.step_size = 0
+    # GROUP BY rp.id
+
+    rp_tbl = sa.alias(_RP_TBL, name='rp')
+    inv_tbl = sa.alias(_INV_TBL, name='inv')
+    t_tbl = sa.alias(_TRAIT_TBL, name='t')
+    rpt_tbl = sa.alias(_RP_TRAIT_TBL, name='rpt')
+
+    rp_to_rpt_join = sa.join(
+        rp_tbl, rpt_tbl,
+        rp_tbl.c.id == rpt_tbl.c.resource_provider_id,
+    )
+
+    rpt_to_t_join = sa.join(
+        rp_to_rpt_join, t_tbl,
+        sa.and_(
+            rpt_tbl.c.trait_id == t_tbl.c.id,
+            # TODO(jaypipes): Replace with os_traits.MISC_SHARE_VIA_AGGREGATE
+            # once os-traits released with that trait.
+            t_tbl.c.name == six.text_type('MISC_SHARES_VIA_AGGREGATE'),
+        ),
+    )
+
+    rp_to_inv_join = sa.join(
+        rpt_to_t_join, inv_tbl,
+        sa.and_(
+            rpt_tbl.c.resource_provider_id == inv_tbl.c.resource_provider_id,
+            inv_tbl.c.resource_class_id == rc_id,
+        ),
+    )
+
+    usage = sa.select([_ALLOC_TBL.c.resource_provider_id,
+                       sql.func.sum(_ALLOC_TBL.c.used).label('used')])
+    usage = usage.where(_ALLOC_TBL.c.resource_class_id == rc_id)
+    usage = usage.group_by(_ALLOC_TBL.c.resource_provider_id)
+    usage = sa.alias(usage, name='usage')
+
+    inv_to_usage_join = sa.outerjoin(
+        rp_to_inv_join, usage,
+        inv_tbl.c.resource_provider_id == usage.c.resource_provider_id,
+    )
+
+    sel = sa.select([rp_tbl.c.id]).select_from(inv_to_usage_join)
+    sel = sel.where(
+        sa.and_(
+            func.coalesce(usage.c.used, 0) + amount <= (
+                inv_tbl.c.total - inv_tbl.c.reserved
+            ) * inv_tbl.c.allocation_ratio,
+            inv_tbl.c.min_unit <= amount,
+            inv_tbl.c.max_unit >= amount,
+            amount % inv_tbl.c.step_size == 0,
+        ),
+    )
+    sel = sel.group_by(rp_tbl.c.id)
+    return [r[0] for r in ctx.session.execute(sel)]
 
 
 @base.NovaObjectRegistry.register
