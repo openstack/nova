@@ -26,8 +26,6 @@ from nova.i18n import _
 from nova import objects
 from nova.policies import fixed_ips as fi_policies
 
-ALIAS = 'os-fixed-ips'
-
 
 class FixedIPController(wsgi.Controller):
 
@@ -108,21 +106,3 @@ class FixedIPController(wsgi.Controller):
         except exception.FixedIpInvalid:
             msg = _("Fixed IP %s not valid") % address
             raise webob.exc.HTTPBadRequest(explanation=msg)
-
-
-class FixedIps(extensions.V21APIExtensionBase):
-    """Fixed IPs support."""
-
-    name = "FixedIPs"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        member_actions = {'action': 'POST'}
-        resources = extensions.ResourceExtension(ALIAS,
-                                                FixedIPController(),
-                                                member_actions=member_actions)
-        return [resources]
-
-    def get_controller_extensions(self):
-        return []

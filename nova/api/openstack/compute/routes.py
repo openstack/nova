@@ -33,6 +33,7 @@ from nova.api.openstack.compute import extended_server_attributes
 from nova.api.openstack.compute import extended_status
 from nova.api.openstack.compute import extended_volumes
 from nova.api.openstack.compute import extension_info
+from nova.api.openstack.compute import fixed_ips
 from nova.api.openstack.compute import flavor_access
 from nova.api.openstack.compute import flavor_manage
 from nova.api.openstack.compute import flavor_rxtx
@@ -98,6 +99,10 @@ availability_zone_controller = functools.partial(
 
 keypairs_controller = functools.partial(
     _create_controller, keypairs.KeypairController, [], [])
+
+
+fixed_ips_controller = functools.partial(_create_controller,
+    fixed_ips.FixedIPController, [], [])
 
 
 flavor_controller = functools.partial(_create_controller,
@@ -253,6 +258,12 @@ ROUTE_LIST = (
     }),
     ('/os-availability-zone/detail', {
         'GET': [availability_zone_controller, 'detail'],
+    }),
+    ('/os-fixed-ips/{id}', {
+        'GET': [fixed_ips_controller, 'show']
+    }),
+    ('/os-fixed-ips/{id}/action', {
+        'POST': [fixed_ips_controller, 'action'],
     }),
     ('/os-floating-ip-dns', {
         'GET': [floating_ip_dns_controller, 'index']
