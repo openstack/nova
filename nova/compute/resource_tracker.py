@@ -95,6 +95,7 @@ class ResourceTracker(object):
         self.monitors = monitor_handler.monitors
         self.old_resources = collections.defaultdict(objects.ComputeNode)
         self.scheduler_client = scheduler_client.SchedulerClient()
+        self.reportclient = self.scheduler_client.reportclient
         self.ram_allocation_ratio = CONF.ram_allocation_ratio
         self.cpu_allocation_ratio = CONF.cpu_allocation_ratio
         self.disk_allocation_ratio = CONF.disk_allocation_ratio
@@ -957,8 +958,7 @@ class ResourceTracker(object):
                 self.pci_tracker.update_pci_for_instance(context,
                                                          instance,
                                                          sign=sign)
-            self.scheduler_client.reportclient.update_instance_allocation(
-                cn, instance, sign)
+            self.reportclient.update_instance_allocation(cn, instance, sign)
             # new instance, update compute node resource usage:
             self._update_usage(self._get_usage_dict(instance), nodename,
                                sign=sign)
@@ -992,8 +992,8 @@ class ResourceTracker(object):
             if instance.vm_state not in vm_states.ALLOW_RESOURCE_REMOVAL:
                 self._update_usage_from_instance(context, instance, nodename)
 
-        self.scheduler_client.reportclient.remove_deleted_instances(
-                cn, self.tracked_instances.values())
+        self.reportclient.remove_deleted_instances(cn,
+                self.tracked_instances.values())
         cn.free_ram_mb = max(0, cn.free_ram_mb)
         cn.free_disk_gb = max(0, cn.free_disk_gb)
 

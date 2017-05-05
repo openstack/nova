@@ -145,6 +145,7 @@ class IronicResourceTrackerTest(test.TestCase):
         self.driver_mock = driver
         self.rt = resource_tracker.ResourceTracker(COMPUTE_HOST, driver)
         self.rt.scheduler_client.reportclient = self.report_client
+        self.rt.reportclient = self.report_client
         self.url = 'http://localhost/placement'
         self.create_fixtures()
 
