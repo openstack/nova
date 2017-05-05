@@ -363,6 +363,7 @@ class InstanceActionVolumeSwapNotification(base.NotificationBase):
 
 @base.notification_sample('instance-volume_attach-start.json')
 @base.notification_sample('instance-volume_attach-end.json')
+@base.notification_sample('instance-volume_attach-error.json')
 @nova_base.NovaObjectRegistry.register_notification
 class InstanceActionVolumeNotification(base.NotificationBase):
     # Version 1.0: Initial version

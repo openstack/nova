@@ -1,0 +1,86 @@
+{
+    "event_type": "instance.volume_attach.error",
+    "payload": {
+        "nova_object.data": {
+            "architecture": null,
+            "availability_zone": "nova",
+            "created_at": "2012-10-29T13:42:11Z",
+            "deleted_at": null,
+            "display_name": "some-server",
+            "display_description":"some-server",
+            "fault": {
+                "nova_object.data": {
+                    "exception": "CinderConnectionFailed",
+                    "exception_message": "Connection to cinder host failed: Connection timed out",
+                    "function_name": "attach_volume",
+                    "module_name": "nova.tests.functional.notification_sample_tests.test_instance"
+                },
+                "nova_object.name": "ExceptionPayload",
+                "nova_object.namespace": "nova",
+                "nova_object.version": "1.0"
+            },
+            "flavor": {
+                "nova_object.name": "FlavorPayload",
+                "nova_object.data": {
+                    "flavorid": "a22d5517-147c-4147-a0d1-e698df5cd4e3",
+                    "name": "test_flavor",
+                    "projects": null,
+                    "root_gb": 1,
+                    "vcpus": 1,
+                    "ephemeral_gb": 0,
+                    "memory_mb": 512,
+                    "disabled": false,
+                    "rxtx_factor": 1.0,
+                    "extra_specs": {
+                        "hw:watchdog_action": "disabled"
+                    },
+                    "swap": 0,
+                    "is_public": true,
+                    "vcpu_weight": 0
+                },
+                "nova_object.version": "1.3",
+                "nova_object.namespace": "nova"
+            },
+            "host": "compute",
+            "host_name": "some-server",
+            "image_uuid": "a2459075-d96c-40d5-893e-577ff92e721c",
+            "ip_addresses": [{
+                "nova_object.data": {
+                    "address": "192.168.1.3",
+                    "device_name": "tapce531f90-19",
+                    "label": "private-network",
+                    "meta": {},
+                    "port_uuid": "ce531f90-199f-48c0-816c-13e38010b442",
+                    "version": 4,
+                    "mac": "fa:16:3e:4c:2c:30"
+                },
+                "nova_object.name": "IpPayload",
+                "nova_object.namespace": "nova",
+                "nova_object.version": "1.0"
+            }],
+            "kernel_id": "",
+            "launched_at": "2012-10-29T13:42:11Z",
+            "metadata": {},
+            "locked":false,
+            "node": "fake-mini",
+            "volume_id": "a07f71dc-8151-4e7d-a0cc-cd24a3f11113",
+            "os_type": null,
+            "power_state":"running",
+            "progress": 0,
+            "ramdisk_id": "",
+            "reservation_id": "r-6w6ruqaz",
+            "state": "active",
+            "task_state": null,
+            "tenant_id": "6f70656e737461636b20342065766572",
+            "terminated_at": null,
+            "auto_disk_config": "MANUAL",
+            "user_id": "fake",
+            "uuid": "0ab886d0-7443-4107-9265-48371bfa662b"
+        },
+        "nova_object.name": "InstanceActionVolumePayload",
+        "nova_object.namespace": "nova",
+        "nova_object.version": "1.0"
+    },
+    "priority": "ERROR",
+    "publisher_id": "nova-compute:compute"
+}
