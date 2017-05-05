@@ -691,6 +691,7 @@ class TestInstanceNotificationSample(
 
     def _detach_volume_from_server(self, server, volume_id):
         self.api.delete_server_volume(server['id'], volume_id)
+        self._wait_for_notification('instance.volume_detach.end')
 
     def _volume_swap_server(self, server, attachement_id, volume_id):
         self.api.put_server_volume(server['id'], attachement_id, volume_id)
@@ -791,7 +792,24 @@ class TestInstanceNotificationSample(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
+        fake_notifier.reset()
         self._detach_volume_from_server(server, self.cinder.SWAP_OLD_VOL)
+
+        # 0. volume_detach-start
+        # 1. volume_detach-end
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-volume_detach-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-volume_detach-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
     def _test_rescue_server(self, server):
         pass

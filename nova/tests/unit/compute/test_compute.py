@@ -852,6 +852,15 @@ class ComputeVolumeTestCase(BaseTestCase):
             mock.call(self.context, instance, 'fake-mini',
                       action='volume_attach', phase='start',
                       volume_id=uuids.volume_id),
+            mock.call(self.context, instance, 'fake-mini',
+                      action='volume_attach', phase='end',
+                      volume_id=uuids.volume_id),
+            mock.call(self.context, instance, 'fake-mini',
+                      action='volume_detach', phase='start',
+                      volume_id=uuids.volume_id),
+            mock.call(self.context, instance, 'fake-mini',
+                      action='volume_detach', phase='end',
+                      volume_id=uuids.volume_id),
             ])
 
         mock_get.assert_called_once_with(self.context, uuids.volume_id,

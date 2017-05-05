@@ -4883,6 +4883,11 @@ class ComputeManager(manager.Manager):
                             like rebuild, when we don't want to destroy BDM
 
         """
+        compute_utils.notify_about_volume_attach_detach(
+            context, instance, self.host,
+            action=fields.NotificationAction.VOLUME_DETACH,
+            phase=fields.NotificationPhase.START,
+            volume_id=volume_id)
         bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
                 context, volume_id, instance.uuid)
 
@@ -4898,6 +4903,11 @@ class ComputeManager(manager.Manager):
         info = dict(volume_id=volume_id)
         self._notify_about_instance_usage(
             context, instance, "volume.detach", extra_usage_info=info)
+        compute_utils.notify_about_volume_attach_detach(
+            context, instance, self.host,
+            action=fields.NotificationAction.VOLUME_DETACH,
+            phase=fields.NotificationPhase.END,
+            volume_id=volume_id)
 
         if destroy_bdm:
             bdm.destroy()
