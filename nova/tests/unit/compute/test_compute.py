@@ -23,7 +23,6 @@ import operator
 import sys
 import time
 import traceback
-import uuid
 
 import ddt
 
@@ -10646,7 +10645,7 @@ class ComputeAPITestCase(BaseTestCase):
         mock_migration.side_effect = fake_migrations
 
         migrations = self.compute_api.get_migrations(self.context,
-                                                             filters)
+                                                     filters)
         self.assertEqual(1, len(migrations))
         self.assertEqual(migrations[0].id, migration['id'])
         mock_migration.assert_called_once_with(self.context, filters)
@@ -10656,23 +10655,22 @@ class ComputeAPITestCase(BaseTestCase):
         migration = test_migration.fake_db_migration(
             instance_uuid=uuids.instance)
         mock_get.return_value = [migration]
-        db.migration_get_in_progress_by_instance(self.context,
-                                                 uuids.instance)
         migrations = self.compute_api.get_migrations_in_progress_by_instance(
                 self.context, uuids.instance)
         self.assertEqual(1, len(migrations))
         self.assertEqual(migrations[0].id, migration['id'])
+        mock_get.assert_called_once_with(self.context, uuids.instance, None)
 
     @mock.patch("nova.db.migration_get_by_id_and_instance")
     def test_get_migration_by_id_and_instance(self, mock_get):
         migration = test_migration.fake_db_migration(
             instance_uuid=uuids.instance)
         mock_get.return_value = migration
-        db.migration_get_by_id_and_instance(
-                self.context, migration['id'], uuid)
         res = self.compute_api.get_migration_by_id_and_instance(
                 self.context, migration['id'], uuids.instance)
         self.assertEqual(res.id, migration['id'])
+        mock_get.assert_called_once_with(self.context, migration['id'],
+                                         uuids.instance)
 
 
 class ComputeAPIIpFilterTestCase(test.NoDBTestCase):
