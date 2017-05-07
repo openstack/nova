@@ -723,7 +723,7 @@ class SchedulerReportClient(object):
             # TODO(cdent): When we're happy that all placement
             # servers support microversion 1.7 we can remove this
             # call and the associated code.
-            LOG.debug('Falling back to placement API microverison 1.2 '
+            LOG.debug('Falling back to placement API microversion 1.2 '
                       'for resource class management.')
             return self._get_or_create_resource_class(name)
         else:
