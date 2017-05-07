@@ -475,6 +475,17 @@ def service_get(context, service_id):
     return result
 
 
+@pick_context_manager_reader
+def service_get_by_uuid(context, service_uuid):
+    query = model_query(context, models.Service).filter_by(uuid=service_uuid)
+
+    result = query.first()
+    if not result:
+        raise exception.ServiceNotFound(service_id=service_uuid)
+
+    return result
+
+
 @pick_context_manager_reader_allow_async
 def service_get_minimum_version(context, binaries):
     min_versions = context.session.query(
