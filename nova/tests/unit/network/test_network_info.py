@@ -647,7 +647,7 @@ iface eth0 inet static
         template = self._setup_injected_network_scenario(dns=False)
         self.assertEqual(expected, template)
 
-    def test_injection_static_overriden_template(self):
+    def test_injection_static_overridden_template(self):
         cfg.CONF.set_override(
             'injected_network_template',
             'nova/tests/unit/network/interfaces-override.template')
