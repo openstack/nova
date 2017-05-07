@@ -130,7 +130,8 @@ class Service(base.NovaPersistentObject, base.NovaObject,
     # Version 1.19: Added get_minimum_version()
     # Version 1.20: Added get_minimum_version_multi()
     # Version 1.21: Added uuid
-    VERSION = '1.21'
+    # Version 1.22: Added get_by_uuid()
+    VERSION = '1.22'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -264,6 +265,11 @@ class Service(base.NovaPersistentObject, base.NovaObject,
     @base.remotable_classmethod
     def get_by_id(cls, context, service_id):
         db_service = db.service_get(context, service_id)
+        return cls._from_db_object(context, cls(), db_service)
+
+    @base.remotable_classmethod
+    def get_by_uuid(cls, context, service_uuid):
+        db_service = db.service_get_by_uuid(context, service_uuid)
         return cls._from_db_object(context, cls(), db_service)
 
     @base.remotable_classmethod
