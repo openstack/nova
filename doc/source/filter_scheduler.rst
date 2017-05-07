@@ -154,8 +154,14 @@ There are many standard filter classes which may be used
   a set of instances.
 * |RetryFilter| - filters hosts that have been attempted for scheduling.
   Only passes hosts that have not been previously attempted.
-* |TrustedFilter| (EXPERIMENTAL) - filters hosts based on their trust.  Only passes hosts
-  that meet the trust requirements specified in the instance properties.
+* |TrustedFilter| (EXPERIMENTAL) - filters hosts based on their trust.  Only
+  passes hosts that meet the trust requirements specified in the instance
+  properties.
+
+  .. warning:: TrustedFilter is deprecated for removal in the 17.0.0 Queens
+     release. There is no replacement planned for this filter. It has been
+     marked experimental since its inception. It is incomplete and not tested.
+
 * |TypeAffinityFilter| - Only passes hosts that are not already running an
   instance of the requested type.
 * |AggregateTypeAffinityFilter| - limits instance_type by aggregate.

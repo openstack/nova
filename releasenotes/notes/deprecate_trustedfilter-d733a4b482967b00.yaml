@@ -1,0 +1,6 @@
+---
+deprecations:
+  - |
+    The ``TrustedFilter`` scheduler filter has been experimental since its existence on
+    May 18, 2012. Due to the lack of tests and activity with it, it's now
+    deprecated and set for removal in the 17.0.0 Queens release.
