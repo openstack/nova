@@ -361,9 +361,9 @@ settings:
    filters shipped with nova.
 
 With these settings, nova will use the ``FilterScheduler`` for the scheduler
-driver.  The standard nova filters and MyFilter are available to the
-FilterScheduler.  The RamFilter, ComputeFilter, and MyFilter are used by
-default when no filters are specified in the request.
+driver. All of the standard nova filters and MyFilter are available to the
+FilterScheduler, but just the RamFilter, ComputeFilter, and MyFilter will be
+used on each request.
 
 Each filter selects hosts in a different way and has different costs. The order
 of ``filter_scheduler.enabled_filters`` affects scheduling performance. The
