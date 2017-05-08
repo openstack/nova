@@ -29,25 +29,6 @@ required and all Nova deployments will be at least a cells v2 cell of one.
 """)
 
 cells_opts = [
-    cfg.StrOpt('topic',
-        default='cells',
-        deprecated_for_removal=True,
-        deprecated_since='15.0.0',
-        deprecated_reason="""
-Configurable RPC topics provide little value and can result in a wide variety
-of errors. They should not be used.
-""",
-        help="""
-Topic.
-
-This is the message queue topic that cells nodes listen on. It is
-used when the cells service is started up to configure the queue,
-and whenever an RPC call to the scheduler is made.
-
-Possible values:
-
-* cells: This is the recommended and the default value.
-"""),
     cfg.BoolOpt('enable',
         default=False,
         help="""

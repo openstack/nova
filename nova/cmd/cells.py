@@ -20,6 +20,7 @@ import sys
 from oslo_log import log as logging
 from oslo_reports import guru_meditation_report as gmr
 
+from nova import cells
 import nova.conf
 from nova import config
 from nova import objects
@@ -39,7 +40,7 @@ def main():
     gmr.TextGuruMeditation.setup_autorun(version)
 
     server = service.Service.create(binary='nova-cells',
-                                    topic=CONF.cells.topic,
+                                    topic=cells.TOPIC,
                                     manager='nova.cells.manager.CellsManager')
     service.serve(server)
     service.wait()

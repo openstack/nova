@@ -27,6 +27,7 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 
+from nova import cells
 import nova.conf
 from nova import exception
 from nova import objects
@@ -135,7 +136,7 @@ class CellsAPI(object):
 
     def __init__(self):
         super(CellsAPI, self).__init__()
-        target = messaging.Target(topic=CONF.cells.topic, version='1.0')
+        target = messaging.Target(topic=cells.TOPIC, version='1.0')
         version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.cells,
                                                CONF.upgrade_levels.cells)
         # NOTE(sbauza): Yes, this is ugly but cells_utils is calling cells.db
