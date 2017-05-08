@@ -842,13 +842,13 @@ class SchedulerReportClient(object):
         LOG.debug('Sending allocation for instance %s',
                   my_allocations,
                   instance=instance)
-        res = self._put_allocations(rp_uuid, instance.uuid, my_allocations)
+        res = self.put_allocations(rp_uuid, instance.uuid, my_allocations)
         if res:
             LOG.info(_LI('Submitted allocation for instance'),
                      instance=instance)
 
     @safe_connect
-    def _put_allocations(self, rp_uuid, consumer_uuid, alloc_data):
+    def put_allocations(self, rp_uuid, consumer_uuid, alloc_data):
         """Creates allocation records for the supplied instance UUID against
         the supplied resource provider.
 
@@ -876,8 +876,8 @@ class SchedulerReportClient(object):
         r = self.put(url, payload)
         if r.status_code != 204:
             LOG.warning(
-                _LW('Unable to submit allocation for instance '
-                    '%(uuid)s (%(code)i %(text)s)'),
+                'Unable to submit allocation for instance '
+                    '%(uuid)s (%(code)i %(text)s)',
                 {'uuid': consumer_uuid,
                  'code': r.status_code,
                  'text': r.text})

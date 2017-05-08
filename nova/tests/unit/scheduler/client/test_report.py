@@ -178,6 +178,35 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
             self.client = report.SchedulerReportClient()
 
 
+class TestPutAllocations(SchedulerReportClientTestCase):
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put')
+    def test_put_allocations(self, mock_put):
+        mock_put.return_value.status_code = 204
+        mock_put.return_value.text = "cool"
+        rp_uuid = mock.sentinel.rp
+        consumer_uuid = mock.sentinel.consumer
+        data = {"MEMORY_MB": 1024}
+        expected_url = "/allocations/%s" % consumer_uuid
+        resp = self.client.put_allocations(rp_uuid, consumer_uuid, data)
+        self.assertTrue(resp)
+        mock_put.assert_called_once_with(expected_url, mock.ANY)
+
+    @mock.patch.object(report.LOG, 'warning')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put')
+    def test_put_allocations_fail(self, mock_put, mock_warn):
+        mock_put.return_value.status_code = 400
+        mock_put.return_value.text = "not cool"
+        rp_uuid = mock.sentinel.rp
+        consumer_uuid = mock.sentinel.consumer
+        data = {"MEMORY_MB": 1024}
+        expected_url = "/allocations/%s" % consumer_uuid
+        resp = self.client.put_allocations(rp_uuid, consumer_uuid, data)
+        self.assertFalse(resp)
+        mock_put.assert_called_once_with(expected_url, mock.ANY)
+        log_msg = mock_warn.call_args[0][0]
+        self.assertIn("Unable to submit allocation for instance", log_msg)
+
+
 class TestProviderOperations(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_create_resource_provider')
