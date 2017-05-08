@@ -279,7 +279,8 @@ class XenAPIOpenVswitchDriverTestCase(XenVIFDriverTestBase):
                         'MAC': fake_vif['address'],
                         'network': 'fake_network',
                         'other_config': {
-                            'nicira-iface-id': 'fake-nicira-iface-id'}
+                            'nicira-iface-id': 'fake-nicira-iface-id',
+                            'neutron-port-id': 'fake-neutron-port-id'}
                        }
         mock_VIF_get_record = self.mock_patch_object(
             self._session.VIF, 'get_record', return_val=fake_vif_rec)
@@ -312,7 +313,8 @@ class XenAPIOpenVswitchDriverTestCase(XenVIFDriverTestBase):
                         'MAC': fake_vif['address'],
                         'network': 'fake_network',
                         'other_config': {
-                            'nicira-iface-id': 'fake-nicira-iface-id'}
+                            'nicira-iface-id': 'fake-nicira-iface-id',
+                            'neutron-port-id': 'fake-neutron-port-id'}
                        }
         mock_VIF_get_record = self.mock_patch_object(
             self._session.VIF, 'get_record', return_val=fake_vif_rec)

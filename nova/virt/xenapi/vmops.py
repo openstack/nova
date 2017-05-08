@@ -2383,7 +2383,7 @@ class VMOps(object):
         default_net_ref = vif_uuid_map.get('')
         for vif in vifs:
             other_config = self._session.VIF.get_other_config(vif)
-            neutron_id = other_config.get('nicira-iface-id')
+            neutron_id = other_config.get('neutron-port-id')
             network_ref = vif_uuid_map.get(neutron_id, default_net_ref)
             if network_ref is None:
                 raise exception.MigrationError(

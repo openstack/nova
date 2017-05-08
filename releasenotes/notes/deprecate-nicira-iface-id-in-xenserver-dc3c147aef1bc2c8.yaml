@@ -1,0 +1,8 @@
+---
+deprecations:
+  - |
+    When using neutron polling mode with XenAPI driver, booting a VM will
+    timeout because ``nova-compute`` cannot receive network-vif-plugged event.
+    This is because it set vif['id'](i.e. neutron port uuid) to two different
+    OVS ports. One is XenServer VIF, the other is tap device qvo-XXXX, but
+    setting 'nicira-iface-id' to XenServer VIF isn't correct, so deprecate it.

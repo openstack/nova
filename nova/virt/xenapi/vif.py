@@ -268,9 +268,9 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
         vif_rec['MTU'] = '1500'
         vif_rec['qos_algorithm_type'] = ''
         vif_rec['qos_algorithm_params'] = {}
-        # OVS on the hypervisor monitors this key and uses it to
-        # set the iface-id attribute
-        vif_rec['other_config'] = {'nicira-iface-id': vif['id']}
+        # Deprecated: 'niciria-iface-id', will remove it in the next release
+        vif_rec['other_config'] = {'nicira-iface-id': vif['id'],
+                                   'neutron-port-id': vif['id']}
         vif_ref = self._create_vif(vif, vif_rec, vm_ref)
 
         # call XenAPI to plug vif
@@ -421,7 +421,7 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
     def _create_linux_bridge(self, vif_rec):
         """create a qbr linux bridge for neutron security group
         """
-        iface_id = vif_rec['other_config']['nicira-iface-id']
+        iface_id = vif_rec['other_config']['neutron-port-id']
         linux_br_name = self._get_qbr_name(iface_id)
         if not self._device_exists(linux_br_name):
             LOG.debug("Create linux bridge %s", linux_br_name)
@@ -468,7 +468,7 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
         network_ref = vif_rec['network']
         bridge_name = self._session.network.get_bridge(network_ref)
         network_uuid = self._session.network.get_uuid(network_ref)
-        iface_id = vif_rec['other_config']['nicira-iface-id']
+        iface_id = vif_rec['other_config']['neutron-port-id']
         patch_port1, tap_name = self._get_patch_port_pair_names(iface_id)
         LOG.debug('plug_ovs_bridge: port1=%(port1)s, port2=%(port2)s,'
                   'network_uuid=%(uuid)s, bridge_name=%(bridge_name)s',
@@ -546,7 +546,7 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
         '''set external ids on the integration bridge vif
         '''
         mac = vif_rec['MAC']
-        iface_id = vif_rec['other_config']['nicira-iface-id']
+        iface_id = vif_rec['other_config']['neutron-port-id']
         vif_uuid = vif_rec['uuid']
         status = 'active'
 
