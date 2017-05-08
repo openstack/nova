@@ -238,6 +238,9 @@ hardcoded_extensions = [
     {'name': 'ServerMetadata',
      'description': 'Server metadata Support.',
      'alias': 'server-metadata'},
+    {'name': 'SimpleTenantUsage',
+     'description': 'Simple tenant usage extension.',
+     'alias': 'os-simple-tenant-usage'}
 ]
 
 

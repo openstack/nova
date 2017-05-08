@@ -33,7 +33,6 @@ from nova import objects
 from nova.policies import simple_tenant_usage as stu_policies
 
 CONF = nova.conf.CONF
-ALIAS = "os-simple-tenant-usage"
 
 
 def parse_strtime(dstr, fmt):
@@ -364,23 +363,3 @@ class SimpleTenantUsageController(wsgi.Controller):
                 tenant_usage['tenant_usage_links'] = usages_links
 
         return tenant_usage
-
-
-class SimpleTenantUsage(extensions.V21APIExtensionBase):
-    """Simple tenant usage extension."""
-
-    name = "SimpleTenantUsage"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        resources = []
-
-        res = extensions.ResourceExtension(ALIAS,
-                                           SimpleTenantUsageController())
-        resources.append(res)
-
-        return resources
-
-    def get_controller_extensions(self):
-        return []

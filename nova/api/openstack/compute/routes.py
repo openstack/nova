@@ -57,6 +57,7 @@ from nova.api.openstack.compute import server_metadata
 from nova.api.openstack.compute import server_usage
 from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import shelve
+from nova.api.openstack.compute import simple_tenant_usage
 from nova.api.openstack.compute import suspend_server
 from nova.api.openstack import wsgi
 import nova.conf
@@ -188,6 +189,11 @@ server_controller = functools.partial(_create_controller,
 server_metadata_controller = functools.partial(_create_controller,
     server_metadata.ServerMetadataController, [], [])
 
+
+simple_tenant_usage_controller = functools.partial(_create_controller,
+    simple_tenant_usage.SimpleTenantUsageController, [], [])
+
+
 # NOTE(alex_xu): This is structure of this route list as below:
 # (
 #     ('Route path': {
@@ -314,6 +320,12 @@ ROUTE_LIST = (
     ('/os-keypairs/{id}', {
         'GET': [keypairs_controller, 'show'],
         'DELETE': [keypairs_controller, 'delete']
+    }),
+    ('/os-simple-tenant-usage', {
+        'GET': [simple_tenant_usage_controller, 'index']
+    }),
+    ('/os-simple-tenant-usage/{id}', {
+        'GET': [simple_tenant_usage_controller, 'show']
     }),
     ('/os-volumes_boot', {
         'GET': [server_controller, 'index'],
