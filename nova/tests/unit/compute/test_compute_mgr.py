@@ -4040,6 +4040,95 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 set_error=True, cleanup_volumes=True,
                 nil_out_host_and_node=True)
 
+    @mock.patch.object(manager.ComputeManager, '_do_build_and_run_instance')
+    @mock.patch('nova.objects.Service.get_by_compute_host')
+    def test_build_failures_disable_service(self, mock_service, mock_dbari):
+        mock_dbari.return_value = build_results.FAILED
+        instance = objects.Instance(uuid=uuids.instance)
+        for i in range(0, 10):
+            self.compute.build_and_run_instance(None, instance, None,
+                                                None, None)
+        service = mock_service.return_value
+        self.assertTrue(service.disabled)
+        self.assertEqual('Auto-disabled due to 10 build failures',
+                         service.disabled_reason)
+        service.save.assert_called_once_with()
+        self.assertEqual(0, self.compute._failed_builds)
+
+    @mock.patch.object(manager.ComputeManager, '_do_build_and_run_instance')
+    @mock.patch('nova.objects.Service.get_by_compute_host')
+    def test_build_failures_not_disable_service(self, mock_service,
+                                                mock_dbari):
+        self.flags(consecutive_build_service_disable_threshold=0,
+                   group='compute')
+        mock_dbari.return_value = build_results.FAILED
+        instance = objects.Instance(uuid=uuids.instance)
+        for i in range(0, 10):
+            self.compute.build_and_run_instance(None, instance, None,
+                                                None, None)
+        service = mock_service.return_value
+        self.assertFalse(service.save.called)
+        self.assertEqual(10, self.compute._failed_builds)
+
+    @mock.patch.object(manager.ComputeManager, '_do_build_and_run_instance')
+    @mock.patch('nova.objects.Service.get_by_compute_host')
+    def test_transient_build_failures_no_disable_service(self, mock_service,
+                                                         mock_dbari):
+        results = [build_results.FAILED,
+                   build_results.ACTIVE,
+                   build_results.RESCHEDULED]
+
+        def _fake_build(*a, **k):
+            if results:
+                return results.pop(0)
+            else:
+                return build_results.ACTIVE
+
+        mock_dbari.side_effect = _fake_build
+        instance = objects.Instance(uuid=uuids.instance)
+        for i in range(0, 10):
+            self.compute.build_and_run_instance(None, instance, None,
+                                                None, None)
+        service = mock_service.return_value
+        self.assertFalse(service.save.called)
+        self.assertEqual(0, self.compute._failed_builds)
+
+    @mock.patch.object(manager.ComputeManager, '_do_build_and_run_instance')
+    @mock.patch('nova.objects.Service.get_by_compute_host')
+    def test_build_reschedules_disable_service(self, mock_service, mock_dbari):
+        mock_dbari.return_value = build_results.RESCHEDULED
+        instance = objects.Instance(uuid=uuids.instance)
+        for i in range(0, 10):
+            self.compute.build_and_run_instance(None, instance, None,
+                                                None, None)
+        service = mock_service.return_value
+        self.assertTrue(service.disabled)
+        self.assertEqual('Auto-disabled due to 10 build failures',
+                         service.disabled_reason)
+        service.save.assert_called_once_with()
+        self.assertEqual(0, self.compute._failed_builds)
+
+    @mock.patch.object(manager.ComputeManager, '_do_build_and_run_instance')
+    @mock.patch('nova.objects.Service.get_by_compute_host')
+    @mock.patch('nova.exception_wrapper._emit_exception_notification')
+    @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
+    def test_build_exceptions_disable_service(self, mock_if, mock_notify,
+                                              mock_service, mock_dbari):
+        mock_dbari.side_effect = test.TestingException()
+        instance = objects.Instance(uuid=uuids.instance,
+                                    task_state=None)
+        for i in range(0, 10):
+            self.assertRaises(test.TestingException,
+                              self.compute.build_and_run_instance,
+                              None, instance, None,
+                              None, None)
+        service = mock_service.return_value
+        self.assertTrue(service.disabled)
+        self.assertEqual('Auto-disabled due to 10 build failures',
+                         service.disabled_reason)
+        service.save.assert_called_once_with()
+        self.assertEqual(0, self.compute._failed_builds)
+
     @mock.patch.object(manager.ComputeManager, '_shutdown_instance')
     @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
     @mock.patch.object(fake_driver.FakeDriver, 'spawn')

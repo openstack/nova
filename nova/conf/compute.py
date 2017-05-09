@@ -23,6 +23,12 @@ from oslo_config import types
 
 from nova.conf import paths
 
+compute_group = cfg.OptGroup(
+    'compute',
+    title='Compute Manager Options',
+    help="""
+A collection of options specific to the nova-compute service.
+""")
 compute_opts = [
     cfg.StrOpt('compute_driver',
         help="""
@@ -637,6 +643,27 @@ Possible values:
 """)
 ]
 
+compute_group_opts = [
+    cfg.IntOpt('consecutive_build_service_disable_threshold',
+        default=10,
+        help="""
+Number of consecutive failed builds that result in disabling a compute service.
+
+This option will cause nova-compute to set itself to a disabled state
+if a certain number of consecutive build failures occur. This will
+prevent the scheduler from continuing to send builds to a compute node that is
+consistently failing. Note that all failures qualify and count towards this
+score, including reschedules that may have been due to racy scheduler behavior.
+Since the failures must be consecutive, it is unlikely that occasional expected
+reschedules will actually disable a compute node.
+
+Possible values:
+
+* Any positive integer representing a build failure count.
+* Zero to never auto-disable.
+"""),
+]
+
 interval_opts = [
     cfg.IntOpt('image_cache_manager_interval',
         default=2400,
@@ -1139,7 +1166,10 @@ ALL_OPTS = (compute_opts +
 
 def register_opts(conf):
     conf.register_opts(ALL_OPTS)
+    conf.register_group(compute_group)
+    conf.register_opts(compute_group_opts, group=compute_group)
 
 
 def list_opts():
-    return {'DEFAULT': ALL_OPTS}
+    return {'DEFAULT': ALL_OPTS,
+            'compute': compute_opts}
