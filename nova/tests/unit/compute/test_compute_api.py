@@ -840,6 +840,12 @@ class _ComputeAPIUnitTestMixIn(object):
             self.compute_api.notifier,
             self.context, inst, '%s.end' % delete_type,
             system_metadata=inst.system_metadata)
+        cell = objects.CellMapping(uuid=uuids.cell,
+                                   transport_url='fake://',
+                                   database_connection='fake://')
+        im = objects.InstanceMapping(cell_mapping=cell)
+        objects.InstanceMapping.get_by_instance_uuid(
+            self.context, inst.uuid).AndReturn(im)
 
     def _test_delete(self, delete_type, **attrs):
         reservations = ['fake-resv']
@@ -883,6 +889,9 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(rpcapi, 'confirm_resize')
         self.mox.StubOutWithMock(self.compute_api.consoleauth_rpcapi,
                                  'delete_tokens_for_instance')
+        self.mox.StubOutWithMock(objects.InstanceMapping,
+                                 'get_by_instance_uuid')
+
         if (inst.vm_state in
             (vm_states.SHELVED, vm_states.SHELVED_OFFLOADED)):
             self._test_delete_shelved_part(inst)
