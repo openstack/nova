@@ -1,0 +1,16 @@
+---
+upgrade:
+  - |
+    The ``nova.virt.libvirt.volume.scality.LibvirtScalityVolumeDriver`` volume
+    driver has been removed. The Scality volume driver in Cinder was deprecated
+    during the Newton release and was removed from Cinder in the Ocata release
+    so it is effectively not maintained and therefore no longer supported.
+  - |
+    The following configuration options, previously found in the ``libvirt``
+    group, have been removed:
+
+    - ``scality_sofs_config``
+    - ``scality_sofs_mount_point``
+
+    These were used by the now-removed ``LibvirtScalityVolumeDriver`` volume
+    driver and therefore no longer had any effect.

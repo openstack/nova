@@ -908,31 +908,6 @@ Possible values:
                help='Path to a Quobyte Client configuration file.'),
 ]
 
-libvirt_volume_scality_opts = [
-    cfg.StrOpt('scality_sofs_config',
-               help="""
-Path or URL to Scality SOFS(Scale-Out File Server) configuration file.
-
-The Scality SOFS provides OpenStack users the option of storing their
-data on a high capacity, replicated, highly available Scality Ring object
-storage cluster.
-"""),
-    cfg.StrOpt('scality_sofs_mount_point',
-               default='$state_path/scality',
-               help="""
-Base dir where Scality SOFS shall be mounted.
-
-The Scality volume driver in Nova mounts SOFS and lets the hypervisor access
-the volumes.
-
-Possible values:
-
-* $state_path/scality where state_path is a config option that specifies
-  the top-level directory for maintaining nova's state or Any string
-  containing the full directory path.
-"""),
-]
-
 libvirt_volume_smbfs_opts = [
     cfg.StrOpt('smbfs_mount_point_base',
                default=paths.state_path_def('mnt'),
@@ -1092,7 +1067,6 @@ ALL_OPTS = list(itertools.chain(
     libvirt_volume_net_opts,
     libvirt_volume_nfs_opts,
     libvirt_volume_quobyte_opts,
-    libvirt_volume_scality_opts,
     libvirt_volume_smbfs_opts,
     libvirt_remotefs_opts,
     libvirt_volume_vzstorage_opts,
