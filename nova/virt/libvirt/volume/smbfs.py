@@ -39,7 +39,7 @@ class LibvirtSMBFSVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
         conf.driver_format = connection_info['data'].get('format', 'raw')
         return conf
 
-    def connect_volume(self, connection_info, disk_info):
+    def connect_volume(self, connection_info, disk_info, instance):
         """Connect the volume."""
         smbfs_share = connection_info['data']['export']
         mount_path = self._get_mount_path(connection_info)
@@ -52,7 +52,7 @@ class LibvirtSMBFSVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
         device_path = self._get_device_path(connection_info)
         connection_info['data']['device_path'] = device_path
 
-    def disconnect_volume(self, connection_info, disk_dev):
+    def disconnect_volume(self, connection_info, disk_dev, instance):
         """Disconnect the volume."""
         smbfs_share = connection_info['data']['export']
         mount_path = self._get_mount_path(connection_info)

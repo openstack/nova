@@ -39,8 +39,10 @@ class LibvirtSMBFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         connection_info = {'data': {'export': export_string,
                                     'name': self.name,
                                     'options': None}}
-        libvirt_driver.connect_volume(connection_info, self.disk_info)
-        libvirt_driver.disconnect_volume(connection_info, "vde")
+        libvirt_driver.connect_volume(connection_info, self.disk_info,
+                                      mock.sentinel.instance)
+        libvirt_driver.disconnect_volume(connection_info, "vde",
+                                         mock.sentinel.instance)
 
         expected_commands = [
             ('mkdir', '-p', export_mnt_base),
@@ -58,8 +60,10 @@ class LibvirtSMBFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         connection_info = {'data': {'export': export_string,
                                     'name': self.name}}
 
-        libvirt_driver.connect_volume(connection_info, self.disk_info)
-        libvirt_driver.disconnect_volume(connection_info, "vde")
+        libvirt_driver.connect_volume(connection_info, self.disk_info,
+                                      mock.sentinel.instance)
+        libvirt_driver.disconnect_volume(connection_info, "vde",
+                                         mock.sentinel.instance)
 
         expected_commands = [
             ('umount', export_mnt_base)]
@@ -92,8 +96,10 @@ class LibvirtSMBFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
                                     'name': self.name,
                                     'options': options}}
 
-        libvirt_driver.connect_volume(connection_info, self.disk_info)
-        libvirt_driver.disconnect_volume(connection_info, "vde")
+        libvirt_driver.connect_volume(connection_info, self.disk_info,
+                                      mock.sentinel.instance)
+        libvirt_driver.disconnect_volume(connection_info, "vde",
+                                         mock.sentinel.instance)
 
         expected_commands = [
             ('mkdir', '-p', export_mnt_base),

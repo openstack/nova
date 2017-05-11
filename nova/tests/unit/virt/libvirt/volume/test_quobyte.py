@@ -210,7 +210,8 @@ class LibvirtQuobyteVolumeDriverTestCase(
 
         connection_info = {'data': {'export': export_string,
                                     'name': self.name}}
-        libvirt_driver.connect_volume(connection_info, self.disk_info)
+        libvirt_driver.connect_volume(connection_info, self.disk_info,
+                                      mock.sentinel.instance)
 
         conf = libvirt_driver.get_config(connection_info, self.disk_info)
         tree = conf.format_dom()
@@ -240,13 +241,15 @@ class LibvirtQuobyteVolumeDriverTestCase(
 
         connection_info = {'data': {'export': export_string,
                                     'name': self.name}}
-        libvirt_driver.connect_volume(connection_info, self.disk_info)
+        libvirt_driver.connect_volume(connection_info, self.disk_info,
+                                      mock.sentinel.instance)
 
         conf = libvirt_driver.get_config(connection_info, self.disk_info)
         tree = conf.format_dom()
         self._assertFileTypeEquals(tree, file_path)
 
-        libvirt_driver.disconnect_volume(connection_info, "vde")
+        libvirt_driver.disconnect_volume(connection_info, "vde",
+                                         mock.sentinel.instance)
 
         mock_validate_volume.assert_called_once_with(export_mnt_base)
         mock_umount_volume.assert_called_once_with(export_mnt_base)
@@ -272,12 +275,14 @@ class LibvirtQuobyteVolumeDriverTestCase(
         connection_info = {'data': {'export': export_string,
                                     'name': self.name}}
 
-        libvirt_driver.connect_volume(connection_info, self.disk_info)
+        libvirt_driver.connect_volume(connection_info, self.disk_info,
+                                      mock.sentinel.instance)
 
         conf = libvirt_driver.get_config(connection_info, self.disk_info)
         tree = conf.format_dom()
         self._assertFileTypeEquals(tree, file_path)
-        libvirt_driver.disconnect_volume(connection_info, "vde")
+        libvirt_driver.disconnect_volume(connection_info, "vde",
+                                         mock.sentinel.instance)
 
         mock_umount_volume.assert_called_once_with(export_mnt_base)
         mock_validate_volume.assert_called_once_with(export_mnt_base)
@@ -304,7 +309,8 @@ class LibvirtQuobyteVolumeDriverTestCase(
         export_mnt_base = os.path.join(mnt_base,
                                        utils.get_hash_str(quobyte_volume))
 
-        libvirt_driver.connect_volume(connection_info, self.disk_info)
+        libvirt_driver.connect_volume(connection_info, self.disk_info,
+                                      mock.sentinel.instance)
         conf = libvirt_driver.get_config(connection_info, self.disk_info)
         tree = conf.format_dom()
         self.assertEqual('file', tree.get('type'))
@@ -316,7 +322,8 @@ class LibvirtQuobyteVolumeDriverTestCase(
                                  mock.ANY))
         mock_validate_volume.assert_called_with(export_mnt_base)
 
-        libvirt_driver.disconnect_volume(connection_info, "vde")
+        libvirt_driver.disconnect_volume(connection_info, "vde",
+                                         mock.sentinel.instance)
 
     @mock.patch.object(libvirt_utils, 'is_mounted', return_value=True)
     def test_libvirt_quobyte_driver_mount_non_quobyte_volume(self,
@@ -340,7 +347,8 @@ class LibvirtQuobyteVolumeDriverTestCase(
             self.assertRaises(exception.NovaException,
                               libvirt_driver.connect_volume,
                               connection_info,
-                              self.disk_info)
+                              self.disk_info,
+                              mock.sentinel.instance)
 
     def test_libvirt_quobyte_driver_normalize_export_with_protocol(self):
         mnt_base = '/mnt'

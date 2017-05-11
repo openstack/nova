@@ -43,14 +43,14 @@ class LibvirtNFSVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
         conf.driver_io = "native"
         return conf
 
-    def connect_volume(self, connection_info, disk_info):
+    def connect_volume(self, connection_info, disk_info, instance):
         """Connect the volume."""
         self._ensure_mounted(connection_info)
 
         connection_info['data']['device_path'] = \
             self._get_device_path(connection_info)
 
-    def disconnect_volume(self, connection_info, disk_dev):
+    def disconnect_volume(self, connection_info, disk_dev, instance):
         """Disconnect the volume."""
 
         mount_path = self._get_mount_path(connection_info)

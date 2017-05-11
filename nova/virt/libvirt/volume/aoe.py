@@ -43,14 +43,14 @@ class LibvirtAOEVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         conf.source_path = connection_info['data']['device_path']
         return conf
 
-    def connect_volume(self, connection_info, mount_device):
+    def connect_volume(self, connection_info, disk_info, instance):
         LOG.debug("Calling os-brick to attach AoE Volume")
         device_info = self.connector.connect_volume(connection_info['data'])
         LOG.debug("Attached AoE volume %s", device_info)
 
         connection_info['data']['device_path'] = device_info['path']
 
-    def disconnect_volume(self, connection_info, disk_dev):
+    def disconnect_volume(self, connection_info, disk_dev, instance):
         """Detach the volume from instance_name."""
 
         LOG.debug("calling os-brick to detach AoE Volume %s",
@@ -59,4 +59,4 @@ class LibvirtAOEVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         LOG.debug("Disconnected AoE Volume %s", disk_dev)
 
         super(LibvirtAOEVolumeDriver,
-              self).disconnect_volume(connection_info, disk_dev)
+              self).disconnect_volume(connection_info, disk_dev, instance)

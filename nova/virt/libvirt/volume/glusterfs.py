@@ -56,13 +56,13 @@ class LibvirtGlusterfsVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
 
         return conf
 
-    def connect_volume(self, connection_info, mount_device):
+    def connect_volume(self, connection_info, disk_info, instance):
         if 'gluster' not in CONF.libvirt.qemu_allowed_storage_drivers:
             self._ensure_mounted(connection_info)
             connection_info['data']['device_path'] = \
                 self._get_device_path(connection_info)
 
-    def disconnect_volume(self, connection_info, disk_dev):
+    def disconnect_volume(self, connection_info, disk_dev, instance):
         """Disconnect the volume."""
 
         if 'gluster' in CONF.libvirt.qemu_allowed_storage_drivers:

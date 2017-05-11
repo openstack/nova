@@ -24,6 +24,7 @@ inline callbacks.
 import eventlet  # noqa
 eventlet.monkey_patch(os=False)
 
+import abc
 import contextlib
 import copy
 import datetime
@@ -491,6 +492,91 @@ class APICoverage(object):
         self.assertThat(
             test_methods,
             testtools.matchers.ContainsAll(api_methods))
+
+
+@six.add_metaclass(abc.ABCMeta)
+class SubclassSignatureTestCase(testtools.TestCase):
+    """Ensure all overriden methods of all subclasses of the class
+    under test exactly match the signature of the base class.
+
+    A subclass of SubclassSignatureTestCase should define a method
+    _get_base_class which:
+
+    * Returns a base class whose subclasses will all be checked
+    * Ensures that all subclasses to be tested have been imported
+
+    SubclassSignatureTestCase defines a single test, test_signatures,
+    which does a recursive, depth-first check of all subclasses, ensuring
+    that their method signatures are identical to those of the base class.
+    """
+    @abc.abstractmethod
+    def _get_base_class(self):
+        raise NotImplementedError()
+
+    def setUp(self):
+        self.base = self._get_base_class()
+
+        super(SubclassSignatureTestCase, self).setUp()
+
+    @staticmethod
+    def _get_argspecs(cls):
+        """Return a dict of method_name->argspec for every method of cls."""
+        argspecs = {}
+
+        # getmembers returns all members, including members inherited from
+        # the base class. It's redundant for us to test these, but as
+        # they'll always pass it's not worth the complexity to filter them out.
+        for (name, method) in inspect.getmembers(cls, inspect.ismethod):
+            # Subclass __init__ methods can usually be legitimately different
+            if name == '__init__':
+                continue
+
+            while hasattr(method, '__wrapped__'):
+                # This is a wrapped function. The signature we're going to
+                # see here is that of the wrapper, which is almost certainly
+                # going to involve varargs and kwargs, and therefore is
+                # unlikely to be what we want. If the wrapper manupulates the
+                # arguments taken by the wrapped function, the wrapped function
+                # isn't what we want either. In that case we're just stumped:
+                # if it ever comes up, add more knobs here to work round it (or
+                # stop using a dynamic language).
+                #
+                # Here we assume the wrapper doesn't manipulate the arguments
+                # to the wrapped function and inspect the wrapped function
+                # instead.
+                method = getattr(method, '__wrapped__')
+
+            argspecs[name] = inspect.getargspec(method)
+
+        return argspecs
+
+    @staticmethod
+    def _clsname(cls):
+        """Return the fully qualified name of cls."""
+        return "%s.%s" % (cls.__module__, cls.__name__)
+
+    def _test_signatures_recurse(self, base, base_argspecs):
+        for sub in base.__subclasses__():
+            sub_argspecs = self._get_argspecs(sub)
+
+            # Check that each subclass method matches the signature of the
+            # base class
+            for (method, sub_argspec) in sub_argspecs.items():
+                # Methods which don't override methods in the base class
+                # are good.
+                if method in base_argspecs:
+                    self.assertEqual(base_argspecs[method], sub_argspec,
+                                     'Signature of %(sub)s.%(method)s '
+                                     'differs from superclass %(base)s' %
+                                     {'base': self._clsname(base),
+                                      'sub': self._clsname(sub),
+                                      'method': method})
+
+            # Recursively check this subclass
+            self._test_signatures_recurse(sub, sub_argspecs)
+
+    def test_signatures(self):
+        self._test_signatures_recurse(self.base, self._get_argspecs(self.base))
 
 
 class TimeOverride(fixtures.Fixture):

@@ -46,7 +46,7 @@ class LibvirtFibreChannelVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         conf.driver_io = "native"
         return conf
 
-    def connect_volume(self, connection_info, disk_info):
+    def connect_volume(self, connection_info, disk_info, instance):
         """Attach the volume to instance_name."""
 
         LOG.debug("Calling os-brick to attach FC Volume")
@@ -58,7 +58,7 @@ class LibvirtFibreChannelVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
             connection_info['data']['multipath_id'] = \
                 device_info['multipath_id']
 
-    def disconnect_volume(self, connection_info, disk_dev):
+    def disconnect_volume(self, connection_info, disk_dev, instance):
         """Detach the volume from instance_name."""
 
         LOG.debug("calling os-brick to detach FC Volume")
@@ -72,4 +72,4 @@ class LibvirtFibreChannelVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         LOG.debug("Disconnected FC Volume %s", disk_dev)
 
         super(LibvirtFibreChannelVolumeDriver,
-              self).disconnect_volume(connection_info, disk_dev)
+              self).disconnect_volume(connection_info, disk_dev, instance)
