@@ -108,6 +108,7 @@ from nova.virt.libvirt.storage import lvm
 from nova.virt.libvirt.storage import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import vif as libvirt_vif
+from nova.virt.libvirt.volume import mount
 from nova.virt.libvirt.volume import remotefs
 from nova.virt import netutils
 from nova.volume import cinder
@@ -3461,6 +3462,11 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.warning(_LW('Cannot update service status on host "%s" '
                          'due to an unexpected exception.'), CONF.host,
                      exc_info=True)
+
+        if enabled:
+            mount.get_manager().host_up(self._host)
+        else:
+            mount.get_manager().host_down()
 
     def _get_guest_cpu_model_config(self):
         mode = CONF.libvirt.cpu_mode

@@ -12,12 +12,13 @@
 
 import os
 
+import fixtures
 import mock
-from oslo_concurrency import processutils
 
 from nova.tests.unit.virt.libvirt.volume import test_volume
+from nova.tests import uuidsentinel as uuids
 from nova import utils
-from nova.virt.libvirt import utils as libvirt_utils
+from nova.virt.libvirt.volume import mount
 from nova.virt.libvirt.volume import nfs
 
 
@@ -26,11 +27,38 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
 
     def setUp(self):
         super(LibvirtNFSVolumeDriverTestCase, self).setUp()
+
+        m = mount.get_manager()
+        m._reset_state()
+
         self.mnt_base = '/mnt'
+        m.host_up(self.fake_host)
         self.flags(nfs_mount_point_base=self.mnt_base, group='libvirt')
 
-    @mock.patch.object(libvirt_utils, 'is_mounted', return_value=False)
-    def test_libvirt_nfs_driver(self, mock_is_mounted):
+        # Caution: this is also faked by the superclass
+        orig_execute = utils.execute
+
+        mounted = [False]
+
+        def fake_execute(*cmd, **kwargs):
+            orig_execute(*cmd, **kwargs)
+
+            if cmd[0] == 'mount':
+                mounted[0] = True
+
+            if cmd[0] == 'umount':
+                mounted[0] = False
+
+        self.useFixture(fixtures.MonkeyPatch('nova.utils.execute',
+                                             fake_execute))
+
+        # Mock ismount to return the current mount state
+        # N.B. This is only valid for tests which mount and unmount a single
+        # directory.
+        self.useFixture(fixtures.MonkeyPatch('os.path.ismount',
+                                         lambda *args, **kwargs: mounted[0]))
+
+    def test_libvirt_nfs_driver(self):
         libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_host)
 
         export_string = '192.168.1.1:/nfs/share1'
@@ -39,8 +67,10 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
 
         connection_info = {'data': {'export': export_string,
                                     'name': self.name}}
+        instance = mock.sentinel.instance
+        instance.uuid = uuids.instance
         libvirt_driver.connect_volume(connection_info, self.disk_info,
-                                      mock.sentinel.instance)
+                                      instance)
         libvirt_driver.disconnect_volume(connection_info, "vde",
                                          mock.sentinel.instance)
 
@@ -50,39 +80,9 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         expected_commands = [
             ('mkdir', '-p', export_mnt_base),
             ('mount', '-t', 'nfs', export_string, export_mnt_base),
-            ('umount', export_mnt_base)]
+            ('umount', export_mnt_base),
+            ('rmdir', export_mnt_base)]
         self.assertEqual(expected_commands, self.executes)
-        self.assertTrue(mock_is_mounted.called)
-
-    @mock.patch.object(nfs.utils, 'execute')
-    @mock.patch.object(nfs.LOG, 'debug')
-    @mock.patch.object(nfs.LOG, 'exception')
-    def test_libvirt_nfs_driver_umount_error(self, mock_LOG_exception,
-                                        mock_LOG_debug, mock_utils_exe):
-        export_string = '192.168.1.1:/nfs/share1'
-        connection_info = {'data': {'export': export_string,
-                                    'name': self.name}}
-        libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_host)
-        mock_utils_exe.side_effect = processutils.ProcessExecutionError(
-            None, None, None, 'umount', 'umount: device is busy.')
-        libvirt_driver.disconnect_volume(connection_info, "vde",
-                                         mock.sentinel.instance)
-        self.assertTrue(mock_LOG_debug.called)
-        mock_utils_exe.side_effect = processutils.ProcessExecutionError(
-            None, None, None, 'umount', 'umount: target is busy.')
-        libvirt_driver.disconnect_volume(connection_info, "vde",
-                                         mock.sentinel.instance)
-        self.assertTrue(mock_LOG_debug.called)
-        mock_utils_exe.side_effect = processutils.ProcessExecutionError(
-            None, None, None, 'umount', 'umount: not mounted.')
-        libvirt_driver.disconnect_volume(connection_info, "vde",
-                                         mock.sentinel.instance)
-        self.assertTrue(mock_LOG_debug.called)
-        mock_utils_exe.side_effect = processutils.ProcessExecutionError(
-            None, None, None, 'umount', 'umount: Other error.')
-        libvirt_driver.disconnect_volume(connection_info, "vde",
-                                         mock.sentinel.instance)
-        self.assertTrue(mock_LOG_exception.called)
 
     def test_libvirt_nfs_driver_get_config(self):
         libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_host)
@@ -100,27 +100,7 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         self.assertEqual('raw', tree.find('./driver').get('type'))
         self.assertEqual('native', tree.find('./driver').get('io'))
 
-    @mock.patch.object(libvirt_utils, 'is_mounted', return_value=True)
-    def test_libvirt_nfs_driver_already_mounted(self, mock_is_mounted):
-        libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_host)
-
-        export_string = '192.168.1.1:/nfs/share1'
-        export_mnt_base = os.path.join(self.mnt_base,
-                utils.get_hash_str(export_string))
-
-        connection_info = {'data': {'export': export_string,
-                                    'name': self.name}}
-        libvirt_driver.connect_volume(connection_info, self.disk_info,
-                                      mock.sentinel.instance)
-        libvirt_driver.disconnect_volume(connection_info, "vde",
-                                         mock.sentinel.instance)
-
-        expected_commands = [
-            ('umount', export_mnt_base)]
-        self.assertEqual(expected_commands, self.executes)
-
-    @mock.patch.object(libvirt_utils, 'is_mounted', return_value=False)
-    def test_libvirt_nfs_driver_with_opts(self, mock_is_mounted):
+    def test_libvirt_nfs_driver_with_opts(self):
         libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_host)
         export_string = '192.168.1.1:/nfs/share1'
         options = '-o intr,nfsvers=3'
@@ -130,8 +110,10 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         connection_info = {'data': {'export': export_string,
                                     'name': self.name,
                                     'options': options}}
+        instance = mock.sentinel.instance
+        instance.uuid = uuids.instance
         libvirt_driver.connect_volume(connection_info, self.disk_info,
-                                      mock.sentinel.instance)
+                                      instance)
         libvirt_driver.disconnect_volume(connection_info, "vde",
                                          mock.sentinel.instance)
 
@@ -140,6 +122,6 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
             ('mount', '-t', 'nfs', '-o', 'intr,nfsvers=3',
              export_string, export_mnt_base),
             ('umount', export_mnt_base),
+            ('rmdir', export_mnt_base)
         ]
         self.assertEqual(expected_commands, self.executes)
-        self.assertTrue(mock_is_mounted.called)
