@@ -759,19 +759,6 @@ libvirt_vif_opts = [
 ]
 
 libvirt_volume_opts = [
-    cfg.ListOpt('qemu_allowed_storage_drivers',
-                default=[],
-                help="""
-Protocols listed here will be accessed directly from QEMU.
-
-If gluster is present in qemu_allowed_storage_drivers, glusterfs's backend will
-pass a disk configuration to QEMU. This allows QEMU to access the volume using
-libgfapi rather than mounting GlusterFS via fuse.
-
-Possible values:
-
-* [gluster]
-"""),
     cfg.BoolOpt('volume_use_multipath',
                 default=False,
                 deprecated_name='iscsi_use_multipath',
@@ -798,15 +785,6 @@ Number of times to rediscover AoE target to find volume.
 Nova provides support for block storage attaching to hosts via AOE (ATA over
 Ethernet). This option allows the user to specify the maximum number of retry
 attempts that can be made to discover the AoE device.
-""")
-]
-
-libvirt_volume_glusterfs_opts = [
-    cfg.StrOpt('glusterfs_mount_point_base',
-               default=paths.state_path_def('mnt'),
-               help="""
-Absolute path to the directory where the glusterfs volume is mounted on the
-compute node.
 """)
 ]
 
@@ -1061,7 +1039,6 @@ ALL_OPTS = list(itertools.chain(
     libvirt_vif_opts,
     libvirt_volume_opts,
     libvirt_volume_aoe_opts,
-    libvirt_volume_glusterfs_opts,
     libvirt_volume_iscsi_opts,
     libvirt_volume_iser_opts,
     libvirt_volume_net_opts,

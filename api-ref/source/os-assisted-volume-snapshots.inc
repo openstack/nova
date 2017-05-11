@@ -9,10 +9,10 @@ file format is supported.
 
 This API is only implemented by the libvirt compute driver.
 
-An internal snapshot that lacks storage such as NFS or GlusterFS can use
+An internal snapshot that lacks storage such as NFS can use
 an emulator/hypervisor to add the snapshot feature.
-This is used to enable snapshot of volumes on backends such as NFS or
-GlusterFS by storing data as qcow2 files on these volumes.
+This is used to enable snapshot of volumes on backends such as NFS
+by storing data as qcow2 files on these volumes.
 
 This API is only ever called by Cinder, where it is used to create a snapshot
 for drivers that extend the remotefs Cinder driver.

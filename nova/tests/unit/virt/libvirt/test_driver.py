@@ -17797,7 +17797,6 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         self.c = context.get_admin_context()
 
         self.flags(instance_name_template='instance-%s')
-        self.flags(qemu_allowed_storage_drivers=[], group='libvirt')
 
         # creating instance
         self.inst = {}
@@ -17833,17 +17832,17 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                   </disk>
                   <disk type='network' device='disk'>
                     <driver name='qemu' type='qcow2'/>
-                    <source protocol='gluster' name='vol1/root.img'>
+                    <source protocol='netfs' name='vol1/root.img'>
                       <host name='server1' port='24007'/>
                     </source>
                     <backingStore type='network' index='1'>
                       <driver name='qemu' type='qcow2'/>
-                      <source protocol='gluster' name='vol1/snap.img'>
+                      <source protocol='netfs' name='vol1/snap.img'>
                         <host name='server1' port='24007'/>
                       </source>
                       <backingStore type='network' index='2'>
                         <driver name='qemu' type='qcow2'/>
-                        <source protocol='gluster' name='vol1/snap-b.img'>
+                        <source protocol='netfs' name='vol1/snap-b.img'>
                           <host name='server1' port='24007'/>
                         </source>
                         <backingStore/>
@@ -17867,12 +17866,12 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                   </disk>
                   <disk type='network' device='disk'>
                     <driver name='qemu' type='qcow2'/>
-                    <source protocol='gluster' name='vol1/snap.img'>
+                    <source protocol='netfs' name='vol1/snap.img'>
                       <host name='server1' port='24007'/>
                     </source>
                     <backingStore type='network' index='1'>
                       <driver name='qemu' type='qcow2'/>
-                      <source protocol='gluster' name='vol1/root.img'>
+                      <source protocol='netfs' name='vol1/root.img'>
                         <host name='server1' port='24007'/>
                       </source>
                       <backingStore/>
@@ -18028,7 +18027,6 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
     def test_volume_snapshot_create_libgfapi(self):
         """Test snapshot creation with libgfapi network disk."""
         self.flags(instance_name_template = 'instance-%s')
-        self.flags(qemu_allowed_storage_drivers = ['gluster'], group='libvirt')
         self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
         self.mox.StubOutWithMock(self.drvr, '_volume_api')
 
@@ -18041,7 +18039,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                     <serial>0e38683e-f0af-418f-a3f1-6b67ea0f919d</serial>
                   </disk>
                   <disk type='block'>
-                    <source protocol='gluster' name='gluster1/volume-1234'>
+                    <source protocol='netfs' name='netfs1/volume-1234'>
                       <host name='127.3.4.5' port='24007'/>
                     </source>
                     <target dev='vdb' bus='virtio' serial='1234'/>
