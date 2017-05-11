@@ -235,8 +235,8 @@ def send_instance_update_notification(context, instance, old_vm_state=None,
 
     # add audit fields:
     (audit_start, audit_end) = audit_period_bounds(current_period=True)
-    payload["audit_period_beginning"] = audit_start
-    payload["audit_period_ending"] = audit_end
+    payload["audit_period_beginning"] = null_safe_isotime(audit_start)
+    payload["audit_period_ending"] = null_safe_isotime(audit_end)
 
     # add bw usage info:
     bw = bandwidth_usage(instance, audit_start)

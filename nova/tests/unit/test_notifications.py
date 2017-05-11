@@ -21,6 +21,7 @@ import datetime
 import mock
 from oslo_context import context as o_context
 from oslo_context import fixture as o_fixture
+from oslo_utils import timeutils
 
 from nova.compute import flavors
 from nova.compute import task_states
@@ -66,6 +67,9 @@ class NotificationsTestCase(test.TestCase):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
+
+        self.fake_time = datetime.datetime(2017, 2, 2, 16, 45, 0)
+        timeutils.set_time_override(self.fake_time)
 
         self.instance = self._wrapped_create()
 
@@ -340,6 +344,11 @@ class NotificationsTestCase(test.TestCase):
         self.assertEqual(payload["display_name"], display_name)
         self.assertEqual(payload["hostname"], hostname)
         self.assertEqual(payload["node"], node)
+        self.assertEqual("2017-02-01T00:00:00.000000",
+                         payload["audit_period_beginning"])
+        self.assertEqual("2017-02-02T16:45:00.000000",
+                         payload["audit_period_ending"])
+
         payload = fake_notifier.VERSIONED_NOTIFICATIONS[0][
             'payload']['nova_object.data']
         state_update = payload['state_update']['nova_object.data']
