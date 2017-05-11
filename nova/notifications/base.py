@@ -386,6 +386,21 @@ def image_meta(system_metadata):
     return image_meta
 
 
+def null_safe_str(s):
+    return str(s) if s else ''
+
+
+def null_safe_int(s):
+    return int(s) if s else ''
+
+
+def null_safe_isotime(s):
+    if isinstance(s, datetime.datetime):
+        return utils.strtime(s)
+    else:
+        return str(s) if s else ''
+
+
 def info_from_instance(context, instance, network_info,
                 system_metadata, **kw):
     """Get detailed instance information for an instance which is common to all
@@ -402,19 +417,6 @@ def info_from_instance(context, instance, network_info,
         modifications.
 
     """
-
-    def null_safe_str(s):
-        return str(s) if s else ''
-
-    def null_safe_int(s):
-        return int(s) if s else ''
-
-    def null_safe_isotime(s):
-        if isinstance(s, datetime.datetime):
-            return utils.strtime(s)
-        else:
-            return str(s) if s else ''
-
     image_ref_url = glance.generate_image_url(instance.image_ref)
 
     instance_type = instance.get_flavor()
