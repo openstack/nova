@@ -4904,7 +4904,18 @@ class KeypairAPI(base.Base):
     def delete_key_pair(self, context, user_id, key_name):
         """Delete a keypair by name."""
         self._notify(context, 'delete.start', key_name)
+        keypair = self.get_key_pair(context, user_id, key_name)
+        compute_utils.notify_about_keypair_action(
+            context=context,
+            keypair=keypair,
+            action=fields_obj.NotificationAction.DELETE,
+            phase=fields_obj.NotificationPhase.START)
         objects.KeyPair.destroy_by_name(context, user_id, key_name)
+        compute_utils.notify_about_keypair_action(
+            context=context,
+            keypair=keypair,
+            action=fields_obj.NotificationAction.DELETE,
+            phase=fields_obj.NotificationPhase.END)
         self._notify(context, 'delete.end', key_name)
 
     def get_key_pairs(self, context, user_id, limit=None, marker=None):

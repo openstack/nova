@@ -28,6 +28,7 @@ from nova.tests.unit.compute import test_compute
 from nova.tests.unit import fake_crypto
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_keypair
+from nova.tests.unit import utils as test_utils
 
 CONF = cfg.CONF
 
@@ -243,14 +244,23 @@ class GetKeypairsTestCase(KeypairAPITestCase):
 
 
 class DeleteKeypairTestCase(KeypairAPITestCase):
-    def test_success(self):
-        self.keypair_api.get_key_pair(self.ctxt, self.ctxt.user_id,
-                                      self.existing_key_name)
+    @mock.patch('nova.compute.utils.notify_about_keypair_action')
+    def test_success(self, mock_notify):
         self.keypair_api.delete_key_pair(self.ctxt, self.ctxt.user_id,
                 self.existing_key_name)
         self.assertRaises(exception.KeypairNotFound,
                 self.keypair_api.get_key_pair, self.ctxt, self.ctxt.user_id,
                 self.existing_key_name)
 
+        match_by_name = test_utils.CustomMockCallMatcher(
+            lambda keypair: keypair['name'] == self.existing_key_name)
+
+        mock_notify.assert_has_calls([
+            mock.call(context=self.ctxt,
+                      keypair=match_by_name,
+                      action='delete', phase='start'),
+            mock.call(context=self.ctxt,
+                      keypair=match_by_name,
+                      action='delete', phase='end')])
         self._check_notifications(action='delete',
                 key_name=self.existing_key_name)

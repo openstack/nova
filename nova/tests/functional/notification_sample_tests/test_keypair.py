@@ -17,7 +17,7 @@ from nova.tests.unit import fake_notifier
 class TestKeypairNotificationSample(
         notification_sample_base.NotificationSampleTestBase):
 
-    def test_keypair_create(self):
+    def test_keypair_create_delete(self):
         keypair_req = {
             "keypair": {
                 "name": "my-key",
@@ -38,3 +38,20 @@ class TestKeypairNotificationSample(
                 "public_key": keypair['public_key']
             },
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
+        self.api.delete_keypair(keypair['name'])
+        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'keypair-delete-start',
+            replacements={
+                "fingerprint": keypair['fingerprint'],
+                "public_key": keypair['public_key']
+            },
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+        self._verify_notification(
+            'keypair-delete-end',
+            replacements={
+                "fingerprint": keypair['fingerprint'],
+                "public_key": keypair['public_key']
+            },
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])

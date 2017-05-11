@@ -21,6 +21,7 @@ import webob
 from nova.api.openstack.compute import keypairs as keypairs_v21
 from nova.api.openstack import wsgi as os_wsgi
 from nova.compute import api as compute_api
+from nova import context as nova_context
 from nova import exception
 from nova import objects
 from nova import policy
@@ -271,7 +272,10 @@ class KeypairsTestV21(test.TestCase):
         self.assertIn("Key pair 'create_duplicate' already exists.",
                       ex.explanation)
 
-    def test_keypair_delete(self):
+    @mock.patch('nova.objects.KeyPair.get_by_name')
+    def test_keypair_delete(self, mock_get_by_name):
+        mock_get_by_name.return_value = objects.KeyPair(
+            nova_context.get_admin_context(), **fake_keypair('FAKE'))
         self.controller.delete(self.req, 'FAKE')
 
     def test_keypair_get_keypair_not_found(self):
