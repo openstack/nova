@@ -3182,7 +3182,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertIsNone(new['host'])
 
     def test_instance_update_and_get_original_expected_task_state_deleting(self):  # noqa
-        # Ensure that we raise UnepectedDeletingTaskStateError when task state
+        # Ensure that we raise UnexpectedDeletingTaskStateError when task state
         # is not as expected, and it is DELETING
         instance = self.create_instance_with_args(
             task_state=task_states.DELETING)
