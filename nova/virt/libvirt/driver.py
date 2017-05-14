@@ -169,6 +169,9 @@ libvirt_volume_drivers = [
     'disco=nova.virt.libvirt.volume.disco.LibvirtDISCOVolumeDriver',
     'vzstorage='
         'nova.virt.libvirt.volume.vzstorage.LibvirtVZStorageVolumeDriver',
+    'veritas_hyperscale='
+        'nova.virt.libvirt.volume.vrtshyperscale.'
+        'LibvirtHyperScaleVolumeDriver',
 ]
 
 
