@@ -928,7 +928,8 @@ class ServerActionsControllerTestV21(test.TestCase):
                           self.controller._action_create_image, self.req,
                           FAKE_UUID, body=body)
 
-    def _do_test_create_volume_backed_image(self, extra_properties):
+    def _do_test_create_volume_backed_image(
+            self, extra_properties, mock_vol_create_side_effect=None):
 
         def _fake_id(x):
             return '%s-%s-%s-%s' % (x * 8, x * 4, x * 4, x * 12)
@@ -991,6 +992,9 @@ class ServerActionsControllerTestV21(test.TestCase):
                               return_value=snapshot),
         ) as (mock_quiesce, mock_vol_get, mock_vol_create):
 
+            if mock_vol_create_side_effect:
+                mock_vol_create.side_effect = mock_vol_create_side_effect
+
             response = self.controller._action_create_image(self.req,
                 FAKE_UUID, body=body)
 
@@ -1028,6 +1032,13 @@ class ServerActionsControllerTestV21(test.TestCase):
     def test_create_volume_backed_image_with_metadata(self):
         self._do_test_create_volume_backed_image(dict(ImageType='Gold',
                                                       ImageVersion='2.0'))
+
+    def test_create_volume_backed_image_cinder_over_quota(self):
+        self.assertRaises(
+            webob.exc.HTTPForbidden,
+            self._do_test_create_volume_backed_image, {},
+            mock_vol_create_side_effect=exception.OverQuota(
+                overs='snapshot'))
 
     def _test_create_volume_backed_image_with_metadata_from_volume(
             self, extra_metadata=None):
