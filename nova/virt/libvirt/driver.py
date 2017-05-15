@@ -5784,10 +5784,8 @@ class LibvirtDriver(driver.ComputeDriver):
                     raise exception.MigrationPreCheckError(reason=msg)
         elif not (dest_check_data.is_shared_block_storage or
                   dest_check_data.is_shared_instance_path):
-            reason = _("Live migration can not be used "
-                       "without shared storage except "
-                       "a booted from volume VM which "
-                       "does not have a local disk.")
+            reason = _("Shared storage live-migration requires either shared "
+                       "storage or boot-from-volume with no local disks.")
             raise exception.InvalidSharedStorage(reason=reason, path=source)
 
         # NOTE(mikal): include the instance directory name here because it
