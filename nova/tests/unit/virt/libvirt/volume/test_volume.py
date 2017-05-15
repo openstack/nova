@@ -18,6 +18,8 @@ import mock
 from nova import exception
 from nova import test
 from nova.tests.unit.virt.libvirt import fakelibvirt
+from nova.virt import fake
+from nova.virt.libvirt import driver
 from nova.virt.libvirt import host
 from nova.virt.libvirt.volume import volume
 
@@ -45,6 +47,17 @@ class FakeSecret(object):
     def undefine(self):
         self.value = None
         return 0
+
+
+class LibvirtBaseVolumeDriverSubclassSignatureTestCase(
+        test.SubclassSignatureTestCase):
+    def _get_base_class(self):
+        # We do this because it has the side-effect of loading all the
+        # volume drivers
+        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        return volume.LibvirtBaseVolumeDriver
 
 
 class LibvirtVolumeBaseTestCase(test.NoDBTestCase):
