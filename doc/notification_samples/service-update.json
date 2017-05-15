@@ -3,7 +3,7 @@
     "payload": {
         "nova_object.namespace": "nova",
         "nova_object.name": "ServiceStatusPayload",
-        "nova_object.version": "1.0",
+        "nova_object.version": "1.1",
         "nova_object.data": {
             "host": "host1",
             "disabled": false,
@@ -14,7 +14,8 @@
             "report_count": 1,
             "forced_down": false,
             "version": 17,
-            "availability_zone": null
+            "availability_zone": null,
+            "uuid": "fa69c544-906b-4a6a-a9c6-c1f7a8078c73"
         }
     },
     "event_type": "service.update",

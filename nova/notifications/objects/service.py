@@ -41,10 +41,12 @@ class ServiceStatusPayload(base.NotificationPayloadBase):
         'availability_zone': ('service', 'availability_zone'),
         'last_seen_up': ('service', 'last_seen_up'),
         'forced_down': ('service', 'forced_down'),
-        'version': ('service', 'version')
+        'version': ('service', 'version'),
+        'uuid': ('service', 'uuid')
     }
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Added uuid field.
+    VERSION = '1.1'
     fields = {
         'host': fields.StringField(nullable=True),
         'binary': fields.StringField(nullable=True),
@@ -56,6 +58,7 @@ class ServiceStatusPayload(base.NotificationPayloadBase):
         'last_seen_up': fields.DateTimeField(nullable=True),
         'forced_down': fields.BooleanField(),
         'version': fields.IntegerField(),
+        'uuid': fields.UUIDField()
     }
 
     def __init__(self, service):
