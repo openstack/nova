@@ -823,6 +823,11 @@ class ApiDbCommands(object):
 class AgentBuildCommands(object):
     """Class for managing agent builds."""
 
+    # TODO(stephenfin): Remove this during the Queens cycle
+    description = ('DEPRECATED: The agent commands are deprecated since '
+                   'Pike as this information is available over the API. They '
+                   'will be removed in an upcoming release.')
+
     @args('--os', metavar='<os>', help='os')
     @args('--architecture', dest='architecture',
             metavar='<architecture>', help='architecture')
