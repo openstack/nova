@@ -49,7 +49,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
     # Version 1.15: Added uuid
     # Version 1.16: Added disk_allocation_ratio
     # Version 1.17: Added mapped
-    VERSION = '1.17'
+    # Version 1.18: Added get_by_uuid().
+    VERSION = '1.18'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -238,6 +239,14 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
     def get_by_id(cls, context, compute_id):
         db_compute = db.compute_node_get(context, compute_id)
         return cls._from_db_object(context, cls(), db_compute)
+
+    @base.remotable_classmethod
+    def get_by_uuid(cls, context, compute_uuid):
+        nodes = ComputeNodeList.get_all_by_uuids(context, [compute_uuid])
+        # We have a unique index on the uuid column so we can get back 0 or 1.
+        if not nodes:
+            raise exception.ComputeHostNotFound(host=compute_uuid)
+        return nodes[0]
 
     # NOTE(hanlind): This is deprecated and should be removed on the next
     # major version bump
