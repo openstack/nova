@@ -162,10 +162,6 @@ class PolicyNotAuthorized(Forbidden):
     msg_fmt = _("Policy doesn't allow %(action)s to be performed.")
 
 
-class VolumeLimitExceeded(Forbidden):
-    msg_fmt = _("Volume resource quota exceeded")
-
-
 class ImageNotActive(NovaException):
     # NOTE(jruzicka): IncorrectState is used for volumes only in EC2,
     # but it still seems like the most appropriate option.
@@ -1626,24 +1622,6 @@ class InstanceGroupMemberNotFound(NotFound):
 
 class InstanceGroupSaveException(NovaException):
     msg_fmt = _("%(field)s should not be part of the updates.")
-
-
-class ImageDownloadModuleError(NovaException):
-    msg_fmt = _("There was an error with the download module %(module)s. "
-                "%(reason)s")
-
-
-class ImageDownloadModuleMetaDataError(ImageDownloadModuleError):
-    msg_fmt = _("The metadata for this location will not work with this "
-                "module %(module)s.  %(reason)s.")
-
-
-class ImageDownloadModuleNotImplementedError(ImageDownloadModuleError):
-    msg_fmt = _("The method %(method_name)s is not implemented.")
-
-
-class ImageDownloadModuleConfigurationError(ImageDownloadModuleError):
-    msg_fmt = _("The module %(module)s is misconfigured: %(reason)s.")
 
 
 class ResourceMonitorError(NovaException):
