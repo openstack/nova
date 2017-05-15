@@ -1,0 +1,6 @@
+---
+features:
+  - The `discover_hosts_in_cells_interval` periodic task in the scheduler is now
+    more efficient in that it can specifically query unmapped compute nodes from
+    the cell databases instead of having to query them all and compare against
+    existing host mappings.
