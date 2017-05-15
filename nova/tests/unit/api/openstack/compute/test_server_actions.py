@@ -927,7 +927,8 @@ class ServerActionsControllerTestV21(test.TestCase):
                           self.controller._action_create_image, self.req,
                           FAKE_UUID, body=body)
 
-    def _do_test_create_volume_backed_image(self, extra_properties):
+    def _do_test_create_volume_backed_image(
+            self, extra_properties, mock_vol_create_side_effect=None):
 
         def _fake_id(x):
             return '%s-%s-%s-%s' % (x * 8, x * 4, x * 4, x * 12)
@@ -986,8 +987,13 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.mox.StubOutWithMock(self.controller.compute_api, 'volume_api')
         volume_api = self.controller.compute_api.volume_api
         volume_api.get(mox.IgnoreArg(), volume['id']).AndReturn(volume)
-        volume_api.create_snapshot_force(mox.IgnoreArg(), volume['id'],
-                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(snapshot)
+        if mock_vol_create_side_effect:
+            volume_api.create_snapshot_force(mox.IgnoreArg(), volume['id'],
+                    mox.IgnoreArg(), mox.IgnoreArg()).AndRaise(
+                        mock_vol_create_side_effect)
+        else:
+            volume_api.create_snapshot_force(mox.IgnoreArg(), volume['id'],
+                    mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(snapshot)
 
         self.mox.ReplayAll()
 
@@ -996,7 +1002,7 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         location = response.headers['Location']
         image_id = location.replace(self.image_url or
-                                        glance.generate_image_url(''), '')
+                                    glance.generate_image_url(''), '')
         image = image_service.show(None, image_id)
 
         self.assertEqual(image['name'], 'snapshot_of_volume_backed')
@@ -1023,6 +1029,13 @@ class ServerActionsControllerTestV21(test.TestCase):
     def test_create_volume_backed_image_with_metadata(self):
         self._do_test_create_volume_backed_image(dict(ImageType='Gold',
                                                       ImageVersion='2.0'))
+
+    def test_create_volume_backed_image_cinder_over_quota(self):
+        self.assertRaises(
+            webob.exc.HTTPForbidden,
+            self._do_test_create_volume_backed_image, {},
+            mock_vol_create_side_effect=exception.OverQuota(
+                overs='snapshot'))
 
     def _test_create_volume_backed_image_with_metadata_from_volume(
             self, extra_metadata=None):
