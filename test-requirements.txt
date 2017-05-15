@@ -3,7 +3,7 @@
 # process, which may cause wedges in the gate later.
 
 hacking!=0.13.0,<0.14,>=0.12.0 # Apache-2.0
-coverage>=4.0 # Apache-2.0
+coverage!=4.4,>=4.0 # Apache-2.0
 ddt>=1.0.1 # MIT
 fixtures>=3.0.0 # Apache-2.0/BSD
 mock>=2.0 # BSD
