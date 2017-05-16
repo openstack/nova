@@ -1,0 +1,17 @@
+---
+features:
+  - |
+    The `nova-compute` worker can automatically disable itself in the
+    service database if consecutive build failures exceed a set threshold. The
+    ``[compute]/consecutive_build_service_disable_threshold`` configuration option
+    allows setting the threshold for this behavior, or disabling it entirely if
+    desired.
+    The intent is that an admin will examine the issue before manually
+    re-enabling the service, which will avoid that compute node becoming a
+    black hole build magnet.
+upgrade:
+  - |
+    The new configuration option
+    ``[compute]/consecutive_build_service_disable_threshold``
+    defaults to a nonzero value, which means multiple failed builds will
+    result in a compute node auto-disabling itself.

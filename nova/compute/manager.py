@@ -528,6 +528,7 @@ class ComputeManager(manager.Manager):
                 CONF.max_concurrent_live_migrations)
         else:
             self._live_migration_semaphore = compute_utils.UnlimitedSemaphore()
+        self._failed_builds = 0
 
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
@@ -1688,6 +1689,31 @@ class ComputeManager(manager.Manager):
 
         return block_device_info
 
+    def _build_failed(self):
+        self._failed_builds += 1
+        limit = CONF.compute.consecutive_build_service_disable_threshold
+        if limit and self._failed_builds >= limit:
+            # NOTE(danms): If we're doing a bunch of parallel builds,
+            # it is possible (although not likely) that we have already
+            # failed N-1 builds before this and we race with a successful
+            # build and disable ourselves here when we might've otherwise
+            # not.
+            LOG.error('Disabling service due to %(fails)i '
+                      'consecutive build failures',
+                      {'fails': self._failed_builds})
+            ctx = nova.context.get_admin_context()
+            service = objects.Service.get_by_compute_host(ctx, CONF.host)
+            service.disabled = True
+            service.disabled_reason = (
+                'Auto-disabled due to %i build failures' % self._failed_builds)
+            service.save()
+            # NOTE(danms): Reset our counter now so that when the admin
+            # re-enables us we can start fresh
+            self._failed_builds = 0
+        elif self._failed_builds > 1:
+            LOG.warning('%(fails)i consecutive build failures',
+                        {'fails': self._failed_builds})
+
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
@@ -1704,7 +1730,18 @@ class ComputeManager(manager.Manager):
             # for a while and we want to make sure that nothing else tries
             # to do anything with this instance while we wait.
             with self._build_semaphore:
-                self._do_build_and_run_instance(*args, **kwargs)
+                try:
+                    result = self._do_build_and_run_instance(*args, **kwargs)
+                except Exception:
+                    result = build_results.FAILED
+                    raise
+                finally:
+                    fails = (build_results.FAILED,
+                             build_results.RESCHEDULED)
+                    if result in fails:
+                        self._build_failed()
+                    else:
+                        self._failed_builds = 0
 
         # NOTE(danms): We spawn here to return the RPC worker thread back to
         # the pool. Since what follows could take a really long time, we don't
