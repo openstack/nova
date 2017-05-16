@@ -70,7 +70,7 @@ class MigrationTask(base.TaskBase):
                 cell=instance_mapping.cell_mapping)
 
         hosts = self.scheduler_client.select_destinations(
-            self.context, self.request_spec)
+            self.context, self.request_spec, [self.instance.uuid])
         host_state = hosts[0]
 
         scheduler_utils.populate_filter_properties(legacy_props,

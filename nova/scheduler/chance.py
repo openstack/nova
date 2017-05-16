@@ -55,7 +55,7 @@ class ChanceScheduler(driver.Scheduler):
 
         return random.choice(hosts)
 
-    def select_destinations(self, context, spec_obj):
+    def select_destinations(self, context, spec_obj, instance_uuids):
         """Selects random destinations."""
         num_instances = spec_obj.num_instances
         # NOTE(timello): Returns a list of dicts with 'host', 'nodename' and

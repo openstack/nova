@@ -406,7 +406,7 @@ class _BaseTaskTestCase(object):
                 'num_instances': 2}
         filter_properties = {'retry': {'num_attempts': 1, 'hosts': []}}
         self.conductor_manager._schedule_instances(self.context,
-                spec, filter_properties).AndReturn(
+                spec, filter_properties, [uuids.fake, uuids.fake]).AndReturn(
                         [{'host': 'host1', 'nodename': 'node1', 'limits': []},
                          {'host': 'host2', 'nodename': 'node2', 'limits': []}])
         db.block_device_mapping_get_all_by_instance(self.context,
@@ -1025,7 +1025,7 @@ class _BaseTaskTestCase(object):
             self.conductor.unshelve_instance(self.context, instance, fake_spec)
             reset_forced_destinations.assert_called_once_with()
             sched_instances.assert_called_once_with(self.context, request_spec,
-                                                    filter_properties)
+                    filter_properties, [instance.uuid])
             # NOTE(sbauza): Since the instance is dehydrated when passing
             # through the RPC API, we can only assert mock.ANY for it
             unshelve_instance.assert_called_once_with(
@@ -1100,7 +1100,7 @@ class _BaseTaskTestCase(object):
         scheduler_utils.build_request_spec(self.context, 'fake_image',
                 mox.IgnoreArg()).AndReturn('req_spec')
         self.conductor_manager._schedule_instances(self.context,
-                'req_spec', filter_properties).AndReturn(
+                'req_spec', filter_properties, [instance.uuid]).AndReturn(
                         [{'host': 'fake_host',
                           'nodename': 'fake_node',
                           'limits': {}}])
@@ -1183,7 +1183,7 @@ class _BaseTaskTestCase(object):
         scheduler_utils.build_request_spec(self.context, None,
                 mox.IgnoreArg()).AndReturn('req_spec')
         self.conductor_manager._schedule_instances(self.context,
-                'req_spec', filter_properties).AndReturn(
+                'req_spec', filter_properties, [instance.uuid]).AndReturn(
                         [{'host': 'fake_host',
                           'nodename': 'fake_node',
                           'limits': {}}])
@@ -1230,6 +1230,7 @@ class _BaseTaskTestCase(object):
         request_spec = {}
         filter_properties = {'ignore_hosts': [(inst_obj.host)]}
         fake_spec = objects.RequestSpec()
+        inst_uuids = [inst_obj.uuid]
         with test.nested(
             mock.patch.object(self.conductor_manager.compute_rpcapi,
                               'rebuild_instance'),
@@ -1250,7 +1251,8 @@ class _BaseTaskTestCase(object):
                                             **rebuild_args)
             fp_mock.assert_called_once_with(self.context, request_spec,
                                             filter_properties)
-            select_dest_mock.assert_called_once_with(self.context, fake_spec)
+            select_dest_mock.assert_called_once_with(self.context, fake_spec,
+                                                     inst_uuids)
             compute_args['host'] = expected_host
             rebuild_mock.assert_called_once_with(self.context,
                                             instance=inst_obj,
@@ -1285,7 +1287,8 @@ class _BaseTaskTestCase(object):
                               **rebuild_args)
             fp_mock.assert_called_once_with(self.context, request_spec,
                                             filter_properties)
-            select_dest_mock.assert_called_once_with(self.context, fake_spec)
+            select_dest_mock.assert_called_once_with(self.context, fake_spec,
+                    [inst_obj.uuid])
             self.assertFalse(rebuild_mock.called)
 
     @mock.patch.object(conductor_manager.compute_rpcapi.ComputeAPI,
@@ -1393,7 +1396,7 @@ class _BaseTaskTestCase(object):
             fp_mock.assert_called_once_with(self.context, request_spec,
                                             filter_properties)
             select_dest_mock.assert_called_once_with(self.context,
-                                                     augmented_spec)
+                    augmented_spec, [inst_obj.uuid])
             compute_args['host'] = expected_host
             rebuild_mock.assert_called_once_with(self.context,
                                             instance=inst_obj,
@@ -2179,7 +2182,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         sig_mock.assert_called_once_with(self.context, legacy_request_spec,
                                          legacy_filter_props)
         select_dest_mock.assert_called_once_with(
-            self.context, fake_spec)
+            self.context, fake_spec, [inst_obj.uuid])
         prep_resize_mock.assert_called_once_with(
             self.context, inst_obj, legacy_request_spec['image'],
             flavor, hosts[0]['host'], [resvs],
@@ -2278,8 +2281,9 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         scheduler_utils.build_request_spec(self.context, image,
                 mox.IgnoreArg()).AndReturn(spec)
         filter_properties = {'retry': {'num_attempts': 1, 'hosts': []}}
+        inst_uuids = [inst.uuid for inst in instances]
         self.conductor_manager._schedule_instances(self.context,
-                spec, filter_properties).AndReturn(
+                spec, filter_properties, inst_uuids).AndReturn(
                         [{'host': 'host1', 'nodename': 'node1', 'limits': []},
                          {'host': 'host2', 'nodename': 'node2', 'limits': []}])
         instances[0].save().AndRaise(
