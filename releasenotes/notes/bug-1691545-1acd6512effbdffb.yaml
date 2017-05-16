@@ -1,0 +1,10 @@
+---
+fixes:
+  - |
+    Fixes `bug 1691545`_ in which there was a significant increase in database
+    connections because of the way connections to cell databases were being
+    established. With this fix, objects related to database connections are
+    cached in the API service and reused to prevent new connections being
+    established for every communication with cell databases.
+
+    .. _bug 1691545: https://bugs.launchpad.net/nova/+bug/1691545

@@ -34,6 +34,10 @@ from nova import policy
 from nova import utils
 
 LOG = logging.getLogger(__name__)
+# TODO(melwitt): This cache should be cleared whenever WSGIService receives a
+# SIGHUP and periodically based on an expiration time. Currently, none of the
+# cell caches are purged, so neither is this one, for now.
+CELL_CACHE = {}
 
 
 class _ContextAuthPlugin(plugin.BaseAuthPlugin):
@@ -370,15 +374,31 @@ def set_target_cell(context, cell_mapping):
     :param context: The RequestContext to add connection information
     :param cell_mapping: An objects.CellMapping object or None
     """
+    global CELL_CACHE
     if cell_mapping is not None:
         # avoid circular import
         from nova import db
         from nova import rpc
-        db_connection_string = cell_mapping.database_connection
-        context.db_connection = db.create_context_manager(db_connection_string)
-        if not cell_mapping.transport_url.startswith('none'):
-            context.mq_connection = rpc.create_transport(
-                cell_mapping.transport_url)
+
+        # Synchronize access to the cache by multiple API workers.
+        @utils.synchronized(cell_mapping.uuid)
+        def get_or_set_cached_cell_and_set_connections():
+            try:
+                cell_tuple = CELL_CACHE[cell_mapping.uuid]
+            except KeyError:
+                db_connection_string = cell_mapping.database_connection
+                context.db_connection = db.create_context_manager(
+                    db_connection_string)
+                if not cell_mapping.transport_url.startswith('none'):
+                    context.mq_connection = rpc.create_transport(
+                        cell_mapping.transport_url)
+                CELL_CACHE[cell_mapping.uuid] = (context.db_connection,
+                                                 context.mq_connection)
+            else:
+                context.db_connection = cell_tuple[0]
+                context.mq_connection = cell_tuple[1]
+
+        get_or_set_cached_cell_and_set_connections()
     else:
         context.db_connection = None
         context.mq_connection = None
