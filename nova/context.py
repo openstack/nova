@@ -34,6 +34,10 @@ from nova import policy
 from nova import utils
 
 LOG = logging.getLogger(__name__)
+# TODO(melwitt): This cache should be cleared whenever WSGIService receives a
+# SIGHUP and periodically based on an expiration time. Currently, none of the
+# cell caches are purged, so neither is this one, for now.
+CELL_CACHE = {}
 
 
 class _ContextAuthPlugin(plugin.BaseAuthPlugin):
@@ -349,11 +353,27 @@ def target_cell(context, cell_mapping):
     :param context: The RequestContext to add connection information
     :param cell_mapping: A objects.CellMapping object
     """
+    global CELL_CACHE
+
     original_db_connection = context.db_connection
     # avoid circular import
     from nova import db
-    db_connection_string = cell_mapping.database_connection
-    context.db_connection = db.create_context_manager(db_connection_string)
+
+    # Synchronize access to the cache by multiple API workers.
+    @utils.synchronized(cell_mapping.uuid)
+    def get_or_set_cached_cell_and_set_connections():
+        try:
+            cell_db_conn = CELL_CACHE[cell_mapping.uuid]
+        except KeyError:
+            db_connection_string = cell_mapping.database_connection
+            context.db_connection = db.create_context_manager(
+                db_connection_string)
+            CELL_CACHE[cell_mapping.uuid] = context.db_connection
+        else:
+            context.db_connection = cell_db_conn
+
+    get_or_set_cached_cell_and_set_connections()
+
     try:
         yield context
     finally:
