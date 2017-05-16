@@ -18,6 +18,7 @@ import mock
 from nova import exception
 from nova import test
 from nova.tests.unit.virt.libvirt import fakelibvirt
+from nova.tests import uuidsentinel as uuids
 from nova.virt import fake
 from nova.virt.libvirt import driver
 from nova.virt.libvirt import host
@@ -330,3 +331,45 @@ class LibvirtVolumeTestCase(LibvirtISCSIVolumeBaseTestCase):
         conf = libvirt_driver.get_config(connection_info, self.disk_info)
         tree = conf.format_dom()
         self.assertIsNone(tree.find("driver[@discard]"))
+
+    def test_libvirt_volume_driver_encryption(self):
+        fake_secret = FakeSecret()
+        fake_host = mock.Mock(spec=host.Host)
+        fake_host.find_secret.return_value = fake_secret
+
+        libvirt_driver = volume.LibvirtVolumeDriver(fake_host)
+        connection_info = {
+            'driver_volume_type': 'fake',
+            'data': {
+                'volume_id': uuids.volume_id,
+                'device_path': '/foo',
+                'discard': False,
+            },
+            'serial': 'fake_serial',
+        }
+        conf = libvirt_driver.get_config(connection_info, self.disk_info)
+        tree = conf.format_dom()
+        encryption = tree.find("encryption")
+        secret = encryption.find("secret")
+        self.assertEqual('luks', encryption.attrib['format'])
+        self.assertEqual('passphrase', secret.attrib['type'])
+        self.assertEqual(SECRET_UUID, secret.attrib['uuid'])
+
+    def test_libvirt_volume_driver_encryption_missing_secret(self):
+        fake_host = mock.Mock(spec=host.Host)
+        fake_host.find_secret.return_value = None
+
+        libvirt_driver = volume.LibvirtVolumeDriver(fake_host)
+        connection_info = {
+            'driver_volume_type': 'fake',
+            'data': {
+                'volume_id': uuids.volume_id,
+                'device_path': '/foo',
+                'discard': False,
+            },
+            'serial': 'fake_serial',
+        }
+
+        conf = libvirt_driver.get_config(connection_info, self.disk_info)
+        tree = conf.format_dom()
+        self.assertIsNone(tree.find("encryption"))

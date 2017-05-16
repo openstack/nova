@@ -25,6 +25,7 @@ Supports KVM, LXC, QEMU, UML, XEN and Parallels.
 
 """
 
+import binascii
 import collections
 from collections import deque
 import contextlib
@@ -46,6 +47,7 @@ from eventlet import greenthread
 from eventlet import tpool
 from lxml import etree
 from os_brick import encryptors
+from os_brick.encryptors import luks as luks_encryptor
 from os_brick import exception as brick_exception
 from os_brick.initiator import connector
 from oslo_concurrency import processutils
@@ -302,6 +304,9 @@ MIN_LIBVIRT_MDEV_SUPPORT = (3, 4, 0)
 # See https://bugzilla.redhat.com/show_bug.cgi?id=1378242
 # for details.
 MIN_LIBVIRT_MULTIATTACH = (3, 10, 0)
+
+MIN_LIBVIRT_LUKS_VERSION = (2, 2, 0)
+MIN_QEMU_LUKS_VERSION = (2, 6, 0)
 
 
 VGPU_RESOURCE_SEMAPHORE = "vgpu_resources"
@@ -645,6 +650,10 @@ class LibvirtDriver(driver.ComputeDriver):
     def _is_virtlogd_available(self):
         return self._host.has_min_version(MIN_LIBVIRT_VIRTLOGD,
                                           MIN_QEMU_VIRTLOGD)
+
+    def _is_native_luks_available(self):
+        return self._host.has_min_version(MIN_LIBVIRT_LUKS_VERSION,
+                                          MIN_QEMU_LUKS_VERSION)
 
     def _handle_live_migration_post_copy(self, migration_flags):
         if CONF.libvirt.live_migration_permit_post_copy:
@@ -1221,10 +1230,11 @@ class LibvirtDriver(driver.ComputeDriver):
         return self.volume_drivers[driver_type]
 
     def _connect_volume(self, context, connection_info, instance,
-                        encryption=None):
+                        encryption=None, allow_native_luks=True):
         vol_driver = self._get_volume_driver(connection_info)
         vol_driver.connect_volume(connection_info, instance)
-        self._attach_encryptor(context, connection_info, encryption=encryption)
+        self._attach_encryptor(context, connection_info, encryption,
+                               allow_native_luks)
 
     def _disconnect_volume(self, context, connection_info, instance,
                            encryption=None):
@@ -1235,6 +1245,16 @@ class LibvirtDriver(driver.ComputeDriver):
     def _extend_volume(self, connection_info, instance):
         vol_driver = self._get_volume_driver(connection_info)
         return vol_driver.extend_volume(connection_info, instance)
+
+    def _use_native_luks(self, encryption=None):
+        """Is LUKS the required provider and native QEMU LUKS available
+        """
+        provider = None
+        if encryption:
+            provider = encryption.get('provider', None)
+        if provider in encryptors.LEGACY_PROVIDER_CLASS_TO_FORMAT_MAP:
+            provider = encryptors.LEGACY_PROVIDER_CLASS_TO_FORMAT_MAP[provider]
+        return provider == encryptors.LUKS and self._is_native_luks_available()
 
     def _get_volume_config(self, connection_info, disk_info):
         vol_driver = self._get_volume_driver(connection_info)
@@ -1259,16 +1279,52 @@ class LibvirtDriver(driver.ComputeDriver):
                             self._volume_api, volume_id, connection_info)
         return encryption
 
-    def _attach_encryptor(self, context, connection_info, encryption):
+    def _attach_encryptor(self, context, connection_info, encryption,
+                          allow_native_luks):
         """Attach the frontend encryptor if one is required by the volume.
 
         The request context is only used when an encryption metadata dict is
         not provided. The encryption metadata dict being populated is then used
         to determine if an attempt to attach the encryptor should be made.
+
+        If native LUKS decryption is enabled then create a Libvirt volume
+        secret containing the LUKS passphrase for the volume.
         """
         if encryption is None:
             encryption = self._get_volume_encryption(context, connection_info)
-        if encryption:
+
+        if (encryption and allow_native_luks and
+            self._use_native_luks(encryption)):
+            # NOTE(lyarwood): Fetch the associated key for the volume and
+            # decode the passphrase from the key.
+            # FIXME(lyarwood): c-vol currently creates symmetric keys for use
+            # with volumes, leading to the binary to hex to string conversion
+            # below.
+            keymgr = key_manager.API(CONF)
+            key = keymgr.get(context, encryption['encryption_key_id'])
+            key_encoded = key.get_encoded()
+            passphrase = binascii.hexlify(key_encoded).decode('utf-8')
+
+            # NOTE(lyarwood): Retain the behaviour of the original os-brick
+            # encryptors and format any volume that does not identify as
+            # encrypted with LUKS.
+            # FIXME(lyarwood): Remove this once c-vol correctly formats
+            # encrypted volumes during their initial creation:
+            # https://bugs.launchpad.net/cinder/+bug/1739442
+            device_path = connection_info.get('data').get('device_path')
+            if device_path:
+                root_helper = utils.get_root_helper()
+                if not luks_encryptor.is_luks(root_helper, device_path):
+                    encryptor = self._get_volume_encryptor(connection_info,
+                                                           encryption)
+                    encryptor._format_volume(passphrase, **encryption)
+
+            # NOTE(lyarwood): Store the passphrase as a libvirt secret locally
+            # on the compute node. This secret is used later when generating
+            # the volume config.
+            volume_id = connection_info.get('data', {}).get('volume_id')
+            self._host.create_secret('volume', volume_id, password=passphrase)
+        elif encryption:
             encryptor = self._get_volume_encryptor(connection_info,
                                                    encryption)
             encryptor.attach_volume(context, **encryption)
@@ -1279,7 +1335,13 @@ class LibvirtDriver(driver.ComputeDriver):
         The request context is only used when an encryption metadata dict is
         not provided. The encryption metadata dict being populated is then used
         to determine if an attempt to detach the encryptor should be made.
+
+        If native LUKS decryption is enabled then delete previously created
+        Libvirt volume secret from the host.
         """
+        volume_id = connection_info.get('data', {}).get('volume_id')
+        if volume_id and self._host.find_secret('volume', volume_id):
+            return self._host.delete_secret('volume', volume_id)
         if encryption is None:
             encryption = self._get_volume_encryption(context, connection_info)
         if encryption:
@@ -1421,6 +1483,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def swap_volume(self, context, old_connection_info,
                     new_connection_info, instance, mountpoint, resize_to):
+
+        # NOTE(lyarwood): https://bugzilla.redhat.com/show_bug.cgi?id=760547
+        encryption = self._get_volume_encryption(context, old_connection_info)
+        if encryption and self._use_native_luks(encryption):
+            raise NotImplementedError(_("Swap volume is not supported for"
+                "encrypted volumes when native LUKS decryption is enabled."))
 
         guest = self._host.get_guest(instance)
 
@@ -6350,6 +6418,14 @@ class LibvirtDriver(driver.ComputeDriver):
                                                         relative=True)
         dest_check_data.instance_relative_path = instance_path
 
+        # NOTE(lyarwood): Used to indicate to the dest that the src is capable
+        # of wiring up the encrypted disk configuration for the domain.
+        # Note that this does not require the QEMU and Libvirt versions to
+        # decrypt LUKS to be installed on the source node. Only the Nova
+        # utility code to generate the correct XML is required, so we can
+        # default to True here for all computes >= Queens.
+        dest_check_data.src_supports_native_luks = True
+
         return dest_check_data
 
     def _is_shared_block_storage(self, instance, dest_check_data,
@@ -7246,7 +7322,17 @@ class LibvirtDriver(driver.ComputeDriver):
 
         for bdm in block_device_mapping:
             connection_info = bdm['connection_info']
-            self._connect_volume(context, connection_info, instance)
+            # NOTE(lyarwood): Handle the P to Q LM during upgrade use case
+            # where an instance has encrypted volumes attached using the
+            # os-brick encryptors. Do not attempt to attach the encrypted
+            # volume using native LUKS decryption on the destionation.
+            src_native_luks = False
+            if migrate_data.obj_attr_is_set('src_supports_native_luks'):
+                src_native_luks = migrate_data.src_supports_native_luks
+            dest_native_luks = self._is_native_luks_available()
+            allow_native_luks = src_native_luks and dest_native_luks
+            self._connect_volume(context, connection_info, instance,
+                                 allow_native_luks=allow_native_luks)
 
         # We call plug_vifs before the compute manager calls
         # ensure_filtering_rules_for_instance, to ensure bridge is set up
@@ -7302,6 +7388,13 @@ class LibvirtDriver(driver.ComputeDriver):
                 bdmi.type = disk_info['type']
                 bdmi.format = disk_info.get('format')
                 bdmi.boot_index = disk_info.get('boot_index')
+                volume_id = connection_info.get('volume_id')
+                volume_secret = None
+                if volume_id:
+                    volume_secret = self._host.find_secret('volume', volume_id)
+                if volume_secret:
+                    bdmi.encryption_secret_uuid = volume_secret.UUIDString()
+
                 migrate_data.bdms.append(bdmi)
 
         return migrate_data
