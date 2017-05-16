@@ -216,6 +216,23 @@ class InstanceCreatePayload(InstanceActionPayload):
 
 
 @nova_base.NovaObjectRegistry.register_notification
+class InstanceActionResizePrepPayload(InstanceActionPayload):
+    # No SCHEMA as all the additional fields are calculated
+
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+    fields = {
+        'new_flavor': fields.ObjectField('FlavorPayload', nullable=True)
+    }
+
+    def __init__(self, instance, fault, new_flavor):
+        super(InstanceActionResizePrepPayload, self).__init__(
+                instance=instance,
+                fault=fault)
+        self.new_flavor = new_flavor
+
+
+@nova_base.NovaObjectRegistry.register_notification
 class InstanceUpdatePayload(InstancePayload):
     # Version 1.0: Initial version
     # Version 1.1: locked and display_description added to InstancePayload
@@ -457,7 +474,6 @@ class InstanceStateUpdatePayload(base.NotificationPayloadBase):
 @base.notification_sample('instance-interface_detach-end.json')
 @base.notification_sample('instance-resize_confirm-start.json')
 @base.notification_sample('instance-resize_confirm-end.json')
-# @base.notification_sample('instance-resize_prep-start.json')
 @base.notification_sample('instance-resize_revert-start.json')
 @base.notification_sample('instance-resize_revert-end.json')
 @base.notification_sample('instance-shelve_offload-start.json')
@@ -529,6 +545,18 @@ class InstanceCreateNotification(base.NotificationBase):
 
     fields = {
         'payload': fields.ObjectField('InstanceCreatePayload')
+    }
+
+
+@base.notification_sample('instance-resize_prep-start.json')
+@base.notification_sample('instance-resize_prep-end.json')
+@nova_base.NovaObjectRegistry.register_notification
+class InstanceActionResizePrepNotification(base.NotificationBase):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'payload': fields.ObjectField('InstanceActionResizePrepPayload')
     }
 
 

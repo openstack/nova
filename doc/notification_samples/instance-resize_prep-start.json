@@ -1,0 +1,6 @@
+{
+    "event_type": "instance.resize_prep.start",
+    "payload": {"$ref":"common_payloads/InstanceActionResizePrepPayload.json#"},
+    "priority": "INFO",
+    "publisher_id": "nova-compute:compute"
+}
