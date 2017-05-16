@@ -616,6 +616,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         # be dropped.
         pass
 
+    def _save_tags(self, context):
+        # NOTE(gibi): tags are not saved through the instance
+        pass
+
     def _save_flavor(self, context):
         if not any([x in self.obj_what_changed() for x in
                     ('flavor', 'old_flavor', 'new_flavor')]):
