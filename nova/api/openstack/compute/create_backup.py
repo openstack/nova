@@ -25,8 +25,6 @@ from nova import compute
 from nova import exception
 from nova.policies import create_backup as cb_policies
 
-ALIAS = "os-create-backup"
-
 
 class CreateBackupController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
@@ -94,19 +92,3 @@ class CreateBackupController(wsgi.Controller):
             resp.headers['Location'] = image_ref
 
         return resp
-
-
-class CreateBackup(extensions.V21APIExtensionBase):
-    """Create a backup of a server."""
-
-    name = "CreateBackup"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        controller = CreateBackupController()
-        extension = extensions.ControllerExtension(self, 'servers', controller)
-        return [extension]
-
-    def get_resources(self):
-        return []

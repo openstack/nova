@@ -31,8 +31,6 @@ from nova import utils
 
 CONF = nova.conf.CONF
 
-ALIAS = "os-evacuate"
-
 
 class EvacuateController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
@@ -133,19 +131,3 @@ class EvacuateController(wsgi.Controller):
             return {'adminPass': password}
         else:
             return None
-
-
-class Evacuate(extensions.V21APIExtensionBase):
-    """Enables server evacuation."""
-
-    name = "Evacuate"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        return []
-
-    def get_controller_extensions(self):
-        controller = EvacuateController()
-        extension = extensions.ControllerExtension(self, 'servers', controller)
-        return [extension]

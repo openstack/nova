@@ -54,7 +54,6 @@ from nova import objects
 from nova.policies import servers as server_policies
 from nova import utils
 
-ALIAS = 'servers'
 TAG_SEARCH_FILTERS = ('tags', 'tags-any', 'not-tags', 'not-tags-any')
 DEVICE_TAGGING_MIN_COMPUTE_VERSION = 14
 
@@ -1162,26 +1161,3 @@ def remove_invalid_sort_keys(context, sort_keys, sort_dirs,
             raise exc.HTTPForbidden(explanation=msg)
 
     return sort_keys, sort_dirs
-
-
-class Servers(extensions.V21APIExtensionBase):
-    """Servers."""
-
-    name = "Servers"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        member_actions = {'action': 'POST'}
-        collection_actions = {'detail': 'GET'}
-        resources = [
-            extensions.ResourceExtension(
-                ALIAS,
-                ServersController(extension_info=self.extension_info),
-                member_name='server', collection_actions=collection_actions,
-                member_actions=member_actions)]
-
-        return resources
-
-    def get_controller_extensions(self):
-        return []

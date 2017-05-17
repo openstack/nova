@@ -19,8 +19,6 @@ from nova.api.openstack import wsgi
 from nova import compute
 from nova.policies import lock_server as ls_policies
 
-ALIAS = "os-lock-server"
-
 
 class LockServerController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
@@ -52,19 +50,3 @@ class LockServerController(wsgi.Controller):
                         instance)
 
         self.compute_api.unlock(context, instance)
-
-
-class LockServer(extensions.V21APIExtensionBase):
-    """Enable lock/unlock server actions."""
-
-    name = "LockServer"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        controller = LockServerController()
-        extension = extensions.ControllerExtension(self, 'servers', controller)
-        return [extension]
-
-    def get_resources(self):
-        return []

@@ -25,9 +25,6 @@ from nova.i18n import _
 from nova.policies import admin_password as ap_policies
 
 
-ALIAS = "os-admin-password"
-
-
 class AdminPasswordController(wsgi.Controller):
 
     def __init__(self, *args, **kwargs):
@@ -63,19 +60,3 @@ class AdminPasswordController(wsgi.Controller):
         except NotImplementedError:
             msg = _("Unable to set password on instance")
             common.raise_feature_not_supported(msg=msg)
-
-
-class AdminPassword(extensions.V21APIExtensionBase):
-    """Admin password management support."""
-
-    name = "AdminPassword"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        return []
-
-    def get_controller_extensions(self):
-        controller = AdminPasswordController()
-        extension = extensions.ControllerExtension(self, 'servers', controller)
-        return [extension]

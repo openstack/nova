@@ -14,12 +14,9 @@
 
 """The Extended Volumes API extension."""
 from nova.api.openstack import api_version_request
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import objects
 from nova.policies import extended_volumes as ev_policies
-
-ALIAS = "os-extended-volumes"
 
 
 class ExtendedVolumesController(wsgi.Controller):
@@ -35,7 +32,7 @@ class ExtendedVolumesController(wsgi.Controller):
         # NOTE(mriedem): The os-extended-volumes prefix should not be used for
         # new attributes after v2.1. They are only in v2.1 for backward compat
         # with v2.0.
-        key = "%s:volumes_attached" % ExtendedVolumes.alias
+        key = "os-extended-volumes:volumes_attached"
         server[key] = volumes_attached
 
     @wsgi.extends
@@ -66,19 +63,3 @@ class ExtendedVolumesController(wsgi.Controller):
         # If that instance has since been deleted, it won't be in the
         # 'bdms' dictionary though, so use 'get' to avoid KeyErrors.
         return bdms.get(server['id'], [])
-
-
-class ExtendedVolumes(extensions.V21APIExtensionBase):
-    """Extended Volumes support."""
-
-    name = "ExtendedVolumes"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        controller = ExtendedVolumesController()
-        extension = extensions.ControllerExtension(self, 'servers', controller)
-        return [extension]
-
-    def get_resources(self):
-        return []

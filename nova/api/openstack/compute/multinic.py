@@ -27,9 +27,6 @@ from nova import exception
 from nova.policies import multinic as multinic_policies
 
 
-ALIAS = "os-multinic"
-
-
 class MultinicController(wsgi.Controller):
     """This API is deprecated from Microversion '2.44'."""
 
@@ -75,21 +72,3 @@ class MultinicController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.FixedIpNotFoundForSpecificInstance as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
-
-
-# Note: The class name is as it has to be for this to be loaded as an
-# extension--only first character capitalized.
-class Multinic(extensions.V21APIExtensionBase):
-    """Multiple network support."""
-
-    name = "Multinic"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        controller = MultinicController()
-        extension = extensions.ControllerExtension(self, 'servers', controller)
-        return [extension]
-
-    def get_resources(self):
-        return []

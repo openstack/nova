@@ -24,9 +24,6 @@ from nova import exception
 from nova.policies import shelve as shelve_policies
 
 
-ALIAS = 'os-shelve'
-
-
 class ShelveController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(ShelveController, self).__init__(*args, **kwargs)
@@ -91,19 +88,3 @@ class ShelveController(wsgi.Controller):
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                                                                   'unshelve',
                                                                   id)
-
-
-class Shelve(exts.V21APIExtensionBase):
-    """Instance shelve mode."""
-
-    name = "Shelve"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        controller = ShelveController()
-        extension = exts.ControllerExtension(self, 'servers', controller)
-        return [extension]
-
-    def get_resources(self):
-        return []

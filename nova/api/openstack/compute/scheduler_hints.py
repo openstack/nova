@@ -13,23 +13,6 @@
 #    under the License.
 
 from nova.api.openstack.compute.schemas import scheduler_hints as schema
-from nova.api.openstack import extensions
-
-ALIAS = "os-scheduler-hints"
-
-
-class SchedulerHints(extensions.V21APIExtensionBase):
-    """Pass arbitrary key/value pairs to the scheduler."""
-
-    name = "SchedulerHints"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        return []
-
-    def get_resources(self):
-        return []
 
 
 # NOTE(gmann): Accepting request body in this function to fetch "scheduler

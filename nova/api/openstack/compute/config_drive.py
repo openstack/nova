@@ -17,11 +17,9 @@
 
 from nova.api.openstack.compute.schemas import config_drive as \
                                                   schema_config_drive
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.policies import config_drive as cd_policies
 
-ALIAS = "os-config-drive"
 ATTRIBUTE_NAME = "config_drive"
 
 
@@ -52,22 +50,6 @@ class ConfigDriveController(wsgi.Controller):
                 cd_policies.BASE_POLICY_NAME, fatal=False):
             servers = resp_obj.obj['servers']
             self._add_config_drive(req, servers)
-
-
-class ConfigDrive(extensions.V21APIExtensionBase):
-    """Config Drive Extension."""
-
-    name = "ConfigDrive"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        controller = ConfigDriveController()
-        extension = extensions.ControllerExtension(self, 'servers', controller)
-        return [extension]
-
-    def get_resources(self):
-        return []
 
 
 # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'

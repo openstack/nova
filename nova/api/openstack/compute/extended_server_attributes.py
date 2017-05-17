@@ -15,13 +15,10 @@
 """The Extended Server Attributes API extension."""
 
 from nova.api.openstack import api_version_request
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova.policies import extended_server_attributes as esa_policies
 from nova.policies import servers as servers_policies
-
-ALIAS = "os-extended-server-attributes"
 
 
 class ExtendedServerAttributesController(wsgi.Controller):
@@ -106,19 +103,3 @@ class ExtendedServerAttributesController(wsgi.Controller):
                         self._extend_server(context, server, instance, req)
                     if authorize_host_status:
                         server['host_status'] = host_statuses[server['id']]
-
-
-class ExtendedServerAttributes(extensions.V21APIExtensionBase):
-    """Extended Server Attributes support."""
-
-    name = "ExtendedServerAttributes"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        controller = ExtendedServerAttributesController()
-        extension = extensions.ControllerExtension(self, 'servers', controller)
-        return [extension]
-
-    def get_resources(self):
-        return []

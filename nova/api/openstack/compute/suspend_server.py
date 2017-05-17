@@ -21,8 +21,6 @@ from nova import compute
 from nova import exception
 from nova.policies import suspend_server as ss_policies
 
-ALIAS = "os-suspend-server"
-
 
 class SuspendServerController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
@@ -66,19 +64,3 @@ class SuspendServerController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'resume', id)
-
-
-class SuspendServer(extensions.V21APIExtensionBase):
-    """Enable suspend/resume server actions."""
-
-    name = "SuspendServer"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        controller = SuspendServerController()
-        extension = extensions.ControllerExtension(self, 'servers', controller)
-        return [extension]
-
-    def get_resources(self):
-        return []

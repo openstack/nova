@@ -24,8 +24,6 @@ from nova.compute import vm_states
 from nova import exception
 from nova.policies import admin_actions as aa_policies
 
-ALIAS = "os-admin-actions"
-
 # States usable in resetState action
 # NOTE: It is necessary to update the schema of nova/api/openstack/compute/
 # schemas/reset_server_state.py, when updating this state_map.
@@ -83,22 +81,3 @@ class AdminActionsController(wsgi.Controller):
         instance.vm_state = state
         instance.task_state = None
         instance.save(admin_state_reset=True)
-
-
-class AdminActions(extensions.V21APIExtensionBase):
-    """Enable admin-only server actions
-
-    Actions include: resetNetwork, injectNetworkInfo, os-resetState
-    """
-
-    name = "AdminActions"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        controller = AdminActionsController()
-        extension = extensions.ControllerExtension(self, 'servers', controller)
-        return [extension]
-
-    def get_resources(self):
-        return []
