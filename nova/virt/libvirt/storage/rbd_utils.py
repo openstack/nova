@@ -135,7 +135,11 @@ class RBDDriver(object):
         try:
             client.connect()
             pool_to_open = pool or self.pool
-            ioctx = client.open_ioctx(pool_to_open)
+            # NOTE(luogangyi): open_ioctx >= 10.1.0 could handle unicode
+            # arguments perfectly as part of Python 3 support.
+            # Therefore, when we turn to Python 3, it's safe to remove
+            # str() conversion.
+            ioctx = client.open_ioctx(str(pool_to_open))
             return client, ioctx
         except rados.Error:
             # shutdown cannot raise an exception
