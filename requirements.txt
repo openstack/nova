@@ -5,7 +5,7 @@
 pbr!=2.1.0,>=2.0.0 # Apache-2.0
 SQLAlchemy!=1.1.5,!=1.1.6,!=1.1.7,!=1.1.8,>=1.0.10 # MIT
 decorator>=3.4.0 # BSD
-eventlet!=0.18.3,>=0.18.2 # MIT
+eventlet!=0.18.3,<0.21.0,>=0.18.2 # MIT
 Jinja2!=2.9.0,!=2.9.1,!=2.9.2,!=2.9.3,!=2.9.4,>=2.8 # BSD License (3 clause)
 keystonemiddleware>=4.12.0 # Apache-2.0
 lxml!=3.7.0,>=2.3 # BSD
