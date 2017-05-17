@@ -571,7 +571,8 @@ def _get_desirable_cpu_topologies(flavor, image_meta, allow_threads=True,
     if numa_topology:
         min_requested_threads = None
         cell_topologies = [cell.cpu_topology for cell in numa_topology.cells
-                           if cell.cpu_topology]
+                           if ('cpu_topology' in cell
+                               and cell.cpu_topology)]
         if cell_topologies:
             min_requested_threads = min(
                     topo.threads for topo in cell_topologies)
@@ -1693,6 +1694,7 @@ def instance_topology_from_instance(instance):
                     cpuset=set(cell['cpuset']),
                     memory=cell['memory'],
                     pagesize=cell.get('pagesize'),
+                    cpu_topology=cell.get('cpu_topology'),
                     cpu_pinning=cell.get('cpu_pinning_raw'),
                     cpu_policy=cell.get('cpu_policy'),
                     cpu_thread_policy=cell.get('cpu_thread_policy'),

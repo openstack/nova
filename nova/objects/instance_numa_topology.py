@@ -66,9 +66,6 @@ class InstanceNUMACell(base.NovaObject,
         if 'pagesize' not in kwargs:
             self.pagesize = None
             self.obj_reset_changes(['pagesize'])
-        if 'cpu_topology' not in kwargs:
-            self.cpu_topology = None
-            self.obj_reset_changes(['cpu_topology'])
         if 'cpu_pinning' not in kwargs:
             self.cpu_pinning = None
             self.obj_reset_changes(['cpu_pinning_raw'])
@@ -110,7 +107,7 @@ class InstanceNUMACell(base.NovaObject,
         cpu_list = sorted(list(self.cpuset))
 
         threads = 0
-        if self.cpu_topology:
+        if ('cpu_topology' in self) and self.cpu_topology:
             threads = self.cpu_topology.threads
         if threads == 1:
             threads = 0
