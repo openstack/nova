@@ -310,6 +310,12 @@ class RbdTestCase(test.NoDBTestCase):
         mock_rados.Rados.open_ioctx.assert_called_once_with(self.rbd_pool)
         mock_rados.Rados.shutdown.assert_called_once_with()
 
+    @mock.patch.object(rbd_utils, 'rados')
+    def test_connect_to_rados_unicode_arg(self, mock_rados):
+        self.driver._connect_to_rados(u'unicode_pool')
+        self.mock_rados.Rados.open_ioctx.assert_called_with(
+            test.MatchType(str))
+
     def test_ceph_args_none(self):
         self.driver.rbd_user = None
         self.driver.ceph_conf = None
