@@ -659,6 +659,12 @@ class GuestBlockTestCase(test.NoDBTestCase):
             'vda', "foo", 0,
             flags=fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_RELATIVE)
 
+    def test_rebase_copy_dev(self):
+        self.gblock.rebase("foo", copy_dev=True)
+        self.domain.blockRebase.assert_called_once_with(
+            'vda', "foo", 0,
+            flags=fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_COPY_DEV)
+
     def test_commit(self):
         self.gblock.commit("foo", "top")
         self.domain.blockCommit.assert_called_once_with(

@@ -14745,7 +14745,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         save.assert_called_once_with()
 
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
-    def test_swap_volume(self, mock_is_job_complete):
+    def test_swap_volume_file(self, mock_is_job_complete):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
 
         mock_dom = mock.MagicMock()
@@ -14761,7 +14761,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock_dom.isPersistent.return_value = True
             mock_is_job_complete.return_value = True
 
-            drvr._swap_volume(guest, srcfile, dstfile, 1)
+            drvr._swap_volume(guest, srcfile,
+                              mock.MagicMock(source_type='file',
+                                             source_path=dstfile),
+                              1)
 
             mock_dom.XMLDesc.assert_called_once_with(
                 flags=(fakelibvirt.VIR_DOMAIN_XML_INACTIVE |
@@ -14769,6 +14772,44 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock_dom.blockRebase.assert_called_once_with(
                 srcfile, dstfile, 0, flags=(
                     fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_COPY |
+                    fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT))
+            mock_dom.blockResize.assert_called_once_with(
+                srcfile, 1 * units.Gi / units.Ki)
+            mock_define.assert_called_once_with(xmldoc)
+
+    @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
+    def test_swap_volume_block(self, mock_is_job_complete):
+        """If the swapped volume is type="block", make sure that we give
+        libvirt the correct VIR_DOMAIN_BLOCK_REBASE_COPY_DEV flag to ensure the
+        correct type="block" XML is generated (bug 1691195)
+        """
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+
+        mock_dom = mock.MagicMock()
+        guest = libvirt_guest.Guest(mock_dom)
+
+        with mock.patch.object(drvr._conn, 'defineXML',
+                               create=True) as mock_define:
+            xmldoc = "<domain/>"
+            srcfile = "/first/path"
+            dstfile = "/second/path"
+
+            mock_dom.XMLDesc.return_value = xmldoc
+            mock_dom.isPersistent.return_value = True
+            mock_is_job_complete.return_value = True
+
+            drvr._swap_volume(guest, srcfile,
+                              mock.MagicMock(source_type='block',
+                                             source_path=dstfile),
+                              1)
+
+            mock_dom.XMLDesc.assert_called_once_with(
+                flags=(fakelibvirt.VIR_DOMAIN_XML_INACTIVE |
+                       fakelibvirt.VIR_DOMAIN_XML_SECURE))
+            mock_dom.blockRebase.assert_called_once_with(
+                srcfile, dstfile, 0, flags=(
+                    fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_COPY |
+                    fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_COPY_DEV |
                     fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT))
             mock_dom.blockResize.assert_called_once_with(
                 srcfile, 1 * units.Gi / units.Ki)
@@ -14807,8 +14848,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_dom.UUIDString.return_value = 'uuid'
         get_guest.return_value = guest
         disk_info = {'bus': 'virtio', 'type': 'disk', 'dev': 'vdb'}
-        get_volume_config.return_value = mock.MagicMock(
-            source_path='/fake-new-volume')
+        conf = mock.MagicMock(source_path='/fake-new-volume')
+        get_volume_config.return_value = conf
 
         conn.swap_volume(old_connection_info, new_connection_info, instance,
                          '/dev/vdb', 1)
@@ -14816,8 +14857,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         get_guest.assert_called_once_with(instance)
         connect_volume.assert_called_once_with(new_connection_info, disk_info)
 
-        swap_volume.assert_called_once_with(guest, 'vdb',
-                                            '/fake-new-volume', 1)
+        swap_volume.assert_called_once_with(guest, 'vdb', conf, 1)
         disconnect_volume.assert_called_once_with(old_connection_info, 'vdb')
 
     def test_swap_volume_driver_source_is_volume(self):
