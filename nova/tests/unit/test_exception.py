@@ -16,6 +16,7 @@
 
 import inspect
 
+import fixtures
 import mock
 import six
 from webob.util import status_reasons
@@ -211,6 +212,13 @@ class NovaExceptionTestCase(test.NoDBTestCase):
         self.assertEqual("some message", exc.format_message())
 
     def test_format_message_remote_error(self):
+        # NOTE(melwitt): This test checks that errors are formatted as expected
+        # in a real environment where format errors are caught and not
+        # reraised, so we patch in the real implementation.
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.exception.NovaException._log_exception',
+            test.NovaExceptionReraiseFormatError.real_log_exception))
+
         class FakeNovaException_Remote(exception.NovaException):
             msg_fmt = "some message %(somearg)s"
 
