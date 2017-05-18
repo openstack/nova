@@ -10868,7 +10868,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         with test.nested(
                 mock.patch.object(drvr, '_get_console_log_path'),
                 mock.patch.object(fake_libvirt_utils, 'file_open',
-                                  side_effect=IOError(errno.EPERM, 'exc'))
+                                  side_effect=IOError(errno.EACCES, 'exc'))
             ) as (mock_path, mock_open):
             drvr._ensure_console_log_for_instance(mock.ANY)
             mock_path.assert_called_once()

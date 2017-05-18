@@ -2874,7 +2874,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # NOTE(sfinucan): We can safely ignore permission issues here and
         # assume that it is libvirt that has taken ownership of this file.
         except IOError as ex:
-            if ex.errno != errno.EPERM:
+            if ex.errno != errno.EACCES:
                 raise
             LOG.debug('Console file already exists: %s.', console_file)
 
