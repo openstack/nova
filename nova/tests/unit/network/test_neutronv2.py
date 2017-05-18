@@ -6318,3 +6318,131 @@ class TestNeutronv2AutoAllocateNetwork(test.NoDBTestCase):
                 ntrn, instance, uuids.port_id, port_req_body)
 
         do_test(self)
+
+
+class TestGetInstanceNetworkInfo(test.NoDBTestCase):
+    """Tests rebuilding the network_info cache."""
+
+    def setUp(self):
+        super(TestGetInstanceNetworkInfo, self).setUp()
+        self.api = neutronapi.API()
+        self.context = context.RequestContext(uuids.user_id, uuids.project_id)
+        self.instance = fake_instance.fake_instance_obj(self.context)
+        client_mock = mock.patch('nova.network.neutronv2.api.get_client')
+        self.client = client_mock.start().return_value
+        self.addCleanup(client_mock.stop)
+        # This is a no-db set of tests and we don't care about refreshing the
+        # info_cache from the database so just mock it out.
+        refresh_info_cache_for_instance = mock.patch(
+            'nova.compute.utils.refresh_info_cache_for_instance')
+        refresh_info_cache_for_instance.start()
+        self.addCleanup(refresh_info_cache_for_instance.stop)
+
+    @staticmethod
+    def _get_vif_in_cache(info_cache, vif_id):
+        for vif in info_cache:
+            if vif['id'] == vif_id:
+                return vif
+
+    @staticmethod
+    def _get_fake_info_cache(vif_ids, **kwargs):
+        """Returns InstanceInfoCache based on the list of provided VIF IDs"""
+        nwinfo = model.NetworkInfo(
+            [model.VIF(vif_id, **kwargs) for vif_id in vif_ids])
+        return objects.InstanceInfoCache(network_info=nwinfo)
+
+    @staticmethod
+    def _get_fake_port(port_id, **kwargs):
+        network_id = kwargs.get('network_id', uuids.network_id)
+        return {'id': port_id, 'network_id': network_id}
+
+    def test_get_nw_info_refresh_vif_id_add_vif(self):
+        """Tests that a network-changed event occurred on a single port
+        which is not already in the cache so it's added.
+        """
+        # The cache has one existing port.
+        self.instance.info_cache = self._get_fake_info_cache([uuids.old_port])
+        # The instance has two ports, one old, one new.
+        self.client.list_ports.return_value = {
+            'ports': [self._get_fake_port(uuids.old_port),
+                      self._get_fake_port(uuids.new_port)]}
+        with test.nested(
+            mock.patch.object(self.api, '_get_available_networks',
+                              return_value=[{'id': uuids.network_id}]),
+            mock.patch.object(self.api, '_build_vif_model',
+                              return_value=model.VIF(uuids.new_port)),
+            # We should not get as far as calling _gather_port_ids_and_networks
+            mock.patch.object(self.api, '_gather_port_ids_and_networks',
+                              new_callable=mock.NonCallableMock)
+        ) as (
+            get_nets, build_vif, gather_ports
+        ):
+            nwinfo = self.api._get_instance_nw_info(
+                self.context, self.instance, refresh_vif_id=uuids.new_port)
+        get_nets.assert_called_once_with(
+            self.context, self.instance.project_id,
+            [uuids.network_id], self.client)
+        # Assert that the old and new ports are in the cache.
+        for port_id in (uuids.old_port, uuids.new_port):
+            self.assertIsNotNone(self._get_vif_in_cache(nwinfo, port_id))
+
+    def test_get_nw_info_refresh_vif_id_update_vif(self):
+        """Tests that a network-changed event occurred on a single port
+        which is already in the cache so it's updated.
+        """
+        # The cache has two existing active VIFs.
+        self.instance.info_cache = self._get_fake_info_cache(
+            [uuids.old_port, uuids.new_port], active=True)
+        # The instance has two ports, one old, one new.
+        self.client.list_ports.return_value = {
+            'ports': [self._get_fake_port(uuids.old_port),
+                      self._get_fake_port(uuids.new_port)]}
+        with test.nested(
+            mock.patch.object(self.api, '_get_available_networks',
+                              return_value=[{'id': uuids.network_id}]),
+            # Fake that the port is no longer active.
+            mock.patch.object(self.api, '_build_vif_model',
+                              return_value=model.VIF(
+                                  uuids.new_port, active=False)),
+            # We should not get as far as calling _gather_port_ids_and_networks
+            mock.patch.object(self.api, '_gather_port_ids_and_networks',
+                              new_callable=mock.NonCallableMock)
+        ) as (
+            get_nets, build_vif, gather_ports
+        ):
+            nwinfo = self.api._get_instance_nw_info(
+                self.context, self.instance, refresh_vif_id=uuids.new_port)
+        get_nets.assert_called_once_with(
+            self.context, self.instance.project_id,
+            [uuids.network_id], self.client)
+        # Assert that the old and new ports are in the cache and that the
+        # old port is still active and the new port is not active.
+        old_vif = self._get_vif_in_cache(nwinfo, uuids.old_port)
+        self.assertIsNotNone(old_vif)
+        self.assertTrue(old_vif['active'])
+        new_vif = self._get_vif_in_cache(nwinfo, uuids.new_port)
+        self.assertIsNotNone(new_vif)
+        self.assertFalse(new_vif['active'])
+
+    def test_get_nw_info_refresh_vif_id_remove_vif(self):
+        """Tests that a network-changed event occurred on a single port
+        which is already in the cache but not in the current list of ports
+        for the instance, so it's removed from the cache.
+        """
+        # The cache has two existing VIFs.
+        self.instance.info_cache = self._get_fake_info_cache(
+            [uuids.old_port, uuids.removed_port])
+        # The instance has one remaining port.
+        self.client.list_ports.return_value = {
+            'ports': [self._get_fake_port(uuids.old_port)]}
+        # We should not get as far as calling _gather_port_ids_and_networks
+        with mock.patch.object(
+                self.api, '_gather_port_ids_and_networks',
+                new_callable=mock.NonCallableMock):
+            nwinfo = self.api._get_instance_nw_info(
+                self.context, self.instance, refresh_vif_id=uuids.removed_port)
+        # Assert that only the old port is still in the cache.
+        old_vif = self._get_vif_in_cache(nwinfo, uuids.old_port)
+        self.assertIsNotNone(old_vif)
+        removed_vif = self._get_vif_in_cache(nwinfo, uuids.removed_port)
+        self.assertIsNone(removed_vif)
