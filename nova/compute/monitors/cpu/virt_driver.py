@@ -62,7 +62,7 @@ class Monitor(base.CPUMonitorBase):
             self._data["cpu.idle.time"] = stats["idle"]
             self._data["cpu.iowait.time"] = stats["iowait"]
             self._data["cpu.frequency"] = stats["frequency"]
-        except (NotImplementedError, TypeError, KeyError):
+        except (TypeError, KeyError):
             LOG.exception(_LE("Not all properties needed are implemented "
                               "in the compute driver"))
             raise exception.ResourceMonitorError(
