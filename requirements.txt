@@ -2,7 +2,7 @@
 # of appearance. Changing the order has an impact on the overall integration
 # process, which may cause wedges in the gate later.
 
-pbr<2.0.0,>=1.8 # Apache-2.0
+pbr>=1.8 # Apache-2.0
 SQLAlchemy<1.1.0,>=1.0.10 # MIT
 decorator>=3.4.0 # BSD
 eventlet!=0.18.3,>=0.18.2 # MIT
