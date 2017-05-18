@@ -21,6 +21,8 @@ Options:
     --dry_run - Don't actually destroy the VDIs
     --all_cached - Destroy all cached images instead of just unused cached
                    images.
+    --keep_days - N - Only remove those cached images which were created
+                      more than N days ago.
 """
 import eventlet
 eventlet.monkey_patch()
@@ -52,7 +54,11 @@ destroy_opts = [
                      ' images.'),
     cfg.BoolOpt('dry_run',
                 default=False,
-                help='Don\'t actually delete the VDIs.')
+                help='Don\'t actually delete the VDIs.'),
+    cfg.IntOpt('keep_days',
+               default=0,
+               help='Destroy cached images which were'
+                    ' created over keep_days.')
 ]
 
 CONF = nova.conf.CONF
@@ -69,7 +75,7 @@ def main():
     sr_ref = vm_utils.safe_find_sr(_session)
     destroyed = vm_utils.destroy_cached_images(
         _session, sr_ref, all_cached=CONF.all_cached,
-        dry_run=CONF.dry_run)
+        dry_run=CONF.dry_run, keep_days=CONF.keep_days)
 
     if '--verbose' in sys.argv:
         print('\n'.join(destroyed))

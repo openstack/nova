@@ -46,6 +46,7 @@ from nova.virt import hardware
 from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake
 from nova.virt.xenapi import vm_utils
+import time
 
 CONF = nova.conf.CONF
 XENSM_TYPE = 'xensm'
@@ -628,11 +629,117 @@ class CreateCachedImageTestCase(VMUtilsTestBase):
                        mock_safe_find_sr):
         self.session.call_xenapi.side_effect = ['ext', {}, 'cache_vdi_ref',
                                                 None, None, None, None, None,
-                                                None, 'vdi_uuid']
+                                                None, None, 'vdi_uuid']
         self.assertEqual((True, {'root': {'uuid': 'vdi_uuid', 'file': None}}),
                          vm_utils._create_cached_image('context', self.session,
                                     'instance', 'name', 'uuid',
                                     vm_utils.ImageType.DISK_VHD))
+
+
+class DestroyCachedImageTestCase(VMUtilsTestBase):
+    def setUp(self):
+        super(DestroyCachedImageTestCase, self).setUp()
+        self.session = stubs.get_fake_session()
+
+    @mock.patch.object(vm_utils, '_find_cached_images')
+    @mock.patch.object(vm_utils, 'destroy_vdi')
+    @mock.patch.object(vm_utils, '_walk_vdi_chain')
+    @mock.patch.object(time, 'time')
+    def test_destroy_cached_image_out_of_keep_days(self,
+                                                   mock_time,
+                                                   mock_walk_vdi_chain,
+                                                   mock_destroy_vdi,
+                                                   mock_find_cached_images):
+        fake_cached_time = '0'
+        mock_find_cached_images.return_value = {'fake_image_id': {
+            'vdi_ref': 'fake_vdi_ref', 'cached_time': fake_cached_time}}
+        self.session.call_xenapi.return_value = 'fake_uuid'
+        mock_walk_vdi_chain.return_value = ('just_one',)
+
+        mock_time.return_value = 2 * 3600 * 24
+
+        fake_keep_days = 1
+        expected_return = set()
+        expected_return.add('fake_uuid')
+
+        uuid_return = vm_utils.destroy_cached_images(self.session,
+            'fake_sr_ref', False, False, fake_keep_days)
+        mock_find_cached_images.assert_called_once()
+        mock_walk_vdi_chain.assert_called_once()
+        mock_time.assert_called()
+        mock_destroy_vdi.assert_called_once()
+        self.assertEqual(expected_return, uuid_return)
+
+    @mock.patch.object(vm_utils, '_find_cached_images')
+    @mock.patch.object(vm_utils, 'destroy_vdi')
+    @mock.patch.object(vm_utils, '_walk_vdi_chain')
+    @mock.patch.object(time, 'time')
+    def test_destroy_cached_image(self, mock_time, mock_walk_vdi_chain,
+                                  mock_destroy_vdi, mock_find_cached_images):
+        fake_cached_time = '0'
+        mock_find_cached_images.return_value = {'fake_image_id': {
+            'vdi_ref': 'fake_vdi_ref', 'cached_time': fake_cached_time}}
+        self.session.call_xenapi.return_value = 'fake_uuid'
+        mock_walk_vdi_chain.return_value = ('just_one',)
+
+        mock_time.return_value = 2 * 3600 * 24
+
+        fake_keep_days = 1
+        expected_return = set()
+        expected_return.add('fake_uuid')
+
+        uuid_return = vm_utils.destroy_cached_images(self.session,
+            'fake_sr_ref', False, False, fake_keep_days)
+        mock_find_cached_images.assert_called_once()
+        mock_walk_vdi_chain.assert_called_once()
+        mock_destroy_vdi.assert_called_once()
+        self.assertEqual(expected_return, uuid_return)
+
+    @mock.patch.object(vm_utils, '_find_cached_images')
+    @mock.patch.object(vm_utils, 'destroy_vdi')
+    @mock.patch.object(vm_utils, '_walk_vdi_chain')
+    @mock.patch.object(time, 'time')
+    def test_destroy_cached_image_cached_time_not_exceed(
+        self, mock_time, mock_walk_vdi_chain,
+        mock_destroy_vdi, mock_find_cached_images):
+        fake_cached_time = '0'
+        mock_find_cached_images.return_value = {'fake_image_id': {
+            'vdi_ref': 'fake_vdi_ref', 'cached_time': fake_cached_time}}
+        self.session.call_xenapi.return_value = 'fake_uuid'
+        mock_walk_vdi_chain.return_value = ('just_one',)
+
+        mock_time.return_value = 1 * 3600 * 24
+
+        fake_keep_days = 2
+        expected_return = set()
+
+        uuid_return = vm_utils.destroy_cached_images(self.session,
+            'fake_sr_ref', False, False, fake_keep_days)
+        mock_find_cached_images.assert_called_once()
+        mock_walk_vdi_chain.assert_called_once()
+        mock_destroy_vdi.assert_not_called()
+        self.assertEqual(expected_return, uuid_return)
+
+    @mock.patch.object(vm_utils, '_find_cached_images')
+    @mock.patch.object(vm_utils, 'destroy_vdi')
+    @mock.patch.object(vm_utils, '_walk_vdi_chain')
+    @mock.patch.object(time, 'time')
+    def test_destroy_cached_image_no_cached_time(
+        self, mock_time, mock_walk_vdi_chain,
+        mock_destroy_vdi, mock_find_cached_images):
+        mock_find_cached_images.return_value = {'fake_image_id': {
+            'vdi_ref': 'fake_vdi_ref', 'cached_time': None}}
+        self.session.call_xenapi.return_value = 'fake_uuid'
+        mock_walk_vdi_chain.return_value = ('just_one',)
+        fake_keep_days = 2
+        expected_return = set()
+
+        uuid_return = vm_utils.destroy_cached_images(self.session,
+            'fake_sr_ref', False, False, fake_keep_days)
+        mock_find_cached_images.assert_called_once()
+        mock_walk_vdi_chain.assert_called_once()
+        mock_destroy_vdi.assert_not_called()
+        self.assertEqual(expected_return, uuid_return)
 
 
 class ShutdownTestCase(VMUtilsTestBase):
