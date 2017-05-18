@@ -11345,14 +11345,7 @@ class EvacuateHostTestCase(BaseTestCase):
             mock.patch.object(self.compute, '_get_compute_info',
                               side_effect=fake_get_compute_info)
         ) as (mock_inst, mock_get):
-            self._rebuild()
-
-            # Should be on destination host
-            instance = db.instance_get(self.context, self.inst.id)
-            self.assertEqual(instance['host'], self.compute.host)
-            self.assertIsNone(instance['node'])
-            self.assertTrue(mock_inst.called)
-            self.assertTrue(mock_get.called)
+            self.assertRaises(exception.ComputeHostNotFound, self._rebuild)
 
     def test_rebuild_on_host_node_passed(self):
         patch_get_info = mock.patch.object(self.compute, '_get_compute_info')
@@ -11540,15 +11533,21 @@ class EvacuateHostTestCase(BaseTestCase):
             network_info=mock.ANY,
             block_device_info=mock.ANY)
 
-    def test_rebuild_migration_passed_in(self):
+    @mock.patch('nova.compute.manager.ComputeManager._get_compute_info')
+    @mock.patch('nova.compute.manager.ComputeManager._get_resource_tracker')
+    def test_rebuild_migration_passed_in(self, get_rt, get_compute):
         migration = mock.Mock(spec=objects.Migration)
 
         patch_spawn = mock.patch.object(self.compute.driver, 'spawn')
         patch_on_disk = mock.patch.object(
             self.compute.driver, 'instance_on_disk', return_value=True)
+        get_compute.return_value = objects.ComputeNode(
+            hypervisor_hostname=NODENAME)
         with patch_spawn, patch_on_disk:
             self._rebuild(migration=migration)
 
+        get_rt.assert_called_once_with(NODENAME)
+        self.assertTrue(get_rt.return_value.rebuild_claim.called)
         self.assertEqual('done', migration.status)
         migration.save.assert_called_once_with()
 

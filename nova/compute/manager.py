@@ -2660,7 +2660,28 @@ class ComputeManager(manager.Manager):
 
         LOG.info(_LI("Rebuilding instance"), context=context,
                     instance=instance)
-        if scheduled_node is not None:
+
+        # NOTE(gyee): there are three possible scenarios.
+        #
+        #   1. instance is being rebuilt on the same node. In this case,
+        #      recreate should be False and scheduled_node should be None.
+        #   2. instance is being rebuilt on a node chosen by the
+        #      scheduler (i.e. evacuate). In this case, scheduled_node should
+        #      be specified and recreate should be True.
+        #   3. instance is being rebuilt on a node chosen by the user. (i.e.
+        #      force evacuate). In this case, scheduled_node is not specified
+        #      and recreate is set to True.
+        #
+        # For scenarios #2 and #3, we must do rebuild claim as server is
+        # being evacuated to a different node.
+        if recreate or scheduled_node is not None:
+            if scheduled_node is None:
+                # NOTE(mriedem): On a recreate (evacuate), we need to update
+                # the instance's host and node properties to reflect it's
+                # destination node for the recreate, and to make a rebuild
+                # claim.
+                compute_node = self._get_compute_info(context, self.host)
+                scheduled_node = compute_node.hypervisor_hostname
             rt = self._get_resource_tracker(scheduled_node)
             rebuild_claim = rt.rebuild_claim
         else:
@@ -2670,19 +2691,8 @@ class ComputeManager(manager.Manager):
         if image_ref:
             image_meta = self.image_api.get(context, image_ref)
 
-        # NOTE(mriedem): On a recreate (evacuate), we need to update
-        # the instance's host and node properties to reflect it's
-        # destination node for the recreate.
         if not scheduled_node:
-            if recreate:
-                try:
-                    compute_node = self._get_compute_info(context, self.host)
-                    scheduled_node = compute_node.hypervisor_hostname
-                except exception.ComputeHostNotFound:
-                    LOG.exception(_LE('Failed to get compute_info for %s'),
-                                  self.host)
-            else:
-                scheduled_node = instance.node
+            scheduled_node = instance.node
 
         with self._error_out_instance_on_exception(context, instance):
             try:
