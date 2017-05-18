@@ -2481,7 +2481,7 @@ class API(base_api.NetworkAPI):
             if updates:
                 LOG.info(_LI("Updating port %(port)s with "
                              "attributes %(attributes)s"),
-                         {"port": p['id'], "attributes": updates},
+                         {"port": port_id, "attributes": updates},
                          instance=instance)
                 try:
                     neutron.update_port(port_id, {'port': updates})
