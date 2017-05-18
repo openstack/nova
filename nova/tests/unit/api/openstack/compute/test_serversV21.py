@@ -56,6 +56,7 @@ from nova.image import glance
 from nova.network import manager
 from nova import objects
 from nova.objects import instance as instance_obj
+from nova.policies import servers as server_policies
 from nova import policy
 from nova import test
 from nova.tests import fixtures as nova_fixtures
@@ -3732,6 +3733,28 @@ class ServersControllerCreateTestV237(test.NoDBTestCase):
         network id is the empty string.
         """
         self.assertRaises(exception.ValidationError, self._create_server, '')
+
+    @mock.patch.object(context.RequestContext, 'can')
+    def test_create_server_networks_none_skip_policy(self, context_can):
+        """Test to ensure skip checking policy rule create:attach_network,
+        when networks is 'none' which means no network will be allocated.
+        """
+        with test.nested(
+            mock.patch.object(objects.Service, 'get_minimum_version',
+                              return_value=14),
+            mock.patch.object(nova.compute.flavors, 'get_flavor_by_flavor_id',
+                              return_value=objects.Flavor()),
+            mock.patch.object(
+                compute_api.API, 'create',
+                return_value=(
+                    [{'uuid': 'f9bccadf-5ab1-4a56-9156-c00c178fe5f5'}],
+                    1)),
+        ):
+            network_policy = server_policies.SERVERS % 'create:attach_network'
+            self._create_server('none')
+            call_list = [c for c in context_can.call_args_list
+                         if c[0][0] == network_policy]
+            self.assertTrue(len(call_list) == 0)
 
     @mock.patch.object(objects.Flavor, 'get_by_flavor_id',
                        side_effect=exception.FlavorNotFound(flavor_id='2'))
