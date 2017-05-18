@@ -271,7 +271,14 @@ class QueryParamsSchemaTestCase(test.NoDBTestCase):
         # parameter 'foo' expect a UUID
         req = fakes.HTTPRequest.blank("/tests?foo=abc")
         req.api_version_request = api_version.APIVersionRequest("2.3")
-        self.assertRaises(exception.ValidationError, self.controller.get, req)
+        ex = self.assertRaises(exception.ValidationError, self.controller.get,
+                               req)
+        if six.PY3:
+            self.assertEqual("Invalid input for query parameters foo. Value: "
+                             "abc. 'abc' is not a 'uuid'", ex.message)
+        else:
+            self.assertEqual("Invalid input for query parameters foo. Value: "
+                             "abc. u'abc' is not a 'uuid'", ex.message)
 
     def test_validate_request_with_multiple_values(self):
         req = fakes.HTTPRequest.blank("/tests?foos=abc")
