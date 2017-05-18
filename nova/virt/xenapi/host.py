@@ -225,6 +225,44 @@ class HostState(object):
             self.update_status()
         return self._stats
 
+    def get_disk_used(self, sr_ref):
+        """Since glance images are downloaded and snapshotted before they are
+        used, only a small proportion of its VDI will be in use and it will
+        never grow.  We only need to count the virtual size for disks that
+        are attached to a VM - every other disk can count physical.
+        """
+
+        def _vdi_attached(vdi_ref):
+            try:
+                vbds = self._session.VDI.get_VBDs(vdi_ref)
+                for vbd in vbds:
+                    if self._session.VBD.get_currently_attached(vbd):
+                        return True
+            except self._session.XenAPI.Failure:
+                # VDI or VBD may no longer exist - in which case, it's
+                # not attached
+                pass
+            return False
+
+        allocated = 0
+        physical_used = 0
+
+        all_vdis = self._session.SR.get_VDIs(sr_ref)
+        for vdi_ref in all_vdis:
+            try:
+                vdi_physical = \
+                    int(self._session.VDI.get_physical_utilisation(vdi_ref))
+                if _vdi_attached(vdi_ref):
+                    allocated += \
+                        int(self._session.VDI.get_virtual_size(vdi_ref))
+                else:
+                    allocated += vdi_physical
+                physical_used += vdi_physical
+            except (ValueError, self._session.XenAPI.Failure):
+                LOG.exception(_LE('Unable to get size for vdi %s'), vdi_ref)
+
+        return (allocated, physical_used)
+
     def update_status(self):
         """Since under Xenserver, a compute node runs on a given host,
         we can get host status information using xenapi.
@@ -235,10 +273,10 @@ class HostState(object):
             sr_ref = vm_utils.scan_default_sr(self._session)
             sr_rec = self._session.SR.get_record(sr_ref)
             total = int(sr_rec["physical_size"])
-            used = int(sr_rec["physical_utilisation"])
+            (allocated, used) = self.get_disk_used(sr_ref)
             data["disk_total"] = total
             data["disk_used"] = used
-            data["disk_allocated"] = int(sr_rec["virtual_allocation"])
+            data["disk_allocated"] = allocated
             data["disk_available"] = total - used
             data["supported_instances"] = to_supported_instances(
                 data.get("host_capabilities")
