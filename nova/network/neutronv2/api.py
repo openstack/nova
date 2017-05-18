@@ -1376,7 +1376,8 @@ class API(base_api.NetworkAPI):
 
     def _get_instance_nw_info(self, context, instance, networks=None,
                               port_ids=None, admin_client=None,
-                              preexisting_port_ids=None, **kwargs):
+                              preexisting_port_ids=None,
+                              refresh_vif_id=None, **kwargs):
         # NOTE(danms): This is an inner method intended to be called
         # by other code that updates instance nwinfo. It *must* be
         # called with the refresh_cache-%(instance_uuid) lock held!
@@ -1387,7 +1388,8 @@ class API(base_api.NetworkAPI):
         compute_utils.refresh_info_cache_for_instance(context, instance)
         nw_info = self._build_network_info_model(context, instance, networks,
                                                  port_ids, admin_client,
-                                                 preexisting_port_ids)
+                                                 preexisting_port_ids,
+                                                 refresh_vif_id)
         return network_model.NetworkInfo.hydrate(nw_info)
 
     def _gather_port_ids_and_networks(self, context, instance, networks=None,
@@ -2355,7 +2357,8 @@ class API(base_api.NetworkAPI):
 
     def _build_network_info_model(self, context, instance, networks=None,
                                   port_ids=None, admin_client=None,
-                                  preexisting_port_ids=None):
+                                  preexisting_port_ids=None,
+                                  refresh_vif_id=None):
         """Return list of ordered VIFs attached to instance.
 
         :param context: Request context.
@@ -2373,6 +2376,10 @@ class API(base_api.NetworkAPI):
                         an instance is de-allocated. Supplied list will
                         be added to the cached list of preexisting port
                         IDs for this instance.
+        :param refresh_vif_id: Optional port ID to refresh within the existing
+                        cache rather than the entire cache. This can be
+                        triggered via a "network-changed" server external event
+                        from Neutron.
         """
 
         search_opts = {'tenant_id': instance.project_id,
@@ -2385,10 +2392,6 @@ class API(base_api.NetworkAPI):
         data = client.list_ports(**search_opts)
 
         current_neutron_ports = data.get('ports', [])
-        nw_info_refresh = networks is None and port_ids is None
-        networks, port_ids = self._gather_port_ids_and_networks(
-                context, instance, networks, port_ids, client)
-        nw_info = network_model.NetworkInfo()
 
         if preexisting_port_ids is None:
             preexisting_port_ids = []
@@ -2399,6 +2402,59 @@ class API(base_api.NetworkAPI):
         for current_neutron_port in current_neutron_ports:
             current_neutron_port_map[current_neutron_port['id']] = (
                 current_neutron_port)
+
+        # Figure out what kind of operation we're processing. If we're given
+        # a single port to refresh then we try to optimize and update just the
+        # information for that VIF in the existing cache rather than try to
+        # rebuild the entire thing.
+        if refresh_vif_id is not None:
+            # TODO(mriedem): Consider pulling this out into it's own method.
+            nw_info = instance.get_network_info()
+            if nw_info:
+                current_neutron_port = current_neutron_port_map.get(
+                    refresh_vif_id)
+                if current_neutron_port:
+                    # Get the network for the port.
+                    networks = self._get_available_networks(
+                        context, instance.project_id,
+                        [current_neutron_port['network_id']], client)
+                    # Build the VIF model given the latest port information.
+                    refreshed_vif = self._build_vif_model(
+                        context, client, current_neutron_port, networks,
+                        preexisting_port_ids)
+                    for index, vif in enumerate(nw_info):
+                        if vif['id'] == refresh_vif_id:
+                            # Update the existing entry.
+                            nw_info[index] = refreshed_vif
+                            LOG.debug('Updated VIF entry in instance network '
+                                      'info cache for port %s.',
+                                      refresh_vif_id, instance=instance)
+                            break
+                    else:
+                        # If it wasn't in the existing cache, add it.
+                        nw_info.append(refreshed_vif)
+                        LOG.debug('Added VIF to instance network info cache '
+                                  'for port %s.', refresh_vif_id,
+                                  instance=instance)
+                else:
+                    # This port is no longer associated with the instance, so
+                    # simply remove it from the nw_info cache.
+                    for index, vif in enumerate(nw_info):
+                        if vif['id'] == refresh_vif_id:
+                            LOG.info('Port %s from network info_cache is no '
+                                     'longer associated with instance in '
+                                     'Neutron. Removing from network '
+                                     'info_cache.', refresh_vif_id,
+                                     instance=instance)
+                            del nw_info[index]
+                            break
+                return nw_info
+            # else there is no existing cache and we need to build it
+
+        nw_info_refresh = networks is None and port_ids is None
+        networks, port_ids = self._gather_port_ids_and_networks(
+                context, instance, networks, port_ids, client)
+        nw_info = network_model.NetworkInfo()
 
         for port_id in port_ids:
             current_neutron_port = current_neutron_port_map.get(port_id)
