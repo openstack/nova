@@ -218,8 +218,29 @@ Nova Shell
 
     Runs the named script from the specified path with flags set.
 
+.. _nova-manage-quota:
+
+Nova Quota
+~~~~~~~~~~
+
+``nova-manage quota refresh``
+
+    Refresh the quota usage for a project or user.
+
 Nova Project
 ~~~~~~~~~~~~
+
+.. deprecated:: 16.0.0
+
+    Much of this information is available over the API, with the exception of
+    the ``quota_usage_refresh`` command. Operators should use the `API`_ for
+    all other operations.
+
+    This command group will be removed in 17.0.0 (Queens). Users of the
+    ``quota_usage_refresh`` subcommand should instead use :ref:`nova-manage
+    quota refresh <nova-manage-quota>`
+
+.. _API: https://developer.openstack.org/api-ref/compute/#quota-sets-os-quota-sets
 
 ``nova-manage project quota <project_id> [--user <user_id>] [--key <key>] [--value <value>]``
 
@@ -231,6 +252,12 @@ Nova Project
     Refresh the quota usages for the project/user so that the
     usage record matches the actual used.  If a key is not specified
     then all quota usages relevant to the project/user are refreshed.
+
+    .. seealso::
+
+        The :ref:`nova-manage quota refresh <nova-manage-quota>` command
+        performs the same actions and is not deprecated. That command should be
+        used instead.
 
 SEE ALSO
 ========
