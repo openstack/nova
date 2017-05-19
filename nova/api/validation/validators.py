@@ -280,14 +280,23 @@ class _SchemaValidator(object):
                     #       message has been written as the similar format of
                     #       WSME.
                     detail = _("Invalid input for field/attribute %(path)s. "
-                               "Value: %(value)s. %(message)s")
+                               "Value: %(value)s. %(message)s") % {
+                        'path': ex.path.pop(),
+                        'value': ex.instance,
+                        'message': ex.message}
                 else:
+                    # NOTE: Use 'ex.path.popleft()' instead of 'ex.path.pop()',
+                    #       due to the structure of query parameters is a dict
+                    #       with key as name and value is list. So the first
+                    #       item in the 'ex.path' is the key, and second item
+                    #       is the index of list in the value. We need the
+                    #       key as the parameter name in the error message.
+                    #       So pop the first value out of 'ex.path'.
                     detail = _("Invalid input for query parameters %(path)s. "
-                               "Value: %(value)s. %(message)s")
-                detail = detail % {
-                    'path': ex.path.pop(), 'value': ex.instance,
-                    'message': ex.message
-                }
+                               "Value: %(value)s. %(message)s") % {
+                        'path': ex.path.popleft(),
+                        'value': ex.instance,
+                        'message': ex.message}
             else:
                 detail = ex.message
             raise exception.ValidationError(detail=detail)
