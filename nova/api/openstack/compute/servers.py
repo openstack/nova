@@ -1015,6 +1015,8 @@ class ServersController(wsgi.Controller):
                         'createImage', id)
         except exception.Invalid as err:
             raise exc.HTTPBadRequest(explanation=err.format_message())
+        except exception.OverQuota as e:
+            raise exc.HTTPForbidden(explanation=e.format_message())
 
         # Starting with microversion 2.45 we return a response body containing
         # the snapshot image id without the Location header.
