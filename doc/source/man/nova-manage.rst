@@ -183,6 +183,10 @@ Nova Cells v2
 Nova Logs
 ~~~~~~~~~
 
+.. deprecated:: 16.0.0
+
+    This will be removed in 17.0.0 (Queens)
+
 ``nova-manage logs errors``
 
     Displays nova errors from log files.
