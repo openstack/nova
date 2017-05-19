@@ -25,6 +25,11 @@ deprecations:
       builds". Operators should use the equivalent resources in the `REST
       API`__ instead.
 
+    `host`
+
+      This allows for the listing of compute hosts. Operators should use the
+      equivalent resources in the `REST API`__ instead.
+
     `project`
 
       This is an alias for `account` and has been deprecated for the same
@@ -41,3 +46,4 @@ deprecations:
 
     __ https://developer.openstack.org/api-ref/compute/#quota-sets-os-quota-sets
     __ https://developer.openstack.org/api-ref/compute/#guest-agents-os-agents
+    __ https://developer.openstack.org/api-ref/compute/#compute-services-os-services
