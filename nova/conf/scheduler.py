@@ -589,6 +589,9 @@ Configuration options for enabling Trusted Platform Module.
 
 trusted_opts = [
     cfg.HostAddressOpt("attestation_server",
+                       deprecated_for_removal=True,
+                       deprecated_reason="Incomplete filter",
+                       deprecated_since="Pike",
                        help="""
 The host to use as the attestation server.
 
@@ -617,6 +620,9 @@ Related options:
 * attestation_insecure_ssl
 """),
     cfg.StrOpt("attestation_server_ca_file",
+            deprecated_for_removal=True,
+            deprecated_reason="Incomplete filter",
+            deprecated_since="Pike",
             help="""
 The absolute path to the certificate to use for authentication when connecting
 to the attestation server. See the `attestation_server` help text for more
@@ -642,6 +648,9 @@ Related options:
 """),
     cfg.PortOpt("attestation_port",
             default=8443,
+            deprecated_for_removal=True,
+            deprecated_reason="Incomplete filter",
+            deprecated_since="Pike",
             help="""
 The port to use when connecting to the attestation server. See the
 `attestation_server` help text for more information about host verification.
@@ -661,6 +670,9 @@ Related options:
 """),
     cfg.StrOpt("attestation_api_url",
             default="/OpenAttestationWebServices/V1.0",
+            deprecated_for_removal=True,
+            deprecated_reason="Incomplete filter",
+            deprecated_since="Pike",
             help="""
 The URL on the attestation server to use. See the `attestation_server` help
 text for more information about host verification.
@@ -687,6 +699,9 @@ Related options:
 """),
     cfg.StrOpt("attestation_auth_blob",
             secret=True,
+            deprecated_for_removal=True,
+            deprecated_reason="Incomplete filter",
+            deprecated_since="Pike",
             help="""
 Attestation servers require a specific blob that is used to authenticate. The
 content and format of the blob are determined by the particular attestation
@@ -714,6 +729,9 @@ Related options:
 """),
     cfg.IntOpt("attestation_auth_timeout",
             default=60,
+            deprecated_for_removal=True,
+            deprecated_reason="Incomplete filter",
+            deprecated_since="Pike",
             min=0,
             help="""
 This value controls how long a successful attestation is cached. Once this
@@ -741,6 +759,9 @@ Related options:
 """),
     cfg.BoolOpt("attestation_insecure_ssl",
             default=False,
+            deprecated_for_removal=True,
+            deprecated_reason="Incomplete filter",
+            deprecated_since="Pike",
             help="""
 When set to True, the SSL certificate verification is skipped for the
 attestation service. See the `attestation_server` help text for more
