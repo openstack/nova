@@ -18,7 +18,7 @@
 Overview
 ========
 
-The Nova project introduced the :doc:`placment service <placement>` as part of
+The Nova project introduced the :doc:`placement service <placement>` as part of
 the Newton release. The service provides an HTTP API to manage inventories of
 different classes of resources, such as disk or virtual cpus, made available by
 entities called resource providers. Information provided through the placement
