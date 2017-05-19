@@ -2440,11 +2440,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                     self.context, uuids.volume_id, connector)
 
     def test_detach_volume(self):
-        # TODO(lyarwood): Move into ../virt/test_block_device.py
+        # TODO(lyarwood): Test DriverVolumeBlockDevice.detach in
+        # ../virt/test_block_device.py
         self._test_detach_volume()
 
     def test_detach_volume_not_destroy_bdm(self):
-        # TODO(lyarwood): Move into ../virt/test_block_device.py
+        # TODO(lyarwood): Test DriverVolumeBlockDevice.detach in
+        # ../virt/test_block_device.py
         self._test_detach_volume(destroy_bdm=False)
 
     @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume_and_instance')
@@ -2454,7 +2456,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     @mock.patch('nova.compute.utils.notify_about_volume_attach_detach')
     def _test_detach_volume(self, mock_notify_attach_detach, notify_inst_usage,
                             detach, bdm_get, destroy_bdm=True):
-        # TODO(lyarwood): Move into ../virt/test_block_device.py
+        # TODO(lyarwood): Test DriverVolumeBlockDevice.detach in
+        # ../virt/test_block_device.py
         volume_id = uuids.volume
         inst_obj = mock.Mock()
         inst_obj.uuid = uuids.instance
@@ -2500,7 +2503,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
     def test_detach_volume_evacuate(self):
         """For evacuate, terminate_connection is called with original host."""
-        # TODO(lyarwood): Move into ../virt/test_block_device.py
+        # TODO(lyarwood): Test DriverVolumeBlockDevice.driver_detach in
+        # ../virt/test_block_device.py
         expected_connector = {'host': 'evacuated-host'}
         conn_info_str = '{"connector": {"host": "evacuated-host"}}'
         self._test_detach_volume_evacuate(conn_info_str,
@@ -2515,7 +2519,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         case because nova does not have the info to get the connector for the
         original (evacuated) host.
         """
-        # TODO(lyarwood): Move into ../virt/test_block_device.py
+        # TODO(lyarwood): Test DriverVolumeBlockDevice.driver_detach in
+        # ../virt/test_block_device.py
         conn_info_str = '{"foo": "bar"}'  # Has no 'connector'.
         self._test_detach_volume_evacuate(conn_info_str)
 
@@ -2525,7 +2530,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         For evacuate, if the stashed connector also has the wrong host,
         then log it and stay with the local connector.
         """
-        # TODO(lyarwood): Move into ../virt/test_block_device.py
+        # TODO(lyarwood): Test DriverVolumeBlockDevice.driver_detach in
+        # ../virt/test_block_device.py
         conn_info_str = '{"connector": {"host": "other-host"}}'
         self._test_detach_volume_evacuate(conn_info_str)
 
@@ -2544,7 +2550,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                          terminate call (optional). Default is to expect the
                          local connector to be used.
         """
-        # TODO(lyarwood): Move into ../virt/test_block_device.py
+        # TODO(lyarwood): Test DriverVolumeBlockDevice.driver_detach in
+        # ../virt/test_block_device.py
         volume_id = 'vol_id'
         instance = fake_instance.fake_instance_obj(self.context,
                                                    host='evacuated-host')

@@ -267,12 +267,12 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
         volume_id = self.volume_id
 
         LOG.info(_LI('Attempting to driver detach volume %(volume_id)s from '
-                     ' mountpoint %(mp)s'), {'volume_id': volume_id, 'mp': mp},
-                     instance=instance)
+                     'mountpoint %(mp)s'), {'volume_id': volume_id, 'mp': mp},
+                 instance=instance)
         try:
             if not virt_driver.instance_exists(instance):
                 LOG.warning(_LW('Detaching volume from unknown instance'),
-                                instance=instance)
+                            instance=instance)
 
             encryption = encryptors.get_encryption_metadata(context,
                     volume_api, volume_id, connection_info)
@@ -304,7 +304,7 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
         if CONF.host == instance.host:
             self.driver_detach(context, instance, volume_api, virt_driver)
         elif not destroy_bdm:
-            LOG.debug("Skipping _driver_detach during remote rebuild.",
+            LOG.debug("Skipping driver_detach during remote rebuild.",
                       instance=instance)
         elif destroy_bdm:
             LOG.error(_LE("Unable to call for a driver detach of volume "
