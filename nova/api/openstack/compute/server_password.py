@@ -23,9 +23,6 @@ from nova import compute
 from nova.policies import server_password as sp_policies
 
 
-ALIAS = 'os-server-password'
-
-
 class ServerPasswordController(wsgi.Controller):
     """The Server Password API controller for the OpenStack API."""
     def __init__(self):
@@ -55,22 +52,3 @@ class ServerPasswordController(wsgi.Controller):
         meta = password.convert_password(context, None)
         instance.system_metadata.update(meta)
         instance.save()
-
-
-class ServerPassword(extensions.V21APIExtensionBase):
-    """Server password support."""
-
-    name = "ServerPassword"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        resources = [
-            extensions.ResourceExtension(
-                ALIAS, ServerPasswordController(),
-                collection_actions={'clear': 'DELETE'},
-                parent=dict(member_name='server', collection_name='servers'))]
-        return resources
-
-    def get_controller_extensions(self):
-        return []
