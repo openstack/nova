@@ -640,28 +640,6 @@ class TestNotificationAction(TestField):
         self.assertRaises(ValueError, self.field.stringify, 'magic')
 
 
-class TestPCIAddress(TestField):
-    def setUp(self):
-        super(TestPCIAddress, self).setUp()
-        self.field = fields.Field(fields.PCIAddressField())
-        self.coerce_good_values = [('0000:00:02.0', '0000:00:02.0')]
-        self.coerce_bad_values = [
-            '000:00:02.0',
-            '0000:0:02.0',
-            '0000:00:2.0',
-            '0000:00:02.',
-            '-000:00:02.0',
-            '0000:0-:02.0',
-            '0000:00:-2.0',
-            '0000:00:02.-',
-            '000000:02.0',
-            '0000:0:02.0',
-            '0000:00:020',
-        ]
-        self.to_primitive_values = self.coerce_good_values
-        self.from_primitive_values = self.coerce_good_values
-
-
 class TestUSBAddress(TestField):
     def setUp(self):
         super(TestUSBAddress, self).setUp()
