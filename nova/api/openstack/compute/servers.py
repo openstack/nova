@@ -528,7 +528,10 @@ class ServersController(wsgi.Controller):
             requested_networks = self._get_requested_networks(
                 requested_networks, supports_device_tagging)
 
-        if requested_networks and len(requested_networks):
+        # Skip policy check for 'create:attach_network' if there is no
+        # network allocation request.
+        if requested_networks and len(requested_networks) and \
+                not requested_networks.no_allocate:
             context.can(server_policies.SERVERS % 'create:attach_network',
                         target)
 
