@@ -524,6 +524,9 @@ class ResourceTracker(object):
         for monitor in self.monitors:
             try:
                 monitor.populate_metrics(metrics)
+            except NotImplementedError:
+                LOG.debug("The compute driver doesn't support host "
+                          "metrics for  %(mon)s", {'mon': monitor})
             except Exception as exc:
                 LOG.warning(_LW("Cannot get the metrics from %(mon)s; "
                                 "error: %(exc)s"),
