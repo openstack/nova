@@ -2201,6 +2201,58 @@ class API(base_api.NetworkAPI):
         return [vif['id'] for vif in net_info
                 if vif.get('preserve_on_delete')]
 
+    def _build_vif_model(self, context, client, current_neutron_port,
+                         networks, preexisting_port_ids):
+        """Builds a ``nova.network.model.VIF`` object based on the parameters
+        and current state of the port in Neutron.
+
+        :param context: Request context.
+        :param client: Neutron client.
+        :param current_neutron_port: The current state of a Neutron port
+            from which to build the VIF object model.
+        :param networks: List of dicts which represent Neutron networks
+            associated with the ports currently attached to a given server
+            instance.
+        :param preexisting_port_ids: List of IDs of ports attached to a
+            given server instance which Nova did not create and therefore
+            should not delete when the port is detached from the server.
+        :return: nova.network.model.VIF object which represents a port in the
+            instance network info cache.
+        """
+        vif_active = False
+        if (current_neutron_port['admin_state_up'] is False
+            or current_neutron_port['status'] == 'ACTIVE'):
+            vif_active = True
+
+        network_IPs = self._nw_info_get_ips(client,
+                                            current_neutron_port)
+        subnets = self._nw_info_get_subnets(context,
+                                            current_neutron_port,
+                                            network_IPs, client)
+
+        devname = "tap" + current_neutron_port['id']
+        devname = devname[:network_model.NIC_NAME_LEN]
+
+        network, ovs_interfaceid = (
+            self._nw_info_build_network(current_neutron_port,
+                                        networks, subnets))
+        preserve_on_delete = (current_neutron_port['id'] in
+                              preexisting_port_ids)
+
+        return network_model.VIF(
+            id=current_neutron_port['id'],
+            address=current_neutron_port['mac_address'],
+            network=network,
+            vnic_type=current_neutron_port.get('binding:vnic_type',
+                                               network_model.VNIC_TYPE_NORMAL),
+            type=current_neutron_port.get('binding:vif_type'),
+            profile=current_neutron_port.get(BINDING_PROFILE),
+            details=current_neutron_port.get('binding:vif_details'),
+            ovs_interfaceid=ovs_interfaceid,
+            devname=devname,
+            active=vif_active,
+            preserve_on_delete=preserve_on_delete)
+
     def _build_network_info_model(self, context, instance, networks=None,
                                   port_ids=None, admin_client=None,
                                   preexisting_port_ids=None):
@@ -2251,40 +2303,10 @@ class API(base_api.NetworkAPI):
         for port_id in port_ids:
             current_neutron_port = current_neutron_port_map.get(port_id)
             if current_neutron_port:
-                vif_active = False
-                if (current_neutron_port['admin_state_up'] is False
-                    or current_neutron_port['status'] == 'ACTIVE'):
-                    vif_active = True
-
-                network_IPs = self._nw_info_get_ips(client,
-                                                    current_neutron_port)
-                subnets = self._nw_info_get_subnets(context,
-                                                    current_neutron_port,
-                                                    network_IPs, client)
-
-                devname = "tap" + current_neutron_port['id']
-                devname = devname[:network_model.NIC_NAME_LEN]
-
-                network, ovs_interfaceid = (
-                    self._nw_info_build_network(current_neutron_port,
-                                                networks, subnets))
-                preserve_on_delete = (current_neutron_port['id'] in
-                                      preexisting_port_ids)
-
-                nw_info.append(network_model.VIF(
-                    id=current_neutron_port['id'],
-                    address=current_neutron_port['mac_address'],
-                    network=network,
-                    vnic_type=current_neutron_port.get('binding:vnic_type',
-                        network_model.VNIC_TYPE_NORMAL),
-                    type=current_neutron_port.get('binding:vif_type'),
-                    profile=current_neutron_port.get(BINDING_PROFILE),
-                    details=current_neutron_port.get('binding:vif_details'),
-                    ovs_interfaceid=ovs_interfaceid,
-                    devname=devname,
-                    active=vif_active,
-                    preserve_on_delete=preserve_on_delete))
-
+                vif = self._build_vif_model(
+                    context, client, current_neutron_port, networks,
+                    preexisting_port_ids)
+                nw_info.append(vif)
             elif nw_info_refresh:
                 LOG.info(_LI('Port %s from network info_cache is no '
                              'longer associated with instance in Neutron. '
