@@ -387,6 +387,38 @@ class ServersActionsJson219Test(ServersSampleBase):
         self._verify_response('server-action-rebuild-resp', subs, resp, 202)
 
 
+class ServersActionsJson226Test(ServersSampleBase):
+    microversion = '2.26'
+    scenarios = [('v2_26', {'api_major_version': 'v2.1'})]
+
+    def test_server_rebuild(self):
+        uuid = self._post_server()
+        image = fake.get_valid_image_id()
+        params = {
+            'uuid': image,
+            'access_ip_v4': '1.2.3.4',
+            'access_ip_v6': '80fe::',
+            'disk_config': 'AUTO',
+            'hostid': '[a-f0-9]+',
+            'name': 'foobar',
+            'pass': 'seekr3t',
+            'preserve_ephemeral': 'false',
+            'description': 'description of foobar'
+        }
+
+        # Add 'tag1' and 'tag2' tags
+        self._do_put('servers/%s/tags/tag1' % uuid)
+        self._do_put('servers/%s/tags/tag2' % uuid)
+
+        # Rebuild Action
+        resp = self._do_post('servers/%s/action' % uuid,
+                             'server-action-rebuild', params)
+
+        subs = params.copy()
+        del subs['uuid']
+        self._verify_response('server-action-rebuild-resp', subs, resp, 202)
+
+
 class ServersCreateImageJsonTest(ServersSampleBase,
                                  _ServersActionsJsonTestMixin):
     """Tests the createImage server action API against 2.1."""

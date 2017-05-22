@@ -11,6 +11,13 @@ image_location:
   required: true
   type: string
   max_version: 2.44
+server_location:
+  description: |
+    The location URL of the server, HTTP header
+    "Location: <server location URL>" will be returned.
+  in: header
+  required: true
+  type: string
 tag_location:
   description: |
     The location of the tag. It's individual tag URL which can be used for
@@ -1045,10 +1052,10 @@ address:
 addresses:
   description: |
     The addresses for the server.  Addresses information is hidden for any server
-    in a state set in the ``osapi_hide_server_address_states`` configuration option.
+    in a state set in the ``hide_server_address_states`` configuration option.
     By default, servers in ``building`` state hide their addresses information.
     See ``nova.conf`` `configuration options
-    <http://docs.openstack.org/liberty/config-reference/content/list-of-compute-config-options.html>`_
+    <https://docs.openstack.org/ocata/config-reference/compute/config-options.html>`_
     for more information.
   in: body
   required: true
@@ -2779,6 +2786,13 @@ imageRef:
   in: body
   required: true
   type: string
+imageRef_rebuild:
+  description: |
+    The UUID of the image to rebuild for your server instance.
+    It must be a valid UUID otherwise API will return 400.
+  in: body
+  required: true
+  type: string
 images:
   description: |
     An array of Image objects.
@@ -3849,7 +3863,7 @@ path:
   description: |
     The path field in the personality object.
   in: body
-  required: false
+  required: true
   type: string
 pause:
   description: |
@@ -3878,7 +3892,7 @@ personality:
     of allowed bytes in the decoded, rather than encoded, data.
   in: body
   required: false
-  type: string
+  type: array
 policies:
   description: |
     A list of exactly one policy name to associate with the server group. The
@@ -4061,10 +4075,10 @@ reboot_type:
   type: string
 rebuild:
   description: |
-    The action.
+    The action to rebuild a server.
   in: body
   required: true
-  type: string
+  type: object
 remote_console:
   description: |
     The remote console object.
@@ -4126,10 +4140,10 @@ request_id_body:
   type: string
 rescue:
   description: |
-    The action.
+    The action to rescue a server.
   in: body
   required: true
-  type: string
+  type: object
 rescue_image_ref:
   description: |
     The image reference to use to rescue your server instance. Specify the image reference
@@ -4341,6 +4355,14 @@ server_description:
     A free form description of the server. Limited to 255 characters
     in length. Before microversion 2.19 this was set to the server
     name.
+server_description_resp:
+  description: |
+    The description of the server.
+    Before microversion 2.19 this was set to the server name.
+  in: body
+  required: true
+  type: string
+  min_version: 2.19
 server_group:
   description: |
     The server group obejct.
@@ -4431,6 +4453,15 @@ server_launch_index:
     When servers are launched via multiple create, this is the
     sequence in which the servers were launched.
   min_version: 2.3
+server_links:
+  description: |
+    Links pertaining to the server. See `API Guide / Links and
+    References
+    <http://developer.openstack.org/api-guide/compute/links_and_references.html>`_
+    for more info.
+  in: body
+  type: array
+  required: true
 server_name:
   description: |
     The server name.

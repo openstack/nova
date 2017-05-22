@@ -1,0 +1,59 @@
+{
+    "server": {
+        "accessIPv4": "%(access_ip_v4)s",
+        "accessIPv6": "%(access_ip_v6)s",
+        "addresses": {
+            "private": [
+                {
+                    "addr": "%(ip)s",
+                    "version": 4
+                }
+            ]
+        },
+        "adminPass": "%(password)s",
+        "created": "%(isotime)s",
+        "flavor": {
+            "id": "1",
+            "links": [
+                {
+                    "href": "%(compute_endpoint)s/flavors/1",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "hostId": "%(hostid)s",
+        "id": "%(uuid)s",
+        "image": {
+            "id": "%(uuid)s",
+            "links": [
+                {
+                    "href": "%(compute_endpoint)s/images/%(uuid)s",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "links": [
+            {
+                "href": "%(versioned_compute_endpoint)s/servers/%(uuid)s",
+                "rel": "self"
+            },
+            {
+                "href": "%(compute_endpoint)s/servers/%(uuid)s",
+                "rel": "bookmark"
+            }
+        ],
+        "metadata": {
+            "meta_var": "meta_val"
+        },
+        "name": "%(name)s",
+        "OS-DCF:diskConfig": "%(disk_config)s",
+        "progress": 0,
+        "status": "ACTIVE",
+        "tenant_id": "6f70656e737461636b20342065766572",
+        "updated": "%(isotime)s",
+        "user_id": "fake",
+        "locked": false,
+        "description": "%(description)s",
+        "tags": ["tag1", "tag2"]
+    }
+}

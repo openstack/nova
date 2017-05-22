@@ -1,6 +1,4 @@
 .. -*- rst -*-
-.. needs:parameter_verification
-.. needs:example_verification
 .. needs:body_verification
 
 ===========================================
@@ -475,26 +473,60 @@ Request
 
   - server_id: server_id_path
   - rebuild: rebuild
-  - imageRef: imageRef
-  - name: server_name_optional
+  - imageRef: imageRef_rebuild
+  - accessIPv4: accessIPv4_in
+  - accessIPv6: accessIPv6_in
   - adminPass: adminPass_request
   - metadata: metadata
+  - name: server_name_optional
+  - OS-DCF:diskConfig: OS-DCF:diskConfig
   - personality: personality
+  - personality.path: path
+  - personality.contents: contents
   - preserve_ephemeral: preserve_ephemeral
+  - description: server_description
 
-**Example Rebuild Server (rebuild Action)**
+**Example Rebuild Server (rebuild Action) (v2.26)**
 
-Preserving the ephemeral disk
-
-.. literalinclude:: ../../doc/api_samples/servers/server-action-rebuild-preserve-ephemeral.json
+.. literalinclude:: ../../doc/api_samples/servers/v2.26/server-action-rebuild.json
    :language: javascript
 
 Response
 --------
 
-**Example Rebuild Server (rebuild Action)**
+.. rest_parameters:: parameters.yaml
 
-.. literalinclude:: ../../doc/api_samples/servers/server-action-rebuild-resp.json
+  - Location: server_location
+  - server: server
+  - accessIPv4: accessIPv4
+  - accessIPv6: accessIPv6
+  - addresses: addresses_obj
+  - adminPass: adminPass_response
+  - created: created
+  - flavor: flavor
+  - flavor.id: flavor_id_body
+  - flavor.links: links
+  - hostId: hostId
+  - id: server_id
+  - image: image
+  - image.id: image_id_body
+  - image.links: links
+  - links: server_links
+  - metadata: metadata_object
+  - name: server_name
+  - OS-DCF:diskConfig: disk_config
+  - progress: progress
+  - status: server_status
+  - tenant_id: tenant_id_body
+  - updated: updated
+  - user_id: user_id
+  - locked: locked
+  - description: server_description_resp
+  - tags: tags
+
+**Example Rebuild Server (rebuild Action) (v2.26)**
+
+.. literalinclude:: ../../doc/api_samples/servers/v2.26/server-action-rebuild-resp.json
    :language: javascript
 
 Remove (Disassociate) Floating Ip (removeFloatingIp Action) (DEPRECATED)
@@ -607,9 +639,9 @@ Request
   - adminPass: adminPass_rescue_request
   - rescue_image_ref: rescue_image_ref
 
-**Example Rescue server**
+**Example Rescue server (rescue Action)**
 
-.. literalinclude:: ../../doc/api_samples/os-rescue/server-rescue-req.json
+.. literalinclude:: ../../doc/api_samples/os-rescue/server-rescue-req-with-image-ref.json
    :language: javascript
 
 Response
@@ -619,7 +651,7 @@ Response
 
   - adminPass: adminPass_response
 
-**Example Extended rescue server**
+**Example Rescue server (rescue Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-rescue/server-rescue.json
    :language: javascript
