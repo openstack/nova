@@ -233,6 +233,7 @@ class TestCase(testtools.TestCase):
         # NOTE(danms): Reset the cached list of cells
         from nova.compute import api
         api.CELLS = []
+        context.CELL_CACHE = {}
 
         self.cell_mappings = {}
         self.host_mappings = {}
