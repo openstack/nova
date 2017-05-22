@@ -27,7 +27,8 @@ server_groups_policies = [
     # TODO(Kevin_Zheng): remove this rule as this not used by any API
     policy.RuleDefault(
         name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_OR_OWNER),
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description='Deprecated in Pike and will be removed in next release'),
     base.create_rule_default(
         POLICY_ROOT % 'create',
         BASE_POLICY_RULE,
