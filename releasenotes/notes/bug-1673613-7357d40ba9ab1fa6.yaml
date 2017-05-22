@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    Includes the fix for `bug 1673613`_ which could cause issues when upgrading
+    and running ``nova-manage cell_v2 simple_cell_setup`` or
+    ``nova-manage cell_v2 map_cell0`` where the database connection is read
+    from config and has special characters in the URL.
+
+    .. _bug 1673613: https://launchpad.net/bugs/1673613
