@@ -3987,7 +3987,7 @@ project_id_instance_action:
   description: |
     The UUID of the project that this server belongs to.
   in: body
-  required: ture
+  required: true
   type: string
 project_id_query_server:
   description: |
