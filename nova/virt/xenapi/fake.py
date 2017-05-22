@@ -781,7 +781,8 @@ class SessionBase(object):
             zlib.compress(("dom_id: %s" % dom_id).encode('utf-8')))
 
     def _plugin_dom0_plugin_version_get_version(self, method, args):
-        return pickle.dumps("2.0")
+        return pickle.dumps(
+            xenapi_session.XenAPISession.PLUGIN_REQUIRED_VERSION)
 
     def _plugin_xenhost_query_gc(self, method, args):
         return pickle.dumps("False")
