@@ -23,7 +23,6 @@ from oslo_utils import timeutils
 from nova.compute.monitors import base
 import nova.conf
 from nova import exception
-from nova.i18n import _LE
 from nova import objects
 
 CONF = nova.conf.CONF
@@ -63,8 +62,8 @@ class Monitor(base.CPUMonitorBase):
             self._data["cpu.iowait.time"] = stats["iowait"]
             self._data["cpu.frequency"] = stats["frequency"]
         except (TypeError, KeyError):
-            LOG.exception(_LE("Not all properties needed are implemented "
-                              "in the compute driver"))
+            LOG.exception("Not all properties needed are implemented "
+                          "in the compute driver")
             raise exception.ResourceMonitorError(
                 monitor=self.__class__.__name__)
 

@@ -72,9 +72,6 @@ from nova import exception
 from nova import exception_wrapper
 from nova import hooks
 from nova.i18n import _
-from nova.i18n import _LE
-from nova.i18n import _LI
-from nova.i18n import _LW
 from nova import image
 from nova.image import glance
 from nova import manager
@@ -158,7 +155,7 @@ def reverts_task_state(function):
             # task is preempted. Do not clear task state in this
             # case.
             with excutils.save_and_reraise_exception():
-                LOG.info(_LI("Task possibly preempted: %s"),
+                LOG.info("Task possibly preempted: %s",
                          e.format_message())
         except Exception:
             with excutils.save_and_reraise_exception():
@@ -172,18 +169,17 @@ def reverts_task_state(function):
                 original_task_state = instance.task_state
                 try:
                     self._instance_update(context, instance, task_state=None)
-                    LOG.info(_LI("Successfully reverted task state from %s on "
-                                 "failure for instance."), original_task_state,
-                                                           instance=instance)
+                    LOG.info("Successfully reverted task state from %s on "
+                             "failure for instance.",
+                             original_task_state, instance=instance)
                 except exception.InstanceNotFound:
                     # We might delete an instance that failed to build shortly
                     # after it errored out this is an expected case and we
                     # should not trace on it.
                     pass
                 except Exception as e:
-                    msg = _LW("Failed to revert task state for instance. "
-                              "Error: %s")
-                    LOG.warning(msg, e, instance=instance)
+                    LOG.warning("Failed to revert task state for instance. "
+                                "Error: %s", e, instance=instance)
 
     return decorated_function
 
@@ -239,9 +235,8 @@ def delete_image_on_error(function):
                     # if it's already gone.
                     pass
                 except Exception:
-                    LOG.exception(_LE("Error while trying to clean up "
-                                      "image %s"), image_id,
-                                  instance=instance)
+                    LOG.exception("Error while trying to clean up image %s",
+                                  image_id, instance=instance)
 
     return decorated_function
 
@@ -541,7 +536,7 @@ class ComputeManager(manager.Manager):
                             self.driver.need_legacy_block_device_info
 
     def reset(self):
-        LOG.info(_LI('Reloading compute RPC API'))
+        LOG.info('Reloading compute RPC API')
         compute_rpcapi.LAST_VERSION = None
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
 
@@ -645,8 +640,8 @@ class ComputeManager(manager.Manager):
                      if inst.uuid in evacuations]
         for instance in evacuated:
             migration = evacuations[instance.uuid]
-            LOG.info(_LI('Deleting instance as it has been evacuated from '
-                         'this host'), instance=instance)
+            LOG.info('Deleting instance as it has been evacuated from '
+                     'this host', instance=instance)
             try:
                 network_info = self.network_api.get_instance_nw_info(
                     context, instance)
@@ -657,8 +652,8 @@ class ComputeManager(manager.Manager):
             except exception.InstanceNotFound:
                 network_info = network_model.NetworkInfo()
                 bdi = {}
-                LOG.info(_LI('Instance has been marked deleted already, '
-                             'removing it from the hypervisor.'),
+                LOG.info('Instance has been marked deleted already, '
+                         'removing it from the hypervisor.',
                          instance=instance)
                 # always destroy disks if the instance was deleted
                 destroy_disks = True
@@ -685,8 +680,8 @@ class ComputeManager(manager.Manager):
                       instance=instance)
             shared_storage = False
         except Exception:
-            LOG.exception(_LE('Failed to check if instance shared'),
-                      instance=instance)
+            LOG.exception('Failed to check if instance shared',
+                          instance=instance)
         finally:
             if data:
                 self.driver.check_instance_shared_storage_cleanup(context,
@@ -752,9 +747,9 @@ class ComputeManager(manager.Manager):
         # log the concern. This will help avoid potential issues on
         # startup due to misconfiguration.
         if instance.host != self.host:
-            LOG.warning(_LW('Instance %(uuid)s appears to not be owned '
-                            'by this host, but by %(host)s. Startup '
-                            'processing is being skipped.'),
+            LOG.warning('Instance %(uuid)s appears to not be owned '
+                        'by this host, but by %(host)s. Startup '
+                        'processing is being skipped.',
                         {'uuid': instance.uuid,
                          'host': instance.host})
             return
@@ -776,8 +771,8 @@ class ComputeManager(manager.Manager):
                 self._complete_partial_deletion(context, instance)
             except Exception:
                 # we don't want that an exception blocks the init_host
-                msg = _LE('Failed to complete a deletion')
-                LOG.exception(msg, instance=instance)
+                LOG.exception('Failed to complete a deletion',
+                              instance=instance)
             return
 
         if (instance.vm_state == vm_states.BUILDING or
@@ -821,8 +816,7 @@ class ComputeManager(manager.Manager):
                 self._post_interrupted_snapshot_cleanup(context, instance)
             except Exception:
                 # we don't want that an exception blocks the init_host
-                msg = _LE('Failed to cleanup snapshot.')
-                LOG.exception(msg, instance=instance)
+                LOG.exception('Failed to cleanup snapshot.', instance=instance)
             instance.task_state = None
             instance.save()
 
@@ -836,9 +830,9 @@ class ComputeManager(manager.Manager):
 
         if instance.task_state == task_states.DELETING:
             try:
-                LOG.info(_LI('Service started deleting the instance during '
-                             'the previous run, but did not finish. Restarting'
-                             ' the deletion now.'), instance=instance)
+                LOG.info('Service started deleting the instance during '
+                         'the previous run, but did not finish. Restarting'
+                         ' the deletion now.', instance=instance)
                 instance.obj_load_attr('metadata')
                 instance.obj_load_attr('system_metadata')
                 bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
@@ -851,8 +845,8 @@ class ComputeManager(manager.Manager):
                 self._delete_instance(context, instance, bdms, quotas)
             except Exception:
                 # we don't want that an exception blocks the init_host
-                msg = _LE('Failed to complete a deletion')
-                LOG.exception(msg, instance=instance)
+                LOG.exception('Failed to complete a deletion',
+                              instance=instance)
                 self._set_instance_obj_error_state(context, instance)
             return
 
@@ -889,9 +883,9 @@ class ComputeManager(manager.Manager):
                                       task_states.REBOOT_STARTED_HARD,
                                       task_states.PAUSING,
                                       task_states.UNPAUSING]):
-            LOG.warning(_LW("Instance in transitional state "
-                            "(%(task_state)s) at start-up and power state "
-                            "is (%(power_state)s), clearing task state"),
+            LOG.warning("Instance in transitional state "
+                        "(%(task_state)s) at start-up and power state "
+                        "is (%(power_state)s), clearing task state",
                         {'task_state': instance.task_state,
                          'power_state': current_power_state},
                         instance=instance)
@@ -900,10 +894,10 @@ class ComputeManager(manager.Manager):
             instance.save()
         elif (current_power_state == power_state.PAUSED and
               instance.task_state == task_states.UNPAUSING):
-            LOG.warning(_LW("Instance in transitional state "
-                            "(%(task_state)s) at start-up and power state "
-                            "is (%(power_state)s), clearing task state "
-                            "and unpausing the instance"),
+            LOG.warning("Instance in transitional state "
+                        "(%(task_state)s) at start-up and power state "
+                        "is (%(power_state)s), clearing task state "
+                        "and unpausing the instance",
                         {'task_state': instance.task_state,
                          'power_state': current_power_state},
                         instance=instance)
@@ -913,8 +907,7 @@ class ComputeManager(manager.Manager):
                 # Some virt driver didn't support pause and unpause
                 pass
             except Exception:
-                LOG.exception(_LE('Failed to unpause instance'),
-                              instance=instance)
+                LOG.exception('Failed to unpause instance', instance=instance)
             return
 
         if instance.task_state == task_states.POWERING_OFF:
@@ -925,8 +918,7 @@ class ComputeManager(manager.Manager):
                 self.stop_instance(context, instance, True)
             except Exception:
                 # we don't want that an exception blocks the init_host
-                msg = _LE('Failed to stop instance')
-                LOG.exception(msg, instance=instance)
+                LOG.exception('Failed to stop instance', instance=instance)
             return
 
         if instance.task_state == task_states.POWERING_ON:
@@ -937,8 +929,7 @@ class ComputeManager(manager.Manager):
                 self.start_instance(context, instance)
             except Exception:
                 # we don't want that an exception blocks the init_host
-                msg = _LE('Failed to start instance')
-                LOG.exception(msg, instance=instance)
+                LOG.exception('Failed to start instance', instance=instance)
             return
 
         net_info = compute_utils.get_nw_info_for_instance(instance)
@@ -948,7 +939,7 @@ class ComputeManager(manager.Manager):
             LOG.debug(e, instance=instance)
         except exception.VirtualInterfacePlugException:
             # we don't want an exception to block the init_host
-            LOG.exception(_LE("Vifs plug failed"), instance=instance)
+            LOG.exception("Vifs plug failed", instance=instance)
             self._set_instance_obj_error_state(context, instance)
             return
 
@@ -968,11 +959,11 @@ class ComputeManager(manager.Manager):
                     instance, net_info, block_dev_info, power_on)
 
             except Exception:
-                LOG.exception(_LE('Failed to revert crashed migration'),
+                LOG.exception('Failed to revert crashed migration',
                               instance=instance)
             finally:
-                LOG.info(_LI('Instance found in migrating state during '
-                             'startup. Resetting task_state'),
+                LOG.info('Instance found in migrating state during '
+                         'startup. Resetting task_state',
                          instance=instance)
                 instance.task_state = None
                 instance.save()
@@ -993,7 +984,7 @@ class ComputeManager(manager.Manager):
                   instance=instance)
 
         if expect_running and CONF.resume_guests_state_on_host_boot:
-            LOG.info(_LI('Rebooting instance after nova-compute restart.'),
+            LOG.info('Rebooting instance after nova-compute restart.',
                      instance=instance)
 
             block_device_info = \
@@ -1003,12 +994,12 @@ class ComputeManager(manager.Manager):
                 self.driver.resume_state_on_host_boot(
                     context, instance, net_info, block_device_info)
             except NotImplementedError:
-                LOG.warning(_LW('Hypervisor driver does not support '
-                                'resume guests'), instance=instance)
+                LOG.warning('Hypervisor driver does not support '
+                            'resume guests', instance=instance)
             except Exception:
                 # NOTE(vish): The instance failed to resume, so we set the
                 #             instance to error and attempt to continue.
-                LOG.warning(_LW('Failed to resume instance'),
+                LOG.warning('Failed to resume instance',
                             instance=instance)
                 self._set_instance_obj_error_state(context, instance)
 
@@ -1042,7 +1033,7 @@ class ComputeManager(manager.Manager):
         return retry_reboot, reboot_type
 
     def handle_lifecycle_event(self, event):
-        LOG.info(_LI("VM %(state)s (Lifecycle Event)"),
+        LOG.info("VM %(state)s (Lifecycle Event)",
                  {'state': event.get_name()},
                  instance_uuid=event.get_instance_uuid())
         context = nova.context.get_admin_context(read_deleted='yes')
@@ -1061,8 +1052,7 @@ class ComputeManager(manager.Manager):
         elif event.get_transition() == virtevent.EVENT_LIFECYCLE_SUSPENDED:
             vm_power_state = power_state.SUSPENDED
         else:
-            LOG.warning(_LW("Unexpected power state %d"),
-                        event.get_transition())
+            LOG.warning("Unexpected power state %d", event.get_transition())
 
         # Note(lpetrut): The event may be delayed, thus not reflecting
         # the current instance power state. In that case, ignore the event.
@@ -1100,18 +1090,18 @@ class ComputeManager(manager.Manager):
             # NOTE(mriedem): If the _sync_power_states periodic task is
             # disabled we should emit a warning in the logs.
             if CONF.sync_power_state_interval < 0:
-                LOG.warning(_LW('Instance lifecycle events from the compute '
-                             'driver have been disabled. Note that lifecycle '
-                             'changes to an instance outside of the compute '
-                             'service will not be synchronized '
-                             'automatically since the _sync_power_states '
-                             'periodic task is also disabled.'))
+                LOG.warning('Instance lifecycle events from the compute '
+                            'driver have been disabled. Note that lifecycle '
+                            'changes to an instance outside of the compute '
+                            'service will not be synchronized '
+                            'automatically since the _sync_power_states '
+                            'periodic task is also disabled.')
             else:
-                LOG.info(_LI('Instance lifecycle events from the compute '
-                             'driver have been disabled. Note that lifecycle '
-                             'changes to an instance outside of the compute '
-                             'service will only be synchronized by the '
-                             '_sync_power_states periodic task.'))
+                LOG.info('Instance lifecycle events from the compute '
+                         'driver have been disabled. Note that lifecycle '
+                         'changes to an instance outside of the compute '
+                         'service will only be synchronized by the '
+                         '_sync_power_states periodic task.')
 
     def init_host(self):
         """Initialization for a standalone compute service."""
@@ -1233,8 +1223,8 @@ class ComputeManager(manager.Manager):
         start = time.time()
         retries = CONF.block_device_allocate_retries
         if retries < 0:
-            LOG.warning(_LW("Treating negative config value (%(retries)s) for "
-                            "'block_device_retries' as 0."),
+            LOG.warning("Treating negative config value (%(retries)s) for "
+                        "'block_device_retries' as 0.",
                         {'retries': retries})
         # (1) treat  negative config value as 0
         # (2) the configured value is 0, one attempt should be made
@@ -1249,8 +1239,8 @@ class ComputeManager(manager.Manager):
             if volume_status not in ['creating', 'downloading']:
                 if volume_status == 'available':
                     return attempt
-                LOG.warning(_LW("Volume id: %(vol_id)s finished being "
-                                "created but its status is %(vol_status)s."),
+                LOG.warning("Volume id: %(vol_id)s finished being "
+                            "created but its status is %(vol_status)s.",
                             {'vol_id': vol_id,
                              'vol_status': volume_status})
                 break
@@ -1315,7 +1305,7 @@ class ComputeManager(manager.Manager):
             _do_validation(context, instance, group_hint)
 
     def _log_original_error(self, exc_info, instance_uuid):
-        LOG.error(_LE('Error: %s'), exc_info[1], instance_uuid=instance_uuid,
+        LOG.error('Error: %s', exc_info[1], instance_uuid=instance_uuid,
                   exc_info=exc_info)
 
     def _reschedule(self, context, request_spec, filter_properties,
@@ -1367,8 +1357,8 @@ class ComputeManager(manager.Manager):
         for instance in building_insts:
             if timeutils.is_older_than(instance.created_at, timeout):
                 self._set_instance_obj_error_state(context, instance)
-                LOG.warning(_LW("Instance build timed out. Set to error "
-                                "state."), instance=instance)
+                LOG.warning("Instance build timed out. Set to error "
+                            "state.", instance=instance)
 
     def _check_instance_exists(self, context, instance):
         """Ensure an instance with the same name is not already present."""
@@ -1416,12 +1406,12 @@ class ComputeManager(manager.Manager):
                 log_info = {'attempt': attempt,
                             'attempts': attempts}
                 if attempt == attempts:
-                    LOG.exception(_LE('Instance failed network setup '
-                                      'after %(attempts)d attempt(s)'),
+                    LOG.exception('Instance failed network setup '
+                                  'after %(attempts)d attempt(s)',
                                   log_info)
                     six.reraise(*exc_info)
-                LOG.warning(_LW('Instance failed network setup '
-                                '(attempt %(attempt)d of %(attempts)d)'),
+                LOG.warning('Instance failed network setup '
+                            '(attempt %(attempt)d of %(attempts)d)',
                             log_info, instance=instance)
                 time.sleep(retry_time)
                 retry_time *= 2
@@ -1591,13 +1581,13 @@ class ComputeManager(manager.Manager):
             return block_device_info
 
         except exception.OverQuota as e:
-            LOG.warning(_LW('Failed to create block device for instance due'
-                            ' to exceeding volume related resource quota.'
-                            ' Error: %s'), e.message, instance=instance)
+            LOG.warning('Failed to create block device for instance due'
+                        ' to exceeding volume related resource quota.'
+                        ' Error: %s', e.message, instance=instance)
             raise
 
         except Exception:
-            LOG.exception(_LE('Instance failed block device setup'),
+            LOG.exception('Instance failed block device setup',
                           instance=instance)
             raise exception.InvalidBDM()
 
@@ -1667,7 +1657,7 @@ class ComputeManager(manager.Manager):
             self.network_api.deallocate_for_instance(
                 context, instance, requested_networks=requested_networks)
         # nova-network does an rpc call so we're OK tracking time spent here
-        LOG.info(_LI('Took %0.2f seconds to deallocate network for instance.'),
+        LOG.info('Took %0.2f seconds to deallocate network for instance.',
                  timer.elapsed(), instance=instance)
 
     def _get_instance_block_device_info(self, context, instance,
@@ -1818,7 +1808,7 @@ class ComputeManager(manager.Manager):
                         decoded_files, admin_password, requested_networks,
                         security_groups, block_device_mapping, node, limits,
                         filter_properties)
-            LOG.info(_LI('Took %0.2f seconds to build instance.'),
+            LOG.info('Took %0.2f seconds to build instance.',
                      timer.elapsed(), instance=instance)
             return build_results.ACTIVE
         except exception.RescheduledException as e:
@@ -1890,8 +1880,8 @@ class ComputeManager(manager.Manager):
             return build_results.FAILED
         except Exception as e:
             # Should not reach here.
-            msg = _LE('Unexpected build failure, not rescheduling build.')
-            LOG.exception(msg, instance=instance)
+            LOG.exception('Unexpected build failure, not rescheduling build.',
+                          instance=instance)
             self._cleanup_allocated_networks(context, instance,
                     requested_networks)
             self._cleanup_volumes(context, instance.uuid,
@@ -1968,8 +1958,8 @@ class ComputeManager(manager.Manager):
                                           injected_files, admin_password,
                                           network_info=network_info,
                                           block_device_info=block_device_info)
-                    LOG.info(_LI('Took %0.2f seconds to spawn the instance on '
-                                 'the hypervisor.'), timer.elapsed(),
+                    LOG.info('Took %0.2f seconds to spawn the instance on '
+                             'the hypervisor.', timer.elapsed(),
                              instance=instance)
         except (exception.InstanceNotFound,
                 exception.UnexpectedDeletingTaskStateError) as e:
@@ -2001,7 +1991,7 @@ class ComputeManager(manager.Manager):
                     phase=fields.NotificationPhase.ERROR, exception=e)
         except (exception.FixedIpLimitExceeded,
                 exception.NoMoreNetworks, exception.NoMoreFixedIps) as e:
-            LOG.warning(_LW('No more network or fixed IP to be allocated'),
+            LOG.warning('No more network or fixed IP to be allocated',
                         instance=instance)
             self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
@@ -2017,7 +2007,7 @@ class ComputeManager(manager.Manager):
                 exception.VirtualInterfaceMacAddressException,
                 exception.FixedIpInvalidOnHost,
                 exception.UnableToAutoAllocateNetwork) as e:
-            LOG.exception(_LE('Failed to allocate network(s)'),
+            LOG.exception('Failed to allocate network(s)',
                           instance=instance)
             self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
@@ -2116,7 +2106,7 @@ class ComputeManager(manager.Manager):
         except Exception:
             # Because this allocation is async any failures are likely to occur
             # when the driver accesses network_info during spawn().
-            LOG.exception(_LE('Failed to allocate network(s)'),
+            LOG.exception('Failed to allocate network(s)',
                           instance=instance)
             msg = _('Failed to allocate the network(s), not rescheduling.')
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
@@ -2151,8 +2141,8 @@ class ComputeManager(manager.Manager):
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=e.format_message())
         except Exception:
-            LOG.exception(_LE('Failure prepping block device'),
-                    instance=instance)
+            LOG.exception('Failure prepping block device',
+                          instance=instance)
             # Make sure the async call finishes
             if network_info is not None:
                 network_info.wait(do_raise=False)
@@ -2167,7 +2157,7 @@ class ComputeManager(manager.Manager):
                 if not isinstance(exc, (
                         exception.InstanceNotFound,
                         exception.UnexpectedDeletingTaskStateError)):
-                    LOG.exception(_LE('Instance failed to spawn'),
+                    LOG.exception('Instance failed to spawn',
                                   instance=instance)
                 # Make sure the async call finishes
                 if network_info is not None:
@@ -2183,8 +2173,8 @@ class ComputeManager(manager.Manager):
                             try_deallocate_networks=deallocate_networks)
                 except Exception as exc2:
                     ctxt.reraise = False
-                    LOG.warning(_LW('Could not clean up failed build,'
-                                    ' not rescheduling. Error: %s'),
+                    LOG.warning('Could not clean up failed build,'
+                                ' not rescheduling. Error: %s',
                                 six.text_type(exc2))
                     raise exception.BuildAbortException(
                             instance_uuid=instance.uuid,
@@ -2195,8 +2185,7 @@ class ComputeManager(manager.Manager):
         try:
             self._deallocate_network(context, instance, requested_networks)
         except Exception:
-            msg = _LE('Failed to deallocate networks')
-            LOG.exception(msg, instance=instance)
+            LOG.exception('Failed to deallocate networks', instance=instance)
             return
 
         instance.system_metadata['network_allocated'] = 'False'
@@ -2215,9 +2204,8 @@ class ComputeManager(manager.Manager):
             self._deallocate_network(context, instance, requested_networks)
         except Exception as ex:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE('Failed to deallocate network for instance. '
-                              'Error: %s'), ex,
-                          instance=instance)
+                LOG.error('Failed to deallocate network for instance. '
+                          'Error: %s', ex, instance=instance)
                 self._set_instance_obj_error_state(context, instance)
 
     def _get_power_off_values(self, context, instance, clean_shutdown):
@@ -2256,7 +2244,7 @@ class ComputeManager(manager.Manager):
                                         trying to teardown networking
         """
         context = context.elevated()
-        LOG.info(_LI('Terminating instance'), instance=instance)
+        LOG.info('Terminating instance', instance=instance)
 
         if notify:
             self._notify_about_instance_usage(context, instance,
@@ -2281,8 +2269,8 @@ class ComputeManager(manager.Manager):
             timer.start()
             self.driver.destroy(context, instance, network_info,
                     block_device_info)
-            LOG.info(_LI('Took %0.2f seconds to destroy the instance on the '
-                         'hypervisor.'), timer.elapsed(), instance=instance)
+            LOG.info('Took %0.2f seconds to destroy the instance on the '
+                     'hypervisor.', timer.elapsed(), instance=instance)
         except exception.InstancePowerOffFailure:
             # if the instance can't power off, don't release the ip
             with excutils.save_and_reraise_exception():
@@ -2325,23 +2313,23 @@ class ComputeManager(manager.Manager):
                           instance=instance)
             except (cinder_exception.EndpointNotFound,
                     keystone_exception.EndpointNotFound) as exc:
-                LOG.warning(_LW('Ignoring EndpointNotFound for '
-                                'volume %(volume_id)s: %(exc)s'),
+                LOG.warning('Ignoring EndpointNotFound for '
+                            'volume %(volume_id)s: %(exc)s',
                             {'exc': exc, 'volume_id': bdm.volume_id},
                             instance=instance)
             except cinder_exception.ClientException as exc:
-                LOG.warning(_LW('Ignoring unknown cinder exception for '
-                                'volume %(volume_id)s: %(exc)s'),
+                LOG.warning('Ignoring unknown cinder exception for '
+                            'volume %(volume_id)s: %(exc)s',
                             {'exc': exc, 'volume_id': bdm.volume_id},
                             instance=instance)
             except Exception as exc:
-                LOG.warning(_LW('Ignoring unknown exception for '
-                                'volume %(volume_id)s: %(exc)s'),
+                LOG.warning('Ignoring unknown exception for '
+                            'volume %(volume_id)s: %(exc)s',
                             {'exc': exc, 'volume_id': bdm.volume_id},
                             instance=instance)
         if vol_bdms:
-            LOG.info(_LI('Took %(time).2f seconds to detach %(num)s volumes '
-                         'for instance.'),
+            LOG.info('Took %(time).2f seconds to detach %(num)s volumes '
+                     'for instance.',
                      {'time': timer.elapsed(), 'num': len(vol_bdms)},
                      instance=instance)
 
@@ -2363,8 +2351,8 @@ class ComputeManager(manager.Manager):
                     self.volume_api.delete(context, bdm.volume_id)
                 except Exception as exc:
                     exc_info = sys.exc_info()
-                    LOG.warning(_LW('Failed to delete volume: %(volume_id)s '
-                                    'due to %(exc)s'),
+                    LOG.warning('Failed to delete volume: %(volume_id)s '
+                                'due to %(exc)s',
                                 {'volume_id': bdm.volume_id, 'exc': exc})
         if exc_info is not None and raise_exc:
             six.reraise(exc_info[0], exc_info[1], exc_info[2])
@@ -2411,8 +2399,8 @@ class ComputeManager(manager.Manager):
                 # NOTE(yoshimatsu): Avoid AttributeError if instance.info_cache
                 # is None. When the root cause that instance.info_cache becomes
                 # None is fixed, the log level should be reconsidered.
-                LOG.warning(_LW("Info cache for instance could not be found. "
-                                "Ignore."), instance=instance)
+                LOG.warning("Info cache for instance could not be found. "
+                            "Ignore.", instance=instance)
 
             # NOTE(vish): We have already deleted the instance, so we have
             #             to ignore problems cleaning up the volumes. It
@@ -2475,13 +2463,13 @@ class ComputeManager(manager.Manager):
             try:
                 self._delete_instance(context, instance, bdms, quotas)
             except exception.InstanceNotFound:
-                LOG.info(_LI("Instance disappeared during terminate"),
+                LOG.info("Instance disappeared during terminate",
                          instance=instance)
             except Exception:
                 # As we're trying to delete always go to Error if something
                 # goes wrong that _delete_instance can't handle.
                 with excutils.save_and_reraise_exception():
-                    LOG.exception(_LE('Setting instance vm_state to ERROR'),
+                    LOG.exception('Setting instance vm_state to ERROR',
                                   instance=instance)
                     self._set_instance_obj_error_state(context, instance)
 
@@ -2519,8 +2507,8 @@ class ComputeManager(manager.Manager):
             if current_power_state in (power_state.NOSTATE,
                                        power_state.SHUTDOWN,
                                        power_state.CRASHED):
-                LOG.info(_LI('Instance is already powered off in the '
-                             'hypervisor when stop is called.'),
+                LOG.info('Instance is already powered off in the '
+                         'hypervisor when stop is called.',
                          instance=instance)
                 expected_task_state.append(None)
 
@@ -2560,12 +2548,12 @@ class ComputeManager(manager.Manager):
             self.image_api.delete(context, snapshot_id)
         except (exception.ImageNotFound,
                 exception.ImageNotAuthorized) as exc:
-            LOG.warning(_LW("Failed to delete snapshot "
-                            "from shelved instance (%s)."),
+            LOG.warning("Failed to delete snapshot "
+                        "from shelved instance (%s).",
                         exc.format_message(), instance=instance)
         except Exception:
-            LOG.exception(_LE("Something wrong happened when trying to "
-                              "delete snapshot from shelved instance."),
+            LOG.exception("Something wrong happened when trying to "
+                          "delete snapshot from shelved instance.",
                           instance=instance)
 
     # NOTE(johannes): This is probably better named power_on_instance
@@ -2770,7 +2758,7 @@ class ComputeManager(manager.Manager):
         """
         context = context.elevated()
 
-        LOG.info(_LI("Rebuilding instance"), instance=instance)
+        LOG.info("Rebuilding instance", instance=instance)
 
         # NOTE(gyee): there are three possible scenarios.
         #
@@ -2804,7 +2792,7 @@ class ComputeManager(manager.Manager):
                     compute_node = self._get_compute_info(context, self.host)
                     scheduled_node = compute_node.hypervisor_hostname
                 except exception.ComputeHostNotFound:
-                    LOG.exception(_LE('Failed to get compute_info for %s'),
+                    LOG.exception('Failed to get compute_info for %s',
                                   self.host)
             else:
                 scheduled_node = instance.node
@@ -2895,12 +2883,12 @@ class ComputeManager(manager.Manager):
                             " storage"))
 
             if on_shared_storage:
-                LOG.info(_LI('disk on shared storage, recreating using'
-                                ' existing disk'))
+                LOG.info('disk on shared storage, recreating using'
+                         ' existing disk')
             else:
                 image_ref = orig_image_ref = instance.image_ref
-                LOG.info(_LI("disk not on shared storage, rebuilding from:"
-                                " '%s'"), str(image_ref))
+                LOG.info("disk not on shared storage, rebuilding from:"
+                         " '%s'", str(image_ref))
 
         if image_ref:
             image_meta = objects.ImageMeta.from_image_ref(
@@ -2986,8 +2974,8 @@ class ComputeManager(manager.Manager):
         instance.save(expected_task_state=[task_states.REBUILD_SPAWNING])
 
         if orig_vm_state == vm_states.STOPPED:
-            LOG.info(_LI("bringing vm to original state: '%s'"),
-                        orig_vm_state, instance=instance)
+            LOG.info("bringing vm to original state: '%s'",
+                     orig_vm_state, instance=instance)
             instance.vm_state = vm_states.ACTIVE
             instance.task_state = task_states.POWERING_OFF
             instance.progress = 0
@@ -3021,7 +3009,7 @@ class ComputeManager(manager.Manager):
                 # compute-manager.
                 #
                 # API-detach
-                LOG.info(_LI("Detaching from volume api: %s"), volume_id)
+                LOG.info("Detaching from volume api: %s", volume_id)
                 volume = self.volume_api.get(context, volume_id)
                 self.volume_api.check_detach(context, volume)
                 self.volume_api.begin_detaching(context, volume_id)
@@ -3048,7 +3036,7 @@ class ComputeManager(manager.Manager):
                                task_states.REBOOT_PENDING_HARD,
                                task_states.REBOOT_STARTED_HARD)
         context = context.elevated()
-        LOG.info(_LI("Rebooting instance"), instance=instance)
+        LOG.info("Rebooting instance", instance=instance)
 
         block_device_info = self._get_instance_block_device_info(context,
                                                                  instance)
@@ -3068,8 +3056,8 @@ class ComputeManager(manager.Manager):
         if instance.power_state != power_state.RUNNING:
             state = instance.power_state
             running = power_state.RUNNING
-            LOG.warning(_LW('trying to reboot a non-running instance:'
-                            ' (state: %(state)s expected: %(running)s)'),
+            LOG.warning('trying to reboot a non-running instance:'
+                        ' (state: %(state)s expected: %(running)s)',
                         {'state': state, 'running': running},
                         instance=instance)
 
@@ -3104,7 +3092,7 @@ class ComputeManager(manager.Manager):
                 # put it into an error state
                 new_power_state = self._get_power_state(context, instance)
                 if new_power_state == power_state.RUNNING:
-                    LOG.warning(_LW('Reboot failed but instance is running'),
+                    LOG.warning('Reboot failed but instance is running',
                                 instance=instance)
                     compute_utils.add_instance_fault_from_exc(context,
                             instance, error, exc_info)
@@ -3118,7 +3106,7 @@ class ComputeManager(manager.Manager):
                     )
                     ctxt.reraise = False
                 else:
-                    LOG.error(_LE('Cannot reboot instance: %s'), error,
+                    LOG.error('Cannot reboot instance: %s', error,
                               instance=instance)
                     self._set_instance_obj_error_state(context, instance)
 
@@ -3130,7 +3118,7 @@ class ComputeManager(manager.Manager):
             instance.task_state = None
             instance.save()
         except exception.InstanceNotFound:
-            LOG.warning(_LW("Instance disappeared during reboot"),
+            LOG.warning("Instance disappeared during reboot",
                         instance=instance)
 
         self._notify_about_instance_usage(context, instance, "reboot.end")
@@ -3200,13 +3188,13 @@ class ComputeManager(manager.Manager):
         try:
             instance.save()
 
-            LOG.info(_LI('instance snapshotting'), instance=instance)
+            LOG.info('instance snapshotting', instance=instance)
 
             if instance.power_state != power_state.RUNNING:
                 state = instance.power_state
                 running = power_state.RUNNING
-                LOG.warning(_LW('trying to snapshot a non-running instance: '
-                                '(state: %(state)s expected: %(running)s)'),
+                LOG.warning('trying to snapshot a non-running instance: '
+                            '(state: %(state)s expected: %(running)s)',
                             {'state': state, 'running': running},
                             instance=instance)
 
@@ -3244,13 +3232,12 @@ class ComputeManager(manager.Manager):
                 if image['status'] != 'active':
                     image_service.delete(context, image_id)
             except Exception:
-                LOG.warning(_LW("Error while trying to clean up image %s"),
+                LOG.warning("Error while trying to clean up image %s",
                             image_id, instance=instance)
         except exception.ImageNotFound:
             instance.task_state = None
             instance.save()
-            msg = _LW("Image not found during snapshot")
-            LOG.warning(msg, instance=instance)
+            LOG.warning("Image not found during snapshot", instance=instance)
 
     def _post_interrupted_snapshot_cleanup(self, context, instance):
         self.driver.post_interrupted_snapshot_cleanup(context, instance)
@@ -3308,8 +3295,8 @@ class ComputeManager(manager.Manager):
                 try:
                     self.image_api.delete(context, image_id)
                 except exception.ImageNotFound:
-                    LOG.info(_LI("Failed to find image %(image_id)s to "
-                                 "delete"), {'image_id': image_id},
+                    LOG.info("Failed to find image %(image_id)s to "
+                             "delete", {'image_id': image_id},
                              instance=instance)
 
     @wrap_exception()
@@ -3344,7 +3331,7 @@ class ComputeManager(manager.Manager):
 
         try:
             self.driver.set_admin_password(instance, new_pass)
-            LOG.info(_LI("Root password set"), instance=instance)
+            LOG.info("Root password set", instance=instance)
             instance.task_state = None
             instance.save(
                 expected_task_state=task_states.UPDATING_PASSWORD)
@@ -3357,15 +3344,15 @@ class ComputeManager(manager.Manager):
                     expected_task_state=task_states.UPDATING_PASSWORD)
         except exception.SetAdminPasswdNotSupported:
             with excutils.save_and_reraise_exception():
-                LOG.info(_LI('set_admin_password is not supported '
-                                'by this driver or guest instance.'),
-                            instance=instance)
+                LOG.info('set_admin_password is not supported '
+                         'by this driver or guest instance.',
+                         instance=instance)
                 instance.task_state = None
                 instance.save(
                     expected_task_state=task_states.UPDATING_PASSWORD)
         except NotImplementedError:
-            LOG.warning(_LW('set_admin_password is not implemented '
-                            'by this driver or guest instance.'),
+            LOG.warning('set_admin_password is not implemented '
+                        'by this driver or guest instance.',
                         instance=instance)
             instance.task_state = None
             instance.save(
@@ -3379,8 +3366,7 @@ class ComputeManager(manager.Manager):
             raise
         except Exception:
             # Catch all here because this could be anything.
-            LOG.exception(_LE('set_admin_password failed'),
-                          instance=instance)
+            LOG.exception('set_admin_password failed', instance=instance)
             self._set_instance_obj_error_state(context, instance)
             # We create a new exception here so that we won't
             # potentially reveal password information to the
@@ -3401,14 +3387,13 @@ class ComputeManager(manager.Manager):
         current_power_state = self._get_power_state(context, instance)
         expected_state = power_state.RUNNING
         if current_power_state != expected_state:
-            LOG.warning(_LW('trying to inject a file into a non-running '
-                            '(state: %(current_state)s expected: '
-                            '%(expected_state)s)'),
+            LOG.warning('trying to inject a file into a non-running '
+                        '(state: %(current_state)s expected: '
+                        '%(expected_state)s)',
                         {'current_state': current_power_state,
                          'expected_state': expected_state},
                         instance=instance)
-        LOG.info(_LI('injecting file to %s'), path,
-                    instance=instance)
+        LOG.info('injecting file to %s', path, instance=instance)
         self.driver.inject_file(instance, path, file_contents)
 
     def _get_rescue_image(self, context, instance, rescue_image_ref=None):
@@ -3425,8 +3410,8 @@ class ComputeManager(manager.Manager):
             rescue_image_ref = system_meta.get('image_base_image_ref')
 
         if not rescue_image_ref:
-            LOG.warning(_LW('Unable to find a different image to use for '
-                            'rescue VM, using instance\'s current image'),
+            LOG.warning('Unable to find a different image to use for '
+                        'rescue VM, using instance\'s current image',
                         instance=instance)
             rescue_image_ref = instance.image_ref
 
@@ -3440,7 +3425,7 @@ class ComputeManager(manager.Manager):
     def rescue_instance(self, context, instance, rescue_password,
                         rescue_image_ref, clean_shutdown):
         context = context.elevated()
-        LOG.info(_LI('Rescuing'), instance=instance)
+        LOG.info('Rescuing', instance=instance)
 
         admin_password = (rescue_password if rescue_password else
                       utils.generate_password())
@@ -3463,7 +3448,7 @@ class ComputeManager(manager.Manager):
                                network_info,
                                rescue_image_meta, admin_password)
         except Exception as e:
-            LOG.exception(_LE("Error trying to Rescue Instance"),
+            LOG.exception("Error trying to Rescue Instance",
                           instance=instance)
             self._set_instance_obj_error_state(context, instance)
             raise exception.InstanceNotRescuable(
@@ -3489,7 +3474,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def unrescue_instance(self, context, instance):
         context = context.elevated()
-        LOG.info(_LI('Unrescuing'), instance=instance)
+        LOG.info('Unrescuing', instance=instance)
 
         network_info = self.network_api.get_instance_nw_info(context, instance)
         self._notify_about_instance_usage(context, instance,
@@ -3537,20 +3522,19 @@ class ComputeManager(manager.Manager):
                 migration = objects.Migration.get_by_id(
                                     context.elevated(), migration_id)
             except exception.MigrationNotFound:
-                LOG.error(_LE("Migration %s is not found during confirmation"),
+                LOG.error("Migration %s is not found during confirmation",
                           migration_id, instance=instance)
                 quotas.rollback()
                 return
 
             if migration.status == 'confirmed':
-                LOG.info(_LI("Migration %s is already confirmed"),
+                LOG.info("Migration %s is already confirmed",
                          migration_id, instance=instance)
                 quotas.rollback()
                 return
             elif migration.status not in ('finished', 'confirming'):
-                LOG.warning(_LW("Unexpected confirmation status '%(status)s' "
-                                "of migration %(id)s, exit confirmation "
-                                "process"),
+                LOG.warning("Unexpected confirmation status '%(status)s' "
+                            "of migration %(id)s, exit confirmation process",
                             {"status": migration.status, "id": migration_id},
                             instance=instance)
                 quotas.rollback()
@@ -3564,7 +3548,7 @@ class ComputeManager(manager.Manager):
                         context, instance.uuid,
                         expected_attrs=expected_attrs)
             except exception.InstanceNotFound:
-                LOG.info(_LI("Instance is not found during confirmation"),
+                LOG.info("Instance is not found during confirmation",
                          instance=instance)
                 quotas.rollback()
                 return
@@ -3765,7 +3749,7 @@ class ComputeManager(manager.Manager):
             instance.save(expected_task_state=task_states.RESIZE_REVERTING)
 
             # if the original vm state was STOPPED, set it back to STOPPED
-            LOG.info(_LI("Updating instance to original state: '%s'"),
+            LOG.info("Updating instance to original state: '%s'",
                      old_vm_state, instance=instance)
             if power_on:
                 instance.vm_state = vm_states.ACTIVE
@@ -3815,7 +3799,7 @@ class ComputeManager(manager.Manager):
         rt = self._get_resource_tracker()
         with rt.resize_claim(context, instance, instance_type, node,
                              image_meta=image, limits=limits) as claim:
-            LOG.info(_LI('Migrating'), instance=instance)
+            LOG.info('Migrating', instance=instance)
             self.compute_rpcapi.resize_instance(
                     context, instance, claim.migration, image,
                     instance_type, quotas.reservations,
@@ -3904,7 +3888,7 @@ class ComputeManager(manager.Manager):
                     method_args, task_state, exc_info)
         except Exception as error:
             rescheduled = False
-            LOG.exception(_LE("Error trying to reschedule"),
+            LOG.exception("Error trying to reschedule",
                           instance_uuid=instance_uuid)
             compute_utils.add_instance_fault_from_exc(context,
                     instance, error,
@@ -4129,14 +4113,14 @@ class ComputeManager(manager.Manager):
                                 disk_info, image_meta)
             quotas.commit()
         except Exception:
-            LOG.exception(_LE('Setting instance vm_state to ERROR'),
+            LOG.exception('Setting instance vm_state to ERROR',
                           instance=instance)
             with excutils.save_and_reraise_exception():
                 try:
                     quotas.rollback()
                 except Exception:
-                    LOG.exception(_LE("Failed to rollback quota for failed "
-                                      "finish_resize"),
+                    LOG.exception("Failed to rollback quota for failed "
+                                  "finish_resize",
                                   instance=instance)
                 self._set_instance_obj_error_state(context, instance)
 
@@ -4193,7 +4177,7 @@ class ComputeManager(manager.Manager):
     def pause_instance(self, context, instance):
         """Pause an instance on this host."""
         context = context.elevated()
-        LOG.info(_LI('Pausing'), instance=instance)
+        LOG.info('Pausing', instance=instance)
         self._notify_about_instance_usage(context, instance, 'pause.start')
         compute_utils.notify_about_instance_action(context, instance,
                self.host, action=fields.NotificationAction.PAUSE,
@@ -4215,7 +4199,7 @@ class ComputeManager(manager.Manager):
     def unpause_instance(self, context, instance):
         """Unpause a paused instance on this host."""
         context = context.elevated()
-        LOG.info(_LI('Unpausing'), instance=instance)
+        LOG.info('Unpausing', instance=instance)
         self._notify_about_instance_usage(context, instance, 'unpause.start')
         compute_utils.notify_about_instance_action(context, instance,
             self.host, action=fields.NotificationAction.UNPAUSE,
@@ -4258,7 +4242,7 @@ class ComputeManager(manager.Manager):
         """Retrieve diagnostics for an instance on this host."""
         current_power_state = self._get_power_state(context, instance)
         if current_power_state == power_state.RUNNING:
-            LOG.info(_LI("Retrieving diagnostics"), instance=instance)
+            LOG.info("Retrieving diagnostics", instance=instance)
             return self.driver.get_diagnostics(instance)
         else:
             raise exception.InstanceInvalidState(
@@ -4275,7 +4259,7 @@ class ComputeManager(manager.Manager):
         """Retrieve diagnostics for an instance on this host."""
         current_power_state = self._get_power_state(context, instance)
         if current_power_state == power_state.RUNNING:
-            LOG.info(_LI("Retrieving diagnostics"), instance=instance)
+            LOG.info("Retrieving diagnostics", instance=instance)
             return self.driver.get_instance_diagnostics(instance)
         else:
             raise exception.InstanceInvalidState(
@@ -4317,7 +4301,7 @@ class ComputeManager(manager.Manager):
     def resume_instance(self, context, instance):
         """Resume the given suspended instance."""
         context = context.elevated()
-        LOG.info(_LI('Resuming'), instance=instance)
+        LOG.info('Resuming', instance=instance)
 
         self._notify_about_instance_usage(context, instance, 'resume.start')
         compute_utils.notify_about_instance_action(context, instance,
@@ -4371,7 +4355,7 @@ class ComputeManager(manager.Manager):
 
     def _shelve_instance(self, context, instance, image_id,
                          clean_shutdown):
-        LOG.info(_LI('Shelving'), instance=instance)
+        LOG.info('Shelving', instance=instance)
         compute_utils.notify_usage_exists(self.notifier, context, instance,
                                           current_period=True)
         self._notify_about_instance_usage(context, instance, 'shelve.start')
@@ -4437,7 +4421,7 @@ class ComputeManager(manager.Manager):
         do_shelve_offload_instance()
 
     def _shelve_offload_instance(self, context, instance, clean_shutdown):
-        LOG.info(_LI('Shelve offloading'), instance=instance)
+        LOG.info('Shelve offloading', instance=instance)
         self._notify_about_instance_usage(context, instance,
                 'shelve_offload.start')
         compute_utils.notify_about_instance_action(context, instance,
@@ -4519,7 +4503,7 @@ class ComputeManager(manager.Manager):
 
     def _unshelve_instance(self, context, instance, image, filter_properties,
                            node):
-        LOG.info(_LI('Unshelving'), instance=instance)
+        LOG.info('Unshelving', instance=instance)
         self._notify_about_instance_usage(context, instance, 'unshelve.start')
         compute_utils.notify_about_instance_action(context, instance,
                 self.host, action=fields.NotificationAction.UNSHELVE,
@@ -4562,7 +4546,7 @@ class ComputeManager(manager.Manager):
                                   block_device_info=block_device_info)
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.exception(_LE('Instance failed to spawn'),
+                LOG.exception('Instance failed to spawn',
                               instance=instance)
 
         if image:
@@ -4612,7 +4596,7 @@ class ComputeManager(manager.Manager):
     def get_console_output(self, context, instance, tail_length):
         """Send the console output for the given instance."""
         context = context.elevated()
-        LOG.info(_LI("Get console output"), instance=instance)
+        LOG.info("Get console output", instance=instance)
         output = self.driver.get_console_output(context, instance)
 
         if type(output) is six.text_type:
@@ -4878,8 +4862,8 @@ class ComputeManager(manager.Manager):
 
     def _attach_volume(self, context, instance, bdm):
         context = context.elevated()
-        LOG.info(_LI('Attaching volume %(volume_id)s to %(mountpoint)s'),
-                  {'volume_id': bdm.volume_id,
+        LOG.info('Attaching volume %(volume_id)s to %(mountpoint)s',
+                 {'volume_id': bdm.volume_id,
                   'mountpoint': bdm['mount_device']},
                  instance=instance)
         compute_utils.notify_about_volume_attach_detach(
@@ -4892,8 +4876,8 @@ class ComputeManager(manager.Manager):
                        do_driver_attach=True)
         except Exception as e:
             with excutils.save_and_reraise_exception():
-                LOG.exception(_LE("Failed to attach %(volume_id)s "
-                                  "at %(mountpoint)s"),
+                LOG.exception("Failed to attach %(volume_id)s "
+                              "at %(mountpoint)s",
                               {'volume_id': bdm.volume_id,
                                'mountpoint': bdm['mount_device']},
                               instance=instance)
@@ -4966,7 +4950,7 @@ class ComputeManager(manager.Manager):
 
         self._notify_volume_usage_detach(context, instance, bdm)
 
-        LOG.info(_LI('Detaching volume %(volume_id)s'),
+        LOG.info('Detaching volume %(volume_id)s',
                  {'volume_id': volume_id}, instance=instance)
 
         driver_bdm = driver_block_device.convert_volume(bdm)
@@ -5044,14 +5028,14 @@ class ComputeManager(manager.Manager):
                     fields.NotificationPhase.ERROR,
                     old_volume_id, new_volume_id, ex)
                 if new_cinfo:
-                    msg = _LE("Failed to swap volume %(old_volume_id)s "
-                              "for %(new_volume_id)s")
+                    msg = ("Failed to swap volume %(old_volume_id)s "
+                           "for %(new_volume_id)s")
                     LOG.exception(msg, {'old_volume_id': old_volume_id,
                                         'new_volume_id': new_volume_id},
                                   instance=instance)
                 else:
-                    msg = _LE("Failed to connect to volume %(volume_id)s "
-                              "with volume at %(mountpoint)s")
+                    msg = ("Failed to connect to volume %(volume_id)s "
+                           "with volume at %(mountpoint)s")
                     LOG.exception(msg, {'volume_id': new_volume_id,
                                         'mountpoint': bdm['device_name']},
                                   instance=instance)
@@ -5107,8 +5091,8 @@ class ComputeManager(manager.Manager):
         if new_vol_size > old_vol_size:
             resize_to = new_vol_size
 
-        LOG.info(_LI('Swapping volume %(old_volume)s for %(new_volume)s'),
-                  {'old_volume': old_volume_id, 'new_volume': new_volume_id},
+        LOG.info('Swapping volume %(old_volume)s for %(new_volume)s',
+                 {'old_volume': old_volume_id, 'new_volume': new_volume_id},
                  instance=instance)
         comp_ret, new_cinfo = self._swap_volume(context, instance,
                                                          bdm,
@@ -5176,8 +5160,8 @@ class ComputeManager(manager.Manager):
             context, instance, port_id, network_id, requested_ip,
             bind_host_id=bind_host_id)
         if len(network_info) != 1:
-            LOG.error(_LE('allocate_port_for_instance returned %(ports)s '
-                          'ports'), {'ports': len(network_info)})
+            LOG.error('allocate_port_for_instance returned %(ports)s '
+                      'ports', {'ports': len(network_info)})
             raise exception.InterfaceAttachFailed(
                     instance_uuid=instance.uuid)
         image_meta = objects.ImageMeta.from_instance(instance)
@@ -5187,16 +5171,16 @@ class ComputeManager(manager.Manager):
                                          network_info[0])
         except exception.NovaException as ex:
             port_id = network_info[0].get('id')
-            LOG.warning(_LW("attach interface failed , try to deallocate "
-                         "port %(port_id)s, reason: %(msg)s"),
-                     {'port_id': port_id, 'msg': ex},
-                     instance=instance)
+            LOG.warning("attach interface failed , try to deallocate "
+                        "port %(port_id)s, reason: %(msg)s",
+                        {'port_id': port_id, 'msg': ex},
+                        instance=instance)
             try:
                 self.network_api.deallocate_port_for_instance(
                     context, instance, port_id)
             except Exception:
-                LOG.warning(_LW("deallocate port %(port_id)s failed"),
-                             {'port_id': port_id}, instance=instance)
+                LOG.warning("deallocate port %(port_id)s failed",
+                            {'port_id': port_id}, instance=instance)
             raise exception.InterfaceAttachFailed(
                 instance_uuid=instance.uuid)
 
@@ -5218,8 +5202,8 @@ class ComputeManager(manager.Manager):
         try:
             self.driver.detach_interface(context, instance, condemned)
         except exception.NovaException as ex:
-            LOG.warning(_LW("Detach interface failed, port_id=%(port_id)s,"
-                            " reason: %(msg)s"),
+            LOG.warning("Detach interface failed, port_id=%(port_id)s,"
+                        " reason: %(msg)s",
                         {'port_id': port_id, 'msg': ex}, instance=instance)
             raise exception.InterfaceDetachFailed(instance_uuid=instance.uuid)
         else:
@@ -5230,8 +5214,8 @@ class ComputeManager(manager.Manager):
                 with excutils.save_and_reraise_exception():
                     # Since this is a cast operation, log the failure for
                     # triage.
-                    LOG.warning(_LW('Failed to deallocate port %(port_id)s '
-                                    'for instance. Error: %(error)s'),
+                    LOG.warning('Failed to deallocate port %(port_id)s '
+                                'for instance. Error: %(error)s',
                                 {'port_id': port_id, 'error': ex},
                                 instance=instance)
 
@@ -5424,7 +5408,7 @@ class ComputeManager(manager.Manager):
                 block_migration, disk, dest, migrate_data)
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.exception(_LE('Pre live migration failed at %s'),
+                LOG.exception('Pre live migration failed at %s',
                               dest, instance=instance)
                 self._set_migration_status(migration, 'error')
                 self._rollback_live_migration(context, instance, dest,
@@ -5441,7 +5425,7 @@ class ComputeManager(manager.Manager):
                                        self._rollback_live_migration,
                                        block_migration, migrate_data)
         except Exception:
-            LOG.exception(_LE('Live migration failed.'), instance=instance)
+            LOG.exception('Live migration failed.', instance=instance)
             with excutils.save_and_reraise_exception():
                 # Put instance and migration into error state,
                 # as its almost certainly too late to rollback
@@ -5582,7 +5566,7 @@ class ComputeManager(manager.Manager):
         required for live migration without shared storage
 
         """
-        LOG.info(_LI('_post_live_migration() is started..'),
+        LOG.info('_post_live_migration() is started..',
                  instance=instance)
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
@@ -5649,8 +5633,8 @@ class ComputeManager(manager.Manager):
             # We don't want to break _post_live_migration() if
             # post_live_migration_at_destination() fails as it should never
             # affect cleaning up source node.
-            LOG.exception(_LE("Post live migration at destination %s failed"),
-                    dest, instance=instance, error=error)
+            LOG.exception("Post live migration at destination %s failed",
+                          dest, instance=instance, error=error)
 
         do_cleanup, destroy_disks = self._live_migration_cleanup_flags(
                 migrate_data)
@@ -5699,7 +5683,7 @@ class ComputeManager(manager.Manager):
         :param block_migration: if true, prepare for block migration
 
         """
-        LOG.info(_LI('Post operation of migration started'),
+        LOG.info('Post operation of migration started',
                  instance=instance)
 
         # NOTE(tr3buchet): setup networks on destination host
@@ -5728,8 +5712,8 @@ class ComputeManager(manager.Manager):
         except Exception:
             with excutils.save_and_reraise_exception():
                 instance.vm_state = vm_states.ERROR
-                LOG.error(_LE('Unexpected error during post live migration at '
-                              'destination host.'), instance=instance)
+                LOG.error('Unexpected error during post live migration at '
+                          'destination host.', instance=instance)
         finally:
             # Restore instance state and update host
             current_power_state = self._get_power_state(context, instance)
@@ -5739,8 +5723,7 @@ class ComputeManager(manager.Manager):
                 compute_node = self._get_compute_info(context, self.host)
                 node_name = compute_node.hypervisor_hostname
             except exception.ComputeHostNotFound:
-                LOG.exception(_LE('Failed to get compute_info for %s'),
-                              self.host)
+                LOG.exception('Failed to get compute_info for %s', self.host)
             finally:
                 instance.host = self.host
                 instance.power_state = current_power_state
@@ -5842,9 +5825,8 @@ class ComputeManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 # NOTE(tdurakov): even if teardown networks fails driver
                 # should try to rollback live migration on destination.
-                LOG.exception(
-                    _LE('An error occurred while deallocating network.'),
-                    instance=instance)
+                LOG.exception('An error occurred while deallocating network.',
+                              instance=instance)
         finally:
             # always run this even if setup_networks_on_host fails
             # NOTE(vish): The mapping is passed in so the driver can disconnect
@@ -5958,8 +5940,8 @@ class ComputeManager(manager.Manager):
                 LOG.debug('InstanceInfoCache no longer exists. '
                           'Unable to refresh', instance=instance)
             except Exception:
-                LOG.error(_LE('An error occurred while refreshing the network '
-                              'cache.'), instance=instance, exc_info=True)
+                LOG.error('An error occurred while refreshing the network '
+                          'cache.', instance=instance, exc_info=True)
         else:
             LOG.debug("Didn't find any instances for network info cache "
                       "update.")
@@ -6014,23 +5996,23 @@ class ComputeManager(manager.Manager):
                 confirm_window=CONF.resize_confirm_window)
 
         if migrations_info["migration_count"] > 0:
-            LOG.info(_LI("Found %(migration_count)d unconfirmed migrations "
-                         "older than %(confirm_window)d seconds"),
+            LOG.info("Found %(migration_count)d unconfirmed migrations "
+                     "older than %(confirm_window)d seconds",
                      migrations_info)
 
         def _set_migration_to_error(migration, reason, **kwargs):
-            LOG.warning(_LW("Setting migration %(migration_id)s to error: "
-                         "%(reason)s"),
-                     {'migration_id': migration['id'], 'reason': reason},
-                     **kwargs)
+            LOG.warning("Setting migration %(migration_id)s to error: "
+                        "%(reason)s",
+                        {'migration_id': migration['id'], 'reason': reason},
+                        **kwargs)
             migration.status = 'error'
             with migration.obj_as_admin():
                 migration.save()
 
         for migration in migrations:
             instance_uuid = migration.instance_uuid
-            LOG.info(_LI("Automatically confirming migration "
-                         "%(migration_id)s for instance %(instance_uuid)s"),
+            LOG.info("Automatically confirming migration "
+                     "%(migration_id)s for instance %(instance_uuid)s",
                      {'migration_id': migration.id,
                       'instance_uuid': instance_uuid})
             expected_attrs = ['metadata', 'system_metadata']
@@ -6083,9 +6065,8 @@ class ComputeManager(manager.Manager):
                 self.compute_api.confirm_resize(context, instance,
                                                 migration=migration)
             except Exception as e:
-                LOG.info(_LI("Error auto-confirming resize: %s. "
-                             "Will retry later."),
-                         e, instance=instance)
+                LOG.info("Error auto-confirming resize: %s. "
+                         "Will retry later.", e, instance=instance)
 
     @periodic_task.periodic_task(spacing=CONF.shelved_poll_interval)
     def _poll_shelved_instances(self, context):
@@ -6114,8 +6095,8 @@ class ComputeManager(manager.Manager):
                 self.shelve_offload_instance(context, instance,
                                              clean_shutdown=False)
             except Exception:
-                LOG.exception(_LE('Periodic task failed to offload instance.'),
-                        instance=instance)
+                LOG.exception('Periodic task failed to offload instance.',
+                              instance=instance)
 
     @periodic_task.periodic_task
     def _instance_usage_audit(self, context):
@@ -6135,10 +6116,9 @@ class ComputeManager(manager.Manager):
         num_instances = len(instances)
         errors = 0
         successes = 0
-        LOG.info(_LI("Running instance usage audit for"
-                     " host %(host)s from %(begin_time)s to "
-                     "%(end_time)s. %(number_instances)s"
-                     " instances."),
+        LOG.info("Running instance usage audit for host %(host)s "
+                 "from %(begin_time)s to %(end_time)s. "
+                 "%(number_instances)s instances.",
                  {'host': self.host,
                   'begin_time': begin,
                   'end_time': end,
@@ -6159,9 +6139,9 @@ class ComputeManager(manager.Manager):
                     ignore_missing_network_data=False)
                 successes += 1
             except Exception:
-                LOG.exception(_LE('Failed to generate usage '
-                                  'audit for instance '
-                                  'on host %s'), self.host,
+                LOG.exception('Failed to generate usage '
+                              'audit for instance '
+                              'on host %s', self.host,
                               instance=instance)
                 errors += 1
         task_log.errors = errors
@@ -6182,7 +6162,7 @@ class ComputeManager(manager.Manager):
         if (curr_time - self._last_bw_usage_poll >
                 CONF.bandwidth_poll_interval):
             self._last_bw_usage_poll = curr_time
-            LOG.info(_LI("Updating bandwidth usage cache"))
+            LOG.info("Updating bandwidth usage cache")
             cells_update_interval = CONF.cells.bandwidth_update_interval
             if (cells_update_interval > 0 and
                    curr_time - self._last_bw_usage_cell_update >
@@ -6204,8 +6184,7 @@ class ComputeManager(manager.Manager):
                 # NOTE(PhilDay): Record that its not supported so we can
                 # skip fast on future calls rather than waste effort getting
                 # the list of instances.
-                LOG.info(_LI("Bandwidth usage not supported by "
-                             "hypervisor."))
+                LOG.info("Bandwidth usage not supported by hypervisor.")
                 self._bw_usage_supported = False
                 return
 
@@ -6330,10 +6309,10 @@ class ComputeManager(manager.Manager):
         num_db_instances = len(db_instances)
 
         if num_vm_instances != num_db_instances:
-            LOG.warning(_LW("While synchronizing instance power states, found "
-                            "%(num_db_instances)s instances in the database "
-                            "and %(num_vm_instances)s instances on the "
-                            "hypervisor."),
+            LOG.warning("While synchronizing instance power states, found "
+                        "%(num_db_instances)s instances in the database "
+                        "and %(num_vm_instances)s instances on the "
+                        "hypervisor.",
                         {'num_db_instances': num_db_instances,
                          'num_vm_instances': num_vm_instances})
 
@@ -6348,8 +6327,8 @@ class ComputeManager(manager.Manager):
             try:
                 query_driver_power_state_and_sync()
             except Exception:
-                LOG.exception(_LE("Periodic sync_power_state task had an "
-                                  "error while processing an instance."),
+                LOG.exception("Periodic sync_power_state task had an "
+                              "error while processing an instance.",
                               instance=db_instance)
 
             self._syncs_in_progress.pop(db_instance.uuid)
@@ -6367,8 +6346,8 @@ class ComputeManager(manager.Manager):
 
     def _query_driver_power_state_and_sync(self, context, db_instance):
         if db_instance.task_state is not None:
-            LOG.info(_LI("During sync_power_state the instance has a "
-                         "pending task (%(task)s). Skip."),
+            LOG.info("During sync_power_state the instance has a "
+                     "pending task (%(task)s). Skip.",
                      {'task': db_instance.task_state}, instance=db_instance)
             return
         # No pending tasks. Now try to figure out the real vm_power_state.
@@ -6411,9 +6390,9 @@ class ComputeManager(manager.Manager):
             # is just in the process of migrating to another host.
             # This implies that the compute source must relinquish
             # control to the compute destination.
-            LOG.info(_LI("During the sync_power process the "
-                         "instance has moved from "
-                         "host %(src)s to host %(dst)s"),
+            LOG.info("During the sync_power process the "
+                     "instance has moved from "
+                     "host %(src)s to host %(dst)s",
                      {'src': db_instance.host,
                       'dst': self.host},
                      instance=db_instance)
@@ -6424,19 +6403,19 @@ class ComputeManager(manager.Manager):
             # but the actual VM has not showed up on the hypervisor
             # yet. In this case, let's allow the loop to continue
             # and run the state sync in a later round
-            LOG.info(_LI("During sync_power_state the instance has a "
-                         "pending task (%(task)s). Skip."),
+            LOG.info("During sync_power_state the instance has a "
+                     "pending task (%(task)s). Skip.",
                      {'task': db_instance.task_state},
                      instance=db_instance)
             return
 
         orig_db_power_state = db_power_state
         if vm_power_state != db_power_state:
-            LOG.info(_LI('During _sync_instance_power_state the DB '
-                         'power_state (%(db_power_state)s) does not match '
-                         'the vm_power_state from the hypervisor '
-                         '(%(vm_power_state)s). Updating power_state in the '
-                         'DB to match the hypervisor.'),
+            LOG.info('During _sync_instance_power_state the DB '
+                     'power_state (%(db_power_state)s) does not match '
+                     'the vm_power_state from the hypervisor '
+                     '(%(vm_power_state)s). Updating power_state in the '
+                     'DB to match the hypervisor.',
                      {'db_power_state': db_power_state,
                       'vm_power_state': vm_power_state},
                      instance=db_instance)
@@ -6458,11 +6437,11 @@ class ComputeManager(manager.Manager):
             # The only rational power state should be RUNNING
             if vm_power_state in (power_state.SHUTDOWN,
                                   power_state.CRASHED):
-                LOG.warning(_LW("Instance shutdown by itself. Calling the "
-                                "stop API. Current vm_state: %(vm_state)s, "
-                                "current task_state: %(task_state)s, "
-                                "original DB power_state: %(db_power_state)s, "
-                                "current VM power_state: %(vm_power_state)s"),
+                LOG.warning("Instance shutdown by itself. Calling the "
+                            "stop API. Current vm_state: %(vm_state)s, "
+                            "current task_state: %(task_state)s, "
+                            "original DB power_state: %(db_power_state)s, "
+                            "current VM power_state: %(vm_power_state)s",
                             {'vm_state': vm_state,
                              'task_state': db_instance.task_state,
                              'db_power_state': orig_db_power_state,
@@ -6481,17 +6460,15 @@ class ComputeManager(manager.Manager):
                     # because the same power_state will be retrieved next
                     # time and retried.
                     # For example, there might be another task scheduled.
-                    LOG.exception(_LE("error during stop() in "
-                                      "sync_power_state."),
+                    LOG.exception("error during stop() in sync_power_state.",
                                   instance=db_instance)
             elif vm_power_state == power_state.SUSPENDED:
-                LOG.warning(_LW("Instance is suspended unexpectedly. Calling "
-                                "the stop API."), instance=db_instance)
+                LOG.warning("Instance is suspended unexpectedly. Calling "
+                            "the stop API.", instance=db_instance)
                 try:
                     self.compute_api.stop(context, db_instance)
                 except Exception:
-                    LOG.exception(_LE("error during stop() in "
-                                      "sync_power_state."),
+                    LOG.exception("error during stop() in sync_power_state.",
                                   instance=db_instance)
             elif vm_power_state == power_state.PAUSED:
                 # Note(maoy): a VM may get into the paused state not only
@@ -6501,23 +6478,23 @@ class ComputeManager(manager.Manager):
                 # we simply ignore the state discrepancy. In many cases,
                 # the VM state will go back to running after the external
                 # instrumentation is done. See bug 1097806 for details.
-                LOG.warning(_LW("Instance is paused unexpectedly. Ignore."),
+                LOG.warning("Instance is paused unexpectedly. Ignore.",
                             instance=db_instance)
             elif vm_power_state == power_state.NOSTATE:
                 # Occasionally, depending on the status of the hypervisor,
                 # which could be restarting for example, an instance may
                 # not be found.  Therefore just log the condition.
-                LOG.warning(_LW("Instance is unexpectedly not found. Ignore."),
+                LOG.warning("Instance is unexpectedly not found. Ignore.",
                             instance=db_instance)
         elif vm_state == vm_states.STOPPED:
             if vm_power_state not in (power_state.NOSTATE,
                                       power_state.SHUTDOWN,
                                       power_state.CRASHED):
-                LOG.warning(_LW("Instance is not stopped. Calling "
-                                "the stop API. Current vm_state: %(vm_state)s,"
-                                " current task_state: %(task_state)s, "
-                                "original DB power_state: %(db_power_state)s, "
-                                "current VM power_state: %(vm_power_state)s"),
+                LOG.warning("Instance is not stopped. Calling "
+                            "the stop API. Current vm_state: %(vm_state)s,"
+                            " current task_state: %(task_state)s, "
+                            "original DB power_state: %(db_power_state)s, "
+                            "current VM power_state: %(vm_power_state)s",
                             {'vm_state': vm_state,
                              'task_state': db_instance.task_state,
                              'db_power_state': orig_db_power_state,
@@ -6529,19 +6506,17 @@ class ComputeManager(manager.Manager):
                     # instance.
                     self.compute_api.force_stop(context, db_instance)
                 except Exception:
-                    LOG.exception(_LE("error during stop() in "
-                                      "sync_power_state."),
+                    LOG.exception("error during stop() in sync_power_state.",
                                   instance=db_instance)
         elif vm_state == vm_states.PAUSED:
             if vm_power_state in (power_state.SHUTDOWN,
                                   power_state.CRASHED):
-                LOG.warning(_LW("Paused instance shutdown by itself. Calling "
-                                "the stop API."), instance=db_instance)
+                LOG.warning("Paused instance shutdown by itself. Calling "
+                            "the stop API.", instance=db_instance)
                 try:
                     self.compute_api.force_stop(context, db_instance)
                 except Exception:
-                    LOG.exception(_LE("error during stop() in "
-                                      "sync_power_state."),
+                    LOG.exception("error during stop() in sync_power_state.",
                                   instance=db_instance)
         elif vm_state in (vm_states.SOFT_DELETED,
                           vm_states.DELETED):
@@ -6549,7 +6524,7 @@ class ComputeManager(manager.Manager):
                                       power_state.SHUTDOWN):
                 # Note(maoy): this should be taken care of periodically in
                 # _cleanup_running_deleted_instances().
-                LOG.warning(_LW("Instance is not (soft-)deleted."),
+                LOG.warning("Instance is not (soft-)deleted.",
                             instance=db_instance)
 
     @periodic_task.periodic_task
@@ -6579,12 +6554,12 @@ class ComputeManager(manager.Manager):
             if self._deleted_old_enough(instance, interval):
                 bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                         context, instance.uuid)
-                LOG.info(_LI('Reclaiming deleted instance'), instance=instance)
+                LOG.info('Reclaiming deleted instance', instance=instance)
                 try:
                     self._delete_instance(context, instance, bdms, quotas)
                 except Exception as e:
-                    LOG.warning(_LW("Periodic reclaim failed to delete "
-                                    "instance: %s"),
+                    LOG.warning("Periodic reclaim failed to delete "
+                                "instance: %s",
                                 e, instance=instance)
 
     def update_available_resource_for_node(self, context, nodename):
@@ -6599,8 +6574,8 @@ class ComputeManager(manager.Manager):
             # tracker tried to update a deleted record and failed.
             # Don't add this resource tracker to the new dict, so
             # that this will resolve itself on the next run.
-            LOG.info(_LI("Compute node '%s' not found in "
-                         "update_available_resource."), nodename)
+            LOG.info("Compute node '%s' not found in "
+                     "update_available_resource.", nodename)
             # TODO(jaypipes): Yes, this is inefficient to throw away all of the
             # compute nodes to force a rebuild, but this is only temporary
             # until Ironic baremetal node resource providers are tracked
@@ -6609,8 +6584,8 @@ class ComputeManager(manager.Manager):
             self._resource_tracker = None
             return
         except Exception:
-            LOG.exception(_LE("Error updating resources for node "
-                          "%(node)s."), {'node': nodename})
+            LOG.exception("Error updating resources for node %(node)s.",
+                          {'node': nodename})
 
     @periodic_task.periodic_task(spacing=CONF.update_resources_interval)
     def update_available_resource(self, context, startup=False):
@@ -6634,11 +6609,11 @@ class ComputeManager(manager.Manager):
         # Delete orphan compute node not reported by driver but still in db
         for cn in compute_nodes_in_db:
             if cn.hypervisor_hostname not in nodenames:
-                LOG.info(_LI("Deleting orphan compute node %(id)s "
-                             "hypervisor host is %(hh)s, "
-                             "nodes are %(nodes)s"),
-                             {'id': cn.id, 'hh': cn.hypervisor_hostname,
-                              'nodes': nodenames})
+                LOG.info("Deleting orphan compute node %(id)s "
+                         "hypervisor host is %(hh)s, "
+                         "nodes are %(nodes)s",
+                         {'id': cn.id, 'hh': cn.hypervisor_hostname,
+                          'nodes': nodenames})
                 cn.destroy()
                 # Delete the corresponding resource provider in placement,
                 # along with any associated allocations and inventory.
@@ -6654,11 +6629,11 @@ class ComputeManager(manager.Manager):
         except exception.NotFound:
             if startup:
                 LOG.warning(
-                    _LW("No compute node record found for host %s. If this is "
-                        "the first time this service is starting on this "
-                        "host, then you can ignore this warning."), self.host)
+                    "No compute node record found for host %s. If this is "
+                    "the first time this service is starting on this "
+                    "host, then you can ignore this warning.", self.host)
             else:
-                LOG.error(_LE("No compute node record for host %s"), self.host)
+                LOG.error("No compute node record for host %s", self.host)
             return []
 
     @periodic_task.periodic_task(
@@ -6694,15 +6669,15 @@ class ComputeManager(manager.Manager):
         with utils.temporary_mutation(context, read_deleted="yes"):
             for instance in self._running_deleted_instances(context):
                 if action == "log":
-                    LOG.warning(_LW("Detected instance with name label "
-                                    "'%s' which is marked as "
-                                    "DELETED but still present on host."),
+                    LOG.warning("Detected instance with name label "
+                                "'%s' which is marked as "
+                                "DELETED but still present on host.",
                                 instance.name, instance=instance)
 
                 elif action == 'shutdown':
-                    LOG.info(_LI("Powering off instance with name label "
-                                 "'%s' which is marked as "
-                                 "DELETED but still present on host."),
+                    LOG.info("Powering off instance with name label "
+                             "'%s' which is marked as "
+                             "DELETED but still present on host.",
                              instance.name, instance=instance)
                     try:
                         try:
@@ -6714,13 +6689,13 @@ class ComputeManager(manager.Manager):
                         # and power it off
                         self.driver.power_off(instance)
                     except Exception:
-                        msg = _LW("Failed to power off instance")
-                        LOG.warning(msg, instance=instance, exc_info=True)
+                        LOG.warning("Failed to power off instance",
+                                    instance=instance, exc_info=True)
 
                 elif action == 'reap':
-                    LOG.info(_LI("Destroying instance with name label "
-                                 "'%s' which is marked as "
-                                 "DELETED but still present on host."),
+                    LOG.info("Destroying instance with name label "
+                             "'%s' which is marked as "
+                             "DELETED but still present on host.",
                              instance.name, instance=instance)
                     bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                         context, instance.uuid, use_slave=True)
@@ -6730,8 +6705,8 @@ class ComputeManager(manager.Manager):
                                                 notify=False)
                         self._cleanup_volumes(context, instance.uuid, bdms)
                     except Exception as e:
-                        LOG.warning(_LW("Periodic cleanup failed to delete "
-                                        "instance: %s"),
+                        LOG.warning("Periodic cleanup failed to delete "
+                                    "instance: %s",
                                     e, instance=instance)
                 else:
                     raise Exception(_("Unrecognized value '%s'"
@@ -6766,8 +6741,8 @@ class ComputeManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 if quotas:
                     quotas.rollback()
-                LOG.info(_LI("Setting instance back to %(state)s after: "
-                             "%(error)s"),
+                LOG.info("Setting instance back to %(state)s after: "
+                         "%(error)s",
                          {'state': instance_state, 'error': error},
                          instance_uuid=instance_uuid)
                 self._instance_update(context, instance,
@@ -6776,14 +6751,14 @@ class ComputeManager(manager.Manager):
         except exception.InstanceFaultRollback as error:
             if quotas:
                 quotas.rollback()
-            LOG.info(_LI("Setting instance back to ACTIVE after: %s"),
+            LOG.info("Setting instance back to ACTIVE after: %s",
                      error, instance_uuid=instance_uuid)
             self._instance_update(context, instance,
                                   vm_state=vm_states.ACTIVE,
                                   task_state=None)
             raise error.inner_exception
         except Exception:
-            LOG.exception(_LE('Setting instance vm_state to ERROR'),
+            LOG.exception('Setting instance vm_state to ERROR',
                           instance_uuid=instance_uuid)
             with excutils.save_and_reraise_exception():
                 if quotas:
@@ -6831,8 +6806,7 @@ class ComputeManager(manager.Manager):
                       {'event': event.key}, instance=instance)
             _event.send(event)
         else:
-            LOG.warning(_LW('Received unexpected event %(event)s for '
-                            'instance'),
+            LOG.warning('Received unexpected event %(event)s for instance',
                         {'event': event.key}, instance=instance)
 
     def _process_instance_vif_deleted_event(self, context, instance,
@@ -6843,9 +6817,9 @@ class ComputeManager(manager.Manager):
         network_info = instance.info_cache.network_info
         for index, vif in enumerate(network_info):
             if vif['id'] == deleted_vif_id:
-                LOG.info(_LI('Neutron deleted interface %(intf)s; '
-                             'detaching it from the instance and '
-                             'deleting it from the info cache'),
+                LOG.info('Neutron deleted interface %(intf)s; '
+                         'detaching it from the instance and '
+                         'deleting it from the info cache',
                          {'intf': vif['id']},
                          instance=instance)
                 del network_info[index]
@@ -6860,8 +6834,8 @@ class ComputeManager(manager.Manager):
                     # yet (like Ironic), so just ignore this.
                     pass
                 except exception.NovaException as ex:
-                    LOG.warning(_LW("Detach interface failed, "
-                                    "port_id=%(port_id)s, reason: %(msg)s"),
+                    LOG.warning("Detach interface failed, "
+                                "port_id=%(port_id)s, reason: %(msg)s",
                                 {'port_id': deleted_vif_id, 'msg': ex},
                                 instance=instance)
                 break
@@ -6882,8 +6856,8 @@ class ComputeManager(manager.Manager):
                 try:
                     self.network_api.get_instance_nw_info(context, instance)
                 except exception.NotFound as e:
-                    LOG.info(_LI('Failed to process external instance event '
-                                 '%(event)s due to: %(error)s'),
+                    LOG.info('Failed to process external instance event '
+                             '%(event)s due to: %(error)s',
                              {'event': event.key, 'error': six.text_type(e)},
                              instance=instance)
             elif event.name == 'network-vif-deleted':
@@ -6892,8 +6866,8 @@ class ComputeManager(manager.Manager):
                                                              instance,
                                                              event.tag)
                 except exception.NotFound as e:
-                    LOG.info(_LI('Failed to process external instance event '
-                                 '%(event)s due to: %(error)s'),
+                    LOG.info('Failed to process external instance event '
+                             '%(event)s due to: %(error)s',
                              {'event': event.key, 'error': six.text_type(e)},
                              instance=instance)
             else:
@@ -6941,10 +6915,10 @@ class ComputeManager(manager.Manager):
         # TODO(raj_singh): Remove this if condition when min value is
         # introduced to "maximum_instance_delete_attempts" cfg option.
         if CONF.maximum_instance_delete_attempts < 1:
-            LOG.warning(_LW('Future versions of Nova will restrict the '
-                            '"maximum_instance_delete_attempts" config option '
-                            'to values >=1. Update your configuration file to '
-                            'mitigate future upgrade issues.'))
+            LOG.warning('Future versions of Nova will restrict the '
+                        '"maximum_instance_delete_attempts" config option '
+                        'to values >=1. Update your configuration file to '
+                        'mitigate future upgrade issues.')
 
         for instance in instances:
             attempts = int(instance.system_metadata.get('clean_attempts', '0'))
@@ -7002,7 +6976,7 @@ class ComputeManager(manager.Manager):
                             with migration.obj_as_admin():
                                 migration.save()
                         except exception.MigrationNotFound:
-                            LOG.warning(_LW("Migration %s is not found."),
+                            LOG.warning("Migration %s is not found.",
                                         migration.id,
                                         instance=instance)
                         break
@@ -7047,8 +7021,8 @@ class ComputeManager(manager.Manager):
             try:
                 self._wait_for_snapshots_completion(context, mapping)
             except Exception as error:
-                LOG.exception(_LE("Exception while waiting completion of "
-                                  "volume snapshots: %s"),
+                LOG.exception("Exception while waiting completion of "
+                              "volume snapshots: %s",
                               error, instance=instance)
         image_meta = objects.ImageMeta.from_instance(instance)
         self.driver.unquiesce(context, instance, image_meta)
