@@ -23,6 +23,7 @@ from nova.api.openstack.compute import agents
 from nova.api.openstack.compute import aggregates
 from nova.api.openstack.compute import assisted_volume_snapshots
 from nova.api.openstack.compute import availability_zone
+from nova.api.openstack.compute import certificates
 from nova.api.openstack.compute import config_drive
 from nova.api.openstack.compute import console_output
 from nova.api.openstack.compute import create_backup
@@ -98,6 +99,10 @@ assisted_volume_snapshots_controller = functools.partial(
 
 availability_zone_controller = functools.partial(
     _create_controller, availability_zone.AvailabilityZoneController, [], [])
+
+
+certificates_controller = functools.partial(
+    _create_controller, certificates.CertificatesController, [], [])
 
 
 keypairs_controller = functools.partial(
@@ -317,6 +322,12 @@ ROUTE_LIST = (
     }),
     ('/os-instance_usage_audit_log/{id}', {
         'GET': [instance_usage_audit_log_controller, 'show']
+    }),
+    ('/os-certificates', {
+        'POST': [certificates_controller, 'create']
+    }),
+    ('/os-certificates/{id}', {
+        'GET': [certificates_controller, 'show']
     }),
     ('/os-keypairs', {
         'GET': [keypairs_controller, 'index'],
