@@ -211,6 +211,9 @@ class TestCase(testtools.TestCase):
         self.useFixture(conf_fixture.ConfFixture(CONF))
         self.useFixture(nova_fixtures.RPCFixture('nova.test'))
 
+        # NOTE(melwitt): Reset the cached db connection objects
+        context.CELL_CACHE = {}
+
         if self.USES_DB:
             self.useFixture(nova_fixtures.Database())
             self.useFixture(nova_fixtures.Database(database='api'))

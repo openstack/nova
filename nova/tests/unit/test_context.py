@@ -20,6 +20,7 @@ from nova import context
 from nova import exception
 from nova import objects
 from nova import test
+from nova.tests import uuidsentinel as uuids
 
 
 class ContextTestCase(test.NoDBTestCase):
@@ -286,7 +287,26 @@ class ContextTestCase(test.NoDBTestCase):
                                       roles=['admin', 'weasel'])
         # Verify the existing db_connection, if any, is restored
         ctxt.db_connection = mock.sentinel.db_conn
-        mapping = objects.CellMapping(database_connection='fake://')
+        mapping = objects.CellMapping(database_connection='fake://',
+                                      transport_url='fake://',
+                                      uuid=uuids.cell)
         with context.target_cell(ctxt, mapping):
             self.assertEqual(ctxt.db_connection, mock.sentinel.cm)
         self.assertEqual(mock.sentinel.db_conn, ctxt.db_connection)
+
+    @mock.patch('nova.db.create_context_manager')
+    def test_target_cell_caching(self, mock_create_cm):
+        mock_create_cm.return_value = mock.sentinel.db_conn_obj
+        ctxt = context.RequestContext('111', '222')
+        mapping = objects.CellMapping(database_connection='fake://db',
+                                      transport_url='fake://mq',
+                                      uuid=uuids.cell)
+        # First call should create new connection objects.
+        with context.target_cell(ctxt, mapping):
+            self.assertEqual(mock.sentinel.db_conn_obj, ctxt.db_connection)
+        mock_create_cm.assert_called_once_with('fake://db')
+        # Second call should use cached objects.
+        mock_create_cm.reset_mock()
+        with context.target_cell(ctxt, mapping):
+            self.assertEqual(mock.sentinel.db_conn_obj, ctxt.db_connection)
+        mock_create_cm.assert_not_called()
