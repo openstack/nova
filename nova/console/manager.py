@@ -22,7 +22,6 @@ from nova.compute import rpcapi as compute_rpcapi
 import nova.conf
 from nova.console import xvp
 from nova import exception
-from nova.i18n import _LI
 from nova import manager
 from nova import objects
 from nova import utils
@@ -49,7 +48,7 @@ class ConsoleProxyManager(manager.Manager):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
 
     def reset(self):
-        LOG.info(_LI('Reloading compute RPC API'))
+        LOG.info('Reloading compute RPC API')
         compute_rpcapi.LAST_VERSION = None
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
 

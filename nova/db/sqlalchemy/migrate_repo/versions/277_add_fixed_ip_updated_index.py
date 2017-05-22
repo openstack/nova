@@ -13,8 +13,6 @@
 from oslo_log import log as logging
 from sqlalchemy import Index, MetaData, Table
 
-from nova.i18n import _LI
-
 LOG = logging.getLogger(__name__)
 
 
@@ -37,8 +35,8 @@ def _get_table_index(migrate_engine):
 def upgrade(migrate_engine):
     meta, table, index = _get_table_index(migrate_engine)
     if index:
-        LOG.info(_LI('Skipped adding %s because an equivalent index'
-                     ' already exists.'), INDEX_NAME)
+        LOG.info('Skipped adding %s because an equivalent index'
+                 ' already exists.', INDEX_NAME)
         return
     columns = [getattr(table.c, col_name) for col_name in INDEX_COLUMNS]
     index = Index(INDEX_NAME, *columns)

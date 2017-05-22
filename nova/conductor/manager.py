@@ -37,7 +37,7 @@ from nova.conductor.tasks import migrate
 from nova import context as nova_context
 from nova.db import base
 from nova import exception
-from nova.i18n import _, _LE, _LI, _LW
+from nova.i18n import _
 from nova import image
 from nova import manager
 from nova import network
@@ -69,7 +69,7 @@ def targets_cell(fn):
             im = objects.InstanceMapping.get_by_instance_uuid(
                 context, instance.uuid)
         except exception.InstanceMappingNotFound:
-            LOG.error(_LE('InstanceMapping not found, unable to target cell'),
+            LOG.error('InstanceMapping not found, unable to target cell',
                       instance=instance)
             im = None
         else:
@@ -230,7 +230,7 @@ class ComputeTaskManager(base.Base):
         self.notifier = rpc.get_notifier('compute', CONF.host)
 
     def reset(self):
-        LOG.info(_LI('Reloading compute RPC API'))
+        LOG.info('Reloading compute RPC API')
         compute_rpcapi.LAST_VERSION = None
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
 
@@ -363,8 +363,7 @@ class ComputeTaskManager(base.Base):
                 self.network_api.deallocate_for_instance(
                     context, instance, requested_networks=requested_networks)
         except Exception:
-            msg = _LE('Failed to deallocate networks')
-            LOG.exception(msg, instance=instance)
+            LOG.exception('Failed to deallocate networks', instance=instance)
             return
 
         instance.system_metadata['network_allocated'] = 'False'
@@ -439,8 +438,8 @@ class ComputeTaskManager(base.Base):
                 migration.status = 'error'
                 migration.save()
         except Exception as ex:
-            LOG.error(_LE('Migration of instance %(instance_id)s to host'
-                          ' %(dest)s unexpectedly failed.'),
+            LOG.error('Migration of instance %(instance_id)s to host'
+                      ' %(dest)s unexpectedly failed.',
                       {'instance_id': instance.uuid, 'dest': destination},
                       exc_info=True)
             _set_vm_state(context, instance, ex, vm_states.ERROR,
@@ -702,18 +701,18 @@ class ComputeTaskManager(base.Base):
                     exception.UnsupportedPolicyException):
                 instance.task_state = None
                 instance.save()
-                LOG.warning(_LW("No valid host found for unshelve instance"),
+                LOG.warning("No valid host found for unshelve instance",
                             instance=instance)
                 return
             except Exception:
                 with excutils.save_and_reraise_exception():
                     instance.task_state = None
                     instance.save()
-                    LOG.error(_LE("Unshelve attempted but an error "
-                                  "has occurred"), instance=instance)
+                    LOG.error("Unshelve attempted but an error "
+                              "has occurred", instance=instance)
         else:
-            LOG.error(_LE('Unshelve attempted but vm_state not SHELVED or '
-                          'SHELVED_OFFLOADED'), instance=instance)
+            LOG.error('Unshelve attempted but vm_state not SHELVED or '
+                      'SHELVED_OFFLOADED', instance=instance)
             instance.vm_state = vm_states.ERROR
             instance.save()
             return
@@ -763,7 +762,7 @@ class ComputeTaskManager(base.Base):
                                 'rebuild_server',
                                 {'vm_state': instance.vm_state,
                                  'task_state': None}, ex, request_spec)
-                        LOG.warning(_LW("No valid host found for rebuild"),
+                        LOG.warning("No valid host found for rebuild",
                                     instance=instance)
                 except exception.UnsupportedPolicyException as ex:
                     request_spec = request_spec.to_legacy_request_spec_dict()
@@ -772,9 +771,8 @@ class ComputeTaskManager(base.Base):
                                 'rebuild_server',
                                 {'vm_state': instance.vm_state,
                                  'task_state': None}, ex, request_spec)
-                        LOG.warning(_LW("Server with unsupported policy "
-                                        "cannot be rebuilt"),
-                                    instance=instance)
+                        LOG.warning("Server with unsupported policy "
+                                    "cannot be rebuilt", instance=instance)
 
             try:
                 migration = objects.Migration.get_by_instance_and_status(
@@ -864,9 +862,9 @@ class ComputeTaskManager(base.Base):
             # Not yet setup for cellsv2. Instances will need to be written
             # to the configured database. This will become a deployment
             # error in Ocata.
-            LOG.error(_LE('No cell mapping found for cell0 while '
-                          'trying to record scheduling failure. '
-                          'Setup is incomplete.'))
+            LOG.error('No cell mapping found for cell0 while '
+                      'trying to record scheduling failure. '
+                      'Setup is incomplete.')
             return
 
         build_requests = build_requests or []
@@ -919,7 +917,7 @@ class ComputeTaskManager(base.Base):
             hosts = self._schedule_instances(context, request_specs[0],
                                              instance_uuids)
         except Exception as exc:
-            LOG.exception(_LE('Failed to schedule instances'))
+            LOG.exception('Failed to schedule instances')
             self._bury_in_cell0(context, request_specs[0], exc,
                                 build_requests=build_requests)
             return
@@ -941,8 +939,8 @@ class ComputeTaskManager(base.Base):
                         context, host['host'])
                     host_mapping_cache[host['host']] = host_mapping
                 except exception.HostMappingNotFound as exc:
-                    LOG.error(_LE('No host-to-cell mapping found for selected '
-                                  'host %(host)s. Setup is incomplete.'),
+                    LOG.error('No host-to-cell mapping found for selected '
+                              'host %(host)s. Setup is incomplete.',
                               {'host': host['host']})
                     self._bury_in_cell0(context, request_spec, exc,
                                         build_requests=[build_request],

@@ -27,7 +27,6 @@ from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import rpcapi as compute_rpcapi
 import nova.conf
 from nova import context as nova_context
-from nova.i18n import _LI
 from nova import manager
 from nova import objects
 
@@ -63,7 +62,7 @@ class ConsoleAuthManager(manager.Manager):
         return self._mc_instance
 
     def reset(self):
-        LOG.info(_LI('Reloading compute RPC API'))
+        LOG.info('Reloading compute RPC API')
         compute_rpcapi.LAST_VERSION = None
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
 
@@ -102,8 +101,8 @@ class ConsoleAuthManager(manager.Manager):
         self.mc_instance.set(instance_uuid.encode('UTF-8'),
                              jsonutils.dumps(tokens))
 
-        LOG.info(_LI("Received Token: %(token)s, %(token_dict)s"),
-                  {'token': token, 'token_dict': token_dict})
+        LOG.info("Received Token: %(token)s, %(token_dict)s",
+                 {'token': token, 'token_dict': token_dict})
 
     def _validate_token(self, context, token):
         instance_uuid = token['instance_uuid']
@@ -131,8 +130,8 @@ class ConsoleAuthManager(manager.Manager):
     def check_token(self, context, token):
         token_str = self.mc.get(token.encode('UTF-8'))
         token_valid = (token_str is not None)
-        LOG.info(_LI("Checking Token: %(token)s, %(token_valid)s"),
-                  {'token': token, 'token_valid': token_valid})
+        LOG.info("Checking Token: %(token)s, %(token_valid)s",
+                 {'token': token, 'token_valid': token_valid})
         if token_valid:
             token = jsonutils.loads(token_str)
             if self._validate_token(context, token):

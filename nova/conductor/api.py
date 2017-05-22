@@ -20,7 +20,6 @@ import oslo_messaging as messaging
 from nova import baserpc
 from nova.conductor import rpcapi
 import nova.conf
-from nova.i18n import _LI, _LW
 
 CONF = nova.conf.CONF
 
@@ -67,16 +66,16 @@ class API(object):
                 self.base_rpcapi.ping(context, '1.21 GigaWatts',
                                       timeout=timeout)
                 if has_timedout:
-                    LOG.info(_LI('nova-conductor connection '
-                                 'established successfully'))
+                    LOG.info('nova-conductor connection '
+                             'established successfully')
                 break
             except messaging.MessagingTimeout:
                 has_timedout = True
-                LOG.warning(_LW('Timed out waiting for nova-conductor.  '
-                                'Is it running? Or did this service start '
-                                'before nova-conductor?  '
-                                'Reattempting establishment of '
-                                'nova-conductor connection...'))
+                LOG.warning('Timed out waiting for nova-conductor.  '
+                            'Is it running? Or did this service start '
+                            'before nova-conductor?  '
+                            'Reattempting establishment of '
+                            'nova-conductor connection...')
 
 
 class ComputeTaskAPI(object):

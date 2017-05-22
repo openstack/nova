@@ -21,7 +21,6 @@ import six.moves
 
 import nova.conf
 from nova import exception
-from nova.i18n import _LW
 from nova import utils
 
 LOG = logging.getLogger(__name__)
@@ -71,10 +70,10 @@ def _get_port_range():
     start, stop = map(int, config_range.split(':'))
     if start >= stop:
         default_port_range = nova.conf.serial_console.DEFAULT_PORT_RANGE
-        LOG.warning(_LW("serial_console.port_range should be in the "
-                        "format <start>:<stop> and start < stop, "
-                        "Given value %(port_range)s is invalid. "
-                        "Taking the default port range %(default)s."),
+        LOG.warning("serial_console.port_range should be in the "
+                    "format <start>:<stop> and start < stop, "
+                    "Given value %(port_range)s is invalid. "
+                    "Taking the default port range %(default)s.",
                     {'port_range': config_range,
                      'default': default_port_range})
         start, stop = map(int, default_port_range.split(':'))

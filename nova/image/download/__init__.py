@@ -17,8 +17,6 @@ from oslo_log import log as logging
 import stevedore.driver
 import stevedore.extension
 
-from nova.i18n import _LE
-
 LOG = logging.getLogger(__name__)
 
 
@@ -36,8 +34,8 @@ def load_transfer_modules():
         schemes_list = mgr.driver.get_schemes()
         for scheme in schemes_list:
             if scheme in module_dictionary:
-                LOG.error(_LE('%(scheme)s is registered as a module twice. '
-                              '%(module_name)s is not being used.'),
+                LOG.error('%(scheme)s is registered as a module twice. '
+                          '%(module_name)s is not being used.',
                           {'scheme': scheme,
                            'module_name': module_name})
             else:
