@@ -4438,7 +4438,7 @@ class HostAPI(base.Base):
         are found, raise an exception.
 
         :param context: A context.RequestContext
-        :param service_id: The DB ID of the service to find
+        :param service_id: The DB ID (or UUID) of the service to find
         :returns: An objects.Service
         :raises: ServiceNotUnique if multiple matches are found
         :raises: ServiceNotFound if no matches are found
@@ -4449,12 +4449,20 @@ class HostAPI(base.Base):
         # which means we really can't do something efficient here
         service = None
         found_in_cell = None
+        is_uuid = uuidutils.is_uuid_like(service_id)
         for cell in CELLS:
             # NOTE(danms): Services can be in cell0, so don't skip it here
             try:
                 with nova_context.target_cell(context, cell) as cctxt:
-                    cell_service = objects.Service.get_by_id(cctxt,
-                                                             service_id)
+                    if is_uuid:
+                        service = objects.Service.get_by_uuid(cctxt,
+                                                              service_id)
+                        found_in_cell = cell
+                        # Service uuids are unique so we can break the loop now
+                        break
+                    else:
+                        cell_service = objects.Service.get_by_id(cctxt,
+                                                                 service_id)
             except exception.ServiceNotFound:
                 # NOTE(danms): Keep looking in other cells
                 continue
@@ -4472,7 +4480,7 @@ class HostAPI(base.Base):
             raise exception.ServiceNotFound(service_id=service_id)
 
     def service_get_by_id(self, context, service_id):
-        """Get service entry for the given service id."""
+        """Get service entry for the given service id or uuid."""
         return self._find_service(context, service_id)
 
     @target_host_cell
@@ -4503,7 +4511,7 @@ class HostAPI(base.Base):
         service.destroy()
 
     def service_delete(self, context, service_id):
-        """Deletes the specified service."""
+        """Deletes the specified service found via id or uuid."""
         self._service_delete(context, service_id)
 
     @target_host_cell
