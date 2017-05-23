@@ -1105,6 +1105,8 @@ class ServersController(wsgi.Controller):
                         'createImage', id)
         except exception.Invalid as err:
             raise exc.HTTPBadRequest(explanation=err.format_message())
+        except exception.OverQuota as e:
+            raise exc.HTTPForbidden(explanation=e.format_message())
 
         # build location of newly-created image entity
         image_id = str(image['id'])
