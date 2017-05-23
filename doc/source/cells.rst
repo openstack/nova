@@ -576,3 +576,15 @@ FAQs
    In the future, we may add a flag to the ``nova-manage cell_v2 list_cells``
    command or add another command to list hosts in a specific cell (or all
    cells).
+
+#. I updated the database_connection and/or transport_url in a cell using the
+   ``nova-manage cell_v2 update_cell`` command but the API is still trying to
+   use the old settings.
+
+   The cell mappings are cached in the nova-api service worker so you will need
+   to restart the worker process to rebuild the cache. Note that there is
+   another global cache tied to request contexts, which is used in the
+   nova-conductor and nova-scheduler services, so you might need to do the same
+   if you are having the same issue in those services. As of the 16.0.0 Pike
+   release there is no timer on the cache or hook to refresh the cache using a
+   SIGHUP to the service.
