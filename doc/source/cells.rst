@@ -68,6 +68,9 @@ deployments and there is a migration path.
 Cells V2
 ========
 
+* `Newton Summit Video - Nova Cells V2: What's Going On? <https://www.openstack.org/videos/austin-2016/nova-cells-v2-whats-going-on>`_
+* `Pike Summit Video - Scaling Nova: How CellsV2 Affects Your Deployment <https://www.openstack.org/videos/boston-2017/scaling-nova-how-cellsv2-affects-your-deployment>`_
+
 Manifesto
 ~~~~~~~~~
 
