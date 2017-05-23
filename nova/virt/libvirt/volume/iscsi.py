@@ -16,7 +16,6 @@ from os_brick.initiator import connector
 from oslo_log import log as logging
 
 import nova.conf
-from nova.i18n import _LW
 from nova import utils
 from nova.virt.libvirt.volume import volume as libvirt_volume
 
@@ -73,7 +72,7 @@ class LibvirtISCSIVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         try:
             self.connector.disconnect_volume(connection_info['data'], None)
         except os_brick_exception.VolumeDeviceNotFound as exc:
-            LOG.warning(_LW('Ignoring VolumeDeviceNotFound: %s'), exc)
+            LOG.warning('Ignoring VolumeDeviceNotFound: %s', exc)
             return
         LOG.debug("Disconnected iSCSI Volume %s", disk_dev)
 

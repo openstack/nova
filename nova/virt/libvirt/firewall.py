@@ -24,8 +24,6 @@ from oslo_utils import excutils
 from oslo_utils import importutils
 
 import nova.conf
-from nova.i18n import _LI
-from nova.i18n import _LW
 import nova.virt.firewall as base_firewall
 from nova.virt import netutils
 
@@ -55,8 +53,8 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
             try:
                 libvirt = importutils.import_module('libvirt')
             except ImportError:
-                LOG.warning(_LW("Libvirt module could not be loaded. "
-                             "NWFilterFirewall will not work correctly."))
+                LOG.warning("Libvirt module could not be loaded. "
+                            "NWFilterFirewall will not work correctly.")
         self._host = host
         self.static_filters_configured = False
 
@@ -109,10 +107,10 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
 
     def setup_basic_filtering(self, instance, network_info):
         """Set up basic filtering (MAC, IP, and ARP spoofing protection)."""
-        LOG.info(_LI('Called setup_basic_filtering in nwfilter'),
+        LOG.info('Called setup_basic_filtering in nwfilter',
                  instance=instance)
 
-        LOG.info(_LI('Ensuring static filters'), instance=instance)
+        LOG.info('Ensuring static filters', instance=instance)
         self._ensure_static_filters()
 
         nodhcp_base_filter = self.get_base_filter_list(instance, False)
@@ -281,9 +279,8 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
                     if errcode == libvirt.VIR_ERR_OPERATION_INVALID:
                         # This happens when the instance filter is still in use
                         # (ie. when the instance has not terminated properly)
-                        LOG.info(_LI('Failed to undefine network filter '
-                                     '%(name)s. Try %(cnt)d of '
-                                     '%(max_retry)d.'),
+                        LOG.info('Failed to undefine network filter '
+                                 '%(name)s. Try %(cnt)d of %(max_retry)d.',
                                  {'name': instance_filter_name,
                                   'cnt': cnt + 1,
                                   'max_retry': max_retry},
@@ -349,8 +346,8 @@ class IptablesFirewallDriver(base_firewall.IptablesFirewallDriver):
             self.iptables.apply()
             self.nwfilter.unfilter_instance(instance, network_info)
         else:
-            LOG.info(_LI('Attempted to unfilter instance which is not '
-                         'filtered'), instance=instance)
+            LOG.info('Attempted to unfilter instance which is not filtered',
+                     instance=instance)
 
     def instance_filter_exists(self, instance, network_info):
         """Check nova-instance-instance-xxx exists."""

@@ -41,9 +41,6 @@ from nova.console import type as console_type
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LE
-from nova.i18n import _LI
-from nova.i18n import _LW
 from nova import objects
 from nova.objects import fields as obj_fields
 from nova import servicegroup
@@ -90,7 +87,7 @@ def map_power_state(state):
     try:
         return _POWER_STATE_MAP[state]
     except KeyError:
-        LOG.warning(_LW("Power state %s not found."), state)
+        LOG.warning("Power state %s not found.", state)
         return power_state.NOSTATE
 
 
@@ -217,8 +214,8 @@ class IronicDriver(virt_driver.ComputeDriver):
             try:
                 properties[prop] = int(node.properties.get(prop, 0))
             except (TypeError, ValueError):
-                LOG.warning(_LW('Node %(uuid)s has a malformed "%(prop)s". '
-                                'It should be an integer.'),
+                LOG.warning('Node %(uuid)s has a malformed "%(prop)s". '
+                            'It should be an integer.',
                             {'uuid': node.uuid, 'prop': prop})
                 properties[prop] = 0
 
@@ -228,7 +225,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         except exception.InvalidArchitectureName:
             cpu_arch = None
         if not cpu_arch:
-            LOG.warning(_LW("cpu_arch not defined for node '%s'"), node.uuid)
+            LOG.warning("cpu_arch not defined for node '%s'", node.uuid)
 
         properties['cpu_arch'] = cpu_arch
         properties['raw_cpu_arch'] = raw_cpu_arch
@@ -253,9 +250,9 @@ class IronicDriver(virt_driver.ComputeDriver):
                 instance_info[prop] = int(node.instance_info.get(prop,
                                                                  original))
             except (TypeError, ValueError):
-                LOG.warning(_LW('Node %(uuid)s has a malformed "%(prop)s". '
-                                'It should be an integer but its value '
-                                'is "%(value)s".'),
+                LOG.warning('Node %(uuid)s has a malformed "%(prop)s". '
+                            'It should be an integer but its value '
+                            'is "%(value)s".',
                             {'uuid': node.uuid, 'prop': prop,
                              'value': node.instance_info.get(prop)})
                 instance_info[prop] = original
@@ -298,8 +295,8 @@ class IronicDriver(virt_driver.ComputeDriver):
                 if len(parts) == 2 and parts[0] and parts[1]:
                     nodes_extra_specs[parts[0].strip()] = parts[1]
                 else:
-                    LOG.warning(_LW("Ignoring malformed capability '%s'. "
-                                    "Format should be 'key:val'."), capability)
+                    LOG.warning("Ignoring malformed capability '%s'. "
+                                "Format should be 'key:val'.", capability)
 
         vcpus_used = 0
         memory_mb_used = 0
@@ -389,9 +386,9 @@ class IronicDriver(virt_driver.ComputeDriver):
         try:
             self.ironicclient.call('node.update', node.uuid, patch)
         except ironic.exc.BadRequest as e:
-            LOG.warning(_LW("Failed to remove deploy parameters from node "
-                            "%(node)s when unprovisioning the instance "
-                            "%(instance)s: %(reason)s"),
+            LOG.warning("Failed to remove deploy parameters from node "
+                        "%(node)s when unprovisioning the instance "
+                        "%(instance)s: %(reason)s",
                         {'node': node.uuid, 'instance': instance.uuid,
                          'reason': six.text_type(e)})
 
@@ -730,15 +727,15 @@ class IronicDriver(virt_driver.ComputeDriver):
         properties = self._parse_node_properties(node)
         memory_kib = properties['memory_mb'] * 1024
         if memory_kib == 0:
-            LOG.warning(_LW("Warning, memory usage is 0 for "
-                            "%(instance)s on baremetal node %(node)s."),
+            LOG.warning("Warning, memory usage is 0 for "
+                        "%(instance)s on baremetal node %(node)s.",
                         {'instance': instance.uuid,
                          'node': instance.node})
 
         num_cpu = properties['cpus']
         if num_cpu == 0:
-            LOG.warning(_LW("Warning, number of cpus is 0 for "
-                            "%(instance)s on baremetal node %(node)s."),
+            LOG.warning("Warning, number of cpus is 0 for "
+                        "%(instance)s on baremetal node %(node)s.",
                         {'instance': instance.uuid,
                          'node': instance.node})
 
@@ -912,8 +909,8 @@ class IronicDriver(virt_driver.ComputeDriver):
             self._start_firewall(instance, network_info)
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE("Error preparing deploy for instance "
-                              "%(instance)s on baremetal node %(node)s."),
+                LOG.error("Error preparing deploy for instance "
+                          "%(instance)s on baremetal node %(node)s.",
                           {'instance': instance.uuid,
                            'node': node_uuid})
                 self._cleanup_deploy(node, instance, network_info)
@@ -931,14 +928,14 @@ class IronicDriver(virt_driver.ComputeDriver):
                     files=injected_files)
             except Exception as e:
                 with excutils.save_and_reraise_exception():
-                    msg = (_LE("Failed to build configdrive: %s") %
+                    msg = ("Failed to build configdrive: %s" %
                            six.text_type(e))
                     LOG.error(msg, instance=instance)
                     self._cleanup_deploy(node, instance, network_info)
 
-            LOG.info(_LI("Config drive for instance %(instance)s on "
-                         "baremetal node %(node)s created."),
-                         {'instance': instance['uuid'], 'node': node_uuid})
+            LOG.info("Config drive for instance %(instance)s on "
+                     "baremetal node %(node)s created.",
+                     {'instance': instance['uuid'], 'node': node_uuid})
 
         # trigger the node deploy
         try:
@@ -947,25 +944,24 @@ class IronicDriver(virt_driver.ComputeDriver):
                                    configdrive=configdrive_value)
         except Exception as e:
             with excutils.save_and_reraise_exception():
-                msg = (_LE("Failed to request Ironic to provision instance "
-                           "%(inst)s: %(reason)s"),
-                           {'inst': instance.uuid,
-                            'reason': six.text_type(e)})
-                LOG.error(msg)
+                LOG.error("Failed to request Ironic to provision instance "
+                          "%(inst)s: %(reason)s",
+                          {'inst': instance.uuid,
+                           'reason': six.text_type(e)})
                 self._cleanup_deploy(node, instance, network_info)
 
         timer = loopingcall.FixedIntervalLoopingCall(self._wait_for_active,
                                                      instance)
         try:
             timer.start(interval=CONF.ironic.api_retry_interval).wait()
-            LOG.info(_LI('Successfully provisioned Ironic node %s'),
+            LOG.info('Successfully provisioned Ironic node %s',
                      node.uuid, instance=instance)
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE("Error deploying instance %(instance)s on "
-                              "baremetal node %(node)s."),
-                             {'instance': instance.uuid,
-                              'node': node_uuid})
+                LOG.error("Error deploying instance %(instance)s on "
+                          "baremetal node %(node)s.",
+                          {'instance': instance.uuid,
+                           'node': node_uuid})
 
     def _unprovision(self, instance, node):
         """This method is called from destroy() to unprovision
@@ -1039,7 +1035,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         try:
             node = self._validate_instance_and_node(instance)
         except exception.InstanceNotFound:
-            LOG.warning(_LW("Destroy called on non-existing instance %s."),
+            LOG.warning("Destroy called on non-existing instance %s.",
                         instance.uuid)
             # NOTE(deva): if nova.compute.ComputeManager._delete_instance()
             #             is called on a non-existing instance, the only way
@@ -1056,7 +1052,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             self._remove_instance_info_from_node(node, instance)
 
         self._cleanup_deploy(node, instance, network_info)
-        LOG.info(_LI('Successfully unprovisioned Ironic node %s'),
+        LOG.info('Successfully unprovisioned Ironic node %s',
                  node.uuid, instance=instance)
 
     def reboot(self, context, instance, network_info, reboot_type,
@@ -1088,8 +1084,8 @@ class IronicDriver(virt_driver.ComputeDriver):
                                        'reboot', soft=True)
                 hard = False
             except ironic.exc.BadRequest as exc:
-                LOG.info(_LI('Soft reboot is not supported by ironic hardware '
-                             'driver. Falling back to hard reboot: %s'),
+                LOG.info('Soft reboot is not supported by ironic hardware '
+                         'driver. Falling back to hard reboot: %s',
                          exc,
                          instance=instance)
 
@@ -1099,8 +1095,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         timer = loopingcall.FixedIntervalLoopingCall(
                     self._wait_for_power_state, instance, 'reboot')
         timer.start(interval=CONF.ironic.api_retry_interval).wait()
-        LOG.info(_LI('Successfully rebooted(type %(type)s) Ironic node '
-                     '%(node)s'),
+        LOG.info('Successfully rebooted(type %(type)s) Ironic node %(node)s',
                  {'type': ('HARD' if hard else 'SOFT'),
                   'node': node.uuid},
                  instance=instance)
@@ -1131,25 +1126,24 @@ class IronicDriver(virt_driver.ComputeDriver):
                 timer.start(interval=CONF.ironic.api_retry_interval).wait()
                 node = self._validate_instance_and_node(instance)
                 if node.power_state == ironic_states.POWER_OFF:
-                    LOG.info(_LI('Successfully soft powered off Ironic node '
-                                 '%s'),
+                    LOG.info('Successfully soft powered off Ironic node %s',
                              node.uuid, instance=instance)
                     return
-                LOG.info(_LI("Failed to soft power off instance "
-                             "%(instance)s on baremetal node %(node)s "
-                             "within the required timeout %(timeout)d "
-                             "seconds due to error: %(reason)s. "
-                             "Attempting hard power off."),
+                LOG.info("Failed to soft power off instance "
+                         "%(instance)s on baremetal node %(node)s "
+                         "within the required timeout %(timeout)d "
+                         "seconds due to error: %(reason)s. "
+                         "Attempting hard power off.",
                          {'instance': instance.uuid,
                           'timeout': timeout,
                           'node': node.uuid,
                           'reason': node.last_error},
                          instance=instance)
             except ironic.exc.ClientException as e:
-                LOG.info(_LI("Failed to soft power off instance "
-                             "%(instance)s on baremetal node %(node)s "
-                             "due to error: %(reason)s. "
-                             "Attempting hard power off."),
+                LOG.info("Failed to soft power off instance "
+                         "%(instance)s on baremetal node %(node)s "
+                         "due to error: %(reason)s. "
+                         "Attempting hard power off.",
                          {'instance': instance.uuid,
                           'node': node.uuid,
                           'reason': e},
@@ -1159,7 +1153,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         timer = loopingcall.FixedIntervalLoopingCall(
                     self._wait_for_power_state, instance, 'power off')
         timer.start(interval=CONF.ironic.api_retry_interval).wait()
-        LOG.info(_LI('Successfully hard powered off Ironic node %s'),
+        LOG.info('Successfully hard powered off Ironic node %s',
                  node.uuid, instance=instance)
 
     def power_on(self, context, instance, network_info,
@@ -1184,7 +1178,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         timer = loopingcall.FixedIntervalLoopingCall(
                     self._wait_for_power_state, instance, 'power on')
         timer.start(interval=CONF.ironic.api_retry_interval).wait()
-        LOG.info(_LI('Successfully powered on Ironic node %s'),
+        LOG.info('Successfully powered on Ironic node %s',
                  node.uuid, instance=instance)
 
     def trigger_crash_dump(self, instance):
@@ -1202,7 +1196,7 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         self.ironicclient.call("node.inject_nmi", node.uuid)
 
-        LOG.info(_LI('Successfully triggered crash dump into Ironic node %s'),
+        LOG.info('Successfully triggered crash dump into Ironic node %s',
                  node.uuid, instance=instance)
 
     def refresh_security_group_rules(self, security_group_id):
@@ -1379,7 +1373,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         timer = loopingcall.FixedIntervalLoopingCall(self._wait_for_active,
                                                      instance)
         timer.start(interval=CONF.ironic.api_retry_interval).wait()
-        LOG.info(_LI('Instance was successfully rebuilt'), instance=instance)
+        LOG.info('Instance was successfully rebuilt', instance=instance)
 
     def network_binding_host_id(self, context, instance):
         """Get host ID to associate with network ports.
@@ -1434,10 +1428,9 @@ class IronicDriver(virt_driver.ComputeDriver):
             except (exception.NovaException,  # Retry failed
                     ironic.exc.InternalServerError,  # Validations
                     ironic.exc.BadRequest) as e:  # Maintenance
-                LOG.error(_LE('Failed to acquire console information for '
-                              'instance %(inst)s: %(reason)s'),
-                          {'inst': instance.uuid,
-                           'reason': e})
+                LOG.error('Failed to acquire console information for '
+                          'instance %(inst)s: %(reason)s',
+                          {'inst': instance.uuid, 'reason': e})
                 raise exception.ConsoleNotAvailable()
 
         def _wait_state(state):
@@ -1459,8 +1452,8 @@ class IronicDriver(virt_driver.ComputeDriver):
             except (exception.NovaException,  # Retry failed
                     ironic.exc.InternalServerError,  # Validations
                     ironic.exc.BadRequest) as e:  # Maintenance
-                LOG.error(_LE('Failed to set console mode to "%(mode)s" '
-                              'for instance %(inst)s: %(reason)s'),
+                LOG.error('Failed to set console mode to "%(mode)s" '
+                          'for instance %(inst)s: %(reason)s',
                           {'mode': mode,
                            'inst': instance.uuid,
                            'reason': e})
@@ -1474,8 +1467,8 @@ class IronicDriver(virt_driver.ComputeDriver):
                     timeout=CONF.ironic.serial_console_state_timeout,
                     jitter=0.5).wait()
             except loopingcall.LoopingCallTimeOut:
-                LOG.error(_LE('Timeout while waiting for console mode to be '
-                              'set to "%(mode)s" on node %(node)s'),
+                LOG.error('Timeout while waiting for console mode to be '
+                          'set to "%(mode)s" on node %(node)s',
                           {'mode': mode,
                            'node': node_uuid})
                 raise exception.ConsoleNotAvailable()
@@ -1528,8 +1521,8 @@ class IronicDriver(virt_driver.ComputeDriver):
         console_info = result['console_info']
 
         if console_info["type"] != "socat":
-            LOG.warning(_LW('Console type "%(type)s" (of ironic node '
-                            '%(node)s) does not support Nova serial console'),
+            LOG.warning('Console type "%(type)s" (of ironic node '
+                        '%(node)s) does not support Nova serial console',
                         {'type': console_info["type"],
                          'node': node.uuid},
                         instance=instance)
@@ -1544,8 +1537,8 @@ class IronicDriver(virt_driver.ComputeDriver):
             if not (scheme and hostname and port):
                 raise AssertionError()
         except (ValueError, AssertionError):
-            LOG.error(_LE('Invalid Socat console URL "%(url)s" '
-                          '(ironic node %(node)s)'),
+            LOG.error('Invalid Socat console URL "%(url)s" '
+                      '(ironic node %(node)s)',
                       {'url': console_info["url"],
                        'node': node.uuid},
                       instance=instance)
@@ -1555,8 +1548,8 @@ class IronicDriver(virt_driver.ComputeDriver):
             return console_type.ConsoleSerial(host=hostname,
                                               port=port)
         else:
-            LOG.warning(_LW('Socat serial console only supports "tcp". '
-                            'This URL is "%(url)s" (ironic node %(node)s).'),
+            LOG.warning('Socat serial console only supports "tcp". '
+                        'This URL is "%(url)s" (ironic node %(node)s).',
                         {'url': console_info["url"],
                          'node': node.uuid},
                         instance=instance)

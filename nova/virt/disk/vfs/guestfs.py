@@ -22,7 +22,6 @@ import six
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LW
 from nova.virt.disk.vfs import api as vfs
 from nova.virt.image import model as imgmodel
 
@@ -93,8 +92,8 @@ class VFSGuestFS(vfs.VFS):
     def configure_debug(self):
         """Configures guestfs to be verbose."""
         if not self.handle:
-            LOG.warning(_LW("Please consider to execute setup before trying "
-                            "to configure debug log message."))
+            LOG.warning("Please consider to execute setup before trying "
+                        "to configure debug log message.")
         else:
             def log_callback(ev, eh, buf, array):
                 if ev == guestfs.EVENT_APPLIANCE:
@@ -197,8 +196,8 @@ class VFSGuestFS(vfs.VFS):
         except AttributeError as ex:
             # set_backend_settings method doesn't exist in older
             # libguestfs versions, so nothing we can do but ignore
-            LOG.warning(_LW("Unable to force TCG mode, "
-                            "libguestfs too old? %s"), ex)
+            LOG.warning("Unable to force TCG mode, "
+                        "libguestfs too old? %s", ex)
             pass
 
         try:
@@ -246,7 +245,7 @@ class VFSGuestFS(vfs.VFS):
                 if self.mount:
                     self.handle.aug_close()
             except RuntimeError as e:
-                LOG.warning(_LW("Failed to close augeas %s"), e)
+                LOG.warning("Failed to close augeas %s", e)
 
             try:
                 self.handle.shutdown()
@@ -254,7 +253,7 @@ class VFSGuestFS(vfs.VFS):
                 # Older libguestfs versions haven't an explicit shutdown
                 pass
             except RuntimeError as e:
-                LOG.warning(_LW("Failed to shutdown appliance %s"), e)
+                LOG.warning("Failed to shutdown appliance %s", e)
 
             try:
                 self.handle.close()
@@ -262,7 +261,7 @@ class VFSGuestFS(vfs.VFS):
                 # Older libguestfs versions haven't an explicit close
                 pass
             except RuntimeError as e:
-                LOG.warning(_LW("Failed to close guest handle %s"), e)
+                LOG.warning("Failed to close guest handle %s", e)
         finally:
             # dereference object and implicitly close()
             self.handle = None

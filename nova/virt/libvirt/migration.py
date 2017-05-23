@@ -24,8 +24,6 @@ from oslo_log import log as logging
 
 from nova.compute import power_state
 import nova.conf
-from nova.i18n import _LI
-from nova.i18n import _LW
 
 LOG = logging.getLogger(__name__)
 
@@ -240,7 +238,7 @@ def find_job_type(guest, instance):
                       instance=instance)
             return libvirt.VIR_DOMAIN_JOB_COMPLETED
         else:
-            LOG.info(_LI("Error %(ex)s, migration failed"),
+            LOG.info("Error %(ex)s, migration failed",
                      {"ex": ex}, instance=instance)
             return libvirt.VIR_DOMAIN_JOB_FAILED
 
@@ -271,15 +269,14 @@ def should_abort(instance, now,
 
     if (progress_timeout != 0 and
             (now - progress_time) > progress_timeout):
-        LOG.warning(_LW("Live migration stuck for %d sec"),
+        LOG.warning("Live migration stuck for %d sec",
                     (now - progress_time), instance=instance)
         return True
 
     if (completion_timeout != 0 and
             elapsed > completion_timeout):
-        LOG.warning(
-            _LW("Live migration not completed after %d sec"),
-            completion_timeout, instance=instance)
+        LOG.warning("Live migration not completed after %d sec",
+                    completion_timeout, instance=instance)
         return True
 
     return False
@@ -359,8 +356,8 @@ def update_downtime(guest, instance,
                   instance=instance)
         return olddowntime
 
-    LOG.info(_LI("Increasing downtime to %(downtime)d ms "
-                 "after %(waittime)d sec elapsed time"),
+    LOG.info("Increasing downtime to %(downtime)d ms "
+             "after %(waittime)d sec elapsed time",
              {"downtime": thisstep[1],
               "waittime": thisstep[0]},
              instance=instance)
@@ -368,8 +365,7 @@ def update_downtime(guest, instance,
     try:
         guest.migrate_configure_max_downtime(thisstep[1])
     except libvirt.libvirtError as e:
-        LOG.warning(_LW("Unable to increase max downtime to %(time)d"
-                        "ms: %(e)s"),
+        LOG.warning("Unable to increase max downtime to %(time)d ms: %(e)s",
                     {"time": thisstep[1], "e": e}, instance=instance)
     return thisstep[1]
 
@@ -404,14 +400,13 @@ def trigger_postcopy_switch(guest, instance, migration):
     try:
         guest.migrate_start_postcopy()
     except libvirt.libvirtError as e:
-        LOG.warning(_LW("Failed to switch to post-copy live "
-                        "migration: %s"),
+        LOG.warning("Failed to switch to post-copy live migration: %s",
                     e, instance=instance)
     else:
         # NOTE(ltomas): Change the migration status to indicate that
         # it is in post-copy active mode, i.e., the VM at
         # destination is the active one
-        LOG.info(_LI("Switching to post-copy migration mode"),
+        LOG.info("Switching to post-copy migration mode",
                  instance=instance)
         migration.status = 'running (post-copy)'
         migration.save()
@@ -443,8 +438,8 @@ def run_tasks(guest, instance, active_migrations, on_migration_failure,
         task = tasks.popleft()
         if task == 'force-complete':
             if migration.status == 'running (post-copy)':
-                LOG.warning(_LW("Live-migration %s already switched "
-                                "to post-copy mode."),
+                LOG.warning("Live-migration %s already switched "
+                            "to post-copy mode.",
                             instance=instance)
             elif is_post_copy_enabled:
                 trigger_postcopy_switch(guest, instance, migration)
@@ -453,11 +448,11 @@ def run_tasks(guest, instance, active_migrations, on_migration_failure,
                     guest.pause()
                     on_migration_failure.append("unpause")
                 except Exception as e:
-                    LOG.warning(_LW("Failed to pause instance during "
-                                    "live-migration %s"),
+                    LOG.warning("Failed to pause instance during "
+                                "live-migration %s",
                                 e, instance=instance)
         else:
-            LOG.warning(_LW("Unknown migration task '%(task)s'"),
+            LOG.warning("Unknown migration task '%(task)s'",
                         {"task": task}, instance=instance)
 
 
@@ -488,11 +483,11 @@ def run_recover_tasks(host, guest, instance, on_migration_failure):
                 if state == power_state.PAUSED:
                     guest.resume()
             except Exception as e:
-                LOG.warning(_LW("Failed to resume paused instance "
-                                "before live-migration rollback %s"),
+                LOG.warning("Failed to resume paused instance "
+                            "before live-migration rollback %s",
                             e, instance=instance)
         else:
-            LOG.warning(_LW("Unknown migration task '%(task)s'"),
+            LOG.warning("Unknown migration task '%(task)s'",
                         {"task": task}, instance=instance)
 
 

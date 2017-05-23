@@ -15,7 +15,7 @@
 
 from oslo_log import log as logging
 
-from nova.i18n import _, _LI
+from nova.i18n import _
 from nova import utils
 from nova.virt.disk.mount import api
 
@@ -32,7 +32,7 @@ class LoopMount(api.Mount):
                                 run_as_root=True)
         if err:
             self.error = _('Could not attach image to loopback: %s') % err
-            LOG.info(_LI('Loop mount error: %s'), self.error)
+            LOG.info('Loop mount error: %s', self.error)
             self.linked = False
             self.device = None
             return False

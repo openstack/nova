@@ -29,7 +29,6 @@ from oslo_log import log as logging
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LE
 from nova.network import linux_net
 from nova.network import model as network_model
 from nova.network import os_vif_util
@@ -634,10 +633,8 @@ class LibvirtGenericVIFDriver(object):
                           fabric, network_model.VIF_TYPE_IB_HOSTDEV,
                           pci_slot, run_as_root=True)
         except processutils.ProcessExecutionError:
-            LOG.exception(
-                _LE("Failed while plugging ib hostdev vif"),
-                instance=instance
-            )
+            LOG.exception(_("Failed while plugging ib hostdev vif"),
+                          instance=instance)
 
     def plug_802qbg(self, instance, vif):
         pass
@@ -679,7 +676,7 @@ class LibvirtGenericVIFDriver(object):
             utils.execute('mm-ctl', '--bind-port', port_id, dev,
                           run_as_root=True)
         except processutils.ProcessExecutionError:
-            LOG.exception(_LE("Failed while plugging vif"), instance=instance)
+            LOG.exception(_("Failed while plugging vif"), instance=instance)
 
     def plug_iovisor(self, instance, vif):
         """Plug using PLUMgrid IO Visor Driver
@@ -700,7 +697,7 @@ class LibvirtGenericVIFDriver(object):
                           'pgtag2=%s' % net_id, 'pgtag1=%s' % tenant_id,
                           run_as_root=True)
         except processutils.ProcessExecutionError:
-            LOG.exception(_LE("Failed while plugging vif"), instance=instance)
+            LOG.exception(_("Failed while plugging vif"), instance=instance)
 
     def plug_tap(self, instance, vif):
         """Plug a VIF_TYPE_TAP virtual interface."""
@@ -754,7 +751,7 @@ class LibvirtGenericVIFDriver(object):
             linux_net.create_tap_dev(dev, multiqueue=multiqueue)
             utils.execute('vrouter-port-control', cmd_args, run_as_root=True)
         except processutils.ProcessExecutionError:
-            LOG.exception(_LE("Failed while plugging vif"), instance=instance)
+            LOG.exception(_("Failed while plugging vif"), instance=instance)
 
     def _plug_os_vif(self, instance, vif):
         instance_info = os_vif_util.nova_to_osvif_instance(instance)
@@ -817,16 +814,14 @@ class LibvirtGenericVIFDriver(object):
             linux_net.delete_ovs_vif_port(self.get_bridge_name(vif),
                                           v2_name)
         except processutils.ProcessExecutionError:
-            LOG.exception(_LE("Failed while unplugging vif"),
-                          instance=instance)
+            LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
     def unplug_ivs_ethernet(self, instance, vif):
         """Unplug the VIF by deleting the port from the bridge."""
         try:
             linux_net.delete_ivs_vif_port(self.get_vif_devname(vif))
         except processutils.ProcessExecutionError:
-            LOG.exception(_LE("Failed while unplugging vif"),
-                          instance=instance)
+            LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
     def unplug_ivs_hybrid(self, instance, vif):
         """UnPlug using hybrid strategy (same as OVS)
@@ -844,8 +839,7 @@ class LibvirtGenericVIFDriver(object):
             utils.execute('brctl', 'delbr', br_name, run_as_root=True)
             linux_net.delete_ivs_vif_port(v2_name)
         except processutils.ProcessExecutionError:
-            LOG.exception(_LE("Failed while unplugging vif"),
-                          instance=instance)
+            LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
     def unplug_ivs(self, instance, vif):
         if self.get_firewall_required(vif) or vif.is_hybrid_plug_enabled():
@@ -864,7 +858,7 @@ class LibvirtGenericVIFDriver(object):
             utils.execute('ebrctl', 'del-port', fabric, vnic_mac,
                           run_as_root=True)
         except Exception:
-            LOG.exception(_LE("Failed while unplugging ib hostdev vif"))
+            LOG.exception(_("Failed while unplugging ib hostdev vif"))
 
     def unplug_802qbg(self, instance, vif):
         pass
@@ -900,8 +894,7 @@ class LibvirtGenericVIFDriver(object):
                           run_as_root=True)
             linux_net.delete_net_dev(dev)
         except processutils.ProcessExecutionError:
-            LOG.exception(_LE("Failed while unplugging vif"),
-                          instance=instance)
+            LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
     def unplug_tap(self, instance, vif):
         """Unplug a VIF_TYPE_TAP virtual interface."""
@@ -909,8 +902,7 @@ class LibvirtGenericVIFDriver(object):
         try:
             linux_net.delete_net_dev(dev)
         except processutils.ProcessExecutionError:
-            LOG.exception(_LE("Failed while unplugging vif"),
-                          instance=instance)
+            LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
     def unplug_iovisor(self, instance, vif):
         """Unplug using PLUMgrid IO Visor Driver
@@ -926,8 +918,7 @@ class LibvirtGenericVIFDriver(object):
                           run_as_root=True)
             linux_net.delete_net_dev(dev)
         except processutils.ProcessExecutionError:
-            LOG.exception(_LE("Failed while unplugging vif"),
-                          instance=instance)
+            LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
     def unplug_vhostuser(self, instance, vif):
         pass
@@ -943,8 +934,7 @@ class LibvirtGenericVIFDriver(object):
             utils.execute('vrouter-port-control', cmd_args, run_as_root=True)
             linux_net.delete_net_dev(dev)
         except processutils.ProcessExecutionError:
-            LOG.exception(
-                _LE("Failed while unplugging vif"), instance=instance)
+            LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
     def _unplug_os_vif(self, instance, vif):
         instance_info = os_vif_util.nova_to_osvif_instance(instance)

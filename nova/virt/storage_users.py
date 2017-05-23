@@ -20,7 +20,6 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
-from nova.i18n import _LW
 from nova import utils
 
 LOG = logging.getLogger(__name__)
@@ -62,7 +61,7 @@ def register_storage_use(storage_path, hostname):
                 try:
                     d = jsonutils.loads(f.read())
                 except ValueError:
-                    LOG.warning(_LW("Cannot decode JSON from %(id_path)s"),
+                    LOG.warning("Cannot decode JSON from %(id_path)s",
                                 {"id_path": id_path})
 
         d[hostname] = time.time()
@@ -90,7 +89,7 @@ def get_storage_users(storage_path):
                 try:
                     d = jsonutils.loads(f.read())
                 except ValueError:
-                    LOG.warning(_LW("Cannot decode JSON from %(id_path)s"),
+                    LOG.warning("Cannot decode JSON from %(id_path)s",
                                 {"id_path": id_path})
 
         recent_users = []

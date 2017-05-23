@@ -24,7 +24,7 @@ from oslo_utils import excutils
 from oslo_utils import units
 
 from nova import exception
-from nova.i18n import _, _LW, _LE
+from nova.i18n import _
 from nova import objects
 from nova.virt import configdrive
 from nova.virt.hyperv import block_device_manager
@@ -98,7 +98,7 @@ class MigrationOps(object):
         except Exception as ex:
             # Log and ignore this exception
             LOG.exception(ex)
-            LOG.error(_LE("Cannot cleanup migration files"))
+            LOG.error("Cannot cleanup migration files")
 
     def _check_target_flavor(self, instance, flavor):
         new_root_gb = flavor.root_gb
@@ -314,8 +314,8 @@ class MigrationOps(object):
         elif sum(eph['size'] for eph in ephemerals) != new_eph_gb:
             # New ephemeral size is different from the original ephemeral size
             # and there are multiple ephemerals.
-            LOG.warning(_LW("Cannot resize multiple ephemeral disks for "
-                            "instance."), instance=instance)
+            LOG.warning("Cannot resize multiple ephemeral disks for instance.",
+                        instance=instance)
 
         for index, eph in enumerate(ephemerals):
             eph_name = "eph%s" % index

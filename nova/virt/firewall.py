@@ -21,7 +21,6 @@ from oslo_utils import importutils
 from nova.compute import utils as compute_utils
 import nova.conf
 from nova import context
-from nova.i18n import _LI
 from nova.network import linux_net
 from nova import objects
 from nova import utils
@@ -137,8 +136,8 @@ class IptablesFirewallDriver(FirewallDriver):
             self.remove_filters_for_instance(instance)
             self.iptables.apply()
         else:
-            LOG.info(_LI('Attempted to unfilter instance which is not '
-                         'filtered'), instance=instance)
+            LOG.info('Attempted to unfilter instance which is not filtered',
+                     instance=instance)
 
     def prepare_instance_filter(self, instance, network_info):
         self.instance_info[instance.id] = (instance, network_info)
@@ -389,10 +388,8 @@ class IptablesFirewallDriver(FirewallDriver):
                                 ipv6_rules):
         chain_name = self._instance_chain_name(instance)
         if not self.iptables.ipv4['filter'].has_chain(chain_name):
-            LOG.info(
-                _LI('instance chain %s disappeared during refresh, '
-                    'skipping'), chain_name,
-                instance=instance)
+            LOG.info('instance chain %s disappeared during refresh, skipping',
+                     chain_name, instance=instance)
             return
         self.remove_filters_for_instance(instance)
         self.add_filters_for_instance(instance, network_info, ipv4_rules,

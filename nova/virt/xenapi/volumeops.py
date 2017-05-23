@@ -22,7 +22,6 @@ from oslo_utils import excutils
 from oslo_utils import strutils
 
 from nova import exception
-from nova.i18n import _LI, _LW
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import volume_utils
 
@@ -59,7 +58,7 @@ class VolumeOps(object):
             vdi_ref = self._connect_hypervisor_to_volume(sr_ref,
                                                          connection_data)
             vdi_uuid = self._session.VDI.get_uuid(vdi_ref)
-            LOG.info(_LI('Connected volume (vdi_uuid): %s'), vdi_uuid)
+            LOG.info('Connected volume (vdi_uuid): %s', vdi_uuid)
 
             if vm_ref:
                 self._attach_volume_to_vm(vdi_ref, vm_ref, instance_name,
@@ -127,8 +126,8 @@ class VolumeOps(object):
                 LOG.debug("Plugging VBD: %s", vbd_ref)
                 self._session.VBD.plug(vbd_ref, vm_ref)
 
-        LOG.info(_LI('Dev %(dev_number)s attached to'
-                     ' instance %(instance_name)s'),
+        LOG.info('Dev %(dev_number)s attached to'
+                 ' instance %(instance_name)s',
                  {'instance_name': instance_name, 'dev_number': dev_number})
 
     def detach_volume(self, connection_info, instance_name, mountpoint):
@@ -145,12 +144,12 @@ class VolumeOps(object):
         if vbd_ref is None:
             # NOTE(sirp): If we don't find the VBD then it must have been
             # detached previously.
-            LOG.warning(_LW('Skipping detach because VBD for %s was '
-                            'not found'), instance_name)
+            LOG.warning('Skipping detach because VBD for %s was not found',
+                        instance_name)
         else:
             self._detach_vbds_and_srs(vm_ref, [vbd_ref])
-            LOG.info(_LI('Mountpoint %(mountpoint)s detached from instance'
-                         ' %(instance_name)s'),
+            LOG.info('Mountpoint %(mountpoint)s detached from instance'
+                     ' %(instance_name)s',
                      {'instance_name': instance_name,
                       'mountpoint': mountpoint})
 

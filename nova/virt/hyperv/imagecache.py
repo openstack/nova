@@ -26,7 +26,7 @@ from oslo_utils import uuidutils
 
 import nova.conf
 from nova import exception
-from nova.i18n import _, _LI
+from nova.i18n import _
 from nova import utils
 from nova.virt.hyperv import pathutils
 from nova.virt import imagecache
@@ -201,7 +201,7 @@ class ImageCache(imagecache.ImageCacheManager):
         for img in backing_files:
             age_seconds = self._pathutils.get_age_of_file(img)
             if age_seconds > max_age_seconds:
-                LOG.info(_LI("Removing old, unused image: %s"), img)
+                LOG.info("Removing old, unused image: %s", img)
                 self._remove_old_image(img)
 
     def _remove_old_image(self, image_path):

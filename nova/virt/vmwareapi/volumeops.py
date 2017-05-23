@@ -23,7 +23,7 @@ from oslo_vmware import vim_util as vutil
 
 import nova.conf
 from nova import exception
-from nova.i18n import _, _LI, _LW
+from nova.i18n import _
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import vm_util
 
@@ -461,8 +461,8 @@ class VMwareVolumeOps(object):
 
         # The volume has been moved from its original location.
         # Need to consolidate the VMDK files.
-        LOG.info(_LI("The volume's backing has been relocated to %s. Need to "
-                     "consolidate backing disk file."), current_device_path)
+        LOG.info("The volume's backing has been relocated to %s. Need to "
+                 "consolidate backing disk file.", current_device_path)
 
         # Pick the host and resource pool on which the instance resides.
         # Move the volume to the datastore where the new VMDK file is present.
@@ -479,8 +479,8 @@ class VMwareVolumeOps(object):
         except oslo_vmw_exceptions.FileNotFoundException:
             # Volume's vmdk was moved; remove the device so that we can
             # relocate the volume.
-            LOG.warning(_LW("Virtual disk: %s of volume's backing not found."),
-                     original_device_path, exc_info=True)
+            LOG.warning("Virtual disk: %s of volume's backing not found.",
+                        original_device_path, exc_info=True)
             LOG.debug("Removing disk device of volume's backing and "
                       "reattempting relocate.")
             self.detach_disk_from_vm(volume_ref, instance, original_device)

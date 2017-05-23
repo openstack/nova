@@ -27,7 +27,6 @@ import six
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LW
 from nova.virt.libvirt import utils
 
 CONF = nova.conf.CONF
@@ -62,11 +61,11 @@ def create_volume(vg, lv, size, sparse=False):
         preallocated_space = 64 * units.Mi
         check_size(vg, lv, preallocated_space)
         if free_space < size:
-            LOG.warning(_LW('Volume group %(vg)s will not be able'
-                         ' to hold sparse volume %(lv)s.'
-                         ' Virtual volume size is %(size)d bytes,'
-                         ' but free space on volume group is'
-                         ' only %(free_space)db.'),
+            LOG.warning('Volume group %(vg)s will not be able'
+                        ' to hold sparse volume %(lv)s.'
+                        ' Virtual volume size is %(size)d bytes,'
+                        ' but free space on volume group is'
+                        ' only %(free_space)db.',
                         {'vg': vg,
                          'free_space': free_space,
                          'size': size,
@@ -210,8 +209,7 @@ def clear_volume(path):
     try:
         volume_size = get_volume_size(path)
     except exception.VolumeBDMPathNotFound:
-        LOG.warning(_LW('ignoring missing logical volume %(path)s'),
-                 {'path': path})
+        LOG.warning('ignoring missing logical volume %(path)s', {'path': path})
         return
 
     if volume_clear_size != 0 and volume_clear_size < volume_size:

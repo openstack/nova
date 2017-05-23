@@ -21,7 +21,6 @@ from oslo_log import log as logging
 import six
 
 from nova import exception
-from nova.i18n import _LI, _LE
 from nova import utils
 from nova.virt.hyperv import pathutils
 from nova.virt.hyperv import serialconsolehandler
@@ -58,8 +57,8 @@ class SerialConsoleOps(object):
             handler.start()
             _console_handlers[instance_name] = handler
         except Exception as exc:
-            LOG.error(_LE('Instance %(instance_name)s serial console handler '
-                          'could not start. Exception %(exc)s'),
+            LOG.error('Instance %(instance_name)s serial console handler '
+                      'could not start. Exception %(exc)s',
                       {'instance_name': instance_name,
                        'exc': exc})
             if handler:
@@ -72,8 +71,8 @@ class SerialConsoleOps(object):
     def stop_console_handler_unsync(self, instance_name):
         handler = _console_handlers.get(instance_name)
         if handler:
-            LOG.info(_LI("Stopping instance %(instance_name)s "
-                         "serial console handler."),
+            LOG.info("Stopping instance %(instance_name)s "
+                     "serial console handler.",
                      {'instance_name': instance_name})
             handler.stop()
             del _console_handlers[instance_name]

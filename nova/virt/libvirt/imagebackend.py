@@ -31,7 +31,6 @@ import six
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LE, _LI, _LW
 from nova import image
 from nova import keymgr
 from nova import utils
@@ -248,8 +247,8 @@ class Image(object):
             can_fallocate = not err
             self.__class__.can_fallocate = can_fallocate
             if not can_fallocate:
-                LOG.warning(_LW('Unable to preallocate image at path: '
-                                '%(path)s'), {'path': self.path})
+                LOG.warning('Unable to preallocate image at path: %(path)s',
+                            {'path': self.path})
         return can_fallocate
 
     def verify_base_size(self, base, size, base_size=0):
@@ -274,11 +273,11 @@ class Image(object):
             base_size = self.get_disk_size(base)
 
         if size < base_size:
-            msg = _LE('%(base)s virtual size %(base_size)s '
-                      'larger than flavor root disk size %(size)s')
-            LOG.error(msg, {'base': base,
-                            'base_size': base_size,
-                            'size': size})
+            LOG.error('%(base)s virtual size %(base_size)s '
+                      'larger than flavor root disk size %(size)s',
+                      {'base': base,
+                       'base_size': base_size,
+                       'size': size})
             raise exception.FlavorDiskSmallerThanImage(
                 flavor_size=size, image_size=base_size)
 
@@ -483,10 +482,9 @@ class Flat(Image):
             data = images.qemu_img_info(self.path)
             return data.file_format
         except exception.InvalidDiskInfo as e:
-            LOG.info(_LI('Failed to get image info from path %(path)s; '
-                         'error: %(error)s'),
-                      {'path': self.path,
-                       'error': e})
+            LOG.info('Failed to get image info from path %(path)s; '
+                     'error: %(error)s',
+                     {'path': self.path, 'error': e})
             return 'raw'
 
     def _supports_encryption(self):
@@ -728,8 +726,8 @@ class Lvm(Image):
                             self.ephemeral_key_uuid).get_encoded()
                 except Exception:
                     with excutils.save_and_reraise_exception():
-                        LOG.error(_LE("Failed to retrieve ephemeral encryption"
-                                      " key"))
+                        LOG.error("Failed to retrieve ephemeral "
+                                  "encryption key")
             else:
                 raise exception.InternalError(
                     _("Instance disk to be encrypted but no context provided"))

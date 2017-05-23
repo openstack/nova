@@ -47,7 +47,7 @@ import nova.conf
 from nova.console import type as ctype
 from nova import context as nova_context
 from nova import exception
-from nova.i18n import _, _LE, _LI, _LW
+from nova.i18n import _
 from nova import objects
 from nova.objects import fields as obj_fields
 from nova.pci import manager as pci_manager
@@ -452,8 +452,8 @@ class VMOps(object):
                     vm_utils.handle_ipxe_iso(
                         self._session, instance, vdis['iso'], network_info)
                 else:
-                    LOG.warning(_LW('ipxe_boot is True but no ISO image '
-                                    'found'), instance=instance)
+                    LOG.warning('ipxe_boot is True but no ISO image found',
+                                instance=instance)
 
             if resize:
                 self._resize_up_vdis(instance, vdis)
@@ -620,7 +620,7 @@ class VMOps(object):
 
     def _handle_neutron_event_timeout(self, instance, undo_mgr):
         # We didn't get callback from Neutron within given time
-        LOG.warning(_LW('Timeout waiting for vif plugging callback'),
+        LOG.warning('Timeout waiting for vif plugging callback',
                     instance=instance)
         if CONF.vif_plugging_is_fatal:
             raise exception.VirtualInterfaceCreateException()
@@ -633,8 +633,8 @@ class VMOps(object):
             self._update_last_dom_id(vm_ref)
 
     def _neutron_failed_callback(self, event_name, instance):
-        LOG.warning(_LW('Neutron Reported failure on event %(event)s'),
-                   {'event': event_name}, instance=instance)
+        LOG.warning('Neutron Reported failure on event %(event)s',
+                    {'event': event_name}, instance=instance)
         if CONF.vif_plugging_is_fatal:
             raise exception.VirtualInterfaceCreateException()
 
@@ -1025,9 +1025,8 @@ class VMOps(object):
                 undo_mgr, old_vdi_ref)
             transfer_vhd_to_dest(new_vdi_ref, new_vdi_uuid)
         except Exception as error:
-            LOG.exception(_LE("_migrate_disk_resizing_down failed. "
-                              "Restoring orig vm"),
-                          instance=instance)
+            LOG.exception(_("_migrate_disk_resizing_down failed. Restoring"
+                            "orig vm"), instance=instance)
             undo_mgr._rollback()
             raise exception.InstanceFaultRollback(error)
 
@@ -1201,15 +1200,15 @@ class VMOps(object):
                 transfer_ephemeral_disks_then_all_leaf_vdis()
 
         except Exception as error:
-            LOG.exception(_LE("_migrate_disk_resizing_up failed. "
-                              "Restoring orig vm due_to: %s."), error,
-                          instance=instance)
+            LOG.exception(_("_migrate_disk_resizing_up failed. "
+                            "Restoring orig vm due_to: %s."),
+                          error, instance=instance)
             try:
                 self._restore_orig_vm_and_cleanup_orphan(instance)
                 # TODO(johngarbutt) should also cleanup VHDs at destination
             except Exception as rollback_error:
-                LOG.warning(_LW("_migrate_disk_resizing_up failed to "
-                                "rollback: %s"), rollback_error,
+                LOG.warning("_migrate_disk_resizing_up failed to "
+                            "rollback: %s", rollback_error,
                             instance=instance)
             raise exception.InstanceFaultRollback(error)
 
@@ -1336,14 +1335,14 @@ class VMOps(object):
             details = exc.details
             if (details[0] == 'VM_BAD_POWER_STATE' and
                     details[-1] == 'halted'):
-                LOG.info(_LI("Starting halted instance found during reboot"),
+                LOG.info("Starting halted instance found during reboot",
                          instance=instance)
                 self._start(instance, vm_ref=vm_ref,
                             bad_volumes_callback=bad_volumes_callback)
                 return
             elif details[0] == 'SR_BACKEND_FAILURE_46':
-                LOG.warning(_LW("Reboot failed due to bad volumes, detaching "
-                                "bad volumes and starting halted instance"),
+                LOG.warning("Reboot failed due to bad volumes, detaching "
+                            "bad volumes and starting halted instance",
                             instance=instance)
                 self._start(instance, vm_ref=vm_ref,
                             bad_volumes_callback=bad_volumes_callback)
@@ -1420,7 +1419,7 @@ class VMOps(object):
             # Skip the update when not possible, as the updated metadata will
             # get added when the VM is being booted up at the end of the
             # resize or rebuild.
-            LOG.warning(_LW("Unable to update metadata, VM not found."),
+            LOG.warning("Unable to update metadata, VM not found.",
                         instance=instance, exc_info=True)
             return
 
@@ -1540,7 +1539,7 @@ class VMOps(object):
         destroy_* methods are internal.
 
         """
-        LOG.info(_LI("Destroying VM"), instance=instance)
+        LOG.info("Destroying VM", instance=instance)
 
         # We don't use _get_vm_opaque_ref because the instance may
         # truly not exist because of a failure during build. A valid
@@ -1572,7 +1571,7 @@ class VMOps(object):
 
         """
         if vm_ref is None:
-            LOG.warning(_LW("VM is not present, skipping destroy..."),
+            LOG.warning("VM is not present, skipping destroy...",
                         instance=instance)
             # NOTE(alaski): There should not be a block device mapping here,
             # but if there is it very likely means there was an error cleaning
@@ -1593,24 +1592,24 @@ class VMOps(object):
                                                           sr_uuid)
                     if not sr_ref:
                         connection_data = bdm['connection_info']['data']
-                        (sr_uuid, _, _) = volume_utils.parse_sr_info(
+                        (sr_uuid, unused, unused) = volume_utils.parse_sr_info(
                             connection_data)
                         sr_ref = volume_utils.find_sr_by_uuid(self._session,
                                                               sr_uuid)
                 except Exception:
-                    LOG.exception(_LE('Failed to find an SR for volume %s'),
+                    LOG.exception(_('Failed to find an SR for volume %s'),
                                   volume_id, instance=instance)
 
                 try:
                     if sr_ref:
                         volume_utils.forget_sr(self._session, sr_ref)
                     else:
-                        LOG.error(_LE('Volume %s is associated with the '
-                            'instance but no SR was found for it'), volume_id,
-                                instance=instance)
+                        LOG.error('Volume %s is associated with the '
+                                  'instance but no SR was found for it',
+                                  volume_id, instance=instance)
                 except Exception:
-                    LOG.exception(_LE('Failed to forget the SR for volume %s'),
-                            volume_id, instance=instance)
+                    LOG.exception(_('Failed to forget the SR for volume %s'),
+                                  volume_id, instance=instance)
             return
 
         # NOTE(alaski): Attempt clean shutdown first if there's an attached
@@ -1709,7 +1708,7 @@ class VMOps(object):
         try:
             vm_ref = self._get_vm_opaque_ref(instance)
         except exception.NotFound:
-            LOG.warning(_LW("VM is not present, skipping soft delete..."),
+            LOG.warning("VM is not present, skipping soft delete...",
                         instance=instance)
         else:
             vm_utils.hard_shutdown_vm(self._session, instance, vm_ref)
@@ -1758,11 +1757,11 @@ class VMOps(object):
                 timeout=timeout)
 
         if instances_info["instance_count"] > 0:
-            LOG.info(_LI("Found %(instance_count)d hung reboots "
-                         "older than %(timeout)d seconds"), instances_info)
+            LOG.info("Found %(instance_count)d hung reboots "
+                     "older than %(timeout)d seconds", instances_info)
 
         for instance in instances:
-            LOG.info(_LI("Automatically hard rebooting"), instance=instance)
+            LOG.info("Automatically hard rebooting", instance=instance)
             self.compute_api.reboot(ctxt, instance, "HARD")
 
     def get_info(self, instance, vm_ref=None):
@@ -1818,7 +1817,7 @@ class VMOps(object):
             raw_console_data = vm_management.get_console_log(
                 self._session, dom_id)
         except self._session.XenAPI.Failure:
-            LOG.exception(_LE("Guest does not have a console available"))
+            LOG.exception(_("Guest does not have a console available"))
             raise exception.ConsoleNotAvailable()
 
         return zlib.decompress(base64.b64decode(raw_console_data))
@@ -2048,15 +2047,15 @@ class VMOps(object):
     def _process_plugin_exception(self, plugin_exception, method, instance):
         err_msg = plugin_exception.details[-1].splitlines()[-1]
         if 'TIMEOUT:' in err_msg:
-            LOG.error(_LE('TIMEOUT: The call to %s timed out'),
+            LOG.error('TIMEOUT: The call to %s timed out',
                       method, instance=instance)
             return {'returncode': 'timeout', 'message': err_msg}
         elif 'NOT IMPLEMENTED:' in err_msg:
-            LOG.error(_LE('NOT IMPLEMENTED: The call to %s is not supported'
-                          ' by the agent.'), method, instance=instance)
+            LOG.error('NOT IMPLEMENTED: The call to %s is not supported'
+                      ' by the agent.', method, instance=instance)
             return {'returncode': 'notimplemented', 'message': err_msg}
         else:
-            LOG.error(_LE('The call to %(method)s returned an error: %(e)s.'),
+            LOG.error('The call to %(method)s returned an error: %(e)s.',
                       {'method': method, 'e': plugin_exception},
                       instance=instance)
             return {'returncode': 'error', 'message': err_msg}
@@ -2156,7 +2155,7 @@ class VMOps(object):
                                                      nwref,
                                                      options)
         except self._session.XenAPI.Failure:
-            LOG.exception(_LE('Migrate Receive failed'))
+            LOG.exception(_('Migrate Receive failed'))
             msg = _('Migrate Receive failed')
             raise exception.MigrationPreCheckError(reason=msg)
         return migrate_data
@@ -2434,7 +2433,7 @@ class VMOps(object):
                     self._call_live_migrate_command(
                         "VM.migrate_send", vm_ref, migrate_data)
                 except self._session.XenAPI.Failure:
-                    LOG.exception(_LE('Migrate Send failed'))
+                    LOG.exception(_('Migrate Send failed'))
                     raise exception.MigrationError(
                         reason=_('Migrate Send failed'))
 
@@ -2491,7 +2490,7 @@ class VMOps(object):
                 if sr_ref:
                     volume_utils.forget_sr(self._session, sr_ref)
             except Exception:
-                LOG.exception(_LE('Failed to forget the SR for volume %s'),
+                LOG.exception(_('Failed to forget the SR for volume %s'),
                               params['id'], instance=instance)
 
         # delete VIF and network in destination host
@@ -2505,8 +2504,8 @@ class VMOps(object):
             try:
                 self.vif_driver.delete_network_and_bridge(instance, vif)
             except Exception:
-                LOG.exception(_LE('Failed to delete networks and bridges with '
-                                  'VIF %s'), vif['id'], instance=instance)
+                LOG.exception(_('Failed to delete networks and bridges with '
+                                'VIF %s'), vif['id'], instance=instance)
 
     def get_per_instance_usage(self):
         """Get usage info about each active instance."""
@@ -2570,13 +2569,13 @@ class VMOps(object):
                 self.firewall_driver.setup_basic_filtering(instance, [vif])
             except exception.NovaException:
                 with excutils.save_and_reraise_exception():
-                    LOG.exception(_LE('attach network interface %s failed.'),
+                    LOG.exception(_('attach network interface %s failed.'),
                                   vif['id'], instance=instance)
                     try:
                         self.vif_driver.unplug(instance, vif, vm_ref)
                     except exception.NovaException:
                         # if unplug failed, no need to raise exception
-                        LOG.warning(_LW('Unplug VIF %s failed.'),
+                        LOG.warning('Unplug VIF %s failed.',
                                     vif['id'], instance=instance)
 
         _attach_interface(instance, vm_ref, vif)
@@ -2589,5 +2588,5 @@ class VMOps(object):
             self.vif_driver.unplug(instance, vif, vm_ref)
         except exception.NovaException:
             with excutils.save_and_reraise_exception():
-                LOG.exception(_LE('detach network interface %s failed.'),
+                LOG.exception(_('detach network interface %s failed.'),
                               vif['id'], instance=instance)

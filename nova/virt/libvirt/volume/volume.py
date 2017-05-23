@@ -21,8 +21,6 @@ from oslo_log import log as logging
 
 import nova.conf
 from nova import exception
-from nova.i18n import _LE
-from nova.i18n import _LW
 from nova import profiler
 from nova.virt.libvirt import config as vconfig
 import nova.virt.libvirt.driver
@@ -76,8 +74,8 @@ class LibvirtBaseVolumeDriver(object):
                         new_key = 'disk_' + k
                         setattr(conf, new_key, v)
             else:
-                LOG.warning(_LW('Unknown content in connection_info/'
-                             'qos_specs: %s'), specs)
+                LOG.warning('Unknown content in connection_info/'
+                            'qos_specs: %s', specs)
 
         # Extract access_mode control parameters
         if 'access_mode' in data and data['access_mode']:
@@ -85,8 +83,8 @@ class LibvirtBaseVolumeDriver(object):
             if access_mode in ('ro', 'rw'):
                 conf.readonly = access_mode == 'ro'
             else:
-                LOG.error(_LE('Unknown content in '
-                              'connection_info/access_mode: %s'),
+                LOG.error('Unknown content in '
+                          'connection_info/access_mode: %s',
                           access_mode)
                 raise exception.InvalidVolumeAccessMode(
                     access_mode=access_mode)

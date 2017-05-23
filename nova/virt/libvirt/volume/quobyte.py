@@ -24,8 +24,6 @@ import six
 import nova.conf
 from nova import exception as nova_exception
 from nova.i18n import _
-from nova.i18n import _LE
-from nova.i18n import _LI
 from nova import utils
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt.volume import fs
@@ -53,7 +51,7 @@ def mount_volume(volume, mnt_base, configfile=None):
               mnt_base)
     # Run mount command but do not fail on already mounted exit code
     utils.execute(*command, check_exit_code=[0, 4])
-    LOG.info(_LI('Mounted volume: %s'), volume)
+    LOG.info('Mounted volume: %s', volume)
 
 
 def umount_volume(mnt_base):
@@ -62,10 +60,9 @@ def umount_volume(mnt_base):
         utils.execute('umount.quobyte', mnt_base)
     except processutils.ProcessExecutionError as exc:
         if 'Device or resource busy' in six.text_type(exc):
-            LOG.error(_LE("The Quobyte volume at %s is still in use."),
-                      mnt_base)
+            LOG.error("The Quobyte volume at %s is still in use.", mnt_base)
         else:
-            LOG.exception(_LE("Couldn't unmount the Quobyte Volume at %s"),
+            LOG.exception(_("Couldn't unmount the Quobyte Volume at %s"),
                           mnt_base)
 
 
@@ -81,8 +78,8 @@ def validate_volume(mnt_base):
         raise nova_exception.InternalError(msg)
 
     if not os.access(mnt_base, os.W_OK | os.X_OK):
-        msg = (_LE("Volume is not writable. Please broaden the file"
-                   " permissions. Mount: %s") % mnt_base)
+        msg = _("Volume is not writable. Please broaden the file"
+                " permissions. Mount: %s") % mnt_base
         raise nova_exception.InternalError(msg)
 
 
@@ -121,8 +118,8 @@ class LibvirtQuobyteVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
             except OSError as exc:
                 if exc.errno == errno.ENOTCONN:
                     mounted = False
-                    LOG.info(_LI('Fixing previous mount %s which was not'
-                                 ' unmounted correctly.'), mount_path)
+                    LOG.info('Fixing previous mount %s which was not'
+                             ' unmounted correctly.', mount_path)
                     umount_volume(mount_path)
 
         if not mounted:
@@ -143,7 +140,7 @@ class LibvirtQuobyteVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
         if libvirt_utils.is_mounted(mount_path, 'quobyte@' + quobyte_volume):
             umount_volume(mount_path)
         else:
-            LOG.info(_LI("Trying to disconnected unmounted volume at %s"),
+            LOG.info("Trying to disconnected unmounted volume at %s",
                      mount_path)
 
     def _normalize_export(self, export):
