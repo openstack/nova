@@ -31,7 +31,7 @@ from nova import db
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import models
 from nova import exception
-from nova.i18n import _, _LE, _LW
+from nova.i18n import _
 from nova.network import model as network_model
 from nova import notifications
 from nova import objects
@@ -308,8 +308,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 # If the vm/task states don't indicate that it's being booted
                 # then we have a bug here. Log an error and attempt to return
                 # the uuid which is what an error above would return.
-                LOG.error(_LE('Could not lazy-load instance.id while '
-                              'attempting to generate the instance name.'))
+                LOG.error('Could not lazy-load instance.id while '
+                          'attempting to generate the instance name.')
                 base_name = self.uuid
         return base_name
 
@@ -723,7 +723,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                     if field in _INSTANCE_EXTRA_FIELDS:
                         self._save_extra_generic(field)
                         continue
-                    LOG.exception(_LE('No save handler for %s'), field,
+                    LOG.exception('No save handler for %s', field,
                                   instance=self)
                 except db_exc.DBReferenceError as exp:
                     if exp.key != 'instance_uuid':
@@ -1410,7 +1410,7 @@ def _migrate_instance_keypairs(ctxt, count):
                 keypairs.objects.append(key)
             except exception.KeypairNotFound:
                 LOG.warning(
-                    _LW('Instance %(uuid)s keypair %(keyname)s not found'),
+                    'Instance %(uuid)s keypair %(keyname)s not found',
                     {'uuid': db_extra.instance_uuid, 'keyname': key_name})
         db_extra.keypairs = jsonutils.dumps(keypairs.obj_to_primitive())
         db_extra.save(ctxt.session)

@@ -18,7 +18,6 @@ from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
 from nova import db
 from nova import exception
-from nova.i18n import _LE
 from nova.objects import base
 from nova.objects import fields
 
@@ -81,8 +80,8 @@ class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject):
         try:
             cells_api.instance_info_cache_update_at_top(ctxt, info_cache)
         except Exception:
-            LOG.exception(_LE("Failed to notify cells of instance info "
-                              "cache update"))
+            LOG.exception("Failed to notify cells of instance info "
+                          "cache update")
 
     @base.remotable
     def save(self, update_cells=True):

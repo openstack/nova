@@ -20,7 +20,7 @@ from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
 from nova import db
 from nova import exception
-from nova.i18n import _, _LW
+from nova.i18n import _
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -221,8 +221,8 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
         if not db_bdms:
             raise exception.VolumeBDMNotFound(volume_id=volume_id)
         if len(db_bdms) > 1:
-            LOG.warning(_LW('Legacy get_by_volume_id() call found multiple '
-                            'BDMs for volume %(volume)s'),
+            LOG.warning('Legacy get_by_volume_id() call found multiple '
+                        'BDMs for volume %(volume)s',
                         {'volume': volume_id})
         db_bdm = db_bdms[0]
         # NOTE (ndipanov): Move this to the db layer into a

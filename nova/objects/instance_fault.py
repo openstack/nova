@@ -20,7 +20,6 @@ from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
 from nova import db
 from nova import exception
-from nova.i18n import _LE
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -88,7 +87,7 @@ class InstanceFault(base.NovaPersistentObject, base.NovaObject,
                 cells_rpcapi.CellsAPI().instance_fault_create_at_top(
                     self._context, db_fault)
             except Exception:
-                LOG.exception(_LE("Failed to notify cells of instance fault"))
+                LOG.exception("Failed to notify cells of instance fault")
 
 
 @base.NovaObjectRegistry.register

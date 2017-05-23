@@ -23,7 +23,6 @@ from sqlalchemy.sql import null
 from nova.db.sqlalchemy import api as db
 from nova.db.sqlalchemy import api_models
 from nova import exception
-from nova.i18n import _LE
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -82,8 +81,7 @@ class BuildRequest(base.NovaObject):
                       'which is not supported here.',
                       dict(instance_uuid=self.instance_uuid,
                           version=exc.objver))
-            LOG.exception(_LE('Could not deserialize instance in '
-                              'BuildRequest'))
+            LOG.exception('Could not deserialize instance in BuildRequest')
             raise exception.BuildRequestNotFound(uuid=self.instance_uuid)
         # NOTE(sbauza): The instance primitive should already have the deleted
         # field being set, so when hydrating it back here, we should get the
@@ -155,7 +153,7 @@ class BuildRequest(base.NovaObject):
                 try:
                     getattr(req, '_load_%s' % key)(db_req[key])
                 except AttributeError:
-                    LOG.exception(_LE('No load handler for %s'), key)
+                    LOG.exception('No load handler for %s', key)
             else:
                 setattr(req, key, db_req[key])
         # Load instance last because other fields on req may be referenced

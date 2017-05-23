@@ -28,7 +28,7 @@ from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
 from nova.db.sqlalchemy import models as main_models
 from nova import exception
-from nova.i18n import _, _LW
+from nova.i18n import _
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -317,7 +317,7 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
                  filter_by(deleted=0).count()
         if result:
             LOG.warning(
-                _LW('Main database contains %(count)i unmigrated aggregates'),
+                'Main database contains %(count)i unmigrated aggregates',
                 {'count': result})
         return result == 0
 
@@ -585,7 +585,7 @@ def migrate_aggregates(ctxt, count):
             db.aggregate_delete(ctxt, aggregate.id)
         except exception.AggregateNotFound:
             LOG.warning(
-                _LW('Aggregate id %(id)i disappeared during migration'),
+                'Aggregate id %(id)i disappeared during migration',
                 {'id': aggregate_id})
         except (exception.AggregateNameExists) as e:
             LOG.error(six.text_type(e))

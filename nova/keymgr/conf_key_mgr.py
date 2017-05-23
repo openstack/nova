@@ -39,7 +39,7 @@ from oslo_log import log as logging
 
 import nova.conf
 from nova import exception
-from nova.i18n import _, _LW
+from nova.i18n import _
 
 
 CONF = nova.conf.CONF
@@ -55,8 +55,8 @@ class ConfKeyManager(key_manager.KeyManager):
     """
 
     def __init__(self, configuration):
-        LOG.warning(_LW('This key manager is insecure and is not recommended '
-                        'for production deployments'))
+        LOG.warning('This key manager is insecure and is not recommended '
+                    'for production deployments')
         super(ConfKeyManager, self).__init__(configuration)
 
         self.key_id = '00000000-0000-0000-0000-000000000000'
@@ -128,4 +128,4 @@ class ConfKeyManager(key_manager.KeyManager):
             raise exception.KeyManagerError(
                 reason="cannot delete non-existent key")
 
-        LOG.warning(_LW("Not deleting key %s"), managed_object_id)
+        LOG.warning("Not deleting key %s", managed_object_id)

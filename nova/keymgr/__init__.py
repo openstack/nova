@@ -19,7 +19,6 @@ from oslo_log import log as logging
 from oslo_utils import importutils
 
 import nova.conf
-from nova.i18n import _LW
 
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
@@ -35,12 +34,12 @@ api_class = None
 try:
     api_class = CONF.key_manager.api_class
 except cfg.NoSuchOptError:
-    LOG.warning(_LW("key_manager.api_class is not set, will use deprecated "
-                    "option keymgr.api_class if set"))
+    LOG.warning("key_manager.api_class is not set, will use deprecated "
+                "option keymgr.api_class if set")
     try:
         api_class = CONF.keymgr.api_class
     except cfg.NoSuchOptError:
-        LOG.warning(_LW("keymgr.api_class is not set"))
+        LOG.warning("keymgr.api_class is not set")
 
 deprecated_barbican = 'nova.keymgr.barbican.BarbicanKeyManager'
 barbican = 'castellan.key_manager.barbican_key_manager.BarbicanKeyManager'
@@ -50,8 +49,8 @@ castellan_mock = ('castellan.tests.unit.key_manager.mock_key_manager.'
 
 
 def log_deprecated_warning(deprecated, castellan):
-    LOG.warning(_LW("key manager api_class set to use deprecated option "
-                    "%(deprecated)s, using %(castellan)s instead"),
+    LOG.warning("key manager api_class set to use deprecated option "
+                "%(deprecated)s, using %(castellan)s instead",
                 {'deprecated': deprecated, 'castellan': castellan})
 
 if api_class == deprecated_barbican:
@@ -63,7 +62,7 @@ elif api_class == deprecated_mock:
 elif api_class is None:
     # TODO(kfarr): key_manager.api_class should be set in DevStack, and this
     # block can be removed
-    LOG.warning(_LW("key manager not set, using insecure default %s"),
+    LOG.warning("key manager not set, using insecure default %s",
                 castellan_mock)
     api_class = castellan_mock
 

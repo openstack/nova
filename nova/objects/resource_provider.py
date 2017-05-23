@@ -32,7 +32,7 @@ from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models as models
 from nova.db.sqlalchemy import resource_class_cache as rc_cache
 from nova import exception
-from nova.i18n import _, _LW
+from nova.i18n import _
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -448,8 +448,8 @@ class ResourceProvider(base.NovaObject):
         """Set all resource provider Inventory to be the provided list."""
         exceeded = _set_inventory(self._context, self, inv_list)
         for uuid, rclass in exceeded:
-            LOG.warning(_LW('Resource provider %(uuid)s is now over-'
-                            'capacity for %(resource)s'),
+            LOG.warning('Resource provider %(uuid)s is now over-'
+                        'capacity for %(resource)s',
                         {'uuid': uuid, 'resource': rclass})
         self.obj_reset_changes()
 
@@ -460,8 +460,8 @@ class ResourceProvider(base.NovaObject):
         """
         exceeded = _update_inventory(self._context, self, inventory)
         for uuid, rclass in exceeded:
-            LOG.warning(_LW('Resource provider %(uuid)s is now over-'
-                            'capacity for %(resource)s'),
+            LOG.warning('Resource provider %(uuid)s is now over-'
+                        'capacity for %(resource)s',
                         {'uuid': uuid, 'resource': rclass})
         self.obj_reset_changes()
 
@@ -1620,10 +1620,10 @@ def _check_capacity_exceeded(conn, allocs):
         if (amount_needed < min_unit or amount_needed > max_unit or
                 amount_needed % step_size != 0):
             LOG.warning(
-                _LW("Allocation for %(rc)s on resource provider %(rp)s "
-                    "violates min_unit, max_unit, or step_size. "
-                    "Requested: %(requested)s, min_unit: %(min_unit)s, "
-                    "max_unit: %(max_unit)s, step_size: %(step_size)s"),
+                "Allocation for %(rc)s on resource provider %(rp)s "
+                "violates min_unit, max_unit, or step_size. "
+                "Requested: %(requested)s, min_unit: %(min_unit)s, "
+                "max_unit: %(max_unit)s, step_size: %(step_size)s",
                 {'rc': alloc.resource_class,
                  'rp': rp_uuid,
                  'requested': amount_needed,
@@ -1639,8 +1639,8 @@ def _check_capacity_exceeded(conn, allocs):
         capacity = (usage['total'] - usage['reserved']) * allocation_ratio
         if capacity < (used + amount_needed):
             LOG.warning(
-                _LW("Over capacity for %(rc)s on resource provider %(rp)s. "
-                    "Needed: %(needed)s, Used: %(used)s, Capacity: %(cap)s"),
+                "Over capacity for %(rc)s on resource provider %(rp)s. "
+                "Needed: %(needed)s, Used: %(used)s, Capacity: %(cap)s",
                 {'rc': alloc.resource_class,
                  'rp': rp_uuid,
                  'needed': amount_needed,
@@ -1943,8 +1943,8 @@ class ResourceClass(base.NovaObject):
             # limit to be exceeded. We set it high in the hope that we never
             # hit this point, but added this log message so we know that this
             # specific situation occurred.
-            LOG.warning(_LW("Exceeded retry limit on ID generation while "
-                            "creating ResourceClass %(name)s"),
+            LOG.warning("Exceeded retry limit on ID generation while "
+                        "creating ResourceClass %(name)s",
                         {'name': self.name})
             msg = _("creating resource class %s") % self.name
             raise exception.MaxDBRetriesExceeded(action=msg)
