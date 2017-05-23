@@ -10742,7 +10742,10 @@ class ComputeAPITestCase(BaseTestCase):
                                                      filters)
         self.assertEqual(1, len(migrations))
         self.assertEqual(migrations[0].id, migration['id'])
-        mock_migration.assert_called_once_with(self.context, filters)
+        mock_migration.assert_called_once_with(mock.ANY, filters)
+        called_context = mock_migration.call_args_list[0][0][0]
+        self.assertIsInstance(called_context, context.RequestContext)
+        self.assertNotEqual(self.context, called_context)
 
     @mock.patch("nova.db.migration_get_in_progress_by_instance")
     def test_get_migrations_in_progress_by_instance(self, mock_get):
