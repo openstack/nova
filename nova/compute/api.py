@@ -2550,14 +2550,11 @@ class API(base.Base):
                         instance.update(updates)
                         instance.save()
                 else:
-                    # If inst_map.cell_mapping does not point at a cell then
-                    # cell migration has not happened yet.
-                    # TODO(alaski): Make this a failure case after we put in
-                    # a block that requires migrating to cellsv2.
-                    instance = objects.Instance.get_by_uuid(
-                        context, instance.uuid, expected_attrs=expected_attrs)
-                    instance.update(updates)
-                    instance.save()
+                    # Conductor doesn't delete the BuildRequest until after the
+                    # InstanceMapping record is created, so if we didn't get
+                    # that and the BuildRequest doesn't exist, then the
+                    # instance is already gone and we need to just error out.
+                    raise exception.InstanceNotFound(instance_id=instance.uuid)
         return instance
 
     # NOTE(melwitt): We don't check instance lock for backup because lock is

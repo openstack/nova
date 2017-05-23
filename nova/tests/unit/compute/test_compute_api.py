@@ -4858,13 +4858,11 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_inst_save.assert_called_once_with()
         self.assertEqual('foo_updated', returned_instance.display_name)
 
-    @mock.patch.object(objects.Instance, 'get_by_uuid')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
     def test_update_instance_not_in_cell_in_transition_state(self,
                                                              mock_buildreq_get,
-                                                             mock_instmap_get,
-                                                             mock_inst_get):
+                                                             mock_instmap_get):
 
         # This test is for covering the following case:
         #  - when we lookup the instance initially, that one is not yet mapped
@@ -4872,7 +4870,7 @@ class _ComputeAPIUnitTestMixIn(object):
         #  - when we update the instance, that one could have been mapped
         #    meanwhile and the BuildRequest was deleted
         #  - if the instance is not mapped, lookup the API DB to find whether
-        #    the instance was deleted, or if the cellv2 migration is not done
+        #    the instance was deleted
 
         self.useFixture(fixtures.AllServicesCurrent())
 
@@ -4884,24 +4882,15 @@ class _ComputeAPIUnitTestMixIn(object):
             uuid=instance.uuid)
         mock_instmap_get.side_effect = exception.InstanceMappingNotFound(
             uuid='fake')
-        mock_inst_get.return_value = instance
 
         updates = {'display_name': 'foo_updated'}
         with mock.patch.object(instance, 'save') as mock_inst_save:
-            returned_instance = self.compute_api.update_instance(
-                self.context, instance, updates)
+            self.assertRaises(exception.InstanceNotFound,
+                              self.compute_api.update_instance,
+                              self.context, instance, updates)
 
         mock_buildreq_get.assert_called_once_with(self.context, instance.uuid)
-        mock_inst_save.assert_called_once_with()
-        self.assertEqual('foo_updated', returned_instance.display_name)
-
-        # Let's do a quick verification on the same unittest to see what
-        # happens if the instance was deleted meanwhile.
-        mock_inst_get.side_effect = exception.InstanceNotFound(
-            instance_id=instance.uuid)
-        self.assertRaises(exception.InstanceNotFound,
-                          self.compute_api.update_instance,
-                          self.context, instance, updates)
+        mock_inst_save.assert_not_called()
 
     def test_populate_instance_for_create_neutron_secgroups(self):
         """Tests that a list of security groups passed in do not actually get
