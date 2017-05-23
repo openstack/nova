@@ -588,3 +588,15 @@ FAQs
    if you are having the same issue in those services. As of the 16.0.0 Pike
    release there is no timer on the cache or hook to refresh the cache using a
    SIGHUP to the service.
+
+#. I have upgraded from Newton to Ocata and I can list instances but I get a
+   404 NotFound error when I try to get details on a specific instance.
+
+   Instances need to be mapped to cells so the API knows which cell an instance
+   lives in. When upgrading, the ``nova-manage cell_v2 simple_cell_setup``
+   command will automatically map the instances to the single cell which is
+   backed by the existing nova database. If you have already upgraded
+   and did not use the ``simple_cell_setup`` command, you can run the
+   ``nova-manage cell_v2 map_instances --cell_uuid <cell_uuid>`` command to
+   map all instances in the given cell. See the :ref:`man-page-cells-v2` man
+   page for details on command usage.
