@@ -51,6 +51,7 @@ from nova.api.openstack.compute import lock_server
 from nova.api.openstack.compute import migrate_server
 from nova.api.openstack.compute import multinic
 from nova.api.openstack.compute import pause_server
+from nova.api.openstack.compute import quota_sets
 from nova.api.openstack.compute import remote_consoles
 from nova.api.openstack.compute import rescue
 from nova.api.openstack.compute import security_groups
@@ -156,6 +157,10 @@ floating_ips_bulk_controller = functools.partial(_create_controller,
 
 instance_usage_audit_log_controller = functools.partial(_create_controller,
     instance_usage_audit_log.InstanceUsageAuditLogController, [], [])
+
+
+quota_set_controller = functools.partial(_create_controller,
+    quota_sets.QuotaSetsController, [], [])
 
 
 server_controller = functools.partial(_create_controller,
@@ -336,6 +341,17 @@ ROUTE_LIST = (
     ('/os-keypairs/{id}', {
         'GET': [keypairs_controller, 'show'],
         'DELETE': [keypairs_controller, 'delete']
+    }),
+    ('/os-quota-sets/{id}', {
+        'GET': [quota_set_controller, 'show'],
+        'PUT': [quota_set_controller, 'update'],
+        'DELETE': [quota_set_controller, 'delete']
+    }),
+    ('/os-quota-sets/{id}/detail', {
+        'GET': [quota_set_controller, 'detail']
+    }),
+    ('/os-quota-sets/{id}/defaults', {
+        'GET': [quota_set_controller, 'defaults']
     }),
     ('/os-simple-tenant-usage', {
         'GET': [simple_tenant_usage_controller, 'index']

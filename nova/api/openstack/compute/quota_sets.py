@@ -36,7 +36,6 @@ from nova import quota
 
 
 CONF = nova.conf.CONF
-ALIAS = "os-quota-sets"
 QUOTAS = quota.QUOTAS
 
 FILTERED_QUOTAS = ["fixed_ips", "floating_ips", "networks",
@@ -232,25 +231,3 @@ class QuotaSetsController(wsgi.Controller):
                                                    id, user_id)
         else:
             QUOTAS.destroy_all_by_project(context, id)
-
-
-class QuotaSets(extensions.V21APIExtensionBase):
-    """Quotas management support."""
-
-    name = "Quotas"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        resources = []
-
-        res = extensions.ResourceExtension(ALIAS,
-                                            QuotaSetsController(),
-                                            member_actions={'defaults': 'GET',
-                                                            'detail': 'GET'})
-        resources.append(res)
-
-        return resources
-
-    def get_controller_extensions(self):
-        return []
