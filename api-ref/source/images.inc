@@ -10,7 +10,7 @@
    deprecated all the proxy APIs and users should use the native APIs
    instead. These will fail with a 404 starting from microversion 2.36.
    See: `Relevant Image APIs
-   <http://developer.openstack.org/api-ref-image-v2.html#images-images-v2>`__.
+   <https://developer.openstack.org/api-ref/image/v2/index.html>`__.
 
 Lists, shows details and deletes images.
 Also sets, lists, shows details, create, update and deletes image metadata.
@@ -18,7 +18,7 @@ Also sets, lists, shows details, create, update and deletes image metadata.
 An image is a collection of files that you use to create and rebuild a
 server. By default, operators provide pre-built operating system images.
 You can also create custom images. See: `Create Image Action
-<http://developer.openstack.org/api-ref/compute/#create-image-createimage-action>`__.
+<https://developer.openstack.org/api-ref/compute/#create-image-createimage-action>`__.
 
 By default, the ``policy.json`` file authorizes all users to view the
 image size in the ``OS-EXT-IMG-SIZE:size`` extended attribute.
