@@ -746,7 +746,8 @@ def compute_node_statistics(context):
                 inner_sel.c.service_id == services_tbl.c.id
             ),
             services_tbl.c.disabled == false(),
-            services_tbl.c.binary == 'nova-compute'
+            services_tbl.c.binary == 'nova-compute',
+            services_tbl.c.deleted == 0
         )
     )
 
