@@ -556,3 +556,23 @@ References
 ~~~~~~~~~~
 
 * `man pages for the cells v2 commands <http://docs.openstack.org/developer/nova/man/nova-manage.html#nova-cells-v2>`_
+
+FAQs
+====
+
+#. How do I find out which hosts are bound to which cell?
+
+   There are a couple of ways to do this.
+
+   1. Run ``nova-manage --config-file <cell config> host list``. This will
+      only lists hosts in the provided cell nova.conf. Note, however, that
+      this command is deprecated as of the 16.0.0 Pike release.
+
+   2. Run ``nova-manage cell_v2 discover_hosts --verbose``. This does not
+      produce a report but if you are trying to determine if a host is in a
+      cell you can run this and it will report any hosts that are not yet
+      mapped to a cell and map them. This command is idempotent.
+
+   In the future, we may add a flag to the ``nova-manage cell_v2 list_cells``
+   command or add another command to list hosts in a specific cell (or all
+   cells).
