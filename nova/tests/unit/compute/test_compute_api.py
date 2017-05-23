@@ -4775,10 +4775,8 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_inst_save.assert_called_once_with()
 
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
-    @mock.patch.object(context, 'target_cell')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     def test_update_existing_instance_in_cell(self, mock_instmap_get,
-                                              mock_target_cell,
                                               mock_buildreq_get):
         inst_map = objects.InstanceMapping(cell_mapping=objects.CellMapping())
         mock_instmap_get.return_value = inst_map
@@ -4791,9 +4789,6 @@ class _ComputeAPIUnitTestMixIn(object):
         with mock.patch.object(instance, 'save') as mock_inst_save:
             returned_instance = self.compute_api.update_instance(
                 self.context, instance, updates)
-        if self.cell_type is None:
-            mock_target_cell.assert_called_once_with(self.context,
-                                                     inst_map.cell_mapping)
         mock_buildreq_get.assert_not_called()
         self.assertEqual('foo_updated', returned_instance.display_name)
         mock_inst_save.assert_called_once_with()

@@ -2506,23 +2506,7 @@ class API(base.Base):
         # has an ID field set, then it was persisted in the right Cell DB.
         if instance.obj_attr_is_set('id'):
             instance.update(updates)
-            # Instance has been scheduled and the BuildRequest has been deleted
-            # we can directly write the update down to the right cell.
-            inst_map = self._get_instance_map_or_none(context, instance.uuid)
-            # If we have a cell_mapping and we're not on cells v1, then
-            # look up the instance in the cell database
-            if inst_map and (inst_map.cell_mapping is not None) and (
-                    not CONF.cells.enable):
-                with nova_context.target_cell(context,
-                                              inst_map.cell_mapping) as cctxt:
-                    with instance.obj_alternate_context(cctxt):
-                        instance.save()
-            else:
-                # If inst_map.cell_mapping does not point at a cell then cell
-                # migration has not happened yet.
-                # TODO(alaski): Make this a failure case after we put in
-                # a block that requires migrating to cellsv2.
-                instance.save()
+            instance.save()
         else:
             # Instance is not yet mapped to a cell, so we need to update
             # BuildRequest instead
