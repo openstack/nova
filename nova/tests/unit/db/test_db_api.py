@@ -8285,6 +8285,55 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         for key, value in data.items():
             self.assertEqual(value, stats.pop(key))
 
+    def test_compute_node_statistics_delete_and_recreate_service(self):
+        # Test added for bug #1692397, this test tests that deleted
+        # service record will not be selected when calculate compute
+        # node statistics.
+
+        # Let's first assert what we expect the setup to look like.
+        self.assertEqual(1, len(db.service_get_all_by_binary(
+            self.ctxt, 'nova-compute')))
+        self.assertEqual(1, len(db.compute_node_get_all_by_host(
+            self.ctxt, 'host1')))
+        # Get the statistics for the original node/service before we delete
+        # the service.
+        original_stats = db.compute_node_statistics(self.ctxt)
+
+        # At this point we have one compute_nodes record and one services
+        # record pointing at the same host. Now we need to simulate the user
+        # deleting the service record in the API, which will only delete very
+        # old compute_nodes records where the service and compute node are
+        # linked via the compute_nodes.service_id column, which is the case
+        # in this test class; at some point we should decouple those to be more
+        # modern.
+        db.service_destroy(self.ctxt, self.service['id'])
+
+        # Now we're going to simulate that the nova-compute service was
+        # restarted, which will create a new services record with a unique
+        # uuid but it will have the same host, binary and topic values as the
+        # deleted service. The unique constraints don't fail in this case since
+        # they include the deleted column and this service and the old service
+        # have a different deleted value.
+        service2_dict = self.service_dict.copy()
+        service2_dict['uuid'] = uuidsentinel.service2_uuid
+        db.service_create(self.ctxt, service2_dict)
+
+        # Again, because of the way the setUp is done currently, the compute
+        # node was linked to the original now-deleted service, so when we
+        # deleted that service it also deleted the compute node record, so we
+        # have to simulate the ResourceTracker in the nova-compute worker
+        # re-creating the compute nodes record.
+        new_compute_node = self.compute_node_dict.copy()
+        del new_compute_node['service_id']  # make it a new style compute node
+        new_compute_node['uuid'] = uuidsentinel.new_compute_uuid
+        db.compute_node_create(self.ctxt, new_compute_node)
+
+        # Now get the stats for all compute nodes (we just have one) and it
+        # should just be for a single service, not double, as we should ignore
+        # the (soft) deleted service.
+        stats = db.compute_node_statistics(self.ctxt)
+        self.assertDictEqual(original_stats, stats)
+
     def test_compute_node_not_found(self):
         self.assertRaises(exception.ComputeHostNotFound, db.compute_node_get,
                           self.ctxt, 100500)
