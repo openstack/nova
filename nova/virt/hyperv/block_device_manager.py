@@ -41,6 +41,7 @@ class BlockDeviceInfoManager(object):
     _DEFAULT_BUS = constants.CTRL_TYPE_SCSI
 
     _TYPE_FOR_DISK_FORMAT = {'vhd': constants.DISK,
+                             'vhdx': constants.DISK,
                              'iso': constants.DVD}
 
     _DEFAULT_ROOT_DEVICE = '/dev/sda'
