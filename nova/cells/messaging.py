@@ -747,7 +747,9 @@ class _TargetedMessageMethods(_BaseMessageMethods):
             cctxt.cast(message.ctxt, method, **kwargs)
 
     def compute_node_get(self, message, compute_id):
-        """Get compute node by ID."""
+        """Get compute node by ID or UUID."""
+        if uuidutils.is_uuid_like(compute_id):
+            return objects.ComputeNode.get_by_uuid(message.ctxt, compute_id)
         return objects.ComputeNode.get_by_id(message.ctxt, compute_id)
 
     def actions_get(self, message, instance_uuid):
@@ -1587,7 +1589,7 @@ class MessageRunner(object):
         return message.process()
 
     def compute_node_get(self, ctxt, cell_name, compute_id):
-        """Return compute node entry from a specific cell by ID."""
+        """Return compute node entry from a specific cell by ID or UUID."""
         method_kwargs = dict(compute_id=compute_id)
         message = _TargetedMessage(self, ctxt, 'compute_node_get',
                                     method_kwargs, 'down',

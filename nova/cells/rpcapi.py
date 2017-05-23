@@ -26,6 +26,7 @@ messaging module.
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
+from oslo_utils import uuidutils
 
 from nova import cells
 import nova.conf
@@ -120,6 +121,8 @@ class CellsAPI(object):
         So, any changes to existing methods in 1.x after that point should be
         done such that they can handle the version_cap being set to
         1.37.
+
+        * 1.38 - Handle uuid parameter in compute_node_get() method.
     '''
 
     VERSION_ALIASES = {
@@ -341,8 +344,16 @@ class CellsAPI(object):
                           host=host, state=state)
 
     def compute_node_get(self, ctxt, compute_id):
-        """Get a compute node by ID in a specific cell."""
-        cctxt = self.client.prepare(version='1.4')
+        """Get a compute node by ID or UUID in a specific cell."""
+        version = '1.38'
+        if uuidutils.is_uuid_like(compute_id):
+            if not self.client.can_send_version(version):
+                LOG.warning('Unable to get compute node by UUID %s; service '
+                            'is too old or the version is capped.', compute_id)
+                raise exception.ComputeHostNotFound(host=compute_id)
+        else:
+            version = '1.4'
+        cctxt = self.client.prepare(version=version)
         return cctxt.call(ctxt, 'compute_node_get', compute_id=compute_id)
 
     def compute_node_get_all(self, ctxt, hypervisor_match=None):
