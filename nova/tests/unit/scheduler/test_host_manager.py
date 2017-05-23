@@ -939,7 +939,7 @@ class HostManagerTestCase(test.NoDBTestCase):
 
         @contextlib.contextmanager
         def fake_set_target(context, cell):
-            yield
+            yield mock.sentinel.cctxt
 
         mock_target.side_effect = fake_set_target
 
@@ -955,8 +955,8 @@ class HostManagerTestCase(test.NoDBTestCase):
         # targeted one if we honored the only-cell destination requirement,
         # and only looked up services and compute nodes in one
         mock_target.assert_called_once_with(context, cells[1])
-        mock_cn.assert_called_once_with(context)
-        mock_sl.assert_called_once_with(context, 'nova-compute',
+        mock_cn.assert_called_once_with(mock.sentinel.cctxt)
+        mock_sl.assert_called_once_with(mock.sentinel.cctxt, 'nova-compute',
                                         include_disabled=True)
 
 

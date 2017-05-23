@@ -205,7 +205,7 @@ def obj_target_cell(obj, cell):
     """Run with object's context set to a specific cell"""
     with try_target_cell(obj._context, cell) as target:
         with obj.obj_alternate_context(target):
-            yield
+            yield target
 
 
 @profiler.trace_cls("rpc")
@@ -830,7 +830,7 @@ class ComputeTaskManager(base.Base):
                 size = instance_type.get('ephemeral_gb', 0)
         return size
 
-    def _create_block_device_mapping(self, instance_type, instance_uuid,
+    def _create_block_device_mapping(self, cell, instance_type, instance_uuid,
                                      block_device_mapping):
         """Create the BlockDeviceMapping objects in the db.
 
@@ -843,7 +843,8 @@ class ComputeTaskManager(base.Base):
         for bdm in instance_block_device_mapping:
             bdm.volume_size = self._volume_size(instance_type, bdm)
             bdm.instance_uuid = instance_uuid
-            bdm.update_or_create()
+            with obj_target_cell(bdm, cell):
+                bdm.update_or_create()
         return instance_block_device_mapping
 
     def _bury_in_cell0(self, context, request_spec, exc,
@@ -971,12 +972,12 @@ class ComputeTaskManager(base.Base):
             notifications.send_update_with_states(context, instance, None,
                     vm_states.BUILDING, None, None, service="conductor")
 
-            with obj_target_cell(instance, cell):
+            with obj_target_cell(instance, cell) as cctxt:
                 objects.InstanceAction.action_start(
-                    context, instance.uuid, instance_actions.CREATE,
+                    cctxt, instance.uuid, instance_actions.CREATE,
                     want_result=False)
                 instance_bdms = self._create_block_device_mapping(
-                    instance.flavor, instance.uuid, block_device_mapping)
+                    cell, instance.flavor, instance.uuid, block_device_mapping)
 
             # Update mapping for instance. Normally this check is guarded by
             # a try/except but if we're here we know that a newer nova-api
@@ -999,9 +1000,9 @@ class ComputeTaskManager(base.Base):
             legacy_secgroups = [s.identifier
                                 for s in request_spec.security_groups]
 
-            with obj_target_cell(instance, cell):
+            with obj_target_cell(instance, cell) as cctxt:
                 self.compute_rpcapi.build_and_run_instance(
-                    context, instance=instance, image=image,
+                    cctxt, instance=instance, image=image,
                     request_spec=request_spec,
                     filter_properties=filter_props,
                     admin_password=admin_password,

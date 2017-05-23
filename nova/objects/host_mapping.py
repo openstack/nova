@@ -218,13 +218,14 @@ def discover_hosts(ctxt, cell_uuid=None, status_fn=None):
         else:
             status_fn(_("Getting compute nodes from cell: %(uuid)s") %
                       {'uuid': cm.uuid})
-        with context.target_cell(ctxt, cm):
+        with context.target_cell(ctxt, cm) as cctxt:
             compute_nodes = objects.ComputeNodeList.get_all_by_not_mapped(
-                ctxt, 1)
+                cctxt, 1)
             status_fn(_('Found %(num)s unmapped computes in cell: %(uuid)s') %
                       {'num': len(compute_nodes),
                        'uuid': cm.uuid})
-            added_hm = _check_and_create_host_mappings(ctxt, cm, compute_nodes,
+            added_hm = _check_and_create_host_mappings(cctxt, cm,
+                                                       compute_nodes,
                                                        status_fn)
             host_mappings.extend(added_hm)
 

@@ -1479,9 +1479,9 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         # NOTE(danms): Assert that we created the InstanceAction in the
         # correct cell
         for cell in cells:
-            with context.target_cell(self.context, cell):
+            with context.target_cell(self.context, cell) as cctxt:
                 actions = objects.InstanceActionList.get_by_instance_uuid(
-                    self.context, instance_uuid)
+                    cctxt, instance_uuid)
                 if cell.name == 'cell1':
                     self.assertEqual(1, len(actions))
                 else:

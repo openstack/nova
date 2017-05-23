@@ -7922,6 +7922,7 @@ class ComputeTestCase(BaseTestCase):
 
         minimum_server_version.return_value = 15
         im_get_by_instance.return_value = mock.Mock()
+        target_cell.return_value.__enter__.return_value = self.context
 
         instance = self._create_fake_instance_obj()
         instance.host = None
@@ -7987,6 +7988,7 @@ class ComputeTestCase(BaseTestCase):
             self, br_get_by_instance, notify, im_get_by_instance, target_cell,
             instance_destroy):
 
+        target_cell.return_value.__enter__.return_value = self.context
         instance = self._create_fake_instance_obj()
         instance.host = None
         instance.save()
@@ -10899,8 +10901,8 @@ def _create_service_entries(ctxt, values=[['avail_zone1', ['fake_host1',
             # NOTE(danms): spread these services across cells
             cell = cells[index % len(cells)]
             index += 1
-            with context.target_cell(ctxt, cell):
-                s = objects.Service(context=ctxt,
+            with context.target_cell(ctxt, cell) as cctxt:
+                s = objects.Service(context=cctxt,
                                     host=host,
                                     binary='nova-compute',
                                     topic='compute',

@@ -1737,10 +1737,9 @@ class API(base.Base):
                 return None, None
         else:
             cell = inst_map.cell_mapping
-            with nova_context.target_cell(context, cell):
+            with nova_context.target_cell(context, cell) as cctxt:
                 try:
-                    instance = objects.Instance.get_by_uuid(context,
-                                                            uuid)
+                    instance = objects.Instance.get_by_uuid(cctxt, uuid)
                 except exception.InstanceNotFound:
                     # Since the cell_mapping exists we know the instance is in
                     # the cell, however InstanceNotFound means it's already
@@ -1799,9 +1798,11 @@ class API(base.Base):
                 if instance is not None:
                     # If instance is None it has already been deleted.
                     if cell:
-                        with nova_context.target_cell(context, cell):
+                        with nova_context.target_cell(context, cell) as cctxt:
+                            # FIXME: When the instance context is targeted,
+                            # we can remove this
                             with compute_utils.notify_about_instance_delete(
-                                    self.notifier, context, instance):
+                                    self.notifier, cctxt, instance):
                                 instance.destroy()
                     else:
                         instance.destroy()
@@ -1873,31 +1874,35 @@ class API(base.Base):
 
                     # We have to get the flavor from the instance while the
                     # context is still targeted to where the instance lives.
-                    with nova_context.target_cell(context, cell):
-                        # If the instance has the targeted context in it then
-                        # we don't need the context manager.
+                    with nova_context.target_cell(context, cell) as cctxt:
+                        # FIXME: If the instance has the targeted context in
+                        # it then we don't need the context manager.
                         quota_flavor = self._get_flavor_for_reservation(
                             instance)
 
-                    with nova_context.target_cell(context, None):
+                    with nova_context.target_cell(context, None) as cctxt:
                         # This is confusing but actually decrements quota usage
                         quotas = self._create_reservations(
-                            context, instance, instance.task_state,
+                            cctxt, instance, instance.task_state,
                             project_id, user_id, flavor=quota_flavor)
 
                     try:
                         # Now destroy the instance from the cell it lives in.
-                        with nova_context.target_cell(context, cell):
+                        with nova_context.target_cell(context, cell) as cctxt:
                             # If the instance has the targeted context in it
                             # then we don't need the context manager.
                             with compute_utils.notify_about_instance_delete(
-                                    self.notifier, context, instance):
+                                    self.notifier, cctxt, instance):
                                 instance.destroy()
                         # Now commit the quota reservation to decrement usage.
-                        with nova_context.target_cell(context, None):
+                        # NOTE(danms): When target_cell yields a context copy,
+                        # we can remove this targeting.
+                        with nova_context.target_cell(context, None) as cctxt:
                             quotas.commit()
                     except exception.InstanceNotFound:
-                        with nova_context.target_cell(context, None):
+                        # NOTE(danms): When target_cell yields a context copy,
+                        # we can remove this targeting.
+                        with nova_context.target_cell(context, None) as cctxt:
                             quotas.rollback()
                     # The instance was deleted or is already gone.
                     return
@@ -2557,10 +2562,10 @@ class API(base.Base):
         except exception.CellMappingNotFound:
             cell0_instances = objects.InstanceList(objects=[])
         else:
-            with nova_context.target_cell(context, cell0_mapping):
+            with nova_context.target_cell(context, cell0_mapping) as cctxt:
                 try:
                     cell0_instances = self._get_instances_by_filters(
-                        context, filters, limit=limit, marker=marker,
+                        cctxt, filters, limit=limit, marker=marker,
                         expected_attrs=expected_attrs, sort_keys=sort_keys,
                         sort_dirs=sort_dirs)
                 except exception.MarkerNotFound:
@@ -2714,8 +2719,10 @@ class API(base.Base):
             # look up the instance in the cell database
             if inst_map and (inst_map.cell_mapping is not None) and (
                     not CONF.cells.enable):
-                with nova_context.target_cell(context, inst_map.cell_mapping):
-                    instance.save()
+                with nova_context.target_cell(context,
+                                              inst_map.cell_mapping) as cctxt:
+                    with instance.obj_alternate_context(cctxt):
+                        instance.save()
             else:
                 # If inst_map.cell_mapping does not point at a cell then cell
                 # migration has not happened yet.
@@ -2756,10 +2763,11 @@ class API(base.Base):
                 inst_map = self._get_instance_map_or_none(context,
                                                           instance.uuid)
                 if inst_map and (inst_map.cell_mapping is not None):
-                    with nova_context.target_cell(context,
-                                                  inst_map.cell_mapping):
+                    with nova_context.target_cell(
+                            context,
+                            inst_map.cell_mapping) as cctxt:
                         instance = objects.Instance.get_by_uuid(
-                            context, instance.uuid,
+                            cctxt, instance.uuid,
                             expected_attrs=expected_attrs)
                         instance.update(updates)
                         instance.save()
@@ -4161,9 +4169,9 @@ class API(base.Base):
         for cell in CELLS:
             if cell.uuid == objects.CellMapping.CELL0_UUID:
                 continue
-            with nova_context.target_cell(context, cell):
+            with nova_context.target_cell(context, cell) as cctxt:
                 migrations.extend(objects.MigrationList.get_by_filters(
-                    context, filters).objects)
+                    cctxt, filters).objects)
         return objects.MigrationList(objects=migrations)
 
     def get_migrations_in_progress_by_instance(self, context, instance_uuid,
@@ -4239,9 +4247,9 @@ class API(base.Base):
             # TODO(salv-orlando): Handle exceptions raised by the rpc api layer
             # in order to ensure that a failure in processing events on a host
             # will not prevent processing events on other hosts
-            with nova_context.target_cell(context, cell_mapping):
+            with nova_context.target_cell(context, cell_mapping) as cctxt:
                 self.compute_rpcapi.external_instance_event(
-                    context, instances_by_host[host], events_by_host[host],
+                    cctxt, instances_by_host[host], events_by_host[host],
                     host=host)
 
     def _get_relevant_hosts(self, context, instance):
@@ -4406,9 +4414,9 @@ class HostAPI(base.Base):
             load_cells()
             services = []
             for cell in CELLS:
-                with nova_context.target_cell(context, cell):
+                with nova_context.target_cell(context, cell) as cctxt:
                     cell_services = objects.ServiceList.get_all(
-                        context, disabled, set_zones=set_zones)
+                        cctxt, disabled, set_zones=set_zones)
                 services.extend(cell_services)
         else:
             services = objects.ServiceList.get_all(context, disabled,
@@ -4444,8 +4452,8 @@ class HostAPI(base.Base):
         for cell in CELLS:
             # NOTE(danms): Services can be in cell0, so don't skip it here
             try:
-                with nova_context.target_cell(context, cell):
-                    cell_service = objects.Service.get_by_id(context,
+                with nova_context.target_cell(context, cell) as cctxt:
+                    cell_service = objects.Service.get_by_id(cctxt,
                                                              service_id)
             except exception.ServiceNotFound:
                 # NOTE(danms): Keep looking in other cells
@@ -4523,9 +4531,9 @@ class HostAPI(base.Base):
         for cell in CELLS:
             if cell.uuid == objects.CellMapping.CELL0_UUID:
                 continue
-            with nova_context.target_cell(context, cell):
+            with nova_context.target_cell(context, cell) as cctxt:
                 try:
-                    return objects.ComputeNode.get_by_id(context,
+                    return objects.ComputeNode.get_by_id(cctxt,
                                                          int(compute_id))
                 except exception.ComputeHostNotFound:
                     # NOTE(danms): Keep looking in other cells
@@ -4540,10 +4548,10 @@ class HostAPI(base.Base):
         for cell in CELLS:
             if cell.uuid == objects.CellMapping.CELL0_UUID:
                 continue
-            with nova_context.target_cell(context, cell):
+            with nova_context.target_cell(context, cell) as cctxt:
                 try:
                     cell_computes = objects.ComputeNodeList.get_by_pagination(
-                        context, limit=limit, marker=marker)
+                        cctxt, limit=limit, marker=marker)
                 except exception.MarkerNotFound:
                     # NOTE(danms): Keep looking through cells
                     continue
@@ -4570,9 +4578,9 @@ class HostAPI(base.Base):
         for cell in CELLS:
             if cell.uuid == objects.CellMapping.CELL0_UUID:
                 continue
-            with nova_context.target_cell(context, cell):
+            with nova_context.target_cell(context, cell) as cctxt:
                 cell_computes = objects.ComputeNodeList.get_by_hypervisor(
-                    context, hypervisor_match)
+                    cctxt, hypervisor_match)
             computes.extend(cell_computes)
         return objects.ComputeNodeList(objects=computes)
 

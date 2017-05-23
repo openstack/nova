@@ -52,16 +52,16 @@ class ConnectionSwitchTestCase(test.NoDBTestCase):
         mapping.create()
         # Create an instance in the cell database
         uuid = uuidutils.generate_uuid()
-        with context.target_cell(ctxt, mapping):
+        with context.target_cell(ctxt, mapping) as cctxt:
             # Must set project_id because instance get specifies
             # project_only=True to model_query, which means non-admin
             # users can only read instances for their project
-            instance = objects.Instance(context=ctxt, uuid=uuid,
+            instance = objects.Instance(context=cctxt, uuid=uuid,
                                         project_id='fake-project')
             instance.create()
 
             # Verify the instance is found in the cell database
-            inst = objects.Instance.get_by_uuid(ctxt, uuid)
+            inst = objects.Instance.get_by_uuid(cctxt, uuid)
             self.assertEqual(uuid, inst.uuid)
 
         # Verify the instance isn't found in the main database
@@ -95,35 +95,35 @@ class CellDatabasesTestCase(test.NoDBTestCase):
 
         # Create an instance and read it from cell1
         uuid = uuidutils.generate_uuid()
-        with context.target_cell(ctxt, mapping1):
-            instance = objects.Instance(context=ctxt, uuid=uuid,
+        with context.target_cell(ctxt, mapping1) as cctxt:
+            instance = objects.Instance(context=cctxt, uuid=uuid,
                                         project_id='fake-project')
             instance.create()
 
-            inst = objects.Instance.get_by_uuid(ctxt, uuid)
+            inst = objects.Instance.get_by_uuid(cctxt, uuid)
             self.assertEqual(uuid, inst.uuid)
 
         # Make sure it can't be read from cell2
-        with context.target_cell(ctxt, mapping2):
+        with context.target_cell(ctxt, mapping2) as cctxt:
             self.assertRaises(exception.InstanceNotFound,
-                              objects.Instance.get_by_uuid, ctxt, uuid)
+                              objects.Instance.get_by_uuid, cctxt, uuid)
 
         # Make sure it can still be read from cell1
-        with context.target_cell(ctxt, mapping1):
-            inst = objects.Instance.get_by_uuid(ctxt, uuid)
+        with context.target_cell(ctxt, mapping1) as cctxt:
+            inst = objects.Instance.get_by_uuid(cctxt, uuid)
             self.assertEqual(uuid, inst.uuid)
 
         # Create an instance and read it from cell2
         uuid = uuidutils.generate_uuid()
-        with context.target_cell(ctxt, mapping2):
-            instance = objects.Instance(context=ctxt, uuid=uuid,
+        with context.target_cell(ctxt, mapping2) as cctxt:
+            instance = objects.Instance(context=cctxt, uuid=uuid,
                                         project_id='fake-project')
             instance.create()
 
-            inst = objects.Instance.get_by_uuid(ctxt, uuid)
+            inst = objects.Instance.get_by_uuid(cctxt, uuid)
             self.assertEqual(uuid, inst.uuid)
 
         # Make sure it can't be read from cell1
-        with context.target_cell(ctxt, mapping1):
+        with context.target_cell(ctxt, mapping1) as cctxt:
             self.assertRaises(exception.InstanceNotFound,
-                              objects.Instance.get_by_uuid, ctxt, uuid)
+                              objects.Instance.get_by_uuid, cctxt, uuid)

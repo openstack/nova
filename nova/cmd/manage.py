@@ -688,8 +688,8 @@ class DbCommands(object):
             try:
                 cell_mapping = objects.CellMapping.get_by_uuid(ctxt,
                                             objects.CellMapping.CELL0_UUID)
-                with context.target_cell(ctxt, cell_mapping):
-                    migration.db_sync(version, context=ctxt)
+                with context.target_cell(ctxt, cell_mapping) as cctxt:
+                    migration.db_sync(version, context=cctxt)
             except exception.CellMappingNotFound:
                 print(_('WARNING: cell0 mapping not found - not'
                         ' syncing cell0.'))
@@ -1168,9 +1168,9 @@ class CellV2Commands(object):
                 ctxt, objects.CellMapping.CELL0_UUID)
 
         # Run migrations so cell0 is usable
-        with context.target_cell(ctxt, cell0_mapping):
+        with context.target_cell(ctxt, cell0_mapping) as cctxt:
             try:
-                migration.db_sync(None, context=ctxt)
+                migration.db_sync(None, context=cctxt)
             except db_exc.DBError as ex:
                 print(_('Unable to sync cell0 schema: %s') % ex)
 

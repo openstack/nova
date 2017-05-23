@@ -335,7 +335,8 @@ class ServerGroupTestV21(test.NoDBTestCase):
         # delete an instance
         im = objects.InstanceMapping.get_by_instance_uuid(ctx,
                                                           instances[1].uuid)
-        with context.target_cell(ctx, im.cell_mapping):
+        with context.target_cell(ctx, im.cell_mapping) as cctxt:
+            instances[1]._context = cctxt
             instances[1].destroy()
 
         # check that the instance does not exist
