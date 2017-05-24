@@ -34,11 +34,13 @@ from nova import exception
 from nova.i18n import _, _LI, _LW
 from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import fields
 from nova.objects import migration as migration_obj
 from nova.pci import manager as pci_manager
 from nova.pci import request as pci_request
 from nova import rpc
 from nova.scheduler import client as scheduler_client
+from nova.scheduler.client import report
 from nova import utils
 from nova.virt import hardware
 
@@ -75,6 +77,51 @@ def _is_trackable_migration(migration):
     # those for now to avoid them being included in below calculations.
     return migration.migration_type in ('resize', 'migration',
                                         'evacuation')
+
+
+def _normalize_inventory_from_cn_obj(inv_data, cn):
+    """Helper function that injects various information from a compute node
+    object into the inventory dict returned from the virt driver's
+    get_inventory() method. This function allows us to marry information like
+    *_allocation_ratio and reserved memory amounts that are in the
+    compute_nodes DB table and that the virt driver doesn't know about with the
+    information the virt driver *does* know about.
+
+    Note that if the supplied inv_data contains allocation_ratio, reserved or
+    other fields, we DO NOT override the value with that of the compute node.
+    This is to ensure that the virt driver is the single source of truth
+    regarding inventory information. For instance, the Ironic virt driver will
+    always return a very specific inventory with allocation_ratios pinned to
+    1.0.
+
+    :param inv_data: Dict, keyed by resource class, of inventory information
+                     returned from virt driver's get_inventory() method
+    :param compute_node: `objects.ComputeNode` describing the compute node
+    """
+    if fields.ResourceClass.VCPU in inv_data:
+        cpu_inv = inv_data[fields.ResourceClass.VCPU]
+        if 'allocation_ratio' not in cpu_inv:
+            cpu_inv['allocation_ratio'] = cn.cpu_allocation_ratio
+        if 'reserved' not in cpu_inv:
+            cpu_inv['reserved'] = CONF.reserved_host_cpus
+
+    if fields.ResourceClass.MEMORY_MB in inv_data:
+        mem_inv = inv_data[fields.ResourceClass.MEMORY_MB]
+        if 'allocation_ratio' not in mem_inv:
+            mem_inv['allocation_ratio'] = cn.ram_allocation_ratio
+        if 'reserved' not in mem_inv:
+            mem_inv['reserved'] = CONF.reserved_host_memory_mb
+
+    if fields.ResourceClass.DISK_GB in inv_data:
+        disk_inv = inv_data[fields.ResourceClass.DISK_GB]
+        if 'allocation_ratio' not in disk_inv:
+            disk_inv['allocation_ratio'] = cn.disk_allocation_ratio
+        if 'reserved' not in disk_inv:
+            # TODO(johngarbutt) We should either move to reserved_host_disk_gb
+            # or start tracking DISK_MB.
+            reserved_mb = CONF.reserved_host_disk_mb
+            reserved_gb = report.convert_mb_to_ceil_gb(reserved_mb)
+            disk_inv['reserved'] = reserved_gb
 
 
 class ResourceTracker(object):
@@ -756,6 +803,7 @@ class ResourceTracker(object):
         # Persist the stats to the Scheduler
         try:
             inv_data = self.driver.get_inventory(nodename)
+            _normalize_inventory_from_cn_obj(inv_data, compute_node)
             self.scheduler_client.set_inventory_for_provider(
                 compute_node.uuid,
                 compute_node.hypervisor_hostname,

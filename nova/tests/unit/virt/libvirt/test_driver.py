@@ -15535,6 +15535,43 @@ class HostStateTestCase(test.NoDBTestCase):
                                 HostStateTestCase.numa_topology._to_dict()))
 
 
+class TestGetInventory(test.NoDBTestCase):
+    def setUp(self):
+        super(TestGetInventory, self).setUp()
+        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_local_gb_info',
+                return_value={'total': 200})
+    @mock.patch('nova.virt.libvirt.host.Host.get_memory_mb_total',
+                return_value=1024)
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vcpu_total',
+                return_value=24)
+    def test_get_inventory(self, mock_vcpu, mock_mem, mock_disk):
+        expected_inv = {
+            fields.ResourceClass.VCPU: {
+                'total': 24,
+                'min_unit': 1,
+                'max_unit': 24,
+                'step_size': 1,
+            },
+            fields.ResourceClass.MEMORY_MB: {
+                'total': 1024,
+                'min_unit': 1,
+                'max_unit': 1024,
+                'step_size': 1,
+            },
+            fields.ResourceClass.DISK_GB: {
+                'total': 200,
+                'min_unit': 1,
+                'max_unit': 200,
+                'step_size': 1,
+            },
+        }
+        inv = self.driver.get_inventory(mock.sentinel.nodename)
+        self.assertEqual(expected_inv, inv)
+
+
 class LibvirtDriverTestCase(test.NoDBTestCase):
     """Test for nova.virt.libvirt.libvirt_driver.LibvirtDriver."""
     def setUp(self):

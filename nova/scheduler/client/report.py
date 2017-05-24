@@ -86,7 +86,7 @@ def safe_connect(f):
     return wrapper
 
 
-def _convert_mb_to_ceil_gb(mb_value):
+def convert_mb_to_ceil_gb(mb_value):
     gb_int = 0
     if mb_value:
         gb_float = mb_value / 1024.0
@@ -126,7 +126,7 @@ def _compute_node_to_inventory_dict(compute_node):
     if compute_node.local_gb > 0:
         # TODO(johngarbutt) We should either move to reserved_host_disk_gb
         # or start tracking DISK_MB.
-        reserved_disk_gb = _convert_mb_to_ceil_gb(CONF.reserved_host_disk_mb)
+        reserved_disk_gb = convert_mb_to_ceil_gb(CONF.reserved_host_disk_mb)
         result[DISK_GB] = {
             'total': compute_node.local_gb,
             'reserved': reserved_disk_gb,
@@ -149,7 +149,7 @@ def _instance_to_allocations_dict(instance):
                                                      instance)
     # TODO(johngarbutt) we have to round up swap MB to the next GB.
     # It would be better to claim disk in MB, but that is hard now.
-    swap_in_gb = _convert_mb_to_ceil_gb(instance.flavor.swap)
+    swap_in_gb = convert_mb_to_ceil_gb(instance.flavor.swap)
     disk = ((0 if is_bfv else instance.flavor.root_gb) +
             swap_in_gb + instance.flavor.ephemeral_gb)
     alloc_dict = {

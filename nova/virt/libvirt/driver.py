@@ -5608,6 +5608,39 @@ class LibvirtDriver(driver.ComputeDriver):
     def refresh_instance_security_rules(self, instance):
         self.firewall_driver.refresh_instance_security_rules(instance)
 
+    def get_inventory(self, nodename):
+        """Return a dict, keyed by resource class, of inventory information for
+        the supplied node.
+        """
+        disk_gb = int(self._get_local_gb_info()['total'])
+        memory_mb = int(self._host.get_memory_mb_total())
+        vcpus = self._get_vcpu_total()
+        # NOTE(jaypipes): We leave some fields like allocation_ratio and
+        # reserved out of the returned dicts here because, for now at least,
+        # the RT injects those values into the inventory dict based on the
+        # compute_nodes record values.
+        result = {
+            fields.ResourceClass.VCPU: {
+                'total': vcpus,
+                'min_unit': 1,
+                'max_unit': vcpus,
+                'step_size': 1,
+            },
+            fields.ResourceClass.MEMORY_MB: {
+                'total': memory_mb,
+                'min_unit': 1,
+                'max_unit': memory_mb,
+                'step_size': 1,
+            },
+            fields.ResourceClass.DISK_GB: {
+                'total': disk_gb,
+                'min_unit': 1,
+                'max_unit': disk_gb,
+                'step_size': 1,
+            },
+        }
+        return result
+
     def get_available_resource(self, nodename):
         """Retrieve resource information.
 
