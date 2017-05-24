@@ -1,0 +1,94 @@
+{
+    "resource_classes": [
+        {
+            "links": [
+                {
+                    "href": "/placement/resource_classes/VCPU",
+                    "rel": "self"
+                }
+            ],
+            "name": "VCPU"
+        },
+        {
+            "links": [
+                {
+                    "href": "/placement/resource_classes/MEMORY_MB",
+                    "rel": "self"
+                }
+            ],
+            "name": "MEMORY_MB"
+        },
+        {
+            "links": [
+                {
+                    "href": "/placement/resource_classes/DISK_GB",
+                    "rel": "self"
+                }
+            ],
+            "name": "DISK_GB"
+        },
+        {
+            "links": [
+                {
+                    "href": "/placement/resource_classes/PCI_DEVICE",
+                    "rel": "self"
+                }
+            ],
+            "name": "PCI_DEVICE"
+        },
+        {
+            "links": [
+                {
+                    "href": "/placement/resource_classes/SRIOV_NET_VF",
+                    "rel": "self"
+                }
+            ],
+            "name": "SRIOV_NET_VF"
+        },
+        {
+            "links": [
+                {
+                    "href": "/placement/resource_classes/NUMA_SOCKET",
+                    "rel": "self"
+                }
+            ],
+            "name": "NUMA_SOCKET"
+        },
+        {
+            "links": [
+                {
+                    "href": "/placement/resource_classes/NUMA_CORE",
+                    "rel": "self"
+                }
+            ],
+            "name": "NUMA_CORE"
+        },
+        {
+            "links": [
+                {
+                    "href": "/placement/resource_classes/NUMA_THREAD",
+                    "rel": "self"
+                }
+            ],
+            "name": "NUMA_THREAD"
+        },
+        {
+            "links": [
+                {
+                    "href": "/placement/resource_classes/NUMA_MEMORY_MB",
+                    "rel": "self"
+                }
+            ],
+            "name": "NUMA_MEMORY_MB"
+        },
+        {
+            "links": [
+                {
+                    "href": "/placement/resource_classes/IPV4_ADDRESS",
+                    "rel": "self"
+                }
+            ],
+            "name": "IPV4_ADDRESS"
+        }
+    ]
+}
