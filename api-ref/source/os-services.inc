@@ -39,8 +39,8 @@ Response
   - state: service_state
   - status: service_status
   - updated_at: updated
-  - forced_down: forced_down
   - zone: OS-EXT-AZ:availability_zone
+  - forced_down: forced_down
 
 **Example List Compute Services**
 
@@ -208,8 +208,8 @@ Response
 
   - service: service
   - binary: binary
-  - forced_down: forced_down
   - host: host_name_body
+  - forced_down: forced_down
 
 |
 
