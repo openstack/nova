@@ -1,0 +1,27 @@
+{
+    "generation": 0,
+    "links": [
+        {
+            "href": "/placement/resource_providers/33f26ae0-dbf2-485b-a24a-244d8280e29f",
+            "rel": "self"
+        },
+        {
+            "href": "/placement/resource_providers/33f26ae0-dbf2-485b-a24a-244d8280e29f/aggregates",
+            "rel": "aggregates"
+        },
+        {
+            "href": "/placement/resource_providers/33f26ae0-dbf2-485b-a24a-244d8280e29f/inventories",
+            "rel": "inventories"
+        },
+        {
+            "href": "/placement/resource_providers/33f26ae0-dbf2-485b-a24a-244d8280e29f/usages",
+            "rel": "usages"
+        },
+        {
+            "href": "/placement/resource_providers/33f26ae0-dbf2-485b-a24a-244d8280e29f/traits",
+            "rel": "traits"
+        }
+    ],
+    "name": "Shared storage",
+    "uuid": "33f26ae0-dbf2-485b-a24a-244d8280e29f"
+}

@@ -41,3 +41,47 @@ Response Example
 
 .. literalinclude:: get-resource_provider.json
    :language: javascript
+
+Update resource provider
+========================
+
+.. rest_method:: PUT /resource_providers/{uuid}
+
+Update the name of the resource provider identified by `{uuid}`.
+
+Normal Response Codes: 200
+
+Error response codes: badRequest(400), itemNotFound(404), conflict(409)
+
+A `409 Conflict` response code will be returned if another resource
+provider exists with the provided name.
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - uuid: resource_provider_uuid_path
+  - name: resource_provider_name
+
+Request example
+---------------
+
+.. literalinclude:: update-resource_provider-request.json
+   :language: javascript
+
+Response
+--------
+
+.. rest_parameters:: parameters.yaml
+
+  - generation: resource_provider_generation
+  - uuid: resource_provider_uuid
+  - links: resource_provider_links
+  - name: resource_provider_name
+
+Response Example
+----------------
+
+.. literalinclude:: update-resource_provider.json
+   :language: javascript
