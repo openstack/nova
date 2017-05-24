@@ -1874,11 +1874,7 @@ class API(base.Base):
 
                     # We have to get the flavor from the instance while the
                     # context is still targeted to where the instance lives.
-                    with nova_context.target_cell(context, cell) as cctxt:
-                        # FIXME: If the instance has the targeted context in
-                        # it then we don't need the context manager.
-                        quota_flavor = self._get_flavor_for_reservation(
-                            instance)
+                    quota_flavor = self._get_flavor_for_reservation(instance)
 
                     with nova_context.target_cell(context, None) as cctxt:
                         # This is confusing but actually decrements quota usage
@@ -1888,22 +1884,13 @@ class API(base.Base):
 
                     try:
                         # Now destroy the instance from the cell it lives in.
-                        with nova_context.target_cell(context, cell) as cctxt:
-                            # If the instance has the targeted context in it
-                            # then we don't need the context manager.
-                            with compute_utils.notify_about_instance_delete(
-                                    self.notifier, cctxt, instance):
-                                instance.destroy()
+                        with compute_utils.notify_about_instance_delete(
+                                self.notifier, context, instance):
+                            instance.destroy()
                         # Now commit the quota reservation to decrement usage.
-                        # NOTE(danms): When target_cell yields a context copy,
-                        # we can remove this targeting.
-                        with nova_context.target_cell(context, None) as cctxt:
-                            quotas.commit()
+                        quotas.commit()
                     except exception.InstanceNotFound:
-                        # NOTE(danms): When target_cell yields a context copy,
-                        # we can remove this targeting.
-                        with nova_context.target_cell(context, None) as cctxt:
-                            quotas.rollback()
+                        quotas.rollback()
                     # The instance was deleted or is already gone.
                     return
                 if not instance:
