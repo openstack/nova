@@ -14,23 +14,28 @@
 """Connection to PowerVM hypervisor through NovaLink."""
 
 from oslo_log import log as logging
+from oslo_utils import excutils
 from pypowervm import adapter as pvm_apt
 from pypowervm import exceptions as pvm_exc
 from pypowervm.helpers import log_helper as log_hlp
 from pypowervm.helpers import vios_busy as vio_hlp
 from pypowervm.tasks import partition as pvm_par
+from pypowervm.tasks import vterm as pvm_vterm
 from pypowervm.wrappers import managed_system as pvm_ms
 import six
 from taskflow.patterns import linear_flow as tf_lf
 
+from nova import conf as cfg
+from nova.console import type as console_type
 from nova import exception as exc
 from nova.virt import driver
-from nova.virt.powervm import host
+from nova.virt.powervm import host as pvm_host
 from nova.virt.powervm.tasks import base as tf_base
 from nova.virt.powervm.tasks import vm as tf_vm
 from nova.virt.powervm import vm
 
 LOG = logging.getLogger(__name__)
+CONF = cfg.CONF
 
 
 class PowerVMDriver(driver.ComputeDriver):
@@ -117,7 +122,8 @@ class PowerVMDriver(driver.ComputeDriver):
         # Do this here so it refreshes each time this method is called.
         self.host_wrapper = pvm_ms.System.get(self.adapter)[0]
         # Get host information
-        data = host.build_host_resource_from_ms(self.host_wrapper)
+        data = pvm_host.build_host_resource_from_ms(self.host_wrapper)
+
         # Add the disk information
         # TODO(efried): Get real stats when disk support is added.
         data["local_gb"] = 100000
@@ -253,3 +259,33 @@ class PowerVMDriver(driver.ComputeDriver):
         vm.reboot(self.adapter, instance, reboot_type == 'HARD')
         # pypowervm exceptions are sufficient to indicate real failure.
         # Otherwise, pypowervm thinks the instance is up.
+
+    def get_vnc_console(self, context, instance):
+        """Get connection info for a vnc console.
+
+        :param context: security context
+        :param instance: nova.objects.instance.Instance
+
+        :return: An instance of console.type.ConsoleVNC
+        """
+        self._log_operation('get_vnc_console', instance)
+        lpar_uuid = vm.get_pvm_uuid(instance)
+
+        # Build the connection to the VNC.
+        host = CONF.vnc.vncserver_proxyclient_address
+        # TODO(thorst, efried) Add the x509 certificate support when it lands
+
+        try:
+            # Open up a remote vterm
+            port = pvm_vterm.open_remotable_vnc_vterm(
+                self.adapter, lpar_uuid, host, vnc_path=lpar_uuid)
+            # Note that the VNC viewer will wrap the internal_access_path with
+            # the HTTP content.
+            return console_type.ConsoleVNC(host=host, port=port,
+                                           internal_access_path=lpar_uuid)
+        except pvm_exc.HttpError as e:
+            with excutils.save_and_reraise_exception(logger=LOG) as sare:
+                # If the LPAR was not found, raise a more descriptive error
+                if e.response.status == 404:
+                    sare.reraise = False
+                    raise exc.InstanceNotFound(instance_id=instance.uuid)

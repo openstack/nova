@@ -176,3 +176,27 @@ class TestPowerVMDriver(test.NoDBTestCase):
         inst = mock.Mock()
         self.drv.reboot('context', inst, 'network_info', 'HARD')
         mock_reboot.assert_called_once_with(self.adp, inst, True)
+
+    @mock.patch('pypowervm.tasks.vterm.open_remotable_vnc_vterm',
+                autospec=True)
+    @mock.patch('nova.virt.powervm.vm.get_pvm_uuid',
+                new=mock.Mock(return_value='uuid'))
+    def test_get_vnc_console(self, mock_vterm):
+        # Success
+        mock_vterm.return_value = '10'
+        resp = self.drv.get_vnc_console(mock.ANY, self.inst)
+        self.assertEqual('127.0.0.1', resp.host)
+        self.assertEqual('10', resp.port)
+        self.assertEqual('uuid', resp.internal_access_path)
+        mock_vterm.assert_called_once_with(
+            mock.ANY, 'uuid', mock.ANY, vnc_path='uuid')
+
+        # VNC failure - exception is raised directly
+        mock_vterm.side_effect = pvm_exc.VNCBasedTerminalFailedToOpen(err='xx')
+        self.assertRaises(pvm_exc.VNCBasedTerminalFailedToOpen,
+                          self.drv.get_vnc_console, mock.ANY, self.inst)
+
+        # 404
+        mock_vterm.side_effect = pvm_exc.HttpError(mock.Mock(status=404))
+        self.assertRaises(exception.InstanceNotFound, self.drv.get_vnc_console,
+                          mock.ANY, self.inst)
