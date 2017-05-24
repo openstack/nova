@@ -629,13 +629,14 @@ class ComputeManager(manager.Manager):
             'status': ['accepted', 'done'],
             'migration_type': 'evacuation',
         }
-        evacuations = objects.MigrationList.get_by_filters(context, filters)
+        with utils.temporary_mutation(context, read_deleted='yes'):
+            evacuations = objects.MigrationList.get_by_filters(context,
+                                                               filters)
         if not evacuations:
             return
         evacuations = {mig.instance_uuid: mig for mig in evacuations}
 
-        filters = {'deleted': False}
-        local_instances = self._get_instances_on_driver(context, filters)
+        local_instances = self._get_instances_on_driver(context)
         evacuated = [inst for inst in local_instances
                      if inst.uuid in evacuations]
         for instance in evacuated:

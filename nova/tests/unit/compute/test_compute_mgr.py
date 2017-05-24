@@ -658,11 +658,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.InstanceList, 'get_by_host')
     @mock.patch.object(fake_driver.FakeDriver, 'destroy')
     @mock.patch.object(fake_driver.FakeDriver, 'init_host')
+    @mock.patch('nova.utils.temporary_mutation')
     @mock.patch('nova.objects.MigrationList.get_by_filters')
     @mock.patch('nova.objects.Migration.save')
     def test_init_host_with_evacuated_instance(self, mock_save, mock_mig_get,
-            mock_init_host, mock_destroy, mock_host_get, mock_admin_ctxt,
-            mock_init_virt, mock_get_inst):
+            mock_temp_mut, mock_init_host, mock_destroy, mock_host_get,
+            mock_admin_ctxt, mock_init_virt, mock_get_inst):
         our_host = self.compute.host
         not_our_host = 'not-' + our_host
 
@@ -685,7 +686,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         mock_host_get.assert_called_once_with(self.context, our_host,
                                 expected_attrs=['info_cache', 'metadata'])
         mock_init_virt.assert_called_once_with()
-        mock_get_inst.assert_called_once_with(self.context, {'deleted': False})
+        mock_temp_mut.assert_called_once_with(self.context, read_deleted='yes')
+        mock_get_inst.assert_called_once_with(self.context)
         mock_get_net.assert_called_once_with(self.context, deleted_instance)
 
         # ensure driver.destroy is called so that driver may
