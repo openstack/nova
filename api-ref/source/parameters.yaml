@@ -781,7 +781,7 @@ server_name_query:
     .. note::
 
        'display_name' can also be requested which is alias of 'name'
-       but that is not reccomended to use as that will be removed in future.
+       but that is not recommended to use as that will be removed in future.
   format: regexp
   in: query
   required: false
