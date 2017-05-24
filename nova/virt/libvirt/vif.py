@@ -521,9 +521,11 @@ class LibvirtGenericVIFDriver(object):
         vif_type = vif['type']
         vnic_type = vif['vnic_type']
 
+        # instance.display_name could be unicode
+        instance_repr = utils.get_obj_repr_unicode(instance)
         LOG.debug('vif_type=%(vif_type)s instance=%(instance)s '
                   'vif=%(vif)s virt_type=%(virt_type)s',
-                  {'vif_type': vif_type, 'instance': instance,
+                  {'vif_type': vif_type, 'instance': instance_repr,
                    'vif': vif, 'virt_type': virt_type})
 
         if vif_type is None:
@@ -766,9 +768,11 @@ class LibvirtGenericVIFDriver(object):
     def plug(self, instance, vif):
         vif_type = vif['type']
 
+        # instance.display_name could be unicode
+        instance_repr = utils.get_obj_repr_unicode(instance)
         LOG.debug('vif_type=%(vif_type)s instance=%(instance)s '
                   'vif=%(vif)s',
-                  {'vif_type': vif_type, 'instance': instance,
+                  {'vif_type': vif_type, 'instance': instance_repr,
                    'vif': vif})
 
         if vif_type is None:
@@ -954,9 +958,11 @@ class LibvirtGenericVIFDriver(object):
     def unplug(self, instance, vif):
         vif_type = vif['type']
 
+        # instance.display_name could be unicode
+        instance_repr = utils.get_obj_repr_unicode(instance)
         LOG.debug('vif_type=%(vif_type)s instance=%(instance)s '
                   'vif=%(vif)s',
-                  {'vif_type': vif_type, 'instance': instance,
+                  {'vif_type': vif_type, 'instance': instance_repr,
                    'vif': vif})
 
         if vif_type is None:

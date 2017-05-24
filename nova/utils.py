@@ -1258,6 +1258,18 @@ def get_sha256_str(base_str):
     return hashlib.sha256(base_str).hexdigest()
 
 
+def get_obj_repr_unicode(obj):
+    """Returns a string representation of an object converted to unicode.
+
+    In the case of python 3, this just returns the repr() of the object,
+    else it converts the repr() to unicode.
+    """
+    obj_repr = repr(obj)
+    if not six.PY3:
+        obj_repr = six.text_type(obj_repr, 'utf-8')
+    return obj_repr
+
+
 def filter_and_format_resource_metadata(resource_type, resource_list,
         search_filts, metadata_type=None):
     """Get all metadata for a list of resources after filtering.
