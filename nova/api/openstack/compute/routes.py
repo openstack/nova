@@ -109,10 +109,6 @@ certificates_controller = functools.partial(
     _create_controller, certificates.CertificatesController, [], [])
 
 
-keypairs_controller = functools.partial(
-    _create_controller, keypairs.KeypairController, [], [])
-
-
 fixed_ips_controller = functools.partial(_create_controller,
     fixed_ips.FixedIPController, [], [])
 
@@ -160,6 +156,10 @@ floating_ips_bulk_controller = functools.partial(_create_controller,
 
 instance_usage_audit_log_controller = functools.partial(_create_controller,
     instance_usage_audit_log.InstanceUsageAuditLogController, [], [])
+
+
+keypairs_controller = functools.partial(
+    _create_controller, keypairs.KeypairController, [], [])
 
 
 limits_controller = functools.partial(
@@ -303,6 +303,12 @@ ROUTE_LIST = (
     ('/os-availability-zone/detail', {
         'GET': [availability_zone_controller, 'detail'],
     }),
+    ('/os-certificates', {
+        'POST': [certificates_controller, 'create']
+    }),
+    ('/os-certificates/{id}', {
+        'GET': [certificates_controller, 'show']
+    }),
     ('/os-fixed-ips/{id}', {
         'GET': [fixed_ips_controller, 'show']
     }),
@@ -345,12 +351,6 @@ ROUTE_LIST = (
     }),
     ('/os-instance_usage_audit_log/{id}', {
         'GET': [instance_usage_audit_log_controller, 'show']
-    }),
-    ('/os-certificates', {
-        'POST': [certificates_controller, 'create']
-    }),
-    ('/os-certificates/{id}', {
-        'GET': [certificates_controller, 'show']
     }),
     ('/os-keypairs', {
         'GET': [keypairs_controller, 'index'],
