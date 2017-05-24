@@ -13,7 +13,7 @@
    deprecated all the proxy APIs and users should use the native APIs
    instead. These will fail with a 404 starting from microversion 2.36.
    See: `Relevant Network APIs
-   <http://developer.openstack.org/api-ref-networking-v2-ext.html>`__.
+   <https://developer.openstack.org/api-ref/networking/v2/#networks>`__.
 
 Manages DNS records associated with floating IP addresses. The API
 dispatches requests to a DNS driver that is selected at startup.

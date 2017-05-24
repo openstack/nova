@@ -13,7 +13,7 @@
    deprecated all the proxy APIs and users should use the native APIs
    instead. These will fail with a 404 starting from microversion 2.36.
    See: `Relevant Network APIs
-   <http://developer.openstack.org/api-ref/networking/v2-ext/index.html#security-groups-security-groups>`__.
+   <https://developer.openstack.org/api-ref/networking/v2/#security-groups-security-groups>`__.
 
 Lists, shows information for, creates, updates and deletes security groups.
 

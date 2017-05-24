@@ -10,7 +10,7 @@
    deprecated all the proxy APIs and users should use the native APIs
    instead. These will fail with a 404 starting from microversion 2.36.
    See: `Relevant Network APIs
-   <http://developer.openstack.org/api-ref-networking-v2.html#networks>`__.
+   <https://developer.openstack.org/api-ref/networking/v2/#networks>`__.
 
 Lists floating IP addresses for a project. Also, creates (allocates) a
 floating IP address for a project, shows floating IP address details,
@@ -20,16 +20,18 @@ The cloud administrator configures a pool of floating IP addresses in
 OpenStack Compute. The project quota defines the maximum number of
 floating IP addresses that you can allocate to the project. After you
 `allocate a floating IP
-address <http://developer.openstack.org/api-ref/compute/#create-allocate-floating-ip-address>`__
+address <https://developer.openstack.org/api-ref/compute/#create-allocate-floating-ip-address>`__
 for a project, you can:
 
 -  `Add (associate) the floating IP
-   address <http://developer.openstack.org/api-ref/compute/#add-associate-floating-ip-addfloatingip-action>`__
+   address <https://developer.openstack.org/api-ref/compute/#add-associate-floating-ip-
+   addfloatingip-action-deprecated>`__
    with an instance in the project. You can associate only one floating
    IP address with an instance at a time.
 
 -  `Remove (disassociate) the floating IP
-   address <http://developer.openstack.org/api-ref/compute/#remove-disassociate-floating-ip-removefloatingip-action>`__
+   address <https://developer.openstack.org/api-ref/compute/#remove-disassociate-
+   floating-ip-removefloatingip-action-deprecated>`__
    from an instance in the project.
 
 -  Delete, or deallocate, a floating IP from the project, which
