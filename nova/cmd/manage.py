@@ -1384,7 +1384,11 @@ class CellV2Commands(object):
                'map.')
     @args('--verbose', action='store_true',
           help=_('Provide detailed output when discovering hosts.'))
-    def discover_hosts(self, cell_uuid=None, verbose=False):
+    @args('--strict', action='store_true',
+          help=_('Considered successful (exit code 0) only when an unmapped '
+                 'host is discovered. Any other outcome will be considered a '
+                 'failure (exit code 1).'))
+    def discover_hosts(self, cell_uuid=None, verbose=False, strict=False):
         """Searches cells, or a single cell, and maps found hosts.
 
         When a new host is added to a deployment it will add a service entry
@@ -1397,7 +1401,10 @@ class CellV2Commands(object):
                 print(msg)
 
         ctxt = context.RequestContext()
-        host_mapping_obj.discover_hosts(ctxt, cell_uuid, status_fn)
+        hosts = host_mapping_obj.discover_hosts(ctxt, cell_uuid, status_fn)
+        # discover_hosts will return an empty list if no hosts are discovered
+        if strict:
+            return int(not hosts)
 
     @action_description(
         _("Add a new cell to nova API database. "
