@@ -107,8 +107,11 @@ resource_provider_links:
   type: array
   in: body
   required: true
-  description: >
+  description: |
     A list of links associated with one resource provider.
+
+    .. note:: Trait relationship link is available starting from version 1.6.
+
 resource_provider_name:
   type: string
   in: body

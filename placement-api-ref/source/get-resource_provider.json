@@ -1,0 +1,27 @@
+{
+    "generation": 0,
+    "links": [
+        {
+            "href": "/placement/resource_providers/3b4005be-d64b-456f-ba36-0ffd02718868",
+            "rel": "self"
+        },
+        {
+            "href": "/placement/resource_providers/3b4005be-d64b-456f-ba36-0ffd02718868/aggregates",
+            "rel": "aggregates"
+        },
+        {
+            "href": "/placement/resource_providers/3b4005be-d64b-456f-ba36-0ffd02718868/inventories",
+            "rel": "inventories"
+        },
+        {
+            "href": "/placement/resource_providers/3b4005be-d64b-456f-ba36-0ffd02718868/usages",
+            "rel": "usages"
+        },
+        {
+            "href": "/placement/resource_providers/3b4005be-d64b-456f-ba36-0ffd02718868/traits",
+            "rel": "traits"
+        }
+    ],
+    "name": "Ceph Storage Pool",
+    "uuid": "3b4005be-d64b-456f-ba36-0ffd02718868"
+}
