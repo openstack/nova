@@ -85,3 +85,31 @@ Response Example
 
 .. literalinclude:: update-resource_provider.json
    :language: javascript
+
+Delete resource provider
+========================
+
+.. rest_method:: DELETE /resource_providers/{uuid}
+
+Delete the resource provider identified by `{uuid}`.
+This will also disassociate aggregates and delete inventories.
+
+Normal Response Codes: 204
+
+Error response codes: itemNotFound(404), conflict(409)
+
+A `409 Conflict` response code will be returned if there exist
+allocations records for any of the inventories that would be deleted
+as a result of removing the resource provider.
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - uuid: resource_provider_uuid_path
+
+Response
+--------
+
+No body content is returned on a successful DELETE.
