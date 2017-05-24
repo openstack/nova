@@ -301,6 +301,8 @@ def _get_nets(vif, subnet, version, net_num, link_id):
         }
         net_info['routes'].append(new_route)
 
+    net_info['services'] = _get_dns_services(subnet)
+
     return net_info
 
 
