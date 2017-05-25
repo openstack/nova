@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Previously, it was possible to specify values for the
+    ``hw:cpu_realtime_mask`` extra spec that were not within the range of valid
+    instances cores. This value is now correctly validated.
