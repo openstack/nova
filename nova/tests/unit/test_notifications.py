@@ -16,6 +16,7 @@
 """Tests for common notifications."""
 
 import copy
+import datetime
 
 import mock
 from oslo_context import context as o_context
@@ -490,6 +491,20 @@ class NotificationsTestCase(test.TestCase):
         self.assertEqual(30, info['memory_mb'])
         self.assertEqual(40, info['ephemeral_gb'])
         self.assertEqual(60, info['disk_gb'])
+
+    def test_payload_has_timestamp_fields(self):
+        time = datetime.datetime(2017, 2, 2, 16, 45, 0)
+        # do not define deleted_at to test that missing value is handled
+        # properly
+        self.instance.terminated_at = time
+        self.instance.launched_at = time
+
+        info = notifications.info_from_instance(self.context, self.instance,
+                                                self.net_info, None)
+
+        self.assertEqual('2017-02-02T16:45:00.000000', info['terminated_at'])
+        self.assertEqual('2017-02-02T16:45:00.000000', info['launched_at'])
+        self.assertEqual('', info['deleted_at'])
 
     def test_send_access_ip_update(self):
         notifications.send_update(self.context, self.instance, self.instance)
