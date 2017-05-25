@@ -109,6 +109,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              header in the response for the snapshot image, they now return a
              json dict in the response body with an image_id key and uuid
              value.
+    * 2.46 - Return ``X-OpenStack-Request-ID`` header on requests.
 """
 
 # The minimum and maximum versions of the API supported
@@ -117,7 +118,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.45"
+_MAX_API_VERSION = "2.46"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which related to network, images and baremetal
