@@ -688,16 +688,13 @@ class SchedulerReportClient(object):
         """
         self._ensure_resource_provider(rp_uuid, rp_name)
 
-        new_inv = {}
-        for rc_name, inv in inv_data.items():
-            if rc_name not in fields.ResourceClass.STANDARD:
-                # Auto-create custom resource classes coming from a virt driver
-                self._ensure_resource_class(rc_name)
+        # Auto-create custom resource classes coming from a virt driver
+        list(map(self._ensure_resource_class,
+                 (rc_name for rc_name in inv_data
+                  if rc_name not in fields.ResourceClass.STANDARD)))
 
-            new_inv[rc_name] = inv
-
-        if new_inv:
-            self._update_inventory(rp_uuid, new_inv)
+        if inv_data:
+            self._update_inventory(rp_uuid, inv_data)
         else:
             self._delete_inventory(rp_uuid)
 
