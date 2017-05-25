@@ -204,21 +204,17 @@ class RequestContext(context.RequestContext):
 
     @classmethod
     def from_dict(cls, values):
-        return cls(
+        return super(RequestContext, cls).from_dict(
+            values,
             user_id=values.get('user_id'),
-            user=values.get('user'),
             project_id=values.get('project_id'),
-            tenant=values.get('tenant'),
-            is_admin=values.get('is_admin'),
+            # TODO(sdague): oslo.context has show_deleted, if
+            # possible, we should migrate to that in the future so we
+            # don't need to be different here.
             read_deleted=values.get('read_deleted', 'no'),
-            roles=values.get('roles'),
             remote_address=values.get('remote_address'),
             timestamp=values.get('timestamp'),
-            request_id=values.get('request_id'),
-            auth_token=values.get('auth_token'),
             quota_class=values.get('quota_class'),
-            user_name=values.get('user_name'),
-            project_name=values.get('project_name'),
             service_catalog=values.get('service_catalog'),
             instance_lock_checked=values.get('instance_lock_checked', False),
         )
