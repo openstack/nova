@@ -40,8 +40,6 @@ class MultipleCreate(extensions.V21APIExtensionBase):
         return []
 
 
-# use nova.api.extensions.server.extensions entry point to modify
-# server create kwargs
 # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
 # parameter as this is placed to handle scheduler_hint extension for V2.1.
 def server_create(server_dict, create_kwargs, body_deprecated_param):
