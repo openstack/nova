@@ -198,66 +198,9 @@ class ContextTestCase(test.NoDBTestCase):
                            'user_id': 111,
                            'user_identity': '111 222 - - -',
                            'user_name': None}
-        self.assertEqual(expected_values, values2)
-
-    def test_convert_from_dict_to_dict_version_2_4_x(self):
-        # fake dict() created with oslo.context 2.4.x, Missing is_admin_project
-        # key
-        values = {'user': '111',
-                  'user_id': '111',
-                  'tenant': '222',
-                  'project_id': '222',
-                  'domain': None, 'project_domain': None,
-                  'auth_token': None,
-                  'resource_uuid': None, 'read_only': False,
-                  'user_identity': '111 222 - - -',
-                  'instance_lock_checked': False,
-                  'user_name': None, 'project_name': None,
-                  'timestamp': '2015-03-02T20:03:59.416299',
-                  'remote_address': None, 'quota_class': None,
-                  'is_admin': True,
-                  'service_catalog': [],
-                  'read_deleted': 'no', 'show_deleted': False,
-                  'roles': [],
-                  'request_id': 'req-956637ad-354a-4bc5-b969-66fd1cc00f50',
-                  'user_domain': None}
-        ctx = context.RequestContext.from_dict(values)
-        self.assertEqual('111', ctx.user)
-        self.assertEqual('222', ctx.tenant)
-        self.assertEqual('111', ctx.user_id)
-        self.assertEqual('222', ctx.project_id)
-        # to_dict() will add is_admin_project
-        values.update({'is_admin_project': True})
-        values2 = ctx.to_dict()
-        self.assertEqual(values, values2)
-
-    def test_convert_from_dict_then_to_dict(self):
-        values = {'user': '111',
-                  'user_id': '111',
-                  'tenant': '222',
-                  'project_id': '222',
-                  'domain': None, 'project_domain': None,
-                  'auth_token': None,
-                  'resource_uuid': None, 'read_only': False,
-                  'user_identity': '111 222 - - -',
-                  'instance_lock_checked': False,
-                  'user_name': None, 'project_name': None,
-                  'timestamp': '2015-03-02T20:03:59.416299',
-                  'remote_address': None, 'quota_class': None,
-                  'is_admin': True,
-                  'is_admin_project': True,
-                  'service_catalog': [],
-                  'read_deleted': 'no', 'show_deleted': False,
-                  'roles': [],
-                  'request_id': 'req-956637ad-354a-4bc5-b969-66fd1cc00f50',
-                  'user_domain': None}
-        ctx = context.RequestContext.from_dict(values)
-        self.assertEqual('111', ctx.user)
-        self.assertEqual('222', ctx.tenant)
-        self.assertEqual('111', ctx.user_id)
-        self.assertEqual('222', ctx.project_id)
-        values2 = ctx.to_dict()
-        self.assertEqual(values, values2)
+        for k, v in expected_values.items():
+            self.assertIn(k, values2)
+            self.assertEqual(values2[k], v)
 
     @mock.patch.object(context.policy, 'authorize')
     def test_can(self, mock_authorize):
