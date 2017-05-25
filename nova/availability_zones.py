@@ -160,7 +160,7 @@ def get_availability_zones(context, get_only_available=False,
 
 def get_instance_availability_zone(context, instance):
     """Return availability zone of specified instance."""
-    host = instance.get('host')
+    host = instance.host if 'host' in instance else None
     if not host:
         # Likely hasn't reached a viable compute node yet so give back the
         # desired availability_zone in the instance record if the boot request
