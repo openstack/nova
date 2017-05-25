@@ -207,6 +207,13 @@ port_id_path:
   in: path
   required: true
   type: string
+quota_class_id: &quota_class_id
+  description: |
+    The ID of the quota class.
+    Nova supports the ``default`` Quota Class only.
+  in: path
+  required: true
+  type: string
 request_id:
   description: |
     The ID of the request.
@@ -1602,12 +1609,19 @@ contents:
   in: body
   required: true
   type: string
-cores:
+cores: &cores
   description: |
     The number of allowed instance cores for each tenant.
   in: body
   required: true
   type: integer
+cores_quota_class: &cores_quota_class
+  <<: *cores
+  description: |
+    The number of allowed server cores for the quota class.
+cores_quota_class_optional:
+  <<: *cores_quota_class
+  required: false
 cores_quota_details:
   description: |
     The object of detailed cores quota, including in_use, limit and
@@ -2143,11 +2157,21 @@ fixed_ips:
 fixed_ips_quota:
   description: |
     The number of allowed fixed IP addresses for each tenant. Must be equal to or
-    greater than the number of allowed instances.
+    greater than the number of allowed servers.
   in: body
   required: true
   type: integer
   max_version: 2.35
+fixed_ips_quota_class: &fixed_ips_quota_class
+  description: |
+    The number of allowed fixed IP addresses for the quota class. Must be
+    equal to or greater than the number of allowed servers.
+  in: body
+  required: true
+  type: integer
+fixed_ips_quota_class_optional:
+  <<: *fixed_ips_quota_class
+  required: false
 fixed_ips_quota_details:
   description: |
     The object of detailed fixed ips quota, including in_use, limit and
@@ -2485,6 +2509,15 @@ floating_ips_list:
   in: body
   required: true
   type: array
+floating_ips_quota_class: &floating_ips_quota_class
+  description: |
+    The number of allowed floating IP addresses for the quota class.
+  in: body
+  required: true
+  type: integer
+floating_ips_quota_class_optional:
+  <<: *floating_ips_quota_class
+  required: false
 floating_ips_quota_details:
   description: |
     The object of detailed floating ips quota, including in_use, limit and
@@ -3030,12 +3063,19 @@ injected_file_path_bytes_quota_optional:
   in: body
   required: false
   type: integer
-injected_files:
+injected_files: &injected_files
   description: |
     The number of allowed injected files for each tenant.
   in: body
   required: true
   type: integer
+injected_files_quota_class: &injected_files_quota_class
+  <<: *injected_files
+  description: |
+    The number of allowed injected files for the quota class.
+injected_files_quota_class_optional:
+  <<: *injected_files_quota_class
+  required: false
 injected_files_quota_details:
   description: |
     The object of detailed injected files quota, including in_use, limit and
@@ -3116,12 +3156,19 @@ instanceActions:
   in: body
   required: true
   type: array
-instances:
+instances: &instances
   description: |
-    The number of allowed instances for each tenant.
+    The number of allowed servers for each tenant.
   in: body
   required: true
   type: integer
+instances_quota_class: &instances_quota_class
+  <<: *instances
+  description: |
+    The number of allowed servers for the quota class.
+instances_quota_class_optional:
+  <<: *instances_quota_class
+  required: false
 instances_quota_details:
   description: |
     The object of detailed instances quota, including in_use, limit and
@@ -3213,12 +3260,19 @@ key_name_resp:
   in: body
   required: true
   type: string
-key_pairs:
+key_pairs: &key_pairs
   description: |
     The number of allowed key pairs for each user.
   in: body
   required: true
   type: integer
+key_pairs_quota_class: &key_pairs_quota_class
+  <<: *key_pairs
+  description: |
+    The number of allowed key pairs for the quota class.
+key_pairs_quota_class_optional:
+  <<: *key_pairs_quota_class
+  required: false
 key_pairs_quota_details:
   description: |
     The object of detailed key pairs quota, including in_use, limit and
@@ -3753,6 +3807,12 @@ networks:
   in: body
   required: true
   type: object
+networks_quota_optional:
+  description: |
+    The number of private networks that can be created per project.
+  in: body
+  required: false
+  type: integer
 new_file:
   description: |
     The name of the qcow2 file that Block Storage creates, which becomes the active
@@ -4301,6 +4361,15 @@ project_id_value:
   in: body
   required: true
   type: string
+quota_class_id_body:
+  <<: *quota_class_id
+  in: body
+quota_class_set:
+  description: |
+    A ``quota_class_set`` object.
+  in: body
+  required: true
+  type: object
 quota_set:
   description: |
     A ``quota_set`` object.
@@ -4313,12 +4382,19 @@ quota_tenant_or_user_id_body:
   in: body
   required: true
   type: string
-ram:
+ram: &ram
   description: |
     The amount of allowed instance RAM, in MB, for each tenant.
   in: body
   required: true
   type: integer
+ram_quota_class: &ram_quota_class
+  <<: *ram
+  description: |
+    The amount of allowed instance RAM, in MB, for the quota class.
+ram_quota_class_optional:
+  <<: *ram_quota_class
+  required: false
 ram_quota_details:
   description: |
     The object of detailed key ram quota, including in_use,
@@ -4570,6 +4646,15 @@ security_group_rules_quota:
   required: true
   type: integer
   max_version: 2.35
+security_group_rules_quota_class: &security_group_rules_quota_class
+  description: |
+    The number of allowed rules for each security group.
+  in: body
+  required: true
+  type: integer
+security_group_rules_quota_class_optional:
+  <<: *security_group_rules_quota_class
+  required: false
 security_group_rules_quota_details:
   description: |
     The object of detailed security group rules quota, including in_use,
@@ -4599,6 +4684,15 @@ security_groups_quota:
   required: true
   type: integer
   max_version: 2.35
+security_groups_quota_class: &security_groups_quota_class
+  description: |
+    The number of allowed security groups for the quota class.
+  in: body
+  required: true
+  type: integer
+security_groups_quota_class_optional:
+  <<: *security_groups_quota_class
+  required: false
 security_groups_quota_details:
   description: |
     The object of detailed security groups, including in_use,
@@ -4668,7 +4762,7 @@ server_group_members_quota_optional:
   in: body
   required: false
   type: integer
-server_groups:
+server_groups: &server_groups
   description: |
     The number of allowed server groups for each tenant.
   in: body
@@ -4680,6 +4774,11 @@ server_groups_list:
   in: body
   required: true
   type: array
+server_groups_quota_class_optional:
+  <<: *server_groups
+  description: |
+    The number of allowed server groups for the quota class.
+  required: false
 server_groups_quota_details:
   description: |
     The object of detailed server groups, including in_use,
