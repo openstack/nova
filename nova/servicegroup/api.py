@@ -78,3 +78,7 @@ class API(object):
             return False
 
         return self._driver.is_up(member)
+
+    def get_updated_time(self, member):
+        """Get the updated time from drivers except db"""
+        return self._driver.updated_time(member)

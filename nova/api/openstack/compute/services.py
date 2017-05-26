@@ -71,13 +71,15 @@ class ServiceController(wsgi.Controller):
         active = 'enabled'
         if svc['disabled']:
             active = 'disabled'
+        updated_time = self.servicegroup_api.get_updated_time(svc)
+
         service_detail = {'binary': svc['binary'],
                           'host': svc['host'],
                           'id': svc['id'],
                           'zone': svc['availability_zone'],
                           'status': active,
                           'state': state,
-                          'updated_at': svc['updated_at'],
+                          'updated_at': updated_time,
                           'disabled_reason': svc['disabled_reason']}
 
         for field in additional_fields:

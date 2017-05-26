@@ -15,10 +15,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import iso8601
 import mock
 
 from nova import servicegroup
 from nova import test
+from oslo_utils import timeutils
 
 
 class MemcachedServiceGroupTestCase(test.NoDBTestCase):
@@ -63,3 +65,29 @@ class MemcachedServiceGroupTestCase(test.NoDBTestCase):
         fn(service)
         self.mc_client.set.assert_called_once_with('compute:fake-host',
                                                    mock.ANY)
+
+    def test_get_updated_time(self):
+        updated_at_time = timeutils.parse_strtime("2016-04-18T02:56:25.198871")
+        service_ref = {
+            'host': 'fake-host',
+            'topic': 'compute',
+            'updated_at': updated_at_time.replace(tzinfo=iso8601.iso8601.Utc())
+        }
+
+        self.mc_client.get.return_value = None
+        self.assertEqual(service_ref['updated_at'],
+                         self.servicegroup_api.get_updated_time(service_ref))
+        self.mc_client.get.assert_called_once_with('compute:fake-host')
+        self.mc_client.reset_mock()
+        retval = timeutils.utcnow()
+        self.mc_client.get.return_value = retval
+        self.assertEqual(retval.replace(tzinfo=iso8601.iso8601.Utc()),
+                         self.servicegroup_api.get_updated_time(service_ref))
+        self.mc_client.get.assert_called_once_with('compute:fake-host')
+        self.mc_client.reset_mock()
+        service_ref['updated_at'] = \
+            retval.replace(tzinfo=iso8601.iso8601.Utc())
+        self.mc_client.get.return_value = updated_at_time
+        self.assertEqual(service_ref['updated_at'],
+                         self.servicegroup_api.get_updated_time(service_ref))
+        self.mc_client.get.assert_called_once_with('compute:fake-host')

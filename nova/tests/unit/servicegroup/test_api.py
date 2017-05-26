@@ -60,3 +60,14 @@ class ServiceGroupApiTestCase(test.NoDBTestCase):
         result = self.servicegroup_api.service_is_up(member)
         self.assertIs(result, False)
         driver.is_up.assert_not_called()
+
+    def test_get_updated_time(self):
+        member = {"host": "fake-host",
+                  "topic": "compute",
+                  "forced_down": False}
+        retval = "2016-11-02T22:40:31.000000"
+
+        driver = self.servicegroup_api._driver
+        driver.updated_time = mock.MagicMock(return_value=retval)
+        result = self.servicegroup_api.get_updated_time(member)
+        self.assertEqual(retval, result)

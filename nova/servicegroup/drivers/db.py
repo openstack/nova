@@ -79,6 +79,10 @@ class DbDriver(base.Driver):
                        'lhb': str(last_heartbeat), 'el': str(elapsed)})
         return is_up
 
+    def updated_time(self, service_ref):
+        """Get the updated time from db"""
+        return service_ref['updated_at']
+
     def _report_state(self, service):
         """Update the state of this service in the datastore."""
 

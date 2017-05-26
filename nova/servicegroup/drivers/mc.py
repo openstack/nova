@@ -17,6 +17,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import iso8601
 from oslo_log import log as logging
 from oslo_utils import timeutils
 
@@ -66,6 +67,21 @@ class MemcachedDriver(base.Driver):
             LOG.debug('Seems service %s is down', key)
 
         return is_up
+
+    def updated_time(self, service_ref):
+        """Get the updated time from memcache"""
+        key = "%(topic)s:%(host)s" % service_ref
+        updated_time_in_mc = self.mc.get(str(key))
+        updated_time_in_db = service_ref['updated_at']
+
+        if updated_time_in_mc:
+            # Change mc time to offset-aware time
+            updated_time_in_mc = \
+                updated_time_in_mc.replace(tzinfo=iso8601.iso8601.Utc())
+            if updated_time_in_db <= updated_time_in_mc:
+                return updated_time_in_mc
+
+        return updated_time_in_db
 
     def _report_state(self, service):
         """Update the state of this service in the datastore."""
