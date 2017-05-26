@@ -3462,6 +3462,45 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         # make sure nothing was logged at exception level
         mock_log.assert_not_called()
 
+    @mock.patch('nova.volume.cinder.API.attachment_delete')
+    @mock.patch('nova.volume.cinder.API.terminate_connection')
+    def test_terminate_volume_connections(self, mock_term_conn,
+                                          mock_attach_delete):
+        """Tests _terminate_volume_connections with cinder v2 style,
+        cinder v3.27 style, and non-volume BDMs.
+        """
+        bdms = objects.BlockDeviceMappingList(
+            objects=[
+                # We use two old-style BDMs to make sure we only build the
+                # connector object once.
+                objects.BlockDeviceMapping(volume_id=uuids.v2_volume_id_1,
+                                           destination_type='volume',
+                                           attachment_id=None),
+                objects.BlockDeviceMapping(volume_id=uuids.v2_volume_id_2,
+                                           destination_type='volume',
+                                           attachment_id=None),
+                objects.BlockDeviceMapping(volume_id=uuids.v3_volume_id,
+                                           destination_type='volume',
+                                           attachment_id=uuids.attach_id),
+                objects.BlockDeviceMapping(volume_id=None,
+                                           destination_type='local')
+            ])
+        fake_connector = mock.sentinel.fake_connector
+        with mock.patch.object(self.compute.driver, 'get_volume_connector',
+                               return_value=fake_connector) as connector_mock:
+            self.compute._terminate_volume_connections(
+                self.context, mock.sentinel.instance, bdms)
+        # assert we called terminate_connection twice (once per old volume bdm)
+        mock_term_conn.assert_has_calls([
+            mock.call(self.context, uuids.v2_volume_id_1, fake_connector),
+            mock.call(self.context, uuids.v2_volume_id_2, fake_connector)
+        ])
+        # assert we only build the connector once
+        connector_mock.assert_called_once_with(mock.sentinel.instance)
+        # assert we called delete_attachment once for the single new volume bdm
+        mock_attach_delete.assert_called_once_with(
+            self.context, uuids.attach_id)
+
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def setUp(self):

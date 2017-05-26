@@ -3983,11 +3983,18 @@ class ComputeManager(manager.Manager):
             self.instance_events.clear_events_for_instance(instance)
 
     def _terminate_volume_connections(self, context, instance, bdms):
-        connector = self.driver.get_volume_connector(instance)
+        connector = None
         for bdm in bdms:
             if bdm.is_volume:
-                self.volume_api.terminate_connection(context, bdm.volume_id,
-                                                     connector)
+                if bdm.attachment_id:
+                    self.volume_api.attachment_delete(context,
+                                                      bdm.attachment_id)
+                else:
+                    if connector is None:
+                        connector = self.driver.get_volume_connector(instance)
+                    self.volume_api.terminate_connection(context,
+                                                         bdm.volume_id,
+                                                         connector)
 
     @staticmethod
     def _set_instance_info(instance, instance_type):
