@@ -7171,7 +7171,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """Return total over committed disk size for all instances."""
         # Disk size that all instance uses : virtual_size - disk_size
         disk_over_committed_size = 0
-        instance_domains = self._host.list_instance_domains()
+        instance_domains = self._host.list_instance_domains(only_running=False)
         if not instance_domains:
             return disk_over_committed_size
 
