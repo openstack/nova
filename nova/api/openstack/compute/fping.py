@@ -31,8 +31,6 @@ from nova.i18n import _
 from nova.policies import fping as fping_policies
 from nova import utils
 
-ALIAS = "os-fping"
-
 CONF = nova.conf.CONF
 
 
@@ -136,18 +134,3 @@ class FpingController(wsgi.Controller):
                 "alive": bool(set(ips) & alive_ips),
             }
         }
-
-
-class Fping(extensions.V21APIExtensionBase):
-    """Fping Management Extension."""
-
-    name = "Fping"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        res = extensions.ResourceExtension(ALIAS, FpingController())
-        return [res]
-
-    def get_controller_extensions(self):
-        return []
