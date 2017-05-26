@@ -2430,6 +2430,44 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         # be for the first instance created above
         rc.delete_allocation_for_instance.assert_called_once_with(uuids.inst0)
 
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    def test_remove_deleted_instances_allocations_no_instance(self,
+                                                              mock_inst_get):
+        # If for some reason an instance is no longer available, but
+        # there are allocations for it, we want to be sure those
+        # allocations are removed, not that an InstanceNotFound
+        # exception is not caught.  Here we set up some allocations,
+        # one of which is for an instance that can no longer be
+        # found.
+        rc = self.rt.reportclient
+        self.rt.tracked_instances = {}
+        # Create 1 instance
+        instance = _INSTANCE_FIXTURES[0].obj_clone()
+        instance.uuid = uuids.inst0
+        # Mock out the allocation call
+        allocs = {uuids.scheduled: "fake_scheduled_instance",
+                  uuids.inst0: "fake_instance_gone"}
+        rc.get_allocations_for_resource_provider = mock.MagicMock(
+            return_value=allocs)
+        rc.delete_allocation_for_instance = mock.MagicMock()
+
+        def get_by_uuid(ctx, inst_uuid, expected_attrs=None):
+            ret = _INSTANCE_FIXTURES[0].obj_clone()
+            ret.uuid = inst_uuid
+            if inst_uuid == uuids.scheduled:
+                ret.host = None
+                return ret
+            raise exc.InstanceNotFound(instance_id=inst_uuid)
+
+        mock_inst_get.side_effect = get_by_uuid
+        cn = self.rt.compute_nodes[_NODENAME]
+        ctx = mock.sentinel.ctx
+        # Call the method.
+        self.rt._remove_deleted_instances_allocations(ctx, cn)
+        # One call should be made to delete allocations, for our
+        # instance that no longer exists.
+        rc.delete_allocation_for_instance.assert_called_once_with(uuids.inst0)
+
 
 class TestInstanceInResizeState(test.NoDBTestCase):
     def test_active_suspending(self):
