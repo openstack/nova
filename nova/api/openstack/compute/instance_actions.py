@@ -23,8 +23,6 @@ from nova.i18n import _
 from nova.policies import instance_actions as ia_policies
 from nova import utils
 
-ALIAS = "os-instance-actions"
-
 ACTION_KEYS = ['action', 'instance_uuid', 'request_id', 'user_id',
                'project_id', 'start_time', 'message']
 EVENT_KEYS = ['event', 'start_time', 'finish_time', 'result', 'traceback']
@@ -87,25 +85,3 @@ class InstanceActionsController(wsgi.Controller):
                                                            action_id)
             action['events'] = [self._format_event(evt) for evt in events_raw]
         return {'instanceAction': action}
-
-
-class InstanceActions(extensions.V21APIExtensionBase):
-    """View a log of actions and events taken on an instance."""
-
-    name = "InstanceActions"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        ext = extensions.ResourceExtension(ALIAS,
-                                           InstanceActionsController(),
-                                           parent=dict(
-                                               member_name='server',
-                                               collection_name='servers'))
-        return [ext]
-
-    def get_controller_extensions(self):
-        """It's an abstract function V21APIExtensionBase and the extension
-        will not be loaded without it.
-        """
-        return []
