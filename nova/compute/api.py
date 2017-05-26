@@ -2555,6 +2555,9 @@ class API(base.Base):
                         cctxt, filters, limit=limit, marker=marker,
                         expected_attrs=expected_attrs, sort_keys=sort_keys,
                         sort_dirs=sort_dirs)
+                    # If we found the marker in cell0 we need to set it to None
+                    # so we don't expect to find it in the cells below.
+                    marker = None
                 except exception.MarkerNotFound:
                     # We can ignore this since we need to look in the cell DB
                     cell0_instances = objects.InstanceList(objects=[])
