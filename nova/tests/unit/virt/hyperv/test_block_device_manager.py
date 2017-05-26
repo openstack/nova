@@ -216,6 +216,9 @@ class BlockDeviceManagerTestCase(test_base.HyperVBaseTestCase):
     def test_check_and_update_root_device_gen1(self):
         self._test_check_and_update_root_device(disk_format='vhd')
 
+    def test_check_and_update_root_device_gen1_vhdx(self):
+        self._test_check_and_update_root_device(disk_format='vhdx')
+
     def test_check_and_update_root_device_gen1_iso(self):
         self._test_check_and_update_root_device(disk_format='iso')
 
