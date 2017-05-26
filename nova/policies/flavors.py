@@ -26,7 +26,8 @@ flavors_policies = [
     # as such should be removed.
     policy.RuleDefault(
         name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_OR_OWNER),
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description='Deprecated in Pike and will be removed in next release'),
 ]
 
 

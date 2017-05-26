@@ -1,0 +1,9 @@
+---
+deprecations:
+  - |
+    Some unused policies have been deprecated. These are:
+
+    * ``os_compute_api:os-server-groups``
+    * ``os_compute_api:flavors``
+
+    Please note you should remove these from your policy file(s).
