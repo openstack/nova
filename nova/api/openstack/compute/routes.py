@@ -58,6 +58,7 @@ from nova.api.openstack.compute import quota_sets
 from nova.api.openstack.compute import remote_consoles
 from nova.api.openstack.compute import rescue
 from nova.api.openstack.compute import security_groups
+from nova.api.openstack.compute import server_diagnostics
 from nova.api.openstack.compute import server_external_events
 from nova.api.openstack.compute import server_metadata
 from nova.api.openstack.compute import server_migrations
@@ -214,6 +215,10 @@ server_controller = functools.partial(_create_controller,
         suspend_server.SuspendServerController
     ]
 )
+
+
+server_diagnostics_controller = functools.partial(_create_controller,
+    server_diagnostics.ServerDiagnosticsController, [], [])
 
 
 server_external_events_controller = functools.partial(_create_controller,
@@ -432,6 +437,9 @@ ROUTE_LIST = (
     }),
     ('/servers/{id}/action', {
         'POST': [server_controller, 'action']
+    }),
+    ('/servers/{server_id}/diagnostics', {
+        'GET': [server_diagnostics_controller, 'index']
     }),
     ('/servers/{server_id}/metadata', {
         'GET': [server_metadata_controller, 'index'],
