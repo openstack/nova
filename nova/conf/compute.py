@@ -76,11 +76,11 @@ should not be inherited by newly created snapshots.
 
 Possible values:
 
-* A list whose item is an image property. Usually only the image
-  properties that are only needed by base images can be included
-  here, since the snapshots that are created from the base images
-  doesn't need them.
-* Default list: ['cache_in_nova', 'bittorrent']
+* A comma-separated list whose item is an image property. Usually only
+  the image properties that are only needed by base images can be included
+  here, since the snapshots that are created from the base images don't
+  need them.
+* Default list: cache_in_nova, bittorrent
 """),
     cfg.StrOpt('null_kernel',
         default='nokernel',
@@ -143,17 +143,22 @@ Possible values:
     cfg.ListOpt('compute_monitors',
         default=[],
         help="""
-A list of monitors that can be used for getting compute metrics.
-You can use the alias/name from the setuptools entry points for
-nova.compute.monitors.* namespaces. If no namespace is supplied,
-the "cpu." namespace is assumed for backwards-compatibility.
+A comma-separated list of monitors that can be used for getting
+compute metrics. You can use the alias/name from the setuptools
+entry points for nova.compute.monitors.* namespaces. If no
+namespace is supplied, the "cpu." namespace is assumed for
+backwards-compatibility.
+
+NOTE: Only one monitor per namespace (For example: cpu) can be loaded at
+a time.
 
 Possible values:
 
-* An empty list will disable the feature(Default).
+* An empty list will disable the feature (Default).
 * An example value that would enable both the CPU and NUMA memory
-  bandwidth monitors that used the virt driver variant:
-  ["cpu.virt_driver", "numa_mem_bw.virt_driver"]
+  bandwidth monitors that use the virt driver variant:
+
+    compute_monitors = cpu.virt_driver, numa_mem_bw.virt_driver
 """),
     cfg.StrOpt('default_ephemeral_format',
         help="""
