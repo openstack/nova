@@ -1062,7 +1062,6 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         # prepare for the deploy
         try:
-            self._plug_vifs(node, instance, network_info)
             self._start_firewall(instance, network_info)
         except Exception:
             with excutils.save_and_reraise_exception():
@@ -1782,6 +1781,44 @@ class IronicDriver(virt_driver.ComputeDriver):
     def need_legacy_block_device_info(self):
         return False
 
+    def prepare_networks_before_block_device_mapping(self, instance,
+                                                     network_info):
+        """Prepare networks before the block devices are mapped to instance.
+
+        Plug VIFs before block device preparation. In case where storage
+        network is managed by neutron and a MAC address is specified as a
+        volume connector to a node, we can get the IP address assigned to
+        the connector. An IP address of volume connector may be required by
+        some volume backend drivers. For getting the IP address, VIFs need to
+        be plugged before block device preparation so that a VIF is assigned to
+        a MAC address.
+        """
+
+        try:
+            self.plug_vifs(instance, network_info)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                LOG.error("Error preparing deploy for instance "
+                          "%(instance)s on baremetal node %(node)s.",
+                          {'instance': instance.uuid,
+                           'node': instance.node},
+                          instance=instance)
+
+    def clean_networks_preparation(self, instance, network_info):
+        """Clean networks preparation when block device mapping is failed.
+
+        Unplug VIFs when block device preparation is failed.
+        """
+
+        try:
+            self.unplug_vifs(instance, network_info)
+        except Exception as e:
+            LOG.warning('Error detaching VIF from node %(node)s '
+                        'after deploy failed; %(reason)s',
+                        {'node': instance.node,
+                         'reason': six.text_type(e)},
+                        instance=instance)
+
     def get_volume_connector(self, instance):
         """Get connector information for the instance for attaching to volumes.
 
@@ -1797,8 +1834,14 @@ class IronicDriver(virt_driver.ComputeDriver):
                 'host': hostname
             }
 
+        An IP address is set if a volume connector with type ip is assigned to
+        a node. An IP address is also set if a node has a volume connector with
+        type mac. An IP address is got from a VIF attached to an ironic port
+        or portgroup with the MAC address. Otherwise, an IP address of one
+        of VIFs is used.
+
         :param instance: nova instance
-        :returns: A connector information dictionary
+        :return: A connector information dictionary
         """
         node = self.ironicclient.call("node.get", instance.node)
         properties = self._parse_node_properties(node)
@@ -1809,8 +1852,13 @@ class IronicDriver(virt_driver.ComputeDriver):
             values.setdefault(conn.type, []).append(conn.connector_id)
         props = {}
 
-        if values.get('ip'):
-            props['ip'] = props['host'] = values['ip'][0]
+        ip = self._get_volume_connector_ip(instance, node, values)
+        if ip:
+            LOG.debug('Volume connector IP address for node %(node)s is '
+                      '%(ip)s.',
+                      {'node': node.uuid, 'ip': ip},
+                      instance=instance)
+            props['ip'] = props['host'] = ip
         if values.get('iqn'):
             props['initiator'] = values['iqn'][0]
         if values.get('wwpn'):
@@ -1824,3 +1872,56 @@ class IronicDriver(virt_driver.ComputeDriver):
         # we should at least set the value to False.
         props['multipath'] = False
         return props
+
+    def _get_volume_connector_ip(self, instance, node, values):
+        if values.get('ip'):
+            LOG.debug('Node %s has an IP address for volume connector',
+                      node.uuid, instance=instance)
+            return values['ip'][0]
+
+        vif_id = self._get_vif_from_macs(node, values.get('mac', []), instance)
+
+        # retrieve VIF and get the IP address
+        nw_info = instance.get_network_info()
+        if vif_id:
+            fixed_ips = [ip for vif in nw_info if vif['id'] == vif_id
+                         for ip in vif.fixed_ips()]
+        else:
+            fixed_ips = [ip for vif in nw_info for ip in vif.fixed_ips()]
+        fixed_ips_v4 = [ip for ip in fixed_ips if ip['version'] == 4]
+        if fixed_ips_v4:
+            return fixed_ips_v4[0]['address']
+        elif fixed_ips:
+            return fixed_ips[0]['address']
+        return None
+
+    def _get_vif_from_macs(self, node, macs, instance):
+        """Get a VIF from specified MACs.
+
+        Retrieve ports and portgroups which have specified MAC addresses and
+        return a UUID of a VIF attached to a port or a portgroup found first.
+
+        :param node: The node object.
+        :param mac: A list of MAC addresses of volume connectors.
+        :param instance: nova instance, used for logging.
+        :return: A UUID of a VIF assigned to one of the MAC addresses.
+        """
+        for mac in macs:
+            for method in ['portgroup.list', 'port.list']:
+                ports = self.ironicclient.call(method,
+                                               node=node.uuid,
+                                               address=mac,
+                                               detail=True)
+                for p in ports:
+                    vif_id = (p.internal_info.get('tenant_vif_port_id') or
+                              p.extra.get('vif_port_id'))
+                    if vif_id:
+                        LOG.debug('VIF %(vif)s for volume connector is '
+                                  'retrieved with MAC %(mac)s of node '
+                                  '%(node)s',
+                                  {'vif': vif_id,
+                                   'mac': mac,
+                                   'node': node.uuid},
+                                  instance=instance)
+                        return vif_id
+        return None

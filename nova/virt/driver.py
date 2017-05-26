@@ -505,6 +505,33 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def prepare_networks_before_block_device_mapping(self, instance,
+                                                     network_info):
+        """Prepare networks before the block devices are mapped to instance.
+
+        Drivers who need network information for block device preparation can
+        do some network preparation necessary for block device preparation.
+
+        :param nova.objects.instance.Instance instance:
+            The instance whose networks are prepared.
+        :param nova.network.model.NetworkInfoAsyncWrapper network_info:
+            The network information of the given `instance`.
+        """
+        pass
+
+    def clean_networks_preparation(self, instance, network_info):
+        """Clean networks preparation when block device mapping is failed.
+
+        Drivers who need network information for block device preparaion should
+        clean the preparation when block device mapping is failed.
+
+        :param nova.objects.instance.Instance instance:
+            The instance whose networks are prepared.
+        :param nova.network.model.NetworkInfoAsyncWrapper network_info:
+            The network information of the given `instance`.
+        """
+        pass
+
     def attach_interface(self, context, instance, image_meta, vif):
         """Use hotplug to add a network interface to a running instance.
 

@@ -156,6 +156,9 @@ class FakeVolumeTargetClient(object):
 
 class FakePortClient(object):
 
+    def list(self, address=None, node=None):
+        pass
+
     def get(self, port_uuid):
         pass
 

@@ -2189,6 +2189,11 @@ class ComputeManager(manager.Manager):
                     reason=msg)
 
         try:
+            # Depending on a virt driver, some network configuration is
+            # necessary before preparing block devices.
+            self.driver.prepare_networks_before_block_device_mapping(
+                instance, network_info)
+
             # Verify that all the BDMs have a device_name set and assign a
             # default to the ones missing it with the help of the driver.
             self._default_block_device_names(instance, image_meta,
@@ -2209,11 +2214,14 @@ class ComputeManager(manager.Manager):
                 # Make sure the async call finishes
                 if network_info is not None:
                     network_info.wait(do_raise=False)
+                    self.driver.clean_networks_preparation(instance,
+                                                           network_info)
         except (exception.UnexpectedTaskStateError,
                 exception.OverQuota, exception.InvalidBDM) as e:
             # Make sure the async call finishes
             if network_info is not None:
                 network_info.wait(do_raise=False)
+                self.driver.clean_networks_preparation(instance, network_info)
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=e.format_message())
         except Exception:
@@ -2222,6 +2230,7 @@ class ComputeManager(manager.Manager):
             # Make sure the async call finishes
             if network_info is not None:
                 network_info.wait(do_raise=False)
+                self.driver.clean_networks_preparation(instance, network_info)
             msg = _('Failure prepping block device.')
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=msg)
