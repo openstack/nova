@@ -1259,6 +1259,7 @@ class TestAllocations(SchedulerReportClientTestCase):
         self.client.update_instance_allocation(cn, inst, -1)
         self.assertTrue(mock_warn.called)
 
+    @mock.patch('nova.scheduler.client.report.LOG')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'delete')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -1266,7 +1267,7 @@ class TestAllocations(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.'
                 '_instance_to_allocations_dict')
     def test_remove_deleted_instances(self, mock_a, mock_get,
-                                      mock_delete):
+                                      mock_delete, mock_log):
         cn = objects.ComputeNode(uuid=uuids.cn)
         inst1 = objects.Instance(uuid=uuids.inst1)
         inst2 = objects.Instance(uuid=uuids.inst2)
@@ -1293,6 +1294,10 @@ class TestAllocations(SchedulerReportClientTestCase):
             mock.call('/allocations/%s' % inst1.uuid),
             mock.call('/allocations/%s' % inst2.uuid)]
         mock_delete.assert_has_calls(expected_calls, any_order=True)
+        expected_calls = [
+            mock.call('Deleting stale allocation for instance %s', inst1.uuid),
+            mock.call('Deleting stale allocation for instance %s', inst2.uuid)]
+        mock_log.debug.assert_has_calls(expected_calls, any_order=True)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'delete')
