@@ -90,6 +90,48 @@ def _fake_instance(start, end, instance_id, tenant_id,
         flavor=flavor)
 
 
+def _fake_instance_deleted_flavorless(context, start, end, instance_id,
+                                      tenant_id, vm_state=vm_states.ACTIVE):
+    return objects.Instance(
+        context=context,
+        deleted=instance_id,
+        id=instance_id,
+        uuid=getattr(uuids, 'instance_%d' % instance_id),
+        image_ref='1',
+        project_id=tenant_id,
+        user_id='fakeuser',
+        display_name='name',
+        instance_type_id=FAKE_INST_TYPE['id'],
+        launched_at=start,
+        terminated_at=end,
+        deleted_at=start,
+        vm_state=vm_state,
+        memory_mb=MEMORY_MB,
+        vcpus=VCPUS,
+        root_gb=ROOT_GB,
+        ephemeral_gb=EPHEMERAL_GB)
+
+
+@classmethod
+def fake_get_active_deleted_flavorless(cls, context, begin, end=None,
+                                       project_id=None, host=None,
+                                       expected_attrs=None, use_slave=False,
+                                       limit=None, marker=None):
+    # First get some normal instances to have actual usage
+    instances = [
+        _fake_instance(START, STOP, x,
+                       project_id or 'faketenant_%s' % (x // SERVERS))
+        for x in range(TENANTS * SERVERS)]
+    # Then get some deleted instances with no flavor to test bugs 1643444 and
+    # 1692893 (duplicates)
+    instances.extend([
+        _fake_instance_deleted_flavorless(
+            context, START, STOP, x,
+            project_id or 'faketenant_%s' % (x // SERVERS))
+        for x in range(TENANTS * SERVERS)])
+    return objects.InstanceList(objects=instances)
+
+
 @classmethod
 def fake_get_active_by_window_joined(cls, context, begin, end=None,
                                      project_id=None, host=None,
@@ -101,8 +143,6 @@ def fake_get_active_by_window_joined(cls, context, begin, end=None,
         for x in range(TENANTS * SERVERS)])
 
 
-@mock.patch('nova.objects.InstanceList.get_active_by_window_joined',
-            fake_get_active_by_window_joined)
 class SimpleTenantUsageTestV21(test.TestCase):
     version = '2.1'
     policy_rule_prefix = "os_compute_api:os-simple-tenant-usage"
@@ -147,9 +187,27 @@ class SimpleTenantUsageTestV21(test.TestCase):
         else:
             self.assertNotIn('tenant_usages_links', res_dict)
 
+    # NOTE(artom) Test for bugs 1643444 and 1692893 (duplicates). We simulate a
+    # situation where an instance has been deleted (moved to shadow table) and
+    # its corresponding instance_extra row has been archived (deleted from
+    # shadow table).
+    @mock.patch('nova.objects.InstanceList.get_active_by_window_joined',
+                fake_get_active_deleted_flavorless)
+    @mock.patch.object(
+        objects.Instance, '_load_flavor',
+        side_effect=exception.InstanceNotFound(instance_id='fake-id'))
+    def test_verify_index_deleted_flavorless(self, mock_load):
+        with mock.patch.object(self.controller, '_get_flavor',
+                               return_value=None):
+            self._test_verify_index(START, STOP)
+
+    @mock.patch('nova.objects.InstanceList.get_active_by_window_joined',
+                fake_get_active_by_window_joined)
     def test_verify_index(self):
         self._test_verify_index(START, STOP)
 
+    @mock.patch('nova.objects.InstanceList.get_active_by_window_joined',
+                fake_get_active_by_window_joined)
     def test_verify_index_future_end_time(self):
         future = NOW + datetime.timedelta(hours=HOURS)
         self._test_verify_index(START, future)
@@ -161,6 +219,8 @@ class SimpleTenantUsageTestV21(test.TestCase):
         future = NOW + datetime.timedelta(hours=HOURS)
         self._test_verify_show(START, future)
 
+    @mock.patch('nova.objects.InstanceList.get_active_by_window_joined',
+                fake_get_active_by_window_joined)
     def _get_tenant_usages(self, detailed=''):
         req = fakes.HTTPRequest.blank('?detailed=%s&start=%s&end=%s' %
                     (detailed, START.isoformat(), STOP.isoformat()),
@@ -205,6 +265,8 @@ class SimpleTenantUsageTestV21(test.TestCase):
         for i in range(TENANTS):
             self.assertIsNone(usages[i].get('server_usages'))
 
+    @mock.patch('nova.objects.InstanceList.get_active_by_window_joined',
+                fake_get_active_by_window_joined)
     def _test_verify_show(self, start, stop, limit=None):
         tenant_id = 1
         url = '?start=%s&end=%s'
@@ -286,14 +348,16 @@ class SimpleTenantUsageTestV21(test.TestCase):
             'start=%s' % (NOW - datetime.timedelta(5)).isoformat())
 
 
-@mock.patch('nova.objects.InstanceList.get_active_by_window_joined',
-            fake_get_active_by_window_joined)
 class SimpleTenantUsageTestV40(SimpleTenantUsageTestV21):
     version = '2.40'
 
+    @mock.patch('nova.objects.InstanceList.get_active_by_window_joined',
+                fake_get_active_by_window_joined)
     def test_next_links_show(self):
         self._test_verify_show(START, STOP, limit=SERVERS * TENANTS)
 
+    @mock.patch('nova.objects.InstanceList.get_active_by_window_joined',
+                fake_get_active_by_window_joined)
     def test_next_links_index(self):
         self._test_verify_index(START, STOP, limit=SERVERS * TENANTS)
 
