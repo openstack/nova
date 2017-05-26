@@ -102,6 +102,7 @@ def cinderclient(context):
                                 auth=auth,
                                 endpoint_override=endpoint_override,
                                 connect_retries=CONF.cinder.http_retries,
+                                global_request_id=context.global_id,
                                 **service_parameters)
 
 
