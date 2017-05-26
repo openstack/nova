@@ -609,6 +609,17 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
     def _check_042(self, engine, data):
         self.assertColumnExists(engine, 'build_requests', 'tags')
 
+    def _check_043(self, engine, data):
+        for column in ['created_at', 'updated_at', 'id', 'uuid', 'project_id',
+                       'user_id']:
+            self.assertColumnExists(engine, 'consumers', column)
+
+        self.assertIndexExists(engine, 'consumers',
+                               'consumers_project_id_uuid_idx')
+        self.assertIndexExists(engine, 'consumers',
+                               'consumers_project_id_user_id_uuid_idx')
+        self.assertUniqueConstraintExists(engine, 'consumers', ['uuid'])
+
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
                                       test_base.DbTestCase,

@@ -582,3 +582,20 @@ class ResourceProviderTrait(API_BASE):
                                   ForeignKey('resource_providers.id'),
                                   primary_key=True,
                                   nullable=False)
+
+
+class Consumer(API_BASE):
+    """Represents a resource consumer."""
+
+    __tablename__ = 'consumers'
+    __table_args__ = (
+        Index('consumers_project_id_uuid_idx', 'project_id', 'uuid'),
+        Index('consumers_project_id_user_id_uuid_idx', 'project_id', 'user_id',
+              'uuid'),
+        schema.UniqueConstraint('uuid', name='uniq_consumers0uuid'),
+    )
+
+    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
+    uuid = Column(String(36), nullable=False)
+    project_id = Column(String(255), nullable=False)
+    user_id = Column(String(255), nullable=False)
