@@ -1,0 +1,17 @@
+---
+upgrade:
+  - |
+    The ``nova.virt.libvirt.volume.glusterfs.LibvirtGlusterfsVolumeDriver``
+    volume driver has been removed. The GlusterFS volume driver in Cinder was
+    deprecated during the Newton release and was removed from Cinder in the
+    Ocata release so it is effectively not maintained and therefore no longer
+    supported.
+
+    The following configuration options, previously found in the ``libvirt``
+    group, have been removed:
+
+    - ``glusterfs_mount_point_base``
+    - ``qemu_allowed_storage_drivers``
+
+    These were used by the now-removed ``LibvirtGlusterfsVolumeDriver`` volume
+    driver and therefore no longer had any effect.

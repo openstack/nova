@@ -156,8 +156,6 @@ libvirt_volume_drivers = [
     'nfs=nova.virt.libvirt.volume.nfs.LibvirtNFSVolumeDriver',
     'smbfs=nova.virt.libvirt.volume.smbfs.LibvirtSMBFSVolumeDriver',
     'aoe=nova.virt.libvirt.volume.aoe.LibvirtAOEVolumeDriver',
-    'glusterfs='
-        'nova.virt.libvirt.volume.glusterfs.LibvirtGlusterfsVolumeDriver',
     'fibre_channel='
         'nova.virt.libvirt.volume.fibrechannel.'
         'LibvirtFibreChannelVolumeDriver',
@@ -400,11 +398,10 @@ class LibvirtDriver(driver.ComputeDriver):
         if self._disk_cachemode is None:
             # We prefer 'none' for consistent performance, host crash
             # safety & migration correctness by avoiding host page cache.
-            # Some filesystems (eg GlusterFS via FUSE) don't support
-            # O_DIRECT though. For those we fallback to 'writethrough'
-            # which gives host crash safety, and is safe for migration
-            # provided the filesystem is cache coherent (cluster filesystems
-            # typically are, but things like NFS are not).
+            # Some filesystems don't support O_DIRECT though. For those we
+            # fallback to 'writethrough' which gives host crash safety, and
+            # is safe for migration provided the filesystem is cache coherent
+            # (cluster filesystems typically are, but things like NFS are not).
             self._disk_cachemode = "none"
             if not self._supports_direct_io(CONF.instances_path):
                 self._disk_cachemode = "writethrough"
@@ -1893,7 +1890,7 @@ class LibvirtDriver(driver.ComputeDriver):
         device_info.parse_dom(xml_doc)
 
         disks_to_snap = []          # to be snapshotted by libvirt
-        network_disks_to_snap = []  # network disks (netfs, gluster, etc.)
+        network_disks_to_snap = []  # network disks (netfs, etc.)
         disks_to_skip = []          # local disks not snapshotted
 
         for guest_disk in device_info.devices:
@@ -1925,7 +1922,12 @@ class LibvirtDriver(driver.ComputeDriver):
                 new_file_path = os.path.join(os.path.dirname(current_file),
                                              new_file)
                 disks_to_snap.append((current_file, new_file_path))
-            elif disk_info['source_protocol'] in ('gluster', 'netfs'):
+            # NOTE(mriedem): This used to include a check for gluster in
+            # addition to netfs since they were added together. Support for
+            # gluster was removed in the 16.0.0 Pike release. It is unclear,
+            # however, if other volume drivers rely on the netfs disk source
+            # protocol.
+            elif disk_info['source_protocol'] == 'netfs':
                 network_disks_to_snap.append((disk_info, new_file))
 
         if not disks_to_snap and not network_disks_to_snap:
