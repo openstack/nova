@@ -2392,8 +2392,10 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         mock_update_usage.assert_called_once_with(
             self.rt._get_usage_dict(self.instance), _NODENAME, sign=-1)
 
+    @mock.patch('nova.compute.resource_tracker.LOG')
     @mock.patch('nova.objects.Instance.get_by_uuid')
-    def test_remove_deleted_instances_allocations(self, mock_inst_get):
+    def test_remove_deleted_instances_allocations(self, mock_inst_get,
+                                                  mock_log):
         rc = self.rt.reportclient
         self.rt.tracked_instances = {}
         # Create 3 instances
@@ -2429,6 +2431,8 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         # Only one call should be made to delete allocations, and that should
         # be for the first instance created above
         rc.delete_allocation_for_instance.assert_called_once_with(uuids.inst0)
+        mock_log.debug.assert_called_once_with(
+            'Deleting stale allocation for instance %s', uuids.inst0)
 
     @mock.patch('nova.objects.Instance.get_by_uuid')
     def test_remove_deleted_instances_allocations_no_instance(self,
