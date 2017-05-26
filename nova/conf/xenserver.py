@@ -159,99 +159,6 @@ session, which allows you to make concurrent XenAPI connections.
 ]
 
 
-xenapi_torrent_opts = [
-    cfg.StrOpt('torrent_base_url',
-        deprecated_for_removal=True,
-        deprecated_since='15.0.0',
-        deprecated_reason="""
-The torrent feature has not been tested nor maintained, and as such is being
-removed.
-""",
-        help="""
-Base URL for torrent files; must contain a slash character (see RFC 1808,
-step 6).
-"""),
-    cfg.FloatOpt('torrent_seed_chance',
-        default=1.0,
-        min=0,
-        deprecated_for_removal=True,
-        deprecated_since='15.0.0',
-        deprecated_reason="""
-The torrent feature has not been tested nor maintained, and as such is being
-removed.
-""",
-        help='Probability that peer will become a seeder (1.0 = 100%)'),
-    cfg.IntOpt('torrent_seed_duration',
-        default=3600,
-        deprecated_for_removal=True,
-        deprecated_since='15.0.0',
-        deprecated_reason="""
-The torrent feature has not been tested nor maintained, and as such is being
-removed.
-""",
-        help="""
-Number of seconds after downloading an image via BitTorrent that it should
-be seeded for other peers.'
-"""),
-    cfg.IntOpt('torrent_max_last_accessed',
-        default=86400,
-        min=0,
-        deprecated_for_removal=True,
-        deprecated_since='15.0.0',
-        deprecated_reason="""
-The torrent feature has not been tested nor maintained, and as such is being
-removed.
-""",
-        help="""
-Cached torrent files not accessed within this number of seconds can be reaped.
-"""),
-    cfg.PortOpt('torrent_listen_port_start',
-        default=6881,
-        deprecated_for_removal=True,
-        deprecated_since='15.0.0',
-        deprecated_reason="""
-The torrent feature has not been tested nor maintained, and as such is being
-removed.
-""",
-        help='Beginning of port range to listen on'),
-    cfg.PortOpt('torrent_listen_port_end',
-        default=6891,
-        deprecated_for_removal=True,
-        deprecated_since='15.0.0',
-        deprecated_reason="""
-The torrent feature has not been tested nor maintained, and as such is being
-removed.
-""",
-        help='End of port range to listen on'),
-    cfg.IntOpt('torrent_download_stall_cutoff',
-        default=600,
-        min=0,
-        deprecated_for_removal=True,
-        deprecated_since='15.0.0',
-        deprecated_reason="""
-The torrent feature has not been tested nor maintained, and as such is being
-removed.
-""",
-        help="""
-Number of seconds a download can remain at the same progress percentage w/o
-being considered a stall.
-"""),
-    cfg.IntOpt('torrent_max_seeder_processes_per_host',
-        default=1,
-        min=-1,
-        deprecated_for_removal=True,
-        deprecated_since='15.0.0',
-        deprecated_reason="""
-The torrent feature has not been tested nor maintained, and as such is being
-removed.
-""",
-        help="""
-Maximum number of seeder processes to run concurrently within a given dom0
-(-1 = no limit).
-""")
-]
-
-
 xenapi_vm_utils_opts = [
     cfg.StrOpt('cache_images',
         default='all',
@@ -331,22 +238,6 @@ considerably since large runs of zeros won't have to be rsynced.
         help="""
 Maximum number of retries to unplug VBD.
 If set to 0, should try once, no retries.
-"""),
-    cfg.StrOpt('torrent_images',
-        default='none',
-        choices=('all', 'some', 'none'),
-        help="""
-Whether or not to download images via Bit Torrent.
-
-The value for this option must be chosen from the choices listed
-here. Configuring a value other than these will default to 'none'.
-
-Possible values:
-
-* `all`: will download all images.
-* `some`: will only download images that have the image_property
-          `bittorrent=true`.
-* `none`: will turnoff downloading images via Bit Torrent.
 """),
     cfg.StrOpt('ipxe_network_name',
         help="""
@@ -661,7 +552,6 @@ Possible values:
 
 ALL_XENSERVER_OPTS = (xenapi_agent_opts +
                       xenapi_session_opts +
-                      xenapi_torrent_opts +
                       xenapi_vm_utils_opts +
                       xenapi_opts +
                       xenapi_vmops_opts +

@@ -1343,40 +1343,10 @@ def _make_uuid_stack():
     return [uuidutils.generate_uuid() for i in range(MAX_VDI_CHAIN_SIZE)]
 
 
-def _image_uses_bittorrent(context, instance):
-    bittorrent = False
-    torrent_images = CONF.xenserver.torrent_images.lower()
-
-    if torrent_images == 'all':
-        bittorrent = True
-    elif torrent_images == 'some':
-        sys_meta = utils.instance_sys_meta(instance)
-        try:
-            bittorrent = strutils.bool_from_string(
-                sys_meta['image_bittorrent'])
-        except KeyError:
-            pass
-    elif torrent_images == 'none':
-        pass
-    else:
-        LOG.warning(_LW("Invalid value '%s' for torrent_images"),
-                    torrent_images)
-
-    return bittorrent
-
-
 def _default_download_handler():
     # TODO(sirp):  This should be configurable like upload_handler
     return importutils.import_object(
             'nova.virt.xenapi.image.glance.GlanceStore')
-
-
-def _choose_download_handler(context, instance):
-    if _image_uses_bittorrent(context, instance):
-        return importutils.import_object(
-                'nova.virt.xenapi.image.bittorrent.BittorrentStore')
-    else:
-        return _default_download_handler()
 
 
 def get_compression_level():
@@ -1396,26 +1366,12 @@ def _fetch_vhd_image(context, session, instance, image_id):
     LOG.debug("Asking xapi to fetch vhd image %s", image_id,
               instance=instance)
 
-    handler = _choose_download_handler(context, instance)
+    handler = _default_download_handler()
 
     try:
         vdis = handler.download_image(context, session, instance, image_id)
     except Exception:
-        default_handler = _default_download_handler()
-
-        # Using type() instead of isinstance() so instance of subclass doesn't
-        # test as equivalent
-        if type(handler) == type(default_handler):
-            raise
-
-        LOG.exception(_LE("Download handler '%(handler)s' raised an"
-                          " exception, falling back to default handler"
-                          " '%(default_handler)s'"),
-                      {'handler': handler,
-                       'default_handler': default_handler})
-
-        vdis = default_handler.download_image(
-                context, session, instance, image_id)
+        raise
 
     # Ensure we can see the import VHDs as VDIs
     scan_default_sr(session)

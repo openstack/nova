@@ -268,33 +268,7 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
         else:
             func.AndReturn({'root': {'uuid': 'vdi'}})
 
-    def _stub_bittorrent_download_vhd(self, raise_exc=None):
-        self.mox.StubOutWithMock(
-                self.session, 'call_plugin_serialized')
-        func = self.session.call_plugin_serialized(
-            'bittorrent.py', 'download_vhd',
-            image_id='image_id',
-            uuid_stack=["uuid_stack"],
-            sr_path='sr_path',
-            torrent_download_stall_cutoff=600,
-            torrent_listen_port_start=6881,
-            torrent_listen_port_end=6891,
-            torrent_max_last_accessed=86400,
-            torrent_max_seeder_processes_per_host=1,
-            torrent_seed_chance=1.0,
-            torrent_seed_duration=3600,
-            torrent_url='http://foo/image_id.torrent'
-        )
-        if raise_exc:
-            func.AndRaise(raise_exc)
-        else:
-            func.AndReturn({'root': {'uuid': 'vdi'}})
-
     def test_fetch_vhd_image_works_with_glance(self):
-        self.mox.StubOutWithMock(vm_utils, '_image_uses_bittorrent')
-        vm_utils._image_uses_bittorrent(
-            self.context, self.instance).AndReturn(False)
-
         self._stub_glance_download_vhd()
 
         self.mox.StubOutWithMock(vm_utils, 'safe_find_sr')
@@ -314,37 +288,7 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
 
         self.mox.VerifyAll()
 
-    def test_fetch_vhd_image_works_with_bittorrent(self):
-        self.flags(torrent_base_url='http://foo', group='xenserver')
-
-        self.mox.StubOutWithMock(vm_utils, '_image_uses_bittorrent')
-        vm_utils._image_uses_bittorrent(
-            self.context, self.instance).AndReturn(True)
-
-        self._stub_bittorrent_download_vhd()
-
-        self.mox.StubOutWithMock(vm_utils, 'safe_find_sr')
-        vm_utils.safe_find_sr(self.session).AndReturn("sr")
-
-        self.mox.StubOutWithMock(vm_utils, '_scan_sr')
-        vm_utils._scan_sr(self.session, "sr")
-
-        self.mox.StubOutWithMock(vm_utils, '_check_vdi_size')
-        vm_utils._check_vdi_size(self.context, self.session, self.instance,
-                                 "vdi")
-
-        self.mox.ReplayAll()
-
-        self.assertEqual("vdi", vm_utils._fetch_vhd_image(self.context,
-            self.session, self.instance, 'image_id')['root']['uuid'])
-
-        self.mox.VerifyAll()
-
     def test_fetch_vhd_image_cleans_up_vdi_on_fail(self):
-        self.mox.StubOutWithMock(vm_utils, '_image_uses_bittorrent')
-        vm_utils._image_uses_bittorrent(
-            self.context, self.instance).AndReturn(False)
-
         self._stub_glance_download_vhd()
 
         self.mox.StubOutWithMock(vm_utils, 'safe_find_sr')
@@ -373,44 +317,7 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
 
         self.mox.VerifyAll()
 
-    def test_fallback_to_default_handler(self):
-        self.flags(torrent_base_url='http://foo', group='xenserver')
-
-        self.mox.StubOutWithMock(vm_utils, '_image_uses_bittorrent')
-        vm_utils._image_uses_bittorrent(
-            self.context, self.instance).AndReturn(True)
-
-        self._stub_bittorrent_download_vhd(raise_exc=RuntimeError)
-
-        vm_utils._make_uuid_stack().AndReturn(["uuid_stack"])
-        vm_utils.get_sr_path(self.session).AndReturn('sr_path')
-
-        self._stub_glance_download_vhd()
-
-        self.mox.StubOutWithMock(vm_utils, 'safe_find_sr')
-        vm_utils.safe_find_sr(self.session).AndReturn("sr")
-
-        self.mox.StubOutWithMock(vm_utils, '_scan_sr')
-        vm_utils._scan_sr(self.session, "sr")
-
-        self.mox.StubOutWithMock(vm_utils, '_check_vdi_size')
-        vm_utils._check_vdi_size(self.context, self.session, self.instance,
-                                 "vdi")
-
-        self.mox.ReplayAll()
-
-        self.assertEqual("vdi", vm_utils._fetch_vhd_image(self.context,
-            self.session, self.instance, 'image_id')['root']['uuid'])
-
-        self.mox.VerifyAll()
-
-    def test_default_handler_does_not_fallback_to_itself(self):
-        self.flags(torrent_base_url='http://foo', group='xenserver')
-
-        self.mox.StubOutWithMock(vm_utils, '_image_uses_bittorrent')
-        vm_utils._image_uses_bittorrent(
-            self.context, self.instance).AndReturn(False)
-
+    def test_fetch_vhd_image_download_exception(self):
         self._stub_glance_download_vhd(raise_exc=RuntimeError)
 
         self.mox.ReplayAll()
@@ -726,47 +633,6 @@ class CreateCachedImageTestCase(VMUtilsTestBase):
                          vm_utils._create_cached_image('context', self.session,
                                     'instance', 'name', 'uuid',
                                     vm_utils.ImageType.DISK_VHD))
-
-
-class BittorrentTestCase(VMUtilsTestBase):
-    def setUp(self):
-        super(BittorrentTestCase, self).setUp()
-        self.context = context.get_admin_context()
-
-    def test_image_uses_bittorrent(self):
-        instance = {'system_metadata': {'image_bittorrent': True}}
-        self.flags(torrent_images='some', group='xenserver')
-        self.assertTrue(vm_utils._image_uses_bittorrent(self.context,
-                                                        instance))
-
-    def _test_create_image(self, cache_type):
-        instance = {'system_metadata': {'image_cache_in_nova': True}}
-        self.flags(cache_images=cache_type, group='xenserver')
-
-        was = {'called': None}
-
-        def fake_create_cached_image(*args):
-            was['called'] = 'some'
-            return (False, {})
-        self.stubs.Set(vm_utils, '_create_cached_image',
-                       fake_create_cached_image)
-
-        def fake_fetch_image(*args):
-            was['called'] = 'none'
-            return {}
-        self.stubs.Set(vm_utils, '_fetch_image',
-                       fake_fetch_image)
-
-        vm_utils.create_image(self.context, None, instance,
-                              'foo', 'bar', 'baz')
-
-        self.assertEqual(was['called'], cache_type)
-
-    def test_create_image_cached(self):
-        self._test_create_image('some')
-
-    def test_create_image_uncached(self):
-        self._test_create_image('none')
 
 
 class ShutdownTestCase(VMUtilsTestBase):
