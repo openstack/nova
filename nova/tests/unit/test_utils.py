@@ -170,14 +170,6 @@ class GenericUtilsTestCase(test.NoDBTestCase):
                 self.assertEqual(fake_execute.uid, 2)
             self.assertEqual(fake_execute.uid, os.getuid())
 
-    def test_xhtml_escape(self):
-        self.assertEqual('&quot;foo&quot;', utils.xhtml_escape('"foo"'))
-        self.assertEqual('&apos;foo&apos;', utils.xhtml_escape("'foo'"))
-        self.assertEqual('&amp;', utils.xhtml_escape('&'))
-        self.assertEqual('&gt;', utils.xhtml_escape('>'))
-        self.assertEqual('&lt;', utils.xhtml_escape('<'))
-        self.assertEqual('&lt;foo&gt;', utils.xhtml_escape('<foo>'))
-
     def test_get_shortened_ipv6(self):
         self.assertEqual("abcd:ef01:2345:6789:abcd:ef01:c0a8:fefe",
                          utils.get_shortened_ipv6(
@@ -246,21 +238,6 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         self.flags(rootwrap_config='foo')
         cmd = utils.get_root_helper()
         self.assertEqual('sudo nova-rootwrap foo', cmd)
-
-    @mock.patch('nova.utils.RootwrapProcessHelper')
-    def test_get_root_helper_proc(self, mock_proc_helper):
-        self.flags(use_rootwrap_daemon=False)
-        self.flags(rootwrap_config="/path/to/conf")
-        utils._get_rootwrap_helper()
-        mock_proc_helper.assert_called_once_with()
-
-    @mock.patch('nova.utils.RootwrapDaemonHelper')
-    def test_get_root_helper_daemon(self, mock_daemon_helper):
-        conf_path = '/path/to/conf'
-        self.flags(use_rootwrap_daemon=True)
-        self.flags(rootwrap_config=conf_path)
-        utils._get_rootwrap_helper()
-        mock_daemon_helper.assert_called_once_with(conf_path)
 
     def test_use_sudo(self):
         self.flags(disable_rootwrap=True, group='workarounds')
