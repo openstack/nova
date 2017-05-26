@@ -14,7 +14,6 @@ tune2fs: CommandFilter, tune2fs, root
 # nova/virt/disk/api.py: 'mount', '-o', 'bind', src, target
 # nova/virt/xenapi/vm_utils.py: 'mount', '-t', 'ext2,ext3,ext4,reiserfs'..
 # nova/virt/configdrive.py: 'mount', device, mountdir
-# nova/virt/libvirt/volume.py: 'mount', '-t', 'sofs' ...
 mount: CommandFilter, mount, root
 
 # nova/virt/disk/mount/api.py: 'umount', mapped_device
