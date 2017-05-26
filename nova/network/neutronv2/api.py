@@ -150,7 +150,8 @@ def get_client(context, admin=False):
         clientv20.Client(session=_SESSION,
                          auth=auth_plugin,
                          endpoint_override=CONF.neutron.url,
-                         region_name=CONF.neutron.region_name),
+                         region_name=CONF.neutron.region_name,
+                         global_request_id=context.global_id),
         admin=admin or context.is_admin)
 
 
