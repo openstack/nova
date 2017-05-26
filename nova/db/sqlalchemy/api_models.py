@@ -300,7 +300,6 @@ class ResourceProvider(API_BASE):
     uuid = Column(String(36), nullable=False)
     name = Column(Unicode(200), nullable=True)
     generation = Column(Integer, default=0)
-    can_host = Column(Integer, default=0)
 
 
 class Inventory(API_BASE):

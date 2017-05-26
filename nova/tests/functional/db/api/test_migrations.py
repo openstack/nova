@@ -90,7 +90,8 @@ class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):
                     'display_name', 'access_ip_v6', 'access_ip_v4', 'key_name',
                     'locked_by', 'image_ref', 'progress', 'request_spec_id',
                     'info_cache', 'user_id', 'task_state', 'security_groups',
-                    'config_drive']
+                    'config_drive'],
+                'resource_providers': ['can_host'],
         }
 
         for element in diff:
