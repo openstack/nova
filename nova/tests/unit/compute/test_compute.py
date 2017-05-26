@@ -11354,11 +11354,11 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertEqual(len(aggr.hosts), len(values[0][1]))
 
     def test_add_host_to_aggregate_raise_not_found(self):
-        # Ensure HostMappingNotFound is raised when adding invalid host.
+        # Ensure ComputeHostNotFound is raised when adding invalid host.
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_zone')
         fake_notifier.NOTIFICATIONS = []
-        self.assertRaises(exception.HostMappingNotFound,
+        self.assertRaises(exception.ComputeHostNotFound,
                           self.api.add_host_to_aggregate,
                           self.context, aggr.id, 'invalid_host')
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
