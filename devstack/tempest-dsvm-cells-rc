@@ -109,3 +109,7 @@ r="$r|(?:.*id\-10fd234a\-515c\-41e5\-b092\-8323060598c5.*)"
 r="$r).*$"
 
 export DEVSTACK_GATE_TEMPEST_REGEX="$r"
+
+# Don't run the cells v1 job with ssh validation since it uses floating IPs
+# by default which cells v1 doesn't support.
+export DEVSTACK_LOCAL_CONFIG="TEMPEST_RUN_VALIDATION=False"
