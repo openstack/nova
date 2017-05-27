@@ -25,6 +25,7 @@ from nova.api.openstack.compute import assisted_volume_snapshots
 from nova.api.openstack.compute import attach_interfaces
 from nova.api.openstack.compute import availability_zone
 from nova.api.openstack.compute import certificates
+from nova.api.openstack.compute import cloudpipe
 from nova.api.openstack.compute import config_drive
 from nova.api.openstack.compute import console_auth_tokens
 from nova.api.openstack.compute import console_output
@@ -123,6 +124,10 @@ availability_zone_controller = functools.partial(
 
 certificates_controller = functools.partial(
     _create_controller, certificates.CertificatesController, [], [])
+
+
+cloudpipe_controller = functools.partial(
+    _create_controller, cloudpipe.CloudpipeController, [], [])
 
 
 fixed_ips_controller = functools.partial(_create_controller,
@@ -388,6 +393,13 @@ ROUTE_LIST = (
     }),
     ('/os-certificates/{id}', {
         'GET': [certificates_controller, 'show']
+    }),
+    ('/os-cloudpipe', {
+        'GET': [cloudpipe_controller, 'index'],
+        'POST': [cloudpipe_controller, 'create']
+    }),
+    ('/os-cloudpipe/{id}', {
+        'PUT': [cloudpipe_controller, 'update']
     }),
     ('/os-console-auth-tokens/{id}', {
         'GET': [console_auth_tokens_controller, 'show']
