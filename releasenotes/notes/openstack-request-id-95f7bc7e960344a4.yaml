@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    Nova now uses oslo.middleware for request_id processing. This
+    means that there is now a new ``X-OpenStack-Request-ID`` header
+    returned on every request which mirrors the content of the
+    existing ``X-Compute-Request-ID``. The expected existence of this
+    header is signaled by Microversion 2.46. If server version >= 2.46, you
+    can expect to see this header in your results (regardless of
+    microversion requested).

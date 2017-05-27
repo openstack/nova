@@ -23,16 +23,19 @@ from nova.api import compute_req_id
 from nova import test
 
 
+ENV_REQUEST_ID = 'openstack.request_id'
+
+
 class RequestIdTest(test.NoDBTestCase):
     def test_generate_request_id(self):
         @webob.dec.wsgify
         def application(req):
-            return req.environ[compute_req_id.ENV_REQUEST_ID]
+            return req.environ[ENV_REQUEST_ID]
 
         app = compute_req_id.ComputeReqIdMiddleware(application)
         req = webob.Request.blank('/test')
         req_id = context.generate_request_id()
-        req.environ[compute_req_id.ENV_REQUEST_ID] = req_id
+        req.environ[ENV_REQUEST_ID] = req_id
         res = req.get_response(app)
 
         res_id = res.headers.get(compute_req_id.HTTP_RESP_HEADER_REQUEST_ID)

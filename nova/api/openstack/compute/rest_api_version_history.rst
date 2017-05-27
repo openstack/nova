@@ -536,3 +536,12 @@ user documentation.
   The ``createImage`` and ``createBackup`` server action APIs no longer return
   a ``Location`` header in the response for the snapshot image, they now return
   a json dict in the response body with an ``image_id`` key and uuid value.
+
+2.46
+----
+
+  The request_id created for every inbound request is now returned in
+  ``X-OpenStack-Request-ID`` in addition to ``X-Compute-Request-ID``
+  to be consistent with the rest of OpenStack. This is a signaling
+  only microversion, as these header settings happen well before
+  microversion processing.

@@ -49,7 +49,7 @@ oslo.privsep!=1.17.0,>=1.9.0 # Apache-2.0
 oslo.i18n!=3.15.2,>=2.1.0 # Apache-2.0
 oslo.service>=1.10.0 # Apache-2.0
 rfc3986>=0.3.1 # Apache-2.0
-oslo.middleware>=3.10.0 # Apache-2.0
+oslo.middleware>=3.27.0 # Apache-2.0
 psutil>=3.2.2 # BSD
 oslo.versionedobjects>=1.17.0 # Apache-2.0
 os-brick>=1.13.0 # Apache-2.0
