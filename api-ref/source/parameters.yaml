@@ -2362,6 +2362,7 @@ flavor_swap:
   description: |
     The size of a dedicated swap disk that will be allocated, in
     MiB. If 0 (the default), no dedicated swap disk will be created.
+    Currently, the empty string ('') is used to represent 0.
   in: body
   required: true
   type: integer
