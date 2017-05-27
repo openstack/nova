@@ -49,6 +49,7 @@ from nova.api.openstack.compute import instance_usage_audit_log
 from nova.api.openstack.compute import keypairs
 from nova.api.openstack.compute import lock_server
 from nova.api.openstack.compute import migrate_server
+from nova.api.openstack.compute import migrations
 from nova.api.openstack.compute import multinic
 from nova.api.openstack.compute import pause_server
 from nova.api.openstack.compute import quota_sets
@@ -157,6 +158,10 @@ floating_ips_bulk_controller = functools.partial(_create_controller,
 
 instance_usage_audit_log_controller = functools.partial(_create_controller,
     instance_usage_audit_log.InstanceUsageAuditLogController, [], [])
+
+
+migrations_controller = functools.partial(_create_controller,
+    migrations.MigrationsController, [], [])
 
 
 quota_set_controller = functools.partial(_create_controller,
@@ -341,6 +346,9 @@ ROUTE_LIST = (
     ('/os-keypairs/{id}', {
         'GET': [keypairs_controller, 'show'],
         'DELETE': [keypairs_controller, 'delete']
+    }),
+    ('/os-migrations', {
+        'GET': [migrations_controller, 'index']
     }),
     ('/os-quota-sets/{id}', {
         'GET': [quota_set_controller, 'show'],

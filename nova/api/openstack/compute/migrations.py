@@ -19,9 +19,6 @@ from nova.objects import base as obj_base
 from nova.policies import migrations as migrations_policies
 
 
-ALIAS = "os-migrations"
-
-
 class MigrationsController(wsgi.Controller):
     """Controller for accessing migrations in OpenStack API."""
 
@@ -80,20 +77,3 @@ class MigrationsController(wsgi.Controller):
             return {'migrations': self._output(req, migrations, True)}
 
         return {'migrations': self._output(req, migrations)}
-
-
-class Migrations(extensions.V21APIExtensionBase):
-    """Provide data on migrations."""
-    name = "Migrations"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        resources = []
-        resource = extensions.ResourceExtension(ALIAS,
-                                                MigrationsController())
-        resources.append(resource)
-        return resources
-
-    def get_controller_extensions(self):
-        return []
