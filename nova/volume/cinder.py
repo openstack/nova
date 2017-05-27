@@ -288,7 +288,7 @@ class API(object):
                 msg = _("Instance %(instance)s and volume %(vol)s are not in "
                         "the same availability_zone. Instance is in "
                         "%(ins_zone)s. Volume is in %(vol_zone)s") % {
-                            "instance": instance['id'],
+                            "instance": instance.uuid,
                             "vol": volume['id'],
                             'ins_zone': instance_az,
                             'vol_zone': volume['availability_zone']}

@@ -189,6 +189,9 @@ class CinderApiTestCase(test.NoDBTestCase):
                   'attach_status': 'detached',
                   'availability_zone': 'zone2'}
         instance = fake_instance_obj(self.ctx)
+        # Simulate _provision_instances in the compute API; the instance is not
+        # created in the API so the instance will not have an id attribute set.
+        delattr(instance, 'id')
 
         self.assertRaises(exception.InvalidVolume,
                           self.api.check_availability_zone,
