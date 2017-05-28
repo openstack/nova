@@ -24,6 +24,7 @@ from nova.api.openstack.compute import aggregates
 from nova.api.openstack.compute import assisted_volume_snapshots
 from nova.api.openstack.compute import attach_interfaces
 from nova.api.openstack.compute import availability_zone
+from nova.api.openstack.compute import cells
 from nova.api.openstack.compute import certificates
 from nova.api.openstack.compute import cloudpipe
 from nova.api.openstack.compute import config_drive
@@ -121,6 +122,10 @@ assisted_volume_snapshots_controller = functools.partial(
 
 availability_zone_controller = functools.partial(
     _create_controller, availability_zone.AvailabilityZoneController, [], [])
+
+
+cells_controller = functools.partial(
+    _create_controller, cells.CellsController, [], [])
 
 
 certificates_controller = functools.partial(
@@ -396,6 +401,30 @@ ROUTE_LIST = (
     }),
     ('/os-availability-zone/detail', {
         'GET': [availability_zone_controller, 'detail'],
+    }),
+    ('/os-cells', {
+        'POST': [cells_controller, 'create'],
+        'GET': [cells_controller, 'index'],
+    }),
+    ('/os-cells/capacities', {
+        'GET': [cells_controller, 'capacities']
+    }),
+    ('/os-cells/detail', {
+        'GET': [cells_controller, 'detail']
+    }),
+    ('/os-cells/info', {
+        'GET': [cells_controller, 'info']
+    }),
+    ('/os-cells/sync_instances', {
+        'POST': [cells_controller, 'sync_instances']
+    }),
+    ('/os-cells/{id}', {
+        'GET': [cells_controller, 'show'],
+        'PUT': [cells_controller, 'update'],
+        'DELETE': [cells_controller, 'delete']
+    }),
+    ('/os-cells/{id}/capacities', {
+        'GET': [cells_controller, 'capacities']
     }),
     ('/os-certificates', {
         'POST': [certificates_controller, 'create']
