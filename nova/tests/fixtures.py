@@ -1426,7 +1426,7 @@ class PlacementFixture(fixtures.Fixture):
             headers={'x-auth-token': self.token},
             raise_exc=False)
 
-    def _fake_put(self, *args):
+    def _fake_put(self, *args, **kwargs):
         (url, data) = args[1:]
         # NOTE(sdague): using json= instead of data= sets the
         # media type to application/json for us. Placement API is

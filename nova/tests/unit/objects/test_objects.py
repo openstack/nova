@@ -1063,7 +1063,7 @@ object_data = {
     'Aggregate': '1.3-f315cb68906307ca2d1cca84d4753585',
     'AggregateList': '1.2-fb6e19f3c3a3186b04eceb98b5dadbfa',
     'Allocation': '1.2-54f99dfa9651922219c205a7fba69e2f',
-    'AllocationList': '1.2-15ecf022a68ddbb8c2a6739cfc9f8f5e',
+    'AllocationList': '1.3-453a548b961f59804cccd05ae29ba4f7',
     'BandwidthUsage': '1.2-c6e4c779c7f40f2407e3d70022e3cd1c',
     'BandwidthUsageList': '1.2-5fe7475ada6fe62413cbfcc06ec70746',
     'BlockDeviceMapping': '1.18-ad87cece6f84c65f5ec21615755bc6d3',

@@ -12,12 +12,14 @@
 """Placement API handlers for setting and deleting allocations."""
 
 import collections
+import copy
 
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 import webob
 
+from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
 from nova import exception
@@ -68,6 +70,15 @@ ALLOCATION_SCHEMA = {
     "required": ["allocations"],
     "additionalProperties": False
 }
+
+ALLOCATION_SCHEMA_V1_8 = copy.deepcopy(ALLOCATION_SCHEMA)
+ALLOCATION_SCHEMA_V1_8['properties']['project_id'] = {'type': 'string',
+                                                      'minLength': 1,
+                                                      'maxLength': 255}
+ALLOCATION_SCHEMA_V1_8['properties']['user_id'] = {'type': 'string',
+                                                   'minLength': 1,
+                                                   'maxLength': 255}
+ALLOCATION_SCHEMA_V1_8['required'].extend(['project_id', 'user_id'])
 
 
 def _allocations_dict(allocations, key_fetcher, resource_provider=None):
@@ -197,12 +208,10 @@ def list_for_resource_provider(req):
     return req.response
 
 
-@wsgi_wrapper.PlacementWsgify
-@util.require_content('application/json')
-def set_allocations(req):
+def _set_allocations(req, schema):
     context = req.environ['placement.context']
     consumer_uuid = util.wsgi_path_item(req.environ, 'consumer_uuid')
-    data = util.extract_json(req.body, ALLOCATION_SCHEMA)
+    data = util.extract_json(req.body, schema)
     allocation_data = data['allocations']
 
     # If the body includes an allocation for a resource provider
@@ -229,7 +238,12 @@ def set_allocations(req):
                 used=resources[resource_class])
             allocation_objects.append(allocation)
 
-    allocations = objects.AllocationList(context, objects=allocation_objects)
+    allocations = objects.AllocationList(
+        context,
+        objects=allocation_objects,
+        project_id=data.get('project_id'),
+        user_id=data.get('user_id'),
+    )
 
     try:
         allocations.create_all()
@@ -255,6 +269,20 @@ def set_allocations(req):
     req.response.status = 204
     req.response.content_type = None
     return req.response
+
+
+@wsgi_wrapper.PlacementWsgify
+@microversion.version_handler('1.0', '1.7')
+@util.require_content('application/json')
+def set_allocations(req):
+    return _set_allocations(req, ALLOCATION_SCHEMA)
+
+
+@wsgi_wrapper.PlacementWsgify  # noqa
+@microversion.version_handler('1.8')
+@util.require_content('application/json')
+def set_allocations(req):
+    return _set_allocations(req, ALLOCATION_SCHEMA_V1_8)
 
 
 @wsgi_wrapper.PlacementWsgify

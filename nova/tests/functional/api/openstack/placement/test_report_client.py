@@ -76,6 +76,8 @@ class SchedulerReportClientTests(test.TestCase):
         self.instance_uuid = uuids.inst
         self.instance = objects.Instance(
             uuid=self.instance_uuid,
+            project_id = uuids.project,
+            user_id = uuids.user,
             flavor=objects.Flavor(root_gb=10,
                                   swap=1,
                                   ephemeral_gb=100,
