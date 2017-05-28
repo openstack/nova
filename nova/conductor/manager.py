@@ -883,12 +883,16 @@ class ComputeTaskManager(base.Base):
         updates = {'vm_state': vm_states.ERROR, 'task_state': None}
         legacy_spec = request_spec.to_legacy_request_spec_dict()
         for instance in instances_by_uuid.values():
-            with obj_target_cell(instance, cell0):
+            with obj_target_cell(instance, cell0) as cctxt:
                 instance.create()
+                # Use the context targeted to cell0 here since the instance is
+                # now in cell0.
                 self._set_vm_state_and_notify(
-                    context, instance.uuid, 'build_instances', updates,
+                    cctxt, instance.uuid, 'build_instances', updates,
                     exc, legacy_spec)
                 try:
+                    # We don't need the cell0-targeted context here because the
+                    # instance mapping is in the API DB.
                     inst_mapping = \
                         objects.InstanceMapping.get_by_instance_uuid(
                             context, instance.uuid)
@@ -988,7 +992,7 @@ class ComputeTaskManager(base.Base):
             inst_mapping.save()
 
             if not self._delete_build_request(
-                    context, build_request, instance, cell, instance_bdms):
+                    build_request, instance, cell, instance_bdms):
                 # The build request was deleted before/during scheduling so
                 # the instance is gone and we don't have anything to build for
                 # this one.
@@ -1013,15 +1017,13 @@ class ComputeTaskManager(base.Base):
                     host=host['host'], node=host['nodename'],
                     limits=host['limits'])
 
-    def _delete_build_request(self, context, build_request, instance, cell,
+    def _delete_build_request(self, build_request, instance, cell,
                               instance_bdms):
         """Delete a build request after creating the instance in the cell.
 
         This method handles cleaning up the instance in case the build request
         is already deleted by the time we try to delete it.
 
-        :param context: the context of the request being handled
-        :type context: nova.context.RequestContext'
         :param build_request: the build request to delete
         :type build_request: nova.objects.BuildRequest
         :param instance: the instance created from the build_request
@@ -1039,9 +1041,9 @@ class ComputeTaskManager(base.Base):
             # This indicates an instance deletion request has been
             # processed, and the build should halt here. Clean up the
             # bdm and instance record.
-            with obj_target_cell(instance, cell):
+            with obj_target_cell(instance, cell) as cctxt:
                 with compute_utils.notify_about_instance_delete(
-                        self.notifier, context, instance):
+                        self.notifier, cctxt, instance):
                     try:
                         instance.destroy()
                     except exception.InstanceNotFound:
