@@ -1057,10 +1057,15 @@ class ResourceTracker(object):
         for instance_uuid in allocations_to_delete:
             # Allocations related to instances being scheduled should not be
             # deleted if we already wrote the allocation previously.
-            instance = objects.Instance.get_by_uuid(context, instance_uuid,
-                                                    expected_attrs=[])
-            if not instance.host:
-                continue
+            try:
+                instance = objects.Instance.get_by_uuid(context, instance_uuid,
+                                                        expected_attrs=[])
+                if not instance.host:
+                    continue
+            except exception.InstanceNotFound:
+                # The instance is gone, so we definitely want to
+                # remove allocations associated with it.
+                pass
             LOG.warning('Deleting stale allocation for instance %s',
                         instance_uuid)
             self.reportclient.delete_allocation_for_instance(instance_uuid)
