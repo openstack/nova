@@ -1,0 +1,48 @@
+# Verify different error messages was attempting to create a
+# resource provider with a duplicated name or UUID.
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        accept: application/json
+        content-type: application/json
+
+tests:
+- name: post new resource provider
+  POST: /resource_providers
+  data:
+      name: shared disk
+      uuid: $ENVIRON['RP_UUID']
+  status: 201
+
+- name: same uuid different name
+  POST: /resource_providers
+  data:
+      name: shared disk X
+      uuid: $ENVIRON['RP_UUID']
+  status: 409
+  response_strings:
+      - "Conflicting resource provider uuid: $ENVIRON['RP_UUID']"
+
+- name: same name different uuid
+  POST: /resource_providers
+  data:
+      name: shared disk
+      uuid: 2c2059d8-005c-4f5c-82b1-b1701b1a29b7
+  status: 409
+  response_strings:
+      - 'Conflicting resource provider name: shared disk'
+
+# On this one, don't test for which field was a duplicate because
+# that depends on how the database reports columns.
+- name: same name same uuid
+  POST: /resource_providers
+  data:
+      name: $ENVIRON['RP_NAME']
+      uuid: $ENVIRON['RP_UUID']
+  status: 409
+  response_strings:
+      - Conflicting resource provider

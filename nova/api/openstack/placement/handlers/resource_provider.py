@@ -190,9 +190,14 @@ def create_resource_provider(req):
             context, name=data['name'], uuid=uuid)
         resource_provider.create()
     except db_exc.DBDuplicateEntry as exc:
+        # Whether exc.columns has one or two entries (in the event
+        # of both fields being duplicates) appears to be database
+        # dependent, so going with the complete solution here.
+        duplicate = ', '.join(['%s: %s' % (column, data[column])
+                          for column in exc.columns])
         raise webob.exc.HTTPConflict(
-            _('Conflicting resource provider %(name)s already exists.') %
-            {'name': data['name']})
+            _('Conflicting resource provider %(duplicate)s already exists.') %
+            {'duplicate': duplicate})
     except exception.ObjectActionError as exc:
         raise webob.exc.HTTPBadRequest(
             _('Unable to create resource provider %(rp_uuid)s: %(error)s') %
