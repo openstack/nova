@@ -29,33 +29,6 @@ class TestOsloCache(test.NoDBTestCase):
         self.assertIsNotNone(region)
 
     @mock.patch('dogpile.cache.region.CacheRegion.configure')
-    def test_get_client(self, mock_cacheregion):
-        self.assertIsNotNone(
-                cache_utils.get_client(expiration_time=60))
-
-        self.flags(group='cache', enabled=True)
-        self.assertIsNotNone(
-                cache_utils.get_client(expiration_time=60))
-
-        self.flags(group='cache', enabled=False)
-        client = cache_utils.get_client(expiration_time=60)
-        self.assertIsNotNone(client.region)
-
-        mock_cacheregion.assert_has_calls(
-                [mock.call('oslo_cache.dict',
-                           arguments={'expiration_time': 60},
-                           expiration_time=60),
-                 mock.call('dogpile.cache.null',
-                           _config_argument_dict=mock.ANY,
-                           _config_prefix='cache.oslo.arguments.',
-                           expiration_time=60,
-                           wrap=None),
-                 mock.call('oslo_cache.dict',
-                           arguments={'expiration_time': 60},
-                           expiration_time=60)],
-        )
-
-    @mock.patch('dogpile.cache.region.CacheRegion.configure')
     def test_get_custom_cache_region(self, mock_cacheregion):
         self.assertRaises(RuntimeError,
                           cache_utils._get_custom_cache_region)
@@ -82,9 +55,5 @@ class TestOsloCache(test.NoDBTestCase):
         self.assertIsNotNone(
                 cache_utils.get_memcached_client(expiration_time=60))
 
-        mock_cacheregion.assert_has_calls(
-                [mock.call('dogpile.cache.null',
-                           _config_argument_dict=mock.ANY,
-                           _config_prefix='cache.oslo.arguments.',
-                           expiration_time=60, wrap=None)]
-        )
+        methods_called = [a[0] for n, a, k in mock_cacheregion.mock_calls]
+        self.assertEqual(['dogpile.cache.null'], methods_called)
