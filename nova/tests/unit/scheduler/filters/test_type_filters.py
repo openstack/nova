@@ -12,6 +12,8 @@
 
 import mock
 
+import six
+
 from nova import objects
 from nova.scheduler.filters import type_filter
 from nova import test
@@ -22,7 +24,12 @@ from nova.tests import uuidsentinel as uuids
 class TestTypeFilter(test.NoDBTestCase):
 
     def test_type_filter(self):
-        self.filt_cls = type_filter.TypeAffinityFilter()
+        with mock.patch.object(type_filter.LOG, 'warning') as mock_warning:
+            self.filt_cls = type_filter.TypeAffinityFilter()
+        # make sure we logged a deprecation warning
+        self.assertEqual(1, mock_warning.call_count)
+        self.assertIn('TypeAffinityFilter is deprecated for removal',
+                      six.text_type(mock_warning.call_args_list[0][0]))
         host = fakes.FakeHostState('fake_host', 'fake_node', {})
         host.instances = {}
         target_id = 1
