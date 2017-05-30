@@ -1,0 +1,91 @@
+# Copyright 2017 Huawei Technologies Co.,LTD.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+from nova import test
+from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional.api import client as api_client
+from nova.tests.functional import integrated_helpers
+from nova.tests.unit import cast_as_call
+from nova.tests.unit.image import fake as image_fake
+from nova.tests.unit import policy_fixture
+
+
+class ServerListLimitMarkerCell0Test(test.TestCase,
+                                     integrated_helpers.InstanceHelperMixin):
+    """Regression test for bug 1689692 introduced in Ocata.
+
+    The user specifies a limit which is greater than the number of instances
+    left in the page and the marker starts in the cell0 database. What happens
+    is we don't null out the marker but we still have more limit so we continue
+    to page in the cell database(s) but the marker isn't found in any of those,
+    since it's already found in cell0, so it eventually raises a MarkerNotFound
+    error.
+    """
+
+    def setUp(self):
+        super(ServerListLimitMarkerCell0Test, self).setUp()
+        self.useFixture(policy_fixture.RealPolicyFixture())
+        # The NeutronFixture is needed to stub out validate_networks in API.
+        self.useFixture(nova_fixtures.NeutronFixture(self))
+        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
+            api_version='v2.1'))
+        self.api = api_fixture.api
+
+        # the image fake backend needed for image discovery
+        image_fake.stub_out_image_service(self)
+        self.addCleanup(image_fake.FakeImageService_reset)
+        # We have to get the image before we use 2.latest otherwise we'll get
+        # a 404 on the /images proxy API because of 2.36.
+        self.image_id = self.api.get_images()[0]['id']
+        # Use the latest microversion available to make sure something does
+        # not regress in new microversions; cap as necessary.
+        self.api.microversion = 'latest'
+
+        self.start_service('conductor')
+        self.flags(driver='chance_scheduler', group='scheduler')
+        self.start_service('scheduler')
+        # We don't start the compute service because we want NoValidHost so
+        # all of the instances go into ERROR state and get put into cell0.
+        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+
+    def test_list_servers_marker_in_cell0_more_limit(self):
+        """Creates three servers, then lists them with a marker on the first
+        and a limit of 3 which is more than what's left to page on (2) but
+        it shouldn't fail, it should just give the other two back. But due
+        to the bug we'll get a 400 since the marker isn't in cell1.
+        """
+        # create three test servers
+        for x in range(3):
+            server = self.api.post_server(
+                dict(server=self._build_minimal_create_server_request(
+                    self.api, 'test-list-server-limit%i' % x, self.image_id,
+                    networks='none')))
+            self.addCleanup(self.api.delete_server, server['id'])
+            self._wait_for_state_change(self.api, server, 'ERROR')
+
+        servers = self.api.get_servers()
+        self.assertEqual(3, len(servers))
+
+        # Take the first server and user that as our marker.
+        marker = servers[0]['id']
+        # Since we're paging after the first server as our marker, there are
+        # only two left so specifying three should just return two. However,
+        # due to the bug, we're going to get a MarkerNotFound error when trying
+        # to page to the cell1 database and the marker isn't there. Assert
+        # we get two servers back once the bug is fixed.
+        ex = self.assertRaises(api_client.OpenStackApiException,
+                               self.api.get_servers,
+                               search_opts=dict(marker=marker, limit=3))
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn('marker [%s] not found' % marker, ex.message)
