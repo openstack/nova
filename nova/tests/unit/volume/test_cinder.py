@@ -284,6 +284,38 @@ class CinderApiTestCase(test.NoDBTestCase):
                                                     mode='ro')
 
     @mock.patch('nova.volume.cinder.cinderclient')
+    def test_attachment_create(self, mock_cinderclient):
+        """Tests the happy path for creating a volume attachment."""
+        values = {
+            'id': uuids.attachment_id,
+            'status': 'reserved',
+            'instance': uuids.instance_id,
+            'volume_id': uuids.volume_id,
+            'attached_at': timeutils.utcnow(),
+            'detached_at': None,
+            'attach_mode': 'rw',
+            'connection_info': None
+        }
+        fake_attachment = mock.Mock(
+            autospec='cinderclient.v3.attachments.VolumeAttachment', **values)
+        mock_cinderclient.return_value.attachments.create.return_value = (
+            fake_attachment)
+        result = self.api.attachment_create(
+            self.ctx, uuids.volume_id, uuids.instance_id)
+        self.assertEqual(fake_attachment, result)
+        mock_cinderclient.return_value.attachments.create.\
+            assert_called_once_with(uuids.volume_id, None, uuids.instance_id)
+
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_attachment_create_volume_not_found(self, mock_cinderclient):
+        """Tests that the translate_volume_exception decorator is used."""
+        # fake out the volume not found error
+        mock_cinderclient.return_value.attachments.create.side_effect = (
+            cinder_exception.NotFound(404))
+        self.assertRaises(exception.VolumeNotFound, self.api.attachment_create,
+                          self.ctx, uuids.volume_id, uuids.instance_id)
+
+    @mock.patch('nova.volume.cinder.cinderclient')
     def test_attachment_delete(self, mock_cinderclient):
         mock_attachments = mock.MagicMock()
         mock_cinderclient.return_value = \

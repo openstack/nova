@@ -495,6 +495,42 @@ class API(object):
              'progress': '90%'}
         )
 
+    @translate_volume_exception
+    def attachment_create(self, context, volume_id, instance_id,
+                          connector=None):
+        """Create a volume attachment. This requires microversion >= 3.27.
+
+        :param context: The nova request context.
+        :param volume_id: UUID of the volume on which to create the attachment.
+        :param instance_id: UUID of the instance to which the volume will be
+            attached.
+        :param connector: host connector dict; if None, the attachment will
+            be 'reserved' but not yet attached.
+        :returns: cinderclient.v3.attachments.VolumeAttachment object
+            representing the new volume attachment with attributes::
+
+                'id': attachment.id,    # this is a uuid
+                'status': attachment.attach_status,
+                'instance': attachment.instance_uuid,
+                'volume_id': attachment.volume_id,
+                'attached_at': cls._normalize(attachment.attach_time),
+                'detached_at': cls._normalize(attachment.detach_time),
+                'attach_mode': attachment.attach_mode,
+                'connection_info': \
+                    getattr(attachment, 'connection_info', None)
+        """
+        try:
+            return cinderclient(context).attachments.create(
+                volume_id, connector, instance_id)
+        except cinder_exception.ClientException as ex:
+            with excutils.save_and_reraise_exception():
+                LOG.error(('Create attachment failed for volume '
+                           '%(volume_id)s. Error: %(msg)s Code: %(code)s'),
+                          {'volume_id': volume_id,
+                           'msg': six.text_type(ex),
+                           'code': getattr(ex, 'code', None)},
+                          instance_uuid=instance_id)
+
     @translate_attachment_exception
     def attachment_delete(self, context, attachment_id):
         try:
