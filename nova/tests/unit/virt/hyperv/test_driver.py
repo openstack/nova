@@ -162,7 +162,7 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
         self.driver.destroy(
             mock.sentinel.context, mock.sentinel.instance,
             mock.sentinel.network_info, mock.sentinel.block_device_info,
-            mock.sentinel.destroy_disks, mock.sentinel.migrate_data)
+            mock.sentinel.destroy_disks)
 
         self.driver._vmops.destroy.assert_called_once_with(
             mock.sentinel.instance, mock.sentinel.network_info,

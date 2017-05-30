@@ -167,7 +167,7 @@ class PowerVMDriver(driver.ComputeDriver):
         tf_base.run(flow_spawn, instance=instance)
 
     def destroy(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True, migrate_data=None):
+                destroy_disks=True):
         """Destroy the specified instance from the Hypervisor.
 
         If the instance is not found (for example if networking failed), this
@@ -180,7 +180,6 @@ class PowerVMDriver(driver.ComputeDriver):
         :param block_device_info: Information about block devices that should
                                   be detached from the instance.
         :param destroy_disks: Indicates if disks should be destroyed
-        :param migrate_data: implementation specific params
         """
         # TODO(thorst, efried) Add resize checks for destroy
         self._log_operation('destroy', instance)

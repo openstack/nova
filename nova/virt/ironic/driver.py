@@ -1024,7 +1024,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         timer.start(interval=CONF.ironic.api_retry_interval).wait()
 
     def destroy(self, context, instance, network_info,
-                block_device_info=None, destroy_disks=True, migrate_data=None):
+                block_device_info=None, destroy_disks=True):
         """Destroy the specified instance, if it can be found.
 
         :param context: The security context.
@@ -1034,8 +1034,6 @@ class IronicDriver(virt_driver.ComputeDriver):
             information. Ignored by this driver.
         :param destroy_disks: Indicates if disks should be
             destroyed. Ignored by this driver.
-        :param migrate_data: implementation specific params.
-            Ignored by this driver.
         """
         LOG.debug('Destroy called for instance', instance=instance)
         try:
