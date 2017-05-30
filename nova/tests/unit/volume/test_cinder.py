@@ -316,6 +316,49 @@ class CinderApiTestCase(test.NoDBTestCase):
                           self.ctx, uuids.volume_id, uuids.instance_id)
 
     @mock.patch('nova.volume.cinder.cinderclient')
+    def test_attachment_update(self, mock_cinderclient):
+        """Tests the happy path for updating a volume attachment."""
+        values = {
+            'id': uuids.attachment_id,
+            'status': 'attached',
+            'instance': uuids.instance_id,
+            'volume_id': uuids.volume_id,
+            'attached_at': timeutils.utcnow(),
+            'detached_at': None,
+            'attach_mode': 'rw',
+            'connection_info': {'data': {'foo': 'bar'}}
+        }
+        fake_attachment = mock.Mock(
+            autospec='cinderclient.v3.attachments.VolumeAttachment', **values)
+        mock_cinderclient.return_value.attachments.update.return_value = (
+            fake_attachment)
+        result = self.api.attachment_update(
+            self.ctx, uuids.attachment_id, connector={'host': 'fake-host'})
+        self.assertEqual(fake_attachment, result)
+
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_attachment_update_attachment_not_found(self, mock_cinderclient):
+        """Tests that the translate_attachment_exception decorator is used."""
+        # fake out the volume not found error
+        mock_cinderclient.return_value.attachments.update.side_effect = (
+            cinder_exception.NotFound(404))
+        self.assertRaises(exception.VolumeAttachmentNotFound,
+                          self.api.attachment_update,
+                          self.ctx, uuids.attachment_id,
+                          connector={'host': 'fake-host'})
+
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_attachment_update_attachment_no_connector(self,
+                                                       mock_cinderclient):
+        """Tests that the translate_cinder_exception decorator is used."""
+        # fake out the volume bad request error
+        mock_cinderclient.return_value.attachments.update.side_effect = (
+            cinder_exception.BadRequest(400))
+        self.assertRaises(exception.InvalidInput,
+                          self.api.attachment_update,
+                          self.ctx, uuids.attachment_id, connector=None)
+
+    @mock.patch('nova.volume.cinder.cinderclient')
     def test_attachment_delete(self, mock_cinderclient):
         mock_attachments = mock.MagicMock()
         mock_cinderclient.return_value = \

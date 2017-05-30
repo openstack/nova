@@ -532,6 +532,30 @@ class API(object):
                           instance_uuid=instance_id)
 
     @translate_attachment_exception
+    def attachment_update(self, context, attachment_id, connector):
+        """Updates the connector on the volume attachment. An attachment
+        without a connector is considered reserved but not fully attached.
+
+        :param context: The nova request context.
+        :param attachment_id: UUID of the volume attachment to update.
+        :param connector: host connector dict. This is required when updating
+            a volume attachment. To terminate a connection, the volume
+            attachment for that connection must be deleted.
+        :returns: cinderclient.v3.attachments.VolumeAttachment object
+            representing the updated volume attachment.
+        """
+        try:
+            return cinderclient(context).attachments.update(
+                attachment_id, connector)
+        except cinder_exception.ClientException as ex:
+            with excutils.save_and_reraise_exception():
+                LOG.error(('Update attachment failed for attachment '
+                           '%(id)s. Error: %(msg)s Code: %(code)s'),
+                          {'id': attachment_id,
+                           'msg': six.text_type(ex),
+                           'code': getattr(ex, 'code', None)})
+
+    @translate_attachment_exception
     def attachment_delete(self, context, attachment_id):
         try:
             cinderclient(
