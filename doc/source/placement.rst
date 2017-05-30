@@ -33,24 +33,27 @@ provides a set of standard resource classes (for example `DISK_GB`,
 `MEMORY_MB`, and `VCPU`) and provides the ability to define custom resource
 classes as needed.
 
+Each resource provider may also have a set of traits which describe qualitative
+aspects of the resource provider. Traits describe an aspect of a resource
+provider that cannot itself be consumed but a workload may wish to specify. For
+example, available disk may be solid state drives (SSD).
+
 References
 ~~~~~~~~~~
 
-The following specifications are based on Newton work and while they present
-the idea or overview for the design, implementation details may have changed
-or be partially complete at this time.
+The following specifications represent the stages of design and development of
+resource providers and the Placement service. Implementation details may have
+changed or be partially complete at this time.
 
 * `Generic Resource Pools <https://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/generic-resource-pools.html>`_
 * `Compute Node Inventory <https://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/compute-node-inventory-newton.html>`_
 * `Resource Provider Allocations <https://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/resource-providers-allocations.html>`_
 * `Resource Provider Base Models <https://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/resource-providers.html>`_
-
-The following specifications are based on Ocata work and are subject to change.
-
-* `Nested Resource Providers <https://review.openstack.org/#/c/386710/>`_
-* `Custom Resource Classes <https://review.openstack.org/#/c/312696/>`_
-* `Scheduler Filters in DB <https://review.openstack.org/#/c/300178/>`_
-
+* `Nested Resource Providers <http://specs.openstack.org/openstack/nova-specs/specs/pike/approved/nested-resource-providers.html>`_
+* `Custom Resource Classes <http://specs.openstack.org/openstack/nova-specs/specs/ocata/implemented/custom-resource-classes.html>`_
+* `Scheduler Filters in DB <http://specs.openstack.org/openstack/nova-specs/specs/ocata/implemented/resource-providers-scheduler-db-filters.html>`_
+* `Scheduler claiming resources to the Placement API <http://specs.openstack.org/openstack/nova-specs/specs/pike/approved/placement-claims.html>`_
+* `The Traits API - Manage Traits with ResourceProvider <http://specs.openstack.org/openstack/nova-specs/specs/pike/approved/resource-provider-traits.html>`_
 
 Deployment
 ==========
