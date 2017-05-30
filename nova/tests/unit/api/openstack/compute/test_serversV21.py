@@ -3209,7 +3209,7 @@ class ServersControllerCreateTest(test.TestCase):
             self.assertEqual(group.uuid, fake_group.uuid)
             self.assertEqual(user_id,
                              self.req.environ['nova.context'].user_id)
-            return 10
+            return {'user': {'server_group_members': 10}}
 
         def fake_limit_check(context, **kwargs):
             if 'server_group_members' in kwargs:
@@ -3218,7 +3218,7 @@ class ServersControllerCreateTest(test.TestCase):
         def fake_instance_destroy(context, uuid, constraint):
             return fakes.stub_instance(1)
 
-        self.stubs.Set(fakes.QUOTAS, 'count', fake_count)
+        self.stubs.Set(fakes.QUOTAS, 'count_as_dict', fake_count)
         self.stubs.Set(fakes.QUOTAS, 'limit_check', fake_limit_check)
         self.stub_out('nova.db.instance_destroy', fake_instance_destroy)
         self.body['os:scheduler_hints'] = {'group': fake_group.uuid}

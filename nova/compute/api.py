@@ -1057,13 +1057,14 @@ class API(base.Base):
 
                 if instance_group:
                     if check_server_group_quota:
-                        count = objects.Quotas.count(context,
+                        count = objects.Quotas.count_as_dict(context,
                                              'server_group_members',
                                              instance_group,
                                              context.user_id)
+                        count_value = count['user']['server_group_members']
                         try:
-                            objects.Quotas.limit_check(context,
-                                               server_group_members=count + 1)
+                            objects.Quotas.limit_check(
+                                context, server_group_members=count_value + 1)
                         except exception.OverQuota:
                             msg = _("Quota exceeded, too many servers in "
                                     "group")
@@ -4861,10 +4862,11 @@ class KeypairAPI(base.Base):
                 reason=_('Keypair name must be string and between '
                          '1 and 255 characters long'))
 
-        count = objects.Quotas.count(context, 'key_pairs', user_id)
+        count = objects.Quotas.count_as_dict(context, 'key_pairs', user_id)
+        count_value = count['user']['key_pairs']
 
         try:
-            objects.Quotas.limit_check(context, key_pairs=count + 1)
+            objects.Quotas.limit_check(context, key_pairs=count_value + 1)
         except exception.OverQuota:
             raise exception.KeypairLimitExceeded()
 
@@ -5189,9 +5191,11 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         this function is written to support both.
         """
 
-        count = objects.Quotas.count(context, 'security_group_rules', id)
+        count = objects.Quotas.count_as_dict(context,
+                                             'security_group_rules', id)
+        count_value = count['user']['security_group_rules']
         try:
-            projected = count + len(vals)
+            projected = count_value + len(vals)
             objects.Quotas.limit_check(context, security_group_rules=projected)
         except exception.OverQuota:
             msg = _("Quota exceeded, too many security group rules.")

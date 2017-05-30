@@ -15,6 +15,7 @@
 import mock
 
 from nova import context
+from nova import exception
 from nova.objects import quotas as quotas_obj
 from nova import quota
 from nova import test
@@ -152,6 +153,131 @@ class _TestQuotasObject(object):
                                        'foo', 10, user_id='user')
         mock_update.assert_called_once_with(self.context, 'fake-project',
                                             'foo', 10, user_id='user')
+
+    @mock.patch.object(QUOTAS, 'count_as_dict')
+    def test_count(self, mock_count):
+        # key_pairs can't actually be counted across a project, this is just
+        # for testing.
+        mock_count.return_value = {'project': {'key_pairs': 5},
+                                   'user': {'key_pairs': 4}}
+        count = quotas_obj.Quotas.count(self.context, 'key_pairs', 'a-user')
+        self.assertEqual(4, count)
+
+        # key_pairs can't actually be counted across a project, this is just
+        # for testing.
+        mock_count.return_value = {'project': {'key_pairs': 5}}
+        count = quotas_obj.Quotas.count(self.context, 'key_pairs', 'a-user')
+        self.assertEqual(5, count)
+
+        mock_count.return_value = {'user': {'key_pairs': 3}}
+        count = quotas_obj.Quotas.count(self.context, 'key_pairs', 'a-user')
+        self.assertEqual(3, count)
+
+    @mock.patch('nova.objects.Quotas.count_as_dict')
+    def test_check_deltas(self, mock_count):
+        self.flags(key_pairs=3, group='quota')
+        self.flags(server_group_members=3, group='quota')
+
+        def fake_count(context, resource):
+            if resource in ('key_pairs', 'server_group_members'):
+                return {'project': {'key_pairs': 2, 'server_group_members': 2},
+                        'user': {'key_pairs': 1, 'server_group_members': 2}}
+            else:
+                return {'user': {resource: 2}}
+
+        mock_count.side_effect = fake_count
+        deltas = {'key_pairs': 1,
+                  'server_group_members': 1,
+                  'security_group_rules': 1}
+        project_id = 'fake-other-project'
+        user_id = 'fake-other-user'
+        quotas_obj.Quotas.check_deltas(self.context, deltas,
+                                       check_project_id=project_id,
+                                       check_user_id=user_id)
+        # Should be called twice: once for key_pairs/server_group_members,
+        # once for security_group_rules.
+        self.assertEqual(2, mock_count.call_count)
+        call1 = mock.call(self.context, 'key_pairs')
+        call2 = mock.call(self.context, 'server_group_members')
+        call3 = mock.call(self.context, 'security_group_rules')
+        self.assertTrue(call1 in mock_count.mock_calls or
+                        call2 in mock_count.mock_calls)
+        self.assertIn(call3, mock_count.mock_calls)
+
+    @mock.patch('nova.objects.Quotas.count_as_dict')
+    def test_check_deltas_zero(self, mock_count):
+        # This will test that we will raise OverQuota if given a zero delta if
+        # an object creation has put us over the allowed quota.
+        # This is for the scenario where we recheck quota and delete an object
+        # if we have gone over quota during a race.
+        self.flags(key_pairs=3, group='quota')
+        self.flags(server_group_members=3, group='quota')
+
+        def fake_count(context, resource):
+            return {'user': {resource: 4}}
+
+        mock_count.side_effect = fake_count
+        deltas = {'key_pairs': 0, 'server_group_members': 0}
+        project_id = 'fake-other-project'
+        user_id = 'fake-other-user'
+        self.assertRaises(exception.OverQuota, quotas_obj.Quotas.check_deltas,
+                          self.context, deltas,
+                          check_project_id=project_id,
+                          check_user_id=user_id)
+        # Should be called twice, once for key_pairs, once for
+        # server_group_members
+        self.assertEqual(2, mock_count.call_count)
+        call1 = mock.call(self.context, 'key_pairs')
+        call2 = mock.call(self.context, 'server_group_members')
+        mock_count.assert_has_calls([call1, call2], any_order=True)
+
+    @mock.patch('nova.objects.Quotas.count_as_dict')
+    def test_check_deltas_negative(self, mock_count):
+        """Test check_deltas with a negative delta.
+
+        Negative deltas probably won't be used going forward for countable
+        resources because there are no usage records to decrement and there
+        won't be quota operations done when deleting resources. When resources
+        are deleted, they will no longer be reflected in the count.
+        """
+        self.flags(key_pairs=3, group='quota')
+        mock_count.return_value = {'user': {'key_pairs': 4}}
+        deltas = {'key_pairs': -1}
+        # Should pass because the delta makes 3 key_pairs
+        quotas_obj.Quotas.check_deltas(self.context, deltas, 'a-user',
+                                       something='something')
+        # args for the count function should get passed along
+        mock_count.assert_called_once_with(self.context, 'key_pairs', 'a-user',
+                                           something='something')
+
+    @mock.patch('nova.objects.Quotas.count_as_dict')
+    @mock.patch('nova.objects.Quotas.limit_check_project_and_user')
+    def test_check_deltas_limit_check_scoping(self, mock_check, mock_count):
+        # check_project_id and check_user_id kwargs should get passed along to
+        # limit_check_project_and_user()
+        mock_count.return_value = {'project': {'foo': 5}, 'user': {'foo': 1}}
+        deltas = {'foo': 1}
+
+        quotas_obj.Quotas.check_deltas(self.context, deltas, 'a-project')
+        mock_check.assert_called_once_with(self.context,
+                                           project_values={'foo': 6},
+                                           user_values={'foo': 2})
+
+        mock_check.reset_mock()
+        quotas_obj.Quotas.check_deltas(self.context, deltas, 'a-project',
+                                       check_project_id='a-project')
+        mock_check.assert_called_once_with(self.context,
+                                           project_values={'foo': 6},
+                                           user_values={'foo': 2},
+                                           project_id='a-project')
+
+        mock_check.reset_mock()
+        quotas_obj.Quotas.check_deltas(self.context, deltas, 'a-project',
+                                       check_user_id='a-user')
+        mock_check.assert_called_once_with(self.context,
+                                           project_values={'foo': 6},
+                                           user_values={'foo': 2},
+                                           user_id='a-user')
 
 
 class TestQuotasObject(_TestQuotasObject, test_objects._LocalTest):

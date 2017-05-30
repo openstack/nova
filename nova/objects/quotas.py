@@ -12,8 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
 
 from nova import db
+from nova import exception
 from nova.objects import base
 from nova.objects import fields
 from nova import quota
@@ -51,7 +53,9 @@ class Quotas(base.NovaObject):
     # Version 1.0: initial version
     # Version 1.1: Added create_limit() and update_limit()
     # Version 1.2: Added limit_check() and count()
-    VERSION = '1.2'
+    # Version 1.3: Added check_deltas(), limit_check_project_and_user(),
+    #              and count_as_dict()
+    VERSION = '1.3'
 
     fields = {
         'reservations': fields.ListOfStringsField(nullable=True),
@@ -123,10 +127,83 @@ class Quotas(base.NovaObject):
             context, project_id=project_id, user_id=user_id, **values)
 
     @base.remotable_classmethod
+    def limit_check_project_and_user(cls, context, project_values=None,
+                                     user_values=None, project_id=None,
+                                     user_id=None):
+        """Check values against quota limits."""
+        return quota.QUOTAS.limit_check_project_and_user(context,
+            project_values=project_values, user_values=user_values,
+            project_id=project_id, user_id=user_id)
+
+    # NOTE(melwitt): This can be removed once no old code can call count().
+    @base.remotable_classmethod
     def count(cls, context, resource, *args, **kwargs):
         """Count a resource."""
-        return quota.QUOTAS.count(
+        count = quota.QUOTAS.count_as_dict(context, resource, *args, **kwargs)
+        key = 'user' if 'user' in count else 'project'
+        return count[key][resource]
+
+    @base.remotable_classmethod
+    def count_as_dict(cls, context, resource, *args, **kwargs):
+        """Count a resource and return a dict."""
+        return quota.QUOTAS.count_as_dict(
             context, resource, *args, **kwargs)
+
+    @base.remotable_classmethod
+    def check_deltas(cls, context, deltas, *count_args, **count_kwargs):
+        """Check usage delta against quota limits.
+
+        This does a Quotas.count_as_dict() followed by a
+        Quotas.limit_check_project_and_user() using the provided deltas.
+
+        :param context: The request context, for access checks
+        :param deltas: A dict of {resource_name: delta, ...} to check against
+                       the quota limits
+        :param count_args: Optional positional arguments to pass to
+                           count_as_dict()
+        :param count_kwargs: Optional keyword arguments to pass to
+                             count_as_dict()
+        :param check_project_id: Optional project_id for scoping the limit
+                                 check to a different project than in the
+                                 context
+        :param check_user_id: Optional user_id for scoping the limit check to a
+                              different user than in the context
+        :raises: exception.OverQuota if the limit check exceeds the quota
+                 limits
+        """
+        # We can't do f(*args, kw=None, **kwargs) in python 2.x
+        check_project_id = count_kwargs.pop('check_project_id', None)
+        check_user_id = count_kwargs.pop('check_user_id', None)
+
+        check_kwargs = collections.defaultdict(dict)
+        for resource in deltas:
+            # If we already counted a resource in a batch count, avoid
+            # unnecessary re-counting and avoid creating empty dicts in
+            # the defaultdict.
+            if (resource in check_kwargs.get('project_values', {}) or
+                    resource in check_kwargs.get('user_values', {})):
+                continue
+            count = cls.count_as_dict(context, resource, *count_args,
+                                      **count_kwargs)
+            for res in count.get('project', {}):
+                if res in deltas:
+                    total = count['project'][res] + deltas[res]
+                    check_kwargs['project_values'][res] = total
+            for res in count.get('user', {}):
+                if res in deltas:
+                    total = count['user'][res] + deltas[res]
+                    check_kwargs['user_values'][res] = total
+        if check_project_id is not None:
+            check_kwargs['project_id'] = check_project_id
+        if check_user_id is not None:
+            check_kwargs['user_id'] = check_user_id
+        try:
+            cls.limit_check_project_and_user(context, **check_kwargs)
+        except exception.OverQuota as exc:
+            # Report usage in the exception when going over quota
+            key = 'user' if 'user' in count else 'project'
+            exc.kwargs['usages'] = count[key]
+            raise exc
 
     @base.remotable_classmethod
     def create_limit(cls, context, project_id, resource, limit, user_id=None):
