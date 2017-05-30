@@ -537,13 +537,18 @@ class ComputeTaskManager(base.Base):
             # check retry policy. Rather ugly use of instances[0]...
             # but if we've exceeded max retries... then we really only
             # have a single instance.
+            # TODO(sbauza): Provide directly the RequestSpec object
+            # when _set_vm_state_and_notify() and populate_retry()
+            # accept it
             request_spec = scheduler_utils.build_request_spec(
                 context, image, instances)
             scheduler_utils.populate_retry(
                 filter_properties, instances[0].uuid)
             instance_uuids = [instance.uuid for instance in instances]
+            spec_obj = objects.RequestSpec.from_primitives(
+                    context, request_spec, filter_properties)
             hosts = self._schedule_instances(
-                    context, request_spec, filter_properties, instance_uuids)
+                    context, spec_obj, instance_uuids)
         except Exception as exc:
             updates = {'vm_state': vm_states.ERROR, 'task_state': None}
             for instance in instances:
@@ -612,16 +617,11 @@ class ComputeTaskManager(base.Base):
                     block_device_mapping=bdms, node=host['nodename'],
                     limits=host['limits'])
 
-    def _schedule_instances(self, context, request_spec, filter_properties,
-            instance_uuids=None):
-        scheduler_utils.setup_instance_group(context, request_spec,
-                                             filter_properties)
-        # TODO(sbauza): Hydrate here the object until we modify the
-        # scheduler.utils methods to directly use the RequestSpec object
-        spec_obj = objects.RequestSpec.from_primitives(
-            context, request_spec, filter_properties)
-        hosts = self.scheduler_client.select_destinations(context, spec_obj,
-                instance_uuids)
+    def _schedule_instances(self, context, request_spec,
+                            instance_uuids=None):
+        scheduler_utils.setup_instance_group(context, request_spec)
+        hosts = self.scheduler_client.select_destinations(context,
+            request_spec, instance_uuids)
         return hosts
 
     @targets_cell
@@ -676,8 +676,7 @@ class ComputeTaskManager(base.Base):
                         # is not forced to be the original host
                         request_spec.reset_forced_destinations()
                         # TODO(sbauza): Provide directly the RequestSpec object
-                        # when _schedule_instances(),
-                        # populate_filter_properties and populate_retry()
+                        # when populate_filter_properties and populate_retry()
                         # accept it
                         filter_properties = request_spec.\
                             to_legacy_filter_properties_dict()
@@ -685,9 +684,10 @@ class ComputeTaskManager(base.Base):
                             to_legacy_request_spec_dict()
                     scheduler_utils.populate_retry(filter_properties,
                                                    instance.uuid)
-                    hosts = self._schedule_instances(
-                            context, request_spec, filter_properties,
-                            [instance.uuid])
+                    request_spec = objects.RequestSpec.from_primitives(
+                        context, request_spec, filter_properties)
+                    hosts = self._schedule_instances(context, request_spec,
+                                                     [instance.uuid])
                     host_state = hosts[0]
                     scheduler_utils.populate_filter_properties(
                             filter_properties, host_state)
@@ -733,9 +733,13 @@ class ComputeTaskManager(base.Base):
                     # NOTE(sbauza): We were unable to find an original
                     # RequestSpec object - probably because the instance is old
                     # We need to mock that the old way
+                    # TODO(sbauza): Provide directly the RequestSpec object
+                    # when _set_vm_state_and_notify() accepts it
                     filter_properties = {'ignore_hosts': [instance.host]}
                     request_spec = scheduler_utils.build_request_spec(
                             context, image_ref, [instance])
+                    request_spec = objects.RequestSpec.from_primitives(
+                        context, request_spec, filter_properties)
                 else:
                     # NOTE(sbauza): Augment the RequestSpec object by excluding
                     # the source host for avoiding the scheduler to pick it
@@ -745,21 +749,15 @@ class ComputeTaskManager(base.Base):
                     # if we want to make sure that the next destination
                     # is not forced to be the original host
                     request_spec.reset_forced_destinations()
-                    # TODO(sbauza): Provide directly the RequestSpec object
-                    # when _schedule_instances() and _set_vm_state_and_notify()
-                    # accept it
-                    filter_properties = request_spec.\
-                        to_legacy_filter_properties_dict()
-                    request_spec = request_spec.to_legacy_request_spec_dict()
                 try:
-                    hosts = self._schedule_instances(
-                            context, request_spec, filter_properties,
-                            [instance.uuid])
+                    hosts = self._schedule_instances(context, request_spec,
+                                                     [instance.uuid])
                     host_dict = hosts.pop(0)
                     host, node, limits = (host_dict['host'],
                                           host_dict['nodename'],
                                           host_dict['limits'])
                 except exception.NoValidHost as ex:
+                    request_spec = request_spec.to_legacy_request_spec_dict()
                     with excutils.save_and_reraise_exception():
                         self._set_vm_state_and_notify(context, instance.uuid,
                                 'rebuild_server',
@@ -768,6 +766,7 @@ class ComputeTaskManager(base.Base):
                         LOG.warning(_LW("No valid host found for rebuild"),
                                     instance=instance)
                 except exception.UnsupportedPolicyException as ex:
+                    request_spec = request_spec.to_legacy_request_spec_dict()
                     with excutils.save_and_reraise_exception():
                         self._set_vm_state_and_notify(context, instance.uuid,
                                 'rebuild_server',
@@ -903,13 +902,11 @@ class ComputeTaskManager(base.Base):
                                      request_specs, image,
                                      admin_password, injected_files,
                                      requested_networks, block_device_mapping):
-        legacy_spec = request_specs[0].to_legacy_request_spec_dict()
         # Add all the UUIDs for the instances
         instance_uuids = [spec.instance_uuid for spec in request_specs]
         try:
-            hosts = self._schedule_instances(context, legacy_spec,
-                        request_specs[0].to_legacy_filter_properties_dict(),
-                        instance_uuids)
+            hosts = self._schedule_instances(context, request_specs[0],
+                                             instance_uuids)
         except Exception as exc:
             LOG.exception(_LE('Failed to schedule instances'))
             self._bury_in_cell0(context, request_specs[0], exc,

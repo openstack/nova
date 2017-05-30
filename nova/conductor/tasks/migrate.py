@@ -43,8 +43,7 @@ class MigrationTask(base.TaskBase):
         # object in the signature and all the scheduler.utils methods too
         legacy_spec = self.request_spec.to_legacy_request_spec_dict()
         legacy_props = self.request_spec.to_legacy_filter_properties_dict()
-        scheduler_utils.setup_instance_group(self.context, legacy_spec,
-                                             legacy_props)
+        scheduler_utils.setup_instance_group(self.context, self.request_spec)
         scheduler_utils.populate_retry(legacy_props,
                                        self.instance.uuid)
 

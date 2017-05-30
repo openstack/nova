@@ -568,20 +568,15 @@ def _set_or_delete_marker_for_migrate_instances(context, marker=None):
 
 def _create_minimal_request_spec(context, instance):
     image = instance.image_meta
-    # TODO(sbauza): Modify that once setup_instance_group() accepts a
-    # RequestSpec object
-    request_spec = {'instance_properties': {'uuid': instance.uuid}}
-    filter_properties = {}
-    scheduler_utils.setup_instance_group(context, request_spec,
-                                         filter_properties)
     # This is an old instance. Let's try to populate a RequestSpec
     # object using the existing information we have previously saved.
     request_spec = objects.RequestSpec.from_components(
         context, instance.uuid, image,
         instance.flavor, instance.numa_topology,
         instance.pci_requests,
-        filter_properties, None, instance.availability_zone
+        {}, None, instance.availability_zone
     )
+    scheduler_utils.setup_instance_group(context, request_spec)
     request_spec.create()
 
 
