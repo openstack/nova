@@ -14,7 +14,6 @@
 
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.functional.api import client as api_client
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import cast_as_call
 from nova.tests.unit.image import fake as image_fake
@@ -62,8 +61,7 @@ class ServerListLimitMarkerCell0Test(test.TestCase,
     def test_list_servers_marker_in_cell0_more_limit(self):
         """Creates three servers, then lists them with a marker on the first
         and a limit of 3 which is more than what's left to page on (2) but
-        it shouldn't fail, it should just give the other two back. But due
-        to the bug we'll get a 400 since the marker isn't in cell1.
+        it shouldn't fail, it should just give the other two back.
         """
         # create three test servers
         for x in range(3):
@@ -80,12 +78,7 @@ class ServerListLimitMarkerCell0Test(test.TestCase,
         # Take the first server and user that as our marker.
         marker = servers[0]['id']
         # Since we're paging after the first server as our marker, there are
-        # only two left so specifying three should just return two. However,
-        # due to the bug, we're going to get a MarkerNotFound error when trying
-        # to page to the cell1 database and the marker isn't there. Assert
-        # we get two servers back once the bug is fixed.
-        ex = self.assertRaises(api_client.OpenStackApiException,
-                               self.api.get_servers,
-                               search_opts=dict(marker=marker, limit=3))
-        self.assertEqual(400, ex.response.status_code)
-        self.assertIn('marker [%s] not found' % marker, ex.message)
+        # only two left so specifying three should just return two.
+        servers = self.api.get_servers(search_opts=dict(marker=marker,
+                                                        limit=3))
+        self.assertEqual(2, len(servers))

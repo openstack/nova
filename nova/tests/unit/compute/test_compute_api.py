@@ -4696,7 +4696,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                         expected_attrs=None, sort_keys=['baz'],
                                         sort_dirs=['desc']),
                               mock.call(mock.ANY, {'foo': 'bar'},
-                                        limit=8, marker='fake-marker',
+                                        limit=8, marker=None,
                                         expected_attrs=None, sort_keys=['baz'],
                                         sort_dirs=['desc'])
                               ]
@@ -4753,7 +4753,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                         expected_attrs=None, sort_keys=['baz'],
                                         sort_dirs=['desc']),
                               mock.call(mock.ANY, {'foo': 'bar'},
-                                        limit=6, marker='fake-marker',
+                                        limit=6, marker=None,
                                         expected_attrs=None, sort_keys=['baz'],
                                         sort_dirs=['desc'])
                               ]
