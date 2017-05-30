@@ -9774,6 +9774,7 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def _get_fake_pci_devs(self):
         return {'id': 3353,
+                'uuid': uuidsentinel.pci_device1,
                 'compute_node_id': 1,
                 'address': '0000:0f:08.7',
                 'vendor_id': '8086',
@@ -9788,6 +9789,7 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 'request_id': None,
                 'parent_addr': '0000:0f:00.1',
                 }, {'id': 3356,
+                'uuid': uuidsentinel.pci_device3356,
                 'compute_node_id': 1,
                 'address': '0000:0f:03.7',
                 'parent_addr': '0000:0f:03.0',

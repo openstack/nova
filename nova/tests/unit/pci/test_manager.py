@@ -61,6 +61,7 @@ fake_db_dev = {
     'deleted_at': None,
     'deleted': None,
     'id': 1,
+    'uuid': uuidsentinel.pci_device1,
     'compute_node_id': 1,
     'address': '0000:00:00.1',
     'vendor_id': 'v',
@@ -76,21 +77,26 @@ fake_db_dev = {
     'parent_addr': None,
     }
 fake_db_dev_1 = dict(fake_db_dev, vendor_id='v1',
+                     uuid=uuidsentinel.pci_device1,
                      product_id='p1', id=2,
                      address='0000:00:00.2',
                      numa_node=0)
 fake_db_dev_2 = dict(fake_db_dev, id=3, address='0000:00:00.3',
+                     uuid=uuidsentinel.pci_device2,
                      numa_node=None, parent_addr='0000:00:00.1')
 fake_db_devs = [fake_db_dev, fake_db_dev_1, fake_db_dev_2]
 
 fake_db_dev_3 = dict(fake_db_dev, id=4, address='0000:00:01.1',
+                     uuid=uuidsentinel.pci_device3,
                      vendor_id='v2', product_id='p2',
                      numa_node=None, dev_type=fields.PciDeviceType.SRIOV_PF)
 fake_db_dev_4 = dict(fake_db_dev, id=5, address='0000:00:02.1',
+                     uuid=uuidsentinel.pci_device4,
                      numa_node=None, dev_type=fields.PciDeviceType.SRIOV_VF,
                      vendor_id='v2', product_id='p2',
                      parent_addr='0000:00:01.1')
 fake_db_dev_5 = dict(fake_db_dev, id=6, address='0000:00:02.2',
+                     uuid=uuidsentinel.pci_device5,
                      numa_node=None, dev_type=fields.PciDeviceType.SRIOV_VF,
                      vendor_id='v2', product_id='p2',
                      parent_addr='0000:00:01.1')

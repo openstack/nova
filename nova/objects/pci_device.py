@@ -17,6 +17,7 @@ import copy
 
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_utils import uuidutils
 from oslo_utils import versionutils
 import six
 
@@ -93,10 +94,12 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
     # Version 1.3: Added field to represent PCI device NUMA node
     # Version 1.4: Added parent_addr field
     # Version 1.5: Added 2 new device statuses: UNCLAIMABLE and UNAVAILABLE
-    VERSION = '1.5'
+    # Version 1.6: Added uuid field
+    VERSION = '1.6'
 
     fields = {
         'id': fields.IntegerField(),
+        'uuid': fields.UUIDField(),
         # Note(yjiang5): the compute_node_id may be None because the pci
         # device objects are created before the compute node is created in DB
         'compute_node_id': fields.IntegerField(nullable=True),
@@ -132,6 +135,8 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                     action='obj_make_compatible',
                     reason='status=%s not supported in version %s' % (
                         status, target_version))
+        if target_version < (1, 6) and 'uuid' in primitive:
+            del primitive['uuid']
 
     def update_device(self, dev_dict):
         """Sync the content from device dictionary to device object.
@@ -193,6 +198,13 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         pci_device._context = context
         pci_device.obj_reset_changes()
 
+        # TODO(jaypipes): Remove in 2.0 version of object. This does an inline
+        # migration to populate the uuid field. A similar inline migration is
+        # performed in the save() method.
+        if db_dev['uuid'] is None:
+            pci_device.uuid = uuidutils.generate_uuid()
+            pci_device.save()
+
         return pci_device
 
     @base.remotable_classmethod
@@ -216,6 +228,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         pci_device = cls()
         pci_device.update_device(dev_dict)
         pci_device.status = fields.PciDeviceStatus.AVAILABLE
+        pci_device.uuid = uuidutils.generate_uuid()
         pci_device._context = context
         return pci_device
 
@@ -226,6 +239,12 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
             db.pci_device_destroy(self._context, self.compute_node_id,
                                   self.address)
         elif self.status != fields.PciDeviceStatus.DELETED:
+            # TODO(jaypipes): Remove in 2.0 version of object. This does an
+            # inline migration to populate the uuid field. A similar migration
+            # is done in the _from_db_object() method to migrate objects as
+            # they are read from the DB.
+            if 'uuid' not in self:
+                self.uuid = uuidutils.generate_uuid()
             updates = self.obj_get_changes()
             updates['extra_info'] = self.extra_info
 
