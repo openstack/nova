@@ -1,0 +1,32 @@
+---
+features:
+  - |
+    Some hypervisors add a signature to their guests, e.g. KVM is adding
+    ``KVMKVMKVM\0\0\0``, Xen: ``XenVMMXenVMM``.
+    The existence of a hypervisor signature enables some paravirtualization
+    features on the guest as well as disallowing certain drivers which test
+    for the hypervisor to load e.g. Nvidia driver [1]:
+    "The latest Nvidia driver (337.88) specifically checks
+    for KVM as the hypervisor and reports Code 43 for the
+    driver in a Windows guest when found.  Removing or
+    changing the KVM signature is sufficient for the driver
+    to load and work."
+
+    The new ``img_hide_hypervisor_id`` image metadata property hides the
+    hypervisor signature for the guest.
+
+    Currently only the libvirt compute driver can hide hypervisor signature
+    for the guest host.
+
+    To verify if hiding hypervisor id is working on Linux based system::
+
+      $ cpuid | grep -i hypervisor_id
+
+    The result should not be (for KVM hypervisor)::
+
+      $ hypervisor_id = KVMKVMKVM\0\0\0
+
+    You can enable this feature by setting the ``img_hide_hypervisor_id=true``
+    property in a Glance image.
+
+    [1]: http://git.qemu.org/?p=qemu.git;a=commitdiff;h=f522d2a

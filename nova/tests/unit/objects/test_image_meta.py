@@ -323,3 +323,10 @@ class TestImageMetaProps(test.NoDBTestCase):
         props = {'os_secure_boot': "required"}
         secure_props = objects.ImageMetaProps.from_dict(props)
         self.assertEqual("required", secure_props.os_secure_boot)
+
+    def test_obj_make_compatible_img_hide_hypervisor_id(self):
+        """Tests that checks if we pop img_hide_hypervisor_id."""
+        obj = objects.ImageMetaProps(img_hide_hypervisor_id=True)
+        primitive = obj.obj_to_primitive('1.0')
+        self.assertNotIn('img_hide_hypervisor_id',
+                         primitive['nova_object.data'])

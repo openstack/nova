@@ -2100,6 +2100,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
             config.LibvirtConfigGuestFeatureACPI(),
             config.LibvirtConfigGuestFeatureAPIC(),
             config.LibvirtConfigGuestFeaturePAE(),
+            config.LibvirtConfigGuestFeatureKvmHidden()
         ]
 
         obj.sysinfo = config.LibvirtConfigGuestSysinfo()
@@ -2158,6 +2159,9 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
                 <acpi/>
                 <apic/>
                 <pae/>
+                <kvm>
+                  <hidden state='on'/>
+                </kvm>
               </features>
               <cputune>
                 <shares>100</shares>

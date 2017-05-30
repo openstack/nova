@@ -167,12 +167,15 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.16: WatchdogActionField supports 'disabled' enum.
     # Version 1.17: Add lan9118 as valid nic for hw_vif_model property for qemu
     # Version 1.18: Pull signature properties from cursive library
-    VERSION = '1.18'
+    # Version 1.19: Added 'img_hide_hypervisor_id' type field
+    VERSION = '1.19'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 19):
+            primitive.pop('img_hide_hypervisor_id', None)
         if target_version < (1, 16) and 'hw_watchdog_action' in primitive:
             # Check to see if hw_watchdog_action was set to 'disabled' and if
             # so, remove it since not specifying it is the same behavior.
@@ -414,6 +417,9 @@ class ImageMetaProps(base.NovaObject):
 
         # string indicating type of key used to compute image signature
         'img_signature_key_type': fields.ImageSignatureKeyTypeField(),
+
+        # boolean - hide hypervisor signature on instance
+        'img_hide_hypervisor_id': fields.FlexibleBooleanField(),
 
         # string of username with admin privileges
         'os_admin_user': fields.StringField(),
