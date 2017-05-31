@@ -29,7 +29,6 @@ from nova import quota
 
 
 QUOTAS = quota.QUOTAS
-ALIAS = 'limits'
 
 
 class LimitsController(wsgi.Controller):
@@ -64,19 +63,3 @@ class LimitsController(wsgi.Controller):
         builder = limits_views.ViewBuilder()
         return builder.build(abs_limits, filter_result=filter_result,
                              max_image_meta=max_image_meta)
-
-
-class Limits(extensions.V21APIExtensionBase):
-    """Limits support."""
-
-    name = "Limits"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        resource = [extensions.ResourceExtension(ALIAS,
-                                                 LimitsController())]
-        return resource
-
-    def get_controller_extensions(self):
-        return []

@@ -25,9 +25,6 @@ from nova import quota
 QUOTAS = quota.QUOTAS
 
 
-ALIAS = "os-used-limits"
-
-
 class UsedLimitsController(wsgi.Controller):
 
     @staticmethod
@@ -80,20 +77,3 @@ class UsedLimitsController(wsgi.Controller):
             context.can(ul_policies.BASE_POLICY_NAME, target)
             return tenant_id
         return context.project_id
-
-
-class UsedLimits(extensions.V21APIExtensionBase):
-    """Provide data on limited resources that are being used."""
-
-    name = "UsedLimits"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        controller = UsedLimitsController()
-        limits_ext = extensions.ControllerExtension(self, 'limits',
-                                                    controller=controller)
-        return [limits_ext]
-
-    def get_resources(self):
-        return []
