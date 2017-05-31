@@ -383,7 +383,8 @@ class CinderApiTestCase(test.NoDBTestCase):
         self.assertRaises(exception.CinderAPIVersionNotAvailable,
                           self.api.attachment_update,
                           self.ctx, uuids.attachment_id, connector={})
-        mock_cinderclient.assert_called_once_with(self.ctx, '3.27')
+        mock_cinderclient.assert_called_once_with(self.ctx, '3.27',
+                                                  skip_version_check=True)
 
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_attachment_delete(self, mock_cinderclient):
@@ -394,7 +395,8 @@ class CinderApiTestCase(test.NoDBTestCase):
         attachment_id = uuids.attachment
         self.api.attachment_delete(self.ctx, attachment_id)
 
-        mock_cinderclient.assert_called_once_with(self.ctx, '3.27')
+        mock_cinderclient.assert_called_once_with(self.ctx, '3.27',
+                                                  skip_version_check=True)
         mock_attachments.delete.assert_called_once_with(attachment_id)
 
     @mock.patch('nova.volume.cinder.LOG')
@@ -423,7 +425,8 @@ class CinderApiTestCase(test.NoDBTestCase):
         self.assertRaises(exception.CinderAPIVersionNotAvailable,
                           self.api.attachment_delete,
                           self.ctx, uuids.attachment_id)
-        mock_cinderclient.assert_called_once_with(self.ctx, '3.27')
+        mock_cinderclient.assert_called_once_with(self.ctx, '3.27',
+                                                  skip_version_check=True)
 
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_detach(self, mock_cinderclient):
@@ -832,4 +835,20 @@ class CinderClientTestCase(test.NoDBTestCase):
         get_volume_api.assert_called_once_with(
             self.mock_session.get_endpoint.return_value)
         get_highest_version.assert_called_once_with(
+            self.mock_session.get_endpoint.return_value)
+
+    @mock.patch('cinderclient.client.get_highest_client_server_version',
+                new_callable=mock.NonCallableMock)  # asserts not called
+    @mock.patch('cinderclient.client.get_volume_api_from_url',
+                return_value='3')
+    def test_create_v3_client_with_microversion_skip_version_check(
+            self, get_volume_api, get_highest_version):
+        """Tests that creating a v3 client and requesting a microversion
+        but asking to skip the version discovery check is honored.
+        """
+        client = cinder.cinderclient(self.ctxt, microversion='3.27',
+                                     skip_version_check=True)
+        self.assertEqual(cinder_api_versions.APIVersion('3.27'),
+                         client.api_version)
+        get_volume_api.assert_called_once_with(
             self.mock_session.get_endpoint.return_value)
