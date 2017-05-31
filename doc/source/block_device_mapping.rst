@@ -92,7 +92,7 @@ assigns are the ones the user requested from Nova. Exposing such a detail
 in the public API of Nova is obviously not ideal, but it needed to stay for
 backwards compatibility. It is also required for some (slightly obscure)
 features around overloading a block device in a Glance image when booting an
-instance [3].
+instance [3]_.
 
 The plan for fixing this was to allow users to not specify the device name of a
 block device, and Nova will determine it (with the help of the virt driver), so
