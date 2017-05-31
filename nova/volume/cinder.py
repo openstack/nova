@@ -556,7 +556,7 @@ class API(object):
                     getattr(attachment, 'connection_info', None)
         """
         try:
-            return cinderclient(context).attachments.create(
+            return cinderclient(context, '3.27').attachments.create(
                 volume_id, connector, instance_id)
         except cinder_exception.ClientException as ex:
             with excutils.save_and_reraise_exception():
@@ -581,7 +581,8 @@ class API(object):
             representing the updated volume attachment.
         """
         try:
-            return cinderclient(context).attachments.update(
+            # TODO(mriedem): consider skipping the microversion discovery
+            return cinderclient(context, '3.27').attachments.update(
                 attachment_id, connector)
         except cinder_exception.ClientException as ex:
             with excutils.save_and_reraise_exception():
@@ -594,8 +595,9 @@ class API(object):
     @translate_attachment_exception
     def attachment_delete(self, context, attachment_id):
         try:
+            # TODO(mriedem): consider skipping the microversion discovery
             cinderclient(
-                context).attachments.delete(attachment_id)
+                context, '3.27').attachments.delete(attachment_id)
         except cinder_exception.ClientException as ex:
             with excutils.save_and_reraise_exception():
                 LOG.error(('Delete attachment failed for attachment '
