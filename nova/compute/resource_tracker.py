@@ -1066,8 +1066,8 @@ class ResourceTracker(object):
                 # The instance is gone, so we definitely want to
                 # remove allocations associated with it.
                 pass
-            LOG.warning('Deleting stale allocation for instance %s',
-                        instance_uuid)
+            LOG.debug('Deleting stale allocation for instance %s',
+                      instance_uuid)
             self.reportclient.delete_allocation_for_instance(instance_uuid)
 
     def _find_orphaned_instances(self):
