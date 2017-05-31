@@ -267,9 +267,25 @@ class AvailabilityZoneTestCases(test.TestCase):
             az.get_instance_availability_zone(self.context, fake_inst))
 
     def test_get_instance_availability_zone_no_host(self):
-        """Test get availability zone from instance if host not set."""
+        """Test get availability zone from instance if host is None."""
         fake_inst = objects.Instance(host=None, availability_zone='inst-az')
 
+        result = az.get_instance_availability_zone(self.context, fake_inst)
+        self.assertEqual('inst-az', result)
+
+    def test_get_instance_availability_zone_no_host_set(self):
+        """Test get availability zone from instance if host not set.
+
+        This is testing the case in the compute API where the Instance object
+        does not have the host attribute set because it's just the object that
+        goes into the BuildRequest, it wasn't actually pulled from the DB. The
+        instance in this case doesn't actually get inserted into the DB until
+        it reaches conductor. So the host attribute may not be set but we
+        expect availability_zone always will in the API because of
+        _validate_and_build_base_options setting a default value which goes
+        into the object.
+        """
+        fake_inst = objects.Instance(availability_zone='inst-az')
         result = az.get_instance_availability_zone(self.context, fake_inst)
         self.assertEqual('inst-az', result)
 
