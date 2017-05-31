@@ -20,12 +20,15 @@ from pypowervm import const as pvm_const
 from pypowervm import exceptions as pvm_exc
 from pypowervm.helpers import log_helper as pvm_hlp_log
 from pypowervm.helpers import vios_busy as pvm_hlp_vbusy
+from pypowervm.utils import transaction as pvm_tx
 from pypowervm.wrappers import managed_system as pvm_ms
+from pypowervm.wrappers import virtual_io_server as pvm_vios
 
 from nova import exception
 from nova import test
 from nova.tests.unit.virt import powervm
 from nova.virt import hardware
+from nova.virt.powervm.disk import ssp
 from nova.virt.powervm import driver
 
 
@@ -40,20 +43,37 @@ class TestPowerVMDriver(test.NoDBTestCase):
         self.sess = self.useFixture(fixtures.MockPatch(
             'pypowervm.adapter.Session', autospec=True)).mock
 
+        self.pwron = self.useFixture(fixtures.MockPatch(
+            'nova.virt.powervm.vm.power_on')).mock
+        self.pwroff = self.useFixture(fixtures.MockPatch(
+            'nova.virt.powervm.vm.power_off')).mock
+
         # Create an instance to test with
         self.inst = powervm.TEST_INSTANCE
 
+    @mock.patch('nova.image.API')
+    @mock.patch('pypowervm.tasks.storage.ComprehensiveScrub', autospec=True)
+    @mock.patch('nova.virt.powervm.disk.ssp.SSPDiskAdapter')
     @mock.patch('pypowervm.wrappers.managed_system.System', autospec=True)
     @mock.patch('pypowervm.tasks.partition.validate_vios_ready', autospec=True)
-    def test_init_host(self, mock_vvr, mock_sys):
-        mock_sys.get.return_value = ['sys']
+    def test_init_host(self, mock_vvr, mock_sys, mock_ssp, mock_scrub,
+                       mock_img):
+        mock_hostw = mock.Mock(uuid='uuid')
+        mock_sys.get.return_value = [mock_hostw]
         self.drv.init_host('host')
         self.sess.assert_called_once_with(conn_tries=60)
         self.adp.assert_called_once_with(
             self.sess.return_value, helpers=[
                 pvm_hlp_log.log_helper, pvm_hlp_vbusy.vios_busy_retry_helper])
-        mock_vvr.assert_called_once_with(self.adp.return_value)
-        self.assertEqual('sys', self.drv.host_wrapper)
+        mock_vvr.assert_called_once_with(self.drv.adapter)
+        mock_sys.get.assert_called_once_with(self.drv.adapter)
+        self.assertEqual(mock_hostw, self.drv.host_wrapper)
+        mock_scrub.assert_called_once_with(self.drv.adapter)
+        mock_scrub.return_value.execute.assert_called_once_with()
+        mock_ssp.assert_called_once_with(self.drv.adapter, 'uuid')
+        self.assertEqual(mock_ssp.return_value, self.drv.disk_dvr)
+        mock_img.assert_called_once_with()
+        self.assertEqual(mock_img.return_value, self.drv.image_api)
 
     @mock.patch('nova.virt.powervm.vm.get_pvm_uuid')
     def test_get_info(self, mock_uuid):
@@ -80,8 +100,11 @@ class TestPowerVMDriver(test.NoDBTestCase):
     def test_get_available_resource(self, mock_bhrfm, mock_sys):
         mock_sys.get.return_value = ['sys']
         mock_bhrfm.return_value = {'foo': 'bar'}
+        self.drv.disk_dvr = mock.create_autospec(ssp.SSPDiskAdapter,
+                                                 instance=True)
         self.assertEqual(
-            {'foo': 'bar', 'local_gb': 100000, 'local_gb_used': 10},
+            {'foo': 'bar', 'local_gb': self.drv.disk_dvr.capacity,
+             'local_gb_used': self.drv.disk_dvr.capacity_used},
             self.drv.get_available_resource('node'))
         mock_sys.get.assert_called_once_with(self.adp)
         mock_bhrfm.assert_called_once_with('sys')
@@ -92,77 +115,91 @@ class TestPowerVMDriver(test.NoDBTestCase):
                 autospec=True)
     @mock.patch('pypowervm.tasks.storage.add_lpar_storage_scrub_tasks',
                 autospec=True)
-    @mock.patch('nova.virt.powervm.vm.power_on')
-    def test_spawn_ops(self, mock_pwron, mock_scrub, mock_ftsk, mock_crt_lpar):
+    def test_spawn_ops(self, mock_scrub, mock_bldftsk, mock_crt_lpar):
         """Validates the 'typical' spawn flow of the spawn of an instance. """
         self.drv.host_wrapper = 'sys'
+        self.drv.disk_dvr = mock.create_autospec(ssp.SSPDiskAdapter,
+                                                 instance=True)
+        mock_ftsk = pvm_tx.FeedTask('fake', [mock.Mock(spec=pvm_vios.VIOS)])
+        mock_bldftsk.return_value = mock_ftsk
         self.drv.spawn('context', self.inst, 'img_meta', 'files', 'password')
         mock_crt_lpar.assert_called_once_with(self.adp, 'sys', self.inst)
-        mock_ftsk.assert_called_once_with(
-            self.adp, name='create_scrubber', xag={pvm_const.XAG.VIO_SMAP,
-                                                   pvm_const.XAG.VIO_FMAP})
+        mock_bldftsk.assert_called_once_with(
+            self.adp, xag={pvm_const.XAG.VIO_SMAP, pvm_const.XAG.VIO_FMAP})
         mock_scrub.assert_called_once_with(
-            [mock_crt_lpar.return_value.id], mock_ftsk.return_value,
-            lpars_exist=True)
-        mock_pwron.assert_called_once_with(self.adp, self.inst)
+            [mock_crt_lpar.return_value.id], mock_ftsk, lpars_exist=True)
+        self.drv.disk_dvr.create_disk_from_image.assert_called_once_with(
+            'context', self.inst, 'img_meta')
+        self.drv.disk_dvr.attach_disk.assert_called_once_with(
+            self.inst, self.drv.disk_dvr.create_disk_from_image.return_value,
+            mock_ftsk)
+        self.pwron.assert_called_once_with(self.adp, self.inst)
 
     @mock.patch('nova.virt.powervm.vm.delete_lpar')
-    @mock.patch('nova.virt.powervm.vm.power_off')
-    def test_destroy(self, mock_pwroff, mock_del):
+    def test_destroy(self, mock_dlt_lpar):
         """Validates PowerVM destroy."""
+        self.drv.disk_dvr = mock.create_autospec(ssp.SSPDiskAdapter,
+                                                 instance=True)
         # Good path
         self.drv.destroy('context', self.inst, [], block_device_info={})
-        mock_pwroff.assert_called_once_with(
+        self.pwroff.assert_called_once_with(
             self.adp, self.inst, force_immediate=True)
-        mock_del.assert_called_once_with(self.adp, self.inst)
+        self.drv.disk_dvr.detach_disk.assert_called_once_with(self.inst)
+        self.drv.disk_dvr.delete_disks.assert_called_once_with(
+            self.drv.disk_dvr.detach_disk.return_value)
+        mock_dlt_lpar.assert_called_once_with(self.adp, self.inst)
 
-        mock_pwroff.reset_mock()
-        mock_del.reset_mock()
+        self.pwroff.reset_mock()
+        self.drv.disk_dvr.detach_disk.reset_mock()
+        self.drv.disk_dvr.delete_disks.reset_mock()
+        mock_dlt_lpar.reset_mock()
 
         # InstanceNotFound exception, non-forced
-        mock_pwroff.side_effect = exception.InstanceNotFound(
+        self.pwroff.side_effect = exception.InstanceNotFound(
             instance_id='something')
         self.drv.destroy('context', self.inst, [], block_device_info={},
                          destroy_disks=False)
-        mock_pwroff.assert_called_once_with(
+        self.pwroff.assert_called_once_with(
             self.adp, self.inst, force_immediate=False)
-        mock_del.assert_not_called()
+        self.drv.disk_dvr.detach_disk.assert_not_called()
+        self.drv.disk_dvr.delete_disks.assert_not_called()
+        mock_dlt_lpar.assert_not_called()
 
-        mock_pwroff.reset_mock()
-        mock_pwroff.side_effect = None
+        self.pwroff.reset_mock()
+        self.pwroff.side_effect = None
 
         # Convertible (PowerVM) exception
-        mock_del.side_effect = pvm_exc.TimeoutError("Timed out")
+        mock_dlt_lpar.side_effect = pvm_exc.TimeoutError("Timed out")
         self.assertRaises(exception.InstanceTerminationFailure,
                           self.drv.destroy, 'context', self.inst, [],
                           block_device_info={})
         # Everything got called
-        mock_pwroff.assert_called_once_with(
+        self.pwroff.assert_called_once_with(
             self.adp, self.inst, force_immediate=True)
-        mock_del.assert_called_once_with(self.adp, self.inst)
+        self.drv.disk_dvr.detach_disk.assert_called_once_with(self.inst)
+        self.drv.disk_dvr.delete_disks.assert_called_once_with(
+            self.drv.disk_dvr.detach_disk.return_value)
+        mock_dlt_lpar.assert_called_once_with(self.adp, self.inst)
 
         # Other random exception raises directly
-        mock_del.side_effect = ValueError()
+        mock_dlt_lpar.side_effect = ValueError()
         self.assertRaises(ValueError,
                           self.drv.destroy, 'context', self.inst, [],
                           block_device_info={})
 
-    @mock.patch('nova.virt.powervm.vm.power_on')
-    def test_power_on(self, mock_power_on):
+    def test_power_on(self):
         self.drv.power_on('context', self.inst, 'network_info')
-        mock_power_on.assert_called_once_with(self.adp, self.inst)
+        self.pwron.assert_called_once_with(self.adp, self.inst)
 
-    @mock.patch('nova.virt.powervm.vm.power_off')
-    def test_power_off(self, mock_power_off):
+    def test_power_off(self):
         self.drv.power_off(self.inst)
-        mock_power_off.assert_called_once_with(
+        self.pwroff.assert_called_once_with(
             self.adp, self.inst, force_immediate=True, timeout=None)
 
-    @mock.patch('nova.virt.powervm.vm.power_off')
-    def test_power_off_timeout(self, mock_power_off):
+    def test_power_off_timeout(self):
         # Long timeout (retry interval means nothing on powervm)
         self.drv.power_off(self.inst, timeout=500, retry_interval=10)
-        mock_power_off.assert_called_once_with(
+        self.pwroff.assert_called_once_with(
             self.adp, self.inst, force_immediate=False, timeout=500)
 
     @mock.patch('nova.virt.powervm.vm.reboot')

@@ -13,7 +13,6 @@
 #    under the License.
 
 import mock
-from pypowervm import const as pvmc
 from taskflow import engines as tf_eng
 from taskflow.patterns import linear_flow as tf_lf
 from taskflow import task as tf_tsk
@@ -29,27 +28,24 @@ class TestVMTasks(test.TestCase):
         self.apt = mock.Mock()
         self.instance = mock.Mock()
 
-    @mock.patch('pypowervm.tasks.partition.build_active_vio_feed_task',
-                autospec=True)
     @mock.patch('pypowervm.tasks.storage.add_lpar_storage_scrub_tasks',
                 autospec=True)
     @mock.patch('nova.virt.powervm.vm.create_lpar')
-    def test_create(self, mock_vm_crt, mock_stg, mock_bld):
+    def test_create(self, mock_vm_crt, mock_stg):
         lpar_entry = mock.Mock()
 
-        crt = tf_vm.Create(self.apt, 'host_wrapper', self.instance)
+        # Test create with normal (non-recreate) ftsk
+        crt = tf_vm.Create(self.apt, 'host_wrapper', self.instance, 'ftsk')
         mock_vm_crt.return_value = lpar_entry
         crt.execute()
 
         mock_vm_crt.assert_called_once_with(self.apt, 'host_wrapper',
                                             self.instance)
 
-        mock_bld.assert_called_once_with(
-            self.apt, name='create_scrubber',
-            xag={pvmc.XAG.VIO_SMAP, pvmc.XAG.VIO_FMAP})
         mock_stg.assert_called_once_with(
-            [lpar_entry.id], mock_bld.return_value, lpars_exist=True)
-        mock_bld.return_value.execute.assert_called_once_with()
+            [lpar_entry.id], 'ftsk', lpars_exist=True)
+        mock_stg.assert_called_once_with([mock_vm_crt.return_value.id], 'ftsk',
+                                         lpars_exist=True)
 
     @mock.patch('nova.virt.powervm.vm.power_on')
     def test_power_on(self, mock_pwron):

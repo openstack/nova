@@ -43,3 +43,13 @@ TEST_INSTANCE = objects.Instance(
     vm_state=vm_states.STOPPED,
     power_state=power_state.SHUTDOWN,
 )
+
+IMAGE1 = {
+    'id': uuidsentinel.img_id,
+    'name': 'image1',
+    'size': 300,
+    'container_format': 'bare',
+    'disk_format': 'raw',
+    'checksum': 'b518a8ba2b152b5607aceb5703fac072',
+}
+TEST_IMAGE1 = objects.image_meta.ImageMeta.from_dict(IMAGE1)

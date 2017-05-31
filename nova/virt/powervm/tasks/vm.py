@@ -13,9 +13,7 @@
 #    under the License.
 
 from oslo_log import log as logging
-from pypowervm import const as pvm_const
 from pypowervm import exceptions as pvm_exc
-from pypowervm.tasks import partition as pvm_tpar
 from pypowervm.tasks import storage as pvm_stg
 from taskflow import task
 from taskflow.types import failure as task_fail
@@ -29,7 +27,7 @@ LOG = logging.getLogger(__name__)
 class Create(task.Task):
     """The task for creating a VM."""
 
-    def __init__(self, adapter, host_wrapper, instance):
+    def __init__(self, adapter, host_wrapper, instance, stg_ftsk):
         """Creates the Task for creating a VM.
 
         The revert method only needs to do something for failed rebuilds.
@@ -48,23 +46,23 @@ class Create(task.Task):
         :param adapter: The adapter for the pypowervm API
         :param host_wrapper: The managed system wrapper
         :param instance: The nova instance.
+        :param stg_ftsk: FeedTask to defer storage connectivity operations.
         """
         super(Create, self).__init__('crt_vm')
         self.instance = instance
         self.adapter = adapter
         self.host_wrapper = host_wrapper
+        self.stg_ftsk = stg_ftsk
 
     def execute(self):
         wrap = vm.create_lpar(self.adapter, self.host_wrapper, self.instance)
         # Get rid of any stale storage and/or mappings associated with the new
         # LPAR's ID, so it doesn't accidentally have access to something it
         # oughtn't.
-        ftsk = pvm_tpar.build_active_vio_feed_task(
-            self.adapter, name='create_scrubber',
-            xag={pvm_const.XAG.VIO_SMAP, pvm_const.XAG.VIO_FMAP})
-        pvm_stg.add_lpar_storage_scrub_tasks([wrap.id], ftsk, lpars_exist=True)
         LOG.info('Scrubbing stale storage.', instance=self.instance)
-        ftsk.execute()
+        pvm_stg.add_lpar_storage_scrub_tasks([wrap.id], self.stg_ftsk,
+                                             lpars_exist=True)
+        return wrap
 
 
 class PowerOn(task.Task):
