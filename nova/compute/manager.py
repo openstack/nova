@@ -486,7 +486,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='4.13')
+    target = messaging.Target(version='4.14')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to an instance during power off.  The overall
@@ -4269,8 +4269,7 @@ class ComputeManager(manager.Manager):
         current_power_state = self._get_power_state(context, instance)
         if current_power_state == power_state.RUNNING:
             LOG.info(_LI("Retrieving diagnostics"), instance=instance)
-            diags = self.driver.get_instance_diagnostics(instance)
-            return diags.serialize()
+            return self.driver.get_instance_diagnostics(instance)
         else:
             raise exception.InstanceInvalidState(
                 attr='power state',

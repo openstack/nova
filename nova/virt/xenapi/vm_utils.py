@@ -47,10 +47,10 @@ import nova.conf
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova.network import model as network_model
+from nova.objects import diagnostics
 from nova.objects import fields as obj_fields
 from nova import utils
 from nova.virt import configdrive
-from nova.virt import diagnostics
 from nova.virt.disk import api as disk
 from nova.virt.disk.vfs import localfs as vfsimpl
 from nova.virt import hardware
@@ -1754,7 +1754,8 @@ def compile_instance_diagnostics(instance, vm_rec):
         diags.add_disk()
 
     max_mem_bytes = int(vm_rec['memory_dynamic_max'])
-    diags.memory_details.maximum = max_mem_bytes / units.Mi
+    diags.memory_details = diagnostics.MemoryDiagnostics(
+        maximum=max_mem_bytes / units.Mi)
 
     return diags
 

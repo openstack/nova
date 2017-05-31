@@ -78,6 +78,7 @@ from nova import image
 from nova import keymgr
 from nova.network import model as network_model
 from nova import objects
+from nova.objects import diagnostics as diagnostics_obj
 from nova.objects import fields
 from nova.objects import migrate_data as migrate_data_obj
 from nova.pci import manager as pci_manager
@@ -86,7 +87,6 @@ from nova import utils
 from nova import version
 from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
-from nova.virt import diagnostics
 from nova.virt.disk import api as disk_api
 from nova.virt.disk.vfs import guestfs
 from nova.virt import driver
@@ -7695,20 +7695,22 @@ class LibvirtDriver(driver.ComputeDriver):
         launched_at = timeutils.normalize_time(instance.launched_at)
         uptime = timeutils.delta_seconds(launched_at,
                                          timeutils.utcnow())
-        diags = diagnostics.Diagnostics(state=power_state.STATE_MAP[state],
+        diags = diagnostics_obj.Diagnostics(state=power_state.STATE_MAP[state],
                                         driver='libvirt',
                                         config_drive=config_drive,
+                                        hypervisor=CONF.libvirt.virt_type,
                                         hypervisor_os='linux',
                                         uptime=uptime)
-        diags.memory_details.maximum = max_mem / units.Mi
-        diags.memory_details.used = mem / units.Mi
+        diags.memory_details = diagnostics_obj.MemoryDiagnostics(
+            maximum=max_mem / units.Mi,
+            used=mem / units.Mi)
 
         # get cpu time, might launch an exception if the method
         # is not supported by the underlying hypervisor being
         # used by libvirt
         try:
             for vcpu in guest.get_vcpus_info():
-                diags.add_cpu(time=vcpu.time)
+                diags.add_cpu(id=vcpu.id, time=vcpu.time)
         except libvirt.libvirtError:
             pass
         # get io status
@@ -7722,7 +7724,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 diags.add_disk(read_bytes=stats[1],
                                read_requests=stats[0],
                                write_bytes=stats[3],
-                               write_requests=stats[2])
+                               write_requests=stats[2],
+                               errors_count=stats[4])
             except libvirt.libvirtError:
                 pass
         for interface in dom_io["ifaces"]:

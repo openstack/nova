@@ -45,9 +45,11 @@ from nova.image import glance
 from nova.network import model as network_model
 from nova import objects
 from nova import test
+from nova.tests.unit import fake_diagnostics
 from nova.tests.unit import fake_instance
 import nova.tests.unit.image.fake
 from nova.tests.unit import matchers
+from nova.tests.unit.objects import test_diagnostics
 from nova.tests.unit import utils
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
@@ -182,7 +184,8 @@ class VMwareSessionTestCase(test.NoDBTestCase):
             fake_invoke.assert_called_once_with(module, 'fira')
 
 
-class VMwareAPIVMTestCase(test.NoDBTestCase):
+class VMwareAPIVMTestCase(test.NoDBTestCase,
+                          test_diagnostics.DiagnosticsComparisonMixin):
     """Unit tests for Vmware API connection calls."""
 
     REQUIRES_LOCKING = True
@@ -1649,22 +1652,22 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def test_get_instance_diagnostics(self):
         self._create_vm()
-        expected = {'uptime': 0,
-                    'memory_details': {'used': 0, 'maximum': 512},
-                    'nic_details': [],
-                    'driver': 'vmwareapi',
-                    'state': 'running',
-                    'version': '1.0',
-                    'cpu_details': [],
-                    'disk_details': [],
-                    'hypervisor_os': 'esxi',
-                    'config_drive': 'False'}
+        expected = fake_diagnostics.fake_diagnostics_obj(
+            uptime=0,
+            memory_details={'used': 0, 'maximum': 512},
+            nic_details=[],
+            driver='vmwareapi',
+            state='running',
+            cpu_details=[],
+            disk_details=[],
+            hypervisor_os='esxi',
+            config_drive=True)
         instance = objects.Instance(uuid=self.uuid,
                                     config_drive=False,
                                     system_metadata={},
                                     node=self.instance_node)
         actual = self.conn.get_instance_diagnostics(instance)
-        self.assertThat(actual.serialize(), matchers.DictMatches(expected))
+        self.assertDiagnosticsEqual(expected, actual)
 
     def test_get_console_output(self):
         self.assertRaises(NotImplementedError, self.conn.get_console_output,
