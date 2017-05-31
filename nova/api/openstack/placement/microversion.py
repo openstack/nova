@@ -46,6 +46,7 @@ VERSIONS = [
     '1.7',  # PUT /resource_classes/{name} is bodiless create or update
     '1.8',  # Adds 'project_id' and 'user_id' required request parameters to
             # PUT /allocations
+    '1.9',  # Adds GET /usages
 ]
 
 

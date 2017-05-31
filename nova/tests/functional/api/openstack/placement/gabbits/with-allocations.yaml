@@ -21,9 +21,9 @@ tests:
       # required but superfluous, is present
       content-type: /application/json/
   response_json_paths:
-      $.resource_provider_generation: 4
-      $.usages.DISK_GB: 1000
-      $.usages.VCPU: 6
+      $.resource_provider_generation: 5
+      $.usages.DISK_GB: 1020
+      $.usages.VCPU: 7
 
 - name: fail to delete resource provider
   DELETE: /resource_providers/$ENVIRON['RP_UUID']
@@ -41,3 +41,30 @@ tests:
       content-type: /application/json/
   response_strings:
       - Unable to delete inventory for resource provider $ENVIRON['RP_UUID'] because the inventory is in use.
+
+- name: get total usages by project
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']
+  request_headers:
+      openstack-api-version: placement 1.9
+  status: 200
+  response_json_paths:
+      $.usages.DISK_GB: 1020
+      $.usages.VCPU: 7
+
+- name: get total usages by project and user
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']&user_id=$ENVIRON['USER_ID']
+  request_headers:
+      openstack-api-version: placement 1.9
+  status: 200
+  response_json_paths:
+      $.usages.DISK_GB: 1000
+      $.usages.VCPU: 6
+
+- name: get total usages by project and alt user
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']&user_id=$ENVIRON['ALT_USER_ID']
+  request_headers:
+      openstack-api-version: placement 1.9
+  status: 200
+  response_json_paths:
+      $.usages.DISK_GB: 20
+      $.usages.VCPU: 1

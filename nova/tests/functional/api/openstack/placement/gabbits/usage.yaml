@@ -37,3 +37,47 @@ tests:
       content-type: application/json
   response_json_paths:
       usages: {}
+
+- name: get total usages earlier version
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']
+  request_headers:
+      openstack-api-version: placement 1.8
+  status: 404
+
+- name: get total usages no project or user
+  GET: /usages
+  request_headers:
+      openstack-api-version: placement 1.9
+  status: 400
+
+- name: get total usages project_id less than min length
+  GET: /usages?project_id=
+  request_headers:
+      openstack-api-version: placement 1.9
+  status: 400
+  response_strings:
+      - "Failed validating 'minLength'"
+
+- name: get total usages user_id less than min length
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']&user_id=
+  request_headers:
+      openstack-api-version: placement 1.9
+  status: 400
+  response_strings:
+      - "Failed validating 'minLength'"
+
+- name: get total usages project_id exceeds max length
+  GET: /usages?project_id=78725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b1
+  request_headers:
+      openstack-api-version: placement 1.9
+  status: 400
+  response_strings:
+      - "Failed validating 'maxLength'"
+
+- name: get total usages user_id exceeds max length
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']&user_id=78725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b1
+  request_headers:
+      openstack-api-version: placement 1.9
+  status: 400
+  response_strings:
+      - "Failed validating 'maxLength'"

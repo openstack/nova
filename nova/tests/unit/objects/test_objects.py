@@ -1171,7 +1171,7 @@ object_data = {
     'Trait': '1.0-2b58dd7c5037153cb4bfc94c0ae5dd3a',
     'TraitList': '1.0-ff48fc1575f20800796b48266114c608',
     'Usage': '1.1-b738dbebeb20e3199fc0ebca6e292a47',
-    'UsageList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
+    'UsageList': '1.2-15ecf022a68ddbb8c2a6739cfc9f8f5e',
     'USBDeviceBus': '1.0-e4c7dd6032e46cd74b027df5eb2d4750',
     'VirtCPUFeature': '1.0-ea2464bdd09084bd388e5f61d5d4fc86',
     'VirtCPUModel': '1.0-5e1864af9227f698326203d7249796b5',

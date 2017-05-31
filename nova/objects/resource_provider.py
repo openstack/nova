@@ -1894,7 +1894,8 @@ class Usage(base.NovaObject):
 class UsageList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Turn off remotable
-    VERSION = '1.1'
+    # Version 1.2: Add get_all_by_project_user()
+    VERSION = '1.2'
 
     fields = {
         'objects': fields.ListOfObjectsField('Usage'),
@@ -1919,9 +1920,34 @@ class UsageList(base.ObjectListBase, base.NovaObject):
                   for item in query.all()]
         return result
 
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_all_by_project_user(context, project_id, user_id=None):
+        query = (context.session.query(models.Allocation.resource_class_id,
+                 func.coalesce(func.sum(models.Allocation.used), 0))
+                 .join(models.Consumer,
+                       models.Allocation.consumer_id == models.Consumer.uuid)
+                 .join(models.Project,
+                       models.Consumer.project_id == models.Project.id)
+                 .filter(models.Project.external_id == project_id))
+        if user_id:
+            query = query.join(models.User,
+                               models.Consumer.user_id == models.User.id)
+            query = query.filter(models.User.external_id == user_id)
+        query = query.group_by(models.Allocation.resource_class_id)
+        result = [dict(resource_class_id=item[0], usage=item[1])
+                  for item in query.all()]
+        return result
+
     @classmethod
     def get_all_by_resource_provider_uuid(cls, context, rp_uuid):
         usage_list = cls._get_all_by_resource_provider_uuid(context, rp_uuid)
+        return base.obj_make_list(context, cls(context), Usage, usage_list)
+
+    @classmethod
+    def get_all_by_project_user(cls, context, project_id, user_id=None):
+        usage_list = cls._get_all_by_project_user(context, project_id,
+                                                  user_id=user_id)
         return base.obj_make_list(context, cls(context), Usage, usage_list)
 
     def __repr__(self):

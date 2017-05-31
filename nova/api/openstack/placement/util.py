@@ -170,6 +170,16 @@ def trait_url(environ, trait):
     return '%s/traits/%s' % (prefix, trait.name)
 
 
+def validate_query_params(req, schema):
+    try:
+        jsonschema.validate(dict(req.GET), schema,
+                            format_checker=jsonschema.FormatChecker())
+    except jsonschema.ValidationError as exc:
+        raise webob.exc.HTTPBadRequest(
+            _('Invalid query string parameters: %(exc)s') %
+            {'exc': exc})
+
+
 def wsgi_path_item(environ, name):
     """Extract the value of a named field in a URL.
 
