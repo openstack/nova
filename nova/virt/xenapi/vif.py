@@ -141,6 +141,9 @@ class XenAPIBridgeDriver(XenVIFDriver):
     def plug(self, instance, vif, vm_ref=None, device=None):
         if not vm_ref:
             vm_ref = vm_utils.lookup(self._session, instance['name'])
+        if not vm_ref:
+            raise exception.VirtualInterfacePlugException(
+                "Cannot find instance %s, discard vif plug" % instance['name'])
 
         # if VIF already exists, return this vif_ref directly
         vif_ref = self._get_vif_ref(vif, vm_ref)
@@ -245,6 +248,9 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
         """
         if not vm_ref:
             vm_ref = vm_utils.lookup(self._session, instance['name'])
+        if not vm_ref:
+            raise exception.VirtualInterfacePlugException(
+                "Cannot find instance %s, discard vif plug" % instance['name'])
 
         # if VIF already exists, return this vif_ref directly
         vif_ref = self._get_vif_ref(vif, vm_ref)

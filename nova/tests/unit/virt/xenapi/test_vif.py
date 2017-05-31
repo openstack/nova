@@ -172,6 +172,14 @@ class XenAPIBridgeDriverTestCase(XenVIFDriverTestBase, object):
         ret_vif_ref = self.bridge_driver.plug(instance, vif, vm_ref, device)
         self.assertEqual('fake_vif_ref', ret_vif_ref)
 
+    @mock.patch.object(vif.vm_utils, 'lookup', return_value=None)
+    def test_plug_exception(self, mock_lookup):
+        instance = {'name': "fake_instance_name"}
+        self.assertRaises(exception.VirtualInterfacePlugException,
+                          self.bridge_driver.plug, instance, fake_vif,
+                          vm_ref=None, device=1)
+        mock_lookup.assert_called_once_with(self._session, instance['name'])
+
 
 class XenAPIOpenVswitchDriverTestCase(XenVIFDriverTestBase):
     def setUp(self):
@@ -198,6 +206,14 @@ class XenAPIOpenVswitchDriverTestCase(XenVIFDriverTestBase):
         self.assertEqual('fake_vif_ref', ret_vif_ref)
         mock_hot_plug.assert_called_once_with(fake_vif, instance,
                                               'fake_vm_ref', 'fake_vif_ref')
+
+    @mock.patch.object(vif.vm_utils, 'lookup', return_value=None)
+    def test_plug_exception(self, mock_lookup):
+        instance = {'name': "fake_instance_name"}
+        self.assertRaises(exception.VirtualInterfacePlugException,
+                          self.ovs_driver.plug, instance, fake_vif,
+                          vm_ref=None, device=1)
+        mock_lookup.assert_called_once_with(self._session, instance['name'])
 
     @mock.patch.object(vif.XenAPIOpenVswitchDriver,
                        'delete_network_and_bridge')
