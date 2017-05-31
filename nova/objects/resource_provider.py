@@ -1683,7 +1683,7 @@ class Trait(base.NovaObject):
 
     @classmethod
     def get_by_name(cls, context, name):
-        db_trait = cls._get_by_name_from_db(context, name)
+        db_trait = cls._get_by_name_from_db(context, six.text_type(name))
         return cls._from_db_object(context, cls(), db_trait)
 
     @staticmethod
@@ -1731,10 +1731,12 @@ class TraitList(base.ObjectListBase, base.NovaObject):
 
         query = context.session.query(models.Trait)
         if 'name_in' in filters:
-            query = query.filter(models.Trait.name.in_(filters['name_in']))
+            query = query.filter(models.Trait.name.in_(
+                [six.text_type(n) for n in filters['name_in']]
+            ))
         if 'prefix' in filters:
             query = query.filter(
-                models.Trait.name.like(filters['prefix'] + '%'))
+                models.Trait.name.like(six.text_type(filters['prefix'] + '%')))
         if 'associated' in filters:
             if filters['associated']:
                 query = query.join(models.ResourceProviderTrait,
