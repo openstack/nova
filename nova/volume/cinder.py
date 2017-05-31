@@ -23,6 +23,7 @@ import copy
 import functools
 import sys
 
+from cinderclient import api_versions as cinder_api_versions
 from cinderclient import client as cinder_client
 from cinderclient import exceptions as cinder_exception
 from keystoneauth1 import exceptions as keystone_exception
@@ -56,7 +57,37 @@ def reset_globals():
     _SESSION = None
 
 
-def cinderclient(context):
+def _check_microversion(url, microversion):
+    """Checks to see if the requested microversion is supported by the current
+    version of python-cinderclient and the volume API endpoint.
+
+    :param url: Cinder API endpoint URL.
+    :param microversion: Requested microversion. If not available at the given
+        API endpoint URL, a CinderAPIVersionNotAvailable exception is raised.
+    :returns: The microversion if it is available. This can be used to
+        construct the cinder v3 client object.
+    :raises: CinderAPIVersionNotAvailable if the microversion is not available.
+    """
+    max_api_version = cinder_client.get_highest_client_server_version(url)
+    # get_highest_client_server_version returns a float which we need to cast
+    # to a str and create an APIVersion object to do our version comparison.
+    max_api_version = cinder_api_versions.APIVersion(str(max_api_version))
+    # Check if the max_api_version matches the requested minimum microversion.
+    if max_api_version.matches(microversion):
+        # The requested microversion is supported by the client and the server.
+        return microversion
+    raise exception.CinderAPIVersionNotAvailable(version=microversion)
+
+
+def cinderclient(context, microversion=None):
+    """Constructs a cinder client object for making API requests.
+
+    :param context: The nova request context for auth.
+    :param microversion: Optional microversion to check against the client.
+        This implies that Cinder v3 is required for any calls that require a
+        microversion. If the microversion is not available, this method will
+        raise an CinderAPIVersionNotAvailable exception.
+    """
     global _SESSION
 
     if not _SESSION:
@@ -89,13 +120,18 @@ def cinderclient(context):
         raise exception.UnsupportedCinderAPIVersion(version=version)
 
     if version == '2':
+        if microversion is not None:
+            # The Cinder v2 API does not support microversions.
+            raise exception.CinderAPIVersionNotAvailable(version=microversion)
         LOG.warning("The support for the Cinder API v2 is deprecated, please "
                     "upgrade to Cinder API v3.")
 
     if version == '3':
-        # TODO(ildikov): Add microversion support for picking up the new
-        # attach/detach API that was added in 3.27.
         version = '3.0'
+        # Check to see a specific microversion is requested and if so, can it
+        # be handled by the backing server.
+        if microversion is not None:
+            version = _check_microversion(url, microversion)
 
     return cinder_client.Client(version,
                                 session=_SESSION,
