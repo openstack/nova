@@ -2077,3 +2077,94 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         )
         got_ids = [rp.id for rp in got_rps]
         self.assertEqual([cn1.id], got_ids)
+
+        # Create another two compute node providers having no local disk
+        # inventory and associated with a different aggregate. Then create a
+        # storage provider but do NOT decorate that provider with the
+        # MISC_SHARES_VIA_AGGREGATE trait and verify that neither of the new
+        # compute node providers are returned by _get_all_with_shared()
+
+        cn4_uuid = uuidsentinel.cn4
+        cn4 = objects.ResourceProvider(
+            self.context,
+            name='cn4',
+            uuid=cn4_uuid,
+        )
+        cn4.create()
+
+        cn5_uuid = uuidsentinel.cn5
+        cn5 = objects.ResourceProvider(
+            self.context,
+            name='cn5',
+            uuid=cn5_uuid,
+        )
+        cn5.create()
+
+        # Populate the two compute node providers with inventory, sans DISK_GB
+        for cn in (cn4, cn5):
+            vcpu = objects.Inventory(
+                resource_provider=cn,
+                resource_class=fields.ResourceClass.VCPU,
+                total=24,
+                reserved=0,
+                min_unit=1,
+                max_unit=24,
+                step_size=1,
+                allocation_ratio=16.0,
+            )
+            memory_mb = objects.Inventory(
+                resource_provider=cn,
+                resource_class=fields.ResourceClass.MEMORY_MB,
+                total=1024,
+                reserved=0,
+                min_unit=64,
+                max_unit=1024,
+                step_size=1,
+                allocation_ratio=1.5,
+            )
+            inv_list = objects.InventoryList(objects=[vcpu, memory_mb])
+            cn.set_inventory(inv_list)
+
+        # Create the storage provider but do NOT mark it sharing its inventory
+        # with other providers
+        ns_uuid = uuidsentinel.ns
+        ns = objects.ResourceProvider(
+            self.context,
+            name='non_shared storage',
+            uuid=ns_uuid,
+        )
+        ns.create()
+
+        # Give the shared storage pool some inventory of DISK_GB
+        disk_gb = objects.Inventory(
+            resource_provider=ns,
+            resource_class=fields.ResourceClass.DISK_GB,
+            total=2000,
+            reserved=0,
+            min_unit=10,
+            max_unit=100,
+            step_size=1,
+            allocation_ratio=1.0,
+        )
+        inv_list = objects.InventoryList(objects=[disk_gb])
+        ns.set_inventory(inv_list)
+
+        # Associate the new no-local-disk compute nodes and the non-shared
+        # storage provider with an aggregate that is different from the
+        # aggregate associating the shared storage provider with compute nodes
+        agg2_uuid = uuidsentinel.agg2
+        cn4.set_aggregates([agg2_uuid])
+        cn5.set_aggregates([agg2_uuid])
+        ns.set_aggregates([agg2_uuid])
+
+        # Ensure neither cn4 nor cn5 are in the returned providers list,
+        # because neither has DISK_GB inventory and although they are
+        # associated with an aggregate that has a storage provider with DISK_GB
+        # inventory, that storage provider is not marked as sharing that
+        # DISK_GB inventory with anybody.
+        got_rps = rp_obj._get_all_with_shared(
+            self.context,
+            resources,
+        )
+        got_ids = [rp.id for rp in got_rps]
+        self.assertEqual([cn1.id], got_ids)
