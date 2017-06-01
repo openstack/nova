@@ -705,6 +705,353 @@ def _get_providers_with_shared_capacity(ctx, rc_id, amount):
     return [r[0] for r in ctx.session.execute(sel)]
 
 
+@db_api.api_context_manager.reader
+def _get_all_with_shared(ctx, resources):
+    """Uses some more advanced SQL to find providers that either have the
+    requested resources "locally" or are associated with a provider that shares
+    those requested resources.
+
+    :param resources: Dict keyed by resource class integer ID of requested
+                      amounts of that resource
+    """
+    # NOTE(jaypipes): The SQL we generate here depends on which resource
+    # classes have providers that share that resource via an aggregate.
+    #
+    # We begin building a "join chain" by starting with a projection from the
+    # resource_providers table:
+    #
+    # SELECT rp.id
+    # FROM resource_providers AS rp
+    #
+    # in addition to a copy of resource_provider_aggregates for each resource
+    # class that has a shared provider:
+    #
+    #  resource_provider_aggregates AS sharing_{RC_NAME},
+    #
+    # We then join to a copy of the inventories table for each resource we are
+    # requesting:
+    #
+    # {JOIN TYPE} JOIN inventories AS inv_{RC_NAME}
+    #  ON {JOINING TABLE}.id = inv_{RC_NAME}.resource_provider_id
+    #  AND inv_{RC_NAME}.resource_class_id = $RC_ID
+    # LEFT JOIN (
+    #  SELECT resource_provider_id, SUM(used) AS used
+    #  FROM allocations
+    #  WHERE resource_class_id = $VCPU_ID
+    #  GROUP BY resource_provider_id
+    # ) AS usage_{RC_NAME}
+    #  ON inv_{RC_NAME}.resource_provider_id = \
+    #      usage_{RC_NAME}.resource_provider_id
+    #
+    # For resource classes that DO NOT have any shared resource providers, the
+    # {JOIN TYPE} will be an INNER join, because we are filtering out any
+    # resource providers that do not have local inventory of that resource
+    # class.
+    #
+    # For resource classes that DO have shared resource providers, the {JOIN
+    # TYPE} will be a LEFT (OUTER) join.
+    #
+    # For the first join, {JOINING TABLE} will be resource_providers. For each
+    # subsequent resource class that is added to the SQL expression, {JOINING
+    # TABLE} will be the alias of the inventories table that refers to the
+    # previously-processed resource class.
+    #
+    # For resource classes that DO have shared providers, we also perform a
+    # "butterfly join" against two copies of the resource_provider_aggregates
+    # table:
+    #
+    # +-----------+  +------------+  +-------------+  +------------+
+    # | last_inv  |  | rpa_shared |  | rpa_sharing |  | rp_sharing |
+    # +-----------|  +------------+  +-------------+  +------------+
+    # | rp_id     |=>| rp_id      |  | rp_id       |<=| id         |
+    # |           |  | agg_id     |<=| agg_id      |  |            |
+    # +-----------+  +------------+  +-------------+  +------------+
+    #
+    # Note in the diagram above, we call the _get_providers_sharing_capacity()
+    # for a resource class to construct the "rp_sharing" set/table.
+    #
+    # The first part of the butterfly join is an outer join against a copy of
+    # the resource_provider_aggregates table in order to winnow results to
+    # providers that are associated with any aggregate that the sharing
+    # provider is associated with:
+    #
+    # LEFT JOIN resource_provider_aggregates AS shared_{RC_NAME}
+    #  ON {JOINING_TABLE}.id = shared_{RC_NAME}.resource_provider_id
+    #
+    # The above is then joined to the set of aggregates associated with the set
+    # of sharing providers for that resource:
+    #
+    # LEFT JOIN resource_provider_aggregates AS sharing_{RC_NAME}
+    #  ON shared_{RC_NAME}.aggregate_id = sharing_{RC_NAME}.aggregate_id
+    #
+    # We calculate the WHERE conditions based on whether the resource class has
+    # any shared providers.
+    #
+    # For resource classes that DO NOT have any shared resource providers, the
+    # WHERE clause constructed finds resource providers that have inventory for
+    # "local" resource providers:
+    #
+    # WHERE (COALESCE(usage_vcpu.used, 0) + $AMOUNT <=
+    #   (inv_{RC_NAME}.total + inv_{RC_NAME}.reserved)
+    #   * inv_{RC_NAME}.allocation_ratio
+    # AND
+    # inv_{RC_NAME}.min_unit <= $AMOUNT AND
+    # inv_{RC_NAME}.max_unit >= $AMOUNT AND
+    # $AMOUNT_VCPU % inv_{RC_NAME}.step_size == 0)
+    #
+    # For resource classes that DO have shared resource providers, the WHERE
+    # clause is slightly more complicated:
+    #
+    # WHERE (
+    #   inv_{RC_NAME}.resource_provider_id IS NOT NULL AND
+    #   (
+    #     (
+    #     COALESCE(usage_{RC_NAME}.used, 0) + $AMOUNT_VCPU <=
+    #       (inv_{RC_NAME}.total + inv_{RC_NAME}.reserved)
+    #       * inv_{RC_NAME}.allocation_ratio
+    #     ) AND
+    #     inv_{RC_NAME}.min_unit <= $AMOUNT_VCPU AND
+    #     inv_{RC_NAME}.max_unit >= $AMOUNT_VCPU AND
+    #     $AMOUNT_VCPU % inv_{RC_NAME}.step_size == 0
+    #   ) OR
+    #   sharing_{RC_NAME}.resource_provider_id IS NOT NULL
+    # )
+    #
+    # Finally, we GROUP BY the resource provider ID:
+    #
+    # GROUP BY rp.id
+    #
+    # To show an example, here is the exact SQL that will be generated in an
+    # environment that has a shared storage pool and compute nodes that have
+    # vCPU and RAM associated with the same aggregate as the provider
+    # representing the shared storage pool:
+    #
+    # SELECT rp.*
+    # FROM resource_providers AS rp
+    # INNER JOIN inventories AS inv_vcpu
+    #  ON rp.id = inv_vcpu.resource_provider_id
+    #  AND inv_vcpu.resource_class_id = $VCPU_ID
+    # LEFT JOIN (
+    #  SELECT resource_provider_id, SUM(used) AS used
+    #  FROM allocations
+    #  WHERE resource_class_id = $VCPU_ID
+    #  GROUP BY resource_provider_id
+    # ) AS usage_vcpu
+    #  ON inv_vcpu.resource_provider_id = \
+    #       usage_vcpu.resource_provider_id
+    # INNER JOIN inventories AS inv_memory_mb
+    # ON inv_vcpu.resource_provider_id = inv_memory_mb.resource_provider_id
+    # AND inv_memory_mb.resource_class_id = $MEMORY_MB_ID
+    # LEFT JOIN (
+    #  SELECT resource_provider_id, SUM(used) AS used
+    #  FROM allocations
+    #  WHERE resource_class_id = $MEMORY_MB_ID
+    #  GROUP BY resource_provider_id
+    # ) AS usage_memory_mb
+    #  ON inv_memory_mb.resource_provider_id = \
+    #       usage_memory_mb.resource_provider_id
+    # LEFT JOIN inventories AS inv_disk_gb
+    #  ON inv_memory_mb.resource_provider_id = \
+    #       inv_disk_gb.resource_provider_id
+    #  AND inv_disk_gb.resource_class_id = $DISK_GB_ID
+    # LEFT JOIN (
+    #  SELECT resource_provider_id, SUM(used) AS used
+    #  FROM allocations
+    #  WHERE resource_class_id = $DISK_GB_ID
+    #  GROUP BY resource_provider_id
+    # ) AS usage_disk_gb
+    #  ON inv_disk_gb.resource_provider_id = \
+    #       usage_disk_gb.resource_provider_id
+    # LEFT JOIN resource_provider_aggregates AS shared_disk_gb
+    #  ON inv_memory_mb.resource_provider_id = \
+    #       shared_disk.resource_provider_id
+    # LEFT JOIN resource_provider_aggregates AS sharing_disk_gb
+    #  ON shared_disk_gb.aggregate_id = sharing_disk_gb.aggregate_id
+    # AND sharing_disk_gb.resource_provider_id IN ($RPS_SHARING_DISK)
+    # WHERE (
+    #   (
+    #     COALESCE(usage_vcpu.used, 0) + $AMOUNT_VCPU <=
+    #     (inv_vcpu.total + inv_vcpu.reserved)
+    #     * inv_vcpu.allocation_ratio
+    #   ) AND
+    #   inv_vcpu.min_unit <= $AMOUNT_VCPU AND
+    #   inv_vcpu.max_unit >= $AMOUNT_VCPU AND
+    #   $AMOUNT_VCPU % inv_vcpu.step_size == 0
+    # ) AND (
+    #   (
+    #     COALESCE(usage_memory_mb.used, 0) + $AMOUNT_VCPU <=
+    #     (inv_memory_mb.total + inv_memory_mb.reserved)
+    #     * inv_memory_mb.allocation_ratio
+    #   ) AND
+    #   inv_memory_mb.min_unit <= $AMOUNT_MEMORY_MB AND
+    #   inv_memory_mb.max_unit >= $AMOUNT_MEMORY_MB AND
+    #   $AMOUNT_MEMORY_MB % inv_memory_mb.step_size == 0
+    # ) AND (
+    #   inv_disk.resource_provider_id IS NOT NULL AND
+    #   (
+    #     (
+    #       COALESCE(usage_disk_gb.used, 0) + $AMOUNT_DISK_GB <=
+    #         (inv_disk_gb.total + inv_disk_gb.reserved)
+    #         * inv_disk_gb.allocation_ratio
+    #     ) AND
+    #     inv_disk_gb.min_unit <= $AMOUNT_DISK_GB AND
+    #     inv_disk_gb.max_unit >= $AMOUNT_DISK_GB AND
+    #     $AMOUNT_DISK_GB % inv_disk_gb.step_size == 0
+    #   ) OR
+    #     sharing_disk_gb.resource_provider_id IS NOT NULL
+    # )
+    # GROUP BY rp.id
+
+    rpt = sa.alias(_RP_TBL, name="rp")
+
+    # Contains a set of resource provider IDs for each resource class requested
+    sharing_providers = {
+        rc_id: _get_providers_with_shared_capacity(ctx, rc_id, amount)
+        for rc_id, amount in resources.items()
+    }
+
+    name_map = {
+        rc_id: _RC_CACHE.string_from_id(rc_id).lower()
+        for rc_id in resources.keys()
+    }
+
+    # Dict, keyed by resource class ID, of an aliased table object for the
+    # inventories table winnowed to only that resource class.
+    inv_tables = {
+        rc_id: sa.alias(_INV_TBL, name='inv_%s' % name_map[rc_id])
+        for rc_id in resources.keys()
+    }
+
+    # Dict, keyed by resource class ID, of a derived table (subquery in the
+    # FROM clause or JOIN) against the allocations table  winnowed to only that
+    # resource class, grouped by resource provider.
+    usage_tables = {
+        rc_id: sa.alias(
+            sa.select([
+                _ALLOC_TBL.c.resource_provider_id,
+                sql.func.sum(_ALLOC_TBL.c.used).label('used'),
+            ]).where(
+                _ALLOC_TBL.c.resource_class_id == rc_id
+            ).group_by(
+                _ALLOC_TBL.c.resource_provider_id
+            ),
+            name='usage_%s' % name_map[rc_id],
+        )
+        for rc_id in resources.keys()
+    }
+
+    # Dict, keyed by resource class ID, of an aliased table of
+    # resource_provider_aggregates representing the aggregates associated with
+    # a provider sharing the resource class
+    sharing_tables = {
+        rc_id: sa.alias(_RP_AGG_TBL, name='sharing_%s' % name_map[rc_id])
+        for rc_id in resources.keys()
+        if len(sharing_providers[rc_id]) > 0
+    }
+
+    # Dict, keyed by resource class ID, of an aliased table of
+    # resource_provider_aggregates representing the resource providers
+    # associated by aggregate to the providers sharing a particular resource
+    # class.
+    shared_tables = {
+        rc_id: sa.alias(_RP_AGG_TBL, name='shared_%s' % name_map[rc_id])
+        for rc_id in resources.keys()
+        if len(sharing_providers[rc_id]) > 0
+    }
+
+    # List of the WHERE conditions we build up by looking at the contents
+    # of the sharing providers
+    where_conds = []
+
+    # Primary selection is on the resource_providers table and all of the
+    # aliased table copies of resource_provider_aggregates for each resource
+    # being shared
+    sel = sa.select([rpt.c.id])
+
+    # The chain of joins that we eventually pass to select_from()
+    join_chain = None
+    # The last inventory join
+    lastij = None
+
+    for rc_id, sps in sharing_providers.items():
+        it = inv_tables[rc_id]
+        ut = usage_tables[rc_id]
+        amount = resources[rc_id]
+
+        if join_chain is None:
+            rp_link = rpt
+            jc = rpt.c.id == it.c.resource_provider_id
+        else:
+            rp_link = join_chain
+            jc = lastij.c.resource_provider_id == it.c.resource_provider_id
+
+        # We can do a more efficient INNER JOIN when we don't have shared
+        # resource providers for this resource class
+        joiner = sa.join
+        if sps:
+            joiner = sa.outerjoin
+        inv_join = joiner(
+            rp_link, it,
+            sa.and_(
+                jc,
+                # Add a join condition winnowing this copy of inventories table
+                # to only the resource class being analyzed in this loop...
+                it.c.resource_class_id == rc_id,
+            ),
+        )
+        lastij = it
+        usage_join = sa.outerjoin(
+            inv_join, ut,
+            it.c.resource_provider_id == ut.c.resource_provider_id,
+        )
+        join_chain = usage_join
+
+        usage_cond = sa.and_(
+            (
+            (sql.func.coalesce(ut.c.used, 0) + amount) <=
+            (it.c.total - it.c.reserved) * it.c.allocation_ratio
+            ),
+            it.c.min_unit <= amount,
+            it.c.max_unit >= amount,
+            amount % it.c.step_size == 0,
+        )
+        if not sps:
+            where_conds.append(usage_cond)
+        else:
+            sharing = sharing_tables[rc_id]
+            shared = shared_tables[rc_id]
+            cond = sa.or_(
+                sa.and_(
+                    it.c.resource_provider_id != sa.null(),
+                    usage_cond,
+                ),
+                sharing.c.resource_provider_id != sa.null(),
+            )
+            where_conds.append(cond)
+
+            # We need to add the "butterfly" join now that produces the set of
+            # resource providers associated with a provider that is sharing the
+            # resource via an aggregate
+            shared_join = sa.outerjoin(
+                join_chain, shared,
+                rpt.c.id == shared.c.resource_provider_id,
+            )
+            sharing_join = sa.outerjoin(
+                shared_join, sharing,
+                sa.and_(
+                    shared.c.aggregate_id == sharing.c.aggregate_id,
+                    sharing.c.resource_provider_id.in_(sps),
+                ),
+            )
+            join_chain = sharing_join
+
+    sel = sel.select_from(join_chain)
+    sel = sel.where(sa.and_(*where_conds))
+    sel = sel.group_by(rpt.c.id)
+
+    return [r for r in ctx.session.execute(sel)]
+
+
 @base.NovaObjectRegistry.register
 class ResourceProviderList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial Version
