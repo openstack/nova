@@ -1730,7 +1730,10 @@ class API(base_api.NetworkAPI):
         fip = self._get_floating_ip_by_address(client, floating_address)
         param = {'port_id': port_id,
                  'fixed_ip_address': fixed_address}
-        client.update_floatingip(fip['id'], {'floatingip': param})
+        try:
+            client.update_floatingip(fip['id'], {'floatingip': param})
+        except neutron_client_exc.Conflict as e:
+            raise exception.FloatingIpAssociateFailed(six.text_type(e))
 
         if fip['port_id']:
             port = self._show_port(context, fip['port_id'],
