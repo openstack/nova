@@ -23,8 +23,6 @@ from nova.api.openstack import wsgi
 from nova.i18n import _
 from nova.policies import ips as ips_policies
 
-ALIAS = 'ips'
-
 
 class IPsController(wsgi.Controller):
     """The servers addresses API controller for the OpenStack API."""
@@ -57,23 +55,3 @@ class IPsController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
 
         return self._view_builder.show(networks[id], id)
-
-
-class IPs(extensions.V21APIExtensionBase):
-    """Server addresses."""
-
-    name = "Ips"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        parent = {'member_name': 'server',
-                  'collection_name': 'servers'}
-        resources = [
-            extensions.ResourceExtension(
-                ALIAS, IPsController(), parent=parent, member_name='ip')]
-
-        return resources
-
-    def get_controller_extensions(self):
-        return []
