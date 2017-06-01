@@ -952,7 +952,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                       'Code=%(errcode)s Error=%(e)s'),
                                   {'errcode': errcode, 'e': e},
                                   instance=instance)
-                    reason = "Error unfiltering instance."
+                    reason = _("Error unfiltering instance.")
                     raise exception.InstanceTerminationFailure(reason=reason)
             except Exception:
                 retry = False

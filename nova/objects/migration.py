@@ -16,6 +16,7 @@ from oslo_utils import versionutils
 
 from nova import db
 from nova import exception
+from nova.i18n import _
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -126,8 +127,8 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
         if 'migration_type' not in updates:
             raise exception.ObjectActionError(
                 action="create",
-                reason="cannot create a Migration object without a "
-                       "migration_type set")
+                reason=_("cannot create a Migration object without a "
+                         "migration_type set"))
         db_migration = db.migration_create(self._context, updates)
         self._from_db_object(self._context, self, db_migration)
 
