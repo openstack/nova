@@ -2052,3 +2052,28 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         )
         got_ids = [rp.id for rp in got_rps]
         self.assertEqual([cn1.id, cn2.id], got_ids)
+
+        # Now we consume all the memory in the second compute node and verify
+        # that it does not get returned from _get_all_with_shared()
+
+        for x in range(3):
+            # allocation_ratio for MEMORY_MB is 1.5, so we need to make 3
+            # 512-MB allocations to fully consume the memory on the node
+            memory_mb_alloc = objects.Allocation(
+                resource_provider=cn2,
+                resource_class=fields.ResourceClass.MEMORY_MB,
+                consumer_id=getattr(uuidsentinel, 'consumer%d' % x),
+                used=512,
+            )
+            alloc_list = objects.AllocationList(
+                self.context,
+                objects=[memory_mb_alloc]
+            )
+            alloc_list.create_all()
+
+        got_rps = rp_obj._get_all_with_shared(
+            self.context,
+            resources,
+        )
+        got_ids = [rp.id for rp in got_rps]
+        self.assertEqual([cn1.id], got_ids)
