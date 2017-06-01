@@ -1971,3 +1971,84 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         )
         got_ids = [rp.id for rp in got_rps]
         self.assertEqual([cn1.id, cn2.id], got_ids)
+
+        # Now we add another compute node that has vCPU and RAM along with
+        # local disk and is *not* associated with the agg1. We want to verify
+        # that this compute node, because it has all three resources "locally"
+        # is also returned by _get_all_with_shared() along with the other
+        # compute nodes that are associated with the shared storage pool.
+        cn3_uuid = uuidsentinel.cn3
+        cn3 = objects.ResourceProvider(
+            self.context,
+            name='cn3',
+            uuid=cn3_uuid,
+        )
+        cn3.create()
+        vcpu = objects.Inventory(
+            resource_provider=cn3,
+            resource_class=fields.ResourceClass.VCPU,
+            total=24,
+            reserved=0,
+            min_unit=1,
+            max_unit=24,
+            step_size=1,
+            allocation_ratio=1.0,
+        )
+        memory_mb = objects.Inventory(
+            resource_provider=cn3,
+            resource_class=fields.ResourceClass.MEMORY_MB,
+            total=1024,
+            reserved=0,
+            min_unit=64,
+            max_unit=1024,
+            step_size=1,
+            allocation_ratio=1.0,
+        )
+        disk_gb = objects.Inventory(
+            resource_provider=cn3,
+            resource_class=fields.ResourceClass.DISK_GB,
+            total=500,
+            reserved=0,
+            min_unit=10,
+            max_unit=500,
+            step_size=10,
+            allocation_ratio=1.0,
+        )
+        inv_list = objects.InventoryList(objects=[vcpu, memory_mb, disk_gb])
+        cn3.set_inventory(inv_list)
+
+        got_rps = rp_obj._get_all_with_shared(
+            self.context,
+            resources,
+        )
+        got_ids = [rp.id for rp in got_rps]
+        self.assertEqual([cn1.id, cn2.id, cn3.id], got_ids)
+
+        # Consume all vCPU and RAM inventory on the "local disk" compute node
+        # and verify it no longer is returned from _get_all_with_shared()
+
+        vcpu_alloc = objects.Allocation(
+            resource_provider=cn3,
+            resource_class=fields.ResourceClass.VCPU,
+            consumer_id=uuidsentinel.consumer,
+            used=24,
+        )
+        memory_mb_alloc = objects.Allocation(
+            resource_provider=cn3,
+            resource_class=fields.ResourceClass.MEMORY_MB,
+            consumer_id=uuidsentinel.consumer,
+            used=1024,
+        )
+
+        alloc_list = objects.AllocationList(
+            self.context,
+            objects=[vcpu_alloc, memory_mb_alloc]
+        )
+        alloc_list.create_all()
+
+        got_rps = rp_obj._get_all_with_shared(
+            self.context,
+            resources,
+        )
+        got_ids = [rp.id for rp in got_rps]
+        self.assertEqual([cn1.id, cn2.id], got_ids)
