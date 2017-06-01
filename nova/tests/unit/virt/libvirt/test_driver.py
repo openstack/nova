@@ -16824,7 +16824,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             power_state.SHUTDOWN,
             expected_flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG))
 
-    def _test_detach_interface(self, power_state, expected_flags):
+    def _test_detach_interface(self, power_state, expected_flags,
+                               device_not_found=False):
         # setup some mocks
         instance = self._create_instance()
         network_info = _fake_network_info(self, 1)
@@ -16853,13 +16854,27 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
               <target dev='tap12345678'/>
             </interface>""")
 
+        if device_not_found:
+            # This will trigger detach_device_with_retry to raise
+            # DeviceNotFound
+            get_interface_calls = [expected_cfg, None]
+        else:
+            get_interface_calls = [expected_cfg, expected_cfg, None]
+
         with test.nested(
             mock.patch.object(host.Host, 'get_guest', return_value=guest),
             mock.patch.object(self.drvr.vif_driver, 'get_config',
                               return_value=expected_cfg),
-            mock.patch.object(domain, 'detachDeviceFlags')
+            # This is called multiple times in a retry loop so we use a
+            # side_effect to simulate the calls to stop the loop.
+            mock.patch.object(guest, 'get_interface_by_cfg',
+                              side_effect=get_interface_calls),
+            mock.patch.object(domain, 'detachDeviceFlags'),
+            mock.patch('nova.virt.libvirt.driver.LOG.warning')
         ) as (
-            mock_get_guest, mock_get_config, mock_detach_device_flags
+            mock_get_guest, mock_get_config,
+            mock_get_interface, mock_detach_device_flags,
+            mock_warning
         ):
             # run the detach method
             self.drvr.detach_interface(self.context, instance, network_info[0])
@@ -16870,14 +16885,31 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             instance, network_info[0], test.MatchType(objects.ImageMeta),
             test.MatchType(objects.Flavor), CONF.libvirt.virt_type,
             self.drvr._host)
-        mock_detach_device_flags.assert_called_once_with(
-            expected_cfg.to_xml(), flags=expected_flags)
+        mock_get_interface.assert_has_calls(
+            [mock.call(expected_cfg) for x in range(len(get_interface_calls))])
+
+        if device_not_found:
+            mock_detach_device_flags.assert_not_called()
+            self.assertTrue(mock_warning.called)
+        else:
+            mock_detach_device_flags.assert_called_once_with(
+                expected_cfg.to_xml(), flags=expected_flags)
+            mock_warning.assert_not_called()
 
     def test_detach_interface_with_running_instance(self):
         self._test_detach_interface(
             power_state.RUNNING,
             expected_flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
                             fakelibvirt.VIR_DOMAIN_AFFECT_LIVE))
+
+    def test_detach_interface_with_running_instance_device_not_found(self):
+        """Tests that the interface is detached before we try to detach it.
+        """
+        self._test_detach_interface(
+            power_state.RUNNING,
+            expected_flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
+                            fakelibvirt.VIR_DOMAIN_AFFECT_LIVE),
+            device_not_found=True)
 
     def test_detach_interface_with_pause_instance(self):
         self._test_detach_interface(
@@ -16963,7 +16995,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                           fakelibvirt.VIR_DOMAIN_AFFECT_LIVE)
         domain.detachDeviceFlags(expected.to_xml(), flags=expected_flags)
         self.mox.ReplayAll()
-        self.drvr.detach_interface(self.context, instance, network_info[0])
+        with mock.patch.object(libvirt_guest.Guest, 'get_interface_by_cfg',
+                               side_effect=[expected, expected, None]):
+            self.drvr.detach_interface(self.context, instance, network_info[0])
         self.mox.VerifyAll()
 
     @mock.patch('nova.virt.libvirt.utils.write_to_file')
