@@ -2016,7 +2016,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(instance_ref.flavor.vcpus, cfg.vcpus)
         self.assertEqual(fields.VMMode.EXE, cfg.os_type)
         self.assertEqual("/sbin/init", cfg.os_init_path)
-        self.assertEqual("console=tty0 console=ttyS0", cfg.os_cmdline)
+        self.assertEqual("console=tty0 console=ttyS0 console=hvc0",
+                         cfg.os_cmdline)
         self.assertIsNone(cfg.os_root)
         self.assertEqual(3, len(cfg.devices))
         self.assertIsInstance(cfg.devices[0],
@@ -2041,7 +2042,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(instance_ref.vcpus, cfg.vcpus)
         self.assertEqual(fields.VMMode.EXE, cfg.os_type)
         self.assertEqual("/sbin/init", cfg.os_init_path)
-        self.assertEqual("console=tty0 console=ttyS0", cfg.os_cmdline)
+        self.assertEqual("console=tty0 console=ttyS0 console=hvc0",
+                         cfg.os_cmdline)
         self.assertIsNone(cfg.os_root)
         self.assertEqual(3, len(cfg.devices))
         self.assertIsInstance(cfg.devices[0],
@@ -5338,9 +5340,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                             instance_ref,
                                             image_meta)
 
-        # the instance has 'root=/dev/vda console=tty0 console=ttyS0' set by
-        # default, so testing an empty string and None value in the
-        # os_command_line image property must pass
+        # the instance has 'root=/dev/vda console=tty0 console=ttyS0
+        # console=hvc0' set by default, so testing an empty string and None
+        # value in the os_command_line image property must pass
         cfg = drvr._get_guest_config(instance_ref,
                                      _fake_network_info(self, 1),
                                      image_meta, disk_info)
@@ -6858,11 +6860,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 check = (lambda t: "no_timer_check" in t.find('./os/cmdline').
                          text, hypervisor_type == "qemu")
                 check_list.append(check)
-            # Hypervisors that only support vm_mode.HVM and Xen
-            # should not produce configuration that results in kernel
-            # arguments
+            # Hypervisors that only support vm_mode.HVM should not produce
+            # configuration that results in kernel arguments
             if not expect_kernel and (hypervisor_type in
-                                      ['qemu', 'kvm', 'xen']):
+                                      ['qemu', 'kvm']):
                 check = (lambda t: t.find('./os/root'), None)
                 check_list.append(check)
                 check = (lambda t: t.find('./os/cmdline'), None)

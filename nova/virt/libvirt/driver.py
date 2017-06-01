@@ -138,7 +138,7 @@ DISABLE_PREFIX = 'AUTO: '
 DISABLE_REASON_UNDEFINED = None
 
 # Guest config console string
-CONSOLE = "console=tty0 console=ttyS0"
+CONSOLE = "console=tty0 console=ttyS0 console=hvc0"
 
 GuestNumaConfig = collections.namedtuple(
     'GuestNumaConfig', ['cpuset', 'cputune', 'numaconfig', 'numatune'])
@@ -4158,24 +4158,18 @@ class LibvirtDriver(driver.ComputeDriver):
                               root_device_name):
         if rescue.get('kernel_id'):
             guest.os_kernel = os.path.join(inst_path, "kernel.rescue")
-            if virt_type == "xen":
-                guest.os_cmdline = "ro root=%s" % root_device_name
-            else:
-                guest.os_cmdline = ("root=%s %s" % (root_device_name, CONSOLE))
-                if virt_type == "qemu":
-                    guest.os_cmdline += " no_timer_check"
+            guest.os_cmdline = ("root=%s %s" % (root_device_name, CONSOLE))
+            if virt_type == "qemu":
+                guest.os_cmdline += " no_timer_check"
         if rescue.get('ramdisk_id'):
             guest.os_initrd = os.path.join(inst_path, "ramdisk.rescue")
 
     def _set_guest_for_inst_kernel(self, instance, guest, inst_path, virt_type,
                                 root_device_name, image_meta):
         guest.os_kernel = os.path.join(inst_path, "kernel")
-        if virt_type == "xen":
-            guest.os_cmdline = "ro root=%s" % root_device_name
-        else:
-            guest.os_cmdline = ("root=%s %s" % (root_device_name, CONSOLE))
-            if virt_type == "qemu":
-                guest.os_cmdline += " no_timer_check"
+        guest.os_cmdline = ("root=%s %s" % (root_device_name, CONSOLE))
+        if virt_type == "qemu":
+            guest.os_cmdline += " no_timer_check"
         if instance.ramdisk_id:
             guest.os_initrd = os.path.join(inst_path, "ramdisk")
         # we only support os_command_line with images with an explicit
@@ -4447,6 +4441,8 @@ class LibvirtDriver(driver.ComputeDriver):
         if virt_type == "xen":
             if guest.os_type == fields.VMMode.HVM:
                 guest.os_loader = CONF.libvirt.xen_hvmloader_path
+            else:
+                guest.os_cmdline = CONSOLE
         elif virt_type in ("kvm", "qemu"):
             if caps.host.cpu.arch in (fields.Architecture.I686,
                                       fields.Architecture.X86_64):
