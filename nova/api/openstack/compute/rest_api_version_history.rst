@@ -227,6 +227,17 @@ user documentation.
   A user can create, update, delete or check existence of simple string tags
   for servers by the os-server-tags plugin.
 
+  Tags have the following schema restrictions:
+
+  * Tag is a Unicode bytestring no longer than 60 characters.
+  * Tag is a non-empty string.
+  * Tags are case sensitive.
+  * '/' is not allowed to be in a tag name
+  * Comma is not allowed to be in a tag name in order to simplify requests that
+    specify lists of tags
+  * All other characters are allowed to be in a tag name
+  * Each server can have up to 50 tags.
+
   The resource point for these operations is /servers/<server_id>/tags
 
   A user can add a single tag to the server by sending PUT request to the
@@ -610,3 +621,9 @@ user documentation.
     useful for API users to monitor when a volume extend operation completes
     for the given server instance. By default only users with the administrator
     role will be able to see event ``traceback`` details.
+
+2.52
+----
+
+  Adds support for applying tags when creating a server. The tag schema is
+  the same as in the `2.26`_ microversion.

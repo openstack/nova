@@ -123,6 +123,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
     * 2.51 - Adds new event name to external-events (volume-extended). Also,
              non-admins can see instance action event details except for the
              traceback field.
+    * 2.52 - Adds support for applying tags when creating a server.
 """
 
 # The minimum and maximum versions of the API supported
@@ -131,7 +132,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.51"
+_MAX_API_VERSION = "2.52"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which related to network, images and baremetal

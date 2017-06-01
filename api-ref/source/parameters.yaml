@@ -4963,6 +4963,28 @@ server_status:
   in: body
   required: true
   type: string
+server_tags_create:
+  description: |
+    A list of tags. Tags have the following restrictions:
+
+    - Tag is a Unicode bytestring no longer than 60 characters.
+
+    - Tag is a non-empty string.
+
+    - Tags are case sensitive.
+
+    - '/' is not allowed to be in a tag name
+
+    - Comma is not allowed to be in a tag name in order to simplify
+      requests that specify lists of tags
+
+    - All other characters are allowed to be in a tag name
+
+    - Each server can have up to 50 tags.
+  in: body
+  required: false
+  type: array
+  min_version: 2.52
 server_usages:
   description: |
     A list of the server usage objects.

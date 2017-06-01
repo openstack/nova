@@ -83,6 +83,7 @@ class ServersController(wsgi.Controller):
     schema_server_create_v232 = schema_servers.base_create_v232
     schema_server_create_v237 = schema_servers.base_create_v237
     schema_server_create_v242 = schema_servers.base_create_v242
+    schema_server_create_v252 = schema_servers.base_create_v252
 
     # NOTE(alex_xu): Please do not add more items into this list. This list
     # should be removed in the future.
@@ -135,6 +136,7 @@ class ServersController(wsgi.Controller):
 
         # TODO(alex_xu): The final goal is that merging all of
         # extended json-schema into server main json-schema.
+        self._create_schema(self.schema_server_create_v252, '2.52')
         self._create_schema(self.schema_server_create_v242, '2.42')
         self._create_schema(self.schema_server_create_v237, '2.37')
         self._create_schema(self.schema_server_create_v232, '2.32')
@@ -446,7 +448,8 @@ class ServersController(wsgi.Controller):
     @validation.schema(schema_server_create_v219, '2.19', '2.31')
     @validation.schema(schema_server_create_v232, '2.32', '2.36')
     @validation.schema(schema_server_create_v237, '2.37', '2.41')
-    @validation.schema(schema_server_create_v242, '2.42')
+    @validation.schema(schema_server_create_v242, '2.42', '2.51')
+    @validation.schema(schema_server_create_v252, '2.52')
     def create(self, req, body):
         """Creates a new server for a given user."""
         context = req.environ['nova.context']
@@ -466,6 +469,9 @@ class ServersController(wsgi.Controller):
         self._create_by_func_list(server_dict, create_kwargs, body)
 
         availability_zone = create_kwargs.pop("availability_zone", None)
+
+        if api_version_request.is_supported(req, min_version='2.52'):
+            create_kwargs['tags'] = server_dict.get('tags')
 
         helpers.translate_attributes(helpers.CREATE,
                                      server_dict, create_kwargs)

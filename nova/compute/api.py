@@ -986,7 +986,7 @@ class API(base.Base):
             max_count, base_options, boot_meta, security_groups,
             block_device_mapping, shutdown_terminate,
             instance_group, check_server_group_quota, filter_properties,
-            key_pair):
+            key_pair, tags):
         # Reserve quotas
         num_instances, quotas = self._check_num_instances_quota(
                 context, instance_type, min_count, max_count)
@@ -1027,11 +1027,13 @@ class API(base.Base):
                 block_device_mapping = (
                     self._bdm_validate_set_size_and_instance(context,
                         instance, instance_type, block_device_mapping))
+                instance_tags = self._transform_tags(tags, instance.uuid)
 
                 build_request = objects.BuildRequest(context,
                         instance=instance, instance_uuid=instance.uuid,
                         project_id=instance.project_id,
-                        block_device_mappings=block_device_mapping)
+                        block_device_mappings=block_device_mapping,
+                        tags=instance_tags)
                 build_request.create()
 
                 # Create an instance_mapping.  The null cell_mapping indicates
@@ -1179,7 +1181,7 @@ class API(base.Base):
                requested_networks, config_drive,
                block_device_mapping, auto_disk_config, filter_properties,
                reservation_id=None, legacy_bdm=True, shutdown_terminate=False,
-               check_server_group_quota=False):
+               check_server_group_quota=False, tags=None):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed and schedule the instance(s) for
         creation.
@@ -1192,6 +1194,7 @@ class API(base.Base):
         min_count = min_count or 1
         max_count = max_count or min_count
         block_device_mapping = block_device_mapping or []
+        tags = tags or []
 
         if image_href:
             image_id, boot_meta = self._get_image(context, image_href)
@@ -1237,11 +1240,13 @@ class API(base.Base):
         instance_group = self._get_requested_instance_group(context,
                                    filter_properties)
 
-        instances_to_build = self._provision_instances(context, instance_type,
-                min_count, max_count, base_options, boot_meta, security_groups,
-                block_device_mapping, shutdown_terminate,
-                instance_group, check_server_group_quota, filter_properties,
-                key_pair)
+        tags = self._create_tag_list_obj(context, tags)
+
+        instances_to_build = self._provision_instances(
+            context, instance_type, min_count, max_count, base_options,
+            boot_meta, security_groups, block_device_mapping,
+            shutdown_terminate, instance_group, check_server_group_quota,
+            filter_properties, key_pair, tags)
 
         instances = []
         request_specs = []
@@ -1276,7 +1281,8 @@ class API(base.Base):
                 admin_password=admin_password,
                 injected_files=injected_files,
                 requested_networks=requested_networks,
-                block_device_mapping=block_device_mapping)
+                block_device_mapping=block_device_mapping,
+                tags=tags)
 
         return (instances, reservation_id)
 
@@ -1583,6 +1589,33 @@ class API(base.Base):
 
         return instance
 
+    def _create_tag_list_obj(self, context, tags):
+        """Create TagList objects from simple string tags.
+
+        :param context: security context.
+        :param tags: simple string tags from API request.
+        :returns: TagList object.
+        """
+        tag_list = [objects.Tag(context=context, tag=t) for t in tags]
+        tag_list_obj = objects.TagList(objects=tag_list)
+        return tag_list_obj
+
+    def _transform_tags(self, tags, resource_id):
+        """Change the resource_id of the tags according to the input param.
+
+        Because this method can be called multiple times when more than one
+        instance is booted in a single request it makes a copy of the tags
+        list.
+
+        :param tags: TagList object.
+        :param resource_id: string.
+        :returns: TagList object.
+        """
+        instance_tags = tags.obj_clone()
+        for tag in instance_tags:
+            tag.resource_id = resource_id
+        return instance_tags
+
     # This method remains because cellsv1 uses it in the scheduler
     def create_db_entry_for_new_instance(self, context, instance_type, image,
             instance, security_group, block_device_mapping, num_instances,
@@ -1640,7 +1673,7 @@ class API(base.Base):
                access_ip_v4=None, access_ip_v6=None, requested_networks=None,
                config_drive=None, auto_disk_config=None, scheduler_hints=None,
                legacy_bdm=True, shutdown_terminate=False,
-               check_server_group_quota=False):
+               check_server_group_quota=False, tags=None):
         """Provision instances, sending instance information to the
         scheduler.  The scheduler will determine where the instance(s)
         go and will handle creating the DB entries.
@@ -1679,7 +1712,8 @@ class API(base.Base):
                        filter_properties=filter_properties,
                        legacy_bdm=legacy_bdm,
                        shutdown_terminate=shutdown_terminate,
-                       check_server_group_quota=check_server_group_quota)
+                       check_server_group_quota=check_server_group_quota,
+                       tags=tags)
 
     def _check_auto_disk_config(self, instance=None, image=None,
                                 **extra_instance_updates):

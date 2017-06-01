@@ -295,6 +295,33 @@ class BuildRequestList(base.ObjectListBase, base.NovaObject):
                         if (k not in instance.metadata or
                                 v != instance.metadata[k]):
                             return False
+            elif filter_key in (
+                    'tags', 'tags-any', 'not-tags', 'not-tags-any'):
+                # Get the list of simple string tags first.
+                tags = ([tag.tag for tag in instance.tags]
+                        if instance.tags else [])
+                if filter_key == 'tags':
+                    for item in filter_val:
+                        if item not in tags:
+                            return False
+                elif filter_key == 'tags-any':
+                    found = []
+                    for item in filter_val:
+                        if item in tags:
+                            found.append(item)
+                    if not found:
+                        return False
+                elif filter_key == 'not-tags':
+                    found = []
+                    for item in filter_val:
+                        if item in tags:
+                            found.append(item)
+                    if len(found) == len(filter_val):
+                        return False
+                elif filter_key == 'not-tags-any':
+                    for item in filter_val:
+                        if item in tags:
+                            return False
             elif isinstance(filter_val, (list, tuple, set, frozenset)):
                 if not filter_val:
                     # Special value to indicate that nothing will match.
@@ -364,10 +391,6 @@ class BuildRequestList(base.ObjectListBase, base.NovaObject):
         build_requests = cls.get_all(context)
 
         # Fortunately some filters do not apply here.
-        # 'tags' can not be applied at boot time so will not be set for an
-        # instance here.
-        # TODO(zhengzhenyu): Handle this when the API supports creating
-        # servers with tags.
         # 'changes-since' works off of the updated_at field which has not yet
         # been set at the point in the boot process where build_request still
         # exists. So it can be ignored.
@@ -381,7 +404,8 @@ class BuildRequestList(base.ObjectListBase, base.NovaObject):
         exact_match_filter_names = ['project_id', 'user_id', 'image_ref',
                                     'vm_state', 'instance_type_id', 'uuid',
                                     'metadata', 'host', 'task_state',
-                                    'system_metadata']
+                                    'system_metadata', 'tags', 'tags-any',
+                                    'not-tags', 'not-tags-any']
         exact_filters = {}
         regex_filters = {}
         for key, value in filters.items():

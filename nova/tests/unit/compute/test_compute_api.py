@@ -3643,7 +3643,7 @@ class _ComputeAPIUnitTestMixIn(object):
                               boot_meta, security_groups, block_device_mapping,
                               shutdown_terminate, instance_group,
                               check_server_group_quota, filter_properties,
-                              None)
+                              None, objects.TagList())
 
         do_test()
 
@@ -3692,7 +3692,8 @@ class _ComputeAPIUnitTestMixIn(object):
                                                   1, 1, mock.MagicMock(),
                                                   {}, None,
                                                   None, None, None, {}, None,
-                                                  fake_keypair)
+                                                  fake_keypair,
+                                                  objects.TagList())
             self.assertEqual(
                 'test',
                 mock_instance.return_value.keypairs.objects[0].name)
@@ -3701,7 +3702,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                                   1, 1, mock.MagicMock(),
                                                   {}, None,
                                                   None, None, None, {}, None,
-                                                  None)
+                                                  None, objects.TagList())
             self.assertEqual(
                 0,
                 len(mock_instance.return_value.keypairs.objects))
@@ -3764,6 +3765,7 @@ class _ComputeAPIUnitTestMixIn(object):
                      'device_name': 'vda',
                      'boot_index': 0,
                      }))])
+            instance_tags = objects.TagList(objects=[objects.Tag(tag='tag')])
             shutdown_terminate = True
             instance_group = None
             check_server_group_quota = False
@@ -3775,7 +3777,7 @@ class _ComputeAPIUnitTestMixIn(object):
                     min_count, max_count, base_options, boot_meta,
                     security_groups, block_device_mappings, shutdown_terminate,
                     instance_group, check_server_group_quota,
-                    filter_properties, None)
+                    filter_properties, None, instance_tags)
 
             for rs, br, im in instances_to_build:
                 self.assertIsInstance(br.instance, objects.Instance)
@@ -3783,6 +3785,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.assertEqual(base_options['project_id'],
                                  br.instance.project_id)
                 self.assertEqual(1, br.block_device_mappings[0].id)
+                self.assertEqual(br.instance.uuid, br.tags[0].resource_id)
                 br.create.assert_called_with()
 
         do_test()
@@ -3855,7 +3858,7 @@ class _ComputeAPIUnitTestMixIn(object):
                     min_count, max_count, base_options, boot_meta,
                     security_groups, block_device_mapping, shutdown_terminate,
                     instance_group, check_server_group_quota,
-                    filter_properties, None))
+                    filter_properties, None, objects.TagList()))
             rs, br, im = instances_to_build[0]
             self.assertTrue(uuidutils.is_uuid_like(br.instance.uuid))
             self.assertEqual(br.instance_uuid, im.instance_uuid)
@@ -3943,14 +3946,14 @@ class _ComputeAPIUnitTestMixIn(object):
             check_server_group_quota = False
             filter_properties = {'scheduler_hints': None,
                     'instance_type': flavor}
-
+            tags = objects.TagList()
             self.assertRaises(exception.InvalidVolume,
                               self.compute_api._provision_instances, ctxt,
                               flavor, min_count, max_count, base_options,
                               boot_meta, security_groups, block_device_mapping,
                               shutdown_terminate, instance_group,
                               check_server_group_quota, filter_properties,
-                              None)
+                              None, tags)
             # First instance, build_req, mapping is created and destroyed
             self.assertTrue(build_req_mocks[0].create.called)
             self.assertTrue(build_req_mocks[0].destroy.called)
@@ -3982,7 +3985,7 @@ class _ComputeAPIUnitTestMixIn(object):
             self.compute_api._provision_instances(ctxt, None, None, None,
                                                   mock.MagicMock(), None, None,
                                                   [], None, None, None, None,
-                                                  None)
+                                                  None, objects.TagList())
             secgroups = mock_secgroup.populate_security_groups.return_value
             mock_objects.RequestSpec.from_components.assert_called_once_with(
                 mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY,

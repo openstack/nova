@@ -16,6 +16,7 @@
 
 import collections
 import datetime
+import ddt
 import uuid
 
 import fixtures
@@ -56,6 +57,7 @@ from nova.image import glance
 from nova.network import manager
 from nova import objects
 from nova.objects import instance as instance_obj
+from nova.objects import tag
 from nova.policies import servers as server_policies
 from nova import policy
 from nova import test
@@ -3860,6 +3862,54 @@ class ServersControllerCreateTestV237(test.NoDBTestCase):
         uuid = 'br-00000000-0000-0000-0000-000000000000'
         self.assertRaises(exception.ValidationError, self._create_server,
                           [{'uuid': uuid}])
+
+
+@ddt.ddt
+class ServersControllerCreateTestV252(test.NoDBTestCase):
+    def setUp(self):
+        super(ServersControllerCreateTestV252, self).setUp()
+        self.controller = servers.ServersController()
+
+        self.body = {
+            'server': {
+                'name': 'device-tagging-server',
+                'imageRef': '6b0edabb-8cde-4684-a3f4-978960a51378',
+                'flavorRef': '2',
+                'networks': [{
+                    'uuid': 'ff608d40-75e9-48cb-b745-77bb55b5eaf2'
+                }]
+            }
+        }
+
+        self.req = fakes.HTTPRequestV21.blank('/fake/servers', version='2.52')
+        self.req.method = 'POST'
+        self.req.headers['content-type'] = 'application/json'
+
+    def _create_server(self, tags):
+        self.body['server']['tags'] = tags
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        return self.controller.create(self.req, body=self.body).obj['server']
+
+    def test_create_server_with_tags_pre_2_52_fails(self):
+        """Negative test to make sure you can't pass 'tags' before 2.52"""
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest('2.51')
+        self.assertRaises(
+            exception.ValidationError, self._create_server, ['tag1'])
+
+    @ddt.data([','],
+              ['/'],
+              ['a' * (tag.MAX_TAG_LENGTH + 1)],
+              ['a'] * (instance_obj.MAX_TAG_COUNT + 1),
+              [''],
+              [1, 2, 3],
+              {'tag': 'tag'})
+    def test_create_server_with_tags_incorrect_tags(self, tags):
+        """Negative test to incorrect tags are not allowed"""
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest('2.52')
+        self.assertRaises(
+            exception.ValidationError, self._create_server, tags)
 
 
 class ServersControllerCreateTestWithMock(test.TestCase):

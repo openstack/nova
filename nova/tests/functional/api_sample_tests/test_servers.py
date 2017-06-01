@@ -230,6 +230,12 @@ class ServersSampleJson247Test(ServersSampleJsonTest):
         self._verify_response('server-action-rebuild-resp', subs, resp, 202)
 
 
+class ServersSampleJson252Test(ServersSampleJsonTest):
+    microversion = '2.52'
+    scenarios = [('v2_52', {'api_major_version': 'v2.1'})]
+    use_common_server_post = False
+
+
 class ServersUpdateSampleJsonTest(ServersSampleBase):
 
     def test_update_server(self):
