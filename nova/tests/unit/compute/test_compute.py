@@ -8359,13 +8359,11 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_populate_instance_for_create_encrypted(self, num_instances=1):
         CONF.set_override('enabled', True,
-                          group='ephemeral_storage_encryption',
-                          enforce_type=True)
+                          group='ephemeral_storage_encryption')
         CONF.set_override('api_class',
                           'castellan.tests.unit.key_manager.mock_key_manager.'
                           'MockKeyManager',
-                          group='key_manager',
-                          enforce_type=True)
+                          group='key_manager')
         base_options = {'image_ref': self.fake_image['id'],
                         'system_metadata': {'fake': 'value'},
                         'display_name': 'foo',
