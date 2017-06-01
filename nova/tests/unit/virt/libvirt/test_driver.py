@@ -8442,6 +8442,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                                     mock_exist,
                                                     mock_shutil
                                                     ):
+
+        def fake_destroy(ctxt, instance, network_info,
+                         block_device_info=None, destroy_disks=True):
+            # This is just here to test the signature. Seems there should
+            # be a better way to do this with mock and autospec.
+            pass
+
+        mock_destroy.side_effect = fake_destroy
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         migrate_data = objects.LibvirtLiveMigrateData(
@@ -8450,7 +8458,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr.rollback_live_migration_at_destination("context", "instance", [],
                                                     None, True, migrate_data)
         mock_destroy.assert_called_once_with("context", "instance", [],
-                                             None, True, migrate_data)
+                                             None, True)
         self.assertFalse(mock_get_instance_path.called)
         self.assertFalse(mock_exist.called)
         self.assertFalse(mock_shutil.called)

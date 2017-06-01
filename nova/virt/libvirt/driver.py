@@ -6696,7 +6696,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """Clean up destination node after a failed live migration."""
         try:
             self.destroy(context, instance, network_info, block_device_info,
-                         destroy_disks, migrate_data)
+                         destroy_disks)
         finally:
             # NOTE(gcb): Failed block live migration may leave instance
             # directory at destination node, ensure it is always deleted.
