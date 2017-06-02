@@ -94,3 +94,35 @@ Response Example
 
 .. literalinclude:: update-inventory.json
    :language: javascript
+
+Delete resource provider inventory
+==================================
+
+Delete the inventory record of the `{resource_class}` for
+the resource provider identified by `{uuid}`.
+
+See `Troubleshooting`_ section in ``Delete resource provider
+inventories`` for a description. In addition, the request returns
+HTTP 409 when there are allocations for the specified resource
+provider and resource class.
+
+.. _Troubleshooting: ?expanded=delete-resource-provider-inventories-detail#delete-resource-provider-inventories
+
+.. rest_method:: DELETE /resource_providers/{uuid}/inventories/{resource_class}
+
+Normal Response Codes: 204
+
+Error response codes: itemNotFound(404), conflict(409)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - uuid: resource_provider_uuid_path
+  - resource_class: resource_class_path
+
+Response
+--------
+
+No body content is returned on a successful DELETE.
