@@ -1662,6 +1662,64 @@ class ServerControllerTestV238(ControllerTest):
         self._test_invalid_status(False)
 
 
+class ServerControllerTestV247(ControllerTest):
+    """Server controller test for microversion 2.47
+
+    The intent here is simply to verify that when showing server details
+    after microversion 2.47 that the flavor is shown as a dict of flavor
+    information rather than as dict of id/links.  The existence of the
+    'extra_specs' key is controlled by policy.
+    """
+    wsgi_api_version = '2.47'
+
+    @mock.patch.object(objects.TagList, 'get_by_resource_id')
+    def test_get_all_server_details(self, mock_get_by_resource_id):
+        # Fake out tags on the instances
+        mock_get_by_resource_id.return_value = objects.TagList()
+
+        expected_flavor = {
+            'disk': 20,
+            'ephemeral': 0,
+            'extra_specs': {},
+            'original_name': u'm1.small',
+            'ram': 2048,
+            'swap': 0,
+            'vcpus': 1}
+
+        req = fakes.HTTPRequest.blank('/fake/servers/detail',
+                                      version=self.wsgi_api_version)
+        res_dict = self.controller.detail(req)
+        for i, s in enumerate(res_dict['servers']):
+            self.assertEqual(s['flavor'], expected_flavor)
+
+    @mock.patch.object(objects.TagList, 'get_by_resource_id')
+    def test_get_all_server_details_no_extra_spec(self,
+            mock_get_by_resource_id):
+        # Fake out tags on the instances
+        mock_get_by_resource_id.return_value = objects.TagList()
+        # Set the policy so we don't have permission to index
+        # flavor extra-specs but are able to get server details.
+        servers_rule = 'os_compute_api:servers:detail'
+        extraspec_rule = 'os_compute_api:os-flavor-extra-specs:index'
+        self.policy.set_rules({
+            extraspec_rule: 'rule:admin_api',
+            servers_rule: '@'})
+
+        expected_flavor = {
+            'disk': 20,
+            'ephemeral': 0,
+            'original_name': u'm1.small',
+            'ram': 2048,
+            'swap': 0,
+            'vcpus': 1}
+
+        req = fakes.HTTPRequest.blank('/fake/servers/detail',
+                                      version=self.wsgi_api_version)
+        res_dict = self.controller.detail(req)
+        for i, s in enumerate(res_dict['servers']):
+            self.assertEqual(s['flavor'], expected_flavor)
+
+
 class ServersControllerDeleteTest(ControllerTest):
 
     def setUp(self):

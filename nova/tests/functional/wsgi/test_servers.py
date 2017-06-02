@@ -61,12 +61,15 @@ class ServersPreSchedulingTestCase(test.TestCase):
         create_resp = self.api.api_post('servers', body)
         get_resp = self.api.api_get('servers/%s' %
                                     create_resp.body['server']['id'])
+        flavor_get_resp = self.api.api_get('flavors/%s' %
+                                           body['server']['flavorRef'])
 
         server = get_resp.body['server']
         # Validate a few things
         self.assertEqual('foo', server['name'])
         self.assertEqual(image_ref, server['image']['id'])
-        self.assertEqual('1', server['flavor']['id'])
+        self.assertEqual(flavor_get_resp.body['flavor']['name'],
+                         server['flavor']['original_name'])
         self.assertEqual('', server['hostId'])
         self.assertIsNone(None, server['OS-SRV-USG:launched_at'])
         self.assertIsNone(None, server['OS-SRV-USG:terminated_at'])
@@ -89,11 +92,14 @@ class ServersPreSchedulingTestCase(test.TestCase):
         create_resp = self.api.api_post('servers', body)
         get_resp = self.api.api_get('servers/%s' %
                                     create_resp.body['server']['id'])
+        flavor_get_resp = self.api.api_get('flavors/%s' %
+                                           body['server']['flavorRef'])
         server = get_resp.body['server']
         # Just validate some basics
         self.assertEqual('foo', server['name'])
         self.assertEqual(image_ref, server['image']['id'])
-        self.assertEqual('1', server['flavor']['id'])
+        self.assertEqual(flavor_get_resp.body['flavor']['name'],
+                         server['flavor']['original_name'])
         self.assertEqual('', server['hostId'])
         self.assertIsNone(None, server['OS-SRV-USG:launched_at'])
         self.assertIsNone(None, server['OS-SRV-USG:terminated_at'])

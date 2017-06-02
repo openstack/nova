@@ -448,7 +448,6 @@ class ServersController(wsgi.Controller):
     @validation.schema(schema_server_create_v242, '2.42')
     def create(self, req, body):
         """Creates a new server for a given user."""
-
         context = req.environ['nova.context']
         server_dict = body['server']
         password = self._get_server_admin_password(server_dict)
