@@ -42,3 +42,55 @@ Response Example
 
 .. literalinclude:: get-inventory.json
    :language: javascript
+
+Update resource provider inventory
+==================================
+
+Replace the inventory record of the `{resource_class}` for the resource
+provider identified by `{uuid}`.
+
+.. rest_method:: PUT /resource_providers/{uuid}/inventories/{resource_class}
+
+Normal Response Codes: 200
+
+Error response codes: badRequest(400), itemNotFound(404), conflict(409)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - uuid: resource_provider_uuid_path
+  - resource_class: resource_class_path
+  - resource_provider_generation: resource_provider_generation
+  - allocation_ratio: allocation_ratio_opt
+  - max_unit: max_unit_opt
+  - min_unit: min_unit_opt
+  - reserved: reserved_opt
+  - step_size: step_size_opt
+  - total: total
+
+Request example
+---------------
+
+.. literalinclude:: update-inventory-request.json
+   :language: javascript
+
+Response
+--------
+
+.. rest_parameters:: parameters.yaml
+
+  - resource_provider_generation: resource_provider_generation
+  - allocation_ratio: allocation_ratio
+  - max_unit: max_unit
+  - min_unit: min_unit
+  - reserved: reserved
+  - step_size: step_size
+  - total: total
+
+Response Example
+----------------
+
+.. literalinclude:: update-inventory.json
+   :language: javascript
