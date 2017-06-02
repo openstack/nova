@@ -28,7 +28,6 @@ from nova.policies import server_external_events as see_policies
 
 
 LOG = logging.getLogger(__name__)
-ALIAS = 'os-server-external-events'
 
 
 class ServerExternalEventsController(wsgi.Controller):
@@ -128,20 +127,3 @@ class ServerExternalEventsController(wsgi.Controller):
         robj = wsgi.ResponseObject({'events': response_events})
         robj._code = result
         return robj
-
-
-class ServerExternalEvents(extensions.V21APIExtensionBase):
-    """Server External Event Triggers."""
-
-    name = "ServerExternalEvents"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        resource = extensions.ResourceExtension(ALIAS,
-                ServerExternalEventsController())
-
-        return [resource]
-
-    def get_controller_extensions(self):
-        return []
