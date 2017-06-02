@@ -15,3 +15,4 @@ Openstack Placement API concepts, please refer to the
 .. include:: root.inc
 .. include:: resource_providers.inc
 .. include:: inventories.inc
+.. include:: inventory.inc
