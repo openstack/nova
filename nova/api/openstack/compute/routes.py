@@ -22,6 +22,7 @@ from nova.api.openstack.compute import admin_password
 from nova.api.openstack.compute import agents
 from nova.api.openstack.compute import aggregates
 from nova.api.openstack.compute import assisted_volume_snapshots
+from nova.api.openstack.compute import attach_interfaces
 from nova.api.openstack.compute import availability_zone
 from nova.api.openstack.compute import certificates
 from nova.api.openstack.compute import config_drive
@@ -214,6 +215,10 @@ server_controller = functools.partial(_create_controller,
 
 server_metadata_controller = functools.partial(_create_controller,
     server_metadata.ServerMetadataController, [], [])
+
+
+server_os_interface_controller = functools.partial(_create_controller,
+    attach_interfaces.InterfaceAttachmentController, [], [])
 
 
 server_password_controller = functools.partial(_create_controller,
@@ -419,6 +424,14 @@ ROUTE_LIST = (
         'GET': [server_metadata_controller, 'show'],
         'PUT': [server_metadata_controller, 'update'],
         'DELETE': [server_metadata_controller, 'delete'],
+    }),
+    ('/servers/{server_id}/os-interface', {
+        'GET': [server_os_interface_controller, 'index'],
+        'POST': [server_os_interface_controller, 'create']
+    }),
+    ('/servers/{server_id}/os-interface/{id}', {
+        'GET': [server_os_interface_controller, 'show'],
+        'DELETE': [server_os_interface_controller, 'delete']
     }),
     ('/servers/{server_id}/os-server-password', {
         'GET': [server_password_controller, 'index'],

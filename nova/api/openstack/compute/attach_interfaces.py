@@ -30,9 +30,6 @@ from nova import network
 from nova.policies import attach_interfaces as ai_policies
 
 
-ALIAS = 'os-attach-interfaces'
-
-
 def _translate_interface_attachment_view(port_info):
     """Maps keys for interface attachment details view."""
     return {
@@ -177,25 +174,3 @@ class InterfaceAttachmentController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'detach_interface', server_id)
-
-
-class AttachInterfaces(extensions.V21APIExtensionBase):
-    """Attach interface support."""
-
-    name = "AttachInterfaces"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        res = [extensions.ResourceExtension('os-interface',
-                                            InterfaceAttachmentController(),
-                                            parent=dict(
-                                                member_name='server',
-                                                collection_name='servers'))]
-        return res
-
-    def get_controller_extensions(self):
-        """It's an abstract function V21APIExtensionBase and the extension
-        will not be loaded without it.
-        """
-        return []
