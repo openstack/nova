@@ -23,9 +23,6 @@ from nova import exception
 from nova.policies import server_diagnostics as sd_policies
 
 
-ALIAS = "os-server-diagnostics"
-
-
 class ServerDiagnosticsController(wsgi.Controller):
     def __init__(self):
         self.compute_api = compute.API()
@@ -51,22 +48,3 @@ class ServerDiagnosticsController(wsgi.Controller):
             raise webob.exc.HTTPConflict(explanation=e.format_message())
         except NotImplementedError:
             common.raise_feature_not_supported()
-
-
-class ServerDiagnostics(extensions.V21APIExtensionBase):
-    """Allow Admins to view server diagnostics through server action."""
-
-    name = "ServerDiagnostics"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        parent_def = {'member_name': 'server', 'collection_name': 'servers'}
-        resources = [
-            extensions.ResourceExtension('diagnostics',
-                                         ServerDiagnosticsController(),
-                                         parent=parent_def)]
-        return resources
-
-    def get_controller_extensions(self):
-        return []
