@@ -118,6 +118,10 @@ resource_provider_name:
 resource_provider_uuid:
   <<: *resource_provider_uuid_path
   in: body
+resource_provider_uuid_opt:
+  <<: *resource_provider_uuid_path
+  in: body
+  required: false
 resource_providers:
   type: array
   in: body
