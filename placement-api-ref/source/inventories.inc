@@ -107,7 +107,7 @@ The request returns an HTTP 409 when there are alllocations against
 the provider or if the provider's inventory is updated by another
 thread while attempting the operation.
 
-.. note:: Method is availiable starting from version 1.5.
+.. note:: Method is available starting from version 1.5.
 
 .. rest_method:: DELETE /resource_providers/{uuid}/inventories
 
