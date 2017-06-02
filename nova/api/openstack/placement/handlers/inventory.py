@@ -403,10 +403,17 @@ def delete_inventories(req):
 
     try:
         resource_provider.set_inventory(inventories)
-    except (exception.ConcurrentUpdateDetected,
-            exception.InventoryInUse) as exc:
+    except exception.ConcurrentUpdateDetected:
         raise webob.exc.HTTPConflict(
-            _('update conflict: %(error)s') % {'error': exc})
+            _('Unable to delete inventory for resource provider '
+              '%(rp_uuid)s because the inventory was updated by '
+              'another process. Please retry your request.')
+              % {'rp_uuid': resource_provider.uuid})
+    except exception.InventoryInUse:
+        raise webob.exc.HTTPConflict(
+            _('Unable to delete inventory for resource provider '
+              '%(rp_uuid)s because the inventory is in use.')
+              % {'rp_uuid': resource_provider.uuid})
 
     response = req.response
     response.status = 204
