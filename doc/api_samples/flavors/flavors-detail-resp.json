@@ -109,6 +109,28 @@
             "swap": "",
             "vcpus": 8,
             "rxtx_factor": 1.0
+        },
+        {
+            "OS-FLV-DISABLED:disabled": false,
+            "disk": 1,
+            "OS-FLV-EXT-DATA:ephemeral": 0,
+            "os-flavor-access:is_public": true,
+            "id": "6",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/flavors/6",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/flavors/6",
+                    "rel": "bookmark"
+                }
+            ],
+            "name": "m1.tiny.specs",
+            "ram": 512,
+            "swap": "",
+            "vcpus": 1,
+            "rxtx_factor": 1.0
         }
     ]
 }

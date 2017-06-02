@@ -333,7 +333,7 @@ class TestDefaultFlavorsFixture(testtools.TestCase):
 
         result = conn.execute("select * from flavors")
         rows = result.fetchall()
-        self.assertEqual(5, len(rows), "Rows %s" % rows)
+        self.assertEqual(6, len(rows), "Rows %s" % rows)
 
 
 class TestIndirectionAPIFixture(testtools.TestCase):
