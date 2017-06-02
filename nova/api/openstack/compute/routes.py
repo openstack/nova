@@ -60,6 +60,7 @@ from nova.api.openstack.compute import rescue
 from nova.api.openstack.compute import security_groups
 from nova.api.openstack.compute import server_metadata
 from nova.api.openstack.compute import server_password
+from nova.api.openstack.compute import server_tags
 from nova.api.openstack.compute import server_usage
 from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import shelve
@@ -223,6 +224,10 @@ server_os_interface_controller = functools.partial(_create_controller,
 
 server_password_controller = functools.partial(_create_controller,
     server_password.ServerPasswordController, [], [])
+
+
+server_tags_controller = functools.partial(_create_controller,
+    server_tags.ServerTagsController, [], [])
 
 
 simple_tenant_usage_controller = functools.partial(_create_controller,
@@ -436,6 +441,16 @@ ROUTE_LIST = (
     ('/servers/{server_id}/os-server-password', {
         'GET': [server_password_controller, 'index'],
         'DELETE': [server_password_controller, 'clear']
+    }),
+    ('/servers/{server_id}/tags', {
+        'GET': [server_tags_controller, 'index'],
+        'PUT': [server_tags_controller, 'update_all'],
+        'DELETE': [server_tags_controller, 'delete_all'],
+    }),
+    ('/servers/{server_id}/tags/{id}', {
+        'GET': [server_tags_controller, 'show'],
+        'PUT': [server_tags_controller, 'update'],
+        'DELETE': [server_tags_controller, 'delete']
     }),
 )
 
