@@ -69,6 +69,20 @@
                 }
             ],
             "name": "m1.xlarge"
+        },
+        {
+            "id": "6",
+            "links": [
+                {
+                    "href": "%(versioned_compute_endpoint)s/flavors/6",
+                    "rel": "self"
+                },
+                {
+                    "href": "%(compute_endpoint)s/flavors/6",
+                    "rel": "bookmark"
+                }
+            ],
+            "name": "m1.tiny.specs"
         }
     ]
 }

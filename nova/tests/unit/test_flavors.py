@@ -154,7 +154,7 @@ class InstanceTypeFilteringTest(test.TestCase):
     def test_no_filters(self):
         filters = None
         expected = ['m1.tiny', 'm1.small', 'm1.medium', 'm1.large',
-                    'm1.xlarge']
+                    'm1.xlarge', 'm1.tiny.specs']
         self.assertFilterResults(filters, expected)
 
     def test_min_memory_mb_filter(self):

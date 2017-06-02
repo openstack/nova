@@ -622,6 +622,11 @@ class DefaultFlavorsFixture(fixtures.Fixture):
         ctxt = context.get_admin_context()
         defaults = {'rxtx_factor': 1.0, 'disabled': False, 'is_public': True,
                     'ephemeral_gb': 0, 'swap': 0}
+        extra_specs = {
+            "hw:cpu_model": "SandyBridge",
+            "hw:mem_page_size": "2048",
+            "hw:cpu_policy": "dedicated"
+        }
         default_flavors = [
             objects.Flavor(context=ctxt, memory_mb=512, vcpus=1,
                            root_gb=1, flavorid='1', name='m1.tiny',
@@ -638,6 +643,9 @@ class DefaultFlavorsFixture(fixtures.Fixture):
             objects.Flavor(context=ctxt, memory_mb=16384, vcpus=8,
                            root_gb=160, flavorid='5', name='m1.xlarge',
                            **defaults),
+            objects.Flavor(context=ctxt, memory_mb=512, vcpus=1,
+                           root_gb=1, flavorid='6', name='m1.tiny.specs',
+                           extra_specs=extra_specs, **defaults),
             ]
         for flavor in default_flavors:
             flavor.create()
