@@ -2428,6 +2428,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock.patch.object(driver_bdm_volume, 'driver_detach'),
         ) as (mock_volume_api, mock_virt_driver, mock_driver_detach):
             connector = mock.Mock()
+
+            def fake_driver_detach(context, instance, volume_api, virt_driver):
+                # This is just here to validate the function signature.
+                pass
+
+            # There should be an easier way to do this with autospec...
+            mock_driver_detach.side_effect = fake_driver_detach
             mock_virt_driver.get_volume_connector.return_value = connector
             self.compute.remove_volume_connection(self.context,
                                                   uuids.volume_id, inst)
@@ -2435,7 +2442,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             bdm_get.assert_called_once_with(self.context, uuids.volume_id,
                                             uuids.instance_uuid)
             mock_driver_detach.assert_called_once_with(self.context, inst,
-                    connector, mock_volume_api, mock_virt_driver)
+                                                       mock_volume_api,
+                                                       mock_virt_driver)
             mock_volume_api.terminate_connection.assert_called_once_with(
                     self.context, uuids.volume_id, connector)
 

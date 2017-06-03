@@ -5148,10 +5148,10 @@ class ComputeManager(manager.Manager):
         try:
             bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
                     context, volume_id, instance.uuid)
-            connector = self.driver.get_volume_connector(instance)
             driver_bdm = driver_block_device.convert_volume(bdm)
-            driver_bdm.driver_detach(context, instance, connector,
+            driver_bdm.driver_detach(context, instance,
                                      self.volume_api, self.driver)
+            connector = self.driver.get_volume_connector(instance)
             self.volume_api.terminate_connection(context, volume_id, connector)
         except exception.NotFound:
             pass
