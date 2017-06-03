@@ -614,7 +614,12 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         # lazy-load projects (which is a problem for instance-bound
         # flavors and compute-cell operations), just load them here.
         if 'projects' not in self:
-            self._load_projects()
+            # If the flavor is deleted we can't lazy-load projects.
+            # FlavorPayload will orphan the flavor which will make the
+            # NotificationPayloadBase set projects=None in the notification
+            # payload.
+            if action != fields.NotificationAction.DELETE:
+                self._load_projects()
         notification_type = flavor_notification.FlavorNotification
         payload_type = flavor_notification.FlavorPayload
 

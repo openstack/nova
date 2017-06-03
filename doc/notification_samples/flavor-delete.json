@@ -17,7 +17,7 @@
             "vcpu_weight": 0,
             "flavorid": "a22d5517-147c-4147-a0d1-e698df5cd4e3",
             "extra_specs": null,
-            "projects": []
+            "projects": null
         }
     },
     "event_type": "flavor.delete",
