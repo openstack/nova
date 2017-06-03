@@ -546,7 +546,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         @mock.patch.object(manager.ComputeManager,
                            '_destroy_evacuated_instances')
         @mock.patch.object(manager.ComputeManager, '_init_instance')
-        def _do_mock_calls(mock_inst_init,
+        @mock.patch.object(self.compute, '_update_scheduler_instance_info')
+        def _do_mock_calls(mock_update_scheduler, mock_inst_init,
                            mock_destroy, mock_admin_ctxt, mock_host_get,
                            mock_filter_off, mock_filter_on, mock_init_host,
                            defer_iptables_apply):
@@ -570,6 +571,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock_host_get.assert_called_once_with(self.context, our_host,
                                     expected_attrs=['info_cache', 'metadata'])
 
+            mock_update_scheduler.assert_called_once_with(
+                self.context, inst_list)
+
         # Test with defer_iptables_apply
         self.flags(defer_iptables_apply=True)
         _do_mock_calls(defer_iptables_apply=True)
@@ -577,6 +581,22 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         # Test without defer_iptables_apply
         self.flags(defer_iptables_apply=False)
         _do_mock_calls(defer_iptables_apply=False)
+
+    @mock.patch('nova.objects.InstanceList.get_by_host',
+                return_value=objects.InstanceList())
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_destroy_evacuated_instances')
+    @mock.patch('nova.compute.manager.ComputeManager._init_instance',
+                mock.NonCallableMock())
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_update_scheduler_instance_info', mock.NonCallableMock())
+    def test_init_host_no_instances(self, mock_destroy_evac_instances,
+                                    mock_get_by_host):
+        """Tests the case that init_host runs and there are no instances
+        on this host yet (it's brand new). Uses NonCallableMock for the
+        methods we assert should not be called.
+        """
+        self.compute.init_host()
 
     @mock.patch('nova.objects.InstanceList')
     @mock.patch('nova.objects.MigrationList.get_by_filters')

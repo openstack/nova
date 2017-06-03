@@ -769,6 +769,23 @@ class HostManagerTestCase(test.NoDBTestCase):
         self.assertEqual(len(new_info['instances']), len(orig_inst_dict))
         self.assertFalse(new_info['updated'])
 
+    @mock.patch('nova.objects.HostMapping.get_by_host',
+                side_effect=exception.HostMappingNotFound(name='host1'))
+    def test_update_instance_info_unknown_host_mapping_not_found(self,
+                                                                 get_by_host):
+        """Tests that case that update_instance_info is called with an
+        unregistered host so the host manager attempts to recreate the
+        instance list, but there is no host mapping found for the given
+        host (it might have just started not be discovered for cells
+        v2 yet).
+        """
+        ctxt = nova_context.RequestContext()
+        instance_info = objects.InstanceList()
+        self.host_manager.update_instance_info(ctxt, 'host1', instance_info)
+        self.assertDictEqual(
+            {}, self.host_manager._instance_info['host1']['instances'])
+        get_by_host.assert_called_once_with(ctxt, 'host1')
+
     def test_delete_instance_info(self):
         host_name = 'fake_host'
         inst1 = fake_instance.fake_instance_obj('fake_context',
