@@ -4814,21 +4814,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._guest_add_pci_devices(guest, instance)
 
-        # image meta takes precedence over flavor extra specs; disable the
-        # watchdog action by default
-        watchdog_action = (flavor.extra_specs.get('hw:watchdog_action')
-                           or 'disabled')
-        watchdog_action = image_meta.properties.get('hw_watchdog_action',
-                                                    watchdog_action)
-
-        # NB(sross): currently only actually supported by KVM/QEmu
-        if watchdog_action != 'disabled':
-            if watchdog_action in fields.WatchdogAction.ALL:
-                bark = vconfig.LibvirtConfigGuestWatchdog()
-                bark.action = watchdog_action
-                guest.add_device(bark)
-            else:
-                raise exception.InvalidWatchdogAction(action=watchdog_action)
+        self._guest_add_watchdog_action(guest, flavor, image_meta)
 
         # Memory balloon device only support 'qemu/kvm' and 'xen' hypervisor
         if (virt_type in ('xen', 'qemu', 'kvm') and
@@ -4842,6 +4828,23 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.add_device(balloon)
 
         return guest
+
+    @staticmethod
+    def _guest_add_watchdog_action(guest, flavor, image_meta):
+        # image meta takes precedence over flavor extra specs; disable the
+        # watchdog action by default
+        watchdog_action = (flavor.extra_specs.get('hw:watchdog_action')
+                           or 'disabled')
+        watchdog_action = image_meta.properties.get('hw_watchdog_action',
+                                                    watchdog_action)
+        # NB(sross): currently only actually supported by KVM/QEmu
+        if watchdog_action != 'disabled':
+            if watchdog_action in fields.WatchdogAction.ALL:
+                bark = vconfig.LibvirtConfigGuestWatchdog()
+                bark.action = watchdog_action
+                guest.add_device(bark)
+            else:
+                raise exception.InvalidWatchdogAction(action=watchdog_action)
 
     def _guest_add_pci_devices(self, guest, instance):
         virt_type = guest.virt_type
