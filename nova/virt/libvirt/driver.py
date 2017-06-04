@@ -4812,17 +4812,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if virt_type in ('qemu', 'kvm'):
             self._set_qemu_guest_agent(guest, flavor, instance, image_meta)
 
-        if virt_type in ('xen', 'qemu', 'kvm'):
-            # Get all generic PCI devices (non-SR-IOV).
-            for pci_dev in pci_manager.get_instance_pci_devs(instance):
-                guest.add_device(self._get_guest_pci_device(pci_dev))
-        else:
-            # PCI devices is only supported for hypervisor 'xen', 'qemu' and
-            # 'kvm'.
-            pci_devs = pci_manager.get_instance_pci_devs(instance, 'all')
-            if len(pci_devs) > 0:
-                raise exception.PciDeviceUnsupportedHypervisor(
-                    type=virt_type)
+        self._guest_add_pci_devices(guest, instance)
 
         # image meta takes precedence over flavor extra specs; disable the
         # watchdog action by default
@@ -4852,6 +4842,18 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.add_device(balloon)
 
         return guest
+
+    def _guest_add_pci_devices(self, guest, instance):
+        virt_type = guest.virt_type
+        if virt_type in ('xen', 'qemu', 'kvm'):
+            # Get all generic PCI devices (non-SR-IOV).
+            for pci_dev in pci_manager.get_instance_pci_devs(instance):
+                guest.add_device(self._get_guest_pci_device(pci_dev))
+        else:
+            # PCI devices is only supported for hypervisors
+            #  'xen', 'qemu' and 'kvm'.
+            if pci_manager.get_instance_pci_devs(instance, 'all'):
+                raise exception.PciDeviceUnsupportedHypervisor(type=virt_type)
 
     @staticmethod
     def _guest_add_video_device(guest):
