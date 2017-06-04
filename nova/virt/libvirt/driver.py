@@ -4798,12 +4798,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if pointer:
             guest.add_device(pointer)
 
-        if (CONF.spice.enabled and CONF.spice.agent_enabled and
-                virt_type not in ('lxc', 'uml', 'xen')):
-            channel = vconfig.LibvirtConfigGuestChannel()
-            channel.type = 'spicevmc'
-            channel.target_name = "com.redhat.spice.0"
-            guest.add_device(channel)
+        self._guest_add_spice_channel(guest)
 
         if self._guest_add_video_device(guest):
             self._add_video_driver(guest, image_meta, flavor)
@@ -4819,6 +4814,15 @@ class LibvirtDriver(driver.ComputeDriver):
         self._guest_add_memory_balloon(guest)
 
         return guest
+
+    @staticmethod
+    def _guest_add_spice_channel(guest):
+        if (CONF.spice.enabled and CONF.spice.agent_enabled
+                and guest.virt_type not in ('lxc', 'uml', 'xen')):
+            channel = vconfig.LibvirtConfigGuestChannel()
+            channel.type = 'spicevmc'
+            channel.target_name = "com.redhat.spice.0"
+            guest.add_device(channel)
 
     @staticmethod
     def _guest_add_memory_balloon(guest):
