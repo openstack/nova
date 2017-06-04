@@ -4805,30 +4805,7 @@ class LibvirtDriver(driver.ComputeDriver):
             channel.target_name = "com.redhat.spice.0"
             guest.add_device(channel)
 
-        # NB some versions of libvirt support both SPICE and VNC
-        # at the same time. We're not trying to second guess which
-        # those versions are. We'll just let libvirt report the
-        # errors appropriately if the user enables both.
-        add_video_driver = False
-        if ((CONF.vnc.enabled and
-             virt_type not in ('lxc', 'uml'))):
-            graphics = vconfig.LibvirtConfigGuestGraphics()
-            graphics.type = "vnc"
-            graphics.keymap = CONF.vnc.keymap
-            graphics.listen = CONF.vnc.vncserver_listen
-            guest.add_device(graphics)
-            add_video_driver = True
-
-        if (CONF.spice.enabled and
-                virt_type not in ('lxc', 'uml', 'xen')):
-            graphics = vconfig.LibvirtConfigGuestGraphics()
-            graphics.type = "spice"
-            graphics.keymap = CONF.spice.keymap
-            graphics.listen = CONF.spice.server_listen
-            guest.add_device(graphics)
-            add_video_driver = True
-
-        if add_video_driver:
+        if self._guest_add_video_device(guest):
             self._add_video_driver(guest, image_meta, flavor)
 
         # Qemu guest agent only support 'qemu' and 'kvm' hypervisor
@@ -4875,6 +4852,29 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.add_device(balloon)
 
         return guest
+
+    @staticmethod
+    def _guest_add_video_device(guest):
+        # NB some versions of libvirt support both SPICE and VNC
+        # at the same time. We're not trying to second guess which
+        # those versions are. We'll just let libvirt report the
+        # errors appropriately if the user enables both.
+        add_video_driver = False
+        if CONF.vnc.enabled and guest.virt_type not in ('lxc', 'uml'):
+            graphics = vconfig.LibvirtConfigGuestGraphics()
+            graphics.type = "vnc"
+            graphics.keymap = CONF.vnc.keymap
+            graphics.listen = CONF.vnc.vncserver_listen
+            guest.add_device(graphics)
+            add_video_driver = True
+        if CONF.spice.enabled and guest.virt_type not in ('lxc', 'uml', 'xen'):
+            graphics = vconfig.LibvirtConfigGuestGraphics()
+            graphics.type = "spice"
+            graphics.keymap = CONF.spice.keymap
+            graphics.listen = CONF.spice.server_listen
+            guest.add_device(graphics)
+            add_video_driver = True
+        return add_video_driver
 
     def _get_guest_pointer_model(self, os_type, image_meta):
         pointer_model = image_meta.properties.get(
