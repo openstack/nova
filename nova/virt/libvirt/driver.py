@@ -4816,9 +4816,16 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._guest_add_watchdog_action(guest, flavor, image_meta)
 
+        self._guest_add_memory_balloon(guest)
+
+        return guest
+
+    @staticmethod
+    def _guest_add_memory_balloon(guest):
+        virt_type = guest.virt_type
         # Memory balloon device only support 'qemu/kvm' and 'xen' hypervisor
         if (virt_type in ('xen', 'qemu', 'kvm') and
-                CONF.libvirt.mem_stats_period_seconds > 0):
+                    CONF.libvirt.mem_stats_period_seconds > 0):
             balloon = vconfig.LibvirtConfigMemoryBalloon()
             if virt_type in ('qemu', 'kvm'):
                 balloon.model = 'virtio'
@@ -4826,8 +4833,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 balloon.model = 'xen'
             balloon.period = CONF.libvirt.mem_stats_period_seconds
             guest.add_device(balloon)
-
-        return guest
 
     @staticmethod
     def _guest_add_watchdog_action(guest, flavor, image_meta):
