@@ -21,7 +21,7 @@ from nova import test
 
 class TestNotifier(test.NoDBTestCase):
 
-    @mock.patch('oslo_messaging.get_transport')
+    @mock.patch('oslo_messaging.get_rpc_transport')
     @mock.patch('oslo_messaging.get_notification_transport')
     @mock.patch('oslo_messaging.Notifier')
     def test_notification_format_affects_notification_driver(self,

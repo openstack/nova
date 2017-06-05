@@ -304,7 +304,7 @@ class TestRPC(testtools.TestCase):
         self.assertEqual('notifier', notifier)
 
     @mock.patch.object(rpc, 'get_allowed_exmods')
-    @mock.patch.object(messaging, 'get_transport')
+    @mock.patch.object(messaging, 'get_rpc_transport')
     def test_create_transport(self, mock_transport, mock_exmods):
         exmods = mock_exmods.return_value
         transport = rpc.create_transport(mock.sentinel.url)
