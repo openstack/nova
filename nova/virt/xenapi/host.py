@@ -113,8 +113,8 @@ class Host(object):
         if vm_counter == migrations_counter:
             return 'on_maintenance'
         else:
-            raise exception.NoValidHost(reason='Unable to find suitable '
-                                                   'host for VMs evacuation')
+            raise exception.NoValidHost(reason=_('Unable to find suitable '
+                                                 'host for VMs evacuation'))
 
     def set_host_enabled(self, enabled):
         """Sets the compute host's ability to accept new instances."""
