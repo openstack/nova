@@ -20,6 +20,7 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
 import contextlib
+import math
 import os
 import time
 import urllib
@@ -1722,6 +1723,23 @@ def get_power_state(session, vm_ref):
     return XENAPI_POWER_STATE[xapi_state]
 
 
+def _vm_query_data_source(session, *args):
+    """We're getting diagnostics stats from the RRDs which are updated every
+    5 seconds. It means that diagnostics information may be incomplete during
+    first 5 seconds of VM life. In such cases method ``query_data_source()``
+    may raise a ``XenAPI.Failure`` exception or may return a `NaN` value.
+    """
+
+    try:
+        value = session.VM.query_data_source(*args)
+    except session.XenAPI.Failure:
+        return None
+
+    if math.isnan(value):
+        return None
+    return value
+
+
 def compile_info(session, vm_ref):
     """Fill record with VM status information."""
     power_state = get_power_state(session, vm_ref)
@@ -1735,29 +1753,69 @@ def compile_info(session, vm_ref):
                                  num_cpu=num_cpu)
 
 
-def compile_instance_diagnostics(instance, vm_rec):
-    vm_power_state_int = XENAPI_POWER_STATE[vm_rec['power_state']]
-    vm_power_state = power_state.STATE_MAP[vm_power_state_int]
+def compile_instance_diagnostics(session, instance, vm_ref):
+    xen_power_state = session.VM.get_power_state(vm_ref)
+    vm_power_state = power_state.STATE_MAP[XENAPI_POWER_STATE[xen_power_state]]
     config_drive = configdrive.required_by(instance)
 
     diags = diagnostics.Diagnostics(state=vm_power_state,
                                     driver='xenapi',
                                     config_drive=config_drive)
-
-    for cpu_num in range(0, int(vm_rec['VCPUs_max'])):
-        diags.add_cpu()
-
-    for vif in vm_rec['VIFs']:
-        diags.add_nic()
-
-    for vbd in vm_rec['VBDs']:
-        diags.add_disk()
-
-    max_mem_bytes = int(vm_rec['memory_dynamic_max'])
-    diags.memory_details = diagnostics.MemoryDiagnostics(
-        maximum=max_mem_bytes / units.Mi)
+    _add_cpu_usage(session, vm_ref, diags)
+    _add_nic_usage(session, vm_ref, diags)
+    _add_disk_usage(session, vm_ref, diags)
+    _add_memory_usage(session, vm_ref, diags)
 
     return diags
+
+
+def _add_cpu_usage(session, vm_ref, diag_obj):
+    cpu_num = int(session.VM.get_VCPUs_max(vm_ref))
+    for cpu_num in range(0, cpu_num):
+        utilisation = _vm_query_data_source(session, vm_ref, "cpu%d" % cpu_num)
+        if utilisation is not None:
+            utilisation *= 100
+        diag_obj.add_cpu(id=cpu_num, utilisation=utilisation)
+
+
+def _add_nic_usage(session, vm_ref, diag_obj):
+    vif_refs = session.VM.get_VIFs(vm_ref)
+    for vif_ref in vif_refs:
+        vif_rec = session.VIF.get_record(vif_ref)
+        rx_rate = _vm_query_data_source(session, vm_ref,
+                                        "vif_%s_rx" % vif_rec['device'])
+        tx_rate = _vm_query_data_source(session, vm_ref,
+                                        "vif_%s_tx" % vif_rec['device'])
+        diag_obj.add_nic(mac_address=vif_rec['MAC'],
+                         rx_rate=rx_rate,
+                         tx_rate=tx_rate)
+
+
+def _add_disk_usage(session, vm_ref, diag_obj):
+    vbd_refs = session.VM.get_VBDs(vm_ref)
+    for vbd_ref in vbd_refs:
+        vbd_rec = session.VBD.get_record(vbd_ref)
+        read_bytes = _vm_query_data_source(session, vm_ref,
+                                           "vbd_%s_read" % vbd_rec['device'])
+        write_bytes = _vm_query_data_source(session, vm_ref,
+                                            "vbd_%s_write" % vbd_rec['device'])
+        diag_obj.add_disk(read_bytes=read_bytes, write_bytes=write_bytes)
+
+
+def _add_memory_usage(session, vm_ref, diag_obj):
+    total_mem = _vm_query_data_source(session, vm_ref, "memory")
+    free_mem = _vm_query_data_source(session, vm_ref, "memory_internal_free")
+    used_mem = None
+    if total_mem is not None:
+        # total_mem provided from XenServer is in Bytes. Converting it to MB.
+        total_mem /= units.Mi
+
+        if free_mem is not None:
+            # free_mem provided from XenServer is in KB. Converting it to MB.
+            used_mem = total_mem - free_mem / units.Ki
+
+    diag_obj.memory_details = diagnostics.MemoryDiagnostics(
+        maximum=total_mem, used=used_mem)
 
 
 def compile_diagnostics(vm_rec):
