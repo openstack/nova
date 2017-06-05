@@ -149,11 +149,10 @@ class ComputeDriver(object):
         pass
 
     def get_info(self, instance):
-        """Get the current status of an instance, by name (not ID!)
+        """Get the current status of an instance.
 
         :param instance: nova.objects.instance.Instance object
-
-        Returns a InstanceInfo object
+        :returns: An InstanceInfo object
         """
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()

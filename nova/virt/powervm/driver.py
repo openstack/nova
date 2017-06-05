@@ -89,11 +89,10 @@ class PowerVMDriver(driver.ComputeDriver):
                   'name': instance.name}, instance=instance)
 
     def get_info(self, instance):
-        """Get the current status of an instance, by name (not ID!)
+        """Get the current status of an instance.
 
         :param instance: nova.objects.instance.Instance object
-
-        Returns a InstanceInfo object containing:
+        :returns: An InstanceInfo object containing:
 
         :state:           the running state, one of the power_state codes
         :max_mem_kb:      (int) the maximum memory in KBytes allowed

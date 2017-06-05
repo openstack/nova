@@ -4956,12 +4956,14 @@ class LibvirtDriver(driver.ComputeDriver):
         return xml
 
     def get_info(self, instance):
-        """Retrieve information from libvirt for a specific instance name.
+        """Retrieve information from libvirt for a specific instance.
 
         If a libvirt error is encountered during lookup, we might raise a
         NotFound exception or Error exception depending on how severe the
         libvirt error is.
 
+        :param instance: nova.objects.instance.Instance object
+        :returns: An InstanceInfo object
         """
         guest = self._host.get_guest(instance)
         # Kind of ugly but we need to pass host to get_info as for a
