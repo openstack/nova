@@ -241,42 +241,6 @@ class TestVM(test.NoDBTestCase):
         self.assertEqual(power_state.CRASHED,
                          vm._translate_vm_state('error'))
 
-    def test_instance_info(self):
-        inst_info = vm.InstanceInfo(self.apt, 'inst')
-        self.get_pvm_uuid.assert_called_once_with('inst')
-        # Test the static properties
-        self.assertEqual(inst_info.id, self.get_pvm_uuid.return_value)
-
-        # Check that we raise an exception if the instance is gone.
-        self.apt.read.side_effect = pvm_exc.HttpError(
-            mock.MagicMock(status=404))
-        self.assertRaises(exception.InstanceNotFound,
-                          inst_info.__getattribute__, 'state')
-
-        # Reset the test inst_info
-        inst_info = vm.InstanceInfo(self.apt, 'inst')
-
-        class FakeResp2(object):
-            def __init__(self, body):
-                self.body = '"%s"' % body
-
-        resp = FakeResp2('running')
-
-        def return_resp(*args, **kwds):
-            return resp
-
-        self.apt.read.side_effect = return_resp
-        self.assertEqual(inst_info.state, power_state.RUNNING)
-
-        # Check the __eq__ method
-        self.get_pvm_uuid.return_value = 'pvm-uuid1'
-        inst_info1 = vm.InstanceInfo(self.apt, 'inst')
-        inst_info2 = vm.InstanceInfo(self.apt, 'inst')
-        self.assertEqual(inst_info1, inst_info2)
-        self.get_pvm_uuid.return_value = 'pvm-uuid2'
-        inst_info2 = vm.InstanceInfo(self.apt, 'inst2')
-        self.assertNotEqual(inst_info1, inst_info2)
-
     @mock.patch('pypowervm.wrappers.logical_partition.LPAR', autospec=True)
     def test_get_lpar_names(self, mock_lpar):
         inst1 = mock.Mock()

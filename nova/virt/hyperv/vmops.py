@@ -134,11 +134,7 @@ class VMOps(object):
         info = self._vmutils.get_vm_summary_info(instance_name)
 
         state = constants.HYPERV_POWER_STATE[info['EnabledState']]
-        return hardware.InstanceInfo(state=state,
-                                     max_mem_kb=info['MemoryUsage'],
-                                     mem_kb=info['MemoryUsage'],
-                                     num_cpu=info['NumberOfProcessors'],
-                                     cpu_time_ns=info['UpTime'])
+        return hardware.InstanceInfo(state=state)
 
     def _create_root_device(self, context, instance, root_disk_info, vm_gen):
         path = None

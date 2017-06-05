@@ -535,11 +535,7 @@ class Guest(object):
 
         return hardware.InstanceInfo(
             state=LIBVIRT_POWER_STATE[dom_info[0]],
-            max_mem_kb=dom_info[1],
-            mem_kb=dom_info[2],
-            num_cpu=dom_info[3],
-            cpu_time_ns=dom_info[4],
-            id=self.id)
+            internal_id=self.id)
 
     def get_power_state(self, host):
         return self.get_info(host).state

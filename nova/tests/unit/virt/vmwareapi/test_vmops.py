@@ -309,10 +309,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             info = self._vmops.get_info(self._instance)
             mock_get_vm_ref.assert_called_once_with(self._session,
                 self._instance)
-            expected = hardware.InstanceInfo(state=power_state.RUNNING,
-                                             max_mem_kb=128 * 1024,
-                                             mem_kb=128 * 1024,
-                                             num_cpu=4)
+            expected = hardware.InstanceInfo(state=power_state.RUNNING)
             self.assertEqual(expected, info)
 
     @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake_ref')

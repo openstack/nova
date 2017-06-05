@@ -308,6 +308,19 @@ def get_vm_qp(adapter, lpar_uuid, qprop=None, log_errors=True):
     return jsonutils.loads(resp.body)
 
 
+def get_vm_info(adapter, instance):
+    """Get the InstanceInfo for an instance.
+
+    :param adapter: The pypowervm.adapter.Adapter for the PowerVM REST API.
+    :param instance: nova.objects.instance.Instance object
+    :returns: An InstanceInfo object.
+    """
+    pvm_uuid = get_pvm_uuid(instance)
+    pvm_state = get_vm_qp(adapter, pvm_uuid, 'PartitionState')
+    nova_state = _translate_vm_state(pvm_state)
+    return hardware.InstanceInfo(nova_state)
+
+
 class VMBuilder(object):
     """Converts a Nova Instance/Flavor into a pypowervm LPARBuilder."""
     _PVM_PROC_COMPAT = 'powervm:processor_compatibility'
@@ -488,32 +501,3 @@ class VMBuilder(object):
 
         # Return the singular pool id.
         return pool_wraps[0].id
-
-
-class InstanceInfo(hardware.InstanceInfo):
-    """Instance Information
-
-    This object tries to lazy load the attributes since the compute
-    manager retrieves it a lot just to check the status and doesn't need
-    all the attributes.
-
-    :param adapter: pypowervm adapter
-    :param instance: nova instance
-    """
-    _QP_STATE = 'PartitionState'
-
-    def __init__(self, adapter, instance):
-        self._adapter = adapter
-        # This is the PowerVM LPAR UUID (not the instance (UU)ID).
-        self.id = get_pvm_uuid(instance)
-        self._state = None
-
-    @property
-    def state(self):
-        # return the state if we previously loaded it
-        if self._state is not None:
-            return self._state
-        # otherwise, fetch the value now
-        pvm_state = get_vm_qp(self._adapter, self.id, self._QP_STATE)
-        self._state = _translate_vm_state(pvm_state)
-        return self._state

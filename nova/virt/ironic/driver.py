@@ -850,10 +850,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                         {'instance': instance.uuid,
                          'node': instance.node})
 
-        return hardware.InstanceInfo(state=map_power_state(node.power_state),
-                                     max_mem_kb=memory_kib,
-                                     mem_kb=memory_kib,
-                                     num_cpu=num_cpu)
+        return hardware.InstanceInfo(state=map_power_state(node.power_state))
 
     def deallocate_networks_on_reschedule(self, instance):
         """Does the driver want networks deallocated on reschedule?

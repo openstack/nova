@@ -623,8 +623,6 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
         vcpus = flavor['vcpus']
         vcpu_weight = flavor['vcpu_weight']
 
-        self.assertEqual(self.vm_info.max_mem_kb, mem_kib)
-        self.assertEqual(self.vm_info.mem_kb, mem_kib)
         self.assertEqual(self.vm['memory_static_max'], mem_bytes)
         self.assertEqual(self.vm['memory_dynamic_max'], mem_bytes)
         self.assertEqual(self.vm['memory_dynamic_min'], mem_bytes)

@@ -331,11 +331,7 @@ class FakeDriver(driver.ComputeDriver):
         if instance.uuid not in self.instances:
             raise exception.InstanceNotFound(instance_id=instance.uuid)
         i = self.instances[instance.uuid]
-        return hardware.InstanceInfo(state=i.state,
-                                     max_mem_kb=0,
-                                     mem_kb=0,
-                                     num_cpu=2,
-                                     cpu_time_ns=0)
+        return hardware.InstanceInfo(state=i.state)
 
     def get_diagnostics(self, instance):
         return {'cpu0_time': 17300000000,

@@ -34,47 +34,23 @@ from nova.virt import hardware as hw
 class InstanceInfoTests(test.NoDBTestCase):
 
     def test_instance_info_default(self):
-        ii = hw.InstanceInfo()
-        self.assertIsNone(ii.state)
-        self.assertIsNone(ii.id)
-        self.assertEqual(0, ii.max_mem_kb)
-        self.assertEqual(0, ii.mem_kb)
-        self.assertEqual(0, ii.num_cpu)
-        self.assertEqual(0, ii.cpu_time_ns)
+        ii = hw.InstanceInfo('fake-state')
+        self.assertEqual('fake-state', ii.state)
+        self.assertIsNone(ii.internal_id)
 
     def test_instance_info(self):
         ii = hw.InstanceInfo(state='fake-state',
-                             max_mem_kb=1,
-                             mem_kb=2,
-                             num_cpu=3,
-                             cpu_time_ns=4,
-                             id='fake-id')
+                             internal_id='fake-id')
         self.assertEqual('fake-state', ii.state)
-        self.assertEqual('fake-id', ii.id)
-        self.assertEqual(1, ii.max_mem_kb)
-        self.assertEqual(2, ii.mem_kb)
-        self.assertEqual(3, ii.num_cpu)
-        self.assertEqual(4, ii.cpu_time_ns)
+        self.assertEqual('fake-id', ii.internal_id)
 
-    def test_instance_infoi_equals(self):
+    def test_instance_info_equals(self):
         ii1 = hw.InstanceInfo(state='fake-state',
-                              max_mem_kb=1,
-                              mem_kb=2,
-                              num_cpu=3,
-                              cpu_time_ns=4,
-                              id='fake-id')
+                              internal_id='fake-id')
         ii2 = hw.InstanceInfo(state='fake-state',
-                              max_mem_kb=1,
-                              mem_kb=2,
-                              num_cpu=3,
-                              cpu_time_ns=4,
-                              id='fake-id')
+                              internal_id='fake-id')
         ii3 = hw.InstanceInfo(state='fake-estat',
-                              max_mem_kb=11,
-                              mem_kb=22,
-                              num_cpu=33,
-                              cpu_time_ns=44,
-                              id='fake-di')
+                              internal_id='fake-di')
         self.assertEqual(ii1, ii2)
         self.assertNotEqual(ii1, ii3)
 

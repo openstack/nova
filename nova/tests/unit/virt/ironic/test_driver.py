@@ -925,14 +925,10 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
         # ironic_states.POWER_ON should be mapped to
         # nova_states.RUNNING
-        memory_kib = properties['memory_mb'] * 1024
         instance = fake_instance.fake_instance_obj('fake-context',
                                                    uuid=self.instance_uuid)
         result = self.driver.get_info(instance)
-        self.assertEqual(hardware.InstanceInfo(state=nova_states.RUNNING,
-                                               max_mem_kb=memory_kib,
-                                               mem_kb=memory_kib,
-                                               num_cpu=properties['cpus']),
+        self.assertEqual(hardware.InstanceInfo(state=nova_states.RUNNING),
                          result)
 
     @mock.patch.object(FAKE_CLIENT.node, 'get_by_instance_uuid')
