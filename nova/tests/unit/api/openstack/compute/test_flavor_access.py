@@ -136,6 +136,12 @@ class FlavorAccessTestV21(test.NoDBTestCase):
     def setUp(self):
         super(FlavorAccessTestV21, self).setUp()
         self.flavor_controller = flavors_api.FlavorsController()
+        # We need to stub out verify_project_id so that it doesn't
+        # generate an EndpointNotFound exception and result in a
+        # server error.
+        self.stub_out('nova.api.openstack.identity.verify_project_id',
+                      lambda ctx, project_id: True)
+
         self.req = FakeRequest()
         self.req.environ = {"nova.context": context.RequestContext('fake_user',
                                                                    'fake')}

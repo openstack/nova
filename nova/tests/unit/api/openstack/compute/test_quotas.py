@@ -41,6 +41,14 @@ def quota_set(id, include_server_group_quotas=True):
 
 class BaseQuotaSetsTest(test.TestCase):
 
+    def setUp(self):
+        super(BaseQuotaSetsTest, self).setUp()
+        # We need to stub out verify_project_id so that it doesn't
+        # generate an EndpointNotFound exception and result in a
+        # server error.
+        self.stub_out('nova.api.openstack.identity.verify_project_id',
+                      lambda ctx, project_id: True)
+
     def get_delete_status_int(self, res):
         # NOTE: on v2.1, http status code is set as wsgi_code of API
         # method instead of status_int in a response object.
@@ -531,6 +539,12 @@ class QuotaSetsTestV236(test.NoDBTestCase):
 
     def setUp(self):
         super(QuotaSetsTestV236, self).setUp()
+        # We need to stub out verify_project_id so that it doesn't
+        # generate an EndpointNotFound exception and result in a
+        # server error.
+        self.stub_out('nova.api.openstack.identity.verify_project_id',
+                      lambda ctx, project_id: True)
+
         self.flags(enable_network_quota=True)
         tenant_networks._register_network_quota()
         self.old_req = fakes.HTTPRequest.blank('', version='2.1')

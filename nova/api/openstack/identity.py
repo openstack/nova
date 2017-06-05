@@ -30,10 +30,22 @@ def verify_project_id(context, project_id):
 
     """
     sess = session.Session(auth=context.get_auth_plugin())
+    failure = webob.exc.HTTPBadRequest(
+            explanation=_("Project ID %s is not a valid project.") %
+            project_id)
     try:
-        resp = sess.get('/v3/projects/%s' % project_id,
-                        endpoint_filter={'service_type': 'identity'},
+        resp = sess.get('/projects/%s' % project_id,
+                        endpoint_filter={
+                            'service_type': 'identity',
+                            'version': (3, 0)
+                        },
                         raise_exc=False)
+    except kse.EndpointNotFound:
+        LOG.error(
+            "Keystone identity service version 3.0 was not found. This might "
+            "be because your endpoint points to the v2.0 versioned endpoint "
+            "which is not supported. Please fix this.")
+        raise failure
     except kse.ClientException:
         # something is wrong, like there isn't a keystone v3 endpoint,
         # we'll take the pass and default to everything being ok.
@@ -45,9 +57,7 @@ def verify_project_id(context, project_id):
         return True
     elif resp.status_code == 404:
         # we got access, and we know this project is not there
-        raise webob.exc.HTTPBadRequest(
-            explanation=_("Project ID %s is not a valid project.") %
-            project_id)
+        raise failure
     elif resp.status_code == 403:
         # we don't have enough permission to verify this, so default
         # to "it's ok".
