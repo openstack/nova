@@ -147,12 +147,15 @@ class NovaProxyRequestHandlerBase(object):
         if connect_info.get('internal_access_path'):
             tsock.send("CONNECT %s HTTP/1.1\r\n\r\n" %
                         connect_info['internal_access_path'])
+            end_token = "\r\n\r\n"
             while True:
                 data = tsock.recv(4096, socket.MSG_PEEK)
-                if data.find("\r\n\r\n") != -1:
+                token_loc = data.find(end_token)
+                if token_loc != -1:
                     if data.split("\r\n")[0].find("200") == -1:
                         raise exception.InvalidConnectionInfo()
-                    tsock.recv(len(data))
+                    # remove the response from recv buffer
+                    tsock.recv(token_loc + len(end_token))
                     break
 
         # Start proxying

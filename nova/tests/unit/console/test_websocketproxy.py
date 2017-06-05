@@ -17,6 +17,8 @@
 
 import mock
 
+import socket
+
 from nova.console import websocketproxy
 from nova import exception
 from nova import test
@@ -179,6 +181,35 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         self.assertRaises(exception.InvalidConnectionInfo,
                           self.wh.new_websocket_client)
         check_token.assert_called_with(mock.ANY, token="123-456-789")
+
+    @mock.patch('nova.consoleauth.rpcapi.ConsoleAuthAPI.check_token')
+    def test_new_websocket_client_internal_access_path_rfb(self, check_token):
+        check_token.return_value = {
+            'host': 'node1',
+            'port': '10000',
+            'internal_access_path': 'vmid',
+            'console_type': 'novnc',
+            'access_url': 'https://example.net:6080'
+        }
+
+        tsock = mock.MagicMock()
+        HTTP_RESP = "HTTP/1.1 200 OK\r\n\r\n"
+        RFB_MSG = "RFB 003.003\n"
+        # RFB negotiation message may arrive earlier.
+        tsock.recv.side_effect = [HTTP_RESP + RFB_MSG,
+                                  HTTP_RESP]
+
+        self.wh.socket.return_value = tsock
+        self.wh.path = "http://127.0.0.1/?token=123-456-789"
+        self.wh.headers = self.fake_header
+
+        self.wh.new_websocket_client()
+
+        check_token.assert_called_with(mock.ANY, token="123-456-789")
+        self.wh.socket.assert_called_with('node1', 10000, connect=True)
+        tsock.recv.assert_has_calls([mock.call(4096, socket.MSG_PEEK),
+                                     mock.call(len(HTTP_RESP))])
+        self.wh.do_proxy.assert_called_with(tsock)
 
     @mock.patch.object(websocketproxy, 'sys')
     @mock.patch('nova.consoleauth.rpcapi.ConsoleAuthAPI.check_token')
