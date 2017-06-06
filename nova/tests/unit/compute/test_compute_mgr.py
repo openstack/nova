@@ -2871,6 +2871,35 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock_volume_api.terminate_connection.assert_called_once_with(
                     self.context, uuids.volume_id, connector)
 
+    def test_remove_volume_connection_cinder_v3_api(self):
+        instance = fake_instance.fake_instance_obj(self.context,
+                                                   uuid=uuids.instance)
+        volume_id = uuids.volume
+        vol_bdm = fake_block_device.fake_bdm_object(
+            self.context,
+            {'source_type': 'volume', 'destination_type': 'volume',
+             'volume_id': volume_id, 'device_name': '/dev/vdb',
+             'instance_uuid': instance.uuid,
+             'connection_info': '{"test": "test"}'})
+        vol_bdm.attachment_id = uuids.attachment
+
+        @mock.patch.object(self.compute.volume_api, 'terminate_connection')
+        @mock.patch.object(self.compute, 'driver')
+        @mock.patch.object(driver_bdm_volume, 'driver_detach')
+        @mock.patch.object(objects.BlockDeviceMapping,
+                           'get_by_volume_and_instance')
+        def _test(mock_get_bdms, mock_detach, mock_driver, mock_terminate):
+            mock_get_bdms.return_value = vol_bdm
+
+            self.compute.remove_volume_connection(self.context,
+                                                  volume_id, instance)
+
+            mock_detach.assert_called_once_with(self.context, instance,
+                                                self.compute.volume_api,
+                                                mock_driver)
+            mock_terminate.assert_not_called()
+        _test()
+
     def test_delete_disk_metadata(self):
         bdm = objects.BlockDeviceMapping(volume_id=uuids.volume_id, tag='foo')
         instance = fake_instance.fake_instance_obj(self.context)
@@ -6042,10 +6071,16 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(compute.driver, 'pre_live_migration')
         @mock.patch.object(compute, '_get_instance_block_device_info')
         @mock.patch.object(compute_utils, 'is_volume_backed_instance')
-        def _test(mock_ivbi, mock_gibdi, mock_plm, mock_nwapi, mock_notify):
+        @mock.patch.object(objects.BlockDeviceMappingList,
+                           'get_by_instance_uuid')
+        def _test(mock_get_bdms, mock_ivbi, mock_gibdi, mock_plm, mock_nwapi,
+                  mock_notify):
+            mock_get_bdms.return_value = []
+            instance = fake_instance.fake_instance_obj(self.context,
+                                                       uuid=uuids.instance)
             migrate_data = migrate_data_obj.LiveMigrateData()
             mock_plm.return_value = migrate_data
-            r = compute.pre_live_migration(self.context, {'uuid': 'foo'},
+            r = compute.pre_live_migration(self.context, instance,
                                            False, {}, {})
             self.assertIsInstance(r, dict)
             self.assertIsInstance(mock_plm.call_args_list[0][0][5],
@@ -6069,6 +6104,136 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                 mock_rpc.pre_live_migration.call_args_list[0][0][5],
                 migrate_data_obj.LiveMigrateData)
 
+        _test()
+
+    def test_pre_live_migration_cinder_v3_api(self):
+        # This tests that pre_live_migration with a bdm with an
+        # attachment_id, will create a new attachment and update
+        # attachment_id's in the bdm.
+        compute = manager.ComputeManager()
+
+        instance = fake_instance.fake_instance_obj(self.context,
+                                                   uuid=uuids.instance)
+        volume_id = uuids.volume
+        vol_bdm = fake_block_device.fake_bdm_object(
+            self.context,
+            {'source_type': 'volume', 'destination_type': 'volume',
+             'volume_id': volume_id, 'device_name': '/dev/vdb',
+             'instance_uuid': instance.uuid,
+             'connection_info': '{"test": "test"}'})
+
+        # attach_create should not be called on this
+        image_bdm = fake_block_device.fake_bdm_object(
+            self.context,
+            {'source_type': 'image', 'destination_type': 'local',
+             'volume_id': volume_id, 'device_name': '/dev/vda',
+             'instance_uuid': instance.uuid,
+             'connection_info': '{"test": "test"}'})
+
+        orig_attachment_id = uuids.attachment1
+        vol_bdm.attachment_id = orig_attachment_id
+        new_attachment_id = uuids.attachment2
+        image_bdm.attachment_id = uuids.attachment3
+
+        migrate_data = migrate_data_obj.LiveMigrateData()
+        migrate_data.old_vol_attachment_ids = {}
+
+        @mock.patch.object(compute.volume_api, 'attachment_complete')
+        @mock.patch.object(vol_bdm, 'save')
+        @mock.patch.object(compute, '_notify_about_instance_usage')
+        @mock.patch.object(compute, 'network_api')
+        @mock.patch.object(compute.driver, 'pre_live_migration')
+        @mock.patch.object(compute, '_get_instance_block_device_info')
+        @mock.patch.object(compute_utils, 'is_volume_backed_instance')
+        @mock.patch.object(objects.BlockDeviceMappingList,
+                           'get_by_instance_uuid')
+        @mock.patch.object(compute.volume_api, 'attachment_create')
+        def _test(mock_attach, mock_get_bdms, mock_ivbi,
+                  mock_gibdi, mock_plm, mock_nwapi, mock_notify,
+                  mock_bdm_save, mock_attach_complete):
+
+            mock_get_bdms.return_value = [vol_bdm, image_bdm]
+            mock_attach.return_value = {'id': new_attachment_id}
+            mock_plm.return_value = migrate_data
+            connector = compute.driver.get_volume_connector(instance)
+
+            r = compute.pre_live_migration(self.context, instance,
+                                           False, {}, migrate_data)
+
+            self.assertIsInstance(r, migrate_data_obj.LiveMigrateData)
+            self.assertIsInstance(mock_plm.call_args_list[0][0][5],
+                                  migrate_data_obj.LiveMigrateData)
+            mock_attach.assert_called_once_with(
+                self.context, volume_id, instance.uuid, connector=connector)
+            self.assertEqual(vol_bdm.attachment_id, new_attachment_id)
+            self.assertEqual(migrate_data.old_vol_attachment_ids[volume_id],
+                             orig_attachment_id)
+            mock_bdm_save.assert_called_once_with()
+            mock_attach_complete.assert_called_once_with(self.context,
+                                                         new_attachment_id)
+
+        _test()
+
+    def test_pre_live_migration_exception_cinder_v3_api(self):
+        # The instance in this test has 2 attachments. The second attach_create
+        # will throw an exception. This will test that the first attachment
+        # is restored after the exception is thrown.
+        compute = manager.ComputeManager()
+
+        instance = fake_instance.fake_instance_obj(self.context,
+                                                   uuid=uuids.instance)
+        volume1_id = uuids.volume1
+        vol1_bdm = fake_block_device.fake_bdm_object(
+            self.context,
+            {'source_type': 'volume', 'destination_type': 'volume',
+             'volume_id': volume1_id, 'device_name': '/dev/vdb',
+             'instance_uuid': instance.uuid,
+             'connection_info': '{"test": "test"}'})
+        vol1_orig_attachment_id = uuids.attachment1
+        vol1_bdm.attachment_id = vol1_orig_attachment_id
+
+        volume2_id = uuids.volume2
+        vol2_bdm = fake_block_device.fake_bdm_object(
+            self.context,
+            {'source_type': 'volume', 'destination_type': 'volume',
+             'volume_id': volume2_id, 'device_name': '/dev/vdb',
+             'instance_uuid': instance.uuid,
+             'connection_info': '{"test": "test"}'})
+        vol2_orig_attachment_id = uuids.attachment2
+        vol2_bdm.attachment_id = vol2_orig_attachment_id
+
+        migrate_data = migrate_data_obj.LiveMigrateData()
+        migrate_data.old_vol_attachment_ids = {}
+
+        @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+        @mock.patch.object(vol1_bdm, 'save')
+        @mock.patch.object(compute, '_notify_about_instance_usage')
+        @mock.patch.object(compute, 'network_api')
+        @mock.patch.object(compute.driver, 'pre_live_migration')
+        @mock.patch.object(compute, '_get_instance_block_device_info')
+        @mock.patch.object(compute_utils, 'is_volume_backed_instance')
+        @mock.patch.object(objects.BlockDeviceMappingList,
+                           'get_by_instance_uuid')
+        @mock.patch.object(compute.volume_api, 'attachment_delete')
+        @mock.patch.object(compute.volume_api, 'attachment_create')
+        def _test(mock_attach_create, mock_attach_delete, mock_get_bdms,
+                  mock_ivbi, mock_gibdi, mock_plm, mock_nwapi, mock_notify,
+                  mock_bdm_save, mock_exception):
+            new_attachment_id = uuids.attachment3
+            mock_attach_create.side_effect = [{'id': new_attachment_id},
+                                              test.TestingException]
+            mock_get_bdms.return_value = [vol1_bdm, vol2_bdm]
+            mock_plm.return_value = migrate_data
+
+            self.assertRaises(test.TestingException,
+                              compute.pre_live_migration,
+                              self.context, instance, False, {}, migrate_data)
+
+            self.assertEqual(vol1_orig_attachment_id, vol1_bdm.attachment_id)
+            self.assertEqual(vol2_orig_attachment_id, vol2_bdm.attachment_id)
+            self.assertEqual(mock_attach_create.call_count, 2)
+            mock_attach_delete.assert_called_once_with(self.context,
+                                                       new_attachment_id)
         _test()
 
     @mock.patch.object(objects.ComputeNode,
@@ -6259,6 +6424,116 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             self.assertEqual(vm_states.ERROR, self.instance.vm_state)
 
         _do_test()
+
+    def test_post_live_migration_cinder_v3_api(self):
+        # Because live migration has succeeded, _post_live_migration
+        # should call attachment_delete with the original/old attachment_id
+        compute = manager.ComputeManager()
+
+        dest_host = 'test_dest_host'
+        instance = fake_instance.fake_instance_obj(self.context,
+                                                   uuid=uuids.instance)
+        bdm_id = 1
+        volume_id = uuids.volume
+
+        vol_bdm = fake_block_device.fake_bdm_object(
+            self.context,
+            {'source_type': 'volume', 'destination_type': 'volume',
+             'volume_id': volume_id, 'device_name': '/dev/vdb',
+             'instance_uuid': instance.uuid,
+             'id': bdm_id,
+             'connection_info':
+             '{"connector": {"host": "%s"}}' % dest_host})
+        image_bdm = fake_block_device.fake_bdm_object(
+            self.context,
+            {'source_type': 'image', 'destination_type': 'local',
+             'volume_id': volume_id, 'device_name': '/dev/vdb',
+             'instance_uuid': instance.uuid})
+        vol_bdm.attachment_id = uuids.attachment1
+        orig_attachment_id = uuids.attachment2
+        migrate_data = migrate_data_obj.LiveMigrateData()
+        migrate_data.old_vol_attachment_ids = {volume_id: orig_attachment_id}
+        image_bdm.attachment_id = uuids.attachment3
+
+        @mock.patch.object(compute, '_get_resource_tracker')
+        @mock.patch.object(vol_bdm, 'save')
+        @mock.patch.object(compute, 'update_available_resource')
+        @mock.patch.object(compute.volume_api, 'attachment_delete')
+        @mock.patch.object(compute, '_get_instance_block_device_info')
+        @mock.patch.object(compute, 'compute_rpcapi')
+        @mock.patch.object(compute, 'driver')
+        @mock.patch.object(compute, '_notify_about_instance_usage')
+        @mock.patch.object(compute, 'network_api')
+        @mock.patch.object(objects.BlockDeviceMappingList,
+                           'get_by_instance_uuid')
+        def _test(mock_get_bdms, mock_net_api, mock_notify, mock_driver,
+                  mock_rpc, mock_get_bdm_info, mock_attach_delete,
+                  mock_update_resource, mock_bdm_save, mock_rt):
+            mock_rt.return_value = mock.Mock()
+            mock_get_bdms.return_value = [vol_bdm, image_bdm]
+
+            compute._post_live_migration(self.context, instance, dest_host,
+                                         migrate_data=migrate_data)
+
+            mock_attach_delete.assert_called_once_with(
+                self.context, orig_attachment_id)
+
+        _test()
+
+    @mock.patch.object(objects.ComputeNode,
+                       'get_first_node_by_host_for_old_compat')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'remove_provider_from_instance_allocation')
+    def test_rollback_live_migration_cinder_v3_api(self, mock_remove_allocs,
+                                                   mock_get_node):
+        compute = manager.ComputeManager()
+        dest_node = objects.ComputeNode(host='foo', uuid=uuids.dest_node)
+        mock_get_node.return_value = dest_node
+        instance = fake_instance.fake_instance_obj(self.context,
+                                                   uuid=uuids.instance)
+        volume_id = uuids.volume
+        orig_attachment_id = uuids.attachment1
+        new_attachment_id = uuids.attachment2
+        migrate_data = migrate_data_obj.LiveMigrateData()
+        migrate_data.old_vol_attachment_ids = {
+            volume_id: orig_attachment_id}
+
+        bdm = fake_block_device.fake_bdm_object(
+            self.context,
+            {'source_type': 'volume', 'destination_type': 'volume',
+             'volume_id': volume_id, 'device_name': '/dev/vdb',
+             'instance_uuid': instance.uuid})
+        bdm.attachment_id = new_attachment_id
+
+        @mock.patch.object(compute.volume_api, 'attachment_delete')
+        @mock.patch.object(bdm, 'save')
+        @mock.patch.object(compute_utils, 'notify_about_instance_action')
+        @mock.patch.object(instance, 'save')
+        @mock.patch.object(compute, '_notify_about_instance_usage')
+        @mock.patch.object(compute.compute_rpcapi, 'remove_volume_connection')
+        @mock.patch.object(compute, 'network_api')
+        @mock.patch.object(objects.BlockDeviceMappingList,
+                           'get_by_instance_uuid')
+        def _test(mock_get_bdms, mock_net_api, mock_remove_conn,
+                  mock_usage, mock_instance_save, mock_action, mock_save,
+                  mock_attach_delete):
+            # this tests that _rollback_live_migration replaces the bdm's
+            # attachment_id with the original attachment id that is in
+            # migrate_data.
+            mock_get_bdms.return_value = objects.BlockDeviceMappingList(
+                objects=[bdm])
+
+            compute._rollback_live_migration(self.context, instance, None,
+                                             migrate_data)
+
+            mock_remove_conn.assert_called_once_with(self.context, instance,
+                                                     bdm.volume_id, None)
+            mock_attach_delete.called_once_with(self.context,
+                                                new_attachment_id)
+            self.assertEqual(bdm.attachment_id, orig_attachment_id)
+            mock_save.assert_called_once_with()
+
+        _test()
 
     def _get_migration(self, migration_id, status, migration_type):
         migration = objects.Migration()

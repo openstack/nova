@@ -10382,12 +10382,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     def test_post_live_migration(self):
         vol = {'block_device_mapping': [
-                  {'connection_info': {
+                  {'attachment_id': None,
+                   'connection_info': {
                        'data': {'multipath_id': 'dummy1'},
                        'serial': 'fake_serial1'},
                     'mount_device': '/dev/sda',
                    },
-                  {'connection_info': {
+                   {'attachment_id': None,
+                    'connection_info': {
                        'data': {},
                        'serial': 'fake_serial2'},
                     'mount_device': '/dev/sdb', }]}
@@ -10422,6 +10424,46 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 mock.call({'data': {'multipath_id': 'dummy1'}}, 'sda',
                           inst_ref),
                 mock.call({'data': {}}, 'sdb', inst_ref)])
+
+    def test_post_live_migration_cinder_v3(self):
+        cntx = context.get_admin_context()
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = fake_instance.fake_instance_obj(cntx,
+                                                   uuid=uuids.instance)
+        vol_id = uuids.volume
+        old_attachment_id = uuids.attachment
+        disk_dev = 'sda'
+        connection_info = {
+            'data': {'multipath_id': 'dummy1'},
+            'serial': vol_id}
+        block_device_mapping = [
+            {'attachment_id': uuids.attachment,
+             'mount_device': '/dev/%s' % disk_dev,
+             'connection_info': connection_info}]
+        old_attachment = {
+            'connection_info': {
+                'data': {'multipath_id': 'dummy1'},
+                'serial': vol_id}}
+
+        migrate_data = objects.LibvirtLiveMigrateData(
+            is_shared_block_storage=True,
+            old_vol_attachment_ids={vol_id: old_attachment_id})
+
+        @mock.patch.object(drvr, '_disconnect_volume')
+        @mock.patch.object(drvr._volume_api, 'attachment_get')
+        @mock.patch.object(driver, 'block_device_info_get_mapping')
+        def _test(mock_get_bdms, mock_attachment_get, mock_disconnect):
+            mock_get_bdms.return_value = block_device_mapping
+            mock_attachment_get.return_value = old_attachment
+
+            drvr.post_live_migration(cntx, instance, None,
+                                     migrate_data=migrate_data)
+
+            mock_attachment_get.assert_called_once_with(cntx,
+                                                        old_attachment_id)
+            mock_disconnect.assert_called_once_with(connection_info, disk_dev,
+                                                    instance)
+        _test()
 
     def test_get_instance_disk_info_excludes_volumes(self):
         # Test data

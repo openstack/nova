@@ -5301,19 +5301,22 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     def remove_volume_connection(self, context, volume_id, instance):
-        """Remove a volume connection using the volume api."""
-        # NOTE(vish): We don't want to actually mark the volume
-        #             detached, or delete the bdm, just remove the
-        #             connection from this host.
+        """Remove the volume connection on this host
 
+        Detach the volume from this instance on this host, and if this is
+        the cinder v2 flow, call cinder to terminate the connection.
+        """
         try:
             bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
                     context, volume_id, instance.uuid)
             driver_bdm = driver_block_device.convert_volume(bdm)
             driver_bdm.driver_detach(context, instance,
                                      self.volume_api, self.driver)
-            connector = self.driver.get_volume_connector(instance)
-            self.volume_api.terminate_connection(context, volume_id, connector)
+            if bdm.attachment_id is None:
+                # cinder v2 api flow
+                connector = self.driver.get_volume_connector(instance)
+                self.volume_api.terminate_connection(context, volume_id,
+                                                     connector)
         except exception.NotFound:
             pass
 
@@ -5533,8 +5536,53 @@ class ComputeManager(manager.Manager):
             migrate_data = \
                 migrate_data_obj.LiveMigrateData.detect_implementation(
                     migrate_data)
+
+        migrate_data.old_vol_attachment_ids = {}
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+            context, instance.uuid)
+        try:
+            connector = self.driver.get_volume_connector(instance)
+            for bdm in bdms:
+                if bdm.is_volume and bdm.attachment_id is not None:
+                    # This bdm uses the new cinder v3.44 API.
+                    # We will create a new attachment for this
+                    # volume on this migration destination host. The old
+                    # attachment will be deleted on the source host
+                    # when the migration succeeds. The old attachment_id
+                    # is stored in dict with the key being the bdm.volume_id
+                    # so it can be restored on rollback.
+                    #
+                    # Also note that attachment_update is not needed as we
+                    # are providing the connector in the create call.
+                    attach_ref = self.volume_api.attachment_create(
+                        context, bdm.volume_id, bdm.instance_uuid,
+                        connector=connector)
+
+                    # save current attachment so we can detach it on success,
+                    # or restore it on a rollback.
+                    migrate_data.old_vol_attachment_ids[bdm.volume_id] = \
+                        bdm.attachment_id
+
+                    # update the bdm with the new attachment_id.
+                    bdm.attachment_id = attach_ref['id']
+                    bdm.save()
+        except Exception:
+            # If we raise, migrate_data with the updated attachment ids
+            # will not be returned to the source host for rollback.
+            # So we need to rollback new attachments here.
+            with excutils.save_and_reraise_exception():
+                old_attachments = migrate_data.old_vol_attachment_ids
+                for bdm in bdms:
+                    if (bdm.is_volume and bdm.attachment_id is not None and
+                            bdm.volume_id in old_attachments):
+                        self.volume_api.attachment_delete(context,
+                                                          bdm.attachment_id)
+                        bdm.attachment_id = old_attachments[bdm.volume_id]
+                        bdm.save()
+
         block_device_info = self._get_instance_block_device_info(
-                            context, instance, refresh_conn_info=True)
+                            context, instance, refresh_conn_info=True,
+                            bdms=bdms)
 
         network_info = self.network_api.get_instance_nw_info(context, instance)
         self._notify_about_instance_usage(
@@ -5548,6 +5596,13 @@ class ComputeManager(manager.Manager):
                                        disk,
                                        migrate_data)
         LOG.debug('driver pre_live_migration data is %s', migrate_data)
+
+        # Volume connections are complete, tell cinder that all the
+        # attachments have completed.
+        for bdm in bdms:
+            if bdm.is_volume and bdm.attachment_id is not None:
+                self.volume_api.attachment_complete(context,
+                                                    bdm.attachment_id)
 
         # NOTE(tr3buchet): setup networks on destination host
         self.network_api.setup_networks_on_host(context, instance,
@@ -5777,15 +5832,24 @@ class ComputeManager(manager.Manager):
         # Detaching volumes.
         connector = self.driver.get_volume_connector(instance)
         for bdm in bdms:
-            # NOTE(vish): We don't want to actually mark the volume
-            #             detached, or delete the bdm, just remove the
-            #             connection from this host.
-
-            # remove the volume connection without detaching from hypervisor
-            # because the instance is not running anymore on the current host
             if bdm.is_volume:
-                self.volume_api.terminate_connection(ctxt, bdm.volume_id,
-                                                     connector)
+                if bdm.attachment_id is None:
+                    # Prior to cinder v3.44:
+                    # We don't want to actually mark the volume detached, or
+                    # delete the bdm, just remove the connection from this
+                    # host.
+                    #
+                    # remove the volume connection without detaching from
+                    # hypervisor because the instance is not running anymore
+                    # on the current host
+                    self.volume_api.terminate_connection(ctxt, bdm.volume_id,
+                                                         connector)
+                else:
+                    # cinder v3.44 api flow - delete the old attachment
+                    # for the source host
+                    old_attachment_id = \
+                        migrate_data.old_vol_attachment_ids[bdm.volume_id]
+                    self.volume_api.attachment_delete(ctxt, old_attachment_id)
 
         # Releasing vlan.
         # (not necessary in current implementation?)
@@ -6000,8 +6064,22 @@ class ComputeManager(manager.Manager):
                 context, instance.uuid)
         for bdm in bdms:
             if bdm.is_volume:
+                # remove the connection on the destination host
                 self.compute_rpcapi.remove_volume_connection(
                         context, instance, bdm.volume_id, dest)
+
+                if bdm.attachment_id:
+                    # 3.44 cinder api flow. Set the bdm's
+                    # attachment_id to the old attachment of the source
+                    # host. If old_attachments is not there, then
+                    # there was an error before the new attachment was made.
+                    old_attachments = migrate_data.old_vol_attachment_ids \
+                        if 'old_vol_attachment_ids' in migrate_data else None
+                    if old_attachments and bdm.volume_id in old_attachments:
+                        self.volume_api.attachment_delete(context,
+                                                          bdm.attachment_id)
+                        bdm.attachment_id = old_attachments[bdm.volume_id]
+                        bdm.save()
 
         self._notify_about_instance_usage(context, instance,
                                           "live_migration._rollback.start")

@@ -1093,7 +1093,7 @@ object_data = {
     'FloatingIPList': '1.12-e4debd21fddb12cf40d36f737225fa9d',
     'HostMapping': '1.0-1a3390a696792a552ab7bd31a77ba9ac',
     'HostMappingList': '1.0-267d952a5d48361d6d7604f50775bc34',
-    'HyperVLiveMigrateData': '1.1-9987a3cec31a81abac6fba7cc722e43f',
+    'HyperVLiveMigrateData': '1.2-bcb6dad687369348ffe0f41da6888704',
     'HVSpec': '1.2-de06bcec472a2f04966b855a49c46b41',
     'IDEDeviceBus': '1.0-29d4c9f27ac44197f01b6ac1b7e16502',
     'ImageMeta': '1.8-642d1b2eb3e880a367f37d72dd76162d',
@@ -1118,7 +1118,7 @@ object_data = {
     'InstancePCIRequest': '1.1-b1d75ebc716cb12906d9d513890092bf',
     'InstancePCIRequests': '1.1-65e38083177726d806684cb1cc0136d2',
     'LibvirtLiveMigrateBDMInfo': '1.0-252aabb723ca79d5469fa56f64b57811',
-    'LibvirtLiveMigrateData': '1.3-2795e5646ee21e8c7f1c3e64fb6c80a3',
+    'LibvirtLiveMigrateData': '1.4-ae5f344e7f78d3b45c259a0f80ea69f5',
     'KeyPair': '1.4-1244e8d1b103cc69d038ed78ab3a8cc6',
     'KeyPairList': '1.3-94aad3ac5c938eef4b5e83da0212f506',
     'MemoryDiagnostics': '1.0-2c995ae0f2223bb0f8e523c5cc0b83da',
@@ -1142,7 +1142,7 @@ object_data = {
     'PciDeviceList': '1.3-52ff14355491c8c580bdc0ba34c26210',
     'PciDevicePool': '1.1-3f5ddc3ff7bfa14da7f6c7e9904cc000',
     'PciDevicePoolList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
-    'PowerVMLiveMigrateData': '1.1-ac0fdd26da685f12d7038782cabd393a',
+    'PowerVMLiveMigrateData': '1.2-b62cd242c5205a853545b1085b072340',
     'Quotas': '1.3-40fcefe522111dddd3e5e6155702cf4e',
     'QuotasNoOp': '1.3-347a039fc7cfee7b225b68b5181e0733',
     'RequestSpec': '1.8-35033ecef47a880f9a5e46e2269e2b97',
@@ -1168,7 +1168,7 @@ object_data = {
     'VirtualInterfaceList': '1.0-9750e2074437b3077e46359102779fc6',
     'VolumeUsage': '1.0-6c8190c46ce1469bb3286a1f21c2e475',
     'XenDeviceBus': '1.0-272a4f899b24e31e42b2b9a7ed7e9194',
-    'XenapiLiveMigrateData': '1.1-79e69f5ac9abfbcfcbaec18e8280bec6',
+    'XenapiLiveMigrateData': '1.2-72b9b6e70de34a283689ec7126aa4879',
 }
 
 
