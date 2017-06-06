@@ -18,14 +18,12 @@ Tests For Cells RPC Communication Driver
 """
 
 import mock
-from mox3 import mox
 import oslo_messaging
 
 from nova.cells import messaging
 from nova.cells import rpc_driver
 import nova.conf
 from nova import context
-from nova import rpc
 from nova import test
 from nova.tests.unit.cells import fakes
 
@@ -41,7 +39,8 @@ class CellsRPCDriverTestCase(test.NoDBTestCase):
         self.ctxt = context.RequestContext('fake', 'fake')
         self.driver = rpc_driver.CellsRPCDriver()
 
-    def test_start_servers(self):
+    @mock.patch('nova.rpc.get_server')
+    def test_start_servers(self, mock_get_server):
         self.flags(rpc_driver_queue_base='cells.intercell42', group='cells')
         fake_msg_runner = fakes.get_message_runner('api-cell')
 
@@ -49,22 +48,27 @@ class CellsRPCDriverTestCase(test.NoDBTestCase):
             def __init__(_self, msg_runner):
                 self.assertEqual(fake_msg_runner, msg_runner)
 
-        self.stubs.Set(rpc_driver, 'InterCellRPCDispatcher',
-                       FakeInterCellRPCDispatcher)
-        self.mox.StubOutWithMock(rpc, 'get_server')
+        endpoints = [test.MatchType(FakeInterCellRPCDispatcher)]
+        self.stub_out('nova.cells.rpc_driver.InterCellRPCDispatcher',
+                      FakeInterCellRPCDispatcher)
+        rpcserver = mock.Mock()
+        mock_get_server.return_value = rpcserver
 
+        expected_mock_get_server_called_list = []
         for message_type in messaging.MessageRunner.get_message_types():
             topic = 'cells.intercell42.' + message_type
             target = oslo_messaging.Target(topic=topic, server=CONF.host)
-            endpoints = [mox.IsA(FakeInterCellRPCDispatcher)]
-
-            rpcserver = self.mox.CreateMockAnything()
-            rpc.get_server(target, endpoints=endpoints).AndReturn(rpcserver)
-            rpcserver.start()
-
-        self.mox.ReplayAll()
+            expected_mock_get_server_called_list.append(
+                mock.call(target, endpoints=endpoints))
 
         self.driver.start_servers(fake_msg_runner)
+        rpcserver.start.assert_called()
+        self.assertEqual(expected_mock_get_server_called_list,
+                         mock_get_server.call_args_list)
+        self.assertEqual(len(messaging.MessageRunner.get_message_types()),
+                         rpcserver.start.call_count)
+        self.assertEqual(len(messaging.MessageRunner.get_message_types()),
+                         mock_get_server.call_count)
 
     def test_stop_servers(self):
         call_info = {'stopped': []}
@@ -112,23 +116,20 @@ class CellsRPCDriverTestCase(test.NoDBTestCase):
                         '%(hostname)s:%(port)d/%(virtual_host)s' %
                         expected_server_params)
 
-        def check_transport_url(cell_state):
-            return cell_state.db_info['transport_url'] == expected_url
-
         rpcapi = self.driver.intercell_rpcapi
-        rpcclient = self.mox.CreateMockAnything()
+        rpcclient = mock.Mock()
 
-        self.mox.StubOutWithMock(rpcapi, '_get_client')
-        rpcapi._get_client(
-            mox.Func(check_transport_url),
-            'cells.intercell.targeted').AndReturn(rpcclient)
+        with mock.patch.object(rpcapi, '_get_client') as m_get_client:
+            m_get_client.return_value = rpcclient
 
-        rpcclient.cast(mox.IgnoreArg(), 'process_message',
-                       message=message.to_json())
-
-        self.mox.ReplayAll()
-
-        self.driver.send_message_to_cell(cell_state, message)
+            self.driver.send_message_to_cell(cell_state, message)
+            m_get_client.assert_called_with(cell_state,
+                                            'cells.intercell.targeted')
+            self.assertEqual(expected_url,
+                             cell_state.db_info['transport_url'])
+            rpcclient.cast.assert_called_with(mock.ANY,
+                                              'process_message',
+                                              message=message.to_json())
 
     def test_send_message_to_cell_fanout_cast(self):
         msg_runner = fakes.get_message_runner('api-cell')
@@ -145,24 +146,24 @@ class CellsRPCDriverTestCase(test.NoDBTestCase):
                         '%(hostname)s:%(port)d/%(virtual_host)s' %
                         expected_server_params)
 
-        def check_transport_url(cell_state):
-            return cell_state.db_info['transport_url'] == expected_url
-
         rpcapi = self.driver.intercell_rpcapi
-        rpcclient = self.mox.CreateMockAnything()
+        rpcclient = mock.Mock()
 
-        self.mox.StubOutWithMock(rpcapi, '_get_client')
-        rpcapi._get_client(
-            mox.Func(check_transport_url),
-            'cells.intercell.targeted').AndReturn(rpcclient)
+        with mock.patch.object(rpcapi, '_get_client') as m_get_client:
+            m_get_client.return_value = rpcclient
 
-        rpcclient.prepare(fanout=True).AndReturn(rpcclient)
-        rpcclient.cast(mox.IgnoreArg(), 'process_message',
-                       message=message.to_json())
+            rpcclient.return_value = rpcclient
+            rpcclient.prepare.return_value = rpcclient
 
-        self.mox.ReplayAll()
-
-        self.driver.send_message_to_cell(cell_state, message)
+            self.driver.send_message_to_cell(cell_state, message)
+            m_get_client.assert_called_with(cell_state,
+                                            'cells.intercell.targeted')
+            self.assertEqual(expected_url,
+                             cell_state.db_info['transport_url'])
+            rpcclient.prepare.assert_called_with(fanout=True)
+            rpcclient.cast.assert_called_with(mock.ANY,
+                                              'process_message',
+                                              message=message.to_json())
 
     def test_rpc_topic_uses_message_type(self):
         self.flags(rpc_driver_queue_base='cells.intercell42', group='cells')
@@ -181,24 +182,24 @@ class CellsRPCDriverTestCase(test.NoDBTestCase):
                         '%(hostname)s:%(port)d/%(virtual_host)s' %
                         expected_server_params)
 
-        def check_transport_url(cell_state):
-            return cell_state.db_info['transport_url'] == expected_url
-
         rpcapi = self.driver.intercell_rpcapi
-        rpcclient = self.mox.CreateMockAnything()
+        rpcclient = mock.Mock()
 
-        self.mox.StubOutWithMock(rpcapi, '_get_client')
-        rpcapi._get_client(
-            mox.Func(check_transport_url),
-            'cells.intercell42.fake-message-type').AndReturn(rpcclient)
+        with mock.patch.object(rpcapi, '_get_client') as m_get_client:
+            m_get_client.return_value = rpcclient
 
-        rpcclient.prepare(fanout=True).AndReturn(rpcclient)
-        rpcclient.cast(mox.IgnoreArg(), 'process_message',
-                       message=message.to_json())
+            rpcclient.prepare(fanout=True)
+            rpcclient.prepare.return_value = rpcclient
 
-        self.mox.ReplayAll()
-
-        self.driver.send_message_to_cell(cell_state, message)
+            self.driver.send_message_to_cell(cell_state, message)
+            m_get_client.assert_called_with(cell_state,
+                    'cells.intercell42.fake-message-type')
+            self.assertEqual(expected_url,
+                             cell_state.db_info['transport_url'])
+            rpcclient.prepare.assert_called_with(fanout=True)
+            rpcclient.cast.assert_called_with(mock.ANY,
+                                              'process_message',
+                                              message=message.to_json())
 
     def test_process_message(self):
         msg_runner = fakes.get_message_runner('api-cell')
@@ -216,10 +217,8 @@ class CellsRPCDriverTestCase(test.NoDBTestCase):
         def _fake_process():
             call_info['process_called'] = True
 
-        self.stubs.Set(msg_runner, 'message_from_json',
-                _fake_message_from_json)
-        self.stubs.Set(message, 'process', _fake_process)
-
+        msg_runner.message_from_json = _fake_message_from_json
+        message.process = _fake_process
         dispatcher.process_message(self.ctxt, message.to_json())
         self.assertEqual(message.to_json(), call_info['json_message'])
         self.assertTrue(call_info['process_called'])
