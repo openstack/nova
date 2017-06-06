@@ -22,7 +22,6 @@ import errno
 import os
 import re
 
-from lxml import etree
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 
@@ -370,38 +369,33 @@ def path_exists(path):
     return os.path.exists(path)
 
 
-def find_disk(virt_dom):
+def find_disk(guest):
     """Find root device path for instance
 
     May be file or device
     """
-    xml_desc = virt_dom.XMLDesc(0)
-    domain = etree.fromstring(xml_desc)
-    os_type = domain.find('os/type').text
-    driver = None
-    if CONF.libvirt.virt_type == 'lxc':
-        filesystem = domain.find('devices/filesystem')
-        driver = filesystem.find('driver')
+    guest_config = guest.get_config()
 
-        source = filesystem.find('source')
-        disk_path = source.get('dir')
+    disk_format = None
+    if guest_config.virt_type == 'lxc':
+        filesystem = next(d for d in guest_config.devices
+                          if isinstance(d, vconfig.LibvirtConfigGuestFilesys))
+        disk_path = filesystem.source_dir
         disk_path = disk_path[0:disk_path.rfind('rootfs')]
         disk_path = os.path.join(disk_path, 'disk')
-    elif (CONF.libvirt.virt_type == 'parallels' and
-          os_type == obj_fields.VMMode.EXE):
-        filesystem = domain.find('devices/filesystem')
-        driver = filesystem.find('driver')
-
-        source = filesystem.find('source')
-        disk_path = source.get('file')
+    elif (guest_config.virt_type == 'parallels' and
+          guest_config.os_type == obj_fields.VMMode.EXE):
+        filesystem = next(d for d in guest_config.devices
+                          if isinstance(d, vconfig.LibvirtConfigGuestFilesys))
+        disk_format = filesystem.driver_type
+        disk_path = filesystem.source_file
     else:
-        disk = domain.find('devices/disk')
-        driver = disk.find('driver')
-
-        source = disk.find('source')
-        disk_path = source.get('file') or source.get('dev')
-        if not disk_path and CONF.libvirt.images_type == 'rbd':
-            disk_path = source.get('name')
+        disk = next(d for d in guest_config.devices
+                    if isinstance(d, vconfig.LibvirtConfigGuestDisk))
+        disk_format = disk.driver_format
+        disk_path = disk.source_path if disk.source_type != 'mount' else None
+        if not disk_path and disk.source_protocol == 'rbd':
+            disk_path = disk.source_name
             if disk_path:
                 disk_path = 'rbd:' + disk_path
 
@@ -409,15 +403,11 @@ def find_disk(virt_dom):
         raise RuntimeError(_("Can't retrieve root device path "
                              "from instance libvirt configuration"))
 
-    if driver is not None:
-        format = driver.get('type')
-        # This is a legacy quirk of libvirt/xen. Everything else should
-        # report the on-disk format in type.
-        if format == 'aio':
-            format = 'raw'
-    else:
-        format = None
-    return (disk_path, format)
+    # This is a legacy quirk of libvirt/xen. Everything else should
+    # report the on-disk format in type.
+    if disk_format == 'aio':
+        disk_format = 'raw'
+    return (disk_path, disk_format)
 
 
 def get_disk_type_from_path(path):

@@ -1549,7 +1549,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # source_format is an on-disk format
         # source_type is a backend type
-        disk_path, source_format = libvirt_utils.find_disk(virt_dom)
+        disk_path, source_format = libvirt_utils.find_disk(guest)
         source_type = libvirt_utils.get_disk_type_from_path(disk_path)
 
         # We won't have source_type for raw or qcow2 disks, because we can't
