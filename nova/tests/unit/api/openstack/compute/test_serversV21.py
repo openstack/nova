@@ -3680,8 +3680,8 @@ class ServersControllerCreateTestV232(test.NoDBTestCase):
 
     def test_create_server_no_tags_old_compute(self):
         with test.nested(
-            mock.patch.object(objects.Service, 'get_minimum_version',
-                              return_value=13),
+            mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                       return_value=13),
             mock.patch.object(nova.compute.flavors, 'get_flavor_by_flavor_id',
                               return_value=objects.Flavor()),
             mock.patch.object(
@@ -3692,22 +3692,22 @@ class ServersControllerCreateTestV232(test.NoDBTestCase):
         ):
             self._create_server()
 
-    @mock.patch.object(objects.Service, 'get_minimum_version',
-                       return_value=13)
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=13)
     def test_create_server_tagged_nic_old_compute_fails(self, get_min_ver):
         self.body['server']['networks'][0]['tag'] = 'foo'
         self.assertRaises(webob.exc.HTTPBadRequest, self._create_server)
 
-    @mock.patch.object(objects.Service, 'get_minimum_version',
-                       return_value=13)
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=13)
     def test_create_server_tagged_bdm_old_compute_fails(self, get_min_ver):
         self.body['server']['block_device_mapping_v2'][0]['tag'] = 'foo'
         self.assertRaises(webob.exc.HTTPBadRequest, self._create_server)
 
     def test_create_server_tagged_nic_new_compute(self):
         with test.nested(
-            mock.patch.object(objects.Service, 'get_minimum_version',
-                              return_value=14),
+            mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                       return_value=14),
             mock.patch.object(nova.compute.flavors, 'get_flavor_by_flavor_id',
                               return_value=objects.Flavor()),
             mock.patch.object(
@@ -3721,8 +3721,8 @@ class ServersControllerCreateTestV232(test.NoDBTestCase):
 
     def test_create_server_tagged_bdm_new_compute(self):
         with test.nested(
-            mock.patch.object(objects.Service, 'get_minimum_version',
-                              return_value=14),
+            mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                       return_value=14),
             mock.patch.object(nova.compute.flavors, 'get_flavor_by_flavor_id',
                               return_value=objects.Flavor()),
             mock.patch.object(
@@ -3798,8 +3798,8 @@ class ServersControllerCreateTestV237(test.NoDBTestCase):
         when networks is 'none' which means no network will be allocated.
         """
         with test.nested(
-            mock.patch.object(objects.Service, 'get_minimum_version',
-                              return_value=14),
+            mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                       return_value=14),
             mock.patch.object(nova.compute.flavors, 'get_flavor_by_flavor_id',
                               return_value=objects.Flavor()),
             mock.patch.object(
