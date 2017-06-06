@@ -662,8 +662,8 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
     @mock.patch.object(imagebackend.utils, 'execute')
     def _create_image(self, sparse, mock_execute, mock_get, mock_create):
         fn = mock.MagicMock()
-        cmd = ('qemu-img', 'convert', '-O', 'raw', self.TEMPLATE_PATH,
-               self.PATH)
+        cmd = ('qemu-img', 'convert', '-t', 'none', '-O', 'raw',
+               self.TEMPLATE_PATH, self.PATH)
 
         image = self.image_class(self.INSTANCE, self.NAME)
 
@@ -698,8 +698,8 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
                              mock_create, mock_resize):
         fn = mock.MagicMock()
         fn(target=self.TEMPLATE_PATH)
-        cmd = ('qemu-img', 'convert', '-O', 'raw', self.TEMPLATE_PATH,
-               self.PATH)
+        cmd = ('qemu-img', 'convert', '-t', 'none', '-O', 'raw',
+               self.TEMPLATE_PATH, self.PATH)
         image = self.image_class(self.INSTANCE, self.NAME)
         image.create_image(fn, self.TEMPLATE_PATH, self.SIZE)
 
@@ -944,6 +944,7 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
                 self.KEY)
             cmd = ('qemu-img',
                    'convert',
+                   '-t', 'none',
                    '-O',
                    'raw',
                    self.TEMPLATE_PATH,
@@ -1024,6 +1025,7 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
                  self.KEY)
             cmd = ('qemu-img',
                    'convert',
+                   '-t', 'none',
                    '-O',
                    'raw',
                    self.TEMPLATE_PATH,
