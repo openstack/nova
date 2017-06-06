@@ -2017,7 +2017,7 @@ class AttachInterfaceNotSupported(Invalid):
 
 
 class InstanceDiagnosticsNotSupported(Invalid):
-    msg_fmt = _("Instance diagnostics is not supported by compute node.")
+    msg_fmt = _("Instance diagnostics are not supported by compute node.")
 
 
 class InvalidReservedMemoryPagesOption(Invalid):
