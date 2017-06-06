@@ -64,7 +64,7 @@ class BuildRequestTestCase(test.NoDBTestCase):
             if key == 'instance':
                 objects.base.obj_equal_prims(expected, db_value)
                 continue
-            elif key == 'block_device_mappings':
+            elif key in ('block_device_mappings', 'tags'):
                 self.assertEqual(1, len(db_value))
                 # Can't compare list objects directly, just compare the single
                 # item they contain.
