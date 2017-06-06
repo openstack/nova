@@ -15,6 +15,8 @@ import copy
 # used over RPC. Remote manipulation is done with the placement HTTP
 # API. The 'remotable' decorators should not be used.
 
+import os_traits
+from oslo_concurrency import lockutils
 from oslo_db import exception as db_exc
 from oslo_log import log as logging
 from oslo_utils import versionutils
@@ -43,6 +45,8 @@ _AGG_TBL = models.PlacementAggregate.__table__
 _RP_AGG_TBL = models.ResourceProviderAggregate.__table__
 _RP_TRAIT_TBL = models.ResourceProviderTrait.__table__
 _RC_CACHE = None
+_TRAIT_LOCK = 'trait_sync'
+_TRAITS_SYNCED = False
 
 LOG = logging.getLogger(__name__)
 
@@ -59,6 +63,70 @@ def _ensure_rc_cache(ctx):
     if _RC_CACHE is not None:
         return
     _RC_CACHE = rc_cache.ResourceClassCache(ctx)
+
+
+@db_api.api_context_manager.writer
+def _trait_sync(ctx):
+    """Sync the os_traits symbols to the database.
+
+    Reads all symbols from the os_traits library, checks if any of them do
+    not exist in the database and bulk-inserts those that are not. This is
+    done once per process using this code if either Trait.get_by_name or
+    TraitList.get_all is called.
+
+    :param ctx: `nova.context.RequestContext` that may be used to grab a DB
+                connection.
+    """
+    # Create a set of all traits in the os_traits library.
+    std_traits = set(os_traits.get_traits())
+    conn = ctx.session.connection()
+    sel = sa.select([_TRAIT_TBL.c.name])
+    res = conn.execute(sel).fetchall()
+    # Create a set of all traits in the db that are not custom
+    # traits.
+    db_traits = set(
+        r[0] for r in res
+        if not os_traits.is_custom(r[0])
+    )
+    # Determine those traits which are in os_traits but not
+    # currently in the database, and insert them.
+    need_sync = std_traits - db_traits
+    ins = _TRAIT_TBL.insert()
+    batch_args = [
+        {'name': six.text_type(trait)}
+        for trait in need_sync
+    ]
+    if batch_args:
+        try:
+            conn.execute(ins, batch_args)
+            LOG.info("Synced traits from os_traits into API DB: %s",
+                     need_sync)
+        except db_exc.DBDuplicateEntry:
+            pass  # some other process sync'd, just ignore
+
+
+def _ensure_trait_sync(ctx):
+    """Ensures that the os_traits library is synchronized to the traits db.
+
+    If _TRAITS_SYNCED is False then this process has not tried to update the
+    traits db. Do so by calling _trait_sync. Since the placement API server
+    could be multi-threaded, lock around testing _TRAITS_SYNCED to avoid
+    duplicating work.
+
+    Different placement API server processes that talk to the same database
+    will avoid issues through the power of transactions.
+
+    :param ctx: `nova.context.RequestContext` that may be used to grab a DB
+                connection.
+    """
+    global _TRAITS_SYNCED
+    # If another thread is doing this work, wait for it to complete.
+    # When that thread is done _TRAITS_SYNCED will be true in this
+    # thread and we'll simply return.
+    with lockutils.lock(_TRAIT_LOCK):
+        if not _TRAITS_SYNCED:
+            _trait_sync(ctx)
+            _TRAITS_SYNCED = True
 
 
 def _get_current_inventory_resources(conn, rp):
@@ -2020,8 +2088,9 @@ class Trait(base.NovaObject):
         self._from_db_object(self._context, self, db_trait)
 
     @staticmethod
-    @db_api.api_context_manager.reader
+    @db_api.api_context_manager.writer  # trait sync can cause a write
     def _get_by_name_from_db(context, name):
+        _ensure_trait_sync(context)
         result = context.session.query(models.Trait).filter_by(
             name=name).first()
         if not result:
@@ -2071,8 +2140,9 @@ class TraitList(base.ObjectListBase, base.NovaObject):
     }
 
     @staticmethod
-    @db_api.api_context_manager.reader
+    @db_api.api_context_manager.writer  # trait sync can cause a write
     def _get_all_from_db(context, filters):
+        _ensure_trait_sync(context)
         if not filters:
             filters = {}
 

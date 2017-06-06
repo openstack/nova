@@ -12,7 +12,9 @@
 
 
 import mock
+import os_traits
 from oslo_db import exception as db_exc
+import sqlalchemy as sa
 
 import nova
 from nova import context
@@ -1534,6 +1536,11 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
 
 class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
 
+    def tearDown(self):
+        """Reset the _TRAITS_SYNCED boolean so it doesn't interfere."""
+        super(ResourceProviderTraitTestCase, self).tearDown()
+        rp_obj._TRAITS_SYNCED = False
+
     def _assert_traits(self, expected_traits, traits_objs):
         expected_traits.sort()
         traits = []
@@ -1541,6 +1548,11 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
             traits.append(obj.name)
         traits.sort()
         self.assertEqual(expected_traits, traits)
+
+    def _assert_traits_in(self, expected_traits, traits_objs):
+        traits = [trait.name for trait in traits_objs]
+        for expected in expected_traits:
+            self.assertIn(expected, traits)
 
     def test_trait_create(self):
         t = objects.Trait(self.context)
@@ -1603,8 +1615,8 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
             t.name = name
             t.create()
 
-        self._assert_traits(trait_names,
-                            objects.TraitList.get_all(self.context))
+        self._assert_traits_in(trait_names,
+                               objects.TraitList.get_all(self.context))
 
     def test_traits_get_all_with_name_in_filter(self):
         trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
@@ -1734,9 +1746,28 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
             filters={'name_in': ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B']})
         rp1.set_traits(associated_traits)
         rp2.set_traits(associated_traits)
-        self._assert_traits(['CUSTOM_TRAIT_C'],
+        self._assert_traits_in(['CUSTOM_TRAIT_C'],
             objects.TraitList.get_all(self.context,
                 filters={'associated': False}))
+
+    def test_sync_standard_traits(self):
+        """Tests that on a clean DB, we have zero traits in the DB but after
+        list all traits, os_traits have been synchronized.
+        """
+        std_traits = os_traits.get_traits()
+        conn = self.api_db.get_engine().connect()
+
+        def _db_traits(conn):
+            sel = sa.select([rp_obj._TRAIT_TBL.c.name])
+            return [r[0] for r in conn.execute(sel).fetchall()]
+
+        self.assertEqual([], _db_traits(conn))
+
+        all_traits = [trait.name for trait in
+                      objects.TraitList.get_all(self.context)]
+        self.assertEqual(set(std_traits), set(all_traits))
+        # confirm with a raw request
+        self.assertEqual(set(std_traits), set(_db_traits(conn)))
 
 
 class SharedProviderTestCase(ResourceProviderBaseCase):
