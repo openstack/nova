@@ -1839,6 +1839,7 @@ class API(base.Base):
                      instance=instance)
             return
 
+        cell = None
         # If there is an instance.host (or the instance is shelved-offloaded),
         # the instance has been scheduled and sent to a cell/compute which
         # means it was pulled from the cell db.
@@ -2024,8 +2025,23 @@ class API(base.Base):
                 # If instance is in shelved_offloaded state or compute node
                 # isn't up, delete instance from db and clean bdms info and
                 # network info
-                self._local_delete(context, instance, bdms, delete_type, cb)
-                quotas.commit()
+                if cell is None:
+                    # NOTE(danms): If we didn't get our cell from one of the
+                    # paths above, look it up now.
+                    try:
+                        im = objects.InstanceMapping.get_by_instance_uuid(
+                            context, instance.uuid)
+                        cell = im.cell_mapping
+                    except exception.InstanceMappingNotFound:
+                        LOG.warning('During local delete, failed to find '
+                                    'instance mapping', instance=instance)
+                        return
+
+                LOG.debug('Doing local delete in cell %s', cell.identity,
+                          instance=instance)
+                with nova_context.target_cell(context, cell) as cctxt:
+                    self._local_delete(cctxt, instance, bdms, delete_type, cb)
+                    quotas.commit()
 
         except exception.InstanceNotFound:
             # NOTE(comstud): Race condition. Instance already gone.
