@@ -1365,7 +1365,6 @@ class LibvirtDriver(driver.ComputeDriver):
             # volume is still in use.
             wait_for_detach = guest.detach_device_with_retry(guest.get_disk,
                                                              disk_dev,
-                                                             persistent=True,
                                                              live=live)
             wait_for_detach()
 
@@ -1467,7 +1466,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # Now we are going to loop until the interface is detached or we
             # timeout.
             wait_for_detach = guest.detach_device_with_retry(
-                guest.get_interface_by_cfg, cfg, persistent=True, live=live,
+                guest.get_interface_by_cfg, cfg, live=live,
                 alternative_device_name=vif.get('address'))
             wait_for_detach()
         except exception.DeviceNotFound:
