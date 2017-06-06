@@ -1536,9 +1536,17 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
 
 class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
 
-    def tearDown(self):
-        """Reset the _TRAITS_SYNCED boolean so it doesn't interfere."""
-        super(ResourceProviderTraitTestCase, self).tearDown()
+    def setUp(self):
+        super(ResourceProviderTraitTestCase, self).setUp()
+        # Reset the _TRAITS_SYNCED global before we start and after
+        # we are done since other tests (notably the gabbi tests)
+        # may have caused it to change.
+        self._reset_traits_synced()
+        self.addCleanup(self._reset_traits_synced)
+
+    @staticmethod
+    def _reset_traits_synced():
+        """Reset the _TRAITS_SYNCED boolean to base state."""
         rp_obj._TRAITS_SYNCED = False
 
     def _assert_traits(self, expected_traits, traits_objs):
