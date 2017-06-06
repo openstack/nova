@@ -2062,7 +2062,12 @@ class API(base_api.NetworkAPI):
 
         if raise_if_associated and fip['port_id']:
             raise exception.FloatingIpAssociated(address=address)
-        client.delete_floatingip(fip['id'])
+        try:
+            client.delete_floatingip(fip['id'])
+        except neutron_client_exc.NotFound:
+            raise exception.FloatingIpNotFoundForAddress(
+                address=address
+            )
 
     @base_api.refresh_cache
     def disassociate_floating_ip(self, context, instance, address,

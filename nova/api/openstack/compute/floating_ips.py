@@ -199,6 +199,8 @@ class FloatingIPController(wsgi.Controller):
         except exception.CannotDisassociateAutoAssignedFloatingIP:
             msg = _('Cannot disassociate auto assigned floating IP')
             raise webob.exc.HTTPForbidden(explanation=msg)
+        except exception.FloatingIpNotFoundForAddress as exc:
+            raise webob.exc.HTTPNotFound(explanation=exc.format_message())
 
 
 class FloatingIPActionController(wsgi.Controller):
