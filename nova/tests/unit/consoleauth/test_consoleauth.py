@@ -19,7 +19,6 @@ Tests for Consoleauth Code.
 """
 
 import mock
-from mox3 import mox
 from oslo_utils import timeutils
 import six
 
@@ -31,6 +30,8 @@ from nova import test
 
 class ConsoleauthTestCase(test.NoDBTestCase):
     """Test Case for consoleauth."""
+
+    rpcapi = 'nova.compute.rpcapi.ComputeAPI.'
 
     def setUp(self):
         super(ConsoleauthTestCase, self).setUp()
@@ -79,12 +80,12 @@ class ConsoleauthTestCase(test.NoDBTestCase):
                                                  self.instance_uuid)
 
     def _stub_validate_console_port(self, result):
-        def fake_validate_console_port(ctxt, instance, port, console_type):
+        def fake_validate_console_port(self, ctxt, instance,
+                                       port, console_type):
             return result
 
-        self.stubs.Set(self.manager.compute_rpcapi,
-                       'validate_console_port',
-                       fake_validate_console_port)
+        self.stub_out(self.rpcapi + 'validate_console_port',
+                      fake_validate_console_port)
 
     @mock.patch('nova.objects.instance.Instance.get_by_uuid')
     def test_multiple_tokens_for_instance(self, mock_get):
@@ -193,12 +194,11 @@ class ControlauthMemcacheEncodingTestCase(test.NoDBTestCase):
                     [mock.call(b'instance', mock.ANY)])
 
     def test_check_token_encoding(self):
-        self.mox.StubOutWithMock(self.manager.mc, "get")
-        self.manager.mc.get(mox.IsA(six.binary_type)).AndReturn(None)
-
-        self.mox.ReplayAll()
-
-        self.manager.check_token(self.context, self.u_token)
+        with mock.patch.object(self.manager.mc,
+                               "get",
+                               return_value=None) as mock_get:
+            self.manager.check_token(self.context, self.u_token)
+            mock_get.assert_called_once_with(test.MatchType(six.binary_type))
 
     def test_delete_tokens_for_instance_encoding(self):
         with test.nested(
@@ -225,16 +225,9 @@ class ControlauthMemcacheEncodingTestCase(test.NoDBTestCase):
 class CellsConsoleauthTestCase(ConsoleauthTestCase):
     """Test Case for consoleauth w/ cells enabled."""
 
+    rpcapi = 'nova.cells.rpcapi.CellsAPI.'
+
     def setUp(self):
         super(CellsConsoleauthTestCase, self).setUp()
         self.flags(enable=True, group='cells')
         self.is_cells = True
-
-    def _stub_validate_console_port(self, result):
-        def fake_validate_console_port(ctxt, instance_uuid, console_port,
-                                       console_type):
-            return result
-
-        self.stubs.Set(self.manager.cells_rpcapi,
-                       'validate_console_port',
-                       fake_validate_console_port)
