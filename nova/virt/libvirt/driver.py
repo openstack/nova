@@ -1246,16 +1246,9 @@ class LibvirtDriver(driver.ComputeDriver):
             instance.device_metadata = self._build_device_metadata(
                 context, instance)
             instance.save()
-        except Exception as ex:
+        except Exception:
             LOG.exception(_LE('Failed to attach volume at mountpoint: %s'),
                           mountpoint, instance=instance)
-            if isinstance(ex, libvirt.libvirtError):
-                errcode = ex.get_error_code()
-                if errcode == libvirt.VIR_ERR_OPERATION_FAILED:
-                    self._disconnect_volume(connection_info, disk_dev,
-                                            instance)
-                    raise exception.DeviceIsBusy(device=disk_dev)
-
             with excutils.save_and_reraise_exception():
                 self._disconnect_volume(connection_info, disk_dev, instance)
 

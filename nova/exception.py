@@ -490,10 +490,6 @@ class DevicePathInUse(Invalid):
     code = 409
 
 
-class DeviceIsBusy(Invalid):
-    msg_fmt = _("The supplied device (%(device)s) is busy.")
-
-
 class InvalidCPUInfo(Invalid):
     msg_fmt = _("Unacceptable CPU info: %(reason)s")
 
