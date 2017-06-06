@@ -27,9 +27,6 @@ from nova import network
 from nova.policies import virtual_interfaces as vif_policies
 
 
-ALIAS = 'os-virtual-interfaces'
-
-
 def _translate_vif_summary_view(req, vif):
     """Maps keys for VIF summary view."""
     d = {}
@@ -77,25 +74,3 @@ class ServerVirtualInterfaceController(wsgi.Controller):
         """Returns the list of VIFs for a given instance."""
         return self._items(req, server_id,
                            entity_maker=_translate_vif_summary_view)
-
-
-class VirtualInterfaces(extensions.V21APIExtensionBase):
-    """Virtual interface support."""
-
-    name = "VirtualInterfaces"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        resources = []
-
-        res = extensions.ResourceExtension(
-            ALIAS,
-            controller=ServerVirtualInterfaceController(),
-            parent=dict(member_name='server', collection_name='servers'))
-        resources.append(res)
-
-        return resources
-
-    def get_controller_extensions(self):
-        return []
