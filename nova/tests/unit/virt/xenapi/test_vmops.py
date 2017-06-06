@@ -1636,8 +1636,8 @@ class LiveMigrateHelperTestCase(VMOpsTestBase):
                                'get_other_config') as mock_other_config, \
              mock.patch.object(self._session.VM,
                               'get_VIFs') as mock_get_vif:
-            mock_other_config.side_effect = [{'nicira-iface-id': 'vif_id_a'},
-                                             {'nicira-iface-id': 'vif_id_b'}]
+            mock_other_config.side_effect = [{'neutron-port-id': 'vif_id_a'},
+                                             {'neutron-port-id': 'vif_id_b'}]
             mock_get_vif.return_value = ['vif_ref1', 'vif_ref2']
             vif_uuid_map = {'vif_id_b': 'dest_net_ref2',
                             'vif_id_a': 'dest_net_ref1'}
@@ -1666,8 +1666,8 @@ class LiveMigrateHelperTestCase(VMOpsTestBase):
                                'get_other_config') as mock_other_config, \
              mock.patch.object(self._session.VM,
                               'get_VIFs') as mock_get_vif:
-            mock_other_config.side_effect = [{'nicira-iface-id': 'vif_id_a'},
-                                             {'nicira-iface-id': 'vif_id_b'}]
+            mock_other_config.side_effect = [{'neutron-port-id': 'vif_id_a'},
+                                             {'neutron-port-id': 'vif_id_b'}]
             mock_get_vif.return_value = ['vif_ref1', 'vif_ref2']
             vif_uuid_map = {'vif_id_c': 'dest_net_ref2',
                             'vif_id_d': 'dest_net_ref1'}
