@@ -2,5 +2,5 @@
 features:
   - Added microversion v2.48 which standardize VM diagnostics response.
     It has a set of fields which each hypervisor will try to fill.
-    If a hypervisor driver unable to provide a specific field then this field
-    will be reported as 'None'.
+    If a hypervisor driver is unable to provide a specific field then this
+    field will be reported as 'None'.

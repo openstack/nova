@@ -53,7 +53,7 @@ will be reported as ``None`` in the response.
   - disk_details: disk_details_diagnostics
   - nic_details: nic_details_diagnostics
 
-**Example Server diagnostics**
+**Example Server diagnostics (2.48)**
 
 .. literalinclude:: ../../doc/api_samples/os-server-diagnostics/v2.48/server-diagnostics-get-resp.json
    :language: javascript
@@ -62,7 +62,7 @@ will be reported as ``None`` in the response.
    Before **microversion 2.48** the response format for diagnostics was not
    well defined. Each hypervisor had its own format.
 
-**Example Old Server diagnostics**
+**Example Server diagnostics (2.1)**
 
 Below is an example of diagnostics for a libvirt based instance. The unit of the return
 value is hypervisor specific, but in this case the unit of vnet1_rx* and

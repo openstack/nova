@@ -562,5 +562,5 @@ user documentation.
   Before version 2.48, VM diagnostics response was just a 'blob' of data
   returned by each hypervisor. From this version VM diagnostics response is
   standardized. It has a set of fields which each hypervisor will try to fill.
-  If a hypervisor driver unable to provide a specific field then this field
+  If a hypervisor driver is unable to provide a specific field then this field
   will be reported as 'None'.

@@ -58,10 +58,10 @@ class ServerDiagnosticsController(wsgi.Controller):
             # Diagnostics object. Old compute returns a dictionary. So we
             # can't perform a request correctly if compute is too old.
             msg = _('Compute node is too old. You must complete the '
-                    'upgrade process to be able to get a standardized '
+                    'upgrade process to be able to get standardized '
                     'diagnostics data which is available since v2.48. However '
-                    'you still able to get a diagnostics data in old format '
-                    'which is available till v2.47.')
+                    'you are still able to get diagnostics data in '
+                    'non-standardized format which is available until v2.47.')
             raise webob.exc.HTTPBadRequest(explanation=msg)
         except NotImplementedError:
             common.raise_feature_not_supported()
