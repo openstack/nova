@@ -1276,19 +1276,16 @@ class CellV2Commands(object):
             # based on the database connection url.
             # The cell0 database will use the same database scheme and
             # netloc as the main database, with a related path.
+            # NOTE(sbauza): The URL has to be RFC1738 compliant in order to
+            # be usable by sqlalchemy.
             connection = CONF.database.connection
             # sqlalchemy has a nice utility for parsing database connection
             # URLs so we use that here to get the db name so we don't have to
             # worry about parsing and splitting a URL which could have special
             # characters in the password, which makes parsing a nightmare.
             url = sqla_url.make_url(connection)
-            cell0_db_name = url.database + '_cell0'
-            # We need to handle multiple occurrences of the substring, e.g. if
-            # the username and db name are both 'nova' we need to only replace
-            # the last one, which is the database name in the URL, not the
-            # username.
-            connection = connection.rstrip(url.database)
-            return connection + cell0_db_name
+            url.database = url.database + '_cell0'
+            return urlparse.unquote(str(url))
 
         dbc = database_connection or cell0_default_connection()
         ctxt = context.RequestContext()
