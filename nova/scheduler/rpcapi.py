@@ -94,6 +94,8 @@ class SchedulerAPI(object):
         changes to existing methods in 4.x after that point should be done such
         that they can handle the version_cap being set to 4.3.
 
+        * 4.4 - Modify select_destinations() signature by providing the
+                instance_uuids for the request.
     '''
 
     VERSION_ALIASES = {
@@ -117,9 +119,13 @@ class SchedulerAPI(object):
         self.client = rpc.get_client(target, version_cap=version_cap,
                                      serializer=serializer)
 
-    def select_destinations(self, ctxt, spec_obj):
-        version = '4.3'
-        msg_args = {'spec_obj': spec_obj}
+    def select_destinations(self, ctxt, spec_obj, instance_uuids):
+        version = '4.4'
+        msg_args = {'instance_uuids': instance_uuids,
+                    'spec_obj': spec_obj}
+        if not self.client.can_send_version(version):
+            del msg_args['instance_uuids']
+            version = '4.3'
         if not self.client.can_send_version(version):
             del msg_args['spec_obj']
             msg_args['request_spec'] = spec_obj.to_legacy_request_spec_dict()

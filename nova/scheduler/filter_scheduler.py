@@ -47,14 +47,14 @@ class FilterScheduler(driver.Scheduler):
         # we split the needed methods into a separate library.
         self.scheduler_client = scheduler_client.SchedulerClient()
 
-    def select_destinations(self, context, spec_obj):
+    def select_destinations(self, context, spec_obj, instance_uuids):
         """Selects a filtered set of hosts and nodes."""
         self.notifier.info(
             context, 'scheduler.select_destinations.start',
             dict(request_spec=spec_obj.to_legacy_request_spec_dict()))
 
         num_instances = spec_obj.num_instances
-        selected_hosts = self._schedule(context, spec_obj)
+        selected_hosts = self._schedule(context, spec_obj, instance_uuids)
 
         # Couldn't fulfill the request_spec
         if len(selected_hosts) < num_instances:
@@ -85,7 +85,7 @@ class FilterScheduler(driver.Scheduler):
             dict(request_spec=spec_obj.to_legacy_request_spec_dict()))
         return dests
 
-    def _schedule(self, context, spec_obj):
+    def _schedule(self, context, spec_obj, instance_uuids):
         """Returns a list of hosts that meet the required specs,
         ordered by their fitness.
         """

@@ -44,7 +44,7 @@ QUOTAS = quota.QUOTAS
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
 
-    target = messaging.Target(version='4.3')
+    target = messaging.Target(version='4.4')
 
     _sentinel = object()
 
@@ -82,7 +82,7 @@ class SchedulerManager(manager.Manager):
     @messaging.expected_exceptions(exception.NoValidHost)
     def select_destinations(self, ctxt,
                             request_spec=None, filter_properties=None,
-                            spec_obj=_sentinel):
+                            spec_obj=_sentinel, instance_uuids=None):
         """Returns destinations(s) best suited for this RequestSpec.
 
         The result should be a list of dicts with 'host', 'nodename' and
@@ -95,7 +95,7 @@ class SchedulerManager(manager.Manager):
             spec_obj = objects.RequestSpec.from_primitives(ctxt,
                                                            request_spec,
                                                            filter_properties)
-        dests = self.driver.select_destinations(ctxt, spec_obj)
+        dests = self.driver.select_destinations(ctxt, spec_obj, instance_uuids)
         return jsonutils.to_primitive(dests)
 
     def update_aggregates(self, ctxt, aggregates):

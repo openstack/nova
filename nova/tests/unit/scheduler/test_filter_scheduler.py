@@ -86,7 +86,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         with mock.patch.object(self.driver.host_manager,
                                'get_filtered_hosts') as mock_get_hosts:
             mock_get_hosts.side_effect = fake_get_filtered_hosts
-            weighed_hosts = self.driver._schedule(self.context, spec_obj)
+            weighed_hosts = self.driver._schedule(self.context, spec_obj,
+                    [uuids.instance])
 
         self.assertEqual(len(weighed_hosts), 10)
         for weighed_host in weighed_hosts:
@@ -156,7 +157,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         with mock.patch.object(self.driver.host_manager,
                                'get_filtered_hosts') as mock_get_hosts:
             mock_get_hosts.side_effect = fake_get_filtered_hosts
-            hosts = self.driver._schedule(self.context, spec_obj)
+            hosts = self.driver._schedule(self.context, spec_obj,
+                    [uuids.instance])
 
         # one host should be chosen
         self.assertEqual(len(hosts), 1)
@@ -200,7 +202,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         with mock.patch.object(self.driver.host_manager,
                                'get_filtered_hosts') as mock_get_hosts:
             mock_get_hosts.side_effect = fake_get_filtered_hosts
-            hosts = self.driver._schedule(self.context, spec_obj)
+            hosts = self.driver._schedule(self.context, spec_obj,
+                    [uuids.instance])
 
         # one host should be chosen
         self.assertEqual(len(hosts), 1)
@@ -255,7 +258,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         with mock.patch.object(self.driver.host_manager,
                                'get_filtered_hosts') as mock_get_hosts:
             mock_get_hosts.side_effect = fake_get_filtered_hosts
-            hosts = self.driver._schedule(self.context, spec_obj)
+            hosts = self.driver._schedule(self.context, spec_obj,
+                    [uuids.instance])
 
         # one host should be chosen
         self.assertEqual(1, len(hosts))
@@ -311,10 +315,12 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             numa_topology=None,
             instance_group=None)
 
+        instance_uuids = [uuids.instance]
         with mock.patch.object(self.driver.host_manager,
                                'get_filtered_hosts') as mock_get_hosts:
             mock_get_hosts.side_effect = fake_get_filtered_hosts
-            dests = self.driver.select_destinations(self.context, spec_obj)
+            dests = self.driver.select_destinations(self.context, spec_obj,
+                    instance_uuids)
 
         (host, node) = (dests[0]['host'], dests[0]['nodename'])
         self.assertEqual(host, selected_hosts[0])
@@ -332,7 +338,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             spec_obj = objects.RequestSpec(num_instances=1,
                                            instance_uuid=uuids.instance)
 
-            self.driver.select_destinations(self.context, spec_obj)
+            self.driver.select_destinations(self.context, spec_obj,
+                    [uuids.instance])
 
             expected = [
                 mock.call(self.context, 'scheduler.select_destinations.start',
@@ -346,7 +353,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         mock_schedule.return_value = []
         self.assertRaises(exception.NoValidHost,
                 self.driver.select_destinations, self.context,
-                objects.RequestSpec(num_instances=1))
+                objects.RequestSpec(num_instances=1), [uuids.instance])
 
     def test_select_destinations_no_valid_host_not_enough(self):
         # Tests that we have fewer hosts available than number of instances
@@ -356,7 +363,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                return_value=consumed_hosts):
             try:
                 self.driver.select_destinations(
-                    self.context, objects.RequestSpec(num_instances=3))
+                        self.context, objects.RequestSpec(num_instances=3),
+                        [uuids.instance])
                 self.fail('Expected NoValidHost to be raised.')
             except exception.NoValidHost as e:
                 # Make sure that we provided a reason why NoValidHost.

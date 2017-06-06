@@ -21,6 +21,7 @@ from nova.scheduler import client as scheduler_client
 from nova.scheduler.client import query as scheduler_query_client
 from nova.scheduler.client import report as scheduler_report_client
 from nova import test
+from nova.tests import uuidsentinel as uuids
 """Tests for Scheduler Client."""
 
 
@@ -38,12 +39,15 @@ class SchedulerClientTestCase(test.NoDBTestCase):
                        'select_destinations')
     def test_select_destinations(self, mock_select_destinations):
         fake_spec = objects.RequestSpec()
+        fake_spec.instance_uuid = uuids.instance
         self.assertIsNone(self.client.queryclient.instance)
 
-        self.client.select_destinations('ctxt', fake_spec)
+        self.client.select_destinations('ctxt', fake_spec,
+                [fake_spec.instance_uuid])
 
         self.assertIsNotNone(self.client.queryclient.instance)
-        mock_select_destinations.assert_called_once_with('ctxt', fake_spec)
+        mock_select_destinations.assert_called_once_with('ctxt', fake_spec,
+                [fake_spec.instance_uuid])
 
     @mock.patch.object(scheduler_query_client.SchedulerQueryClient,
                        'select_destinations',
@@ -51,7 +55,8 @@ class SchedulerClientTestCase(test.NoDBTestCase):
     def test_select_destinations_timeout(self, mock_select_destinations):
         # check if the scheduler service times out properly
         fake_spec = objects.RequestSpec()
-        fake_args = ['ctxt', fake_spec]
+        fake_spec.instance_uuid = uuids.instance
+        fake_args = ['ctxt', fake_spec, [fake_spec.instance_uuid]]
         self.assertRaises(messaging.MessagingTimeout,
                           self.client.select_destinations, *fake_args)
         mock_select_destinations.assert_has_calls([mock.call(*fake_args)] * 2)
@@ -62,7 +67,8 @@ class SchedulerClientTestCase(test.NoDBTestCase):
     def test_select_destinations_timeout_once(self, mock_select_destinations):
         # scenario: the scheduler service times out & recovers after failure
         fake_spec = objects.RequestSpec()
-        fake_args = ['ctxt', fake_spec]
+        fake_spec.instance_uuid = uuids.instance
+        fake_args = ['ctxt', fake_spec, [fake_spec.instance_uuid]]
         self.client.select_destinations(*fake_args)
         mock_select_destinations.assert_has_calls([mock.call(*fake_args)] * 2)
 

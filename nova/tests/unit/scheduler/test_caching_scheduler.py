@@ -84,7 +84,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.assertRaises(exception.NoValidHost,
                 self.driver.select_destinations,
-                self.context, spec_obj)
+                self.context, spec_obj, [spec_obj.instance_uuid])
 
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
@@ -101,7 +101,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     def _test_select_destinations(self, spec_obj):
         return self.driver.select_destinations(
-                self.context, spec_obj)
+                self.context, spec_obj, [spec_obj.instance_uuid])
 
     def _get_fake_request_spec(self):
         # NOTE(sbauza): Prevent to stub the Flavor.get_by_id call just by
@@ -175,8 +175,8 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
             a = timeutils.utcnow()
 
             for x in range(requests):
-                self.driver.select_destinations(
-                    self.context, spec_obj)
+                self.driver.select_destinations(self.context, spec_obj,
+                        [spec_obj.instance_uuid])
 
             b = timeutils.utcnow()
             c = b - a
@@ -222,7 +222,8 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
             uuids.cell1: host_states_cell1,
             uuids.cell2: host_states_cell2,
         }
-        d = self.driver.select_destinations(self.context, spec_obj)
+        d = self.driver.select_destinations(self.context, spec_obj,
+                [spec_obj.instance_uuid])
         self.assertIn(d[0]['host'], [hs.host for hs in host_states_cell2])
 
 

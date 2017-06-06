@@ -184,7 +184,7 @@ class LiveMigrationTask(base.TaskBase):
             request_spec.ignore_hosts = attempted_hosts
             try:
                 host = self.scheduler_client.select_destinations(self.context,
-                                request_spec)[0]['host']
+                        request_spec, [self.instance.uuid])[0]['host']
             except messaging.RemoteError as ex:
                 # TODO(ShaoHe Feng) There maybe multi-scheduler, and the
                 # scheduling algorithm is R-R, we can let other scheduler try.

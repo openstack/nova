@@ -557,8 +557,9 @@ class ComputeTaskManager(base.Base):
                 context, image, instances)
             scheduler_utils.populate_retry(
                 filter_properties, instances[0].uuid)
+            instance_uuids = [instance.uuid for instance in instances]
             hosts = self._schedule_instances(
-                    context, request_spec, filter_properties)
+                    context, request_spec, filter_properties, instance_uuids)
         except Exception as exc:
             updates = {'vm_state': vm_states.ERROR, 'task_state': None}
             for instance in instances:
@@ -627,14 +628,16 @@ class ComputeTaskManager(base.Base):
                     block_device_mapping=bdms, node=host['nodename'],
                     limits=host['limits'])
 
-    def _schedule_instances(self, context, request_spec, filter_properties):
+    def _schedule_instances(self, context, request_spec, filter_properties,
+            instance_uuids=None):
         scheduler_utils.setup_instance_group(context, request_spec,
                                              filter_properties)
         # TODO(sbauza): Hydrate here the object until we modify the
         # scheduler.utils methods to directly use the RequestSpec object
         spec_obj = objects.RequestSpec.from_primitives(
             context, request_spec, filter_properties)
-        hosts = self.scheduler_client.select_destinations(context, spec_obj)
+        hosts = self.scheduler_client.select_destinations(context, spec_obj,
+                instance_uuids)
         return hosts
 
     @targets_cell
@@ -699,7 +702,8 @@ class ComputeTaskManager(base.Base):
                     scheduler_utils.populate_retry(filter_properties,
                                                    instance.uuid)
                     hosts = self._schedule_instances(
-                            context, request_spec, filter_properties)
+                            context, request_spec, filter_properties,
+                            [instance.uuid])
                     host_state = hosts[0]
                     scheduler_utils.populate_filter_properties(
                             filter_properties, host_state)
@@ -765,7 +769,8 @@ class ComputeTaskManager(base.Base):
                     request_spec = request_spec.to_legacy_request_spec_dict()
                 try:
                     hosts = self._schedule_instances(
-                            context, request_spec, filter_properties)
+                            context, request_spec, filter_properties,
+                            [instance.uuid])
                     host_dict = hosts.pop(0)
                     host, node, limits = (host_dict['host'],
                                           host_dict['nodename'],
@@ -915,9 +920,12 @@ class ComputeTaskManager(base.Base):
                                      admin_password, injected_files,
                                      requested_networks, block_device_mapping):
         legacy_spec = request_specs[0].to_legacy_request_spec_dict()
+        # Add all the UUIDs for the instances
+        instance_uuids = [spec.instance_uuid for spec in request_specs]
         try:
             hosts = self._schedule_instances(context, legacy_spec,
-                        request_specs[0].to_legacy_filter_properties_dict())
+                        request_specs[0].to_legacy_filter_properties_dict(),
+                        instance_uuids)
         except Exception as exc:
             LOG.exception(_LE('Failed to schedule instances'))
             self._bury_in_cell0(context, request_specs[0], exc,

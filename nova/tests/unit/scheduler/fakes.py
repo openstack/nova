@@ -167,5 +167,5 @@ class FakeHostState(host_manager.HostState):
 
 class FakeScheduler(driver.Scheduler):
 
-    def select_destinations(self, context, request_spec, filter_properties):
+    def select_destinations(self, context, spec_obj, instance_uuids):
         return []

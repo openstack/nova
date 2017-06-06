@@ -21,6 +21,7 @@ from nova import exception
 from nova import objects
 from nova.scheduler import chance
 from nova.tests.unit.scheduler import test_scheduler
+from nova.tests import uuidsentinel as uuids
 
 
 class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
@@ -62,7 +63,8 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
                       _return_hosts)
 
         spec_obj = objects.RequestSpec(num_instances=2, ignore_hosts=None)
-        dests = self.driver.select_destinations(self.context, spec_obj)
+        dests = self.driver.select_destinations(self.context, spec_obj,
+                [uuids.instance1, uuids.instance2])
 
         self.assertEqual(2, len(dests))
         (host, node) = (dests[0]['host'], dests[0]['nodename'])
@@ -89,6 +91,7 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
                       _return_no_host)
 
         spec_obj = objects.RequestSpec(num_instances=1)
+        spec_obj.instance_uuid = uuids.instance
         self.assertRaises(exception.NoValidHost,
                           self.driver.select_destinations, self.context,
-                          spec_obj)
+                          spec_obj, [spec_obj.instance_uuid])
