@@ -25,6 +25,7 @@ from nova import objects
 from nova.objects import aggregate
 from nova.objects import service
 from nova import test
+from nova.tests import fixtures
 from nova.tests.unit.objects import test_compute_node
 from nova.tests.unit.objects import test_objects
 from nova.tests import uuidsentinel
@@ -484,3 +485,48 @@ class TestServiceVersion(test.TestCase):
         obj = objects.Service()
         obj._from_db_object(self.ctxt, obj, fake_different_service)
         self.assertEqual(fake_version, obj.version)
+
+
+class TestServiceVersionCells(test.TestCase):
+
+    def setUp(self):
+        self.context = context.get_admin_context()
+        super(TestServiceVersionCells, self).setUp()
+
+    def _setup_cells(self):
+        # NOTE(danms): Override the base class's cell setup so we can have two
+        self.cells = fixtures.CellDatabases()
+        self.cells.add_cell_database(uuidsentinel.cell1, default=True)
+        self.cells.add_cell_database(uuidsentinel.cell2)
+        self.useFixture(self.cells)
+
+        cm = objects.CellMapping(context=self.context,
+                                 uuid=uuidsentinel.cell1,
+                                 name='cell1',
+                                 transport_url='fake://nowhere/',
+                                 database_connection=uuidsentinel.cell1)
+        cm.create()
+        cm = objects.CellMapping(context=self.context,
+                                 uuid=uuidsentinel.cell2,
+                                 name='cell2',
+                                 transport_url='fake://nowhere/',
+                                 database_connection=uuidsentinel.cell2)
+        cm.create()
+
+    def _create_services(self, *versions):
+        cells = objects.CellMappingList.get_all(self.context)
+        index = 0
+        for version in versions:
+            service = objects.Service(context=self.context,
+                                      binary='nova-compute')
+            service.version = version
+            cell = cells[index % len(cells)]
+            with context.target_cell(self.context, cell):
+                service.create()
+            index += 1
+
+    @mock.patch('nova.objects.Service._check_minimum_version')
+    def test_version_all_cells(self, mock_check):
+        self._create_services(16, 16, 13, 16)
+        self.assertEqual(13, service.get_minimum_version_all_cells(
+            self.context, ['nova-compute']))
