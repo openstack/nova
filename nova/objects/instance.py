@@ -1000,6 +1000,12 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         context will be saved which can cause incorrect resource tracking, and
         should be avoided.
         """
+        # First check to see if we even have a migration context set and if not
+        # we can exit early without lazy-loading other attributes.
+        if 'migration_context' in self and self.migration_context is None:
+            yield
+            return
+
         current_values = {}
         for attr_name in _MIGRATION_CONTEXT_ATTRS:
             current_values[attr_name] = getattr(self, attr_name)
