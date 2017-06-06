@@ -3692,8 +3692,9 @@ networks:
     automatically allocate a network for the project (if possible). *none*
     tells the Compute service to not allocate a network for the instance. The
     *auto* and *none* values cannot be used with any other network values,
-    including other network uuids, ports or fixed IPs. These are requested as
-    strings for the networks value, not in a list. See the associated example.
+    including other network uuids, ports, fixed IPs or device tags. These are
+    requested as strings for the networks value, not in a list. See the
+    associated example.
   in: body
   required: true
   type: object
