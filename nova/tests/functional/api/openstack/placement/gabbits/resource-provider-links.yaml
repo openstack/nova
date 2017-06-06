@@ -1,0 +1,92 @@
+# Confirm that the links provided when getting one or more resources
+# providers are correct. They vary across different microversions.
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        accept: application/json
+
+tests:
+- name: post new resource provider
+  POST: /resource_providers
+  request_headers:
+    content-type: application/json
+  data:
+      name: $ENVIRON['RP_NAME']
+      uuid: $ENVIRON['RP_UUID']
+  status: 201
+
+- name: get rp latest
+  GET: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      openstack-api-version: placement latest
+  response_json_paths:
+      $.links.`len`: 5
+      $.links[?rel = "self"].href: /resource_providers/$ENVIRON['RP_UUID']
+      $.links[?rel = "inventories"].href: /resource_providers/$ENVIRON['RP_UUID']/inventories
+      $.links[?rel = "aggregates"].href: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+      $.links[?rel = "usages"].href: /resource_providers/$ENVIRON['RP_UUID']/usages
+      $.links[?rel = "traits"].href: /resource_providers/$ENVIRON['RP_UUID']/traits
+
+- name: get rp 1.0
+  GET: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      openstack-api-version: placement 1.0
+  response_json_paths:
+      $.links.`len`: 3
+      $.links[?rel = "self"].href: /resource_providers/$ENVIRON['RP_UUID']
+      $.links[?rel = "inventories"].href: /resource_providers/$ENVIRON['RP_UUID']/inventories
+      $.links[?rel = "usages"].href: /resource_providers/$ENVIRON['RP_UUID']/usages
+
+- name: get rp 1.1
+  desc: aggregates added in 1.1
+  GET: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      openstack-api-version: placement 1.1
+  response_json_paths:
+      $.links.`len`: 4
+      $.links[?rel = "self"].href: /resource_providers/$ENVIRON['RP_UUID']
+      $.links[?rel = "inventories"].href: /resource_providers/$ENVIRON['RP_UUID']/inventories
+      $.links[?rel = "usages"].href: /resource_providers/$ENVIRON['RP_UUID']/usages
+      $.links[?rel = "aggregates"].href: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+
+- name: get rp 1.5
+  desc: traits added after 1.5
+  GET: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      openstack-api-version: placement 1.5
+  response_json_paths:
+      $.links.`len`: 4
+      $.links[?rel = "self"].href: /resource_providers/$ENVIRON['RP_UUID']
+      $.links[?rel = "inventories"].href: /resource_providers/$ENVIRON['RP_UUID']/inventories
+      $.links[?rel = "usages"].href: /resource_providers/$ENVIRON['RP_UUID']/usages
+      $.links[?rel = "aggregates"].href: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+
+- name: get rp 1.6
+  desc: traits added in 1.6
+  GET: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      openstack-api-version: placement 1.6
+  response_json_paths:
+      $.links.`len`: 5
+      $.links[?rel = "self"].href: /resource_providers/$ENVIRON['RP_UUID']
+      $.links[?rel = "inventories"].href: /resource_providers/$ENVIRON['RP_UUID']/inventories
+      $.links[?rel = "usages"].href: /resource_providers/$ENVIRON['RP_UUID']/usages
+      $.links[?rel = "aggregates"].href: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+      $.links[?rel = "traits"].href: /resource_providers/$ENVIRON['RP_UUID']/traits
+
+- name: get rp 1.7
+  desc: nothing new in 1.7
+  GET: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      openstack-api-version: placement 1.7
+  response_json_paths:
+      $.links.`len`: 5
+      $.links[?rel = "self"].href: /resource_providers/$ENVIRON['RP_UUID']
+      $.links[?rel = "inventories"].href: /resource_providers/$ENVIRON['RP_UUID']/inventories
+      $.links[?rel = "usages"].href: /resource_providers/$ENVIRON['RP_UUID']/usages
+      $.links[?rel = "aggregates"].href: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+      $.links[?rel = "traits"].href: /resource_providers/$ENVIRON['RP_UUID']/traits

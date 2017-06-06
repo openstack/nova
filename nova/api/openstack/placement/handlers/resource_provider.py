@@ -144,7 +144,13 @@ def _normalize_resources_qs_param(qs):
 def _serialize_links(environ, resource_provider):
     url = util.resource_provider_url(environ, resource_provider)
     links = [{'rel': 'self', 'href': url}]
-    for rel in ('aggregates', 'inventories', 'usages', 'traits'):
+    rel_types = ['inventories', 'usages']
+    want_version = environ[microversion.MICROVERSION_ENVIRON]
+    if want_version >= (1, 1):
+        rel_types.append('aggregates')
+    if want_version >= (1, 6):
+        rel_types.append('traits')
+    for rel in rel_types:
         links.append({'rel': rel, 'href': '%s/%s' % (url, rel)})
     return links
 
