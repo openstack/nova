@@ -349,8 +349,8 @@ class FakeDriver(driver.ComputeDriver):
 
     def get_instance_diagnostics(self, instance):
         diags = diagnostics_obj.Diagnostics(
-            state='running', driver='libvirt', hypervisor='fake-hypervisor',
-            hypervisor_os='fake-os', uptime=46664, config_drive=True)
+            state='running', driver='libvirt', hypervisor='kvm',
+            hypervisor_os='ubuntu', uptime=46664, config_drive=True)
         diags.add_cpu(id=0, time=17300000000, utilisation=15)
         diags.add_nic(mac_address='01:23:45:67:89:ab',
                       rx_octets=2070139,

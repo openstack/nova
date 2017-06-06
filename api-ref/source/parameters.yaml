@@ -1516,6 +1516,13 @@ config_drive:
   in: body
   required: false
   type: boolean
+config_drive_diagnostics:
+  description: |
+    Indicates whether or not a config drive was used for this server.
+  in: body
+  required: true
+  type: boolean
+  min_version: 2.48
 config_drive_resp:
   description: |
     Indicates whether or not a config drive was used for this server.
@@ -1602,6 +1609,20 @@ cores_quota_optional:
   in: body
   required: false
   type: integer
+cpu_details_diagnostics:
+  description: |
+    The list of dictionaries with detailed information about VM CPUs.
+    Following fields are presented in each dictionary:
+
+    - ``id`` - the ID of CPU (Integer)
+
+    - ``time`` - CPU Time in nano seconds (Integer)
+
+    - ``utilisation`` - CPU utilisation in percents (Integer)
+  in: body
+  required: true
+  type: array
+  min_version: 2.48
 cpu_info:
   description: |
     A dictionary that contains cpu information like ``arch``, ``model``,
@@ -1800,6 +1821,24 @@ disk_config:
   in: body
   required: true
   type: string
+disk_details_diagnostics:
+  description: |
+    The list of dictionaries with detailed information about VM disks.
+    Following fields are presented in each dictionary:
+
+    - ``read_bytes`` - Disk reads in bytes (Integer)
+
+    - ``read_requests`` - Read requests (Integer)
+
+    - ``write_bytes`` - Disk writes in bytes (Integer)
+
+    - ``write_requests`` - Write requests (Integer)
+
+    - ``errors_count`` - Disk errors (Integer)
+  in: body
+  required: true
+  type: array
+  min_version: 2.48
 disk_over_commit:
   description: |
     Set to ``True`` to enable over commit when the destination host is checked for
@@ -1833,6 +1872,19 @@ display_name_optional:
   in: body
   required: false
   type: string
+driver_diagnostics:
+  description: |
+    The driver on which the VM is running. Possible values are:
+
+    - ``libvirt``
+    - ``xenapi``
+    - ``hyperv``
+    - ``vmwareapi``
+    - ``ironic``
+  in: body
+  required: true
+  type: string
+  min_version: 2.48
 ended_at:
   description: |
     The date and time when the server was deleted.
@@ -2701,6 +2753,14 @@ hypervisor_count:
   in: body
   required: true
   type: integer
+hypervisor_diagnostics:
+  description: |
+    The hypervisor on which the VM is running. Examples for libvirt driver
+    may be: ``qemu``, ``kvm`` or ``xen``.
+  in: body
+  required: true
+  type: string
+  min_version: 2.48
 hypervisor_free_disk_gb:
   description: |
     The free disk remaining on this hypervisor(in GB).
@@ -2730,6 +2790,13 @@ hypervisor_links:
   type: array
   min_version: 2.33
   required: false
+hypervisor_os_diagnostics:
+  description: |
+    The hypervisor OS.
+  in: body
+  type: string
+  required: true
+  min_version: 2.48
 hypervisor_service:
   description: |
     The hypervisor service object.
@@ -3341,6 +3408,19 @@ members:
   in: body
   required: true
   type: array
+memory_details_diagnostics:
+  description: |
+    The dictionary with information about VM memory usage.
+    Following fields are presented in the dictionary:
+
+    - ``maximum`` - Amount of memory provisioned for the VM in MB (Integer)
+
+    - ``used`` - Amount of memory that is currently used by the guest operating
+      system and its applications in MB (Integer)
+  in: body
+  required: true
+  type: array
+  min_version: 2.48
 memory_mb:
   description: |
     The memory of this hypervisor(in MB).
@@ -3624,6 +3704,57 @@ new_file:
   in: body
   required: true
   type: string
+nic_details_diagnostics:
+  description: |
+    The list of dictionaries with detailed information about VM NICs.
+    Following fields are presented in each dictionary:
+
+    - ``mac_address`` - Mac address of the interface (String)
+
+    - ``rx_octets`` - Received octets (Integer)
+
+    - ``rx_errors`` - Received errors (Integer)
+
+    - ``rx_drop`` - Received packets dropped (Integer)
+
+    - ``rx_packets`` - Received packets (Integer)
+
+    - ``rx_rate`` - Receive rate in bytes (Integer)
+
+    - ``tx_octets`` - Transmitted Octets (Integer)
+
+    - ``tx_errors`` - Transmit errors (Integer)
+
+    - ``tx_drop`` - Transmit dropped packets (Integer)
+
+    - ``tx_packets`` - Transmit packets (Integer)
+
+    - ``tx_rate`` - Transmit rate in bytes (Integer)
+  in: body
+  required: true
+  type: array
+  min_version: 2.48
+num_cpus_diagnostics:
+  description: |
+    The number of vCPUs.
+  in: body
+  required: true
+  type: integer
+  min_version: 2.48
+num_disks_diagnostics:
+  description: |
+    The number of disks.
+  in: body
+  required: true
+  type: integer
+  min_version: 2.48
+num_nics_diagnostics:
+  description: |
+    The number of vNICs.
+  in: body
+  required: true
+  type: integer
+  min_version: 2.48
 on_shared_storage:
   description: |
     Server on shared storage.
@@ -5009,6 +5140,13 @@ uptime:
   in: body
   required: true
   type: string
+uptime_diagnostics:
+  description: |
+    The amount of time in seconds that the VM has been running.
+  in: body
+  required: true
+  type: integer
+  min_version: 2.48
 uptime_simple_tenant_usage:
   description: |
     The uptime of the server.
@@ -5148,6 +5286,20 @@ virtual_interfaces:
   in: body
   required: true
   type: array
+vm_state_diagnostics:
+  description: |
+    A string enum denoting the current state of the VM. Possible values are:
+
+    - ``pending``
+    - ``running``
+    - ``paused``
+    - ``shutdown``
+    - ``crashed``
+    - ``suspended``
+  in: body
+  required: true
+  type: string
+  min_version: 2.48
 vm_state_optional:
   description: |
     The VM state.
