@@ -69,21 +69,20 @@ class GlanceImageTestCase(test.NoDBTestCase):
 
 
 class RawImageTestCase(test.NoDBTestCase):
-    def test_get_size(self):
-        glance_image = self.mox.CreateMock(utils.GlanceImage)
-        glance_image.meta = {'size': '123'}
-        raw_image = utils.RawImage(glance_image)
-        self.mox.ReplayAll()
+    @mock.patch.object(utils, 'GlanceImage', spec_set=True, autospec=True)
+    def test_get_size(self, mock_glance_image):
+        mock_glance_image.meta = {'size': '123'}
+        raw_image = utils.RawImage(mock_glance_image)
 
         self.assertEqual(123, raw_image.get_size())
 
-    def test_stream_to(self):
-        glance_image = self.mox.CreateMock(utils.GlanceImage)
-        glance_image.download_to('file').AndReturn('result')
-        raw_image = utils.RawImage(glance_image)
-        self.mox.ReplayAll()
+    @mock.patch.object(utils, 'GlanceImage', spec_set=True, autospec=True)
+    def test_stream_to(self, mock_glance_image):
+        mock_glance_image.download_to.return_value = 'result'
+        raw_image = utils.RawImage(mock_glance_image)
 
         self.assertEqual('result', raw_image.stream_to('file'))
+        mock_glance_image.download_to.assert_called_once_with('file')
 
 
 class TestIterableBasedFile(test.NoDBTestCase):
@@ -138,115 +137,108 @@ class TestIterableBasedFile(test.NoDBTestCase):
 
 
 class RawTGZTestCase(test.NoDBTestCase):
-    def test_as_tarfile(self):
+    @mock.patch.object(utils.RawTGZImage, '_as_file', return_value='the_file')
+    @mock.patch.object(utils.tarfile, 'open', return_value='tf')
+    def test_as_tarfile(self, mock_open, mock_as_file):
         image = utils.RawTGZImage(None)
-        self.mox.StubOutWithMock(image, '_as_file')
-        self.mox.StubOutWithMock(utils.tarfile, 'open')
-
-        image._as_file().AndReturn('the_file')
-        utils.tarfile.open(mode='r|gz', fileobj='the_file').AndReturn('tf')
-
-        self.mox.ReplayAll()
-
         result = image._as_tarfile()
         self.assertEqual('tf', result)
+        mock_as_file.assert_called_once_with()
+        mock_open.assert_called_once_with(mode='r|gz', fileobj='the_file')
 
-    def test_as_file(self):
-        self.mox.StubOutWithMock(utils, 'IterableToFileAdapter')
-        glance_image = self.mox.CreateMock(utils.GlanceImage)
-        image = utils.RawTGZImage(glance_image)
-        glance_image.data().AndReturn('iterable-data')
-        utils.IterableToFileAdapter('iterable-data').AndReturn('data-as-file')
-
-        self.mox.ReplayAll()
-
+    @mock.patch.object(utils, 'GlanceImage', spec_set=True, autospec=True)
+    @mock.patch.object(utils, 'IterableToFileAdapter',
+                       return_value='data-as-file')
+    def test_as_file(self, mock_adapter, mock_glance_image):
+        mock_glance_image.data.return_value = 'iterable-data'
+        image = utils.RawTGZImage(mock_glance_image)
         result = image._as_file()
-
         self.assertEqual('data-as-file', result)
+        mock_glance_image.data.assert_called_once_with()
+        mock_adapter.assert_called_once_with('iterable-data')
 
-    def test_get_size(self):
-        tar_file = self.mox.CreateMock(tarfile.TarFile)
-        tar_info = self.mox.CreateMock(tarfile.TarInfo)
+    @mock.patch.object(tarfile, 'TarFile', spec_set=True, autospec=True)
+    @mock.patch.object(tarfile, 'TarInfo', autospec=True)
+    @mock.patch.object(utils.RawTGZImage, '_as_tarfile')
+    def test_get_size(self, mock_as_tar, mock_tar_info, mock_tar_file):
+        mock_tar_file.next.return_value = mock_tar_info
+        mock_tar_info.size = 124
+        mock_as_tar.return_value = mock_tar_file
 
         image = utils.RawTGZImage(None)
-
-        self.mox.StubOutWithMock(image, '_as_tarfile')
-
-        image._as_tarfile().AndReturn(tar_file)
-        tar_file.next().AndReturn(tar_info)
-        tar_info.size = 124
-
-        self.mox.ReplayAll()
-
         result = image.get_size()
 
         self.assertEqual(124, result)
-        self.assertEqual(image._tar_info, tar_info)
-        self.assertEqual(image._tar_file, tar_file)
+        self.assertEqual(image._tar_info, mock_tar_info)
+        self.assertEqual(image._tar_file, mock_tar_file)
+        mock_as_tar.assert_called_once_with()
+        mock_tar_file.next.assert_called_once_with()
 
-    def test_get_size_called_twice(self):
-        tar_file = self.mox.CreateMock(tarfile.TarFile)
-        tar_info = self.mox.CreateMock(tarfile.TarInfo)
+    @mock.patch.object(tarfile, 'TarFile', spec_set=True, autospec=True)
+    @mock.patch.object(tarfile, 'TarInfo', autospec=True)
+    @mock.patch.object(utils.RawTGZImage, '_as_tarfile')
+    def test_get_size_called_twice(self, mock_as_tar, mock_tar_info,
+                                   mock_tar_file):
+        mock_tar_file.next.return_value = mock_tar_info
+        mock_tar_info.size = 124
+        mock_as_tar.return_value = mock_tar_file
 
         image = utils.RawTGZImage(None)
-
-        self.mox.StubOutWithMock(image, '_as_tarfile')
-
-        image._as_tarfile().AndReturn(tar_file)
-        tar_file.next().AndReturn(tar_info)
-        tar_info.size = 124
-
-        self.mox.ReplayAll()
-
         image.get_size()
         result = image.get_size()
 
         self.assertEqual(124, result)
-        self.assertEqual(image._tar_info, tar_info)
-        self.assertEqual(image._tar_file, tar_file)
+        self.assertEqual(image._tar_info, mock_tar_info)
+        self.assertEqual(image._tar_file, mock_tar_file)
+        mock_as_tar.assert_called_once_with()
+        mock_tar_file.next.assert_called_once_with()
 
-    def test_stream_to_without_size_retrieved(self):
-        source_tar = self.mox.CreateMock(tarfile.TarFile)
-        first_tarinfo = self.mox.CreateMock(tarfile.TarInfo)
-        target_file = self.mox.CreateMock(open)
-        source_file = self.mox.CreateMock(open)
+    @mock.patch.object(tarfile, 'TarFile', spec_set=True, autospec=True)
+    @mock.patch.object(tarfile, 'TarInfo', spec_set=True, autospec=True)
+    @mock.patch.object(utils.RawTGZImage, '_as_tarfile')
+    @mock.patch.object(utils.shutil, 'copyfileobj')
+    def test_stream_to_without_size_retrieved(self, mock_copyfile,
+                                              mock_as_tar, mock_tar_info,
+                                              mock_tar_file):
+        target_file = mock.create_autospec(open)
+        source_file = mock.create_autospec(open)
+        mock_tar_file.next.return_value = mock_tar_info
+        mock_tar_file.extractfile.return_value = source_file
+        mock_as_tar.return_value = mock_tar_file
 
         image = utils.RawTGZImage(None)
         image._image_service_and_image_id = ('service', 'id')
-
-        self.mox.StubOutWithMock(image, '_as_tarfile', source_tar)
-        self.mox.StubOutWithMock(utils.shutil, 'copyfileobj')
-
-        image._as_tarfile().AndReturn(source_tar)
-        source_tar.next().AndReturn(first_tarinfo)
-        source_tar.extractfile(first_tarinfo).AndReturn(source_file)
-        utils.shutil.copyfileobj(source_file, target_file)
-        source_tar.close()
-
-        self.mox.ReplayAll()
-
         image.stream_to(target_file)
 
-    def test_stream_to_with_size_retrieved(self):
-        source_tar = self.mox.CreateMock(tarfile.TarFile)
-        first_tarinfo = self.mox.CreateMock(tarfile.TarInfo)
-        target_file = self.mox.CreateMock(open)
-        source_file = self.mox.CreateMock(open)
-        first_tarinfo.size = 124
+        mock_as_tar.assert_called_once_with()
+        mock_tar_file.next.assert_called_once_with()
+        mock_tar_file.extractfile.assert_called_once_with(mock_tar_info)
+        mock_copyfile.assert_called_once_with(
+            source_file, target_file)
+        mock_tar_file.close.assert_called_once_with()
+
+    @mock.patch.object(tarfile, 'TarFile', spec_set=True, autospec=True)
+    @mock.patch.object(tarfile, 'TarInfo', autospec=True)
+    @mock.patch.object(utils.RawTGZImage, '_as_tarfile')
+    @mock.patch.object(utils.shutil, 'copyfileobj')
+    def test_stream_to_with_size_retrieved(self, mock_copyfile,
+                                           mock_as_tar, mock_tar_info,
+                                           mock_tar_file):
+        target_file = mock.create_autospec(open)
+        source_file = mock.create_autospec(open)
+        mock_tar_info.size = 124
+        mock_tar_file.next.return_value = mock_tar_info
+        mock_tar_file.extractfile.return_value = source_file
+        mock_as_tar.return_value = mock_tar_file
 
         image = utils.RawTGZImage(None)
         image._image_service_and_image_id = ('service', 'id')
-
-        self.mox.StubOutWithMock(image, '_as_tarfile', source_tar)
-        self.mox.StubOutWithMock(utils.shutil, 'copyfileobj')
-
-        image._as_tarfile().AndReturn(source_tar)
-        source_tar.next().AndReturn(first_tarinfo)
-        source_tar.extractfile(first_tarinfo).AndReturn(source_file)
-        utils.shutil.copyfileobj(source_file, target_file)
-        source_tar.close()
-
-        self.mox.ReplayAll()
-
         image.get_size()
         image.stream_to(target_file)
+
+        mock_as_tar.assert_called_once_with()
+        mock_tar_file.next.assert_called_once_with()
+        mock_tar_file.extractfile.assert_called_once_with(mock_tar_info)
+        mock_copyfile.assert_called_once_with(
+            source_file, target_file)
+        mock_tar_file.close.assert_called_once_with()
