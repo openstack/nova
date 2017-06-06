@@ -353,8 +353,9 @@ class TestCreateGlanceClient(test.NoDBTestCase):
                 'X-User-Id': 'fake',
                 'X-Roles': '',
                 'X-Tenant-Id': 'fake',
-                'X-Identity-Status': 'Confirmed'
-            }
+                'X-Identity-Status': 'Confirmed',
+            },
+            'global_request_id': mock.ANY
         }
         glance._glanceclient_from_endpoint(ctx, expected_endpoint, 2)
         init_mock.assert_called_once_with('2', expected_endpoint,
@@ -370,8 +371,9 @@ class TestCreateGlanceClient(test.NoDBTestCase):
                 'X-User-Id': 'fake',
                 'X-Roles': '',
                 'X-Tenant-Id': 'fake',
-                'X-Identity-Status': 'Confirmed'
-            }
+                'X-Identity-Status': 'Confirmed',
+            },
+            'global_request_id': mock.ANY
         }
         glance._glanceclient_from_endpoint(ctx, expected_endpoint, 2)
         init_mock.assert_called_once_with('2', expected_endpoint,
@@ -511,10 +513,11 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
                                            ssl_enable_mock):
         self.flags(ca_file='foo.cert', cert_file='bar.cert',
                    key_file='wut.key', group='ssl')
-        ctxt = mock.sentinel.ctx
+        ctxt = mock.MagicMock()
         glance._glanceclient_from_endpoint(ctxt, 'https://host4:9295', 2)
         client_mock.assert_called_once_with(
-            '2', 'https://host4:9295', insecure=False, ssl_compression=False,
+            '2', 'https://host4:9295', global_request_id=mock.ANY,
+            insecure=False, ssl_compression=False,
             cert_file='bar.cert', key_file='wut.key', cacert='foo.cert',
             identity_headers=mock.ANY)
 

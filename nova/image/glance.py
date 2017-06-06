@@ -91,6 +91,7 @@ def _glanceclient_from_endpoint(context, endpoint, version):
     # NOTE(sdague): even if we aren't using keystone, it doesn't
     # hurt to send these headers.
     params['identity_headers'] = generate_identity_headers(context)
+    params['global_request_id'] = context.global_id
     if endpoint.startswith('https://'):
         # https specific params
         params['insecure'] = CONF.glance.api_insecure
