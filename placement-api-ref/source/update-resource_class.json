@@ -1,0 +1,9 @@
+{
+    "links": [
+        {
+            "href": "/placement/resource_classes/CUSTOM_FPGA_V2",
+            "rel": "self"
+        }
+    ],
+    "name": "CUSTOM_FPGA_V2"
+}

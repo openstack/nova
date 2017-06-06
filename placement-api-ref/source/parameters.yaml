@@ -96,6 +96,18 @@ reserved_opt:
 resource_class:
   <<: *resource_class_path
   in: body
+resource_class_links:
+  type: array
+  in: body
+  required: true
+  description: >
+    A list of links associated with one resource class.
+resource_classes:
+  type: array
+  in: body
+  required: true
+  description: >
+    A list of ``resource_class`` objects.
 resource_provider_generation:
   type: integer
   in: body
