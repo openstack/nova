@@ -511,7 +511,7 @@ class ServersController(wsgi.Controller):
 
         image_uuid = self._image_from_req_data(server_dict, create_kwargs)
 
-        # NOTE(cyeoh): Although an extension can set
+        # NOTE(cyeoh): Although upper layer can set the value of
         # return_reservation_id in order to request that a reservation
         # id be returned to the client instead of the newly created
         # instance information we do not want to pass this parameter
