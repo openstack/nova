@@ -1140,16 +1140,17 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertEqual('fake://netloc/nova_cell0',
                          cell_mapping.database_connection)
 
-    @ddt.data('mysql+pymysql://nova:abcd0123:AB@controller/nova',
-              'mysql+pymysql://nova:abcd0123?AB@controller/nova',
-              'mysql+pymysql://nova:abcd0123@AB@controller/nova',
-              'mysql+pymysql://nova:abcd0123/AB@controller/nova',
-              'mysql+pymysql://test:abcd0123%AB@controller/nova')
+    @ddt.data('mysql+pymysql://nova:abcd0123:AB@controller/%s',
+              'mysql+pymysql://nova:abcd0123?AB@controller/%s',
+              'mysql+pymysql://nova:abcd0123@AB@controller/%s',
+              'mysql+pymysql://nova:abcd0123/AB@controller/%s',
+              'mysql+pymysql://test:abcd0123/AB@controller/%s?charset=utf8')
     def test_map_cell0_default_database_special_characters(self,
-                                                           decoded_connection):
+                                                           connection):
         """Tests that a URL with special characters, like in the credentials,
         is handled properly.
         """
+        decoded_connection = connection % 'nova'
         self.flags(connection=decoded_connection, group='database')
         ctxt = context.RequestContext()
         self.commands.map_cell0()
@@ -1158,7 +1159,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertEqual('cell0', cell_mapping.name)
         self.assertEqual('none:///', cell_mapping.transport_url)
         self.assertEqual(
-            decoded_connection + '_cell0',
+            connection % 'nova_cell0',
             cell_mapping.database_connection)
         # Delete the cell mapping for the next iteration.
         cell_mapping.destroy()
