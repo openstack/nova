@@ -52,19 +52,6 @@ to resize to the same host. Setting this option to true will add
 the same host to the destination options. Also set to true
 if you allow the ServerGroupAffinityFilter and need to resize.
 """),
-    cfg.StrOpt('default_schedule_zone',
-        help="""
-Availability zone to use when user doesn't specify one.
-
-This option is used by the scheduler to determine which availability
-zone to place a new VM instance into if the user did not specify one
-at the time of VM boot request.
-
-Possible values:
-
-* Any string representing an availability zone name
-* Default value is None.
-"""),
     cfg.ListOpt('non_inheritable_image_properties',
         default=['cache_in_nova', 'bittorrent'],
         help="""
