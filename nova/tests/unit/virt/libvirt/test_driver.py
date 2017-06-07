@@ -71,6 +71,7 @@ from nova.objects import migrate_data as migrate_data_obj
 from nova.objects import virtual_interface as obj_vif
 from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
+import nova.privsep.libvirt
 from nova import test
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_diagnostics
@@ -11288,9 +11289,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 drvr._ensure_console_log_for_instance,
                 mock.ANY)
 
-    def test_get_console_output_file(self):
-        fake_libvirt_utils.files['console.log'] = b'01234567890'
-
+    @mock.patch('nova.privsep.libvirt.last_bytes',
+                return_value=(b'67890', 0))
+    def test_get_console_output_file(self, mock_last_bytes):
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
 
@@ -11370,9 +11371,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual('', output)
 
     @mock.patch('os.path.exists', return_value=True)
-    def test_get_console_output_pty(self, mocked_path_exists):
-        fake_libvirt_utils.files['pty'] = b'01234567890'
-
+    @mock.patch('nova.privsep.libvirt.last_bytes',
+                return_value=(b'67890', 0))
+    @mock.patch('nova.privsep.dac_admin.writefile')
+    def test_get_console_output_pty(self, mocked_writefile, mocked_last_bytes,
+                                    mocked_path_exists):
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
 
@@ -11402,13 +11405,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             def _fake_flush(self, fake_pty):
                 return 'foo'
 
-            def _fake_append_to_file(self, data, fpath):
-                return 'pty'
-
             self.create_fake_libvirt_mock()
             libvirt_driver.LibvirtDriver._conn.lookupByUUIDString = fake_lookup
             libvirt_driver.LibvirtDriver._flush_libvirt_console = _fake_flush
-            libvirt_driver.LibvirtDriver._append_to_file = _fake_append_to_file
 
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
@@ -11469,7 +11468,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           drvr.get_console_output, self.context, instance)
 
     @mock.patch('nova.virt.libvirt.host.Host.get_domain')
-    @mock.patch.object(libvirt_guest.Guest, "get_xml_desc")
+    @mock.patch.object(libvirt_guest.Guest, 'get_xml_desc')
     def test_get_console_output_logrotate(self, mock_get_xml, get_domain):
         fake_libvirt_utils.files['console.log'] = b'uvwxyz'
         fake_libvirt_utils.files['console.log.0'] = b'klmnopqrst'
@@ -11477,6 +11476,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         def mock_path_exists(path):
             return os.path.basename(path) in fake_libvirt_utils.files
+
+        def mock_last_bytes(path, count):
+            with fake_libvirt_utils.file_open(path) as flo:
+                return nova.privsep.libvirt._last_bytes_inner(flo, count)
 
         xml = """
         <domain type='kvm'>
@@ -11506,8 +11509,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     libvirt_driver.MAX_CONSOLE_BYTES = bytes_to_read
                     with mock.patch('os.path.exists',
                                     side_effect=mock_path_exists):
-                        log_data = drvr.get_console_output(self.context,
-                                                           instance)
+                        with mock.patch('nova.privsep.libvirt.last_bytes',
+                                        side_effect=mock_last_bytes):
+                            log_data = drvr.get_console_output(self.context,
+                                                               instance)
                 finally:
                     libvirt_driver.MAX_CONSOLE_BYTES = prev_max
                 return log_data
@@ -15101,7 +15106,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 mock.sentinel.new_connection_info, 'vdb', instance)
 
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
-    def _test_live_snapshot(self, mock_is_job_complete,
+    @mock.patch('nova.privsep.dac_admin.chown')
+    def _test_live_snapshot(self, mock_chown, mock_is_job_complete,
                             can_quiesce=False, require_quiesce=False):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         mock_dom = mock.MagicMock()
@@ -15114,11 +15120,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 mock.patch.object(fake_libvirt_utils, 'get_disk_size'),
                 mock.patch.object(fake_libvirt_utils, 'get_disk_backing_file'),
                 mock.patch.object(fake_libvirt_utils, 'create_cow_image'),
-                mock.patch.object(fake_libvirt_utils, 'chown'),
                 mock.patch.object(fake_libvirt_utils, 'extract_snapshot'),
                 mock.patch.object(drvr, '_set_quiesced')
         ) as (mock_define, mock_size, mock_backing, mock_create_cow,
-              mock_chown, mock_snapshot, mock_quiesce):
+              mock_snapshot, mock_quiesce):
 
             xmldoc = "<domain/>"
             srcfile = "/first/path"
@@ -15157,7 +15162,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock_backing.assert_called_once_with(srcfile, basename=False,
                                                  format="qcow2")
             mock_create_cow.assert_called_once_with(bckfile, dltfile, 1004009)
-            mock_chown.assert_called_once_with(dltfile, os.getuid())
+            mock_chown.assert_called_once_with(dltfile, uid=os.getuid())
             mock_snapshot.assert_called_once_with(dltfile, "qcow2",
                                                   dstfile, "qcow2")
             mock_define.assert_called_once_with(xmldoc)
