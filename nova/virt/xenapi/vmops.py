@@ -25,6 +25,9 @@ import zlib
 import eventlet
 from eventlet import greenthread
 import netaddr
+from os_xenapi.client import host_xenstore
+from os_xenapi.client import vm_management
+from os_xenapi.client import XenAPI
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
@@ -1812,8 +1815,8 @@ class VMOps(object):
         dom_id = self._get_last_dom_id(instance, check_rescue=True)
 
         try:
-            raw_console_data = self._session.call_plugin('console.py',
-                    'get_console_log', {'dom_id': dom_id})
+            raw_console_data = vm_management.get_console_log(
+                self._session, dom_id)
         except self._session.XenAPI.Failure:
             LOG.exception(_LE("Guest does not have a console available"))
             raise exception.ConsoleNotAvailable()
@@ -2007,9 +2010,12 @@ class VMOps(object):
         at the specified location. A XenAPIPlugin.PluginError will be raised
         if any error is encountered in the write process.
         """
-        return self._make_plugin_call('xenstore.py', 'write_record', instance,
-                                      vm_ref=vm_ref, path=path,
-                                      value=jsonutils.dumps(value))
+        dom_id = self._get_dom_id(instance, vm_ref)
+        try:
+            return host_xenstore.write_record(self._session, dom_id, path,
+                                              jsonutils.dumps(value))
+        except self._session.XenAPI.Failure as e:
+            return self._process_plugin_exception(e, 'write_record', instance)
 
     def _read_from_xenstore(self, instance, path, ignore_missing_path=True,
                             vm_ref=None):
@@ -2020,52 +2026,40 @@ class VMOps(object):
         """
         # NOTE(sulo): These need to be string for valid field type
         # for xapi.
-        if ignore_missing_path:
-            ignore_missing = 'True'
-        else:
-            ignore_missing = 'False'
-
-        return self._make_plugin_call('xenstore.py', 'read_record', instance,
-                                      vm_ref=vm_ref, path=path,
-                                      ignore_missing_path=ignore_missing)
+        dom_id = self._get_dom_id(instance, vm_ref)
+        try:
+            return host_xenstore.read_record(
+                self._session, dom_id, path,
+                ignore_missing_path=ignore_missing_path)
+        except XenAPI.Failure as e:
+            return self._process_plugin_exception(e, 'read_record', instance)
 
     def _delete_from_xenstore(self, instance, path, vm_ref=None):
         """Deletes the value from the xenstore record for the given VM at
         the specified location.  A XenAPIPlugin.PluginError will be
         raised if any error is encountered in the delete process.
         """
-        return self._make_plugin_call('xenstore.py', 'delete_record', instance,
-                                      vm_ref=vm_ref, path=path)
-
-    def _make_plugin_call(self, plugin, method, instance=None, vm_ref=None,
-                          **addl_args):
-        """Abstracts out the process of calling a method of a xenapi plugin.
-        Any errors raised by the plugin will in turn raise a RuntimeError here.
-        """
-        args = {}
-        if instance or vm_ref:
-            args['dom_id'] = self._get_dom_id(instance, vm_ref)
-        args.update(addl_args)
+        dom_id = self._get_dom_id(instance, vm_ref)
         try:
-            return self._session.call_plugin(plugin, method, args)
-        except self._session.XenAPI.Failure as e:
-            err_msg = e.details[-1].splitlines()[-1]
-            if 'TIMEOUT:' in err_msg:
-                LOG.error(_LE('TIMEOUT: The call to %(method)s timed out. '
-                              'args=%(args)r'),
-                          {'method': method, 'args': args}, instance=instance)
-                return {'returncode': 'timeout', 'message': err_msg}
-            elif 'NOT IMPLEMENTED:' in err_msg:
-                LOG.error(_LE('NOT IMPLEMENTED: The call to %(method)s is not'
-                              ' supported by the agent. args=%(args)r'),
-                          {'method': method, 'args': args}, instance=instance)
-                return {'returncode': 'notimplemented', 'message': err_msg}
-            else:
-                LOG.error(_LE('The call to %(method)s returned an error: '
-                              '%(e)s. args=%(args)r'),
-                          {'method': method, 'args': args, 'e': e},
-                          instance=instance)
-                return {'returncode': 'error', 'message': err_msg}
+            return host_xenstore.delete_record(self._session, dom_id, path)
+        except XenAPI.Failure as e:
+            return self._process_plugin_exception(e, 'delete_record', instance)
+
+    def _process_plugin_exception(self, plugin_exception, method, instance):
+        err_msg = plugin_exception.details[-1].splitlines()[-1]
+        if 'TIMEOUT:' in err_msg:
+            LOG.error(_LE('TIMEOUT: The call to %s timed out'),
+                      method, instance=instance)
+            return {'returncode': 'timeout', 'message': err_msg}
+        elif 'NOT IMPLEMENTED:' in err_msg:
+            LOG.error(_LE('NOT IMPLEMENTED: The call to %s is not supported'
+                          ' by the agent.'), method, instance=instance)
+            return {'returncode': 'notimplemented', 'message': err_msg}
+        else:
+            LOG.error(_LE('The call to %(method)s returned an error: %(e)s.'),
+                      {'method': method, 'e': plugin_exception},
+                      instance=instance)
+            return {'returncode': 'error', 'message': err_msg}
 
     def _get_dom_id(self, instance, vm_ref=None, check_rescue=False):
         vm_ref = vm_ref or self._get_vm_opaque_ref(instance, check_rescue)

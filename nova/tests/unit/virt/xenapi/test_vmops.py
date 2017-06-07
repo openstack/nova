@@ -22,6 +22,7 @@ except ImportError:
 
 from eventlet import greenthread
 import mock
+from os_xenapi.client import host_xenstore
 from os_xenapi.client import session as xenapi_session
 import six
 
@@ -1307,35 +1308,43 @@ class XenstoreCallsTestCase(VMOpsTestBase):
     from vmops.
     """
 
-    @mock.patch.object(vmops.VMOps, '_make_plugin_call')
-    def test_read_from_xenstore(self, fake_xapi_call):
-        fake_xapi_call.return_value = "fake_xapi_return"
+    @mock.patch.object(vmops.VMOps, '_get_dom_id')
+    @mock.patch.object(host_xenstore, 'read_record')
+    def test_read_from_xenstore(self, mock_read_record, mock_dom_id):
+        mock_read_record.return_value = "fake_xapi_return"
+        mock_dom_id.return_value = "fake_dom_id"
         fake_instance = {"name": "fake_instance"}
         path = "attr/PVAddons/MajorVersion"
         self.assertEqual("fake_xapi_return",
                          self.vmops._read_from_xenstore(fake_instance, path,
                                                         vm_ref="vm_ref"))
+        mock_dom_id.assert_called_once_with(fake_instance, "vm_ref")
 
-    @mock.patch.object(vmops.VMOps, '_make_plugin_call')
-    def test_read_from_xenstore_ignore_missing_path(self, fake_xapi_call):
+    @mock.patch.object(vmops.VMOps, '_get_dom_id')
+    @mock.patch.object(host_xenstore, 'read_record')
+    def test_read_from_xenstore_ignore_missing_path(self, mock_read_record,
+                                                    mock_dom_id):
+        mock_read_record.return_value = "fake_xapi_return"
+        mock_dom_id.return_value = "fake_dom_id"
         fake_instance = {"name": "fake_instance"}
         path = "attr/PVAddons/MajorVersion"
         self.vmops._read_from_xenstore(fake_instance, path, vm_ref="vm_ref")
-        fake_xapi_call.assert_called_once_with('xenstore.py', 'read_record',
-                                               fake_instance, vm_ref="vm_ref",
-                                               path=path,
-                                               ignore_missing_path='True')
+        mock_read_record.assert_called_once_with(
+            self._session, "fake_dom_id", path, ignore_missing_path=True)
 
-    @mock.patch.object(vmops.VMOps, '_make_plugin_call')
-    def test_read_from_xenstore_missing_path(self, fake_xapi_call):
+    @mock.patch.object(vmops.VMOps, '_get_dom_id')
+    @mock.patch.object(host_xenstore, 'read_record')
+    def test_read_from_xenstore_missing_path(self, mock_read_record,
+                                             mock_dom_id):
+        mock_read_record.return_value = "fake_xapi_return"
+        mock_dom_id.return_value = "fake_dom_id"
         fake_instance = {"name": "fake_instance"}
         path = "attr/PVAddons/MajorVersion"
         self.vmops._read_from_xenstore(fake_instance, path, vm_ref="vm_ref",
                                        ignore_missing_path=False)
-        fake_xapi_call.assert_called_once_with('xenstore.py', 'read_record',
-                                               fake_instance, vm_ref="vm_ref",
-                                               path=path,
-                                               ignore_missing_path='False')
+        mock_read_record.assert_called_once_with(self._session, "fake_dom_id",
+                                                 path,
+                                                 ignore_missing_path=False)
 
 
 class LiveMigrateTestCase(VMOpsTestBase):
