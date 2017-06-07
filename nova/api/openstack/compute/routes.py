@@ -48,6 +48,7 @@ from nova.api.openstack.compute import floating_ips_bulk
 from nova.api.openstack.compute import fping
 from nova.api.openstack.compute import hide_server_addresses
 from nova.api.openstack.compute import hosts
+from nova.api.openstack.compute import hypervisors
 from nova.api.openstack.compute import instance_actions
 from nova.api.openstack.compute import instance_usage_audit_log
 from nova.api.openstack.compute import ips
@@ -169,6 +170,10 @@ fping_controller = functools.partial(_create_controller,
 
 hosts_controller = functools.partial(
     _create_controller, hosts.HostController, [], [])
+
+
+hypervisors_controller = functools.partial(
+    _create_controller, hypervisors.HypervisorsController, [], [])
 
 
 instance_actions_controller = functools.partial(_create_controller,
@@ -412,6 +417,27 @@ ROUTE_LIST = (
     }),
     ('/os-hosts/{id}/startup', {
         'GET': [hosts_controller, 'startup']
+    }),
+    ('/os-hypervisors', {
+        'GET': [hypervisors_controller, 'index']
+    }),
+    ('/os-hypervisors/detail', {
+        'GET': [hypervisors_controller, 'detail']
+    }),
+    ('/os-hypervisors/statistics', {
+        'GET': [hypervisors_controller, 'statistics']
+    }),
+    ('/os-hypervisors/{id}', {
+        'GET': [hypervisors_controller, 'show']
+    }),
+    ('/os-hypervisors/{id}/search', {
+        'GET': [hypervisors_controller, 'search']
+    }),
+    ('/os-hypervisors/{id}/servers', {
+        'GET': [hypervisors_controller, 'servers']
+    }),
+    ('/os-hypervisors/{id}/uptime', {
+        'GET': [hypervisors_controller, 'uptime']
     }),
     ('/os-instance_usage_audit_log', {
         'GET': [instance_usage_audit_log_controller, 'index']
