@@ -75,6 +75,7 @@ from nova.api.openstack.compute import shelve
 from nova.api.openstack.compute import simple_tenant_usage
 from nova.api.openstack.compute import suspend_server
 from nova.api.openstack.compute import used_limits
+from nova.api.openstack.compute import virtual_interfaces
 from nova.api.openstack import wsgi
 import nova.conf
 
@@ -272,6 +273,10 @@ server_tags_controller = functools.partial(_create_controller,
 
 simple_tenant_usage_controller = functools.partial(_create_controller,
     simple_tenant_usage.SimpleTenantUsageController, [], [])
+
+
+virtual_interfaces_controller = functools.partial(_create_controller,
+    virtual_interfaces.ServerVirtualInterfaceController, [], [])
 
 
 # NOTE(alex_xu): This is structure of this route list as below:
@@ -552,6 +557,9 @@ ROUTE_LIST = (
     ('/servers/{server_id}/os-server-password', {
         'GET': [server_password_controller, 'index'],
         'DELETE': [server_password_controller, 'clear']
+    }),
+    ('/servers/{server_id}/os-virtual-interfaces', {
+        'GET': [virtual_interfaces_controller, 'index']
     }),
     ('/servers/{server_id}/tags', {
         'GET': [server_tags_controller, 'index'],
