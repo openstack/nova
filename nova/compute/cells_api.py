@@ -225,8 +225,6 @@ class ComputeCellsAPI(compute_api.API):
             delete_type = method_name == 'soft_delete' and 'soft' or 'hard'
             self.cells_rpcapi.instance_delete_everywhere(context,
                     instance, delete_type)
-            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                    context, instance.uuid)
             # NOTE(danms): If we try to delete an instance with no cell,
             # there isn't anything to salvage, so we can hard-delete here.
             try:
@@ -260,6 +258,8 @@ class ComputeCellsAPI(compute_api.API):
                 # Instance has been deleted out from under us
                 return
 
+            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                    context, instance.uuid)
             try:
                 super(ComputeCellsAPI, self)._local_delete(context, instance,
                                                            bdms, method_name,
