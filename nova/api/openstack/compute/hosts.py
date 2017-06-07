@@ -31,7 +31,6 @@ from nova import objects
 from nova.policies import hosts as hosts_policies
 
 LOG = logging.getLogger(__name__)
-ALIAS = 'os-hosts'
 
 
 class HostController(wsgi.Controller):
@@ -289,21 +288,3 @@ class HostController(wsgi.Controller):
         for resource in six.itervalues(by_proj_resources):
             resources.append({'resource': resource})
         return {'host': resources}
-
-
-class Hosts(extensions.V21APIExtensionBase):
-    """Admin-only host administration."""
-
-    name = "Hosts"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        resources = [extensions.ResourceExtension(ALIAS,
-                HostController(),
-                member_actions={"startup": "GET", "shutdown": "GET",
-                        "reboot": "GET"})]
-        return resources
-
-    def get_controller_extensions(self):
-        return []
