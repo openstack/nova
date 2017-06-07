@@ -20,7 +20,6 @@ import re
 import time
 
 import mock
-from mox3 import mox
 import netifaces
 from oslo_concurrency import processutils
 from oslo_serialization import jsonutils
@@ -400,18 +399,20 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.stub_out('nova.db.network_get_associated_fixed_ips',
                       get_associated)
 
-    def _test_add_snat_rule(self, expected, is_external):
+    @mock.patch.object(linux_net.iptables_manager.ipv4['nat'], 'add_rule')
+    def _test_add_snat_rule(self, expected, is_external, mock_add_rule):
 
         def verify_add_rule(chain, rule):
             self.assertEqual('snat', chain)
             self.assertEqual(expected, rule)
             self.called = True
 
-        self.stubs.Set(linux_net.iptables_manager.ipv4['nat'],
-                       'add_rule', verify_add_rule)
+        mock_add_rule.side_effect = verify_add_rule
+
         self.called = False
         linux_net.add_snat_rule('10.0.0.0/24', is_external)
         if expected:
+            mock_add_rule.assert_called_once_with('snat', expected)
             self.assertTrue(self.called)
 
     def test_add_snat_rule_no_ext(self):
@@ -439,51 +440,31 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                     '-j SNAT --to-source 10.10.10.1')
         self._test_add_snat_rule(expected, True)
 
-    def test_update_dhcp_for_nw00(self):
-        self.flags(use_single_default_gateway=True)
+    @mock.patch.object(fileutils, 'ensure_tree')
+    @mock.patch.object(os, 'chmod')
+    def test_update_dhcp_for_nw00(self, mock_chmod, mock_ensure_tree):
+        with mock.patch.object(self.driver, 'write_to_file') \
+                as mock_write_to_file:
+            self.flags(use_single_default_gateway=True)
 
-        self.mox.StubOutWithMock(self.driver, 'write_to_file')
-        self.mox.StubOutWithMock(fileutils, 'ensure_tree')
-        self.mox.StubOutWithMock(os, 'chmod')
+            self.driver.update_dhcp(self.context, "eth0", networks[0])
 
-        self.driver.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
-        self.driver.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
-        fileutils.ensure_tree(mox.IgnoreArg())
-        fileutils.ensure_tree(mox.IgnoreArg())
-        fileutils.ensure_tree(mox.IgnoreArg())
-        fileutils.ensure_tree(mox.IgnoreArg())
-        fileutils.ensure_tree(mox.IgnoreArg())
-        fileutils.ensure_tree(mox.IgnoreArg())
-        fileutils.ensure_tree(mox.IgnoreArg())
-        os.chmod(mox.IgnoreArg(), mox.IgnoreArg())
-        os.chmod(mox.IgnoreArg(), mox.IgnoreArg())
+            self.assertEqual(mock_write_to_file.call_count, 2)
+            self.assertEqual(mock_ensure_tree.call_count, 7)
+            self.assertEqual(mock_chmod.call_count, 2)
 
-        self.mox.ReplayAll()
+    @mock.patch.object(fileutils, 'ensure_tree')
+    @mock.patch.object(os, 'chmod')
+    def test_update_dhcp_for_nw01(self, mock_chmod, mock_ensure_tree):
+        with mock.patch.object(self.driver, 'write_to_file') \
+                as mock_write_to_file:
+            self.flags(use_single_default_gateway=True)
 
-        self.driver.update_dhcp(self.context, "eth0", networks[0])
+            self.driver.update_dhcp(self.context, "eth0", networks[0])
 
-    def test_update_dhcp_for_nw01(self):
-        self.flags(use_single_default_gateway=True)
-
-        self.mox.StubOutWithMock(self.driver, 'write_to_file')
-        self.mox.StubOutWithMock(fileutils, 'ensure_tree')
-        self.mox.StubOutWithMock(os, 'chmod')
-
-        self.driver.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
-        self.driver.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
-        fileutils.ensure_tree(mox.IgnoreArg())
-        fileutils.ensure_tree(mox.IgnoreArg())
-        fileutils.ensure_tree(mox.IgnoreArg())
-        fileutils.ensure_tree(mox.IgnoreArg())
-        fileutils.ensure_tree(mox.IgnoreArg())
-        fileutils.ensure_tree(mox.IgnoreArg())
-        fileutils.ensure_tree(mox.IgnoreArg())
-        os.chmod(mox.IgnoreArg(), mox.IgnoreArg())
-        os.chmod(mox.IgnoreArg(), mox.IgnoreArg())
-
-        self.mox.ReplayAll()
-
-        self.driver.update_dhcp(self.context, "eth0", networks[0])
+            self.assertEqual(mock_write_to_file.call_count, 2)
+            self.assertEqual(mock_ensure_tree.call_count, 7)
+            self.assertEqual(mock_chmod.call_count, 2)
 
     def _get_fixedips(self, network, host=None):
         return objects.FixedIPList.get_by_network(self.context,
@@ -633,7 +614,9 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         actual = self.driver._host_dns(fixedip)
         self.assertEqual(expected, actual)
 
-    def test_linux_bridge_driver_plug(self):
+    @mock.patch.object(linux_net.iptables_manager.ipv4['filter'], 'add_rule')
+    @mock.patch.object(utils, 'execute')
+    def test_linux_bridge_driver_plug(self, mock_execute, mock_add_rule):
         """Makes sure plug doesn't drop FORWARD by default.
 
         Ensures bug 890195 doesn't reappear.
@@ -641,18 +624,23 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
 
         def fake_execute(*args, **kwargs):
             return "", ""
-        self.stubs.Set(utils, 'execute', fake_execute)
 
         def verify_add_rule(chain, rule):
             self.assertEqual('FORWARD', chain)
             self.assertIn('ACCEPT', rule)
-        self.stubs.Set(linux_net.iptables_manager.ipv4['filter'],
-                       'add_rule', verify_add_rule)
+
+        mock_execute.side_effect = fake_execute
+        mock_add_rule.side_effect = verify_add_rule
+
         driver = linux_net.LinuxBridgeInterfaceDriver()
         driver.plug({"bridge": "br100", "bridge_interface": "eth0",
                      "share_address": False}, "fakemac")
+        self.assertEqual(2, mock_add_rule.call_count)
 
-    def test_linux_ovs_driver_plug_exception(self):
+    @mock.patch.object(linux_net, 'device_exists')
+    @mock.patch.object(utils, 'execute')
+    def test_linux_ovs_driver_plug_exception(self, mock_execute,
+                                             mock_device_exists):
         self.flags(fake_network=False)
 
         def fake_execute(*args, **kwargs):
@@ -661,8 +649,9 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         def fake_device_exists(*args, **kwargs):
             return False
 
-        self.stubs.Set(utils, 'execute', fake_execute)
-        self.stubs.Set(linux_net, 'device_exists', fake_device_exists)
+        mock_execute.side_effect = fake_execute
+        mock_device_exists.side_effect = fake_device_exists
+
         driver = linux_net.LinuxOVSInterfaceDriver()
 
         exc = self.assertRaises(exception.OvsConfigurationFailure,
@@ -674,8 +663,12 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                        re.DOTALL))
         self.assertIsInstance(exc.kwargs['inner_exception'],
                               processutils.ProcessExecutionError)
+        mock_execute.assert_called_once()
+        mock_device_exists.assert_called_once()
 
-    def test_vlan_override(self):
+    @mock.patch.object(linux_net.LinuxBridgeInterfaceDriver,
+                      'ensure_vlan_bridge')
+    def test_vlan_override(self, mock_ensure_vlan_bridge):
         """Makes sure vlan_interface flag overrides network bridge_interface.
 
         Allows heterogeneous networks a la bug 833426
@@ -685,12 +678,10 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
 
         info = {}
 
-        @staticmethod
         def test_ensure(vlan, bridge, interface, network, mac_address, mtu):
             info['passed_interface'] = interface
 
-        self.stubs.Set(linux_net.LinuxBridgeInterfaceDriver,
-                       'ensure_vlan_bridge', test_ensure)
+        mock_ensure_vlan_bridge.side_effect = test_ensure
 
         network = {
                 "bridge": "br100",
@@ -705,8 +696,10 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         driver.plug(network, "fakemac")
         self.assertEqual("override_interface", info['passed_interface'])
         driver.plug(network, "fakemac")
+        self.assertEqual(3, mock_ensure_vlan_bridge.call_count)
 
-    def test_flat_override(self):
+    @mock.patch.object(linux_net.LinuxBridgeInterfaceDriver, 'ensure_bridge')
+    def test_flat_override(self, mock_ensure_bridge):
         """Makes sure flat_interface flag overrides network bridge_interface.
 
         Allows heterogeneous networks a la bug 833426
@@ -716,12 +709,10 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
 
         info = {}
 
-        @staticmethod
         def test_ensure(bridge, interface, network, gateway):
             info['passed_interface'] = interface
 
-        self.stubs.Set(linux_net.LinuxBridgeInterfaceDriver,
-                       'ensure_bridge', test_ensure)
+        mock_ensure_bridge.side_effect = test_ensure
 
         network = {
                 "bridge": "br100",
@@ -733,8 +724,16 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.flags(flat_interface="override_interface")
         driver.plug(network, "fakemac")
         self.assertEqual("override_interface", info['passed_interface'])
+        self.assertEqual(2, mock_ensure_bridge.call_count)
 
-    def _test_dnsmasq_execute(self, extra_expected=None):
+    @mock.patch.object(linux_net, '_dnsmasq_pid_for')
+    @mock.patch.object(linux_net, 'write_to_file')
+    @mock.patch('os.chmod')
+    @mock.patch.object(linux_net, '_add_dhcp_mangle_rule')
+    @mock.patch.object(linux_net, '_execute')
+    def _test_dnsmasq_execute(self, mock_execute, mock_add_dhcp_mangle_rule,
+                              mock_chmod, mock_write_to_file,
+                              mock_dnsmasq_pid_for, extra_expected=None):
         network_ref = {'id': 'fake',
                        'label': 'fake',
                        'gateway': '10.0.0.1',
@@ -753,13 +752,9 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         def fake_add_dhcp_mangle_rule(*args, **kwargs):
             executes.append(args)
 
-        self.stubs.Set(linux_net, '_execute', fake_execute)
-        self.stubs.Set(linux_net, '_add_dhcp_mangle_rule',
-                       fake_add_dhcp_mangle_rule)
+        mock_execute.side_effect = fake_execute
+        mock_add_dhcp_mangle_rule.side_effect = fake_add_dhcp_mangle_rule
 
-        self.stub_out('os.chmod', lambda *a, **kw: None)
-        self.stubs.Set(linux_net, 'write_to_file', lambda *a, **kw: None)
-        self.stubs.Set(linux_net, '_dnsmasq_pid_for', lambda *a, **kw: None)
         dev = 'br100'
 
         default_domain = CONF.dhcp_domain
@@ -795,6 +790,11 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             if extra_expected:
                 expected += extra_expected
             self.assertEqual([(dev,), tuple(expected)], executes)
+        self.assertEqual(2, mock_execute.call_count)
+        self.assertEqual(2, mock_add_dhcp_mangle_rule.call_count)
+        self.assertEqual(4, mock_chmod.call_count)
+        self.assertEqual(2, mock_write_to_file.call_count)
+        self.assertEqual(2, mock_dnsmasq_pid_for.call_count)
 
     def test_dnsmasq_execute(self):
         self._test_dnsmasq_execute()
@@ -806,7 +806,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             '--server=1.1.1.1',
             '--server=2.2.2.2',
         ]
-        self._test_dnsmasq_execute(expected)
+        self._test_dnsmasq_execute(extra_expected=expected)
 
     def test_dnsmasq_execute_use_network_dns_servers(self):
         self.flags(use_network_dns_servers=True)
@@ -814,31 +814,29 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             '--no-resolv',
             '--server=8.8.4.4',
         ]
-        self._test_dnsmasq_execute(expected)
+        self._test_dnsmasq_execute(extra_expected=expected)
 
     def test_isolated_host(self):
         self.flags(fake_network=False,
                    share_dhcp_address=True)
-        # NOTE(vish): use a fresh copy of the manager for each test
-        self.stubs.Set(linux_net, 'iptables_manager',
-                       linux_net.IptablesManager())
-        self.stubs.Set(linux_net, 'binary_name', 'test')
         executes = []
 
         def fake_execute(*args, **kwargs):
             executes.append(args)
             return "", ""
 
-        self.stubs.Set(utils, 'execute', fake_execute)
-
         driver = linux_net.LinuxBridgeInterfaceDriver()
 
-        @staticmethod
         def fake_ensure(bridge, interface, network, gateway):
             return bridge
 
-        self.stubs.Set(linux_net.LinuxBridgeInterfaceDriver,
-                       'ensure_bridge', fake_ensure)
+        self.stub_out('nova.network.linux_net.iptables_manager',
+                      linux_net.IptablesManager())
+        self.stub_out('nova.network.linux_net.binary_name', 'test')
+        self.stub_out('nova.utils.execute', fake_execute)
+        self.stub_out(
+            'nova.network.linux_net.LinuxBridgeInterfaceDriver.ensure_bridge',
+            fake_ensure)
 
         iface = 'eth0'
         dhcp = '192.168.1.1'
@@ -847,6 +845,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                    'bridge': 'br100',
                    'bridge_interface': iface}
         driver.plug(network, 'fakemac')
+
         expected = [
             ('ebtables', '--concurrent', '-t', 'filter', '-D', 'INPUT', '-p',
              'ARP', '-i', iface, '--arp-ip-dst', dhcp, '-j', 'DROP'),
@@ -877,12 +876,12 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
 
         executes = []
 
-        @staticmethod
         def fake_remove(bridge, gateway):
             return
 
-        self.stubs.Set(linux_net.LinuxBridgeInterfaceDriver,
-                       'remove_bridge', fake_remove)
+        self.stub_out(
+            'nova.network.linux_net.LinuxBridgeInterfaceDriver.remove_bridge',
+            fake_remove)
 
         driver.unplug(network)
         expected = [
@@ -899,7 +898,9 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         ]
         self.assertEqual(expected, executes)
 
-    def _test_initialize_gateway(self, existing, expected, routes=''):
+    @mock.patch.object(utils, 'execute')
+    def _test_initialize_gateway(self, existing, expected, mock_execute,
+                                 routes=''):
         self.flags(fake_network=False)
         executes = []
 
@@ -911,13 +912,16 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                 return routes, ""
             if args[0] == 'sysctl':
                 return '1\n', ''
-        self.stubs.Set(utils, 'execute', fake_execute)
+
+        mock_execute.side_effect = fake_execute
+
         network = {'dhcp_server': '192.168.1.1',
                    'cidr': '192.168.1.0/24',
                    'broadcast': '192.168.1.255',
                    'cidr_v6': '2001:db8::/64'}
         self.driver.initialize_gateway_device('eth0', network)
         self.assertEqual(expected, executes)
+        self.assertTrue(mock_execute.called)
 
     def test_initialize_gateway_moves_wrong_ip(self):
         existing = ("2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> "
@@ -992,7 +996,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             ('ip', '-f', 'inet6', 'addr', 'change',
              '2001:db8::/64', 'dev', 'eth0'),
         ]
-        self._test_initialize_gateway(existing, expected, routes)
+        self._test_initialize_gateway(existing, expected, routes=routes)
 
     def test_initialize_gateway_no_move_right_ip(self):
         existing = ("2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> "
@@ -1027,10 +1031,15 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         ]
         self._test_initialize_gateway(existing, expected)
 
-    def test_ensure_floating_no_duplicate_forwards(self):
+    @mock.patch.object(linux_net, 'ensure_ebtables_rules')
+    @mock.patch.object(linux_net.iptables_manager, 'apply')
+    def test_ensure_floating_no_duplicate_forwards(self, mock_apply,
+                                                   mock_ensure_ebtables_rules):
         ln = linux_net
-        self.stubs.Set(ln.iptables_manager, 'apply', lambda: None)
-        self.stubs.Set(ln, 'ensure_ebtables_rules', lambda *a, **kw: None)
+
+        mock_apply.side_effect = lambda: None
+        mock_ensure_ebtables_rules.side_effect = lambda *a, **kw: None
+
         net = {'bridge': 'br100', 'cidr': '10.0.0.0/24'}
         ln.ensure_floating_forward('10.10.10.10', '10.0.0.1', 'eth0', net)
         ln.ensure_floating_forward('10.10.10.11', '10.0.0.10', 'eth0', net)
@@ -1038,49 +1047,51 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         ln.ensure_floating_forward('10.10.10.10', '10.0.0.3', 'eth0', net)
         dup_forward_rules = len(linux_net.iptables_manager.ipv4['nat'].rules)
         self.assertEqual(two_forward_rules, dup_forward_rules)
+        self.assertEqual(3, mock_apply.call_count)
+        self.assertEqual(3, mock_ensure_ebtables_rules.call_count)
 
     def test_apply_ran(self):
         manager = linux_net.IptablesManager()
         manager.iptables_apply_deferred = False
-        self.mox.StubOutWithMock(manager, '_apply')
-        manager._apply()
-        self.mox.ReplayAll()
-        empty_ret = manager.apply()
-        self.assertIsNone(empty_ret)
+        with mock.patch.object(manager, '_apply') as mock_apply:
+            empty_ret = manager.apply()
+            mock_apply.assert_called_once()
+            self.assertIsNone(empty_ret)
 
     def test_apply_not_run(self):
         manager = linux_net.IptablesManager()
         manager.iptables_apply_deferred = True
-        self.mox.StubOutWithMock(manager, '_apply')
-        self.mox.ReplayAll()
-        manager.apply()
+        with mock.patch.object(manager, '_apply') as mock_apply:
+            manager.apply()
+            mock_apply.assert_not_called()
 
     def test_deferred_unset_apply_ran(self):
         manager = linux_net.IptablesManager()
         manager.iptables_apply_deferred = True
-        self.mox.StubOutWithMock(manager, '_apply')
-        manager._apply()
-        self.mox.ReplayAll()
-        manager.defer_apply_off()
-        self.assertFalse(manager.iptables_apply_deferred)
+        with mock.patch.object(manager, '_apply') as mock_apply:
+            manager.defer_apply_off()
+            mock_apply.assert_called_once()
+            self.assertFalse(manager.iptables_apply_deferred)
 
-    def _test_add_metadata_accept_rule(self, expected):
+    @mock.patch.object(linux_net.iptables_manager.ipv4['filter'], 'add_rule')
+    def _test_add_metadata_accept_rule(self, expected, mock_add_rule):
         def verify_add_rule(chain, rule):
             self.assertEqual('INPUT', chain)
             self.assertEqual(expected, rule)
 
-        self.stubs.Set(linux_net.iptables_manager.ipv4['filter'],
-                       'add_rule', verify_add_rule)
+        mock_add_rule.side_effect = verify_add_rule
         linux_net.metadata_accept()
+        mock_add_rule.assert_called_once()
 
-    def _test_add_metadata_accept_ipv6_rule(self, expected):
+    @mock.patch.object(linux_net.iptables_manager.ipv6['filter'], 'add_rule')
+    def _test_add_metadata_accept_ipv6_rule(self, expected, mock_add_rule):
         def verify_add_rule(chain, rule):
             self.assertEqual('INPUT', chain)
             self.assertEqual(expected, rule)
 
-        self.stubs.Set(linux_net.iptables_manager.ipv6['filter'],
-                       'add_rule', verify_add_rule)
+        mock_add_rule.side_effect = verify_add_rule
         linux_net.metadata_accept()
+        mock_add_rule.assert_called_once()
 
     def test_metadata_accept(self):
         self.flags(metadata_port='8775')
@@ -1110,14 +1121,15 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                     '-m addrtype --dst-type LOCAL -j ACCEPT')
         self._test_add_metadata_accept_ipv6_rule(expected)
 
-    def _test_add_metadata_forward_rule(self, expected):
+    @mock.patch.object(linux_net.iptables_manager.ipv4['nat'], 'add_rule')
+    def _test_add_metadata_forward_rule(self, expected, mock_add_rule):
         def verify_add_rule(chain, rule):
             self.assertEqual('PREROUTING', chain)
             self.assertEqual(expected, rule)
 
-        self.stubs.Set(linux_net.iptables_manager.ipv4['nat'],
-                       'add_rule', verify_add_rule)
+        mock_add_rule.side_effect = verify_add_rule
         linux_net.metadata_forward()
+        mock_add_rule.assert_called_once()
 
     def test_metadata_forward(self):
         self.flags(metadata_port='8775')
@@ -1293,10 +1305,10 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             executes.append(args)
             return "", ""
 
-        self.stubs.Set(self.driver, '_execute', fake_execute)
-        self.driver._exec_ebtables('fake')
-        self.assertEqual(1, len(executes))
-        self.mox.UnsetStubs()
+        with mock.patch.object(self.driver, '_execute',
+                               side_effect=fake_execute):
+            self.driver._exec_ebtables('fake')
+            self.assertEqual(1, len(executes))
 
     def _ebtables_race_stderr(self):
         return (u"Unable to update the kernel. Two possible causes:\n"
@@ -1320,13 +1332,13 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             raise processutils.ProcessExecutionError('error',
                     stderr=self._ebtables_race_stderr())
 
-        self.stubs.Set(time, 'sleep', fake_sleep)
-        self.stubs.Set(self.driver, '_execute', fake_execute)
-        self.assertRaises(processutils.ProcessExecutionError,
-                          self.driver._exec_ebtables, 'fake')
-        max_calls = CONF.ebtables_exec_attempts
-        self.assertEqual(max_calls, len(executes))
-        self.mox.UnsetStubs()
+        with mock.patch.object(time, 'sleep', side_effect=fake_sleep), \
+                mock.patch.object(self.driver, '_execute',
+                                  side_effect=fake_execute):
+            self.assertRaises(processutils.ProcessExecutionError,
+                              self.driver._exec_ebtables, 'fake')
+            max_calls = CONF.ebtables_exec_attempts
+            self.assertEqual(max_calls, len(executes))
 
     def test_exec_ebtables_fail_no_retry(self):
         executes = []
@@ -1339,12 +1351,12 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             raise processutils.ProcessExecutionError('error',
                     stderr="Sorry, rule does not exist")
 
-        self.stubs.Set(time, 'sleep', fake_sleep)
-        self.stubs.Set(self.driver, '_execute', fake_execute)
-        self.assertRaises(processutils.ProcessExecutionError,
-                          self.driver._exec_ebtables, 'fake')
-        self.assertEqual(1, len(executes))
-        self.mox.UnsetStubs()
+        with mock.patch.object(time, 'sleep', side_effect=fake_sleep), \
+                mock.patch.object(self.driver, '_execute',
+                              side_effect=fake_execute):
+            self.assertRaises(processutils.ProcessExecutionError,
+                              self.driver._exec_ebtables, 'fake')
+            self.assertEqual(1, len(executes))
 
     def test_exec_ebtables_fail_once(self):
         executes = []
@@ -1360,11 +1372,11 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             else:
                 return "", ""
 
-        self.stubs.Set(time, 'sleep', fake_sleep)
-        self.stubs.Set(self.driver, '_execute', fake_execute)
-        self.driver._exec_ebtables('fake')
-        self.assertEqual(2, len(executes))
-        self.mox.UnsetStubs()
+        with mock.patch.object(time, 'sleep', side_effect=fake_sleep), \
+                mock.patch.object(self.driver, '_execute',
+                                  side_effect=fake_execute):
+            self.driver._exec_ebtables('fake')
+            self.assertEqual(2, len(executes))
 
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('nova.utils.execute')
