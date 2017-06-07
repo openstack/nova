@@ -121,7 +121,8 @@ class InterCellRPCAPI(object):
         """
         transport_url = next_hop.db_info['transport_url']
         if transport_url not in self.transports:
-            transport = messaging.get_transport(nova.conf.CONF, transport_url)
+            transport = messaging.get_rpc_transport(
+                nova.conf.CONF, transport_url)
             self.transports[transport_url] = transport
         else:
             transport = self.transports[transport_url]

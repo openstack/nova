@@ -671,7 +671,7 @@ class RPCFixture(fixtures.Fixture):
         # one of the many transports we're multplexing here.
         if url not in self._buses:
             exmods = rpc.get_allowed_exmods()
-            self._buses[url] = messaging.get_transport(
+            self._buses[url] = messaging.get_rpc_transport(
                 CONF,
                 url=url,
                 allowed_remote_exmods=exmods)

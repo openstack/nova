@@ -230,9 +230,9 @@ def if_notifications_enabled(f):
 
 def create_transport(url):
     exmods = get_allowed_exmods()
-    return messaging.get_transport(CONF,
-                                   url=url,
-                                   allowed_remote_exmods=exmods)
+    return messaging.get_rpc_transport(CONF,
+                                       url=url,
+                                       allowed_remote_exmods=exmods)
 
 
 class LegacyValidatingNotifier(object):
