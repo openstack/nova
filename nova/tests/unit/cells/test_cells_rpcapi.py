@@ -34,9 +34,9 @@ class CellsAPITestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(CellsAPITestCase, self).setUp()
-        self.fake_topic = 'fake_topic'
+        self.fake_topic = 'cells'
         self.fake_context = 'fake_context'
-        self.flags(topic=self.fake_topic, enable=True, group='cells')
+        self.flags(enable=True, group='cells')
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
 
     def _stub_rpc_method(self, rpc_method, result):

@@ -15,3 +15,5 @@
 """
 Cells
 """
+
+TOPIC = 'cells'
