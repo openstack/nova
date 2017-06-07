@@ -1039,6 +1039,25 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
         """
         self.assertXmlEqual(xml, obj.to_xml())
 
+    def test_config_disk_device_address_drive_added(self):
+        obj = config.LibvirtConfigGuestDisk()
+        obj.source_type = "file"
+        obj.source_path = "/tmp/hello"
+        obj.target_dev = "/dev/hda"
+        obj.target_bus = "scsi"
+        obj.device_addr = config.LibvirtConfigGuestDeviceAddressDrive()
+        obj.device_addr.controller = 1
+        obj.device_addr.bus = 2
+        obj.device_addr.target = 3
+        obj.device_addr.unit = 4
+
+        self.assertXmlEqual("""
+        <disk type="file" device="disk">
+          <source file="/tmp/hello"/>
+          <target bus="scsi" dev="/dev/hda"/>
+          <address type="drive" controller="1" bus="2" target="3" unit="4"/>
+        </disk>""", obj.to_xml())
+
     def test_config_disk_device_address_type_virtio_mmio(self):
         xml = """
             <disk type='file' device='disk'>
