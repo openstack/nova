@@ -817,3 +817,59 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
         self.assertRaises(exception.NovaException,
                           os_vif_util.nova_to_osvif_vif,
                           vif)
+
+    def test_nova_to_osvif_vhostuser_vrouter(self):
+        vif = model.VIF(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            type=model.VIF_TYPE_VHOSTUSER,
+            address="22:52:25:62:e2:aa",
+            network=model.Network(
+                id="b82c1929-051e-481d-8110-4669916c7915",
+                label="Demo Net",
+                subnets=[]),
+            details={
+                model.VIF_DETAILS_VHOSTUSER_MODE: 'client',
+                model.VIF_DETAILS_VHOSTUSER_VROUTER_PLUG: True,
+                model.VIF_DETAILS_VHOSTUSER_SOCKET: '/fake/socket',
+            }
+        )
+
+        actual = os_vif_util.nova_to_osvif_vif(vif)
+
+        expect = osv_objects.vif.VIFVHostUser(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            active=False,
+            address="22:52:25:62:e2:aa",
+            plugin="contrail_vrouter",
+            vif_name="nicdc065497-3c",
+            path='/fake/socket',
+            mode='client',
+            has_traffic_filtering=False,
+            preserve_on_delete=False,
+            network=osv_objects.network.Network(
+                id="b82c1929-051e-481d-8110-4669916c7915",
+                bridge_interface=None,
+                label="Demo Net",
+                subnets=osv_objects.subnet.SubnetList(
+                    objects=[])))
+
+        self.assertObjEqual(expect, actual)
+
+    def test_nova_to_osvif_vhostuser_vrouter_no_socket_path(self):
+        vif = model.VIF(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            type=model.VIF_TYPE_VHOSTUSER,
+            address="22:52:25:62:e2:aa",
+            network=model.Network(
+                id="b82c1929-051e-481d-8110-4669916c7915",
+                label="Demo Net",
+                subnets=[]),
+            details={
+                model.VIF_DETAILS_VHOSTUSER_MODE: 'client',
+                model.VIF_DETAILS_VHOSTUSER_VROUTER_PLUG: True,
+            }
+        )
+
+        self.assertRaises(exception.VifDetailsMissingVhostuserSockPath,
+                          os_vif_util.nova_to_osvif_vif,
+                          vif)

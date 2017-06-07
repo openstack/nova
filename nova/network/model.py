@@ -83,6 +83,10 @@ VIF_DETAILS_VHOSTUSER_OVS_PLUG = 'vhostuser_ovs_plug'
 # Specifies whether vhost-user socket should be used to
 # create a fp netdevice interface.
 VIF_DETAILS_VHOSTUSER_FP_PLUG = 'vhostuser_fp_plug'
+# Specifies whether vhost-user socket should be used to
+# create a vrouter netdevice interface
+# TODO(mhenkel): Consider renaming this to be contrail-specific.
+VIF_DETAILS_VHOSTUSER_VROUTER_PLUG = 'vhostuser_vrouter_plug'
 # ovs vhost user interface type name
 OVS_VHOSTUSER_INTERFACE_TYPE = 'dpdkvhostuser'
 
