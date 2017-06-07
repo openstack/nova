@@ -584,6 +584,36 @@ class ResourceProviderTrait(API_BASE):
                                   nullable=False)
 
 
+class Project(API_BASE):
+    """The project is the Keystone project."""
+
+    __tablename__ = 'projects'
+    __table_args__ = (
+        schema.UniqueConstraint(
+            'external_id',
+            name='uniq_projects0external_id',
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
+    external_id = Column(String(255), nullable=False)
+
+
+class User(API_BASE):
+    """The user is the Keystone user."""
+
+    __tablename__ = 'users'
+    __table_args__ = (
+        schema.UniqueConstraint(
+            'external_id',
+            name='uniq_users0external_id',
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
+    external_id = Column(String(255), nullable=False)
+
+
 class Consumer(API_BASE):
     """Represents a resource consumer."""
 
@@ -597,5 +627,5 @@ class Consumer(API_BASE):
 
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     uuid = Column(String(36), nullable=False)
-    project_id = Column(String(255), nullable=False)
-    user_id = Column(String(255), nullable=False)
+    project_id = Column(Integer, nullable=False)
+    user_id = Column(Integer, nullable=False)
