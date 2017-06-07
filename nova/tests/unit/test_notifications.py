@@ -551,7 +551,7 @@ class NotificationsTestCase(test.TestCase):
         def sending_no_state_change(context, instance, **kwargs):
             called[0] = True
         self.stub_out('nova.notifications.base.'
-                      '_send_instance_update_notification',
+                      'send_instance_update_notification',
                        sending_no_state_change)
         notifications.send_update(self.context, self.instance, self.instance)
         self.assertTrue(called[0])
@@ -560,7 +560,7 @@ class NotificationsTestCase(test.TestCase):
         def fail_sending(context, instance, **kwargs):
             raise Exception('failed to notify')
         self.stub_out('nova.notifications.base.'
-                      '_send_instance_update_notification',
+                      'send_instance_update_notification',
                        fail_sending)
 
         notifications.send_update(self.context, self.instance, self.instance)
@@ -572,7 +572,7 @@ class NotificationsTestCase(test.TestCase):
         # not logged as an error.
         notfound = exception.InstanceNotFound(instance_id=self.instance.uuid)
         with mock.patch.object(notifications,
-                               '_send_instance_update_notification',
+                               'send_instance_update_notification',
                                side_effect=notfound):
             notifications.send_update(
                 self.context, self.instance, self.instance)
@@ -586,7 +586,7 @@ class NotificationsTestCase(test.TestCase):
         # not logged as an error.
         notfound = exception.InstanceNotFound(instance_id=self.instance.uuid)
         with mock.patch.object(notifications,
-                               '_send_instance_update_notification',
+                               'send_instance_update_notification',
                                side_effect=notfound):
             notifications.send_update_with_states(
                 self.context, self.instance,
