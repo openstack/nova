@@ -249,6 +249,11 @@ management network.
 Possible values:
 
 * A valid IP address or hostname, else None.
+
+Related options:
+
+* ``live_migration_tunnelled``: The live_migration_inbound_addr value is
+  ignored if tunneling is enabled.
 """),
     cfg.StrOpt('live_migration_uri',
                deprecated_for_removal=True,
@@ -266,22 +271,26 @@ on virt_type). Any included "%s" is replaced with the migration target
 hostname.
 
 If this option is set to None (which is the default), Nova will automatically
-generate the `live_migration_uri` value based on only 3 supported `virt_type`
+generate the `live_migration_uri` value based on only 4 supported `virt_type`
 in following list:
+
 * 'kvm': 'qemu+tcp://%s/system'
 * 'qemu': 'qemu+tcp://%s/system'
 * 'xen': 'xenmigr://%s/system'
+* 'parallels': 'parallels+tcp://%s/system'
 
 Related options:
+
 * ``live_migration_inbound_addr``: If ``live_migration_inbound_addr`` value
-  is not None, the ip/hostname address of target compute node is used instead
-  of ``live_migration_uri`` as the uri for live migration.
+  is not None and ``live_migration_tunnelled`` is False, the ip/hostname
+  address of target compute node is used instead of ``live_migration_uri`` as
+  the uri for live migration.
 * ``live_migration_scheme``: If ``live_migration_uri`` is not set, the scheme
   used for live migration is taken from ``live_migration_scheme`` instead.
 """),
     cfg.StrOpt('live_migration_scheme',
                help="""
-Schema used for live migration.
+URI scheme used for live migration.
 
 Override the default libvirt live migration scheme (which is dependent on
 virt_type). If this option is set to None, nova will automatically choose a
@@ -289,6 +298,7 @@ sensible default based on the hypervisor. It is not recommended that you change
 this unless you are very sure that hypervisor supports a particular scheme.
 
 Related options:
+
 * ``virt_type``: This option is meaningful only when ``virt_type`` is set to
   `kvm` or `qemu`.
 * ``live_migration_uri``: If ``live_migration_uri`` value is not None, the
@@ -305,15 +315,15 @@ VIR_MIGRATE_TUNNELLED migration flag, avoiding the need to configure
 the network to allow direct hypervisor to hypervisor communication.
 If False, use the native transport. If not set, Nova will choose a
 sensible default based on, for example the availability of native
-encryption support in the hypervisor. Enable this option will definitely
+encryption support in the hypervisor. Enabling this option will definitely
 impact performance massively.
 
 Note that this option is NOT compatible with use of block migration.
 
-Possible values:
+Related options:
 
-* Supersedes and (if set) overrides the deprecated 'live_migration_flag' and
-  'block_migration_flag' to enable tunneled migration.
+* ``live_migration_inbound_addr``: The live_migration_inbound_addr value is
+  ignored if tunneling is enabled.
 """),
     cfg.IntOpt('live_migration_bandwidth',
                default=0,
