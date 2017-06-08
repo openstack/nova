@@ -29,6 +29,14 @@ class ExceptionPayload(base.NotificationPayloadBase):
         'exception_message': fields.StringField()
     }
 
+    def __init__(self, module_name, function_name, exception,
+                 exception_message):
+        super(ExceptionPayload, self).__init__()
+        self.module_name = module_name
+        self.function_name = function_name
+        self.exception = exception
+        self.exception_message = exception_message
+
     @classmethod
     def from_exception(cls, fault):
         trace = inspect.trace()[-1]

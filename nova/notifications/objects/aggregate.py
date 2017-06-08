@@ -37,8 +37,8 @@ class AggregatePayload(base.NotificationPayloadBase):
         'metadata': fields.DictOfStringsField(nullable=True),
     }
 
-    def __init__(self, aggregate, **kwargs):
-        super(AggregatePayload, self).__init__(**kwargs)
+    def __init__(self, aggregate):
+        super(AggregatePayload, self).__init__()
         self.populate_schema(aggregate=aggregate)
 
 

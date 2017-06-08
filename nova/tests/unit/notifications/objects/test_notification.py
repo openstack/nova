@@ -49,6 +49,12 @@ class TestNotificationBase(test.NoDBTestCase):
                     action='obj_load_attr',
                     reason='attribute %s not lazy-loadable' % attrname)
 
+        def __init__(self, not_important_field):
+            super(TestNotificationBase.TestObject, self).__init__()
+            # field1 and field_2 simulates that some fields are initialized
+            # outside of the object's ctor
+            self.not_important_field = not_important_field
+
     @base.NovaObjectRegistry.register_if(False)
     class TestNotificationPayload(notification.NotificationPayloadBase):
         VERSION = '1.0'
@@ -67,9 +73,11 @@ class TestNotificationBase(test.NoDBTestCase):
             'lazy_field': fields.IntegerField()  # filled by the schema
         }
 
-        def populate_schema(self, source_field):
+        def __init__(self, extra_field, source_field):
             super(TestNotificationBase.TestNotificationPayload,
-                  self).populate_schema(source_field=source_field)
+                  self).__init__()
+            self.extra_field = extra_field
+            self.populate_schema(source_field=source_field)
 
     @base.NovaObjectRegistry.register_if(False)
     class TestNotificationPayloadEmptySchema(
@@ -79,6 +87,11 @@ class TestNotificationBase(test.NoDBTestCase):
         fields = {
             'extra_field': fields.StringField(),  # filled by ctor
         }
+
+        def __init__(self, extra_field):
+            super(TestNotificationBase.TestNotificationPayloadEmptySchema,
+                  self).__init__()
+            self.extra_field = extra_field
 
     @notification.notification_sample('test-update-1.json')
     @notification.notification_sample('test-update-2.json')
@@ -118,7 +131,7 @@ class TestNotificationBase(test.NoDBTestCase):
         'nova_object.data': {
             'extra_field': 'test string',
             'field_1': 'test1',
-            'field_2': 42,
+            'field_2': 15,
             'lazy_field': 42},
         'nova_object.version': '1.0',
         'nova_object.namespace': 'nova'}
@@ -132,13 +145,12 @@ class TestNotificationBase(test.NoDBTestCase):
             mock_db_service_update.return_value = self.fake_service
             self.service_obj.save()
 
-        self.my_obj = self.TestObject(field_1='test1',
-                                      field_2=42,
-                                      not_important_field=13)
+        self.my_obj = self.TestObject(not_important_field=13)
+        self.my_obj.field_1 = 'test1'
+        self.my_obj.field_2 = 15
 
         self.payload = self.TestNotificationPayload(
-            extra_field='test string')
-        self.payload.populate_schema(source_field=self.my_obj)
+            extra_field='test string', source_field=self.my_obj)
 
         self.notification = self.TestNotification(
             event_type=notification.EventType(
@@ -224,8 +236,10 @@ class TestNotificationBase(test.NoDBTestCase):
 
     @mock.patch('nova.rpc.NOTIFIER')
     def test_not_possible_to_emit_if_not_populated(self, mock_notifier):
-        non_populated_payload = self.TestNotificationPayload(
-            extra_field='test string')
+        payload = self.TestNotificationPayload(
+            extra_field='test string', source_field=self.my_obj)
+        payload.populated = False
+
         noti = self.TestNotification(
             event_type=notification.EventType(
                 object='test_object',
@@ -233,37 +247,41 @@ class TestNotificationBase(test.NoDBTestCase):
             publisher=notification.NotificationPublisher.from_service_obj(
                 self.service_obj),
             priority=fields.NotificationPriority.INFO,
-            payload=non_populated_payload)
+            payload=payload)
 
         mock_context = mock.Mock()
         self.assertRaises(AssertionError, noti.emit, mock_context)
         self.assertFalse(mock_notifier.called)
 
     def test_lazy_load_source_field(self):
-        my_obj = self.TestObject(field_1='test1',
-                                 field_2=42,
-                                 not_important_field=13)
-        payload = self.TestNotificationPayload(extra_field='test string')
+        my_obj = self.TestObject(not_important_field=13)
+        my_obj.field_1 = 'test1'
+        my_obj.field_2 = 15
 
-        payload.populate_schema(my_obj)
+        payload = self.TestNotificationPayload(extra_field='test string',
+                                               source_field=my_obj)
 
         self.assertEqual(42, payload.lazy_field)
 
     def test_uninited_source_field_defaulted_to_none(self):
-        my_obj = self.TestObject(field_2=42,
-                                 not_important_field=13)
-        payload = self.TestNotificationPayload(extra_field='test string')
+        my_obj = self.TestObject(not_important_field=13)
+        # intentionally not initializing field_1 to simulate an uninited but
+        # nullable field
+        my_obj.field_2 = 15
 
-        payload.populate_schema(my_obj)
+        payload = self.TestNotificationPayload(extra_field='test string',
+                                               source_field=my_obj)
 
         self.assertIsNone(payload.field_1)
 
     def test_uninited_source_field_not_nullable_payload_field_fails(self):
-        my_obj = self.TestObject(field_1='test1',
-                                 not_important_field=13)
-        payload = self.TestNotificationPayload(extra_field='test string')
+        my_obj = self.TestObject(not_important_field=13)
+        # intentionally not initializing field_2 to simulate an uninited no
+        # nullable field
+        my_obj.field_1 = 'test1'
 
-        self.assertRaises(ValueError, payload.populate_schema, my_obj)
+        self.assertRaises(ValueError, self.TestNotificationPayload,
+                          extra_field='test string', source_field=my_obj)
 
     @mock.patch('nova.rpc.NOTIFIER')
     def test_empty_schema(self, mock_notifier):
@@ -304,8 +322,8 @@ class TestNotificationBase(test.NoDBTestCase):
         mock_notifier.is_enabled.return_value = False
 
         payload = self.TestNotificationPayload(
-            extra_field='test string')
-        self.payload.populate_schema(source_field=self.my_obj)
+            extra_field='test string',
+            source_field=self.my_obj)
         noti = self.TestNotification(
             event_type=notification.EventType(
                 object='test_object',
@@ -328,8 +346,8 @@ class TestNotificationBase(test.NoDBTestCase):
         self.flags(notification_format='unversioned', group='notifications')
 
         payload = self.TestNotificationPayload(
-            extra_field='test string')
-        self.payload.populate_schema(source_field=self.my_obj)
+            extra_field='test string',
+            source_field=self.my_obj)
         noti = self.TestNotification(
             event_type=notification.EventType(
                 object='test_object',

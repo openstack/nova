@@ -56,10 +56,16 @@ class EventType(NotificationObject):
         'phase': fields.NotificationPhaseField(nullable=True),
     }
 
+    def __init__(self, object, action, phase=None):
+        super(EventType, self).__init__()
+        self.object = object
+        self.action = action
+        self.phase = phase
+
     def to_notification_event_type_field(self):
         """Serialize the object to the wire format."""
         s = '%s.%s' % (self.object, self.action)
-        if self.obj_attr_is_set('phase'):
+        if self.phase:
             s += '.%s' % self.phase
         return s
 
@@ -89,8 +95,8 @@ class NotificationPayloadBase(NotificationObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
 
-    def __init__(self, **kwargs):
-        super(NotificationPayloadBase, self).__init__(**kwargs)
+    def __init__(self):
+        super(NotificationPayloadBase, self).__init__()
         self.populated = not self.SCHEMA
 
     @rpc.if_notifications_enabled
@@ -126,7 +132,7 @@ class NotificationPayloadBase(NotificationObject):
 
         # the schema population will create changed fields but we don't need
         # this information in the notification
-        self.obj_reset_changes(recursive=False)
+        self.obj_reset_changes(recursive=True)
 
 
 @base.NovaObjectRegistry.register_notification
@@ -138,6 +144,11 @@ class NotificationPublisher(NotificationObject):
         'host': fields.StringField(nullable=False),
         'binary': fields.StringField(nullable=False),
     }
+
+    def __init__(self, host, binary):
+        super(NotificationPublisher, self).__init__()
+        self.host = host
+        self.binary = binary
 
     @classmethod
     def from_service_obj(cls, service):
@@ -172,7 +183,7 @@ class NotificationBase(NotificationObject):
         # Note(gibi): notification payload will be a newly populated object
         # therefore every field of it will look changed so this does not carry
         # any extra information so we drop this from the payload.
-        self.payload.obj_reset_changes(recursive=False)
+        self.payload.obj_reset_changes(recursive=True)
 
         self._emit(context,
                    event_type=

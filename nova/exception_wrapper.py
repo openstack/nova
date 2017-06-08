@@ -36,8 +36,7 @@ def _emit_exception_notification(notifier, context, ex, function_name, args,
 @rpc.if_notifications_enabled
 def _emit_versioned_exception_notification(context, ex, binary):
     versioned_exception_payload = exception.ExceptionPayload.from_exception(ex)
-    publisher = base.NotificationPublisher(context=context, host=CONF.host,
-                                           binary=binary)
+    publisher = base.NotificationPublisher(host=CONF.host, binary=binary)
     event_type = base.EventType(
             object='compute',
             action=fields.NotificationAction.EXCEPTION)

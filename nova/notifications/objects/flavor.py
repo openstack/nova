@@ -73,8 +73,8 @@ class FlavorPayload(base.NotificationPayloadBase):
         'projects': fields.ListOfStringsField(nullable=True),
     }
 
-    def __init__(self, flavor, **kwargs):
-        super(FlavorPayload, self).__init__(**kwargs)
+    def __init__(self, flavor):
+        super(FlavorPayload, self).__init__()
         if 'projects' not in flavor:
             # NOTE(danms): If projects is not loaded in the flavor,
             # don't attempt to load it. If we're in a child cell then
