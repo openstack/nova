@@ -51,6 +51,7 @@ from nova import exception
 from nova.i18n import _
 from nova.image import glance
 from nova import objects
+from nova.objects import service as service_obj
 from nova.policies import servers as server_policies
 from nova import utils
 
@@ -493,8 +494,8 @@ class ServersController(wsgi.Controller):
         if host or node:
             context.can(server_policies.SERVERS % 'create:forced_host', {})
 
-        min_compute_version = objects.Service.get_minimum_version(
-            nova_context.get_admin_context(), 'nova-compute')
+        min_compute_version = service_obj.get_minimum_version_all_cells(
+            nova_context.get_admin_context(), ['nova-compute'])
         supports_device_tagging = (min_compute_version >=
                                    DEVICE_TAGGING_MIN_COMPUTE_VERSION)
 
