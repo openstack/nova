@@ -509,7 +509,7 @@ hypervisor_marker:
     parameter value in a subsequent limited request.
   in: query
   required: false
-  type: string
+  type: integer
   min_version: 2.33
 hypervisor_query:
   description: |
