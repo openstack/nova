@@ -1354,6 +1354,14 @@ def delete_net_dev(dev):
     """Delete a network device only if it exists."""
     if device_exists(dev):
         try:
+            out, err = _execute('ip', 'route', 'show', 'dev', dev)
+            fields = out.split()
+            try:
+                field = fields[0]
+                _execute('ip', 'route', 'del', fields[0],
+                               'dev', dev, run_as_root=True)
+            except IndexError:
+                pass
             utils.execute('ip', 'link', 'delete', dev, run_as_root=True,
                           check_exit_code=[0, 2, 254])
             LOG.debug("Net device removed: '%s'", dev)
