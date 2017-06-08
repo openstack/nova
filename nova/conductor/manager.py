@@ -473,28 +473,12 @@ class ComputeTaskManager(base.Base):
         # The BuildRequest needs to be stored until the instance is mapped to
         # an instance table. At that point it will never be used again and
         # should be deleted.
-        try:
-            build_request = objects.BuildRequest.get_by_instance_uuid(context,
-                    instance.uuid)
-            # TODO(alaski): Sync API updates of the build_request to the
-            # instance before it is destroyed. Right now only locked_by can
-            # be updated before this is destroyed.
-            build_request.destroy()
-        except exception.BuildRequestNotFound:
-            with excutils.save_and_reraise_exception() as exc_ctxt:
-                service_version = objects.Service.get_minimum_version(
-                    context, 'nova-osapi_compute')
-                if service_version >= 12:
-                    # A BuildRequest was created during the boot process, the
-                    # NotFound exception indicates a delete happened which
-                    # should abort the boot.
-                    pass
-                else:
-                    LOG.debug('BuildRequest not found for instance %(uuid)s, '
-                              'likely due to an older nova-api service '
-                              'running.', {'uuid': instance.uuid})
-                    exc_ctxt.reraise = False
-            return
+        build_request = objects.BuildRequest.get_by_instance_uuid(
+            context, instance.uuid)
+        # TODO(alaski): Sync API updates of the build_request to the
+        # instance before it is destroyed. Right now only locked_by can
+        # be updated before this is destroyed.
+        build_request.destroy()
 
     def _populate_instance_mapping(self, context, instance, host):
         try:
