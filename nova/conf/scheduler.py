@@ -438,6 +438,25 @@ Possible values:
 * An integer or float value, where the value corresponds to the multipler
   ratio for this weigher.
 """),
+    cfg.FloatOpt("pci_weight_multiplier",
+        default=1.0,
+        min=0.0,
+        help="""
+PCI device affinity weight multiplier.
+
+The PCI device affinity weighter computes a weighting based on the number of
+PCI devices on the host and the number of PCI devices requested by the
+instance. The ``NUMATopologyFilter`` filter must be enabled for this to have
+any significance. For more information, refer to the filter documentation:
+
+    https://docs.openstack.org/developer/nova/filter_scheduler.html
+
+Possible values:
+
+* A positive integer or float value, where the value corresponds to the
+  multiplier ratio for this weigher.
+"""),
+    # TODO(sfinucan): Add 'min' parameter and remove warning in 'affinity.py'
     cfg.FloatOpt("soft_affinity_weight_multiplier",
         default=1.0,
         deprecated_group="DEFAULT",

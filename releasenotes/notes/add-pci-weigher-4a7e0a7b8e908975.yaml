@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    Add ``PCIWeigher`` weigher. This can be used to ensure non-PCI instances
+    don't occupy resources on hosts with PCI devices. This can be configured
+    using the ``[filter_scheduler] pci_weight_multiplier`` configuration
+    option.
