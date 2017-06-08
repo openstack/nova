@@ -9616,14 +9616,14 @@ class InstanceGroupDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
         db.instance_group_update(self.context, id, values)
         result = db.instance_group_get(self.context, id)
         self.assertEqual(result['name'], 'new_fake_name')
-        # update update members
+        # update members
         values = self._get_default_values()
         members = ['instance_id1', 'instance_id2']
         values['members'] = members
         db.instance_group_update(self.context, id, values)
         result = db.instance_group_get(self.context, id)
         self._assertEqualListsOfPrimitivesAsSets(result['members'], members)
-        # update update policies
+        # update policies
         values = self._get_default_values()
         policies = ['policy1', 'policy2']
         values['policies'] = policies
