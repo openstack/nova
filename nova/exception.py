@@ -149,6 +149,13 @@ class UnsupportedCinderAPIVersion(NovaException):
     msg_fmt = _('Nova does not support Cinder API version %(version)s')
 
 
+class CinderAPIVersionNotAvailable(NovaException):
+    """Used to indicate that a requested Cinder API version, generally a
+    microversion, is not available.
+    """
+    msg_fmt = _('Cinder API version %(version)s is not available.')
+
+
 class Forbidden(NovaException):
     msg_fmt = _("Forbidden")
     code = 403

@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from cinderclient import api_versions as cinder_api_versions
 from cinderclient import exceptions as cinder_exception
 from keystoneclient import exceptions as keystone_exception
 import mock
@@ -717,3 +718,79 @@ class CinderApiTestCase(test.NoDBTestCase):
         my_func.side_effect = raised_exc
 
         self.assertRaises(expected_exc, wrapper(my_func), 'foo', 'bar', 'baz')
+
+
+class CinderClientTestCase(test.NoDBTestCase):
+    """Used to test constructing a cinder client object at various versions."""
+
+    def setUp(self):
+        super(CinderClientTestCase, self).setUp()
+        cinder.reset_globals()
+        self.ctxt = context.RequestContext('fake-user', 'fake-project')
+        # Mock out the keystoneauth stuff.
+        self.mock_session = mock.Mock(
+            autospec='keystoneauth1.loading.session.Session')
+        load_session = mock.patch('keystoneauth1.loading.'
+                                  'load_session_from_conf_options',
+                                  return_value=self.mock_session).start()
+        self.addCleanup(load_session.stop)
+
+    @mock.patch('cinderclient.client.get_volume_api_from_url',
+                return_value='3')
+    def test_create_v3_client_no_microversion(self, get_volume_api):
+        """Tests that creating a v3 client, which is the default, and without
+        specifying a microversion will default to 3.0 as the version to use.
+        """
+        client = cinder.cinderclient(self.ctxt)
+        self.assertEqual(cinder_api_versions.APIVersion('3.0'),
+                         client.api_version)
+        get_volume_api.assert_called_once_with(
+            self.mock_session.get_endpoint.return_value)
+
+    @mock.patch('cinderclient.client.get_volume_api_from_url',
+                return_value='2')
+    def test_create_v2_client_with_microversion_fails(self, get_volume_api):
+        """Tests that requesting a microversion against a v2 client will raise
+        an exception.
+        """
+        self.assertRaises(exception.CinderAPIVersionNotAvailable,
+                          cinder.cinderclient, self.ctxt, microversion='3.27')
+        get_volume_api.assert_called_once_with(
+            self.mock_session.get_endpoint.return_value)
+
+    @mock.patch('cinderclient.client.get_volume_api_from_url',
+                return_value='3')
+    @mock.patch('cinderclient.client.get_highest_client_server_version',
+                return_value=2.0)   # Fake the case that cinder is really old.
+    def test_create_v3_client_with_microversion_too_new(self,
+                                                        get_highest_version,
+                                                        get_volume_api):
+        """Tests that creating a v3 client and requesting a microversion that
+        is either too new for the server (or client) to support raises an
+        exception.
+        """
+        self.assertRaises(exception.CinderAPIVersionNotAvailable,
+                          cinder.cinderclient, self.ctxt, microversion='3.27')
+        get_volume_api.assert_called_once_with(
+            self.mock_session.get_endpoint.return_value)
+        get_highest_version.assert_called_once_with(
+            self.mock_session.get_endpoint.return_value)
+
+    @mock.patch('cinderclient.client.get_highest_client_server_version',
+                return_value=float(cinder_api_versions.MAX_VERSION))
+    @mock.patch('cinderclient.client.get_volume_api_from_url',
+                return_value='3')
+    def test_create_v3_client_with_microversion_available(self,
+                                                          get_volume_api,
+                                                          get_highest_version):
+        """Tests that creating a v3 client and requesting a microversion that
+        is available in the server and supported by the client will result in
+        creating a Client object with the requested microversion.
+        """
+        client = cinder.cinderclient(self.ctxt, microversion='3.27')
+        self.assertEqual(cinder_api_versions.APIVersion('3.27'),
+                         client.api_version)
+        get_volume_api.assert_called_once_with(
+            self.mock_session.get_endpoint.return_value)
+        get_highest_version.assert_called_once_with(
+            self.mock_session.get_endpoint.return_value)
