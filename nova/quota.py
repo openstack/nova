@@ -609,9 +609,10 @@ class DbQuotaDriver(object):
         merged_values = {}
         for key in keys_to_merge:
             # The key will be either in project_values or user_values based on
-            # the earlier symmetric_difference.
-            merged_values[key] = (project_values.get(key) or
-                                  user_values.get(key))
+            # the earlier symmetric_difference. Default to 0 in case the found
+            # value is 0 and won't take precedence over a None default.
+            merged_values[key] = (project_values.get(key, 0) or
+                                  user_values.get(key, 0))
             project_values.pop(key, None)
             user_values.pop(key, None)
 

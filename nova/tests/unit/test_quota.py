@@ -2492,6 +2492,18 @@ class DbQuotaDriverTestCase(test.TestCase):
         for kwarg in kwargs:
             self.driver.limit_check_project_and_user(ctxt, resources, **kwarg)
 
+    def test_limit_check_project_and_user_zero_values(self):
+        self._stub_get_project_quotas()
+        ctxt = FakeContext('test_project', 'test_class')
+        resources = self._get_fake_countable_resources()
+        # Check: only project_values, only user_values, and then both.
+        kwargs = [{'project_values': {'fixed_ips': 0}},
+                  {'user_values': {'key_pairs': 0}},
+                  {'project_values': {'instances': 0},
+                   'user_values': {'instances': 0}}]
+        for kwarg in kwargs:
+            self.driver.limit_check_project_and_user(ctxt, resources, **kwarg)
+
     def _stub_quota_reserve(self):
         def fake_quota_reserve(context, resources, quotas, user_quotas, deltas,
                                expire, until_refresh, max_age, project_id=None,
