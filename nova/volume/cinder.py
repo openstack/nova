@@ -79,7 +79,7 @@ def _check_microversion(url, microversion):
     raise exception.CinderAPIVersionNotAvailable(version=microversion)
 
 
-def cinderclient(context, microversion=None):
+def cinderclient(context, microversion=None, skip_version_check=False):
     """Constructs a cinder client object for making API requests.
 
     :param context: The nova request context for auth.
@@ -87,6 +87,10 @@ def cinderclient(context, microversion=None):
         This implies that Cinder v3 is required for any calls that require a
         microversion. If the microversion is not available, this method will
         raise an CinderAPIVersionNotAvailable exception.
+    :param skip_version_check: If True and a specific microversion is
+        requested, the version discovery check is skipped and the microversion
+        is used directly. This should only be used if a previous check for the
+        same microversion was successful.
     """
     global _SESSION
 
@@ -131,7 +135,10 @@ def cinderclient(context, microversion=None):
         # Check to see a specific microversion is requested and if so, can it
         # be handled by the backing server.
         if microversion is not None:
-            version = _check_microversion(url, microversion)
+            if skip_version_check:
+                version = microversion
+            else:
+                version = _check_microversion(url, microversion)
 
     return cinder_client.Client(version,
                                 session=_SESSION,
@@ -581,9 +588,9 @@ class API(object):
             representing the updated volume attachment.
         """
         try:
-            # TODO(mriedem): consider skipping the microversion discovery
-            return cinderclient(context, '3.27').attachments.update(
-                attachment_id, connector)
+            return cinderclient(
+                context, '3.27', skip_version_check=True).attachments.update(
+                    attachment_id, connector)
         except cinder_exception.ClientException as ex:
             with excutils.save_and_reraise_exception():
                 LOG.error(('Update attachment failed for attachment '
@@ -595,9 +602,9 @@ class API(object):
     @translate_attachment_exception
     def attachment_delete(self, context, attachment_id):
         try:
-            # TODO(mriedem): consider skipping the microversion discovery
             cinderclient(
-                context, '3.27').attachments.delete(attachment_id)
+                context, '3.27', skip_version_check=True).attachments.delete(
+                    attachment_id)
         except cinder_exception.ClientException as ex:
             with excutils.save_and_reraise_exception():
                 LOG.error(('Delete attachment failed for attachment '
