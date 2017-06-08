@@ -2,7 +2,7 @@
     "event_type": "instance.volume_attach.start",
     "payload": {
         "nova_object.data": {
-            "architecture": null,
+            "architecture": "x86_64",
             "availability_zone": "nova",
             "created_at": "2012-10-29T13:42:11Z",
             "deleted_at": null,
@@ -33,7 +33,7 @@
             },
             "host": "compute",
             "host_name": "some-server",
-            "image_uuid": "a2459075-d96c-40d5-893e-577ff92e721c",
+            "image_uuid": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
             "ip_addresses": [{
                 "nova_object.data": {
                     "address": "192.168.1.3",

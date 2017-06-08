@@ -75,7 +75,6 @@ class TestInstanceNotificationSample(
             self._test_revert_server,
             self._test_resize_confirm_server,
             self._test_snapshot_server,
-            self._test_rebuild_server,
             self._test_reboot_server,
             self._test_reboot_server_error,
             self._test_trigger_crash_dump,
@@ -570,7 +569,17 @@ class TestInstanceNotificationSample(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
-    def _test_rebuild_server(self, server):
+    def test_rebuild_server(self):
+        # NOTE(gabor_antal): Rebuild changes the image used by the instance,
+        # therefore the actions tested in test_instance_action had to be in
+        # specific order. To avoid this problem, rebuild was moved from
+        # test_instance_action to its own method.
+
+        server = self._boot_a_server(
+            extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
+
+        fake_notifier.reset()
+
         post = {
             'rebuild': {
                 'imageRef': 'a2459075-d96c-40d5-893e-577ff92e721c',
