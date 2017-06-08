@@ -118,8 +118,8 @@ def get_datastore(session, cluster, datastore_regex=None,
                                          "get_object_property",
                                          cluster,
                                          "datastore")
-    # If there are no hosts in the cluster then an empty string is
-    # returned
+    # If there are no datastores in the cluster then an exception is
+    # raised
     if not datastore_ret:
         raise exception.DatastoreNotFound()
 
