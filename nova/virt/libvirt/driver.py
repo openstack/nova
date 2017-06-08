@@ -1363,7 +1363,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # timeout.
             wait_for_detach = guest.detach_device_with_retry(
                 guest.get_interface_by_cfg, cfg, live=live,
-                alternative_device_name=vif.get('address'))
+                alternative_device_name=self.vif_driver.get_vif_devname(vif))
             wait_for_detach()
         except exception.DeviceNotFound:
             # The interface is gone so just log it as a warning.
