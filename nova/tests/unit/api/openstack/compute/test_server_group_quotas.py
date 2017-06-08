@@ -13,13 +13,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 from oslo_config import cfg
 from oslo_utils import uuidutils
 import webob
 
 from nova.api.openstack.compute import server_groups as sg_v21
 from nova import context
-from nova import quota
+from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests import uuidsentinel as uuids
@@ -84,8 +85,10 @@ class ServerGroupQuotasTestV21(test.TestCase):
 
     def _assert_server_groups_in_use(self, project_id, user_id, in_use):
         ctxt = context.get_admin_context()
-        result = quota.QUOTAS.get_user_quotas(ctxt, project_id, user_id)
-        self.assertEqual(result['server_groups']['in_use'], in_use)
+        counts = objects.InstanceGroupList.get_counts(ctxt, project_id,
+                                                      user_id=user_id)
+        self.assertEqual(in_use, counts['project']['server_groups'])
+        self.assertEqual(in_use, counts['user']['server_groups'])
 
     def test_create_server_group_normal(self):
         self._setup_quotas()
@@ -111,6 +114,18 @@ class ServerGroupQuotasTestV21(test.TestCase):
         self.assertRaises(webob.exc.HTTPForbidden,
                           self.controller.create,
                           self.req, body={'server_group': sgroup})
+
+    @mock.patch('nova.objects.Quotas.check_deltas')
+    def test_create_server_group_recheck_disabled(self, mock_check):
+        self.flags(recheck_quota=False, group='quota')
+        self._setup_quotas()
+        sgroup = server_group_template()
+        policies = ['anti-affinity']
+        sgroup['policies'] = policies
+        self.controller.create(self.req, body={'server_group': sgroup})
+        ctxt = self.req.environ['nova.context']
+        mock_check.assert_called_once_with(ctxt, {'server_groups': 1},
+                                           ctxt.project_id, ctxt.user_id)
 
     def test_delete_server_group_by_admin(self):
         self._setup_quotas()
