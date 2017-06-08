@@ -2493,6 +2493,10 @@ class DbQuotaDriverTestCase(test.TestCase):
             self.driver.limit_check_project_and_user(ctxt, resources, **kwarg)
 
     def test_limit_check_project_and_user_zero_values(self):
+        """Tests to make sure that we don't compare 0 to None and fail with
+        a TypeError in python 3 when calculating merged_values between
+        project_values and user_values.
+        """
         self._stub_get_project_quotas()
         ctxt = FakeContext('test_project', 'test_class')
         resources = self._get_fake_countable_resources()
