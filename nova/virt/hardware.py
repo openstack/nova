@@ -1479,10 +1479,19 @@ def numa_fit_instance_to_host(
     if 'emulator_threads_policy' in instance_topology:
         emulator_threads_policy = instance_topology.emulator_threads_policy
 
+    host_cells = host_topology.cells
+
+    # If PCI device(s) are not required, prefer host cells that don't have
+    # devices attached. Presence of a given numa_node in a PCI pool is
+    # indicative of a PCI device being associated with that node
+    if not pci_requests and pci_stats:
+        host_cells = sorted(host_cells, key=lambda cell: cell.id in [
+            pool['numa_node'] for pool in pci_stats.pools])
+
     # TODO(ndipanov): We may want to sort permutations differently
     # depending on whether we want packing/spreading over NUMA nodes
     for host_cell_perm in itertools.permutations(
-            host_topology.cells, len(instance_topology)):
+            host_cells, len(instance_topology)):
         cells = []
         for host_cell, instance_cell in zip(
                 host_cell_perm, instance_topology.cells):

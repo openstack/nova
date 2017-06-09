@@ -13,6 +13,7 @@
 # under the License.
 
 import collections
+import copy
 
 import mock
 from oslo_serialization import jsonutils
@@ -25,6 +26,7 @@ from nova.objects import base as base_obj
 from nova.objects import fields
 from nova.pci import stats
 from nova import test
+from nova.tests.unit import fake_pci_device_pools as fake_pci
 from nova.tests import uuidsentinel as uuids
 from nova.virt import hardware as hw
 
@@ -1781,6 +1783,33 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
                                                         pci_requests=pci_reqs,
                                                         pci_stats=pci_stats)
             self.assertIsNone(fitted_instance1)
+
+    def test_get_fitting_pci_avoided(self):
+
+        def _create_pci_stats(node):
+            test_dict = copy.copy(fake_pci.fake_pool_dict)
+            test_dict['numa_node'] = node
+            return stats.PciDeviceStats(
+                [objects.PciDevicePool.from_dict(test_dict)])
+
+        # the PCI device is found on host cell 1
+        pci_stats = _create_pci_stats(1)
+
+        # ...threfore an instance without a PCI device should get host cell 2
+        instance_topology = hw.numa_fit_instance_to_host(
+                self.host, self.instance1, pci_stats=pci_stats)
+        self.assertIsInstance(instance_topology, objects.InstanceNUMATopology)
+        # TODO(sfinucan): We should be comparing this against the HOST cell
+        self.assertEqual(2, instance_topology.cells[0].id)
+
+        # the PCI device is now found on host cell 2
+        pci_stats = _create_pci_stats(2)
+
+        # ...threfore an instance without a PCI device should get host cell 1
+        instance_topology = hw.numa_fit_instance_to_host(
+                self.host, self.instance1, pci_stats=pci_stats)
+        self.assertIsInstance(instance_topology, objects.InstanceNUMATopology)
+        self.assertEqual(1, instance_topology.cells[0].id)
 
 
 class NumberOfSerialPortsTest(test.NoDBTestCase):
