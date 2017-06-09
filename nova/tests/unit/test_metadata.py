@@ -1602,11 +1602,13 @@ class MetadataPasswordTestCase(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           password.handle_password, request, self.mdinst)
 
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
     @mock.patch('nova.objects.Instance.get_by_uuid')
-    def _try_set_password(self, get_by_uuid, val=b'bar'):
+    def _try_set_password(self, get_by_uuid, get_mapping, val=b'bar'):
         request = webob.Request.blank('')
         request.method = 'POST'
         request.body = val
+        get_mapping.return_value = objects.InstanceMapping(cell_mapping=None)
         get_by_uuid.return_value = self.instance
 
         with mock.patch.object(self.instance, 'save') as save:
@@ -1614,6 +1616,7 @@ class MetadataPasswordTestCase(test.TestCase):
             save.assert_called_once_with()
 
         self.assertIn('password_0', self.instance.system_metadata)
+        get_mapping.assert_called_once_with(mock.ANY, self.instance.uuid)
 
     def test_set_password(self):
         self.mdinst.password = ''
