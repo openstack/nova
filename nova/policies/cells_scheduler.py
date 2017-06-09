@@ -13,29 +13,27 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.policies import base
+from oslo_policy import policy
 
 
 POLICY_ROOT = 'cells_scheduler_filter:%s'
 
 
 cells_scheduler_policies = [
-    base.create_rule_default(
+    policy.RuleDefault(
         POLICY_ROOT % 'DifferentCellFilter',
         'is_admin:True',
         """Different cell filter to route a build away from a particular cell
 
 This policy is read by nova-scheduler process.
-""",
-        []),
-    base.create_rule_default(
+"""),
+    policy.RuleDefault(
         POLICY_ROOT % 'TargetCellFilter',
         'is_admin:True',
         """Target cell filter to route a build to a particular cell
 
 This policy is read by nova-scheduler process.
-""",
-        [])
+""")
 ]
 
 

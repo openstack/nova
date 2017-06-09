@@ -25,7 +25,6 @@ import requests_mock
 import nova.conf
 from nova import context
 from nova import exception
-from nova.policies import base
 from nova import policy
 from nova import test
 from nova.tests.unit import fake_policy
@@ -234,63 +233,6 @@ class AdminRolePolicyTestCase(test.NoDBTestCase):
         for action in self.actions:
             self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
                           self.context, action, self.target)
-
-
-class PolicyDocsTestCase(test.NoDBTestCase):
-
-    def test_create_rule_default(self):
-        rule_default = base.create_rule_default(
-            "name", "check_str", "description goes in here",
-            [{'method': 'GET', 'path': '/test_url'},
-             {'method': 'POST', 'path': '/test_url'}])
-
-        expected = """description goes in here
-
-GET /test_url
-POST /test_url
-
-"""
-        self.assertEqual(expected, rule_default.description)
-        self.assertEqual("name", rule_default.name)
-        self.assertEqual("check_str", rule_default.check_str)
-
-    def test_create_rule_default_improper_formatting(self):
-        """Ensure we correctly handle various formatting misdemeanours."""
-        rule_default = base.create_rule_default(
-            "name",
-            "check_str",
-            """Joe's special policy.
-
-This is Joe's special policy. Joe writes
-really, really long sentences that should really be wrapped better than \
-they are.
-Unfortunately we can't expect him
-to just do
-things
-right, so we must fix the problem ourselves.
-
-Oh, Joe. You so silly.
-
-""",
-            [{'method': 'GET', 'path': '/test_url'},
-             {'method': 'POST', 'path': '/test_url'}])
-
-        expected = """Joe's special policy.
-
-This is Joe's special policy. Joe writes really, really long sentences \
-that should really be wrapped better than they are. Unfortunately we \
-can't expect him to just do things right, so we must fix the problem \
-ourselves.
-
-Oh, Joe. You so silly.
-
-GET /test_url
-POST /test_url
-
-"""
-        self.assertEqual(expected, rule_default.description)
-        self.assertEqual("name", rule_default.name)
-        self.assertEqual("check_str", rule_default.check_str)
 
 
 class RealRolePolicyTestCase(test.NoDBTestCase):
