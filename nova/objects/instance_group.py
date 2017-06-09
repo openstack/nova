@@ -279,6 +279,18 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         return _instance_group_members_add_by_uuid(context, group_uuid,
                                                    members)
 
+    @staticmethod
+    @db_api.api_context_manager.writer
+    def _remove_members_in_db(context, group_id, instance_uuids):
+        # There is no public method provided for removing members because the
+        # user-facing API doesn't allow removal of instance group members. We
+        # need to be able to remove members to address quota races.
+        context.session.query(api_models.InstanceGroupMember).\
+            filter_by(group_id=group_id).\
+            filter(api_models.InstanceGroupMember.instance_uuid.
+                   in_(set(instance_uuids))).\
+            delete(synchronize_session=False)
+
     def obj_load_attr(self, attrname):
         # NOTE(sbauza): Only hosts could be lazy-loaded right now
         if attrname != 'hosts':
