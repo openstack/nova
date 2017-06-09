@@ -3673,12 +3673,18 @@ networks:
     a network, specify the UUID of the network in the ``uuid`` attribute in a ``networks``
     object.  To provision the server instance with a NIC for an already existing port,
     specify the port-id in the ``port`` attribute in a ``networks`` object.
-
-    In microversion 2.32, the ``tag`` is an optional string attribute that
-    can be used to assign a tag to a virtual network interface. This tag is
-    then exposed to the guest in the metadata API and the config drive and is
-    associated to hardware metadata for that network interface, such as bus
-    (ex: PCI), bus address (ex: 0000:00:02.0), and MAC address.
+    
+    If multiple networks are defined, the order in which they appear in the
+    guest operating system will not necessarily reflect the order in which they
+    are given in the server boot request. Guests should therefore not depend
+    on device order to deduce any information about their network devices.
+    Instead, device role tags should be used: introduced in 2.32, broken in
+    2.37, and re-introduced and fixed in 2.42, the ``tag`` is an optional,
+    string attribute that can be used to assign a tag to a virtual network
+    interface. This tag is then exposed to the guest in the metadata API and
+    the config drive and is associated to hardware metadata for that network
+    interface, such as bus (ex: PCI), bus address (ex: 0000:00:02.0), and MAC
+    address.
 
     A bug has caused the ``tag`` attribute to no longer be accepted starting
     with version 2.37. Therefore, network interfaces could only be tagged in
