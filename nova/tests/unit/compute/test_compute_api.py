@@ -25,6 +25,7 @@ from oslo_serialization import jsonutils
 from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
+import six
 
 from nova.compute import api as compute_api
 from nova.compute import cells_api as compute_cells_api
@@ -4934,13 +4935,17 @@ class _ComputeAPIUnitTestMixIn(object):
 
     @mock.patch('nova.objects.CellMappingList.get_all')
     @mock.patch('nova.objects.InstanceList.get_by_filters')
-    def test_get_all_instances_honors_cache(self, mock_get_inst,
+    @mock.patch('nova.compute.api.LOG.warning')
+    def test_get_all_instances_honors_cache(self, mock_warning, mock_get_inst,
                                             mock_get_cm):
         mock_get_cm.return_value = [
             objects.CellMapping(name='foo',
                                 uuid=objects.CellMapping.CELL0_UUID)]
-
         self.compute_api._get_instances_by_filters_all_cells(self.context, {})
+        # There should be a warning because we only have one cell
+        self.assertEqual(1, mock_warning.call_count)
+        self.assertIn('At least two cells are expected but only one was found',
+                      six.text_type(mock_warning.call_args_list[0][0]))
         self.compute_api._get_instances_by_filters_all_cells(self.context, {})
 
         # We should only call this once to prime the cache

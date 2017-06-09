@@ -2660,6 +2660,18 @@ class API(base.Base):
     def _get_instances_by_filters_all_cells(self, context, *args, **kwargs):
         """This is just a wrapper that iterates (non-zero) cells."""
         load_cells()
+        if len(CELLS) == 1:
+            # We always expect at least two cells; one for cell0 and one for at
+            # least a single main cell. If there is only one cell it indicates
+            # that nova-api was started before all of the cells were mapped and
+            # we should provide a warning to the operator.
+            LOG.warning('At least two cells are expected but only one '
+                        'was found (%s). cell0 and the initial main cell '
+                        'should be created before starting nova-api since '
+                        'the cells are cached in each worker. When you '
+                        'create more cells, you will need to restart the '
+                        'nova-api service to reset the cache.',
+                        CELLS[0].identity)
 
         limit = kwargs.pop('limit', None)
 
