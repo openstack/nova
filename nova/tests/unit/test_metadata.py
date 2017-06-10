@@ -1635,6 +1635,20 @@ class MetadataPasswordTestCase(test.TestCase):
         result = password.handle_password(request, self.mdinst)
         self.assertEqual(result, 'foo')
 
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid',
+                       return_value=objects.InstanceMapping(cell_mapping=None))
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_set_password_instance_not_found(self, get_by_uuid, get_mapping):
+        """Tests that a 400 is returned if the instance can not be found."""
+        get_by_uuid.side_effect = exception.InstanceNotFound(
+            instance_id=self.instance.uuid)
+        request = webob.Request.blank('')
+        request.method = 'POST'
+        request.val = b'foo'
+        request.content_length = len(request.body)
+        self.assertRaises(webob.exc.HTTPBadRequest, password.handle_password,
+                          request, self.mdinst)
+
     def test_bad_method(self):
         request = webob.Request.blank('')
         request.method = 'PUT'
