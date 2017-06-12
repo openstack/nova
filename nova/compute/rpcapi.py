@@ -22,7 +22,7 @@ from oslo_serialization import jsonutils
 import nova.conf
 from nova import context
 from nova import exception
-from nova.i18n import _, _LI, _LE
+from nova.i18n import _
 from nova import objects
 from nova.objects import base as objects_base
 from nova.objects import migrate_data as migrate_data_obj
@@ -370,20 +370,20 @@ class ComputeAPI(object):
         try:
             version_cap = history[service_version]['compute_rpc']
         except IndexError:
-            LOG.error(_LE('Failed to extract compute RPC version from '
-                          'service history because I am too '
-                          'old (minimum version is now %(version)i)'),
+            LOG.error('Failed to extract compute RPC version from '
+                      'service history because I am too '
+                      'old (minimum version is now %(version)i)',
                       {'version': service_version})
             raise exception.ServiceTooOld(thisver=service_obj.SERVICE_VERSION,
                                           minver=service_version)
         except KeyError:
-            LOG.error(_LE('Failed to extract compute RPC version from '
-                          'service history for version %(version)i'),
+            LOG.error('Failed to extract compute RPC version from '
+                      'service history for version %(version)i',
                       {'version': service_version})
             return target.version
         LAST_VERSION = version_cap
-        LOG.info(_LI('Automatically selected compute RPC version %(rpc)s '
-                     'from minimum service version %(service)i'),
+        LOG.info('Automatically selected compute RPC version %(rpc)s '
+                 'from minimum service version %(service)i',
                  {'rpc': version_cap,
                   'service': service_version})
         return version_cap

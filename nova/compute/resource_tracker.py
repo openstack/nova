@@ -31,7 +31,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
 from nova import exception
-from nova.i18n import _, _LI, _LW
+from nova.i18n import _
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import fields
@@ -179,13 +179,13 @@ class ResourceTracker(object):
 
         # sanity checks:
         if instance.host:
-            LOG.warning(_LW("Host field should not be set on the instance "
-                            "until resources have been claimed."),
+            LOG.warning("Host field should not be set on the instance "
+                        "until resources have been claimed.",
                         instance=instance)
 
         if instance.node:
-            LOG.warning(_LW("Node field should not be set on the instance "
-                            "until resources have been claimed."),
+            LOG.warning("Node field should not be set on the instance "
+                        "until resources have been claimed.",
                         instance=instance)
 
         # get the overhead required to build this instance:
@@ -528,8 +528,8 @@ class ResourceTracker(object):
         self._copy_resources(cn, resources)
         self.compute_nodes[nodename] = cn
         cn.create()
-        LOG.info(_LI('Compute_service record created for '
-                     '%(host)s:%(node)s'),
+        LOG.info('Compute_service record created for '
+                 '%(host)s:%(node)s',
                  {'host': self.host, 'node': nodename})
 
         self._setup_pci_tracker(context, cn, resources)
@@ -575,8 +575,8 @@ class ResourceTracker(object):
                 LOG.debug("The compute driver doesn't support host "
                           "metrics for  %(mon)s", {'mon': monitor})
             except Exception as exc:
-                LOG.warning(_LW("Cannot get the metrics from %(mon)s; "
-                                "error: %(exc)s"),
+                LOG.warning("Cannot get the metrics from %(mon)s; "
+                            "error: %(exc)s",
                             {'mon': monitor, 'exc': exc})
         # TODO(jaypipes): Remove this when compute_node.metrics doesn't need
         # to be populated as a JSONified string.
@@ -706,7 +706,7 @@ class ResourceTracker(object):
             return objects.ComputeNode.get_by_host_and_nodename(
                 context, self.host, nodename)
         except exception.NotFound:
-            LOG.warning(_LW("No compute node record for %(host)s:%(node)s"),
+            LOG.warning("No compute node record for %(host)s:%(node)s",
                         {'host': self.host, 'node': nodename})
 
     def _report_hypervisor_resource_view(self, resources):
@@ -766,15 +766,15 @@ class ResourceTracker(object):
             ucpu = 0
         pci_stats = (list(cn.pci_device_pools) if
             cn.pci_device_pools else [])
-        LOG.info(_LI("Final resource view: "
-                     "name=%(node)s "
-                     "phys_ram=%(phys_ram)sMB "
-                     "used_ram=%(used_ram)sMB "
-                     "phys_disk=%(phys_disk)sGB "
-                     "used_disk=%(used_disk)sGB "
-                     "total_vcpus=%(total_vcpus)s "
-                     "used_vcpus=%(used_vcpus)s "
-                     "pci_stats=%(pci_stats)s"),
+        LOG.info("Final resource view: "
+                 "name=%(node)s "
+                 "phys_ram=%(phys_ram)sMB "
+                 "used_ram=%(used_ram)sMB "
+                 "phys_disk=%(phys_disk)sGB "
+                 "used_disk=%(used_disk)sGB "
+                 "total_vcpus=%(total_vcpus)s "
+                 "used_vcpus=%(used_vcpus)s "
+                 "pci_stats=%(pci_stats)s",
                  {'node': nodename,
                   'phys_ram': cn.memory_mb,
                   'used_ram': cn.memory_mb_used,
@@ -863,7 +863,7 @@ class ResourceTracker(object):
             return
 
         uuid = migration.instance_uuid
-        LOG.info(_LI("Updating from migration %s"), uuid)
+        LOG.info("Updating from migration %s", uuid)
 
         incoming = (migration.dest_compute == self.host and
                     migration.dest_node == nodename)
@@ -954,7 +954,7 @@ class ResourceTracker(object):
 
             # skip migration if instance isn't in a resize state:
             if not _instance_in_resize_state(instances[uuid]):
-                LOG.warning(_LW("Instance not resizing, skipping migration."),
+                LOG.warning("Instance not resizing, skipping migration.",
                             instance_uuid=uuid)
                 continue
 
@@ -976,8 +976,8 @@ class ResourceTracker(object):
                 self._update_usage_from_migration(context, instance, migration,
                                                   nodename)
             except exception.FlavorNotFound:
-                LOG.warning(_LW("Flavor could not be found, skipping "
-                                "migration."), instance_uuid=instance.uuid)
+                LOG.warning("Flavor could not be found, skipping migration.",
+                            instance_uuid=instance.uuid)
                 continue
 
     def _update_usage_from_instance(self, context, instance, nodename,
@@ -1096,8 +1096,8 @@ class ResourceTracker(object):
         for orphan in orphans:
             memory_mb = orphan['memory_mb']
 
-            LOG.warning(_LW("Detected running orphan instance: %(uuid)s "
-                            "(consuming %(memory_mb)s MB memory)"),
+            LOG.warning("Detected running orphan instance: %(uuid)s "
+                        "(consuming %(memory_mb)s MB memory)",
                         {'uuid': orphan['uuid'], 'memory_mb': memory_mb})
 
             # just record memory usage for the orphan

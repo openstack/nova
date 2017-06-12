@@ -25,7 +25,6 @@ from nova.cmd import common as cmd_common
 from nova.conductor import rpcapi as conductor_rpcapi
 import nova.conf
 from nova import config
-from nova.i18n import _LE, _LW
 from nova import objects
 from nova.objects import base as objects_base
 from nova import service
@@ -41,8 +40,8 @@ def main():
     logging.setup(CONF, "nova")
 
     if not CONF.cells.enable:
-        LOG.error(_LE('Nova network is deprecated and not supported '
-                      'except as required for CellsV1 deployments.'))
+        LOG.error('Nova network is deprecated and not supported '
+                  'except as required for CellsV1 deployments.')
         return 1
 
     utils.monkey_patch()
@@ -53,8 +52,8 @@ def main():
     cmd_common.block_db_access('nova-network')
     objects_base.NovaObject.indirection_api = conductor_rpcapi.ConductorAPI()
 
-    LOG.warning(_LW('Nova network is deprecated and will be removed '
-                    'in the future'))
+    LOG.warning('Nova network is deprecated and will be removed '
+                'in the future')
     server = service.Service.create(binary='nova-network',
                                     topic=CONF.network_topic,
                                     manager=CONF.network_manager)

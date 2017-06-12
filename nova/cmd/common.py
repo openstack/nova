@@ -28,7 +28,7 @@ import six
 import nova.conf
 import nova.db.api
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _
 from nova import utils
 
 CONF = nova.conf.CONF
@@ -44,8 +44,8 @@ def block_db_access(service_name):
 
         def __call__(self, *args, **kwargs):
             stacktrace = "".join(traceback.format_stack())
-            LOG.error(_LE('No db access allowed in %(service_name)s: '
-                          '%(stacktrace)s'),
+            LOG.error('No db access allowed in %(service_name)s: '
+                      '%(stacktrace)s',
                       dict(service_name=service_name, stacktrace=stacktrace))
             raise exception.DBNotAllowed(service_name)
 

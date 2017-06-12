@@ -28,7 +28,6 @@ from oslo_reports import guru_meditation_report as gmr
 import nova.conf
 from nova import config
 from nova import exception
-from nova.i18n import _LE, _LW
 from nova import objects
 from nova import service
 from nova import utils
@@ -59,13 +58,12 @@ def main():
             launcher.launch_service(server, workers=server.workers or 1)
             started += 1
         except exception.PasteAppNotFound as ex:
-            log.warning(
-                _LW("%s. ``enabled_apis`` includes bad values. "
-                    "Fix to remove this warning."), ex)
+            log.warning("%s. ``enabled_apis`` includes bad values. "
+                        "Fix to remove this warning.", ex)
 
     if started == 0:
-        log.error(_LE('No APIs were started. '
-                      'Check the enabled_apis config option.'))
+        log.error('No APIs were started. '
+                  'Check the enabled_apis config option.')
         sys.exit(1)
 
     launcher.wait()

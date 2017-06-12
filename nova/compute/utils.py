@@ -30,7 +30,6 @@ from nova.compute import power_state
 from nova.compute import task_states
 import nova.conf
 from nova import exception
-from nova.i18n import _LW
 from nova.network import model as network_model
 from nova import notifications
 from nova.notifications.objects import aggregate as aggregate_notification
@@ -241,8 +240,8 @@ def get_value_from_system_metadata(instance, key, type, default):
     try:
         return type(value)
     except ValueError:
-        LOG.warning(_LW("Metadata value %(value)s for %(key)s is not of "
-                        "type %(type)s. Using default value %(default)s."),
+        LOG.warning("Metadata value %(value)s for %(key)s is not of "
+                    "type %(type)s. Using default value %(default)s.",
                     {'value': value, 'key': key, 'type': type,
                      'default': default}, instance=instance)
         return default
@@ -482,8 +481,8 @@ def notify_about_host_update(context, event_suffix, host_payload):
     """
     host_identifier = host_payload.get('host_name')
     if not host_identifier:
-        LOG.warning(_LW("No host name specified for the notification of "
-                        "HostAPI.%s and it will be ignored"), event_suffix)
+        LOG.warning("No host name specified for the notification of "
+                    "HostAPI.%s and it will be ignored", event_suffix)
         return
 
     notifier = rpc.get_notifier(service='api', host=host_identifier)

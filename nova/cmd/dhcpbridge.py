@@ -33,7 +33,6 @@ from nova.conductor import rpcapi as conductor_rpcapi
 import nova.conf
 from nova import config
 from nova import context
-from nova.i18n import _LE
 from nova.network import rpcapi as network_rpcapi
 from nova import objects
 from nova.objects import base as objects_base
@@ -130,7 +129,7 @@ def main():
         try:
             network_id = int(os.environ.get('NETWORK_ID'))
         except TypeError:
-            LOG.error(_LE("Environment variable 'NETWORK_ID' must be set."))
+            LOG.error("Environment variable 'NETWORK_ID' must be set.")
             return 1
 
         print(init_leases(network_id))

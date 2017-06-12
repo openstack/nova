@@ -21,7 +21,6 @@ from oslo_log import log as logging
 from stevedore import enabled
 
 import nova.conf
-from nova.i18n import _LW
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
@@ -59,9 +58,9 @@ class MonitorHandler(object):
         namespace_parts = ept_parts[0].split('.')
         namespace = '.'.join(namespace_parts[0:-1])
         if self.type_monitor_loaded[namespace] is not False:
-            LOG.warning(_LW("Excluding %(namespace)s monitor "
-                            "%(monitor_name)s. Already loaded "
-                            "%(loaded_monitor)s."),
+            LOG.warning("Excluding %(namespace)s monitor "
+                        "%(monitor_name)s. Already loaded "
+                        "%(loaded_monitor)s.",
                         {'namespace': namespace,
                          'monitor_name': ext.name,
                          'loaded_monitor': self.type_monitor_loaded[namespace]
@@ -85,8 +84,8 @@ class MonitorHandler(object):
         if namespace + '.' + ext.name in cfg_monitors:
             self.type_monitor_loaded[namespace] = ext.name
             return True
-        LOG.warning(_LW("Excluding %(namespace)s monitor %(monitor_name)s. "
-                        "Not in the list of enabled monitors "
-                        "(CONF.compute_monitors)."),
+        LOG.warning("Excluding %(namespace)s monitor %(monitor_name)s. "
+                    "Not in the list of enabled monitors "
+                    "(CONF.compute_monitors).",
                     {'namespace': namespace, 'monitor_name': ext.name})
         return False

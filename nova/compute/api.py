@@ -58,9 +58,6 @@ from nova import exception
 from nova import exception_wrapper
 from nova import hooks
 from nova.i18n import _
-from nova.i18n import _LE
-from nova.i18n import _LI
-from nova.i18n import _LW
 from nova import image
 from nova import keymgr
 from nova import network
@@ -240,7 +237,7 @@ def load_cells():
                        cells=','.join([c.identity for c in CELLS])))
 
     if not CELLS:
-        LOG.error(_LE('No cells are configured, unable to continue'))
+        LOG.error('No cells are configured, unable to continue')
 
 
 @profiler.trace_cls("compute_api")
@@ -621,8 +618,8 @@ class API(base.Base):
             new_name = (CONF.multi_instance_display_name_template %
                         params)
         except (KeyError, TypeError):
-            LOG.exception(_LE('Failed to set instance name using '
-                              'multi_instance_display_name_template.'))
+            LOG.exception('Failed to set instance name using '
+                          'multi_instance_display_name_template.')
             new_name = display_name
         return new_name
 
@@ -1211,10 +1208,10 @@ class API(base.Base):
         if max_net_count < min_count:
             raise exception.PortLimitExceeded()
         elif max_net_count < max_count:
-            LOG.info(_LI("max count reduced from %(max_count)d to "
-                         "%(max_net_count)d due to network port quota"),
-                        {'max_count': max_count,
-                         'max_net_count': max_net_count})
+            LOG.info("max count reduced from %(max_count)d to "
+                     "%(max_net_count)d due to network port quota",
+                     {'max_count': max_count,
+                      'max_net_count': max_net_count})
             max_count = max_net_count
 
         block_device_mapping = self._check_and_transform_bdm(context,
@@ -1835,8 +1832,7 @@ class API(base.Base):
 
     def _delete(self, context, instance, delete_type, cb, **instance_attrs):
         if instance.disable_terminate:
-            LOG.info(_LI('instance termination disabled'),
-                     instance=instance)
+            LOG.info('instance termination disabled', instance=instance)
             return
 
         cell = None
@@ -1920,19 +1916,19 @@ class API(base.Base):
         if instance.vm_state in (vm_states.SHELVED,
                                  vm_states.SHELVED_OFFLOADED):
             snapshot_id = instance.system_metadata.get('shelved_image_id')
-            LOG.info(_LI("Working on deleting snapshot %s "
-                         "from shelved instance..."),
+            LOG.info("Working on deleting snapshot %s "
+                     "from shelved instance...",
                      snapshot_id, instance=instance)
             try:
                 self.image_api.delete(context, snapshot_id)
             except (exception.ImageNotFound,
                     exception.ImageNotAuthorized) as exc:
-                LOG.warning(_LW("Failed to delete snapshot "
-                                "from shelved instance (%s)."),
+                LOG.warning("Failed to delete snapshot "
+                            "from shelved instance (%s).",
                             exc.format_message(), instance=instance)
             except Exception:
-                LOG.exception(_LE("Something wrong happened when trying to "
-                                  "delete snapshot from shelved instance."),
+                LOG.exception("Something wrong happened when trying to "
+                              "delete snapshot from shelved instance.",
                               instance=instance)
 
         original_task_state = instance.task_state
@@ -1979,10 +1975,10 @@ class API(base.Base):
                             "%s.end" % delete_type,
                             system_metadata=instance.system_metadata)
                     quotas.commit()
-                    LOG.info(_LI('Instance deleted and does not have host '
-                                 'field, its vm_state is %(state)s.'),
-                                 {'state': instance.vm_state},
-                                 instance=instance)
+                    LOG.info('Instance deleted and does not have host '
+                             'field, its vm_state is %(state)s.',
+                             {'state': instance.vm_state},
+                              instance=instance)
                     return
                 except exception.ObjectActionError:
                     instance.refresh()
@@ -2000,8 +1996,8 @@ class API(base.Base):
                 if not is_local_delete:
                     if original_task_state in (task_states.DELETING,
                                                   task_states.SOFT_DELETING):
-                        LOG.info(_LI('Instance is already in deleting state, '
-                                     'ignoring this request'),
+                        LOG.info('Instance is already in deleting state, '
+                                 'ignoring this request',
                                  instance=instance)
                         quotas.rollback()
                         return
@@ -2060,8 +2056,8 @@ class API(base.Base):
             try:
                 migration = objects.Migration.get_by_instance_and_status(
                         context.elevated(), instance.uuid, status)
-                LOG.info(_LI('Found an unconfirmed migration during delete, '
-                             'id: %(id)s, status: %(status)s'),
+                LOG.info('Found an unconfirmed migration during delete, '
+                         'id: %(id)s, status: %(status)s',
                          {'id': migration.id,
                           'status': migration.status},
                          instance=instance)
@@ -2070,7 +2066,7 @@ class API(base.Base):
                 pass
 
         if not migration:
-            LOG.info(_LI('Instance may have been confirmed during delete'),
+            LOG.info('Instance may have been confirmed during delete',
                      instance=instance)
             return
 
@@ -2087,8 +2083,8 @@ class API(base.Base):
         try:
             deltas = compute_utils.downsize_quota_delta(context, instance)
         except KeyError:
-            LOG.info(_LI('Migration %s may have been confirmed during '
-                         'delete'), migration.id, instance=instance)
+            LOG.info('Migration %s may have been confirmed during delete',
+                     migration.id, instance=instance)
             return
         quotas = compute_utils.reserve_quota_delta(context, deltas, instance)
 
@@ -2194,18 +2190,18 @@ class API(base.Base):
                     if bdm.delete_on_termination:
                         self.volume_api.delete(context, bdm.volume_id)
                 except Exception as exc:
-                    err_str = _LW("Ignoring volume cleanup failure due to %s")
-                    LOG.warning(err_str, exc, instance=instance)
+                    LOG.warning("Ignoring volume cleanup failure due to %s",
+                                exc, instance=instance)
             bdm.destroy()
 
     def _local_delete(self, context, instance, bdms, delete_type, cb):
         if instance.vm_state == vm_states.SHELVED_OFFLOADED:
-            LOG.info(_LI("instance is in SHELVED_OFFLOADED state, cleanup"
-                         " the instance's info from database."),
+            LOG.info("instance is in SHELVED_OFFLOADED state, cleanup"
+                     " the instance's info from database.",
                      instance=instance)
         else:
-            LOG.warning(_LW("instance's host %s is down, deleting from "
-                            "database"), instance.host, instance=instance)
+            LOG.warning("instance's host %s is down, deleting from "
+                        "database", instance.host, instance=instance)
         compute_utils.notify_about_instance_usage(
             self.notifier, context, instance, "%s.start" % delete_type)
 
@@ -2822,8 +2818,8 @@ class API(base.Base):
         props_copy = dict(extra_properties, backup_type=backup_type)
 
         if compute_utils.is_volume_backed_instance(context, instance):
-            LOG.info(_LI("It's not supported to backup volume backed "
-                         "instance."), instance=instance)
+            LOG.info("It's not supported to backup volume backed "
+                     "instance.", instance=instance)
             raise exception.InvalidRequest(
                 _('Backup is not supported for volume-backed instances.'))
         else:
@@ -2875,16 +2871,16 @@ class API(base.Base):
             try:
                 image_id = image_meta['id']
                 self.image_api.delete(context, image_id)
-                LOG.info(_LI('Image %s deleted because instance '
-                             'deleted before snapshot started.'),
+                LOG.info('Image %s deleted because instance '
+                         'deleted before snapshot started.',
                          image_id, instance=instance)
             except exception.ImageNotFound:
                 pass
             except Exception as exc:
-                msg = _LW("Error while trying to clean up image %(img_id)s: "
-                          "%(error_msg)s")
-                LOG.warning(msg, {"img_id": image_meta['id'],
-                                  "error_msg": six.text_type(exc)})
+                LOG.warning("Error while trying to clean up image %(img_id)s: "
+                            "%(error_msg)s",
+                            {"img_id": image_meta['id'],
+                             "error_msg": six.text_type(exc)})
             attr = 'task_state'
             state = task_states.DELETING
             if type(ex) == exception.InstanceNotFound:
@@ -2997,8 +2993,8 @@ class API(base.Base):
                         'image_os_require_quiesce')):
                     raise
                 else:
-                    LOG.info(_LI('Skipping quiescing instance: '
-                                 '%(reason)s.'), {'reason': err},
+                    LOG.info('Skipping quiescing instance: %(reason)s.',
+                             {'reason': err},
                              instance=instance)
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
@@ -3328,8 +3324,8 @@ class API(base.Base):
                 (overs, reqs, total_alloweds,
                  useds) = self._get_over_quota_detail(headroom, overs, quotas,
                                                       deltas)
-                LOG.warning(_LW("%(overs)s quota exceeded for %(pid)s,"
-                                " tried to resize instance."),
+                LOG.warning("%(overs)s quota exceeded for %(pid)s,"
+                            " tried to resize instance.",
                             {'overs': overs, 'pid': context.project_id})
                 raise exception.TooManyInstances(overs=overs,
                                                  req=reqs,
@@ -4114,8 +4110,8 @@ class API(base.Base):
         inst_host = instance.host
         service = objects.Service.get_by_compute_host(context, inst_host)
         if self.servicegroup_api.service_is_up(service):
-            LOG.error(_LE('Instance compute service state on %s '
-                          'expected to be down, but it was up.'), inst_host)
+            LOG.error('Instance compute service state on %s '
+                      'expected to be down, but it was up.', inst_host)
             raise exception.ComputeServiceInUse(host=inst_host)
 
         instance.task_state = task_states.REBUILDING
@@ -5032,7 +5028,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
             msg = _("Quota exceeded, too many security groups.")
             self.raise_over_quota(msg)
 
-        LOG.info(_LI("Create Security Group %s"), name)
+        LOG.info("Create Security Group %s", name)
 
         try:
             self.ensure_default(context)
@@ -5137,10 +5133,10 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
             quotas.reserve(project_id=quota_project,
                            user_id=quota_user, security_groups=-1)
         except Exception:
-            LOG.exception(_LE("Failed to update usages deallocating "
-                              "security group"))
+            LOG.exception("Failed to update usages deallocating "
+                          "security group")
 
-        LOG.info(_LI("Delete security group %s"), security_group['name'])
+        LOG.info("Delete security group %s", security_group['name'])
         self.db.security_group_destroy(context, security_group['id'])
 
         # Commit the reservations
@@ -5232,8 +5228,8 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
             msg = _("Quota exceeded, too many security group rules.")
             self.raise_over_quota(msg)
 
-        msg = _LI("Security group %(name)s added %(protocol)s ingress "
-                  "(%(from_port)s:%(to_port)s)")
+        msg = ("Security group %(name)s added %(protocol)s ingress "
+               "(%(from_port)s:%(to_port)s)")
         rules = []
         for v in vals:
             rule = self.db.security_group_rule_create(context, v)
@@ -5247,8 +5243,8 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         return rules
 
     def remove_rules(self, context, security_group, rule_ids):
-        msg = _LI("Security group %(name)s removed %(protocol)s ingress "
-                  "(%(from_port)s:%(to_port)s)")
+        msg = ("Security group %(name)s removed %(protocol)s ingress "
+               "(%(from_port)s:%(to_port)s)")
         for rule_id in rule_ids:
             rule = self.get_rule(context, rule_id)
             LOG.info(msg, {'name': security_group['name'],
