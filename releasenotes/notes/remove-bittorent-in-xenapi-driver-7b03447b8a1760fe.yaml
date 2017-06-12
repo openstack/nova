@@ -1,0 +1,5 @@
+---
+other:
+  - |
+    With XenAPI driver, we have deprecated bittorrent since '15.0.0', so we
+    decide to remove all bittorrent related files and unit tests.
