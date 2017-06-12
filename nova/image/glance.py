@@ -46,6 +46,7 @@ from nova.i18n import _LE, _LI, _LW
 import nova.image.download as image_xfers
 from nova import objects
 from nova.objects import fields
+from nova import service_auth
 
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
@@ -60,7 +61,7 @@ def _glanceclient_from_endpoint(context, endpoint, version):
         _SESSION = ks_loading.load_session_from_conf_options(
             CONF, nova.conf.glance.glance_group.name)
 
-    auth = context.get_auth_plugin()
+    auth = service_auth.get_auth_plugin(context)
 
     # TODO(johngarbutt) eventually we should default to getting the
     # endpoint URL from the service catalog.

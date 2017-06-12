@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    Added support for Keystone middleware feature for interaction of Nova with
+    the Glance API. With this support, if service token is sent along with the
+    user token, then the expiration of user token will be ignored. In order to
+    use this functionality a service user needs to be created first.
+    Add the service user configurations in ``nova.conf`` under ``service_user``
+    group and set ``send_service_user_token`` flag to ``True``.
+
+    .. note:: This feature is already implemented for Nova interaction with the
+      Cinder and Neutron APIs in Ocata.
