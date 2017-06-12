@@ -43,6 +43,12 @@ resources_query:
         resources=VCPU:4,DISK_GB:64,MEMORY_MB:2048
 
 # variables in body
+aggregates:
+  type: array
+  in: body
+  required: true
+  description: >
+    A list of aggregate uuids.
 allocation_ratio: &allocation_ratio
   type: float
   in: body
