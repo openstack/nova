@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from keystoneauth1 import loading as ks_loading
 from oslo_config import cfg
 
 glance_group = cfg.OptGroup(
@@ -34,14 +35,6 @@ Possible values:
 
 * A list of any fully qualified url of the form "scheme://hostname:port[/path]"
   (i.e. "http://10.0.1.0:9292" or "https://my.glance.server/image").
-"""),
-    cfg.BoolOpt('api_insecure',
-        default=False,
-        help="""
-Enable insecure SSL (https) requests to glance.
-
-This setting can be used to turn off verification of the glance server
-certificate against the certificate authorities.
 """),
     cfg.IntOpt('num_retries',
         default=0,
@@ -142,6 +135,23 @@ def register_opts(conf):
     conf.register_group(glance_group)
     conf.register_opts(glance_opts, group=glance_group)
 
+    deprecated = {
+        'insecure': [cfg.DeprecatedOpt('api_insecure',
+                        group=glance_group.name)],
+        'cafile': [cfg.DeprecatedOpt('ca_file',
+                        group="ssl")],
+        'certfile': [cfg.DeprecatedOpt('cert_file',
+                        group="ssl")],
+        'keyfile': [cfg.DeprecatedOpt('key_file',
+                        group="ssl")],
+    }
+    ks_loading.register_session_conf_options(conf, glance_group.name,
+                                             deprecated)
+
 
 def list_opts():
-    return {glance_group: glance_opts}
+    return {
+        glance_group: (
+            glance_opts +
+            ks_loading.get_session_conf_options())
+    }

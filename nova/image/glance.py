@@ -31,9 +31,9 @@ from cursive import signature_utils
 import glanceclient
 import glanceclient.exc
 from glanceclient.v2 import schemas
+from keystoneauth1 import loading as ks_loading
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
-from oslo_service import sslutils
 from oslo_utils import excutils
 from oslo_utils import timeutils
 import six
@@ -49,6 +49,24 @@ from nova.objects import fields
 
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
+
+_SESSION = None
+
+
+def _glanceclient_from_endpoint(context, endpoint, version):
+    global _SESSION
+
+    if not _SESSION:
+        _SESSION = ks_loading.load_session_from_conf_options(
+            CONF, nova.conf.glance.glance_group.name)
+
+    auth = context.get_auth_plugin()
+
+    # TODO(johngarbutt) eventually we should default to getting the
+    # endpoint URL from the service catalog.
+    return glanceclient.Client(version, session=_SESSION, auth=auth,
+                               endpoint_override=endpoint,
+                               global_request_id=context.global_id)
 
 
 def generate_glance_url():
@@ -83,27 +101,6 @@ def generate_identity_headers(context, status='Confirmed'):
         'X-Roles': ','.join(getattr(context, 'roles', [])),
         'X-Identity-Status': status,
     }
-
-
-def _glanceclient_from_endpoint(context, endpoint, version):
-    """Instantiate a new glanceclient.Client object."""
-    params = {}
-    # NOTE(sdague): even if we aren't using keystone, it doesn't
-    # hurt to send these headers.
-    params['identity_headers'] = generate_identity_headers(context)
-    params['global_request_id'] = context.global_id
-    if endpoint.startswith('https://'):
-        # https specific params
-        params['insecure'] = CONF.glance.api_insecure
-        params['ssl_compression'] = False
-        sslutils.is_enabled(CONF)
-        if CONF.ssl.cert_file:
-            params['cert_file'] = CONF.ssl.cert_file
-        if CONF.ssl.key_file:
-            params['key_file'] = CONF.ssl.key_file
-        if CONF.ssl.ca_file:
-            params['cacert'] = CONF.ssl.ca_file
-    return glanceclient.Client(str(version), endpoint, **params)
 
 
 def get_api_servers():

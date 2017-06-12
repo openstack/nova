@@ -60,7 +60,6 @@ from nova.conf import service
 from nova.conf import service_token
 from nova.conf import servicegroup
 from nova.conf import spice
-from nova.conf import ssl
 from nova.conf import upgrade_levels
 from nova.conf import vendordata
 from nova.conf import vmware
@@ -112,7 +111,6 @@ service.register_opts(CONF)
 service_token.register_opts(CONF)
 servicegroup.register_opts(CONF)
 spice.register_opts(CONF)
-ssl.register_opts(CONF)
 upgrade_levels.register_opts(CONF)
 vendordata.register_opts(CONF)
 vmware.register_opts(CONF)
