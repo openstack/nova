@@ -10884,6 +10884,21 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             fetch_func=mock.ANY, filename='swap_%i' % expected,
             size=expected * units.Mi, context=self.context, swap_mb=expected)
 
+    @mock.patch.object(nova.virt.libvirt.imagebackend.Image, 'cache')
+    def test_create_vz_container_with_swap(self, mock_cache):
+        self.flags(virt_type='parallels', group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        instance_ref = copy.deepcopy(self.test_instance)
+        instance_ref['vm_mode'] = fields.VMMode.EXE
+        instance_ref['flavor'].swap = 1024
+        instance = objects.Instance(**instance_ref)
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance, image_meta)
+        self.assertRaises(exception.Invalid,
+                          drvr._create_image,
+                          self.context, instance, disk_info['mapping'])
+
     @mock.patch.object(nova.virt.libvirt.imagebackend.Image, 'cache',
                        side_effect=exception.ImageNotFound(image_id='fake-id'))
     def test_create_image_not_exist_no_fallback(self, mock_cache):

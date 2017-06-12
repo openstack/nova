@@ -3118,6 +3118,39 @@ class LibvirtDriver(driver.ComputeDriver):
 
         LOG.info(_LI('Creating image'), instance=instance)
 
+        inst_type = instance.get_flavor()
+        swap_mb = 0
+        if 'disk.swap' in disk_mapping:
+            mapping = disk_mapping['disk.swap']
+
+            if ignore_bdi_for_swap:
+                # This is a workaround to support legacy swap resizing,
+                # which does not touch swap size specified in bdm,
+                # but works with flavor specified size only.
+                # In this case we follow the legacy logic and ignore block
+                # device info completely.
+                # NOTE(ft): This workaround must be removed when a correct
+                # implementation of resize operation changing sizes in bdms is
+                # developed. Also at that stage we probably may get rid of
+                # the direct usage of flavor swap size here,
+                # leaving the work with bdm only.
+                swap_mb = inst_type['swap']
+            else:
+                swap = driver.block_device_info_get_swap(block_device_info)
+                if driver.swap_is_usable(swap):
+                    swap_mb = swap['swap_size']
+                elif (inst_type['swap'] > 0 and
+                      not block_device.volume_in_mapping(
+                        mapping['dev'], block_device_info)):
+                    swap_mb = inst_type['swap']
+
+            if swap_mb > 0:
+                if (CONF.libvirt.virt_type == "parallels" and
+                        instance.vm_mode == fields.VMMode.EXE):
+                    msg = _("Swap disk is not supported "
+                            "for Virtuozzo container")
+                    raise exception.Invalid(msg)
+
         if not disk_images:
             disk_images = {'image_id': instance.image_ref,
                            'kernel_id': instance.kernel_id,
@@ -3136,7 +3169,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                      filename=fname,
                                      image_id=disk_images['ramdisk_id'])
 
-        inst_type = instance.get_flavor()
         if CONF.libvirt.virt_type == 'uml':
             libvirt_utils.chown(image('disk').path, 'root')
 
@@ -3193,38 +3225,13 @@ class LibvirtDriver(driver.ComputeDriver):
                              ephemeral_size=eph['size'],
                              specified_fs=specified_fs)
 
-        if 'disk.swap' in disk_mapping:
-            mapping = disk_mapping['disk.swap']
-            swap_mb = 0
-
-            if ignore_bdi_for_swap:
-                # This is a workaround to support legacy swap resizing,
-                # which does not touch swap size specified in bdm,
-                # but works with flavor specified size only.
-                # In this case we follow the legacy logic and ignore block
-                # device info completely.
-                # NOTE(ft): This workaround must be removed when a correct
-                # implementation of resize operation changing sizes in bdms is
-                # developed. Also at that stage we probably may get rid of
-                # the direct usage of flavor swap size here,
-                # leaving the work with bdm only.
-                swap_mb = inst_type['swap']
-            else:
-                swap = driver.block_device_info_get_swap(block_device_info)
-                if driver.swap_is_usable(swap):
-                    swap_mb = swap['swap_size']
-                elif (inst_type['swap'] > 0 and
-                      not block_device.volume_in_mapping(
-                        mapping['dev'], block_device_info)):
-                    swap_mb = inst_type['swap']
-
-            if swap_mb > 0:
-                size = swap_mb * units.Mi
-                image('disk.swap').cache(fetch_func=self._create_swap,
-                                         context=context,
-                                         filename="swap_%s" % swap_mb,
-                                         size=size,
-                                         swap_mb=swap_mb)
+        if swap_mb > 0:
+            size = swap_mb * units.Mi
+            image('disk.swap').cache(fetch_func=self._create_swap,
+                                     context=context,
+                                     filename="swap_%s" % swap_mb,
+                                     size=size,
+                                     swap_mb=swap_mb)
 
     def _create_and_inject_local_root(self, context, instance,
                                       booted_from_volume, suffix, disk_images,
