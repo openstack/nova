@@ -31,6 +31,7 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import fields
 from nova.objects import instance as obj_instance
+from nova.objects.resource_provider import ResourceClass
 from nova import rpc
 
 
@@ -83,6 +84,65 @@ def build_request_spec(ctxt, image, instances, instance_type=None):
     return jsonutils.to_primitive(request_spec)
 
 
+def _process_extra_specs(extra_specs, resources):
+    """Check the flavor's extra_specs for custom resource information.
+    These will be a dict that is generated from the flavor; and in the
+    flavor, the extra_specs entries will be in the format of either:
+
+        resources:$CUSTOM_RESOURCE_CLASS=$N
+    ...to add a custom resource class to the request, with a positive
+    integer amount of $N
+
+        resources:$STANDARD_RESOURCE_CLASS=0
+    ...to remove that resource class from the request.
+
+        resources:$STANDARD_RESOURCE_CLASS=$N
+    ...to override the flavor's value for that resource class with $N
+    """
+    resource_specs = {key.split("resources:", 1)[-1]: val
+            for key, val in extra_specs.items()
+            if key.startswith("resources:")}
+    resource_keys = set(resource_specs)
+    custom_keys = set([key for key in resource_keys
+            if key.startswith(ResourceClass.CUSTOM_NAMESPACE)])
+    std_keys = resource_keys - custom_keys
+
+    def validate_int(key):
+        val = resource_specs.get(key)
+        try:
+            # Amounts must be integers
+            return int(val)
+        except ValueError:
+            # Not a valid integer
+            LOG.warning("Resource amounts must be integers. Received "
+                    "'%(val)s' for key %(key)s.", {"key": key, "val": val})
+            return None
+
+    for custom_key in custom_keys:
+        custom_val = validate_int(custom_key)
+        if custom_val is not None:
+            if custom_val == 0:
+                # Custom resource values must be positive integers
+                LOG.warning("Resource amounts must be positive integers. "
+                        "Received '%(val)s' for key %(key)s.",
+                        {"key": custom_key, "val": custom_val})
+                continue
+            resources[custom_key] = custom_val
+    for std_key in std_keys:
+        if std_key not in resources:
+            LOG.warning("Received an invalid ResourceClass '%(key)s' in "
+                    "extra_specs.", {"key": std_key})
+            continue
+        val = validate_int(std_key)
+        if val is None:
+            # Received an invalid amount. It's already logged, so move on.
+            continue
+        elif val == 0:
+            resources.pop(std_key, None)
+        else:
+            resources[std_key] = val
+
+
 def resources_from_request_spec(spec_obj):
     """Given a RequestSpec object, returns a dict, keyed by resource class
     name, of requested amounts of those resources.
@@ -111,6 +171,8 @@ def resources_from_request_spec(spec_obj):
     # to avoid asking for disk usage.
     if requested_disk_gb != 0:
         resources[fields.ResourceClass.DISK_GB] = requested_disk_gb
+    if "extra_specs" in spec_obj.flavor:
+        _process_extra_specs(spec_obj.flavor.extra_specs, resources)
 
     return resources
 
