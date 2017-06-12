@@ -117,6 +117,9 @@ class FakeRequest(object):
         super(FakeRequest, self).__init__()
         self.api_version_request = api_version.APIVersionRequest(version)
 
+    def is_legacy_v2(self):
+        return False
+
 
 class FakeRequestWithService(FakeRequest):
     GET = {"binary": "nova-compute"}
@@ -885,6 +888,43 @@ class ServicesTestV211(ServicesTestV21):
              'updated_at': datetime.datetime(2012, 9, 18, 8, 3, 38)}]}
         self._process_output(response, has_id=True)
         self.assertEqual(res_dict, response)
+
+    def test_force_down_service(self):
+        req = FakeRequest(self.wsgi_api_version)
+        req_body = {"forced_down": True,
+                    "host": "host1", "binary": "nova-compute"}
+        res_dict = self.controller.update(req, 'force-down', body=req_body)
+
+        response = {
+            "service": {
+                "forced_down": True,
+                "host": "host1",
+                "binary": "nova-compute"
+            }
+        }
+        self.assertEqual(response, res_dict)
+
+    def test_force_down_service_with_string_forced_down(self):
+        req = FakeRequest(self.wsgi_api_version)
+        req_body = {"forced_down": "True",
+                    "host": "host1", "binary": "nova-compute"}
+        res_dict = self.controller.update(req, 'force-down', body=req_body)
+
+        response = {
+            "service": {
+                "forced_down": True,
+                "host": "host1",
+                "binary": "nova-compute"
+            }
+        }
+        self.assertEqual(response, res_dict)
+
+    def test_force_down_service_with_invalid_parameter(self):
+        req = FakeRequest(self.wsgi_api_version)
+        req_body = {"forced_down": "Invalid",
+                    "host": "host1", "binary": "nova-compute"}
+        self.assertRaises(exception.ValidationError,
+            self.controller.update, req, 'force-down', body=req_body)
 
 
 class ServicesCellsTestV21(test.TestCase):
