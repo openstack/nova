@@ -3516,6 +3516,26 @@ class TestNeutronv2WithMock(test.TestCase):
                               api.allocate_floating_ip, self.context,
                               'ext_net')
 
+    @mock.patch('nova.network.neutronv2.api.get_client')
+    @mock.patch('nova.network.neutronv2.api.API._get_floating_ip_by_address',
+                return_value={'port_id': None, 'id': 'abc'})
+    def test_release_floating_ip_not_found(self, mock_get_ip, mock_ntrn):
+        """Ensure neutron's NotFound exception is correctly handled.
+
+        Sometimes, trying to delete a floating IP multiple times in a short
+        delay can trigger an exception because the operation is not atomic. If
+        neutronclient's call to delete fails with a NotFound error, then we
+        should correctly handle this.
+        """
+        mock_nc = mock.Mock()
+        mock_ntrn.return_value = mock_nc
+        mock_nc.delete_floatingip.side_effect = exceptions.NotFound()
+        address = '172.24.4.227'
+
+        self.assertRaises(exception.FloatingIpNotFoundForAddress,
+                          self.api.release_floating_ip,
+                          self.context, address)
+
     @mock.patch.object(client.Client, 'create_port')
     def test_create_port_minimal_raise_no_more_ip(self, create_port_mock):
         instance = fake_instance.fake_instance_obj(self.context)
