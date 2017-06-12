@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_utils import strutils
 import webob.exc
 
 from nova.api.openstack import api_version_request
@@ -132,7 +133,7 @@ class ServiceController(wsgi.Controller):
     def _forced_down(self, body, context):
         """Set or unset forced_down flag for the service"""
         try:
-            forced_down = body["forced_down"]
+            forced_down = strutils.bool_from_string(body["forced_down"])
         except KeyError:
             msg = _('Missing forced_down field')
             raise webob.exc.HTTPBadRequest(explanation=msg)
