@@ -1387,6 +1387,19 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
 
         mock_cell_mapping_get_by_uuid.assert_not_called()
 
+    @mock.patch('nova.objects.host_mapping.discover_hosts')
+    def test_discover_hosts_strict(self, mock_discover_hosts):
+        # Check for exit code 0 if unmapped hosts found
+        mock_discover_hosts.return_value = ['fake']
+        self.assertEqual(self.commands.discover_hosts(strict=True), 0)
+
+        # Check for exit code 1 if no unmapped hosts are found
+        mock_discover_hosts.return_value = []
+        self.assertEqual(self.commands.discover_hosts(strict=True), 1)
+
+        # Check the return when strict=False
+        self.assertIsNone(self.commands.discover_hosts())
+
     def test_validate_transport_url_in_conf(self):
         from_conf = 'fake://user:pass@host:port/'
         self.flags(transport_url=from_conf)
