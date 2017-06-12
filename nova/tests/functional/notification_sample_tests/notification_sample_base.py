@@ -247,3 +247,8 @@ class NotificationSampleTestBase(test.TestCase,
                          (event_type, expected_count, len(notifications),
                           notifications))
         return notifications
+
+    def _attach_volume_to_server(self, server, volume_id):
+        self.api.post_server_volume(
+            server['id'], {"volumeAttachment": {"volumeId": volume_id}})
+        self._wait_for_notification('instance.volume_attach.end')

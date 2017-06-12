@@ -117,6 +117,15 @@ topic queue in this list.
 The list of versioned notifications is visible in
 http://docs.openstack.org/developer/nova/notifications.html
 """),
+    cfg.BoolOpt(
+        'bdms_in_notifications',
+        default=False,
+        help="""
+If enabled, include block device information in the versioned notification
+payload. Sending block device information is disabled by default as providing
+that information can incur some overhead on the system since the information
+may need to be loaded from the database.
+""")
 ]
 
 

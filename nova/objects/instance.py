@@ -1168,6 +1168,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             return network_model.NetworkInfo.hydrate([])
         return self.info_cache.network_info
 
+    def get_bdms(self):
+        return objects.BlockDeviceMappingList.get_by_instance_uuid(
+            self._context, self.uuid)
+
 
 def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
     get_fault = expected_attrs and 'fault' in expected_attrs

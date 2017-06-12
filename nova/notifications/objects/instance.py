@@ -10,11 +10,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import nova.conf
 from nova.notifications.objects import base
 from nova.notifications.objects import flavor as flavor_payload
 from nova.notifications.objects import keypair as keypair_payload
 from nova.objects import base as nova_base
 from nova.objects import fields
+
+
+CONF = nova.conf.CONF
 
 
 @nova_base.NovaObjectRegistry.register_notification
@@ -58,7 +62,8 @@ class InstancePayload(base.NotificationPayloadBase):
     # Version 1.1: add locked and display_description field
     # Version 1.2: Add auto_disk_config field
     # Version 1.3: Add key_name field
-    VERSION = '1.3'
+    # Version 1.4: Add BDM related data
+    VERSION = '1.4'
     fields = {
         'uuid': fields.UUIDField(),
         'user_id': fields.StringField(nullable=True),
@@ -92,6 +97,8 @@ class InstancePayload(base.NotificationPayloadBase):
         'progress': fields.IntegerField(nullable=True),
 
         'ip_addresses': fields.ListOfObjectsField('IpPayload'),
+        'block_devices': fields.ListOfObjectsField('BlockDevicePayload',
+                                                   nullable=True),
 
         'metadata': fields.DictOfStringsField(),
         'locked': fields.BooleanField(),
@@ -103,6 +110,9 @@ class InstancePayload(base.NotificationPayloadBase):
         network_info = instance.get_network_info()
         self.ip_addresses = IpPayload.from_network_info(network_info)
         self.flavor = flavor_payload.FlavorPayload(flavor=instance.flavor)
+        # TODO(gibi): investigate the possibility to use already in scope bdm
+        # when available like in instance.create
+        self.block_devices = BlockDevicePayload.from_instance(instance)
 
         self.populate_schema(instance=instance)
 
@@ -114,7 +124,8 @@ class InstanceActionPayload(InstancePayload):
     # Version 1.1: locked and display_description added to InstancePayload
     # Version 1.2: Added auto_disk_config field to InstancePayload
     # Version 1.3: Added key_name field to InstancePayload
-    VERSION = '1.3'
+    # Version 1.4: Add BDM related data
+    VERSION = '1.4'
     fields = {
         'fault': fields.ObjectField('ExceptionPayload', nullable=True),
     }
@@ -128,8 +139,9 @@ class InstanceActionPayload(InstancePayload):
 class InstanceActionVolumePayload(InstanceActionPayload):
     # Version 1.0: Initial version
     #         1.1: Added key_name field to InstancePayload
+    #         1.2: Add BDM related data
 
-    VERSION = '1.1'
+    VERSION = '1.2'
     fields = {
         'volume_id': fields.UUIDField()
     }
@@ -148,7 +160,8 @@ class InstanceActionVolumeSwapPayload(InstanceActionPayload):
     # Version 1.1: locked and display_description added to InstancePayload
     # Version 1.2: Added auto_disk_config field to InstancePayload
     # Version 1.3: Added key_name field to InstancePayload
-    VERSION = '1.3'
+    # Version 1.4: Add BDM related data
+    VERSION = '1.4'
     fields = {
         'old_volume_id': fields.UUIDField(),
         'new_volume_id': fields.UUIDField(),
@@ -173,7 +186,8 @@ class InstanceCreatePayload(InstanceActionPayload):
     #              have decreasing version.
     #         1.3: Add keypairs field
     #         1.4: Add key_name field to InstancePayload
-    VERSION = '1.4'
+    #         1.5: Add BDM related data to InstancePayload
+    VERSION = '1.5'
 
     fields = {
         'keypairs': fields.ListOfObjectsField('KeypairPayload')
@@ -194,7 +208,8 @@ class InstanceUpdatePayload(InstancePayload):
     # Version 1.2: Added tags field
     # Version 1.3: Added auto_disk_config field to InstancePayload
     # Version 1.4: Added key_name field to InstancePayload
-    VERSION = '1.4'
+    # Version 1.5: Add BDM related data
+    VERSION = '1.5'
     fields = {
         'state_update': fields.ObjectField('InstanceStateUpdatePayload'),
         'audit_period': fields.ObjectField('AuditPeriodPayload'),
@@ -289,6 +304,48 @@ class AuditPeriodPayload(base.NotificationPayloadBase):
         super(AuditPeriodPayload, self).__init__()
         self.audit_period_beginning = audit_period_beginning
         self.audit_period_ending = audit_period_ending
+
+
+@nova_base.NovaObjectRegistry.register_notification
+class BlockDevicePayload(base.NotificationPayloadBase):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    SCHEMA = {
+        'device_name': ('bdm', 'device_name'),
+        'boot_index': ('bdm', 'boot_index'),
+        'delete_on_termination': ('bdm', 'delete_on_termination'),
+        'volume_id': ('bdm', 'volume_id'),
+        'tag': ('bdm', 'tag')
+    }
+
+    fields = {
+        'device_name': fields.StringField(nullable=True),
+        'boot_index': fields.IntegerField(nullable=True),
+        'delete_on_termination': fields.BooleanField(default=False),
+        'volume_id': fields.UUIDField(),
+        'tag': fields.StringField(nullable=True)
+    }
+
+    def __init__(self, bdm):
+        super(BlockDevicePayload, self).__init__()
+        self.populate_schema(bdm=bdm)
+
+    @classmethod
+    def from_instance(cls, instance):
+        """Returns a list of BlockDevicePayload objects based on the passed
+        bdms.
+        """
+        if not CONF.notifications.bdms_in_notifications:
+            return None
+
+        instance_bdms = instance.get_bdms()
+        bdms = []
+        if instance_bdms is not None:
+            for bdm in instance_bdms:
+                if bdm.volume_id is not None:
+                    bdms.append(cls(bdm))
+        return bdms
 
 
 @nova_base.NovaObjectRegistry.register_notification
