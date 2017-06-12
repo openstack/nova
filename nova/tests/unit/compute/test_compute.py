@@ -12081,7 +12081,7 @@ class EvacuateHostTestCase(BaseTestCase):
             mock_setup_networks_on_host.assert_called_once_with(
                 ctxt, self.inst, self.inst.host)
             mock_setup_instance_network_on_host.assert_called_once_with(
-                ctxt, self.inst, self.inst.host)
+                ctxt, self.inst, self.inst.host, migration)
 
         _test_rebuild(vm_is_stopped=vm_states_is_stopped)
 
