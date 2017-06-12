@@ -2459,17 +2459,6 @@ class TestNeutronv2(TestNeutronv2Base):
         fip = api.allocate_floating_ip(self.context)
         self.assertEqual(self.fip_unassociated['floating_ip_address'], fip)
 
-    def test_release_floating_ip(self):
-        api = neutronapi.API()
-        address = self.fip_unassociated['floating_ip_address']
-        fip_id = self.fip_unassociated['id']
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.list_floatingips(floating_ip_address=address).\
-            AndReturn({'floatingips': [self.fip_unassociated]})
-        self.moxed_client.delete_floatingip(fip_id)
-        self.mox.ReplayAll()
-        api.release_floating_ip(self.context, address)
-
     def test_disassociate_and_release_floating_ip(self):
         api = neutronapi.API()
         address = self.fip_unassociated['floating_ip_address']
@@ -2497,16 +2486,6 @@ class TestNeutronv2(TestNeutronv2Base):
         self.mox.ReplayAll()
         api.disassociate_and_release_floating_ip(self.context, instance,
                                                  floating_ip)
-
-    def test_release_floating_ip_associated(self):
-        api = neutronapi.API()
-        address = self.fip_associated['floating_ip_address']
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.list_floatingips(floating_ip_address=address).\
-            AndReturn({'floatingips': [self.fip_associated]})
-        self.mox.ReplayAll()
-        self.assertRaises(exception.FloatingIpAssociated,
-                          api.release_floating_ip, self.context, address)
 
     def _setup_mock_for_refresh_cache(self, api, instances):
         nw_info = model.NetworkInfo()
@@ -3608,6 +3587,38 @@ class TestNeutronv2WithMock(test.TestCase):
             self.assertRaises(exception.FloatingIpBadRequest,
                               api.allocate_floating_ip, self.context,
                               'ext_net')
+
+    @mock.patch('nova.network.neutronv2.api.get_client')
+    @mock.patch('nova.network.neutronv2.api.API._get_floating_ip_by_address',
+                return_value={'port_id': None, 'id': 'abc'})
+    def test_release_floating_ip(self, mock_get_ip, mock_ntrn):
+        """Validate default behavior."""
+        mock_nc = mock.Mock()
+        mock_ntrn.return_value = mock_nc
+        address = '172.24.4.227'
+
+        self.api.release_floating_ip(self.context, address)
+
+        mock_ntrn.assert_called_once_with(self.context)
+        mock_get_ip.assert_called_once_with(mock_nc, address)
+        mock_nc.delete_floatingip.assert_called_once_with('abc')
+
+    @mock.patch('nova.network.neutronv2.api.get_client')
+    @mock.patch('nova.network.neutronv2.api.API._get_floating_ip_by_address',
+                return_value={'port_id': 'abc', 'id': 'abc'})
+    def test_release_floating_ip_associated(self, mock_get_ip, mock_ntrn):
+        """Ensure release fails if a port is still associated with it.
+
+        If the floating IP has a port associated with it, as indicated by a
+        configured port_id, then any attempt to release should fail.
+        """
+        mock_nc = mock.Mock()
+        mock_ntrn.return_value = mock_nc
+        address = '172.24.4.227'
+
+        self.assertRaises(exception.FloatingIpAssociated,
+                          self.api.release_floating_ip,
+                          self.context, address)
 
     @mock.patch('nova.network.neutronv2.api.get_client')
     @mock.patch('nova.network.neutronv2.api.API._get_floating_ip_by_address',
