@@ -75,14 +75,6 @@ asse_true_false_with_in_or_not_in_spaces = re.compile(r"assert(True|False)"
                     r"[\[|'|\"](, .*)?\)")
 asse_raises_regexp = re.compile(r"assertRaisesRegexp\(")
 conf_attribute_set_re = re.compile(r"CONF\.[a-z0-9_.]+\s*=\s*\w")
-log_translation = re.compile(
-    r"(.)*LOG\.(audit|error|critical)\(\s*('|\")")
-log_translation_info = re.compile(
-    r"(.)*LOG\.(info)\(\s*(_\(|'|\")")
-log_translation_exception = re.compile(
-    r"(.)*LOG\.(exception)\(\s*(_\(|'|\")")
-log_translation_LW = re.compile(
-    r"(.)*LOG\.(warning|warn)\(\s*(_\(|'|\")")
 translated_log = re.compile(
     r"(.)*LOG\.(audit|error|info|critical|exception)"
     "\(\s*_\(\s*('|\")")
