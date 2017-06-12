@@ -22,9 +22,6 @@ from nova import exception
 from nova.policies import consoles as consoles_policies
 
 
-ALIAS = 'os-consoles'
-
-
 def _translate_keys(cons):
     """Coerces a console instance into proper dictionary format."""
     pool = cons['pool']
@@ -105,24 +102,3 @@ class ConsolesController(wsgi.Controller):
                                             int(id))
         except exception.ConsoleNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
-
-
-class Consoles(extensions.V21APIExtensionBase):
-    """Consoles."""
-
-    name = "Consoles"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        parent = {'member_name': 'server',
-                  'collection_name': 'servers'}
-        resources = [
-            extensions.ResourceExtension(
-                'consoles', ConsolesController(), parent=parent,
-                member_name='console')]
-
-        return resources
-
-    def get_controller_extensions(self):
-        return []

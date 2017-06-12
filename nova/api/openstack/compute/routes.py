@@ -26,7 +26,9 @@ from nova.api.openstack.compute import attach_interfaces
 from nova.api.openstack.compute import availability_zone
 from nova.api.openstack.compute import certificates
 from nova.api.openstack.compute import config_drive
+from nova.api.openstack.compute import console_auth_tokens
 from nova.api.openstack.compute import console_output
+from nova.api.openstack.compute import consoles
 from nova.api.openstack.compute import create_backup
 from nova.api.openstack.compute import deferred_delete
 from nova.api.openstack.compute import evacuate
@@ -244,6 +246,14 @@ server_controller = functools.partial(_create_controller,
 )
 
 
+console_auth_tokens_controller = functools.partial(_create_controller,
+    console_auth_tokens.ConsoleAuthTokensController, [], [])
+
+
+consoles_controller = functools.partial(_create_controller,
+    consoles.ConsolesController, [], [])
+
+
 server_diagnostics_controller = functools.partial(_create_controller,
     server_diagnostics.ServerDiagnosticsController, [], [])
 
@@ -368,6 +378,9 @@ ROUTE_LIST = (
     }),
     ('/os-certificates/{id}', {
         'GET': [certificates_controller, 'show']
+    }),
+    ('/os-console-auth-tokens/{id}', {
+        'GET': [console_auth_tokens_controller, 'show']
     }),
     ('/os-fixed-ips/{id}', {
         'GET': [fixed_ips_controller, 'show']
@@ -522,6 +535,14 @@ ROUTE_LIST = (
     }),
     ('/servers/{id}/action', {
         'POST': [server_controller, 'action']
+    }),
+    ('/servers/{server_id}/consoles', {
+        'GET': [consoles_controller, 'index'],
+        'POST': [consoles_controller, 'create']
+    }),
+    ('/servers/{server_id}/consoles/{id}', {
+        'GET': [consoles_controller, 'show'],
+        'DELETE': [consoles_controller, 'delete']
     }),
     ('/servers/{server_id}/diagnostics', {
         'GET': [server_diagnostics_controller, 'index']
