@@ -20,28 +20,12 @@ from webob import exc
 from nova.api.openstack import api_version_request
 from nova.api.openstack.compute.schemas import block_device_mapping as \
                                                   schema_block_device_mapping
-from nova.api.openstack import extensions
 from nova import block_device
 from nova import exception
 from nova.i18n import _
 
-ALIAS = "os-block-device-mapping"
 ATTRIBUTE_NAME = "block_device_mapping_v2"
 LEGACY_ATTRIBUTE_NAME = "block_device_mapping"
-
-
-class BlockDeviceMapping(extensions.V21APIExtensionBase):
-    """Block device mapping boot support."""
-
-    name = "BlockDeviceMapping"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        return []
-
-    def get_controller_extensions(self):
-        return []
 
 
 # use nova.api.extensions.server.extensions entry point to modify
