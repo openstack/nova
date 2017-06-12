@@ -2714,7 +2714,21 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
 
         LOG.info(_LI("Rebuilding instance"), instance=instance)
-        if scheduled_node is not None:
+
+        # NOTE(gyee): there are three possible scenarios.
+        #
+        #   1. instance is being rebuilt on the same node. In this case,
+        #      recreate should be False and scheduled_node should be None.
+        #   2. instance is being rebuilt on a node chosen by the
+        #      scheduler (i.e. evacuate). In this case, scheduled_node should
+        #      be specified and recreate should be True.
+        #   3. instance is being rebuilt on a node chosen by the user. (i.e.
+        #      force evacuate). In this case, scheduled_node is not specified
+        #      and recreate is set to True.
+        #
+        # For scenarios #2 and #3, we must do rebuild claim as server is
+        # being evacuated to a different node.
+        if recreate or scheduled_node is not None:
             rt = self._get_resource_tracker()
             rebuild_claim = rt.rebuild_claim
         else:
