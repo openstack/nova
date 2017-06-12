@@ -14387,7 +14387,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         prepare.side_effect = fake_prepare
         drvr = libvirt_driver.LibvirtDriver(virtapi, False)
 
-        instance = objects.Instance(**self.test_instance)
+        instance = objects.Instance(vm_state=vm_states.BUILDING,
+                                    **self.test_instance)
         vifs = [{'id': 'vif1', 'active': False},
                 {'id': 'vif2', 'active': False}]
 
