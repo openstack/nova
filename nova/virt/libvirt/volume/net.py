@@ -62,13 +62,25 @@ class LibvirtNetVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         auth_enabled = netdisk_properties.get('auth_enabled')
         if auth_enabled:
             conf.auth_username = netdisk_properties['auth_username']
-            conf.auth_secret_uuid = netdisk_properties['secret_uuid']
+            # We started preferring Cinder config for rbd auth values starting
+            # in Ocata, but if we have a guest connection from before that when
+            # secret_uuid wasn't configured in Cinder, we need to fallback to
+            # get it from local nova.conf.
+            if netdisk_properties['secret_uuid'] is not None:
+                conf.auth_secret_uuid = netdisk_properties['secret_uuid']
+            else:
+                LOG.debug('Falling back to Nova configuration for RBD auth '
+                          'secret_uuid value.')
+                conf.auth_secret_uuid = CONF.libvirt.rbd_secret_uuid
             # secret_type is always hard-coded to 'ceph' in cinder
             conf.auth_secret_type = netdisk_properties['secret_type']
         elif CONF.libvirt.rbd_secret_uuid:
             # Anyone relying on falling back to nova config is probably having
             # this work accidentally and we'll remove that support in the
             # 16.0.0 Pike release.
+            # NOTE(mriedem): We'll have to be extra careful about this in case
+            # the reason we got here is due to an old volume connection created
+            # before we started preferring the Cinder settings in Ocata.
             LOG.warning(_LW('Falling back to Nova configuration values for '
                             'RBD authentication. Cinder should be configured '
                             'for auth with Ceph volumes. This fallback will '
