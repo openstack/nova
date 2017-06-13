@@ -26,6 +26,14 @@ Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403)
 
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - binary: binary_query
+  - host: host_query_service
+
 Response
 --------
 

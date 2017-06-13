@@ -322,6 +322,12 @@ availability_zone_query_server:
   in: query
   required: false
   type: string
+binary_query:
+  description: |
+    Filter the service list result by binary name of the service.
+  in: query
+  required: false
+  type: string
 changes-since:
   description: |
     Filters the response by a date and time when the image last changed status.
@@ -483,6 +489,12 @@ flavor_query:
 host_query_server:
   description: |
     Filter the server list result by the host name of compute node. Only allowed for Admin.
+  in: query
+  required: false
+  type: string
+host_query_service:
+  description: |
+    Filter the service list result by the host name.
   in: query
   required: false
   type: string
