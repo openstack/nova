@@ -3998,7 +3998,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         with test.nested(
             mock.patch.object(nova.compute.utils,
                               'notify_about_instance_action'),
-            mock.patch.object(self.compute, '_notify_about_instance_usage'),
+            mock.patch.object(nova.compute.utils,
+                              'notify_about_instance_delete'),
             mock.patch.object(objects.Instance, 'save'),
             mock.patch.object(self.compute.driver, 'soft_delete')
         ) as (fake_notify, fake_notify_usage, fake_save, fake_soft_delete):

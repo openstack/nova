@@ -2607,25 +2607,25 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def soft_delete_instance(self, context, instance, reservations):
         """Soft delete an instance on this host."""
-        self._notify_about_instance_usage(context, instance,
-                                          "soft_delete.start")
-        compute_utils.notify_about_instance_action(context, instance,
-            self.host, action=fields.NotificationAction.SOFT_DELETE,
-            phase=fields.NotificationPhase.START)
-        try:
-            self.driver.soft_delete(instance)
-        except NotImplementedError:
-            # Fallback to just powering off the instance if the
-            # hypervisor doesn't implement the soft_delete method
-            self.driver.power_off(instance)
-        instance.power_state = self._get_power_state(context, instance)
-        instance.vm_state = vm_states.SOFT_DELETED
-        instance.task_state = None
-        instance.save(expected_task_state=[task_states.SOFT_DELETING])
-        self._notify_about_instance_usage(context, instance, "soft_delete.end")
-        compute_utils.notify_about_instance_action(context, instance,
-            self.host, action=fields.NotificationAction.SOFT_DELETE,
-            phase=fields.NotificationPhase.END)
+        with compute_utils.notify_about_instance_delete(
+                self.notifier, context, instance, 'soft_delete'):
+            compute_utils.notify_about_instance_action(context, instance,
+                self.host, action=fields.NotificationAction.SOFT_DELETE,
+                phase=fields.NotificationPhase.START)
+            try:
+                self.driver.soft_delete(instance)
+            except NotImplementedError:
+                # Fallback to just powering off the instance if the
+                # hypervisor doesn't implement the soft_delete method
+                self.driver.power_off(instance)
+            instance.power_state = self._get_power_state(context, instance)
+            instance.vm_state = vm_states.SOFT_DELETED
+            instance.task_state = None
+            instance.save(expected_task_state=[task_states.SOFT_DELETING])
+            compute_utils.notify_about_instance_action(
+                context, instance, self.host,
+                action=fields.NotificationAction.SOFT_DELETE,
+                phase=fields.NotificationPhase.END)
 
     @wrap_exception()
     @reverts_task_state

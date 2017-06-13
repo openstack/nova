@@ -853,9 +853,14 @@ class _ComputeAPIUnitTestMixIn(object):
                 test.TestingException("Unexpected error"))
 
     def _test_downed_host_part(self, inst, updates, delete_time, delete_type):
-        compute_utils.notify_about_instance_usage(
-            self.compute_api.notifier, self.context, inst,
-            '%s.start' % delete_type)
+        if 'soft' in delete_type:
+            compute_utils.notify_about_instance_usage(
+                self.compute_api.notifier, self.context, inst,
+                'delete.start')
+        else:
+            compute_utils.notify_about_instance_usage(
+                self.compute_api.notifier, self.context, inst,
+                '%s.start' % delete_type)
         self.context.elevated().AndReturn(self.context)
         self.compute_api.network_api.deallocate_for_instance(
             self.context, inst)
@@ -872,10 +877,16 @@ class _ComputeAPIUnitTestMixIn(object):
         self.compute_api._local_cleanup_bdm_volumes([], inst, self.context)
         db.instance_destroy(self.context, inst.uuid,
                             constraint=None).AndReturn(fake_inst)
-        compute_utils.notify_about_instance_usage(
-            self.compute_api.notifier,
-            self.context, inst, '%s.end' % delete_type,
-            system_metadata=inst.system_metadata)
+        if 'soft' in delete_type:
+            compute_utils.notify_about_instance_usage(
+                self.compute_api.notifier,
+                self.context, inst, 'delete.end',
+                system_metadata=inst.system_metadata)
+        else:
+            compute_utils.notify_about_instance_usage(
+                self.compute_api.notifier,
+                self.context, inst, '%s.end' % delete_type,
+                system_metadata=inst.system_metadata)
         cell = objects.CellMapping(uuid=uuids.cell,
                                    transport_url='fake://',
                                    database_connection='fake://')
