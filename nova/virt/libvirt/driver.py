@@ -1469,6 +1469,21 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest.get_interface_by_cfg, cfg, live=live,
                 alternative_device_name=self.vif_driver.get_vif_devname(vif))
             wait_for_detach()
+        except exception.DeviceDetachFailed:
+            # We failed to detach the device even with the retry loop, so let's
+            # dump some debug information to the logs before raising back up.
+            with excutils.save_and_reraise_exception():
+                devname = self.vif_driver.get_vif_devname(vif)
+                interface = guest.get_interface_by_cfg(cfg)
+                if interface:
+                    LOG.warning(
+                        'Failed to detach interface %(devname)s after '
+                        'repeated attempts. Final interface xml:\n'
+                        '%(interface_xml)s\nFinal guest xml:\n%(guest_xml)s',
+                        {'devname': devname,
+                         'interface_xml': interface.to_xml(),
+                         'guest_xml': guest.get_xml_desc()},
+                        instance=instance)
         except exception.DeviceNotFound:
             # The interface is gone so just log it as a warning.
             LOG.warning(_LW('Detaching interface %(mac)s failed because '
