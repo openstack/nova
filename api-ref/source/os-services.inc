@@ -60,7 +60,7 @@ Disable Scheduling For A Compute Service
 
 .. rest_method:: PUT /os-services/disable
 
-Disables scheduling for a Compute service with optional logging.
+Disables scheduling for a Compute service.
 
 Specify the service by its host name and binary name.
 
