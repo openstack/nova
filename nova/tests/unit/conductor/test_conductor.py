@@ -1255,7 +1255,8 @@ class _BaseTaskTestCase(object):
                                instance=inst_obj,
                                **compute_args)
 
-    def test_rebuild_instance_with_scheduler(self):
+    @mock.patch('nova.compute.utils.notify_about_instance_rebuild')
+    def test_rebuild_instance_with_scheduler(self, mock_notify):
         inst_obj = self._create_fake_instance_obj()
         inst_obj.host = 'noselect'
         expected_host = 'thebesthost'
@@ -1299,6 +1300,9 @@ class _BaseTaskTestCase(object):
             self.assertEqual(inst_obj.project_id, fake_spec.project_id)
         self.assertEqual('compute.instance.rebuild.scheduled',
                          fake_notifier.NOTIFICATIONS[0].event_type)
+        mock_notify.assert_called_once_with(
+            self.context, inst_obj, 'thebesthost', action='rebuild_scheduled',
+            source='nova-conductor')
 
     def test_rebuild_instance_with_scheduler_no_host(self):
         inst_obj = self._create_fake_instance_obj()
@@ -1414,7 +1418,8 @@ class _BaseTaskTestCase(object):
                                instance=inst_obj,
                                **compute_args)
 
-    def test_rebuild_instance_with_request_spec(self):
+    @mock.patch('nova.compute.utils.notify_about_instance_rebuild')
+    def test_rebuild_instance_with_request_spec(self, mock_notify):
         inst_obj = self._create_fake_instance_obj()
         inst_obj.host = 'noselect'
         expected_host = 'thebesthost'
@@ -1453,6 +1458,9 @@ class _BaseTaskTestCase(object):
                                             **compute_args)
         self.assertEqual('compute.instance.rebuild.scheduled',
                          fake_notifier.NOTIFICATIONS[0].event_type)
+        mock_notify.assert_called_once_with(
+            self.context, inst_obj, 'thebesthost', action='rebuild_scheduled',
+            source='nova-conductor')
 
 
 class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):

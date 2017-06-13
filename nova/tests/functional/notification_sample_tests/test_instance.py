@@ -1042,15 +1042,28 @@ class TestInstanceNotificationSample(
         self._wait_for_state_change(self.api, server,
                                     expected_status='ACTIVE')
 
+        # 0. instance.rebuild_scheduled
+        # 1. instance.exists
+        # 2. instance.rebuild.start
+        # 3. instance.detach.start
+        # 4. instance.detach.end
+        # 5. instance.rebuild.end
         # The compute/manager will detach every volume during rebuild
-        self.assertEqual(5, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-rebuild_scheduled',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id'],
+                'trusted_image_certificates': None},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
         self._verify_notification(
             'instance-rebuild-start',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id'],
                 'trusted_image_certificates': None},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
         self._verify_notification(
             'instance-volume_detach-start',
             replacements={
@@ -1059,7 +1072,7 @@ class TestInstanceNotificationSample(
                 'architecture': None,
                 'image_uuid': 'a2459075-d96c-40d5-893e-577ff92e721c',
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
         self._verify_notification(
             'instance-volume_detach-end',
             replacements={
@@ -1068,14 +1081,14 @@ class TestInstanceNotificationSample(
                 'architecture': None,
                 'image_uuid': 'a2459075-d96c-40d5-893e-577ff92e721c',
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[4])
         self._verify_notification(
             'instance-rebuild-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id'],
                 'trusted_image_certificates': None},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[4])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[5])
 
     def test_rebuild_server_with_trusted_cert(self):
         # NOTE(gabor_antal): Rebuild changes the image used by the instance,
@@ -1107,14 +1120,26 @@ class TestInstanceNotificationSample(
         self._wait_for_state_change(self.api, server,
                                     expected_status='ACTIVE')
 
+        # 0. instance.rebuild_scheduled
+        # 1. instance.exists
+        # 2. instance.rebuild.start
+        # 3. instance.detach.start
+        # 4. instance.detach.end
+        # 5. instance.rebuild.end
         # The compute/manager will detach every volume during rebuild
-        self.assertEqual(5, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-rebuild_scheduled',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
         self._verify_notification(
             'instance-rebuild-start',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
         self._verify_notification(
             'instance-volume_detach-start',
             replacements={
@@ -1123,7 +1148,7 @@ class TestInstanceNotificationSample(
                 'architecture': None,
                 'image_uuid': 'a2459075-d96c-40d5-893e-577ff92e721c',
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
         self._verify_notification(
             'instance-volume_detach-end',
             replacements={
@@ -1132,13 +1157,13 @@ class TestInstanceNotificationSample(
                 'architecture': None,
                 'image_uuid': 'a2459075-d96c-40d5-893e-577ff92e721c',
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[4])
         self._verify_notification(
             'instance-rebuild-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[4])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[5])
 
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_do_rebuild_instance_with_claim')
@@ -1165,8 +1190,8 @@ class TestInstanceNotificationSample(
         notification = self._get_notifications('instance.rebuild.error')
         self.assertEqual(1, len(notification))
 
-        tb = fake_notifier.VERSIONED_NOTIFICATIONS[0]['payload'][
-            'nova_object.data']['fault']['nova_object.data']['traceback']
+        tb = notification[0]['payload']['nova_object.data']['fault'][
+                'nova_object.data']['traceback']
         self.assertIn('raise exception.VirtualInterfaceCreateException()', tb)
 
         self._verify_notification(

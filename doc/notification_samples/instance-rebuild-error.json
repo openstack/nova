@@ -15,8 +15,6 @@
                 "nova_object.version": "1.1",
                 "nova_object.namespace": "nova"
             },
-            "architecture": null,
-            "image_uuid": "a2459075-d96c-40d5-893e-577ff92e721c",
             "task_state": "rebuilding"
         }
     },

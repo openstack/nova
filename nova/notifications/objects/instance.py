@@ -660,6 +660,7 @@ class InstanceActionRescueNotification(base.NotificationBase):
     }
 
 
+@base.notification_sample('instance-rebuild_scheduled.json')
 @base.notification_sample('instance-rebuild-start.json')
 @base.notification_sample('instance-rebuild-end.json')
 @base.notification_sample('instance-rebuild-error.json')

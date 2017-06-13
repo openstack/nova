@@ -45,6 +45,7 @@ from nova import network
 from nova import notifications
 from nova import objects
 from nova.objects import base as nova_object
+from nova.objects import fields
 from nova import profiler
 from nova import rpc
 from nova.scheduler import client as scheduler_client
@@ -969,6 +970,10 @@ class ComputeTaskManager(base.Base):
 
             compute_utils.notify_about_instance_usage(
                 self.notifier, context, instance, "rebuild.scheduled")
+            compute_utils.notify_about_instance_rebuild(
+                context, instance, host,
+                action=fields.NotificationAction.REBUILD_SCHEDULED,
+                source=fields.NotificationSource.CONDUCTOR)
 
             instance.availability_zone = (
                 availability_zones.get_host_availability_zone(
