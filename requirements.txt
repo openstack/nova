@@ -5,7 +5,7 @@
 pbr!=2.1.0,>=2.0.0 # Apache-2.0
 SQLAlchemy!=1.1.5,!=1.1.6,!=1.1.7,!=1.1.8,>=1.0.10 # MIT
 decorator>=3.4.0 # BSD
-eventlet!=0.18.3,<0.21.0,>=0.18.2 # MIT
+eventlet!=0.18.3,!=0.20.1,<0.21.0,>=0.18.2 # MIT
 Jinja2!=2.9.0,!=2.9.1,!=2.9.2,!=2.9.3,!=2.9.4,>=2.8 # BSD License (3 clause)
 keystonemiddleware>=4.12.0 # Apache-2.0
 lxml!=3.7.0,>=2.3 # BSD
@@ -25,10 +25,10 @@ enum34;python_version=='2.7' or python_version=='2.6' or python_version=='3.3' #
 iso8601>=0.1.11 # MIT
 jsonschema!=2.5.0,<3.0.0,>=2.0.0 # MIT
 python-cinderclient>=2.1.0 # Apache-2.0
-keystoneauth1>=2.20.0 # Apache-2.0
+keystoneauth1>=2.21.0 # Apache-2.0
 python-neutronclient>=6.3.0 # Apache-2.0
 python-glanceclient>=2.7.0 # Apache-2.0
-requests!=2.12.2,!=2.13.0,>=2.10.0 # Apache-2.0
+requests>=2.14.2 # Apache-2.0
 six>=1.9.0 # MIT
 stevedore>=1.20.0 # Apache-2.0
 setuptools!=24.0.0,!=34.0.0,!=34.0.1,!=34.0.2,!=34.0.3,!=34.1.0,!=34.1.1,!=34.2.0,!=34.3.0,!=34.3.1,!=34.3.2,>=16.0 # PSF/ZPL
@@ -44,7 +44,7 @@ oslo.utils>=3.20.0 # Apache-2.0
 oslo.db>=4.21.1 # Apache-2.0
 oslo.rootwrap>=5.0.0 # Apache-2.0
 oslo.messaging!=5.25.0,>=5.24.2 # Apache-2.0
-oslo.policy>=1.17.0 # Apache-2.0
+oslo.policy>=1.23.0 # Apache-2.0
 oslo.privsep!=1.17.0,>=1.9.0 # Apache-2.0
 oslo.i18n!=3.15.2,>=2.1.0 # Apache-2.0
 oslo.service>=1.10.0 # Apache-2.0
