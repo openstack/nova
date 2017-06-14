@@ -249,7 +249,7 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
 
         linux_net.iptables_manager.execute = fake_iptables_execute
 
-        self.stub_out('nova.compute.utils.get_nw_info_for_instance',
+        self.stub_out('nova.objects.Instance.get_network_info',
                       lambda instance: network_model)
 
         self.fw.prepare_instance_filter(instance_ref, network_model)

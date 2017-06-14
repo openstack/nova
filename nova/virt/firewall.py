@@ -18,7 +18,6 @@
 from oslo_log import log as logging
 from oslo_utils import importutils
 
-from nova.compute import utils as compute_utils
 import nova.conf
 from nova import context
 from nova.i18n import _LI
@@ -355,8 +354,7 @@ class IptablesFirewallDriver(FirewallDriver):
                         if inst.info_cache.deleted:
                             LOG.debug('ignoring deleted cache')
                             continue
-                        nw_info = compute_utils.get_nw_info_for_instance(
-                                inst)
+                        nw_info = inst.get_network_info()
 
                         ips = [ip['address'] for ip in nw_info.fixed_ips()
                                if ip['version'] == version]

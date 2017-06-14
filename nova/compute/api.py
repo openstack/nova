@@ -2633,7 +2633,7 @@ class API(base.Base):
         ipv6_f = re.compile(str(filters.get('ip6')))
 
         def _match_instance(instance):
-            nw_info = compute_utils.get_nw_info_for_instance(instance)
+            nw_info = instance.get_network_info()
             for vif in nw_info:
                 for fixed_ip in vif.fixed_ips():
                     address = fixed_ip.get('address')

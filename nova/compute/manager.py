@@ -932,7 +932,7 @@ class ComputeManager(manager.Manager):
                 LOG.exception('Failed to start instance', instance=instance)
             return
 
-        net_info = compute_utils.get_nw_info_for_instance(instance)
+        net_info = instance.get_network_info()
         try:
             self.driver.plug_vifs(instance, net_info)
         except NotImplementedError as e:
@@ -2253,7 +2253,7 @@ class ComputeManager(manager.Manager):
                     self.host, action=fields.NotificationAction.SHUTDOWN,
                     phase=fields.NotificationPhase.START)
 
-        network_info = compute_utils.get_nw_info_for_instance(instance)
+        network_info = instance.get_network_info()
 
         # NOTE(vish) get bdms before destroying the instance
         vol_bdms = [bdm for bdm in bdms if bdm.is_volume]
@@ -2933,7 +2933,7 @@ class ComputeManager(manager.Manager):
             self.network_api.setup_instance_network_on_host(
                     context, instance, self.host)
 
-        network_info = compute_utils.get_nw_info_for_instance(instance)
+        network_info = instance.get_network_info()
         if bdms is None:
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid)

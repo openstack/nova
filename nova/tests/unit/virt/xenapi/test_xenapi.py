@@ -2896,8 +2896,7 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
 
         network_model = fake_network.fake_get_instance_nw_info(self, 1)
 
-        from nova.compute import utils as compute_utils  # noqa
-        self.stubs.Set(compute_utils, 'get_nw_info_for_instance',
+        self.stubs.Set(objects.Instance, 'get_network_info',
                        lambda instance: network_model)
 
         self.fw.prepare_instance_filter(instance_ref, network_model)

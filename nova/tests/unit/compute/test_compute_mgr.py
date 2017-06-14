@@ -683,7 +683,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         with test.nested(
             mock.patch.object(context, 'get_admin_context',
                 return_value=self.context),
-            mock.patch.object(compute_utils, 'get_nw_info_for_instance',
+            mock.patch.object(objects.Instance, 'get_network_info',
                 return_value=network_model.NetworkInfo()),
             mock.patch.object(self.compute.driver, 'plug_vifs',
                 side_effect=exception.VirtualInterfacePlugException(
@@ -922,7 +922,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 expected_attrs=['system_metadata'])
 
         with test.nested(
-            mock.patch.object(compute_utils, 'get_nw_info_for_instance',
+            mock.patch.object(objects.Instance, 'get_network_info',
                               return_value=network_model.NetworkInfo()),
             mock.patch.object(self.compute.driver, 'plug_vifs'),
             mock.patch.object(self.compute.driver, 'finish_revert_migration'),
@@ -942,7 +942,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
             mock_retry.assert_called_once_with(self.context, instance,
                 power_state.SHUTDOWN)
-            mock_get_nw.assert_called_once_with(instance)
+            mock_get_nw.assert_called_once_with()
             mock_plug.assert_called_once_with(instance, [])
             mock_get_inst.assert_called_once_with(self.context, instance)
             mock_finish.assert_called_once_with(self.context, instance,
@@ -972,12 +972,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 task_state=task_states.MIGRATING)
         with test.nested(
             mock.patch.object(instance, 'save'),
-            mock.patch('nova.compute.utils.get_nw_info_for_instance',
+            mock.patch('nova.objects.Instance.get_network_info',
                        return_value=network_model.NetworkInfo())
         ) as (save, get_nw_info):
             self.compute._init_instance(self.context, instance)
             save.assert_called_once_with(expected_task_state=['migrating'])
-            get_nw_info.assert_called_once_with(instance)
+            get_nw_info.assert_called_once_with()
         self.assertIsNone(instance.task_state)
         self.assertEqual(vm_states.ACTIVE, instance.vm_state)
 
@@ -1180,7 +1180,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         with test.nested(
             mock.patch.object(self.compute, '_get_power_state',
                               return_value=power_state.RUNNING),
-            mock.patch.object(compute_utils, 'get_nw_info_for_instance'),
+            mock.patch.object(objects.Instance, 'get_network_info'),
             mock.patch.object(instance, 'save', autospec=True)
         ) as (mock_get_power_state, mock_nw_info, mock_instance_save):
             self.compute._init_instance(self.context, instance)
@@ -1188,7 +1188,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.assertIsNone(instance.task_state)
 
     @mock.patch('nova.context.RequestContext.elevated')
-    @mock.patch('nova.compute.utils.get_nw_info_for_instance')
+    @mock.patch('nova.objects.Instance.get_network_info')
     @mock.patch(
         'nova.compute.manager.ComputeManager._get_instance_block_device_info')
     @mock.patch('nova.virt.driver.ComputeDriver.destroy')
@@ -1215,7 +1215,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                       action='shutdown', phase='end')])
 
     @mock.patch('nova.context.RequestContext.elevated')
-    @mock.patch('nova.compute.utils.get_nw_info_for_instance')
+    @mock.patch('nova.objects.Instance.get_network_info')
     @mock.patch(
         'nova.compute.manager.ComputeManager._get_instance_block_device_info')
     @mock.patch('nova.virt.driver.ComputeDriver.destroy')
@@ -1261,11 +1261,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock.patch.object(self.compute, '_get_power_state',
                                return_value=return_power_state),
             mock.patch.object(self.compute, 'reboot_instance'),
-            mock.patch.object(compute_utils, 'get_nw_info_for_instance')
+            mock.patch.object(objects.Instance, 'get_network_info')
           ) as (
             _get_power_state,
             reboot_instance,
-            get_nw_info_for_instance
+            get_network_info
           ):
             self.compute._init_instance(self.context, instance)
             call = mock.call(self.context, instance, block_device_info=None,
@@ -1333,11 +1333,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock.patch.object(self.compute, '_get_power_state',
                                return_value=power_state.RUNNING),
             mock.patch.object(instance, 'save', autospec=True),
-            mock.patch.object(compute_utils, 'get_nw_info_for_instance')
+            mock.patch.object(objects.Instance, 'get_network_info')
           ) as (
             _get_power_state,
             instance_save,
-            get_nw_info_for_instance
+            get_network_info
           ):
             self.compute._init_instance(self.context, instance)
             instance_save.assert_called_once_with()
