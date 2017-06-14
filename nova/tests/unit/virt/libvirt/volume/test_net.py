@@ -139,6 +139,38 @@ class LibvirtNetVolumeDriverTestCase(
         self.assertEqual(self.uuid, tree.find('./auth/secret').get('uuid'))
         libvirt_driver.disconnect_volume(connection_info, "vde")
 
+    def test_libvirt_rbd_driver_auth_enabled_flags_secret_uuid_fallback(self):
+        """The values from the cinder connection_info take precedence over
+        nova.conf values, unless it's old connection data where the
+        secret_uuid wasn't set on the cinder side for the original connection
+        which is now persisted in the
+        nova.block_device_mappings.connection_info column and used here. In
+        this case we fallback to use the local config for secret_uuid.
+        """
+        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_host)
+        connection_info = self.rbd_connection(self.vol)
+        secret_type = 'ceph'
+        connection_info['data']['auth_enabled'] = True
+        connection_info['data']['auth_username'] = self.user
+        connection_info['data']['secret_type'] = secret_type
+        # Fake out cinder not setting the secret_uuid in the old connection.
+        connection_info['data']['secret_uuid'] = None
+
+        flags_uuid = '37152720-1785-11e2-a740-af0c1d8b8e4b'
+        flags_user = 'bar'
+        self.flags(rbd_user=flags_user,
+                   rbd_secret_uuid=flags_uuid,
+                   group='libvirt')
+
+        conf = libvirt_driver.get_config(connection_info, self.disk_info)
+        tree = conf.format_dom()
+        self._assertNetworkAndProtocolEquals(tree)
+        self.assertEqual(self.user, tree.find('./auth').get('username'))
+        self.assertEqual(secret_type, tree.find('./auth/secret').get('type'))
+        # Assert that the secret_uuid comes from CONF.libvirt.rbd_secret_uuid.
+        self.assertEqual(flags_uuid, tree.find('./auth/secret').get('uuid'))
+        libvirt_driver.disconnect_volume(connection_info, "vde")
+
     def test_libvirt_rbd_driver_auth_disabled(self):
         libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_host)
         connection_info = self.rbd_connection(self.vol)
