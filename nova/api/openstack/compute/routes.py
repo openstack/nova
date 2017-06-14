@@ -67,6 +67,7 @@ from nova.api.openstack.compute import rescue
 from nova.api.openstack.compute import security_groups
 from nova.api.openstack.compute import server_diagnostics
 from nova.api.openstack.compute import server_external_events
+from nova.api.openstack.compute import server_groups
 from nova.api.openstack.compute import server_metadata
 from nova.api.openstack.compute import server_migrations
 from nova.api.openstack.compute import server_password
@@ -260,6 +261,10 @@ server_diagnostics_controller = functools.partial(_create_controller,
 
 server_external_events_controller = functools.partial(_create_controller,
     server_external_events.ServerExternalEventsController, [], [])
+
+
+server_groups_controller = functools.partial(_create_controller,
+    server_groups.ServerGroupController, [], [])
 
 
 server_metadata_controller = functools.partial(_create_controller,
@@ -492,6 +497,14 @@ ROUTE_LIST = (
     }),
     ('/os-server-external-events', {
         'POST': [server_external_events_controller, 'create']
+    }),
+    ('/os-server-groups', {
+        'GET': [server_groups_controller, 'index'],
+        'POST': [server_groups_controller, 'create']
+    }),
+    ('/os-server-groups/{id}', {
+        'GET': [server_groups_controller, 'show'],
+        'DELETE': [server_groups_controller, 'delete']
     }),
     ('/os-services', {
         'GET': [services_controller, 'index']
