@@ -11,6 +11,12 @@ resource_provider_uuid_path: &resource_provider_uuid_path
   required: true
   description: >
     The uuid of a resource provider.
+trait_name:
+  type: string
+  in: path
+  required: true
+  description: >
+    The name of a trait.
 
 # variables in query
 member_of:
@@ -41,6 +47,26 @@ resources_query:
     capacity to serve::
 
         resources=VCPU:4,DISK_GB:64,MEMORY_MB:2048
+trait_associated:
+  type: string
+  in: query
+  required: false
+  description: >
+     If this parameter has a true value, the returned traits will be
+     those that are associated with at least one resource provider.
+     Available values for the parameter are true and false.
+trait_name_query:
+  type: string
+  in: query
+  required: false
+  description: |
+    A string to filter traits. The following options are available:
+
+    `starts_with` operator filters the traits whose name begins with a
+    specific prefix, e.g. name=starts_with:CUSTOM,
+
+    `in` operator filters the traits whose name is in the specified list, e.g.
+    name=in:HW_CPU_X86_AVX,HW_CPU_X86_SSE,HW_CPU_X86_INVALID_FEATURE.
 
 # variables in body
 aggregates:
@@ -166,6 +192,12 @@ total:
   required: true
   description: >
     The actual amount of the resource that the provider can accommodate.
+traits:
+  type: array
+  in: body
+  required: true
+  description: >
+    A list of traits.
 version_id:
   type: string
   in: body

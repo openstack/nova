@@ -1,0 +1,7 @@
+{
+    "traits": [
+        "CUSTOM_HW_FPGA_CLASS1",
+        "CUSTOM_HW_FPGA_CLASS2",
+        "CUSTOM_HW_FPGA_CLASS3"
+    ]
+}
