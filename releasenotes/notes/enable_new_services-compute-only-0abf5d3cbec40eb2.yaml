@@ -1,0 +1,9 @@
+---
+other:
+  - |
+    The ``[DEFAULT]/enable_new_services`` configuration option will now only be
+    used to auto-disable new nova-compute services. Other services like
+    nova-conductor, nova-scheduler and nova-osapi_compute will not be
+    auto-disabled since disabling them does nothing functionally, and starting
+    in Pike the ``PUT /os-services/enable`` REST API will not be able to find
+    non-compute services to enable them.

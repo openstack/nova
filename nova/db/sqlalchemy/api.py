@@ -585,8 +585,13 @@ def service_get_by_compute_host(context, host):
 def service_create(context, values):
     service_ref = models.Service()
     service_ref.update(values)
-    if not CONF.enable_new_services:
-        msg = _("New service disabled due to config option.")
+    # We only auto-disable nova-compute services since those are the only
+    # ones that can be enabled using the os-services REST API and they are
+    # the only ones where being disabled means anything. It does
+    # not make sense to be able to disable non-compute services like
+    # nova-scheduler or nova-osapi_compute since that does nothing.
+    if not CONF.enable_new_services and values.get('binary') == 'nova-compute':
+        msg = _("New compute service disabled due to config option.")
         service_ref.disabled = True
         service_ref.disabled_reason = msg
     try:

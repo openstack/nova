@@ -1098,19 +1098,21 @@ Possible values:
     cfg.BoolOpt('enable_new_services',
         default=True,
         help="""
-Enable new services on this host automatically.
+Enable new nova-compute services on this host automatically.
 
-When a new service (for example "nova-compute") starts up, it gets
+When a new nova-compute service starts up, it gets
 registered in the database as an enabled service. Sometimes it can be useful
-to register new services in disabled state and then enabled them at a later
-point in time. This option can set this behavior for all services per host.
+to register new compute services in disabled state and then enabled them at a
+later point in time. This option only sets this behavior for nova-compute
+services, it does not auto-disable other services like nova-conductor,
+nova-scheduler, nova-consoleauth, or nova-osapi_compute.
 
 Possible values:
 
-* ``True``: Each new service is enabled as soon as it registers itself.
-* ``False``: Services must be enabled via a REST API call or with the CLI
-  with ``nova service-enable <hostname> <binary>``, otherwise they are not
-  ready to use.
+* ``True``: Each new compute service is enabled as soon as it registers itself.
+* ``False``: Compute services must be enabled via an os-services REST API call
+  or with the CLI with ``nova service-enable <hostname> <binary>``, otherwise
+  they are not ready to use.
 """),
     cfg.StrOpt('instance_name_template',
          default='instance-%08x',
