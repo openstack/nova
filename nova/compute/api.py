@@ -1054,14 +1054,10 @@ class API(base.Base):
 
                 if instance_group:
                     if check_server_group_quota:
-                        count = objects.Quotas.count_as_dict(context,
-                                             'server_group_members',
-                                             instance_group,
-                                             context.user_id)
-                        count_value = count['user']['server_group_members']
                         try:
-                            objects.Quotas.limit_check(
-                                context, server_group_members=count_value + 1)
+                            objects.Quotas.check_deltas(
+                                context, {'server_group_members': 1},
+                                instance_group, context.user_id)
                         except exception.OverQuota:
                             msg = _("Quota exceeded, too many servers in "
                                     "group")
@@ -1069,6 +1065,23 @@ class API(base.Base):
 
                     members = objects.InstanceGroup.add_members(
                         context, instance_group.uuid, [instance.uuid])
+
+                    # NOTE(melwitt): We recheck the quota after creating the
+                    # object to prevent users from allocating more resources
+                    # than their allowed quota in the event of a race. This is
+                    # configurable because it can be expensive if strict quota
+                    # limits are not required in a deployment.
+                    if CONF.quota.recheck_quota and check_server_group_quota:
+                        try:
+                            objects.Quotas.check_deltas(
+                                context, {'server_group_members': 0},
+                                instance_group, context.user_id)
+                        except exception.OverQuota:
+                            objects.InstanceGroup._remove_members_in_db(
+                                context, instance_group.id, [instance.uuid])
+                            msg = _("Quota exceeded, too many servers in "
+                                    "group")
+                            raise exception.QuotaError(msg)
                     # list of members added to servers group in this iteration
                     # is needed to check quota of server group during add next
                     # instance
