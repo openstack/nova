@@ -1,0 +1,17 @@
+{
+    "priority": "INFO",
+    "payload": {
+        "nova_object.version": "1.0",
+        "nova_object.namespace": "nova",
+        "nova_object.name": "KeypairPayload",
+        "nova_object.data": {
+            "user_id": "fake",
+            "name": "my-key",
+            "fingerprint": null,
+            "public_key": null,
+            "type": "ssh"
+        }
+    },
+    "event_type": "keypair.create.start",
+    "publisher_id": "nova-api:fake-mini"
+}

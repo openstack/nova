@@ -14,6 +14,7 @@
 #    under the License.
 """Tests for keypair API."""
 
+import mock
 from oslo_concurrency import processutils
 from oslo_config import cfg
 import six
@@ -162,11 +163,17 @@ class CreateImportSharedTestMixIn(object):
 class CreateKeypairTestCase(KeypairAPITestCase, CreateImportSharedTestMixIn):
     func_name = 'create_key_pair'
 
-    def _check_success(self):
+    @mock.patch('nova.compute.utils.notify_about_keypair_action')
+    def _check_success(self, mock_notify):
         keypair, private_key = self.keypair_api.create_key_pair(
             self.ctxt, self.ctxt.user_id, 'foo', key_type=self.keypair_type)
         self.assertEqual('foo', keypair['name'])
         self.assertEqual(self.keypair_type, keypair['type'])
+        mock_notify.assert_has_calls([
+            mock.call(context=self.ctxt, keypair=keypair,
+                      action='create', phase='start'),
+            mock.call(context=self.ctxt, keypair=keypair,
+                      action='create', phase='end')])
         self._check_notifications()
 
     def test_success_ssh(self):

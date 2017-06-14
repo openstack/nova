@@ -35,6 +35,7 @@ from nova.notifications.objects import aggregate as aggregate_notification
 from nova.notifications.objects import base as notification_base
 from nova.notifications.objects import exception as notification_exception
 from nova.notifications.objects import instance as instance_notification
+from nova.notifications.objects import keypair as keypair_notification
 from nova import objects
 from nova.objects import fields
 from nova import rpc
@@ -391,6 +392,27 @@ def notify_about_volume_attach_detach(context, instance, host, action, phase,
                     action=action,
                     phase=phase),
             payload=payload)
+    notification.emit(context)
+
+
+def notify_about_keypair_action(context, keypair, action, phase):
+    """Send versioned notification about the keypair action on the instance
+
+    :param context: the request context
+    :param keypair: the keypair which the action performed on
+    :param action: the name of the action
+    :param phase: the phase of the action
+    """
+    payload = keypair_notification.KeypairPayload(keypair=keypair)
+    notification = keypair_notification.KeypairNotification(
+        priority=fields.NotificationPriority.INFO,
+        publisher=notification_base.NotificationPublisher(
+            host=CONF.host, binary='nova-api'),
+        event_type=notification_base.EventType(
+            object='keypair',
+            action=action,
+            phase=phase),
+        payload=payload)
     notification.emit(context)
 
 
