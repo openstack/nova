@@ -116,7 +116,7 @@ class HypervisorsController(wsgi.Controller):
         except exception.MarkerNotFound:
             msg = _('marker [%s] not found') % marker
             raise webob.exc.HTTPBadRequest(explanation=msg)
-        req.cache_db_compute_nodes(compute_nodes)
+
         hypervisors_list = []
         for hyp in compute_nodes:
             try:
@@ -163,7 +163,7 @@ class HypervisorsController(wsgi.Controller):
         except exception.MarkerNotFound:
             msg = _('marker [%s] not found') % marker
             raise webob.exc.HTTPBadRequest(explanation=msg)
-        req.cache_db_compute_nodes(compute_nodes)
+
         hypervisors_list = []
         for hyp in compute_nodes:
             try:
@@ -194,7 +194,6 @@ class HypervisorsController(wsgi.Controller):
         context.can(hv_policies.BASE_POLICY_NAME)
         try:
             hyp = self.host_api.compute_node_get(context, id)
-            req.cache_db_compute_node(hyp)
             service = self.host_api.service_get_by_compute_host(
                 context, hyp.host)
         except (ValueError, exception.ComputeHostNotFound,
@@ -210,7 +209,6 @@ class HypervisorsController(wsgi.Controller):
         context.can(hv_policies.BASE_POLICY_NAME)
         try:
             hyp = self.host_api.compute_node_get(context, id)
-            req.cache_db_compute_node(hyp)
         except (ValueError, exception.ComputeHostNotFound):
             msg = _("Hypervisor with ID '%s' could not be found.") % id
             raise webob.exc.HTTPNotFound(explanation=msg)
