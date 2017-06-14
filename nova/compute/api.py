@@ -4638,7 +4638,21 @@ class HostAPI(base.Base):
         return objects.ComputeNodeList(objects=computes)
 
     def compute_node_statistics(self, context):
-        return self.db.compute_node_statistics(context)
+        load_cells()
+
+        cell_stats = []
+        for cell in CELLS:
+            if cell.uuid == objects.CellMapping.CELL0_UUID:
+                continue
+            with nova_context.target_cell(context, cell) as cctxt:
+                cell_stats.append(self.db.compute_node_statistics(cctxt))
+
+        if cell_stats:
+            keys = cell_stats[0].keys()
+            return {k: sum(stats[k] for stats in cell_stats)
+                    for k in keys}
+        else:
+            return {}
 
 
 class InstanceActionAPI(base.Base):

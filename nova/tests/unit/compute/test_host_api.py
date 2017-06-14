@@ -422,6 +422,20 @@ class ComputeHostAPITestCase(test.TestCase):
                                                   aggregate.id).hosts
         self.assertEqual([], result)
 
+    @mock.patch('nova.db.compute_node_statistics')
+    def test_compute_node_statistics(self, mock_cns):
+        # Note this should only be called twice
+        mock_cns.side_effect = [
+            {'stat1': 1, 'stat2': 4.0},
+            {'stat1': 5, 'stat2': 1.2},
+        ]
+        compute_api.CELLS = [objects.CellMapping(uuid=uuids.cell1),
+                             objects.CellMapping(
+                                 uuid=objects.CellMapping.CELL0_UUID),
+                             objects.CellMapping(uuid=uuids.cell2)]
+        stats = self.host_api.compute_node_statistics(self.ctxt)
+        self.assertEqual({'stat1': 6, 'stat2': 5.2}, stats)
+
 
 class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
     def setUp(self):
@@ -579,3 +593,7 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
             self.assertEqual('fake-response', result)
 
         _do_test()
+
+    def test_compute_node_statistics(self):
+        # Not implementing cross-cellsv2 for cellsv1
+        pass
