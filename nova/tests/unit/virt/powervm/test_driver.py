@@ -16,12 +16,12 @@ from __future__ import absolute_import
 
 import fixtures
 import mock
+from oslo_config import cfg
 from pypowervm import const as pvm_const
 from pypowervm import exceptions as pvm_exc
 from pypowervm.helpers import log_helper as pvm_hlp_log
 from pypowervm.helpers import vios_busy as pvm_hlp_vbusy
 from pypowervm.utils import transaction as pvm_tx
-from pypowervm.wrappers import managed_system as pvm_ms
 from pypowervm.wrappers import virtual_io_server as pvm_vios
 
 from nova import exception
@@ -30,6 +30,9 @@ from nova.tests.unit.virt import powervm
 from nova.virt import hardware
 from nova.virt.powervm.disk import ssp
 from nova.virt.powervm import driver
+
+
+CONF = cfg.CONF
 
 
 class TestPowerVMDriver(test.NoDBTestCase):
@@ -90,10 +93,7 @@ class TestPowerVMDriver(test.NoDBTestCase):
         mock_names.assert_called_once_with(self.adp)
 
     def test_get_available_nodes(self):
-        self.drv.host_wrapper = mock.create_autospec(pvm_ms.System,
-                                                     instance=True)
-        self.assertEqual([self.drv.host_wrapper.mtms.mtms_str],
-                         self.drv.get_available_nodes('node'))
+        self.assertEqual([CONF.host], self.drv.get_available_nodes('node'))
 
     @mock.patch('pypowervm.wrappers.managed_system.System', autospec=True)
     @mock.patch('nova.virt.powervm.host.build_host_resource_from_ms')

@@ -119,7 +119,7 @@ class PowerVMDriver(driver.ComputeDriver):
         [hypervisor_hostname].
         """
 
-        return [self.host_wrapper.mtms.mtms_str]
+        return [CONF.host]
 
     def get_available_resource(self, nodename):
         """Retrieve resource information.
