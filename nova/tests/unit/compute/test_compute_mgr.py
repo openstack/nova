@@ -25,6 +25,7 @@ import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
+import six
 
 import nova
 from nova.compute import build_results
@@ -4501,6 +4502,28 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.requested_networks, self.security_groups)
         mock_prep.assert_called_once_with(self.context, self.instance,
                 self.block_device_mapping)
+
+    @mock.patch('nova.virt.block_device.attach_block_devices',
+                side_effect=exception.VolumeNotCreated('oops!'))
+    def test_prep_block_device_maintain_original_error_message(self,
+                                                               mock_attach):
+        """Tests that when attach_block_devices raises an Exception, the
+        re-raised InvalidBDM has the original error message which contains
+        the actual details of the failure.
+        """
+        bdms = objects.BlockDeviceMappingList(
+            objects=[fake_block_device.fake_bdm_object(
+                self.context,
+                dict(source_type='image',
+                     destination_type='volume',
+                     boot_index=0,
+                     image_id=uuids.image_id,
+                     device_name='/dev/vda',
+                     volume_size=1))])
+        ex = self.assertRaises(exception.InvalidBDM,
+                               self.compute._prep_block_device,
+                               self.context, self.instance, bdms)
+        self.assertEqual('oops!', six.text_type(ex))
 
     @mock.patch('nova.objects.InstanceGroup.get_by_hint')
     def test_validate_policy_honors_workaround_disabled(self, mock_get):
