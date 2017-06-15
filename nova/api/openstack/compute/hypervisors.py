@@ -86,6 +86,15 @@ class HypervisorsController(wsgi.Controller):
 
         return hyp_dict
 
+    def _get_compute_nodes_by_name_pattern(self, context, hostname_match):
+        compute_nodes = self.host_api.compute_node_search_by_hypervisor(
+                context, hostname_match)
+        if not compute_nodes:
+            msg = (_("No hypervisor matching '%s' could be found.") %
+                   hostname_match)
+            raise webob.exc.HTTPNotFound(explanation=msg)
+        return compute_nodes
+
     @wsgi.Controller.api_version("2.33")  # noqa
     @extensions.expected_errors((400))
     def index(self, req):
@@ -229,21 +238,16 @@ class HypervisorsController(wsgi.Controller):
     def search(self, req, id):
         context = req.environ['nova.context']
         context.can(hv_policies.BASE_POLICY_NAME)
-        hypervisors = self.host_api.compute_node_search_by_hypervisor(
-                context, id)
-        if hypervisors:
-            try:
-                return dict(hypervisors=[
-                    self._view_hypervisor(
-                        hyp,
-                        self.host_api.service_get_by_compute_host(context,
-                                                                  hyp.host),
-                        False, req)
-                    for hyp in hypervisors])
-            except exception.HostMappingNotFound:
-                msg = _("No hypervisor matching '%s' could be found.") % id
-                raise webob.exc.HTTPNotFound(explanation=msg)
-        else:
+        hypervisors = self._get_compute_nodes_by_name_pattern(context, id)
+        try:
+            return dict(hypervisors=[
+                self._view_hypervisor(
+                    hyp,
+                    self.host_api.service_get_by_compute_host(context,
+                                                              hyp.host),
+                    False, req)
+                for hyp in hypervisors])
+        except exception.HostMappingNotFound:
             msg = _("No hypervisor matching '%s' could be found.") % id
             raise webob.exc.HTTPNotFound(explanation=msg)
 
@@ -251,11 +255,7 @@ class HypervisorsController(wsgi.Controller):
     def servers(self, req, id):
         context = req.environ['nova.context']
         context.can(hv_policies.BASE_POLICY_NAME)
-        compute_nodes = self.host_api.compute_node_search_by_hypervisor(
-                context, id)
-        if not compute_nodes:
-            msg = _("No hypervisor matching '%s' could be found.") % id
-            raise webob.exc.HTTPNotFound(explanation=msg)
+        compute_nodes = self._get_compute_nodes_by_name_pattern(context, id)
         hypervisors = []
         for compute_node in compute_nodes:
             try:
