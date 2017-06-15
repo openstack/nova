@@ -13,7 +13,6 @@
 
 import collections
 
-import jsonschema
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
@@ -91,24 +90,6 @@ def _allocations_dict(allocations, key_fetcher, resource_provider=None):
     if resource_provider:
         result['resource_provider_generation'] = resource_provider.generation
     return result
-
-
-def _extract_allocations(body, schema):
-    """Extract allocation data from a JSON body."""
-    try:
-        data = jsonutils.loads(body)
-    except ValueError as exc:
-        raise webob.exc.HTTPBadRequest(
-            _('Malformed JSON: %(error)s') % {'error': exc},
-            json_formatter=util.json_error_formatter)
-    try:
-        jsonschema.validate(data, schema,
-                            format_checker=jsonschema.FormatChecker())
-    except jsonschema.ValidationError as exc:
-        raise webob.exc.HTTPBadRequest(
-            _('JSON does not validate: %(error)s') % {'error': exc},
-            json_formatter=util.json_error_formatter)
-    return data
 
 
 def _serialize_allocations_for_consumer(allocations):
@@ -221,7 +202,7 @@ def list_for_resource_provider(req):
 def set_allocations(req):
     context = req.environ['placement.context']
     consumer_uuid = util.wsgi_path_item(req.environ, 'consumer_uuid')
-    data = _extract_allocations(req.body, ALLOCATION_SCHEMA)
+    data = util.extract_json(req.body, ALLOCATION_SCHEMA)
     allocation_data = data['allocations']
 
     # If the body includes an allocation for a resource provider
