@@ -2782,7 +2782,7 @@ hypervisor_free_disk_gb:
 hypervisor_hostname:
   description: |
     The hypervisor host name provided by the Nova virt driver. For the Ironic driver,
-    it is the Ironic node name.
+    it is the Ironic node uuid.
   in: body
   required: true
   type: string
@@ -3845,7 +3845,7 @@ OS-EXT-SRV-ATTR:host:
 OS-EXT-SRV-ATTR:hypervisor_hostname:
   description: |
     The hypervisor host name provided by the Nova virt driver. For the Ironic driver,
-    it is the Ironic node name. Appears in the response for administrative users only.
+    it is the Ironic node uuid. Appears in the response for administrative users only.
   in: body
   required: true
   type: string
