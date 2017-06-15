@@ -147,18 +147,6 @@ class Request(wsgi.Request):
     def get_db_flavor(self, flavorid):
         return self.get_db_item('flavors', flavorid)
 
-    def cache_db_compute_nodes(self, compute_nodes):
-        self.cache_db_items('compute_nodes', compute_nodes, 'id')
-
-    def cache_db_compute_node(self, compute_node):
-        self.cache_db_items('compute_nodes', [compute_node], 'id')
-
-    def get_db_compute_nodes(self):
-        return self.get_db_items('compute_nodes')
-
-    def get_db_compute_node(self, id):
-        return self.get_db_item('compute_nodes', id)
-
     def best_match_content_type(self):
         """Determine the requested response content-type."""
         if 'nova.best_content_type' not in self.environ:
