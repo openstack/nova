@@ -1046,9 +1046,6 @@ class ResourceTracker(object):
         # Remove allocations for instances that have been removed.
         self._remove_deleted_instances_allocations(context, cn)
 
-        cn.free_ram_mb = max(0, cn.free_ram_mb)
-        cn.free_disk_gb = max(0, cn.free_disk_gb)
-
     def _remove_deleted_instances_allocations(self, context, cn):
         tracked_keys = set(self.tracked_instances.keys())
         allocations = self.reportclient.get_allocations_for_resource_provider(
