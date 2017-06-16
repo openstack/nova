@@ -26,14 +26,47 @@ tag_location:
   required: true
   type: string
   min_version: 2.26
-x-openstack-request-id:
+x-compute-request-id_resp:
   description: |
-    A unique ID for tracking the request. The request ID associated with the request
-    appears in the log lines for that request. By default, the middleware configuration
-    ensures that the request ID appears in the log files.
+    The local request ID, which is a unique ID generated automatically
+    for tracking each request to nova.
+    It is associated with the request and appears in the log lines
+    for that request.
+    By default, the middleware configuration
+    ensures that the local request ID appears in the log files.
+
+    .. note::
+
+       This header exists for backward compatibility.
   in: header
   required: true
   type: string
+x-openstack-request-id_req:
+  description: |
+    The global request ID, which is a unique common ID
+    for tracking each request in OpenStack components.
+    The format of the global request ID must be ``req-`` + UUID (UUID4).
+    If not in accordance with the format, it is ignored.
+    It is associated with the request and appears in the log lines
+    for that request.
+    By default, the middleware configuration ensures that
+    the global request ID appears in the log files.
+  in: header
+  required: false
+  type: string
+  min_version: 2.46
+x-openstack-request-id_resp:
+  description: |
+    The local request ID, which is a unique ID generated automatically
+    for tracking each request to nova.
+    It is associated with the request and appears in the log lines
+    for that request.
+    By default, the middleware configuration
+    ensures that the local request ID appears in the log files.
+  in: header
+  required: true
+  type: string
+  min_version: 2.46
 
 # variables in path
 agent_build_id:

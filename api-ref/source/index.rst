@@ -12,6 +12,7 @@ the `API guide <http://developer.openstack.org/api-guide/compute/index.html>`_.
 
 .. include:: versions.inc
 .. include:: urls.inc
+.. include:: request-ids.inc
 .. include:: servers.inc
 .. include:: servers-actions.inc
 .. include:: servers-action-fixed-ip.inc

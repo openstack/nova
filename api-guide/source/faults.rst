@@ -13,11 +13,56 @@ the action you requested has successfully completed.
 Tracking Errors by Request ID
 =============================
 
-Every request made has a unique Request ID.
-This is returned in a response header.
-Here is an example response header:
+There are two types of request ID.
 
-X-Compute-Request-Id: req-4b9e5c04-c40f-4b4f-960e-6ac0858dca6c
+.. list-table::
+  :header-rows: 1
+  :widths: 2,8
+
+  * - Type
+    - Description
+  * - Local request ID
+    - Locally generated unique request ID by each service and different between
+      all services (Nova, Cinder, Glance, Neutron, etc.) involved
+      in that operation. The format is ``req-`` + UUID (UUID4).
+  * - Global request ID
+    - User specified request ID which is utilized as common identifier
+      by all services (Nova, Cinder, Glance, Neutron, etc.) involved
+      in that operation. This request ID is same among all services involved
+      in that operation.
+      The format is ``req-`` + UUID (UUID4).
+
+It is extremely common for clouds to have an ELK (Elastic Search, Logstash,
+Kibana) infrastructure consuming their logs.
+The only way to query these flows is if there is a common identifier across
+all relevant messages. The global request ID immediately makes existing
+deployed tooling better for managing OpenStack.
+
+**Request Header**
+
+In each REST API request, you can specify the global request ID
+in ``X-Openstack-Request-Id`` header, starting from microversion 2.46.
+The format must be ``req-`` + UUID (UUID4).
+If not in accordance with the format, the global request ID is ignored by Nova.
+
+Request header example::
+
+  X-Openstack-Request-Id: req-3dccb8c4-08fe-4706-a91d-e843b8fe9ed2
+
+**Response Header**
+
+In each REST API request, ``X-Compute-Request-Id`` is returned
+in the response header.
+Starting from microversion 2.46, ``X-Openstack-Request-Id`` is also returned
+in the response header.
+
+``X-Compute-Request-Id`` and ``X-Openstack-Request-Id`` are local request IDs.
+The global request IDs are not returned.
+
+Response header example::
+
+  X-Compute-Request-Id: req-d7bc29d0-7b99-4aeb-a356-89975043ab5e
+  X-Openstack-Request-Id: req-d7bc29d0-7b99-4aeb-a356-89975043ab5e
 
 Server Actions
 --------------
@@ -31,9 +76,33 @@ http://developer.openstack.org/api-ref/compute/#servers-run-an-action-servers-ac
 Logs
 ----
 
-All logs on the system, by default, include the request-id when available.
-This allows an administrator to track the API request processing as it
-transitions between all the different nova services.
+All logs on the system, by default, include the global request ID and
+the local request ID when available. This allows an administrator to
+track the API request processing as it transitions between all the
+different nova services or between nova and other component services
+called by nova during that request.
+
+When nova services receive the local request IDs of other components in the
+``X-Openstack-Request-Id`` header, the local request IDs are output to logs
+along with the local request IDs of nova services.
+
+.. tip::
+
+   If a session client is used in client library, set ``DEBUG`` level to
+   the ``keystoneauth`` log level. If not, set ``DEBUG`` level to the client
+   library package. e.g. ``glanceclient``, ``cinderclient``.
+
+Sample log output is provided below.
+In this example, nova is using local request ID
+``req-034279a7-f2dd-40ff-9c93-75768fda494d``,
+while neutron is using local request ID
+``req-39b315da-e1eb-4ab5-a45b-3f2dbdaba787``::
+
+  Jun 19 09:16:34 devstack-master nova-compute[27857]: DEBUG keystoneauth.session [None req-034279a7-f2dd-40ff-9c93-75768fda494d admin admin] POST call to network for http://10.0.2.15:9696/v2.0/ports used request id req-39b315da-e1eb-4ab5-a45b-3f2dbdaba787 {{(pid=27857) request /usr/local/lib/python2.7/dist-packages/keystoneauth1/session.py:640}}
+
+.. note::
+
+   The local request IDs are useful to make 'call graphs'.
 
 Instance Faults
 ---------------
