@@ -2134,6 +2134,27 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         mock_update_usage.assert_called_once_with(
             self.rt._get_usage_dict(self.instance), sign=-1)
 
+    def test_update_usage_from_instances_goes_negative(self):
+        # NOTE(danms): The resource tracker _should_ report negative resources
+        # for things like free_ram_mb if overcommit is being used. This test
+        # ensures that we don't collapse negative values to zero.
+        self.flags(reserved_host_memory_mb=2048)
+        self.flags(reserved_host_disk_mb=(11 * 1024))
+        cn = objects.ComputeNode(memory_mb=1024, local_gb=10,
+                                 hypervisor_hostname='foo')
+        self.rt.compute_node = cn
+
+        @mock.patch.object(self.sched_client_mock.reportclient,
+                           'remove_deleted_instances')
+        @mock.patch.object(self.rt, '_update_usage_from_instance')
+        def test(uufi, rdia):
+            self.rt._update_usage_from_instances('ctxt', [])
+
+        test()
+
+        self.assertEqual(-1024, cn.free_ram_mb)
+        self.assertEqual(-1, cn.free_disk_gb)
+
 
 class TestInstanceInResizeState(test.NoDBTestCase):
     def test_active_suspending(self):
