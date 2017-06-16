@@ -954,8 +954,6 @@ class ResourceTracker(object):
 
         self.scheduler_client.reportclient.remove_deleted_instances(
                 cn, self.tracked_instances.values())
-        cn.free_ram_mb = max(0, cn.free_ram_mb)
-        cn.free_disk_gb = max(0, cn.free_disk_gb)
 
     def _find_orphaned_instances(self):
         """Given the set of instances and migrations already account for
