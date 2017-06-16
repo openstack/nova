@@ -4952,18 +4952,31 @@ class KeypairAPI(base.Base):
         """Create a new key pair."""
         self._validate_new_key_pair(context, user_id, key_name, key_type)
 
-        self._notify(context, 'create.start', key_name)
-
-        private_key, public_key, fingerprint = self._generate_key_pair(
-            user_id, key_type)
-
         keypair = objects.KeyPair(context)
         keypair.user_id = user_id
         keypair.name = key_name
         keypair.type = key_type
+        keypair.fingerprint = None
+        keypair.public_key = None
+
+        self._notify(context, 'create.start', key_name)
+        compute_utils.notify_about_keypair_action(
+            context=context,
+            keypair=keypair,
+            action=fields_obj.NotificationAction.CREATE,
+            phase=fields_obj.NotificationPhase.START)
+
+        private_key, public_key, fingerprint = self._generate_key_pair(
+            user_id, key_type)
+
         keypair.fingerprint = fingerprint
         keypair.public_key = public_key
         keypair.create()
+        compute_utils.notify_about_keypair_action(
+            context=context,
+            keypair=keypair,
+            action=fields_obj.NotificationAction.CREATE,
+            phase=fields_obj.NotificationPhase.END)
 
         self._notify(context, 'create.end', key_name)
 

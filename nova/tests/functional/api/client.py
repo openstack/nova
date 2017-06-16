@@ -217,7 +217,7 @@ class TestOpenStackClient(object):
             headers['Content-Type'] = 'application/json'
             kwargs['body'] = jsonutils.dumps(body)
 
-        kwargs.setdefault('check_response_status', [200, 202])
+        kwargs.setdefault('check_response_status', [200, 201, 202])
         return APIResponse(self.api_request(relative_uri, **kwargs))
 
     def api_put(self, relative_uri, body, **kwargs):
@@ -423,3 +423,6 @@ class TestOpenStackClient(object):
 
     def get_services(self):
         return self.api_get('/os-services').body['services']
+
+    def post_keypair(self, keypair):
+        return self.api_post('/os-keypairs', keypair).body['keypair']

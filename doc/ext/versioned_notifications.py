@@ -30,6 +30,7 @@ from nova.objects import base
 from nova.notifications.objects import exception
 from nova.notifications.objects import flavor
 from nova.notifications.objects import instance
+from nova.notifications.objects import keypair
 from nova.notifications.objects import service
 
 
