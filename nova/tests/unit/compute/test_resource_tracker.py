@@ -2472,6 +2472,26 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         # instance that no longer exists.
         rc.delete_allocation_for_instance.assert_called_once_with(uuids.inst0)
 
+    def test_update_usage_from_instances_goes_negative(self):
+        # NOTE(danms): The resource tracker _should_ report negative resources
+        # for things like free_ram_mb if overcommit is being used. This test
+        # ensures that we don't collapse negative values to zero.
+        self.flags(reserved_host_memory_mb=2048)
+        self.flags(reserved_host_disk_mb=(11 * 1024))
+        cn = objects.ComputeNode(memory_mb=1024, local_gb=10)
+        self.rt.compute_nodes['foo'] = cn
+
+        @mock.patch.object(self.rt,
+                           '_remove_deleted_instances_allocations')
+        @mock.patch.object(self.rt, '_update_usage_from_instance')
+        def test(uufi, rdia):
+            self.rt._update_usage_from_instances('ctxt', [], 'foo')
+
+        test()
+
+        self.assertEqual(-1024, cn.free_ram_mb)
+        self.assertEqual(-1, cn.free_disk_gb)
+
 
 class TestInstanceInResizeState(test.NoDBTestCase):
     def test_active_suspending(self):
