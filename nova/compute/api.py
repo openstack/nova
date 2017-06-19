@@ -4015,7 +4015,7 @@ class API(base.Base):
             # NOTE(sbauza): Unset the host to make sure we call the scheduler
             host_name = None
             # FIXME(sbauza): Since only Ironic driver uses more than one
-            # compute per service but doesn't support evacuations,
+            # compute per service but doesn't support live migrations,
             # let's provide the first one.
             target = nodes[0]
             if request_spec:
