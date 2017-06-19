@@ -37,8 +37,6 @@ from nova import quota
 
 CONF = nova.conf.CONF
 
-ALIAS = 'os-tenant-networks'
-
 QUOTAS = quota.QUOTAS
 LOG = logging.getLogger(__name__)
 
@@ -182,21 +180,6 @@ class TenantNetworkController(wsgi.Controller):
             LOG.exception(msg, extra=network)
             raise exc.HTTPServiceUnavailable(explanation=msg)
         return {"network": network_dict(networks[0])}
-
-
-class TenantNetworks(extensions.V21APIExtensionBase):
-    """Tenant-based Network Management Extension."""
-
-    name = "OSTenantNetworks"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        ext = extensions.ResourceExtension(ALIAS, TenantNetworkController())
-        return [ext]
-
-    def get_controller_extensions(self):
-        return []
 
 
 def _sync_networks(context, project_id, session):
