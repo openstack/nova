@@ -294,6 +294,10 @@ server_password_controller = functools.partial(_create_controller,
     server_password.ServerPasswordController, [], [])
 
 
+server_remote_consoles_controller = functools.partial(_create_controller,
+    remote_consoles.RemoteConsolesController, [], [])
+
+
 server_tags_controller = functools.partial(_create_controller,
     server_tags.ServerTagsController, [], [])
 
@@ -640,6 +644,9 @@ ROUTE_LIST = (
     }),
     ('/servers/{server_id}/os-virtual-interfaces', {
         'GET': [virtual_interfaces_controller, 'index']
+    }),
+    ('/servers/{server_id}/remote-consoles', {
+        'POST': [server_remote_consoles_controller, 'create']
     }),
     ('/servers/{server_id}/tags', {
         'GET': [server_tags_controller, 'index'],
