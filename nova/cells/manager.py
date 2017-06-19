@@ -60,7 +60,7 @@ class CellsManager(manager.Manager):
     Scheduling requests get passed to the scheduler class.
     """
 
-    target = oslo_messaging.Target(version='1.37')
+    target = oslo_messaging.Target(version='1.38')
 
     def __init__(self, *args, **kwargs):
         LOG.warning('The cells feature of Nova is considered experimental '
@@ -355,7 +355,7 @@ class CellsManager(manager.Manager):
 
     @oslo_messaging.expected_exceptions(exception.CellRoutingInconsistency)
     def compute_node_get(self, ctxt, compute_id):
-        """Get a compute node by ID in a specific cell."""
+        """Get a compute node by ID or UUID in a specific cell."""
         cell_name, compute_id = cells_utils.split_cell_and_item(
                 compute_id)
         response = self.msg_runner.compute_node_get(ctxt, cell_name,

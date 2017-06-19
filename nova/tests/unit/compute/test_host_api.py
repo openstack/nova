@@ -436,6 +436,67 @@ class ComputeHostAPITestCase(test.TestCase):
         stats = self.host_api.compute_node_statistics(self.ctxt)
         self.assertEqual({'stat1': 6, 'stat2': 5.2}, stats)
 
+    @mock.patch.object(objects.CellMappingList, 'get_all',
+                       return_value=objects.CellMappingList(objects=[
+                           objects.CellMapping(
+                               uuid=objects.CellMapping.CELL0_UUID,
+                               transport_url='mq://cell0',
+                               database_connection='db://cell0'),
+                           objects.CellMapping(
+                               uuid=uuids.cell1_uuid,
+                               transport_url='mq://fake1',
+                               database_connection='db://fake1'),
+                           objects.CellMapping(
+                               uuid=uuids.cell2_uuid,
+                               transport_url='mq://fake2',
+                               database_connection='db://fake2')]))
+    @mock.patch.object(objects.ComputeNode, 'get_by_uuid',
+                       side_effect=[exception.ComputeHostNotFound(
+                                        host=uuids.cn_uuid),
+                                    objects.ComputeNode(uuid=uuids.cn_uuid)])
+    def test_compute_node_get_using_uuid(self, compute_get_by_uuid,
+                                         cell_mappings_get_all):
+        """Tests that we can lookup a compute node in the HostAPI using a uuid.
+        """
+        self.host_api.compute_node_get(self.ctxt, uuids.cn_uuid)
+        # cell0 should have been skipped, and the compute node wasn't found
+        # in cell1 so we checked cell2 and found it
+        self.assertEqual(2, compute_get_by_uuid.call_count)
+        compute_get_by_uuid.assert_has_calls(
+            [mock.call(self.ctxt, uuids.cn_uuid)] * 2)
+
+    @mock.patch.object(objects.CellMappingList, 'get_all',
+                       return_value=objects.CellMappingList(objects=[
+                           objects.CellMapping(
+                               uuid=objects.CellMapping.CELL0_UUID,
+                               transport_url='mq://cell0',
+                               database_connection='db://cell0'),
+                           objects.CellMapping(
+                               uuid=uuids.cell1_uuid,
+                               transport_url='mq://fake1',
+                               database_connection='db://fake1'),
+                           objects.CellMapping(
+                               uuid=uuids.cell2_uuid,
+                               transport_url='mq://fake2',
+                               database_connection='db://fake2')]))
+    @mock.patch.object(objects.ComputeNode, 'get_by_uuid',
+                       side_effect=exception.ComputeHostNotFound(
+                           host=uuids.cn_uuid))
+    def test_compute_node_get_not_found(self, compute_get_by_uuid,
+                                        cell_mappings_get_all):
+        """Tests that we can lookup a compute node in the HostAPI using a uuid
+        and will fail with ComputeHostNotFound if we didn't find it in any
+        cell.
+        """
+        self.assertRaises(exception.ComputeHostNotFound,
+                          self.host_api.compute_node_get,
+                          self.ctxt, uuids.cn_uuid)
+        # cell0 should have been skipped, and the compute node wasn't found
+        # in cell1 or cell2.
+        self.assertEqual(2, compute_get_by_uuid.call_count)
+        compute_get_by_uuid.assert_has_calls(
+            [mock.call(self.ctxt, uuids.cn_uuid)] * 2)
+
 
 class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
     def setUp(self):
@@ -597,3 +658,19 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
     def test_compute_node_statistics(self):
         # Not implementing cross-cellsv2 for cellsv1
         pass
+
+    def test_compute_node_get_using_uuid(self):
+        cell_compute_uuid = cells_utils.cell_with_item('cell1', uuids.cn_uuid)
+        with mock.patch.object(self.host_api.cells_rpcapi,
+                               'compute_node_get') as compute_node_get:
+            self.host_api.compute_node_get(self.ctxt, cell_compute_uuid)
+        compute_node_get.assert_called_once_with(self.ctxt, cell_compute_uuid)
+
+    def test_compute_node_get_not_found(self):
+        cell_compute_uuid = cells_utils.cell_with_item('cell1', uuids.cn_uuid)
+        with mock.patch.object(self.host_api.cells_rpcapi, 'compute_node_get',
+                               side_effect=exception.CellRoutingInconsistency(
+                                   reason='because_cells_v1')):
+            self.assertRaises(exception.ComputeHostNotFound,
+                              self.host_api.compute_node_get,
+                              self.ctxt, cell_compute_uuid)

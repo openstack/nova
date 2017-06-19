@@ -648,7 +648,7 @@ class HostAPI(compute_api.HostAPI):
                                                   state=state)
 
     def compute_node_get(self, context, compute_id):
-        """Get a compute node from a particular cell by its integer ID.
+        """Get a compute node from a particular cell by its integer ID or UUID.
         compute_id should be in the format of 'path!to!cell@ID'.
         """
         try:

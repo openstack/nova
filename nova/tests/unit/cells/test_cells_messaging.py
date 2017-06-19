@@ -956,6 +956,19 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
         self.assertEqual('fake_result', result)
         mock_get_id.assert_called_with(self.ctxt, compute_id)
 
+    @mock.patch.object(objects.ComputeNode, 'get_by_uuid',
+                       return_value=objects.ComputeNode(uuid=uuids.cn_uuid))
+    def test_compute_node_get_using_uuid(self, compute_node_get_by_uuid):
+        """Tests that _TargetedMessageMethods.compute_node_get handles a
+        UUID for the query parameter.
+        """
+        response = self.src_msg_runner.compute_node_get(
+            self.ctxt, self.tgt_cell_name, uuids.cn_uuid)
+        result = response.value_or_raise()
+        self.assertEqual(uuids.cn_uuid, result.uuid)
+        compute_node_get_by_uuid.assert_called_once_with(
+            self.ctxt, uuids.cn_uuid)
+
     def test_actions_get(self):
         fake_uuid = fake_server_actions.FAKE_UUID
         fake_req_id = fake_server_actions.FAKE_REQUEST_ID1

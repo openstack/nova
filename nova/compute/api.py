@@ -4576,16 +4576,25 @@ class HostAPI(base.Base):
                                         state=state)
 
     def compute_node_get(self, context, compute_id):
-        """Return compute node entry for particular integer ID."""
+        """Return compute node entry for particular integer ID or UUID."""
         load_cells()
 
         # NOTE(danms): Unfortunately this API exposes database identifiers
         # which means we really can't do something efficient here
+        is_uuid = uuidutils.is_uuid_like(compute_id)
         for cell in CELLS:
             if cell.uuid == objects.CellMapping.CELL0_UUID:
                 continue
             with nova_context.target_cell(context, cell) as cctxt:
                 try:
+                    if is_uuid:
+                        # NOTE(mriedem): We wouldn't have to loop over cells if
+                        # we stored the ComputeNode.uuid in the HostMapping but
+                        # we don't have that. It could be added but would
+                        # require an online data migration to update existing
+                        # host mappings.
+                        return objects.ComputeNode.get_by_uuid(cctxt,
+                                                               compute_id)
                     return objects.ComputeNode.get_by_id(cctxt,
                                                          int(compute_id))
                 except exception.ComputeHostNotFound:
