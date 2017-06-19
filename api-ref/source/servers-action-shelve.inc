@@ -127,7 +127,8 @@ If the server is locked, you must have administrator privileges to unshelve the 
 
 **Asynchronous Postconditions**
 
-After you successfully shelve a server, its status changes to ``ACTIVE``. The server appears on the compute node.
+After you successfully unshelve a server, its status changes to ``ACTIVE``.
+The server appears on the compute node.
 
 The shelved image is deleted from the list of images returned by an API call.
 
