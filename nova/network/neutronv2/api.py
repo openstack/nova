@@ -884,11 +884,13 @@ class API(base_api.NetworkAPI):
             admin_client=admin_client,
             preexisting_port_ids=preexisting_port_ids,
             update_cells=True)
-        # NOTE(danms): Only return info about ports we created in this run.
-        # In the initial allocation case, this will be everything we created,
-        # and in later runs will only be what was created that time. Thus,
-        # this only affects the attach case, not the original use for this
-        # method.
+        # Only return info about ports we processed in this run, which might
+        # have been pre-existing neutron ports or ones that nova created. In
+        # the initial allocation case (server create), this will be everything
+        # we processed, and in later runs will only be what was processed that
+        # time. For example, if the instance was created with port A and
+        # then port B was attached in this call, only port B would be returned.
+        # Thus, this filtering only affects the attach case.
         return network_model.NetworkInfo([vif for vif in nw_info
                                           if vif['id'] in created_port_ids +
                                           preexisting_port_ids])
