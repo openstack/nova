@@ -28,7 +28,6 @@ from nova import utils
 
 
 QUOTAS = quota.QUOTAS
-ALIAS = "os-quota-class-sets"
 
 # Quotas that are only enabled by specific extensions
 EXTENDED_QUOTAS = {'server_groups': 'os-server-group-quotas',
@@ -41,10 +40,10 @@ class QuotaClassSetsController(wsgi.Controller):
 
     def __init__(self, **kwargs):
         self.supported_quotas = QUOTAS.resources
-        extension_info = kwargs.pop('extension_info').get_extensions()
+        # TODO(jichenjc): need fix v2 and v2.1 API difference here see bug
+        # 1693168 for more info
         for resource, extension in EXTENDED_QUOTAS.items():
-            if extension not in extension_info:
-                self.supported_quotas.remove(resource)
+            self.supported_quotas.remove(resource)
 
     def _format_quota_set(self, quota_class, quota_set):
         """Convert the quota object to a result dict."""
@@ -89,22 +88,3 @@ class QuotaClassSetsController(wsgi.Controller):
 
         values = QUOTAS.get_class_quotas(context, quota_class)
         return self._format_quota_set(None, values)
-
-
-class QuotaClasses(extensions.V21APIExtensionBase):
-    """Quota classes management support."""
-
-    name = "QuotaClasses"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        resources = []
-        res = extensions.ResourceExtension(
-            ALIAS,
-            QuotaClassSetsController(extension_info=self.extension_info))
-        resources.append(res)
-        return resources
-
-    def get_controller_extensions(self):
-        return []
