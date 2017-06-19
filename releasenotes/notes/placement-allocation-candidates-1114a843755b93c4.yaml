@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    A new 1.10 API microversion is added to the Placement REST API. This
+    microversion adds support for the GET /allocation_candidates resource
+    endpoint. This endpoint returns information about possible allocation
+    requests that callers can make which meet a set of resource constraints
+    supplied as query string parameters. Also returned is some inventory and
+    capacity information for the resource providers involved in the allocation
+    candidates.

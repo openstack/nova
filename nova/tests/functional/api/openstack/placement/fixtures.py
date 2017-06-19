@@ -191,6 +191,104 @@ class AllocationFixture(APIFixture):
         os.environ['ALT_RP_NAME'] = uuidutils.generate_uuid()
 
 
+class SharedStorageFixture(APIFixture):
+    """An APIFixture that has some two compute nodes without local storage
+    associated by aggregate to a provider of shared storage.
+    """
+
+    def start_fixture(self):
+        super(SharedStorageFixture, self).start_fixture()
+        self.context = context.get_admin_context()
+
+        # These UUIDs are staticly defined here because the JSONPath querying
+        # needed in the allocation-candidates.yaml gabbits cannot refer to an
+        # ENVIRON variable because the $ sign is a token in the JSONPath
+        # parser.
+        os.environ['CN1_UUID'] = 'c1c1c1c1-2894-4df1-aa6b-c61fa72ed22d'
+        os.environ['CN2_UUID'] = 'c2c2c2c2-beef-49a0-98a0-b998b88debfd'
+        os.environ['SS_UUID'] = 'dddddddd-61a6-472e-b8c1-74796e803066'
+        os.environ['AGG_UUID'] = 'aaaaaaaa-04b3-458c-9a9f-361aad56f41c'
+
+        cn1_uuid = os.environ['CN1_UUID']
+        cn2_uuid = os.environ['CN2_UUID']
+        ss_uuid = os.environ['SS_UUID']
+        agg_uuid = os.environ['AGG_UUID']
+
+        cn1 = objects.ResourceProvider(
+            self.context,
+            name='cn1',
+            uuid=cn1_uuid)
+        cn1.create()
+
+        cn2 = objects.ResourceProvider(
+            self.context,
+            name='cn2',
+            uuid=cn2_uuid)
+        cn2.create()
+
+        ss = objects.ResourceProvider(
+            self.context,
+            name='ss',
+            uuid=ss_uuid)
+        ss.create()
+
+        # Populate compute node inventory for VCPU and RAM
+        for cn in (cn1, cn2):
+            vcpu_inv = objects.Inventory(
+                self.context,
+                resource_provider=cn,
+                resource_class='VCPU',
+                total=24,
+                reserved=0,
+                max_unit=24,
+                min_unit=1,
+                step_size=1,
+                allocation_ratio=16.0)
+            vcpu_inv.obj_set_defaults()
+            ram_inv = objects.Inventory(
+                self.context,
+                resource_provider=cn,
+                resource_class='MEMORY_MB',
+                total=128 * 1024,
+                reserved=0,
+                max_unit=128 * 1024,
+                min_unit=256,
+                step_size=256,
+                allocation_ratio=1.5)
+            ram_inv.obj_set_defaults()
+            inv_list = objects.InventoryList(objects=[vcpu_inv, ram_inv])
+            cn.set_inventory(inv_list)
+
+        # Populate shared storage provider with DISK_GB inventory
+        disk_inv = objects.Inventory(
+            self.context,
+            resource_provider=ss,
+            resource_class='DISK_GB',
+            total=2000,
+            reserved=100,
+            max_unit=2000,
+            min_unit=10,
+            step_size=10,
+            allocation_ratio=1.0)
+        disk_inv.obj_set_defaults()
+        inv_list = objects.InventoryList(objects=[disk_inv])
+        ss.set_inventory(inv_list)
+
+        # Mark the shared storage pool as having inventory shared among any
+        # provider associated via aggregate
+        t = objects.Trait.get_by_name(
+            self.context,
+            "MISC_SHARES_VIA_AGGREGATE",
+        )
+        ss.set_traits(objects.TraitList(objects=[t]))
+
+        # Now associate the shared storage pool and both compute nodes with the
+        # same aggregate
+        cn1.set_aggregates([agg_uuid])
+        cn2.set_aggregates([agg_uuid])
+        ss.set_aggregates([agg_uuid])
+
+
 class CORSFixture(APIFixture):
     """An APIFixture that turns on CORS."""
 

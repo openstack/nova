@@ -74,7 +74,7 @@ GET_RPS_SCHEMA_1_3['properties']['member_of'] = {
 # having some set of capacity for some resources. The query string is a
 # comma-delimited set of "$RESOURCE_CLASS_NAME:$AMOUNT" strings. The validation
 # of the string is left up to the helper code in the
-# _normalize_resources_qs_param() function below.
+# normalize_resources_qs_param() function.
 GET_RPS_SCHEMA_1_4 = copy.deepcopy(GET_RPS_SCHEMA_1_3)
 GET_RPS_SCHEMA_1_4['properties']['resources'] = {
     "type": "string"

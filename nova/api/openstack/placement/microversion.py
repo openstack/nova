@@ -47,6 +47,7 @@ VERSIONS = [
     '1.8',  # Adds 'project_id' and 'user_id' required request parameters to
             # PUT /allocations
     '1.9',  # Adds GET /usages
+    '1.10',  # Adds GET /allocation_candidates resource endpoint
 ]
 
 
