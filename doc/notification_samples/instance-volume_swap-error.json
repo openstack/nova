@@ -88,12 +88,13 @@
             "tenant_id": "6f70656e737461636b20342065766572",
             "terminated_at": null,
             "auto_disk_config":"MANUAL",
+            "updated_at": "2012-10-29T13:42:11Z",
             "user_id": "fake",
             "uuid": "0ab886d0-7443-4107-9265-48371bfa662b"
         },
         "nova_object.name": "InstanceActionVolumeSwapPayload",
         "nova_object.namespace": "nova",
-        "nova_object.version": "1.4"
+        "nova_object.version": "1.5"
     },
     "priority": "ERROR",
     "publisher_id": "nova-compute:compute"

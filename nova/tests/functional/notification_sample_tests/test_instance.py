@@ -271,7 +271,8 @@ class TestInstanceNotificationSample(
             # scheduled
             {'host': 'compute',
              'node': 'fake-mini',
-             'state_update.old_task_state': None},
+             'state_update.old_task_state': None,
+             'updated_at': '2012-10-29T13:42:11Z'},
 
             # building -> networking
             {'state_update.new_task_state': 'networking',
