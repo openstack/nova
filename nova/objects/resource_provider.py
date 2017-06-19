@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
 import copy
 # NOTE(cdent): The resource provider objects are designed to never be
 # used over RPC. Remote manipulation is done with the placement HTTP
@@ -2170,3 +2171,373 @@ class TraitList(base.ObjectListBase, base.NovaObject):
     def get_all(cls, context, filters=None):
         db_traits = cls._get_all_from_db(context, filters)
         return base.obj_make_list(context, cls(context), Trait, db_traits)
+
+
+@base.NovaObjectRegistry.register_if(False)
+class AllocationRequestResource(base.NovaObject):
+    # 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'resource_provider': fields.ObjectField('ResourceProvider'),
+        'resource_class': fields.ResourceClassField(read_only=True),
+        'amount': fields.NonNegativeIntegerField(),
+    }
+
+
+@base.NovaObjectRegistry.register_if(False)
+class AllocationRequest(base.NovaObject):
+    # 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'resource_requests': fields.ListOfObjectsField(
+            'AllocationRequestResource'
+        ),
+    }
+
+
+@base.NovaObjectRegistry.register_if(False)
+class ProviderSummaryResource(base.NovaObject):
+    # 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'resource_class': fields.ResourceClassField(read_only=True),
+        'capacity': fields.NonNegativeIntegerField(),
+        'used': fields.NonNegativeIntegerField(),
+    }
+
+
+@base.NovaObjectRegistry.register_if(False)
+class ProviderSummary(base.NovaObject):
+    # 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'resource_provider': fields.ObjectField('ResourceProvider'),
+        'resources': fields.ListOfObjectsField('ProviderSummaryResource'),
+        'traits': fields.ListOfObjectsField('Trait'),
+    }
+
+
+@db_api.api_context_manager.reader
+def _get_usages_by_provider_and_rc(ctx, rp_ids, rc_ids):
+    """Returns a row iterator of usage records grouped by resource provider ID
+    and resource class ID for all resource providers and resource classes
+    involved in our request
+    """
+    # We build up a SQL expression that looks like this:
+    # SELECT
+    #   rp.id as resource_provider_id
+    # , rp.uuid as resource_provider_uuid
+    # , inv.resource_class_id
+    # , inv.total
+    # , inv.reserved
+    # , inv.allocation_ratio
+    # , usage.used
+    # FROM resource_providers AS rp
+    # JOIN inventories AS inv
+    #  ON rp.id = inv.resource_provider_id
+    # LEFT JOIN (
+    #   SELECT resource_provider_id, resource_class_id, SUM(used) as used
+    #   FROM allocations
+    #   WHERE resource_provider_id IN ($rp_ids)
+    #   AND resource_class_id IN ($rc_ids)
+    #   GROUP BY resource_provider_id, resource_class_id
+    # )
+    # AS usages
+    #   ON inv.resource_provider_id = usage.resource_provider_id
+    #   AND inv.resource_class_id = usage.resource_class_id
+    # WHERE rp.id IN ($rp_ids)
+    # AND inv.resource_class_id IN ($rc_ids)
+    rpt = sa.alias(_RP_TBL, name="rp")
+    inv = sa.alias(_INV_TBL, name="inv")
+    # Build our derived table (subquery in the FROM clause) that sums used
+    # amounts for resource provider and resource class
+    usage = sa.alias(
+        sa.select([
+            _ALLOC_TBL.c.resource_provider_id,
+            _ALLOC_TBL.c.resource_class_id,
+            sql.func.sum(_ALLOC_TBL.c.used).label('used'),
+        ]).where(
+            sa.and_(
+                _ALLOC_TBL.c.resource_provider_id.in_(rp_ids),
+                _ALLOC_TBL.c.resource_class_id.in_(rc_ids),
+            ),
+        ).group_by(
+            _ALLOC_TBL.c.resource_provider_id,
+            _ALLOC_TBL.c.resource_class_id
+        ),
+        name='usage',
+    )
+    # Build a join between the resource providers and inventories table
+    rpt_inv_join = sa.join(rpt, inv, rpt.c.id == inv.c.resource_provider_id)
+    # And then join to the derived table of usages
+    usage_join = sa.outerjoin(
+        rpt_inv_join,
+        usage,
+        sa.and_(
+            usage.c.resource_provider_id == inv.c.resource_provider_id,
+            usage.c.resource_class_id == inv.c.resource_class_id,
+        ),
+    )
+    query = sa.select([
+        rpt.c.id.label("resource_provider_id"),
+        rpt.c.uuid.label("resource_provider_uuid"),
+        inv.c.resource_class_id,
+        inv.c.total,
+        inv.c.reserved,
+        inv.c.allocation_ratio,
+        usage.c.used,
+    ]).select_from(usage_join)
+    return ctx.session.execute(query).fetchall()
+
+
+@base.NovaObjectRegistry.register_if(False)
+class AllocationCandidates(base.NovaObject):
+    """The AllocationCandidates object is a collection of possible allocations
+    that match some request for resources, along with some summary information
+    about the resource providers involved in these allocation candidates.
+    """
+    # 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        # A collection of allocation possibilities that can be attempted by the
+        # caller that would, at the time of calling, meet the requested
+        # resource constraints
+        'allocation_requests': fields.ListOfObjectsField('AllocationRequest'),
+        # Information about usage and inventory that relate to any provider
+        # contained in any of the AllocationRequest objects in the
+        # allocation_requests field
+        'provider_summaries': fields.ListOfObjectsField('ProviderSummary'),
+    }
+
+    @classmethod
+    def get_by_filters(cls, context, filters):
+        """Returns an AllocationCandidates object containing all resource
+        providers matching a set of supplied resource constraints, with a set
+        of allocation requests constructed from that list of resource
+        providers.
+
+        :param filters: A dict of filters containing one or more of the
+                        following keys:
+
+            'resources': A dict, keyed by resource class name, of amounts of
+                         that resource being requested. The resource provider
+                         must either have capacity for the amount being
+                         requested or be associated via aggregate to a provider
+                         that shares this resource and has capacity for the
+                         requested amount.
+        """
+        _ensure_rc_cache(context)
+        alloc_reqs, provider_summaries = cls._get_by_filters(context, filters)
+        return cls(
+            context,
+            allocation_requests=alloc_reqs,
+            provider_summaries=provider_summaries,
+        )
+
+    # TODO(jaypipes): See what we can pull out of here into helper functions to
+    # minimize the complexity of this method.
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_by_filters(context, filters):
+        # We first get the list of "root providers" that either have the
+        # requested resources or are associated with the providers that
+        # share one or more of the requested resource(s)
+        resources = filters.get('resources')
+        if not resources:
+            raise ValueError(_("Supply a resources collection in filters."))
+
+        # Transform resource string names to internal integer IDs
+        resources = {
+            _RC_CACHE.id_from_string(key): value
+            for key, value in resources.items()
+        }
+
+        roots = [r[0] for r in _get_all_with_shared(context, resources)]
+
+        if not roots:
+            return [], []
+
+        # Contains a set of resource provider IDs for each resource class
+        # requested
+        sharing_providers = {
+            rc_id: _get_providers_with_shared_capacity(context, rc_id, amount)
+            for rc_id, amount in resources.items()
+        }
+        # We need to grab usage information for all the providers identified as
+        # potentially fulfilling part of the resource request. This includes
+        # "root providers" returned from _get_all_with_shared() as well as all
+        # the providers of shared resources. Here, we simply grab a unique set
+        # of all those resource provider internal IDs by set union'ing them
+        # together
+        all_rp_ids = set(roots)
+        for rps in sharing_providers.values():
+            all_rp_ids |= set(rps)
+
+        # Grab usage summaries for each provider (local or sharing) and
+        # resource class requested
+        usages = _get_usages_by_provider_and_rc(
+            context,
+            all_rp_ids,
+            list(resources.keys()),
+        )
+
+        # Build up a dict, keyed by internal resource provider ID, of usage
+        # information from which we will then build both allocation request and
+        # provider summary information
+        summaries = {}
+        for usage in usages:
+            u_rp_id = usage['resource_provider_id']
+            u_rp_uuid = usage['resource_provider_uuid']
+            u_rc_id = usage['resource_class_id']
+            # NOTE(jaypipes): usage['used'] may be None due to the LEFT JOIN of
+            # the usages subquery, so we coerce NULL values to 0 here.
+            used = usage['used'] or 0
+            allocation_ratio = usage['allocation_ratio']
+            cap = int((usage['total'] - usage['reserved']) * allocation_ratio)
+
+            summary = summaries.get(u_rp_id)
+            if not summary:
+                summary = {
+                    'uuid': u_rp_uuid,
+                    'resources': {},
+                    # TODO(jaypipes): Fill in the provider's traits...
+                    'traits': [],
+                }
+                summaries[u_rp_id] = summary
+            summary['resources'][u_rc_id] = {
+                'capacity': cap,
+                'used': used,
+            }
+
+        # Next, build up a list of allocation requests. These allocation
+        # requests are AllocationRequest objects, containing resource provider
+        # UUIDs, resource class names and amounts to consume from that resource
+        # provider
+        alloc_request_objs = []
+
+        # Build a dict, keyed by resource class ID, of
+        # AllocationRequestResource objects that represent each resource
+        # provider for a shared resource
+        sharing_resource_requests = collections.defaultdict(list)
+        for shared_rc_id in sharing_providers.keys():
+            sharing = sharing_providers[shared_rc_id]
+            for sharing_rp_id in sharing:
+                sharing_summary = summaries[sharing_rp_id]
+                sharing_rp_uuid = sharing_summary['uuid']
+                sharing_res_req = AllocationRequestResource(
+                    context,
+                    resource_provider=ResourceProvider(
+                        context,
+                        uuid=sharing_rp_uuid,
+                    ),
+                    resource_class=_RC_CACHE.string_from_id(shared_rc_id),
+                    amount=resources[shared_rc_id],
+                )
+                sharing_resource_requests[shared_rc_id].append(sharing_res_req)
+
+        for root_rp_id in roots:
+            root_summary = summaries[root_rp_id]
+            root_rp_uuid = root_summary['uuid']
+            local_resources = set(
+                rc_id for rc_id in resources.keys()
+                if rc_id in root_summary['resources']
+            )
+            shared_resources = set(
+                rc_id for rc_id in resources.keys()
+                if rc_id not in root_summary['resources']
+            )
+            # Determine if the root provider actually has all the resources
+            # requested. If not, we need to add an AllocationRequest
+            # alternative containing this resource for each sharing provider
+            has_all = len(shared_resources) == 0
+            if has_all:
+                resource_requests = [
+                    AllocationRequestResource(
+                        context,
+                        resource_provider=ResourceProvider(
+                            context,
+                            uuid=root_rp_uuid,
+                        ),
+                        resource_class=_RC_CACHE.string_from_id(rc_id),
+                        amount=amount,
+                    ) for rc_id, amount in resources.items()
+                ]
+                req_obj = AllocationRequest(
+                    context,
+                    resource_requests=resource_requests,
+                )
+                alloc_request_objs.append(req_obj)
+
+            # If there are no resource providers sharing resources involved in
+            # this request, there's no point building a set of allocation
+            # requests that involve resource providers other than the "root
+            # providers" that have all the local resources on them
+            if not sharing_resource_requests:
+                continue
+
+            # add an AllocationRequest that includes local resources from the
+            # root provider and shared resources from each sharing provider of
+            # that resource class
+            non_shared_resources = local_resources - shared_resources
+            non_shared_requests = [
+                AllocationRequestResource(
+                    context,
+                    resource_provider=ResourceProvider(
+                        context,
+                        uuid=root_rp_uuid,
+                    ),
+                    resource_class=_RC_CACHE.string_from_id(rc_id),
+                    amount=amount,
+                ) for rc_id, amount in resources.items()
+                if rc_id in non_shared_resources
+            ]
+            sharing_request_tuples = zip(
+                sharing_resource_requests[shared_rc_id]
+                for shared_rc_id in shared_resources
+            )
+            # sharing_request_tuples will now contain a list of tuples with the
+            # tuples being AllocationRequestResource objects for each provider
+            # of a shared resource
+            for shared_request_tuple in sharing_request_tuples:
+                shared_requests = list(*shared_request_tuple)
+                resource_requests = non_shared_requests + shared_requests
+                req_obj = AllocationRequest(
+                    context,
+                    resource_requests=resource_requests,
+                )
+                alloc_request_objs.append(req_obj)
+
+        # Finally, construct the object representations for the provider
+        # summaries we built above. These summaries may be used by the
+        # scheduler (or any other caller) to sort and weigh for its eventual
+        # placement and claim decisions
+        summary_objs = []
+        for rp_id, summary in summaries.items():
+            rp_uuid = summary['uuid']
+            rps_resources = []
+            for rc_id, usage in summary['resources'].items():
+                rc_name = _RC_CACHE.string_from_id(rc_id)
+                rpsr_obj = ProviderSummaryResource(
+                    context,
+                    resource_class=rc_name,
+                    capacity=usage['capacity'],
+                    used=usage['used'],
+                )
+                rps_resources.append(rpsr_obj)
+
+            summary_obj = ProviderSummary(
+                context,
+                resource_provider=ResourceProvider(
+                    context,
+                    uuid=rp_uuid,
+                ),
+                resources=rps_resources,
+            )
+            summary_objs.append(summary_obj)
+
+        return alloc_request_objs, summary_objs
