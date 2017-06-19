@@ -154,6 +154,23 @@ class InstanceActionVolumeSwapPayload(InstanceActionPayload):
 
 
 @nova_base.NovaObjectRegistry.register_notification
+class InstanceCreatePayload(InstanceActionPayload):
+    # No SCHEMA as all the additional fields are calculated
+
+    # Version 1.2: Initial version. It starts at 1.2 to match with the version
+    #              of the InstanceActionPayload at the time when this specific
+    #              payload is created as a child of it so that the
+    #              instance.create notification using this new payload does not
+    #              have decreasing version.
+    VERSION = '1.2'
+
+    def __init__(self, instance, fault):
+        super(InstanceCreatePayload, self).__init__(
+            instance=instance,
+            fault=fault)
+
+
+@nova_base.NovaObjectRegistry.register_notification
 class InstanceUpdatePayload(InstancePayload):
     # Version 1.0: Initial version
     # Version 1.1: locked and display_description added to InstancePayload
@@ -339,9 +356,6 @@ class InstanceStateUpdatePayload(base.NotificationPayloadBase):
 # @base.notification_sample('instance-unrescue-end.json')
 @base.notification_sample('instance-unshelve-start.json')
 @base.notification_sample('instance-unshelve-end.json')
-@base.notification_sample('instance-create-start.json')
-@base.notification_sample('instance-create-end.json')
-@base.notification_sample('instance-create-error.json')
 @nova_base.NovaObjectRegistry.register_notification
 class InstanceActionNotification(base.NotificationBase):
     # Version 1.0: Initial version
@@ -388,4 +402,17 @@ class InstanceActionVolumeNotification(base.NotificationBase):
 
     fields = {
         'payload': fields.ObjectField('InstanceActionVolumePayload')
+    }
+
+
+@base.notification_sample('instance-create-start.json')
+@base.notification_sample('instance-create-end.json')
+@base.notification_sample('instance-create-error.json')
+@nova_base.NovaObjectRegistry.register_notification
+class InstanceCreateNotification(base.NotificationBase):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'payload': fields.ObjectField('InstanceCreatePayload')
     }

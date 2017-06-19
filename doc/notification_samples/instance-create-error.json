@@ -63,7 +63,7 @@
             "user_id":"fake",
             "uuid":"178b0921-8f85-4257-88b6-2e743b5a975c"
         },
-        "nova_object.name":"InstanceActionPayload",
+        "nova_object.name":"InstanceCreatePayload",
         "nova_object.namespace":"nova",
         "nova_object.version":"1.2"
     },

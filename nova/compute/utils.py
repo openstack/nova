@@ -365,6 +365,34 @@ def notify_about_instance_action(context, instance, host, action, phase=None,
     notification.emit(context)
 
 
+def notify_about_instance_create(context, instance, host, phase=None,
+                                 binary='nova-compute', exception=None):
+    """Send versioned notification about instance creation
+
+    :param context: the request context
+    :param instance: the instance being created
+    :param host: the host emitting the notification
+    :param phase: the phase of the creation
+    :param binary: the binary emitting the notification
+    :param exception: the thrown exception (used in error notifications)
+    """
+    fault, priority = _get_fault_and_priority_from_exc(exception)
+    payload = instance_notification.InstanceCreatePayload(
+        instance=instance,
+        fault=fault)
+    notification = instance_notification.InstanceCreateNotification(
+        context=context,
+        priority=priority,
+        publisher=notification_base.NotificationPublisher(
+            host=host, binary=binary),
+        event_type=notification_base.EventType(
+            object='instance',
+            action=fields.NotificationAction.CREATE,
+            phase=phase),
+        payload=payload)
+    notification.emit(context)
+
+
 def notify_about_volume_attach_detach(context, instance, host, action, phase,
                                       binary='nova-compute', volume_id=None,
                                       exception=None):

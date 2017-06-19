@@ -4360,7 +4360,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     '_shutdown_instance'),
                 mock.patch.object(self.compute,
                     '_validate_instance_group_policy'),
-                mock.patch('nova.compute.utils.notify_about_instance_action')
+                mock.patch('nova.compute.utils.notify_about_instance_create')
         ) as (spawn, save,
                 _build_networks_for_instance, _notify_about_instance_usage,
                 _shutdown_instance, _validate_instance_group_policy,
@@ -4387,9 +4387,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
             mock_notify.assert_has_calls([
                 mock.call(self.context, self.instance, 'fake-mini',
-                          action='create', phase='start'),
+                          phase='start'),
                 mock.call(self.context, self.instance, 'fake-mini',
-                          action='create', phase='error', exception=exc)])
+                          phase='error', exception=exc)])
 
             save.assert_has_calls([
                 mock.call(),
@@ -4797,10 +4797,10 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.context, mock.sentinel.instance,
                 requested_networks=requested_networks)
 
-    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    @mock.patch('nova.compute.utils.notify_about_instance_create')
     @mock.patch.object(manager.ComputeManager, '_instance_update')
     def test_launched_at_in_create_end_notification(self,
-            mock_instance_update, mock_notify_instance_action):
+            mock_instance_update, mock_notify_instance_create):
 
         def fake_notify(*args, **kwargs):
             if args[2] == 'create.end':
@@ -4829,11 +4829,11 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     mock_notify.call_count - 1]
             self.assertEqual(expected_call, create_end_call)
 
-            mock_notify_instance_action.assert_has_calls([
+            mock_notify_instance_create.assert_has_calls([
                 mock.call(self.context, self.instance, 'fake-mini',
-                          action='create', phase='start'),
+                          phase='start'),
                 mock.call(self.context, self.instance, 'fake-mini',
-                          action='create', phase='end')])
+                          phase='end')])
 
     def test_access_ip_set_when_instance_set_to_active(self):
 
