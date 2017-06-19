@@ -17,27 +17,11 @@ from webob import exc
 
 from nova.api.openstack.compute.schemas import multiple_create as \
                                                   schema_multiple_create
-from nova.api.openstack import extensions
 from nova.i18n import _
 
-ALIAS = "os-multiple-create"
 MIN_ATTRIBUTE_NAME = "min_count"
 MAX_ATTRIBUTE_NAME = "max_count"
 RRID_ATTRIBUTE_NAME = "return_reservation_id"
-
-
-class MultipleCreate(extensions.V21APIExtensionBase):
-    """Allow multiple create in the Create Server v2.1 API."""
-
-    name = "MultipleCreate"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        return []
-
-    def get_controller_extensions(self):
-        return []
 
 
 # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
