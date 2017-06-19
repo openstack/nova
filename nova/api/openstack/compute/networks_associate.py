@@ -24,8 +24,6 @@ from nova.i18n import _
 from nova import network
 from nova.policies import networks_associate as na_policies
 
-ALIAS = "os-networks-associate"
-
 
 class NetworkAssociateActionController(wsgi.Controller):
     """Network Association API Controller."""
@@ -80,20 +78,3 @@ class NetworkAssociateActionController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
         except NotImplementedError:
             common.raise_feature_not_supported()
-
-
-class NetworksAssociate(extensions.V21APIExtensionBase):
-    """Network association support."""
-
-    name = "NetworkAssociationSupport"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        extension = extensions.ControllerExtension(
-                self, 'os-networks', NetworkAssociateActionController())
-
-        return [extension]
-
-    def get_resources(self):
-        return []
