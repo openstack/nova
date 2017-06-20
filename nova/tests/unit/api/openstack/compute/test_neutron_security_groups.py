@@ -130,6 +130,14 @@ class TestNeutronSecurityGroupsV21(
         # Enforced by Neutron server.
         pass
 
+    def test_create_security_group_over_quota_during_recheck(self):
+        # Enforced by Neutron server.
+        pass
+
+    def test_create_security_group_no_quota_recheck(self):
+        # Enforced by Neutron server.
+        pass
+
     def test_update_security_group(self):
         # Enforced by Neutron server.
         pass

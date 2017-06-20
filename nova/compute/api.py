@@ -5070,32 +5070,41 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         self.db.security_group_ensure_default(context)
 
     def create_security_group(self, context, name, description):
-        quotas = objects.Quotas(context=context)
         try:
-            quotas.reserve(security_groups=1)
+            objects.Quotas.check_deltas(context, {'security_groups': 1},
+                                        context.project_id,
+                                        user_id=context.user_id)
         except exception.OverQuota:
             msg = _("Quota exceeded, too many security groups.")
             self.raise_over_quota(msg)
 
         LOG.info("Create Security Group %s", name)
 
-        try:
-            self.ensure_default(context)
+        self.ensure_default(context)
 
-            group = {'user_id': context.user_id,
-                     'project_id': context.project_id,
-                     'name': name,
-                     'description': description}
+        group = {'user_id': context.user_id,
+                 'project_id': context.project_id,
+                 'name': name,
+                 'description': description}
+        try:
+            group_ref = self.db.security_group_create(context, group)
+        except exception.SecurityGroupExists:
+            msg = _('Security group %s already exists') % name
+            self.raise_group_already_exists(msg)
+
+        # NOTE(melwitt): We recheck the quota after creating the object to
+        # prevent users from allocating more resources than their allowed quota
+        # in the event of a race. This is configurable because it can be
+        # expensive if strict quota limits are not required in a deployment.
+        if CONF.quota.recheck_quota:
             try:
-                group_ref = self.db.security_group_create(context, group)
-            except exception.SecurityGroupExists:
-                msg = _('Security group %s already exists') % name
-                self.raise_group_already_exists(msg)
-            # Commit the reservation
-            quotas.commit()
-        except Exception:
-            with excutils.save_and_reraise_exception():
-                quotas.rollback()
+                objects.Quotas.check_deltas(context, {'security_groups': 0},
+                                            context.project_id,
+                                            user_id=context.user_id)
+            except exception.OverQuota:
+                self.db.security_group_destroy(context, group_ref['id'])
+                msg = _("Quota exceeded, too many security groups.")
+                self.raise_over_quota(msg)
 
         return group_ref
 
@@ -5175,21 +5184,8 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
             msg = _("Security group is still in use")
             self.raise_invalid_group(msg)
 
-        quotas = objects.Quotas(context=context)
-        quota_project, quota_user = quotas_obj.ids_from_security_group(
-                                context, security_group)
-        try:
-            quotas.reserve(project_id=quota_project,
-                           user_id=quota_user, security_groups=-1)
-        except Exception:
-            LOG.exception("Failed to update usages deallocating "
-                          "security group")
-
         LOG.info("Delete security group %s", security_group['name'])
         self.db.security_group_destroy(context, security_group['id'])
-
-        # Commit the reservations
-        quotas.commit()
 
     def is_associated_with_server(self, security_group, instance_uuid):
         """Check if the security group is already associated

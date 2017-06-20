@@ -1854,6 +1854,23 @@ def _keypair_get_count_by_user(context, user_id):
     return {'user': {'key_pairs': count}}
 
 
+def _security_group_count(context, project_id, user_id=None):
+    """Get the counts of security groups in the database.
+
+    :param context: The request context for database access
+    :param project_id: The project_id to count across
+    :param user_id: The user_id to count across
+    :returns: A dict containing the project-scoped counts and user-scoped
+              counts if user_id is specified. For example:
+
+                {'project': {'security_groups': <count across project>},
+                 'user': {'security_groups': <count across user>}}
+    """
+    # NOTE(melwitt): This assumes a single cell.
+    return objects.SecurityGroupList.get_counts(context, project_id,
+                                                user_id=user_id)
+
+
 def _server_group_count_members_by_user(context, group, user_id):
     # NOTE(melwitt): This is mostly duplicated from
     # InstanceGroup.count_members_by_user() to query across multiple cells.
@@ -1909,8 +1926,8 @@ resources = [
     ReservableResource('instances', '_sync_instances', 'instances'),
     ReservableResource('cores', '_sync_instances', 'cores'),
     ReservableResource('ram', '_sync_instances', 'ram'),
-    ReservableResource('security_groups', '_sync_security_groups',
-                       'security_groups'),
+    CountableResource('security_groups', _security_group_count,
+                      'security_groups'),
     ReservableResource('floating_ips', '_sync_floating_ips',
                        'floating_ips'),
     ReservableResource('fixed_ips', '_sync_fixed_ips', 'fixed_ips'),
