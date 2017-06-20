@@ -1092,7 +1092,7 @@ object_data = {
     'Flavor': '1.1-b6bb7a730a79d720344accefafacf7ee',
     'FlavorList': '1.1-52b5928600e7ca973aa4fc1e46f3934c',
     'FloatingIP': '1.10-52a67d52d85eb8b3f324a5b7935a335b',
-    'FloatingIPList': '1.11-7f2ba670714e1b7bab462ab3290f7159',
+    'FloatingIPList': '1.12-e4debd21fddb12cf40d36f737225fa9d',
     'HostMapping': '1.0-1a3390a696792a552ab7bd31a77ba9ac',
     'HostMappingList': '1.0-267d952a5d48361d6d7604f50775bc34',
     'HyperVLiveMigrateData': '1.1-9987a3cec31a81abac6fba7cc722e43f',

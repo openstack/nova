@@ -255,6 +255,15 @@ class _TestFloatingIPObject(object):
         self.assertEqual('1.1',
             primitive['nova_object.data']['fixed_ip']['nova_object.version'])
 
+    def test_get_count_by_project(self):
+        ips = [objects.FloatingIPList.make_ip_info('1.1.1.1', 'pool', 'eth0')]
+        objects.FloatingIPList.create(self.context, ips)
+        floating_ip.FloatingIP.allocate_address(self.context,
+                                                self.context.project_id,
+                                                'pool')
+        self.assertEqual(1, floating_ip.FloatingIPList.get_count_by_project(
+            self.context, self.context.project_id))
+
 
 class TestFloatingIPObject(test_objects._LocalTest,
                            _TestFloatingIPObject):
