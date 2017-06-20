@@ -22,7 +22,7 @@ from oslo_log import log as logging
 from nova.console import serial as serial_console
 from nova.console import type as ctype
 from nova import exception
-from nova.i18n import _, _LI
+from nova.i18n import _
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import pathutils
 from nova.virt.hyperv import serialproxy
@@ -76,12 +76,12 @@ class SerialConsoleHandler(object):
         self._listen_port = serial_console.acquire_port(
             self._listen_host)
 
-        LOG.info(_LI('Initializing serial proxy on '
-                     '%(addr)s:%(port)s, handling connections '
-                     'to instance %(instance_name)s.'),
-                     {'addr': self._listen_host,
-                      'port': self._listen_port,
-                      'instance_name': self._instance_name})
+        LOG.info('Initializing serial proxy on '
+                 '%(addr)s:%(port)s, handling connections '
+                 'to instance %(instance_name)s.',
+                 {'addr': self._listen_host,
+                  'port': self._listen_port,
+                  'instance_name': self._instance_name})
 
         # Use this event in order to manage
         # pending queue operations.

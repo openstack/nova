@@ -40,8 +40,6 @@ import six
 from nova.compute import power_state
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LE
-from nova.i18n import _LW
 from nova import utils
 from nova.virt import hardware
 from nova.virt.libvirt import compat
@@ -127,7 +125,7 @@ class Guest(object):
             guest = host.write_instance_config(xml)
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE('Error defining a guest with XML: %s'),
+                LOG.error('Error defining a guest with XML: %s',
                           encodeutils.safe_decode(xml))
         return guest
 
@@ -141,8 +139,8 @@ class Guest(object):
             return self._domain.createWithFlags(flags)
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE('Error launching a defined domain '
-                              'with XML: %s'),
+                LOG.error('Error launching a defined domain '
+                          'with XML: %s',
                           self._encoded_xml, errors='ignore')
 
     def poweroff(self):
@@ -177,7 +175,7 @@ class Guest(object):
                 LOG.debug('Failed to set time: agent not configured',
                           instance_uuid=self.uuid)
             else:
-                LOG.warning(_LW('Failed to set time: %(reason)s'),
+                LOG.warning('Failed to set time: %(reason)s',
                             {'reason': e}, instance_uuid=self.uuid)
         except Exception as ex:
             # The highest priority is not to let this method crash and thus
@@ -210,7 +208,7 @@ class Guest(object):
                     check_exit_code=[0, 1])
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE('Error enabling hairpin mode with XML: %s'),
+                LOG.error('Error enabling hairpin mode with XML: %s',
                           self._encoded_xml, errors='ignore')
 
     def get_interfaces(self):

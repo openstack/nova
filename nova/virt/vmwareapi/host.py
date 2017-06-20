@@ -25,7 +25,6 @@ from oslo_vmware import exceptions as vexc
 import nova.conf
 from nova import context
 from nova import exception
-from nova.i18n import _LW
 from nova import objects
 from nova.objects import fields as obj_fields
 from nova.virt.vmwareapi import ds_util
@@ -79,8 +78,8 @@ class VCState(object):
             about_info = self._session._call_method(vim_util, "get_about_info")
         except (vexc.VimConnectionException, vexc.VimAttributeException) as ex:
             # VimAttributeException is thrown when vpxd service is down
-            LOG.warning(_LW("Failed to connect with %(node)s. "
-                            "Error: %(error)s"),
+            LOG.warning("Failed to connect with %(node)s. "
+                        "Error: %(error)s",
                         {'node': self._host_name, 'error': ex})
             self._set_host_enabled(False)
             return data

@@ -49,7 +49,7 @@ from nova.compute import power_state
 from nova.compute import task_states
 import nova.conf
 from nova import exception
-from nova.i18n import _, _LE, _LI, _LW
+from nova.i18n import _
 from nova.network import model as network_model
 from nova.objects import diagnostics
 from nova.objects import fields as obj_fields
@@ -263,7 +263,7 @@ def destroy_vm(session, instance, vm_ref):
     try:
         session.VM.destroy(vm_ref)
     except session.XenAPI.Failure:
-        LOG.exception(_LE('Destroy VM failed'))
+        LOG.exception(_('Destroy VM failed'))
         return
 
     LOG.debug("VM destroyed", instance=instance)
@@ -271,7 +271,7 @@ def destroy_vm(session, instance, vm_ref):
 
 def clean_shutdown_vm(session, instance, vm_ref):
     if is_vm_shutdown(session, vm_ref):
-        LOG.warning(_LW("VM already halted, skipping shutdown..."),
+        LOG.warning("VM already halted, skipping shutdown...",
                     instance=instance)
         return True
 
@@ -279,14 +279,14 @@ def clean_shutdown_vm(session, instance, vm_ref):
     try:
         session.call_xenapi('VM.clean_shutdown', vm_ref)
     except session.XenAPI.Failure:
-        LOG.exception(_LE('Shutting down VM (cleanly) failed.'))
+        LOG.exception(_('Shutting down VM (cleanly) failed.'))
         return False
     return True
 
 
 def hard_shutdown_vm(session, instance, vm_ref):
     if is_vm_shutdown(session, vm_ref):
-        LOG.warning(_LW("VM already halted, skipping shutdown..."),
+        LOG.warning("VM already halted, skipping shutdown...",
                     instance=instance)
         return True
 
@@ -294,7 +294,7 @@ def hard_shutdown_vm(session, instance, vm_ref):
     try:
         session.call_xenapi('VM.hard_shutdown', vm_ref)
     except session.XenAPI.Failure:
-        LOG.exception(_LE('Shutting down VM (hard) failed'))
+        LOG.exception(_('Shutting down VM (hard) failed'))
         return False
     return True
 
@@ -339,15 +339,15 @@ def unplug_vbd(session, vbd_ref, this_vm_ref):
         except session.XenAPI.Failure as exc:
             err = len(exc.details) > 0 and exc.details[0]
             if err == 'DEVICE_ALREADY_DETACHED':
-                LOG.info(_LI('VBD %s already detached'), vbd_ref)
+                LOG.info('VBD %s already detached', vbd_ref)
                 return
             elif _should_retry_unplug_vbd(err):
-                LOG.info(_LI('VBD %(vbd_ref)s unplug failed with "%(err)s", '
-                             'attempt %(num_attempt)d/%(max_attempts)d'),
+                LOG.info('VBD %(vbd_ref)s unplug failed with "%(err)s", '
+                         'attempt %(num_attempt)d/%(max_attempts)d',
                          {'vbd_ref': vbd_ref, 'num_attempt': num_attempt,
                           'max_attempts': max_attempts, 'err': err})
             else:
-                LOG.exception(_LE('Unable to unplug VBD'))
+                LOG.exception(_('Unable to unplug VBD'))
                 raise exception.StorageError(
                         reason=_('Unable to unplug VBD %s') % vbd_ref)
 
@@ -362,7 +362,7 @@ def destroy_vbd(session, vbd_ref):
     try:
         session.call_xenapi('VBD.destroy', vbd_ref)
     except session.XenAPI.Failure:
-        LOG.exception(_LE('Unable to destroy VBD'))
+        LOG.exception(_('Unable to destroy VBD'))
         raise exception.StorageError(
                 reason=_('Unable to destroy VBD %s') % vbd_ref)
 
@@ -626,8 +626,7 @@ def _delete_snapshots_in_vdi_chain(session, instance, vdi_uuid_chain, sr_ref):
     # ensure garbage collector has been run
     _scan_sr(session, sr_ref)
 
-    LOG.info(_LI("Deleted %s snapshots."), number_of_snapshots,
-             instance=instance)
+    LOG.info("Deleted %s snapshots.", number_of_snapshots, instance=instance)
 
 
 def remove_old_snapshots(session, instance, vm_ref):
@@ -788,7 +787,7 @@ def _find_cached_image(session, image_id, sr_ref):
     number_found = len(recs)
     if number_found > 0:
         if number_found > 1:
-            LOG.warning(_LW("Multiple base images for image: %s"), image_id)
+            LOG.warning("Multiple base images for image: %s", image_id)
         return list(recs.keys())[0]
 
 
@@ -934,8 +933,7 @@ def try_auto_configure_disk(session, vdi_ref, new_gb):
     try:
         _auto_configure_disk(session, vdi_ref, new_gb)
     except exception.CannotResizeDisk as e:
-        msg = _LW('Attempted auto_configure_disk failed because: %s')
-        LOG.warning(msg, e)
+        LOG.warning('Attempted auto_configure_disk failed because: %s', e)
 
 
 def _make_partition(session, dev, partition_start, partition_end):
@@ -1204,9 +1202,9 @@ def _create_cached_image(context, session, instance, name_label,
     sr_type = session.call_xenapi('SR.get_type', sr_ref)
 
     if CONF.use_cow_images and sr_type != "ext":
-        LOG.warning(_LW("Fast cloning is only supported on default local SR "
-                        "of type ext. SR on this system was found to be of "
-                        "type %s. Ignoring the cow flag."), sr_type)
+        LOG.warning("Fast cloning is only supported on default local SR "
+                    "of type ext. SR on this system was found to be of "
+                    "type %s. Ignoring the cow flag.", sr_type)
 
     @utils.synchronized('xenapi-image-cache' + image_id)
     def _create_cached_image_impl(context, session, instance, name_label,
@@ -1279,8 +1277,8 @@ def create_image(context, session, instance, name_label, image_id,
     elif cache_images == 'none':
         cache = False
     else:
-        LOG.warning(_LW("Unrecognized cache_images value '%s', defaulting to"
-                        " True"), CONF.xenserver.cache_images)
+        LOG.warning("Unrecognized cache_images value '%s', defaulting to True",
+                    CONF.xenserver.cache_images)
         cache = True
 
     # Fetch (and cache) the image
@@ -1295,9 +1293,9 @@ def create_image(context, session, instance, name_label, image_id,
         downloaded = True
     duration = timeutils.delta_seconds(start_time, timeutils.utcnow())
 
-    LOG.info(_LI("Image creation data, cacheable: %(cache)s, "
-                 "downloaded: %(downloaded)s duration: %(duration).2f secs "
-                 "for image %(image_id)s"),
+    LOG.info("Image creation data, cacheable: %(cache)s, "
+             "downloaded: %(downloaded)s duration: %(duration).2f secs "
+             "for image %(image_id)s",
              {'image_id': image_id, 'cache': cache, 'downloaded': downloaded,
               'duration': duration})
 
@@ -1352,8 +1350,7 @@ def _default_download_handler():
 def get_compression_level():
     level = CONF.xenserver.image_compression_level
     if level is not None and (level < 1 or level > 9):
-        LOG.warning(_LW("Invalid value '%d' for image_compression_level"),
-                    level)
+        LOG.warning("Invalid value '%d' for image_compression_level", level)
         return None
     return level
 
@@ -1420,8 +1417,8 @@ def _check_vdi_size(context, session, instance, vdi_uuid):
 
     size = _get_vdi_chain_size(session, vdi_uuid)
     if size > allowed_size:
-        LOG.error(_LE("Image size %(size)d exceeded flavor "
-                      "allowed size %(allowed_size)d"),
+        LOG.error("Image size %(size)d exceeded flavor "
+                  "allowed size %(allowed_size)d",
                   {'size': size, 'allowed_size': allowed_size},
                   instance=instance)
 
@@ -1512,8 +1509,7 @@ def _fetch_disk_image(context, session, instance, name_label, image_id,
             return {vdi_role: dict(uuid=vdi_uuid, file=None)}
     except (session.XenAPI.Failure, IOError, OSError) as e:
         # We look for XenAPI and OS failures.
-        LOG.exception(_LE("Failed to fetch glance image"),
-                      instance=instance)
+        LOG.exception(_("Failed to fetch glance image"), instance=instance)
         e.args = e.args + ([dict(type=ImageType.to_string(image_type),
                                  uuid=vdi_uuid,
                                  file=filename)],)
@@ -1608,7 +1604,7 @@ def lookup_vm_vdis(session, vm_ref):
                     # This is not an attached volume
                     vdi_refs.append(vdi_ref)
             except session.XenAPI.Failure:
-                LOG.exception(_LE('"Look for the VDIs failed'))
+                LOG.exception(_('"Look for the VDIs failed'))
     return vdi_refs
 
 
@@ -1796,7 +1792,7 @@ def compile_diagnostics(vm_rec):
 
         return diags
     except expat.ExpatError as e:
-        LOG.exception(_LE('Unable to parse rrd of %s'), e)
+        LOG.exception(_('Unable to parse rrd of %s'), e)
         return {"Unable to retrieve diagnostics": e}
 
 
@@ -1826,8 +1822,8 @@ def _scan_sr(session, sr_ref=None, max_attempts=4):
                         if exc.details[0] == 'SR_BACKEND_FAILURE_40':
                             if attempt < max_attempts:
                                 ctxt.reraise = False
-                                LOG.warning(_LW("Retry SR scan due to error: "
-                                                "%s"), exc)
+                                LOG.warning("Retry SR scan due to error: %s",
+                                            exc)
                                 greenthread.sleep(2 ** attempt)
                                 attempt += 1
         do_scan(sr_ref)
@@ -1859,8 +1855,8 @@ def _find_sr(session):
         filter_pattern = tokens[1]
     except IndexError:
         # oops, flag is invalid
-        LOG.warning(_LW("Flag sr_matching_filter '%s' does not respect "
-                        "formatting convention"),
+        LOG.warning("Flag sr_matching_filter '%s' does not respect "
+                    "formatting convention",
                     CONF.xenserver.sr_matching_filter)
         return None
 
@@ -1880,10 +1876,10 @@ def _find_sr(session):
         if sr_ref:
             return sr_ref
     # No SR found!
-    LOG.error(_LE("XenAPI is unable to find a Storage Repository to "
-                  "install guest instances on. Please check your "
-                  "configuration (e.g. set a default SR for the pool) "
-                  "and/or configure the flag 'sr_matching_filter'."))
+    LOG.error("XenAPI is unable to find a Storage Repository to "
+              "install guest instances on. Please check your "
+              "configuration (e.g. set a default SR for the pool) "
+              "and/or configure the flag 'sr_matching_filter'.")
     return None
 
 
@@ -1946,8 +1942,8 @@ def _get_rrd(server, vm_uuid):
             vm_uuid))
         return xml.read()
     except IOError:
-        LOG.exception(_LE('Unable to obtain RRD XML for VM %(vm_uuid)s with '
-                          'server details: %(server)s.'),
+        LOG.exception(_('Unable to obtain RRD XML for VM %(vm_uuid)s with '
+                        'server details: %(server)s.'),
                       {'vm_uuid': vm_uuid, 'server': server})
         return None
 
@@ -2161,7 +2157,7 @@ def cleanup_attached_vdis(session):
         if 'nova_instance_uuid' in vdi_rec['other_config']:
             # Belongs to an instance and probably left over after an
             # unclean restart
-            LOG.info(_LI('Disconnecting stale VDI %s from compute domU'),
+            LOG.info('Disconnecting stale VDI %s from compute domU',
                      vdi_rec['uuid'])
             unplug_vbd(session, vbd_ref, this_vm_ref)
             destroy_vbd(session, vbd_ref)
@@ -2224,12 +2220,11 @@ def _get_dom0_ref(session):
 
 def get_this_vm_uuid(session):
     if CONF.xenserver.independent_compute:
-        msg = _LE("This host has been configured with the independent "
+        LOG.error("This host has been configured with the independent "
                   "compute flag.  An operation has been attempted which is "
                   "incompatible with this flag, but should have been "
                   "caught earlier.  Please raise a bug against the "
                   "OpenStack Nova project")
-        LOG.error(msg)
         raise exception.NotSupportedWithOption(
             operation='uncaught operation',
             option='CONF.xenserver.independent_compute')
@@ -2484,7 +2479,7 @@ def _mounted_processing(device, key, net, metadata):
                     vfs = vfsimpl.VFSLocalFS(
                         imgmodel.LocalFileImage(None, imgmodel.FORMAT_RAW),
                         imgdir=tmpdir)
-                    LOG.info(_LI('Manipulating interface files directly'))
+                    LOG.info('Manipulating interface files directly')
                     # for xenapi, we don't 'inject' admin_password here,
                     # it's handled at instance startup time, nor do we
                     # support injecting arbitrary files here.
@@ -2493,8 +2488,8 @@ def _mounted_processing(device, key, net, metadata):
             finally:
                 utils.execute('umount', dev_path, run_as_root=True)
         else:
-            LOG.info(_LI('Failed to mount filesystem (expected for '
-                         'non-linux instances): %s'), err)
+            LOG.info('Failed to mount filesystem (expected for '
+                     'non-linux instances): %s', err)
 
 
 def ensure_correct_host(session):
@@ -2607,14 +2602,14 @@ def handle_ipxe_iso(session, instance, cd_vdi, network_info):
     """
     boot_menu_url = CONF.xenserver.ipxe_boot_menu_url
     if not boot_menu_url:
-        LOG.warning(_LW('ipxe_boot_menu_url not set, user will have to'
-                        ' enter URL manually...'), instance=instance)
+        LOG.warning('ipxe_boot_menu_url not set, user will have to'
+                    ' enter URL manually...', instance=instance)
         return
 
     network_name = CONF.xenserver.ipxe_network_name
     if not network_name:
-        LOG.warning(_LW('ipxe_network_name not set, user will have to'
-                        ' enter IP manually...'), instance=instance)
+        LOG.warning('ipxe_network_name not set, user will have to'
+                    ' enter IP manually...', instance=instance)
         return
 
     network = None
@@ -2624,8 +2619,8 @@ def handle_ipxe_iso(session, instance, cd_vdi, network_info):
             break
 
     if not network:
-        LOG.warning(_LW("Unable to find network matching '%(network_name)s', "
-                        "user will have to enter IP manually..."),
+        LOG.warning("Unable to find network matching '%(network_name)s', "
+                    "user will have to enter IP manually...",
                     {'network_name': network_name}, instance=instance)
         return
 
@@ -2649,7 +2644,7 @@ def handle_ipxe_iso(session, instance, cd_vdi, network_info):
     except session.XenAPI.Failure as exc:
         _type, _method, error = exc.details[:3]
         if error == 'CommandNotFound':
-            LOG.warning(_LW("ISO creation tool '%s' does not exist."),
+            LOG.warning("ISO creation tool '%s' does not exist.",
                         CONF.xenserver.ipxe_mkisofs_cmd, instance=instance)
         else:
             raise

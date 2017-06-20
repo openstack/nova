@@ -24,7 +24,6 @@ from nova.compute import power_state
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LW
 from nova.network import model as network_model
 from nova.virt.xenapi import network_utils
 from nova.virt.xenapi import vm_utils
@@ -56,8 +55,8 @@ class XenVIFDriver(object):
         try:
             vif_ref = self._session.call_xenapi('VIF.create', vif_rec)
         except Exception as e:
-            LOG.warning(_LW("Failed to create vif, exception:%(exception)s, "
-                            "vif:%(vif)s"), {'exception': e, 'vif': vif})
+            LOG.warning("Failed to create vif, exception:%(exception)s, "
+                        "vif:%(vif)s", {'exception': e, 'vif': vif})
             raise exception.NovaException(
                 reason=_("Failed to create vif %s") % vif)
 
@@ -79,7 +78,7 @@ class XenVIFDriver(object):
             self._session.call_xenapi('VIF.destroy', vif_ref)
         except Exception as e:
             LOG.warning(
-                _LW("Fail to unplug vif:%(vif)s, exception:%(exception)s"),
+                "Fail to unplug vif:%(vif)s, exception:%(exception)s",
                 {'vif': vif, 'exception': e}, instance=instance)
             raise exception.NovaException(
                 reason=_("Failed to unplug vif %s") % vif)
@@ -324,8 +323,8 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
             # delete the patch port pair
             host_network.ovs_del_port(self._session, bridge_name, patch_port1)
         except Exception as e:
-            LOG.warning(_LW("Failed to delete patch port pair for vif %(if)s,"
-                            " exception:%(exception)s"),
+            LOG.warning("Failed to delete patch port pair for vif %(if)s,"
+                        " exception:%(exception)s",
                         {'if': vif, 'exception': e}, instance=instance)
             raise exception.VirtualInterfaceUnplugException(
                 reason=_("Failed to delete patch port pair"))
@@ -356,8 +355,8 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
                                       CONF.xenserver.ovs_integration_bridge,
                                       qvo_name)
         except Exception as e:
-            LOG.warning(_LW("Failed to delete bridge for vif %(if)s, "
-                            "exception:%(exception)s"),
+            LOG.warning("Failed to delete bridge for vif %(if)s, "
+                        "exception:%(exception)s",
                         {'if': vif, 'exception': e}, instance=instance)
             raise exception.VirtualInterfaceUnplugException(
                 reason=_("Failed to delete bridge"))
@@ -507,8 +506,8 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
         try:
             network_ref = self._session.network.create(network_rec)
         except Exception as e:
-            LOG.warning(_LW("Failed to create interim network for vif %(if)s, "
-                            "exception:%(exception)s"),
+            LOG.warning("Failed to create interim network for vif %(if)s, "
+                        "exception:%(exception)s",
                         {'if': vif, 'exception': e})
             raise exception.VirtualInterfacePlugException(
                 _("Failed to create the interim network for vif"))

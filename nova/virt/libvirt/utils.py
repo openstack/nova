@@ -27,8 +27,6 @@ from oslo_log import log as logging
 
 import nova.conf
 from nova.i18n import _
-from nova.i18n import _LI
-from nova.i18n import _LW
 from nova.objects import fields as obj_fields
 from nova import utils
 from nova.virt.disk import api as disk
@@ -167,7 +165,7 @@ def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
                     else:
                         return "tap"
                 else:
-                    LOG.info(_LI("tap-ctl check: %s"), out)
+                    LOG.info("tap-ctl check: %s", out)
             except OSError as exc:
                 if exc.errno == errno.ENOENT:
                     LOG.debug("tap-ctl tool is not installed")
@@ -279,8 +277,8 @@ def update_mtime(path):
         # the same base image and using shared storage, so log the exception
         # but don't fail. Ideally we'd know if we were on shared storage and
         # would re-raise the error if we are not on shared storage.
-        LOG.warning(_LW("Failed to update mtime on path %(path)s. "
-                        "Error: %(error)s"),
+        LOG.warning("Failed to update mtime on path %(path)s. "
+                    "Error: %(error)s",
                     {'path': path, "error": exc})
 
 

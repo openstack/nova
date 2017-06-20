@@ -20,7 +20,6 @@ from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import excutils
 
-from nova.i18n import _LE
 from nova.virt.libvirt import utils
 
 
@@ -67,8 +66,8 @@ def create_volume(target, device, cipher, key_size, key):
         utils.execute(*cmd, process_input=key, run_as_root=True)
     except processutils.ProcessExecutionError as e:
         with excutils.save_and_reraise_exception():
-            LOG.error(_LE("Could not start encryption for disk %(device)s: "
-                          "%(exception)s"), {'device': device, 'exception': e})
+            LOG.error("Could not start encryption for disk %(device)s: "
+                      "%(exception)s", {'device': device, 'exception': e})
 
 
 def delete_volume(target):
@@ -87,10 +86,10 @@ def delete_volume(target):
             LOG.debug("Ignoring exit code 4, volume already destroyed")
         else:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE("Could not disconnect encrypted volume "
-                              "%(volume)s. If dm-crypt device is still active "
-                              "it will have to be destroyed manually for "
-                              "cleanup to succeed."), {'volume': target})
+                LOG.error("Could not disconnect encrypted volume "
+                          "%(volume)s. If dm-crypt device is still active "
+                          "it will have to be destroyed manually for "
+                          "cleanup to succeed.", {'volume': target})
 
 
 def list_volumes():

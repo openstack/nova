@@ -38,8 +38,6 @@ from oslo_utils import units
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LE
-from nova.i18n import _LW
 from nova import utils
 from nova.virt.disk.mount import api as mount
 from nova.virt.disk.vfs import api as vfs
@@ -243,8 +241,8 @@ def is_image_extendable(image):
             # provides a bad configuration for libguestfs reported in
             # the bug lp#1413142. When resolved we should remove this
             # except to let the error to be propagated.
-            LOG.warning(_LW('Unable to mount image %(image)s with '
-                            'error %(error)s. Cannot resize.'),
+            LOG.warning('Unable to mount image %(image)s with '
+                        'error %(error)s. Cannot resize.',
                         {'image': image, 'error': e})
         finally:
             if fs is not None:
@@ -407,8 +405,8 @@ def inject_data(image, key=None, net=None, metadata=None, admin_password=None,
             inject_val = items[inject]
             if inject_val:
                 raise
-        LOG.warning(_LW('Ignoring error injecting data into image %(image)s '
-                        '(%(e)s)'), {'image': image, 'e': e})
+        LOG.warning('Ignoring error injecting data into image %(image)s '
+                    '(%(e)s)', {'image': image, 'e': e})
         return False
 
     try:
@@ -432,8 +430,8 @@ def setup_container(image, container_dir):
     img = _DiskImage(image=image, mount_dir=container_dir)
     dev = img.mount()
     if dev is None:
-        LOG.error(_LE("Failed to mount container filesystem '%(image)s' "
-                    "on '%(target)s': %(errors)s"),
+        LOG.error("Failed to mount container filesystem '%(image)s' "
+                  "on '%(target)s': %(errors)s",
                   {"image": img, "target": container_dir,
                    "errors": img.errors})
         raise exception.NovaException(img.errors)
@@ -465,7 +463,7 @@ def teardown_container(container_dir, container_root_device=None):
                 LOG.debug('No release necessary for block device %s',
                           container_root_device)
     except Exception:
-        LOG.exception(_LE('Failed to teardown container filesystem'))
+        LOG.exception(_('Failed to teardown container filesystem'))
 
 
 def clean_lxc_namespace(container_dir):
@@ -478,7 +476,7 @@ def clean_lxc_namespace(container_dir):
         img = _DiskImage(image=None, mount_dir=container_dir)
         img.umount()
     except Exception:
-        LOG.exception(_LE('Failed to umount container filesystem'))
+        LOG.exception(_('Failed to umount container filesystem'))
 
 
 def inject_data_into_fs(fs, key, net, metadata, admin_password, files,
@@ -511,8 +509,8 @@ def inject_data_into_fs(fs, key, net, metadata, admin_password, files,
             except Exception as e:
                 if inject in mandatory:
                     raise
-                LOG.warning(_LW('Ignoring error injecting %(inject)s into '
-                                'image (%(e)s)'), {'inject': inject, 'e': e})
+                LOG.warning('Ignoring error injecting %(inject)s into '
+                            'image (%(e)s)', {'inject': inject, 'e': e})
                 status = False
     return status
 

@@ -20,9 +20,6 @@ import signal
 
 from oslo_log import log as logging
 
-from nova.i18n import _LE
-from nova.i18n import _LW
-
 
 LOG = logging.getLogger(__name__)
 
@@ -75,9 +72,9 @@ class InstanceJobTracker(object):
                 os.kill(pid, signal.SIGKILL)
             except OSError as exc:
                 if exc.errno != errno.ESRCH:
-                    LOG.error(_LE('Failed to kill process %(pid)s '
-                                  'due to %(reason)s, while deleting the '
-                                  'instance.'), {'pid': pid, 'reason': exc},
+                    LOG.error('Failed to kill process %(pid)s '
+                              'due to %(reason)s, while deleting the '
+                              'instance.', {'pid': pid, 'reason': exc},
                               instance=instance)
 
             try:
@@ -85,14 +82,12 @@ class InstanceJobTracker(object):
                 os.kill(pid, 0)
             except OSError as exc:
                 if exc.errno != errno.ESRCH:
-                    LOG.error(_LE('Unexpected error while checking process '
-                                  '%(pid)s.'), {'pid': pid},
-                              instance=instance)
+                    LOG.error('Unexpected error while checking process '
+                              '%(pid)s.', {'pid': pid}, instance=instance)
             else:
                 # The process is still around
-                LOG.warning(_LW("Failed to kill a long running process "
-                             "%(pid)s related to the instance when "
-                             "deleting it."), {'pid': pid},
-                         instance=instance)
+                LOG.warning("Failed to kill a long running process "
+                            "%(pid)s related to the instance when "
+                            "deleting it.", {'pid': pid}, instance=instance)
 
             self.remove_job(instance, pid)

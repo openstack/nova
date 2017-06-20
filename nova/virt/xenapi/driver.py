@@ -34,8 +34,8 @@ from oslo_utils import versionutils
 import six.moves.urllib.parse as urlparse
 
 import nova.conf
-from nova.i18n import _, _LE, _LW
 from nova import exception
+from nova.i18n import _
 from nova.virt import driver
 from nova.virt.xenapi import host
 from nova.virt.xenapi import pool
@@ -53,10 +53,10 @@ OVERHEAD_PER_VCPU = 1.5
 
 
 def invalid_option(option_name, recommended_value):
-    LOG.exception(_LE('Current value of '
-                      'CONF.xenserver.%(option)s option incompatible with '
-                      'CONF.xenserver.independent_compute=True.  '
-                      'Consider using "%(recommended)s"'),
+    LOG.exception(_('Current value of '
+                    'CONF.xenserver.%(option)s option incompatible with '
+                    'CONF.xenserver.independent_compute=True.  '
+                    'Consider using "%(recommended)s"'),
                   {'option': option_name,
                    'recommended': recommended_value})
     raise exception.NotSupportedWithOption(
@@ -120,7 +120,7 @@ class XenAPIDriver(driver.ComputeDriver):
             try:
                 vm_utils.cleanup_attached_vdis(self._session)
             except Exception:
-                LOG.exception(_LE('Failure while cleaning up attached VDIs'))
+                LOG.exception(_('Failure while cleaning up attached VDIs'))
 
     def instance_exists(self, instance):
         """Checks existence of an instance on the host.
@@ -363,7 +363,7 @@ class XenAPIDriver(driver.ComputeDriver):
                 self._initiator = stats['host_other-config']['iscsi_iqn']
                 self._hypervisor_hostname = stats['host_hostname']
             except (TypeError, KeyError) as err:
-                LOG.warning(_LW('Could not determine key: %s'), err,
+                LOG.warning('Could not determine key: %s', err,
                             instance=instance)
                 self._initiator = None
         return {

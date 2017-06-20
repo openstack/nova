@@ -35,7 +35,6 @@ from nova.compute import task_states
 import nova.conf
 from nova.console import type as ctype
 from nova import exception
-from nova.i18n import _LW
 from nova.objects import diagnostics as diagnostics_obj
 from nova.objects import fields as obj_fields
 from nova.virt import driver
@@ -274,7 +273,7 @@ class FakeDriver(driver.ComputeDriver):
                 disk=flavor.root_gb)
             del self.instances[key]
         else:
-            LOG.warning(_LW("Key '%(key)s' not in instances '%(inst)s'"),
+            LOG.warning("Key '%(key)s' not in instances '%(inst)s'",
                         {'key': key,
                          'inst': self.instances}, instance=instance)
 

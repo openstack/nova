@@ -34,7 +34,7 @@ from nova.compute import power_state
 from nova.compute import task_states
 import nova.conf
 from nova import exception
-from nova.i18n import _, _LI, _LE, _LW
+from nova.i18n import _
 from nova.virt import driver
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import error_util
@@ -131,7 +131,7 @@ class VMwareVCDriver(driver.ComputeDriver):
         next_min_ver = v_utils.convert_version_to_int(
             constants.NEXT_MIN_VC_VERSION)
         vc_version = vim_util.get_vc_version(self._session)
-        LOG.info(_LI("VMware vCenter version: %s"), vc_version)
+        LOG.info("VMware vCenter version: %s", vc_version)
         if v_utils.convert_version_to_int(vc_version) < min_version:
             raise exception.NovaException(
                 _('Detected vCenter version %(version)s. Nova requires VMware '
@@ -139,10 +139,10 @@ class VMwareVCDriver(driver.ComputeDriver):
                       'version': vc_version,
                       'min_version': constants.MIN_VC_VERSION})
         elif v_utils.convert_version_to_int(vc_version) < next_min_ver:
-            LOG.warning(_LW('Running Nova with a VMware vCenter version less '
-                            'than %(version)s is deprecated. The required '
-                            'minimum version of vCenter will be raised to '
-                            '%(version)s in the 16.0.0 release.'),
+            LOG.warning('Running Nova with a VMware vCenter version less '
+                        'than %(version)s is deprecated. The required '
+                        'minimum version of vCenter will be raised to '
+                        '%(version)s in the 16.0.0 release.',
                         {'version': constants.NEXT_MIN_VC_VERSION})
 
     @property
@@ -166,8 +166,7 @@ class VMwareVCDriver(driver.ComputeDriver):
                             CONF.vmware.pbm_default_policy):
                 raise error_util.PbmDefaultPolicyDoesNotExist()
             if CONF.vmware.datastore_regex:
-                LOG.warning(_LW(
-                    "datastore_regex is ignored when PBM is enabled"))
+                LOG.warning("datastore_regex is ignored when PBM is enabled")
                 self._datastore_regex = None
 
     def init_host(self, host):
@@ -365,13 +364,13 @@ class VMwareVCDriver(driver.ComputeDriver):
                     self.detach_volume(connection_info, instance,
                                        disk.get('device_name'))
                 except exception.DiskNotFound:
-                    LOG.warning(_LW('The volume %s does not exist!'),
+                    LOG.warning('The volume %s does not exist!',
                                 disk.get('device_name'),
                                 instance=instance)
                 except Exception as e:
                     with excutils.save_and_reraise_exception():
-                        LOG.error(_LE("Failed to detach %(device_name)s. "
-                                      "Exception: %(exc)s"),
+                        LOG.error("Failed to detach %(device_name)s. "
+                                  "Exception: %(exc)s",
                                   {'device_name': disk.get('device_name'),
                                    'exc': e},
                                   instance=instance)
@@ -396,8 +395,8 @@ class VMwareVCDriver(driver.ComputeDriver):
             try:
                 self._detach_instance_volumes(instance, block_device_info)
             except vexc.ManagedObjectNotFoundException:
-                LOG.warning(_LW('Instance does not exists. Proceeding to '
-                                'delete instance properties on datastore'),
+                LOG.warning('Instance does not exists. Proceeding to '
+                            'delete instance properties on datastore',
                             instance=instance)
         self._vmops.destroy(instance, destroy_disks)
 

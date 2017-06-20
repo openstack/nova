@@ -24,7 +24,7 @@ from oslo_utils import importutils
 import six
 
 import nova.conf
-from nova.i18n import _LE, _LW
+from nova.i18n import _
 from nova import utils
 
 LOG = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ def mount_share(mount_path, export_path,
         utils.execute(*mount_cmd, run_as_root=True)
     except processutils.ProcessExecutionError as exc:
         if 'Device or resource busy' in six.text_type(exc):
-            LOG.warning(_LW("%s is already mounted"), export_path)
+            LOG.warning("%s is already mounted", export_path)
         else:
             raise
 
@@ -70,8 +70,7 @@ def unmount_share(mount_path, export_path):
         if 'target is busy' in six.text_type(exc):
             LOG.debug("The share %s is still in use.", export_path)
         else:
-            LOG.exception(_LE("Couldn't unmount the share %s"),
-                          export_path)
+            LOG.exception(_("Couldn't unmount the share %s"), export_path)
 
 
 class RemoteFilesystem(object):

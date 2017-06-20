@@ -30,7 +30,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import exception
-from nova.i18n import _, _LE, _LI, _LW
+from nova.i18n import _
 from nova import objects
 from nova.objects import fields as obj_fields
 from nova.virt.xenapi import pool_states
@@ -73,11 +73,11 @@ class Host(object):
                         name = vm_rec['name_label']
                         uuid = _uuid_find(ctxt, host, name)
                         if not uuid:
-                            LOG.info(_LI('Instance %(name)s running on '
-                                         '%(host)s could not be found in '
-                                         'the database: assuming it is a '
-                                         'worker VM and skip ping migration '
-                                         'to a new host'),
+                            LOG.info('Instance %(name)s running on '
+                                     '%(host)s could not be found in '
+                                     'the database: assuming it is a '
+                                     'worker VM and skip ping migration '
+                                     'to a new host',
                                      {'name': name, 'host': host})
                             continue
                     instance = objects.Instance.get_by_uuid(ctxt, uuid)
@@ -105,8 +105,8 @@ class Host(object):
 
                     break
                 except XenAPI.Failure:
-                    LOG.exception(_LE('Unable to migrate VM %(vm_ref)s '
-                                      'from %(host)s'),
+                    LOG.exception(_('Unable to migrate VM %(vm_ref)s '
+                                    'from %(host)s'),
                                   {'vm_ref': vm_ref, 'host': host})
                     instance.host = host
                     instance.vm_state = vm_states.ACTIVE
@@ -262,7 +262,7 @@ class HostState(object):
                     allocated += vdi_physical
                 physical_used += vdi_physical
             except (ValueError, self._session.XenAPI.Failure):
-                LOG.exception(_LE('Unable to get size for vdi %s'), vdi_ref)
+                LOG.exception(_('Unable to get size for vdi %s'), vdi_ref)
 
         return (allocated, physical_used)
 
@@ -298,8 +298,8 @@ class HostState(object):
                 del data['host_memory']
             if (data['host_hostname'] !=
                     self._stats.get('host_hostname', data['host_hostname'])):
-                LOG.error(_LE('Hostname has changed from %(old)s to %(new)s. '
-                              'A restart is required to take effect.'),
+                LOG.error('Hostname has changed from %(old)s to %(new)s. '
+                          'A restart is required to take effect.',
                           {'old': self._stats['host_hostname'],
                            'new': data['host_hostname']})
                 data['host_hostname'] = self._stats['host_hostname']
@@ -330,7 +330,7 @@ def to_supported_instances(host_capabilities):
 
             result.append((guestarch, obj_fields.HVType.XEN, ostype))
         except ValueError:
-            LOG.warning(_LW("Failed to extract instance support from %s"),
+            LOG.warning("Failed to extract instance support from %s",
                         capability)
 
     return result
@@ -401,11 +401,11 @@ def call_xenhost(session, method, arg_dict):
             return ''
         return jsonutils.loads(result)
     except ValueError:
-        LOG.exception(_LE("Unable to get updated status"))
+        LOG.exception(_("Unable to get updated status"))
         return None
     except session.XenAPI.Failure as e:
-        LOG.error(_LE("The call to %(method)s returned "
-                      "an error: %(e)s."), {'method': method, 'e': e})
+        LOG.error("The call to %(method)s returned "
+                  "an error: %(e)s.", {'method': method, 'e': e})
         return e.details[1]
 
 
@@ -421,11 +421,11 @@ def _call_host_management(session, method, *args):
             return ''
         return jsonutils.loads(result)
     except ValueError:
-        LOG.exception(_LE("Unable to get updated status"))
+        LOG.exception(_("Unable to get updated status"))
         return None
     except session.XenAPI.Failure as e:
-        LOG.error(_LE("The call to %(method)s returned "
-                      "an error: %(e)s."), {'method': method.__name__, 'e': e})
+        LOG.error("The call to %(method)s returned an error: %(e)s.",
+                  {'method': method.__name__, 'e': e})
         return e.details[1]
 
 

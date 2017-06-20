@@ -14,7 +14,7 @@ from oslo_log import log as logging
 
 import nova.conf
 from nova import exception
-from nova.i18n import _, _LW
+from nova.i18n import _
 from nova import utils
 from nova.virt.libvirt.volume import volume as libvirt_volume
 
@@ -81,10 +81,10 @@ class LibvirtNetVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
             # NOTE(mriedem): We'll have to be extra careful about this in case
             # the reason we got here is due to an old volume connection created
             # before we started preferring the Cinder settings in Ocata.
-            LOG.warning(_LW('Falling back to Nova configuration values for '
-                            'RBD authentication. Cinder should be configured '
-                            'for auth with Ceph volumes. This fallback will '
-                            'be dropped in the Nova 16.0.0 Pike release.'))
+            LOG.warning('Falling back to Nova configuration values for '
+                        'RBD authentication. Cinder should be configured '
+                        'for auth with Ceph volumes. This fallback will '
+                        'be dropped in the Nova 16.0.0 Pike release.')
             # use the nova config values
             conf.auth_username = CONF.libvirt.rbd_user
             conf.auth_secret_uuid = CONF.libvirt.rbd_secret_uuid

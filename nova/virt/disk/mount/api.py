@@ -21,7 +21,7 @@ from oslo_service import loopingcall
 from oslo_utils import importutils
 
 from nova import exception
-from nova.i18n import _, _LI, _LW
+from nova.i18n import _
 from nova import utils
 from nova.virt.image import model as imgmodel
 
@@ -167,11 +167,10 @@ class Mount(object):
         start_time = time.time()
         device = self._inner_get_dev()
         while not device:
-            LOG.info(_LI('Device allocation failed. Will retry in 2 seconds.'))
+            LOG.info('Device allocation failed. Will retry in 2 seconds.')
             time.sleep(2)
             if time.time() - start_time > MAX_DEVICE_WAIT:
-                LOG.warning(_LW('Device allocation failed after repeated '
-                                'retries.'))
+                LOG.warning('Device allocation failed after repeated retries.')
                 return False
             device = self._inner_get_dev()
         return True

@@ -21,7 +21,7 @@ from oslo_vmware import vim_util
 
 import nova.conf
 from nova import exception
-from nova.i18n import _, _LI, _LW
+from nova.i18n import _
 from nova.network import model
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import network_util
@@ -96,8 +96,8 @@ def _check_ovs_supported_version(session):
     vc_version = versionutils.convert_version_to_int(
         vim_util.get_vc_version(session))
     if vc_version < min_version:
-        LOG.warning(_LW('VMware vCenter version less than %(version)s '
-                        'does not support the \'ovs\' port type.'),
+        LOG.warning('VMware vCenter version less than %(version)s '
+                    'does not support the \'ovs\' port type.',
                     {'version': constants.MIN_VC_OVS_VERSION})
 
 
@@ -118,9 +118,9 @@ def _get_neutron_network(session, cluster, vif):
             if not net_id:
                 # Make use of the original one, in the event that the
                 # plugin does not pass the aforementioned id
-                LOG.info(_LI('NSX Logical switch ID is not present. '
-                             'Using network ID to attach to the '
-                             'opaque network.'))
+                LOG.info('NSX Logical switch ID is not present. '
+                         'Using network ID to attach to the '
+                         'opaque network.')
                 net_id = vif['network']['id']
             use_external_id = True
             network_type = 'nsx.LogicalSwitch'
