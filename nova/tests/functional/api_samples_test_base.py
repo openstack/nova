@@ -342,7 +342,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         regexes.update(subs)
         subs = regexes
         self.subs = subs
-        self.assertEqual(exp_code, response.status_code)
+        message = response.text if response.status_code >= 400 else None
+        self.assertEqual(exp_code, response.status_code, message)
         response_data = response.content
         response_data = pretty_data(response_data)
         if not os.path.exists(self._get_template(name,
