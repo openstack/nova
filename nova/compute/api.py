@@ -4383,8 +4383,8 @@ def _find_service_in_cell(context, service_id=None, service_host=None):
     for cell in CELLS:
         # NOTE(danms): Services can be in cell0, so don't skip it here
         try:
-            with nova_context.target_cell(context, cell):
-                cell_service = lookup_fn(context)
+            with nova_context.target_cell(context, cell) as cctxt:
+                cell_service = lookup_fn(cctxt)
         except exception.NotFound:
             # NOTE(danms): Keep looking in other cells
             continue
