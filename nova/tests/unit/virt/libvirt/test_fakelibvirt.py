@@ -99,14 +99,16 @@ class FakeLibvirtTests(test.NoDBTestCase):
         res = conn_method(None).getInfo()
         self.assertIn(res[0], (obj_fields.Architecture.I686,
                                obj_fields.Architecture.X86_64))
-        self.assertTrue(1024 <= res[1] <= 16384,
-                        "Memory unusually high or low.")
-        self.assertTrue(1 <= res[2] <= 32,
-                        "Active CPU count unusually high or low.")
-        self.assertTrue(800 <= res[3] <= 4500,
-                        "CPU speed unusually high or low.")
-        self.assertLessEqual(res[2], (res[5] * res[6]), "More active CPUs "
-                             "than num_sockets*cores_per_socket")
+
+        self.assertLessEqual(1024, res[1], "Memory unusually high.")
+        self.assertGreaterEqual(16384, res[1], "Memory unusually low.")
+        self.assertLessEqual(1, res[2], "Active CPU count unusually high.")
+        self.assertGreaterEqual(32, res[2], "Active CPU count unusually low.")
+        self.assertLessEqual(800, res[3], "CPU speed unusually high.")
+        self.assertGreaterEqual(4500, res[3], "CPU speed unusually low.")
+        self.assertLessEqual(res[2], (res[5] * res[6]),
+                             "More active CPUs than "
+                             "num_sockets*cores_per_socket")
 
     def test_createXML_detects_invalid_xml(self):
         self._test_XML_func_detects_invalid_xml('createXML', [0])

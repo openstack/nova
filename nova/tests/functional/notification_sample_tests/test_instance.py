@@ -765,10 +765,7 @@ class TestInstanceNotificationSample(
         # 5. instance-volume_swap-start
         # 6. instance-volume_swap-error
         # 7. compute.exception
-        self.assertTrue(len(fake_notifier.VERSIONED_NOTIFICATIONS) >= 7,
-                        'Unexpected number of versioned notifications. '
-                        'Expected at least 6, got: %s' %
-                        len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertLessEqual(7, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'instance-volume_swap-start',
             replacements={

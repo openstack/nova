@@ -3812,7 +3812,7 @@ class ServersControllerCreateTestV237(test.NoDBTestCase):
             self._create_server('none')
             call_list = [c for c in context_can.call_args_list
                          if c[0][0] == network_policy]
-            self.assertTrue(len(call_list) == 0)
+            self.assertEqual(0, len(call_list))
 
     @mock.patch.object(objects.Flavor, 'get_by_flavor_id',
                        side_effect=exception.FlavorNotFound(flavor_id='2'))
