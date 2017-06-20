@@ -42,7 +42,8 @@ def _get_fake_get_usages(updates=None):
     # results.
     usages = {'security_group_rules': {'in_use': 1},
               'key_pairs': {'in_use': 2},
-              'server_group_members': {'in_use': 3}}
+              'server_group_members': {'in_use': 3},
+              'floating_ips': {'in_use': 2}}
     if updates:
         usages.update(updates)
 
@@ -1007,7 +1008,6 @@ class DbQuotaDriverTestCase(test.TestCase):
                 instances=dict(in_use=2, reserved=2),
                 cores=dict(in_use=4, reserved=4),
                 ram=dict(in_use=10 * 1024, reserved=0),
-                floating_ips=dict(in_use=2, reserved=0),
                 metadata_items=dict(in_use=0, reserved=0),
                 injected_files=dict(in_use=0, reserved=0),
                 injected_file_content_bytes=dict(in_use=0, reserved=0),
@@ -1238,7 +1238,6 @@ class DbQuotaDriverTestCase(test.TestCase):
                 instances=dict(in_use=2, reserved=2),
                 cores=dict(in_use=4, reserved=4),
                 ram=dict(in_use=10 * 1024, reserved=0),
-                floating_ips=dict(in_use=2, reserved=0),
                 metadata_items=dict(in_use=0, reserved=0),
                 injected_files=dict(in_use=0, reserved=0),
                 injected_file_content_bytes=dict(in_use=0, reserved=0),
@@ -2328,8 +2327,7 @@ class DbQuotaDriverTestCase(test.TestCase):
         result = self.driver._get_quotas(FakeContext('test_project',
                                                      'test_class'),
                                          quota.QUOTAS._resources,
-                                         ['instances', 'cores', 'ram',
-                                          'floating_ips'],
+                                         ['instances', 'cores', 'ram'],
                                          True,
                                          project_id='test_project')
 
@@ -2338,7 +2336,6 @@ class DbQuotaDriverTestCase(test.TestCase):
                 instances=10,
                 cores=20,
                 ram=50 * 1024,
-                floating_ips=10,
                 ))
 
     def test_get_quotas_no_sync(self):
@@ -2351,7 +2348,8 @@ class DbQuotaDriverTestCase(test.TestCase):
                                           'injected_file_path_bytes',
                                           'security_group_rules',
                                           'server_group_members',
-                                          'server_groups', 'security_groups'],
+                                          'server_groups', 'security_groups',
+                                          'floating_ips'],
                                           False,
                                          project_id='test_project')
 
@@ -2365,6 +2363,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                 server_group_members=10,
                 server_groups=10,
                 security_groups=10,
+                floating_ips=10,
                 ))
 
     def test_limit_check_under(self):
@@ -2700,7 +2699,7 @@ class QuotaSqlAlchemyBase(test.TestCase):
 
         self.addCleanup(restore_sync_functions)
 
-        for res_name in ('instances', 'cores', 'ram', 'floating_ips'):
+        for res_name in ('instances', 'cores', 'ram'):
             method_name = '_sync_%s' % res_name
             sqa_api.QUOTA_SYNC_FUNCTIONS[method_name] = make_sync(res_name)
             res = quota.ReservableResource(res_name, '_sync_%s' % res_name)
@@ -2788,7 +2787,7 @@ class QuotaSqlAlchemyBase(test.TestCase):
             created_at = timeutils.utcnow()
         if updated_at is None:
             updated_at = timeutils.utcnow()
-        if resource == 'fixed_ips' or resource == 'floating_ips':
+        if resource == 'fixed_ips':
             user_id = None
 
         quota_usage_ref = self._make_quota_usage(project_id, user_id, resource,
@@ -3057,8 +3056,7 @@ class QuotaReserveSqlAlchemyTestCase(QuotaSqlAlchemyBase):
 
 class QuotaEngineUsageRefreshTestCase(QuotaSqlAlchemyBase):
     def _init_usages(self, *in_use, **kwargs):
-        for i, option in enumerate(('instances', 'cores', 'ram',
-                                    'floating_ips')):
+        for i, option in enumerate(('instances', 'cores', 'ram')):
             self.init_usage('test_project', 'fake_user',
                             option, in_use[i], **kwargs)
         return FakeContext('test_project', 'test_class')
@@ -3078,19 +3076,11 @@ class QuotaEngineUsageRefreshTestCase(QuotaSqlAlchemyBase):
         # 0     instances        user
         # 1     cores            user
         # 2     ram              user
-        # 3     floating_ips     project
-        self.usages_list.append(dict(resource='floating_ips',
-                     project_id='test_project',
-                     user_id=None,
-                     in_use=2,
-                     reserved=2,
-                     until_refresh=None))
 
         # None of the usage refresh tests should add a reservation.
         self.usages_list[0]['reserved'] = 0
         self.usages_list[1]['reserved'] = 0
         self.usages_list[2]['reserved'] = 0
-        self.usages_list[3]['reserved'] = 0
 
         def fake_quota_get_all_by_project_and_user(context, project_id,
                                                    user_id):
@@ -3137,11 +3127,6 @@ class QuotaEngineUsageRefreshTestCase(QuotaSqlAlchemyBase):
         quota.QUOTAS.usage_refresh(ctxt, 'test_project', 'fake_user')
 
         self.assertEqual(self.sync_called, set(['instances']))
-
-        # Compare the expected usages with the actual usages.
-        # Expect floating_ips not to change since it is project scoped.
-        self.usages_list[3]['in_use'] = 3
-        self.usages_list[3]['until_refresh'] = 5
         self.compare_usage(self.usages, self.usages_list)
 
         # No usages were created.
@@ -3157,9 +3142,6 @@ class QuotaEngineUsageRefreshTestCase(QuotaSqlAlchemyBase):
         self.assertEqual(self.sync_called, set(['instances']))
 
         # Compare the expected usages with the actual usages.
-        # Expect floating_ips not to change since it is project scoped.
-        self.usages_list[3]['in_use'] = 3
-        self.usages_list[3]['until_refresh'] = 5
         self.compare_usage(self.usages, self.usages_list)
 
         # No usages were created.
@@ -3191,7 +3173,9 @@ class QuotaEngineUsageRefreshTestCase(QuotaSqlAlchemyBase):
         ctxt = context.get_admin_context()
         quota.QUOTAS.usage_refresh(ctxt, 'test_project')
 
-        self.assertEqual(self.sync_called, set(['floating_ips']))
+        # No sync functions will be called because there are no more
+        # project-scoped ReservableResources
+        self.assertEqual(self.sync_called, set([]))
 
         # Compare the expected usages with the actual usages.
         # Expect instances not to change since it is user scoped.
@@ -3206,45 +3190,6 @@ class QuotaEngineUsageRefreshTestCase(QuotaSqlAlchemyBase):
         self.compare_usage(self.usages, self.usages_list)
 
         self.assertEqual(self.usages_created, {})
-
-    def test_usage_refresh_project_one_key(self):
-        self._init_usages(3, 3, 3, 3, 3, 3, 3, until_refresh = 5)
-        # Let the parameter determine the project_id, not the context.
-        ctxt = context.get_admin_context()
-        keys = ['floating_ips']
-        quota.QUOTAS.usage_refresh(ctxt, 'test_project', resource_names=keys)
-
-        self.assertEqual(self.sync_called, set(['floating_ips']))
-
-        # Compare the expected usages with the actual usages.
-        # Expect instances not to change since it is user scoped.
-        self.usages_list[0]['in_use'] = 3
-        self.usages_list[0]['until_refresh'] = 5
-        # Expect cores not to change since it is user scoped.
-        self.usages_list[1]['in_use'] = 3
-        self.usages_list[1]['until_refresh'] = 5
-        # Expect ram not to change since it is user scoped.
-        self.usages_list[2]['in_use'] = 3
-        self.usages_list[2]['until_refresh'] = 5
-        self.compare_usage(self.usages, self.usages_list)
-
-        self.assertEqual(self.usages_created, {})
-
-    def test_usage_refresh_create_project_usage(self):
-        ctxt = context.get_admin_context()
-
-        # Create per-project floating_ips usage
-        keys = ['floating_ips']
-        quota.QUOTAS.usage_refresh(ctxt, 'test_project', resource_names=keys)
-
-        self.assertEqual(self.sync_called, set(['floating_ips']))
-
-        # Compare the expected usages with the created usages.
-        # Expect floating_ips to be created and initialized to 0
-        self.usages_list[3]['in_use'] = 0
-        self.compare_usage(self.usages_created, self.usages_list[3:])
-
-        self.assertEqual(len(self.usages_created), 1)
 
     def _test_exception(self, context, project_id, user_id, keys):
         try:
@@ -3253,13 +3198,6 @@ class QuotaEngineUsageRefreshTestCase(QuotaSqlAlchemyBase):
             self.assertIn(keys[0], e.format_message())
         else:
             self.fail('Expected QuotaUsageRefreshNotAllowed failure')
-
-    def test_usage_refresh_invalid_user_key(self):
-        context = FakeContext('test_project', 'test_class')
-        # floating_ips is a valid syncable project key,
-        # but not a valid user key
-        self._test_exception(context, 'test_project', 'fake_user',
-                             ['floating_ips'])
 
     def test_usage_refresh_non_syncable_user_key(self):
         # security_group_rules is a valid user key, but not syncable

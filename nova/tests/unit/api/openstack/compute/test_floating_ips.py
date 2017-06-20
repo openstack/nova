@@ -557,6 +557,45 @@ class FloatingIpTestV21(test.TestCase):
 
         self.assertIn('IP allocation over quota', ex.explanation)
 
+    @mock.patch('nova.objects.FloatingIP.deallocate')
+    @mock.patch('nova.objects.FloatingIP.allocate_address')
+    @mock.patch('nova.objects.quotas.Quotas.check_deltas')
+    def test_floating_ip_allocate_over_quota_during_recheck(self, check_mock,
+                                                            alloc_mock,
+                                                            dealloc_mock):
+        ctxt = self.fake_req.environ['nova.context']
+
+        # Simulate a race where the first check passes and the recheck fails.
+        check_mock.side_effect = [None,
+                                  exception.OverQuota(overs='floating_ips')]
+
+        self.assertRaises(webob.exc.HTTPForbidden,
+                          self.controller.create, self.fake_req)
+
+        self.assertEqual(2, check_mock.call_count)
+        call1 = mock.call(ctxt, {'floating_ips': 1}, ctxt.project_id)
+        call2 = mock.call(ctxt, {'floating_ips': 0}, ctxt.project_id)
+        check_mock.assert_has_calls([call1, call2])
+
+        # Verify we removed the floating IP that was added after the first
+        # quota check passed.
+        dealloc_mock.assert_called_once_with(ctxt,
+                                             alloc_mock.return_value.address)
+
+    @mock.patch('nova.objects.FloatingIP.allocate_address')
+    @mock.patch('nova.objects.quotas.Quotas.check_deltas')
+    def test_floating_ip_allocate_no_quota_recheck(self, check_mock,
+                                                   alloc_mock):
+        # Disable recheck_quota.
+        self.flags(recheck_quota=False, group='quota')
+
+        ctxt = self.fake_req.environ['nova.context']
+        self.controller.create(self.fake_req)
+
+        # check_deltas should have been called only once.
+        check_mock.assert_called_once_with(ctxt, {'floating_ips': 1},
+                                           ctxt.project_id)
+
     @mock.patch('nova.network.api.API.allocate_floating_ip',
                 side_effect=exception.FloatingIpLimitExceeded())
     def test_floating_ip_allocate_quota_exceed_in_pool(self, allocate_mock):

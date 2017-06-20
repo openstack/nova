@@ -30,14 +30,11 @@ from nova import exception
 from nova.i18n import _LE, _LI, _LW
 from nova.network import rpcapi as network_rpcapi
 from nova import objects
-from nova import quota
 from nova import rpc
 from nova import servicegroup
 from nova import utils
 
 LOG = logging.getLogger(__name__)
-
-QUOTAS = quota.QUOTAS
 
 CONF = nova.conf.CONF
 
@@ -206,28 +203,33 @@ class FloatingIP(object):
         # called into from other places
         try:
             if use_quota:
-                reservations = QUOTAS.reserve(context, floating_ips=1,
-                                              project_id=project_id)
+                objects.Quotas.check_deltas(context, {'floating_ips': 1},
+                                            project_id)
         except exception.OverQuota:
             LOG.warning(_LW("Quota exceeded for %s, tried to allocate "
                             "floating IP"), context.project_id)
             raise exception.FloatingIpLimitExceeded()
 
-        try:
-            floating_ip = objects.FloatingIP.allocate_address(
-                context, project_id, pool, auto_assigned=auto_assigned)
-            payload = dict(project_id=project_id, floating_ip=floating_ip)
-            self.notifier.info(context,
-                               'network.floating_ip.allocate', payload)
+        floating_ip = objects.FloatingIP.allocate_address(
+            context, project_id, pool, auto_assigned=auto_assigned)
 
-            # Commit the reservations
-            if use_quota:
-                QUOTAS.commit(context, reservations, project_id=project_id)
-        except Exception:
-            with excutils.save_and_reraise_exception():
-                if use_quota:
-                    QUOTAS.rollback(context, reservations,
-                                    project_id=project_id)
+        # NOTE(melwitt): We recheck the quota after creating the object to
+        # prevent users from allocating more resources than their allowed quota
+        # in the event of a race. This is configurable because it can be
+        # expensive if strict quota limits are not required in a deployment.
+        if CONF.quota.recheck_quota and use_quota:
+            try:
+                objects.Quotas.check_deltas(context, {'floating_ips': 0},
+                                            project_id)
+            except exception.OverQuota:
+                objects.FloatingIP.deallocate(context, floating_ip.address)
+                LOG.warning(_LW("Quota exceeded for %s, tried to allocate "
+                                "floating IP"), context.project_id)
+                raise exception.FloatingIpLimitExceeded()
+
+        payload = dict(project_id=project_id, floating_ip=floating_ip)
+        self.notifier.info(context,
+                           'network.floating_ip.allocate', payload)
 
         return floating_ip
 
@@ -240,7 +242,6 @@ class FloatingIP(object):
         # handle auto_assigned
         if not affect_auto_assigned and floating_ip.auto_assigned:
             return
-        use_quota = not floating_ip.auto_assigned
 
         # make sure project owns this floating ip (allocated)
         self._floating_ip_owned_by_project(context, floating_ip)
@@ -257,30 +258,7 @@ class FloatingIP(object):
                        floating_ip=str(floating_ip.address))
         self.notifier.info(context, 'network.floating_ip.deallocate', payload)
 
-        project_id = floating_ip.project_id
-        # Get reservations...
-        try:
-            if use_quota:
-                reservations = QUOTAS.reserve(context,
-                                              project_id=project_id,
-                                              floating_ips=-1)
-            else:
-                reservations = None
-        except Exception:
-            reservations = None
-            LOG.exception(_LE("Failed to update usages deallocating "
-                              "floating IP"))
-
-        rows_updated = objects.FloatingIP.deallocate(context, address)
-        # number of updated rows will be 0 if concurrently another
-        # API call has also deallocated the same floating ip
-        if not rows_updated:
-            if reservations:
-                QUOTAS.rollback(context, reservations, project_id=project_id)
-        else:
-            # Commit the reservations
-            if reservations:
-                QUOTAS.commit(context, reservations, project_id=project_id)
+        objects.FloatingIP.deallocate(context, address)
 
     @messaging.expected_exceptions(exception.FloatingIpNotFoundForAddress)
     def associate_floating_ip(self, context, floating_address, fixed_address,

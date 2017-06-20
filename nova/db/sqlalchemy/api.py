@@ -66,7 +66,6 @@ import nova.context
 from nova.db.sqlalchemy import models
 from nova import exception
 from nova.i18n import _, _LI, _LE, _LW
-from nova import quota
 from nova import safe_utils
 
 profiler_sqlalchemy = importutils.try_import('osprofiler.sqlalchemy')
@@ -1000,20 +999,6 @@ def floating_ip_bulk_destroy(context, ips):
         model_query(context, models.FloatingIp).\
             filter(models.FloatingIp.address.in_(ip_block)).\
             soft_delete(synchronize_session='fetch')
-
-    # Delete the quotas, if needed.
-    # Quota update happens in a separate transaction, so previous must have
-    # been committed first.
-    for project_id, count in project_id_to_quota_count.items():
-        try:
-            reservations = quota.QUOTAS.reserve(context,
-                                                project_id=project_id,
-                                                floating_ips=count)
-            quota.QUOTAS.commit(context, reservations, project_id=project_id)
-        except Exception:
-            with excutils.save_and_reraise_exception():
-                LOG.exception(_LE("Failed to update usages bulk "
-                                  "deallocating floating IP"))
 
 
 @require_context
