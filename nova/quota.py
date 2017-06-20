@@ -1894,6 +1894,12 @@ def _server_group_count_members_by_user(context, group, user_id):
     return {'user': {'server_group_members': len(instances)}}
 
 
+def _fixed_ip_count(context, project_id):
+    # NOTE(melwitt): This assumes a single cell.
+    count = objects.FixedIPList.get_count_by_project(context, project_id)
+    return {'project': {'fixed_ips': count}}
+
+
 def _server_group_count(context, project_id, user_id=None):
     """Get the counts of server groups in the database.
 
@@ -1930,7 +1936,7 @@ resources = [
                       'security_groups'),
     ReservableResource('floating_ips', '_sync_floating_ips',
                        'floating_ips'),
-    ReservableResource('fixed_ips', '_sync_fixed_ips', 'fixed_ips'),
+    CountableResource('fixed_ips', _fixed_ip_count, 'fixed_ips'),
     AbsoluteResource('metadata_items', 'metadata_items'),
     AbsoluteResource('injected_files', 'injected_files'),
     AbsoluteResource('injected_file_content_bytes',

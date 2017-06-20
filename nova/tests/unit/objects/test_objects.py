@@ -1148,7 +1148,7 @@ object_data = {
     'PciDevicePoolList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
     'PowerVMLiveMigrateData': '1.1-ac0fdd26da685f12d7038782cabd393a',
     'Quotas': '1.3-40fcefe522111dddd3e5e6155702cf4e',
-    'QuotasNoOp': '1.3-b19f8a5d187f75ccf372aa23c5f906a4',
+    'QuotasNoOp': '1.3-347a039fc7cfee7b225b68b5181e0733',
     'RequestSpec': '1.8-35033ecef47a880f9a5e46e2269e2b97',
     'ResourceClass': '1.0-e6b367e2cf1733c5f3526f20a3286fe9',
     'ResourceClassList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
