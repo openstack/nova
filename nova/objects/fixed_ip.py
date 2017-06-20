@@ -16,6 +16,8 @@ from oslo_utils import timeutils
 from oslo_utils import versionutils
 
 from nova import db
+from nova.db.sqlalchemy import api as db_api
+from nova.db.sqlalchemy import models
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
@@ -219,11 +221,22 @@ class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject):
     # Version 1.12: FixedIP <= version 1.12
     # Version 1.13: FixedIP <= version 1.13
     # Version 1.14: FixedIP <= version 1.14
-    VERSION = '1.14'
+    # Version 1.15: Added get_count_by_project() for quotas
+    VERSION = '1.15'
 
     fields = {
         'objects': fields.ListOfObjectsField('FixedIP'),
         }
+
+    @staticmethod
+    @db_api.pick_context_manager_reader
+    def _get_count_by_project_from_db(context, project_id):
+        return context.session.query(models.FixedIp.id).\
+                filter_by(deleted=0).\
+                join(models.Instance,
+                     models.Instance.uuid == models.FixedIp.instance_uuid).\
+                filter(models.Instance.project_id == project_id).\
+                count()
 
     @obj_base.remotable_classmethod
     def get_all(cls, context):
@@ -296,3 +309,7 @@ class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject):
                                                   reason='already created')
             ips.append(ip)
         db.fixed_ip_bulk_create(context, ips)
+
+    @obj_base.remotable_classmethod
+    def get_count_by_project(cls, context, project_id):
+        return cls._get_count_by_project_from_db(context, project_id)

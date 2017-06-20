@@ -22,6 +22,7 @@ from oslo_versionedobjects import base as ovo_base
 
 from nova import exception
 from nova.objects import fixed_ip
+from nova.objects import instance as instance_obj
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_network
 from nova.tests.unit.objects import test_objects
@@ -357,6 +358,18 @@ class _TestFixedIPObject(object):
             target_version='1.1',
             version_manifest=versions)
         self.assertNotIn('default_route', primitive['nova_object.data'])
+
+    def test_get_count_by_project(self):
+        instance = instance_obj.Instance(context=self.context,
+                                         uuid=uuids.instance,
+                                         project_id=self.context.project_id)
+        instance.create()
+        ip = fixed_ip.FixedIP(context=self.context,
+                              address='192.168.1.1',
+                              instance_uuid=instance.uuid)
+        ip.create()
+        self.assertEqual(1, fixed_ip.FixedIPList.get_count_by_project(
+            self.context, self.context.project_id))
 
 
 class TestFixedIPObject(test_objects._LocalTest,
