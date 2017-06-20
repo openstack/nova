@@ -182,3 +182,62 @@ def wsgi_path_item(environ, name):
         return environ['wsgiorg.routing_args'][1][name]
     except (KeyError, IndexError):
         return None
+
+
+def normalize_resources_qs_param(qs):
+    """Given a query string parameter for resources, validate it meets the
+    expected format and return a dict of amounts, keyed by resource class name.
+
+    The expected format of the resources parameter looks like so:
+
+        $RESOURCE_CLASS_NAME:$AMOUNT,$RESOURCE_CLASS_NAME:$AMOUNT
+
+    So, if the user was looking for resource providers that had room for an
+    instance that will consume 2 vCPUs, 1024 MB of RAM and 50GB of disk space,
+    they would use the following query string:
+
+        ?resources=VCPU:2,MEMORY_MB:1024,DISK_GB:50
+
+    The returned value would be:
+
+        {
+            "VCPU": 2,
+            "MEMORY_MB": 1024,
+            "DISK_GB": 50,
+        }
+
+    :param qs: The value of the 'resources' query string parameter
+    :raises `webob.exc.HTTPBadRequest` if the parameter's value isn't in the
+            expected format.
+    """
+    result = {}
+    resource_tuples = qs.split(',')
+    for rt in resource_tuples:
+        try:
+            rc_name, amount = rt.split(':')
+        except ValueError:
+            msg = _('Badly formed resources parameter. Expected resources '
+                    'query string parameter in form: '
+                    '?resources=VCPU:2,MEMORY_MB:1024. Got: %s.')
+            msg = msg % rt
+            raise webob.exc.HTTPBadRequest(msg)
+        try:
+            amount = int(amount)
+        except ValueError:
+            msg = _('Requested resource %(resource_name)s expected positive '
+                    'integer amount. Got: %(amount)s.')
+            msg = msg % {
+                'resource_name': rc_name,
+                'amount': amount,
+            }
+            raise webob.exc.HTTPBadRequest(msg)
+        if amount < 1:
+            msg = _('Requested resource %(resource_name)s requires '
+                    'amount >= 1. Got: %(amount)d.')
+            msg = msg % {
+                'resource_name': rc_name,
+                'amount': amount,
+            }
+            raise webob.exc.HTTPBadRequest(msg)
+        result[rc_name] = amount
+    return result
