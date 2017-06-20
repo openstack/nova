@@ -1,0 +1,14 @@
+{
+    "nova_object.name": "IpPayload",
+    "nova_object.namespace": "nova",
+    "nova_object.version": "1.0",
+    "nova_object.data": {
+        "mac": "fa:16:3e:4c:2c:30",
+        "address": "192.168.1.3",
+        "port_uuid": "ce531f90-199f-48c0-816c-13e38010b442",
+        "meta": {},
+        "version": 4,
+        "label": "private-network",
+        "device_name": "tapce531f90-19"
+    }
+}
