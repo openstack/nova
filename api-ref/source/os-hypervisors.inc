@@ -116,7 +116,7 @@ Show Hypervisor Statistics
 
 .. rest_method:: GET /os-hypervisors/statistics
 
-Shows summary statistics for all hypervisors over all compute nodes.
+Shows summary statistics for all enabled hypervisors over all compute nodes.
 
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through

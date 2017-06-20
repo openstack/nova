@@ -2823,7 +2823,7 @@ hypervisor_state:
   type: string
 hypervisor_statistics:
   description: |
-    The object of the hypervisors' statics.
+    The hypervisors statistics summary object.
   in: body
   required: true
   type: object
