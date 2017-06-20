@@ -19,6 +19,7 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests import uuidsentinel as uuids
 
 
 class ConnectionSwitchTestCase(test.NoDBTestCase):
@@ -76,26 +77,37 @@ class CellDatabasesTestCase(test.NoDBTestCase):
         super(CellDatabasesTestCase, self).setUp()
         self.useFixture(nova_fixtures.Database(database='api'))
         fix = nova_fixtures.CellDatabases()
-        fix.add_cell_database('blah')
-        fix.add_cell_database('wat')
+        fix.add_cell_database('cell0')
+        fix.add_cell_database('cell1')
+        fix.add_cell_database('cell2')
         self.useFixture(fix)
 
+        self.context = context.RequestContext('fake-user', 'fake-project')
+
+    def _create_cell_mappings(self):
+        cell0_uuid = objects.CellMapping.CELL0_UUID
+        self.mapping0 = objects.CellMapping(context=self.context,
+                                            uuid=cell0_uuid,
+                                            database_connection='cell0',
+                                            transport_url='none:///')
+        self.mapping1 = objects.CellMapping(context=self.context,
+                                            uuid=uuidutils.generate_uuid(),
+                                            database_connection='cell1',
+                                            transport_url='none:///')
+        self.mapping2 = objects.CellMapping(context=self.context,
+                                            uuid=uuidutils.generate_uuid(),
+                                            database_connection='cell2',
+                                            transport_url='none:///')
+        self.mapping0.create()
+        self.mapping1.create()
+        self.mapping2.create()
+
     def test_cell_dbs(self):
-        ctxt = context.RequestContext('fake-user', 'fake-project')
-        mapping1 = objects.CellMapping(context=ctxt,
-                                       uuid=uuidutils.generate_uuid(),
-                                       database_connection='blah',
-                                       transport_url='none:///')
-        mapping2 = objects.CellMapping(context=ctxt,
-                                       uuid=uuidutils.generate_uuid(),
-                                       database_connection='wat',
-                                       transport_url='none:///')
-        mapping1.create()
-        mapping2.create()
+        self._create_cell_mappings()
 
         # Create an instance and read it from cell1
         uuid = uuidutils.generate_uuid()
-        with context.target_cell(ctxt, mapping1) as cctxt:
+        with context.target_cell(self.context, self.mapping1) as cctxt:
             instance = objects.Instance(context=cctxt, uuid=uuid,
                                         project_id='fake-project')
             instance.create()
@@ -104,18 +116,18 @@ class CellDatabasesTestCase(test.NoDBTestCase):
             self.assertEqual(uuid, inst.uuid)
 
         # Make sure it can't be read from cell2
-        with context.target_cell(ctxt, mapping2) as cctxt:
+        with context.target_cell(self.context, self.mapping2) as cctxt:
             self.assertRaises(exception.InstanceNotFound,
                               objects.Instance.get_by_uuid, cctxt, uuid)
 
         # Make sure it can still be read from cell1
-        with context.target_cell(ctxt, mapping1) as cctxt:
+        with context.target_cell(self.context, self.mapping1) as cctxt:
             inst = objects.Instance.get_by_uuid(cctxt, uuid)
             self.assertEqual(uuid, inst.uuid)
 
         # Create an instance and read it from cell2
         uuid = uuidutils.generate_uuid()
-        with context.target_cell(ctxt, mapping2) as cctxt:
+        with context.target_cell(self.context, self.mapping2) as cctxt:
             instance = objects.Instance(context=cctxt, uuid=uuid,
                                         project_id='fake-project')
             instance.create()
@@ -124,6 +136,66 @@ class CellDatabasesTestCase(test.NoDBTestCase):
             self.assertEqual(uuid, inst.uuid)
 
         # Make sure it can't be read from cell1
-        with context.target_cell(ctxt, mapping1) as cctxt:
+        with context.target_cell(self.context, self.mapping1) as cctxt:
             self.assertRaises(exception.InstanceNotFound,
                               objects.Instance.get_by_uuid, cctxt, uuid)
+
+    def test_scatter_gather_cells(self):
+        self._create_cell_mappings()
+
+        # Create an instance in cell0
+        with context.target_cell(self.context, self.mapping0) as cctxt:
+            instance = objects.Instance(context=cctxt, uuid=uuids.instance0,
+                                        project_id='fake-project')
+            instance.create()
+
+        # Create an instance in first cell
+        with context.target_cell(self.context, self.mapping1) as cctxt:
+            instance = objects.Instance(context=cctxt, uuid=uuids.instance1,
+                                        project_id='fake-project')
+            instance.create()
+
+        # Create an instance in second cell
+        with context.target_cell(self.context, self.mapping2) as cctxt:
+            instance = objects.Instance(context=cctxt, uuid=uuids.instance2,
+                                        project_id='fake-project')
+            instance.create()
+
+        filters = {'deleted': False, 'project_id': 'fake-project'}
+        results = context.scatter_gather_all_cells(
+            self.context, objects.InstanceList.get_by_filters, filters,
+            sort_dir='asc')
+        instances = objects.InstanceList()
+        for result in results.values():
+            instances = instances + result
+
+        # Should have 3 instances across cells
+        self.assertEqual(3, len(instances))
+
+        # Verify we skip cell0 when specified
+        results = context.scatter_gather_skip_cell0(
+            self.context, objects.InstanceList.get_by_filters, filters)
+        instances = objects.InstanceList()
+        for result in results.values():
+            instances = instances + result
+
+        # Should have gotten only the instances from the last two cells
+        self.assertEqual(2, len(instances))
+        self.assertIn(self.mapping1.uuid, results)
+        self.assertIn(self.mapping2.uuid, results)
+        instance_uuids = [inst.uuid for inst in instances]
+        self.assertIn(uuids.instance1, instance_uuids)
+        self.assertIn(uuids.instance2, instance_uuids)
+
+        # Try passing one cell
+        results = context.scatter_gather_cells(
+            self.context, [self.mapping1], 60,
+            objects.InstanceList.get_by_filters, filters)
+        instances = objects.InstanceList()
+        for result in results.values():
+            instances = instances + result
+
+        # Should have gotten only one instance from cell1
+        self.assertEqual(1, len(instances))
+        self.assertIn(self.mapping1.uuid, results)
+        self.assertEqual(uuids.instance1, instances[0].uuid)
