@@ -5136,6 +5136,25 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         self.assertRaises(exception.NovaException,
                           compute_api._find_service_in_cell, self.context)
 
+    @mock.patch('nova.objects.Service.get_by_id')
+    def test_find_service_in_cell_targets(self, mock_get_service):
+        mock_get_service.side_effect = [exception.NotFound(),
+                                        mock.sentinel.service]
+        compute_api.CELLS = [mock.sentinel.cell0, mock.sentinel.cell1]
+
+        @contextlib.contextmanager
+        def fake_target(context, cell):
+            yield 'context-for-%s' % cell
+
+        with mock.patch('nova.context.target_cell') as mock_target:
+            mock_target.side_effect = fake_target
+            s = compute_api._find_service_in_cell(self.context, service_id=123)
+            self.assertEqual(mock.sentinel.service, s)
+            cells = [call[0][0]
+                     for call in mock_get_service.call_args_list]
+            self.assertEqual(['context-for-%s' % c for c in compute_api.CELLS],
+                             cells)
+
     def test_validate_and_build_base_options_translate_neutron_secgroup(self):
         """Tests that _check_requested_secgroups will return a uuid for a
         requested Neutron security group and that will be returned from
