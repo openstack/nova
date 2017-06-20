@@ -16,6 +16,8 @@ from oslo_utils import uuidutils
 from oslo_utils import versionutils
 
 from nova import db
+from nova.db.sqlalchemy import api as db_api
+from nova.db.sqlalchemy import models
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -97,7 +99,8 @@ class SecurityGroup(base.NovaPersistentObject, base.NovaObject):
 class SecurityGroupList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              SecurityGroup <= version 1.1
-    VERSION = '1.0'
+    # Version 1.1: Added get_counts() for quotas
+    VERSION = '1.1'
 
     fields = {
         'objects': fields.ListOfObjectsField('SecurityGroup'),
@@ -107,6 +110,19 @@ class SecurityGroupList(base.ObjectListBase, base.NovaObject):
         super(SecurityGroupList, self).__init__(*args, **kwargs)
         self.objects = []
         self.obj_reset_changes()
+
+    @staticmethod
+    @db_api.pick_context_manager_reader
+    def _get_counts_from_db(context, project_id, user_id=None):
+        query = context.session.query(models.SecurityGroup.id).\
+                filter_by(deleted=0).\
+                filter_by(project_id=project_id)
+        counts = {}
+        counts['project'] = {'security_groups': query.count()}
+        if user_id:
+            query = query.filter_by(user_id=user_id)
+            counts['user'] = {'security_groups': query.count()}
+        return counts
 
     @base.remotable_classmethod
     def get_all(cls, context):
@@ -125,6 +141,21 @@ class SecurityGroupList(base.ObjectListBase, base.NovaObject):
         groups = db.security_group_get_by_instance(context, instance.uuid)
         return base.obj_make_list(context, cls(context),
                                   objects.SecurityGroup, groups)
+
+    @base.remotable_classmethod
+    def get_counts(cls, context, project_id, user_id=None):
+        """Get the counts of SecurityGroup objects in the database.
+
+        :param context: The request context for database access
+        :param project_id: The project_id to count across
+        :param user_id: The user_id to count across
+        :returns: A dict containing the project-scoped counts and user-scoped
+                  counts if user_id is specified. For example:
+
+                    {'project': {'security_groups': <count across project>},
+                     'user': {'security_groups': <count across user>}}
+        """
+        return cls._get_counts_from_db(context, project_id, user_id=user_id)
 
 
 def make_secgroup_list(security_groups):
