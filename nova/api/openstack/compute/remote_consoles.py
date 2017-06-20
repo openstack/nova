@@ -24,9 +24,6 @@ from nova import exception
 from nova.policies import remote_consoles as rc_policies
 
 
-ALIAS = "os-remote-consoles"
-
-
 class RemoteConsolesController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         self.compute_api = compute.API()
@@ -186,22 +183,3 @@ class RemoteConsolesController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         except NotImplementedError:
             common.raise_feature_not_supported()
-
-
-class RemoteConsoles(extensions.V21APIExtensionBase):
-    """Interactive Console support."""
-    name = "Consoles"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        return []
-
-    def get_resources(self):
-        parent = {'member_name': 'server',
-                  'collection_name': 'servers'}
-        resources = [
-            extensions.ResourceExtension(
-                'remote-consoles', RemoteConsolesController(), parent=parent,
-                member_name='remote-console')]
-        return resources
