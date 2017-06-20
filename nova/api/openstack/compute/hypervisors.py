@@ -95,18 +95,16 @@ class HypervisorsController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=msg)
         return compute_nodes
 
-    @wsgi.Controller.api_version("2.33")  # noqa
-    @extensions.expected_errors((400))
-    def index(self, req):
-        limit, marker = common.get_limit_and_marker(req)
-        return self._index(req, limit=limit, marker=marker, links=True)
+    def _get_hypervisors(self, req, detail=False, limit=None, marker=None,
+                         links=False):
+        """Get hypervisors for the given request.
 
-    @wsgi.Controller.api_version("2.1", "2.32")  # noqa
-    @extensions.expected_errors(())
-    def index(self, req):
-        return self._index(req)
-
-    def _index(self, req, limit=None, marker=None, links=False):
+        :param req: nova.api.openstack.wsgi.Request for the GET request
+        :param detail: If True, return a detailed response.
+        :param limit: An optional user-supplied page limit.
+        :param marker: An optional user-supplied marker for paging.
+        :param links: If True, return links in the response for paging.
+        """
         context = req.environ['nova.context']
         context.can(hv_policies.BASE_POLICY_NAME)
 
@@ -124,7 +122,7 @@ class HypervisorsController(wsgi.Controller):
                     context, hyp.host)
                 hypervisors_list.append(
                     self._view_hypervisor(
-                        hyp, service, False, req))
+                        hyp, service, detail, req))
             except (exception.ComputeHostNotFound,
                     exception.HostMappingNotFound):
                 # The compute service could be deleted which doesn't delete
@@ -136,11 +134,26 @@ class HypervisorsController(wsgi.Controller):
 
         hypervisors_dict = dict(hypervisors=hypervisors_list)
         if links:
-            hypervisors_links = self._view_builder.get_links(req,
-                                                             hypervisors_list)
+            hypervisors_links = self._view_builder.get_links(
+                req, hypervisors_list, detail)
             if hypervisors_links:
                 hypervisors_dict['hypervisors_links'] = hypervisors_links
         return hypervisors_dict
+
+    @wsgi.Controller.api_version("2.33")  # noqa
+    @extensions.expected_errors((400))
+    def index(self, req):
+        limit, marker = common.get_limit_and_marker(req)
+        return self._index(req, limit=limit, marker=marker, links=True)
+
+    @wsgi.Controller.api_version("2.1", "2.32")  # noqa
+    @extensions.expected_errors(())
+    def index(self, req):
+        return self._index(req)
+
+    def _index(self, req, limit=None, marker=None, links=False):
+        return self._get_hypervisors(req, detail=False, limit=limit,
+                                     marker=marker, links=links)
 
     @wsgi.Controller.api_version("2.33")  # noqa
     @extensions.expected_errors((400))
@@ -154,39 +167,8 @@ class HypervisorsController(wsgi.Controller):
         return self._detail(req)
 
     def _detail(self, req, limit=None, marker=None, links=False):
-        context = req.environ['nova.context']
-        context.can(hv_policies.BASE_POLICY_NAME)
-
-        try:
-            compute_nodes = self.host_api.compute_node_get_all(
-                context, limit=limit, marker=marker)
-        except exception.MarkerNotFound:
-            msg = _('marker [%s] not found') % marker
-            raise webob.exc.HTTPBadRequest(explanation=msg)
-
-        hypervisors_list = []
-        for hyp in compute_nodes:
-            try:
-                service = self.host_api.service_get_by_compute_host(
-                    context, hyp.host)
-                hypervisors_list.append(
-                    self._view_hypervisor(
-                        hyp, service, True, req))
-            except (exception.ComputeHostNotFound,
-                    exception.HostMappingNotFound):
-                # The compute service could be deleted which doesn't delete
-                # the compute node record, that has to be manually removed
-                # from the database so we just ignore it when listing nodes.
-                LOG.debug('Unable to find service for compute node %s. The '
-                          'service may be deleted and compute nodes need to '
-                          'be manually cleaned up.', hyp.host)
-        hypervisors_dict = dict(hypervisors=hypervisors_list)
-        if links:
-            hypervisors_links = self._view_builder.get_links(
-                req, hypervisors_list, detail=True)
-            if hypervisors_links:
-                hypervisors_dict['hypervisors_links'] = hypervisors_links
-        return hypervisors_dict
+        return self._get_hypervisors(req, detail=True, limit=limit,
+                                     marker=marker, links=links)
 
     @extensions.expected_errors(404)
     def show(self, req, id):
