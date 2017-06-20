@@ -31,6 +31,7 @@ from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 import nova.network
+from nova import objects
 from nova.policies import tenant_networks as tn_policies
 from nova import quota
 
@@ -101,34 +102,17 @@ class TenantNetworkController(wsgi.Controller):
     def delete(self, req, id):
         context = req.environ['nova.context']
         context.can(tn_policies.BASE_POLICY_NAME)
-        reservation = None
-        try:
-            if CONF.enable_network_quota:
-                reservation = QUOTAS.reserve(context, networks=-1)
-        except Exception:
-            reservation = None
-            LOG.exception("Failed to update usages deallocating network.")
-
-        def _rollback_quota(reservation):
-            if CONF.enable_network_quota and reservation:
-                QUOTAS.rollback(context, reservation)
 
         try:
             self.network_api.disassociate(context, id)
             self.network_api.delete(context, id)
         except exception.PolicyNotAuthorized as e:
-            _rollback_quota(reservation)
             raise exc.HTTPForbidden(explanation=six.text_type(e))
         except exception.NetworkInUse as e:
-            _rollback_quota(reservation)
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.NetworkNotFound:
-            _rollback_quota(reservation)
             msg = _("Network not found")
             raise exc.HTTPNotFound(explanation=msg)
-
-        if CONF.enable_network_quota and reservation:
-            QUOTAS.commit(context, reservation)
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((400, 403, 409, 503))
@@ -157,7 +141,8 @@ class TenantNetworkController(wsgi.Controller):
 
         try:
             if CONF.enable_network_quota:
-                reservation = QUOTAS.reserve(context, networks=1)
+                objects.Quotas.check_deltas(context, {'networks': 1},
+                                            context.project_id)
         except exception.OverQuota:
             msg = _("Quota exceeded, too many networks.")
             raise exc.HTTPForbidden(explanation=msg)
@@ -167,31 +152,43 @@ class TenantNetworkController(wsgi.Controller):
         try:
             networks = self.network_api.create(context,
                                                label=label, **kwargs)
-            if CONF.enable_network_quota:
-                QUOTAS.commit(context, reservation)
         except exception.PolicyNotAuthorized as e:
             raise exc.HTTPForbidden(explanation=six.text_type(e))
         except exception.CidrConflict as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except Exception:
-            if CONF.enable_network_quota:
-                QUOTAS.rollback(context, reservation)
             msg = _("Create networks failed")
             LOG.exception(msg, extra=network)
             raise exc.HTTPServiceUnavailable(explanation=msg)
+
+        # NOTE(melwitt): We recheck the quota after creating the object to
+        # prevent users from allocating more resources than their allowed quota
+        # in the event of a race. This is configurable because it can be
+        # expensive if strict quota limits are not required in a deployment.
+        if CONF.quota.recheck_quota and CONF.enable_network_quota:
+            try:
+                objects.Quotas.check_deltas(context, {'networks': 0},
+                                            context.project_id)
+            except exception.OverQuota:
+                self.network_api.delete(context,
+                                        network_dict(networks[0])['id'])
+                msg = _("Quota exceeded, too many networks.")
+                raise exc.HTTPForbidden(explanation=msg)
+
         return {"network": network_dict(networks[0])}
 
 
-def _sync_networks(context, project_id, session):
+def _network_count(context, project_id):
+    # NOTE(melwitt): This assumes a single cell.
     ctx = nova_context.RequestContext(user_id=None, project_id=project_id)
     ctx = ctx.elevated()
     networks = nova.network.api.API().get_all(ctx)
-    return dict(networks=len(networks))
+    return {'project': {'networks': len(networks)}}
 
 
 def _register_network_quota():
     if CONF.enable_network_quota:
-        QUOTAS.register_resource(quota.ReservableResource('networks',
-                                                          _sync_networks,
+        QUOTAS.register_resource(quota.CountableResource('networks',
+                                                          _network_count,
                                                          'quota_networks'))
 _register_network_quota()
