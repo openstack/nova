@@ -391,10 +391,6 @@ def null_safe_str(s):
     return str(s) if s else ''
 
 
-def null_safe_int(s):
-    return int(s) if s else ''
-
-
 def null_safe_isotime(s):
     if isinstance(s, datetime.datetime):
         return utils.strtime(s)
@@ -475,7 +471,11 @@ def info_from_instance(context, instance, network_info,
         # Status properties
         state=instance.vm_state,
         state_description=null_safe_str(instance.task_state),
-        progress=null_safe_int(instance.progress),
+        # NOTE(gibi): It might seems wrong to default the progress to an empty
+        # string but this is how legacy work and this code only used by the
+        # legacy notification so try to keep the compatibility here but also
+        # keep it contained.
+        progress=int(instance.progress) if instance.progress else '',
 
         # accessIPs
         access_ip_v4=instance.access_ip_v4,

@@ -39,14 +39,6 @@ class TestNullSafeUtils(test.NoDBTestCase):
         line = 'test'
         self.assertEqual(line, base.null_safe_str(line))
 
-    def test_null_safe_int(self):
-        number = None
-        # TODO(gibi): Fix null_safe_int to return 0 as default instead of empty
-        # string
-        self.assertEqual('', base.null_safe_int(number))
-        number = 10
-        self.assertEqual(number, base.null_safe_int(number))
-
 
 class TestSendInstanceUpdateNotification(test.NoDBTestCase):
 
