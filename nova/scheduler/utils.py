@@ -29,6 +29,7 @@ from nova import exception
 from nova.i18n import _, _LE, _LW
 from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import fields
 from nova.objects import instance as obj_instance
 from nova import rpc
 
@@ -80,6 +81,38 @@ def build_request_spec(ctxt, image, instances, instance_type=None):
             'instance_type': instance_type,
             'num_instances': len(instances)}
     return jsonutils.to_primitive(request_spec)
+
+
+def resources_from_request_spec(spec_obj):
+    """Given a RequestSpec object, returns a dict, keyed by resource class
+    name, of requested amounts of those resources.
+    """
+    resources = {}
+
+    resources[fields.ResourceClass.VCPU] = spec_obj.vcpus
+    resources[fields.ResourceClass.MEMORY_MB] = spec_obj.memory_mb
+
+    requested_disk_mb = (1024 * (spec_obj.root_gb +
+                                 spec_obj.ephemeral_gb) +
+                         spec_obj.swap)
+    # NOTE(sbauza): Disk request is expressed in MB but we count
+    # resources in GB. Since there could be a remainder of the division
+    # by 1024, we need to ceil the result to the next bigger Gb so we
+    # can be sure there would be enough disk space in the destination
+    # to sustain the request.
+    # FIXME(sbauza): All of that could be using math.ceil() but since
+    # we support both py2 and py3, let's fake it until we only support
+    # py3.
+    requested_disk_gb = requested_disk_mb // 1024
+    if requested_disk_mb % 1024 != 0:
+        # Let's ask for a bit more space since we count in GB
+        requested_disk_gb += 1
+    # NOTE(sbauza): Some flavors provide zero size for disk values, we need
+    # to avoid asking for disk usage.
+    if requested_disk_gb != 0:
+        resources[fields.ResourceClass.DISK_GB] = requested_disk_gb
+
+    return resources
 
 
 def set_vm_state_and_notify(context, instance_uuid, service, method, updates,
