@@ -2469,6 +2469,9 @@ class VMOps(object):
         # applied security groups, however this requires changes to XenServer
         self._prepare_instance_filter(instance, network_info)
         self.firewall_driver.apply_instance_filter(instance, network_info)
+
+        # hook linux bridge and ovs bridge at destination
+        self._post_start_actions(instance)
         vm_utils.create_kernel_and_ramdisk(context, self._session, instance,
                                            instance['name'])
 
