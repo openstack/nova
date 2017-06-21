@@ -3954,6 +3954,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.block_device_mapping, self.node, self.limits, {})
         mock_clean_net.assert_called_once_with(self.context, self.instance,
                 self.requested_networks)
+        mock_clean_vol.assert_called_once_with(self.context,
+                self.instance.uuid, self.block_device_mapping,
+                raise_exc=False)
         mock_add.assert_called_once_with(self.context, self.instance,
                 mock.ANY, mock.ANY, fault_message=mock.ANY)
         mock_nil.assert_called_once_with(self.instance)
