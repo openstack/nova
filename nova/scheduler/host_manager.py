@@ -109,6 +109,7 @@ class HostState(object):
     def __init__(self, host, node, cell_uuid):
         self.host = host
         self.nodename = node
+        self.uuid = None
         self._lock_name = (host, node)
 
         # Mutable available resources.
@@ -195,6 +196,8 @@ class HostState(object):
                 and self.updated > compute.updated_at):
             return
         all_ram_mb = compute.memory_mb
+
+        self.uuid = compute.uuid
 
         # Assume virtual size is all consumed by instances if use qcow2 disk.
         free_gb = compute.free_disk_gb

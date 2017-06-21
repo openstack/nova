@@ -35,6 +35,12 @@ CONF = nova.conf.CONF
 class Scheduler(object):
     """The base class that all Scheduler classes should inherit from."""
 
+    USES_ALLOCATION_CANDIDATES = True
+    """Indicates that the scheduler driver calls the Placement API for
+    allocation candidates and uses those allocation candidates in its
+    decision-making.
+    """
+
     def __init__(self):
         self.host_manager = driver.DriverManager(
                 "nova.scheduler.host_manager",
@@ -55,7 +61,8 @@ class Scheduler(object):
                 if self.servicegroup_api.service_is_up(service)]
 
     @abc.abstractmethod
-    def select_destinations(self, context, spec_obj, instance_uuids):
+    def select_destinations(self, context, spec_obj, instance_uuids,
+            provider_summaries):
         """Returns a list of HostState objects that have been chosen by the
         scheduler driver, one for each requested instance
         (spec_obj.num_instances)

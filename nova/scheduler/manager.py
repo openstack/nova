@@ -32,6 +32,8 @@ from nova import manager
 from nova import objects
 from nova.objects import host_mapping as host_mapping_obj
 from nova import quota
+from nova.scheduler import client as scheduler_client
+from nova.scheduler import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -57,6 +59,8 @@ class SchedulerManager(manager.Manager):
     _sentinel = object()
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
+        client = scheduler_client.SchedulerClient()
+        self.placement_client = client.reportclient
         if not scheduler_driver:
             scheduler_driver = CONF.scheduler.driver
         self.driver = driver.DriverManager(
@@ -103,7 +107,26 @@ class SchedulerManager(manager.Manager):
             spec_obj = objects.RequestSpec.from_primitives(ctxt,
                                                            request_spec,
                                                            filter_properties)
-        dests = self.driver.select_destinations(ctxt, spec_obj, instance_uuids)
+        resources = utils.resources_from_request_spec(spec_obj)
+        alloc_reqs, p_sums = None, None
+        if self.driver.USES_ALLOCATION_CANDIDATES:
+            res = self.placement_client.get_allocation_candidates(resources)
+            alloc_reqs, p_sums = res
+            if not alloc_reqs:
+                LOG.debug("Got no allocation candidates from the Placement "
+                          "API. This may be a temporary occurrence as compute "
+                          "nodes start up and begin reporting inventory to "
+                          "the Placement service.")
+                # TODO(jaypipes): Setting p_sums to None triggers the scheduler
+                # to load all compute nodes to do scheduling "the old way".
+                # Really, we should raise NoValidHosts here, but all functional
+                # tests will fall over if we do that without changing the
+                # PlacementFixture to load compute node inventory into the
+                # placement database before starting functional tests.
+                p_sums = None
+
+        dests = self.driver.select_destinations(ctxt, spec_obj, instance_uuids,
+            p_sums)
         dest_dicts = [_host_state_obj_to_dict(d) for d in dests]
         return jsonutils.to_primitive(dest_dicts)
 

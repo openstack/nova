@@ -28,10 +28,7 @@ import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import rpc
-from nova.scheduler import client as scheduler_client
 from nova.scheduler import driver
-from nova.scheduler import utils
-
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
@@ -42,12 +39,9 @@ class FilterScheduler(driver.Scheduler):
     def __init__(self, *args, **kwargs):
         super(FilterScheduler, self).__init__(*args, **kwargs)
         self.notifier = rpc.get_notifier('scheduler')
-        # TODO(sbauza): It seems weird that we load a scheduler client for
-        # the FilterScheduler but it will be the PlacementClient later on once
-        # we split the needed methods into a separate library.
-        self.scheduler_client = scheduler_client.SchedulerClient()
 
-    def select_destinations(self, context, spec_obj, instance_uuids):
+    def select_destinations(self, context, spec_obj, instance_uuids,
+            provider_summaries):
         """Returns a sorted list of HostState objects that satisfy the
         supplied request_spec.
         """
@@ -56,7 +50,8 @@ class FilterScheduler(driver.Scheduler):
             dict(request_spec=spec_obj.to_legacy_request_spec_dict()))
 
         num_instances = spec_obj.num_instances
-        selected_hosts = self._schedule(context, spec_obj, instance_uuids)
+        selected_hosts = self._schedule(context, spec_obj, instance_uuids,
+            provider_summaries)
 
         # Couldn't fulfill the request_spec
         if len(selected_hosts) < num_instances:
@@ -84,7 +79,7 @@ class FilterScheduler(driver.Scheduler):
             dict(request_spec=spec_obj.to_legacy_request_spec_dict()))
         return [host.obj for host in selected_hosts]
 
-    def _schedule(self, context, spec_obj, instance_uuids):
+    def _schedule(self, context, spec_obj, instance_uuids, provider_summaries):
         """Returns a list of hosts that meet the required specs,
         ordered by their fitness.
         """
@@ -98,7 +93,8 @@ class FilterScheduler(driver.Scheduler):
         # Note: remember, we are using an iterator here. So only
         # traverse this list once. This can bite you if the hosts
         # are being scanned in a filter or weighing function.
-        hosts = self._get_all_host_states(elevated, spec_obj)
+        hosts = self._get_all_host_states(elevated, spec_obj,
+            provider_summaries)
 
         selected_hosts = []
         num_instances = spec_obj.num_instances
@@ -134,19 +130,15 @@ class FilterScheduler(driver.Scheduler):
                 spec_obj.instance_group.obj_reset_changes(['hosts'])
         return selected_hosts
 
-    def _get_all_host_states(self, context, spec_obj):
+    def _get_all_host_states(self, context, spec_obj, provider_summaries):
         """Template method, so a subclass can implement caching."""
-        resources = utils.resources_from_request_spec(spec_obj)
-        filters = {'resources': resources}
-        reportclient = self.scheduler_client.reportclient
-        rps = reportclient.get_filtered_resource_providers(filters)
-        # NOTE(sbauza): In case the Placement service is not running yet or
-        # when returning an exception, we wouldn't get any resource providers.
-        # If so, let's return an empty list so _schedule would raise a
-        # NoValidHosts.
-        if not rps:
-            return []
-        compute_uuids = [rp['uuid'] for rp in rps]
+        # NOTE(jaypipes): None is treated differently from an empty dict. We
+        # pass None when we want to grab all compute nodes (for instance, when
+        # using the caching scheduler. We pass an empty dict when the Placement
+        # API found no providers that match the requested constraints.
+        compute_uuids = None
+        if provider_summaries is not None:
+            compute_uuids = list(provider_summaries.keys())
         return self.host_manager.get_host_states_by_uuids(context,
                                                           compute_uuids,
                                                           spec_obj)

@@ -352,47 +352,40 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                 mock.sentinel.name,
         )
 
-    def test_get_filtered_resource_providers(self):
-        uuid = uuids.compute_node
+    def test_get_allocation_candidates(self):
         resp_mock = mock.Mock(status_code=200)
         json_data = {
-            'resource_providers': [
-                {'uuid': uuid,
-                 'name': uuid,
-                 'generation': 42}
-            ],
+            'allocation_requests': mock.sentinel.alloc_reqs,
+            'provider_summaries': mock.sentinel.p_sums,
         }
-        filters = {'resources': {'VCPU': 1, 'MEMORY_MB': 1024}}
+        resources = {'VCPU': 1, 'MEMORY_MB': 1024}
         resp_mock.json.return_value = json_data
         self.ks_sess_mock.get.return_value = resp_mock
 
-        result = self.client.get_filtered_resource_providers(filters)
+        alloc_reqs, p_sums = self.client.get_allocation_candidates(resources)
 
-        expected_provider_dict = dict(
-                uuid=uuid,
-                name=uuid,
-                generation=42,
-        )
-        expected_url = '/resource_providers?%s' % parse.urlencode(
+        expected_url = '/allocation_candidates?%s' % parse.urlencode(
             {'resources': 'MEMORY_MB:1024,VCPU:1'})
         self.ks_sess_mock.get.assert_called_once_with(
             expected_url, endpoint_filter=mock.ANY, raise_exc=False,
-            headers={'OpenStack-API-Version': 'placement 1.4'})
-        self.assertEqual(expected_provider_dict, result[0])
+            headers={'OpenStack-API-Version': 'placement 1.10'})
+        self.assertEqual(mock.sentinel.alloc_reqs, alloc_reqs)
+        self.assertEqual(mock.sentinel.p_sums, p_sums)
 
-    def test_get_filtered_resource_providers_not_found(self):
+    def test_get_allocation_candidates_not_found(self):
         # Ensure _get_resource_provider() just returns None when the placement
         # API doesn't find a resource provider matching a UUID
         resp_mock = mock.Mock(status_code=404)
         self.ks_sess_mock.get.return_value = resp_mock
 
-        result = self.client.get_filtered_resource_providers({'foo': 'bar'})
+        res = self.client.get_allocation_candidates({'foo': 'bar'})
 
-        expected_url = '/resource_providers?foo=bar'
+        expected_url = '/allocation_candidates?resources=foo%3Abar'
         self.ks_sess_mock.get.assert_called_once_with(
             expected_url, endpoint_filter=mock.ANY, raise_exc=False,
-            headers={'OpenStack-API-Version': 'placement 1.4'})
-        self.assertIsNone(result)
+            headers={'OpenStack-API-Version': 'placement 1.10'})
+        self.assertIsNone(res[0])
+        self.assertIsNone(res[0])
 
     def test_get_resource_provider_found(self):
         # Ensure _get_resource_provider() returns a dict of resource provider

@@ -195,6 +195,11 @@ Pike (16.0.0)
 * The ``nova.scheduler.filter_scheduler.FilterScheduler`` in Pike will
   no longer fall back to not using the Placement Service, even if older
   computes are running in the deployment.
+* The scheduler now requests allocation candidates from the Placement service
+  during scheduling. The allocation candidates information was introduced in
+  the Placement API 1.10 microversion, so you should upgrade the placement
+  service **before** the Nova scheduler service so that the scheduler can take
+  advantage of the allocation candidate information.
 
 
 REST API

@@ -80,6 +80,7 @@ class NotificationSampleTestBase(test.TestCase,
         # the image fake backend needed for image discovery
         nova.tests.unit.image.fake.stub_out_image_service(self)
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
+        self.useFixture(nova_fixtures.PlacementFixture())
 
         self.start_service('conductor')
         self.start_service('scheduler')

@@ -39,6 +39,7 @@ class ServersPreSchedulingTestCase(test.TestCase):
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NoopConductorFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.useFixture(nova_fixtures.PlacementFixture())
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
 

@@ -264,37 +264,47 @@ class SchedulerReportClient(object):
             url,
             endpoint_filter=self.ks_filter, raise_exc=False, **kwargs)
 
-    # TODO(sbauza): Change that poor interface into passing a rich versioned
-    # object that would provide the ResourceProvider requirements.
     @safe_connect
-    def get_filtered_resource_providers(self, filters):
-        """Returns a list of ResourceProviders matching the requirements
-        expressed by the filters argument, which can include a dict named
-        'resources' where amounts are keyed by resource class names.
+    def get_allocation_candidates(self, resources):
+        """Returns a tuple of (allocation_requests, provider_summaries).
 
-        eg. filters = {'resources': {'VCPU': 1}}
+        The allocation requests are a collection of potential JSON objects that
+        can be passed to the PUT /allocations/{consumer_uuid} Placement REST
+        API to claim resources against one or more resource providers that meet
+        the requested resource constraints.
+
+        The provider summaries is a dict, keyed by resource provider UUID, of
+        inventory and capacity information for any resource provider involved
+        in the allocation requests.
+
+        :returns: A tuple with a list of allocation request dicts and a dict of
+                  provider information or (None, None) if the request failed
+
+        :param resources: A dict, keyed by resource class name, of requested
+                          amounts of those resources
         """
-        resources = filters.pop("resources", None)
-        if resources:
-            resource_query = ",".join(sorted("%s:%s" % (rc, amount)
-                                      for (rc, amount) in resources.items()))
-            filters['resources'] = resource_query
-        resp = self.get("/resource_providers?%s" % parse.urlencode(filters),
-                        version='1.4')
+        resource_query = ",".join(
+            sorted("%s:%s" % (rc, amount)
+            for (rc, amount) in resources.items()))
+        qs_params = {
+            'resources': resource_query,
+        }
+
+        url = "/allocation_candidates?%s" % parse.urlencode(qs_params)
+        resp = self.get(url, version='1.10')
         if resp.status_code == 200:
             data = resp.json()
-            return data.get('resource_providers', [])
-        else:
-            msg = _LE("Failed to retrieve filtered list of resource providers "
-                      "from placement API for filters %(filters)s. "
-                      "Got %(status_code)d: %(err_text)s.")
-            args = {
-                'filters': filters,
-                'status_code': resp.status_code,
-                'err_text': resp.text,
-            }
-            LOG.error(msg, args)
-            return None
+            return data['allocation_requests'], data['provider_summaries']
+
+        msg = ("Failed to retrieve allocation candidates from placement API "
+               "for filters %(resources)s. Got %(status_code)d: %(err_text)s.")
+        args = {
+            'resources': resources,
+            'status_code': resp.status_code,
+            'err_text': resp.text,
+        }
+        LOG.error(msg, args)
+        return None, None
 
     @safe_connect
     def _get_provider_aggregates(self, rp_uuid):

@@ -1078,6 +1078,7 @@ class HostStateTestCase(test.NoDBTestCase):
 
         hyper_ver_int = versionutils.convert_version_to_int('6.0.0')
         compute = objects.ComputeNode(
+            uuid=uuids.cn1,
             stats=stats, memory_mb=1, free_disk_gb=0, local_gb=0,
             local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
             disk_available_least=None,
@@ -1121,6 +1122,7 @@ class HostStateTestCase(test.NoDBTestCase):
 
         hyper_ver_int = versionutils.convert_version_to_int('6.0.0')
         compute = objects.ComputeNode(
+            uuid=uuids.cn1,
             stats=stats, memory_mb=0, free_disk_gb=0, local_gb=0,
             local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
             disk_available_least=None,
@@ -1154,6 +1156,7 @@ class HostStateTestCase(test.NoDBTestCase):
 
         hyper_ver_int = versionutils.convert_version_to_int('6.0.0')
         compute = objects.ComputeNode(
+            uuid=uuids.cn1,
             stats=stats, memory_mb=0, free_disk_gb=0, local_gb=0,
             local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
             disk_available_least=None,
@@ -1313,6 +1316,7 @@ class HostStateTestCase(test.NoDBTestCase):
         ]
         hyper_ver_int = versionutils.convert_version_to_int('6.0.0')
         compute = objects.ComputeNode(
+            uuid=uuids.cn1,
             metrics=jsonutils.dumps(metrics),
             memory_mb=0, free_disk_gb=0, local_gb=0,
             local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,

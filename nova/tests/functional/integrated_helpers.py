@@ -80,6 +80,7 @@ class _IntegratedTestBase(test.TestCase):
         self._setup_services()
 
         self.useFixture(cast_as_call.CastAsCall(self.stubs))
+        self.useFixture(nova_fixtures.PlacementFixture())
 
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
 

@@ -64,7 +64,8 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         spec_obj = objects.RequestSpec(num_instances=2, ignore_hosts=None)
         dests = self.driver.select_destinations(self.context, spec_obj,
-                [uuids.instance1, uuids.instance2])
+                [uuids.instance1, uuids.instance2],
+                mock.sentinel.p_sums)
 
         self.assertEqual(2, len(dests))
         (host, node) = (dests[0].host, dests[0].nodename)
@@ -94,4 +95,5 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         spec_obj.instance_uuid = uuids.instance
         self.assertRaises(exception.NoValidHost,
                           self.driver.select_destinations, self.context,
-                          spec_obj, [spec_obj.instance_uuid])
+                          spec_obj, [spec_obj.instance_uuid],
+                          mock.sentinel.p_sums)

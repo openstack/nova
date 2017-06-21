@@ -32,6 +32,8 @@ CONF = nova.conf.CONF
 class ChanceScheduler(driver.Scheduler):
     """Implements Scheduler as a random node selector."""
 
+    USES_ALLOCATION_CANDIDATES = False
+
     def _filter_hosts(self, hosts, spec_obj):
         """Filter a list of hosts based on RequestSpec."""
 
@@ -55,7 +57,8 @@ class ChanceScheduler(driver.Scheduler):
 
         return random.choice(hosts)
 
-    def select_destinations(self, context, spec_obj, instance_uuids):
+    def select_destinations(self, context, spec_obj, instance_uuids,
+            provider_summaries):
         """Selects random destinations."""
         num_instances = spec_obj.num_instances
         # NOTE(timello): Returns a list of dicts with 'host', 'nodename' and

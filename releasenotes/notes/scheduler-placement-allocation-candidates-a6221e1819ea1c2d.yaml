@@ -1,0 +1,9 @@
+---
+upgrade:
+  - |
+    The scheduler now requests allocation candidates from the Placement
+    service during scheduling. The allocation candidates information
+    was introduced in the Placement API 1.10 microversion, so you should
+    upgrade the placement service before the Nova scheduler service so that
+    the scheduler can take advantage of the allocation candidate
+    information.

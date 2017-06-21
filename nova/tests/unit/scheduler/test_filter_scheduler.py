@@ -44,16 +44,13 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
     @mock.patch('nova.objects.InstanceList.get_by_host')
     @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids',
                 return_value=fakes.COMPUTE_NODES)
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get_filtered_resource_providers',
-                return_value=fakes.RESOURCE_PROVIDERS)
     @mock.patch('nova.objects.Service.get_minimum_version',
                 return_value=objects.service.SERVICE_VERSION)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
     def test_schedule_happy_day(self, mock_get_extra, mock_get_mv,
-                                mock_get_rps, mock_get_all,
+                                mock_get_all,
                                 mock_by_host, mock_get_by_binary):
         """Make sure there's nothing glaringly wrong with _schedule()
         by doing a happy day pass through.
@@ -86,8 +83,9 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         with mock.patch.object(self.driver.host_manager,
                                'get_filtered_hosts') as mock_get_hosts:
             mock_get_hosts.side_effect = fake_get_filtered_hosts
+            provider_uuids = {cn.uuid: cn for cn in fakes.COMPUTE_NODES}
             weighed_hosts = self.driver._schedule(self.context, spec_obj,
-                    [uuids.instance])
+                    [uuids.instance], provider_uuids)
 
         self.assertEqual(len(weighed_hosts), 10)
         for weighed_host in weighed_hosts:
@@ -125,16 +123,13 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
     @mock.patch('nova.objects.InstanceList.get_by_host')
     @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids',
                 return_value=fakes.COMPUTE_NODES)
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get_filtered_resource_providers',
-                return_value=fakes.RESOURCE_PROVIDERS)
     @mock.patch('nova.objects.Service.get_minimum_version',
                 return_value=objects.service.SERVICE_VERSION)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
     def test_schedule_host_pool(self, mock_get_extra, mock_get_mv,
-                                mock_get_rps, mock_get_all,
+                                mock_get_all,
                                 mock_by_host, mock_get_by_binary):
         """Make sure the host_subset_size property works properly."""
 
@@ -157,8 +152,9 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         with mock.patch.object(self.driver.host_manager,
                                'get_filtered_hosts') as mock_get_hosts:
             mock_get_hosts.side_effect = fake_get_filtered_hosts
+            provider_uuids = {cn.uuid: cn for cn in fakes.COMPUTE_NODES}
             hosts = self.driver._schedule(self.context, spec_obj,
-                    [uuids.instance])
+                    [uuids.instance], provider_uuids)
 
         # one host should be chosen
         self.assertEqual(len(hosts), 1)
@@ -168,16 +164,13 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
     @mock.patch('nova.objects.InstanceList.get_by_host')
     @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids',
                 return_value=fakes.COMPUTE_NODES)
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get_filtered_resource_providers',
-                return_value=fakes.RESOURCE_PROVIDERS)
     @mock.patch('nova.objects.Service.get_minimum_version',
                 return_value=objects.service.SERVICE_VERSION)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
     def test_schedule_large_host_pool(self, mock_get_extra, mock_get_mv,
-                                      mock_get_rps, mock_get_all,
+                                      mock_get_all,
                                       mock_by_host, mock_get_by_binary):
         """Hosts should still be chosen if pool size
         is larger than number of filtered hosts.
@@ -202,8 +195,9 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         with mock.patch.object(self.driver.host_manager,
                                'get_filtered_hosts') as mock_get_hosts:
             mock_get_hosts.side_effect = fake_get_filtered_hosts
+            provider_uuids = {cn.uuid: cn for cn in fakes.COMPUTE_NODES}
             hosts = self.driver._schedule(self.context, spec_obj,
-                    [uuids.instance])
+                    [uuids.instance], provider_uuids)
 
         # one host should be chosen
         self.assertEqual(len(hosts), 1)
@@ -213,16 +207,13 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 return_value=fakes.SERVICES)
     @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids',
                 return_value=fakes.COMPUTE_NODES)
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get_filtered_resource_providers',
-                return_value=fakes.RESOURCE_PROVIDERS)
     @mock.patch('nova.objects.Service.get_minimum_version',
                 return_value=objects.service.SERVICE_VERSION)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
     def test_schedule_chooses_best_host(self, mock_get_extra, mock_get_mv,
-                                        mock_get_rps, mock_cn_get_all,
+                                        mock_cn_get_all,
                                         mock_get_by_binary,
                                         mock_get_inst_info):
         """If host_subset_size is 1, the largest host with greatest weight
@@ -258,8 +249,9 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         with mock.patch.object(self.driver.host_manager,
                                'get_filtered_hosts') as mock_get_hosts:
             mock_get_hosts.side_effect = fake_get_filtered_hosts
+            provider_uuids = {cn.uuid: cn for cn in fakes.COMPUTE_NODES}
             hosts = self.driver._schedule(self.context, spec_obj,
-                    [uuids.instance])
+                    [uuids.instance], provider_uuids)
 
         # one host should be chosen
         self.assertEqual(1, len(hosts))
@@ -271,14 +263,11 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
     @mock.patch('nova.objects.InstanceList.get_by_host')
     @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids',
                 return_value=fakes.COMPUTE_NODES)
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get_filtered_resource_providers',
-                return_value=fakes.RESOURCE_PROVIDERS)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
     def test_select_destinations(self, mock_get_extra,
-                                 mock_get_rps, mock_get_all,
+                                 mock_get_all,
                                  mock_by_host, mock_get_by_binary):
         """select_destinations is basically a wrapper around _schedule().
 
@@ -319,8 +308,12 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         with mock.patch.object(self.driver.host_manager,
                                'get_filtered_hosts') as mock_get_hosts:
             mock_get_hosts.side_effect = fake_get_filtered_hosts
+            p_sums = {
+                cn.uuid: cn
+                for cn in fakes.COMPUTE_NODES
+            }
             dests = self.driver.select_destinations(self.context, spec_obj,
-                    instance_uuids)
+                    instance_uuids, p_sums)
 
         (host, node) = (dests[0].host, dests[0].nodename)
         self.assertEqual(host, selected_hosts[0])
@@ -339,7 +332,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                            instance_uuid=uuids.instance)
 
             self.driver.select_destinations(self.context, spec_obj,
-                    [uuids.instance])
+                    [uuids.instance], {})
 
             expected = [
                 mock.call(self.context, 'scheduler.select_destinations.start',
@@ -353,7 +346,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         mock_schedule.return_value = []
         self.assertRaises(exception.NoValidHost,
                 self.driver.select_destinations, self.context,
-                objects.RequestSpec(num_instances=1), [uuids.instance])
+                objects.RequestSpec(num_instances=1), [uuids.instance], {})
 
     def test_select_destinations_no_valid_host_not_enough(self):
         # Tests that we have fewer hosts available than number of instances
@@ -364,7 +357,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             try:
                 self.driver.select_destinations(
                         self.context, objects.RequestSpec(num_instances=3),
-                        [uuids.instance])
+                        [uuids.instance], {})
                 self.fail('Expected NoValidHost to be raised.')
             except exception.NoValidHost as e:
                 # Make sure that we provided a reason why NoValidHost.

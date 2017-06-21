@@ -73,6 +73,7 @@ NUMA_TOPOLOGIES_W_HT = [
 
 COMPUTE_NODES = [
         objects.ComputeNode(
+            uuid=uuidsentinel.cn1,
             id=1, local_gb=1024, memory_mb=1024, vcpus=1,
             disk_available_least=None, free_ram_mb=512, vcpus_used=1,
             free_disk_gb=512, local_gb_used=0,
@@ -84,6 +85,7 @@ COMPUTE_NODES = [
             cpu_allocation_ratio=16.0, ram_allocation_ratio=1.5,
             disk_allocation_ratio=1.0),
         objects.ComputeNode(
+            uuid=uuidsentinel.cn2,
             id=2, local_gb=2048, memory_mb=2048, vcpus=2,
             disk_available_least=1024, free_ram_mb=1024, vcpus_used=2,
             free_disk_gb=1024, local_gb_used=0,
@@ -95,6 +97,7 @@ COMPUTE_NODES = [
             cpu_allocation_ratio=16.0, ram_allocation_ratio=1.5,
             disk_allocation_ratio=1.0),
         objects.ComputeNode(
+            uuid=uuidsentinel.cn3,
             id=3, local_gb=4096, memory_mb=4096, vcpus=4,
             disk_available_least=3333, free_ram_mb=3072, vcpus_used=1,
             free_disk_gb=3072, local_gb_used=0,
@@ -106,6 +109,7 @@ COMPUTE_NODES = [
             cpu_allocation_ratio=16.0, ram_allocation_ratio=1.5,
             disk_allocation_ratio=1.0),
         objects.ComputeNode(
+            uuid=uuidsentinel.cn4,
             id=4, local_gb=8192, memory_mb=8192, vcpus=8,
             disk_available_least=8192, free_ram_mb=8192, vcpus_used=0,
             free_disk_gb=8888, local_gb_used=0,
@@ -118,6 +122,7 @@ COMPUTE_NODES = [
             disk_allocation_ratio=1.0),
         # Broken entry
         objects.ComputeNode(
+            uuid=uuidsentinel.cn5,
             id=5, local_gb=1024, memory_mb=1024, vcpus=1,
             host='fake', hypervisor_hostname='fake-hyp'),
 ]
