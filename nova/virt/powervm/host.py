@@ -17,9 +17,12 @@ import math
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
+from nova import conf as cfg
 from nova.objects import fields
 
+
 LOG = logging.getLogger(__name__)
+CONF = cfg.CONF
 
 # Power VM hypervisor info
 # Normally, the hypervisor version is a string in the form of '8.0.0' and
@@ -54,7 +57,7 @@ def build_host_resource_from_ms(ms_w):
                               ms_w.memory_free)
     data["hypervisor_type"] = fields.HVType.PHYP
     data["hypervisor_version"] = IBM_POWERVM_HYPERVISOR_VERSION
-    data["hypervisor_hostname"] = ms_w.mtms.mtms_str
+    data["hypervisor_hostname"] = CONF.host
     data["cpu_info"] = jsonutils.dumps({'vendor': 'ibm', 'arch': 'ppc64'})
     data["numa_topology"] = None
     data["supported_instances"] = POWERVM_SUPPORTED_INSTANCES
