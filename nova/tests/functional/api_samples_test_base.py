@@ -373,7 +373,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         except NoMatch as e:
             raise NoMatch("\nFailed to match Template to Response: \n%s\n"
                           "Template: %s\n\n"
-                          "Respones: %s\n\n" %
+                          "Response: %s\n\n" %
                           (e,
                            pp.pformat(template_data),
                            pp.pformat(response_data)))
@@ -396,7 +396,9 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         except NoMatch as e:
             raise NoMatch("\nFailed to match Template to Sample: \n%s\n"
                           "Template: %s\n\n"
-                          "Sample: %s\n\n" %
+                          "Sample: %s\n\n"
+                          "Hint: does your test need to override "
+                          "ApiSampleTestBase.generalize_subs()?" %
                           (e,
                            pp.pformat(template_data),
                            pp.pformat(sample_data)))
