@@ -342,9 +342,14 @@ class InstanceMetadata(object):
         if self.instance.key_name:
             if cells_opts.get_cell_type() == 'compute':
                 cells_api = cells_rpcapi.CellsAPI()
-                keypair = cells_api.get_keypair_at_top(
-                  context.get_admin_context(), self.instance.user_id,
-                  self.instance.key_name)
+                try:
+                    keypair = cells_api.get_keypair_at_top(
+                      context.get_admin_context(), self.instance.user_id,
+                      self.instance.key_name)
+                except exception.KeypairNotFound:
+                    # NOTE(lpigueir): If keypair was deleted, treat
+                    # it like it never had any
+                    keypair = None
             else:
                 keypairs = self.instance.keypairs
                 # NOTE(mriedem): It's possible for the keypair to be deleted

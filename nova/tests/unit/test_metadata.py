@@ -568,6 +568,24 @@ class MetadataTestCase(test.TestCase):
             self._test_as_json_with_options(is_cells=True,
                                             os_version=os_version)
 
+    @mock.patch('nova.cells.rpcapi.CellsAPI.get_keypair_at_top',
+                side_effect=exception.KeypairNotFound(
+                name='key', user_id='fake_user'))
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_as_json_deleted_keypair_in_cells_mode(self,
+                                                   mock_get_keypair_at_top,
+                                                   mock_inst_get_by_uuid):
+        self.flags(enable=True, group='cells')
+        self.flags(cell_type='compute', group='cells')
+
+        instance = self.instance.obj_clone()
+        delattr(instance, 'keypairs')
+        md = fake_InstanceMetadata(self, instance)
+        meta = md._metadata_as_json(base.OPENSTACK_VERSIONS[-1], path=None)
+        meta = jsonutils.loads(meta)
+        self.assertNotIn('keys', meta)
+        self.assertNotIn('public_keys', meta)
+
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     def test_metadata_as_json_deleted_keypair(self, mock_inst_get_by_uuid):
         """Tests that we handle missing instance keypairs.
