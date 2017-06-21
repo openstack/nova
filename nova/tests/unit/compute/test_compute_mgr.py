@@ -2477,13 +2477,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         # ../virt/test_block_device.py
         self._test_detach_volume(destroy_bdm=False)
 
-    @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume_and_instance')
     @mock.patch.object(driver_bdm_volume, 'detach')
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_notify_about_instance_usage')
     @mock.patch('nova.compute.utils.notify_about_volume_attach_detach')
     def _test_detach_volume(self, mock_notify_attach_detach, notify_inst_usage,
-                            detach, bdm_get, destroy_bdm=True):
+                            detach, destroy_bdm=True):
         # TODO(lyarwood): Test DriverVolumeBlockDevice.detach in
         # ../virt/test_block_device.py
         volume_id = uuids.volume
@@ -2497,14 +2496,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                  'volume_id': volume_id, 'device_name': '/dev/vdb',
                  'connection_info': '{"test": "test"}'})
         bdm = objects.BlockDeviceMapping(context=self.context, **fake_bdm)
-        bdm_get.return_value = bdm
 
         with test.nested(
             mock.patch.object(self.compute, 'volume_api'),
             mock.patch.object(self.compute, 'driver'),
             mock.patch.object(bdm, 'destroy'),
         ) as (volume_api, driver, bdm_destroy):
-            self.compute._detach_volume(self.context, volume_id, inst_obj,
+            self.compute._detach_volume(self.context, bdm, inst_obj,
                                         destroy_bdm=destroy_bdm,
                                         attachment_id=attachment_id)
             detach.assert_called_once_with(self.context, inst_obj,
@@ -2563,13 +2561,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         conn_info_str = '{"connector": {"host": "other-host"}}'
         self._test_detach_volume_evacuate(conn_info_str)
 
-    @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume_and_instance')
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_notify_about_instance_usage')
     @mock.patch('nova.compute.utils.notify_about_volume_attach_detach')
     def _test_detach_volume_evacuate(self, conn_info_str,
                                      mock_notify_attach_detach,
-                                     notify_inst_usage, bdm_get,
+                                     notify_inst_usage,
                                      expected=None):
         """Re-usable code for detach volume evacuate test cases.
 
@@ -2589,7 +2586,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
          'connection_info': '{"test": "test"}'})
         bdm = objects.BlockDeviceMapping(context=self.context, **fake_bdm)
         bdm.connection_info = conn_info_str
-        bdm_get.return_value = bdm
 
         local_connector = {'host': 'local-connector-host'}
         expected_connector = local_connector if not expected else expected
@@ -2602,7 +2598,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             driver.get_volume_connector.return_value = local_connector
 
             self.compute._detach_volume(self.context,
-                                        volume_id,
+                                        bdm,
                                         instance,
                                         destroy_bdm=False)
 
