@@ -2611,6 +2611,9 @@ class ComputeManager(manager.Manager):
         try:
             self._notify_about_instance_usage(context, instance,
                                               "soft_delete.start")
+            compute_utils.notify_about_instance_action(context, instance,
+                self.host, action=fields.NotificationAction.SOFT_DELETE,
+                phase=fields.NotificationPhase.START)
             try:
                 self.driver.soft_delete(instance)
             except NotImplementedError:
@@ -2626,6 +2629,9 @@ class ComputeManager(manager.Manager):
                 quotas.rollback()
         quotas.commit()
         self._notify_about_instance_usage(context, instance, "soft_delete.end")
+        compute_utils.notify_about_instance_action(context, instance,
+            self.host, action=fields.NotificationAction.SOFT_DELETE,
+            phase=fields.NotificationPhase.END)
 
     @wrap_exception()
     @reverts_task_state

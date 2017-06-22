@@ -641,6 +641,8 @@ class TestInstanceNotificationSample(
         self.flags(reclaim_instance_interval=30)
         self.api.delete_server(server['id'])
         self._wait_for_state_change(self.api, server, 'SOFT_DELETED')
+        # we don't want to test soft_delete here
+        fake_notifier.reset()
         self.api.post_server_action(server['id'], {'restore': {}})
         self._wait_for_state_change(self.api, server, 'ACTIVE')
 
@@ -657,8 +659,6 @@ class TestInstanceNotificationSample(
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
-
-        self.flags(reclaim_instance_interval=0)
 
     def _test_reboot_server(self, server):
         post = {'reboot': {'type': 'HARD'}}
@@ -835,7 +835,26 @@ class TestInstanceNotificationSample(
         pass
 
     def _test_soft_delete_server(self, server):
-        pass
+        self.flags(reclaim_instance_interval=30)
+        self.api.delete_server(server['id'])
+        self._wait_for_state_change(self.api, server, 'SOFT_DELETED')
+
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-soft_delete-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-soft_delete-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+        self.flags(reclaim_instance_interval=0)
+        # Leave instance in normal, active state
+        self.api.post_server_action(server['id'], {'restore': {}})
 
     @mock.patch('nova.volume.cinder.API.attach')
     def _test_attach_volume_error(self, server, mock_attach):
