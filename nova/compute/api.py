@@ -1833,7 +1833,7 @@ class API(base.Base):
                             # FIXME: When the instance context is targeted,
                             # we can remove this
                             with compute_utils.notify_about_instance_delete(
-                                    self.notifier, cctxt, instance):
+                                    self.notifier, cctxt, instance, CONF.host):
                                 instance.destroy()
                     else:
                         instance.destroy()
@@ -1891,7 +1891,7 @@ class API(base.Base):
                     try:
                         # Now destroy the instance from the cell it lives in.
                         with compute_utils.notify_about_instance_delete(
-                                self.notifier, context, instance):
+                                self.notifier, context, instance, CONF.host):
                             instance.destroy()
                     except exception.InstanceNotFound:
                         pass
@@ -1962,7 +1962,7 @@ class API(base.Base):
             if not instance.host and not may_have_ports_or_volumes:
                 try:
                     with compute_utils.notify_about_instance_delete(
-                            self.notifier, context, instance,
+                            self.notifier, context, instance, CONF.host,
                             delete_type
                             if delete_type != 'soft_delete'
                             else 'delete'):
@@ -2111,7 +2111,7 @@ class API(base.Base):
             LOG.warning("instance's host %s is down, deleting from "
                         "database", instance.host, instance=instance)
         with compute_utils.notify_about_instance_delete(
-                self.notifier, context, instance,
+                self.notifier, context, instance, CONF.host,
                 delete_type if delete_type != 'soft_delete' else 'delete'):
 
             elevated = context.elevated()
