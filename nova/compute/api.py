@@ -4607,10 +4607,25 @@ class HostAPI(base.Base):
         load_cells()
 
         computes = []
+        uuid_marker = marker and uuidutils.is_uuid_like(marker)
         for cell in CELLS:
             if cell.uuid == objects.CellMapping.CELL0_UUID:
                 continue
             with nova_context.target_cell(context, cell) as cctxt:
+
+                # If we have a marker and it's a uuid, see if the compute node
+                # is in this cell.
+                if marker and uuid_marker:
+                    try:
+                        compute_marker = objects.ComputeNode.get_by_uuid(
+                            cctxt, marker)
+                        # we found the marker compute node, so use it's id
+                        # for the actual marker for paging in this cell's db
+                        marker = compute_marker.id
+                    except exception.ComputeHostNotFound:
+                        # The marker node isn't in this cell so keep looking.
+                        continue
+
                 try:
                     cell_computes = objects.ComputeNodeList.get_by_pagination(
                         cctxt, limit=limit, marker=marker)
