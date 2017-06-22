@@ -4210,13 +4210,21 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch.object(fake_driver.FakeDriver, 'spawn')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
-    def test_instance_not_found(self, mock_notify, mock_save, mock_spawn,
-                                mock_build, mock_shutdown):
-        exc = exception.InstanceNotFound(instance_id=1)
+    def _test_instance_exception(self, exc, raised_exc,
+                                 mock_notify, mock_save, mock_spawn,
+                                 mock_build, mock_shutdown):
+        """This method test the instance related InstanceNotFound
+            and reschedule on exception errors. The test cases get from
+            arguments.
+
+            :param exc: Injected exception into the code under test
+            :param exception: Raised exception in test case
+            :param result: At end the excepted state
+        """
         mock_build.return_value = self.network_info
         mock_spawn.side_effect = exc
 
-        self.assertRaises(exception.InstanceNotFound,
+        self.assertRaises(raised_exc,
                           self.compute._build_and_run_instance,
                           self.context, self.instance, self.image,
                           self.injected_files, self.admin_pass,
@@ -4230,56 +4238,28 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             mock.call(expected_task_state='block_device_mapping')])
         mock_notify.assert_has_calls([
             mock.call(self.context, self.instance, 'create.start',
-                extra_usage_info={'image_name': self.image.get('name')}),
+                      extra_usage_info={'image_name': self.image.get('name')}),
             mock.call(self.context, self.instance, 'create.error',
-                fault=exc)])
-        mock_build.assert_called_once_with(self.context, self.instance,
-            self.requested_networks, self.security_groups)
-        mock_shutdown.assert_called_once_with(self.context, self.instance,
-            self.block_device_mapping, self.requested_networks,
-            try_deallocate_networks=False)
-        mock_spawn.assert_called_once_with(self.context, self.instance,
-            test.MatchType(objects.ImageMeta), self.injected_files,
-            self.admin_pass, network_info=self.network_info,
+                      fault=exc)])
+        mock_build.assert_called_once_with(
+            self.context, self.instance, self.requested_networks,
+            self.security_groups)
+        mock_shutdown.assert_called_once_with(
+            self.context, self.instance, self.block_device_mapping,
+            self.requested_networks, try_deallocate_networks=False)
+        mock_spawn.assert_called_once_with(
+            self.context, self.instance, test.MatchType(objects.ImageMeta),
+            self.injected_files, self.admin_pass,
+            network_info=self.network_info,
             block_device_info=self.block_device_info)
 
-    @mock.patch.object(manager.ComputeManager, '_shutdown_instance')
-    @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
-    @mock.patch.object(fake_driver.FakeDriver, 'spawn')
-    @mock.patch.object(objects.Instance, 'save')
-    @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
-    def test_reschedule_on_exception(self, mock_notify, mock_save,
-                                     mock_spawn, mock_build, mock_shutdown):
-        exc = test.TestingException()
-        mock_build.return_value = self.network_info
-        mock_spawn.side_effect = exc
+    def test_instance_not_found(self):
+        got_exc = exception.InstanceNotFound(instance_id=1)
+        self._test_instance_exception(got_exc, exception.InstanceNotFound)
 
-        self.assertRaises(exception.RescheduledException,
-                          self.compute._build_and_run_instance,
-                          self.context, self.instance, self.image,
-                          self.injected_files, self.admin_pass,
-                          self.requested_networks, self.security_groups,
-                          self.block_device_mapping, self.node,
-                          self.limits, self.filter_properties)
-
-        mock_save.assert_has_calls([
-            mock.call(),
-            mock.call(),
-            mock.call(expected_task_state='block_device_mapping')])
-        mock_notify.assert_has_calls([
-            mock.call(self.context, self.instance, 'create.start',
-                extra_usage_info={'image_name': self.image.get('name')}),
-            mock.call(self.context, self.instance, 'create.error',
-                fault=exc)])
-        mock_build.assert_called_once_with(self.context, self.instance,
-            self.requested_networks, self.security_groups)
-        mock_shutdown.assert_called_once_with(self.context, self.instance,
-            self.block_device_mapping, self.requested_networks,
-            try_deallocate_networks=False)
-        mock_spawn.assert_called_once_with(self.context, self.instance,
-            test.MatchType(objects.ImageMeta), self.injected_files,
-            self.admin_pass, network_info=self.network_info,
-            block_device_info=self.block_device_info)
+    def test_reschedule_on_exception(self):
+        got_exc = test.TestingException()
+        self._test_instance_exception(got_exc, exception.RescheduledException)
 
     def test_spawn_network_alloc_failure(self):
         # Because network allocation is asynchronous, failures may not present
