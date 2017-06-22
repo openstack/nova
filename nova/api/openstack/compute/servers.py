@@ -453,16 +453,9 @@ class ServersController(wsgi.Controller):
         server_dict = body['server']
         password = self._get_server_admin_password(server_dict)
         name = common.normalize_name(server_dict['name'])
-
+        description = name
         if api_version_request.is_supported(req, min_version='2.19'):
-            if 'description' in server_dict:
-                # This is allowed to be None
-                description = server_dict['description']
-            else:
-                # No default description
-                description = None
-        else:
-            description = name
+            description = server_dict.get('description')
 
         # Arguments to be passed to instance create function
         create_kwargs = {}
