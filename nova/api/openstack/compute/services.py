@@ -39,6 +39,9 @@ class ServiceController(wsgi.Controller):
                         "disable-log-reason": self._disable_log_reason}
 
     def _get_services(self, req):
+        # The API services are filtered out since they are not RPC services
+        # and therefore their state is not reported through the service group
+        # API, so they would always be reported as 'down' (see bug 1543625).
         api_services = ('nova-osapi_compute', 'nova-ec2', 'nova-metadata')
 
         context = req.environ['nova.context']
