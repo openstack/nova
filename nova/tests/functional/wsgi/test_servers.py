@@ -71,8 +71,8 @@ class ServersPreSchedulingTestCase(test.TestCase):
         self.assertEqual(flavor_get_resp.body['flavor']['name'],
                          server['flavor']['original_name'])
         self.assertEqual('', server['hostId'])
-        self.assertIsNone(None, server['OS-SRV-USG:launched_at'])
-        self.assertIsNone(None, server['OS-SRV-USG:terminated_at'])
+        self.assertIsNone(server['OS-SRV-USG:launched_at'])
+        self.assertIsNone(server['OS-SRV-USG:terminated_at'])
         self.assertFalse(server['locked'])
         self.assertEqual([], server['tags'])
         self.assertEqual('scheduling', server['OS-EXT-STS:task_state'])
@@ -101,8 +101,8 @@ class ServersPreSchedulingTestCase(test.TestCase):
         self.assertEqual(flavor_get_resp.body['flavor']['name'],
                          server['flavor']['original_name'])
         self.assertEqual('', server['hostId'])
-        self.assertIsNone(None, server['OS-SRV-USG:launched_at'])
-        self.assertIsNone(None, server['OS-SRV-USG:terminated_at'])
+        self.assertIsNone(server['OS-SRV-USG:launched_at'])
+        self.assertIsNone(server['OS-SRV-USG:terminated_at'])
         self.assertFalse(server['locked'])
         self.assertEqual([], server['tags'])
         self.assertEqual('scheduling', server['OS-EXT-STS:task_state'])
