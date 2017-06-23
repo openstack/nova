@@ -81,10 +81,6 @@ class OpenStackApiException(Exception):
                         '_body': _body})
 
         super(OpenStackApiException, self).__init__(message)
-        # py35 does not give special meaning to the first arg and store it
-        # as the message variable.
-        if not hasattr(self, 'message'):
-            self.message = message
 
 
 class OpenStackApiAuthenticationException(OpenStackApiException):
