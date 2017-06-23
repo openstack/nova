@@ -4797,12 +4797,8 @@ class KeypairAPI(base.Base):
             raise exception.InvalidKeypair(
                 reason=_('Keypair name must be string and between '
                          '1 and 255 characters long'))
-
-        count = objects.Quotas.count_as_dict(context, 'key_pairs', user_id)
-        count_value = count['user']['key_pairs']
-
         try:
-            objects.Quotas.limit_check(context, key_pairs=count_value + 1)
+            objects.Quotas.check_deltas(context, {'key_pairs': 1}, user_id)
         except exception.OverQuota:
             raise exception.KeypairLimitExceeded()
 
@@ -4854,6 +4850,18 @@ class KeypairAPI(base.Base):
         keypair.fingerprint = fingerprint
         keypair.public_key = public_key
         keypair.create()
+
+        # NOTE(melwitt): We recheck the quota after creating the object to
+        # prevent users from allocating more resources than their allowed quota
+        # in the event of a race. This is configurable because it can be
+        # expensive if strict quota limits are not required in a deployment.
+        if CONF.quota.recheck_quota:
+            try:
+                objects.Quotas.check_deltas(context, {'key_pairs': 0}, user_id)
+            except exception.OverQuota:
+                keypair.destroy()
+                raise exception.KeypairLimitExceeded()
+
         compute_utils.notify_about_keypair_action(
             context=context,
             keypair=keypair,
