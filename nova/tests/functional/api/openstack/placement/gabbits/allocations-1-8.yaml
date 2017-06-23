@@ -1,0 +1,152 @@
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        accept: application/json
+        OpenStack-API-Version: placement 1.8
+
+tests:
+
+- name: put an allocation no project_id or user_id
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+              DISK_GB: 10
+  status: 400
+  response_strings:
+      - Failed validating 'required' in schema
+
+- name: put an allocation no project_id
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+              DISK_GB: 10
+      user_id: $ENVIRON['USER_ID']
+  status: 400
+  response_strings:
+      - Failed validating 'required' in schema
+
+- name: put an allocation no user_id
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+              DISK_GB: 10
+      project_id: $ENVIRON['PROJECT_ID']
+  status: 400
+  response_strings:
+      - Failed validating 'required' in schema
+
+- name: put an allocation project_id less than min length
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+              DISK_GB: 10
+      project_id: ""
+      user_id: $ENVIRON['USER_ID']
+  status: 400
+  response_strings:
+      - "Failed validating 'minLength'"
+
+- name: put an allocation user_id less than min length
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+              DISK_GB: 10
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: ""
+  status: 400
+  response_strings:
+      - "Failed validating 'minLength'"
+
+- name: put an allocation project_id exceeds max length
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+              DISK_GB: 10
+      project_id: 78725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b1
+      user_id: $ENVIRON['USER_ID']
+  status: 400
+  response_strings:
+      - "Failed validating 'maxLength'"
+
+- name: put an allocation user_id exceeds max length
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+              DISK_GB: 10
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: 78725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b178725f09-5c01-4c9e-97a5-98d75e1e32b1
+  status: 400
+  response_strings:
+      - "Failed validating 'maxLength'"
+
+- name: create the resource provider
+  POST: /resource_providers
+  request_headers:
+      content-type: application/json
+  data:
+      name: $ENVIRON['RP_NAME']
+      uuid: $ENVIRON['RP_UUID']
+  status: 201
+
+- name: post some inventory
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: DISK_GB
+      total: 2048
+      min_unit: 10
+      max_unit: 1024
+  status: 201
+
+- name: put an allocation
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+                DISK_GB: 10
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+  status: 204

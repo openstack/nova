@@ -123,6 +123,7 @@ class IronicResourceTrackerTest(test.TestCase):
             task_state=task_states.SPAWNING,
             power_state=power_state.RUNNING,
             project_id='project',
+            user_id=uuids.user,
         ),
     }
 

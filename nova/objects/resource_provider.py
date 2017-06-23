@@ -45,6 +45,9 @@ _RC_TBL = models.ResourceClass.__table__
 _AGG_TBL = models.PlacementAggregate.__table__
 _RP_AGG_TBL = models.ResourceProviderAggregate.__table__
 _RP_TRAIT_TBL = models.ResourceProviderTrait.__table__
+_PROJECT_TBL = models.Project.__table__
+_USER_TBL = models.User.__table__
+_CONSUMER_TBL = models.Consumer.__table__
 _RC_CACHE = None
 _TRAIT_LOCK = 'trait_sync'
 _TRAITS_SYNCED = False
@@ -1654,15 +1657,66 @@ def _check_capacity_exceeded(conn, allocs):
     return list(res_providers.values())
 
 
+def _ensure_lookup_table_entry(conn, tbl, external_id):
+    """Ensures the supplied external ID exists in the specified lookup table
+    and if not, adds it. Returns the internal ID.
+
+    :param conn: DB connection object to use
+    :param tbl: The lookup table
+    :param external_id: The external project or user identifier
+    :type external_id: string
+    """
+    # Grab the project internal ID if it exists in the projects table
+    sel = sa.select([tbl.c.id]).where(
+        tbl.c.external_id == external_id
+    )
+    res = conn.execute(sel).fetchall()
+    if not res:
+        try:
+            res = conn.execute(tbl.insert().values(external_id=external_id))
+            return res.inserted_primary_key[0]
+        except db_exc.DBDuplicateEntry:
+            # Another thread added it just before us, so just read the
+            # internal ID that that thread created...
+            res = conn.execute(sel).fetchall()
+
+    return res[0][0]
+
+
+def _ensure_project(conn, external_id):
+    """Ensures the supplied external project ID exists in the projects lookup
+    table and if not, adds it. Returns the internal project ID.
+
+    :param conn: DB connection object to use
+    :param external_id: The external project identifier
+    :type external_id: string
+    """
+    return _ensure_lookup_table_entry(conn, _PROJECT_TBL, external_id)
+
+
+def _ensure_user(conn, external_id):
+    """Ensures the supplied external user ID exists in the users lookup table
+    and if not, adds it. Returns the internal user ID.
+
+    :param conn: DB connection object to use
+    :param external_id: The external user identifier
+    :type external_id: string
+    """
+    return _ensure_lookup_table_entry(conn, _USER_TBL, external_id)
+
+
 @base.NovaObjectRegistry.register
 class AllocationList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial Version
     # Version 1.1: Add create_all() and delete_all()
     # Version 1.2: Turn off remotable
-    VERSION = '1.2'
+    # Version 1.3: Add project_id and user_id fields
+    VERSION = '1.3'
 
     fields = {
         'objects': fields.ListOfObjectsField('Allocation'),
+        'project_id': fields.StringField(nullable=True),
+        'user_id': fields.StringField(nullable=True),
     }
 
     @staticmethod
@@ -1687,9 +1741,40 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
                 models.Allocation.consumer_id == consumer_id)
         return query.all()
 
-    @staticmethod
+    def _ensure_consumer_project_user(self, conn, consumer_id):
+        """Examines the project_id, user_id of the object along with the
+        supplied consumer_id and ensures that there are records in the
+        consumers, projects, and users table for these entities.
+
+        :param consumer_id: Comes from the Allocation object being processed
+        """
+        if (self.obj_attr_is_set('project_id') and
+                self.project_id is not None and
+                self.obj_attr_is_set('user_id') and
+                self.user_id is not None):
+            # Grab the project internal ID if it exists in the projects table
+            pid = _ensure_project(conn, self.project_id)
+            # Grab the user internal ID if it exists in the users table
+            uid = _ensure_user(conn, self.user_id)
+
+            # Add the consumer if it doesn't already exist
+            sel_stmt = sa.select([_CONSUMER_TBL.c.uuid]).where(
+                _CONSUMER_TBL.c.uuid == consumer_id)
+            result = conn.execute(sel_stmt).fetchall()
+            if not result:
+                try:
+                    conn.execute(_CONSUMER_TBL.insert().values(
+                        uuid=consumer_id,
+                        project_id=pid,
+                        user_id=uid))
+                except db_exc.DBDuplicateEntry:
+                    # We assume at this time that a consumer project/user can't
+                    # change, so if we get here, we raced and should just pass
+                    # if the consumer already exists.
+                    pass
+
     @db_api.api_context_manager.writer
-    def _set_allocations(context, allocs):
+    def _set_allocations(self, context, allocs):
         """Write a set of allocations.
 
         We must check that there is capacity for each allocation.
@@ -1724,6 +1809,7 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
             # First delete any existing allocations for that rp/consumer combo.
             _delete_current_allocs(conn, allocs)
             before_gens = _check_capacity_exceeded(conn, allocs)
+            self._ensure_consumer_project_user(conn, allocs[0].consumer_id)
             # Now add the allocations that were passed in.
             for alloc in allocs:
                 rp = alloc.resource_provider

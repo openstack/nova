@@ -839,13 +839,15 @@ class SchedulerReportClient(object):
         LOG.debug('Sending allocation for instance %s',
                   my_allocations,
                   instance=instance)
-        res = self.put_allocations(rp_uuid, instance.uuid, my_allocations)
+        res = self.put_allocations(rp_uuid, instance.uuid, my_allocations,
+                                   instance.project_id, instance.user_id)
         if res:
             LOG.info(_LI('Submitted allocation for instance'),
                      instance=instance)
 
     @safe_connect
-    def put_allocations(self, rp_uuid, consumer_uuid, alloc_data):
+    def put_allocations(self, rp_uuid, consumer_uuid, alloc_data, project_id,
+                        user_id):
         """Creates allocation records for the supplied instance UUID against
         the supplied resource provider.
 
@@ -857,6 +859,8 @@ class SchedulerReportClient(object):
         :param consumer_uuid: The instance's UUID.
         :param alloc_data: Dict, keyed by resource class, of amounts to
                            consume.
+        :param project_id: The project_id associated with the allocations.
+        :param user_id: The user_id associated with the allocations.
         :returns: True if the allocations were created, False otherwise.
         """
         payload = {
@@ -868,9 +872,18 @@ class SchedulerReportClient(object):
                     'resources': alloc_data,
                 },
             ],
+            'project_id': project_id,
+            'user_id': user_id,
         }
         url = '/allocations/%s' % consumer_uuid
-        r = self.put(url, payload)
+        r = self.put(url, payload, version='1.8')
+        if r.status_code == 406:
+            # microversion 1.8 not available so try the earlier way
+            # TODO(melwitt): Remove this when we can be sure all placement
+            # servers support version 1.8.
+            payload.pop('project_id')
+            payload.pop('user_id')
+            r = self.put(url, payload)
         if r.status_code != 204:
             LOG.warning(
                 'Unable to submit allocation for instance '

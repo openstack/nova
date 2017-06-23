@@ -1213,6 +1213,51 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         self._check_create_allocations(inventory_kwargs,
                                        bad_used, good_used)
 
+    def test_create_all_with_project_user(self):
+        consumer_uuid = uuidsentinel.consumer
+        rp_class = fields.ResourceClass.DISK_GB
+        rp = self._make_rp_and_inventory(resource_class=rp_class,
+                                         max_unit=500)
+        allocation1 = objects.Allocation(resource_provider=rp,
+                                         consumer_id=consumer_uuid,
+                                         resource_class=rp_class,
+                                         used=100)
+        allocation2 = objects.Allocation(resource_provider=rp,
+                                         consumer_id=consumer_uuid,
+                                         resource_class=rp_class,
+                                         used=200)
+        allocation_list = objects.AllocationList(
+            self.context,
+            objects=[allocation1, allocation2],
+            project_id=self.context.project_id,
+            user_id=self.context.user_id,
+        )
+        allocation_list.create_all()
+
+        # Verify that we have records in the consumers, projects, and users
+        # table for the information used in the above allocation creation
+        with self.api_db.get_engine().connect() as conn:
+            tbl = rp_obj._PROJECT_TBL
+            sel = sa.select([tbl.c.id]).where(
+                tbl.c.external_id == self.context.project_id,
+            )
+            res = conn.execute(sel).fetchall()
+            self.assertEqual(1, len(res), "project lookup not created.")
+
+            tbl = rp_obj._USER_TBL
+            sel = sa.select([tbl.c.id]).where(
+                tbl.c.external_id == self.context.user_id,
+            )
+            res = conn.execute(sel).fetchall()
+            self.assertEqual(1, len(res), "user lookup not created.")
+
+            tbl = rp_obj._CONSUMER_TBL
+            sel = sa.select([tbl.c.id]).where(
+                tbl.c.uuid == consumer_uuid,
+            )
+            res = conn.execute(sel).fetchall()
+            self.assertEqual(1, len(res), "consumer lookup not created.")
+
 
 class UsageListTestCase(ResourceProviderBaseCase):
 

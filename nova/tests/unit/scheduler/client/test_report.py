@@ -187,9 +187,34 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         consumer_uuid = mock.sentinel.consumer
         data = {"MEMORY_MB": 1024}
         expected_url = "/allocations/%s" % consumer_uuid
-        resp = self.client.put_allocations(rp_uuid, consumer_uuid, data)
+        resp = self.client.put_allocations(rp_uuid, consumer_uuid, data,
+                                           mock.sentinel.project_id,
+                                           mock.sentinel.user_id)
         self.assertTrue(resp)
-        mock_put.assert_called_once_with(expected_url, mock.ANY)
+        mock_put.assert_called_once_with(expected_url, mock.ANY, version='1.8')
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put')
+    def test_put_allocations_fail_fallback_succeeds(self, mock_put):
+        not_acceptable = mock.Mock()
+        not_acceptable.status_code = 406
+        not_acceptable.text = 'microversion not supported'
+        ok_request = mock.Mock()
+        ok_request.status_code = 204
+        ok_request.text = 'cool'
+        mock_put.side_effect = [not_acceptable, ok_request]
+        rp_uuid = mock.sentinel.rp
+        consumer_uuid = mock.sentinel.consumer
+        data = {"MEMORY_MB": 1024}
+        expected_url = "/allocations/%s" % consumer_uuid
+        resp = self.client.put_allocations(rp_uuid, consumer_uuid, data,
+                                           mock.sentinel.project_id,
+                                           mock.sentinel.user_id)
+        self.assertTrue(resp)
+        # Should fall back to earlier way if 1.8 fails.
+        call1 = mock.call(expected_url, mock.ANY, version='1.8')
+        call2 = mock.call(expected_url, mock.ANY)
+        self.assertEqual(2, mock_put.call_count)
+        mock_put.assert_has_calls([call1, call2])
 
     @mock.patch.object(report.LOG, 'warning')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put')
@@ -200,9 +225,11 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         consumer_uuid = mock.sentinel.consumer
         data = {"MEMORY_MB": 1024}
         expected_url = "/allocations/%s" % consumer_uuid
-        resp = self.client.put_allocations(rp_uuid, consumer_uuid, data)
+        resp = self.client.put_allocations(rp_uuid, consumer_uuid, data,
+                                           mock.sentinel.project_id,
+                                           mock.sentinel.user_id)
         self.assertFalse(resp)
-        mock_put.assert_called_once_with(expected_url, mock.ANY)
+        mock_put.assert_called_once_with(expected_url, mock.ANY, version='1.8')
         log_msg = mock_warn.call_args[0][0]
         self.assertIn("Unable to submit allocation for instance", log_msg)
 
@@ -1427,17 +1454,20 @@ class TestAllocations(SchedulerReportClientTestCase):
     def test_update_instance_allocation_new(self, mock_a, mock_get,
                                             mock_put):
         cn = objects.ComputeNode(uuid=uuids.cn)
-        inst = objects.Instance(uuid=uuids.inst)
+        inst = objects.Instance(uuid=uuids.inst, project_id=uuids.project,
+                                user_id=uuids.user)
         mock_get.return_value.json.return_value = {'allocations': {}}
         expected = {
             'allocations': [
                 {'resource_provider': {'uuid': cn.uuid},
-                 'resources': mock_a.return_value}]
+                 'resources': mock_a.return_value}],
+            'project_id': inst.project_id,
+            'user_id': inst.user_id,
         }
         self.client.update_instance_allocation(cn, inst, 1)
         mock_put.assert_called_once_with(
             '/allocations/%s' % inst.uuid,
-            expected)
+            expected, version='1.8')
         self.assertTrue(mock_get.called)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -1478,7 +1508,8 @@ class TestAllocations(SchedulerReportClientTestCase):
     def test_update_instance_allocation_new_failed(self, mock_warn, mock_a,
                                                    mock_put, mock_get):
         cn = objects.ComputeNode(uuid=uuids.cn)
-        inst = objects.Instance(uuid=uuids.inst)
+        inst = objects.Instance(uuid=uuids.inst, project_id=uuids.project,
+                                user_id=uuids.user)
         try:
             mock_put.return_value.__nonzero__.return_value = False
         except AttributeError:
