@@ -220,6 +220,12 @@ def normalize_resources_qs_param(qs):
     :raises `webob.exc.HTTPBadRequest` if the parameter's value isn't in the
             expected format.
     """
+    if qs.strip() == "":
+        msg = _('Badly formed resources parameter. Expected resources '
+                'query string parameter in form: '
+                '?resources=VCPU:2,MEMORY_MB:1024. Got: empty string.')
+        raise webob.exc.HTTPBadRequest(msg)
+
     result = {}
     resource_tuples = qs.split(',')
     for rt in resource_tuples:
