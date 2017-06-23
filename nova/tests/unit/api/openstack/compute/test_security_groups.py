@@ -1222,6 +1222,51 @@ class TestSecurityGroupRulesV21(test.TestCase):
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.create,
                           self.req, {'security_group_rule': rule})
 
+    @mock.patch('nova.objects.Quotas.check_deltas')
+    def test_create_rule_over_quota_during_recheck(self, mock_check):
+        # Simulate a race where the first check passes and the recheck fails.
+        # First check occurs in compute/api.
+        exc = exception.OverQuota(overs='security_group_rules',
+                                  usages={'security_group_rules': 100})
+        mock_check.side_effect = [None, exc]
+
+        rule = {
+            'ip_protocol': 'tcp', 'from_port': '121', 'to_port': '121',
+            'parent_group_id': self.sg2['id'], 'group_id': self.sg1['id']
+        }
+        self.assertRaises(webob.exc.HTTPForbidden, self.controller.create,
+                          self.req, {'security_group_rule': rule})
+
+        ctxt = self.req.environ['nova.context']
+        self.assertEqual(2, mock_check.call_count)
+        # parent_group_id is used for adding the rules.
+        call1 = mock.call(ctxt, {'security_group_rules': 1}, self.sg2['id'])
+        call2 = mock.call(ctxt, {'security_group_rules': 0}, self.sg2['id'])
+        mock_check.assert_has_calls([call1, call2])
+
+        # Verify we removed the rule that was added after the first quota check
+        # passed.
+        rules = objects.SecurityGroupRuleList.get_by_security_group_id(
+            ctxt, self.sg1['id'])
+        self.assertEqual(0, len(rules))
+
+    @mock.patch('nova.objects.Quotas.check_deltas')
+    def test_create_rule_no_quota_recheck(self, mock_check):
+        # Disable recheck_quota.
+        self.flags(recheck_quota=False, group='quota')
+
+        rule = {
+            'ip_protocol': 'tcp', 'from_port': '121', 'to_port': '121',
+            'parent_group_id': self.sg2['id'], 'group_id': self.sg1['id']
+        }
+        self.controller.create(self.req, {'security_group_rule': rule})
+
+        ctxt = self.req.environ['nova.context']
+        # check_deltas should have been called only once.
+        # parent_group_id is used for adding the rules.
+        mock_check.assert_called_once_with(ctxt, {'security_group_rules': 1},
+                                           self.sg2['id'])
+
     def test_create_rule_cidr_allow_all(self):
         rule = security_group_rule_template(cidr='0.0.0.0/0',
                                             parent_group_id=self.sg2['id'])
