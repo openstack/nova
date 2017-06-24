@@ -1819,6 +1819,8 @@ class ComputeManager(manager.Manager):
                     instance=instance)
                 self._cleanup_allocated_networks(context, instance,
                     requested_networks)
+                self._cleanup_volumes(context, instance.uuid,
+                    block_device_mapping, raise_exc=False)
                 compute_utils.add_instance_fault_from_exc(context,
                         instance, e, sys.exc_info(),
                         fault_message=e.kwargs['reason'])
