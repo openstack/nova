@@ -485,6 +485,14 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         self.assertEqual('00000000-aaaa-aaaa-aaaa-000000000000',
                          result['volumeAttachment']['id'])
 
+    @mock.patch.object(compute_api.API, 'attach_volume',
+                       side_effect=exception.VolumeTaggedAttachNotSupported())
+    def test_attach_volume_not_supported(self, mock_attach_volume):
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
+                                     'device': '/dev/fake'}}
+        self.assertRaises(webob.exc.HTTPBadRequest, self.attachments.create,
+                          self.req, FAKE_UUID, body=body)
+
     @mock.patch.object(common, 'get_instance')
     def test_attach_vol_shelved_not_supported(self, mock_get_instance):
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,

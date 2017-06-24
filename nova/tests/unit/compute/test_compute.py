@@ -10089,7 +10089,7 @@ class ComputeAPITestCase(BaseTestCase):
 
             mock_reserve_bdm.assert_called_once_with(
                     self.context, instance, '/dev/vdb', 'fake-volume-id',
-                    disk_bus='ide', device_type='cdrom')
+                    disk_bus='ide', device_type='cdrom', tag=None)
             self.assertEqual(mock_get.call_args,
                              mock.call(self.context, 'fake-volume-id'))
             self.assertEqual(mock_check_availability_zone.call_args,

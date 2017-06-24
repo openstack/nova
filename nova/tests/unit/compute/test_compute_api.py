@@ -392,6 +392,43 @@ class _ComputeAPIUnitTestMixIn(object):
 
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'reserve_block_device_name')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
+    def test_tagged_volume_attach(self, mock_attach, mock_reserve):
+        instance = self._create_instance_obj()
+        volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
+                                         None, None, None, None, None)
+
+        fake_bdm = mock.MagicMock(spec=objects.BlockDeviceMapping)
+        mock_reserve.return_value = fake_bdm
+
+        mock_volume_api = mock.patch.object(self.compute_api, 'volume_api',
+                                            mock.MagicMock(spec=cinder.API))
+
+        with mock_volume_api as mock_v_api:
+            mock_v_api.get.return_value = volume
+            self.compute_api.attach_volume(
+                self.context, instance, volume['id'], tag='foo')
+            mock_reserve.assert_called_once_with(self.context, instance, None,
+                                                 volume['id'],
+                                                 device_type=None,
+                                                 disk_bus=None, tag='foo')
+            mock_v_api.check_availability_zone.assert_called_once_with(
+                self.context, volume, instance=instance)
+            mock_v_api.reserve_volume.assert_called_once_with(self.context,
+                                                              volume['id'])
+            mock_attach.assert_called_once_with(self.context,
+                                                instance, fake_bdm)
+
+    def test_attach_volume_shelved_instance(self):
+        instance = self._create_instance_obj()
+        instance.vm_state = vm_states.SHELVED_OFFLOADED
+        volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
+                                         None, None, None, None, None)
+        self.assertRaises(exception.VolumeTaggedAttachToShelvedNotSupported,
+                          self.compute_api.attach_volume, self.context,
+                          instance, volume['id'], tag='foo')
+
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'reserve_block_device_name')
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
     def test_attach_volume_reserve_fails(self, mock_attach, mock_reserve):
         instance = self._create_instance_obj()
         volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
@@ -5236,6 +5273,14 @@ class ComputeAPIAPICellUnitTestCase(_ComputeAPIUnitTestMixIn,
             mock_attach.assert_called_once_with(self.context, instance,
                                                 'attach_volume', volume['id'],
                                                 None, None, None)
+
+    def test_tagged_volume_attach(self):
+        instance = self._create_instance_obj()
+        volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
+                                         None, None, None, None, None)
+        self.assertRaises(exception.VolumeTaggedAttachNotSupported,
+                          self.compute_api.attach_volume, self.context,
+                          instance, volume['id'], tag='foo')
 
     def test_create_with_networks_max_count_none(self):
         self.skipTest("This test does not test any rpcapi.")

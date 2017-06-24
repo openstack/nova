@@ -481,7 +481,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='4.14')
+    target = messaging.Target(version='4.15')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to an instance during power off.  The overall
@@ -4814,7 +4814,12 @@ class ComputeManager(manager.Manager):
     @reverts_task_state
     @wrap_instance_fault
     def reserve_block_device_name(self, context, instance, device,
-                                  volume_id, disk_bus, device_type):
+                                  volume_id, disk_bus, device_type, tag=None):
+        if (tag and not
+                self.driver.capabilities.get('supports_tagged_attach_volume',
+                                             False)):
+            raise exception.VolumeTaggedAttachNotSupported()
+
         @utils.synchronized(instance.uuid)
         def do_reserve():
             bdms = (
@@ -4829,7 +4834,7 @@ class ComputeManager(manager.Manager):
                     instance_uuid=instance.uuid, boot_index=None,
                     volume_id=volume_id,
                     device_name=device, guest_format=None,
-                    disk_bus=disk_bus, device_type=device_type)
+                    disk_bus=disk_bus, device_type=device_type, tag=tag)
 
             new_bdm.device_name = self._get_device_name_for_instance(
                     instance, bdms, new_bdm)

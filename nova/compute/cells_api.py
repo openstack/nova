@@ -458,8 +458,10 @@ class ComputeCellsAPI(compute_api.API):
 
     @check_instance_cell
     def _attach_volume(self, context, instance, volume_id, device,
-                       disk_bus, device_type):
+                       disk_bus, device_type, tag=None):
         """Attach an existing volume to an existing instance."""
+        if tag:
+            raise exception.VolumeTaggedAttachNotSupported()
         volume = self.volume_api.get(context, volume_id)
         self.volume_api.check_availability_zone(context, volume,
                                                 instance=instance)

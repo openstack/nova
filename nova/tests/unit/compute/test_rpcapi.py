@@ -452,8 +452,58 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         self._test_compute_api('reserve_block_device_name', 'call',
                 instance=self.fake_instance_obj, device='device',
                 volume_id='id', disk_bus='ide', device_type='cdrom',
-                version='4.0',
+                tag='foo', version='4.15',
                 _return_value=objects_block_dev.BlockDeviceMapping())
+
+    def test_reserve_block_device_name_raises(self):
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        instance = self.fake_instance_obj
+        rpcapi = compute_rpcapi.ComputeAPI()
+        cctxt_mock = mock.Mock()
+        mock_client = mock.Mock()
+        rpcapi.router.client = mock.Mock()
+        rpcapi.router.client.return_value = mock_client
+        with test.nested(
+            mock.patch.object(mock_client, 'can_send_version',
+                              return_value=False),
+            mock.patch.object(mock_client, 'prepare',
+                              return_value=cctxt_mock)
+        ) as (
+            can_send_mock, prepare_mock
+        ):
+            self.assertRaises(exception.TaggedAttachmentNotSupported,
+                              rpcapi.reserve_block_device_name, ctxt, instance,
+                              'fake_device', 'fake_volume_id', tag='foo')
+        can_send_mock.assert_called_once_with('4.15')
+
+    def test_reserve_block_device_name_downgrades_version(self):
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        instance = self.fake_instance_obj
+        rpcapi = compute_rpcapi.ComputeAPI()
+        call_mock = mock.Mock()
+        cctxt_mock = mock.Mock(call=call_mock)
+        mock_client = mock.Mock()
+        rpcapi.router.client = mock.Mock()
+        rpcapi.router.client.return_value = mock_client
+        with test.nested(
+            mock.patch.object(mock_client, 'can_send_version',
+                              return_value=False),
+            mock.patch.object(mock_client, 'prepare',
+                              return_value=cctxt_mock)
+        ) as (
+            can_send_mock, prepare_mock
+        ):
+            rpcapi.reserve_block_device_name(ctxt, instance, 'fake_device',
+                                             'fake_volume_id')
+
+        can_send_mock.assert_called_once_with('4.15')
+        prepare_mock.assert_called_once_with(server=instance['host'],
+                                             version='4.0')
+        call_mock.assert_called_once_with(ctxt, 'reserve_block_device_name',
+                                          instance=instance,
+                                          device='fake_device',
+                                          volume_id='fake_volume_id',
+                                          disk_bus=None, device_type=None)
 
     def test_refresh_instance_security_rules(self):
         expected_args = {'instance': self.fake_instance_obj}

@@ -3718,13 +3718,19 @@ class API(base.Base):
         self.compute_rpcapi.inject_network_info(context, instance=instance)
 
     def _create_volume_bdm(self, context, instance, device, volume_id,
-                           disk_bus, device_type, is_local_creation=False):
+                           disk_bus, device_type, is_local_creation=False,
+                           tag=None):
         if is_local_creation:
             # when the creation is done locally we can't specify the device
             # name as we do not have a way to check that the name specified is
             # a valid one.
             # We leave the setting of that value when the actual attach
             # happens on the compute manager
+            # NOTE(artom) Local attach (to a shelved-offload instance) cannot
+            # support device tagging because we have no way to call the compute
+            # manager to check that it supports device tagging. In fact, we
+            # don't even know which computer manager the instance will
+            # eventually end up on when it's unshelved.
             volume_bdm = objects.BlockDeviceMapping(
                 context=context,
                 source_type='volume', destination_type='volume',
@@ -3741,7 +3747,7 @@ class API(base.Base):
             #             have to make sure that they are assigned atomically.
             volume_bdm = self.compute_rpcapi.reserve_block_device_name(
                 context, instance, device, volume_id, disk_bus=disk_bus,
-                device_type=device_type)
+                device_type=device_type, tag=tag)
         return volume_bdm
 
     def _check_attach_and_reserve_volume(self, context, volume_id, instance):
@@ -3753,7 +3759,7 @@ class API(base.Base):
         return volume
 
     def _attach_volume(self, context, instance, volume_id, device,
-                       disk_bus, device_type):
+                       disk_bus, device_type, tag=None):
         """Attach an existing volume to an existing instance.
 
         This method is separated to make it possible for cells version
@@ -3761,7 +3767,7 @@ class API(base.Base):
         """
         volume_bdm = self._create_volume_bdm(
             context, instance, device, volume_id, disk_bus=disk_bus,
-            device_type=device_type)
+            device_type=device_type, tag=tag)
         try:
             self._check_attach_and_reserve_volume(context, volume_id, instance)
             self.compute_rpcapi.attach_volume(context, instance, volume_bdm)
@@ -3805,7 +3811,7 @@ class API(base.Base):
                                     vm_states.SOFT_DELETED, vm_states.SHELVED,
                                     vm_states.SHELVED_OFFLOADED])
     def attach_volume(self, context, instance, volume_id, device=None,
-                       disk_bus=None, device_type=None):
+                      disk_bus=None, device_type=None, tag=None):
         """Attach an existing volume to an existing instance."""
         # NOTE(vish): Fail fast if the device is not going to pass. This
         #             will need to be removed along with the test if we
@@ -3816,6 +3822,13 @@ class API(base.Base):
 
         is_shelved_offloaded = instance.vm_state == vm_states.SHELVED_OFFLOADED
         if is_shelved_offloaded:
+            if tag:
+                # NOTE(artom) Local attach (to a shelved-offload instance)
+                # cannot support device tagging because we have no way to call
+                # the compute manager to check that it supports device tagging.
+                # In fact, we don't even know which computer manager the
+                # instance will eventually end up on when it's unshelved.
+                raise exception.VolumeTaggedAttachToShelvedNotSupported()
             return self._attach_volume_shelved_offloaded(context,
                                                          instance,
                                                          volume_id,
@@ -3824,7 +3837,7 @@ class API(base.Base):
                                                          device_type)
 
         return self._attach_volume(context, instance, volume_id, device,
-                                   disk_bus, device_type)
+                                   disk_bus, device_type, tag=tag)
 
     def _check_and_begin_detach(self, context, volume, instance):
         self.volume_api.check_detach(context, volume, instance=instance)

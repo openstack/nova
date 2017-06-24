@@ -324,6 +324,7 @@ class ComputeAPI(object):
                  instead of dictionary. Strictly speaking we don't need to bump
                  the version because this method was unused before. The version
                  was bumped to signal the availability of the corrected RPC API
+        * 4.15 - Add tag argument to reserve_block_device_name()
     '''
 
     VERSION_ALIASES = {
@@ -914,14 +915,25 @@ class ComputeAPI(object):
         return cctxt.call(ctxt, 'get_host_uptime')
 
     def reserve_block_device_name(self, ctxt, instance, device, volume_id,
-                                  disk_bus=None, device_type=None):
+                                  disk_bus=None, device_type=None, tag=None):
         kw = {'instance': instance, 'device': device,
               'volume_id': volume_id, 'disk_bus': disk_bus,
-              'device_type': device_type}
-        version = '4.0'
+              'device_type': device_type, 'tag': tag}
+        version = '4.15'
 
-        cctxt = self.router.client(ctxt).prepare(
-                server=_compute_host(None, instance), version=version)
+        client = self.router.client(ctxt)
+        if not client.can_send_version(version):
+            if tag:
+                # NOTE(artom) Reserve attempted with a device role tag, but
+                # we're pinned to less than 4.15 - ie, not all nodes have
+                # received the Pike code yet.
+                raise exception.TaggedAttachmentNotSupported()
+            else:
+                version = '4.0'
+                kw.pop('tag')
+
+        cctxt = client.prepare(server=_compute_host(None, instance),
+                               version=version)
         return cctxt.call(ctxt, 'reserve_block_device_name', **kw)
 
     def backup_instance(self, ctxt, instance, image_id, backup_type,
