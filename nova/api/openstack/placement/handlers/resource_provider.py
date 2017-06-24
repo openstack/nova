@@ -13,7 +13,6 @@
 
 import copy
 
-import jsonschema
 from oslo_db import exception as db_exc
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
@@ -208,13 +207,8 @@ def list_resource_providers(req):
         schema = GET_RPS_SCHEMA_1_3
     if want_version >= (1, 4):
         schema = GET_RPS_SCHEMA_1_4
-    try:
-        jsonschema.validate(dict(req.GET), schema,
-                            format_checker=jsonschema.FormatChecker())
-    except jsonschema.ValidationError as exc:
-        raise webob.exc.HTTPBadRequest(
-            _('Invalid query string parameters: %(exc)s') %
-            {'exc': exc})
+
+    util.validate_query_params(req, schema)
 
     filters = {}
     for attr in ['uuid', 'name', 'member_of']:

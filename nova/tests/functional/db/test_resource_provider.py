@@ -1258,6 +1258,33 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
             res = conn.execute(sel).fetchall()
             self.assertEqual(1, len(res), "consumer lookup not created.")
 
+        # Create allocation for a different user in the project
+        other_consumer_uuid = uuidsentinel.other_consumer
+        allocation3 = objects.Allocation(resource_provider=rp,
+                                         consumer_id=other_consumer_uuid,
+                                         resource_class=rp_class,
+                                         used=200)
+        allocation_list = objects.AllocationList(
+            self.context,
+            objects=[allocation3],
+            project_id=self.context.project_id,
+            user_id=uuidsentinel.other_user,
+        )
+        allocation_list.create_all()
+
+        # Get usages back by project
+        usage_list = objects.UsageList.get_all_by_project_user(
+            self.context, self.context.project_id)
+        self.assertEqual(1, len(usage_list))
+        self.assertEqual(500, usage_list[0].usage)
+
+        # Get usages back by project and user
+        usage_list = objects.UsageList.get_all_by_project_user(
+            self.context, self.context.project_id,
+            user_id=uuidsentinel.other_user)
+        self.assertEqual(1, len(usage_list))
+        self.assertEqual(200, usage_list[0].usage)
+
 
 class UsageListTestCase(ResourceProviderBaseCase):
 
