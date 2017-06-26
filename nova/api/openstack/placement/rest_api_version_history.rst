@@ -123,3 +123,24 @@ class is a custom resource class and does not already exist it will be created
 and a ``201`` response code returned. If the class already exists the response
 code will be ``204``. This makes it possible to check or create a resource
 class in one request.
+
+1.8 Require placement 'project_id', 'user_id' in PUT /allocations
+-----------------------------------------------------------------
+
+The 1.8 version adds ``project_id`` and ``user_id`` required request parameters
+to ``PUT /allocations``.
+
+1.9 Add GET /usages
+--------------------
+
+The 1.9 version adds usages that can be queried by a project or project/user.
+
+The following new routes are added:
+
+``GET /usages?project_id=<project_id>``
+
+   Returns all usages for a given project.
+
+``GET /usages?project_id=<project_id>&user_id=<user_id>``
+
+   Returns all usages for a given project and user.
