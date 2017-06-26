@@ -30,7 +30,6 @@ from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_keypair
 
 CONF = cfg.CONF
-QUOTAS = quota.QUOTAS
 
 
 class KeypairAPITestCase(test_compute.BaseTestCase):
@@ -150,12 +149,10 @@ class CreateImportSharedTestMixIn(object):
         self.assertKeypairRaises(exception.KeyPairExists, msg,
                                  self.existing_key_name)
 
-    def test_quota_limit(self):
-        def fake_quotas_count(self, context, resource, *args, **kwargs):
-            return {'user': {'key_pairs': CONF.quota.key_pairs}}
-
-        self.stubs.Set(QUOTAS, "count_as_dict", fake_quotas_count)
-
+    @mock.patch.object(quota.QUOTAS, 'count_as_dict',
+                       return_value={'user': {
+                                         'key_pairs': CONF.quota.key_pairs}})
+    def test_quota_limit(self, mock_count_as_dict):
         msg = "Maximum number of key pairs exceeded"
         self.assertKeypairRaises(exception.KeypairLimitExceeded, msg, 'foo')
 
