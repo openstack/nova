@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import copy
-
 import mock
 import webob
 
@@ -25,31 +23,11 @@ from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 
-_FAKE_CONNECT_INFO = {'instance_uuid': 'fake_instance_uuid',
-                      'host': 'fake_host',
-                      'port': 'fake_port',
-                      'internal_access_path': 'fake_access_path',
-                      'console_type': 'rdp-html5'}
-
-
-def _fake_check_token(self, context, token):
-    return _FAKE_CONNECT_INFO
-
-
-def _fake_check_token_not_found(self, context, token):
-    return None
-
-
-def _fake_check_token_unauthorized(self, context, token):
-    connect_info = copy.deepcopy(_FAKE_CONNECT_INFO)
-    connect_info['console_type'] = 'unauthorized_console_type'
-    return connect_info
-
 
 class ConsoleAuthTokensExtensionTestV21(test.NoDBTestCase):
     controller_class = console_auth_tokens_v21
 
-    _EXPECTED_OUTPUT = {'console': {'instance_uuid': 'fake_instance_uuid',
+    _EXPECTED_OUTPUT = {'console': {'instance_uuid': fakes.FAKE_UUID,
                                     'host': 'fake_host',
                                     'port': 'fake_port',
                                     'internal_access_path':
@@ -57,27 +35,41 @@ class ConsoleAuthTokensExtensionTestV21(test.NoDBTestCase):
 
     def setUp(self):
         super(ConsoleAuthTokensExtensionTestV21, self).setUp()
-        self.stubs.Set(consoleauth_rpcapi.ConsoleAuthAPI, 'check_token',
-                       _fake_check_token)
-
         self.controller = self.controller_class.ConsoleAuthTokensController()
         self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
+        self.context = self.req.environ['nova.context']
 
-    def test_get_console_connect_info(self):
+    @mock.patch.object(consoleauth_rpcapi.ConsoleAuthAPI, 'check_token',
+                       return_value={
+                           'instance_uuid': fakes.FAKE_UUID,
+                           'host': 'fake_host',
+                           'port': 'fake_port',
+                           'internal_access_path': 'fake_access_path',
+                           'console_type': 'rdp-html5'})
+    def test_get_console_connect_info(self, mock_check_token):
         output = self.controller.show(self.req, fakes.FAKE_UUID)
         self.assertEqual(self._EXPECTED_OUTPUT, output)
+        mock_check_token.assert_called_once_with(self.context, fakes.FAKE_UUID)
 
-    def test_get_console_connect_info_token_not_found(self):
-        self.stubs.Set(consoleauth_rpcapi.ConsoleAuthAPI, 'check_token',
-                       _fake_check_token_not_found)
+    @mock.patch.object(consoleauth_rpcapi.ConsoleAuthAPI, 'check_token',
+                       return_value=None)
+    def test_get_console_connect_info_token_not_found(self, mock_check_token):
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.show, self.req, fakes.FAKE_UUID)
+        mock_check_token.assert_called_once_with(self.context, fakes.FAKE_UUID)
 
-    def test_get_console_connect_info_nonrdp_console_type(self):
-        self.stubs.Set(consoleauth_rpcapi.ConsoleAuthAPI, 'check_token',
-                       _fake_check_token_unauthorized)
+    @mock.patch.object(consoleauth_rpcapi.ConsoleAuthAPI, 'check_token',
+                       return_value={
+                           'instance_uuid': fakes.FAKE_UUID,
+                           'host': 'fake_host',
+                           'port': 'fake_port',
+                           'internal_access_path': 'fake_access_path',
+                           'console_type': 'unauthorized_console_type'})
+    def test_get_console_connect_info_nonrdp_console_type(self,
+                                                          mock_check_token):
         self.assertRaises(webob.exc.HTTPUnauthorized,
                           self.controller.show, self.req, fakes.FAKE_UUID)
+        mock_check_token.assert_called_once_with(self.context, fakes.FAKE_UUID)
 
 
 class ConsoleAuthTokensExtensionTestV231(ConsoleAuthTokensExtensionTestV21):
@@ -89,10 +81,11 @@ class ConsoleAuthTokensExtensionTestV231(ConsoleAuthTokensExtensionTestV21):
 
     @mock.patch.object(consoleauth_rpcapi.ConsoleAuthAPI, 'check_token')
     def test_get_console_connect_info_nonrdp_console_type(self, mock_check):
-        mock_check.return_value = {'instance_uuid': 'fake_instance_uuid',
+        mock_check.return_value = {'instance_uuid': fakes.FAKE_UUID,
                                    'host': 'fake_host',
                                    'port': 'fake_port',
                                    'internal_access_path': 'fake_access_path',
                                    'console_type': 'webmks'}
         output = self.controller.show(self.req, fakes.FAKE_UUID)
         self.assertEqual(self._EXPECTED_OUTPUT, output)
+        mock_check.assert_called_once_with(self.context, fakes.FAKE_UUID)
