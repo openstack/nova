@@ -1,0 +1,17 @@
+{
+    "allocations": {
+        "92637880-2d79-43c6-afab-d860886c6391": {
+            "generation": 2,
+            "resources": {
+                "DISK_GB": 5
+            }
+        },
+        "ba8e1ef8-7fa3-41a4-9bb4-d7cb2019899b": {
+            "generation": 8,
+            "resources": {
+                "MEMORY_MB": 512,
+                "VCPU": 2
+            }
+        }
+    }
+}

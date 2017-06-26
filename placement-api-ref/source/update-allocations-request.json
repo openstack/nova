@@ -1,0 +1,23 @@
+{
+    "allocations": [
+        {
+            "resource_provider": {
+                "uuid": "844ac34d-620e-474c-833c-4c9921251353"
+            },
+            "resources": {
+                "MEMORY_MB": 512,
+                "VCPU": 2
+            }
+        },
+        {
+            "resource_provider": {
+                "uuid": "92637880-2d79-43c6-afab-d860886c6391"
+            },
+            "resources": {
+                "DISK_GB": 5
+            }
+        }
+    ],
+    "project_id": "6e3b2ce9-9175-4830-a862-b9de690bdceb",
+    "user_id": "81c516e3-5e0e-4dcb-9a38-4473d229a950"
+}

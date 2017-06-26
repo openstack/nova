@@ -22,3 +22,4 @@ Openstack Placement API concepts, please refer to the
 .. include:: aggregates.inc
 .. include:: traits.inc
 .. include:: resource_provider_traits.inc
+.. include:: allocations.inc
