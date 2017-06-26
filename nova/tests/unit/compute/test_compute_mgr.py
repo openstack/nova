@@ -5353,16 +5353,24 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
     def test_rollback_live_migration_handles_dict(self):
         compute = manager.ComputeManager()
 
+        @mock.patch('nova.compute.utils.notify_about_instance_action')
         @mock.patch.object(compute.network_api, 'setup_networks_on_host')
         @mock.patch.object(compute, '_notify_about_instance_usage')
         @mock.patch.object(compute, '_live_migration_cleanup_flags')
         @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
-        def _test(mock_bdm, mock_lmcf, mock_notify, mock_nwapi):
+        def _test(mock_bdm, mock_lmcf, mock_notify, mock_nwapi,
+                  mock_notify_about_instance_action):
             mock_bdm.return_value = []
             mock_lmcf.return_value = False, False
+            mock_instance = mock.MagicMock()
             compute._rollback_live_migration(self.context,
-                                             mock.MagicMock(),
+                                             mock_instance,
                                              'foo', {})
+            mock_notify_about_instance_action.assert_has_calls([
+                mock.call(self.context, mock_instance, compute.host,
+                          action='live_migration_rollback', phase='start'),
+                mock.call(self.context, mock_instance, compute.host,
+                          action='live_migration_rollback', phase='end')])
             self.assertIsInstance(mock_lmcf.call_args_list[0][0][0],
                                   migrate_data_obj.LiveMigrateData)
 

@@ -22,6 +22,64 @@ from nova.tests.functional.notification_sample_tests \
 from nova.tests.unit import fake_notifier
 
 
+class TestInstanceNotificationSampleWithMultipleCompute(
+        notification_sample_base.NotificationSampleTestBase):
+
+    def setUp(self):
+        self.flags(use_neutron=True)
+        super(TestInstanceNotificationSampleWithMultipleCompute, self).setUp()
+        self.neutron = fixtures.NeutronFixture(self)
+        self.useFixture(self.neutron)
+        self.cinder = fixtures.CinderFixture(self)
+        self.useFixture(self.cinder)
+
+    def test_live_migration_actions(self):
+        server = self._boot_a_server(
+            extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
+        self._wait_for_notification('instance.create.end')
+        # server will boot on host1
+        self.useFixture(fixtures.ConfPatcher(host='host2'))
+        self.compute2 = self.start_service('compute', host='host2')
+
+        actions = [
+            self._test_live_migration_rollback,
+        ]
+
+        for action in actions:
+            fake_notifier.reset()
+            action(server)
+            # Ensure that instance is in active state after an action
+            self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.pre_live_migration',
+                side_effect=exception.LiveMigrationWithOldNovaNotSupported())
+    def _test_live_migration_rollback(self, server, mock_migration):
+        post = {
+            'os-migrateLive': {
+                'host': 'host2',
+                'block_migration': True,
+                'force': True,
+            }
+        }
+        self.admin_api.post_server_action(server['id'], post)
+        self._wait_for_notification('instance.live_migration_rollback.start')
+        self._wait_for_notification('instance.live_migration_rollback.end')
+
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-live_migration_rollback-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-live_migration_rollback-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
+
 class TestInstanceNotificationSample(
         notification_sample_base.NotificationSampleTestBase):
 
