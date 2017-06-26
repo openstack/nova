@@ -174,6 +174,12 @@ resource_classes:
   required: true
   description: >
     A list of ``resource_class`` objects.
+resource_provider_allocations:
+  type: object
+  in: body
+  required: true
+  description: >
+    A dictionary of allocation records keyed by consumer uuid.
 resource_provider_generation:
   type: integer
   in: body
