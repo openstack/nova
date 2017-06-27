@@ -67,7 +67,7 @@ class TestLocalDeleteAttachedVolumes(test.TestCase):
         # The consoleauth service is needed for deleting console tokens.
         self.start_service('consoleauth')
 
-        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+        self.useFixture(cast_as_call.CastAsCall(self))
 
         self.flavor_id = self.api.get_flavors()[0]['id']
 

@@ -72,7 +72,7 @@ class TestSerialConsoleLiveMigrate(test.TestCase):
         self.compute = self.start_service('compute', host='test_compute1')
         self.consoleauth = self.start_service('consoleauth')
 
-        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+        self.useFixture(cast_as_call.CastAsCall(self))
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
 
         self.image_id = self.api.get_images()[0]['id']

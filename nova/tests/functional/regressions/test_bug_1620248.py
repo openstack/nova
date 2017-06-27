@@ -35,7 +35,7 @@ class TestServerUpdate(test.TestCase):
         # the image fake backend needed for image discovery
         nova.tests.unit.image.fake.stub_out_image_service(self)
 
-        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+        self.useFixture(cast_as_call.CastAsCall(self))
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
 
         self.image_id = self.api.get_images()[0]['id']
