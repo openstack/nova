@@ -16,6 +16,7 @@
 import mock
 from webob import exc
 
+from nova.api.openstack import common
 from nova.api.openstack.compute import attach_interfaces \
         as attach_interfaces_v21
 from nova.compute import api as compute_api
@@ -177,15 +178,23 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         self.stub_out('nova.compute.api.API.detach_interface',
                       fake_detach_interface)
 
-        result = self.attachments.delete(self.req, FAKE_UUID1, FAKE_PORT_ID1)
-        # NOTE: on v2.1, http status code is set as wsgi_code of API
-        # method instead of status_int in a response object.
-        if isinstance(self.attachments,
-                      attach_interfaces_v21.InterfaceAttachmentController):
-            status_int = self.attachments.delete.wsgi_code
-        else:
-            status_int = result.status_int
-        self.assertEqual(202, status_int)
+        inst = objects.Instance(uuid=FAKE_UUID1)
+        with mock.patch.object(common, 'get_instance',
+                               return_value=inst) as mock_get_instance:
+            result = self.attachments.delete(self.req, FAKE_UUID1,
+                                             FAKE_PORT_ID1)
+            # NOTE: on v2.1, http status code is set as wsgi_code of API
+            # method instead of status_int in a response object.
+            if isinstance(self.attachments,
+                          attach_interfaces_v21.InterfaceAttachmentController):
+                status_int = self.attachments.delete.wsgi_code
+            else:
+                status_int = result.status_int
+            self.assertEqual(202, status_int)
+            ctxt = self.req.environ['nova.context']
+            mock_get_instance.assert_called_with(
+                self.attachments.compute_api, ctxt, FAKE_UUID1,
+                expected_attrs=['device_metadata'])
 
     def test_detach_interface_instance_locked(self):
         def fake_detach_interface_from_locked_server(self, context,

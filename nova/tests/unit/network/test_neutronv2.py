@@ -4501,6 +4501,7 @@ class TestNeutronv2WithMock(test.TestCase):
                                              raise_if_fail=True)
         mock_delete_vifs.assert_called_once_with(mock.sentinel.ctx, 'inst-1')
 
+    @mock.patch('nova.network.neutronv2.api.API._delete_nic_metadata')
     @mock.patch('nova.network.neutronv2.api.API.get_instance_nw_info')
     @mock.patch('nova.network.neutronv2.api.API._unbind_ports')
     @mock.patch('nova.objects.Instance.get_network_info')
@@ -4511,7 +4512,8 @@ class TestNeutronv2WithMock(test.TestCase):
                                                       mock_ntrn,
                                                       mock_inst_get_nwinfo,
                                                       mock_unbind,
-                                                      mock_netinfo):
+                                                      mock_netinfo,
+                                                      mock_del_nic_meta):
         mock_inst = mock.Mock(project_id="proj-1",
                               availability_zone='zone-1',
                               uuid='inst-1')
@@ -4521,14 +4523,29 @@ class TestNeutronv2WithMock(test.TestCase):
             id='3', preserve_on_delete=True)]
         mock_client = mock.Mock()
         mock_ntrn.return_value = mock_client
-        mock_vif = mock.MagicMock(spec=objects.VirtualInterface)
-        mock_get_vif_by_uuid.return_value = mock_vif
+        vif = objects.VirtualInterface()
+        vif.tag = 'foo'
+        vif.destroy = mock.MagicMock()
+        mock_get_vif_by_uuid.return_value = vif
         self.api.deallocate_port_for_instance(mock.sentinel.ctx,
                                               mock_inst, '2')
         mock_unbind.assert_called_once_with(mock.sentinel.ctx, ['2'],
                                             mock_client)
         mock_get_vif_by_uuid.assert_called_once_with(mock.sentinel.ctx, '2')
-        mock_vif.destroy.assert_called_once_with()
+        mock_del_nic_meta.assert_called_once_with(self.api, mock_inst,
+                                                  vif)
+        vif.destroy.assert_called_once_with()
+
+    def test_delete_nic_metadata(self):
+        vif = objects.VirtualInterface(address='aa:bb:cc:dd:ee:ff', tag='foo')
+        instance = fake_instance.fake_instance_obj(self.context)
+        instance.device_metadata = objects.InstanceDeviceMetadata(
+            devices=[objects.NetworkInterfaceMetadata(
+                mac='aa:bb:cc:dd:ee:ff', tag='foo')])
+        instance.save = mock.Mock()
+        self.api._delete_nic_metadata(instance, vif)
+        self.assertEqual(0, len(instance.device_metadata.devices))
+        instance.save.assert_called_once_with()
 
     @mock.patch('nova.network.neutronv2.api.API.'
                 '_check_external_network_attach')
