@@ -301,7 +301,7 @@ class API(base_api.NetworkAPI):
     # NOTE(danms): Here for neutron compatibility
     def allocate_port_for_instance(self, context, instance, port_id,
                                    network_id=None, requested_ip=None,
-                                   bind_host_id=None):
+                                   bind_host_id=None, tag=None):
         raise NotImplementedError()
 
     # NOTE(danms): Here for neutron compatibility

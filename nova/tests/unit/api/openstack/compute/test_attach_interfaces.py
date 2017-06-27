@@ -231,6 +231,14 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         self.assertEqual(result['interfaceAttachment']['net_id'],
             FAKE_NET_ID1)
 
+    @mock.patch.object(
+        compute_api.API, 'attach_interface',
+        side_effect=exception.NetworkInterfaceTaggedAttachNotSupported())
+    def test_interface_tagged_attach_not_supported(self, mock_attach):
+        body = {'interfaceAttachment': {'net_id': FAKE_NET_ID2}}
+        self.assertRaises(exc.HTTPBadRequest, self.attachments.create,
+                          self.req, FAKE_UUID1, body=body)
+
     def test_attach_interface_with_network_id(self):
         self.stub_out('nova.compute.api.API.attach_interface',
                       fake_attach_interface)

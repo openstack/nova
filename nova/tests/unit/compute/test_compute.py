@@ -9971,8 +9971,45 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(vif['id'], network_id)
         mock_allocate.assert_called_once_with(
             self.context, instance, port_id, network_id, req_ip,
-            bind_host_id='fake-host')
+            bind_host_id='fake-host', tag=None)
         return nwinfo, port_id
+
+    def test_interface_tagged_attach(self):
+        new_type = flavors.get_flavor_by_flavor_id('4')
+        instance = objects.Instance(image_ref=uuids.image_instance,
+                                    system_metadata={},
+                                    flavor=new_type,
+                                    host='fake-host')
+        nwinfo = [fake_network_cache_model.new_vif()]
+        network_id = nwinfo[0]['network']['id']
+        port_id = nwinfo[0]['id']
+        req_ip = '1.2.3.4'
+        mock_allocate = mock.Mock(return_value=nwinfo)
+        self.compute.network_api.allocate_port_for_instance = mock_allocate
+
+        with mock.patch.dict(self.compute.driver.capabilities,
+                             supports_attach_interface=True,
+                             supports_tagged_attach_interface=True):
+            vif = self.compute.attach_interface(self.context,
+                                                instance,
+                                                network_id,
+                                                port_id,
+                                                req_ip, tag='foo')
+        self.assertEqual(vif['id'], network_id)
+        mock_allocate.assert_called_once_with(
+            self.context, instance, port_id, network_id, req_ip,
+            bind_host_id='fake-host', tag='foo')
+        return nwinfo, port_id
+
+    def test_tagged_attach_interface_raises(self):
+        instance = self._create_fake_instance_obj()
+        with mock.patch.dict(self.compute.driver.capabilities,
+                             supports_attach_interface=True,
+                             supports_tagged_attach_interface=False):
+            self.assertRaises(
+                exception.NetworkInterfaceTaggedAttachNotSupported,
+                self.compute.attach_interface, self.context, instance,
+                'fake-network-id', 'fake-port-id', 'fake-req-ip', tag='foo')
 
     def test_attach_interface_failed(self):
         new_type = flavors.get_flavor_by_flavor_id('4')
@@ -10005,7 +10042,8 @@ class ComputeAPITestCase(BaseTestCase):
                               instance, network_id, port_id, req_ip)
             mock_allocate.assert_called_once_with(self.context, instance,
                                                   network_id, port_id, req_ip,
-                                                  bind_host_id='fake-host')
+                                                  bind_host_id='fake-host',
+                                                  tag=None)
             mock_deallocate.assert_called_once_with(self.context, instance,
                                                     port_id)
 

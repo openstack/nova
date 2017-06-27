@@ -183,7 +183,59 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     def test_attach_interface(self):
         self._test_compute_api('attach_interface', 'call',
                 instance=self.fake_instance_obj, network_id='id',
-                port_id='id2', version='4.0', requested_ip='192.168.1.50')
+                port_id='id2', version='4.16', requested_ip='192.168.1.50',
+                tag='foo')
+
+    def test_attach_interface_raises(self):
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        instance = self.fake_instance_obj
+        rpcapi = compute_rpcapi.ComputeAPI()
+        cctxt_mock = mock.Mock()
+        mock_client = mock.Mock()
+        rpcapi.router.client = mock.Mock()
+        rpcapi.router.client.return_value = mock_client
+        with test.nested(
+            mock.patch.object(mock_client, 'can_send_version',
+                              return_value=False),
+            mock.patch.object(mock_client, 'prepare',
+                              return_value=cctxt_mock)
+        ) as (
+            can_send_mock, prepare_mock
+        ):
+            self.assertRaises(exception.TaggedAttachmentNotSupported,
+                              rpcapi.attach_interface, ctxt, instance,
+                              'fake_network', 'fake_port', 'fake_requested_ip',
+                              tag='foo')
+        can_send_mock.assert_called_once_with('4.16')
+
+    def test_attach_interface_downgrades_version(self):
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        instance = self.fake_instance_obj
+        rpcapi = compute_rpcapi.ComputeAPI()
+        call_mock = mock.Mock()
+        cctxt_mock = mock.Mock(call=call_mock)
+        mock_client = mock.Mock()
+        rpcapi.router.client = mock.Mock()
+        rpcapi.router.client.return_value = mock_client
+        with test.nested(
+            mock.patch.object(mock_client, 'can_send_version',
+                              return_value=False),
+            mock.patch.object(mock_client, 'prepare',
+                              return_value=cctxt_mock)
+        ) as (
+            can_send_mock, prepare_mock
+        ):
+            rpcapi.attach_interface(ctxt, instance, 'fake_network',
+                                    'fake_port', 'fake_requested_ip')
+
+        can_send_mock.assert_called_once_with('4.16')
+        prepare_mock.assert_called_once_with(server=instance['host'],
+                                             version='4.0')
+        call_mock.assert_called_once_with(ctxt, 'attach_interface',
+                                          instance=instance,
+                                          network_id='fake_network',
+                                          port_id='fake_port',
+                                          requested_ip='fake_requested_ip')
 
     def test_attach_volume(self):
         self._test_compute_api('attach_volume', 'cast',

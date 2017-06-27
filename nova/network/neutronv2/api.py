@@ -1196,13 +1196,14 @@ class API(base_api.NetworkAPI):
 
     def allocate_port_for_instance(self, context, instance, port_id,
                                    network_id=None, requested_ip=None,
-                                   bind_host_id=None):
+                                   bind_host_id=None, tag=None):
         """Allocate a port for the instance."""
         requested_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(network_id=network_id,
                                             address=requested_ip,
                                             port_id=port_id,
-                                            pci_request_id=None)])
+                                            pci_request_id=None,
+                                            tag=tag)])
         return self.allocate_for_instance(context, instance, vpn=False,
                 requested_networks=requested_networks,
                 bind_host_id=bind_host_id)

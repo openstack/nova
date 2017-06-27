@@ -4445,6 +4445,16 @@ class TestNeutronv2WithMock(test.TestCase):
             "No specific network was requested and none are available for "
             "project 'fake-project'.", six.text_type(ex))
 
+    @mock.patch.object(neutronapi.API, 'allocate_for_instance')
+    def test_allocate_port_for_instance_with_tag(self, mock_allocate):
+        instance = fake_instance.fake_instance_obj(self.context)
+        api = neutronapi.API()
+        api.allocate_port_for_instance(self.context, instance, None,
+                                       network_id=None, requested_ip=None,
+                                       bind_host_id=None, tag='foo')
+        req_nets_in_call = mock_allocate.call_args[1]['requested_networks']
+        self.assertEqual('foo', req_nets_in_call.objects[0].tag)
+
     @mock.patch('nova.objects.network_request.utils')
     @mock.patch('nova.network.neutronv2.api.LOG')
     @mock.patch('nova.network.neutronv2.api.base_api')

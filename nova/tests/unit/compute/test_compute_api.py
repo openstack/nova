@@ -5229,6 +5229,15 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         self.assertItemsEqual(['default', uuids.secgroup_uuid],
                               security_groups)
 
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_interface')
+    def test_tagged_interface_attach(self, mock_attach):
+        instance = self._create_instance_obj()
+        self.compute_api.attach_interface(self.context, instance, None, None,
+                                          None, tag='foo')
+        mock_attach.assert_called_with(self.context, instance=instance,
+                                       network_id=None, port_id=None,
+                                       requested_ip=None, tag='foo')
+
 
 class ComputeAPIAPICellUnitTestCase(_ComputeAPIUnitTestMixIn,
                                     test.NoDBTestCase):

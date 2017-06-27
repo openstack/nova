@@ -283,6 +283,11 @@ class VolumeTaggedAttachToShelvedNotSupported(TaggedAttachmentNotSupported):
                 "shelved-offloaded instances.")
 
 
+class NetworkInterfaceTaggedAttachNotSupported(TaggedAttachmentNotSupported):
+    msg_fmt = _("Tagged network interface attachment is not supported for "
+                "this server instance.")
+
+
 class InvalidKeypair(Invalid):
     msg_fmt = _("Keypair data is invalid: %(reason)s")
 
