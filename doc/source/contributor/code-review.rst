@@ -241,8 +241,9 @@ If a new microversion API is added, the following needs to happen:
 
 Notifications
 =============
+
 * Every new notification type shall use the new versioned notification
-  infrastructure documented in :doc:`notifications`
+  infrastructure documented in :doc:`/notifications`
 
 Release Notes
 =============

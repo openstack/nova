@@ -197,7 +197,7 @@ But let's put a Nova specific twist on things...
 Overview
 ~~~~~~~~
 
-.. image:: ./images/Nova_spec_process.svg
+.. image:: /_static/images/nova-spec-process.svg
    :alt: Flow chart showing the Nova bug/feature process
 
 Where do you track bugs?

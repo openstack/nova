@@ -85,7 +85,7 @@ integration testing efforts.
 .. toctree::
    :maxdepth: 1
 
-   test_strategy
+   contributor/testing
    feature_classification
    support-matrix
 
@@ -98,11 +98,11 @@ actually does, and why.
 .. toctree::
    :maxdepth: 1
 
-   how_to_get_involved
-   process
+   contributor/how-to-get-involved
+   contributor/process
    architecture
-   project_scope
-   development.environment
+   contributor/project-scope
+   contributor/development-environment
 
 Development Policies
 --------------------
@@ -124,11 +124,11 @@ community, while keeping users happy and keeping developers productive.
 .. toctree::
    :maxdepth: 1
 
-   process
-   blueprints
-   policies
-   code-review
-   releasenotes
+   contributor/process
+   contributor/blueprints
+   contributor/policies
+   contributor/code-review
+   contributor/releasenotes
 
 Architecture Concepts
 ----------------------
@@ -146,7 +146,7 @@ Open Development.
 .. toctree::
    :maxdepth: 1
 
-   addmethod.openstackapi
+   contributor/api-2
    rpc
    block_device_mapping
    conductor
@@ -155,7 +155,7 @@ Open Development.
    i18n
    notifications
    placement
-   placement_dev
+   contributor/placement
    quotas
    threading
    vmstates
@@ -176,8 +176,8 @@ these are a great place to start reading up on the current plans.
 
    cells
    upgrade
-   api_plugins
-   api_microversion_dev
+   contributor/api
+   contributor/microversions
    policy_enforcement
    stable_api
    scheduler_evolution
@@ -189,9 +189,9 @@ Advanced testing and guides
     :maxdepth: 1
 
     gmr
-    testing/libvirt-numa
-    testing/serial-console
-    testing/zero-downtime-upgrade
+    contributor/testing/libvirt-numa
+    contributor/testing/serial-console
+    contributor/testing/zero-downtime-upgrade
 
 Sample Configuration File
 -------------------------
