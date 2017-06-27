@@ -335,6 +335,14 @@ class TestNormalizeResourceQsParam(test.NoDBTestCase):
         }
         self.assertEqual(expected, resources)
 
+    def test_400_empty_string(self):
+        qs = ""
+        self.assertRaises(
+            webob.exc.HTTPBadRequest,
+            util.normalize_resources_qs_param,
+            qs,
+        )
+
     def test_400_bad_int(self):
         qs = "VCPU:foo"
         self.assertRaises(
