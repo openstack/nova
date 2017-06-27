@@ -48,7 +48,9 @@ class FilterScheduler(driver.Scheduler):
         self.scheduler_client = scheduler_client.SchedulerClient()
 
     def select_destinations(self, context, spec_obj, instance_uuids):
-        """Selects a filtered set of hosts and nodes."""
+        """Returns a sorted list of HostState objects that satisfy the
+        supplied request_spec.
+        """
         self.notifier.info(
             context, 'scheduler.select_destinations.start',
             dict(request_spec=spec_obj.to_legacy_request_spec_dict()))
@@ -77,13 +79,10 @@ class FilterScheduler(driver.Scheduler):
             reason = _('There are not enough hosts available.')
             raise exception.NoValidHost(reason=reason)
 
-        dests = [dict(host=host.obj.host, nodename=host.obj.nodename,
-                      limits=host.obj.limits) for host in selected_hosts]
-
         self.notifier.info(
             context, 'scheduler.select_destinations.end',
             dict(request_spec=spec_obj.to_legacy_request_spec_dict()))
-        return dests
+        return [host.obj for host in selected_hosts]
 
     def _schedule(self, context, spec_obj, instance_uuids):
         """Returns a list of hosts that meet the required specs,

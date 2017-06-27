@@ -97,7 +97,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
         result = self._test_select_destinations(spec_obj)
 
         self.assertEqual(1, len(result))
-        self.assertEqual(result[0]["host"], fake_host.host)
+        self.assertEqual(result[0].host, fake_host.host)
 
     def _test_select_destinations(self, spec_obj):
         return self.driver.select_destinations(
@@ -224,7 +224,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
         }
         d = self.driver.select_destinations(self.context, spec_obj,
                 [spec_obj.instance_uuid])
-        self.assertIn(d[0]['host'], [hs.host for hs in host_states_cell2])
+        self.assertIn(d[0].host, [hs.host for hs in host_states_cell2])
 
 
 if __name__ == '__main__':

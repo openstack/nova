@@ -56,9 +56,8 @@ class Scheduler(object):
 
     @abc.abstractmethod
     def select_destinations(self, context, spec_obj, instance_uuids):
-        """Must override select_destinations method.
-
-        :return: A list of dicts with 'host', 'nodename' and 'limits' as keys
-            that satisfies the request_spec and filter_properties.
+        """Returns a list of HostState objects that have been chosen by the
+        scheduler driver, one for each requested instance
+        (spec_obj.num_instances)
         """
         return []
