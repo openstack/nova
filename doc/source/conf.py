@@ -24,7 +24,7 @@ sys.path.insert(0, os.path.abspath('./'))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 
 extensions = ['sphinx.ext.autodoc',
-              'ext.nova_todo',
+              'sphinx.ext.todo',
               'sphinx.ext.coverage',
               'sphinx.ext.graphviz',
               'oslosphinx',
