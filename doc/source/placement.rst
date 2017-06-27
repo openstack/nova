@@ -142,11 +142,11 @@ Upgrade Notes
 
 The follow sub-sections provide notes on upgrading to a given target release.
 
-.. note:: As a reminder, the `nova-status upgrade check`_ tool can be used to
-  help determine the status of your deployment and how ready it is to perform
-  an upgrade.
+.. note::
 
-.. _nova-status upgrade check: http://docs.openstack.org/developer/nova/man/nova-status.html
+   As a reminder, the :doc:`nova-status upgrade check </cli/nova-status>` tool
+   can be used to help determine the status of your deployment and how ready it
+   is to perform an upgrade.
 
 Ocata (15.0.0)
 ~~~~~~~~~~~~~~

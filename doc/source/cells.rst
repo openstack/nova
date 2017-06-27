@@ -333,7 +333,7 @@ utilized.
 References
 ~~~~~~~~~~
 
-* `man pages for the cells v2 commands <http://docs.openstack.org/developer/nova/man/nova-manage.html#nova-cells-v2>`_
+* :doc:`nova-manage man page </cli/nova-manage>`
 
 Step-By-Step for Common Use Cases
 =================================
@@ -555,7 +555,7 @@ you did not configure the automatic host discovery as described in step 5 in
 References
 ~~~~~~~~~~
 
-* `man pages for the cells v2 commands <http://docs.openstack.org/developer/nova/man/nova-manage.html#nova-cells-v2>`_
+* :doc:`nova-manage man page </cli/nova-manage>`
 
 FAQs
 ====
