@@ -243,7 +243,7 @@ Notifications
 =============
 
 * Every new notification type shall use the new versioned notification
-  infrastructure documented in :doc:`/notifications`
+  infrastructure documented in :doc:`/reference/notifications`
 
 Release Notes
 =============

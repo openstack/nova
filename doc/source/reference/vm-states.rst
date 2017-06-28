@@ -136,6 +136,6 @@ Create Instance States
 The following diagram shows the sequence of VM states, task states, and
 power states when a new VM instance is created.
 
-.. image:: ./images/create_vm_states.svg
+.. image:: /_static/images/create-vm-states.svg
    :alt: Sequence of VM states, task states, and power states when a new
          VM instance is created.

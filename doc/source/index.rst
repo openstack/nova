@@ -54,7 +54,7 @@ forward. You can also see a history of our microversions here:
 .. toctree::
    :maxdepth: 1
 
-   api_microversion_history
+   reference/api-microversion-history
 
 .. note::
     Only Version 2.1 APIs should be used from this point forward, Version 2.0
@@ -147,18 +147,18 @@ Open Development.
    :maxdepth: 1
 
    contributor/api-2
-   rpc
+   reference/rpc
    block_device_mapping
    conductor
    filter_scheduler
    aggregates
-   i18n
-   notifications
+   reference/i18n
+   reference/notifications
    placement
    contributor/placement
    quotas
-   threading
-   vmstates
+   reference/threading
+   reference/vm-states
    wsgi
 
 Architecture Evolution Plans
@@ -178,9 +178,9 @@ these are a great place to start reading up on the current plans.
    upgrade
    contributor/api
    contributor/microversions
-   policy_enforcement
-   stable_api
-   scheduler_evolution
+   reference/policy-enforcement
+   reference/stable-api
+   reference/scheduler-evolution
 
 Advanced testing and guides
 ----------------------------
@@ -188,7 +188,7 @@ Advanced testing and guides
 .. toctree::
     :maxdepth: 1
 
-    gmr
+    reference/gmr
     contributor/testing/libvirt-numa
     contributor/testing/serial-console
     contributor/testing/zero-downtime-upgrade
@@ -222,7 +222,7 @@ Module Reference
 .. toctree::
    :maxdepth: 1
 
-   services
+   reference/services
 
 
 .. # NOTE(mriedem): This is the section where we hide things that we don't

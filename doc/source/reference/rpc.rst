@@ -25,7 +25,7 @@ AMQP is the messaging technology chosen by the OpenStack cloud.  The AMQP broker
 
 Nova uses direct, fanout, and topic-based exchanges. The architecture looks like the one depicted in the figure below:
 
-.. image:: ./images/rpc/arch.png
+.. image:: /_static/images/rpc-arch.png
    :width: 60%
 
 ..
@@ -47,7 +47,7 @@ Figure 2 shows the following internal elements:
     * Direct Exchange: this is a routing table that is created during rpc.call operations; there are many instances of this kind of exchange throughout the life-cycle of a message broker node, one for each rpc.call invoked.
     * Queue Element: A Queue is a message bucket. Messages are kept in the queue until a Consumer (either Topic or Direct Consumer) connects to the queue and fetch it. Queues can be shared or can be exclusive. Queues whose routing key is 'topic' are shared amongst Workers of the same personality.
 
-.. image:: ./images/rpc/rabt.png
+.. image:: /_static/images/rpc-rabt.png
    :width: 60%
 
 ..
@@ -62,7 +62,7 @@ The diagram below shows the message flow during an rpc.call operation:
     3. once the task is completed, a Direct Publisher is allocated to send the response message to the queuing system.
     4. once the message is dispatched by the exchange, it is fetched by the Direct Consumer dictated by the routing key (such as 'msg_id') and passed to the Invoker.
 
-.. image:: ./images/rpc/flow1.png
+.. image:: /_static/images/rpc-flow-1.png
    :width: 60%
 
 ..
@@ -75,7 +75,7 @@ The diagram below shows the message flow during an rpc.cast operation:
     1. A Topic Publisher is instantiated to send the message request to the queuing system.
     2. Once the message is dispatched by the exchange, it is fetched by the Topic Consumer dictated by the routing key (such as 'topic') and passed to the Worker in charge of the task.
 
-.. image:: ./images/rpc/flow2.png
+.. image:: /_static/images/rpc-flow-2.png
    :width: 60%
 
 ..
@@ -100,7 +100,7 @@ The figure below shows the status of a RabbitMQ node after Nova components' boot
        5. scheduler.phantom (phantom is hostname)
        6. scheduler
 
-.. image:: ./images/rpc/state.png
+.. image:: /_static/images/rpc-state.png
    :width: 60%
 
 ..

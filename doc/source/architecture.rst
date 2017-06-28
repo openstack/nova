@@ -32,7 +32,7 @@ a `manager` that is listening for `RPC` messages.
 The one major exception is nova-compute, where a single process runs on the
 hypervisor it is managing (except when using the VMware or Ironic drivers).
 The manager also, optionally, has periodic tasks.
-For more details on our `RPC` system, please see: :doc:`rpc`
+For more details on our `RPC` system, please see: :doc:`/reference/rpc`
 
 Nova also uses a central database that is (logically) shared between all
 components. However, to aid upgrade, the DB is accessed through an object
