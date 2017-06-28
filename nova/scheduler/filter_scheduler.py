@@ -27,10 +27,10 @@ from six.moves import range
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova.objects import fields
 from nova import rpc
 from nova.scheduler import client as scheduler_client
 from nova.scheduler import driver
+from nova.scheduler import utils
 
 
 CONF = nova.conf.CONF
@@ -135,37 +135,10 @@ class FilterScheduler(driver.Scheduler):
                 spec_obj.instance_group.obj_reset_changes(['hosts'])
         return selected_hosts
 
-    def _get_resources_per_request_spec(self, spec_obj):
-        resources = {}
-
-        resources[fields.ResourceClass.VCPU] = spec_obj.vcpus
-        resources[fields.ResourceClass.MEMORY_MB] = spec_obj.memory_mb
-
-        requested_disk_mb = (1024 * (spec_obj.root_gb +
-                                     spec_obj.ephemeral_gb) +
-                             spec_obj.swap)
-        # NOTE(sbauza): Disk request is expressed in MB but we count
-        # resources in GB. Since there could be a remainder of the division
-        # by 1024, we need to ceil the result to the next bigger Gb so we
-        # can be sure there would be enough disk space in the destination
-        # to sustain the request.
-        # FIXME(sbauza): All of that could be using math.ceil() but since
-        # we support both py2 and py3, let's fake it until we only support
-        # py3.
-        requested_disk_gb = requested_disk_mb // 1024
-        if requested_disk_mb % 1024 != 0:
-            # Let's ask for a bit more space since we count in GB
-            requested_disk_gb += 1
-        # NOTE(sbauza): Some flavors provide zero size for disk values, we need
-        # to avoid asking for disk usage.
-        if requested_disk_gb != 0:
-            resources[fields.ResourceClass.DISK_GB] = requested_disk_gb
-
-        return resources
-
     def _get_all_host_states(self, context, spec_obj):
         """Template method, so a subclass can implement caching."""
-        filters = {'resources': self._get_resources_per_request_spec(spec_obj)}
+        resources = utils.resources_from_request_spec(spec_obj)
+        filters = {'resources': resources}
         reportclient = self.scheduler_client.reportclient
         rps = reportclient.get_filtered_resource_providers(filters)
         # NOTE(sbauza): In case the Placement service is not running yet or

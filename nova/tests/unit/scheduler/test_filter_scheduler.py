@@ -373,29 +373,3 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 # Make sure that the consumed hosts have chance to be reverted.
                 for host in consumed_hosts:
                     self.assertIsNone(host.obj.updated)
-
-    def _test_get_resources_per_request_spec(self, flavor, expected):
-        fake_spec = objects.RequestSpec(flavor=flavor)
-        resources = self.driver._get_resources_per_request_spec(fake_spec)
-        self.assertEqual(expected, resources)
-
-    def test_get_resources_per_request_spec(self):
-        flavor = objects.Flavor(vcpus=1,
-                                memory_mb=1024,
-                                root_gb=10,
-                                ephemeral_gb=5,
-                                swap=0)
-        expected_resources = {'VCPU': 1,
-                              'MEMORY_MB': 1024,
-                              'DISK_GB': 15}
-        self._test_get_resources_per_request_spec(flavor, expected_resources)
-
-    def test_get_resources_per_request_spec_with_no_disk(self):
-        flavor = objects.Flavor(vcpus=1,
-                                memory_mb=1024,
-                                root_gb=0,
-                                ephemeral_gb=0,
-                                swap=0)
-        expected_resources = {'VCPU': 1,
-                              'MEMORY_MB': 1024}
-        self._test_get_resources_per_request_spec(flavor, expected_resources)
