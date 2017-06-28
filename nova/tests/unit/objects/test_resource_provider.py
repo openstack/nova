@@ -13,6 +13,7 @@
 import mock
 import six
 
+import nova
 from nova import context
 from nova import exception
 from nova import objects
@@ -581,3 +582,14 @@ class TestResourceClass(test.NoDBTestCase):
         rc = objects.ResourceClass(self.context)
         exc = self.assertRaises(exception.ObjectActionError, rc.create)
         self.assertIn('name is required', str(exc))
+
+
+class TestTraitSync(test_objects._LocalTest):
+    @mock.patch("nova.objects.resource_provider._trait_sync")
+    def test_sync_flag(self, mock_sync):
+        synced = nova.objects.resource_provider._TRAITS_SYNCED
+        self.assertFalse(synced)
+        # Sync the traits
+        nova.objects.resource_provider._ensure_trait_sync(self.context)
+        synced = nova.objects.resource_provider._TRAITS_SYNCED
+        self.assertTrue(synced)

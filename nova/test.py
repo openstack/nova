@@ -294,6 +294,9 @@ class TestCase(testtools.TestCase):
         # caching of that value.
         utils._IS_NEUTRON = None
 
+        # Reset the traits sync flag
+        objects.resource_provider._TRAITS_SYNCED = False
+
         mox_fixture = self.useFixture(moxstubout.MoxStubout())
         self.mox = mox_fixture.mox
         self.stubs = mox_fixture.stubs
