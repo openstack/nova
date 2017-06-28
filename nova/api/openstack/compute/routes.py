@@ -53,6 +53,7 @@ from nova.api.openstack.compute import fping
 from nova.api.openstack.compute import hide_server_addresses
 from nova.api.openstack.compute import hosts
 from nova.api.openstack.compute import hypervisors
+from nova.api.openstack.compute import image_metadata
 from nova.api.openstack.compute import image_size
 from nova.api.openstack.compute import images
 from nova.api.openstack.compute import instance_actions
@@ -200,6 +201,11 @@ hypervisors_controller = functools.partial(
 images_controller = functools.partial(
     _create_controller, images.ImagesController,
     [image_size.ImageSizeController], [])
+
+
+image_metadata_controller = functools.partial(
+    _create_controller, image_metadata.ImageMetadataController,
+    [], [])
 
 
 instance_actions_controller = functools.partial(_create_controller,
@@ -390,6 +396,16 @@ ROUTE_LIST = (
     ('/images/{id}', {
         'GET': [images_controller, 'show'],
         'DELETE': [images_controller, 'delete']
+    }),
+    ('/images/{image_id}/metadata', {
+        'GET': [image_metadata_controller, 'index'],
+        'POST': [image_metadata_controller, 'create'],
+        'PUT': [image_metadata_controller, 'update_all']
+    }),
+    ('/images/{image_id}/metadata/{id}', {
+        'GET': [image_metadata_controller, 'show'],
+        'PUT': [image_metadata_controller, 'update'],
+        'DELETE': [image_metadata_controller, 'delete']
     }),
     ('/limits', {
         'GET': [limits_controller, 'index']

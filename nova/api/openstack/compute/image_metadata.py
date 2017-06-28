@@ -27,8 +27,6 @@ from nova import exception
 from nova.i18n import _
 import nova.image
 
-ALIAS = 'image-metadata'
-
 
 class ImageMetadataController(wsgi.Controller):
     """The image metadata API controller for the OpenStack API."""
@@ -134,36 +132,3 @@ class ImageMetadataController(wsgi.Controller):
                                   purge_props=True)
         except exception.ImageNotAuthorized as e:
             raise exc.HTTPForbidden(explanation=e.format_message())
-
-
-class ImageMetadata(extensions.V21APIExtensionBase):
-    """Image Metadata API."""
-    name = "ImageMetadata"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        parent = {'member_name': 'image',
-                  'collection_name': 'images'}
-        resources = [extensions.ResourceExtension('metadata',
-                                                  ImageMetadataController(),
-                                                  member_name='image_meta',
-                                                  parent=parent,
-                                                  custom_routes_fn=
-                                                  self.image_metadata_map
-                                                  )]
-        return resources
-
-    def get_controller_extensions(self):
-        return []
-
-    def image_metadata_map(self, mapper, wsgi_resource):
-        mapper.connect("metadata",
-                       "/{project_id}/images/{image_id}/metadata",
-                       controller=wsgi_resource,
-                       action='update_all', conditions={"method": ['PUT']})
-        # Also connect the non project_id route
-        mapper.connect("metadata",
-                       "/images/{image_id}/metadata",
-                       controller=wsgi_resource,
-                       action='update_all', conditions={"method": ['PUT']})
