@@ -89,3 +89,5 @@ class GlanceStore(object):
                                      host_glance.upload_vhd, image_id, params)
         except xenapi_exception.PluginRetriesExceeded:
             raise exception.CouldNotUploadImage(image_id=image_id)
+        except xenapi_exception.PluginImageNotFound:
+            raise exception.ImageNotFound(image_id=image_id)
