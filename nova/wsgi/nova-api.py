@@ -10,15 +10,32 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""WSGI script for Nova API
+"""Broken, non-working WSGI script for Nova API that will not work.
 
-EXPERIMENTAL support script for running Nova API under Apache2 etc.
+#################################
+#        DO NOT RUN THIS        #
+#################################
 
-Just to be clear, EXPERIMENTAL means DO NOT RUN THIS IN
-PRODUCTION. There are KNOWN things that will break if you run your API
-services under Apache (et al), plus a bunch of other unknown ones most
-likely. At this point, this is not tested anywhere in Nova's gate.
-Buyer beware.
+This is not experimental, it's BROKEN. It will not work. It is kept
+in the tree for gate reasons and will be removed as soon as possible.
+There is an updated WSGI application for use under a real http daemon
+which does things that this does not, which is actually tested, and
+which will be supported. Run this instead:
+
+  nova/api/openstack/compute/wsgi.py
+
+which, when installed, becomes
+
+  $BINDIR/nova-api-wsgi
+
+Post-warning quiz:
+
+Q: Should I run this?
+
+  (a) No
+  (b) Heck no
+  (c) Definitely not
+  (d) All of the above
 
 """
 
