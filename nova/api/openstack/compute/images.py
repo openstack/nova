@@ -27,8 +27,6 @@ import nova.image
 import nova.utils
 
 
-ALIAS = 'images'
-
 SUPPORTED_FILTERS = {
     'name': 'name',
     'status': 'status',
@@ -154,22 +152,3 @@ class ImagesController(wsgi.Controller):
 
         req.cache_db_items('images', images, 'id')
         return self._view_builder.detail(req, images)
-
-
-class Images(extensions.V21APIExtensionBase):
-    """Proxying API for Images."""
-
-    name = "Images"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        coll_actions = {'detail': 'GET'}
-        resource = extensions.ResourceExtension(ALIAS,
-                ImagesController(),
-                collection_actions=coll_actions)
-
-        return [resource]
-
-    def get_controller_extensions(self):
-        return []
