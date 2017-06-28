@@ -322,7 +322,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             dests = self.driver.select_destinations(self.context, spec_obj,
                     instance_uuids)
 
-        (host, node) = (dests[0]['host'], dests[0]['nodename'])
+        (host, node) = (dests[0].host, dests[0].nodename)
         self.assertEqual(host, selected_hosts[0])
         self.assertEqual(node, selected_nodes[0])
 

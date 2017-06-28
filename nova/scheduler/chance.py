@@ -65,7 +65,7 @@ class ChanceScheduler(driver.Scheduler):
         dests = []
         for i in range(num_instances):
             host = self._schedule(context, CONF.compute_topic, spec_obj)
-            host_state = dict(host=host, nodename=None, limits=None)
+            host_state = self.host_manager.host_state_cls(host, None, None)
             dests.append(host_state)
 
         if len(dests) < num_instances:

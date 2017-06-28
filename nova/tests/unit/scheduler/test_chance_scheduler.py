@@ -67,10 +67,10 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 [uuids.instance1, uuids.instance2])
 
         self.assertEqual(2, len(dests))
-        (host, node) = (dests[0]['host'], dests[0]['nodename'])
+        (host, node) = (dests[0].host, dests[0].nodename)
         self.assertEqual('host3', host)
         self.assertIsNone(node)
-        (host, node) = (dests[1]['host'], dests[1]['nodename'])
+        (host, node) = (dests[1].host, dests[1].nodename)
         self.assertEqual('host2', host)
         self.assertIsNone(node)
 

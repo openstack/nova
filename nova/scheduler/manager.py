@@ -41,6 +41,14 @@ CONF = nova.conf.CONF
 QUOTAS = quota.QUOTAS
 
 
+def _host_state_obj_to_dict(host_state):
+    return {
+        'host': host_state.host,
+        'nodename': host_state.nodename,
+        'limits': host_state.limits,
+    }
+
+
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
 
@@ -96,7 +104,8 @@ class SchedulerManager(manager.Manager):
                                                            request_spec,
                                                            filter_properties)
         dests = self.driver.select_destinations(ctxt, spec_obj, instance_uuids)
-        return jsonutils.to_primitive(dests)
+        dest_dicts = [_host_state_obj_to_dict(d) for d in dests]
+        return jsonutils.to_primitive(dest_dicts)
 
     def update_aggregates(self, ctxt, aggregates):
         """Updates HostManager internal aggregates information.
