@@ -2808,7 +2808,7 @@ class ComputeTestCase(BaseTestCase,
             func(self.context, bdms)
             # Verify volumes to be detached without destroying
             mock_detach.assert_called_once_with(self.context,
-                                                bdms[0].volume_id,
+                                                bdms[0],
                                                 instance, destroy_bdm=False)
 
         self.stub_out('nova.virt.fake.FakeDriver.rebuild', fake)

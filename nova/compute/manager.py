@@ -2943,7 +2943,7 @@ class ComputeManager(manager.Manager):
         def detach_block_devices(context, bdms):
             for bdm in bdms:
                 if bdm.is_volume:
-                    self._detach_volume(context, bdm.volume_id, instance,
+                    self._detach_volume(context, bdm, instance,
                                         destroy_bdm=False)
 
         files = self._decode_files(injected_files)
@@ -4931,25 +4931,25 @@ class ComputeManager(manager.Manager):
         self.notifier.info(context, 'volume.usage',
                            compute_utils.usage_volume_info(vol_usage))
 
-    def _detach_volume(self, context, volume_id, instance, destroy_bdm=True,
+    def _detach_volume(self, context, bdm, instance, destroy_bdm=True,
                        attachment_id=None):
         """Detach a volume from an instance.
 
         :param context: security context
-        :param volume_id: the volume id
+        :param bdm: nova.objects.BlockDeviceMapping volume bdm to detach
         :param instance: the Instance object to detach the volume from
         :param destroy_bdm: if True, the corresponding BDM entry will be marked
                             as deleted. Disabling this is useful for operations
                             like rebuild, when we don't want to destroy BDM
-
+        :param attachment_id: The volume attachment_id for the given instance
+                              and volume.
         """
+        volume_id = bdm.volume_id
         compute_utils.notify_about_volume_attach_detach(
             context, instance, self.host,
             action=fields.NotificationAction.VOLUME_DETACH,
             phase=fields.NotificationPhase.START,
             volume_id=volume_id)
-        bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
-                context, volume_id, instance.uuid)
 
         self._notify_volume_usage_detach(context, instance, bdm)
 
@@ -4975,9 +4975,18 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     @wrap_instance_fault
     def detach_volume(self, context, volume_id, instance, attachment_id=None):
-        """Detach a volume from an instance."""
+        """Detach a volume from an instance.
 
-        self._detach_volume(context, volume_id, instance,
+        :param context: security context
+        :param volume_id: the volume id
+        :param instance: the Instance object to detach the volume from
+        :param attachment_id: The volume attachment_id for the given instance
+                              and volume.
+
+        """
+        bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
+                context, volume_id, instance.uuid)
+        self._detach_volume(context, bdm, instance,
                             attachment_id=attachment_id)
 
     def _init_volume_connection(self, context, new_volume_id,
