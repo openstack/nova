@@ -1,0 +1,7 @@
+{
+    "usages": {
+        "DISK_GB": 5,
+        "MEMORY_MB": 512,
+        "VCPU": 2
+    }
+}
