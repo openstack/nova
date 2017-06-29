@@ -227,4 +227,4 @@ nova-compute service could be Newton level code making requests to an Ocata
 placement API, and vice-versa, an Ocata compute service in a cells v2 cell
 could be making requests to a Newton placement API.
 
-.. include:: ../../nova/api/openstack/placement/rest_api_version_history.rst
+.. include:: ../../../nova/api/openstack/placement/rest_api_version_history.rst

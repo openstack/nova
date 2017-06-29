@@ -8,7 +8,7 @@ working with Compute Nodes only.
 Filtering
 ---------
 
-.. image:: ./images/filteringWorkflow1.png
+.. image:: /_static/images/filtering-workflow-1.png
 
 During its work Filter Scheduler iterates over all found compute nodes,
 evaluating each against a set of filters. The list of resulting hosts is
@@ -470,7 +470,7 @@ so subsequent selections can adjust accordingly. It is useful if the customer
 asks for a large block of instances, because weight is computed for
 each instance requested.
 
-.. image:: ./images/filteringWorkflow2.png
+.. image:: /_static/images/filtering-workflow-2.png
 
 At the end Filter Scheduler sorts selected hosts by their weight and attempts
 to provision instances on the chosen hosts.

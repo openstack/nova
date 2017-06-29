@@ -52,7 +52,7 @@ Below there are sections on NFV and HPC specific features. These look at
 specific features and scenarios that are important to those more specific
 sets of use cases.
 
-.. feature_matrix:: feature_matrix_gp.ini
+.. feature_matrix:: feature-matrix-gp.ini
 
 .. _matrix-nfv:
 
@@ -65,7 +65,7 @@ create a particular service. It is common for this workloads needing
 bare metal like performance, i.e. low latency and close to line speed
 performance.
 
-.. feature_matrix:: feature_matrix_nfv.ini
+.. feature_matrix:: feature-matrix-nfv.ini
 
 .. _matrix-hpc:
 
@@ -75,7 +75,7 @@ HPC Cloud Features
 High Performance Compute (HPC) cloud have some specific needs that are covered
 in this set of features.
 
-.. feature_matrix:: feature_matrix_hpc.ini
+.. feature_matrix:: feature-matrix-hpc.ini
 
 .. _notes-on-concepts:
 

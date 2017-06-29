@@ -50,7 +50,7 @@ Components
 Below you will find a helpful explanation of the key components
 of a typical (non-cells v1) Nova deployment.
 
-.. image:: ./images/architecture.svg
+.. image:: /_static/images/architecture.svg
    :width: 100%
 
 * DB: sql database for data storage.

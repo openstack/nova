@@ -26,8 +26,8 @@ features working across upgrades, we must aim to test all features.
 Reporting Test Coverage
 =======================
 
-For details on plans to report the current test coverage, please see:
-:doc:`/feature_classification`
+For details on plans to report the current test coverage, refer to
+:doc:`/user/feature-classification`.
 
 Running tests and reporting results
 ===================================

@@ -86,8 +86,8 @@ integration testing efforts.
    :maxdepth: 1
 
    contributor/testing
-   feature_classification
-   support-matrix
+   user/feature-classification
+   user/support-matrix
 
 Developer Guide
 ===============
@@ -100,7 +100,7 @@ actually does, and why.
 
    contributor/how-to-get-involved
    contributor/process
-   architecture
+   user/architecture
    contributor/project-scope
    contributor/development-environment
 
@@ -148,18 +148,18 @@ Open Development.
 
    contributor/api-2
    reference/rpc
-   block_device_mapping
-   conductor
-   filter_scheduler
-   aggregates
+   user/block-device-mapping
+   user/conductor
+   user/filter-scheduler
+   user/aggregates
    reference/i18n
    reference/notifications
-   placement
+   user/placement
    contributor/placement
-   quotas
+   user/quotas
    reference/threading
    reference/vm-states
-   wsgi
+   user/wsgi
 
 Architecture Evolution Plans
 -----------------------------
@@ -174,8 +174,8 @@ these are a great place to start reading up on the current plans.
 .. toctree::
    :maxdepth: 1
 
-   cells
-   upgrade
+   user/cells
+   user/upgrade
    contributor/api
    contributor/microversions
    reference/policy-enforcement
@@ -238,7 +238,7 @@ Metadata
 .. toctree::
     :maxdepth: 1
 
-    vendordata
+    user/vendordata
 
 Indices and tables
 ==================
