@@ -35,6 +35,8 @@ class InstancePayload(base.NotificationPayloadBase):
 
         'image_uuid': ('instance', 'image_ref'),
 
+        'key_name': ('instance', 'key_name'),
+
         'kernel_id': ('instance', 'kernel_id'),
         'ramdisk_id': ('instance', 'ramdisk_id'),
 
@@ -55,7 +57,8 @@ class InstancePayload(base.NotificationPayloadBase):
     # Version 1.0: Initial version
     # Version 1.1: add locked and display_description field
     # Version 1.2: Add auto_disk_config field
-    VERSION = '1.2'
+    # Version 1.3: Add key_name field
+    VERSION = '1.3'
     fields = {
         'uuid': fields.UUIDField(),
         'user_id': fields.StringField(nullable=True),
@@ -72,6 +75,8 @@ class InstancePayload(base.NotificationPayloadBase):
 
         'flavor': fields.ObjectField('FlavorPayload'),
         'image_uuid': fields.StringField(nullable=True),
+
+        'key_name': fields.StringField(nullable=True),
 
         'kernel_id': fields.StringField(nullable=True),
         'ramdisk_id': fields.StringField(nullable=True),
@@ -108,7 +113,8 @@ class InstanceActionPayload(InstancePayload):
 
     # Version 1.1: locked and display_description added to InstancePayload
     # Version 1.2: Added auto_disk_config field to InstancePayload
-    VERSION = '1.2'
+    # Version 1.3: Added key_name field to InstancePayload
+    VERSION = '1.3'
     fields = {
         'fault': fields.ObjectField('ExceptionPayload', nullable=True),
     }
@@ -121,8 +127,9 @@ class InstanceActionPayload(InstancePayload):
 @nova_base.NovaObjectRegistry.register_notification
 class InstanceActionVolumePayload(InstanceActionPayload):
     # Version 1.0: Initial version
+    #         1.1: Added key_name field to InstancePayload
 
-    VERSION = '1.0'
+    VERSION = '1.1'
     fields = {
         'volume_id': fields.UUIDField()
     }
@@ -140,7 +147,8 @@ class InstanceActionVolumeSwapPayload(InstanceActionPayload):
 
     # Version 1.1: locked and display_description added to InstancePayload
     # Version 1.2: Added auto_disk_config field to InstancePayload
-    VERSION = '1.2'
+    # Version 1.3: Added key_name field to InstancePayload
+    VERSION = '1.3'
     fields = {
         'old_volume_id': fields.UUIDField(),
         'new_volume_id': fields.UUIDField(),
@@ -164,7 +172,8 @@ class InstanceCreatePayload(InstanceActionPayload):
     #              instance.create notification using this new payload does not
     #              have decreasing version.
     #         1.3: Add keypairs field
-    VERSION = '1.3'
+    #         1.4: Add key_name field to InstancePayload
+    VERSION = '1.4'
 
     fields = {
         'keypairs': fields.ListOfObjectsField('KeypairPayload')
@@ -184,7 +193,8 @@ class InstanceUpdatePayload(InstancePayload):
     # Version 1.1: locked and display_description added to InstancePayload
     # Version 1.2: Added tags field
     # Version 1.3: Added auto_disk_config field to InstancePayload
-    VERSION = '1.3'
+    # Version 1.4: Added key_name field to InstancePayload
+    VERSION = '1.4'
     fields = {
         'state_update': fields.ObjectField('InstanceStateUpdatePayload'),
         'audit_period': fields.ObjectField('AuditPeriodPayload'),

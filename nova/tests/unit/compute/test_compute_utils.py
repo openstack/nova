@@ -517,7 +517,7 @@ class UsageInfoTestCase(test.TestCase):
 
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'task_state', 'display_description', 'locked',
-                     'auto_disk_config'):
+                     'auto_disk_config', 'key_name'):
             self.assertIn(attr, payload, "Key %s not in payload" % attr)
 
         self.assertEqual(payload['image_uuid'], uuids.fake_image_ref)
