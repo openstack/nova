@@ -40,6 +40,7 @@ from nova.objects import fields
 from nova import rpc
 from nova import test
 from nova.tests.unit import fake_block_device
+from nova.tests.unit import fake_crypto
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_notifier
@@ -385,6 +386,9 @@ class DefaultDeviceNamesForInstanceTestCase(test.NoDBTestCase):
 class UsageInfoTestCase(test.TestCase):
 
     def setUp(self):
+        self.public_key = fake_crypto.get_ssh_public_key()
+        self.fingerprint = '1e:2c:9b:56:79:4b:45:77:f9:ca:7a:98:2c:b0:d5:3c'
+
         def fake_get_nw_info(cls, ctxt, instance):
             self.assertTrue(ctxt.is_admin)
             return fake_network.fake_get_instance_nw_info(self, 1, 1)
@@ -519,6 +523,53 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual(payload['image_uuid'], uuids.fake_image_ref)
 
     def test_notify_about_instance_create(self):
+        keypair = objects.KeyPair(name='my-key', user_id='fake', type='ssh',
+                                  public_key=self.public_key,
+                                  fingerprint=self.fingerprint)
+        keypairs = objects.KeyPairList(objects=[keypair])
+        instance = create_instance(self.context, params={'keypairs': keypairs})
+
+        compute_utils.notify_about_instance_create(
+            self.context,
+            instance,
+            host='fake-compute',
+            phase='start')
+
+        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+
+        self.assertEqual('INFO', notification['priority'])
+        self.assertEqual('instance.create.start', notification['event_type'])
+        self.assertEqual('nova-compute:fake-compute',
+                         notification['publisher_id'])
+
+        payload = notification['payload']['nova_object.data']
+        self.assertEqual('fake', payload['tenant_id'])
+        self.assertEqual('fake', payload['user_id'])
+        self.assertEqual(instance['uuid'], payload['uuid'])
+
+        flavorid = flavors.get_flavor_by_name('m1.tiny')['flavorid']
+        flavor = payload['flavor']['nova_object.data']
+        self.assertEqual(flavorid, str(flavor['flavorid']))
+
+        keypairs_payload = payload['keypairs']
+        self.assertEqual(1, len(keypairs_payload))
+        keypair_data = keypairs_payload[0]['nova_object.data']
+        self.assertEqual(keypair_data,
+                         {'name': 'my-key',
+                          'user_id': 'fake',
+                          'type': 'ssh',
+                          'public_key': self.public_key,
+                          'fingerprint': self.fingerprint})
+
+        for attr in ('display_name', 'created_at', 'launched_at',
+                     'state', 'task_state', 'display_description', 'locked',
+                     'auto_disk_config'):
+            self.assertIn(attr, payload, "Key %s not in payload" % attr)
+
+        self.assertEqual(uuids.fake_image_ref, payload['image_uuid'])
+
+    def test_notify_about_instance_create_without_keypair(self):
         instance = create_instance(self.context)
 
         compute_utils.notify_about_instance_create(
@@ -544,6 +595,7 @@ class UsageInfoTestCase(test.TestCase):
         flavor = payload['flavor']['nova_object.data']
         self.assertEqual(flavorid, str(flavor['flavorid']))
 
+        self.assertEqual(0, len(payload['keypairs']))
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'task_state', 'display_description', 'locked',
                      'auto_disk_config'):
