@@ -458,6 +458,8 @@ class VMOps(object):
             if resize:
                 self._resize_up_vdis(instance, vdis)
 
+            instance.device_metadata = self._save_device_metadata(
+                context, instance, block_device_info)
             self._attach_disks(context, instance, image_meta, vm_ref,
                                name_label, vdis, disk_image_type,
                                network_info, rescue,
@@ -815,6 +817,79 @@ class VMOps(object):
                                           network_info,
                                           admin_password=admin_password,
                                           files=files)
+
+    @staticmethod
+    def _prepare_disk_metadata(bdm):
+        """Returns the disk metadata with dual disk buses - ide and xen. More
+           details about Xen device number can be found in
+           http://xenbits.xen.org/docs/4.2-testing/misc/vbd-interface.txt
+        """
+        path = bdm.device_name
+        disk_num = volume_utils.get_device_number(path)
+
+        xen0 = objects.XenDeviceBus(address=("00%02d00" % disk_num))
+
+        registry = ('HKLM\\SYSTEM\\ControlSet001\\Enum\\SCSI\\'
+                    'Disk&Ven_XENSRC&Prod_PVDISK\\')
+        vbd_prefix = '/sys/devices/vbd-'
+
+        if disk_num < 4:
+            ide = objects.IDEDeviceBus(
+                address=("%d:%d" % (disk_num / 2, disk_num % 2)))
+
+            xen1 = objects.XenDeviceBus(
+                address=("%d" % (202 << 8 | disk_num << 4)))
+            xen2 = objects.XenDeviceBus()
+            if disk_num < 2:
+                xen2.address = "%d" % (3 << 8 | disk_num << 6)
+            else:
+                xen2.address = "%d" % (22 << 8 | (disk_num - 2) << 6)
+
+            return [objects.DiskMetadata(path=path, bus=ide, tags=[bdm.tag]),
+                    objects.DiskMetadata(path=registry + xen0.address,
+                                         bus=xen0, tags=[bdm.tag]),
+                    objects.DiskMetadata(path=vbd_prefix + xen1.address,
+                                         bus=xen1, tags=[bdm.tag]),
+                    objects.DiskMetadata(path=vbd_prefix + xen2.address,
+                                         bus=xen2, tags=[bdm.tag])]
+        else:
+            xen1 = objects.XenDeviceBus()
+
+            if disk_num < 16:
+                xen1.address = "%d" % (202 << 8 | disk_num << 4)
+            else:
+                xen1.address = "%d" % (1 << 28 | disk_num << 8)
+
+            return [objects.DiskMetadata(path=registry + xen0.address,
+                                         bus=xen0, tags=[bdm.tag]),
+                    objects.DiskMetadata(path=vbd_prefix + xen1.address,
+                                         bus=xen1, tags=[bdm.tag])]
+
+    def _save_device_metadata(self, context, instance, block_device_info):
+        """Builds a metadata object for instance devices, that maps the user
+           provided tag to the hypervisor assigned device address.
+        """
+        vifs = objects.VirtualInterfaceList.get_by_instance_uuid(
+            context, instance["uuid"])
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+            context, instance["uuid"])
+
+        metadata = []
+        for vif in vifs:
+            if 'tag' in vif and vif.tag:
+                device = objects.NetworkInterfaceMetadata(
+                    mac=vif.address,
+                    bus=objects.PCIDeviceBus(),
+                    tags=[vif.tag])
+                metadata.append(device)
+
+        if block_device_info:
+            for bdm in bdms:
+                if 'tag' in bdm and bdm.tag:
+                    metadata.extend(self._prepare_disk_metadata(bdm))
+
+        if metadata:
+            return objects.InstanceDeviceMetadata(devices=metadata)
 
     def _wait_for_instance_to_start(self, instance, vm_ref):
         LOG.debug('Waiting for instance state to become running',

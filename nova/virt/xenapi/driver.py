@@ -71,7 +71,7 @@ class XenAPIDriver(driver.ComputeDriver):
         "supports_recreate": False,
         "supports_migrate_to_same_host": False,
         "supports_attach_interface": True,
-        "supports_device_tagging": False,
+        "supports_device_tagging": True,
     }
 
     def __init__(self, virtapi, read_only=False):
