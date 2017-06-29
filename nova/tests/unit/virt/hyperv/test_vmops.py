@@ -70,6 +70,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         self._vmops._vhdutils = mock.MagicMock()
         self._vmops._pathutils = mock.MagicMock()
         self._vmops._hostutils = mock.MagicMock()
+        self._vmops._migrutils = mock.MagicMock()
         self._vmops._serial_console_ops = mock.MagicMock()
         self._vmops._block_dev_man = mock.MagicMock()
         self._vmops._vif_driver = mock.MagicMock()
@@ -1092,29 +1093,42 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         self._vmops._pathutils.get_instance_dir.assert_called_once_with(
             mock_instance.name, create_dir=False, remove_dir=True)
 
-    @ddt.data(True, False)
+    @ddt.data({},
+              {'vm_exists': True},
+              {'planned_vm_exists': True})
+    @ddt.unpack
     @mock.patch('nova.virt.hyperv.volumeops.VolumeOps.disconnect_volumes')
     @mock.patch('nova.virt.hyperv.vmops.VMOps._delete_disk_files')
     @mock.patch('nova.virt.hyperv.vmops.VMOps.power_off')
     @mock.patch('nova.virt.hyperv.vmops.VMOps.unplug_vifs')
-    def test_destroy(self, vm_exists, mock_unplug_vifs, mock_power_off,
-                     mock_delete_disk_files, mock_disconnect_volumes):
+    def test_destroy(self, mock_unplug_vifs, mock_power_off,
+                     mock_delete_disk_files, mock_disconnect_volumes,
+                     vm_exists=False, planned_vm_exists=False):
         mock_instance = fake_instance.fake_instance_obj(self.context)
         self._vmops._vmutils.vm_exists.return_value = vm_exists
+        self._vmops._migrutils.planned_vm_exists.return_value = (
+            planned_vm_exists)
 
         self._vmops.destroy(instance=mock_instance,
                             block_device_info=mock.sentinel.FAKE_BD_INFO,
                             network_info=mock.sentinel.fake_network_info)
 
+        mock_destroy_planned_vms = (
+            self._vmops._migrutils.destroy_existing_planned_vm)
         if vm_exists:
             self._vmops._vmutils.stop_vm_jobs.assert_called_once_with(
                 mock_instance.name)
             mock_power_off.assert_called_once_with(mock_instance)
             self._vmops._vmutils.destroy_vm.assert_called_once_with(
                 mock_instance.name)
+        elif planned_vm_exists:
+            self._vmops._migrutils.planned_vm_exists.assert_called_once_with(
+                mock_instance.name)
+            mock_destroy_planned_vms.assert_called_once_with(
+                mock_instance.name)
         else:
-            self.assertFalse(mock_power_off.called)
             self.assertFalse(self._vmops._vmutils.destroy_vm.called)
+            self.assertFalse(mock_destroy_planned_vms.called)
 
         self._vmops._vmutils.vm_exists.assert_called_with(
             mock_instance.name)
