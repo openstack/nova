@@ -507,14 +507,10 @@ class SecurityGroups(extensions.V21APIExtensionBase):
         return []
 
     def get_resources(self):
-        server_secgrp_ext = extensions.ResourceExtension(
-            ALIAS,
-            controller=ServerSecurityGroupController(),
-            parent=dict(member_name='server', collection_name='servers'))
         secgrp_rules_ext = extensions.ResourceExtension(
             'os-security-group-rules',
             controller=SecurityGroupRulesController())
-        return [server_secgrp_ext, secgrp_rules_ext]
+        return [secgrp_rules_ext]
 
 
 # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
