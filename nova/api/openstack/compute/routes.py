@@ -249,6 +249,10 @@ quota_set_controller = functools.partial(_create_controller,
     quota_sets.QuotaSetsController, [], [])
 
 
+security_group_controller = functools.partial(_create_controller,
+    security_groups.SecurityGroupController, [], [])
+
+
 server_controller = functools.partial(_create_controller,
     servers.ServersController,
     [
@@ -607,6 +611,15 @@ ROUTE_LIST = (
     }),
     ('/os-quota-sets/{id}/defaults', {
         'GET': [quota_set_controller, 'defaults']
+    }),
+    ('/os-security-groups', {
+        'GET': [security_group_controller, 'index'],
+        'POST': [security_group_controller, 'create']
+    }),
+    ('/os-security-groups/{id}', {
+        'GET': [security_group_controller, 'show'],
+        'PUT': [security_group_controller, 'update'],
+        'DELETE': [security_group_controller, 'delete']
     }),
     ('/os-server-external-events', {
         'POST': [server_external_events_controller, 'create']
