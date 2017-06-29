@@ -366,25 +366,23 @@ def _get_group_details(context, instance_uuid, user_group_hosts=None):
                             policies=group.policies, members=group.members)
 
 
-def setup_instance_group(context, request_spec, filter_properties):
+def setup_instance_group(context, request_spec):
     """Add group_hosts and group_policies fields to filter_properties dict
     based on instance uuids provided in request_spec, if those instances are
     belonging to a group.
 
     :param request_spec: Request spec
-    :param filter_properties: Filter properties
     """
-    group_hosts = filter_properties.get('group_hosts')
-    # NOTE(sbauza) If there are multiple instance UUIDs, it's a boot
-    # request and they will all be in the same group, so it's safe to
-    # only check the first one.
-    instance_uuid = request_spec.get('instance_properties', {}).get('uuid')
+    if request_spec.instance_group and request_spec.instance_group.hosts:
+        group_hosts = request_spec.instance_group.hosts
+    else:
+        group_hosts = None
+    instance_uuid = request_spec.instance_uuid
     group_info = _get_group_details(context, instance_uuid, group_hosts)
     if group_info is not None:
-        filter_properties['group_updated'] = True
-        filter_properties['group_hosts'] = group_info.hosts
-        filter_properties['group_policies'] = group_info.policies
-        filter_properties['group_members'] = group_info.members
+        request_spec.instance_group.hosts = list(group_info.hosts)
+        request_spec.instance_group.policies = group_info.policies
+        request_spec.instance_group.members = group_info.members
 
 
 def retry_on_timeout(retries=1):

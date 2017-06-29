@@ -253,9 +253,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         utils.get_image_from_system_metadata(
             self.instance.system_metadata).AndReturn("image")
-        fake_props = {'instance_properties': {'uuid': self.instance_uuid}}
         scheduler_utils.setup_instance_group(
-            self.context, fake_props, {'ignore_hosts': [self.instance_host]})
+            self.context, self.fake_spec)
         self.fake_spec.reset_forced_destinations()
         self.task.scheduler_client.select_destinations(
             self.context, self.fake_spec, [self.instance.uuid]).AndReturn(
@@ -292,11 +291,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             self.assertEqual("host1", task._find_destination())
 
             get_image.assert_called_once_with(self.instance.system_metadata)
-            fake_props = {'instance_properties': {'uuid': self.instance_uuid}}
-            setup_ig.assert_called_once_with(
-                self.context, fake_props,
-                {'ignore_hosts': [self.instance_host]}
-            )
+            setup_ig.assert_called_once_with(self.context, another_spec)
             select_dest.assert_called_once_with(self.context, another_spec,
                     [self.instance.uuid])
             check_compat.assert_called_once_with("host1")
@@ -313,9 +308,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 '_check_compatible_with_source_hypervisor')
         self.mox.StubOutWithMock(self.task, '_call_livem_checks_on_host')
 
-        fake_props = {'instance_properties': {'uuid': self.instance_uuid}}
-        scheduler_utils.setup_instance_group(
-            self.context, fake_props, {'ignore_hosts': [self.instance_host]})
+        scheduler_utils.setup_instance_group(self.context, self.fake_spec)
         self.task.scheduler_client.select_destinations(self.context,
                 self.fake_spec, [self.instance.uuid]).AndReturn(
                         [{'host': 'host1'}])
@@ -336,9 +329,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         utils.get_image_from_system_metadata(
             self.instance.system_metadata).AndReturn("image")
-        fake_props = {'instance_properties': {'uuid': self.instance_uuid}}
-        scheduler_utils.setup_instance_group(
-            self.context, fake_props, {'ignore_hosts': [self.instance_host]})
+        scheduler_utils.setup_instance_group(self.context, self.fake_spec)
         self.task.scheduler_client.select_destinations(self.context,
                 self.fake_spec, [self.instance.uuid]).AndReturn(
                         [{'host': 'host1'}])
@@ -374,9 +365,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         utils.get_image_from_system_metadata(
             self.instance.system_metadata).AndReturn("image")
-        fake_props = {'instance_properties': {'uuid': self.instance_uuid}}
-        scheduler_utils.setup_instance_group(
-            self.context, fake_props, {'ignore_hosts': [self.instance_host]})
+        scheduler_utils.setup_instance_group(self.context, self.fake_spec)
         self.task.scheduler_client.select_destinations(self.context,
                 self.fake_spec, [self.instance.uuid]).AndReturn(
                         [{'host': 'host1'}])
@@ -405,9 +394,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         utils.get_image_from_system_metadata(
             self.instance.system_metadata).AndReturn("image")
-        fake_props = {'instance_properties': {'uuid': self.instance_uuid}}
-        scheduler_utils.setup_instance_group(
-            self.context, fake_props, {'ignore_hosts': [self.instance_host]})
+        scheduler_utils.setup_instance_group(self.context, self.fake_spec)
         self.task.scheduler_client.select_destinations(self.context,
                 self.fake_spec, [self.instance.uuid]).AndReturn(
                         [{'host': 'host1'}])
@@ -435,9 +422,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         utils.get_image_from_system_metadata(
             self.instance.system_metadata).AndReturn("image")
-        fake_props = {'instance_properties': {'uuid': self.instance_uuid}}
-        scheduler_utils.setup_instance_group(
-            self.context, fake_props, {'ignore_hosts': [self.instance_host]})
+        scheduler_utils.setup_instance_group(self.context, self.fake_spec)
         self.task.scheduler_client.select_destinations(self.context,
                 self.fake_spec, [self.instance.uuid]).AndReturn(
                         [{'host': 'host1'}])
@@ -458,9 +443,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                                  'select_destinations')
         utils.get_image_from_system_metadata(
             self.instance.system_metadata).AndReturn("image")
-        fake_props = {'instance_properties': {'uuid': self.instance_uuid}}
-        scheduler_utils.setup_instance_group(
-            self.context, fake_props, {'ignore_hosts': [self.instance_host]})
+        scheduler_utils.setup_instance_group(self.context, self.fake_spec)
         self.task.scheduler_client.select_destinations(self.context,
                 self.fake_spec, [self.instance.uuid]).AndRaise(
                         exception.NoValidHost(reason=""))

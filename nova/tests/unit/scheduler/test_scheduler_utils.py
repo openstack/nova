@@ -334,43 +334,42 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
             self._get_group_details_with_filter_not_configured(policy)
 
     @mock.patch.object(scheduler_utils, '_get_group_details')
-    def test_setup_instance_group_in_filter_properties(self, mock_ggd):
+    def test_setup_instance_group_in_request_spec(self, mock_ggd):
         mock_ggd.return_value = scheduler_utils.GroupDetails(
             hosts=set(['hostA', 'hostB']), policies=['policy'],
             members=['instance1'])
-        spec = {'instance_properties': {'uuid': uuids.instance}}
-        filter_props = {'group_hosts': ['hostC']}
+        spec = objects.RequestSpec(instance_uuid=uuids.instance)
+        spec.instance_group = objects.InstanceGroup(hosts=['hostC'])
 
-        scheduler_utils.setup_instance_group(self.context, spec, filter_props)
+        scheduler_utils.setup_instance_group(self.context, spec)
 
         mock_ggd.assert_called_once_with(self.context, uuids.instance,
                                          ['hostC'])
-        expected_filter_props = {'group_updated': True,
-                                 'group_hosts': set(['hostA', 'hostB']),
-                                 'group_policies': ['policy'],
-                                 'group_members': ['instance1']}
-        self.assertEqual(expected_filter_props, filter_props)
+        # Given it returns a list from a set, make sure it's sorted.
+        self.assertEqual(['hostA', 'hostB'], sorted(spec.instance_group.hosts))
+        self.assertEqual(['policy'], spec.instance_group.policies)
+        self.assertEqual(['instance1'], spec.instance_group.members)
 
     @mock.patch.object(scheduler_utils, '_get_group_details')
     def test_setup_instance_group_with_no_group(self, mock_ggd):
         mock_ggd.return_value = None
-        spec = {'instance_properties': {'uuid': uuids.instance}}
-        filter_props = {'group_hosts': ['hostC']}
+        spec = objects.RequestSpec(instance_uuid=uuids.instance)
+        spec.instance_group = objects.InstanceGroup(hosts=['hostC'])
 
-        scheduler_utils.setup_instance_group(self.context, spec, filter_props)
+        scheduler_utils.setup_instance_group(self.context, spec)
 
         mock_ggd.assert_called_once_with(self.context, uuids.instance,
                                          ['hostC'])
-        self.assertNotIn('group_updated', filter_props)
-        self.assertNotIn('group_policies', filter_props)
-        self.assertEqual(['hostC'], filter_props['group_hosts'])
+        # Make sure the field isn't touched by the caller.
+        self.assertFalse(spec.instance_group.obj_attr_is_set('policies'))
+        self.assertEqual(['hostC'], spec.instance_group.hosts)
 
     @mock.patch.object(scheduler_utils, '_get_group_details')
     def test_setup_instance_group_with_filter_not_configured(self, mock_ggd):
         mock_ggd.side_effect = exception.NoValidHost(reason='whatever')
         spec = {'instance_properties': {'uuid': uuids.instance}}
-        filter_props = {'group_hosts': ['hostC']}
-
+        spec = objects.RequestSpec(instance_uuid=uuids.instance)
+        spec.instance_group = objects.InstanceGroup(hosts=['hostC'])
         self.assertRaises(exception.NoValidHost,
                           scheduler_utils.setup_instance_group,
-                          self.context, spec, filter_props)
+                          self.context, spec)

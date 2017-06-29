@@ -156,11 +156,6 @@ class LiveMigrationTask(base.TaskBase):
         image = utils.get_image_from_system_metadata(
             self.instance.system_metadata)
         filter_properties = {'ignore_hosts': attempted_hosts}
-        # TODO(sbauza): Remove that once setup_instance_group() accepts a
-        # RequestSpec object
-        request_spec = {'instance_properties': {'uuid': self.instance.uuid}}
-        scheduler_utils.setup_instance_group(self.context, request_spec,
-                                                 filter_properties)
         if not self.request_spec:
             # NOTE(sbauza): We were unable to find an original RequestSpec
             # object - probably because the instance is old.
@@ -177,7 +172,7 @@ class LiveMigrationTask(base.TaskBase):
             # if we want to make sure that the next destination
             # is not forced to be the original host
             request_spec.reset_forced_destinations()
-
+        scheduler_utils.setup_instance_group(self.context, request_spec)
         host = None
         while host is None:
             self._check_not_over_max_retries(attempted_hosts)
