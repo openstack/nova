@@ -165,14 +165,6 @@ def fake_request(testcase, mdinst, relpath, address="127.0.0.1",
     return response
 
 
-class FakeDeviceMetadata(metadata_obj.DeviceMetadata):
-    pass
-
-
-class FakeDeviceBus(metadata_obj.DeviceBus):
-    pass
-
-
 def fake_metadata_objects():
     nic_obj = metadata_obj.NetworkInterfaceMetadata(
         bus=metadata_obj.PCIDeviceBus(address='0000:00:01.0'),
@@ -202,9 +194,9 @@ def fake_metadata_objects():
         path='/dev/sda',
         tags=['baz'],
     )
-    fake_device_obj = FakeDeviceMetadata()
+    fake_device_obj = metadata_obj.DeviceMetadata()
     device_with_fake_bus_obj = metadata_obj.NetworkInterfaceMetadata(
-        bus=FakeDeviceBus(),
+        bus=metadata_obj.DeviceBus(),
         mac='00:00:00:00:00:00',
         tags=['foo']
     )
@@ -396,6 +388,12 @@ class MetadataTestCase(test.TestCase):
         md = fake_InstanceMetadata(self, inst)
         self.assertRaises(base.InvalidMetadataPath,
             md.lookup, "/2009-04-04/meta-data/kernel-id")
+
+    def test_instance_is_sanitized(self):
+        inst = self.instance.obj_clone()
+        inst._will_not_pass = True
+        md = fake_InstanceMetadata(self, inst)
+        self.assertFalse(hasattr(md.instance, '_will_not_pass'))
 
     def test_check_version(self):
         inst = self.instance.obj_clone()
