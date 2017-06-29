@@ -3415,6 +3415,18 @@ md5hash:
   in: body
   required: true
   type: string
+media_types:
+  description: |
+    The `media types
+    <https://www.iana.org/assignments/media-types/media-types.xhtml>`_.
+    It is an array of a fixed dict.
+
+    .. note::
+      It is vestigial and provide no useful information.
+      It will be deprecated and removed in the future.
+  in: body
+  required: true
+  type: array
 members:
   description: |
     A list of members in the server group.
@@ -5150,6 +5162,17 @@ updated_consider_null:
     For example, ``2015-08-27T09:49:58-05:00``. The ``±hh:mm``
     value, if included, is the time zone as an offset from UTC.  In
     the previous example, the offset value is ``-05:00``.
+  in: body
+  required: true
+  type: string
+updated_version:
+  description: |
+    This is a fixed string. It is ``2011-01-21T11:33:21Z`` in version 2.0,
+    ``2013-07-23T11:33:21Z`` in version 2.1.
+
+    .. note::
+      It is vestigial and provides no useful information.
+      It will be deprecated and removed in the future.
   in: body
   required: true
   type: string
