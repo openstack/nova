@@ -55,7 +55,7 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         actions = [
             self._test_live_migration_rollback,
             self._test_live_migration_abort,
-            self._test_live_migration_pre,
+            self._test_live_migration_pre_and_post_dest,
             self._test_evacuate_server
         ]
 
@@ -93,7 +93,7 @@ class TestInstanceNotificationSampleWithMultipleCompute(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
-    def _test_live_migration_pre(self, server):
+    def _test_live_migration_pre_and_post_dest(self, server):
         post = {
             'os-migrateLive': {
                 'host': 'host2',
@@ -118,12 +118,21 @@ class TestInstanceNotificationSampleWithMultipleCompute(
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
         migrations = self.admin_api.get_active_migrations(server['id'])
         self.assertEqual(1, len(migrations))
-        # FakeLiveMigrateDriver needs force_complete to finish migration
-        # TODO(elod.illes): Enhance FakeLiveMigrateDriver to finish migration
-        # automatically. This enhancement probably will happen as part of the
-        # patch proposing instance.live_migration_post.end transformation.
-        self.admin_api.force_complete_migration(server['id'],
-            migrations[0]['id'])
+
+        self._wait_for_notification('instance.live_migration_post_dest.end')
+        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-live_migration_post_dest-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+        self._verify_notification(
+            'instance-live_migration_post_dest-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
 
     def _test_live_migration_abort(self, server):
         post = {
