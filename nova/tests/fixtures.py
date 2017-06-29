@@ -1407,25 +1407,29 @@ class PlacementFixture(fixtures.Fixture):
             'nova.scheduler.client.report.SchedulerReportClient.delete',
             self._fake_delete))
 
-    def _fake_get(self, *args, **kwargs):
-        (url,) = args[1:]
+    @staticmethod
+    def _update_headers_with_version(headers, **kwargs):
         version = kwargs.get("version")
-        # TODO(sbauza): The current placement NoAuthMiddleware returns a 401
-        # in case a token is not provided. We should change that by creating
-        # a fake token so we could remove adding the header below.
-        headers = {'x-auth-token': self.token}
         if version is not None:
             # TODO(mriedem): Perform some version discovery at some point.
             headers.update({
                 'OpenStack-API-Version': 'placement %s' % version
             })
+
+    def _fake_get(self, *args, **kwargs):
+        (url,) = args[1:]
+        # TODO(sbauza): The current placement NoAuthMiddleware returns a 401
+        # in case a token is not provided. We should change that by creating
+        # a fake token so we could remove adding the header below.
+        headers = {'x-auth-token': self.token}
+        self._update_headers_with_version(headers, **kwargs)
         return self._client.get(
             url,
             endpoint_override="http://127.0.0.1:%s" % self.service.port,
             headers=headers,
             raise_exc=False)
 
-    def _fake_post(self, *args):
+    def _fake_post(self, *args, **kwargs):
         (url, data) = args[1:]
         # NOTE(sdague): using json= instead of data= sets the
         # media type to application/json for us. Placement API is
@@ -1434,10 +1438,12 @@ class PlacementFixture(fixtures.Fixture):
         # TODO(sbauza): The current placement NoAuthMiddleware returns a 401
         # in case a token is not provided. We should change that by creating
         # a fake token so we could remove adding the header below.
+        headers = {'x-auth-token': self.token}
+        self._update_headers_with_version(headers, **kwargs)
         return self._client.post(
             url, json=data,
             endpoint_override="http://127.0.0.1:%s" % self.service.port,
-            headers={'x-auth-token': self.token},
+            headers=headers,
             raise_exc=False)
 
     def _fake_put(self, *args, **kwargs):
@@ -1449,10 +1455,12 @@ class PlacementFixture(fixtures.Fixture):
         # TODO(sbauza): The current placement NoAuthMiddleware returns a 401
         # in case a token is not provided. We should change that by creating
         # a fake token so we could remove adding the header below.
+        headers = {'x-auth-token': self.token}
+        self._update_headers_with_version(headers, **kwargs)
         return self._client.put(
             url, json=data,
             endpoint_override="http://127.0.0.1:%s" % self.service.port,
-            headers={'x-auth-token': self.token},
+            headers=headers,
             raise_exc=False)
 
     def _fake_delete(self, *args):
