@@ -94,6 +94,7 @@ class VMOps(object):
         self._metricsutils = utilsfactory.get_metricsutils()
         self._vhdutils = utilsfactory.get_vhdutils()
         self._hostutils = utilsfactory.get_hostutils()
+        self._migrutils = utilsfactory.get_migrationutils()
         self._pathutils = pathutils.PathUtils()
         self._volumeops = volumeops.VolumeOps()
         self._imagecache = imagecache.ImageCache()
@@ -738,9 +739,14 @@ class VMOps(object):
                 self._vmutils.stop_vm_jobs(instance_name)
                 self.power_off(instance)
                 self._vmutils.destroy_vm(instance_name)
+            elif self._migrutils.planned_vm_exists(instance_name):
+                self._migrutils.destroy_existing_planned_vm(instance_name)
             else:
                 LOG.debug("Instance not found", instance=instance)
 
+            # NOTE(claudiub): The vifs should be unplugged and the volumes
+            # should be disconnected even if the VM doesn't exist anymore,
+            # so they are not leaked.
             self.unplug_vifs(instance, network_info)
             self._volumeops.disconnect_volumes(block_device_info)
 
