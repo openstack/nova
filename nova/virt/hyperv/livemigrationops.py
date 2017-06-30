@@ -139,5 +139,6 @@ class LiveMigrationOps(object):
 
     def check_can_live_migrate_source(self, ctxt, instance_ref,
                                       dest_check_data):
-        LOG.debug("check_can_live_migrate_source called", instance_ref)
+        LOG.debug("check_can_live_migrate_source called",
+                  instance=instance_ref)
         return dest_check_data
