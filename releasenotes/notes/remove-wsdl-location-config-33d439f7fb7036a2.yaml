@@ -1,0 +1,5 @@
+---
+upgrade:
+  - |
+    The ``[vmware] wsdl_location`` configuration option has been removed after
+    being deprecated in 15.0.0. It was unused and should have no impact.
