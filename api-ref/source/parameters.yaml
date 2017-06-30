@@ -3807,12 +3807,15 @@ networks:
   in: body
   required: true
   type: object
-networks_quota_optional:
+networks_quota_optional: &networks_quota_optional
   description: |
     The number of private networks that can be created per project.
   in: body
   required: false
   type: integer
+networks_quota_set_optional:
+  <<: *networks_quota_optional
+  max_version: 2.35
 new_file:
   description: |
     The name of the qcow2 file that Block Storage creates, which becomes the active

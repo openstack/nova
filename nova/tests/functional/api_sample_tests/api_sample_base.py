@@ -93,6 +93,11 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
             # NOTE(danms): Disable base automatic DB (and cells) config
             self.USES_DB = False
             self.USES_DB_SELF = True
+        # This is to enable the network quota which is being registered
+        # based on CONF.enable_network_quota. Need this to test the
+        # network quota in quota sample tests.
+        self.flags(enable_network_quota=True)
+        self.useFixture(fixtures.RegisterNetworkQuota())
 
         # super class call is delayed here so that we have the right
         # paste and conf before loading all the services, as we can't
