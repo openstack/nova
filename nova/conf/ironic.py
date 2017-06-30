@@ -32,8 +32,9 @@ If using the Ironic driver following options must be set:
 """)
 
 ironic_options = [
-    cfg.StrOpt(
+    cfg.URIOpt(
         'api_endpoint',
+        schemes=['http', 'https'],
         sample_default='http://ironic.example.org:6385/',
         help='URL override for the Ironic API endpoint.'),
     cfg.IntOpt(

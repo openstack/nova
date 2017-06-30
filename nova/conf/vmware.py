@@ -62,6 +62,8 @@ vmware_utils_opts = [
 Set this value if affected by an increased network latency causing
 repeated characters when typing in a remote console.
 """),
+    # NOTE(takashin): 'serial_port_service_uri' can be non URI format.
+    # See https://github.com/openstack/vmware-vspc/blob/master/README.rst
     cfg.StrOpt('serial_port_service_uri',
                help="""
 Identifies the remote system where the serial port traffic will
@@ -76,14 +78,15 @@ Possible values:
 
 * Any valid URI
 """),
-    cfg.StrOpt('serial_port_proxy_uri',
+    cfg.URIOpt('serial_port_proxy_uri',
+               schemes=['telnet', 'telnets'],
                help="""
 Identifies a proxy service that provides network access to the
 serial_port_service_uri.
 
 Possible values:
 
-* Any valid URI
+* Any valid URI (The scheme is 'telnet' or 'telnets'.)
 
 Related options:
 This option is ignored if serial_port_service_uri is not specified.
