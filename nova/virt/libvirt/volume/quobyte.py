@@ -54,7 +54,7 @@ def mount_volume(volume, mnt_base, configfile=None):
     LOG.debug('Mounting volume %s at mount point %s ...',
               volume,
               mnt_base)
-    utils.execute(*command, check_exit_code=[0, 4])
+    utils.execute(*command)
     LOG.info('Mounted volume: %s', volume)
 
 
@@ -107,7 +107,7 @@ class LibvirtQuobyteVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
 
         return conf
 
-    @utils.synchronized('connect_volume')
+    @utils.synchronized('connect_qb_volume')
     def connect_volume(self, connection_info, disk_info, instance):
         """Connect the volume."""
         data = connection_info['data']
@@ -133,7 +133,7 @@ class LibvirtQuobyteVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
 
         validate_volume(mount_path)
 
-    @utils.synchronized('connect_volume')
+    @utils.synchronized('connect_qb_volume')
     def disconnect_volume(self, connection_info, disk_dev, instance):
         """Disconnect the volume."""
 

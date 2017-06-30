@@ -47,8 +47,7 @@ class QuobyteTestCase(test.NoDBTestCase):
         mock_ensure_tree.assert_called_once_with(export_mnt_base)
         expected_commands = [mock.call('mount.quobyte',
                                        quobyte_volume,
-                                       export_mnt_base,
-                                       check_exit_code=[0, 4])
+                                       export_mnt_base)
                              ]
         mock_execute.assert_has_calls(expected_commands)
         mock_exists.assert_called_once_with(" /run/systemd/system")
@@ -72,8 +71,7 @@ class QuobyteTestCase(test.NoDBTestCase):
                                        '--user',
                                        'mount.quobyte',
                                        quobyte_volume,
-                                       export_mnt_base,
-                                       check_exit_code=[0, 4])
+                                       export_mnt_base)
                              ]
         mock_execute.assert_has_calls(expected_commands)
         mock_exists.assert_called_once_with(" /run/systemd/system")
@@ -100,8 +98,7 @@ class QuobyteTestCase(test.NoDBTestCase):
                                        quobyte_volume,
                                        export_mnt_base,
                                        '-c',
-                                       config_file_dummy,
-                                       check_exit_code=[0, 4])
+                                       config_file_dummy)
                              ]
         mock_execute.assert_has_calls(expected_commands)
         mock_exists.assert_called_once_with(" /run/systemd/system")
