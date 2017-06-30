@@ -114,16 +114,8 @@ def errors_out_migration_ctxt(migration):
 
     try:
         yield
-    except Exception as ex:
+    except Exception:
         with excutils.save_and_reraise_exception():
-            # NOTE(rajesht): If InstanceNotFound error is thrown from
-            # decorated function, migration status should be set to
-            # 'error', without checking current migration status.
-            if not isinstance(ex, exception.InstanceNotFound):
-                status = migration.status
-                if status not in ['migrating', 'post-migrating']:
-                    return
-
             migration.status = 'error'
             try:
                 with migration.obj_as_admin():
