@@ -83,6 +83,9 @@ create_volume_attachment = {
     'required': ['volumeAttachment'],
     'additionalProperties': False,
 }
+create_volume_attachment_v249 = copy.deepcopy(create_volume_attachment)
+create_volume_attachment_v249['properties']['volumeAttachment'][
+                              'properties']['tag'] = parameter_types.tag
 
 update_volume_attachment = copy.deepcopy(create_volume_attachment)
 del update_volume_attachment['properties']['volumeAttachment'][

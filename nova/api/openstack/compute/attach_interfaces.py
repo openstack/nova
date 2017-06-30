@@ -99,7 +99,8 @@ class InterfaceAttachmentController(wsgi.Controller):
                 port_info['port'])}
 
     @extensions.expected_errors((400, 404, 409, 500, 501))
-    @validation.schema(attach_interfaces.create)
+    @validation.schema(attach_interfaces.create, '2.0', '2.48')
+    @validation.schema(attach_interfaces.create_v249, '2.49')
     def create(self, req, server_id, body):
         """Attach an interface to an instance."""
         context = req.environ['nova.context']
@@ -109,10 +110,12 @@ class InterfaceAttachmentController(wsgi.Controller):
         network_id = None
         port_id = None
         req_ip = None
+        tag = None
         if body:
             attachment = body['interfaceAttachment']
             network_id = attachment.get('net_id', None)
             port_id = attachment.get('port_id', None)
+            tag = attachment.get('tag', None)
             try:
                 req_ip = attachment['fixed_ips'][0]['ip_address']
             except Exception:
@@ -128,7 +131,7 @@ class InterfaceAttachmentController(wsgi.Controller):
         instance = common.get_instance(self.compute_api, context, server_id)
         try:
             vif = self.compute_api.attach_interface(context,
-                instance, network_id, port_id, req_ip)
+                instance, network_id, port_id, req_ip, tag=tag)
         except (exception.InterfaceAttachFailedNoNetwork,
                 exception.NetworkAmbiguous,
                 exception.NoMoreFixedIps,

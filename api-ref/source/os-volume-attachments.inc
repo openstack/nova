@@ -67,10 +67,16 @@ Request
   - volumeAttachment: volumeAttachment_post
   - volumeId: volumeId
   - device: device
+  - tag: device_tag_bdm_attachment
 
 **Example Attach a volume to an instance: JSON request**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/attach-volume-to-server-req.json
+   :language: javascript
+
+**Example Attach a volume to an instance and tag it (v2.49): JSON request**
+
+.. literalinclude:: ../../doc/api_samples/os-volumes/v2.49/attach-volume-to-server-req.json
    :language: javascript
 
 Response

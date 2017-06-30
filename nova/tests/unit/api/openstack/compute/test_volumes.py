@@ -63,7 +63,7 @@ def fake_get_volume(self, context, id):
             }
 
 
-def fake_attach_volume(self, context, instance, volume_id, device):
+def fake_attach_volume(self, context, instance, volume_id, device, tag=None):
     pass
 
 
@@ -494,7 +494,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
 
     @mock.patch.object(compute_api.API, 'attach_volume',
                        side_effect=exception.VolumeTaggedAttachNotSupported())
-    def test_attach_volume_not_supported(self, mock_attach_volume):
+    def test_tagged_volume_attach_not_supported(self, mock_attach_volume):
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
                                      'device': '/dev/fake'}}
         self.assertRaises(webob.exc.HTTPBadRequest, self.attachments.create,
@@ -551,7 +551,8 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
 
     def test_attach_volume_to_locked_server(self):
         def fake_attach_volume_to_locked_server(self, context, instance,
-                                                volume_id, device=None):
+                                                volume_id, device=None,
+                                                tag=None):
             raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
 
         self.stubs.Set(compute_api.API,
@@ -686,6 +687,47 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                           self._test_swap,
                           self.attachments,
                           body=body)
+
+
+class VolumeAttachTestsV249(test.NoDBTestCase):
+    validation_error = exception.ValidationError
+
+    def setUp(self):
+        super(VolumeAttachTestsV249, self).setUp()
+        self.attachments = volumes_v21.VolumeAttachmentController()
+        self.req = fakes.HTTPRequest.blank(
+                  '/v2/servers/id/os-volume_attachments/uuid',
+                  version='2.49')
+
+    def test_tagged_volume_attach_invalid_tag_comma(self):
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
+                                     'device': '/dev/fake',
+                                     'tag': ','}}
+        self.assertRaises(exception.ValidationError, self.attachments.create,
+                          self.req, FAKE_UUID, body=body)
+
+    def test_tagged_volume_attach_invalid_tag_slash(self):
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
+                                     'device': '/dev/fake',
+                                     'tag': '/'}}
+        self.assertRaises(exception.ValidationError, self.attachments.create,
+                          self.req, FAKE_UUID, body=body)
+
+    def test_tagged_volume_attach_invalid_tag_too_long(self):
+        tag = ''.join(map(str, range(10, 41)))
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
+                                     'device': '/dev/fake',
+                                     'tag': tag}}
+        self.assertRaises(exception.ValidationError, self.attachments.create,
+                          self.req, FAKE_UUID, body=body)
+
+    @mock.patch('nova.compute.api.API.attach_volume')
+    @mock.patch('nova.compute.api.API.get', fake_get_instance)
+    def test_tagged_volume_attach_valid_tag(self, _):
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
+                                     'device': '/dev/fake',
+                                     'tag': 'foo'}}
+        self.attachments.create(self.req, FAKE_UUID, body=body)
 
 
 class CommonBadRequestTestCase(object):

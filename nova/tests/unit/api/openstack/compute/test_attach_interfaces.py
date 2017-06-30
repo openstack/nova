@@ -83,7 +83,7 @@ def fake_show_port(context, port_id, **kwargs):
 
 
 def fake_attach_interface(self, context, instance, network_id, port_id,
-                          requested_ip='192.168.1.3'):
+                          requested_ip='192.168.1.3', tag=None):
     if not network_id:
         # if no network_id is given when add a port to an instance, use the
         # first default network.
@@ -222,7 +222,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
 
     def test_attach_interface_instance_locked(self):
         def fake_attach_interface_to_locked_server(self, context,
-            instance, network_id, port_id, requested_ip):
+            instance, network_id, port_id, requested_ip, tag=None):
             raise exception.InstanceIsLocked(instance_uuid=FAKE_UUID1)
 
         self.stub_out('nova.compute.api.API.attach_interface',
@@ -355,7 +355,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
                           body=body)
         ctxt = self.req.environ['nova.context']
         attach_mock.assert_called_once_with(ctxt, fake_instance, None,
-                                            None, None)
+                                            None, None, tag=None)
         get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
                                          expected_attrs=None)
 
@@ -374,7 +374,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
                           body=body)
         ctxt = self.req.environ['nova.context']
         attach_mock.assert_called_once_with(ctxt, fake_instance, None,
-                                            None, None)
+                                            None, None, tag=None)
         get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
                                          expected_attrs=None)
 
@@ -394,7 +394,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
                           body=body)
         ctxt = self.req.environ['nova.context']
         attach_mock.assert_called_once_with(ctxt, fake_instance, None,
-                                            None, None)
+                                            None, None, tag=None)
         get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
                                          expected_attrs=None)
 
@@ -410,7 +410,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
                           self.req, FAKE_UUID1, body={})
         ctxt = self.req.environ['nova.context']
         attach_mock.assert_called_once_with(ctxt, fake_instance, None,
-                                            None, None)
+                                            None, None, tag=None)
         get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
                                          expected_attrs=None)
 
@@ -429,7 +429,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
                           body=body)
         ctxt = self.req.environ['nova.context']
         attach_mock.assert_called_once_with(ctxt, fake_instance, None,
-                                            None, None)
+                                            None, None, tag=None)
         get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
                                          expected_attrs=None)
 
@@ -446,7 +446,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
                           self.req, FAKE_UUID1, body={})
         ctxt = self.req.environ['nova.context']
         attach_mock.assert_called_once_with(ctxt, fake_instance, None,
-                                            None, None)
+                                            None, None, tag=None)
         get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
                                          expected_attrs=None)
 
@@ -469,6 +469,42 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
     def test_attach_interface_instance_with_non_array_fixed_ips(self):
         param = {'fixed_ips': 'non_array'}
         self._test_attach_interface_with_invalid_parameter(param)
+
+
+class InterfaceAttachTestsV249(test.NoDBTestCase):
+    controller_cls = attach_interfaces_v21.InterfaceAttachmentController
+
+    def setUp(self):
+        super(InterfaceAttachTestsV249, self).setUp()
+        self.attachments = self.controller_cls()
+        self.req = fakes.HTTPRequest.blank('', version='2.49')
+
+    def test_tagged_interface_attach_invalid_tag_comma(self):
+        body = {'interfaceAttachment': {'net_id': FAKE_NET_ID2,
+                                        'tag': ','}}
+        self.assertRaises(exception.ValidationError, self.attachments.create,
+                          self.req, FAKE_UUID1, body=body)
+
+    def test_tagged_interface_attach_invalid_tag_slash(self):
+        body = {'interfaceAttachment': {'net_id': FAKE_NET_ID2,
+                                        'tag': '/'}}
+        self.assertRaises(exception.ValidationError, self.attachments.create,
+                          self.req, FAKE_UUID1, body=body)
+
+    def test_tagged_interface_attach_invalid_tag_too_long(self):
+        tag = ''.join(map(str, range(10, 41)))
+        body = {'interfaceAttachment': {'net_id': FAKE_NET_ID2,
+                                        'tag': tag}}
+        self.assertRaises(exception.ValidationError, self.attachments.create,
+                          self.req, FAKE_UUID1, body=body)
+
+    @mock.patch('nova.compute.api.API.attach_interface')
+    @mock.patch('nova.compute.api.API.get', fake_get_instance)
+    def test_tagged_interface_attach_valid_tag(self, _):
+        body = {'interfaceAttachment': {'net_id': FAKE_NET_ID2,
+                                        'tag': 'foo'}}
+        with mock.patch.object(self.attachments, 'show'):
+            self.attachments.create(self.req, FAKE_UUID1, body=body)
 
 
 class AttachInterfacesPolicyEnforcementv21(test.NoDBTestCase):

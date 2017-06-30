@@ -317,7 +317,8 @@ class VolumeAttachmentController(wsgi.Controller):
 
     # TODO(mriedem): This API should return a 202 instead of a 200 response.
     @extensions.expected_errors((400, 404, 409))
-    @validation.schema(volumes_schema.create_volume_attachment)
+    @validation.schema(volumes_schema.create_volume_attachment, '2.0', '2.48')
+    @validation.schema(volumes_schema.create_volume_attachment_v249, '2.49')
     def create(self, req, server_id, body):
         """Attach a volume to an instance."""
         context = req.environ['nova.context']
@@ -325,6 +326,7 @@ class VolumeAttachmentController(wsgi.Controller):
 
         volume_id = body['volumeAttachment']['volumeId']
         device = body['volumeAttachment'].get('device')
+        tag = body['volumeAttachment'].get('tag')
 
         instance = common.get_instance(self.compute_api, context, server_id)
 
@@ -335,7 +337,7 @@ class VolumeAttachmentController(wsgi.Controller):
 
         try:
             device = self.compute_api.attach_volume(context, instance,
-                                                    volume_id, device)
+                                                    volume_id, device, tag=tag)
         except (exception.InstanceUnknownCell,
                 exception.VolumeNotFound) as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
