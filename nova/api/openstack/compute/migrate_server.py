@@ -63,7 +63,7 @@ class MigrateServerController(wsgi.Controller):
     @wsgi.response(202)
     @extensions.expected_errors((400, 404, 409))
     @wsgi.action('os-migrateLive')
-    @validation.schema(migrate_server.migrate_live, "2.1", "2.24")
+    @validation.schema(migrate_server.migrate_live, "2.0", "2.24")
     @validation.schema(migrate_server.migrate_live_v2_25, "2.25", "2.29")
     @validation.schema(migrate_server.migrate_live_v2_30, "2.30")
     def _migrate_live(self, req, id, body):
