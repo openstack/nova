@@ -19,6 +19,7 @@ Test the base rpc API.
 """
 
 from nova import baserpc
+from nova.compute import rpcapi as compute_rpcapi
 import nova.conf
 from nova import context
 from nova import test
@@ -36,7 +37,7 @@ class BaseAPITestCase(test.TestCase):
                                               self.project_id)
         self.conductor = self.start_service('conductor')
         self.compute = self.start_service('compute')
-        self.base_rpcapi = baserpc.BaseAPI(CONF.compute_topic)
+        self.base_rpcapi = baserpc.BaseAPI(compute_rpcapi.RPC_TOPIC)
 
     def test_ping(self):
         res = self.base_rpcapi.ping(self.context, 'foo')

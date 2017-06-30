@@ -1050,28 +1050,6 @@ Related options:
 """)
 ]
 
-rpcapi_opts = [
-    cfg.StrOpt("compute_topic",
-        default="compute",
-        deprecated_for_removal=True,
-        deprecated_since="15.0.0",
-        deprecated_reason="""
-There is no need to let users choose the RPC topic for all services - there
-is little gain from this. Furthermore, it makes it really easy to break Nova
-by using this option.
-""",
-        help="""
-This is the message queue topic that the compute service 'listens' on. It is
-used when the compute service is started up to configure the queue, and
-whenever an RPC call to the compute service is made.
-
-Possible values:
-
-* Any string, but there is almost never any reason to ever change this value
-  from its default of 'compute'.
-"""),
-]
-
 db_opts = [
     cfg.StrOpt('osapi_compute_unique_server_name_scope',
         default='',
@@ -1149,7 +1127,6 @@ ALL_OPTS = (compute_opts +
             timeout_opts +
             running_deleted_opts +
             instance_cleaning_opts +
-            rpcapi_opts +
             db_opts)
 
 

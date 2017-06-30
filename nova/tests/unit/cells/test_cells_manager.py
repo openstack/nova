@@ -24,6 +24,7 @@ from six.moves import range
 
 from nova.cells import messaging
 from nova.cells import utils as cells_utils
+from nova.compute import rpcapi as compute_rpcapi
 import nova.conf
 from nova import context
 from nova import objects
@@ -388,7 +389,7 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
                                  'proxy_rpc_to_manager')
         fake_response = self._get_fake_response()
         cell_and_host = cells_utils.cell_with_item('fake-cell', 'fake-host')
-        topic = "%s.%s" % (CONF.compute_topic, cell_and_host)
+        topic = "%s.%s" % (compute_rpcapi.RPC_TOPIC, cell_and_host)
         self.msg_runner.proxy_rpc_to_manager(self.ctxt, 'fake-cell',
                 'fake-host', topic, 'fake-rpc-msg',
                 True, -1).AndReturn(fake_response)

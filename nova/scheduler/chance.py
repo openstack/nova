@@ -21,6 +21,7 @@ Chance (Random) Scheduler implementation
 
 import random
 
+from nova.compute import rpcapi as compute_rpcapi
 import nova.conf
 from nova import exception
 from nova.i18n import _
@@ -67,7 +68,8 @@ class ChanceScheduler(driver.Scheduler):
         # and limiting the destination scope to a single requested cell
         dests = []
         for i in range(num_instances):
-            host = self._schedule(context, CONF.compute_topic, spec_obj)
+            host = self._schedule(context, compute_rpcapi.RPC_TOPIC,
+                                  spec_obj)
             host_state = self.host_manager.host_state_cls(host, None, None)
             dests.append(host_state)
 

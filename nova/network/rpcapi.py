@@ -27,6 +27,7 @@ from nova import rpc
 
 
 CONF = nova.conf.CONF
+RPC_TOPIC = 'network'
 
 
 @profiler.trace_cls("rpc")
@@ -128,7 +129,7 @@ class NetworkAPI(object):
 
     def __init__(self, topic=None):
         super(NetworkAPI, self).__init__()
-        topic = topic or CONF.network_topic
+        topic = topic or RPC_TOPIC
         target = messaging.Target(topic=topic, version='1.0')
         version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.network,
                                                CONF.upgrade_levels.network)

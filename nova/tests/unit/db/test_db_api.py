@@ -49,6 +49,7 @@ from sqlalchemy import sql
 from sqlalchemy import Table
 
 from nova import block_device
+from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
@@ -7832,8 +7833,8 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         super(ComputeNodeTestCase, self).setUp()
         self.ctxt = context.get_admin_context()
         self.service_dict = dict(host='host1', binary='nova-compute',
-                            topic=CONF.compute_topic, report_count=1,
-                            disabled=False)
+                            topic=compute_rpcapi.RPC_TOPIC,
+                            report_count=1, disabled=False)
         self.service = db.service_create(self.ctxt, self.service_dict)
         self.compute_node_dict = dict(vcpus=2, memory_mb=1024, local_gb=2048,
                                  uuid=uuidutils.generate_uuid(),
@@ -7898,8 +7899,8 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_compute_node_get_all_by_pagination(self):
         service_dict = dict(host='host2', binary='nova-compute',
-                            topic=CONF.compute_topic, report_count=1,
-                            disabled=False)
+                            topic=compute_rpcapi.RPC_TOPIC,
+                            report_count=1, disabled=False)
         service = db.service_create(self.ctxt, service_dict)
         compute_node_dict = dict(vcpus=2, memory_mb=1024, local_gb=2048,
                                  uuid=uuidsentinel.fake_compute_node,
@@ -8156,8 +8157,8 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_compute_node_statistics(self):
         service_dict = dict(host='hostA', binary='nova-compute',
-                            topic=CONF.compute_topic, report_count=1,
-                            disabled=False)
+                            topic=compute_rpcapi.RPC_TOPIC,
+                            report_count=1, disabled=False)
         service = db.service_create(self.ctxt, service_dict)
         # Define the various values for the new compute node
         new_vcpus = 4
@@ -8234,7 +8235,7 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_compute_node_statistics_disabled_service(self):
         serv = db.service_get_by_host_and_topic(
-            self.ctxt, 'host1', CONF.compute_topic)
+            self.ctxt, 'host1', compute_rpcapi.RPC_TOPIC)
         db.service_update(self.ctxt, serv['id'], {'disabled': True})
         stats = db.compute_node_statistics(self.ctxt)
         self.assertEqual(stats.pop('count'), 0)

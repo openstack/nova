@@ -112,7 +112,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
 
         rpcapi = kwargs.pop('rpcapi_class', compute_rpcapi.ComputeAPI)()
         self.assertIsNotNone(rpcapi.router)
-        self.assertEqual(rpcapi.router.target.topic, CONF.compute_topic)
+        self.assertEqual(rpcapi.router.target.topic,
+                         compute_rpcapi.RPC_TOPIC)
 
         # This test wants to run the real prepare function, so must use
         # a real client object

@@ -25,6 +25,7 @@ from nova.cmd import common as cmd_common
 from nova.conductor import rpcapi as conductor_rpcapi
 import nova.conf
 from nova import config
+from nova.network import rpcapi as network_rpcapi
 from nova import objects
 from nova.objects import base as objects_base
 from nova import service
@@ -55,7 +56,7 @@ def main():
     LOG.warning('Nova network is deprecated and will be removed '
                 'in the future')
     server = service.Service.create(binary='nova-network',
-                                    topic=CONF.network_topic,
+                                    topic=network_rpcapi.RPC_TOPIC,
                                     manager=CONF.network_manager)
     service.serve(server)
     service.wait()

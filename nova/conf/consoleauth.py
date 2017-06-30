@@ -16,29 +16,6 @@
 
 from oslo_config import cfg
 
-default_opts = [
-    cfg.StrOpt('consoleauth_topic',
-        default='consoleauth',
-        deprecated_for_removal=True,
-        deprecated_since='15.0.0',
-        deprecated_reason="""
-There is no need to let users choose the RPC topic for all services - there
-is little gain from this. Furthermore, it makes it really easy to break Nova
-by using this option.
-""",
-        help="""
-This option allows you to change the message topic used by nova-consoleauth
-service when communicating via the AMQP server. Nova Console Authentication
-server authenticates nova consoles. Users can then access their instances
-through VNC clients. The Nova API service uses a message queue to
-communicate with nova-consoleauth to get a VNC console.
-
-Possible Values:
-
-* 'consoleauth' (default) or Any string representing topic exchange name.
-"""),
-]
-
 consoleauth_group = cfg.OptGroup(
     name='consoleauth',
     title='Console auth options')
@@ -60,12 +37,9 @@ considered expired.  Expired tokens are then deleted.
 
 
 def register_opts(conf):
-    conf.register_opts(default_opts)
-
     conf.register_group(consoleauth_group)
     conf.register_opts(consoleauth_opts, group=consoleauth_group)
 
 
 def list_opts():
-    return {'DEFAULT': default_opts,
-            consoleauth_group: consoleauth_opts}
+    return {consoleauth_group: consoleauth_opts}
