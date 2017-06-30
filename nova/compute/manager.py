@@ -4969,8 +4969,25 @@ class ComputeManager(manager.Manager):
             phase=fields.NotificationPhase.END,
             volume_id=volume_id)
 
+        if 'tag' in bdm and bdm.tag:
+            self._delete_disk_metadata(instance, bdm)
         if destroy_bdm:
             bdm.destroy()
+
+    def _delete_disk_metadata(self, instance, bdm):
+        for device in instance.device_metadata.devices:
+            if isinstance(device, objects.DiskMetadata):
+                if 'serial' in device:
+                    if device.serial == bdm.volume_id:
+                        instance.device_metadata.devices.remove(device)
+                        instance.save()
+                        break
+                else:
+                    # NOTE(artom) We log the entire device object because all
+                    # fields are nullable and may not be set
+                    LOG.warning('Unable to determine whether to clean up '
+                                'device metadata for disk %s', device,
+                                instance=instance)
 
     @wrap_exception()
     @wrap_instance_fault

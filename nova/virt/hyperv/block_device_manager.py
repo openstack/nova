@@ -85,6 +85,7 @@ class BlockDeviceInfoManager(object):
             if bdm_obj and 'tag' in bdm_obj and bdm_obj.tag:
                 bus = self._get_device_bus(bdm)
                 device = objects.DiskMetadata(bus=bus,
+                                              serial=bdm_obj.volume_id,
                                               tags=[bdm_obj.tag])
                 bdm_metadata.append(device)
 

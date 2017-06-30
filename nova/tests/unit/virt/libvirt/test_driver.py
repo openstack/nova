@@ -1560,31 +1560,38 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 fake_block_device.FakeDbBlockDeviceDict(
                     {'id': 1,
                      'source_type': 'volume', 'destination_type': 'volume',
-                     'device_name': '/dev/sda', 'tag': "db"}),
+                     'device_name': '/dev/sda', 'tag': "db",
+                     'volume_id': uuids.volume_1}),
                 fake_block_device.FakeDbBlockDeviceDict(
                     {'id': 2,
                      'source_type': 'volume', 'destination_type': 'volume',
-                     'device_name': '/dev/hda', 'tag': "nfvfunc1"}),
+                     'device_name': '/dev/hda', 'tag': "nfvfunc1",
+                     'volume_id': uuids.volume_2}),
                 fake_block_device.FakeDbBlockDeviceDict(
                     {'id': 3,
                      'source_type': 'volume', 'destination_type': 'volume',
-                     'device_name': '/dev/sdb', 'tag': "nfvfunc2"}),
+                     'device_name': '/dev/sdb', 'tag': "nfvfunc2",
+                     'volume_id': uuids.volume_3}),
                 fake_block_device.FakeDbBlockDeviceDict(
                     {'id': 4,
                      'source_type': 'volume', 'destination_type': 'volume',
-                     'device_name': '/dev/hdb'}),
+                     'device_name': '/dev/hdb',
+                     'volume_id': uuids.volume_4}),
                 fake_block_device.FakeDbBlockDeviceDict(
                     {'id': 5,
                      'source_type': 'volume', 'destination_type': 'volume',
-                     'device_name': '/dev/vda', 'tag': "nfvfunc3"}),
+                     'device_name': '/dev/vda', 'tag': "nfvfunc3",
+                     'volume_id': uuids.volume_5}),
                 fake_block_device.FakeDbBlockDeviceDict(
                     {'id': 6,
                      'source_type': 'volume', 'destination_type': 'volume',
-                     'device_name': '/dev/vdb', 'tag': "nfvfunc4"}),
+                     'device_name': '/dev/vdb', 'tag': "nfvfunc4",
+                     'volume_id': uuids.volume_6}),
                 fake_block_device.FakeDbBlockDeviceDict(
                     {'id': 7,
                      'source_type': 'volume', 'destination_type': 'volume',
-                     'device_name': '/dev/vdc', 'tag': "nfvfunc5"}),
+                     'device_name': '/dev/vdc', 'tag': "nfvfunc5",
+                     'volume_id': uuids.volume_7}),
             ]
         )
         vif = obj_vif.VirtualInterface(context=self.context)
@@ -1637,8 +1644,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertIsInstance(metadata[0].bus,
                                   objects.SCSIDeviceBus)
             self.assertEqual(['db'], metadata[0].tags)
+            self.assertEqual(uuids.volume_1, metadata[0].serial)
             self.assertFalse(metadata[0].bus.obj_attr_is_set('address'))
             self.assertEqual(['nfvfunc1'], metadata[1].tags)
+            self.assertEqual(uuids.volume_2, metadata[1].serial)
             self.assertIsInstance(metadata[1],
                                   objects.DiskMetadata)
             self.assertIsInstance(metadata[1].bus,
@@ -1650,19 +1659,25 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertIsInstance(metadata[2].bus,
                                   objects.USBDeviceBus)
             self.assertEqual(['nfvfunc2'], metadata[2].tags)
+            self.assertEqual(uuids.volume_3, metadata[2].serial)
             self.assertFalse(metadata[2].bus.obj_attr_is_set('address'))
             self.assertIsInstance(metadata[3],
                                   objects.DiskMetadata)
             self.assertIsInstance(metadata[3].bus,
                                   objects.PCIDeviceBus)
             self.assertEqual(['nfvfunc3'], metadata[3].tags)
+            # NOTE(artom) We're not checking volume 4 because it's not tagged
+            # and only tagged devices appear in the metadata
+            self.assertEqual(uuids.volume_5, metadata[3].serial)
             self.assertEqual('0000:00:09.0', metadata[3].bus.address)
             self.assertIsInstance(metadata[4],
                                   objects.DiskMetadata)
             self.assertEqual(['nfvfunc4'], metadata[4].tags)
+            self.assertEqual(uuids.volume_6, metadata[4].serial)
             self.assertIsInstance(metadata[5],
                                   objects.DiskMetadata)
             self.assertEqual(['nfvfunc5'], metadata[5].tags)
+            self.assertEqual(uuids.volume_7, metadata[5].serial)
             self.assertIsInstance(metadata[6],
                                   objects.NetworkInterfaceMetadata)
             self.assertIsInstance(metadata[6].bus,

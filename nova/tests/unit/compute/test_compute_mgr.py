@@ -2493,6 +2493,28 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock_volume_api.terminate_connection.assert_called_once_with(
                     self.context, uuids.volume_id, connector)
 
+    def test_delete_disk_metadata(self):
+        bdm = objects.BlockDeviceMapping(volume_id=uuids.volume_id, tag='foo')
+        instance = fake_instance.fake_instance_obj(self.context)
+        instance.device_metadata = objects.InstanceDeviceMetadata(
+                devices=[objects.DiskMetadata(serial=uuids.volume_id,
+                                              tag='foo')])
+        instance.save = mock.Mock()
+        self.compute._delete_disk_metadata(instance, bdm)
+        self.assertEqual(0, len(instance.device_metadata.devices))
+        instance.save.assert_called_once_with()
+
+    def test_delete_disk_metadata_no_serial(self):
+        bdm = objects.BlockDeviceMapping(tag='foo')
+        instance = fake_instance.fake_instance_obj(self.context)
+        instance.device_metadata = objects.InstanceDeviceMetadata(
+                devices=[objects.DiskMetadata(tag='foo')])
+        self.compute._delete_disk_metadata(instance, bdm)
+        # NOTE(artom) This looks weird because we haven't deleted anything, but
+        # it's normal behaviour for when DiskMetadata doesn't have serial set
+        # and we can't find it based on BlockDeviceMapping's volume_id.
+        self.assertEqual(1, len(instance.device_metadata.devices))
+
     def test_detach_volume(self):
         # TODO(lyarwood): Test DriverVolumeBlockDevice.detach in
         # ../virt/test_block_device.py
@@ -2502,6 +2524,43 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         # TODO(lyarwood): Test DriverVolumeBlockDevice.detach in
         # ../virt/test_block_device.py
         self._test_detach_volume(destroy_bdm=False)
+
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_notify_about_instance_usage')
+    @mock.patch.object(driver_bdm_volume, 'detach')
+    @mock.patch('nova.compute.utils.notify_about_volume_attach_detach')
+    @mock.patch('nova.compute.manager.ComputeManager._delete_disk_metadata')
+    def test_detach_untagged_volume_metadata_not_deleted(
+            self, mock_delete_metadata, _, __, ___):
+        inst_obj = mock.Mock()
+        fake_bdm = fake_block_device.FakeDbBlockDeviceDict(
+                {'source_type': 'volume', 'destination_type': 'volume',
+                 'volume_id': uuids.volume, 'device_name': '/dev/vdb',
+                 'connection_info': '{"test": "test"}'})
+        bdm = objects.BlockDeviceMapping(context=self.context, **fake_bdm)
+
+        self.compute._detach_volume(self.context, bdm, inst_obj,
+                                    destroy_bdm=False,
+                                    attachment_id=uuids.attachment)
+        self.assertFalse(mock_delete_metadata.called)
+
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_notify_about_instance_usage')
+    @mock.patch.object(driver_bdm_volume, 'detach')
+    @mock.patch('nova.compute.utils.notify_about_volume_attach_detach')
+    @mock.patch('nova.compute.manager.ComputeManager._delete_disk_metadata')
+    def test_detach_tagged_volume(self, mock_delete_metadata, _, __, ___):
+        inst_obj = mock.Mock()
+        fake_bdm = fake_block_device.FakeDbBlockDeviceDict(
+                {'source_type': 'volume', 'destination_type': 'volume',
+                 'volume_id': uuids.volume, 'device_name': '/dev/vdb',
+                 'connection_info': '{"test": "test"}', 'tag': 'foo'})
+        bdm = objects.BlockDeviceMapping(context=self.context, **fake_bdm)
+
+        self.compute._detach_volume(self.context, bdm, inst_obj,
+                                    destroy_bdm=False,
+                                    attachment_id=uuids.attachment)
+        mock_delete_metadata.assert_called_once_with(inst_obj, bdm)
 
     @mock.patch.object(driver_bdm_volume, 'detach')
     @mock.patch('nova.compute.manager.ComputeManager.'

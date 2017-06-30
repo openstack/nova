@@ -68,8 +68,10 @@ class BlockDeviceManagerTestCase(test_base.HyperVBaseTestCase):
             'ephemerals': [ephemeral],
         }
 
-        bdm = self._bdm_mock(device_name=mock.sentinel.dev0, tag='taggy')
-        eph = self._bdm_mock(device_name=mock.sentinel.dev1, tag='ephy')
+        bdm = self._bdm_mock(device_name=mock.sentinel.dev0, tag='taggy',
+                             volume_id=mock.sentinel.uuid1)
+        eph = self._bdm_mock(device_name=mock.sentinel.dev1, tag='ephy',
+                             volume_id=mock.sentinel.uuid2)
         mock_get_by_inst_uuid.return_value = [
             bdm, eph, self._bdm_mock(device_name=mock.sentinel.dev2, tag=None),
         ]
@@ -83,8 +85,10 @@ class BlockDeviceManagerTestCase(test_base.HyperVBaseTestCase):
         mock_get_device_bus.assert_has_calls(
           [mock.call(root_disk), mock.call(ephemeral)], any_order=True)
         mock_DiskMetadata.assert_has_calls(
-            [mock.call(bus=mock_get_device_bus.return_value, tags=[bdm.tag]),
-             mock.call(bus=mock_get_device_bus.return_value, tags=[eph.tag])],
+            [mock.call(bus=mock_get_device_bus.return_value,
+                       serial=bdm.volume_id, tags=[bdm.tag]),
+             mock.call(bus=mock_get_device_bus.return_value,
+                       serial=eph.volume_id, tags=[eph.tag])],
             any_order=True)
         self.assertEqual([mock_DiskMetadata.return_value] * 2, bdm_metadata)
 

@@ -399,15 +399,22 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         self.stubs.Set(compute_api.API,
                        'detach_volume',
                        fake_detach_volume)
-        result = self.attachments.delete(self.req, FAKE_UUID, FAKE_UUID_A)
-        # NOTE: on v2.1, http status code is set as wsgi_code of API
-        # method instead of status_int in a response object.
-        if isinstance(self.attachments,
-                      volumes_v21.VolumeAttachmentController):
-            status_int = self.attachments.delete.wsgi_code
-        else:
-            status_int = result.status_int
-        self.assertEqual(202, status_int)
+        inst = fake_instance.fake_instance_obj(self.context,
+                                               **{'uuid': FAKE_UUID})
+        with mock.patch.object(common, 'get_instance',
+                               return_value=inst) as mock_get_instance:
+            result = self.attachments.delete(self.req, FAKE_UUID, FAKE_UUID_A)
+            # NOTE: on v2.1, http status code is set as wsgi_code of API
+            # method instead of status_int in a response object.
+            if isinstance(self.attachments,
+                          volumes_v21.VolumeAttachmentController):
+                status_int = self.attachments.delete.wsgi_code
+            else:
+                status_int = result.status_int
+            self.assertEqual(202, status_int)
+            mock_get_instance.assert_called_with(
+                self.attachments.compute_api, self.context, FAKE_UUID,
+                expected_attrs=['device_metadata'])
 
     @mock.patch.object(common, 'get_instance')
     def test_detach_vol_shelved_not_supported(self, mock_get_instance):

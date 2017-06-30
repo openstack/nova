@@ -7855,6 +7855,11 @@ class LibvirtDriver(driver.ComputeDriver):
                     continue
                 bus = self._prepare_device_bus(dev)
                 device = objects.DiskMetadata(tags=[bdm.tag])
+                # NOTE(artom) Setting the serial (which corresponds to
+                # volume_id in BlockDeviceMapping) in DiskMetadata allows us to
+                # find the disks's BlockDeviceMapping object when we detach the
+                # volume and want to clean up its metadata.
+                device.serial = bdm.volume_id
                 if bus:
                     device.bus = bus
                 devices.append(device)
