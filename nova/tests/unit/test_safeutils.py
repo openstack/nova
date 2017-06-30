@@ -18,6 +18,15 @@ from nova import safe_utils
 from nova import test
 
 
+def get_closure():
+    x = 1
+
+    def wrapper(self, instance, red=None, blue=None):
+        return x
+
+    return wrapper
+
+
 class WrappedCodeTestCase(test.NoDBTestCase):
     """Test the get_wrapped_function utility method."""
 
@@ -62,6 +71,16 @@ class WrappedCodeTestCase(test.NoDBTestCase):
             pass
 
         func = safe_utils.get_wrapped_function(wrapped)
+        func_code = func.__code__
+        self.assertEqual(4, len(func_code.co_varnames))
+        self.assertIn('self', func_code.co_varnames)
+        self.assertIn('instance', func_code.co_varnames)
+        self.assertIn('red', func_code.co_varnames)
+        self.assertIn('blue', func_code.co_varnames)
+
+    def test_closure(self):
+        closure = get_closure()
+        func = safe_utils.get_wrapped_function(closure)
         func_code = func.__code__
         self.assertEqual(4, len(func_code.co_varnames))
         self.assertIn('self', func_code.co_varnames)
