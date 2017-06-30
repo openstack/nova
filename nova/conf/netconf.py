@@ -24,6 +24,7 @@ from oslo_utils import netutils
 netconf_opts = [
     cfg.StrOpt("my_ip",
         default=netutils.get_my_ipv4(),
+        sample_default='<host_ipv4>',
         help="""
 The IP address which the host is using to connect to the management network.
 
@@ -53,8 +54,18 @@ Related options:
 """),
     cfg.StrOpt("host",
         default=socket.gethostname(),
+        sample_default='<current_hostname>',
         help="""
-Hostname, FQDN or IP address of this host. Must be valid within AMQP key.
+Hostname, FQDN or IP address of this host.
+
+Used as:
+
+* the oslo.messaging queue name for nova-compute worker
+* we use this value for the binding_host sent to neutron. This means if you use
+  a neutron agent, it should have the same value for host.
+* cinder host attachment information
+
+Must be valid within AMQP key.
 
 Possible values:
 
