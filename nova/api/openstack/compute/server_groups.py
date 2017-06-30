@@ -147,7 +147,7 @@ class ServerGroupController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1")
     @extensions.expected_errors((400, 403))
-    @validation.schema(schema.create, "2.1", "2.14")
+    @validation.schema(schema.create, "2.0", "2.14")
     @validation.schema(schema.create_v215, "2.15")
     def create(self, req, body):
         """Creates a new server group."""
