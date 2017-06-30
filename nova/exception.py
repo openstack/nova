@@ -2090,6 +2090,10 @@ class ResourceClassCannotUpdateStandard(Invalid):
     msg_fmt = _("Cannot update standard resource class %(resource_class)s.")
 
 
+class InvalidResourceAmount(Invalid):
+    msg_fmt = _("Resource amounts must be integers. Received '%(amount)s'.")
+
+
 class InvalidInventory(Invalid):
     msg_fmt = _("Inventory for '%(resource_class)s' on "
                 "resource provider '%(resource_provider)s' invalid.")
