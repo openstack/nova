@@ -52,7 +52,7 @@ rfc3986>=0.3.1 # Apache-2.0
 oslo.middleware>=3.27.0 # Apache-2.0
 psutil>=3.2.2 # BSD
 oslo.versionedobjects>=1.17.0 # Apache-2.0
-os-brick>=1.13.1 # Apache-2.0
+os-brick!=1.14.0,>=1.13.1 # Apache-2.0
 os-traits>=0.3.1 # Apache-2.0
 os-vif>=1.4.0 # Apache-2.0
 os-win>=2.0.0 # Apache-2.0
