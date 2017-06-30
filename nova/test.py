@@ -265,6 +265,7 @@ class TestCase(testtools.TestCase):
         from nova.compute import api
         api.CELLS = []
         context.CELL_CACHE = {}
+        context.CELLS = []
 
         self.cell_mappings = {}
         self.host_mappings = {}
