@@ -1458,6 +1458,20 @@ class _TestInstanceObject(object):
             inst_value = getattr(inst, attr_name)
             self.assertIs(expected_objs[attr_name], inst_value)
 
+    @mock.patch('nova.objects.Instance.obj_load_attr',
+                new_callable=mock.NonCallableMock)  # asserts not called
+    def test_mutated_migration_context_early_exit(self, obj_load_attr):
+        """Tests that we exit early from mutated_migration_context if the
+        migration_context attribute is set to None meaning this instance is
+        not being migrated.
+        """
+        inst = instance.Instance(context=self.context, migration_context=None)
+        for attr in instance._MIGRATION_CONTEXT_ATTRS:
+            self.assertNotIn(attr, inst)
+        with inst.mutated_migration_context():
+            for attr in instance._MIGRATION_CONTEXT_ATTRS:
+                self.assertNotIn(attr, inst)
+
     def test_clear_numa_topology(self):
         numa_topology = (test_instance_numa_topology.
                             fake_obj_numa_topology.obj_clone())
