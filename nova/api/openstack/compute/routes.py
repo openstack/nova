@@ -91,6 +91,7 @@ from nova.api.openstack.compute import suspend_server
 from nova.api.openstack.compute import tenant_networks
 from nova.api.openstack.compute import used_limits
 from nova.api.openstack.compute import virtual_interfaces
+from nova.api.openstack.compute import volumes
 from nova.api.openstack import wsgi
 import nova.conf
 
@@ -363,6 +364,10 @@ tenant_networks_controller = functools.partial(_create_controller,
 
 virtual_interfaces_controller = functools.partial(_create_controller,
     virtual_interfaces.ServerVirtualInterfaceController, [], [])
+
+
+volumes_controller = functools.partial(_create_controller,
+    volumes.VolumeController, [], [])
 
 
 # NOTE(alex_xu): This is structure of this route list as below:
@@ -695,6 +700,17 @@ ROUTE_LIST = (
     ('/os-tenant-networks/{id}', {
         'GET': [tenant_networks_controller, 'show'],
         'DELETE': [tenant_networks_controller, 'delete']
+    }),
+    ('/os-volumes', {
+        'GET': [volumes_controller, 'index'],
+        'POST': [volumes_controller, 'create'],
+    }),
+    ('/os-volumes/detail', {
+        'GET': [volumes_controller, 'detail'],
+    }),
+    ('/os-volumes/{id}', {
+        'GET': [volumes_controller, 'show'],
+        'DELETE': [volumes_controller, 'delete']
     }),
     ('/os-volumes_boot', {
         'GET': [server_controller, 'index'],
