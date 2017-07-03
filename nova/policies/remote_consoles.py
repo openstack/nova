@@ -25,7 +25,7 @@ remote_consoles_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_OR_OWNER,
-        "Generates a URL to access remove server console",
+        "Generate a URL to access remove server console",
         [
             {
                 'method': 'POST',

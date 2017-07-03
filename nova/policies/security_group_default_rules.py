@@ -25,10 +25,10 @@ security_group_default_rules_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_API,
-        """Lists, shows information for, creates and deletes default security
+        """List, show information for, create, or delete default security
 group rules.
 
-These API's are only available with nova-network which is now deprecated.""",
+These APIs are only available with nova-network which is now deprecated.""",
         [
             {
                 'method': 'GET',

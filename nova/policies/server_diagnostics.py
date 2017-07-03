@@ -25,7 +25,7 @@ server_diagnostics_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_API,
-        "Shows the usage data for a server",
+        "Show the usage data for a server",
         [
             {
                 'method': 'GET',

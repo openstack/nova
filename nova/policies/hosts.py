@@ -25,7 +25,7 @@ hosts_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_API,
-        """List, Show and Manage physical hosts.
+        """List, show and manage physical hosts.
 
 These APIs are all deprecated in favor of os-hypervisors and os-services.""",
         [

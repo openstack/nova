@@ -25,7 +25,7 @@ config_drive_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_OR_OWNER,
-        """Add 'config_drive' attribute in the server response.""",
+        "Add 'config_drive' attribute in the server response",
         [
             {
                 'method': 'GET',

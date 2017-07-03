@@ -25,8 +25,8 @@ extensions_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_OR_OWNER,
-        "Lists available extensions and shows information for an extension "
-        "by alias.",
+        "List available extensions and show information for an extension "
+        "by alias",
         [
             {
                 'method': 'GET',

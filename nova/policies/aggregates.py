@@ -35,7 +35,7 @@ aggregates_policies = [
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'add_host',
         base.RULE_ADMIN_API,
-        "Add a host to an aggregate.",
+        "Add a host to an aggregate",
         [
             {
                 'path': '/os-aggregates/{aggregate_id}/action (add_host)',
@@ -95,7 +95,7 @@ aggregates_policies = [
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'show',
         base.RULE_ADMIN_API,
-        "Show details for an aggregate.",
+        "Show details for an aggregate",
         [
             {
                 'path': '/os-aggregates/{aggregate_id}',

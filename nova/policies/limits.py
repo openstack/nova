@@ -25,7 +25,7 @@ limits_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_OR_OWNER,
-        """Shows rate and absolute limits for the project.""",
+        "Show rate and absolute limits for the project",
         [
             {
                 'method': 'GET',

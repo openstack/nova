@@ -25,7 +25,7 @@ multinic_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_OR_OWNER,
-        """Adds or Removes a fixed IP address from a server.
+        """Add or remove a fixed IP address from a server.
 
 These APIs are proxy calls to the Network service. These are all
 deprecated.""",

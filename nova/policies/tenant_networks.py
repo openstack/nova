@@ -25,8 +25,7 @@ tenant_networks_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_OR_OWNER,
-        """Creates, lists, shows information for, and deletes
-project networks.
+        """Create, list, show information for, and delete project networks.
 
 These APIs are proxy calls to the Network service. These are all
 deprecated.""",

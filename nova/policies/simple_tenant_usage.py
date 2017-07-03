@@ -25,7 +25,7 @@ simple_tenant_usage_policies = [
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'show',
         base.RULE_ADMIN_OR_OWNER,
-        "Show usage statistics for a specific tenant.",
+        "Show usage statistics for a specific tenant",
         [
             {
                 'method': 'GET',
@@ -35,7 +35,7 @@ simple_tenant_usage_policies = [
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'list',
         base.RULE_ADMIN_API,
-        "List per tenant usage statistics for all tenants.",
+        "List per tenant usage statistics for all tenants",
         [
             {
                 'method': 'GET',

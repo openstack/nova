@@ -29,12 +29,11 @@ hypervisors_policies = [
 
 This rule will be checked for the following APIs:
 
-List all hypervisors, list all hypervisors with details, show
-summary statistics for all hypervisors over all compute nodes,
-show details for a hypervisor, show the uptime of a hypervisor,
-search hypervisor by hypervisor_hostname pattern and list all
-servers on hypervisors that can match the provided hypervisor_hostname
-pattern.""",
+List all hypervisors, list all hypervisors with details, show summary
+statistics for all hypervisors over all compute nodes, show details for a
+hypervisor, show the uptime of a hypervisor, search hypervisor by
+hypervisor_hostname pattern and list all servers on hypervisors that can match
+the provided hypervisor_hostname pattern.""",
         [
             {
                 'path': '/os-hypervisors',
