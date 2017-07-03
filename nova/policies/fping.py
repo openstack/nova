@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_policy import policy
+
 from nova.policies import base
 
 
@@ -21,7 +23,7 @@ POLICY_ROOT = 'os_compute_api:os-fping:%s'
 
 
 fping_policies = [
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'all_tenants',
         base.RULE_ADMIN_API,
         """Pings instances for all projects and reports which instances
@@ -35,7 +37,7 @@ which itself is deprecated.""",
                 'path': '/os-fping?all_tenants=true'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_OR_OWNER,
         """Pings instances, particular instance and reports which instances

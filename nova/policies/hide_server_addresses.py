@@ -13,13 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.policies import base
+from oslo_policy import policy
 
 BASE_POLICY_NAME = 'os_compute_api:os-hide-server-addresses'
 
 
 hide_server_addresses_policies = [
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         'is_admin:False',
         """Hide server's 'addresses' key in the server response.

@@ -14,6 +14,8 @@
 #    under the License.
 
 
+from oslo_policy import policy
+
 from nova.policies import base
 
 
@@ -21,7 +23,7 @@ BASE_POLICY_NAME = 'os_compute_api:os-flavor-rxtx'
 
 
 flavor_rxtx_policies = [
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_OR_OWNER,
         "Adds the rxtx_factor key into some Flavor APIs",

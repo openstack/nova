@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_policy import policy
+
 from nova.policies import base
 
 
@@ -20,7 +22,7 @@ POLICY_ROOT = 'os_compute_api:server-metadata:%s'
 
 
 server_metadata_policies = [
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'index',
         base.RULE_ADMIN_OR_OWNER,
         "List all metadata of a server",
@@ -31,7 +33,7 @@ server_metadata_policies = [
             }
         ]
     ),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'show',
         base.RULE_ADMIN_OR_OWNER,
         "Show metadata for a server",
@@ -42,7 +44,7 @@ server_metadata_policies = [
             }
         ]
     ),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'create',
         base.RULE_ADMIN_OR_OWNER,
         "Create metadata for a server",
@@ -53,7 +55,7 @@ server_metadata_policies = [
             }
         ]
     ),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'update_all',
         base.RULE_ADMIN_OR_OWNER,
         "Replace metadata for a server",
@@ -64,7 +66,7 @@ server_metadata_policies = [
             }
         ]
     ),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'update',
         base.RULE_ADMIN_OR_OWNER,
         "Update metadata from a server",
@@ -75,7 +77,7 @@ server_metadata_policies = [
             }
         ]
     ),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'delete',
         base.RULE_ADMIN_OR_OWNER,
         "Delete metadata from a server",

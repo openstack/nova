@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_policy import policy
+
 from nova.policies import base
 
 
@@ -20,7 +22,7 @@ POLICY_ROOT = 'os_compute_api:os-simple-tenant-usage:%s'
 
 
 simple_tenant_usage_policies = [
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'show',
         base.RULE_ADMIN_OR_OWNER,
         "Show usage statistics for a specific tenant.",
@@ -30,7 +32,7 @@ simple_tenant_usage_policies = [
                 'path': '/os-simple-tenant-usage/{tenant_id}'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'list',
         base.RULE_ADMIN_API,
         "List per tenant usage statistics for all tenants.",

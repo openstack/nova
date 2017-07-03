@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_policy import policy
+
 from nova.policies import base
 
 
@@ -21,7 +23,7 @@ POLICY_ROOT = 'os_compute_api:os-networks:%s'
 
 
 networks_policies = [
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_API,
         """Create and delete a network, add and disassociate a network
@@ -46,7 +48,7 @@ These APIs are only available with nova-network which is deprecated.""",
                 'path': '/os-networks/{network_id}/action (disassociate)'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'view',
         base.RULE_ADMIN_OR_OWNER,
         """List networks for the project and show details for a network.

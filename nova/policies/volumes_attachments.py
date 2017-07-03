@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_policy import policy
+
 from nova.policies import base
 
 
@@ -20,7 +22,7 @@ POLICY_ROOT = 'os_compute_api:os-volumes-attachments:%s'
 
 
 volumes_attachments_policies = [
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'index',
         base.RULE_ADMIN_OR_OWNER,
         "List volume attachments for an instance",
@@ -29,7 +31,7 @@ volumes_attachments_policies = [
              'path': '/servers/{server_id}/os-volume_attachments'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'create',
         base.RULE_ADMIN_OR_OWNER,
         "Attach a volume to an instance",
@@ -39,7 +41,7 @@ volumes_attachments_policies = [
                 'path': '/servers/{server_id}/os-volume_attachments'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'show',
         base.RULE_ADMIN_OR_OWNER,
         "Show details of a volume attachment",
@@ -50,7 +52,7 @@ volumes_attachments_policies = [
                  '/servers/{server_id}/os-volume_attachments/{attachment_id}'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'update',
         base.RULE_ADMIN_API,
         "Update a volume attachment",
@@ -61,7 +63,7 @@ volumes_attachments_policies = [
                  '/servers/{server_id}/os-volume_attachments/{attachment_id}'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'delete',
         base.RULE_ADMIN_OR_OWNER,
         "Detach a volume from an instance",

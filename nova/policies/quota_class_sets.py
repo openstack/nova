@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_policy import policy
+
 from nova.policies import base
 
 
@@ -20,7 +22,7 @@ POLICY_ROOT = 'os_compute_api:os-quota-class-sets:%s'
 
 
 quota_class_sets_policies = [
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'show',
         'is_admin:True or quota_class:%(quota_class)s',
         "List quotas for specific quota classs",
@@ -30,7 +32,7 @@ quota_class_sets_policies = [
                 'path': '/os-quota-class-sets/{quota_class}'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'update',
         base.RULE_ADMIN_API,
         'Update quotas for specific quota class',

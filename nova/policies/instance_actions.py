@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_policy import policy
+
 from nova.policies import base
 
 
@@ -21,7 +23,7 @@ POLICY_ROOT = 'os_compute_api:os-instance-actions:%s'
 
 
 instance_actions_policies = [
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'events',
         base.RULE_ADMIN_API,
         """Add events details in action details for a server.
@@ -34,7 +36,7 @@ os_compute_api:os-instance-actions passes""",
                 'path': '/servers/{server_id}/os-instance-actions/{request_id}'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_OR_OWNER,
         """List actions and show action details for a server.""",

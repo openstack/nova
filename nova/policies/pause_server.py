@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_policy import policy
+
 from nova.policies import base
 
 
@@ -20,7 +22,7 @@ POLICY_ROOT = 'os_compute_api:os-pause-server:%s'
 
 
 pause_server_policies = [
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'pause',
         base.RULE_ADMIN_OR_OWNER,
         "Pause a server.",
@@ -31,7 +33,7 @@ pause_server_policies = [
             }
         ]
     ),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'unpause',
         base.RULE_ADMIN_OR_OWNER,
         "Unpause a paused server.",
