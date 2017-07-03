@@ -960,6 +960,9 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.assertIndexMembers(engine, 'compute_nodes',
                                 'compute_nodes_uuid_idx', ['uuid'])
 
+    def _check_362(self, engine, data):
+        self.assertColumnExists(engine, 'pci_devices', 'uuid')
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,

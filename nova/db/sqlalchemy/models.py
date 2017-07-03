@@ -1424,7 +1424,7 @@ class PciDevice(BASE, NovaBase, models.SoftDeleteMixin):
             name="uniq_pci_devices0compute_node_id0address0deleted")
     )
     id = Column(Integer, primary_key=True)
-
+    uuid = Column(String(36))
     compute_node_id = Column(Integer, ForeignKey('compute_nodes.id'),
                              nullable=False)
 
