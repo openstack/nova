@@ -3476,12 +3476,24 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                               vconfig.LibvirtConfigGuestDisk)
         self.assertEqual(cfg.devices[2].target_dev, disk)
 
-    def test_get_guest_config_with_virtio_scsi_bus(self):
+    def test_get_guest_config_default_with_virtio_scsi_bus(self):
+        self._test_get_guest_config_with_virtio_scsi_bus()
+
+    @mock.patch.object(rbd_utils.RBDDriver, 'get_mon_addrs')
+    @mock.patch.object(rbd_utils, 'rbd')
+    def test_get_guest_config_rbd_with_virtio_scsi_bus(
+            self, mock_rdb, mock_get_mon_addrs):
+        self.flags(images_type='rbd', group='libvirt')
+        mock_get_mon_addrs.return_value = ("host", 9876)
+        self._test_get_guest_config_with_virtio_scsi_bus()
+
+    def _test_get_guest_config_with_virtio_scsi_bus(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
         image_meta = objects.ImageMeta.from_dict({
             "disk_format": "raw",
-            "properties": {"hw_scsi_model": "virtio-scsi"}})
+            "properties": {"hw_scsi_model": "virtio-scsi",
+                           "hw_disk_bus": "scsi"}})
         instance_ref = objects.Instance(**self.test_instance)
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -3491,8 +3503,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         cfg = drvr._get_guest_config(instance_ref, [], image_meta, disk_info)
         self.assertIsInstance(cfg.devices[0],
                          vconfig.LibvirtConfigGuestDisk)
+        self.assertEqual(0, cfg.devices[0].device_addr.unit)
         self.assertIsInstance(cfg.devices[1],
                          vconfig.LibvirtConfigGuestDisk)
+        self.assertEqual(1, cfg.devices[1].device_addr.unit)
         self.assertIsInstance(cfg.devices[2],
                          vconfig.LibvirtConfigGuestController)
         self.assertEqual(cfg.devices[2].model, 'virtio-scsi')
