@@ -144,3 +144,11 @@ The following new routes are added:
 ``GET /usages?project_id=<project_id>&user_id=<user_id>``
 
    Returns all usages for a given project and user.
+
+1.10 Allocation candidates
+-------------------------------------------
+
+The 1.10 version brings a new REST resource endpoint for getting a list of
+allocation candidates. Allocation candidates are collections of possible
+allocations against resource providers that can satisfy a particular request
+for resources.

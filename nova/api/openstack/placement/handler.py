@@ -30,6 +30,7 @@ from oslo_log import log as logging
 
 from nova.api.openstack.placement.handlers import aggregate
 from nova.api.openstack.placement.handlers import allocation
+from nova.api.openstack.placement.handlers import allocation_candidate
 from nova.api.openstack.placement.handlers import inventory
 from nova.api.openstack.placement.handlers import resource_class
 from nova.api.openstack.placement.handlers import resource_provider
@@ -103,6 +104,9 @@ ROUTE_DECLARATIONS = {
         'GET': allocation.list_for_consumer,
         'PUT': allocation.set_allocations,
         'DELETE': allocation.delete_allocations,
+    },
+    '/allocation_candidates': {
+        'GET': allocation_candidate.list_allocation_candidates,
     },
     '/traits': {
         'GET': trait.list_traits,
