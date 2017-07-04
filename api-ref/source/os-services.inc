@@ -7,8 +7,7 @@
 ================================
 
 Lists all running Compute services in a region, enables or disables
-scheduling for a Compute service, logs disabled Compute service
-information, and deletes a Compute service.
+scheduling for a Compute service and deletes a Compute service.
 
 For an overview of Compute services, see `OpenStack
 Compute <https://docs.openstack.org/ocata/install-guide-obs/common/get-started-compute.html>`__.
@@ -96,12 +95,13 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-services/service-disable-put-resp.json
    :language: javascript
 
-Log Disabled Compute Service Information
-========================================
+Disable Scheduling For A Compute Service and Log Disabled Reason
+================================================================
 
 .. rest_method:: PUT /os-services/disable-log-reason
 
-Logs information to the Compute service table about why a Compute service was disabled.
+Disables scheduling for a Compute service and logs information to the Compute
+service table about why a Compute service was disabled.
 
 Specify the service by its host name and binary name.
 
@@ -118,7 +118,7 @@ Request
   - binary: binary
   - disabled_reason: disabled_reason_body
 
-**Example Log Disabled Compute Service Information**
+**Example Disable Scheduling For A Compute Service and Log Disabled Reason**
 
 .. literalinclude:: ../../doc/api_samples/os-services/service-disable-log-put-req.json
    :language: javascript
@@ -134,7 +134,7 @@ Response
   - host: host_name_body
   - status: service_status
 
-**Example Log Disabled Compute Service Information**
+**Example Disable Scheduling For A Compute Service and Log Disabled Reason**
 
 .. literalinclude:: ../../doc/api_samples/os-services/service-disable-log-put-resp.json
    :language: javascript
