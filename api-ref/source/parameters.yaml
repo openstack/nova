@@ -4293,7 +4293,7 @@ project_id_server_group:
     The project ID who owns the server group.
   min_version: 2.13
   in: body
-  required: false
+  required: true
   type: string
 project_id_value:
   description: |
@@ -5264,7 +5264,7 @@ user_id_server_group:
     The user ID who owns the server group.
   min_version: 2.13
   in: body
-  required: false
+  required: true
   type: string
 vcpus:
   description: |
