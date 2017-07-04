@@ -54,12 +54,12 @@ class AdminPasswordTestV21(test.NoDBTestCase):
 
     def test_change_password(self):
         body = {'changePassword': {'adminPass': 'test'}}
-        res = self._get_action()(self.fake_req, '1', body=body)
+        res = self._get_action()(self.fake_req, fakes.FAKE_UUID, body=body)
         self._check_status(202, res, self._get_action())
 
     def test_change_password_empty_string(self):
         body = {'changePassword': {'adminPass': ''}}
-        res = self._get_action()(self.fake_req, '1', body=body)
+        res = self._get_action()(self.fake_req, fakes.FAKE_UUID, body=body)
         self._check_status(202, res, self._get_action())
 
     @mock.patch('nova.compute.api.API.set_admin_password',
@@ -68,21 +68,22 @@ class AdminPasswordTestV21(test.NoDBTestCase):
         body = {'changePassword': {'adminPass': 'test'}}
         self.assertRaises(webob.exc.HTTPNotImplemented,
                           self._get_action(),
-                          self.fake_req, '1', body=body)
+                          self.fake_req, fakes.FAKE_UUID, body=body)
 
     @mock.patch('nova.compute.api.API.get',
-                side_effect=exception.InstanceNotFound(instance_id='1'))
+                side_effect=exception.InstanceNotFound(
+                    instance_id=fakes.FAKE_UUID))
     def test_change_password_with_non_existed_instance(self, mock_get):
         body = {'changePassword': {'adminPass': 'test'}}
         self.assertRaises(webob.exc.HTTPNotFound,
                           self._get_action(),
-                          self.fake_req, '1', body=body)
+                          self.fake_req, fakes.FAKE_UUID, body=body)
 
     def test_change_password_with_non_string_password(self):
         body = {'changePassword': {'adminPass': 1234}}
         self.assertRaises(self.validation_error,
                           self._get_action(),
-                          self.fake_req, '1', body=body)
+                          self.fake_req, fakes.FAKE_UUID, body=body)
 
     @mock.patch('nova.compute.api.API.set_admin_password',
                 side_effect=exception.InstancePasswordSetFailed(instance="1",
@@ -91,7 +92,7 @@ class AdminPasswordTestV21(test.NoDBTestCase):
         body = {'changePassword': {'adminPass': 'test'}}
         self.assertRaises(webob.exc.HTTPConflict,
                           self._get_action(),
-                          self.fake_req, '1', body=body)
+                          self.fake_req, fakes.FAKE_UUID, body=body)
 
     @mock.patch('nova.compute.api.API.set_admin_password',
                 side_effect=exception.SetAdminPasswdNotSupported(instance="1",
@@ -100,7 +101,7 @@ class AdminPasswordTestV21(test.NoDBTestCase):
         body = {'changePassword': {'adminPass': 'test'}}
         self.assertRaises(webob.exc.HTTPConflict,
                           self._get_action(),
-                          self.fake_req, '1', body=body)
+                          self.fake_req, fakes.FAKE_UUID, body=body)
 
     @mock.patch('nova.compute.api.API.set_admin_password',
                 side_effect=exception.InstanceAgentNotEnabled(instance="1",
@@ -110,38 +111,38 @@ class AdminPasswordTestV21(test.NoDBTestCase):
         body = {'changePassword': {'adminPass': 'test'}}
         self.assertRaises(webob.exc.HTTPConflict,
                           self._get_action(),
-                          self.fake_req, '1', body=body)
+                          self.fake_req, fakes.FAKE_UUID, body=body)
 
     def test_change_password_without_admin_password(self):
         body = {'changPassword': {}}
         self.assertRaises(self.validation_error,
                           self._get_action(),
-                          self.fake_req, '1', body=body)
+                          self.fake_req, fakes.FAKE_UUID, body=body)
 
     def test_change_password_none(self):
         body = {'changePassword': {'adminPass': None}}
         self.assertRaises(self.validation_error,
                           self._get_action(),
-                          self.fake_req, '1', body=body)
+                          self.fake_req, fakes.FAKE_UUID, body=body)
 
     def test_change_password_adminpass_none(self):
         body = {'changePassword': None}
         self.assertRaises(self.validation_error,
                           self._get_action(),
-                          self.fake_req, '1', body=body)
+                          self.fake_req, fakes.FAKE_UUID, body=body)
 
     def test_change_password_bad_request(self):
         body = {'changePassword': {'pass': '12345'}}
         self.assertRaises(self.validation_error,
                           self._get_action(),
-                          self.fake_req, '1', body=body)
+                          self.fake_req, fakes.FAKE_UUID, body=body)
 
     def test_server_change_password_pass_disabled(self):
         # run with enable_instance_password disabled to verify adminPass
         # is missing from response. See lp bug 921814
         self.flags(enable_instance_password=False, group='api')
         body = {'changePassword': {'adminPass': '1234pass'}}
-        res = self._get_action()(self.fake_req, '1', body=body)
+        res = self._get_action()(self.fake_req, fakes.FAKE_UUID, body=body)
         self._check_status(202, res, self._get_action())
 
     @mock.patch('nova.compute.api.API.set_admin_password',
@@ -152,7 +153,7 @@ class AdminPasswordTestV21(test.NoDBTestCase):
         body = {'changePassword': {'adminPass': 'test'}}
         self.assertRaises(webob.exc.HTTPConflict,
                           self._get_action(),
-                          self.fake_req, 'fake', body=body)
+                          self.fake_req, fakes.FAKE_UUID, body=body)
 
 
 class AdminPasswordPolicyEnforcementV21(test.NoDBTestCase):
