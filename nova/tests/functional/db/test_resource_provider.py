@@ -2294,7 +2294,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         resources = {
             fields.ResourceClass.VCPU: 1,
             fields.ResourceClass.MEMORY_MB: 64,
-            fields.ResourceClass.DISK_GB: 100,
+            fields.ResourceClass.DISK_GB: 1500,
         }
         return resources
 
@@ -2344,7 +2344,15 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         )
         cn2.create()
 
-        for cn in (cn1, cn2):
+        cn3_uuid = uuidsentinel.cn3
+        cn3 = objects.ResourceProvider(
+            self.context,
+            name='cn3',
+            uuid=cn3_uuid
+        )
+        cn3.create()
+
+        for cn in (cn1, cn2, cn3):
             vcpu = objects.Inventory(
                 resource_provider=cn,
                 resource_class=fields.ResourceClass.VCPU,
@@ -2365,16 +2373,28 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
                 step_size=64,
                 allocation_ratio=1.5,
             )
-            disk_gb = objects.Inventory(
-                resource_provider=cn,
-                resource_class=fields.ResourceClass.DISK_GB,
-                total=2000,
-                reserved=100,
-                min_unit=10,
-                max_unit=100,
-                step_size=10,
-                allocation_ratio=1.0,
-            )
+            if cn.uuid == cn3_uuid:
+                disk_gb = objects.Inventory(
+                    resource_provider=cn,
+                    resource_class=fields.ResourceClass.DISK_GB,
+                    total=1000,
+                    reserved=100,
+                    min_unit=10,
+                    max_unit=1000,
+                    step_size=10,
+                    allocation_ratio=1.0,
+                )
+            else:
+                disk_gb = objects.Inventory(
+                    resource_provider=cn,
+                    resource_class=fields.ResourceClass.DISK_GB,
+                    total=2000,
+                    reserved=100,
+                    min_unit=10,
+                    max_unit=2000,
+                    step_size=10,
+                    allocation_ratio=1.0,
+                )
             disk_gb.obj_set_defaults()
             inv_list = objects.InventoryList(objects=[
                 vcpu,
@@ -2523,7 +2543,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
             total=2000,
             reserved=100,
             min_unit=10,
-            max_unit=100,
+            max_unit=2000,
             step_size=1,
             allocation_ratio=1.0,
         )

@@ -2402,7 +2402,9 @@ def _get_usages_by_provider_and_rc(ctx, rp_ids, rc_ids):
         inv.c.reserved,
         inv.c.allocation_ratio,
         usage.c.used,
-    ]).select_from(usage_join)
+    ]).select_from(usage_join).where(
+        sa.and_(rpt.c.id.in_(rp_ids),
+                inv.c.resource_class_id.in_(rc_ids)))
     return ctx.session.execute(query).fetchall()
 
 
