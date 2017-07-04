@@ -662,7 +662,7 @@ class API(base_api.NetworkAPI):
         Check the user has access to the network they requested, and that
         it is a suitable network to connect to. This includes getting the
         network details for any ports that have been passed in, because the
-        request will have been updated with the request_id in
+        request will have been updated with the network_id in
         _validate_requested_port_ids.
 
         If the user has not requested any ports or any networks, we get back
@@ -898,7 +898,12 @@ class API(base_api.NetworkAPI):
     def _update_ports_for_instance(self, context, instance, neutron,
             admin_client, requests_and_created_ports, nets,
             bind_host_id, dhcp_opts, available_macs):
-        """Create port for network_requests that don't have a port_id
+        """Update ports from network_requests.
+
+        Updates the pre-existing ports and the ones created in
+        ``_create_ports_for_instance`` with ``device_id``, ``device_owner``,
+        optionally ``mac_address`` and ``dhcp_opts``, and, depending on the
+        loaded extensions, ``rxtx_factor``, ``binding:host_id``, ``dns_name``.
 
         :param context: The request context.
         :param instance: nova.objects.instance.Instance object.
