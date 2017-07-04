@@ -1,0 +1,11 @@
+{
+    "event_type": "instance.live_migration_rollback_dest.end",
+    "payload": {
+        "$ref": "common_payloads/InstanceActionPayload.json#",
+        "nova_object.data": {
+            "action_initiator_user": "admin"
+        }
+    },
+    "priority": "INFO",
+    "publisher_id": "nova-compute:host2"
+}

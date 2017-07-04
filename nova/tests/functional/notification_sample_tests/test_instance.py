@@ -65,9 +65,12 @@ class TestInstanceNotificationSampleWithMultipleCompute(
             # Ensure that instance is in active state after an action
             self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
 
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_live_migration_cleanup_flags', return_value=[True, False])
     @mock.patch('nova.compute.rpcapi.ComputeAPI.pre_live_migration',
                 side_effect=exception.DestinationDiskExists(path='path'))
-    def _test_live_migration_rollback(self, server, mock_migration):
+    def _test_live_migration_rollback(self, server, mock_migration,
+                                      mock_flags):
         post = {
             'os-migrateLive': {
                 'host': 'host2',
@@ -76,10 +79,14 @@ class TestInstanceNotificationSampleWithMultipleCompute(
             }
         }
         self.admin_api.post_server_action(server['id'], post)
-        self._wait_for_notification('instance.live_migration_rollback.start')
-        self._wait_for_notification('instance.live_migration_rollback.end')
+        self._wait_for_notification(
+            'instance.live_migration_rollback_dest.end')
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        # 0. instance.live_migration_rollback.start
+        # 1. instance.live_migration_rollback.end
+        # 2. instance.live_migration_rollback_dest.start
+        # 3. instance.live_migration_rollback_dest.end
+        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'instance-live_migration_rollback-start',
             replacements={
@@ -92,6 +99,18 @@ class TestInstanceNotificationSampleWithMultipleCompute(
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+        self._verify_notification(
+            'instance-live_migration_rollback_dest-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+        self._verify_notification(
+            'instance-live_migration_rollback_dest-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
 
     def _test_live_migration_pre_and_post_dest(self, server):
         post = {

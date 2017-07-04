@@ -6717,10 +6717,12 @@ class ComputeTestCase(BaseTestCase,
 
         _test()
 
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch.object(fake.FakeDriver,
                        'rollback_live_migration_at_destination')
     def test_rollback_live_migration_at_destination_correctly(self,
-                                                    mock_rollback):
+                                                    mock_rollback,
+                                                    mock_notify):
         # creating instance testdata
         c = context.get_admin_context()
         instance = self._create_fake_instance_obj({'host': 'dummy'})
@@ -6748,9 +6750,16 @@ class ComputeTestCase(BaseTestCase,
                          'root_device_name': None,
                          'block_device_mapping': []},
                         destroy_disks=True, migrate_data=None)
+        mock_notify.assert_has_calls([
+                mock.call(c, instance, self.compute.host,
+                          action='live_migration_rollback_dest',
+                          phase='start'),
+                mock.call(c, instance, self.compute.host,
+                          action='live_migration_rollback_dest',
+                          phase='end')])
 
-    @mock.patch('nova.virt.driver.ComputeDriver.'
-                'rollback_live_migration_at_destination')
+    @mock.patch.object(fake.FakeDriver,
+                       'rollback_live_migration_at_destination')
     def test_rollback_live_migration_at_destination_network_fails(
             self, mock_rollback):
         c = context.get_admin_context()
