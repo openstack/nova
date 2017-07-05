@@ -15,6 +15,7 @@
 
 """Tests for network API."""
 
+import copy
 import itertools
 import uuid
 
@@ -559,7 +560,7 @@ class ApiTestCase(test.TestCase):
 
 
 @mock.patch('nova.network.api.API')
-@mock.patch('nova.db.instance_info_cache_update', return_value=fake_info_cache)
+@mock.patch('nova.db.instance_info_cache_update')
 class TestUpdateInstanceCache(test.NoDBTestCase):
     def setUp(self):
         super(TestUpdateInstanceCache, self).setUp()
@@ -572,32 +573,41 @@ class TestUpdateInstanceCache(test.NoDBTestCase):
 
     def test_update_nw_info_none(self, db_mock, api_mock):
         api_mock._get_instance_nw_info.return_value = self.nw_info
-
+        info_cache = copy.deepcopy(fake_info_cache)
+        info_cache.update({'network_info': self.nw_json})
+        db_mock.return_value = info_cache
         base_api.update_instance_cache_with_nw_info(api_mock, self.context,
                                                self.instance, None)
         api_mock._get_instance_nw_info.assert_called_once_with(self.context,
                                                                 self.instance)
         db_mock.assert_called_once_with(self.context, self.instance.uuid,
                                         {'network_info': self.nw_json})
+        self.assertEqual(self.nw_info, self.instance.info_cache.network_info)
 
     def test_update_nw_info_one_network(self, db_mock, api_mock):
-        api_mock._get_instance_nw_info.return_value = self.nw_info
+        info_cache = copy.deepcopy(fake_info_cache)
+        info_cache.update({'network_info': self.nw_json})
+        db_mock.return_value = info_cache
         base_api.update_instance_cache_with_nw_info(api_mock, self.context,
                                                self.instance, self.nw_info)
         self.assertFalse(api_mock._get_instance_nw_info.called)
         db_mock.assert_called_once_with(self.context, self.instance.uuid,
                                         {'network_info': self.nw_json})
+        self.assertEqual(self.nw_info, self.instance.info_cache.network_info)
 
     def test_update_nw_info_empty_list(self, db_mock, api_mock):
-        api_mock._get_instance_nw_info.return_value = self.nw_info
+        new_nw_info = network_model.NetworkInfo([])
+        db_mock.return_value = fake_info_cache
         base_api.update_instance_cache_with_nw_info(api_mock, self.context,
-                                                self.instance,
-                                                network_model.NetworkInfo([]))
+                                                self.instance, new_nw_info)
         self.assertFalse(api_mock._get_instance_nw_info.called)
         db_mock.assert_called_once_with(self.context, self.instance.uuid,
                                         {'network_info': '[]'})
+        self.assertEqual(new_nw_info, self.instance.info_cache.network_info)
 
     def test_decorator_return_object(self, db_mock, api_mock):
+        db_mock.return_value = fake_info_cache
+
         @base_api.refresh_cache
         def func(self, context, instance):
             return network_model.NetworkInfo([])
@@ -607,6 +617,8 @@ class TestUpdateInstanceCache(test.NoDBTestCase):
                                         {'network_info': '[]'})
 
     def test_decorator_return_none(self, db_mock, api_mock):
+        db_mock.return_value = fake_info_cache
+
         @base_api.refresh_cache
         def func(self, context, instance):
             pass
