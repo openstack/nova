@@ -20,6 +20,13 @@ tests:
 #  os.environ['SS_UUID'] = 'dddddddd-61a6-472e-b8c1-74796e803066'
 #  os.environ['AGG_UUID'] = 'aaaaaaaa-04b3-458c-9e9f-361aad56f41c'
 
+- name: list traits
+  GET: /traits
+  status: 200
+  response_strings:
+    # We at least want to make sure that this trait is supported.
+    - MISC_SHARES_VIA_AGGREGATE
+
 - name: get allocation candidates before microversion
   GET: /allocation_candidates?resources=VCPU:1
   request_headers:
