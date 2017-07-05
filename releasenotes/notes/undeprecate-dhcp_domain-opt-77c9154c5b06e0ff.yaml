@@ -1,0 +1,8 @@
+---
+other:
+  - |
+    The ``dhcp_domain`` option has been undeprecated and moved to the ``[api]``
+    group. It is used by the metadata service to configure fully-qualified
+    domain names for instances, in addition to its role configuring DHCP
+    services for *nova-network*. This use case was missed when deprecating the
+    option initially.

@@ -1007,8 +1007,8 @@ def restart_dhcp(context, dev, network_ref, fixedips):
 
     # dnsmasq currently gives an error for an empty domain,
     # rather than ignoring.  So only specify it if defined.
-    if CONF.dhcp_domain:
-        cmd.append('--domain=%s' % CONF.dhcp_domain)
+    if CONF.api.dhcp_domain:
+        cmd.append('--domain=%s' % CONF.api.dhcp_domain)
 
     dns_servers = CONF.dns_server
     if CONF.use_network_dns_servers:
@@ -1096,20 +1096,20 @@ def _host_dhcp(fixedip):
         net = _host_dhcp_network(fixedip.virtual_interface_id)
         return '%s,%s.%s,%s,net:%s' % (fixedip.virtual_interface.address,
                                hostname,
-                               CONF.dhcp_domain,
+                               CONF.api.dhcp_domain,
                                fixedip.address,
                                net)
     else:
         return '%s,%s.%s,%s' % (fixedip.virtual_interface.address,
                                hostname,
-                               CONF.dhcp_domain,
+                               CONF.api.dhcp_domain,
                                fixedip.address)
 
 
 def _host_dns(fixedip):
     return '%s\t%s.%s' % (fixedip.address,
                           fixedip.instance.hostname,
-                          CONF.dhcp_domain)
+                          CONF.api.dhcp_domain)
 
 
 def _host_dhcp_opts(vif_id=None, gateway=None):

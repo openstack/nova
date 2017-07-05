@@ -528,8 +528,10 @@ class InstanceMetadata(object):
         return self._check_version(required, requested, OPENSTACK_VERSIONS)
 
     def _get_hostname(self):
-        if CONF.dhcp_domain:
-            return '.'.join([self.instance.hostname, CONF.dhcp_domain])
+        # TODO(stephenfin): At some point in the future, we may wish to
+        # retrieve this information from neutron.
+        if CONF.api.dhcp_domain:
+            return '.'.join([self.instance.hostname, CONF.api.dhcp_domain])
 
         return self.instance.hostname
 

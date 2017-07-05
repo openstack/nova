@@ -734,10 +734,10 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
 
         dev = 'br100'
 
-        default_domain = CONF.dhcp_domain
+        default_domain = CONF.api.dhcp_domain
         for domain in ('', default_domain):
             executes = []
-            self.flags(dhcp_domain=domain)
+            self.flags(dhcp_domain=domain, group='api')
             fixedips = self._get_fixedips(network_ref)
             linux_net.restart_dhcp(self.context, dev, network_ref, fixedips)
             expected = ['env',
@@ -761,8 +761,8 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             '--no-hosts',
             '--leasefile-ro']
 
-            if CONF.dhcp_domain:
-                expected.append('--domain=%s' % CONF.dhcp_domain)
+            if CONF.api.dhcp_domain:
+                expected.append('--domain=%s' % CONF.api.dhcp_domain)
 
             if extra_expected:
                 expected += extra_expected
