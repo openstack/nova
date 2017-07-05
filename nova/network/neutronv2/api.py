@@ -1227,7 +1227,7 @@ class API(base_api.NetworkAPI):
         vif = objects.VirtualInterface.get_by_uuid(context, port_id)
         if vif:
             if 'tag' in vif and vif.tag:
-                self._delete_nic_metadata(self, instance, vif)
+                self._delete_nic_metadata(instance, vif)
             vif.destroy()
         else:
             LOG.debug('VirtualInterface not found for port: %s',

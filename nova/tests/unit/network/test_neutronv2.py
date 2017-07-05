@@ -4532,8 +4532,7 @@ class TestNeutronv2WithMock(test.TestCase):
         mock_unbind.assert_called_once_with(mock.sentinel.ctx, ['2'],
                                             mock_client)
         mock_get_vif_by_uuid.assert_called_once_with(mock.sentinel.ctx, '2')
-        mock_del_nic_meta.assert_called_once_with(self.api, mock_inst,
-                                                  vif)
+        mock_del_nic_meta.assert_called_once_with(mock_inst, vif)
         vif.destroy.assert_called_once_with()
 
     def test_delete_nic_metadata(self):
