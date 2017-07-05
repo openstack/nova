@@ -6282,9 +6282,17 @@ class ComputeManager(manager.Manager):
 
         self._notify_about_instance_usage(
             context, instance, 'live.migration.force.complete.start')
+        compute_utils.notify_about_instance_action(
+            context, instance, self.host,
+            action=fields.NotificationAction.LIVE_MIGRATION_FORCE_COMPLETE,
+            phase=fields.NotificationPhase.START)
         self.driver.live_migration_force_complete(instance)
         self._notify_about_instance_usage(
             context, instance, 'live.migration.force.complete.end')
+        compute_utils.notify_about_instance_action(
+            context, instance, self.host,
+            action=fields.NotificationAction.LIVE_MIGRATION_FORCE_COMPLETE,
+            phase=fields.NotificationPhase.END)
 
     @wrap_exception()
     @wrap_instance_event(prefix='compute')

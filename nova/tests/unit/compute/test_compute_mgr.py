@@ -7234,13 +7234,14 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         migration.status = 'running'
         migration.id = 0
 
+        @mock.patch('nova.compute.utils.notify_about_instance_action')
         @mock.patch('nova.image.api.API.generate_image_url',
                     return_value='fake-url')
         @mock.patch.object(objects.Migration, 'get_by_id',
                            return_value=migration)
         @mock.patch.object(self.compute.driver,
                            'live_migration_force_complete')
-        def _do_test(force_complete, get_by_id, gen_img_url):
+        def _do_test(force_complete, get_by_id, gen_img_url, mock_notify):
             self.compute.live_migration_force_complete(
                 self.context, self.instance)
 
@@ -7259,6 +7260,14 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             self.assertEqual(
                 self.instance.uuid,
                 fake_notifier.NOTIFICATIONS[1].payload['instance_id'])
+            self.assertEqual(2, mock_notify.call_count)
+            mock_notify.assert_has_calls([
+                mock.call(self.context, self.instance, self.compute.host,
+                          action='live_migration_force_complete',
+                          phase='start'),
+                mock.call(self.context, self.instance, self.compute.host,
+                          action='live_migration_force_complete',
+                          phase='end')])
 
         _do_test()
 

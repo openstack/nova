@@ -807,6 +807,7 @@ class NotificationAction(BaseNovaEnum):
     LIVE_MIGRATION_PRE = 'live_migration_pre'
     LIVE_MIGRATION_ROLLBACK_DEST = 'live_migration_rollback_dest'
     LIVE_MIGRATION_ROLLBACK = 'live_migration_rollback'
+    LIVE_MIGRATION_FORCE_COMPLETE = 'live_migration_force_complete'
     REBUILD = 'rebuild'
     REBUILD_SCHEDULED = 'rebuild_scheduled'
     INTERFACE_DETACH = 'interface_detach'
@@ -836,7 +837,7 @@ class NotificationAction(BaseNovaEnum):
            RESIZE_CONFIRM, RESIZE_PREP, RESIZE_REVERT, SHELVE_OFFLOAD,
            SOFT_DELETE, TRIGGER_CRASH_DUMP, UNRESCUE, UNSHELVE, ADD_HOST,
            REMOVE_HOST, ADD_MEMBER, UPDATE_METADATA, LOCK, UNLOCK,
-           REBUILD_SCHEDULED, UPDATE_PROP)
+           REBUILD_SCHEDULED, UPDATE_PROP, LIVE_MIGRATION_FORCE_COMPLETE)
 
 
 # TODO(rlrossit): These should be changed over to be a StateMachine enum from
