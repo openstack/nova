@@ -4815,16 +4815,29 @@ class KeypairAPI(base.Base):
 
         self._notify(context, 'import.start', key_name)
 
-        fingerprint = self._generate_fingerprint(public_key, key_type)
-
         keypair = objects.KeyPair(context)
         keypair.user_id = user_id
         keypair.name = key_name
         keypair.type = key_type
-        keypair.fingerprint = fingerprint
+        keypair.fingerprint = None
         keypair.public_key = public_key
+
+        compute_utils.notify_about_keypair_action(
+            context=context,
+            keypair=keypair,
+            action=fields_obj.NotificationAction.IMPORT,
+            phase=fields_obj.NotificationPhase.START)
+
+        fingerprint = self._generate_fingerprint(public_key, key_type)
+
+        keypair.fingerprint = fingerprint
         keypair.create()
 
+        compute_utils.notify_about_keypair_action(
+            context=context,
+            keypair=keypair,
+            action=fields_obj.NotificationAction.IMPORT,
+            phase=fields_obj.NotificationPhase.END)
         self._notify(context, 'import.end', key_name)
 
         return keypair

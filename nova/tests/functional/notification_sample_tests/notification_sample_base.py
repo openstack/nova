@@ -169,6 +169,16 @@ class NotificationSampleTestBase(test.TestCase,
             }}
         self.api.post_keypair(keypair_req)
 
+        keypair_expected_notifications = [
+            'keypair-import-start',
+            'keypair-import-end'
+        ]
+        self.assertLessEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        for notification in keypair_expected_notifications:
+            self._verify_notification(
+                notification,
+                actual=fake_notifier.VERSIONED_NOTIFICATIONS.pop(0))
+
         server = self._build_minimal_create_server_request(
             self.api, 'some-server',
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
