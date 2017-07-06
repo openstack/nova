@@ -251,10 +251,18 @@ class SchedulerReportClient(object):
             url, endpoint_filter=self.ks_filter, raise_exc=False,
             **kwargs)
 
-    def delete(self, url):
+    def delete(self, url, version=None):
+        kwargs = {}
+        if version is not None:
+            # TODO(mriedem): Perform some version discovery at some point.
+            kwargs = {
+                'headers': {
+                    'OpenStack-API-Version': 'placement %s' % version
+                },
+            }
         return self._client.delete(
             url,
-            endpoint_filter=self.ks_filter, raise_exc=False)
+            endpoint_filter=self.ks_filter, raise_exc=False, **kwargs)
 
     # TODO(sbauza): Change that poor interface into passing a rich versioned
     # object that would provide the ResourceProvider requirements.
@@ -612,6 +620,9 @@ class SchedulerReportClient(object):
     def _delete_inventory(self, rp_uuid):
         """Deletes all inventory records for a resource provider with the
         supplied UUID.
+
+        First attempt to DELETE the inventory using microversion 1.5. If
+        this results in a 406, fail over to a PUT.
         """
         curr = self._get_inventory_and_update_provider_generation(rp_uuid)
 
@@ -627,28 +638,55 @@ class SchedulerReportClient(object):
         LOG.info(msg, rp_uuid)
 
         url = '/resource_providers/%s/inventories' % rp_uuid
-        cur_rp_gen = self._resource_providers[rp_uuid]['generation']
-        payload = {
-            'resource_provider_generation': cur_rp_gen,
-            'inventories': {},
-        }
-        r = self.put(url, payload)
+        r = self.delete(url, version="1.5")
         placement_req_id = get_placement_request_id(r)
-        if r.status_code == 200:
-            # Update our view of the generation for next time
-            updated_inv = r.json()
-            new_gen = updated_inv['resource_provider_generation']
-
-            self._resource_providers[rp_uuid]['generation'] = new_gen
-            msg_args = {
-                'rp_uuid': rp_uuid,
-                'generation': new_gen,
-                'placement_req_id': placement_req_id,
+        cur_rp_gen = self._resource_providers[rp_uuid]['generation']
+        msg_args = {
+            'rp_uuid': rp_uuid,
+            'placement_req_id': placement_req_id,
+        }
+        if r.status_code == 406:
+            # microversion 1.5 not available so try the earlier way
+            # TODO(cdent): When we're happy that all placement
+            # servers support microversion 1.5 we can remove this
+            # call and the associated code.
+            LOG.debug('Falling back to placement API microversion 1.0 '
+                      'for deleting all inventory for a resource provider.')
+            payload = {
+                'resource_provider_generation': cur_rp_gen,
+                'inventories': {},
             }
-            LOG.info(_LI('[%(placement_req_id)s] Deleted all inventory for '
-                         'resource provider %(rp_uuid)s at generation '
-                         '%(generation)i'),
+            r = self.put(url, payload)
+            placement_req_id = get_placement_request_id(r)
+            msg_args['placement_req_id'] = placement_req_id
+            if r.status_code == 200:
+                # Update our view of the generation for next time
+                updated_inv = r.json()
+                new_gen = updated_inv['resource_provider_generation']
+
+                self._resource_providers[rp_uuid]['generation'] = new_gen
+                msg_args['generation'] = new_gen
+                LOG.info(_LI("[%(placement_req_id)s] Deleted all inventory "
+                             "for resource provider %(rp_uuid)s at generation "
+                             "%(generation)i."),
+                         msg_args)
+                return
+
+        if r.status_code == 204:
+            self._resource_providers[rp_uuid]['generation'] = cur_rp_gen + 1
+            LOG.info(_LI("[%(placement_req_id)s] Deleted all inventory for "
+                         "resource provider %(rp_uuid)s."),
                      msg_args)
+            return
+        elif r.status_code == 404:
+            # This can occur if another thread deleted the inventory and the
+            # resource provider already
+            LOG.debug("[%(placement_req_id)s] Resource provider %(rp_uuid)s "
+                      "deleted by another thread when trying to delete "
+                      "inventory. Ignoring.",
+                      msg_args)
+            self._resource_providers.pop(rp_uuid, None)
+            self._provider_aggregate_map.pop(rp_uuid, None)
             return
         elif r.status_code == 409:
             rc_str = _extract_inventory_in_use(r.text)
@@ -656,21 +694,14 @@ class SchedulerReportClient(object):
                 msg = _LW("[%(placement_req_id)s] We cannot delete inventory "
                           "%(rc_str)s for resource provider %(rp_uuid)s "
                           "because the inventory is in use.")
-                msg_args = {
-                    'rp_uuid': rp_uuid,
-                    'rc_str': rc_str,
-                    'placement_req_id': placement_req_id,
-                }
+                msg_args['rc_str'] = rc_str
                 LOG.warning(msg, msg_args)
                 return
 
         msg = _LE("[%(placement_req_id)s] Failed to delete inventory for "
-                  "resource provider %(rp_uuid)s. Got error response: %(err)s")
-        msg_args = {
-            'rp_uuid': rp_uuid,
-            'err': r.text,
-            'placement_req_id': placement_req_id,
-        }
+                  "resource provider %(rp_uuid)s. Got error response: "
+                  "%(err)s.")
+        msg_args['err'] = r.text
         LOG.error(msg, msg_args)
 
     def set_inventory_for_provider(self, rp_uuid, rp_name, inv_data):
