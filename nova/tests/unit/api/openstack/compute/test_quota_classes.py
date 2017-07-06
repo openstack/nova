@@ -15,7 +15,6 @@
 import copy
 import webob
 
-from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute import quota_classes \
        as quota_classes_v21
 from nova import exception
@@ -46,9 +45,7 @@ class QuotaClassSetsTestV21(test.TestCase):
         self._setup()
 
     def _setup(self):
-        ext_info = extension_info.LoadedExtensionInfo()
-        self.controller = quota_classes_v21.QuotaClassSetsController(
-            extension_info=ext_info)
+        self.controller = quota_classes_v21.QuotaClassSetsController()
 
     def _check_filtered_extended_quota(self, quota_set):
         self.assertNotIn('server_groups', quota_set)
@@ -161,9 +158,7 @@ class QuotaClassesPolicyEnforcementV21(test.NoDBTestCase):
 
     def setUp(self):
         super(QuotaClassesPolicyEnforcementV21, self).setUp()
-        ext_info = extension_info.LoadedExtensionInfo()
-        self.controller = quota_classes_v21.QuotaClassSetsController(
-            extension_info=ext_info)
+        self.controller = quota_classes_v21.QuotaClassSetsController()
         self.req = fakes.HTTPRequest.blank('')
 
     def test_show_policy_failed(self):

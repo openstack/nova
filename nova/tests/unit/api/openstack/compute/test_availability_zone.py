@@ -19,7 +19,6 @@ import mock
 from oslo_config import cfg
 
 from nova.api.openstack.compute import availability_zone as az_v21
-from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute import servers as servers_v21
 from nova import availability_zones
 from nova.compute import api as compute_api
@@ -184,9 +183,7 @@ class ServersControllerCreateTestV21(test.TestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def _set_up_controller(self):
-        ext_info = extension_info.LoadedExtensionInfo()
-        self.controller = servers_v21.ServersController(
-            extension_info=ext_info)
+        self.controller = servers_v21.ServersController()
 
     def _create_instance_with_availability_zone(self, zone_name):
         def create(*args, **kwargs):

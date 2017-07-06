@@ -18,7 +18,6 @@ from oslo_config import cfg
 from oslo_serialization import jsonutils
 from webob import exc
 
-from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute import servers as servers_v21
 from nova.compute import api as compute_api
 from nova import db
@@ -36,9 +35,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
     validation_error = exception.ValidationError
 
     def _setup_controller(self):
-        ext_info = extension_info.LoadedExtensionInfo()
-        self.controller = servers_v21.ServersController(
-                                        extension_info=ext_info)
+        self.controller = servers_v21.ServersController()
 
     def setUp(self):
         super(BlockDeviceMappingTestV21, self).setUp()

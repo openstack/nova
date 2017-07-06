@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute import servers as servers_v21
 from nova import exception
 from nova import test
@@ -46,9 +45,7 @@ class AccessIPsAPIValidationTestV21(test.TestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def _set_up_controller(self):
-        ext_info = extension_info.LoadedExtensionInfo()
-        self.controller = servers_v21.ServersController(
-                            extension_info=ext_info)
+        self.controller = servers_v21.ServersController()
 
     def _verify_update_access_ip(self, res_dict, params):
         for key, value in params.items():
