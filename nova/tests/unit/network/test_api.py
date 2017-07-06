@@ -17,9 +17,9 @@
 
 import copy
 import itertools
-import uuid
 
 import mock
+from oslo_utils import uuidutils
 
 from nova.compute import flavors
 from nova import context
@@ -256,7 +256,7 @@ class ApiTestCase(test.TestCase):
         fake_flavor = flavors.get_default_flavor()
         fake_flavor['rxtx_factor'] = 1.21
         fake_instance = objects.Instance(
-            uuid=uuid.uuid4().hex,
+            uuid=uuidutils.generate_uuid(dashed=False),
             project_id='fake_project_id',
             instance_type_id=fake_flavor['id'],
             flavor=fake_flavor,

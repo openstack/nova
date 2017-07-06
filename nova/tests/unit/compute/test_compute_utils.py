@@ -18,9 +18,9 @@
 
 import copy
 import string
-import uuid
 
 import mock
+from oslo_utils import uuidutils
 import six
 
 from nova.compute import flavors
@@ -87,11 +87,12 @@ class ComputeValidateDeviceTestCase(test.NoDBTestCase):
         # check if test name includes "xen"
         if 'xen' in self.id():
             self.flags(compute_driver='xenapi.XenAPIDriver')
-            self.instance = objects.Instance(uuid=uuid.uuid4().hex,
-                root_device_name=None,
-                default_ephemeral_device=None)
+            self.instance = objects.Instance(
+                uuid=uuidutils.generate_uuid(dashed=False),
+                root_device_name=None, default_ephemeral_device=None)
         else:
-            self.instance = objects.Instance(uuid=uuid.uuid4().hex,
+            self.instance = objects.Instance(
+                uuid=uuidutils.generate_uuid(dashed=False),
                 root_device_name='/dev/vda',
                 default_ephemeral_device='/dev/vdb')
 

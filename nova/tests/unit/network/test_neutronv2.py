@@ -16,7 +16,6 @@
 
 import collections
 import copy
-import uuid
 
 from keystoneauth1.fixture import V2Token
 from keystoneauth1 import loading as ks_loading
@@ -31,6 +30,7 @@ from oslo_config import fixture as config_fixture
 from oslo_policy import policy as oslo_policy
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
+from oslo_utils import uuidutils
 import requests_mock
 import six
 from six.moves import range
@@ -5753,7 +5753,7 @@ class TestNeutronClientForAdminScenarios(test.NoDBTestCase):
     @requests_mock.mock()
     def _test_get_client_for_admin(self, req_mock,
                                    use_id=False, admin_context=False):
-        token_value = uuid.uuid4().hex
+        token_value = uuidutils.generate_uuid(dashed=False)
         auth_url = 'http://anyhost/auth'
         token_resp = V2Token(token_id=token_value)
         req_mock.post(auth_url + '/tokens', json=token_resp)

@@ -15,13 +15,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import uuid
-
 from eventlet import greenthread
 from lxml import etree
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import importutils
+from oslo_utils import uuidutils
 
 import nova.conf
 import nova.virt.firewall as base_firewall
@@ -235,7 +234,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
         except Exception as e:
             LOG.debug(u"Cannot find UUID for filter '%(name)s': '%(e)s'",
                 {'name': name, 'e': e})
-            u = uuid.uuid4().hex
+            u = uuidutils.generate_uuid(dashed=False)
 
         LOG.debug("UUID for filter '%s' is '%s'", name, u)
         return u

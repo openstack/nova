@@ -20,7 +20,6 @@
 
 import copy
 import datetime
-import uuid as stdlib_uuid
 
 import iso8601
 import mock
@@ -9136,7 +9135,7 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         self.uuidstrs = []
         for _ in range(6):
-            self.uuidstrs.append(stdlib_uuid.uuid4().hex)
+            self.uuidstrs.append(uuidutils.generate_uuid(dashed=False))
 
     def _assert_shadow_tables_empty_except(self, *exceptions):
         """Ensure shadow tables are empty

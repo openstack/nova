@@ -13,16 +13,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import uuid as uuid_lib
-
+from oslo_utils import uuidutils
 from webob import exc
 
 from nova.api.openstack.compute import cloudpipe as cloudpipe_v21
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 
-
-project_id = str(uuid_lib.uuid4().hex)
+project_id = uuidutils.generate_uuid(dashed=False)
 
 
 class CloudpipeTestV21(test.NoDBTestCase):
