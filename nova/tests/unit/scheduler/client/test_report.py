@@ -198,6 +198,45 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
         ) as (_auth_mock, _sess_mock):
             self.client = report.SchedulerReportClient()
 
+    def _init_provider_tree(self, generation_override=None,
+                            resources_override=None):
+        cn = self.compute_node
+        resources = resources_override
+        if resources_override is None:
+            resources = {
+                'VCPU': {
+                    'total': cn.vcpus,
+                    'reserved': 0,
+                    'min_unit': 1,
+                    'max_unit': cn.vcpus,
+                    'step_size': 1,
+                    'allocation_ratio': cn.cpu_allocation_ratio,
+                },
+                'MEMORY_MB': {
+                    'total': cn.memory_mb,
+                    'reserved': 512,
+                    'min_unit': 1,
+                    'max_unit': cn.memory_mb,
+                    'step_size': 1,
+                    'allocation_ratio': cn.ram_allocation_ratio,
+                },
+                'DISK_GB': {
+                    'total': cn.local_gb,
+                    'reserved': 0,
+                    'min_unit': 1,
+                    'max_unit': cn.local_gb,
+                    'step_size': 1,
+                    'allocation_ratio': cn.disk_allocation_ratio,
+                },
+            }
+        generation = generation_override or 1
+        rp = self.client._provider_tree.new_root(
+            cn.hypervisor_hostname,
+            cn.uuid,
+            generation,
+        )
+        rp.update_inventory(resources, generation)
+
 
 class TestPutAllocations(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put')
@@ -991,16 +1030,19 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         # object for the compute host and check that
         # _ensure_resource_provider() doesn't call _get_resource_provider() or
         # _create_resource_provider()
-        self.client._resource_providers = {
-            uuids.compute_node: mock.sentinel.rp
-        }
+        cn = self.compute_node
+        self.client._provider_tree.new_root(
+            cn.hypervisor_hostname,
+            cn.uuid,
+            1,
+        )
 
-        self.client._ensure_resource_provider(uuids.compute_node)
-        get_agg_mock.assert_called_once_with(uuids.compute_node)
+        self.client._ensure_resource_provider(cn.uuid)
+        get_agg_mock.assert_called_once_with(cn.uuid)
         self.assertIn(uuids.compute_node, self.client._provider_aggregate_map)
         self.assertEqual(
             get_agg_mock.return_value,
-            self.client._provider_aggregate_map[uuids.compute_node]
+            self.client._provider_aggregate_map[cn.uuid]
         )
         self.assertFalse(get_rp_mock.called)
         self.assertFalse(create_rp_mock.called)
@@ -1016,19 +1058,23 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         # No resource provider exists in the client's cache, so validate that
         # if we get the resource provider from the placement API that we don't
         # try to create the resource provider.
-        get_rp_mock.return_value = mock.sentinel.rp
+        get_rp_mock.return_value = {
+            'uuid': uuids.compute_node,
+            'name': mock.sentinel.name,
+            'generation': 1,
+        }
 
         self.client._ensure_resource_provider(uuids.compute_node)
 
         get_rp_mock.assert_called_once_with(uuids.compute_node)
+        self.assertTrue(self.client._provider_tree.exists(uuids.compute_node))
         get_agg_mock.assert_called_once_with(uuids.compute_node)
         self.assertIn(uuids.compute_node, self.client._provider_aggregate_map)
         self.assertEqual(
             get_agg_mock.return_value,
             self.client._provider_aggregate_map[uuids.compute_node]
         )
-        self.assertEqual({uuids.compute_node: mock.sentinel.rp},
-                          self.client._resource_providers)
+        self.assertTrue(self.client._provider_tree.exists(uuids.compute_node))
         self.assertFalse(create_rp_mock.called)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -1051,8 +1097,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         get_rp_mock.assert_called_once_with(uuids.compute_node)
         create_rp_mock.assert_called_once_with(uuids.compute_node,
                                                uuids.compute_node)
+        self.assertFalse(self.client._provider_tree.exists(uuids.compute_node))
         self.assertFalse(get_agg_mock.called)
-        self.assertEqual({}, self.client._resource_providers)
         self.assertEqual({}, self.client._provider_aggregate_map)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -1067,8 +1113,11 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         # provider was returned from the placement API, so verify that in this
         # case we try to create the resource provider via the placement API.
         get_rp_mock.return_value = None
-        create_rp_mock.return_value = mock.sentinel.rp
-
+        create_rp_mock.return_value = {
+            'uuid': uuids.compute_node,
+            'name': 'compute-name',
+            'generation': 1,
+        }
         self.client._ensure_resource_provider(uuids.compute_node)
 
         get_agg_mock.assert_called_once_with(uuids.compute_node)
@@ -1082,19 +1131,14 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                 uuids.compute_node,
                 uuids.compute_node,  # name param defaults to UUID if None
         )
-        self.assertEqual({uuids.compute_node: mock.sentinel.rp},
-                          self.client._resource_providers)
+        self.assertTrue(self.client._provider_tree.exists(uuids.compute_node))
 
         create_rp_mock.reset_mock()
-        self.client._resource_providers = {}
 
         self.client._ensure_resource_provider(uuids.compute_node,
-                                              mock.sentinel.name)
-
-        create_rp_mock.assert_called_once_with(
-                uuids.compute_node,
-                mock.sentinel.name,
-        )
+                                              'compute-name')
+        # Shouldn't be called now that provider is in cache...
+        self.assertFalse(create_rp_mock.called)
 
     def test_get_allocation_candidates(self):
         resp_mock = mock.Mock(status_code=200)
@@ -1189,13 +1233,13 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.ks_sess_mock.get.assert_called_once_with(expected_url,
                                                       endpoint_filter=mock.ANY,
                                                       raise_exc=False)
-        # A 503 Service Unavailable should trigger an error log
-        # that includes the placement request id and return None
+        # A 503 Service Unavailable should trigger an error log that
+        # includes the placement request id and return None
         # from _get_resource_provider()
         self.assertTrue(logging_mock.called)
-        self.assertEqual(uuids.request_id,
-                        logging_mock.call_args[0][1]['placement_req_id'])
         self.assertIsNone(result)
+        self.assertEqual(uuids.request_id,
+                         logging_mock.call_args[0][1]['placement_req_id'])
 
     def test_create_resource_provider(self):
         # Ensure _create_resource_provider() returns a dict of resource
@@ -1564,9 +1608,8 @@ class TestInventory(SchedulerReportClientTestCase):
     def test_delete_inventory(self, mock_get, mock_delete, mock_debug,
                               mock_put, mock_info):
         cn = self.compute_node
-        rp = dict(uuid=cn.uuid, generation=42)
         # Make sure the resource provider exists for preventing to call the API
-        self.client._resource_providers[cn.uuid] = rp
+        self._init_provider_tree()
 
         mock_get.return_value.json.return_value = {
             'resource_provider_generation': 1,
@@ -1591,9 +1634,8 @@ class TestInventory(SchedulerReportClientTestCase):
     def test_delete_inventory_already_no_inventory(self, mock_get, mock_delete,
             mock_extract):
         cn = self.compute_node
-        rp = dict(uuid=cn.uuid, generation=42)
         # Make sure the resource provider exists for preventing to call the API
-        self.client._resource_providers[cn.uuid] = rp
+        self._init_provider_tree()
 
         mock_get.return_value.json.return_value = {
             'resource_provider_generation': 1,
@@ -1604,8 +1646,8 @@ class TestInventory(SchedulerReportClientTestCase):
         self.assertIsNone(result)
         self.assertFalse(mock_delete.called)
         self.assertFalse(mock_extract.called)
-        new_gen = self.client._resource_providers[cn.uuid]['generation']
-        self.assertEqual(1, new_gen)
+        rp = self.client._provider_tree.find(cn.uuid)
+        self.assertEqual(1, rp.generation)
 
     @mock.patch.object(report.LOG, 'info')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -1618,9 +1660,8 @@ class TestInventory(SchedulerReportClientTestCase):
     def test_delete_inventory_put(self, mock_get, mock_delete, mock_debug,
                                   mock_put, mock_info):
         cn = self.compute_node
-        rp = dict(uuid=cn.uuid, generation=42)
         # Make sure the resource provider exists for preventing to call the API
-        self.client._resource_providers[cn.uuid] = rp
+        self._init_provider_tree()
 
         mock_get.return_value.json.return_value = {
             'resource_provider_generation': 1,
@@ -1641,11 +1682,11 @@ class TestInventory(SchedulerReportClientTestCase):
         self.assertIsNone(result)
         self.assertTrue(mock_debug.called)
         self.assertTrue(mock_put.called)
-        new_gen = self.client._resource_providers[cn.uuid]['generation']
-        self.assertEqual(44, new_gen)
         self.assertTrue(mock_info.called)
         self.assertEqual(uuids.request_id,
                          mock_info.call_args[0][1]['placement_req_id'])
+        rp = self.client._provider_tree.find(cn.uuid)
+        self.assertEqual(44, rp.generation)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'put')
@@ -1657,9 +1698,8 @@ class TestInventory(SchedulerReportClientTestCase):
     def test_delete_inventory_put_failover(self, mock_get, mock_delete,
                                            mock_debug, mock_put):
         cn = self.compute_node
-        rp = dict(uuid=cn.uuid, generation=42)
         # Make sure the resource provider exists for preventing to call the API
-        self.client._resource_providers[cn.uuid] = rp
+        self._init_provider_tree()
 
         mock_get.return_value.json.return_value = {
             'resource_provider_generation': 42,
@@ -1671,7 +1711,7 @@ class TestInventory(SchedulerReportClientTestCase):
         mock_put.return_value.status_code = 200
         self.client._delete_inventory(cn.uuid)
         self.assertTrue(mock_debug.called)
-        exp_url = '/resource_providers/%s/inventories' % rp['uuid']
+        exp_url = '/resource_providers/%s/inventories' % cn.uuid
         payload = {
             'resource_provider_generation': 42,
             'inventories': {},
@@ -1684,13 +1724,21 @@ class TestInventory(SchedulerReportClientTestCase):
     @mock.patch.object(report.LOG, 'debug')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'delete')
-    def test_delete_inventory_put_failover_in_use(self, mock_delete,
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get')
+    def test_delete_inventory_put_failover_in_use(self, mock_get, mock_delete,
                                                   mock_debug, mock_put,
                                                   mock_error):
         cn = self.compute_node
-        rp = dict(uuid=cn.uuid, generation=42)
         # Make sure the resource provider exists for preventing to call the API
-        self.client._resource_providers[cn.uuid] = rp
+        self._init_provider_tree()
+
+        mock_get.return_value.json.return_value = {
+            'resource_provider_generation': 42,
+            'inventories': {
+                'DISK_GB': {'total': 10},
+            }
+        }
         mock_delete.return_value.status_code = 406
         mock_put.return_value.status_code = 409
         mock_put.return_value.text = (
@@ -1705,9 +1753,10 @@ class TestInventory(SchedulerReportClientTestCase):
                                          uuids.request_id}
         self.client._delete_inventory(cn.uuid)
         self.assertTrue(mock_debug.called)
+        rp = self.client._provider_tree.find(cn.uuid)
         exp_url = '/resource_providers/%s/inventories' % cn.uuid
         payload = {
-            'resource_provider_generation': rp['generation'],
+            'resource_provider_generation': rp.generation,
             'inventories': {},
         }
         mock_put.assert_called_once_with(exp_url, payload)
@@ -1723,9 +1772,8 @@ class TestInventory(SchedulerReportClientTestCase):
     def test_delete_inventory_inventory_in_use(self, mock_get, mock_delete,
             mock_warn):
         cn = self.compute_node
-        rp = dict(uuid=cn.uuid, generation=42)
         # Make sure the resource provider exists for preventing to call the API
-        self.client._resource_providers[cn.uuid] = rp
+        self._init_provider_tree()
 
         mock_get.return_value.json.return_value = {
             'resource_provider_generation': 1,
@@ -1776,9 +1824,8 @@ There was a conflict when trying to complete your request.
         return.
         """
         cn = self.compute_node
-        rp = dict(uuid=cn.uuid, generation=42)
         # Make sure the resource provider exists for preventing to call the API
-        self.client._resource_providers[cn.uuid] = rp
+        self._init_provider_tree()
 
         mock_get.return_value.json.return_value = {
             'resource_provider_generation': 1,
@@ -1793,7 +1840,7 @@ There was a conflict when trying to complete your request.
                                             uuids.request_id}
         result = self.client._delete_inventory(cn.uuid)
         self.assertIsNone(result)
-        self.assertNotIn(cn.uuid, self.client._resource_providers)
+        self.assertRaises(ValueError, self.client._provider_tree.find, cn.uuid)
         self.assertTrue(mock_debug.called)
         self.assertIn('deleted by another thread', mock_debug.call_args[0][0])
         self.assertEqual(uuids.request_id,
@@ -1808,9 +1855,8 @@ There was a conflict when trying to complete your request.
     def test_delete_inventory_inventory_error(self, mock_get, mock_delete,
             mock_warn, mock_error):
         cn = self.compute_node
-        rp = dict(uuid=cn.uuid, generation=42)
         # Make sure the resource provider exists for preventing to call the API
-        self.client._resource_providers[cn.uuid] = rp
+        self._init_provider_tree()
 
         mock_get.return_value.json.return_value = {
             'resource_provider_generation': 1,
@@ -1842,14 +1888,13 @@ There was a conflict when trying to complete your request.
                 'get')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'put')
-    def test_update_inventory(self, mock_put, mock_get):
+    def test_update_inventory_initial_empty(self, mock_put, mock_get):
         # Ensure _update_inventory() returns a list of Inventories objects
         # after creating or updating the existing values
         uuid = uuids.compute_node
         compute_node = self.compute_node
-        rp = dict(uuid=uuid, name='foo', generation=42)
         # Make sure the resource provider exists for preventing to call the API
-        self.client._resource_providers[uuid] = rp
+        self._init_provider_tree(resources_override={})
 
         mock_get.return_value.json.return_value = {
             'resource_provider_generation': 43,
@@ -1878,7 +1923,8 @@ There was a conflict when trying to complete your request.
         exp_url = '/resource_providers/%s/inventories' % uuid
         mock_get.assert_called_once_with(exp_url)
         # Updated with the new inventory from the PUT call
-        self.assertEqual(44, rp['generation'])
+        rp = self.client._provider_tree.find(uuid)
+        self.assertEqual(44, rp.generation)
         expected = {
             # Called with the newly-found generation from the existing
             # inventory
@@ -1916,11 +1962,93 @@ There was a conflict when trying to complete your request.
                 'get')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'put')
-    def test_update_inventory_no_update(self, mock_put, mock_get):
+    def test_update_inventory(self, mock_put, mock_get):
+        # Ensure _update_inventory() returns a list of Inventories objects
+        # after creating or updating the existing values
         uuid = uuids.compute_node
         compute_node = self.compute_node
-        rp = dict(uuid=uuid, name='foo', generation=42)
-        self.client._resource_providers[uuid] = rp
+        # Make sure the resource provider exists for preventing to call the API
+        self._init_provider_tree()
+        new_vcpus_total = 240
+
+        mock_get.return_value.json.return_value = {
+            'resource_provider_generation': 43,
+            'inventories': {
+                'VCPU': {'total': 16},
+                'MEMORY_MB': {'total': 1024},
+                'DISK_GB': {'total': 10},
+            }
+        }
+        mock_put.return_value.status_code = 200
+        mock_put.return_value.json.return_value = {
+            'resource_provider_generation': 44,
+            'inventories': {
+                'VCPU': {'total': new_vcpus_total},
+                'MEMORY_MB': {'total': 1024},
+                'DISK_GB': {'total': 10},
+            }
+        }
+
+        inv_data = report._compute_node_to_inventory_dict(compute_node)
+        # Make a change to trigger the update...
+        inv_data['VCPU']['total'] = new_vcpus_total
+        result = self.client._update_inventory_attempt(
+            compute_node.uuid, inv_data
+        )
+        self.assertTrue(result)
+
+        exp_url = '/resource_providers/%s/inventories' % uuid
+        mock_get.assert_called_once_with(exp_url)
+        # Updated with the new inventory from the PUT call
+        rp = self.client._provider_tree.find(uuid)
+        self.assertEqual(44, rp.generation)
+        expected = {
+            # Called with the newly-found generation from the existing
+            # inventory
+            'resource_provider_generation': 43,
+            'inventories': {
+                'VCPU': {
+                    'total': new_vcpus_total,
+                    'reserved': 0,
+                    'min_unit': 1,
+                    'max_unit': compute_node.vcpus,
+                    'step_size': 1,
+                    'allocation_ratio': compute_node.cpu_allocation_ratio,
+                },
+                'MEMORY_MB': {
+                    'total': 1024,
+                    'reserved': CONF.reserved_host_memory_mb,
+                    'min_unit': 1,
+                    'max_unit': compute_node.memory_mb,
+                    'step_size': 1,
+                    'allocation_ratio': compute_node.ram_allocation_ratio,
+                },
+                'DISK_GB': {
+                    'total': 10,
+                    'reserved': CONF.reserved_host_disk_mb * 1024,
+                    'min_unit': 1,
+                    'max_unit': compute_node.local_gb,
+                    'step_size': 1,
+                    'allocation_ratio': compute_node.disk_allocation_ratio,
+                },
+            }
+        }
+        mock_put.assert_called_once_with(exp_url, expected)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'put')
+    def test_update_inventory_no_update(self, mock_put, mock_get):
+        """Simulate situation where scheduler client is first starting up and
+        ends up loading information from the placement API via a GET against
+        the resource provider's inventory but has no local cached inventory
+        information for a resource provider.
+        """
+        uuid = uuids.compute_node
+        compute_node = self.compute_node
+        # Make sure the resource provider exists for preventing to call the API
+        self._init_provider_tree(generation_override=42, resources_override={})
         mock_get.return_value.json.return_value = {
             'resource_provider_generation': 43,
             'inventories': {
@@ -1960,7 +2088,8 @@ There was a conflict when trying to complete your request.
         # No update so put should not be called
         self.assertFalse(mock_put.called)
         # Make sure we updated the generation from the inventory records
-        self.assertEqual(43, rp['generation'])
+        rp = self.client._provider_tree.find(compute_node.uuid)
+        self.assertEqual(43, rp.generation)
 
     @mock.patch.object(report.LOG, 'info')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -1975,11 +2104,17 @@ There was a conflict when trying to complete your request.
         # after creating or updating the existing values
         uuid = uuids.compute_node
         compute_node = self.compute_node
-        rp = dict(uuid=uuid, name='foo', generation=42)
         # Make sure the resource provider exists for preventing to call the API
-        self.client._resource_providers[uuid] = rp
+        self.client._provider_tree.new_root(
+            compute_node.hypervisor_hostname,
+            compute_node.uuid,
+            42,
+        )
 
-        mock_get.return_value = {}
+        mock_get.return_value = {
+            'resource_provider_generation': 42,
+            'inventories': {},
+        }
         mock_put.return_value.status_code = 409
         mock_put.return_value.text = 'Does not match inventory in use'
         mock_put.return_value.headers = {'x-openstack-request-id':
@@ -1992,7 +2127,7 @@ There was a conflict when trying to complete your request.
         self.assertFalse(result)
 
         # Invalidated the cache
-        self.assertNotIn(uuid, self.client._resource_providers)
+        self.assertFalse(self.client._provider_tree.exists(uuid))
         # Refreshed our resource provider
         mock_ensure.assert_called_once_with(uuid)
         # Logged the request id in the log message
@@ -2008,11 +2143,17 @@ There was a conflict when trying to complete your request.
         # after creating or updating the existing values
         uuid = uuids.compute_node
         compute_node = self.compute_node
-        rp = dict(uuid=uuid, name='foo', generation=42)
         # Make sure the resource provider exists for preventing to call the API
-        self.client._resource_providers[uuid] = rp
+        self.client._provider_tree.new_root(
+            compute_node.hypervisor_hostname,
+            compute_node.uuid,
+            42,
+        )
 
-        mock_get.return_value = {}
+        mock_get.return_value = {
+            'resource_provider_generation': 42,
+            'inventories': {},
+        }
         mock_put.return_value.status_code = 409
         mock_put.return_value.text = (
             "update conflict: Inventory for VCPU on "
@@ -2028,7 +2169,7 @@ There was a conflict when trying to complete your request.
         )
 
         # Did NOT invalidate the cache
-        self.assertIn(uuid, self.client._resource_providers)
+        self.assertIsNotNone(self.client._provider_tree.find(uuid))
 
     @mock.patch.object(report.LOG, 'info')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -2041,11 +2182,17 @@ There was a conflict when trying to complete your request.
         # after creating or updating the existing values
         uuid = uuids.compute_node
         compute_node = self.compute_node
-        rp = dict(uuid=uuid, name='foo', generation=42)
         # Make sure the resource provider exists for preventing to call the API
-        self.client._resource_providers[uuid] = rp
+        self.client._provider_tree.new_root(
+            compute_node.hypervisor_hostname,
+            compute_node.uuid,
+            42,
+        )
 
-        mock_get.return_value = {}
+        mock_get.return_value = {
+            'resource_provider_generation': 42,
+            'inventories': {},
+        }
         mock_put.return_value.status_code = 234
         mock_put.return_value.headers = {'openstack-request-id':
                                          uuids.request_id}
@@ -2057,10 +2204,7 @@ There was a conflict when trying to complete your request.
         self.assertFalse(result)
 
         # No cache invalidation
-        self.assertIn(uuid, self.client._resource_providers)
-        # Logged the request id in the log messages
-        self.assertEqual(uuids.request_id,
-                         mock_info.call_args[0][1]['placement_req_id'])
+        self.assertTrue(self.client._provider_tree.exists(uuid))
 
     @mock.patch.object(report.LOG, 'warning')
     @mock.patch.object(report.LOG, 'debug')
@@ -2074,11 +2218,17 @@ There was a conflict when trying to complete your request.
         # after creating or updating the existing values
         uuid = uuids.compute_node
         compute_node = self.compute_node
-        rp = dict(uuid=uuid, name='foo', generation=42)
         # Make sure the resource provider exists for preventing to call the API
-        self.client._resource_providers[uuid] = rp
+        self.client._provider_tree.new_root(
+            compute_node.hypervisor_hostname,
+            compute_node.uuid,
+            42,
+        )
 
-        mock_get.return_value = {}
+        mock_get.return_value = {
+            'resource_provider_generation': 42,
+            'inventories': {},
+        }
         try:
             mock_put.return_value.__nonzero__.return_value = False
         except AttributeError:
@@ -2094,7 +2244,7 @@ There was a conflict when trying to complete your request.
         self.assertFalse(result)
 
         # No cache invalidation
-        self.assertIn(uuid, self.client._resource_providers)
+        self.assertTrue(self.client._provider_tree.exists(uuid))
         # Logged the request id in the log messages
         self.assertEqual(uuids.request_id,
                          mock_debug.call_args[0][1]['placement_req_id'])
@@ -2111,10 +2261,14 @@ There was a conflict when trying to complete your request.
                                                       mock_ensure):
         # Ensure _update_inventory() fails if we have a conflict when updating
         # but retries correctly.
-        cn = mock.MagicMock()
+        cn = self.compute_node
         mock_update.side_effect = (False, True)
 
-        self.client._resource_providers[cn.uuid] = True
+        self.client._provider_tree.new_root(
+            cn.hypervisor_hostname,
+            cn.uuid,
+            42,
+        )
         result = self.client._update_inventory(
             cn.uuid, mock.sentinel.inv_data
         )
@@ -2132,10 +2286,14 @@ There was a conflict when trying to complete your request.
                                              mock_update,
                                              mock_ensure):
         # but retries correctly.
-        cn = mock.MagicMock()
+        cn = self.compute_node
         mock_update.side_effect = (False, False, False)
 
-        self.client._resource_providers[cn.uuid] = True
+        self.client._provider_tree.new_root(
+            cn.hypervisor_hostname,
+            cn.uuid,
+            42,
+        )
         result = self.client._update_inventory(
             cn.uuid, mock.sentinel.inv_data
         )
@@ -2538,7 +2696,7 @@ class TestAllocations(SchedulerReportClientTestCase):
     @mock.patch("nova.objects.InstanceList.get_by_host_and_node")
     def test_delete_resource_provider_cascade(self, mock_by_host,
             mock_del_alloc, mock_delete):
-        self.client._resource_providers[uuids.cn] = mock.Mock()
+        self.client._provider_tree.new_root(uuids.cn, uuids.cn, 1)
         cn = objects.ComputeNode(uuid=uuids.cn, host="fake_host",
                 hypervisor_hostname="fake_hostname", )
         inst1 = objects.Instance(uuid=uuids.inst1)
@@ -2551,7 +2709,7 @@ class TestAllocations(SchedulerReportClientTestCase):
         self.assertEqual(2, mock_del_alloc.call_count)
         exp_url = "/resource_providers/%s" % uuids.cn
         mock_delete.assert_called_once_with(exp_url)
-        self.assertNotIn(uuids.cn, self.client._resource_providers)
+        self.assertFalse(self.client._provider_tree.exists(uuids.cn))
 
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
                 "delete")
@@ -2560,6 +2718,7 @@ class TestAllocations(SchedulerReportClientTestCase):
     @mock.patch("nova.objects.InstanceList.get_by_host_and_node")
     def test_delete_resource_provider_no_cascade(self, mock_by_host,
             mock_del_alloc, mock_delete):
+        self.client._provider_tree.new_root(uuids.cn, uuids.cn, 1)
         self.client._provider_aggregate_map[uuids.cn] = mock.Mock()
         cn = objects.ComputeNode(uuid=uuids.cn, host="fake_host",
                 hypervisor_hostname="fake_hostname", )
@@ -2580,6 +2739,7 @@ class TestAllocations(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.LOG')
     def test_delete_resource_provider_log_calls(self, mock_log, mock_delete):
         # First, check a successful call
+        self.client._provider_tree.new_root(uuids.cn, uuids.cn, 1)
         cn = objects.ComputeNode(uuid=uuids.cn, host="fake_host",
                 hypervisor_hostname="fake_hostname", )
         resp_mock = mock.MagicMock(status_code=204)

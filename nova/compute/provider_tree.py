@@ -71,6 +71,10 @@ class _Provider(object):
         if provider.uuid in self.children:
             del self.children[provider.uuid]
 
+    def has_inventory(self):
+        """Returns whether the provider has any inventory records at all. """
+        return self.inventory != {}
+
     def has_inventory_changed(self, new):
         """Returns whether the inventory has changed for the provider."""
         cur = self.inventory
@@ -97,7 +101,15 @@ class _Provider(object):
         provider generation to set the provider to. The method returns whether
         the inventory has changed.
         """
-        self.generation = generation
+        if generation != self.generation:
+            msg_args = {
+                'rp_uuid': self.uuid,
+                'old': self.generation,
+                'new': generation,
+            }
+            LOG.debug("Updating resource provider %(rp_uuid)s generation "
+                      "from %(old)s to %(new)s", msg_args)
+            self.generation = generation
         if self.has_inventory_changed(inventory):
             self.inventory = copy.deepcopy(inventory)
             return True
@@ -191,6 +203,17 @@ class ProviderTree(object):
             p = _Provider(name, uuid, generation, parent_uuid)
             parent.add_child(p)
             return p
+
+    def has_inventory(self, name_or_uuid):
+        """Returns True if the provider identified by name_or_uuid has any
+        inventory records at all.
+
+        :raises: ValueError if a provider with uuid was not found in the tree.
+        :param name_or_uuid: Either name or UUID of the resource provider
+        """
+        with self.lock:
+            p = self._find_with_lock(name_or_uuid)
+            return p.has_inventory()
 
     def has_inventory_changed(self, name_or_uuid, inventory):
         """Returns True if the supplied inventory is different for the provider
