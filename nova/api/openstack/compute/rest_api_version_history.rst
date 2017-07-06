@@ -579,3 +579,19 @@ user documentation.
   be reflected in the config drive.
 
   Tagged volume attachment is not supported for shelved-offloaded instances.
+
+
+2.50
+----
+
+  The ``server_groups`` and ``server_group_members`` keys are exposed in GET & PUT
+  ``os-quota-class-sets`` APIs Response body.
+  Networks related quotas have been filtered out from os-quota-class. Below quotas
+  are filtered out and not available in ``os-quota-class-sets`` APIs from this
+  microversion onwards.
+
+  - "fixed_ips"
+  - "floating_ips"
+  - "networks",
+  - "security_group_rules"
+  - "security_groups"

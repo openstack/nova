@@ -116,6 +116,10 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              the output.
     * 2.48 - Standardize VM diagnostics info.
     * 2.49 - Support tagged attachment of network interfaces and block devices.
+    * 2.50 - Exposes ``server_groups`` and ``server_group_members`` keys in
+             GET & PUT ``os-quota-class-sets`` APIs response.
+             Also filter out Network related quotas from
+             ``os-quota-class-sets`` API
 """
 
 # The minimum and maximum versions of the API supported
@@ -124,7 +128,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.49"
+_MAX_API_VERSION = "2.50"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which related to network, images and baremetal

@@ -26,14 +26,18 @@ Nova supports implicit 'default' Quota Class only.
     for more details.
 
 .. warning::
-    There is a bug in the v2.1 API and the legacy v2 compatible API which does
-    not return the ``server_groups`` and ``server_group_members`` quotas in
+    There is a bug in the v2.1 API till microversion 2.49 and
+    the legacy v2 compatible API which does not return the
+    ``server_groups`` and ``server_group_members`` quotas in
     GET and PUT ``os-quota-class-sets`` API response, whereas the v2 API
     used to return those keys in the API response.
     There is workaround to get the ``server_groups`` and
     ``server_group_members`` quotas using
     :ref:`list-default-quotas-for-tenant`
     API but that is per project quota.
+    This issue is fixed in microversion 2.50, here onwards
+    ``server_groups`` and ``server_group_members`` keys are
+    returned in API response body.
 
 Show the quota for Quota Class
 ==============================
@@ -72,11 +76,13 @@ Response
   - ram: ram_quota_class
   - security_group_rules: security_group_rules_quota_class
   - security_groups: security_groups_quota_class
+  - server_groups: server_groups_quota_class
+  - server_group_members: server_group_members_quota_class
   - networks: networks_quota_optional
 
-**Example Show A Quota Class: JSON response**
+**Example Show A Quota Class: JSON response(2.50)**
 
-.. literalinclude:: ../../doc/api_samples/os-quota-class-sets/quota-classes-show-get-resp.json
+.. literalinclude:: ../../doc/api_samples/os-quota-class-sets/v2.50/quota-classes-show-get-resp.json
    :language: javascript
 
 Create or Update Quotas for Quota Class
@@ -117,9 +123,9 @@ Request
   - server_group_members: server_group_members_quota_optional
   - networks: networks_quota_optional
 
-**Example Update Quotas: JSON request**
+**Example Update Quotas: JSON request(2.50)**
 
-.. literalinclude:: ../../doc/api_samples/os-quota-class-sets/quota-classes-update-post-req.json
+.. literalinclude:: ../../doc/api_samples/os-quota-class-sets/v2.50/quota-classes-update-post-req.json
    :language: javascript
 
 Response
@@ -140,9 +146,11 @@ Response
   - ram: ram_quota_class
   - security_group_rules: security_group_rules_quota_class
   - security_groups: security_groups_quota_class
+  - server_groups: server_groups_quota_class
+  - server_group_members: server_group_members_quota_class
   - networks: networks_quota_optional
 
-**Example Update Quotas: JSON response**
+**Example Update Quotas: JSON response(2.50)**
 
-.. literalinclude:: ../../doc/api_samples/os-quota-class-sets/quota-classes-update-post-resp.json
+.. literalinclude:: ../../doc/api_samples/os-quota-class-sets/v2.50/quota-classes-update-post-resp.json
    :language: javascript
