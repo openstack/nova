@@ -417,16 +417,16 @@ class NotificationsTestCase(test.TestCase):
     def test_update_with_service_name(self):
         notifications.send_update_with_states(self.context, self.instance,
                 vm_states.BUILDING, vm_states.BUILDING, task_states.SPAWNING,
-                None, service="testservice")
+                None, service="nova-compute")
         self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
         self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
 
         # service name should default to 'compute'
         notif = fake_notifier.NOTIFICATIONS[0]
-        self.assertEqual('testservice.testhost', notif.publisher_id)
+        self.assertEqual('nova-compute.testhost', notif.publisher_id)
 
         notif = fake_notifier.VERSIONED_NOTIFICATIONS[0]
-        self.assertEqual('nova-testservice:testhost', notif['publisher_id'])
+        self.assertEqual('nova-compute:testhost', notif['publisher_id'])
 
     def test_update_with_host_name(self):
         notifications.send_update_with_states(self.context, self.instance,

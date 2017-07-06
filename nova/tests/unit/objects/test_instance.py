@@ -171,7 +171,7 @@ class _TestInstanceObject(object):
             fake_keypairlist.obj_to_primitive())
         fake_service = {'created_at': None, 'updated_at': None,
                         'deleted_at': None, 'deleted': False, 'id': 123,
-                        'host': 'fake-host', 'binary': 'nova-fake',
+                        'host': 'fake-host', 'binary': 'nova-compute',
                         'topic': 'fake-service-topic', 'report_count': 1,
                         'forced_down': False, 'disabled': False,
                         'disabled_reason': None, 'last_seen_up': None,

@@ -117,7 +117,7 @@ class TestNotificationBase(test.NoDBTestCase):
         'id': 123,
         'uuid': uuids.service,
         'host': 'fake-host',
-        'binary': 'nova-fake',
+        'binary': 'nova-compute',
         'topic': 'fake-service-topic',
         'report_count': 1,
         'forced_down': False,
@@ -166,7 +166,7 @@ class TestNotificationBase(test.NoDBTestCase):
                              expected_event_type,
                              expected_payload):
         mock_notifier.prepare.assert_called_once_with(
-            publisher_id='nova-fake:fake-host')
+            publisher_id='nova-compute:fake-host')
         mock_notify = mock_notifier.prepare.return_value.info
         self.assertTrue(mock_notify.called)
         self.assertEqual(mock_notify.call_args[0][0], mock_context)
@@ -196,8 +196,9 @@ class TestNotificationBase(test.NoDBTestCase):
             event_type=notification.EventType(
                 object='test_object',
                 action=fields.NotificationAction.UPDATE),
-            publisher=notification.NotificationPublisher(host='fake-host',
-                                                         source='nova-fake'),
+            publisher=notification.NotificationPublisher(
+                host='fake-host',
+                source='nova-compute'),
             priority=fields.NotificationPriority.INFO,
             payload=self.payload)
 
@@ -390,7 +391,7 @@ notification_object_data = {
     'IpPayload': '1.0-8ecf567a99e516d4af094439a7632d34',
     'KeypairNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'KeypairPayload': '1.0-6daebbbde0e1bf35c1556b1ecd9385c1',
-    'NotificationPublisher': '2.0-578ee5fea2922ff32e8917621f140857',
+    'NotificationPublisher': '2.1-9f89fe4abb80f9a7b726e59800c905de',
     'ServiceStatusNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'ServiceStatusPayload': '1.1-7b6856bd879db7f3ecbcd0ca9f35f92f',
 }

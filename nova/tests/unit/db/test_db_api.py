@@ -8253,7 +8253,7 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_compute_node_statistics_with_other_service(self):
         other_service = self.service_dict.copy()
         other_service['topic'] = 'fake-topic'
-        other_service['binary'] = 'nova-fake'
+        other_service['binary'] = 'nova-api'
         db.service_create(self.ctxt, other_service)
 
         stats = db.compute_node_statistics(self.ctxt)

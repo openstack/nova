@@ -779,6 +779,25 @@ class NotificationPhase(BaseNovaEnum):
     ALL = (START, END, ERROR)
 
 
+class NotificationSource(BaseNovaEnum):
+    """Represents possible nova binary service names in notification envelope.
+
+    The publisher_id field of the nova notifications consists of the name of
+    the host and the name of the service binary that emits the notification.
+    The below values are the ones that is used in every notification. Please
+    note that on the REST API the nova-api service binary is called
+    nova-osapi_compute. This is not reflected here as notifications always used
+    the name nova-api instead.
+    """
+
+    COMPUTE = 'nova-compute'
+    API = 'nova-api'
+    CONDUCTOR = 'nova-conductor'
+    SCHEDULER = 'nova-scheduler'
+
+    ALL = (API, COMPUTE, CONDUCTOR, SCHEDULER)
+
+
 class NotificationAction(BaseNovaEnum):
     UPDATE = 'update'
     EXCEPTION = 'exception'
@@ -1186,6 +1205,10 @@ class NotificationPhaseField(BaseEnumField):
 
 class NotificationActionField(BaseEnumField):
     AUTO_TYPE = NotificationAction()
+
+
+class NotificationSourceField(BaseEnumField):
+    AUTO_TYPE = NotificationSource()
 
 
 class InstanceStateField(BaseEnumField):

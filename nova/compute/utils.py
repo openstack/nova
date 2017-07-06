@@ -339,7 +339,8 @@ def _get_fault_and_priority_from_exc(exception):
 
 
 def notify_about_instance_action(context, instance, host, action, phase=None,
-                                 source='nova-compute', exception=None):
+                                 source=fields.NotificationSource.COMPUTE,
+                                 exception=None):
     """Send versioned notification about the action made on the instance
     :param instance: the instance which the action performed on
     :param host: the host emitting the notification
@@ -366,7 +367,8 @@ def notify_about_instance_action(context, instance, host, action, phase=None,
 
 
 def notify_about_instance_create(context, instance, host, phase=None,
-                                 source='nova-compute', exception=None):
+                                 source=fields.NotificationSource.COMPUTE,
+                                 exception=None):
     """Send versioned notification about instance creation
 
     :param context: the request context
@@ -394,8 +396,8 @@ def notify_about_instance_create(context, instance, host, phase=None,
 
 
 def notify_about_volume_attach_detach(context, instance, host, action, phase,
-                                      source='nova-compute', volume_id=None,
-                                      exception=None):
+                                      source=fields.NotificationSource.COMPUTE,
+                                      volume_id=None, exception=None):
     """Send versioned notification about the action made on the instance
     :param instance: the instance which the action performed on
     :param host: the host emitting the notification
@@ -435,7 +437,7 @@ def notify_about_keypair_action(context, keypair, action, phase):
     notification = keypair_notification.KeypairNotification(
         priority=fields.NotificationPriority.INFO,
         publisher=notification_base.NotificationPublisher(
-            host=CONF.host, source='nova-api'),
+            host=CONF.host, source=fields.NotificationSource.API),
         event_type=notification_base.EventType(
             object='keypair',
             action=action,
@@ -469,7 +471,7 @@ def notify_about_volume_swap(context, instance, host, action, phase,
         context=context,
         priority=priority,
         publisher=notification_base.NotificationPublisher(
-            host=host, source='nova-compute'),
+            host=host, source=fields.NotificationSource.COMPUTE),
         event_type=notification_base.EventType(
             object='instance', action=action, phase=phase),
         payload=payload).emit(context)
@@ -511,7 +513,7 @@ def notify_about_aggregate_action(context, aggregate, action, phase):
     notification = aggregate_notification.AggregateNotification(
         priority=fields.NotificationPriority.INFO,
         publisher=notification_base.NotificationPublisher(
-            host=CONF.host, source='nova-api'),
+            host=CONF.host, source=fields.NotificationSource.API),
         event_type=notification_base.EventType(
             object='aggregate',
             action=action,

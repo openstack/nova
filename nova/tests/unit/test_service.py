@@ -89,7 +89,7 @@ class ServiceTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ServiceTestCase, self).setUp()
         self.host = 'foo'
-        self.binary = 'nova-fake'
+        self.binary = 'nova-compute'
         self.topic = 'fake'
 
     def test_create(self):
@@ -109,7 +109,7 @@ class ServiceTestCase(test.NoDBTestCase):
                                self.binary,
                                self.topic,
                                'nova.tests.unit.test_service.FakeManager')
-        exp = "<Service: host=foo, binary=nova-fake, " \
+        exp = "<Service: host=foo, binary=nova-compute, " \
               "manager_class_name=nova.tests.unit.test_service.FakeManager>"
         self.assertEqual(exp, repr(serv))
 

@@ -626,7 +626,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         payload = payload_type(self)
         notification_type(
             publisher=notification.NotificationPublisher(
-                host=CONF.host, source="nova-api"),
+                host=CONF.host, source=fields.NotificationSource.API),
             event_type=notification.EventType(object="flavor",
                                               action=action),
             priority=fields.NotificationPriority.INFO,

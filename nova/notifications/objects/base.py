@@ -139,11 +139,14 @@ class NotificationPayloadBase(NotificationObject):
 class NotificationPublisher(NotificationObject):
     # Version 1.0: Initial version
     #         2.0: The binary field has been renamed to source
-    VERSION = '2.0'
+    #         2.1: The type of the source field changed from string to enum.
+    #              This only needs a minor bump as the enum uses the possible
+    #              values of the previous string field
+    VERSION = '2.1'
 
     fields = {
         'host': fields.StringField(nullable=False),
-        'source': fields.StringField(nullable=False),
+        'source': fields.NotificationSourceField(nullable=False),
     }
 
     def __init__(self, host, source):
