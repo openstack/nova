@@ -63,8 +63,9 @@ Shows details for a server action.
 Action details of deleted instances can be returned for requests later
 than microversion 2.21.
 
-Policy defaults enable only users with the administrative role to perform this operation.
-Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or the owner of
+the server to perform this operation. Cloud providers can change these permissions
+through the ``policy.json`` file.
 
 Normal response codes: 200
 

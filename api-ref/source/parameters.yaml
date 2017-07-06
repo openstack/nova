@@ -3098,8 +3098,12 @@ injectNetworkInfo:
 instance_action_events:
   description: |
     The events occurred in this action.
+
+    Policy defaults enable only users with the administrative role to see
+    instance action event information. Cloud providers can change these
+    permissions through the ``policy.json`` file.
   in: body
-  required: true
+  required: false
   type: array
 instance_id_body:
   description: |
