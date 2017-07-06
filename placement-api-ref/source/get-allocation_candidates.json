@@ -1,0 +1,34 @@
+{
+    "allocation_requests": [
+        {
+            "allocations": [
+                {
+                    "resource_provider": {
+                        "uuid": "30742363-f65e-4012-a60a-43e0bec38f0e"
+                    },
+                    "resources": {
+                        "MEMORY_MB": 512
+                    }
+                }
+            ]
+        }
+    ],
+    "provider_summaries": {
+        "30742363-f65e-4012-a60a-43e0bec38f0e": {
+            "resources": {
+                "DISK_GB": {
+                    "capacity": 77,
+                    "used": 0
+                },
+                "MEMORY_MB": {
+                    "capacity": 11206,
+                    "used": 256
+                },
+                "VCPU": {
+                    "capacity": 64,
+                    "used": 0
+                }
+            }
+        }
+    }
+}

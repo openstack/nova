@@ -49,7 +49,7 @@ resource_provider_uuid_query:
   <<: *resource_provider_uuid_path
   in: query
   required: false
-resources_query:
+resources_query: &resources_query
   type: string
   in: query
   required: false
@@ -59,6 +59,9 @@ resources_query:
     capacity to serve::
 
         resources=VCPU:4,DISK_GB:64,MEMORY_MB:2048
+resources_query_required:
+  <<: *resources_query
+  required: true
 trait_associated:
   type: string
   in: query
@@ -110,6 +113,15 @@ allocation_ratio: &allocation_ratio
 allocation_ratio_opt:
   <<: *allocation_ratio
   required: false
+allocation_requests:
+  type: array
+  in: body
+  required: true
+  description: >
+    A list of objects that contain a
+    serialized HTTP body that a client may subsequently use in a call
+    to PUT /allocations/{consumer_uuid} to claim resources against a
+    related set of resource providers.
 allocations_array:
   type: array
   in: body
@@ -122,6 +134,12 @@ allocations_by_resource_provider:
   required: true
   description: >
     A dictionary of allocations keyed by resource provider uuid.
+capacity:
+  type: integer
+  in: body
+  required: true
+  description: >
+    The amount of the resource that the provider can accommodate.
 inventories:
   type: object
   in: body
@@ -150,6 +168,13 @@ project_id_body:
   <<: *project_id
   in: body
   min_version: 1.8
+provider_summaries:
+  type: object
+  in: body
+  required: true
+  description: >
+    A dictionary keyed by resource provider UUID,
+    of dictionaries of inventory/capacity information.
 reserved: &reserved
   type: integer
   in: body
@@ -207,7 +232,7 @@ resource_provider_object:
   in: body
   required: true
   description: >
-    A dictionary contains uuid of the resource provider.
+    A dictionary which contains the UUID of the resource provider.
 resource_provider_usages:
   type: object
   in: body
@@ -258,6 +283,12 @@ traits:
   required: true
   description: >
     A list of traits.
+used:
+  type: integer
+  in: body
+  required: true
+  description: >
+    The amount of the resource that has been already allocated.
 user_id_body:
   <<: *user_id
   in: body
