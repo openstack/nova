@@ -39,6 +39,12 @@ tests:
   response_strings:
       - "'resources' is a required property"
 
+- name: get bad resource class
+  GET: /allocation_candidates?resources=MCPU:99
+  status: 400
+  response_strings:
+      - Invalid resource class in resources parameter
+
 - name: get allocation candidates no allocations yet
   GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100
   status: 200
