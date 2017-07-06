@@ -440,7 +440,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def get_host_ip_addr(self):
-        """Retrieves the IP address of the dom0
+        """Retrieves the IP address of the host running compute service
         """
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
@@ -1160,8 +1160,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def get_host_uptime(self):
-        """Returns the result of calling the Linux command `uptime` on this
-        host.
+        """Returns the result of the time since start up of this hypervisor.
 
         :return: A text which contains the uptime of this host since the
                  last boot.
