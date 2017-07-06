@@ -41,12 +41,29 @@ POST_RESOURCE_PROVIDER_SCHEMA = {
     },
     "required": [
         "name"
-     ],
+    ],
     "additionalProperties": False,
 }
 # Remove uuid to create the schema for PUTting a resource provider
 PUT_RESOURCE_PROVIDER_SCHEMA = copy.deepcopy(POST_RESOURCE_PROVIDER_SCHEMA)
 PUT_RESOURCE_PROVIDER_SCHEMA['properties'].pop('uuid')
+
+# Placement API microversion 1.14 adds an optional parent_provider_uuid field
+# to the POST and PUT request schemas
+POST_RP_SCHEMA_V1_14 = copy.deepcopy(POST_RESOURCE_PROVIDER_SCHEMA)
+POST_RP_SCHEMA_V1_14["properties"]["parent_provider_uuid"] = {
+    "anyOf": [
+        {
+            "type": "string",
+            "format": "uuid",
+        },
+        {
+            "type": "null",
+        }
+    ]
+}
+PUT_RP_SCHEMA_V1_14 = copy.deepcopy(POST_RP_SCHEMA_V1_14)
+PUT_RP_SCHEMA_V1_14['properties'].pop('uuid')
 
 # Represents the allowed query string parameters to the GET /resource_providers
 # API call
@@ -80,6 +97,17 @@ GET_RPS_SCHEMA_1_4['properties']['resources'] = {
     "type": "string"
 }
 
+# Placement API microversion 1.14 adds support for requesting resource
+# providers within a tree of providers. The 'in_tree' query string parameter
+# should be the UUID of a resource provider. The result of the GET call will
+# include only those resource providers in the same "provider tree" as the
+# provider with the UUID represented by 'in_tree'
+GET_RPS_SCHEMA_1_14 = copy.deepcopy(GET_RPS_SCHEMA_1_4)
+GET_RPS_SCHEMA_1_14['properties']['in_tree'] = {
+    "type": "string",
+    "format": "uuid",
+}
+
 
 def _serialize_links(environ, resource_provider):
     url = util.resource_provider_url(environ, resource_provider)
@@ -97,20 +125,23 @@ def _serialize_links(environ, resource_provider):
     return links
 
 
-def _serialize_provider(environ, resource_provider):
+def _serialize_provider(environ, resource_provider, want_version):
     data = {
         'uuid': resource_provider.uuid,
         'name': resource_provider.name,
         'generation': resource_provider.generation,
         'links': _serialize_links(environ, resource_provider)
     }
+    if want_version.matches((1, 14)):
+        data['parent_provider_uuid'] = resource_provider.parent_provider_uuid
+        data['root_provider_uuid'] = resource_provider.root_provider_uuid
     return data
 
 
-def _serialize_providers(environ, resource_providers):
+def _serialize_providers(environ, resource_providers, want_version):
     output = []
     for provider in resource_providers:
-        provider_data = _serialize_provider(environ, provider)
+        provider_data = _serialize_provider(environ, provider, want_version)
         output.append(provider_data)
     return {"resource_providers": output}
 
@@ -124,12 +155,15 @@ def create_resource_provider(req):
     header pointing to the newly created resource provider.
     """
     context = req.environ['placement.context']
-    data = util.extract_json(req.body, POST_RESOURCE_PROVIDER_SCHEMA)
+    schema = POST_RESOURCE_PROVIDER_SCHEMA
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
+    if want_version.matches((1, 14)):
+        schema = POST_RP_SCHEMA_V1_14
+    data = util.extract_json(req.body, schema)
 
     try:
-        uuid = data.get('uuid', uuidutils.generate_uuid())
-        resource_provider = rp_obj.ResourceProvider(
-            context, name=data['name'], uuid=uuid)
+        uuid = data.setdefault('uuid', uuidutils.generate_uuid())
+        resource_provider = rp_obj.ResourceProvider(context, **data)
         resource_provider.create()
     except db_exc.DBDuplicateEntry as exc:
         # Whether exc.columns has one or two entries (in the event
@@ -192,8 +226,9 @@ def get_resource_provider(req):
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
 
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     req.response.body = encodeutils.to_utf8(jsonutils.dumps(
-        _serialize_provider(req.environ, resource_provider)))
+        _serialize_provider(req.environ, resource_provider, want_version)))
     req.response.content_type = 'application/json'
     return req.response
 
@@ -210,15 +245,17 @@ def list_resource_providers(req):
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
 
     schema = GET_RPS_SCHEMA_1_0
-    if want_version == (1, 3):
-        schema = GET_RPS_SCHEMA_1_3
-    if want_version >= (1, 4):
+    if want_version.matches((1, 14)):
+        schema = GET_RPS_SCHEMA_1_14
+    elif want_version.matches((1, 4)):
         schema = GET_RPS_SCHEMA_1_4
+    elif want_version.matches((1, 3)):
+        schema = GET_RPS_SCHEMA_1_3
 
     util.validate_query_params(req, schema)
 
     filters = {}
-    for attr in ['uuid', 'name', 'member_of']:
+    for attr in ['uuid', 'name', 'member_of', 'in_tree']:
         if attr in req.GET:
             value = req.GET[attr]
             # special case member_of to always make its value a
@@ -250,8 +287,8 @@ def list_resource_providers(req):
             {'error': exc})
 
     response = req.response
-    response.body = encodeutils.to_utf8(
-        jsonutils.dumps(_serialize_providers(req.environ, resource_providers)))
+    response.body = encodeutils.to_utf8(jsonutils.dumps(
+        _serialize_providers(req.environ, resource_providers, want_version)))
     response.content_type = 'application/json'
     return response
 
@@ -271,9 +308,16 @@ def update_resource_provider(req):
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
 
-    data = util.extract_json(req.body, PUT_RESOURCE_PROVIDER_SCHEMA)
+    schema = PUT_RESOURCE_PROVIDER_SCHEMA
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
+    if want_version.matches((1, 14)):
+        schema = PUT_RP_SCHEMA_V1_14
 
-    resource_provider.name = data['name']
+    data = util.extract_json(req.body, schema)
+
+    for field in rp_obj.ResourceProvider.SETTABLE_FIELDS:
+        if field in data:
+            setattr(resource_provider, field, data[field])
 
     try:
         resource_provider.save()
@@ -287,7 +331,7 @@ def update_resource_provider(req):
             {'rp_uuid': uuid, 'error': exc})
 
     req.response.body = encodeutils.to_utf8(jsonutils.dumps(
-        _serialize_provider(req.environ, resource_provider)))
+        _serialize_provider(req.environ, resource_provider, want_version)))
     req.response.status = 200
     req.response.content_type = 'application/json'
     return req.response

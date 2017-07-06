@@ -6,6 +6,7 @@ defaults:
     request_headers:
         x-auth-token: admin
         accept: application/json
+        openstack-api-version: placement latest
 
 tests:
 
@@ -80,6 +81,7 @@ tests:
   response_json_paths:
       $.uuid: $ENVIRON['RP_UUID']
       $.name: $ENVIRON['RP_NAME']
+      $.parent_provider_uuid: null
       $.generation: 0
       $.links[?rel = "self"].href: /resource_providers/$ENVIRON['RP_UUID']
       $.links[?rel = "inventories"].href: /resource_providers/$ENVIRON['RP_UUID']/inventories
@@ -107,6 +109,7 @@ tests:
       $.resource_providers[0].uuid: $ENVIRON['RP_UUID']
       $.resource_providers[0].name: $ENVIRON['RP_NAME']
       $.resource_providers[0].generation: 0
+      $.resource_providers[0].parent_provider_uuid: null
       $.resource_providers[0].links[?rel = "self"].href: /resource_providers/$ENVIRON['RP_UUID']
       $.resource_providers[0].links[?rel = "inventories"].href: /resource_providers/$ENVIRON['RP_UUID']/inventories
       $.resource_providers[0].links[?rel = "usages"].href: /resource_providers/$ENVIRON['RP_UUID']/usages
@@ -174,7 +177,7 @@ tests:
       $.resource_providers[0].links[?rel = "inventories"].href: /resource_providers/$ENVIRON['RP_UUID']/inventories
       $.resource_providers[0].links[?rel = "usages"].href: /resource_providers/$ENVIRON['RP_UUID']/usages
 
-- name: update a resource provider
+- name: update a resource provider's name
   PUT: /resource_providers/$RESPONSE['$.resource_providers[0].uuid']
   request_headers:
       content-type: application/json
@@ -208,6 +211,174 @@ tests:
   response_json_paths:
       $.errors[0].title: Bad Request
 
+# This section of tests validate nested resource provider relationships and
+# constraints. We attempt to set the parent provider UUID for the primary
+# resource provider to a UUID value of a provider we have not yet created and
+# expect a failure. We then create that parent provider record and attempt to
+# set the same parent provider UUID without also setting the root provider UUID
+# to the same value, with an expected failure. Finally, we set the primary
+# provider's root AND parent to the new provider UUID and verify success.
+
+- name: test POST microversion limits nested providers
+  POST: /resource_providers
+  request_headers:
+      openstack-api-version: placement 1.13
+      content-type: application/json
+  data:
+      name: child
+      parent_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
+  status: 400
+  response_strings:
+      - 'JSON does not validate'
+
+- name: test PUT microversion limits nested providers
+  PUT: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      openstack-api-version: placement 1.13
+      content-type: application/json
+  data:
+      name: child
+      parent_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
+  status: 400
+  response_strings:
+      - 'JSON does not validate'
+
+- name: fail trying to set a root provider UUID
+  PUT: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      content-type: application/json
+  data:
+      root_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
+  status: 400
+  response_strings:
+      - 'JSON does not validate'
+
+- name: fail trying to self-parent
+  POST: /resource_providers
+  request_headers:
+      content-type: application/json
+  data:
+      name: child
+      uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
+      parent_provider_uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
+  status: 400
+  response_strings:
+      - 'parent provider UUID cannot be same as UUID'
+
+- name: update a parent provider UUID to non-existing provider
+  PUT: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      content-type: application/json
+  data:
+      name: parent
+      parent_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
+  status: 400
+  response_strings:
+      - 'parent provider UUID does not exist'
+
+- name: now create the parent provider
+  POST: /resource_providers
+  request_headers:
+      content-type: application/json
+  data:
+      name: parent
+      uuid: $ENVIRON['PARENT_PROVIDER_UUID']
+  status: 201
+
+- name: get provider with old microversion no root provider UUID field
+  GET: /resource_providers/$ENVIRON['PARENT_PROVIDER_UUID']
+  request_headers:
+      openstack-api-version: placement 1.13
+      content-type: application/json
+  response_json_paths:
+      $.`len`: 4
+      name: parent
+  status: 200
+
+- name: get provider has root provider UUID field
+  GET: /resource_providers/$ENVIRON['PARENT_PROVIDER_UUID']
+  request_headers:
+      content-type: application/json
+  response_json_paths:
+      $.`len`: 6
+      name: parent
+      root_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
+      parent_provider_uuid: null
+  status: 200
+
+- name: update a parent
+  PUT: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      content-type: application/json
+  data:
+      name: child
+      parent_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
+  status: 200
+
+- name: get provider has new parent and root provider UUID field
+  GET: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      content-type: application/json
+  response_json_paths:
+      name: child
+      root_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
+      parent_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
+  status: 200
+
+- name: fail trying to un-parent
+  PUT: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      content-type: application/json
+  data:
+      name: child
+      parent_provider_uuid: null
+  status: 400
+  response_strings:
+      - 'un-parenting a provider is not currently allowed'
+
+- name: list all resource providers in a tree that does not exist
+  GET: /resource_providers?in_tree=$ENVIRON['ALT_PARENT_PROVIDER_UUID']
+  response_json_paths:
+      $.resource_providers.`len`: 0
+
+- name: list all resource providers in a tree with multiple providers in tree
+  GET: /resource_providers?in_tree=$ENVIRON['RP_UUID']
+  response_json_paths:
+      $.resource_providers.`len`: 2
+      # Verify that we have both the parent and child in the list
+      $.resource_providers[?uuid="$ENVIRON['PARENT_PROVIDER_UUID']"].root_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
+      $.resource_providers[?uuid="$ENVIRON['RP_UUID']"].root_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
+
+- name: create a new parent provider
+  POST: /resource_providers
+  request_headers:
+    content-type: application/json
+  data:
+      name: altwparent
+      uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
+  status: 201
+  response_headers:
+      location: //resource_providers/[a-f0-9-]+/
+  response_forbidden_headers:
+      - content-type
+
+- name: list all resource providers in a tree
+  GET: /resource_providers?in_tree=$ENVIRON['ALT_PARENT_PROVIDER_UUID']
+  response_json_paths:
+      $.resource_providers.`len`: 1
+      $.resource_providers[?uuid="$ENVIRON['ALT_PARENT_PROVIDER_UUID']"].root_provider_uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
+
+- name: fail trying to re-parent to a different provider
+  PUT: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      content-type: application/json
+  data:
+      name: child
+      parent_provider_uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
+  status: 400
+  response_strings:
+      - 're-parenting a provider is not currently allowed'
+
 - name: create a new provider
   POST: /resource_providers
   request_headers:
@@ -221,7 +392,7 @@ tests:
   request_headers:
       content-type: application/json
   data:
-      name: new name
+      name: child
   status: 409
   response_json_paths:
       $.errors[0].title: Conflict

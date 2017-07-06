@@ -178,3 +178,22 @@ with the new `PUT` format.
 
 Version 1.13 gives the ability to set or clear allocations for more than
 one consumer uuid with a request to ``POST /allocations``.
+
+1.14 Add nested resource providers
+----------------------------------
+
+The 1.14 version introduces the concept of nested resource providers. The
+resource provider resource now contains two new attributes:
+
+* ``parent_provider_uuid`` indicates the provider's direct parent, or null if
+  there is no parent. This attribute can be set in the call to ``POST
+  /resource_providers`` and ``PUT /resource_providers/{uuid}`` if the attribute
+  has not already been set to a non-NULL value (i.e. we do not support
+  "reparenting" a provider)
+* ``root_provider_uuid`` indicates the UUID of the root resource provider in
+  the provider's tree. This is a read-only attribute
+
+A new ``in_tree=<UUID>`` parameter is now available in the ``GET
+/resource-providers`` API call. Supplying a UUID value for the ``in_tree``
+parameter will cause all resource providers within the "provider tree" of the
+provider matching ``<UUID>`` to be returned.

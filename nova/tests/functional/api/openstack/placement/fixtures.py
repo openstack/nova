@@ -85,6 +85,8 @@ class APIFixture(fixture.GabbiFixture):
         os.environ['INSTANCE_UUID'] = uuidutils.generate_uuid()
         os.environ['MIGRATION_UUID'] = uuidutils.generate_uuid()
         os.environ['CONSUMER_UUID'] = uuidutils.generate_uuid()
+        os.environ['PARENT_PROVIDER_UUID'] = uuidutils.generate_uuid()
+        os.environ['ALT_PARENT_PROVIDER_UUID'] = uuidutils.generate_uuid()
 
     def stop_fixture(self):
         self.api_db_fixture.cleanup()

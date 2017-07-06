@@ -1,1 +1,4 @@
- {"name": "Shared storage"}
+ {
+     "name": "Shared storage",
+     "parent_provider_uuid": "542df8ed-9be2-49b9-b4db-6d3183ff8ec8"
+ }

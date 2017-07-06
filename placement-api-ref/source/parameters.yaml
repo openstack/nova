@@ -58,6 +58,14 @@ resource_provider_name_query:
   required: false
   description: >
     The name of a resource provider to filter the list.
+resource_provider_tree_query:
+  type: string
+  in: query
+  required: false
+  description: >
+    A UUID of a resource provider. The returned resource providers will be in
+    the same "provider tree" as the specified provider.
+  min_version: 1.14
 resource_provider_uuid_query:
   <<: *resource_provider_uuid_path
   in: query
@@ -290,6 +298,34 @@ resource_provider_object:
   required: true
   description: >
     A dictionary which contains the UUID of the resource provider.
+resource_provider_parent_provider_uuid:
+  type: string
+  in: body
+  required: false
+  description: >
+    The UUID of the immediate parent of the resource provider.
+  min_version: 1.14
+resource_provider_parent_provider_uuid_required:
+  type: string
+  in: body
+  required: true
+  description: >
+    The UUID of the immediate parent of the resource provider.
+  min_version: 1.14
+resource_provider_root_provider_uuid:
+  type: string
+  in: body
+  required: false
+  description: >
+    Read-only UUID of the top-most provider in this provider tree.
+  min_version: 1.14
+resource_provider_root_provider_uuid_required:
+  type: string
+  in: body
+  required: true
+  description: >
+    Read-only UUID of the top-most provider in this provider tree.
+  min_version: 1.14
 resource_provider_usages:
   type: object
   in: body
