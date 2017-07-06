@@ -264,6 +264,8 @@ class RequestSpec(base.NovaObject):
         spec._populate_group_info(filter_properties)
         scheduler_hints = filter_properties.get('scheduler_hints', {})
         spec._from_hints(scheduler_hints)
+        spec.requested_destination = filter_properties.get(
+            'requested_destination')
 
         # NOTE(sbauza): Default the other fields that are not part of the
         # original contract
@@ -372,6 +374,9 @@ class RequestSpec(base.NovaObject):
             # we had to hydrate the field by putting a single item into a list.
             filt_props['scheduler_hints'] = {hint: self.get_scheduler_hint(
                 hint) for hint in self.scheduler_hints}
+        if self.obj_attr_is_set('requested_destination'
+                                ) and self.requested_destination:
+            filt_props['requested_destination'] = self.requested_destination
         return filt_props
 
     @classmethod
@@ -417,6 +422,8 @@ class RequestSpec(base.NovaObject):
         spec_obj.availability_zone = availability_zone
         if security_groups is not None:
             spec_obj.security_groups = security_groups
+        spec_obj.requested_destination = filter_properties.get(
+            'requested_destination')
 
         # NOTE(sbauza): Default the other fields that are not part of the
         # original contract
