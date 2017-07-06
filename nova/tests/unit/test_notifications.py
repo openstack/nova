@@ -426,7 +426,7 @@ class NotificationsTestCase(test.TestCase):
         self.assertEqual('testservice.testhost', notif.publisher_id)
 
         notif = fake_notifier.VERSIONED_NOTIFICATIONS[0]
-        self.assertEqual('testservice:testhost', notif['publisher_id'])
+        self.assertEqual('nova-testservice:testhost', notif['publisher_id'])
 
     def test_update_with_host_name(self):
         notifications.send_update_with_states(self.context, self.instance,

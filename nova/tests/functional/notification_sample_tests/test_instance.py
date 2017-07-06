@@ -173,7 +173,7 @@ class TestInstanceNotificationSample(
         # rest is from the nova-compute. To keep the test simpler
         # assert this fact and then modify the publisher_id of the
         # first and eighth notification to match the template
-        self.assertEqual('conductor:fake-mini',
+        self.assertEqual('nova-conductor:fake-mini',
                          instance_updates[0]['publisher_id'])
         self.assertEqual('nova-api:fake-mini',
                          instance_updates[7]['publisher_id'])
