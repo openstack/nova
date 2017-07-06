@@ -92,7 +92,7 @@ Response
 Show a detail of a volume attachment
 ====================================
 
-.. rest_method:: GET /servers/{server_id}/os-volume_attachments/{attachment_id}
+.. rest_method:: GET /servers/{server_id}/os-volume_attachments/{volume_id}
 
 Show a detail of a volume attachment.
 
@@ -106,7 +106,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - server_id: server_id_path
-  - attachment_id: attachment_id
+  - volume_id: volume_id
 
 Response
 --------
@@ -158,7 +158,7 @@ No body is returned on successful request.
 Detach a volume from an instance
 ================================
 
-.. rest_method:: DELETE /servers/{server_id}/os-volume_attachments/{attachment_id}
+.. rest_method:: DELETE /servers/{server_id}/os-volume_attachments/{volume_id}
 
 Detach a volume from an instance.
 
@@ -175,7 +175,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - server_id: server_id_path
-  - attachment_id: attachment_id
+  - volume_id: volume_id
 
 Response
 --------
