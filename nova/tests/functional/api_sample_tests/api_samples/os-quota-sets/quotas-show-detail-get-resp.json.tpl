@@ -70,6 +70,11 @@
             "in_use": 0,
             "limit": 10,
             "reserved": 0
+        },
+        "networks": {
+            "in_use": 2,
+            "limit": 3,
+            "reserved": 0
         }
     }
 }

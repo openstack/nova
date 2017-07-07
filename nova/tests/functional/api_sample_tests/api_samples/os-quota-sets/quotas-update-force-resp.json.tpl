@@ -14,6 +14,7 @@
         "security_groups": 10,
         "server_groups": 10,
         "server_group_members": 10,
-        "id": "fake_tenant"
+        "id": "fake_tenant",
+        "networks": 3
     }
 }
