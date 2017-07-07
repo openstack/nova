@@ -32,5 +32,9 @@ r="$r|tempest\.api\.compute\.admin\.test_volume_swap\.TestVolumeSwap\.test_volum
 # https://bugs.launchpad.net/nova/+bug/1675787
 r="$r|tempest\.api\.compute\.images\.test_images\.ImagesTestJSON\.test_create_image_from_paused_server"
 
+# Cannot boot from encrypted volume
+# https://bugs.launchpad.net/nova/+bug/1702897
+r="$r|tempest\.scenario\.test_volume_boot_pattern\.TestVolumeBootPattern\.test_boot_server_from_encrypted_volume_luks"
+
 r="^(?!.*(?:$r))(?:^tempest\.(?:api|scenario|thirdparty))"
 export DEVSTACK_GATE_TEMPEST_REGEX="$r"
