@@ -10519,6 +10519,7 @@ class ConsoleAuthTokenTestCase(test.TestCase):
         db_obj1 = db.console_auth_token_get_valid(self.context, hash1, uuid1)
         db_obj2 = db.console_auth_token_get_valid(self.context, hash1, uuid2)
         self.assertIsNotNone(db_obj1, "a valid token should be found here")
+        self.assertEqual(hash1, db_obj1['token_hash'])
         self.assertIsNone(db_obj2, "the token uuid should not match")
 
     def test_console_auth_token_destroy_expired_by_host(self):
@@ -10550,6 +10551,37 @@ class ConsoleAuthTokenTestCase(test.TestCase):
         self.assertIsNone(db_obj1, "the token should have been deleted")
         self.assertIsNotNone(db_obj2, "a valid token should be found here")
         self.assertIsNotNone(db_obj3, "a valid token should be found here")
+
+    def test_console_auth_token_get_valid_without_uuid_deleted_instance(self):
+        uuid1 = uuidsentinel.uuid1
+        hash1 = utils.get_sha256_str(uuidsentinel.token1)
+        self._create_instances([uuid1])
+        self._create(hash1, uuid1, 100)
+
+        db_obj1 = db.console_auth_token_get_valid(self.context, hash1)
+        self.assertIsNotNone(db_obj1, "a valid token should be in database")
+
+        db.instance_destroy(self.context, uuid1)
+        db_obj1 = db.console_auth_token_get_valid(self.context, hash1)
+        self.assertIsNone(db_obj1, "the token should have been deleted")
+
+    def test_console_auth_token_get_valid_without_uuid_by_expiry(self):
+        uuid1 = uuidsentinel.uuid1
+        uuid2 = uuidsentinel.uuid2
+        hash1 = utils.get_sha256_str(uuidsentinel.token1)
+        hash2 = utils.get_sha256_str(uuidsentinel.token2)
+        self.addCleanup(timeutils.clear_time_override)
+        timeutils.set_time_override(timeutils.utcnow())
+        self._create_instances([uuid1, uuid2])
+
+        self._create(hash1, uuid1, 10)
+        timeutils.advance_time_seconds(100)
+        self._create(hash2, uuid2, 10)
+
+        db_obj1 = db.console_auth_token_get_valid(self.context, hash1)
+        db_obj2 = db.console_auth_token_get_valid(self.context, hash2)
+        self.assertIsNone(db_obj1, "the token should have expired")
+        self.assertIsNotNone(db_obj2, "a valid token should be found here")
 
 
 class SortMarkerHelper(test.TestCase):

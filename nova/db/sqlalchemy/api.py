@@ -1864,7 +1864,7 @@ def instance_destroy(context, instance_uuid, constraint=None):
             filter_by(instance_uuid=instance_uuid).\
             soft_delete()
     # NOTE(snikitin): We can't use model_query here, because there is no
-    # column 'deleted' in 'tags' table.
+    # column 'deleted' in 'tags' or 'console_auth_tokens' tables.
     context.session.query(models.Tag).filter_by(
         resource_id=instance_uuid).delete()
     context.session.query(models.ConsoleAuthToken).filter_by(
@@ -6646,13 +6646,15 @@ def console_auth_token_create(context, values):
 
 
 @pick_context_manager_reader
-def console_auth_token_get_valid(context, token_hash, instance_uuid):
-    _check_instance_exists_in_project(context, instance_uuid)
-    return context.session.query(models.ConsoleAuthToken).\
-        filter_by(token_hash=token_hash).\
-        filter_by(instance_uuid=instance_uuid).\
-        filter(models.ConsoleAuthToken.expires > timeutils.utcnow_ts()).\
-        first()
+def console_auth_token_get_valid(context, token_hash, instance_uuid=None):
+    if instance_uuid is not None:
+        _check_instance_exists_in_project(context, instance_uuid)
+    query = context.session.query(models.ConsoleAuthToken).\
+        filter_by(token_hash=token_hash)
+    if instance_uuid is not None:
+        query = query.filter_by(instance_uuid=instance_uuid)
+    return query.filter(
+        models.ConsoleAuthToken.expires > timeutils.utcnow_ts()).first()
 
 
 @pick_context_manager_writer
