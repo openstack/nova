@@ -273,6 +273,7 @@ class ComputeTaskAPI(object):
     1.14 - Added request_spec to unshelve_instance()
     1.15 - Added live_migrate_instance
     1.16 - Added schedule_and_build_instances
+    1.17 - Added tags to schedule_and_build_instances()
     """
 
     def __init__(self):
@@ -353,18 +354,24 @@ class ComputeTaskAPI(object):
         cctxt.cast(context, 'build_instances', **kw)
 
     def schedule_and_build_instances(self, context, build_requests,
-                                      request_specs,
-                                      image, admin_password, injected_files,
-                                      requested_networks,
-                                      block_device_mapping):
-        version = '1.16'
+                                     request_specs,
+                                     image, admin_password, injected_files,
+                                     requested_networks,
+                                     block_device_mapping,
+                                     tags=None):
+        version = '1.17'
         kw = {'build_requests': build_requests,
               'request_specs': request_specs,
               'image': jsonutils.to_primitive(image),
               'admin_password': admin_password,
               'injected_files': injected_files,
               'requested_networks': requested_networks,
-              'block_device_mapping': block_device_mapping}
+              'block_device_mapping': block_device_mapping,
+              'tags': tags}
+
+        if not self.client.can_send_version(version):
+            version = '1.16'
+            del kw['tags']
 
         cctxt = self.client.prepare(version=version)
         cctxt.cast(context, 'schedule_and_build_instances', **kw)

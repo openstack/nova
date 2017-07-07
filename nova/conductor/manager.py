@@ -218,7 +218,7 @@ class ComputeTaskManager(base.Base):
     may involve coordinating activities on multiple compute nodes.
     """
 
-    target = messaging.Target(namespace='compute_task', version='1.16')
+    target = messaging.Target(namespace='compute_task', version='1.17')
 
     def __init__(self):
         super(ComputeTaskManager, self).__init__()
@@ -835,6 +835,16 @@ class ComputeTaskManager(base.Base):
                 bdm.update_or_create()
         return instance_block_device_mapping
 
+    def _create_tags(self, context, instance_uuid, tags):
+        """Create the Tags objects in the db."""
+        if tags:
+            tag_list = [tag.tag for tag in tags]
+            instance_tags = objects.TagList.create(
+                context, instance_uuid, tag_list)
+            return instance_tags
+        else:
+            return tags
+
     def _bury_in_cell0(self, context, request_spec, exc,
                        build_requests=None, instances=None):
         """Ensure all provided build_requests and instances end up in cell0.
@@ -901,7 +911,8 @@ class ComputeTaskManager(base.Base):
     def schedule_and_build_instances(self, context, build_requests,
                                      request_specs, image,
                                      admin_password, injected_files,
-                                     requested_networks, block_device_mapping):
+                                     requested_networks, block_device_mapping,
+                                     tags=None):
         # Add all the UUIDs for the instances
         instance_uuids = [spec.instance_uuid for spec in request_specs]
         try:
@@ -971,6 +982,7 @@ class ComputeTaskManager(base.Base):
                     want_result=False)
                 instance_bdms = self._create_block_device_mapping(
                     cell, instance.flavor, instance.uuid, block_device_mapping)
+                instance_tags = self._create_tags(cctxt, instance.uuid, tags)
 
             # Update mapping for instance. Normally this check is guarded by
             # a try/except but if we're here we know that a newer nova-api
@@ -981,7 +993,8 @@ class ComputeTaskManager(base.Base):
             inst_mapping.save()
 
             if not self._delete_build_request(
-                    build_request, instance, cell, instance_bdms):
+                    context, build_request, instance, cell, instance_bdms,
+                    instance_tags):
                 # The build request was deleted before/during scheduling so
                 # the instance is gone and we don't have anything to build for
                 # this one.
@@ -1006,13 +1019,15 @@ class ComputeTaskManager(base.Base):
                     host=host['host'], node=host['nodename'],
                     limits=host['limits'])
 
-    def _delete_build_request(self, build_request, instance, cell,
-                              instance_bdms):
+    def _delete_build_request(self, context, build_request, instance, cell,
+                              instance_bdms, instance_tags):
         """Delete a build request after creating the instance in the cell.
 
         This method handles cleaning up the instance in case the build request
         is already deleted by the time we try to delete it.
 
+        :param context: the context of the request being handled
+        :type context: nova.context.RequestContext
         :param build_request: the build request to delete
         :type build_request: nova.objects.BuildRequest
         :param instance: the instance created from the build_request
@@ -1021,6 +1036,8 @@ class ComputeTaskManager(base.Base):
         :type cell: nova.objects.CellMapping
         :param instance_bdms: list of block device mappings for the instance
         :type instance_bdms: nova.objects.BlockDeviceMappingList
+        :param instance_tags: list of tags for the instance
+        :type instance_tags: nova.objects.TagList
         :returns: True if the build request was successfully deleted, False if
             the build request was already deleted and the instance is now gone.
         """
@@ -1029,7 +1046,7 @@ class ComputeTaskManager(base.Base):
         except exception.BuildRequestNotFound:
             # This indicates an instance deletion request has been
             # processed, and the build should halt here. Clean up the
-            # bdm and instance record.
+            # bdm, tags and instance record.
             with obj_target_cell(instance, cell) as cctxt:
                 with compute_utils.notify_about_instance_delete(
                         self.notifier, cctxt, instance):
@@ -1050,6 +1067,12 @@ class ComputeTaskManager(base.Base):
                     try:
                         bdm.destroy()
                     except exception.ObjectActionError:
+                        pass
+            if instance_tags:
+                with try_target_cell(context, cell) as target_ctxt:
+                    try:
+                        objects.TagList.destroy(target_ctxt, instance.uuid)
+                    except exception.InstanceNotFound:
                         pass
             return False
         return True
