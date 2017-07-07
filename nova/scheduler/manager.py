@@ -100,6 +100,7 @@ class SchedulerManager(manager.Manager):
         The result should be a list of dicts with 'host', 'nodename' and
         'limits' as keys.
         """
+        LOG.debug("Starting to schedule for instances: %s", instance_uuids)
 
         # TODO(sbauza): Change the method signature to only accept a spec_obj
         # argument once API v5 is provided.
