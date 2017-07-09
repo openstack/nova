@@ -40,6 +40,7 @@ from nova.conf import hyperv
 from nova.conf import ipv6
 from nova.conf import ironic
 from nova.conf import key_manager
+from nova.conf import keystone
 from nova.conf import libvirt
 from nova.conf import mks
 from nova.conf import netconf
@@ -93,6 +94,7 @@ mks.register_opts(CONF)
 ipv6.register_opts(CONF)
 ironic.register_opts(CONF)
 key_manager.register_opts(CONF)
+keystone.register_opts(CONF)
 libvirt.register_opts(CONF)
 netconf.register_opts(CONF)
 network.register_opts(CONF)

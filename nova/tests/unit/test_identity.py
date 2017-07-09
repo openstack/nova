@@ -16,6 +16,8 @@
 import mock
 
 from keystoneauth1 import exceptions as kse
+from keystoneauth1 import loading as ks_loading
+from keystoneauth1.session import Session
 import webob
 
 from nova.api.openstack import identity
@@ -67,81 +69,91 @@ class IdentityValidationTest(test.NoDBTestCase):
 
     """
 
-    @mock.patch('keystoneauth1.session.Session.get')
-    def test_good_id(self, get):
+    @mock.patch.object(ks_loading, 'load_session_from_conf_options')
+    def test_good_id(self, mock_load):
         """Test response 200.
 
         This indicates we have permissions, and we have definitively
         found the project exists.
 
         """
-        get.return_value = FakeResponse(200)
+        session = mock.create_autospec(Session)
+        session.get.return_value = FakeResponse(200)
+        mock_load.return_value = session
         self.assertTrue(identity.verify_project_id(mock.MagicMock(), "foo"))
-        get.assert_called_once_with(
+        session.get.assert_called_once_with(
             '/projects/foo',
             endpoint_filter={'service_type': 'identity', 'version': (3, 0)},
             raise_exc=False)
 
-    @mock.patch('keystoneauth1.session.Session.get')
-    def test_no_project(self, get):
+    @mock.patch.object(ks_loading, 'load_session_from_conf_options')
+    def test_no_project(self, mock_load):
         """Test response 404.
 
         This indicates that we have permissions, and we have
         definitively found the project does not exist.
 
         """
-        get.return_value = FakeResponse(404)
+        session = mock.create_autospec(Session)
+        session.get.return_value = FakeResponse(404)
+        mock_load.return_value = session
         self.assertRaises(webob.exc.HTTPBadRequest,
                           identity.verify_project_id,
                           mock.MagicMock(), "foo")
-        get.assert_called_once_with(
+        session.get.assert_called_once_with(
             '/projects/foo',
             endpoint_filter={'service_type': 'identity', 'version': (3, 0)},
             raise_exc=False)
 
-    @mock.patch('keystoneauth1.session.Session.get')
-    def test_unknown_id(self, get):
+    @mock.patch.object(ks_loading, 'load_session_from_conf_options')
+    def test_unknown_id(self, mock_load):
         """Test response 403.
 
         This indicates we don't have permissions. We fail open here
         and assume the project exists.
 
         """
-        get.return_value = FakeResponse(403)
+        session = mock.create_autospec(Session)
+        session.get.return_value = FakeResponse(403)
+        mock_load.return_value = session
         self.assertTrue(identity.verify_project_id(mock.MagicMock(), "foo"))
-        get.assert_called_once_with(
+        session.get.assert_called_once_with(
             '/projects/foo',
             endpoint_filter={'service_type': 'identity', 'version': (3, 0)},
             raise_exc=False)
 
-    @mock.patch('keystoneauth1.session.Session.get')
-    def test_unknown_error(self, get):
+    @mock.patch.object(ks_loading, 'load_session_from_conf_options')
+    def test_unknown_error(self, mock_load):
         """Test some other return from keystone.
 
         If we got anything else, something is wrong on the keystone
         side. We don't want to fail on our side.
 
         """
-        get.return_value = FakeResponse(500, "Oh noes!")
+        session = mock.create_autospec(Session)
+        session.get.return_value = FakeResponse(500, "Oh noes!")
+        mock_load.return_value = session
         self.assertTrue(identity.verify_project_id(mock.MagicMock(), "foo"))
-        get.assert_called_once_with(
+        session.get.assert_called_once_with(
             '/projects/foo',
             endpoint_filter={'service_type': 'identity', 'version': (3, 0)},
             raise_exc=False)
 
-    @mock.patch('keystoneauth1.session.Session.get')
-    def test_early_fail(self, get):
+    @mock.patch.object(ks_loading, 'load_session_from_conf_options')
+    def test_early_fail(self, mock_load):
         """Test if we get a keystoneauth exception.
 
         If we get a random keystoneauth exception, fall back and
         assume the project exists.
 
         """
-        get.side_effect = kse.ConnectionError()
+        session = mock.create_autospec(Session)
+        session.get.side_effect = kse.ConnectionError()
+        mock_load.return_value = session
         self.assertTrue(identity.verify_project_id(mock.MagicMock(), "foo"))
 
-    @mock.patch('keystoneauth1.session.Session.get')
-    def test_wrong_version(self, get):
+    @mock.patch.object(ks_loading, 'load_session_from_conf_options')
+    def test_wrong_version(self, mock_load):
         """Test endpoint not found.
 
         EndpointNotFound will be made when the keystone v3 API is not
@@ -149,7 +161,9 @@ class IdentityValidationTest(test.NoDBTestCase):
         registered as the root endpoint. We treat this the same as 404.
 
         """
-        get.side_effect = kse.EndpointNotFound()
+        session = mock.create_autospec(Session)
+        session.get.side_effect = kse.EndpointNotFound()
+        mock_load.return_value = session
         self.assertRaises(webob.exc.HTTPBadRequest,
                           identity.verify_project_id,
                           mock.MagicMock(), "foo")
