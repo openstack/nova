@@ -1,0 +1,14 @@
+{
+    "event_type": "instance.evacuate",
+    "payload": {
+        "$ref": "common_payloads/InstanceActionPayload.json#",
+        "nova_object.data": {
+            "host": "host2",
+            "node": "host2",
+            "power_state": "pending",
+            "task_state": "rebuilding"
+        }
+    },
+    "priority": "INFO",
+    "publisher_id": "nova-api:host2"
+}

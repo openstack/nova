@@ -4194,6 +4194,10 @@ class API(base.Base):
 
         compute_utils.notify_about_instance_usage(
             self.notifier, context, instance, "evacuate")
+        compute_utils.notify_about_instance_action(
+            context, instance, CONF.host,
+            action=fields_obj.NotificationAction.EVACUATE,
+            source=fields_obj.NotificationSource.API)
 
         try:
             request_spec = objects.RequestSpec.get_by_instance_uuid(
