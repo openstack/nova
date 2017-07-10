@@ -6430,7 +6430,8 @@ class ComputeTestCase(BaseTestCase,
         mock_post.assert_called_once_with(c, instance, False, dest)
         mock_clear.assert_called_once_with(mock.ANY)
 
-    def test_post_live_migration_working_correctly(self):
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    def test_post_live_migration_working_correctly(self, mock_notify):
         # Confirm post_live_migration() works as expected correctly.
         dest = 'desthost'
         srchost = self.compute.host
@@ -6477,7 +6478,12 @@ class ComputeTestCase(BaseTestCase,
         ):
             self.compute._post_live_migration(c, instance, dest,
                                               migrate_data=migrate_data)
-
+            mock_notify.assert_has_calls([
+                mock.call(c, instance, 'fake-mini',
+                          action='live_migration_post', phase='start'),
+                mock.call(c, instance, 'fake-mini',
+                          action='live_migration_post', phase='end')])
+            self.assertEqual(2, mock_notify.call_count)
             post_live_migration.assert_has_calls([
                 mock.call(c, instance, {'swap': None, 'ephemerals': [],
                                         'root_device_name': None,
