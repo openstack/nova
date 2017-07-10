@@ -18,6 +18,7 @@ from cinderclient import exceptions as cinder_exception
 from keystoneclient import exceptions as keystone_exception
 import mock
 from oslo_utils import timeutils
+import six
 
 import nova.conf
 from nova import context
@@ -412,7 +413,7 @@ class CinderApiTestCase(test.NoDBTestCase):
                                attachment_id)
 
         self.assertEqual(404, ex.code)
-        self.assertIn(attachment_id, ex.message)
+        self.assertIn(attachment_id, six.text_type(ex))
 
     @mock.patch('nova.volume.cinder.cinderclient',
                 side_effect=exception.CinderAPIVersionNotAvailable(
