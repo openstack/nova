@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import functools
 import math
 import re
@@ -885,6 +886,32 @@ class SchedulerReportClient(object):
         if res:
             LOG.info(_LI('Submitted allocation for instance'),
                      instance=instance)
+
+    def claim_resources(self, consumer_uuid, alloc_request, project_id,
+                        user_id):
+        """Creates allocation records for the supplied instance UUID against
+        the supplied resource providers.
+
+        :param consumer_uuid: The instance's UUID.
+        :param alloc_request: The JSON body of the request to make to the
+                              placement's PUT /allocations API
+        :param project_id: The project_id associated with the allocations.
+        :param user_id: The user_id associated with the allocations.
+        :returns: True if the allocations were created, False otherwise.
+        """
+        url = '/allocations/%s' % consumer_uuid
+        payload = copy.deepcopy(alloc_request)
+        payload['project_id'] = project_id
+        payload['user_id'] = user_id
+        r = self.put(url, payload, version='1.10')
+        if r.status_code != 204:
+            LOG.warning(
+                'Unable to submit allocation for instance '
+                '%(uuid)s (%(code)i %(text)s)',
+                {'uuid': consumer_uuid,
+                 'code': r.status_code,
+                 'text': r.text})
+        return r.status_code == 204
 
     @safe_connect
     def put_allocations(self, rp_uuid, consumer_uuid, alloc_data, project_id,

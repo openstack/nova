@@ -10,6 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
 from keystoneauth1 import exceptions as ks_exc
 import mock
 import six
@@ -232,6 +234,72 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         mock_put.assert_called_once_with(expected_url, mock.ANY, version='1.8')
         log_msg = mock_warn.call_args[0][0]
         self.assertIn("Unable to submit allocation for instance", log_msg)
+
+    def test_claim_resources_success(self):
+        resp_mock = mock.Mock(status_code=204)
+        self.ks_sess_mock.put.return_value = resp_mock
+        consumer_uuid = uuids.consumer_uuid
+        alloc_req = {
+            'allocations': {
+                'resource_provider': {
+                    'uuid': uuids.cn1,
+                },
+                'resources': {
+                    'VCPU': 1,
+                    'MEMORY_MB': 1024,
+                },
+            },
+        }
+
+        project_id = uuids.project_id
+        user_id = uuids.user_id
+        res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
+            user_id)
+
+        expected_url = "/allocations/%s" % consumer_uuid
+        expected_payload = copy.deepcopy(alloc_req)
+        expected_payload['project_id'] = project_id
+        expected_payload['user_id'] = user_id
+        self.ks_sess_mock.put.assert_called_once_with(
+            expected_url, endpoint_filter=mock.ANY,
+            headers={'OpenStack-API-Version': 'placement 1.10'},
+            json=expected_payload, raise_exc=False)
+
+        self.assertTrue(res)
+
+    @mock.patch.object(report.LOG, 'warning')
+    def test_claim_resources_failure(self, mock_log):
+        resp_mock = mock.Mock(status_code=409)
+        self.ks_sess_mock.put.return_value = resp_mock
+        consumer_uuid = uuids.consumer_uuid
+        alloc_req = {
+            'allocations': {
+                'resource_provider': {
+                    'uuid': uuids.cn1,
+                },
+                'resources': {
+                    'VCPU': 1,
+                    'MEMORY_MB': 1024,
+                },
+            },
+        }
+
+        project_id = uuids.project_id
+        user_id = uuids.user_id
+        res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
+            user_id)
+
+        expected_url = "/allocations/%s" % consumer_uuid
+        expected_payload = copy.deepcopy(alloc_req)
+        expected_payload['project_id'] = project_id
+        expected_payload['user_id'] = user_id
+        self.ks_sess_mock.put.assert_called_once_with(
+            expected_url, endpoint_filter=mock.ANY,
+            headers={'OpenStack-API-Version': 'placement 1.10'},
+            json=expected_payload, raise_exc=False)
+
+        self.assertFalse(res)
+        self.assertTrue(mock_log.called)
 
 
 class TestProviderOperations(SchedulerReportClientTestCase):
