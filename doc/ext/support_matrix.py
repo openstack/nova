@@ -269,7 +269,7 @@ class SupportMatrixDirective(rst.Directive):
             for key in targets:
                 if key not in feature.implementations:
                     raise Exception("'%s' missing in '[%s]' section" %
-                                    (target.key, section))
+                                    (key, section))
 
             features.append(feature)
 
