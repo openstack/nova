@@ -1,0 +1,20 @@
+---
+features:
+  - |
+    The ``XenAPI`` compute driver now supports creating servers with virtual
+    interface and block device tags which was introduced in the ``2.32``
+    microversion.
+
+    Note that multiple paths will exist for a tagged disk for the following
+    reasons:
+
+    1. HVM guests may not have the paravirtualization (PV) drivers installed,
+       in which case the disk will be accessible on the ``ide`` bus. When the
+       PV drivers are installed the disk will be accessible on the ``xen`` bus.
+    2. Windows guests with PV drivers installed expose devices in a different
+       way to Linux guests with PV drivers. Linux systems will see disk paths
+       under ``/sys/devices/``, but Windows guests will see them in the
+       registry, for example ``HKLM\System\ControlSet001\Enum\SCSIDisk``. These
+       two disks are both on the ``xen`` bus.
+
+    See the following XenAPI documentation for details: http://xenbits.xen.org/docs/4.2-testing/misc/vbd-interface.txt
