@@ -338,6 +338,7 @@ def _get_fault_and_priority_from_exc(exception):
     return fault, priority
 
 
+@rpc.if_notifications_enabled
 def notify_about_instance_action(context, instance, host, action, phase=None,
                                  binary='nova-compute', exception=None):
     """Send versioned notification about the action made on the instance
@@ -365,6 +366,7 @@ def notify_about_instance_action(context, instance, host, action, phase=None,
     notification.emit(context)
 
 
+@rpc.if_notifications_enabled
 def notify_about_instance_create(context, instance, host, phase=None,
                                  binary='nova-compute', exception=None):
     """Send versioned notification about instance creation
@@ -393,6 +395,7 @@ def notify_about_instance_create(context, instance, host, phase=None,
     notification.emit(context)
 
 
+@rpc.if_notifications_enabled
 def notify_about_volume_attach_detach(context, instance, host, action, phase,
                                       binary='nova-compute', volume_id=None,
                                       exception=None):
@@ -423,6 +426,7 @@ def notify_about_volume_attach_detach(context, instance, host, action, phase,
     notification.emit(context)
 
 
+@rpc.if_notifications_enabled
 def notify_about_keypair_action(context, keypair, action, phase):
     """Send versioned notification about the keypair action on the instance
 
@@ -444,6 +448,7 @@ def notify_about_keypair_action(context, keypair, action, phase):
     notification.emit(context)
 
 
+@rpc.if_notifications_enabled
 def notify_about_volume_swap(context, instance, host, action, phase,
                              old_volume_id, new_volume_id, exception=None):
     """Send versioned notification about the volume swap action
@@ -506,6 +511,7 @@ def notify_about_aggregate_update(context, event_suffix, aggregate_payload):
     notifier.info(context, 'aggregate.%s' % event_suffix, aggregate_payload)
 
 
+@rpc.if_notifications_enabled
 def notify_about_aggregate_action(context, aggregate, action, phase):
     payload = aggregate_notification.AggregatePayload(aggregate)
     notification = aggregate_notification.AggregateNotification(
