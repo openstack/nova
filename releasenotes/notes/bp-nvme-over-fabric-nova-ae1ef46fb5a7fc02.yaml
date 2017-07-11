@@ -1,0 +1,4 @@
+---
+features:
+  - |
+    Added support for ``nvmeof`` type volumes to the libvirt driver.

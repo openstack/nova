@@ -1190,6 +1190,18 @@ v2.10."""),
 ]
 
 
+libvirt_volume_nvmeof_opts = [
+    cfg.IntOpt('num_nvme_discover_tries',
+               default=3,
+               help="""
+Number of times to rediscover NVMe target to find volume
+
+Nova provides support for block storage attaching to hosts via NVMe
+(Non-Volatile Memory Express). This option allows the user to specify the
+maximum number of retry attempts that can be made to discover the NVMe device.
+"""),
+]
+
 ALL_OPTS = list(itertools.chain(
     libvirt_general_opts,
     libvirt_imagebackend_opts,
@@ -1208,6 +1220,7 @@ ALL_OPTS = list(itertools.chain(
     libvirt_remotefs_opts,
     libvirt_volume_vzstorage_opts,
     libvirt_virtio_queue_sizes,
+    libvirt_volume_nvmeof_opts,
 ))
 
 

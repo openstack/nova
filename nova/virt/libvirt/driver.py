@@ -187,6 +187,7 @@ libvirt_volume_drivers = [
         'nova.virt.libvirt.volume.vrtshyperscale.'
         'LibvirtHyperScaleVolumeDriver',
     'storpool=nova.virt.libvirt.volume.storpool.LibvirtStorPoolVolumeDriver',
+    'nvmeof=nova.virt.libvirt.volume.nvme.LibvirtNVMEVolumeDriver',
 ]
 
 
