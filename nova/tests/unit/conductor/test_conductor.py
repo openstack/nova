@@ -1818,8 +1818,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.assertEqual(2, build_and_run_instance.call_count)
         self.assertEqual(2, len(instance_cells))
 
+    @mock.patch('nova.compute.utils.notify_about_compute_task_error')
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
-    def test_schedule_and_build_scheduler_failure(self, select_destinations):
+    def test_schedule_and_build_scheduler_failure(self, select_destinations,
+                                                  mock_notify):
         select_destinations.side_effect = Exception
         self.start_service('compute', host='fake-host')
         self.conductor.schedule_and_build_instances(**self.params)
@@ -1829,6 +1831,17 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 self.ctxt, self.params['build_requests'][0].instance_uuid)
         self.assertEqual('error', instance.vm_state)
         self.assertIsNone(instance.task_state)
+
+        mock_notify.assert_called_once_with(
+            test.MatchType(context.RequestContext), 'build_instances',
+            instance.uuid, test.MatchType(dict), 'error',
+            test.MatchType(Exception), test.MatchType(str))
+        request_spec_dict = mock_notify.call_args_list[0][0][3]
+        for key in ('instance_type', 'num_instances', 'instance_properties',
+                    'image'):
+            self.assertIn(key, request_spec_dict)
+        tb = mock_notify.call_args_list[0][0][6]
+        self.assertIn('Traceback (most recent call last):', tb)
 
     @mock.patch('nova.objects.TagList.destroy')
     @mock.patch('nova.objects.TagList.create')
@@ -1987,10 +2000,12 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.assertTrue(bury.called)
         self.assertFalse(build_and_run.called)
 
+    @mock.patch('nova.compute.utils.notify_about_compute_task_error')
     @mock.patch('nova.objects.quotas.Quotas.check_deltas')
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
     def test_schedule_and_build_over_quota_during_recheck(self, mock_select,
-                                                          mock_check):
+                                                          mock_check,
+                                                          mock_notify):
         mock_select.return_value = [[fake_selection1]]
         # Simulate a race where the first check passes and the recheck fails.
         # First check occurs in compute/api.
@@ -2047,6 +2062,17 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         request_specs = request_spec_get_all(self.ctxt)
         self.assertEqual(0, len(request_specs))
 
+        mock_notify.assert_called_once_with(
+            test.MatchType(context.RequestContext), 'build_instances',
+            instance.uuid, test.MatchType(dict), 'error',
+            test.MatchType(exc.TooManyInstances), test.MatchType(str))
+        request_spec_dict = mock_notify.call_args_list[0][0][3]
+        for key in ('instance_type', 'num_instances', 'instance_properties',
+                    'image'):
+            self.assertIn(key, request_spec_dict)
+        tb = mock_notify.call_args_list[0][0][6]
+        self.assertIn('Traceback (most recent call last):', tb)
+
     @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
     @mock.patch('nova.objects.quotas.Quotas.check_deltas')
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
@@ -2074,7 +2100,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                       build_requests=1)
         self.assertTrue(mock_cm_get.called)
 
-    def test_bury_in_cell0(self):
+    @mock.patch('nova.compute.utils.notify_about_compute_task_error')
+    def test_bury_in_cell0(self, mock_notify):
         bare_br = self.params['build_requests'][0]
 
         inst_br = fake_build_request.fake_req_obj(self.ctxt)
@@ -2120,11 +2147,41 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         self.assertEqual(expected, inst_states)
 
+        self.assertEqual(4, mock_notify.call_count)
+        mock_notify.assert_has_calls([
+            mock.call(
+                test.MatchType(context.RequestContext), 'build_instances',
+                bare_br.instance_uuid, test.MatchType(dict), 'error',
+                test.MatchType(Exception), test.MatchType(str)),
+            mock.call(
+                test.MatchType(context.RequestContext), 'build_instances',
+                inst_br.instance_uuid, test.MatchType(dict), 'error',
+                test.MatchType(Exception), test.MatchType(str)),
+            mock.call(
+                test.MatchType(context.RequestContext), 'build_instances',
+                deleted_br.instance_uuid, test.MatchType(dict), 'error',
+                test.MatchType(Exception), test.MatchType(str)),
+            mock.call(
+                test.MatchType(context.RequestContext), 'build_instances',
+                fast_deleted_br.instance_uuid, test.MatchType(dict), 'error',
+                test.MatchType(Exception), test.MatchType(str))],
+            any_order=True)
+
+        for i in range(0, 3):
+            # traceback.format_exc() returns 'NoneType'
+            # because an exception is not raised in this test.
+            # So the argument for traceback is not checked.
+            request_spec_dict = mock_notify.call_args_list[i][0][3]
+            for key in ('instance_type', 'num_instances',
+                        'instance_properties', 'image'):
+                self.assertIn(key, request_spec_dict)
+
+    @mock.patch('nova.compute.utils.notify_about_compute_task_error')
     @mock.patch.object(objects.CellMapping, 'get_by_uuid')
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_create_block_device_mapping')
     def test_bury_in_cell0_with_block_device_mapping(self, mock_create_bdm,
-            mock_get_cell):
+            mock_get_cell, mock_notify):
         mock_get_cell.return_value = self.cell_mappings['cell0']
 
         inst_br = fake_build_request.fake_req_obj(self.ctxt)
@@ -2140,6 +2197,17 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         mock_create_bdm.assert_called_once_with(
             self.cell_mappings['cell0'], inst.flavor, inst.uuid,
             self.params['block_device_mapping'])
+        mock_notify.assert_called_once_with(
+            test.MatchType(context.RequestContext), 'build_instances',
+            inst.uuid, test.MatchType(dict), 'error',
+            test.MatchType(Exception), test.MatchType(str))
+        # traceback.format_exc() returns 'NoneType'
+        # because an exception is not raised in this test.
+        # So the argument for traceback is not checked.
+        request_spec_dict = mock_notify.call_args_list[0][0][3]
+        for key in ('instance_type', 'num_instances', 'instance_properties',
+                    'image'):
+            self.assertIn(key, request_spec_dict)
 
     def test_reset(self):
         with mock.patch('nova.compute.rpcapi.ComputeAPI') as mock_rpc:
@@ -2724,8 +2792,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                     block_device_mapping=mock.ANY,
                     node='node2', limits=None, host_list=[])
 
+    @mock.patch('nova.compute.utils.notify_about_compute_task_error')
     @mock.patch('nova.objects.Instance.save')
-    def test_build_instances_max_retries_exceeded(self, mock_save):
+    def test_build_instances_max_retries_exceeded(self, mock_save,
+                                                  mock_notify):
         """Tests that when populate_retry raises MaxRetriesExceeded in
         build_instances, we don't attempt to cleanup the build request.
         """
@@ -2745,8 +2815,21 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 requested_networks, mock.sentinel.secgroups)
             mock_save.assert_called_once_with()
 
+        mock_notify.assert_called_once_with(
+            self.context, 'build_instances',
+            instance.uuid, test.MatchType(dict), 'error',
+            test.MatchType(exc.MaxRetriesExceeded), test.MatchType(str))
+        request_spec_dict = mock_notify.call_args_list[0][0][3]
+        for key in ('instance_type', 'num_instances', 'instance_properties',
+                    'image'):
+            self.assertIn(key, request_spec_dict)
+        tb = mock_notify.call_args_list[0][0][6]
+        self.assertIn('Traceback (most recent call last):', tb)
+
+    @mock.patch('nova.compute.utils.notify_about_compute_task_error')
     @mock.patch('nova.objects.Instance.save')
-    def test_build_instances_reschedule_no_valid_host(self, mock_save):
+    def test_build_instances_reschedule_no_valid_host(self, mock_save,
+                                                      mock_notify):
         """Tests that when select_destinations raises NoValidHost in
         build_instances, we don't attempt to cleanup the build request if
         we're rescheduling (num_attempts>1).
@@ -2769,6 +2852,17 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                     mock.sentinel.admin_pass, mock.sentinel.files,
                     requested_networks, mock.sentinel.secgroups)
                 mock_save.assert_called_once_with()
+
+        mock_notify.assert_called_once_with(
+            self.context, 'build_instances',
+            instance.uuid, test.MatchType(dict), 'error',
+            test.MatchType(exc.NoValidHost), test.MatchType(str))
+        request_spec_dict = mock_notify.call_args_list[0][0][3]
+        for key in ('instance_type', 'num_instances', 'instance_properties',
+                    'image'):
+            self.assertIn(key, request_spec_dict)
+        tb = mock_notify.call_args_list[0][0][6]
+        self.assertIn('Traceback (most recent call last):', tb)
 
     def test_cleanup_allocated_networks_none_requested(self):
         # Tests that we don't deallocate networks if 'none' were specifically

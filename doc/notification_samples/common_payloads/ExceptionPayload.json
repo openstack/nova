@@ -1,0 +1,12 @@
+{
+    "nova_object.version": "1.1",
+    "nova_object.namespace": "nova",
+    "nova_object.name": "ExceptionPayload",
+    "nova_object.data": {
+        "function_name": "_schedule_instances",
+        "module_name": "nova.conductor.manager",
+        "exception": "NoValidHost",
+        "exception_message": "No valid host was found. There are not enough hosts available.",
+        "traceback": "Traceback (most recent call last):\n  File \"nova/conductor/manager.py\", line ..."
+    }
+}

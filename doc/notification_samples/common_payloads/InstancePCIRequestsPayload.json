@@ -1,0 +1,9 @@
+{
+    "nova_object.version": "1.0",
+    "nova_object.namespace": "nova",
+    "nova_object.name": "InstancePCIRequestsPayload",
+    "nova_object.data":{
+        "instance_uuid": "d5e6a7b7-80e5-4166-85a3-cd6115201082",
+        "requests": []
+    }
+}

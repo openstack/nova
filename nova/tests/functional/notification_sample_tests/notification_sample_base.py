@@ -157,7 +157,7 @@ class NotificationSampleTestBase(test.TestCase,
         self.assertJsonEqual(sample_obj, notification)
 
     def _boot_a_server(self, expected_status='ACTIVE', extra_params=None,
-                       scheduler_hints=None):
+                       scheduler_hints=None, additional_extra_specs=None):
 
         # We have to depend on a specific image and flavor to fix the content
         # of the notification that will be emitted
@@ -172,6 +172,8 @@ class NotificationSampleTestBase(test.TestCase,
         extra_specs = {
             "extra_specs": {
                 "hw:watchdog_action": "disabled"}}
+        if additional_extra_specs:
+            extra_specs['extra_specs'].update(additional_extra_specs)
         self.admin_api.post_extra_spec(flavor_id, extra_specs)
 
         # Ignore the create flavor notification

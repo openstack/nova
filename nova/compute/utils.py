@@ -36,6 +36,7 @@ from nova import exception
 from nova import notifications
 from nova.notifications.objects import aggregate as aggregate_notification
 from nova.notifications.objects import base as notification_base
+from nova.notifications.objects import compute_task as task_notification
 from nova.notifications.objects import exception as notification_exception
 from nova.notifications.objects import flavor as flavor_notification
 from nova.notifications.objects import instance as instance_notification
@@ -854,6 +855,41 @@ def notify_about_volume_usage(context, vol_usage, host):
                 object='volume',
                 action=fields.NotificationAction.USAGE),
             payload=payload)
+    notification.emit(context)
+
+
+@rpc.if_notifications_enabled
+def notify_about_compute_task_error(context, action, instance_uuid,
+                                    request_spec, state, exception, tb):
+    """Send a versioned notification about compute task error.
+
+    :param context: the request context
+    :param action: the name of the action
+    :param instance_uuid: the UUID of the instance
+    :param request_spec: the request spec object or
+                         the dict includes request spec information
+    :param state: the vm state of the instance
+    :param exception: the thrown exception
+    :param tb: the traceback
+    """
+    if (request_spec is not None and
+            not isinstance(request_spec, objects.RequestSpec)):
+        request_spec = objects.RequestSpec.from_primitives(
+            context, request_spec, {})
+
+    fault, _ = _get_fault_and_priority_from_exc_and_tb(exception, tb)
+    payload = task_notification.ComputeTaskPayload(
+        instance_uuid=instance_uuid, request_spec=request_spec, state=state,
+        reason=fault)
+    notification = task_notification.ComputeTaskNotification(
+        priority=fields.NotificationPriority.ERROR,
+        publisher=notification_base.NotificationPublisher(
+            host=CONF.host, source=fields.NotificationSource.CONDUCTOR),
+        event_type=notification_base.EventType(
+            object='compute_task',
+            action=action,
+            phase=fields.NotificationPhase.ERROR),
+        payload=payload)
     notification.emit(context)
 
 

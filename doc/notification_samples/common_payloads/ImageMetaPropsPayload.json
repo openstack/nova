@@ -1,0 +1,8 @@
+{
+    "nova_object.namespace": "nova",
+    "nova_object.data": {
+        "hw_architecture": "x86_64"
+    },
+    "nova_object.name": "ImageMetaPropsPayload",
+    "nova_object.version": "1.0"
+}

@@ -67,7 +67,9 @@ class EventType(NotificationObject):
     #               NotificationActionField enum
     # Version 1.16: CONNECT is added to NotificationActionField enum
     # Version 1.17: USAGE is added to NotificationActionField enum
-    VERSION = '1.17'
+    # Version 1.18: ComputeTask related values have been added to
+    #               NotificationActionField enum
+    VERSION = '1.18'
 
     fields = {
         'object': fields.StringField(nullable=False),
@@ -119,7 +121,7 @@ class NotificationPayloadBase(NotificationObject):
         self.populated = not self.SCHEMA
 
     @rpc.if_notifications_enabled
-    def populate_schema(self, **kwargs):
+    def populate_schema(self, set_none=True, **kwargs):
         """Populate the object based on the SCHEMA and the source objects
 
         :param kwargs: A dict contains the source object at the key defined in
@@ -137,14 +139,15 @@ class NotificationPayloadBase(NotificationObject):
                     NotImplementedError,
                     exception.OrphanedObjectError,
                     ovo_exception.OrphanedObjectError):
-                # If it is unset or non lazy loadable in the source object
-                # then we cannot do anything else but try to default it in the
-                # payload object we are generating here.
-                # NOTE(gibi): This will fail if the payload field is not
-                # nullable, but that means that either the source object is not
-                # properly initialized or the payload field needs to be defined
-                # as nullable
-                setattr(self, key, None)
+                if set_none:
+                    # If it is unset or non lazy loadable in the source object
+                    # then we cannot do anything else but try to default it
+                    # in the payload object we are generating here.
+                    # NOTE(gibi): This will fail if the payload field is not
+                    # nullable, but that means that either the source object
+                    # is not properly initialized or the payload field needs
+                    # to be defined as nullable
+                    setattr(self, key, None)
             except Exception:
                 with excutils.save_and_reraise_exception():
                     LOG.error('Failed trying to populate attribute "%s" '

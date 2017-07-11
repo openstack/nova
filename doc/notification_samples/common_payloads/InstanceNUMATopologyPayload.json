@@ -1,0 +1,12 @@
+{
+    "nova_object.version": "1.0",
+    "nova_object.namespace": "nova",
+    "nova_object.name": "InstanceNUMATopologyPayload",
+    "nova_object.data": {
+        "cells": [
+            {"$ref": "InstanceNUMACellPayload.json#"}
+        ],
+        "emulator_threads_policy": null,
+        "instance_uuid": "75cab9f7-57e2-4bd1-984f-a0383d9ee60e"
+    }
+}

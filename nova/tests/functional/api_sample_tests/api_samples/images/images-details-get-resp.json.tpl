@@ -206,6 +206,7 @@
                 }
             ],
             "metadata": {
+                "architecture": "x86_64",
                 "kernel_id": "nokernel",
                 "ramdisk_id": "nokernel"
             },

@@ -40,7 +40,8 @@ class FakeImageServiceTestCase(test.NoDBTestCase):
                                         'updated_at', 'deleted_at', 'deleted',
                                         'status', 'is_public', 'properties',
                                         'disk_format', 'container_format',
-                                        'size']))
+                                        'size', 'min_disk', 'min_ram',
+                                        'protected', 'tags', 'visibility']))
             self.assertIsInstance(image['created_at'], datetime.datetime)
             self.assertIsInstance(image['updated_at'], datetime.datetime)
 

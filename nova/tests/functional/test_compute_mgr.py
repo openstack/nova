@@ -67,7 +67,11 @@ class ComputeManagerTestCase(test.TestCase):
             # Simulate that we're on the last retry attempt
             filter_properties = {'retry': {'num_attempts': 3}}
             request_spec = objects.RequestSpec.from_primitives(
-                self.context, {}, filter_properties)
+                self.context,
+                {'instance_properties': {'uuid': instance.uuid},
+                 'instance_type': flavor,
+                 'image': None},
+                filter_properties)
             self.compute.manager.build_and_run_instance(
                     self.context, instance, {}, request_spec,
                     filter_properties, block_device_mapping=[])
