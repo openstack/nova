@@ -594,9 +594,9 @@ class SpawnTestCase(VMOpsTestBase):
         mock_NetworkInterfaceMetadata, mock_get_bdms, mock_get_vifs):
         context = {}
         instance = {"uuid": "fake_uuid"}
-        block_device_info = {'block_device_mapping': []}
         vif = self._dev_mock({"address": "fake_address", "tag": "vif_tag"})
         bdm = self._dev_mock({"device_name": "/dev/xvdx", "tag": "bdm_tag"})
+        block_device_info = {'block_device_mapping': [bdm]}
 
         mock_get_vifs.return_value = [vif]
         mock_get_bdms.return_value = [bdm]
@@ -616,6 +616,28 @@ class SpawnTestCase(VMOpsTestBase):
         mock_prepare_disk_metadata.assert_called_once_with(bdm)
         self.assertEqual(dev_meta["devices"],
             [mock.sentinel.vif_metadata, mock.sentinel.bdm_metadata])
+
+    @mock.patch.object(objects.VirtualInterfaceList, 'get_by_instance_uuid')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch.object(vmops.VMOps, '_prepare_disk_metadata')
+    def test_save_device_metadata_no_vifs_no_bdms(
+            self, mock_prepare_disk_metadata, mock_get_bdms, mock_get_vifs):
+        """Tests that we don't save any device metadata when there are no
+        VIFs or BDMs.
+        """
+        ctxt = context.RequestContext('fake-user', 'fake-project')
+        instance = objects.Instance(uuid=uuids.instance_uuid)
+        block_device_info = {'block_device_mapping': []}
+
+        mock_get_vifs.return_value = objects.VirtualInterfaceList()
+
+        dev_meta = self.vmops._save_device_metadata(
+            ctxt, instance, block_device_info)
+        self.assertIsNone(dev_meta)
+
+        mock_get_vifs.assert_called_once_with(ctxt, uuids.instance_uuid)
+        mock_get_bdms.assert_not_called()
+        mock_prepare_disk_metadata.assert_not_called()
 
     def test_spawn_with_neutron_exception(self):
         self.mox.StubOutWithMock(self.vmops, '_get_neutron_events')

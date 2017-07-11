@@ -871,8 +871,6 @@ class VMOps(object):
         """
         vifs = objects.VirtualInterfaceList.get_by_instance_uuid(
             context, instance["uuid"])
-        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-            context, instance["uuid"])
 
         metadata = []
         for vif in vifs:
@@ -883,7 +881,15 @@ class VMOps(object):
                     tags=[vif.tag])
                 metadata.append(device)
 
-        if block_device_info:
+        block_device_mapping = virt_driver.block_device_info_get_mapping(
+            block_device_info)
+        if block_device_mapping:
+            # TODO(mriedem): We should be able to get the BDMs out of the
+            # block_device_info['block_device_mapping'] field, however, that
+            # is a list of DriverVolumeBlockDevice objects and do not currently
+            # proxy the 'tag' attribute.
+            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance["uuid"])
             for bdm in bdms:
                 if 'tag' in bdm and bdm.tag:
                     metadata.extend(self._prepare_disk_metadata(bdm))
