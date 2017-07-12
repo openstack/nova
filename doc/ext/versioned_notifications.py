@@ -22,8 +22,8 @@ It is used via a single directive in the .rst file
 
 from docutils import nodes
 import importlib
-from sphinx.util.compat import Directive
 import pkgutil
+from sphinx.util.compat import Directive
 
 import nova.notifications.objects
 from nova.notifications.objects import base as notification
