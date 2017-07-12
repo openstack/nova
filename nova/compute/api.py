@@ -96,7 +96,6 @@ CONF = nova.conf.CONF
 
 MAX_USERDATA_SIZE = 65535
 RO_SECURITY_GROUPS = ['default']
-VIDEO_RAM = 'hw_video:ram_max_mb'
 
 AGGREGATE_ACTION_UPDATE = 'Update'
 AGGREGATE_ACTION_UPDATE_META = 'UpdateMeta'
@@ -346,8 +345,7 @@ class API(base.Base):
 
         # Determine requested cores and ram
         req_cores = max_count * instance_type['vcpus']
-        vram_mb = int(instance_type.get('extra_specs', {}).get(VIDEO_RAM, 0))
-        req_ram = max_count * (instance_type['memory_mb'] + vram_mb)
+        req_ram = max_count * instance_type['memory_mb']
 
         # Check the quota
         try:
@@ -371,8 +369,7 @@ class API(base.Base):
                               headroom['cores'] // instance_type['vcpus'])
             if instance_type['memory_mb']:
                 allowed = min(allowed,
-                              headroom['ram'] // (instance_type['memory_mb'] +
-                                                  vram_mb))
+                              headroom['ram'] // instance_type['memory_mb'])
 
             # Convert to the appropriate exception message
             if allowed <= 0:
@@ -2130,13 +2127,11 @@ class API(base.Base):
                                    task_states.RESIZE_FINISH):
             old_flavor = flavor or instance.old_flavor
             instance_vcpus = old_flavor.vcpus
-            vram_mb = old_flavor.extra_specs.get('hw_video:ram_max_mb', 0)
-            instance_memory_mb = old_flavor.memory_mb + vram_mb
+            instance_memory_mb = old_flavor.memory_mb
         else:
             flavor = flavor or instance.flavor
             instance_vcpus = flavor.vcpus
-            vram_mb = int(flavor.get('extra_specs', {}).get(VIDEO_RAM, 0))
-            instance_memory_mb = flavor.memory_mb + vram_mb
+            instance_memory_mb = flavor.memory_mb
 
         quotas = objects.Quotas(context=context)
         quotas.reserve(project_id=project_id,

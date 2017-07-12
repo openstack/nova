@@ -890,11 +890,9 @@ class _ComputeAPIUnitTestMixIn(object):
         inst = self._create_instance_obj()
         inst.update(attrs)
         inst._context = self.context
-        vram_mb = int(inst.flavor.get('extra_specs',
-                                      {}).get(compute_api.VIDEO_RAM, 0))
         deltas = {'instances': -1,
                   'cores': -inst.flavor.vcpus,
-                  'ram': -(inst.flavor.memory_mb + vram_mb)}
+                  'ram': -inst.flavor.memory_mb}
         delete_time = datetime.datetime(1955, 11, 5, 9, 30,
                                         tzinfo=iso8601.iso8601.Utc())
         self.useFixture(utils_fixture.TimeFixture(delete_time))
@@ -1043,12 +1041,6 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def test_delete_in_resized(self):
         self._test_delete('delete', vm_state=vm_states.RESIZED)
-
-    def test_delete_with_vram(self):
-        flavor = objects.Flavor(vcpus=1, memory_mb=512,
-            extra_specs={compute_api.VIDEO_RAM: "64"})
-        self._test_delete('delete',
-                          flavor=flavor)
 
     def test_delete_shelved(self):
         fake_sys_meta = {'shelved_image_id': SHELVED_IMAGE}
