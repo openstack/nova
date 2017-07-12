@@ -89,44 +89,30 @@ modindex_common_prefix = ['nova.']
 # Grouping the document tree for man pages.
 # List of tuples 'sourcefile', 'target', u'title', u'Authors name', 'manual'
 
-man_pages = [
-    ('man/nova-api-metadata', 'nova-api-metadata', u'Cloud controller fabric',
-     [u'OpenStack'], 1),
-    ('man/nova-api-os-compute', 'nova-api-os-compute',
-     u'Cloud controller fabric', [u'OpenStack'], 1),
-    ('man/nova-api', 'nova-api', u'Cloud controller fabric',
-     [u'OpenStack'], 1),
-    ('man/nova-cells', 'nova-cells', u'Cloud controller fabric',
-     [u'OpenStack'], 1),
-    ('man/nova-compute', 'nova-compute', u'Cloud controller fabric',
-     [u'OpenStack'], 1),
-    ('man/nova-console', 'nova-console', u'Cloud controller fabric',
-     [u'OpenStack'], 1),
-    ('man/nova-consoleauth', 'nova-consoleauth', u'Cloud controller fabric',
-     [u'OpenStack'], 1),
-    ('man/nova-dhcpbridge', 'nova-dhcpbridge', u'Cloud controller fabric',
-     [u'OpenStack'], 1),
-    ('man/nova-idmapshift', 'nova-idmapshift', u'Cloud controller fabric',
-     [u'OpenStack'], 1),
-    ('man/nova-manage', 'nova-manage', u'Cloud controller fabric',
-     [u'OpenStack'], 1),
-    ('man/nova-network', 'nova-network', u'Cloud controller fabric',
-     [u'OpenStack'], 1),
-    ('man/nova-novncproxy', 'nova-novncproxy', u'Cloud controller fabric',
-     [u'OpenStack'], 1),
-    ('man/nova-spicehtml5proxy', 'nova-spicehtml5proxy', u'Cloud controller fabric',
-     [u'OpenStack'], 1),
-    ('man/nova-serialproxy', 'nova-serialproxy', u'Cloud controller fabric',
-     [u'OpenStack'], 1),
-    ('man/nova-rootwrap', 'nova-rootwrap', u'Cloud controller fabric',
-     [u'OpenStack'], 1),
-    ('man/nova-scheduler', 'nova-scheduler', u'Cloud controller fabric',
-     [u'OpenStack'], 1),
-    ('man/nova-xvpvncproxy', 'nova-xvpvncproxy', u'Cloud controller fabric',
-     [u'OpenStack'], 1),
-    ('man/nova-conductor', 'nova-conductor', u'Cloud controller fabric',
-     [u'OpenStack'], 1),
+_man_pages = [
+    ('nova-api-metadata', u'Cloud controller fabric'),
+    ('nova-api-os-compute', u'Cloud controller fabric'),
+    ('nova-api', u'Cloud controller fabric'),
+    ('nova-cells', u'Cloud controller fabric'),
+    ('nova-compute', u'Cloud controller fabric'),
+    ('nova-console', u'Cloud controller fabric'),
+    ('nova-consoleauth', u'Cloud controller fabric'),
+    ('nova-dhcpbridge', u'Cloud controller fabric'),
+    ('nova-idmapshift', u'Cloud controller fabric'),
+    ('nova-manage', u'Cloud controller fabric'),
+    ('nova-network', u'Cloud controller fabric'),
+    ('nova-novncproxy', u'Cloud controller fabric'),
+    ('nova-spicehtml5proxy', u'Cloud controller fabric'),
+    ('nova-serialproxy', u'Cloud controller fabric'),
+    ('nova-rootwrap', u'Cloud controller fabric'),
+    ('nova-scheduler', u'Cloud controller fabric'),
+    ('nova-xvpvncproxy', u'Cloud controller fabric'),
+    ('nova-conductor', u'Cloud controller fabric'),
 ]
+
+man_pages = [
+    ('man/%s' % name, name, description, [u'OpenStack'], 1)
+    for name, description in _man_pages]
 
 # -- Options for HTML output --------------------------------------------------
 
