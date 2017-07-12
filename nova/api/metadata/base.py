@@ -130,6 +130,7 @@ class InstanceMetadata(object):
         # values in what we cache.
         instance.ec2_ids
         instance.keypairs
+        instance.device_metadata
         instance = objects.Instance.obj_from_primitive(
             instance.obj_to_primitive())
 

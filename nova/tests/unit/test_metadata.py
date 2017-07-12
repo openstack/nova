@@ -391,9 +391,32 @@ class MetadataTestCase(test.TestCase):
 
     def test_instance_is_sanitized(self):
         inst = self.instance.obj_clone()
+        # The instance already has some fake device_metadata stored on it,
+        # and we want to test to see it gets lazy-loaded, so save off the
+        # original attribute value and delete the attribute from the instance,
+        # then we can assert it gets loaded up later.
+        original_device_meta = inst.device_metadata
+        delattr(inst, 'device_metadata')
+
+        def fake_obj_load_attr(attrname):
+            if attrname == 'device_metadata':
+                inst.device_metadata = original_device_meta
+            elif attrname == 'ec2_ids':
+                inst.ec2_ids = objects.EC2Ids()
+            else:
+                self.fail('Unexpected instance lazy-load: %s' % attrname)
+
         inst._will_not_pass = True
-        md = fake_InstanceMetadata(self, inst)
+        with mock.patch.object(
+                inst, 'obj_load_attr',
+                side_effect=fake_obj_load_attr) as mock_obj_load_attr:
+            md = fake_InstanceMetadata(self, inst)
         self.assertFalse(hasattr(md.instance, '_will_not_pass'))
+        self.assertEqual(2, mock_obj_load_attr.call_count)
+        mock_obj_load_attr.assert_has_calls(
+            [mock.call('device_metadata'), mock.call('ec2_ids')],
+            any_order=True)
+        self.assertIs(original_device_meta, inst.device_metadata)
 
     def test_check_version(self):
         inst = self.instance.obj_clone()
