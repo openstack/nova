@@ -375,14 +375,16 @@ def _concurrency(signal, wait, done, target, is_block_dev=False):
 
 class FakeVirtDomain(object):
 
-    def __init__(self, fake_xml=None, uuidstr=None, id=None, name=None):
+    def __init__(self, fake_xml=None, uuidstr=None, id=None, name=None,
+                 info=None):
         if uuidstr is None:
             uuidstr = uuids.fake
         self.uuidstr = uuidstr
         self.id = id
         self.domname = name
-        self._info = [power_state.RUNNING, 2048 * units.Mi, 1234 * units.Mi,
-                     None, None]
+        self._info = info or (
+            [power_state.RUNNING, 2048 * units.Mi,
+             1234 * units.Mi, None, None])
         if fake_xml:
             self._fake_dom_xml = fake_xml
         else:
@@ -16717,8 +16719,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self._test_inject_data(instance, injection_info, "/fail/path",
                                disk_params, called=False)
 
-    def _test_attach_detach_interface(self, method, power_state,
-                                      expected_flags):
+    def _test_attach_interface(self, power_state, expected_flags):
         instance = self._create_instance()
         network_info = _fake_network_info(self, 1)
         domain = FakeVirtDomain(fake_xml="""
@@ -16743,91 +16744,109 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         host.Host.get_domain(instance).AndReturn(domain)
         domain.info().AndReturn([power_state, 1, 2, 3, 4])
 
-        if method == 'attach_interface':
-            self.drvr.firewall_driver.setup_basic_filtering(
-                instance, [network_info[0]])
-            fake_image_meta = objects.ImageMeta.from_dict(
-                {'id': instance.image_ref})
-            expected = self.drvr.vif_driver.get_config(
-                instance, network_info[0], fake_image_meta, instance.flavor,
-                CONF.libvirt.virt_type, self.drvr._host)
-            self.mox.StubOutWithMock(self.drvr.vif_driver,
-                                     'get_config')
-            self.drvr.vif_driver.get_config(
-                instance, network_info[0],
-                mox.IsA(objects.ImageMeta),
-                mox.IsA(objects.Flavor),
-                CONF.libvirt.virt_type,
-                self.drvr._host).AndReturn(expected)
-            domain.attachDeviceFlags(expected.to_xml(), flags=expected_flags)
-        elif method == 'detach_interface':
-            expected = vconfig.LibvirtConfigGuestInterface()
-            expected.parse_str("""
-                <interface type='bridge'>
-                  <mac address='52:54:00:f6:35:8f'/>
-                  <model type='virtio'/>
-                  <source bridge='br0'/>
-                  <target dev='tap12345678'/>
-                </interface>""")
-            self.mox.StubOutWithMock(self.drvr.vif_driver,
-                                     'get_config')
-            self.drvr.vif_driver.get_config(
-                instance, network_info[0],
-                mox.IsA(objects.ImageMeta),
-                mox.IsA(objects.Flavor),
-                CONF.libvirt.virt_type,
-                self.drvr._host).AndReturn(expected)
-            domain.detachDeviceFlags("""
-                <interface type='bridge'>
-                  <mac address='52:54:00:f6:35:8f'/>
-                  <model type='virtio'/>
-                  <source bridge='br0'/>
-                  <target dev='tap12345678'/>
-                  <address type='pci' domain='0x0000' bus='0x00'
-                   slot='0x03' function='0x0'/>
-                </interface>""", expected_flags)
+        self.drvr.firewall_driver.setup_basic_filtering(
+            instance, [network_info[0]])
+        fake_image_meta = objects.ImageMeta.from_dict(
+            {'id': instance.image_ref})
+        expected = self.drvr.vif_driver.get_config(
+            instance, network_info[0], fake_image_meta, instance.flavor,
+            CONF.libvirt.virt_type, self.drvr._host)
+        self.mox.StubOutWithMock(self.drvr.vif_driver,
+                                 'get_config')
+        self.drvr.vif_driver.get_config(
+            instance, network_info[0],
+            mox.IsA(objects.ImageMeta),
+            mox.IsA(objects.Flavor),
+            CONF.libvirt.virt_type,
+            self.drvr._host).AndReturn(expected)
+        domain.attachDeviceFlags(expected.to_xml(), flags=expected_flags)
 
         self.mox.ReplayAll()
-        if method == 'attach_interface':
-            self.drvr.attach_interface(
-                self.context, instance, fake_image_meta, network_info[0])
-        elif method == 'detach_interface':
-            self.drvr.detach_interface(
-                self.context, instance, network_info[0])
+        self.drvr.attach_interface(
+            self.context, instance, fake_image_meta, network_info[0])
         self.mox.VerifyAll()
 
     def test_attach_interface_with_running_instance(self):
-        self._test_attach_detach_interface(
-            'attach_interface', power_state.RUNNING,
+        self._test_attach_interface(
+            power_state.RUNNING,
             expected_flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
                             fakelibvirt.VIR_DOMAIN_AFFECT_LIVE))
 
     def test_attach_interface_with_pause_instance(self):
-        self._test_attach_detach_interface(
-            'attach_interface', power_state.PAUSED,
+        self._test_attach_interface(
+            power_state.PAUSED,
             expected_flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
                             fakelibvirt.VIR_DOMAIN_AFFECT_LIVE))
 
     def test_attach_interface_with_shutdown_instance(self):
-        self._test_attach_detach_interface(
-            'attach_interface', power_state.SHUTDOWN,
+        self._test_attach_interface(
+            power_state.SHUTDOWN,
             expected_flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG))
 
+    def _test_detach_interface(self, power_state, expected_flags):
+        # setup some mocks
+        instance = self._create_instance()
+        network_info = _fake_network_info(self, 1)
+        domain = FakeVirtDomain(fake_xml="""
+                <domain type='kvm'>
+                    <devices>
+                        <interface type='bridge'>
+                            <mac address='52:54:00:f6:35:8f'/>
+                            <model type='virtio'/>
+                            <source bridge='br0'/>
+                            <target dev='tap12345678'/>
+                            <address type='pci' domain='0x0000' bus='0x00'
+                             slot='0x03' function='0x0'/>
+                        </interface>
+                    </devices>
+                </domain>""",
+                info=[power_state, 1, 2, 3, 4])
+        guest = libvirt_guest.Guest(domain)
+
+        expected_cfg = vconfig.LibvirtConfigGuestInterface()
+        expected_cfg.parse_str("""
+            <interface type='bridge'>
+              <mac address='52:54:00:f6:35:8f'/>
+              <model type='virtio'/>
+              <source bridge='br0'/>
+              <target dev='tap12345678'/>
+            </interface>""")
+
+        with test.nested(
+            mock.patch.object(host.Host, 'get_guest', return_value=guest),
+            mock.patch.object(self.drvr.vif_driver, 'get_config',
+                              return_value=expected_cfg),
+            mock.patch.object(domain, 'detachDeviceFlags')
+        ) as (
+            mock_get_guest, mock_get_config, mock_detach_device_flags
+        ):
+            # run the detach method
+            self.drvr.detach_interface(self.context, instance, network_info[0])
+
+        # make our assertions
+        mock_get_guest.assert_called_once_with(instance)
+        mock_get_config.assert_called_once_with(
+            instance, network_info[0], test.MatchType(objects.ImageMeta),
+            test.MatchType(objects.Flavor), CONF.libvirt.virt_type,
+            self.drvr._host)
+        mock_detach_device_flags.assert_called_once_with(
+            expected_cfg.to_xml(), flags=expected_flags)
+
     def test_detach_interface_with_running_instance(self):
-        self._test_attach_detach_interface(
-            'detach_interface', power_state.RUNNING,
+        self._test_detach_interface(
+            power_state.RUNNING,
             expected_flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
                             fakelibvirt.VIR_DOMAIN_AFFECT_LIVE))
 
     def test_detach_interface_with_pause_instance(self):
-        self._test_attach_detach_interface(
-            'detach_interface', power_state.PAUSED,
+        self._test_detach_interface(
+            power_state.PAUSED,
             expected_flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
                             fakelibvirt.VIR_DOMAIN_AFFECT_LIVE))
 
     def test_detach_interface_with_shutdown_instance(self):
-        self._test_attach_detach_interface(
-            'detach_interface', power_state.SHUTDOWN,
+        self._test_detach_interface(
+            power_state.SHUTDOWN,
             expected_flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG))
 
     @mock.patch('nova.virt.libvirt.driver.LOG')
@@ -16879,7 +16898,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(host.Host, 'get_domain')
         self.mox.StubOutWithMock(self.drvr.firewall_driver,
                                  'setup_basic_filtering')
-        self.mox.StubOutWithMock(domain, 'attachDeviceFlags')
+        self.mox.StubOutWithMock(domain, 'detachDeviceFlags')
         self.mox.StubOutWithMock(domain, 'info')
 
         host.Host.get_domain(instance).AndReturn(domain)
@@ -16901,15 +16920,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                 self.drvr._host).AndReturn(expected)
         expected_flags = (fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
                           fakelibvirt.VIR_DOMAIN_AFFECT_LIVE)
-        domain.detachDeviceFlags("""
-            <interface type='bridge'>
-                <mac address='52:54:00:f6:35:8f'/>
-                <model type='virtio'/>
-                <source bridge='br0'/>
-                <target dev='tap12345678'/>
-                <address type='pci' domain='0x0000' bus='0x00'
-                 slot='0x03' function='0x0'/>
-            </interface>""", expected_flags)
+        domain.detachDeviceFlags(expected.to_xml(), flags=expected_flags)
         self.mox.ReplayAll()
         self.drvr.detach_interface(self.context, instance, network_info[0])
         self.mox.VerifyAll()
