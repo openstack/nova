@@ -3813,6 +3813,7 @@ networks_quota_optional: &networks_quota_optional
   in: body
   required: false
   type: integer
+  max_version: 2.50
 networks_quota_set_optional:
   <<: *networks_quota_optional
   max_version: 2.35
@@ -4746,12 +4747,15 @@ server_group_id_body:
   in: body
   required: true
   type: string
-server_group_members:
+server_group_members: &server_group_members
   description: |
     The number of allowed members for each server group.
   in: body
   required: true
   type: integer
+server_group_members_quota_class:
+  <<: *server_group_members
+  min_version: 2.50
 server_group_members_quota_details:
   description: |
     The object of detailed server group members, including in_use,
@@ -4777,6 +4781,11 @@ server_groups_list:
   in: body
   required: true
   type: array
+server_groups_quota_class:
+  <<: *server_groups
+  description: |
+    The number of allowed server groups for the quota class.
+  min_version: 2.50
 server_groups_quota_class_optional:
   <<: *server_groups
   description: |

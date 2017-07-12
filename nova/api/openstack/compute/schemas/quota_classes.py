@@ -11,6 +11,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import copy
 
 from nova.api.openstack.compute.schemas import quota_sets
 
@@ -26,3 +27,12 @@ update = {
     'required': ['quota_class_set'],
     'additionalProperties': False,
 }
+
+update_v250 = copy.deepcopy(update)
+del update_v250['properties']['quota_class_set']['properties']['fixed_ips']
+del update_v250['properties']['quota_class_set']['properties']['floating_ips']
+del update_v250['properties']['quota_class_set']['properties'][
+    'security_groups']
+del update_v250['properties']['quota_class_set']['properties'][
+    'security_group_rules']
+del update_v250['properties']['quota_class_set']['properties']['networks']

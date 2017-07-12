@@ -1,0 +1,20 @@
+---
+fixes:
+  - |
+    Fix bug 1693168. v2.1 API which does not return the ``server_groups`` and
+    ``server_group_members`` quotas in GET and PUT ``os-quota-class-sets`` API
+    response. v2 API used to return those keys in the API response.
+    Microversion 2.50 restored that behavior. In microversion 2.50, the
+    ``server_groups`` and ``server_group_members`` keys are exposed in
+    GET and PUT ``os-quota-class-sets`` APIs Response body.
+    Fix bug 1701211. Network related quotas are filtered out of
+    ``os-quota-class-sets`` APIs and not available from microversion
+    2.50 onwards.
+    Filtered quotas are:
+
+    - 'fixed_ips'
+    - 'floating ips'
+    - 'security_groups'
+    - 'security_group_rules'
+    - 'networks'
+
