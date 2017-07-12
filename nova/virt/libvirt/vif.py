@@ -566,7 +566,14 @@ class LibvirtGenericVIFDriver(object):
         return func(instance, vif, image_meta,
                     inst_type, virt_type, host)
 
-    def _plug_bridge_with_port(self, instance, vif, port):
+    def plug_ivs_hybrid(self, instance, vif):
+        """Plug using hybrid strategy (same as OVS)
+
+        Create a per-VIF linux bridge, then link that bridge to the OVS
+        integration bridge via a veth device, setting up the other end
+        of the veth device just like a normal IVS port.  Then boot the
+        VIF on the linux bridge using standard libvirt mechanisms.
+        """
         iface_id = self.get_ovs_interfaceid(vif)
         br_name = self.get_br_name(vif['id'])
         v1_name, v2_name = self.get_veth_pair_names(vif['id'])
@@ -594,24 +601,8 @@ class LibvirtGenericVIFDriver(object):
             linux_net._create_veth_pair(v1_name, v2_name, mtu)
             utils.execute('ip', 'link', 'set', br_name, 'up', run_as_root=True)
             utils.execute('brctl', 'addif', br_name, v1_name, run_as_root=True)
-            if port == 'ovs':
-                linux_net.create_ovs_vif_port(self.get_bridge_name(vif),
-                                              v2_name, iface_id,
-                                              vif['address'], instance.uuid,
-                                              mtu)
-            elif port == 'ivs':
-                linux_net.create_ivs_vif_port(v2_name, iface_id,
-                                              vif['address'], instance.uuid)
-
-    def plug_ovs_hybrid(self, instance, vif):
-        """Plug using hybrid strategy
-
-        Create a per-VIF linux bridge, then link that bridge to the OVS
-        integration bridge via a veth device, setting up the other end
-        of the veth device just like a normal OVS port.  Then boot the
-        VIF on the linux bridge using standard libvirt mechanisms.
-        """
-        self._plug_bridge_with_port(instance, vif, port='ovs')
+            linux_net.create_ivs_vif_port(v2_name, iface_id,
+                                          vif['address'], instance.uuid)
 
     def plug_ivs_ethernet(self, instance, vif):
         iface_id = self.get_ovs_interfaceid(vif)
@@ -619,16 +610,6 @@ class LibvirtGenericVIFDriver(object):
         linux_net.create_tap_dev(dev)
         linux_net.create_ivs_vif_port(dev, iface_id, vif['address'],
                                       instance.uuid)
-
-    def plug_ivs_hybrid(self, instance, vif):
-        """Plug using hybrid strategy (same as OVS)
-
-        Create a per-VIF linux bridge, then link that bridge to the OVS
-        integration bridge via a veth device, setting up the other end
-        of the veth device just like a normal IVS port.  Then boot the
-        VIF on the linux bridge using standard libvirt mechanisms.
-        """
-        self._plug_bridge_with_port(instance, vif, port='ivs')
 
     def plug_ivs(self, instance, vif):
         if self.get_firewall_required(vif) or vif.is_hybrid_plug_enabled():
@@ -810,36 +791,6 @@ class LibvirtGenericVIFDriver(object):
                   "vif_type=%s") % vif_type)
         func(instance, vif)
 
-    def unplug_ovs_hybrid(self, instance, vif):
-        """UnPlug using hybrid strategy
-
-        Unhook port from OVS, unhook port from bridge, delete
-        bridge, and delete both veth devices.
-        """
-        try:
-            br_name = self.get_br_name(vif['id'])
-            v1_name, v2_name = self.get_veth_pair_names(vif['id'])
-
-            if linux_net.device_exists(br_name):
-                utils.execute('brctl', 'delif', br_name, v1_name,
-                              run_as_root=True)
-                utils.execute('ip', 'link', 'set', br_name, 'down',
-                              run_as_root=True)
-                utils.execute('brctl', 'delbr', br_name,
-                              run_as_root=True)
-
-            linux_net.delete_ovs_vif_port(self.get_bridge_name(vif),
-                                          v2_name)
-        except processutils.ProcessExecutionError:
-            LOG.exception(_("Failed while unplugging vif"), instance=instance)
-
-    def unplug_ivs_ethernet(self, instance, vif):
-        """Unplug the VIF by deleting the port from the bridge."""
-        try:
-            linux_net.delete_ivs_vif_port(self.get_vif_devname(vif))
-        except processutils.ProcessExecutionError:
-            LOG.exception(_("Failed while unplugging vif"), instance=instance)
-
     def unplug_ivs_hybrid(self, instance, vif):
         """UnPlug using hybrid strategy (same as OVS)
 
@@ -855,6 +806,13 @@ class LibvirtGenericVIFDriver(object):
                           run_as_root=True)
             utils.execute('brctl', 'delbr', br_name, run_as_root=True)
             linux_net.delete_ivs_vif_port(v2_name)
+        except processutils.ProcessExecutionError:
+            LOG.exception(_("Failed while unplugging vif"), instance=instance)
+
+    def unplug_ivs_ethernet(self, instance, vif):
+        """Unplug the VIF by deleting the port from the bridge."""
+        try:
+            linux_net.delete_ivs_vif_port(self.get_vif_devname(vif))
         except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
 

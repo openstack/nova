@@ -32,15 +32,12 @@ from nova import db
 from nova import exception
 from nova.network import driver
 from nova.network import linux_net
-from nova.network import model as network_model
 from nova import objects
 from nova import test
 from nova.tests import uuidsentinel as uuids
 from nova import utils
 
 CONF = nova.conf.CONF
-
-HOST = "testhost"
 
 instances = {uuids.instance_1:
                  {'id': 0,
@@ -121,31 +118,6 @@ networks = [{'id': 0,
              'host': None,
              'project_id': 'fake_project',
              'vpn_public_address': '192.168.1.2',
-             'mtu': None,
-             'enable_dhcp': True,
-             'share_address': False},
-            {'id': 2,
-             'uuid': "cccccccc-cccc-cccc-cccc-cccccccccccc",
-             'label': 'test2',
-             'injected': False,
-             'multi_host': True,
-             'cidr': '192.168.2.0/24',
-             'cidr_v6': '2001:db10::/64',
-             'gateway_v6': '2001:db10::1',
-             'netmask_v6': '64',
-             'netmask': '255.255.255.0',
-             'bridge': 'fa2',
-             'bridge_interface': 'fake_fa2',
-             'gateway': '192.168.2.1',
-             'broadcast': '192.168.2.255',
-             'dns1': '192.168.0.1',
-             'dns2': '192.168.0.2',
-             'dhcp_server': '192.168.2.1',
-             'dhcp_start': '192.168.100.1',
-             'vlan': None,
-             'host': None,
-             'project_id': 'fake_project',
-             'vpn_public_address': '192.168.2.2',
              'mtu': None,
              'enable_dhcp': True,
              'share_address': False}]
@@ -1216,67 +1188,6 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         with mock.patch.object(utils, 'execute', return_value=('', '')) as ex:
             linux_net._set_device_mtu('fake-dev')
             ex.assert_has_calls(calls)
-
-    def _ovs_vif_port(self, calls, interface_type=None):
-        with mock.patch.object(utils, 'execute', return_value=('', '')) as ex:
-            linux_net.create_ovs_vif_port('fake-bridge', 'fake-dev',
-                                          'fake-iface-id', 'fake-mac',
-                                          'fake-instance-uuid',
-                                          interface_type=interface_type)
-            ex.assert_has_calls(calls)
-
-    def test_ovs_vif_port_cmd(self):
-        expected = ['--', '--if-exists',
-                    'del-port', 'fake-dev', '--', 'add-port',
-                    'fake-bridge', 'fake-dev',
-                    '--', 'set', 'Interface', 'fake-dev',
-                    'external-ids:iface-id=fake-iface-id',
-                    'external-ids:iface-status=active',
-                    'external-ids:attached-mac=fake-mac',
-                    'external-ids:vm-uuid=fake-instance-uuid'
-                ]
-        cmd = linux_net._create_ovs_vif_cmd('fake-bridge', 'fake-dev',
-                                            'fake-iface-id', 'fake-mac',
-                                            'fake-instance-uuid')
-
-        self.assertEqual(expected, cmd)
-
-        expected += ['type=fake-type']
-        cmd = linux_net._create_ovs_vif_cmd('fake-bridge', 'fake-dev',
-                                            'fake-iface-id', 'fake-mac',
-                                            'fake-instance-uuid',
-                                            'fake-type')
-        self.assertEqual(expected, cmd)
-
-    def test_ovs_vif_port(self):
-        calls = [
-                mock.call('ovs-vsctl', '--timeout=120', '--', '--if-exists',
-                          'del-port', 'fake-dev', '--', 'add-port',
-                          'fake-bridge', 'fake-dev',
-                          '--', 'set', 'Interface', 'fake-dev',
-                          'external-ids:iface-id=fake-iface-id',
-                          'external-ids:iface-status=active',
-                          'external-ids:attached-mac=fake-mac',
-                          'external-ids:vm-uuid=fake-instance-uuid',
-                          run_as_root=True)
-                ]
-        self._ovs_vif_port(calls)
-
-    @mock.patch.object(linux_net, '_ovs_vsctl')
-    @mock.patch.object(linux_net, '_create_ovs_vif_cmd')
-    @mock.patch.object(linux_net, '_set_device_mtu')
-    def test_ovs_vif_port_with_type_vhostuser(self, mock_set_device_mtu,
-                                              mock_create_cmd, mock_vsctl):
-        linux_net.create_ovs_vif_port(
-            'fake-bridge',
-            'fake-dev', 'fake-iface-id', 'fake-mac',
-            "fake-instance-uuid", mtu=1500,
-            interface_type=network_model.OVS_VHOSTUSER_INTERFACE_TYPE)
-        mock_create_cmd.assert_called_once_with('fake-bridge',
-            'fake-dev', 'fake-iface-id', 'fake-mac',
-            "fake-instance-uuid", network_model.OVS_VHOSTUSER_INTERFACE_TYPE)
-        self.assertFalse(mock_set_device_mtu.called)
-        self.assertTrue(mock_vsctl.called)
 
     def _create_veth_pair(self, calls):
         with mock.patch.object(utils, 'execute', return_value=('', '')) as ex:
