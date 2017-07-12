@@ -114,6 +114,10 @@ class LibvirtBaseVolumeDriver(object):
         """Disconnect the volume."""
         pass
 
+    def extend_volume(self, connection_info, instance):
+        """Extend the volume."""
+        raise NotImplementedError()
+
 
 class LibvirtVolumeDriver(LibvirtBaseVolumeDriver):
     """Class for volumes backed by local file."""

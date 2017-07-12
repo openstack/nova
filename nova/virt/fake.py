@@ -124,8 +124,9 @@ class FakeDriver(driver.ComputeDriver):
         "supports_migrate_to_same_host": True,
         "supports_attach_interface": True,
         "supports_tagged_attach_interface": True,
-        "supports_tagged_attach_volume": True
-    }
+        "supports_tagged_attach_volume": True,
+        "supports_extend_volume": True,
+        }
 
     # Since we don't have a real hypervisor, pretend we have lots of
     # disk and ram so this driver can be used to test large instances.
@@ -308,6 +309,10 @@ class FakeDriver(driver.ComputeDriver):
         if instance_name not in self._mounts:
             self._mounts[instance_name] = {}
         self._mounts[instance_name][mountpoint] = new_connection_info
+
+    def extend_volume(self, connection_info, instance):
+        """Extend the disk attached to the instance."""
+        pass
 
     def attach_interface(self, context, instance, image_meta, vif):
         if vif['id'] in self._interfaces:

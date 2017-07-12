@@ -1,0 +1,17 @@
+---
+features:
+  - |
+    It is now possible to signal and perform an online volume size change
+    as of the 2.51 microversion using the ``volume-extended`` external event.
+    Nova will perform the volume extension so the host can detect its new size.
+    It will also resize the device in QEMU so instance can detect
+    the new disk size without rebooting.
+
+    Currently only the libvirt compute driver with iSCSI and FC volumes
+    supports the online volume size change.
+  - |
+    The 2.51 microversion exposes the ``events`` field in the response body for
+    the ``GET /servers/{server_id}/os-instance-actions/{request_id}`` API. This
+    is useful for API users to monitor when a volume extend operation completes
+    for the given server instance. By default only users with the administrator
+    role will be able to see event ``traceback`` details.

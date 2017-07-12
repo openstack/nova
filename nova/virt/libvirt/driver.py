@@ -301,6 +301,7 @@ class LibvirtDriver(driver.ComputeDriver):
         "supports_device_tagging": True,
         "supports_tagged_attach_interface": True,
         "supports_tagged_attach_volume": True,
+        "supports_extend_volume": True,
     }
 
     def __init__(self, virtapi, read_only=False):
@@ -1167,6 +1168,10 @@ class LibvirtDriver(driver.ComputeDriver):
         vol_driver = self._get_volume_driver(connection_info)
         vol_driver.disconnect_volume(connection_info, disk_dev, instance)
 
+    def _extend_volume(self, connection_info, instance):
+        vol_driver = self._get_volume_driver(connection_info)
+        return vol_driver.extend_volume(connection_info, instance)
+
     def _get_volume_config(self, connection_info, disk_info):
         vol_driver = self._get_volume_driver(connection_info)
         return vol_driver.get_config(connection_info, disk_info)
@@ -1401,6 +1406,36 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise
 
         self._disconnect_volume(connection_info, disk_dev, instance)
+
+    def extend_volume(self, connection_info, instance):
+        try:
+            new_size = self._extend_volume(connection_info, instance)
+        except NotImplementedError:
+            raise exception.ExtendVolumeNotSupported()
+
+        # Resize the device in QEMU so its size is updated and
+        # detected by the instance without rebooting.
+        try:
+            guest = self._host.get_guest(instance)
+            state = guest.get_power_state(self._host)
+            active_state = state in (power_state.RUNNING, power_state.PAUSED)
+            if active_state:
+                disk_path = connection_info['data']['device_path']
+                LOG.debug('resizing block device %(dev)s to %(size)u kb',
+                          {'dev': disk_path, 'size': new_size})
+                dev = guest.get_block_device(disk_path)
+                dev.resize(new_size // units.Ki)
+            else:
+                LOG.debug('Skipping block device resize, guest is not running',
+                          instance=instance)
+        except exception.InstanceNotFound:
+            with excutils.save_and_reraise_exception():
+                LOG.warning('During extend_volume, instance disappeared.',
+                            instance=instance)
+        except libvirt.libvirtError:
+            with excutils.save_and_reraise_exception():
+                LOG.exception('resizing block device failed.',
+                              instance=instance)
 
     def attach_interface(self, context, instance, image_meta, vif):
         guest = self._host.get_guest(instance)

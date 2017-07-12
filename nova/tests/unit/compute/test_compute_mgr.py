@@ -2261,11 +2261,92 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         do_test()
 
+    def test_extend_volume(self):
+        inst_obj = objects.Instance(id=3, uuid=uuids.instance)
+        connection_info = {'foo': 'bar'}
+        bdm = objects.BlockDeviceMapping(
+            source_type='volume',
+            destination_type='volume',
+            volume_id=uuids.volume_id,
+            volume_size=10,
+            instance_uuid=uuids.instance,
+            device_name='/dev/vda',
+            connection_info=jsonutils.dumps(connection_info))
+
+        @mock.patch.object(self.compute, 'volume_api')
+        @mock.patch.object(self.compute.driver, 'extend_volume')
+        @mock.patch.object(objects.BlockDeviceMapping,
+                           'get_by_volume_and_instance')
+        @mock.patch.object(objects.BlockDeviceMapping, 'save')
+        def do_test(bdm_save, bdm_get_by_vol_and_inst, extend_volume,
+                    volume_api):
+            bdm_get_by_vol_and_inst.return_value = bdm
+            volume_api.get.return_value = {'size': 20}
+
+            self.compute.extend_volume(
+                self.context, inst_obj, uuids.volume_id)
+            bdm_save.assert_called_once_with()
+            extend_volume.assert_called_once_with(
+                connection_info, inst_obj)
+
+        do_test()
+
+    def test_extend_volume_not_implemented_error(self):
+        """Tests the case where driver.extend_volume raises
+        NotImplementedError.
+        """
+        inst_obj = objects.Instance(id=3, uuid=uuids.instance)
+        connection_info = {'foo': 'bar'}
+        bdm = objects.BlockDeviceMapping(
+            source_type='volume',
+            destination_type='volume',
+            volume_id=uuids.volume_id,
+            volume_size=10,
+            instance_uuid=uuids.instance,
+            device_name='/dev/vda',
+            connection_info=jsonutils.dumps(connection_info))
+
+        @mock.patch.object(self.compute, 'volume_api')
+        @mock.patch.object(objects.BlockDeviceMapping,
+                           'get_by_volume_and_instance')
+        @mock.patch.object(objects.BlockDeviceMapping, 'save')
+        @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+        def do_test(add_fault_mock, bdm_save, bdm_get_by_vol_and_inst,
+                    volume_api):
+            bdm_get_by_vol_and_inst.return_value = bdm
+            volume_api.get.return_value = {'size': 20}
+            self.assertRaises(
+                exception.ExtendVolumeNotSupported,
+                self.compute.extend_volume,
+                self.context, inst_obj, uuids.volume_id)
+            add_fault_mock.assert_called_once_with(
+                self.context, inst_obj, mock.ANY, mock.ANY)
+
+        with mock.patch.dict(self.compute.driver.capabilities,
+                             supports_extend_volume=False):
+            do_test()
+
+    def test_extend_volume_volume_not_found(self):
+        """Tests the case where driver.extend_volume tries to extend
+        a volume not attached to the specified instance.
+        """
+        inst_obj = objects.Instance(id=3, uuid=uuids.instance)
+
+        @mock.patch.object(objects.BlockDeviceMapping,
+                           'get_by_volume_and_instance',
+                           side_effect=exception.NotFound())
+        def do_test(bdm_get_by_vol_and_inst):
+            self.compute.extend_volume(
+                self.context, inst_obj, uuids.volume_id)
+
+        do_test()
+
     def test_external_instance_event(self):
         instances = [
             objects.Instance(id=1, uuid=uuids.instance_1),
             objects.Instance(id=2, uuid=uuids.instance_2),
-            objects.Instance(id=3, uuid=uuids.instance_3)]
+            objects.Instance(id=3, uuid=uuids.instance_3),
+            objects.Instance(id=4, uuid=uuids.instance_4)]
         events = [
             objects.InstanceExternalEvent(name='network-changed',
                                           tag='tag1',
@@ -2275,13 +2356,18 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                           tag='tag2'),
             objects.InstanceExternalEvent(name='network-vif-deleted',
                                           instance_uuid=uuids.instance_3,
-                                          tag='tag3')]
+                                          tag='tag3'),
+            objects.InstanceExternalEvent(name='volume-extended',
+                                          instance_uuid=uuids.instance_4,
+                                          tag='tag4')]
 
+        @mock.patch.object(self.compute,
+                           'extend_volume')
         @mock.patch.object(self.compute, '_process_instance_vif_deleted_event')
         @mock.patch.object(self.compute.network_api, 'get_instance_nw_info')
         @mock.patch.object(self.compute, '_process_instance_event')
         def do_test(_process_instance_event, get_instance_nw_info,
-                    _process_instance_vif_deleted_event):
+                    _process_instance_vif_deleted_event, extend_volume):
             self.compute.external_instance_event(self.context,
                                                  instances, events)
             get_instance_nw_info.assert_called_once_with(self.context,
@@ -2290,6 +2376,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                             events[1])
             _process_instance_vif_deleted_event.assert_called_once_with(
                 self.context, instances[2], events[2].tag)
+            extend_volume.assert_called_once_with(
+                self.context, instances[3], events[3].tag)
         do_test()
 
     def test_external_instance_event_with_exception(self):
@@ -2307,7 +2395,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             objects.Instance(id=3, uuid=uuids.instance_3),
             # instance_4 doesn't have info_cache set so it will be lazy-loaded
             # and blow up with an InstanceNotFound error.
-            objects.Instance(id=4, uuid=uuids.instance_4)]
+            objects.Instance(id=4, uuid=uuids.instance_4),
+            objects.Instance(id=5, uuid=uuids.instance_5),
+        ]
         events = [
             objects.InstanceExternalEvent(name='network-changed',
                                           tag='tag1',
@@ -2321,10 +2411,17 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             objects.InstanceExternalEvent(name='network-vif-deleted',
                                           instance_uuid=uuids.instance_4,
                                           tag='tag4'),
+            objects.InstanceExternalEvent(name='volume-extended',
+                                          instance_uuid=uuids.instance_5,
+                                          tag='tag5'),
         ]
 
         # Make sure all the four events are handled despite the exceptions in
-        # processing events 1, 2, and 4.
+        # processing events 1, 2, 4 and 5.
+        @mock.patch.object(objects.BlockDeviceMapping,
+                           'get_by_volume_and_instance',
+                           side_effect=exception.InstanceNotFound(
+                               instance_id=uuids.instance_5))
         @mock.patch.object(instances[3], 'obj_load_attr',
                            side_effect=exception.InstanceNotFound(
                                instance_id=uuids.instance_4))
@@ -2338,7 +2435,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         @mock.patch.object(self.compute, '_process_instance_event')
         def do_test(_process_instance_event, get_instance_nw_info,
                     detach_interface, update_instance_cache_with_nw_info,
-                    obj_load_attr):
+                    obj_load_attr, bdm_get_by_vol_and_inst):
             self.compute.external_instance_event(self.context,
                                                  instances, events)
             get_instance_nw_info.assert_called_once_with(self.context,
@@ -2353,6 +2450,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             _process_instance_event.assert_called_once_with(instances[2],
                                                             events[2])
             obj_load_attr.assert_called_once_with('info_cache')
+            bdm_get_by_vol_and_inst.assert_called_once_with(
+                self.context, 'tag5', instances[4].uuid)
         do_test()
 
     def test_cancel_all_events(self):

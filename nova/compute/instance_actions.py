@@ -52,3 +52,11 @@ LIVE_MIGRATION = 'live-migration'
 LIVE_MIGRATION_CANCEL = 'live_migration_cancel'
 LIVE_MIGRATION_FORCE_COMPLETE = 'live_migration_force_complete'
 TRIGGER_CRASH_DUMP = 'trigger_crash_dump'
+# The extend_volume action is not like the traditional instance actions which
+# are driven directly through the compute API. The extend_volume action is
+# initiated by a Cinder volume extend (resize) action. Cinder will call the
+# server external events API after the volume extend is performed so that Nova
+# can perform any updates on the compute side. The instance actions framework
+# is used for tracking this asynchronous operation so the user/admin can know
+# when it is done in case they need/want to reboot the guest operating system.
+EXTEND_VOLUME = 'extend_volume'

@@ -76,7 +76,13 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         subs['start_time'] = str(fake_action['start_time'])
         subs['result'] = '(Success)|(Error)'
         subs['event'] = '(schedule)|(compute_create)'
-        self._verify_response('instance-action-get-resp', subs, response, 200)
+        # Non-admins can see event details except for the "traceback" field
+        # starting in the 2.51 microversion.
+        if self.ADMIN_API:
+            name = 'instance-action-get-resp'
+        else:
+            name = 'instance-action-get-non-admin-resp'
+        self._verify_response(name, subs, response, 200)
 
     def test_instance_actions_list(self):
         fake_uuid = fake_server_actions.FAKE_UUID
@@ -93,3 +99,30 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
 class ServerActionsV221SampleJsonTest(ServerActionsSampleJsonTest):
     microversion = '2.21'
     scenarios = [('v2_21', {'api_major_version': 'v2.1'})]
+
+
+class ServerActionsV251AdminSampleJsonTest(ServerActionsSampleJsonTest):
+    """Tests the 2.51 microversion for the os-instance-actions API.
+
+    The 2.51 microversion allows non-admins to see instance action event
+    details *except* for the traceback field.
+
+    The tests in this class are run as an admin user so all fields will be
+    displayed.
+    """
+    microversion = '2.51'
+    scenarios = [('v2_51', {'api_major_version': 'v2.1'})]
+
+
+class ServerActionsV251NonAdminSampleJsonTest(ServerActionsSampleJsonTest):
+    """Tests the 2.51 microversion for the os-instance-actions API.
+
+    The 2.51 microversion allows non-admins to see instance action event
+    details *except* for the traceback field.
+
+    The tests in this class are run as a non-admin user so all fields except
+    for the ``traceback`` field will be displayed.
+    """
+    ADMIN_API = False
+    microversion = '2.51'
+    scenarios = [('v2_51', {'api_major_version': 'v2.1'})]

@@ -6881,6 +6881,56 @@ class ComputeManager(manager.Manager):
                                 instance=instance)
                 break
 
+    @wrap_instance_event(prefix='compute')
+    @wrap_instance_fault
+    def extend_volume(self, context, instance, extended_volume_id):
+
+        # If an attached volume is extended by cinder, it needs to
+        # be extended by virt driver so host can detect its new size.
+        # And bdm needs to be updated.
+        LOG.debug('Handling volume-extended event for volume %(vol)s',
+                  {'vol': extended_volume_id}, instance=instance)
+
+        try:
+            bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
+                   context, extended_volume_id, instance.uuid)
+        except exception.NotFound:
+            LOG.warning('Extend volume failed, '
+                        'volume %(vol)s is not attached to instance.',
+                        {'vol': extended_volume_id},
+                        instance=instance)
+            return
+
+        LOG.info('Cinder extended volume %(vol)s; '
+                 'extending it to detect new size',
+                 {'vol': extended_volume_id},
+                 instance=instance)
+        volume = self.volume_api.get(context, bdm.volume_id)
+
+        if bdm.connection_info is None:
+            LOG.warning('Extend volume failed, '
+                        'attached volume %(vol)s has no connection_info',
+                        {'vol': extended_volume_id},
+                        instance=instance)
+            return
+
+        connection_info = jsonutils.loads(bdm.connection_info)
+        bdm.volume_size = volume['size']
+        bdm.save()
+
+        if not self.driver.capabilities.get('supports_extend_volume', False):
+            raise exception.ExtendVolumeNotSupported()
+
+        try:
+            self.driver.extend_volume(connection_info,
+                                      instance)
+        except Exception as ex:
+            LOG.warning('Extend volume failed, '
+                        'volume_id=%(volume_id)s, reason: %(msg)s',
+                        {'volume_id': extended_volume_id, 'msg': ex},
+                        instance=instance)
+            raise
+
     @wrap_exception()
     def external_instance_event(self, context, instances, events):
         # NOTE(danms): Some event types are handled by the manager, such
@@ -6911,6 +6961,8 @@ class ComputeManager(manager.Manager):
                              '%(event)s due to: %(error)s',
                              {'event': event.key, 'error': six.text_type(e)},
                              instance=instance)
+            elif event.name == 'volume-extended':
+                self.extend_volume(context, instance, event.tag)
             else:
                 self._process_instance_event(instance, event)
 
