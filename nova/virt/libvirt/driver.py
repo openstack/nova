@@ -1297,7 +1297,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
             except Exception as exc:
                 LOG.exception("Failure rebasing volume %(new_path)s on "
-                    "%(new_path)s.", {'new_path': conf.source_path,
+                    "%(old_path)s.", {'new_path': conf.source_path,
                                       'old_path': disk_path})
                 raise exception.VolumeRebaseFailed(reason=six.text_type(exc))
 
