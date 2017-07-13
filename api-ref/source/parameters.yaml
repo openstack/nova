@@ -822,6 +822,18 @@ reservation_id_query:
   type: string
   description: |
     A reservation id as returned by a servers multiple create call.
+reserved_query:
+  description: |
+    Specify whether the result of resource total includes reserved resources
+    or not.
+
+      - ``0``: Not include reserved resources.
+      - Other than 0: Include reserved resources.
+
+    If non integer value is specified, it is the same as ``0``.
+  in: query
+  required: false
+  type: integer
 server_name_query:
   description: |
     Filters the response by a server name, as a string.  You can use regular expressions
@@ -973,6 +985,13 @@ task_state_query_server:
   type: string
   description: |
     Filter the server list result by task state.
+tenant_id_query:
+  description: |
+    Specify the project ID (tenant ID) to show the rate and absolute limits.
+    This parameter can be specified by admin only.
+  in: query
+  required: false
+  type: string
 terminated_at_query_server:
   description: |
     Filter the server list result by a date and time stamp when instance was terminated.
@@ -1645,7 +1664,7 @@ contents:
   type: string
 cores: &cores
   description: |
-    The number of allowed instance cores for each tenant.
+    The number of allowed server cores for each tenant.
   in: body
   required: true
   type: integer
@@ -1665,7 +1684,7 @@ cores_quota_details:
   type: object
 cores_quota_optional:
   description: |
-    The number of allowed instance cores for each tenant.
+    The number of allowed server cores for each tenant.
   in: body
   required: false
   type: integer
@@ -2222,7 +2241,7 @@ fixed_ips_quota_details:
 fixed_ips_quota_optional:
   description: |
     The number of allowed fixed IP addresses for each tenant. Must be equal to or
-    greater than the number of allowed instances.
+    greater than the number of allowed servers.
   in: body
   required: false
   type: integer
@@ -3220,14 +3239,14 @@ instances_quota_class_optional:
   required: false
 instances_quota_details:
   description: |
-    The object of detailed instances quota, including in_use, limit and
+    The object of detailed servers quota, including in_use, limit and
     reserved number of instances.
   in: body
   required: true
   type: object
 instances_quota_optional:
   description: |
-    The number of allowed instances for each tenant.
+    The number of allowed servers for each tenant.
   in: body
   required: false
   type: integer
@@ -3460,7 +3479,8 @@ limits:
   type: object
 limits_absolutes:
   description: |
-    Name/value pairs that set quota limits within a deployment.
+    Name/value pairs that set quota limits within a deployment and
+    Name/value pairs of resource usage.
   in: body
   required: true
   type: object
@@ -3625,7 +3645,7 @@ metadata_compat:
   type: object
 metadata_items:
   description: |
-    The number of allowed metadata items for each instance.
+    The number of allowed metadata items for each server.
   in: body
   required: true
   type: integer
@@ -3638,7 +3658,7 @@ metadata_items_quota_details:
   type: object
 metadata_items_quota_optional:
   description: |
-    The number of allowed metadata items for each instance.
+    The number of allowed metadata items for each server.
   in: body
   required: false
   type: integer
@@ -4437,7 +4457,7 @@ quota_tenant_or_user_id_body:
   type: string
 ram: &ram
   description: |
-    The amount of allowed instance RAM, in MB, for each tenant.
+    The amount of allowed server RAM, in MB, for each tenant.
   in: body
   required: true
   type: integer
@@ -4457,7 +4477,7 @@ ram_quota_details:
   type: object
 ram_quota_optional:
   description: |
-    The amount of allowed instance RAM, in MB, for each tenant.
+    The amount of allowed server RAM, in MB, for each tenant.
   in: body
   required: false
   type: integer
@@ -5249,12 +5269,29 @@ to_port:
   in: body
   required: true
   type: integer
+total_cores_used:
+  description: |
+    The number of used server cores in each tenant.
+    If ``reserved`` query parameter is specified and it is not 0,
+    the number of reserved server cores are also included.
+  in: body
+  required: true
+  type: integer
 total_errors:
   description: |
     The total number of instance audit task errors.
   in: body
   required: true
   type: integer
+total_floatingips_used:
+  description: |
+    The number of used floating IP addresses in each tenant.
+    If ``reserved`` query parameter is specified and it is not 0,
+    the number of reserved floating IP addresses are also included.
+  in: body
+  required: true
+  type: integer
+  max_version: 2.35
 total_hours:
   description: |
     The total duration that servers exist (in hours).
@@ -5264,6 +5301,14 @@ total_hours:
 total_instances:
   description: |
     The total number of VM instances in the period.
+  in: body
+  required: true
+  type: integer
+total_instances_used:
+  description: |
+    The number of servers in each tenant.
+    If ``reserved`` query parameter is specified and it is not 0,
+    the number of reserved servers are also included.
   in: body
   required: true
   type: integer
@@ -5281,6 +5326,31 @@ total_memory_mb_usage:
   in: body
   required: true
   type: float
+total_ram_used:
+  description: |
+    The amount of used server RAM in each tenant.
+    If ``reserved`` query parameter is specified and it is not 0,
+    the amount of reserved server RAM is also included.
+  in: body
+  required: true
+  type: integer
+total_security_groups_used:
+  description: |
+    The number of used security groups in each tenant.
+    If ``reserved`` query parameter is specified and it is not 0,
+    the number of reserved security groups are also included.
+  in: body
+  required: true
+  type: integer
+  max_version: 2.35
+total_server_groups_used:
+  description: |
+    The number of used server groups in each tenant.
+    If ``reserved`` query parameter is specified and it is not 0,
+    the number of reserved server groups are also included.
+  in: body
+  required: true
+  type: integer
 total_vcpus_usage:
   description: |
     Multiplying the number of virtual CPUs of the server by hours the server exists,
