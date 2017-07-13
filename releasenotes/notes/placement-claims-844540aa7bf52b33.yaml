@@ -1,0 +1,14 @@
+---
+other:
+  - |
+    The filter scheduler will now attempt to claim a number of
+    resources in the placement API after determining a list of
+    potential hosts. We attempt to claim these resources for each instance
+    in the build request, and if a claim does not succeed, we try this
+    claim against the next potential host the scheduler selected. This
+    claim retry process can potentially attempt claims against a large
+    number of hosts, and we do not limit the number of hosts to attempt
+    claims against. Claims for resources may fail due to another scheduler
+    process concurrently claiming resources against the same compute node.
+    This concurrent resource claim is normal and the retry of a claim
+    request should be unusual but harmless.

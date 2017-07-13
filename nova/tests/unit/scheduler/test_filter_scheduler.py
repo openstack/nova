@@ -20,6 +20,8 @@ import mock
 
 from nova import exception
 from nova import objects
+from nova.scheduler import client
+from nova.scheduler.client import report
 from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
 from nova.scheduler import utils as scheduler_utils
@@ -34,11 +36,27 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     driver_cls = filter_scheduler.FilterScheduler
 
+    @mock.patch('nova.scheduler.client.SchedulerClient')
+    def setUp(self, mock_client):
+        pc_client = mock.Mock(spec=report.SchedulerReportClient)
+        sched_client = mock.Mock(spec=client.SchedulerClient)
+        sched_client.reportclient = pc_client
+        mock_client.return_value = sched_client
+        self.placement_client = pc_client
+        super(FilterSchedulerTestCase, self).setUp()
+
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_claim_resources')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
                 '_get_all_host_states')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
                 '_get_sorted_hosts')
-    def test_schedule(self, mock_get_hosts, mock_get_all_states):
+    def test_schedule_placement_bad_comms(self, mock_get_hosts,
+            mock_get_all_states, mock_claim):
+        """If there was a problem communicating with the Placement service,
+        alloc_reqs_by_rp_uuid will be None and we need to avoid trying to claim
+        in the Placement API.
+        """
         spec_obj = objects.RequestSpec(
             num_instances=1,
             flavor=objects.Flavor(memory_mb=512,
@@ -50,11 +68,60 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             instance_group=None)
 
         host_state = mock.Mock(spec=host_manager.HostState,
-            host=mock.sentinel.host)
+            host=mock.sentinel.host, uuid=uuids.cn1)
         all_host_states = [host_state]
         mock_get_all_states.return_value = all_host_states
         mock_get_hosts.return_value = all_host_states
-        instance_uuids = [uuids.instance]
+
+        instance_uuids = None
+        ctx = mock.Mock()
+        selected_hosts = self.driver._schedule(ctx, spec_obj,
+            instance_uuids, None, mock.sentinel.provider_summaries)
+
+        mock_get_all_states.assert_called_once_with(
+            ctx.elevated.return_value, spec_obj,
+            mock.sentinel.provider_summaries)
+        mock_get_hosts.assert_called_once_with(spec_obj, all_host_states, 0)
+
+        self.assertEqual(len(selected_hosts), 1)
+        self.assertEqual([host_state], selected_hosts)
+
+        # Ensure that we have consumed the resources on the chosen host states
+        host_state.consume_from_request.assert_called_once_with(spec_obj)
+
+        # And ensure we never called _claim_resources()
+        self.assertFalse(mock_claim.called)
+
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_claim_resources')
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_get_all_host_states')
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_get_sorted_hosts')
+    def test_schedule_old_conductor(self, mock_get_hosts,
+            mock_get_all_states, mock_claim):
+        """Old conductor can call scheduler without the instance_uuids
+        parameter. When this happens, we need to ensure we do not attempt to
+        claim resources in the placement API since obviously we need instance
+        UUIDs to perform those claims.
+        """
+        spec_obj = objects.RequestSpec(
+            num_instances=1,
+            flavor=objects.Flavor(memory_mb=512,
+                                  root_gb=512,
+                                  ephemeral_gb=0,
+                                  swap=0,
+                                  vcpus=1),
+            project_id=uuids.project_id,
+            instance_group=None)
+
+        host_state = mock.Mock(spec=host_manager.HostState,
+            host=mock.sentinel.host, uuid=uuids.cn1)
+        all_host_states = [host_state]
+        mock_get_all_states.return_value = all_host_states
+        mock_get_hosts.return_value = all_host_states
+
+        instance_uuids = None
         ctx = mock.Mock()
         selected_hosts = self.driver._schedule(ctx, spec_obj,
             instance_uuids, mock.sentinel.alloc_reqs_by_rp_uuid,
@@ -71,12 +138,161 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # Ensure that we have consumed the resources on the chosen host states
         host_state.consume_from_request.assert_called_once_with(spec_obj)
 
+        # And ensure we never called _claim_resources()
+        self.assertFalse(mock_claim.called)
+
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_claim_resources')
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_get_all_host_states')
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_get_sorted_hosts')
+    def test_schedule_successful_claim(self, mock_get_hosts,
+            mock_get_all_states, mock_claim):
+        spec_obj = objects.RequestSpec(
+            num_instances=1,
+            flavor=objects.Flavor(memory_mb=512,
+                                  root_gb=512,
+                                  ephemeral_gb=0,
+                                  swap=0,
+                                  vcpus=1),
+            project_id=uuids.project_id,
+            instance_group=None)
+
+        host_state = mock.Mock(spec=host_manager.HostState,
+            host=mock.sentinel.host, uuid=uuids.cn1)
+        all_host_states = [host_state]
+        mock_get_all_states.return_value = all_host_states
+        mock_get_hosts.return_value = all_host_states
+        mock_claim.return_value = True
+
+        instance_uuids = [uuids.instance]
+        alloc_reqs_by_rp_uuid = {
+            uuids.cn1: [mock.sentinel.alloc_req],
+        }
+        ctx = mock.Mock()
+        selected_hosts = self.driver._schedule(ctx, spec_obj,
+            instance_uuids, alloc_reqs_by_rp_uuid,
+            mock.sentinel.provider_summaries)
+
+        mock_get_all_states.assert_called_once_with(
+            ctx.elevated.return_value, spec_obj,
+            mock.sentinel.provider_summaries)
+        mock_get_hosts.assert_called_once_with(spec_obj, all_host_states, 0)
+        mock_claim.assert_called_once_with(ctx.elevated.return_value, spec_obj,
+            uuids.instance, [mock.sentinel.alloc_req])
+
+        self.assertEqual(len(selected_hosts), 1)
+        self.assertEqual([host_state], selected_hosts)
+
+        # Ensure that we have consumed the resources on the chosen host states
+        host_state.consume_from_request.assert_called_once_with(spec_obj)
+
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_cleanup_allocations')
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_claim_resources')
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_get_all_host_states')
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_get_sorted_hosts')
+    def test_schedule_unsuccessful_claim(self, mock_get_hosts,
+            mock_get_all_states, mock_claim, mock_cleanup):
+        """Tests that we return an empty list if we are unable to successfully
+        claim resources for the instance
+        """
+        spec_obj = objects.RequestSpec(
+            num_instances=1,
+            flavor=objects.Flavor(memory_mb=512,
+                                  root_gb=512,
+                                  ephemeral_gb=0,
+                                  swap=0,
+                                  vcpus=1),
+            project_id=uuids.project_id,
+            instance_group=None)
+
+        host_state = mock.Mock(spec=host_manager.HostState,
+            host=mock.sentinel.host, uuid=uuids.cn1)
+        all_host_states = [host_state]
+        mock_get_all_states.return_value = all_host_states
+        mock_get_hosts.return_value = all_host_states
+        mock_claim.return_value = False
+
+        instance_uuids = [uuids.instance]
+        alloc_reqs_by_rp_uuid = {
+            uuids.cn1: [mock.sentinel.alloc_req],
+        }
+        ctx = mock.Mock()
+        selected_hosts = self.driver._schedule(ctx, spec_obj,
+            instance_uuids, alloc_reqs_by_rp_uuid,
+            mock.sentinel.provider_summaries)
+
+        mock_get_all_states.assert_called_once_with(
+            ctx.elevated.return_value, spec_obj,
+            mock.sentinel.provider_summaries)
+        mock_get_hosts.assert_called_once_with(spec_obj, all_host_states, 0)
+        mock_claim.assert_called_once_with(ctx.elevated.return_value, spec_obj,
+            uuids.instance, [mock.sentinel.alloc_req])
+
+        self.assertEqual([], selected_hosts)
+
+        mock_cleanup.assert_called_once_with([])
+
+        # Ensure that we have consumed the resources on the chosen host states
+        self.assertFalse(host_state.consume_from_request.called)
+
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_cleanup_allocations')
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_claim_resources')
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_get_all_host_states')
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_get_sorted_hosts')
+    def test_schedule_not_all_instance_clean_claimed(self, mock_get_hosts,
+            mock_get_all_states, mock_claim, mock_cleanup):
+        """Tests that we clean up previously-allocated instances if not all
+        instances could be scheduled
+        """
+        spec_obj = objects.RequestSpec(
+            num_instances=2,
+            flavor=objects.Flavor(memory_mb=512,
+                                  root_gb=512,
+                                  ephemeral_gb=0,
+                                  swap=0,
+                                  vcpus=1),
+            project_id=uuids.project_id,
+            instance_group=None)
+
+        host_state = mock.Mock(spec=host_manager.HostState,
+            host=mock.sentinel.host, uuid=uuids.cn1)
+        all_host_states = [host_state]
+        mock_get_all_states.return_value = all_host_states
+        mock_get_hosts.side_effect = [
+            all_host_states,  # first return all the hosts (only one)
+            [],  # then act as if no more hosts were found that meet criteria
+        ]
+        mock_claim.return_value = True
+
+        instance_uuids = [uuids.instance1, uuids.instance2]
+        alloc_reqs_by_rp_uuid = {
+            uuids.cn1: [mock.sentinel.alloc_req],
+        }
+        ctx = mock.Mock()
+        self.driver._schedule(ctx, spec_obj, instance_uuids,
+            alloc_reqs_by_rp_uuid, mock.sentinel.provider_summaries)
+
+        # Ensure we cleaned up the first successfully-claimed instance
+        mock_cleanup.assert_called_once_with([uuids.instance1])
+
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_claim_resources')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
                 '_get_all_host_states')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
                 '_get_sorted_hosts')
     def test_schedule_instance_group(self, mock_get_hosts,
-            mock_get_all_states):
+            mock_get_all_states, mock_claim):
         """Test that since the request spec object contains an instance group
         object, that upon choosing a host in the primary schedule loop,
         that we update the request spec's instance group information
@@ -93,10 +309,18 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             project_id=uuids.project_id,
             instance_group=ig)
 
-        hs1 = mock.Mock(spec=host_manager.HostState, host='host1')
-        hs2 = mock.Mock(spec=host_manager.HostState, host='host2')
+        hs1 = mock.Mock(spec=host_manager.HostState, host='host1',
+            uuid=uuids.cn1)
+        hs2 = mock.Mock(spec=host_manager.HostState, host='host2',
+            uuid=uuids.cn2)
         all_host_states = [hs1, hs2]
         mock_get_all_states.return_value = all_host_states
+        mock_claim.return_value = True
+
+        alloc_reqs_by_rp_uuid = {
+            uuids.cn1: [mock.sentinel.alloc_req_cn1],
+            uuids.cn2: [mock.sentinel.alloc_req_cn2],
+        }
 
         # Simulate host 1 and host 2 being randomly returned first by
         # _get_sorted_hosts() in the two iterations for each instance in
@@ -107,8 +331,17 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         ]
         ctx = mock.Mock()
         self.driver._schedule(ctx, spec_obj, instance_uuids,
-            mock.sentinel.alloc_reqs_by_rp_uuid,
-            mock.sentinel.provider_summaries)
+            alloc_reqs_by_rp_uuid, mock.sentinel.provider_summaries)
+
+        # Check that we called _claim_resources() for both the first and second
+        # host state
+        claim_calls = [
+            mock.call(ctx.elevated.return_value, spec_obj,
+                uuids.instance0, [mock.sentinel.alloc_req_cn2]),
+            mock.call(ctx.elevated.return_value, spec_obj,
+                uuids.instance1, [mock.sentinel.alloc_req_cn1]),
+        ]
+        mock_claim.assert_has_calls(claim_calls)
 
         # Check that _get_sorted_hosts() is called twice and that the
         # second time, we pass it the hosts that were returned from
@@ -217,6 +450,40 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # weighed hosts (2), we just random.choice() on the entire set of
         # weighed hosts and thus return [hs1, hs2]
         self.assertEqual([hs1, hs2], results)
+
+    def test_cleanup_allocations(self):
+        instance_uuids = []
+        # Check we don't do anything if there's no instance UUIDs to cleanup
+        # allocations for
+        pc = self.placement_client
+
+        self.driver._cleanup_allocations(instance_uuids)
+        self.assertFalse(pc.delete_allocation_for_instance.called)
+
+        instance_uuids = [uuids.instance1, uuids.instance2]
+        self.driver._cleanup_allocations(instance_uuids)
+
+        exp_calls = [mock.call(uuids.instance1), mock.call(uuids.instance2)]
+        pc.delete_allocation_for_instance.assert_has_calls(exp_calls)
+
+    def test_claim_resources(self):
+        """Tests that when _schedule() calls _claim_resources(), that we
+        appropriately call the placement client to claim resources for the
+        instance.
+        """
+        ctx = mock.Mock(user_id=uuids.user_id)
+        spec_obj = mock.Mock(project_id=uuids.project_id)
+        instance_uuid = uuids.instance
+        alloc_reqs = [mock.sentinel.alloc_req]
+
+        res = self.driver._claim_resources(ctx, spec_obj, instance_uuid,
+            alloc_reqs)
+
+        pc = self.placement_client
+        pc.claim_resources.return_value = True
+        pc.claim_resources.assert_called_once_with(uuids.instance,
+            mock.sentinel.alloc_req, uuids.project_id, uuids.user_id)
+        self.assertTrue(res)
 
     def test_add_retry_host(self):
         retry = dict(num_attempts=1, hosts=[])
