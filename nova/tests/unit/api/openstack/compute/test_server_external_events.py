@@ -55,6 +55,7 @@ def fake_get_by_uuid(cls, context, uuid, **kwargs):
 class ServerExternalEventsTestV21(test.NoDBTestCase):
     server_external_events = server_external_events_v21
     invalid_error = exception.ValidationError
+    wsgi_api_version = '2.1'
 
     def setUp(self):
         super(ServerExternalEventsTestV21, self).setUp()
@@ -74,7 +75,8 @@ class ServerExternalEventsTestV21(test.NoDBTestCase):
         self.resp_event_2['status'] = 'completed'
         self.default_resp_body = {'events': [self.resp_event_1,
                                              self.resp_event_2]}
-        self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
+        self.req = fakes.HTTPRequest.blank('', use_admin_context=True,
+                                           version=self.wsgi_api_version)
 
     def _assert_call(self, body, expected_uuids, expected_events):
         with mock.patch.object(self.api.compute_api,
@@ -157,3 +159,20 @@ class ServerExternalEventsTestV21(test.NoDBTestCase):
         body = {'events': self.event_1}
         self.assertRaises(self.invalid_error,
                           self.api.create, self.req, body=body)
+
+
+@mock.patch('nova.objects.instance.Instance.get_by_uuid', fake_get_by_uuid)
+class ServerExternalEventsTestV251(ServerExternalEventsTestV21):
+    wsgi_api_version = '2.51'
+
+    def test_create_with_missing_tag(self):
+        body = self.default_body
+        body['events'][1]['name'] = 'volume-extended'
+        result, code = self._assert_call(body,
+                                         [fake_instance_uuids[0]],
+                                         ['network-vif-plugged'])
+        self.assertEqual(200, result['events'][0]['code'])
+        self.assertEqual('completed', result['events'][0]['status'])
+        self.assertEqual(400, result['events'][1]['code'])
+        self.assertEqual('failed', result['events'][1]['status'])
+        self.assertEqual(207, code)

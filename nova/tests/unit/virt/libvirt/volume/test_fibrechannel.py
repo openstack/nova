@@ -59,3 +59,17 @@ class LibvirtFibreChannelVolumeDriverTestCase(
         self.assertEqual(device_path, tree.find('./source').get('dev'))
         self.assertEqual('raw', tree.find('./driver').get('type'))
         self.assertEqual('native', tree.find('./driver').get('io'))
+
+    def test_extend_volume(self):
+        device_path = '/dev/fake-dev'
+        connection_info = {'data': {'device_path': device_path}}
+
+        libvirt_driver = fibrechannel.LibvirtFibreChannelVolumeDriver(
+                                                                self.fake_host)
+        libvirt_driver.connector.extend_volume = mock.MagicMock(return_value=1)
+        new_size = libvirt_driver.extend_volume(connection_info,
+                                                mock.sentinel.instance)
+
+        self.assertEqual(1, new_size)
+        libvirt_driver.connector.extend_volume.assert_called_once_with(
+           connection_info['data'])

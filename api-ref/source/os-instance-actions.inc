@@ -95,14 +95,20 @@ Response
   - request_id: request_id_body
   - start_time: start_time
   - user_id: user_id
-  - events: instance_action_events
+  - events: instance_action_events_2_50
+  - events: instance_action_events_2_51
   - events.event: event
   - events.start_time: event_start_time
   - events.finish_time: event_finish_time
   - events.result: event_result
   - events.traceback: event_traceback
 
-**Example Show Server Action Details: JSON response**
+**Example Show Server Action Details For Admin (v2.1)**
 
 .. literalinclude:: ../../doc/api_samples/os-instance-actions/instance-action-get-resp.json
+   :language: javascript
+
+**Example Show Server Action Details For Non-Admin (v2.51)**
+
+.. literalinclude:: ../../doc/api_samples/os-instance-actions/v2.51/instance-action-get-non-admin-resp.json
    :language: javascript

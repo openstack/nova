@@ -129,6 +129,7 @@ class ComputeDriver(object):
         "supports_device_tagging": False,
         "supports_tagged_attach_interface": False,
         "supports_tagged_attach_volume": False,
+        "supports_extend_volume": False,
     }
 
     def __init__(self, virtapi):
@@ -473,6 +474,18 @@ class ComputeDriver(object):
         :param int resize_to:
             If the new volume is larger than the old volume, it gets resized
             to the given size (in Gigabyte) of `resize_to`.
+
+        :return: None
+        """
+        raise NotImplementedError()
+
+    def extend_volume(self, connection_info, instance):
+        """Extend the disk attached to the instance.
+
+        :param dict connection_info:
+            The connection for the extended volume.
+        :param nova.objects.instance.Instance instance:
+            The instance whose volume gets extended.
 
         :return: None
         """

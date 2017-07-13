@@ -3377,7 +3377,8 @@ class _ComputeAPIUnitTestMixIn(object):
             cores=instance.flavor.vcpus, ram=instance.flavor.memory_mb,
             project_id=instance.project_id, user_id=instance.user_id)
 
-    def test_external_instance_event(self):
+    @mock.patch.object(objects.InstanceAction, 'action_start')
+    def test_external_instance_event(self, mock_action_start):
         instances = [
             objects.Instance(uuid=uuids.instance_1, host='host1',
                              migration_context=None),
@@ -3385,17 +3386,27 @@ class _ComputeAPIUnitTestMixIn(object):
                              migration_context=None),
             objects.Instance(uuid=uuids.instance_3, host='host2',
                              migration_context=None),
+            objects.Instance(uuid=uuids.instance_4, host='host2',
+                             migration_context=None),
             ]
         mappings = {inst.uuid: objects.InstanceMapping.get_by_instance_uuid(
             self.context, inst.uuid)
                     for inst in instances}
+        volume_id = uuidutils.generate_uuid()
         events = [
             objects.InstanceExternalEvent(
-                instance_uuid=uuids.instance_1),
+                instance_uuid=uuids.instance_1,
+                name='network-changed'),
             objects.InstanceExternalEvent(
-                instance_uuid=uuids.instance_2),
+                instance_uuid=uuids.instance_2,
+                name='network-changed'),
             objects.InstanceExternalEvent(
-                instance_uuid=uuids.instance_3),
+                instance_uuid=uuids.instance_3,
+                name='network-changed'),
+            objects.InstanceExternalEvent(
+                instance_uuid=uuids.instance_4,
+                name='volume-extended',
+                tag=volume_id),
             ]
         self.compute_api.compute_rpcapi = mock.MagicMock()
         self.compute_api.external_instance_event(self.context,
@@ -3405,6 +3416,9 @@ class _ComputeAPIUnitTestMixIn(object):
                                host='host1')
         method.assert_any_call(self.context, instances[2:], events[2:],
                                host='host2')
+        mock_action_start.assert_called_once_with(
+            self.context, uuids.instance_4, instance_actions.EXTEND_VOLUME,
+            want_result=False)
         self.assertEqual(2, method.call_count)
 
     def test_external_instance_event_evacuating_instance(self):
@@ -3440,11 +3454,14 @@ class _ComputeAPIUnitTestMixIn(object):
             self.context, inst.uuid) for inst in instances}
         events = [
             objects.InstanceExternalEvent(
-                instance_uuid=uuids.instance_1),
+                instance_uuid=uuids.instance_1,
+                name='network-changed'),
             objects.InstanceExternalEvent(
-                instance_uuid=uuids.instance_2),
+                instance_uuid=uuids.instance_2,
+                name='network-changed'),
             objects.InstanceExternalEvent(
-                instance_uuid=uuids.instance_3),
+                instance_uuid=uuids.instance_3,
+                name='network-changed'),
             ]
 
         with mock.patch('nova.db.sqlalchemy.api.migration_get', migration_get):

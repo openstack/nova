@@ -36,9 +36,16 @@ class ServerExternalEventsController(wsgi.Controller):
         self.compute_api = compute.API()
         super(ServerExternalEventsController, self).__init__()
 
+    @staticmethod
+    def _is_event_tag_present_when_required(event):
+        if event.name == 'volume-extended' and event.tag is None:
+            return False
+        return True
+
     @extensions.expected_errors((400, 403, 404))
     @wsgi.response(200)
-    @validation.schema(server_external_events.create)
+    @validation.schema(server_external_events.create, '2.1', '2.50')
+    @validation.schema(server_external_events.create_v251, '2.51')
     def create(self, req, body):
         """Creates a new instance event."""
         context = req.environ['nova.context']
@@ -92,7 +99,15 @@ class ServerExternalEventsController(wsgi.Controller):
             # for which the event is sent is assigned to a host; otherwise
             # it will not be possible to dispatch the event
             if instance:
-                if instance.host:
+                if not self._is_event_tag_present_when_required(event):
+                    LOG.debug("Event tag is missing for instance "
+                              "%(instance)s. Dropping event %(event)s",
+                              {'instance': event.instance_uuid,
+                               'event': event.name})
+                    _event['status'] = 'failed'
+                    _event['code'] = 400
+                    result = 207
+                elif instance.host:
                     accepted_events.append(event)
                     accepted_instances.add(instance)
                     LOG.info('Creating event %(name)s:%(tag)s for '

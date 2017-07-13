@@ -4277,6 +4277,13 @@ class API(base.Base):
                 hosts_by_instance[instance.uuid].append(host)
 
         for event in events:
+            if event.name == 'volume-extended':
+                # Volume extend is a user-initiated operation starting in the
+                # Block Storage service API. We record an instance action so
+                # the user can monitor the operation to completion.
+                objects.InstanceAction.action_start(
+                    context, event.instance_uuid,
+                    instance_actions.EXTEND_VOLUME, want_result=False)
             for host in hosts_by_instance[event.instance_uuid]:
                 events_by_host[host].append(event)
 

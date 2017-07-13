@@ -55,3 +55,16 @@ class LibvirtISCSIVolumeDriverTestCase(
 
         msg = mock_LOG_warning.call_args_list[0]
         self.assertIn('Ignoring VolumeDeviceNotFound', msg[0][0])
+
+    def test_extend_volume(self):
+        device_path = '/dev/fake-dev'
+        connection_info = {'data': {'device_path': device_path}}
+
+        libvirt_driver = iscsi.LibvirtISCSIVolumeDriver(self.fake_host)
+        libvirt_driver.connector.extend_volume = mock.MagicMock(return_value=1)
+        new_size = libvirt_driver.extend_volume(connection_info,
+                                                mock.sentinel.instance)
+
+        self.assertEqual(1, new_size)
+        libvirt_driver.connector.extend_volume.assert_called_once_with(
+           connection_info['data'])

@@ -264,6 +264,10 @@ class VolumeNotCreated(NovaException):
                 " attempts. And its status is %(volume_status)s.")
 
 
+class ExtendVolumeNotSupported(Invalid):
+    msg_fmt = _("Volume size extension is not supported by the hypervisor.")
+
+
 class VolumeEncryptionNotSupported(Invalid):
     msg_fmt = _("Volume encryption is not supported for %(volume_type)s "
                 "volume %(volume_id)s")

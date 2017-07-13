@@ -580,7 +580,6 @@ user documentation.
 
   Tagged volume attachment is not supported for shelved-offloaded instances.
 
-
 2.50
 ----
 
@@ -595,3 +594,19 @@ user documentation.
   - "networks",
   - "security_group_rules"
   - "security_groups"
+
+2.51
+----
+
+  There are two changes for the 2.51 microversion:
+
+  * Add ``volume-extended`` event name to the ``os-server-external-events``
+    API. This will be used by the Block Storage service when extending the size
+    of an attached volume. This signals the Compute service to perform any
+    necessary actions on the compute host or hypervisor to adjust for the new
+    volume block device size.
+  * Expose the ``events`` field in the response body for the
+    ``GET /servers/{server_id}/os-instance-actions/{request_id}`` API. This is
+    useful for API users to monitor when a volume extend operation completes
+    for the given server instance. By default only users with the administrator
+    role will be able to see event ``traceback`` details.

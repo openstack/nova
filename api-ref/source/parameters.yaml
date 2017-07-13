@@ -1551,6 +1551,7 @@ code:
     The HTTP response code for the event. The following codes are currently used:
 
       * 200 - successfully submitted event
+      * 400 - the request is missing required parameter
       * 404 - the instance specified by ``server_uuid`` was not found
       * 422 - no host was found for the server specified by ``server_uuid``,
          so there is no route to this server.
@@ -2034,7 +2035,8 @@ event_finish_time:
 event_name:
   description: |
     The event name. A valid value is ``network-changed``, ``network-vif-plugged``,
-    ``network-vif-unplugged``, or ``network-vif-deleted``.
+    ``network-vif-unplugged``, ``network-vif-deleted``, or ``volume-extended``.
+    The event name ``volume-extended`` is added since microversion ``2.51``.
   in: body
   required: true
   type: string
@@ -2074,7 +2076,11 @@ event_tag:
   type: string
 event_traceback:
   description: |
-    The traceback stack if error occurred in this event.
+    The traceback stack if an error occurred in this event.
+
+    Policy defaults enable only users with the administrative role to see
+    an instance action event traceback. Cloud providers can change these
+    permissions through the ``policy.json`` file.
   in: body
   required: true
   type: string
@@ -3122,9 +3128,9 @@ injectNetworkInfo:
   in: body
   required: true
   type: none
-instance_action_events:
+instance_action_events_2_50:
   description: |
-    The events occurred in this action.
+    The events which occurred in this action.
 
     Policy defaults enable only users with the administrative role to see
     instance action event information. Cloud providers can change these
@@ -3132,6 +3138,18 @@ instance_action_events:
   in: body
   required: false
   type: array
+  max_version: 2.50
+instance_action_events_2_51:
+  description: |
+    The events which occurred in this action.
+
+    Policy defaults enable only users with the administrative role or the owner
+    of the server to see instance action event information. Cloud providers can
+    change these permissions through the ``policy.json`` file.
+  in: body
+  required: true
+  type: array
+  min_version: 2.51
 instance_id_body:
   description: |
     The UUID of the server.
