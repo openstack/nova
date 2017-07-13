@@ -5497,7 +5497,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             mock.patch.object(db, 'instance_fault_create'),
             mock.patch.object(self.compute, '_update_resource_tracker'),
             mock.patch.object(self.instance, 'save'),
-        ) as (_finish_resize, fault_create, instance_update, instance_save):
+            mock.patch.object(objects.BlockDeviceMappingList,
+                              'get_by_instance_uuid')
+        ) as (_finish_resize, fault_create, instance_update, instance_save,
+              get_bdm):
             fault_create.return_value = (
                 test_instance_fault.fake_faults['fake-uuid'][0])
             yield _finish_resize

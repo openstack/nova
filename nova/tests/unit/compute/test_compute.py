@@ -2658,13 +2658,17 @@ class ComputeTestCase(BaseTestCase,
 
         self.compute.terminate_instance(self.context, instance, [], [])
 
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     @mock.patch.object(nova.compute.utils, 'notify_about_instance_action')
     @mock.patch('nova.context.RequestContext.elevated')
-    def test_resume_notifications(self, mock_context, mock_notify):
+    def test_resume_notifications(self, mock_context, mock_notify,
+                                  mock_get_bdms):
         # ensure instance can be suspended and resumed.
         context = self.context
         mock_context.return_value = context
         instance = self._create_fake_instance_obj()
+        bdms = block_device_obj.block_device_make_list(self.context, [])
+        mock_get_bdms.return_value = bdms
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
         instance.task_state = task_states.SUSPENDING
@@ -2682,9 +2686,9 @@ class ComputeTestCase(BaseTestCase,
                          'compute.instance.resume.end')
         mock_notify.assert_has_calls([
             mock.call(context, instance, 'fake-mini',
-                      action='resume', phase='start'),
+                      action='resume', phase='start', bdms=bdms),
             mock.call(context, instance, 'fake-mini',
-                      action='resume', phase='end')])
+                      action='resume', phase='end', bdms=bdms)])
         self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_resume_no_old_state(self):
@@ -2899,6 +2903,7 @@ class ComputeTestCase(BaseTestCase,
                                       on_shared_storage=False)
         self.compute.terminate_instance(self.context, instance, [], [])
 
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     @mock.patch.object(compute_manager.ComputeManager,
                            '_get_instance_block_device_info')
     @mock.patch.object(compute_manager.ComputeManager,
@@ -2909,7 +2914,7 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     def _test_reboot(self, soft, mock_notify_action, mock_get_power,
                      mock_get_orig, mock_update, mock_notify_usage,
-                     mock_get_blk, test_delete=False,
+                     mock_get_blk, mock_get_bdms, test_delete=False,
                      test_unrescue=False, fail_reboot=False,
                      fail_running=False):
         reboot_type = soft and 'SOFT' or 'HARD'
@@ -2959,6 +2964,9 @@ class ComputeTestCase(BaseTestCase,
                    task_state=expected_task,
                    launched_at=timeutils.utcnow()))
 
+        bdms = block_device_obj.block_device_make_list(self.context, [])
+        mock_get_bdms.return_value = bdms
+
         if test_unrescue:
             instance.vm_state = vm_states.RESCUED
         instance.obj_reset_changes()
@@ -2985,7 +2993,7 @@ class ComputeTestCase(BaseTestCase,
         notify_call_list = [mock.call(econtext, instance, 'reboot.start')]
         notify_action_call_list = [
             mock.call(econtext, instance, 'fake-mini', action='reboot',
-                      phase='start')]
+                      phase='start', bdms=bdms)]
 
         ps_call_list = [mock.call(econtext, instance)]
         db_call_list = [mock.call(econtext, instance['uuid'],
@@ -3052,7 +3060,7 @@ class ComputeTestCase(BaseTestCase,
                                               'reboot.end'))
             notify_action_call_list.append(
                 mock.call(econtext, instance, 'fake-mini',
-                          action='reboot', phase='end'))
+                          action='reboot', phase='end', bdms=bdms))
         elif fail_reboot and not fail_running:
             mock_get_orig.side_effect = chain(mock_get_orig.side_effect,
                                               [fault])
@@ -3074,12 +3082,13 @@ class ComputeTestCase(BaseTestCase,
                                                   'reboot.error', fault=fault))
                 notify_action_call_list.append(
                     mock.call(econtext, instance, 'fake-mini',
-                              action='reboot', phase='error', exception=fault))
+                              action='reboot', phase='error', exception=fault,
+                              bdms=bdms))
             notify_call_list.append(mock.call(econtext, instance,
                                               'reboot.end'))
             notify_action_call_list.append(
                 mock.call(econtext, instance, 'fake-mini',
-                          action='reboot', phase='end'))
+                          action='reboot', phase='end', bdms=bdms))
 
         if not fail_reboot or fail_running:
             self.compute.reboot_instance(self.context, instance=instance,
@@ -3093,7 +3102,7 @@ class ComputeTestCase(BaseTestCase,
                                   reboot_type=reboot_type)
 
         self.assertEqual(expected_call_info, reboot_call_info)
-        mock_get_blk.assert_called_once_with(econtext, instance)
+        mock_get_blk.assert_called_once_with(econtext, instance, bdms)
         mock_get_nw.assert_called_once_with(econtext, instance)
         mock_notify_usage.assert_has_calls(notify_call_list)
         mock_notify_action.assert_has_calls(notify_action_call_list)
@@ -4589,6 +4598,9 @@ class ComputeTestCase(BaseTestCase,
         network_api = self.compute.network_api
 
         with test.nested(
+            mock.patch.object(objects.BlockDeviceMappingList,
+                              'get_by_instance_uuid',
+                              return_value='fake_bdms'),
             mock.patch.object(network_api, 'setup_networks_on_host'),
             mock.patch.object(network_api, 'migrate_instance_finish'),
             mock.patch.object(self.compute.network_api,
@@ -4599,7 +4611,7 @@ class ComputeTestCase(BaseTestCase,
             mock.patch.object(self.compute, '_get_instance_block_device_info'),
             mock.patch.object(migration, 'save'),
             mock.patch.object(instance, 'save'),
-        ) as (mock_setup, mock_net_mig, mock_get_nw, mock_notify,
+        ) as (mock_get_bdm, mock_setup, mock_net_mig, mock_get_nw, mock_notify,
               mock_notify_action, mock_virt_mig, mock_get_blk, mock_mig_save,
               mock_inst_save):
             def _mig_save():
@@ -4662,9 +4674,11 @@ class ComputeTestCase(BaseTestCase,
                           network_info='fake-nwinfo1')])
             mock_notify_action.assert_has_calls([
                 mock.call(self.context, instance, 'fake-mini',
-                          action='resize_finish', phase='start'),
+                          action='resize_finish', phase='start',
+                          bdms='fake_bdms'),
                 mock.call(self.context, instance, 'fake-mini',
-                          action='resize_finish', phase='end')])
+                          action='resize_finish', phase='end',
+                          bdms='fake_bdms')])
             # nova.conf sets the default flavor to m1.small and the test
             # sets the default flavor to m1.tiny so they should be different
             # which makes this a resize
@@ -4673,7 +4687,8 @@ class ComputeTestCase(BaseTestCase,
                 test.MatchType(objects.ImageMeta), resize_instance,
                 'fake-bdminfo', power_on)
             mock_get_blk.assert_called_once_with(self.context, instance,
-                                                 refresh_conn_info=True)
+                                                 refresh_conn_info=True,
+                                                 bdms='fake_bdms')
             mock_inst_save.assert_has_calls(inst_call_list)
             mock_mig_save.assert_called_once_with()
 

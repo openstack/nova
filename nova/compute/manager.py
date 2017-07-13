@@ -3024,8 +3024,10 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         LOG.info("Rebooting instance", instance=instance)
 
-        block_device_info = self._get_instance_block_device_info(context,
-                                                                 instance)
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+            context, instance.uuid)
+        block_device_info = self._get_instance_block_device_info(
+            context, instance, bdms)
 
         network_info = self.network_api.get_instance_nw_info(context, instance)
 
@@ -3033,7 +3035,8 @@ class ComputeManager(manager.Manager):
         compute_utils.notify_about_instance_action(
             context, instance, self.host,
             action=fields.NotificationAction.REBOOT,
-            phase=fields.NotificationPhase.START
+            phase=fields.NotificationPhase.START,
+            bdms=bdms
         )
 
         instance.power_state = self._get_power_state(context, instance)
@@ -3088,7 +3091,7 @@ class ComputeManager(manager.Manager):
                         context, instance, self.host,
                         action=fields.NotificationAction.REBOOT,
                         phase=fields.NotificationPhase.ERROR,
-                        exception=error
+                        exception=error, bdms=bdms
                     )
                     ctxt.reraise = False
                 else:
@@ -3111,7 +3114,8 @@ class ComputeManager(manager.Manager):
         compute_utils.notify_about_instance_action(
             context, instance, self.host,
             action=fields.NotificationAction.REBOOT,
-            phase=fields.NotificationPhase.END
+            phase=fields.NotificationPhase.END,
+            bdms=bdms
         )
 
     @delete_image_on_error
@@ -4071,7 +4075,7 @@ class ComputeManager(manager.Manager):
         instance.flavor = instance_type
 
     def _finish_resize(self, context, instance, migration, disk_info,
-                       image_meta):
+                       image_meta, bdms):
         resize_instance = False
         old_instance_type_id = migration['old_instance_type_id']
         new_instance_type_id = migration['new_instance_type_id']
@@ -4111,10 +4115,10 @@ class ComputeManager(manager.Manager):
             network_info=network_info)
         compute_utils.notify_about_instance_action(context, instance,
                self.host, action=fields.NotificationAction.RESIZE_FINISH,
-               phase=fields.NotificationPhase.START)
+               phase=fields.NotificationPhase.START, bdms=bdms)
 
         block_device_info = self._get_instance_block_device_info(
-                            context, instance, refresh_conn_info=True)
+            context, instance, refresh_conn_info=True, bdms=bdms)
 
         # NOTE(mriedem): If the original vm_state was STOPPED, we don't
         # automatically power on the instance after it's migrated
@@ -4155,11 +4159,14 @@ class ComputeManager(manager.Manager):
         new host machine.
 
         """
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+            context, instance.uuid)
+
         with self._error_out_instance_on_exception(context, instance), \
              errors_out_migration_ctxt(migration):
             image_meta = objects.ImageMeta.from_dict(image)
             network_info = self._finish_resize(context, instance, migration,
-                                               disk_info, image_meta)
+                                               disk_info, image_meta, bdms)
 
         self._update_scheduler_instance_info(context, instance)
         self._notify_about_instance_usage(
@@ -4167,7 +4174,7 @@ class ComputeManager(manager.Manager):
             network_info=network_info)
         compute_utils.notify_about_instance_action(context, instance,
                self.host, action=fields.NotificationAction.RESIZE_FINISH,
-               phase=fields.NotificationPhase.END)
+               phase=fields.NotificationPhase.END, bdms=bdms)
 
     @wrap_exception()
     @wrap_instance_fault
@@ -4349,13 +4356,17 @@ class ComputeManager(manager.Manager):
         LOG.info('Resuming', instance=instance)
 
         self._notify_about_instance_usage(context, instance, 'resume.start')
+
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+            context, instance.uuid)
+        block_device_info = self._get_instance_block_device_info(
+            context, instance, bdms)
+
         compute_utils.notify_about_instance_action(context, instance,
             self.host, action=fields.NotificationAction.RESUME,
-            phase=fields.NotificationPhase.START)
+            phase=fields.NotificationPhase.START, bdms=bdms)
 
         network_info = self.network_api.get_instance_nw_info(context, instance)
-        block_device_info = self._get_instance_block_device_info(
-                            context, instance)
 
         with self._error_out_instance_on_exception(context, instance,
              instance_state=instance.vm_state):
@@ -4373,7 +4384,7 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(context, instance, 'resume.end')
         compute_utils.notify_about_instance_action(context, instance,
             self.host, action=fields.NotificationAction.RESUME,
-            phase=fields.NotificationPhase.END)
+            phase=fields.NotificationPhase.END, bdms=bdms)
 
     @wrap_exception()
     @reverts_task_state
