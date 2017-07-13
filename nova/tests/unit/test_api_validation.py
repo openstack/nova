@@ -275,10 +275,10 @@ class QueryParamsSchemaTestCase(test.NoDBTestCase):
                                req)
         if six.PY3:
             self.assertEqual("Invalid input for query parameters foo. Value: "
-                             "abc. 'abc' is not a 'uuid'", ex.message)
+                             "abc. 'abc' is not a 'uuid'", six.text_type(ex))
         else:
             self.assertEqual("Invalid input for query parameters foo. Value: "
-                             "abc. u'abc' is not a 'uuid'", ex.message)
+                             "abc. u'abc' is not a 'uuid'", six.text_type(ex))
 
     def test_validate_request_with_multiple_values(self):
         req = fakes.HTTPRequest.blank("/tests?foos=abc")
