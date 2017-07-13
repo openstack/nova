@@ -731,7 +731,7 @@ class ComputeManager(manager.Manager):
                 system_metadata=system_meta)
         compute_utils.notify_about_instance_action(context, instance,
                 self.host, action=fields.NotificationAction.DELETE,
-                phase=fields.NotificationPhase.END)
+                phase=fields.NotificationPhase.END, bdms=bdms)
         self._delete_scheduler_instance_info(context, instance.uuid)
 
     def _init_instance(self, context, instance):
@@ -2254,7 +2254,7 @@ class ComputeManager(manager.Manager):
                                               "shutdown.start")
             compute_utils.notify_about_instance_action(context, instance,
                     self.host, action=fields.NotificationAction.SHUTDOWN,
-                    phase=fields.NotificationPhase.START)
+                    phase=fields.NotificationPhase.START, bdms=bdms)
 
         network_info = instance.get_network_info()
 
@@ -2341,7 +2341,7 @@ class ComputeManager(manager.Manager):
                                               "shutdown.end")
             compute_utils.notify_about_instance_action(context, instance,
                     self.host, action=fields.NotificationAction.SHUTDOWN,
-                    phase=fields.NotificationPhase.END)
+                    phase=fields.NotificationPhase.END, bdms=bdms)
 
     def _cleanup_volumes(self, context, instance_uuid, bdms, raise_exc=True):
         exc_info = None
@@ -2377,7 +2377,7 @@ class ComputeManager(manager.Manager):
                                           "delete.start")
         compute_utils.notify_about_instance_action(context, instance,
                 self.host, action=fields.NotificationAction.DELETE,
-                phase=fields.NotificationPhase.START)
+                phase=fields.NotificationPhase.START, bdms=bdms)
 
         self._shutdown_instance(context, instance, bdms)
         # NOTE(dims): instance.info_cache.delete() should be called after
@@ -2688,13 +2688,13 @@ class ComputeManager(manager.Manager):
                               admin_password, network_info=network_info,
                               block_device_info=new_block_device_info)
 
-    def _notify_instance_rebuild_error(self, context, instance, error):
+    def _notify_instance_rebuild_error(self, context, instance, error, bdms):
         self._notify_about_instance_usage(context, instance,
                                           'rebuild.error', fault=error)
         compute_utils.notify_about_instance_action(
             context, instance, self.host,
             action=fields.NotificationAction.REBUILD,
-            phase=fields.NotificationPhase.ERROR, exception=error)
+            phase=fields.NotificationPhase.ERROR, exception=error, bdms=bdms)
 
     @messaging.expected_exceptions(exception.PreserveEphemeralNotSupported)
     @wrap_exception()
@@ -2801,8 +2801,7 @@ class ComputeManager(manager.Manager):
                 # not raise ComputeResourcesUnavailable.
                 rt.delete_allocation_for_evacuated_instance(
                     instance, scheduled_node, node_type='destination')
-                self._notify_instance_rebuild_error(context, instance, e)
-
+                self._notify_instance_rebuild_error(context, instance, e, bdms)
                 raise exception.BuildAbortException(
                     instance_uuid=instance.uuid, reason=e.format_message())
             except (exception.InstanceNotFound,
@@ -2810,13 +2809,13 @@ class ComputeManager(manager.Manager):
                 LOG.debug('Instance was deleted while rebuilding',
                           instance=instance)
                 self._set_migration_status(migration, 'failed')
-                self._notify_instance_rebuild_error(context, instance, e)
+                self._notify_instance_rebuild_error(context, instance, e, bdms)
             except Exception as e:
                 self._set_migration_status(migration, 'failed')
                 if recreate or scheduled_node is not None:
                     rt.delete_allocation_for_evacuated_instance(
                         instance, scheduled_node, node_type='destination')
-                self._notify_instance_rebuild_error(context, instance, e)
+                self._notify_instance_rebuild_error(context, instance, e, bdms)
                 raise
             else:
                 instance.apply_migration_context()
@@ -2907,7 +2906,8 @@ class ComputeManager(manager.Manager):
         compute_utils.notify_about_instance_action(
             context, instance, self.host,
             action=fields.NotificationAction.REBUILD,
-            phase=fields.NotificationPhase.START)
+            phase=fields.NotificationPhase.START,
+            bdms=bdms)
 
         instance.power_state = self._get_power_state(context, instance)
         instance.task_state = task_states.REBUILDING
@@ -2979,7 +2979,8 @@ class ComputeManager(manager.Manager):
         compute_utils.notify_about_instance_action(
             context, instance, self.host,
             action=fields.NotificationAction.REBUILD,
-            phase=fields.NotificationPhase.END)
+            phase=fields.NotificationPhase.END,
+            bdms=bdms)
 
     def _handle_bad_volumes_detached(self, context, instance, bad_devices,
                                      block_device_info):
@@ -4000,12 +4001,13 @@ class ComputeManager(manager.Manager):
             self._notify_about_instance_usage(
                 context, instance, "resize.start", network_info=network_info)
 
-            compute_utils.notify_about_instance_action(context, instance,
-                   self.host, action=fields.NotificationAction.RESIZE,
-                   phase=fields.NotificationPhase.START)
-
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid)
+
+            compute_utils.notify_about_instance_action(context, instance,
+                   self.host, action=fields.NotificationAction.RESIZE,
+                   phase=fields.NotificationPhase.START, bdms=bdms)
+
             block_device_info = self._get_instance_block_device_info(
                                 context, instance, bdms=bdms)
 
@@ -4042,7 +4044,7 @@ class ComputeManager(manager.Manager):
 
         compute_utils.notify_about_instance_action(context, instance,
                self.host, action=fields.NotificationAction.RESIZE,
-               phase=fields.NotificationPhase.END)
+               phase=fields.NotificationPhase.END, bdms=bdms)
         self.instance_events.clear_events_for_instance(instance)
 
     def _terminate_volume_connections(self, context, instance, bdms):
@@ -4399,12 +4401,21 @@ class ComputeManager(manager.Manager):
     def _shelve_instance(self, context, instance, image_id,
                          clean_shutdown):
         LOG.info('Shelving', instance=instance)
+        offload = CONF.shelved_offload_time == 0
+        if offload:
+            # Get the BDMs early so we can pass them into versioned
+            # notifications since _shelve_offload_instance needs the
+            # BDMs anyway.
+            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance.uuid)
+        else:
+            bdms = None
         compute_utils.notify_usage_exists(self.notifier, context, instance,
                                           current_period=True)
         self._notify_about_instance_usage(context, instance, 'shelve.start')
         compute_utils.notify_about_instance_action(context, instance,
                 self.host, action=fields.NotificationAction.SHELVE,
-                phase=fields.NotificationPhase.START)
+                phase=fields.NotificationPhase.START, bdms=bdms)
 
         def update_task_state(task_state, expected_state=task_states.SHELVING):
             shelving_state_map = {
@@ -4436,11 +4447,11 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(context, instance, 'shelve.end')
         compute_utils.notify_about_instance_action(context, instance,
                 self.host, action=fields.NotificationAction.SHELVE,
-                phase=fields.NotificationPhase.END)
+                phase=fields.NotificationPhase.END, bdms=bdms)
 
-        if CONF.shelved_offload_time == 0:
+        if offload:
             self._shelve_offload_instance(context, instance,
-                                          clean_shutdown=False)
+                                          clean_shutdown=False, bdms=bdms)
 
     @wrap_exception()
     @reverts_task_state
@@ -4463,13 +4474,17 @@ class ComputeManager(manager.Manager):
             self._shelve_offload_instance(context, instance, clean_shutdown)
         do_shelve_offload_instance()
 
-    def _shelve_offload_instance(self, context, instance, clean_shutdown):
+    def _shelve_offload_instance(self, context, instance, clean_shutdown,
+                                 bdms=None):
         LOG.info('Shelve offloading', instance=instance)
+        if bdms is None:
+            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance.uuid)
         self._notify_about_instance_usage(context, instance,
                 'shelve_offload.start')
         compute_utils.notify_about_instance_action(context, instance,
                 self.host, action=fields.NotificationAction.SHELVE_OFFLOAD,
-                phase=fields.NotificationPhase.START)
+                phase=fields.NotificationPhase.START, bdms=bdms)
 
         self._power_off_instance(context, instance, clean_shutdown)
         current_power_state = self._get_power_state(context, instance)
@@ -4477,8 +4492,6 @@ class ComputeManager(manager.Manager):
         self.network_api.cleanup_instance_network_on_host(context, instance,
                                                           instance.host)
         network_info = self.network_api.get_instance_nw_info(context, instance)
-        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-            context, instance.uuid)
 
         block_device_info = self._get_instance_block_device_info(context,
                                                                  instance,
@@ -4516,7 +4529,7 @@ class ComputeManager(manager.Manager):
                 'shelve_offload.end')
         compute_utils.notify_about_instance_action(context, instance,
                 self.host, action=fields.NotificationAction.SHELVE_OFFLOAD,
-                phase=fields.NotificationPhase.END)
+                phase=fields.NotificationPhase.END, bdms=bdms)
 
     @wrap_exception()
     @reverts_task_state
@@ -4558,16 +4571,17 @@ class ComputeManager(manager.Manager):
     def _unshelve_instance(self, context, instance, image, filter_properties,
                            node):
         LOG.info('Unshelving', instance=instance)
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance.uuid)
+
         self._notify_about_instance_usage(context, instance, 'unshelve.start')
         compute_utils.notify_about_instance_action(context, instance,
                 self.host, action=fields.NotificationAction.UNSHELVE,
-                phase=fields.NotificationPhase.START)
+                phase=fields.NotificationPhase.START, bdms=bdms)
 
         instance.task_state = task_states.SPAWNING
         instance.save()
 
-        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                context, instance.uuid)
         block_device_info = self._prep_block_device(context, instance, bdms)
         scrubbed_keys = self._unshelve_instance_key_scrub(instance)
 
@@ -4624,7 +4638,7 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(context, instance, 'unshelve.end')
         compute_utils.notify_about_instance_action(context, instance,
                 self.host, action=fields.NotificationAction.UNSHELVE,
-                phase=fields.NotificationPhase.END)
+                phase=fields.NotificationPhase.END, bdms=bdms)
 
     @messaging.expected_exceptions(NotImplementedError)
     @wrap_instance_fault
@@ -6011,7 +6025,8 @@ class ComputeManager(manager.Manager):
         compute_utils.notify_about_instance_action(context, instance,
                 self.host,
                 action=fields.NotificationAction.LIVE_MIGRATION_ROLLBACK,
-                phase=fields.NotificationPhase.START)
+                phase=fields.NotificationPhase.START,
+                bdms=bdms)
 
         do_cleanup, destroy_disks = self._live_migration_cleanup_flags(
                 migrate_data)
@@ -6024,9 +6039,11 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(context, instance,
                                           "live_migration._rollback.end")
         compute_utils.notify_about_instance_action(context, instance,
+
                 self.host,
                 action=fields.NotificationAction.LIVE_MIGRATION_ROLLBACK,
-                phase=fields.NotificationPhase.END)
+                phase=fields.NotificationPhase.END,
+                bdms=bdms)
 
         self._set_migration_status(migration, migration_status)
 

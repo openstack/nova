@@ -155,10 +155,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         specd_compute._shutdown_instance = _mark_shutdown
         mock_inst.info_cache = call_tracker
 
+        mock_bdms = mock.Mock()
         specd_compute._delete_instance(specd_compute,
                                        self.context,
                                        mock_inst,
-                                       mock.Mock())
+                                       mock_bdms)
 
         methods_called = [n for n, a, k in call_tracker.mock_calls]
         self.assertEqual(['clear_events_for_instance',
@@ -169,7 +170,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                             mock_inst,
                                             specd_compute.host,
                                             action='delete',
-                                            phase='start')
+                                            phase='start',
+                                            bdms=mock_bdms)
 
     def _make_compute_node(self, hyp_hostname, cn_id):
             cn = mock.Mock(spec_set=['hypervisor_hostname', 'id',
@@ -296,9 +298,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         mock_notify.assert_has_calls([
             mock.call(self.context, instance, 'fake-mini',
-                      action='delete', phase='start'),
+                      action='delete', phase='start', bdms=[]),
             mock.call(self.context, instance, 'fake-mini',
-                      action='delete', phase='end')])
+                      action='delete', phase='end', bdms=[])])
 
     def test_check_device_tagging_no_tagging(self):
         bdms = objects.BlockDeviceMappingList(objects=[
@@ -1207,9 +1209,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                         notify=True, try_deallocate_networks=False)
         mock_notify.assert_has_calls([
             mock.call(self.context, instance, 'fake-mini',
-                      action='shutdown', phase='start'),
+                      action='shutdown', phase='start', bdms=bdms),
             mock.call(self.context, instance, 'fake-mini',
-                      action='shutdown', phase='end')])
+                      action='shutdown', phase='end', bdms=bdms)])
 
     @mock.patch('nova.context.RequestContext.elevated')
     @mock.patch('nova.objects.Instance.get_network_info')
@@ -3595,7 +3597,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         )
         mock_notify.assert_called_once_with(
             mock.ANY, instance, 'fake-mini', action='rebuild', phase='error',
-            exception=exc)
+            exception=exc, bdms=None)
 
     def test_rebuild_deleting(self):
         instance = fake_instance.fake_instance_obj(self.context)
@@ -6088,7 +6090,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
         def _test(mock_bdm, mock_lmcf, mock_notify, mock_nwapi,
                   mock_notify_about_instance_action):
-            mock_bdm.return_value = objects.BlockDeviceMappingList()
+            bdms = objects.BlockDeviceMappingList()
+            mock_bdm.return_value = bdms
             mock_lmcf.return_value = False, False
             mock_instance = mock.MagicMock()
             compute._rollback_live_migration(self.context,
@@ -6099,9 +6102,11 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                 mock_instance.project_id, test.MatchType(dict))
             mock_notify_about_instance_action.assert_has_calls([
                 mock.call(self.context, mock_instance, compute.host,
-                          action='live_migration_rollback', phase='start'),
+                          action='live_migration_rollback', phase='start',
+                          bdms=bdms),
                 mock.call(self.context, mock_instance, compute.host,
-                          action='live_migration_rollback', phase='end')])
+                          action='live_migration_rollback', phase='end',
+                          bdms=bdms)])
             self.assertIsInstance(mock_lmcf.call_args_list[0][0][0],
                                   migrate_data_obj.LiveMigrateData)
 

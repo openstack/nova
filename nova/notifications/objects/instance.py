@@ -108,14 +108,15 @@ class InstancePayload(base.NotificationPayloadBase):
         'auto_disk_config': fields.DiskConfigField()
     }
 
-    def __init__(self, instance):
+    def __init__(self, instance, bdms=None):
         super(InstancePayload, self).__init__()
         network_info = instance.get_network_info()
         self.ip_addresses = IpPayload.from_network_info(network_info)
         self.flavor = flavor_payload.FlavorPayload(flavor=instance.flavor)
-        # TODO(gibi): investigate the possibility to use already in scope bdm
-        # when available like in instance.create
-        self.block_devices = BlockDevicePayload.from_instance(instance)
+        if bdms is not None:
+            self.block_devices = BlockDevicePayload.from_bdms(bdms)
+        else:
+            self.block_devices = BlockDevicePayload.from_instance(instance)
 
         self.populate_schema(instance=instance)
 
@@ -134,8 +135,9 @@ class InstanceActionPayload(InstancePayload):
         'fault': fields.ObjectField('ExceptionPayload', nullable=True),
     }
 
-    def __init__(self, instance, fault):
-        super(InstanceActionPayload, self).__init__(instance=instance)
+    def __init__(self, instance, fault, bdms=None):
+        super(InstanceActionPayload, self).__init__(instance=instance,
+                                                    bdms=bdms)
         self.fault = fault
 
 
@@ -352,12 +354,21 @@ class BlockDevicePayload(base.NotificationPayloadBase):
             return None
 
         instance_bdms = instance.get_bdms()
-        bdms = []
         if instance_bdms is not None:
-            for bdm in instance_bdms:
-                if bdm.volume_id is not None:
-                    bdms.append(cls(bdm))
-        return bdms
+            return cls.from_bdms(instance_bdms)
+        else:
+            return []
+
+    @classmethod
+    def from_bdms(cls, bdms):
+        """Returns a list of BlockDevicePayload objects based on the passed
+        BlockDeviceMappingList.
+        """
+        payloads = []
+        for bdm in bdms:
+            if bdm.volume_id is not None:
+                payloads.append(cls(bdm))
+        return payloads
 
 
 @nova_base.NovaObjectRegistry.register_notification
