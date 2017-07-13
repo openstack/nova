@@ -43,7 +43,7 @@ Response
 
   - security_groups: security_groups
   - description: description
-  - id: id
+  - id: security_group_id_body
   - name: name
   - rules: rules
   - tenant_id: tenant_id_body
@@ -86,7 +86,7 @@ Response
 
   - security_group: security_group
   - description: description
-  - id: id
+  - id: security_group_id_body
   - name: name
   - rules: rules
   - tenant_id: tenant_id_body
@@ -122,7 +122,7 @@ Response
 
   - security_group: security_group
   - description: description
-  - id: id
+  - id: security_group_id_body
   - name: name
   - rules: rules
   - tenant_id: tenant_id_body
@@ -165,7 +165,7 @@ Response
 
   - security_group: security_group
   - description: description
-  - id: id
+  - id: security_group_id_body
   - name: name
   - rules: rules
   - tenant_id: tenant_id_body

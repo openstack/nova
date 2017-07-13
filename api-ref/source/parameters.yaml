@@ -2927,12 +2927,6 @@ hypervisors:
   in: body
   required: true
   type: array
-id:
-  description: |
-    The security group name or UUID.
-  in: body
-  required: true
-  type: string
 image:
   description: |
     The UUID and links for the image for your server instance. The ``image`` object
@@ -4570,7 +4564,7 @@ revertResize:
   type: none
 rules:
   description: |
-    A security group rules object.
+    The list of security group rules.
   in: body
   required: true
   type: array
@@ -4634,6 +4628,12 @@ security_group_default_rules:
   in: body
   required: true
   type: array
+security_group_id_body:
+  description: |
+    The ID of the security group.
+  in: body
+  required: true
+  type: string
 security_group_rule:
   description: |
     A ``security_group_rule`` object.
@@ -4681,7 +4681,7 @@ security_groups:
   type: array
 security_groups_obj:
   description: |
-    Security groups object.
+    One or more security groups objects.
   in: body
   required: true
   type: array
