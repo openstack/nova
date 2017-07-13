@@ -1,0 +1,14 @@
+---
+features:
+  - This release adds support for Netronome's Agilio OVS VIF type. In order
+    to use the accelerated plugging modes, external Neutron and OS-VIF plugins
+    are required. Consult
+    https://github.com/Netronome/agilio-ovs-openstack-plugin for installation
+    and operation instructions.
+    Consult the Agilio documentation available at
+    https://support.netronome.com/ for more information about the plugin
+    compatibility and support matrix.
+  - The ``virtio-forwarder`` VNIC type has been added to the list of VNICs.
+    This VNIC type is intended to request a low-latency virtio port inside the
+    instance, likely backed by hardware acceleration. Currently the Agilio OVS
+    external Neutron and OS-VIF plugins provide support for this VNIC mode.
