@@ -295,6 +295,8 @@ class ComputeTaskAPI(object):
         cctxt = self.client.prepare(version=version)
         cctxt.cast(context, 'live_migrate_instance', **kw)
 
+    # TODO(melwitt): Remove the reservations parameter in version 2.0 of the
+    # RPC API.
     def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
                   flavor, block_migration, disk_over_commit,
                   reservations=None, clean_shutdown=True, request_spec=None):

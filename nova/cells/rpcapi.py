@@ -571,7 +571,7 @@ class CellsAPI(object):
         cctxt.cast(ctxt, 'soft_delete_instance', instance=instance)
 
     def resize_instance(self, ctxt, instance, extra_instance_updates,
-                       scheduler_hint, flavor, reservations,
+                       scheduler_hint, flavor, reservations=None,
                        clean_shutdown=True,
                        request_spec=None):
         # NOTE(sbauza): Since Cells v1 is quite feature-frozen, we don't want
@@ -606,12 +606,12 @@ class CellsAPI(object):
                    host_name=host_name)
 
     def revert_resize(self, ctxt, instance, migration, host,
-                      reservations):
+                      reservations=None):
         cctxt = self.client.prepare(version='1.21')
         cctxt.cast(ctxt, 'revert_resize', instance=instance)
 
     def confirm_resize(self, ctxt, instance, migration, host,
-                       reservations, cast=True):
+                       reservations=None, cast=True):
         # NOTE(comstud): This is only used in the API cell where we should
         # always cast and ignore the 'cast' kwarg.
         # Also, the compute api method normally takes an optional

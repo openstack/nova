@@ -86,7 +86,7 @@ class ComputeTaskAPI(object):
         self.conductor_compute_rpcapi = rpcapi.ComputeTaskAPI()
 
     def resize_instance(self, context, instance, extra_instance_updates,
-                        scheduler_hint, flavor, reservations,
+                        scheduler_hint, flavor, reservations=None,
                         clean_shutdown=True, request_spec=None):
         # NOTE(comstud): 'extra_instance_updates' is not used here but is
         # needed for compatibility with the cells_rpcapi version of this
