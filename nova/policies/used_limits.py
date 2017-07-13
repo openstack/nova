@@ -20,7 +20,7 @@ BASE_POLICY_NAME = 'os_compute_api:os-used-limits'
 
 
 used_limits_policies = [
-    # TODO(aunnam): Remove this rule after we seperate the scope check from
+    # TODO(aunnam): Remove this rule after we separate the scope check from
     # policies, as this is only checking the scope.
     base.create_rule_default(
         BASE_POLICY_NAME,
