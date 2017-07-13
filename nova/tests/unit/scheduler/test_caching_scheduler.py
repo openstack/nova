@@ -87,7 +87,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.assertRaises(exception.NoValidHost,
                 self.driver.select_destinations,
                 self.context, spec_obj, [spec_obj.instance_uuid],
-                {})
+                {}, {})
 
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
@@ -103,13 +103,14 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.assertEqual(result[0].host, fake_host.host)
 
     def _test_select_destinations(self, spec_obj):
-        p_sums = {}
+        provider_summaries = {}
         for cell_hosts in self.driver.all_host_states.values():
             for hs in cell_hosts:
-                p_sums[hs.uuid] = hs
+                provider_summaries[hs.uuid] = hs
 
         return self.driver.select_destinations(
-                self.context, spec_obj, [spec_obj.instance_uuid], p_sums)
+                self.context, spec_obj, [spec_obj.instance_uuid], {},
+                provider_summaries)
 
     def _get_fake_request_spec(self):
         # NOTE(sbauza): Prevent to stub the Flavor.get_by_id call just by
@@ -179,14 +180,14 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
             host_state = self._get_fake_host_state(x)
             host_states.append(host_state)
         self.driver.all_host_states = {uuids.cell: host_states}
-        p_sums = {hs.uuid: hs for hs in host_states}
+        provider_summaries = {hs.uuid: hs for hs in host_states}
 
         def run_test():
             a = timeutils.utcnow()
 
             for x in range(requests):
                 self.driver.select_destinations(self.context, spec_obj,
-                        [spec_obj.instance_uuid], p_sums)
+                        [spec_obj.instance_uuid], {}, provider_summaries)
 
             b = timeutils.utcnow()
             c = b - a
@@ -232,12 +233,12 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
             uuids.cell1: host_states_cell1,
             uuids.cell2: host_states_cell2,
         }
-        p_sums = {
+        provider_summaries = {
             cn.uuid: cn for cn in host_states_cell1 + host_states_cell2
         }
 
         d = self.driver.select_destinations(self.context, spec_obj,
-                [spec_obj.instance_uuid], p_sums)
+                [spec_obj.instance_uuid], {}, provider_summaries)
         self.assertIn(d[0].host, [hs.host for hs in host_states_cell2])
 
 

@@ -41,9 +41,33 @@ class FilterScheduler(driver.Scheduler):
         self.notifier = rpc.get_notifier('scheduler')
 
     def select_destinations(self, context, spec_obj, instance_uuids,
-            provider_summaries):
+            alloc_reqs_by_rp_uuid, provider_summaries):
         """Returns a sorted list of HostState objects that satisfy the
         supplied request_spec.
+
+        :param context: The RequestContext object
+        :param spec_obj: The RequestSpec object
+        :param instance_uuids: List of UUIDs, one for each value of the spec
+                               object's num_instances attribute
+        :param alloc_reqs_by_rp_uuid: Optional dict, keyed by resource provider
+                                      UUID, of the allocation requests that may
+                                      be used to claim resources against
+                                      matched hosts. If None, indicates either
+                                      the placement API wasn't reachable or
+                                      that there were no allocation requests
+                                      returned by the placement API. If the
+                                      latter, the provider_summaries will be an
+                                      empty dict, not None.
+        :param provider_summaries: Optional dict, keyed by resource provider
+                                   UUID, of information that will be used by
+                                   the filters/weighers in selecting matching
+                                   hosts for a request. If None, indicates that
+                                   the scheduler driver should grab all compute
+                                   node information locally and that the
+                                   Placement API is not used. If an empty dict,
+                                   indicates the Placement API returned no
+                                   potential matches for the requested
+                                   resources.
         """
         self.notifier.info(
             context, 'scheduler.select_destinations.start',
@@ -51,7 +75,7 @@ class FilterScheduler(driver.Scheduler):
 
         num_instances = spec_obj.num_instances
         selected_hosts = self._schedule(context, spec_obj, instance_uuids,
-            provider_summaries)
+            alloc_reqs_by_rp_uuid, provider_summaries)
 
         # Couldn't fulfill the request_spec
         if len(selected_hosts) < num_instances:
@@ -79,9 +103,34 @@ class FilterScheduler(driver.Scheduler):
             dict(request_spec=spec_obj.to_legacy_request_spec_dict()))
         return selected_hosts
 
-    def _schedule(self, context, spec_obj, instance_uuids, provider_summaries):
-        """Returns a list of hosts that meet the required specs,
-        ordered by their fitness.
+    def _schedule(self, context, spec_obj, instance_uuids,
+            alloc_reqs_by_rp_uuid, provider_summaries):
+        """Returns a list of hosts that meet the required specs, ordered by
+        their fitness.
+
+        :param context: The RequestContext object
+        :param spec_obj: The RequestSpec object
+        :param instance_uuids: List of UUIDs, one for each value of the spec
+                               object's num_instances attribute
+        :param alloc_reqs_by_rp_uuid: Optional dict, keyed by resource provider
+                                      UUID, of the allocation requests that may
+                                      be used to claim resources against
+                                      matched hosts. If None, indicates either
+                                      the placement API wasn't reachable or
+                                      that there were no allocation requests
+                                      returned by the placement API. If the
+                                      latter, the provider_summaries will be an
+                                      empty dict, not None.
+        :param provider_summaries: Optional dict, keyed by resource provider
+                                   UUID, of information that will be used by
+                                   the filters/weighers in selecting matching
+                                   hosts for a request. If None, indicates that
+                                   the scheduler driver should grab all compute
+                                   node information locally and that the
+                                   Placement API is not used. If an empty dict,
+                                   indicates the Placement API returned no
+                                   potential matches for the requested
+                                   resources.
         """
         elevated = context.elevated()
 

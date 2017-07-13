@@ -96,14 +96,19 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
     def test_select_destination(self, mock_get_ac, mock_rfrs):
         fake_spec = objects.RequestSpec()
         fake_spec.instance_uuid = uuids.instance
-        place_res = (mock.sentinel.alloc_reqs, mock.sentinel.p_sums)
+        place_res = (fakes.ALLOC_REQS, mock.sentinel.p_sums)
         mock_get_ac.return_value = place_res
+        expected_alloc_reqs_by_rp_uuid = {
+            cn.uuid: [fakes.ALLOC_REQS[x]]
+            for x, cn in enumerate(fakes.COMPUTE_NODES)
+        }
         with mock.patch.object(self.manager.driver, 'select_destinations'
                 ) as select_destinations:
             self.manager.select_destinations(None, spec_obj=fake_spec,
                     instance_uuids=[fake_spec.instance_uuid])
             select_destinations.assert_called_once_with(None, fake_spec,
-                    [fake_spec.instance_uuid], mock.sentinel.p_sums)
+                [fake_spec.instance_uuid], expected_alloc_reqs_by_rp_uuid,
+                mock.sentinel.p_sums)
             mock_get_ac.assert_called_once_with(mock_rfrs.return_value)
 
     @mock.patch('nova.scheduler.utils.resources_from_request_spec')
@@ -124,7 +129,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
             self.manager.select_destinations(None, spec_obj=fake_spec,
                     instance_uuids=[fake_spec.instance_uuid])
             select_destinations.assert_called_once_with(None, fake_spec,
-                    [fake_spec.instance_uuid], None)
+                    [fake_spec.instance_uuid], None, None)
             mock_get_ac.assert_called_once_with(mock_rfrs.return_value)
 
     @mock.patch('nova.scheduler.utils.resources_from_request_spec')
@@ -146,7 +151,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                 self.context, spec_obj=fake_spec,
                 instance_uuids=[fake_spec.instance_uuid])
             select_destinations.assert_called_once_with(
-                self.context, fake_spec, [fake_spec.instance_uuid], None)
+                self.context, fake_spec, [fake_spec.instance_uuid], None, None)
             mock_get_ac.assert_called_once_with(mock_rfrs.return_value)
 
     @mock.patch('nova.scheduler.utils.resources_from_request_spec')
@@ -168,7 +173,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
             self.manager.select_destinations(None, spec_obj=fake_spec,
                     instance_uuids=[fake_spec.instance_uuid])
             select_destinations.assert_called_once_with(None, fake_spec,
-                    [fake_spec.instance_uuid], None)
+                    [fake_spec.instance_uuid], None, None)
             mock_get_ac.assert_called_once_with(mock_rfrs.return_value)
 
     @mock.patch('nova.scheduler.utils.resources_from_request_spec')
@@ -176,13 +181,17 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                 'get_allocation_candidates')
     def test_select_destination_with_4_3_client(self, mock_get_ac, mock_rfrs):
         fake_spec = objects.RequestSpec()
-        place_res = (mock.sentinel.alloc_reqs, mock.sentinel.p_sums)
+        place_res = (fakes.ALLOC_REQS, mock.sentinel.p_sums)
         mock_get_ac.return_value = place_res
+        expected_alloc_reqs_by_rp_uuid = {
+            cn.uuid: [fakes.ALLOC_REQS[x]]
+            for x, cn in enumerate(fakes.COMPUTE_NODES)
+        }
         with mock.patch.object(self.manager.driver, 'select_destinations'
                 ) as select_destinations:
             self.manager.select_destinations(None, spec_obj=fake_spec)
             select_destinations.assert_called_once_with(None, fake_spec, None,
-                mock.sentinel.p_sums)
+                expected_alloc_reqs_by_rp_uuid, mock.sentinel.p_sums)
             mock_get_ac.assert_called_once_with(mock_rfrs.return_value)
 
     # TODO(sbauza): Remove that test once the API v4 is removed
@@ -195,15 +204,20 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         fake_spec = objects.RequestSpec()
         fake_spec.instance_uuid = uuids.instance
         from_primitives.return_value = fake_spec
-        place_res = (mock.sentinel.alloc_reqs, mock.sentinel.p_sums)
+        place_res = (fakes.ALLOC_REQS, mock.sentinel.p_sums)
         mock_get_ac.return_value = place_res
+        expected_alloc_reqs_by_rp_uuid = {
+            cn.uuid: [fakes.ALLOC_REQS[x]]
+            for x, cn in enumerate(fakes.COMPUTE_NODES)
+        }
         with mock.patch.object(self.manager.driver, 'select_destinations'
                 ) as select_destinations:
             self.manager.select_destinations(None, request_spec='fake_spec',
                     filter_properties='fake_props',
                     instance_uuids=[fake_spec.instance_uuid])
             select_destinations.assert_called_once_with(None, fake_spec,
-                    [fake_spec.instance_uuid], mock.sentinel.p_sums)
+                    [fake_spec.instance_uuid], expected_alloc_reqs_by_rp_uuid,
+                    mock.sentinel.p_sums)
             mock_get_ac.assert_called_once_with(mock_rfrs.return_value)
 
     def test_update_aggregates(self):
