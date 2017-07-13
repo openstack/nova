@@ -7184,7 +7184,7 @@ class ComputeTestCase(BaseTestCase,
                                          {'source_compute': self.compute.host,
                                           'status': ['accepted', 'done'],
                                           'migration_type': 'evacuation'})
-        mock_get_inst.assert_called_once_with(fake_context, {'deleted': False})
+        mock_get_inst.assert_called_once_with(fake_context)
         mock_get_nw.assert_called_once_with(fake_context, evacuated_instance)
         mock_get_blk.assert_called_once_with(fake_context, evacuated_instance)
         mock_is_inst.assert_called_once_with(fake_context, evacuated_instance)
@@ -7238,7 +7238,7 @@ class ComputeTestCase(BaseTestCase,
                 return_value='fake_network_info') as mock_get_nw:
             self.compute._destroy_evacuated_instances(fake_context)
 
-        mock_get_drv.assert_called_once_with(fake_context, {'deleted': False})
+        mock_get_drv.assert_called_once_with(fake_context)
         mock_get_nw.assert_called_once_with(fake_context, evacuated_instance)
         mock_get_blk.assert_called_once_with(fake_context, evacuated_instance)
         mock_check_local.assert_called_once_with(fake_context,
@@ -7296,7 +7296,7 @@ class ComputeTestCase(BaseTestCase,
                 return_value='fake_network_info') as mock_get_nw:
             self.compute._destroy_evacuated_instances(fake_context)
 
-        mock_get_inst.assert_called_once_with(fake_context, {'deleted': False})
+        mock_get_inst.assert_called_once_with(fake_context)
         mock_get_nw.assert_called_once_with(fake_context, evacuated_instance)
         mock_get_blk.assert_called_once_with(fake_context, evacuated_instance)
         mock_check_local.assert_called_once_with(fake_context,
