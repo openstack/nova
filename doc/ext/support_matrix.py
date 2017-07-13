@@ -25,7 +25,6 @@ It is used via a single directive in the .rst file
 import re
 import sys
 
-import six
 from six.moves import configparser
 
 from docutils import nodes
@@ -59,7 +58,9 @@ class SupportMatrixFeature(object):
                   STATUS_CONDITION, STATUS_OPTIONAL]
 
     def __init__(self, key, title, status=STATUS_OPTIONAL,
-                 group=None, notes=None, cli=[]):
+                 group=None, notes=None, cli=None):
+        if not cli:
+            cli = []
         # A unique key (eg 'foo.bar.wizz') to identify the feature
         self.key = key
         # A human friendly short title for the feature
@@ -474,10 +475,10 @@ class SupportMatrixDirective(rst.Directive):
             notes.append(item)
 
     def _create_cli_paragraph(self, feature):
-        ''' Create a paragraph which represents the CLI commands of the feature
+        """Create a paragraph which represents the CLI commands of the feature
 
         The paragraph will have a bullet list of CLI commands.
-        '''
+        """
         para = nodes.paragraph()
         para.append(nodes.strong(text="CLI commands:"))
         commands = nodes.bullet_list()
@@ -489,7 +490,7 @@ class SupportMatrixDirective(rst.Directive):
         return para
 
     def _create_notes_paragraph(self, notes):
-        """ Constructs a paragraph which represents the implementation notes
+        """Constructs a paragraph which represents the implementation notes
 
         The paragraph consists of text and clickable URL nodes if links were
         given in the notes.
