@@ -4925,7 +4925,7 @@ def console_get(context, console_id, instance_uuid=None):
     if not result:
         if instance_uuid:
             raise exception.ConsoleNotFoundForInstance(
-                    console_id=console_id, instance_uuid=instance_uuid)
+                    instance_uuid=instance_uuid)
         else:
             raise exception.ConsoleNotFound(console_id=console_id)
 
