@@ -4,6 +4,7 @@
         "nova_object.data":{
             "architecture":"x86_64",
             "availability_zone": "nova",
+            "block_devices":[],
             "created_at":"2012-10-29T13:42:11Z",
             "deleted_at":null,
             "display_name":"some-server",
@@ -78,7 +79,7 @@
         },
         "nova_object.name":"InstanceCreatePayload",
         "nova_object.namespace":"nova",
-        "nova_object.version":"1.4"
+        "nova_object.version":"1.5"
     },
     "priority":"ERROR",
     "publisher_id":"nova-compute:compute"

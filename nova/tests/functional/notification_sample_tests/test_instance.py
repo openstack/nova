@@ -27,6 +27,7 @@ class TestInstanceNotificationSampleWithMultipleCompute(
 
     def setUp(self):
         self.flags(use_neutron=True)
+        self.flags(bdms_in_notifications='True', group='notifications')
         super(TestInstanceNotificationSampleWithMultipleCompute, self).setUp()
         self.neutron = fixtures.NeutronFixture(self)
         self.useFixture(self.neutron)
@@ -37,6 +38,7 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         server = self._boot_a_server(
             extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
         self._wait_for_notification('instance.create.end')
+        self._attach_volume_to_server(server, self.cinder.SWAP_OLD_VOL)
         # server will boot on host1
         self.useFixture(fixtures.ConfPatcher(host='host2'))
         self.compute2 = self.start_service('compute', host='host2')
@@ -85,6 +87,7 @@ class TestInstanceNotificationSample(
 
     def setUp(self):
         self.flags(use_neutron=True)
+        self.flags(bdms_in_notifications='True', group='notifications')
         super(TestInstanceNotificationSample, self).setUp()
         self.neutron = fixtures.NeutronFixture(self)
         self.useFixture(self.neutron)
@@ -121,6 +124,8 @@ class TestInstanceNotificationSample(
         server = self._boot_a_server(
             extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
 
+        self._attach_volume_to_server(server, self.cinder.SWAP_OLD_VOL)
+
         actions = [
             self._test_power_off_on_server,
             self._test_restore_server,
@@ -136,7 +141,7 @@ class TestInstanceNotificationSample(
             self._test_reboot_server,
             self._test_reboot_server_error,
             self._test_trigger_crash_dump,
-            self._test_volume_attach_detach_server,
+            self._test_volume_detach_attach_server,
             self._test_rescue_server,
             self._test_unrescue_server,
             self._test_soft_delete_server,
@@ -152,15 +157,18 @@ class TestInstanceNotificationSample(
     def test_create_delete_server(self):
         server = self._boot_a_server(
             extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
+        self._attach_volume_to_server(server, self.cinder.SWAP_OLD_VOL)
         self.api.delete_server(server['id'])
         self._wait_until_deleted(server)
-        self.assertEqual(7, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(9, len(fake_notifier.VERSIONED_NOTIFICATIONS))
 
         # This list needs to be in order.
         expected_notifications = [
             'instance-create-start',
             'instance-create-end',
             'instance-update-tags-action',
+            'instance-volume_attach-start',
+            'instance-volume_attach-end',
             'instance-delete-start',
             'instance-shutdown-start',
             'instance-shutdown-end',
@@ -223,6 +231,7 @@ class TestInstanceNotificationSample(
 
         server = self._boot_a_server(
             extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
+        self._attach_volume_to_server(server, self.cinder.SWAP_OLD_VOL)
 
         instance_updates = self._wait_for_notifications('instance.update', 8)
 
@@ -336,7 +345,19 @@ class TestInstanceNotificationSample(
                        'out_bytes': 0,
                        'in_bytes': 0},
                   'nova_object.version': '1.0'}],
-             'tags': ["tag1"]
+             'tags': ["tag1"],
+             'block_devices': [{
+                "nova_object.data": {
+                    "boot_index": None,
+                    "delete_on_termination": False,
+                    "device_name": "/dev/sdb",
+                    "tag": None,
+                    "volume_id": "a07f71dc-8151-4e7d-a0cc-cd24a3f11113"
+                },
+                "nova_object.name": "BlockDevicePayload",
+                "nova_object.namespace": "nova",
+                "nova_object.version": "1.0"
+              }]
             },
 
             # deleting -> deleted
@@ -350,7 +371,19 @@ class TestInstanceNotificationSample(
              'ip_addresses': [],
              'power_state': 'pending',
              'bandwidth': [],
-             'tags': ["tag1"]
+             'tags': ["tag1"],
+             'block_devices': [{
+                "nova_object.data": {
+                    "boot_index": None,
+                    "delete_on_termination": False,
+                    "device_name": "/dev/sdb",
+                    "tag": None,
+                    "volume_id": "a07f71dc-8151-4e7d-a0cc-cd24a3f11113"
+                },
+                "nova_object.name": "BlockDevicePayload",
+                "nova_object.namespace": "nova",
+                "nova_object.version": "1.0"
+              }]
             },
         ]
 
@@ -635,6 +668,7 @@ class TestInstanceNotificationSample(
 
         server = self._boot_a_server(
             extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
+        self._attach_volume_to_server(server, self.cinder.SWAP_OLD_VOL)
 
         fake_notifier.reset()
 
@@ -652,7 +686,8 @@ class TestInstanceNotificationSample(
         self._wait_for_state_change(self.api, server,
                                     expected_status='ACTIVE')
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        # The compute/manager will detach every volume during rebuild
+        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'instance-rebuild-start',
             replacements={
@@ -660,11 +695,29 @@ class TestInstanceNotificationSample(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
         self._verify_notification(
+            'instance-volume_detach-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'task_state': 'rebuilding',
+                'architecture': None,
+                'image_uuid': 'a2459075-d96c-40d5-893e-577ff92e721c',
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+        self._verify_notification(
+            'instance-volume_detach-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'task_state': 'rebuilding',
+                'architecture': None,
+                'image_uuid': 'a2459075-d96c-40d5-893e-577ff92e721c',
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+        self._verify_notification(
             'instance-rebuild-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
 
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_do_rebuild_instance_with_claim')
@@ -675,6 +728,7 @@ class TestInstanceNotificationSample(
 
         server = self._boot_a_server(
             extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
+        self._attach_volume_to_server(server, self.cinder.SWAP_OLD_VOL)
 
         fake_notifier.reset()
 
@@ -761,11 +815,6 @@ class TestInstanceNotificationSample(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
-    def _attach_volume_to_server(self, server, volume_id):
-        self.api.post_server_volume(
-            server['id'], {"volumeAttachment": {"volumeId": volume_id}})
-        self._wait_for_notification('instance.volume_attach.end')
-
     def _detach_volume_from_server(self, server, volume_id):
         self.api.delete_server_volume(server['id'], volume_id)
         self._wait_for_notification('instance.volume_detach.end')
@@ -824,11 +873,24 @@ class TestInstanceNotificationSample(
         # 6. instance-volume_swap-error
         # 7. compute.exception
         self.assertLessEqual(7, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        block_devices = [{
+            "nova_object.data": {
+                "boot_index": None,
+                "delete_on_termination": False,
+                "device_name": "/dev/sdb",
+                "tag": None,
+                "volume_id": self.cinder.SWAP_ERR_OLD_VOL
+            },
+            "nova_object.name": "BlockDevicePayload",
+            "nova_object.namespace": "nova",
+            "nova_object.version": "1.0"
+        }]
         self._verify_notification(
             'instance-volume_swap-start',
             replacements={
                 'new_volume_id': self.cinder.SWAP_ERR_NEW_VOL,
                 'old_volume_id': self.cinder.SWAP_ERR_OLD_VOL,
+                'block_devices': block_devices,
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[5])
@@ -836,6 +898,7 @@ class TestInstanceNotificationSample(
             'instance-volume_swap-error',
             replacements={
                 'reservation_id': server['reservation_id'],
+                'block_devices': block_devices,
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[6])
 
@@ -848,26 +911,7 @@ class TestInstanceNotificationSample(
     def _test_trigger_crash_dump(self, server):
         pass
 
-    def _test_volume_attach_detach_server(self, server):
-        self._attach_volume_to_server(server, self.cinder.SWAP_OLD_VOL)
-
-        # 0. volume_attach-start
-        # 1. volume_attach-end
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
-        self._verify_notification(
-            'instance-volume_attach-start',
-            replacements={
-                'reservation_id': server['reservation_id'],
-                'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
-        self._verify_notification(
-            'instance-volume_attach-end',
-            replacements={
-                'reservation_id': server['reservation_id'],
-                'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
-
-        fake_notifier.reset()
+    def _test_volume_detach_attach_server(self, server):
         self._detach_volume_from_server(server, self.cinder.SWAP_OLD_VOL)
 
         # 0. volume_detach-start
@@ -881,6 +925,25 @@ class TestInstanceNotificationSample(
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
         self._verify_notification(
             'instance-volume_detach-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
+        fake_notifier.reset()
+        self._attach_volume_to_server(server, self.cinder.SWAP_OLD_VOL)
+
+        # 0. volume_attach-start
+        # 1. volume_attach-end
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-volume_attach-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-volume_attach-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
@@ -921,10 +984,30 @@ class TestInstanceNotificationSample(
                 reason="Connection timed out")
         mock_attach.side_effect = attach_volume
 
-        post = {"volumeAttachment": {"volumeId": self.cinder.SWAP_OLD_VOL}}
+        post = {"volumeAttachment": {"volumeId": self.cinder.SWAP_NEW_VOL}}
         self.api.post_server_volume(server['id'], post)
 
         self._wait_for_notification('instance.volume_attach.error')
+
+        block_devices = [
+            # Add by default at boot
+            {'nova_object.data': {'boot_index': None,
+                                  'delete_on_termination': False,
+                                  'tag': None,
+                                  'device_name': '/dev/sdb',
+                                  'volume_id': self.cinder.SWAP_OLD_VOL},
+             'nova_object.name': 'BlockDevicePayload',
+             'nova_object.namespace': 'nova',
+             'nova_object.version': '1.0'},
+            # Attaching it right now
+            {'nova_object.data': {'boot_index': None,
+                                  'delete_on_termination': False,
+                                  'tag': None,
+                                  'device_name': '/dev/sdc',
+                                  'volume_id': self.cinder.SWAP_NEW_VOL},
+             'nova_object.name': 'BlockDevicePayload',
+             'nova_object.namespace': 'nova',
+             'nova_object.version': '1.0'}]
 
         # 0. volume_attach-start
         # 1. volume_attach-error
@@ -936,11 +1019,15 @@ class TestInstanceNotificationSample(
             'instance-volume_attach-start',
             replacements={
                 'reservation_id': server['reservation_id'],
+                'block_devices': block_devices,
+                'volume_id': self.cinder.SWAP_NEW_VOL,
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
         self._verify_notification(
             'instance-volume_attach-error',
             replacements={
                 'reservation_id': server['reservation_id'],
+                'block_devices': block_devices,
+                'volume_id': self.cinder.SWAP_NEW_VOL,
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])

@@ -21,9 +21,11 @@ from nova import exception
 from nova.network import model as network_model
 from nova.notifications import base as notification_base
 from nova.notifications.objects import base as notification
+from nova.notifications.objects import instance as instance_notification
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
+from nova.objects import instance as instance_obj
 from nova import test
 from nova.tests.unit.objects import test_objects
 from nova.tests import uuidsentinel as uuids
@@ -369,24 +371,25 @@ notification_object_data = {
     'AggregatePayload': '1.1-1eb9adcc4440d8627de6ec37c6398746',
     'AuditPeriodPayload': '1.0-2b429dd307b8374636703b843fa3f9cb',
     'BandwidthPayload': '1.0-ee2616a7690ab78406842a2b68e34130',
+    'BlockDevicePayload': '1.0-29751e1b6d41b1454e36768a1e764df8',
     'EventType': '1.5-ffa6d332f4462c45a2a363356a14165f',
     'ExceptionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'ExceptionPayload': '1.0-27db46ee34cd97e39f2643ed92ad0cc5',
     'FlavorNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'FlavorPayload': '1.3-6335e626893d7df5f96f87e6731fef56',
     'InstanceActionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceActionPayload': '1.3-b57b9564bf5a180c9d3999dfc2be4e29',
+    'InstanceActionPayload': '1.4-2a206cf87e4060c2ec43ed71c4a2ed42',
     'InstanceActionVolumeNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceActionVolumePayload': '1.1-77163365e23cfff0bffa47d4ca5bf62e',
+    'InstanceActionVolumePayload': '1.2-414024a2ea54cf842482c1c6a4bef013',
     'InstanceActionVolumeSwapNotification':
     '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceActionVolumeSwapPayload': '1.3-5efb715850d07c496447009ca14cec83',
+    'InstanceActionVolumeSwapPayload': '1.4-8b82cef523c62020c24b3eb1c39ea2ef',
     'InstanceCreateNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceCreatePayload': '1.4-125ba6eacf5a567213600221b1e4a74c',
-    'InstancePayload': '1.3-7c6f0360955b22b492d6eaedd2192001',
+    'InstanceCreatePayload': '1.5-97e9c0f516a68f20b25ce2f994cab081',
+    'InstancePayload': '1.4-46d922bd0a5cce46398b0cf7e8735fc4',
     'InstanceStateUpdatePayload': '1.0-07e111c0fa0f6db0f79b0726d593e3da',
     'InstanceUpdateNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceUpdatePayload': '1.4-052b015d109385f3cbb2f1a0f33381c2',
+    'InstanceUpdatePayload': '1.5-ec4d3d9c809842b1dcf4739b1d788f32',
     'IpPayload': '1.0-8ecf567a99e516d4af094439a7632d34',
     'KeypairNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'KeypairPayload': '1.0-6daebbbde0e1bf35c1556b1ecd9385c1',
@@ -533,3 +536,50 @@ class TestInstanceNotification(test.NoDBTestCase):
 
         self.assertFalse(mock_payload.called)
         self.assertFalse(mock_notification.called)
+
+
+class TestBlockDevicePayload(test.NoDBTestCase):
+    @mock.patch('nova.objects.instance.Instance.get_bdms')
+    def test_payload_contains_volume_bdms_if_requested(self, mock_get_bdms):
+        self.flags(bdms_in_notifications='True', group='notifications')
+        context = mock.Mock()
+        instance = instance_obj.Instance(uuid=uuids.instance_uuid)
+        image_bdm = objects.BlockDeviceMapping(
+            **{'context': context, 'source_type': 'image',
+               'destination_type': 'local',
+               'image_id': uuids.image_id,
+               'volume_id': None,
+               'device_name': '/dev/vda',
+               'instance_uuid': instance.uuid})
+
+        volume_bdm = objects.BlockDeviceMapping(
+            **{'context': context, 'source_type': 'volume',
+               'destination_type': 'volume',
+               'volume_id': uuids.volume_id,
+               'device_name': '/dev/vdb',
+               'instance_uuid': instance.uuid,
+               'boot_index': 0,
+               'delete_on_termination': True,
+               'tag': 'my-tag'})
+
+        mock_get_bdms.return_value = [image_bdm, volume_bdm]
+
+        bdms = instance_notification.BlockDevicePayload.from_instance(
+            instance)
+
+        self.assertEqual(1, len(bdms))
+        bdm = bdms[0]
+        self.assertIsInstance(bdm, instance_notification.BlockDevicePayload)
+        self.assertEqual('/dev/vdb', bdm.device_name)
+        self.assertEqual(0, bdm.boot_index)
+        self.assertTrue(bdm.delete_on_termination)
+        self.assertEqual('my-tag', bdm.tag)
+        self.assertEqual(uuids.volume_id, bdm.volume_id)
+
+    @mock.patch('nova.objects.instance.Instance.get_bdms',
+                return_value=mock.NonCallableMock())
+    def test_bdms_are_skipped_by_default(self, mock_get_bdms):
+        instance = instance_obj.Instance(uuid=uuids.instance_uuid)
+        bmds = instance_notification.BlockDevicePayload.from_instance(
+            instance)
+        self.assertIsNone(bmds)

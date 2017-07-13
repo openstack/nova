@@ -1267,13 +1267,13 @@ class CinderFixture(fixtures.Fixture):
                         },
                         'attach_status': 'attached'
                     })
-                return volume
+                    return volume
 
             # Check to see if the volume is attached.
             for instance_uuid, volumes in self.attachments.items():
                 if volume_id in volumes:
                     # The volume is attached.
-                    return {
+                    volume = {
                         'status': 'in-use',
                         'display_name': volume_id,
                         'attach_status': 'attached',
@@ -1286,15 +1286,23 @@ class CinderFixture(fixtures.Fixture):
                             }
                         }
                     }
+                    break
+            else:
+                # This is a test that does not care about the actual details.
+                volume = {
+                    'status': 'available',
+                    'display_name': 'TEST2',
+                    'attach_status': 'detached',
+                    'id': volume_id,
+                    'size': 1
+                }
 
-            # This is a test that does not care about the actual details.
-            return {
-                       'status': 'available',
-                       'display_name': 'TEST2',
-                       'attach_status': 'detached',
-                       'id': volume_id,
-                       'size': 1
-                   }
+            # update the status based on existing attachments
+            has_attachment = any(
+                [volume['id'] in attachments
+                 for attachments in self.attachments.values()])
+            volume['status'] = 'attached' if has_attachment else 'detached'
+            return volume
 
         def fake_initialize_connection(self, context, volume_id, connector):
             if volume_id == CinderFixture.SWAP_ERR_NEW_VOL:
