@@ -842,15 +842,12 @@ class VDIOtherConfigTestCase(VMUtilsTestBase):
 
         self.assertEqual(expected, self.session.args[0]['other_config'])
 
-    def test_create_image(self):
+    @mock.patch.object(vm_utils, '_fetch_image',
+                       return_value={'root': {'uuid': 'fake-uuid'}})
+    def test_create_image(self, mock_vm_utils):
         # Other images are registered implicitly when they are dropped into
         # the SR by a dom0 plugin or some other process
         self.flags(cache_images='none', group='xenserver')
-
-        def fake_fetch_image(*args):
-            return {'root': {'uuid': 'fake-uuid'}}
-
-        self.stubs.Set(vm_utils, '_fetch_image', fake_fetch_image)
 
         other_config = {}
 
