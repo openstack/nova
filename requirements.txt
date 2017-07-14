@@ -41,7 +41,7 @@ oslo.log>=3.22.0 # Apache-2.0
 oslo.reports>=0.6.0 # Apache-2.0
 oslo.serialization>=1.10.0 # Apache-2.0
 oslo.utils>=3.20.0 # Apache-2.0
-oslo.db>=4.23.0 # Apache-2.0
+oslo.db>=4.24.0 # Apache-2.0
 oslo.rootwrap>=5.0.0 # Apache-2.0
 oslo.messaging!=5.25.0,>=5.24.2 # Apache-2.0
 oslo.policy>=1.23.0 # Apache-2.0
@@ -52,7 +52,7 @@ rfc3986>=0.3.1 # Apache-2.0
 oslo.middleware>=3.27.0 # Apache-2.0
 psutil>=3.2.2 # BSD
 oslo.versionedobjects>=1.17.0 # Apache-2.0
-os-brick!=1.14.0,>=1.13.1 # Apache-2.0
+os-brick!=1.14.0,!=1.15.0,>=1.13.1 # Apache-2.0
 os-traits>=0.3.1 # Apache-2.0
 os-vif>=1.6.0 # Apache-2.0
 os-win>=2.0.0 # Apache-2.0
