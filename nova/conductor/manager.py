@@ -411,8 +411,10 @@ class ComputeTaskManager(base.Base):
                           ' %(dest)s unexpectedly failed.'),
                       {'instance_id': instance.uuid, 'dest': destination},
                       exc_info=True)
+            # Reset the task state to None to indicate completion of
+            # the operation as it is done in case of known exceptions.
             _set_vm_state(context, instance, ex, vm_states.ERROR,
-                          instance.task_state)
+                          task_state=None)
             migration.status = 'error'
             migration.save()
             raise exception.MigrationError(reason=six.text_type(ex))
