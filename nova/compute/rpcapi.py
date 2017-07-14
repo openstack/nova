@@ -512,6 +512,8 @@ class ComputeAPI(object):
                           instance=instance,
                           data=data)
 
+    # TODO(melwitt): Remove the reservations parameter in version 5.0 of the
+    # RPC API.
     def confirm_resize(self, ctxt, instance, migration, host,
             reservations=None, cast=True):
         version = '4.0'
@@ -541,6 +543,8 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'detach_volume',
                    instance=instance, volume_id=volume_id, **extra)
 
+    # TODO(melwitt): Remove the reservations parameter in version 5.0 of the
+    # RPC API.
     def finish_resize(self, ctxt, instance, migration, image, disk_info,
             host, reservations=None):
         version = '4.0'
@@ -550,6 +554,8 @@ class ComputeAPI(object):
                    instance=instance, migration=migration,
                    image=image, disk_info=disk_info, reservations=reservations)
 
+    # TODO(melwitt): Remove the reservations parameter in version 5.0 of the
+    # RPC API.
     def finish_revert_resize(self, ctxt, instance, migration, host,
                              reservations=None):
         version = '4.0'
@@ -744,6 +750,8 @@ class ComputeAPI(object):
         else:
             return result
 
+    # TODO(melwitt): Remove the reservations parameter in version 5.0 of the
+    # RPC API.
     def prep_resize(self, ctxt, instance, image, instance_type, host,
                     reservations=None, request_spec=None,
                     filter_properties=None, node=None,
@@ -853,6 +861,8 @@ class ComputeAPI(object):
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'reset_network', instance=instance)
 
+    # TODO(melwitt): Remove the reservations parameter in version 5.0 of the
+    # RPC API.
     def resize_instance(self, ctxt, instance, migration, image, instance_type,
                         reservations=None, clean_shutdown=True):
         msg_args = {'instance': instance, 'migration': migration,
@@ -990,6 +1000,8 @@ class ComputeAPI(object):
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'suspend_instance', instance=instance)
 
+    # TODO(melwitt): Remove the reservations parameter in version 5.0 of the
+    # RPC API.
     def terminate_instance(self, ctxt, instance, bdms, reservations=None,
                            delete_type=None):
         # NOTE(rajesht): The `delete_type` parameter is passed because
@@ -1014,6 +1026,8 @@ class ComputeAPI(object):
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'unrescue_instance', instance=instance)
 
+    # TODO(melwitt): Remove the reservations parameter in version 5.0 of the
+    # RPC API.
     def soft_delete_instance(self, ctxt, instance, reservations=None):
         version = '4.0'
         cctxt = self.router.client(ctxt).prepare(
