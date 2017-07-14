@@ -18,7 +18,7 @@ get a URL to connect the console from this API. The URL includes the token
 which is used to get permission to access the console. Servers may support
 different console protocols. To return a remote console using a specific
 protocol, such as RDP, set the ``protocol`` parameter to ``rdp``. For the same
-protocol, there may be different connection types such as ``vnc protocal and
+protocol, there may be different connection types such as ``vnc protocol and
 novnc type`` or ``vnc protocol and xvpvnc type``.
 
 Normal response codes: 200
