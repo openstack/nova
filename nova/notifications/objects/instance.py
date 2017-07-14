@@ -204,10 +204,11 @@ class InstanceCreatePayload(InstanceActionPayload):
         'tags': fields.ListOfStringsField(),
     }
 
-    def __init__(self, instance, fault):
+    def __init__(self, instance, fault, bdms):
         super(InstanceCreatePayload, self).__init__(
-                instance=instance,
-                fault=fault)
+            instance=instance,
+            fault=fault,
+            bdms=bdms)
         self.keypairs = [keypair_payload.KeypairPayload(keypair=keypair)
                          for keypair in instance.keypairs]
         self.tags = [instance_tag.tag

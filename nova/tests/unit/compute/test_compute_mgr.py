@@ -4881,9 +4881,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
             mock_notify.assert_has_calls([
                 mock.call(self.context, self.instance, 'fake-mini',
-                          phase='start'),
+                          phase='start', bdms=[]),
                 mock.call(self.context, self.instance, 'fake-mini',
-                          phase='error', exception=exc)])
+                          phase='error', exception=exc, bdms=[])])
 
             save.assert_has_calls([
                 mock.call(),
@@ -5348,9 +5348,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
             mock_notify_instance_create.assert_has_calls([
                 mock.call(self.context, self.instance, 'fake-mini',
-                          phase='start'),
+                          phase='start', bdms=[]),
                 mock.call(self.context, self.instance, 'fake-mini',
-                          phase='end')])
+                          phase='end', bdms=[])])
 
     def test_access_ip_set_when_instance_set_to_active(self):
 

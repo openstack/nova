@@ -384,7 +384,7 @@ def notify_about_instance_action(context, instance, host, action, phase=None,
 @rpc.if_notifications_enabled
 def notify_about_instance_create(context, instance, host, phase=None,
                                  source=fields.NotificationSource.COMPUTE,
-                                 exception=None):
+                                 exception=None, bdms=None):
     """Send versioned notification about instance creation
 
     :param context: the request context
@@ -393,11 +393,14 @@ def notify_about_instance_create(context, instance, host, phase=None,
     :param phase: the phase of the creation
     :param source: the source of the notification
     :param exception: the thrown exception (used in error notifications)
+    :param bdms: BlockDeviceMappingList object for the instance. If it is not
+                provided then we will load it from the db if so configured
     """
     fault, priority = _get_fault_and_priority_from_exc(exception)
     payload = instance_notification.InstanceCreatePayload(
         instance=instance,
-        fault=fault)
+        fault=fault,
+        bdms=bdms)
     notification = instance_notification.InstanceCreateNotification(
         context=context,
         priority=priority,
