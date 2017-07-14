@@ -74,7 +74,6 @@ class _IntegratedTestBase(test.TestCase):
 
         # TODO(mriedem): Fix the functional tests to work with Neutron.
         self.flags(use_neutron=self.USE_NEUTRON)
-        self.flags(keep_alive=False, group="wsgi")
 
         nova.tests.unit.image.fake.stub_out_image_service(self)
         self._setup_services()
