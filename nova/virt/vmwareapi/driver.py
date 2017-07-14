@@ -92,6 +92,12 @@ class VMwareVCDriver(driver.ComputeDriver):
             raise Exception(_("Must specify host_ip, host_username and "
                               "host_password to use vmwareapi.VMwareVCDriver"))
 
+        if CONF.vnc.keymap:
+            LOG.warning('The option "[vnc] keymap" has been deprecated in '
+                        'favor of the VMWare-specific "[vmware] vnc_keymap" '
+                        'option. Please update nova.conf to address this '
+                        'change')
+
         self._datastore_regex = None
         if CONF.vmware.datastore_regex:
             try:

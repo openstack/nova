@@ -143,7 +143,12 @@ Related options:
   ``server_listen`` using the value of this option.
 """),
     cfg.StrOpt('keymap',
-        default='en-us',
+        deprecated_for_removal=True,
+        deprecated_since='18.0.0',
+        deprecated_reason="""
+Configuring this option forces QEMU to do keymap conversions. These conversions
+are lossy and can result in significant issues for users of non en-US
+keyboards. Refer to bug #1682020 for more information.""",
         help="""
 A keyboard layout which is supported by the underlying hypervisor on this
 node.

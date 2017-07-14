@@ -53,8 +53,8 @@ def get_vm_xml(name="testname", uuid=None, source_type='file',
       <source %(interface_type)s='br100'/>
     </interface>
     <input type='mouse' bus='ps2'/>
-    <graphics type='vnc' port='5901' autoport='yes' keymap='en-us'/>
-    <graphics type='spice' port='5901' autoport='yes' keymap='en-us'/>
+    <graphics type='vnc' port='5901' autoport='yes'/>
+    <graphics type='spice' port='5901' autoport='yes'/>
   </devices>
 </domain>''' % {'name': name,
                 'uuid_tag': uuid_tag,

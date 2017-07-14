@@ -1001,7 +1001,10 @@ def get_vnc_config_spec(client_factory, port):
     opt_port.value = port
     opt_keymap = client_factory.create('ns0:OptionValue')
     opt_keymap.key = "RemoteDisplay.vnc.keyMap"
-    opt_keymap.value = CONF.vnc.keymap
+    if CONF.vnc.keymap:
+        opt_keymap.value = CONF.vnc.keymap
+    else:
+        opt_keymap.value = CONF.vmware.vnc_keymap
 
     extras = [opt_enabled, opt_port, opt_keymap]
 

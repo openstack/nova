@@ -462,12 +462,11 @@ class LibvirtDriver(driver.ComputeDriver):
             conf.driver_cache = cache_mode
 
     def _do_quality_warnings(self):
-        """Warn about untested driver configurations.
+        """Warn about potential configuration issues.
 
-        This will log a warning message about untested driver or host arch
-        configurations to indicate to administrators that the quality is
-        unknown. Currently, only qemu or kvm on intel 32- or 64-bit systems
-        is tested upstream.
+        This will log a warning message for things such as untested driver or
+        host arch configurations in order to indicate potential issues to
+        administrators.
         """
         caps = self._host.get_capabilities()
         hostarch = caps.host.cpu.arch
@@ -480,6 +479,18 @@ class LibvirtDriver(driver.ComputeDriver):
                         'information, see: https://docs.openstack.org/'
                         'nova/latest/user/support-matrix.html',
                         {'type': CONF.libvirt.virt_type, 'arch': hostarch})
+
+        if CONF.vnc.keymap:
+            LOG.warning('The option "[vnc] keymap" has been deprecated '
+                        'in favor of configuration within the guest. '
+                        'Update nova.conf to address this change and '
+                        'refer to bug #1682020 for more information.')
+
+        if CONF.spice.keymap:
+            LOG.warning('The option "[spice] keymap" has been deprecated '
+                        'in favor of configuration within the guest. '
+                        'Update nova.conf to address this change and '
+                        'refer to bug #1682020 for more information.')
 
     def _handle_conn_event(self, enabled, reason):
         LOG.info("Connection event '%(enabled)d' reason '%(reason)s'",
@@ -5168,9 +5179,6 @@ class LibvirtDriver(driver.ComputeDriver):
             graphics = vconfig.LibvirtConfigGuestGraphics()
             graphics.type = "vnc"
             if CONF.vnc.keymap:
-                # TODO(stephenfin): There are some issues here that may
-                # necessitate deprecating this option entirely in the future.
-                # Refer to bug #1682020 for more information.
                 graphics.keymap = CONF.vnc.keymap
             graphics.listen = CONF.vnc.server_listen
             guest.add_device(graphics)
@@ -5179,9 +5187,6 @@ class LibvirtDriver(driver.ComputeDriver):
             graphics = vconfig.LibvirtConfigGuestGraphics()
             graphics.type = "spice"
             if CONF.spice.keymap:
-                # TODO(stephenfin): There are some issues here that may
-                # necessitate deprecating this option entirely in the future.
-                # Refer to bug #1682020 for more information.
                 graphics.keymap = CONF.spice.keymap
             graphics.listen = CONF.spice.server_listen
             guest.add_device(graphics)

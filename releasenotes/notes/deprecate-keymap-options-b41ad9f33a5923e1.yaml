@@ -1,0 +1,34 @@
+---
+deprecations:
+  - |
+    Two keymap-related configuration options have been deprecated:
+
+    - ``[vnc] keymap``
+    - ``[spice] keymap``
+
+    The VNC option affects the libvirt and VMWare virt drivers, while the SPICE
+    option only affects libvirt. For the libvirt driver, configuring these
+    options resulted in lossy keymap conversions for the given graphics method.
+    It is recommended that users should unset these options and configure their
+    guests as necessary instead. In the case of noVNC, noVNC 1.0.0 should be
+    used as this provides support for QEMU's Extended Key Event messages. Refer
+    to `bug #1682020`__ and the `QEMU RFB pull request`__ for more information.
+
+    For the VMWare driver, only the VNC option applies. However, this option is
+    deprecated and will not affect any other driver in the future. A new option
+    has been added to the ``[vmware]`` group to replace this:
+
+    - ``[vmware] vnc_keymap``
+
+    The ``[vnc] keymap`` and ``[spice] keymap`` options will be removed in a
+    future release.
+
+    __ https://bugs.launchpad.net/nova/+bug/1682020
+    __ https://github.com/novnc/noVNC/pull/596
+upgrade:
+  - |
+    noVNC 1.0.0 introduced a breaking change in the URLs used to access the
+    console. Previously, the ``vnc_auto.html`` path was used but it is now
+    necessary to use the ``vnc_lite.html`` path. When noVNC is updated to
+    1.0.0, ``[vnc] novncproxy_base_url`` configuration value must be updated on
+    each compute node to reflect this change.

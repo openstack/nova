@@ -38,9 +38,15 @@ Guests will get created with graphical devices to support this. Clients
 
     cfg.StrOpt(
         'keymap',
-        default='en-us',
         deprecated_group='DEFAULT',
         deprecated_name='vnc_keymap',
+        deprecated_for_removal=True,
+        deprecated_since='18.0.0',
+        deprecated_reason="""
+Configuring this option forces QEMU to do keymap conversions. These conversions
+are lossy and can result in significant issues for users of non en-US
+keyboards. You should instead use a VNC client that supports Extended Key Event
+messages, such as noVNC 1.0.0. Refer to bug #1682020 for more information.""",
         help="""
 Keymap for VNC.
 
@@ -99,6 +105,9 @@ VNC support through a websocket-based client.
 This option sets the public base URL to which client systems will
 connect. noVNC clients can use this address to connect to the noVNC
 instance and, by extension, the VNC sessions.
+
+If using noVNC >= 1.0.0, you should use ``vnc_lite.html`` instead of
+``vnc_auto.html``.
 
 Related options:
 
