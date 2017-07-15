@@ -55,6 +55,12 @@ tests:
   DELETE: /traits/CUSTOM_NON_EXSITED
   status: 404
 
+- name: try to delete standard trait
+  DELETE: /traits/HW_CPU_X86_SSE
+  status: 400
+  response_strings:
+      - Cannot delete standard trait
+
 - name: create CUSTOM_TRAIT_1
   PUT: /traits/CUSTOM_TRAIT_1
   status: 201
