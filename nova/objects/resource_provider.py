@@ -1032,7 +1032,13 @@ def _check_capacity_exceeded(conn, allocs):
         rc_id = _RC_CACHE.id_from_string(alloc.resource_class)
         rp_uuid = alloc.resource_provider.uuid
         key = (rp_uuid, rc_id)
-        usage = usage_map[key]
+        try:
+            usage = usage_map[key]
+        except KeyError:
+            # The resource class at rc_id is not in the usage map.
+            raise exception.InvalidInventory(
+                    resource_class=alloc.resource_class,
+                    resource_provider=rp_uuid)
         amount_needed = alloc.used
         allocation_ratio = usage['allocation_ratio']
         min_unit = usage['min_unit']
