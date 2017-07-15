@@ -1,0 +1,78 @@
+# A sequence of tests that confirms that a resource class in use
+# cannot be deleted.
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        accept: application/json
+        content-type: application/json
+        OpenStack-API-Version: placement latest
+
+tests:
+
+- name: create a resource provider
+  POST: /resource_providers
+  data:
+      name: an rp
+  status: 201
+
+- name: get resource provider
+  GET: $LOCATION
+  status: 200
+
+- name: create a resource class
+  PUT: /resource_classes/CUSTOM_GOLD
+  status: 201
+
+- name: add inventory to an rp
+  PUT: /resource_providers/$HISTORY['get resource provider'].$RESPONSE['$.uuid']/inventories
+  data:
+      resource_provider_generation: 0
+      inventories:
+          VCPU:
+              total: 24
+          CUSTOM_GOLD:
+              total: 5
+  status: 200
+
+- name: allocate some of it
+  PUT: /allocations/6d9f83db-6eb5-49f6-84b0-5d03c6aa9fc8
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $HISTORY['get resource provider'].$RESPONSE['$.uuid']
+            resources:
+                VCPU: 5
+                CUSTOM_GOLD: 1
+      project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
+      user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
+  status: 204
+
+- name: fail delete resource class allocations
+  DELETE: /resource_classes/CUSTOM_GOLD
+  status: 409
+  response_strings:
+      - Unable to delete resource class
+      - Class is in use in inventory
+
+- name: delete the allocation
+  DELETE: $HISTORY['allocate some of it'].$URL
+  status: 204
+
+- name: fail delete resource class inventory
+  DELETE: /resource_classes/CUSTOM_GOLD
+  status: 409
+  response_strings:
+      - Unable to delete resource class
+      - Class is in use in inventory
+
+- name: delete the inventory
+  DELETE: $HISTORY['add inventory to an rp'].$URL
+  status: 204
+
+- name: delete resource class
+  DELETE: /resource_classes/CUSTOM_GOLD
+  status: 204
