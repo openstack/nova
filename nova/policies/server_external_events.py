@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_policy import policy
+
 from nova.policies import base
 
 
@@ -20,7 +22,7 @@ POLICY_ROOT = 'os_compute_api:os-server-external-events:%s'
 
 
 server_external_events_policies = [
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'create',
         base.RULE_ADMIN_API,
         "Creates one or more external events",

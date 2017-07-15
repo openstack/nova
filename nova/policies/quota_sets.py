@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_policy import policy
+
 from nova.policies import base
 
 
@@ -20,7 +22,7 @@ POLICY_ROOT = 'os_compute_api:os-quota-sets:%s'
 
 
 quota_sets_policies = [
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'update',
         base.RULE_ADMIN_API,
         "Update the quotas",
@@ -30,7 +32,7 @@ quota_sets_policies = [
                 'path': '/os-quota-sets/{tenant_id}'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'defaults',
         base.RULE_ANY,
         "List default quotas",
@@ -40,7 +42,7 @@ quota_sets_policies = [
                 'path': '/os-quota-sets/{tenant_id}/defaults'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'show',
         base.RULE_ADMIN_OR_OWNER,
         "Show a quota",
@@ -50,7 +52,7 @@ quota_sets_policies = [
                 'path': '/os-quota-sets/{tenant_id}'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'delete',
         base.RULE_ADMIN_API,
         "Revert quotas to defaults",
@@ -60,7 +62,7 @@ quota_sets_policies = [
                 'path': '/os-quota-sets/{tenant_id}'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'detail',
         base.RULE_ADMIN_API,
         "Show the detail of quota",

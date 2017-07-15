@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_policy import policy
+
 from nova.policies import base
 
 
@@ -20,7 +22,7 @@ POLICY_ROOT = 'os_compute_api:os-consoles:%s'
 
 
 consoles_policies = [
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'create',
         base.RULE_ADMIN_OR_OWNER,
         'Create a console for a server instance',
@@ -30,7 +32,7 @@ consoles_policies = [
                 'path': '/servers/{server_id}/consoles'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'show',
         base.RULE_ADMIN_OR_OWNER,
         'Show console details for a server instance',
@@ -40,7 +42,7 @@ consoles_policies = [
                 'path': '/servers/{server_id}/consoles/{console_id}'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'delete',
         base.RULE_ADMIN_OR_OWNER,
         'Delete a console for a server instance',
@@ -50,7 +52,7 @@ consoles_policies = [
                 'path': '/servers/{server_id}/consoles/{console_id}'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'index',
         base.RULE_ADMIN_OR_OWNER,
         'List all consoles for a server instance',

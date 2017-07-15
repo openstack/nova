@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_policy import policy
+
 from nova.policies import base
 
 
@@ -21,7 +23,7 @@ POLICY_ROOT = 'os_compute_api:os-floating-ip-dns:%s'
 
 
 floating_ip_dns_policies = [
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_OR_OWNER,
         """List registered DNS domains, and CRUD actions on domain names.
@@ -49,7 +51,7 @@ Note this only works with nova-network and this API is deprecated.""",
                 'path': '/os-floating-ip-dns/{domain}/entries/{name}'
             },
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'domain:update',
         base.RULE_ADMIN_API,
         "Create or update a DNS domain.",
@@ -59,7 +61,7 @@ Note this only works with nova-network and this API is deprecated.""",
                 'path': '/os-floating-ip-dns/{domain}'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'domain:delete',
         base.RULE_ADMIN_API,
         "Delete a DNS domain.",

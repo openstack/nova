@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_policy import policy
+
 from nova.policies import base
 
 
@@ -20,7 +22,7 @@ POLICY_ROOT = 'os_compute_api:os-admin-actions:%s'
 
 
 admin_actions_policies = [
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'reset_state',
         base.RULE_ADMIN_API,
         "Reset the state of a given server",
@@ -30,7 +32,7 @@ admin_actions_policies = [
                 'path': '/servers/{server_id}/action (os-resetState)'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'inject_network_info',
         base.RULE_ADMIN_API,
         "Inject network information into the server",
@@ -40,7 +42,7 @@ admin_actions_policies = [
                 'path': '/servers/{server_id}/action (injectNetworkInfo)'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'reset_network',
         base.RULE_ADMIN_API,
         "Reset networking on a server",

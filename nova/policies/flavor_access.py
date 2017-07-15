@@ -14,6 +14,8 @@
 #    under the License.
 
 
+from oslo_policy import policy
+
 from nova.policies import base
 
 
@@ -22,7 +24,7 @@ POLICY_ROOT = 'os_compute_api:os-flavor-access:%s'
 
 
 flavor_access_policies = [
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'add_tenant_access',
         base.RULE_ADMIN_API,
         "Add flavor access to a tenant",
@@ -32,7 +34,7 @@ flavor_access_policies = [
                 'path': '/flavors/{flavor_id}/action (addTenantAccess)'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'remove_tenant_access',
         base.RULE_ADMIN_API,
         "Remove flavor access from a tenant",
@@ -42,7 +44,7 @@ flavor_access_policies = [
                 'path': '/flavors/{flavor_id}/action (removeTenantAccess)'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_OR_OWNER,
         """Allow the listing of flavor access information

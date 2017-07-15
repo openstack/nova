@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_policy import policy
+
 from nova.policies import base
 
 
@@ -20,7 +22,7 @@ POLICY_ROOT = 'os_compute_api:os-migrate-server:%s'
 
 
 migrate_server_policies = [
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'migrate',
         base.RULE_ADMIN_API,
         "Cold migrate a server to a host",
@@ -30,7 +32,7 @@ migrate_server_policies = [
                 'path': '/servers/{server_id}/action (migrate)'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'migrate_live',
         base.RULE_ADMIN_API,
         "Live migrate a server to a new host without a reboot",

@@ -11,6 +11,8 @@
 #    under the License.
 
 
+from oslo_policy import policy
+
 from nova.policies import base
 
 
@@ -18,7 +20,7 @@ RULE_AOO = base.RULE_ADMIN_OR_OWNER
 SERVERS = 'os_compute_api:servers:%s'
 
 rules = [
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         SERVERS % 'index',
         RULE_AOO,
         "List all servers",
@@ -28,7 +30,7 @@ rules = [
                 'path': '/servers'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         SERVERS % 'detail',
         RULE_AOO,
         "List all servers with detailed information",
@@ -38,7 +40,7 @@ rules = [
                 'path': '/servers/detail'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         SERVERS % 'index:get_all_tenants',
         base.RULE_ADMIN_API,
         "List all servers for all projects",
@@ -48,7 +50,7 @@ rules = [
                 'path': '/servers'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         SERVERS % 'detail:get_all_tenants',
         base.RULE_ADMIN_API,
         "List all servers with detailed information for all projects",
@@ -58,7 +60,7 @@ rules = [
                 'path': '/servers/detail'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         SERVERS % 'show',
         RULE_AOO,
         "Show a server",
@@ -70,7 +72,7 @@ rules = [
         ]),
     # the details in host_status are pretty sensitive, only admins
     # should do that by default.
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         SERVERS % 'show:host_status',
         base.RULE_ADMIN_API,
         "Show a server with additional host status information",
@@ -84,7 +86,7 @@ rules = [
                 'path': '/servers/detail'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         SERVERS % 'create',
         RULE_AOO,
         "Create a server",
@@ -94,7 +96,7 @@ rules = [
                 'path': '/servers'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         SERVERS % 'create:forced_host',
         base.RULE_ADMIN_API,
         "Create a server on the specified host",
@@ -104,7 +106,7 @@ rules = [
                 'path': '/servers'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         SERVERS % 'create:attach_volume',
         RULE_AOO,
         "Create a server with the requested volume attached to it",
@@ -114,7 +116,7 @@ rules = [
                 'path': '/servers'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         SERVERS % 'create:attach_network',
         RULE_AOO,
         "Create a server with the requested network attached to it",
@@ -124,7 +126,7 @@ rules = [
                 'path': '/servers'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         SERVERS % 'delete',
         RULE_AOO,
         "Delete a server",
@@ -134,7 +136,7 @@ rules = [
                 'path': '/servers/{server_id}'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         SERVERS % 'update',
         RULE_AOO,
         "Update a server",
@@ -144,7 +146,7 @@ rules = [
                 'path': '/servers/{server_id}'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         SERVERS % 'confirm_resize',
         RULE_AOO,
         "Confirm a server resize",
@@ -154,7 +156,7 @@ rules = [
                 'path': '/servers/{server_id}/action (confirmResize)'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         SERVERS % 'revert_resize',
         RULE_AOO,
         "Revert a server resize",
@@ -164,7 +166,7 @@ rules = [
                 'path': '/servers/{server_id}/action (revertResize)'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         SERVERS % 'reboot',
         RULE_AOO,
         "Reboot a server",
@@ -174,7 +176,7 @@ rules = [
                 'path': '/servers/{server_id}/action (reboot)'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         SERVERS % 'resize',
         RULE_AOO,
         "Resize a server",
@@ -184,7 +186,7 @@ rules = [
                 'path': '/servers/{server_id}/action (resize)'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         SERVERS % 'rebuild',
         RULE_AOO,
         "Rebuild a server",
@@ -194,7 +196,7 @@ rules = [
                 'path': '/servers/{server_id}/action (rebuild)'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         SERVERS % 'create_image',
         RULE_AOO,
         "Create an image from a server",
@@ -204,7 +206,7 @@ rules = [
                 'path': '/servers/{server_id}/action (createImage)'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         SERVERS % 'create_image:allow_volume_backed',
         RULE_AOO,
         "Create an image from a volume backed server",
@@ -214,7 +216,7 @@ rules = [
                 'path': '/servers/{server_id}/action (createImage)'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         SERVERS % 'start',
         RULE_AOO,
         "Start a server",
@@ -224,7 +226,7 @@ rules = [
                 'path': '/servers/{server_id}/action (os-start)'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         SERVERS % 'stop',
         RULE_AOO,
         "Stop a server",
@@ -234,7 +236,7 @@ rules = [
                 'path': '/servers/{server_id}/action (os-stop)'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         SERVERS % 'trigger_crash_dump',
         RULE_AOO,
         "Trigger crash dump in a server",

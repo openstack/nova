@@ -28,11 +28,5 @@ rules = [
 ]
 
 
-# TODO(johngarbutt) we can remove this now
-def create_rule_default(name, check_str, description, operations):
-    return policy.DocumentedRuleDefault(name, check_str,
-                                        description, operations)
-
-
 def list_rules():
     return rules

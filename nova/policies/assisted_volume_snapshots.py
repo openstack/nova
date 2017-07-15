@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_policy import policy
+
 from nova.policies import base
 
 
@@ -20,7 +22,7 @@ POLICY_ROOT = 'os_compute_api:os-assisted-volume-snapshots:%s'
 
 
 assisted_volume_snapshots_policies = [
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'create',
         base.RULE_ADMIN_API,
         "Create an assisted volume snapshot",
@@ -30,7 +32,7 @@ assisted_volume_snapshots_policies = [
                 'method': 'POST'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'delete',
         base.RULE_ADMIN_API,
         "Delete an assisted volume snapshot",

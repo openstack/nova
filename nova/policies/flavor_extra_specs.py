@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_policy import policy
+
 from nova.policies import base
 
 
@@ -20,7 +22,7 @@ POLICY_ROOT = 'os_compute_api:os-flavor-extra-specs:%s'
 
 
 flavor_extra_specs_policies = [
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'show',
         base.RULE_ADMIN_OR_OWNER,
         "Show an extra spec for a flavor",
@@ -32,7 +34,7 @@ flavor_extra_specs_policies = [
             }
         ]
     ),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'create',
         base.RULE_ADMIN_API,
         "Create extra specs for a flavor",
@@ -43,7 +45,7 @@ flavor_extra_specs_policies = [
             }
         ]
     ),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'update',
         base.RULE_ADMIN_API,
         "Update an extra spec for a flavor",
@@ -55,7 +57,7 @@ flavor_extra_specs_policies = [
             }
         ]
     ),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'delete',
         base.RULE_ADMIN_API,
         "Delete an extra spec for a flavor",
@@ -67,7 +69,7 @@ flavor_extra_specs_policies = [
             }
         ]
     ),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'index',
         base.RULE_ADMIN_OR_OWNER,
         "List extra specs for a flavor",

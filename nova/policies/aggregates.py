@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_policy import policy
+
 from nova.policies import base
 
 
@@ -20,7 +22,7 @@ POLICY_ROOT = 'os_compute_api:os-aggregates:%s'
 
 
 aggregates_policies = [
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'set_metadata',
         base.RULE_ADMIN_API,
         "Create or replace metadata for an aggregate",
@@ -30,7 +32,7 @@ aggregates_policies = [
                 'method': 'POST'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'add_host',
         base.RULE_ADMIN_API,
         "Add a host to an aggregate.",
@@ -40,7 +42,7 @@ aggregates_policies = [
                 'method': 'POST'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'create',
         base.RULE_ADMIN_API,
         "Create an aggregate",
@@ -50,7 +52,7 @@ aggregates_policies = [
                 'method': 'POST'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'remove_host',
         base.RULE_ADMIN_API,
         "Remove a host from an aggregate",
@@ -60,7 +62,7 @@ aggregates_policies = [
                 'method': 'POST'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'update',
         base.RULE_ADMIN_API,
         "Update name and/or availability zone for an aggregate",
@@ -70,7 +72,7 @@ aggregates_policies = [
                 'method': 'PUT'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'index',
         base.RULE_ADMIN_API,
         "List all aggregates",
@@ -80,7 +82,7 @@ aggregates_policies = [
                 'method': 'GET'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'delete',
         base.RULE_ADMIN_API,
         "Delete an aggregate",
@@ -90,7 +92,7 @@ aggregates_policies = [
                 'method': 'DELETE'
             }
         ]),
-    base.create_rule_default(
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'show',
         base.RULE_ADMIN_API,
         "Show details for an aggregate.",
