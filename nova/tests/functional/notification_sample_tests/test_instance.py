@@ -834,7 +834,9 @@ class TestInstanceNotificationSample(
                                  self.cinder.SWAP_NEW_VOL)
         self._wait_until_swap_volume(server, self.cinder.SWAP_NEW_VOL)
 
-        self.assertEqual(7, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(7, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         'Unexpected number of versioned notifications. '
+                         'Got: %s' % fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-volume_swap-start',
             replacements={
@@ -872,7 +874,9 @@ class TestInstanceNotificationSample(
         # 5. instance-volume_swap-start
         # 6. instance-volume_swap-error
         # 7. compute.exception
-        self.assertLessEqual(7, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertLessEqual(7, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                             'Unexpected number of versioned notifications. '
+                             'Got: %s' % fake_notifier.VERSIONED_NOTIFICATIONS)
         block_devices = [{
             "nova_object.data": {
                 "boot_index": None,
