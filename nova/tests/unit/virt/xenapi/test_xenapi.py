@@ -3401,7 +3401,7 @@ class HypervisorPoolTestCase(test.NoDBTestCase):
 
         self.assertIn(
             (slave.compute_rpcapi.add_aggregate_host,
-            "CONTEXT", "slave", jsonutils.to_primitive(self.fake_aggregate),
+            "CONTEXT", "slave", self.fake_aggregate,
             "master", "SLAVE_INFO"),
             slave.compute_rpcapi._mock_calls)
 
