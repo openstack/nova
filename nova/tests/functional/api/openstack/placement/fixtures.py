@@ -206,19 +206,14 @@ class SharedStorageFixture(APIFixture):
         super(SharedStorageFixture, self).start_fixture()
         self.context = context.get_admin_context()
 
-        # These UUIDs are staticly defined here because the JSONPath querying
-        # needed in the allocation-candidates.yaml gabbits cannot refer to an
-        # ENVIRON variable because the $ sign is a token in the JSONPath
-        # parser.
-        os.environ['CN1_UUID'] = 'c1c1c1c1-2894-4df1-aa6b-c61fa72ed22d'
-        os.environ['CN2_UUID'] = 'c2c2c2c2-beef-49a0-98a0-b998b88debfd'
-        os.environ['SS_UUID'] = 'dddddddd-61a6-472e-b8c1-74796e803066'
-        os.environ['AGG_UUID'] = 'aaaaaaaa-04b3-458c-9a9f-361aad56f41c'
-
-        cn1_uuid = os.environ['CN1_UUID']
-        cn2_uuid = os.environ['CN2_UUID']
-        ss_uuid = os.environ['SS_UUID']
-        agg_uuid = os.environ['AGG_UUID']
+        cn1_uuid = uuidutils.generate_uuid()
+        cn2_uuid = uuidutils.generate_uuid()
+        ss_uuid = uuidutils.generate_uuid()
+        agg_uuid = uuidutils.generate_uuid()
+        os.environ['CN1_UUID'] = cn1_uuid
+        os.environ['CN2_UUID'] = cn2_uuid
+        os.environ['SS_UUID'] = ss_uuid
+        os.environ['AGG_UUID'] = agg_uuid
 
         cn1 = objects.ResourceProvider(
             self.context,
