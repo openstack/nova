@@ -528,9 +528,9 @@ class ResourceTracker(object):
         self._copy_resources(cn, resources)
         self.compute_nodes[nodename] = cn
         cn.create()
-        LOG.info('Compute_service record created for '
-                 '%(host)s:%(node)s',
-                 {'host': self.host, 'node': nodename})
+        LOG.info('Compute node record created for '
+                 '%(host)s:%(node)s with uuid: %(uuid)s',
+                 {'host': self.host, 'node': nodename, 'uuid': cn.uuid})
 
         self._setup_pci_tracker(context, cn, resources)
         self._update(context, cn)
