@@ -456,8 +456,13 @@ class TestInstanceNotificationSample(
         self._wait_for_state_change(self.api, server,
                                     expected_status='SHELVED')
         self.api.post_server_action(server['id'], {'shelveOffload': {}})
-        self._wait_for_state_change(self.api, server,
-                                    expected_status='SHELVED_OFFLOADED')
+        # we need to wait for the instance.host to become None as well before
+        # we can unshelve to make sure that the unshelve.start notification
+        # payload is stable as the compute manager first sets the instance
+        # state then a bit later sets the instance.host to None.
+        self._wait_for_server_parameter(self.api, server,
+                                        {'status': 'SHELVED_OFFLOADED',
+                                         'OS-EXT-SRV-ATTR:host': None})
 
         self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
@@ -493,8 +498,13 @@ class TestInstanceNotificationSample(
         # instance status to 'SHELVED_OFFLOADED'
         self.flags(shelved_offload_time = 0)
         self.api.post_server_action(server['id'], {'shelve': {}})
-        self._wait_for_state_change(self.api, server,
-                                    expected_status='SHELVED_OFFLOADED')
+        # we need to wait for the instance.host to become None as well before
+        # we can unshelve to make sure that the unshelve.start notification
+        # payload is stable as the compute manager first sets the instance
+        # state then a bit later sets the instance.host to None.
+        self._wait_for_server_parameter(self.api, server,
+                                        {'status': 'SHELVED_OFFLOADED',
+                                         'OS-EXT-SRV-ATTR:host': None})
 
         post = {'unshelve': None}
         self.api.post_server_action(server['id'], post)
